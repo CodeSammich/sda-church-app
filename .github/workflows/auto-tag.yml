@@ -1,9 +1,14 @@
 name: Release Auto-Tag
 on:
+  # ensure that workflows are run on various PR events
   pull_request:
     types: [opened, edited, synchronized, closed]
     branches:
       - main
+  # ensure that subsequent commits on PR also trigger the workflow
+  push:
+    branches:
+      - "release/**"
 
 jobs:
   # Job 1: Ensures a version tag exists in the PR description
