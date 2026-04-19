@@ -1,0 +1,42 @@
+name: Release Auto-Tag
+on:
+  pull_request:
+    types: [opened, edited, synchronized, closed]
+    branches:
+      - main
+
+jobs:
+  # Job 1: Ensures a version tag exists in the PR description
+  enforce-tag:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == false
+    steps:
+      - name: Check for versioning tag
+        run: |
+          BODY="${{ github.event.pull_request.body }}"
+          if [[ "$BODY" =~ "#major" || "$BODY" =~ "#minor" || "$BODY" =~ "#patch" ]]; then
+            echo "Validation Passed: Version tag found."
+            exit 0
+          else
+            echo "Validation Failed: Please add #major, #minor, or #patch to the PR description."
+            exit 1
+          fi
+
+  # Job 2: Creates the tag ONLY on merge from a release/ branch
+  tag:
+    needs: enforce-tag
+    if: |
+      github.event.pull_request.merged == true && 
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.64.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
