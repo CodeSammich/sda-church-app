@@ -24,7 +24,6 @@ jobs:
 
   # Job 2: Creates the tag ONLY on merge from a release/ branch
   tag:
-    needs: enforce-tag
     if: |
       github.event.pull_request.merged == true && 
       startsWith(github.event.pull_request.head.ref, 'release/')
