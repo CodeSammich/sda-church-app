@@ -35,22 +35,25 @@ jobs:
         with:
           fetch-depth: 0
       - name: Determine bump type from PR body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          set -euo pipefail
+          BODY="${PR_BODY:-}"
           count=0
           bump=""
-          if [[ "$BODY" =~ "#major" ]]; then ((count++)); bump="major"; fi
-          if [[ "$BODY" =~ "#minor" ]]; then ((count++)); bump="minor"; fi
-          if [[ "$BODY" =~ "#patch" ]]; then ((count++)); bump="patch"; fi
-          if [ $count -gt 1 ]; then
+          if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); bump="major"; fi
+          if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); bump="minor"; fi
+          if printf '%s' "$BODY" | grep -Fq '#patch'; then ((count++)); bump="patch"; fi
+          if [ "$count" -gt 1 ]; then
             echo "Error: Multiple version tags found in PR body. Please include only one of #major, #minor, or #patch."
             exit 1
           fi
-          if [ $count -eq 0 ]; then
+          if [ "$count" -eq 0 ]; then
             echo "Error: No version tag found in PR body. Please include #major, #minor, or #patch."
             exit 1
           fi
-          echo "DEFAULT_BUMP=$bump" >> $GITHUB_ENV
+          echo "DEFAULT_BUMP=$bump" >> "$GITHUB_ENV"
       - name: Bump version and push tag
         uses: anothrNick/github-tag-action@1.64.0
         env:
