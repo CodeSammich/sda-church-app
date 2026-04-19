@@ -54,9 +54,9 @@ jobs:
           echo "--- end preview ---"
           count=0
           echo "count=$count before grep checks"
-          if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); fi
-          if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); fi
-          if printf '%s' "$BODY" | grep -Fq '#patch'; then ((count++)); fi
+          if printf '%s' "$BODY" | grep -Fq '#major'; then count=$((count + 1)); fi
+          if printf '%s' "$BODY" | grep -Fq '#minor'; then count=$((count + 1)); fi
+          if printf '%s' "$BODY" | grep -Fq '#patch'; then count=$((count + 1)); fi
           echo "count=$count after grep checks"
           if [ "$count" -gt 1 ]; then
             echo "::error::Validation Failed: Multiple version tags found in PR description. Please include only one of #major, #minor, or #patch."
@@ -89,9 +89,9 @@ jobs:
           BODY="$PR_BODY"
           count=0
           bump=""
-          if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); bump="major"; fi
-          if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); bump="minor"; fi
-          if printf '%s' "$BODY" | grep -Fq '#patch'; then ((count++)); bump="patch"; fi
+          if printf '%s' "$BODY" | grep -Fq '#major'; then count=$((count + 1)); bump="major"; fi
+          if printf '%s' "$BODY" | grep -Fq '#minor'; then count=$((count + 1)); bump="minor"; fi
+          if printf '%s' "$BODY" | grep -Fq '#patch'; then count=$((count + 1)); bump="patch"; fi
           if [ "$count" -gt 1 ]; then
             echo "::error::Error: Multiple version tags found in PR body. Please include only one of #major, #minor, or #patch."
             exit 1
