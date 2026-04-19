@@ -12,15 +12,24 @@ jobs:
     if: github.event.pull_request.merged == false
     steps:
       - name: Check for versioning tag
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
-          if [[ "$BODY" =~ "#major" || "$BODY" =~ "#minor" || "$BODY" =~ "#patch" ]]; then
-            echo "Validation Passed: Version tag found."
-            exit 0
-          else
+          set -euo pipefail
+          BODY="${PR_BODY:-}"
+          count=0
+          if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); fi
+          if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); fi
+          if printf '%s' "$BODY" | grep -Fq '#patch'; then ((count++)); fi
+          if [ "$count" -gt 1 ]; then
+            echo "Validation Failed: Multiple version tags found in PR description. Please include only one of #major, #minor, or #patch."
+            exit 1
+          fi
+          if [ "$count" -eq 0 ]; then
             echo "Validation Failed: Please add #major, #minor, or #patch to the PR description."
             exit 1
           fi
+          echo "Validation Passed: One version tag found."
 
   # Job 2: Creates the tag ONLY on merge from a release/ branch
   tag:
