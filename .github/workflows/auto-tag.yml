@@ -55,11 +55,11 @@ jobs:
           if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); fi
           if printf '%s' "$BODY" | grep -Fq '#patch'; then ((count++)); fi
           if [ "$count" -gt 1 ]; then
-            echo "Validation Failed: Multiple version tags found in PR description. Please include only one of #major, #minor, or #patch."
+            echo "Validation Failed: Multiple version tags found in PR description. Please include only one of #major, #minor, or #patch." >&2
             exit 1
           fi
           if [ "$count" -eq 0 ]; then
-            echo "Validation Failed: Please add #major, #minor, or #patch to the PR description."
+            echo "Validation Failed: Please add #major, #minor, or #patch to the PR description." >&2
             exit 1
           fi
           echo "Validation Passed: One version tag found."
