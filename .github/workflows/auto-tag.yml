@@ -1,30 +1,77 @@
 name: Release Auto-Tag
 on:
+  # ensure that workflows are run on various PR events
   pull_request:
     types: [opened, edited, synchronized, closed]
     branches:
       - main
+  # ensure that subsequent commits on PR also trigger the workflow
+  push:
+    branches:
+      - "release/**"
 
 jobs:
   # Job 1: Ensures a version tag exists in the PR description
   enforce-tag:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == false
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/'))
     steps:
-      - name: Check for versioning tag
+      - name: Resolve PR body
+        id: pr_body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
-          if [[ "$BODY" =~ "#major" || "$BODY" =~ "#minor" || "$BODY" =~ "#patch" ]]; then
-            echo "Validation Passed: Version tag found."
-            exit 0
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
           else
-            echo "Validation Failed: Please add #major, #minor, or #patch to the PR description."
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+            PR_JSON=$(curl -sSL \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${BRANCH_NAME}&state=open")
+            BODY=$(printf '%s' "$PR_JSON" | jq -r '.[0].body // ""')
+            if [ -z "$BODY" ]; then
+              echo "Validation Failed: no open pull request found for branch $BRANCH_NAME."
+              exit 1
+            fi
+          fi
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$BODY" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Check for versioning tag
+        env:
+          PR_BODY: ${{ steps.pr_body.outputs.body }}
+        run: |
+          set -euxo pipefail
+          BODY="$PR_BODY"
+          echo "PR body length: ${#BODY}"
+          echo "--- PR body preview ---"
+          printf '%s\n' "$BODY" | sed -n '1,12p'
+          echo "--- end preview ---"
+          count=0
+          echo "count=$count before grep checks"
+          if printf '%s' "$BODY" | grep -Fq '#major'; then count=$((count + 1)); fi
+          if printf '%s' "$BODY" | grep -Fq '#minor'; then count=$((count + 1)); fi
+          if printf '%s' "$BODY" | grep -Fq '#patch'; then count=$((count + 1)); fi
+          echo "count=$count after grep checks"
+          if [ "$count" -gt 1 ]; then
+            echo "::error::Validation Failed: Multiple version tags found in PR description. Please include only one of #major, #minor, or #patch."
             exit 1
           fi
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Validation Failed: Please add #major, #minor, or #patch to the PR description."
+            exit 1
+          fi
+          echo "Validation Passed: One version tag found."
 
   # Job 2: Creates the tag ONLY on merge from a release/ branch
   tag:
     if: |
+      github.event_name == 'pull_request' &&
       github.event.pull_request.merged == true && 
       startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
@@ -35,22 +82,25 @@ jobs:
         with:
           fetch-depth: 0
       - name: Determine bump type from PR body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          set -euo pipefail
+          BODY="$PR_BODY"
           count=0
           bump=""
-          if [[ "$BODY" =~ "#major" ]]; then ((count++)); bump="major"; fi
-          if [[ "$BODY" =~ "#minor" ]]; then ((count++)); bump="minor"; fi
-          if [[ "$BODY" =~ "#patch" ]]; then ((count++)); bump="patch"; fi
-          if [ $count -gt 1 ]; then
-            echo "Error: Multiple version tags found in PR body. Please include only one of #major, #minor, or #patch."
+          if printf '%s' "$BODY" | grep -Fq '#major'; then count=$((count + 1)); bump="major"; fi
+          if printf '%s' "$BODY" | grep -Fq '#minor'; then count=$((count + 1)); bump="minor"; fi
+          if printf '%s' "$BODY" | grep -Fq '#patch'; then count=$((count + 1)); bump="patch"; fi
+          if [ "$count" -gt 1 ]; then
+            echo "::error::Error: Multiple version tags found in PR body. Please include only one of #major, #minor, or #patch."
             exit 1
           fi
-          if [ $count -eq 0 ]; then
-            echo "Error: No version tag found in PR body. Please include #major, #minor, or #patch."
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Error: No version tag found in PR body. Please include #major, #minor, or #patch."
             exit 1
           fi
-          echo "DEFAULT_BUMP=$bump" >> $GITHUB_ENV
+          echo "DEFAULT_BUMP=$bump" >> "$GITHUB_ENV"
       - name: Bump version and push tag
         uses: anothrNick/github-tag-action@1.64.0
         env:
