@@ -14,12 +14,38 @@ jobs:
   # Job 1: Ensures a version tag exists in the PR description
   enforce-tag:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == false
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/'))
     steps:
+      - name: Resolve PR body
+        id: pr_body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
+          else
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+            PR_JSON=$(curl -sSL \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${BRANCH_NAME}&state=open")
+            BODY=$(printf '%s' "$PR_JSON" | jq -r '.[0].body // ""')
+            if [ -z "$BODY" ]; then
+              echo "Validation Failed: no open pull request found for branch $BRANCH_NAME."
+              exit 1
+            fi
+          fi
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$BODY" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Check for versioning tag
         run: |
           set -euo pipefail
-          BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
+          BODY="${{ steps.pr_body.outputs.body }}"
           count=0
           if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); fi
           if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); fi
@@ -37,6 +63,7 @@ jobs:
   # Job 2: Creates the tag ONLY on merge from a release/ branch
   tag:
     if: |
+      github.event_name == 'pull_request' &&
       github.event.pull_request.merged == true && 
       startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
