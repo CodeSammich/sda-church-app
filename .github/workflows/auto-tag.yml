@@ -4,9 +4,6 @@ on:
     types: [opened, edited, synchronized, closed]
     branches:
       - main
-  push:
-    branches:
-      - "release/**"
 
 jobs:
   # Job 1: Ensures a version tag exists in the PR description
@@ -15,11 +12,9 @@ jobs:
     if: github.event.pull_request.merged == false
     steps:
       - name: Check for versioning tag
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           set -euo pipefail
-          BODY="${PR_BODY:-}"
+          BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
           count=0
           if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); fi
           if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); fi
@@ -47,11 +42,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Determine bump type from PR body
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           set -euo pipefail
-          BODY="${PR_BODY:-}"
+          BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
           count=0
           bump=""
           if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); bump="major"; fi
