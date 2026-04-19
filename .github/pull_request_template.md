@@ -8,6 +8,8 @@ _Please leave exactly one tag below visible to trigger the [semantic version](ht
 
 ## Description
 
+_What does your change do?_
+
 ## Testing
 
 - [ ] Unit tests passed

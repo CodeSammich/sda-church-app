@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.sdachurchapp"
+      "bundleIdentifier": "com.anonymous.sdachurchapp",
+      "minimumOsVersion": "18.0"
     },
     "android": {
       "adaptiveIcon": {
