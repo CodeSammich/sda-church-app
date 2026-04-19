@@ -4,6 +4,9 @@ on:
     types: [opened, edited, synchronized, closed]
     branches:
       - main
+  push:
+    branches:
+      - "release/**"
 
 jobs:
   # Job 1: Ensures a version tag exists in the PR description
