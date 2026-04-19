@@ -46,6 +46,10 @@ jobs:
         run: |
           set -euo pipefail
           BODY="${{ steps.pr_body.outputs.body }}"
+          echo "PR body length: ${#BODY}"
+          echo "--- PR body preview ---"
+          printf '%s\n' "$BODY" | sed -n '1,12p'
+          echo "--- end preview ---"
           count=0
           if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); fi
           if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); fi
