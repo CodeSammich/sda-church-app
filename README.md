@@ -55,7 +55,7 @@ This command:
 
 ## Release & Versioning
 
-This project uses **Semantic Versioning** with the following rules:
+This project uses **Semantic Versioning** ([npm SemVer Guide](https://docs.npmjs.com/about-semantic-versioning)) with the following rules:
 
 - **#patch** — Backward compatible bug fixes (e.g., `0.1.0` → `0.1.1`)
 - **#minor** — Backward compatible new features (e.g., `0.1.0` → `0.2.0`)
@@ -63,19 +63,24 @@ This project uses **Semantic Versioning** with the following rules:
 
 ### Release Process
 
-1. **Create a Release Branch** from `main` if none are actively being worked on:
+1. **Create a Release Branch** from `main`:
 
    ```bash
    git checkout main
    git pull origin main
-   git checkout -b release/0.2.0
-   git push -u origin release/0.2.0
+   git checkout -b release/0.2.1  # Replace 0.2.1 with the next semantic version
+   git push -u origin release/0.2.1
    ```
 
-2. **Create a Pull Request** from `release/0.2.0` → `main`:
+   Check the [latest tag](https://github.com/CodeSammich/sda-church-app/tags) to determine the appropriate next version. For details on semantic versioning, see [npm Semantic Versioning Guide](https://docs.npmjs.com/about-semantic-versioning).
+
+   **All work**, including patches, minor features, and major updates, must go through a release branch. This ensures consistent versioning and automated tagging.
+
+2. **Create a Pull Request** from your release branch → `main`:
    - Add exactly one version tag in the PR description: `#patch`, `#minor`, or `#major`
    - Complete testing checklist
    - Wait for PR checks to pass
+   - Branch name must start with `release/` and match the next semantic version from the latest [tag](https://github.com/CodeSammich/sda-church-app/tags)
 
 3. **Automated Tag Creation**:
    - The `Release Auto-Tag` workflow validates the PR body
@@ -186,6 +191,8 @@ git push -u origin feature/new-calendar-view
 # 6. Automated: Tag v0.2.0 is created on merge commit
 # Done! Release is published.
 ```
+
+**Note**: All releases, including patch updates (e.g., `v0.2.1`), follow this same workflow. Create a `release/0.2.1` branch for any hotfixes or patch releases.
 
 ---
 
