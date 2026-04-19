@@ -43,9 +43,11 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Check for versioning tag
+        env:
+          PR_BODY: ${{ steps.pr_body.outputs.body }}
         run: |
           set -euo pipefail
-          BODY="${{ steps.pr_body.outputs.body }}"
+          BODY="$PR_BODY"
           echo "PR body length: ${#BODY}"
           echo "--- PR body preview ---"
           printf '%s\n' "$BODY" | sed -n '1,12p'
@@ -78,20 +80,22 @@ jobs:
         with:
           fetch-depth: 0
       - name: Determine bump type from PR body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           set -euo pipefail
-          BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
+          BODY="$PR_BODY"
           count=0
           bump=""
           if printf '%s' "$BODY" | grep -Fq '#major'; then ((count++)); bump="major"; fi
           if printf '%s' "$BODY" | grep -Fq '#minor'; then ((count++)); bump="minor"; fi
           if printf '%s' "$BODY" | grep -Fq '#patch'; then ((count++)); bump="patch"; fi
           if [ "$count" -gt 1 ]; then
-            echo "Error: Multiple version tags found in PR body. Please include only one of #major, #minor, or #patch."
+            echo "Error: Multiple version tags found in PR body. Please include only one of #major, #minor, or #patch." >&2
             exit 1
           fi
           if [ "$count" -eq 0 ]; then
-            echo "Error: No version tag found in PR body. Please include #major, #minor, or #patch."
+            echo "Error: No version tag found in PR body. Please include #major, #minor, or #patch." >&2
             exit 1
           fi
           echo "DEFAULT_BUMP=$bump" >> "$GITHUB_ENV"
