@@ -1,7 +1,7 @@
 {
   "name": "sda-church-app",
   "main": "expo-router/entry",
-  "version": "0.19.5",
+  "version": "0.20.0",
   "homepage": "https://codesammich.github.io/sda-church-app",
   "scripts": {
     "sync-version": "node public/sync-version.js",
