@@ -422,7 +422,7 @@ export default function HomeScreen() {
           resizeMode="cover"
         >
           <LinearGradient
-            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.75)']}
+            colors={theme.gradients.heroOverlay}
             style={StyleSheet.absoluteFill}
           />
           <Text

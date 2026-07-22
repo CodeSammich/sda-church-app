@@ -13,6 +13,7 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { DocumentStyles } from '@/styles/DocumentStyles';
+import { NavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
@@ -204,16 +205,16 @@ export default function FellowshipsAndFoodScreen() {
         {/* Hero Section Banner */}
         <ImageBackground
           source={{ uri: FELLOWSHIP_IMAGES_URLS[0] }}
-          style={[DocumentStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
           resizeMode="cover"
         >
           <LinearGradient
-            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)']}
+            colors={theme.gradients.heroOverlay}
             style={StyleSheet.absoluteFill}
           />
           <Text
             variant="headlineSmall"
-            style={[DocumentStyles.heroTitle, { color: '#FFFFFF' }]}
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
             {labels.title}
           </Text>

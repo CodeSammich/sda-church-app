@@ -1,11 +1,13 @@
+import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ScrollView } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet } from 'react-native';
 import { Card, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,14 +43,28 @@ export default function EventScreen() {
       <Stack.Screen options={{ title: labels.title, backTo } as any} />
       <ScrollView
         style={DocumentStyles.container}
-        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingTop: headerHeight }}
       >
-        <List.Section>
-          <List.Subheader
-            style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
+        {/* Hero */}
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text
+            variant="headlineSmall"
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
             {labels.title}
-          </List.Subheader>
+          </Text>
+        </ImageBackground>
+
+        {/* Body */}
+        <List.Section>
           <Card style={{ backgroundColor: theme.colors.surface }} mode="outlined">
             <Card.Content>
               <Text

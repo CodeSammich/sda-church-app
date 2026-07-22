@@ -9,6 +9,7 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { DocumentStyles } from '@/styles/DocumentStyles';
+import { NavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
@@ -161,16 +162,16 @@ export default function AboutChurchHistoryScreen() {
       >
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[styles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
           resizeMode="cover"
         >
           <LinearGradient
-            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)']}
+            colors={theme.gradients.heroOverlay}
             style={StyleSheet.absoluteFill}
           />
           <Text
             variant="headlineSmall"
-            style={[styles.heroTitle, { color: '#FFFFFF' }]}
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
             {labels.churchName}
           </Text>

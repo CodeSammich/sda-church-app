@@ -1,5 +1,6 @@
 import { MenuCard } from '@/components/MenuCard';
 import {
+  CHURCH_BUILDING_IMAGE_URL,
   openChineseHymnalAndroid,
   openChineseHymnalIos,
 } from '@/constants/ExternalLinks';
@@ -7,10 +8,11 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ScrollView } from 'react-native';
-import { List } from 'react-native-paper';
+import { ImageBackground, ScrollView, StyleSheet } from 'react-native';
+import { List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const uiLabels = {
@@ -71,6 +73,25 @@ export default function HymnalSelectionScreen() {
           { paddingTop: headerHeight },
         ]}
       >
+        {/* Hero */}
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text
+            variant="headlineSmall"
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
+          >
+            {labels.title}
+          </Text>
+        </ImageBackground>
+
+        {/* Body */}
         <List.Section>
           <MenuCard
             title={labels.english}

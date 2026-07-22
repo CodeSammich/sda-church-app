@@ -1,10 +1,13 @@
+import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { DocumentStyles } from '@/styles/DocumentStyles';
+import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -51,15 +54,27 @@ export default function PrayerWallScreen() {
       <Stack.Screen options={{ title: labels.title, backTo } as any} />
       <ScrollView
         style={DocumentStyles.container}
-        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingTop: headerHeight }}
       >
-        <View style={DocumentStyles.section}>
+        {/* Hero */}
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
           <Text
             variant="headlineSmall"
-            style={[DocumentStyles.docTitle, { color: theme.colors.onSurface }]}
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
             {labels.title}
           </Text>
+        </ImageBackground>
+
+        <View style={DocumentStyles.section}>
           <Text
             variant="bodyMedium"
             style={[
