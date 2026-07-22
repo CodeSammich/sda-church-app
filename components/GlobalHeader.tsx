@@ -9,10 +9,11 @@ import {
   SearchableItem,
 } from '@/constants/SearchTerms';
 import { useAppTheme } from '@/constants/Themes';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useSegments } from 'expo-router';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
-import { Appbar, List, Portal, Searchbar } from 'react-native-paper';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Appbar, List, Portal, Searchbar, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
@@ -115,12 +116,28 @@ export const GlobalHeader = (props: any) => {
     });
   };
 
+  const handleBackPress = () => {
+    if (backTo) {
+      router.navigate(backTo as any);
+    } else if (segments.includes('you')) {
+      router.navigate('/you' as any);
+    } else if (segments.includes('resources')) {
+      router.navigate('/resources' as any);
+    } else if (segments.includes('community')) {
+      router.navigate('/community' as any);
+    } else if (segments.includes('home')) {
+      router.navigate('/' as any);
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <Animated.View
       style={[
         styles.headerWrapper,
         {
-          backgroundColor: theme.colors.background,
+          backgroundColor: 'transparent',
           paddingTop: insets.top,
           transform: [{ translateY: headerTranslateY }],
         },
@@ -136,29 +153,47 @@ export const GlobalHeader = (props: any) => {
         }}
       >
         {isSubPage && (
-          <Appbar.BackAction
-            onPress={() => {
-              if (backTo) {
-                router.navigate(backTo as any);
-              } else if (segments.includes('you')) {
-                router.navigate('/you' as any);
-              } else if (segments.includes('resources')) {
-                router.navigate('/resources' as any);
-              } else if (segments.includes('community')) {
-                router.navigate('/community' as any);
-              } else if (segments.includes('home')) {
-                router.navigate('/' as any);
-              } else {
-                router.back();
-              }
-            }}
-          />
+          <Pressable
+            onPress={handleBackPress}
+            style={({ pressed }) => [
+              styles.circleBackButton,
+              {
+                backgroundColor: theme.dark
+                  ? 'rgba(30, 30, 30, 0.75)'
+                  : 'rgba(0, 0, 0, 0.45)',
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <MaterialCommunityIcons name="chevron-left" size={26} color="#FFFFFF" />
+          </Pressable>
         )}
         {isSubPage && !isBiblePage && !isHymnalPage ? (
-          <Appbar.Content
-            title={title}
-            titleStyle={{ color: theme.colors.onSurface, fontWeight: 'bold' }}
-          />
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            {title && (
+              <View
+                style={[
+                  styles.floatingTitleChip,
+                  {
+                    backgroundColor: theme.dark
+                      ? 'rgba(30, 30, 30, 0.75)'
+                      : 'rgba(0, 0, 0, 0.45)',
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                  },
+                ]}
+              >
+                <Text
+                  variant="titleMedium"
+                  style={{ color: '#FFFFFF', fontWeight: 'bold' }}
+                  numberOfLines={1}
+                >
+                  {title}
+                </Text>
+              </View>
+            )}
+          </View>
         ) : (
           <View style={{ flex: 1 }}>
             <Searchbar
@@ -175,14 +210,16 @@ export const GlobalHeader = (props: any) => {
                 }
               }}
               onBlur={() => setTimeout(() => setIsSearching(false), 200)} // Delay to allow onPress to fire
-              style={{
-                backgroundColor: theme.colors.surface,
-                elevation: 0,
-                borderRadius: 24,
-                height: 44,
-                marginRight: 12,
-                marginLeft: 12,
-              }}
+              style={[
+                styles.floatingSearchbar,
+                {
+                  backgroundColor: theme.colors.surface,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 6,
+                },
+              ]}
               inputStyle={{
                 minHeight: 0,
                 paddingBottom: 0,
@@ -236,6 +273,44 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1000,
   },
+  circleBackButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  floatingTitleChip: {
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  floatingSearchbar: {
+    elevation: 4,
+    borderRadius: 24,
+    height: 44,
+    marginRight: 12,
+    marginLeft: 12,
+  },
   resultsOverlay: {
     position: 'absolute',
     left: 0,
@@ -244,5 +319,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginTop: 8,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
 });

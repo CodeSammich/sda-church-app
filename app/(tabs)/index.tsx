@@ -24,7 +24,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Button, Card, List, Text } from 'react-native-paper';
+import { Button, Card, Divider, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -437,15 +437,15 @@ export default function HomeScreen() {
     <>
       <ScrollView
         style={NavigationStyles.container}
-        contentContainerStyle={{ paddingTop: headerHeight }}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={styles.hero}
+          style={[styles.hero, { paddingTop: insets.top + 70, paddingBottom: 28 }]}
           resizeMode="cover"
         >
           <LinearGradient
-            colors={theme.gradients.heroOverlay}
+            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.75)']}
             style={StyleSheet.absoluteFill}
           />
           <Text
@@ -518,66 +518,91 @@ export default function HomeScreen() {
           {/* Sabbath Countdown Widget */}
           <Card
             style={[styles.timerCard, { backgroundColor: theme.colors.surface }]}
-            mode="outlined"
+            mode="contained"
           >
             <Card.Content style={styles.timerContentSubtle}>
               <View style={styles.timerRow}>
-                <MaterialCommunityIcons
-                  name="sun-clock-outline"
-                  size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
-                  color={theme.colors.tertiary}
-                  style={{ marginRight: 12 }}
-                />
                 <View style={styles.labelColumn}>
                   <Text
-                    variant="bodyLarge"
-                    style={{ color: theme.colors.onSurface, fontWeight: '600' }}
+                    variant="labelMedium"
+                    style={{
+                      color: isSabbath ? theme.colors.primary : theme.colors.secondary,
+                      fontWeight: 'bold',
+                    }}
                   >
-                    {isSabbath ? labels.sabbathEnds : labels.sabbathStarts}
+                    {isSabbath ? labels.isSabbath : labels.sabbathStarts}
                   </Text>
                   {targetDate && (
-                    <Text
-                      variant="labelSmall"
-                      style={{ color: theme.colors.primary, fontWeight: '700' }}
-                    >
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                       {formatDisplayDate(targetDate)}
                     </Text>
                   )}
-                  <Text
-                    variant="labelSmall"
-                    style={{ color: theme.colors.onSurfaceVariant, opacity: 0.6 }}
-                  >
-                    {useGps ? labels.locationLocal : labels.locationDefault}
-                  </Text>
                 </View>
-
                 <Text
-                  variant="bodyLarge"
                   style={[
                     styles.timerValueSubtle,
-                    { color: theme.colors.onSurfaceVariant },
+                    { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
                   ]}
                 >
-                  {countdown || '00:00:00'}
+                  {countdown || '--:--:--'}
                 </Text>
+              </View>
+
+              <Divider style={{ marginVertical: 8, opacity: 0.5 }} />
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, fontStyle: 'italic' }}>
+                  {useGps ? labels.locationLocal : labels.locationDefault}
+                </Text>
+                <Button
+                  mode="text"
+                  compact
+                  icon="video-outline"
+                  onPress={openSabbathStream}
+                  textColor={theme.colors.primary}
+                  labelStyle={{ fontSize: 12, marginHorizontal: 0 }}
+                >
+                  {labels.livestream}
+                </Button>
               </View>
             </Card.Content>
           </Card>
 
-          {/* This Week — 2-column pastel grid */}
+          <List.Subheader
+            style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
+          >
+            {labels.explore}
+          </List.Subheader>
           <View style={styles.grid}>
             <GridMenuCard
-              title={labels.livestream}
-              subtitle={(labels as any).liveNow}
-              icon="youtube"
-              color={theme.colors.cardBgColors.livestream}
-              iconColor={theme.colors.iconColors.livestream}
-              onPress={openSabbathStream}
+              title={labels.aboutSDA}
+              icon="cross"
+              color={theme.colors.cardBgColors.aboutSDA}
+              iconColor={theme.colors.iconColors.aboutSDA}
+              onPress={() =>
+                router.push({
+                  pathname: '/home/about-sda',
+                  params: { backTo: '/' },
+                } as any)
+              }
+              style={styles.gridCell}
+            />
+            <GridMenuCard
+              title={labels.aboutHistory}
+              icon="map-marker-path"
+              color={theme.colors.cardBgColors.aboutHistory}
+              iconColor={theme.colors.iconColors.aboutHistory}
+              onPress={() =>
+                router.push({
+                  pathname: '/home/about-my-church',
+                  params: { backTo: '/' },
+                } as any)
+              }
               style={styles.gridCell}
             />
             <GridMenuCard
               title={labels.bulletin}
-              icon="file-document-outline"
+              icon="newspaper-variant-outline"
               color={theme.colors.cardBgColors.bulletin}
               iconColor={theme.colors.iconColors.bulletin}
               onPress={() =>
@@ -589,13 +614,65 @@ export default function HomeScreen() {
               style={styles.gridCell}
             />
             <GridMenuCard
+              title={labels.contact}
+              icon="card-account-phone"
+              color={theme.colors.cardBgColors.meetTeam}
+              iconColor={theme.colors.iconColors.meetTeam}
+              onPress={() =>
+                router.push({
+                  pathname: '/home/contact',
+                  params: { backTo: '/' },
+                } as any)
+              }
+              style={styles.gridCell}
+            />
+            <GridMenuCard
+              title={labels.meetTeam}
+              icon="account-group"
+              color={theme.colors.cardBgColors.meetTeam}
+              iconColor={theme.colors.iconColors.meetTeam}
+              onPress={() =>
+                router.push({
+                  pathname: '/home/team',
+                  params: { backTo: '/' },
+                } as any)
+              }
+              style={styles.gridCell}
+            />
+            <GridMenuCard
+              title={labels.join}
+              icon="water-outline"
+              color={theme.colors.cardBgColors.join}
+              iconColor={theme.colors.iconColors.join}
+              onPress={() =>
+                router.push({
+                  pathname: '/home/baptism',
+                  params: { backTo: '/' },
+                } as any)
+              }
+              style={styles.gridCell}
+            />
+            <GridMenuCard
               title={labels.give}
-              icon="hand-heart-outline"
+              icon="heart"
               color={theme.colors.cardBgColors.tithe}
               iconColor={theme.colors.iconColors.tithe}
               onPress={() =>
                 router.push({
                   pathname: '/home/give',
+                  params: { backTo: '/' },
+                } as any)
+              }
+              style={styles.gridCell}
+            />
+            <GridMenuCard
+              title={labels.events}
+              icon="calendar"
+              color={theme.colors.cardBgColors.events}
+              iconColor={theme.colors.iconColors.events}
+              onPress={() =>
+                router.push({
+                  pathname: '/home/events',
                   params: { backTo: '/' },
                 } as any)
               }
@@ -609,19 +686,6 @@ export default function HomeScreen() {
               onPress={() =>
                 router.push({
                   pathname: '/home/prayer',
-                  params: { backTo: '/' },
-                } as any)
-              }
-              style={styles.gridCell}
-            />
-            <GridMenuCard
-              title={labels.events}
-              icon="calendar-month"
-              color={theme.colors.cardBgColors.events}
-              iconColor={theme.colors.iconColors.events}
-              onPress={() =>
-                router.push({
-                  pathname: '/home/events',
                   params: { backTo: '/' },
                 } as any)
               }
@@ -648,7 +712,14 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: { padding: 24, alignItems: 'center', justifyContent: 'center' },
+  hero: {
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+  },
   welcomeText: {
     fontWeight: 'bold',
     textAlign: 'center',
@@ -657,12 +728,12 @@ const styles = StyleSheet.create({
   timerCard: {
     marginBottom: 16,
     borderRadius: 12,
-    overflow: 'hidden', // Prevents inner elements from clipping past rounded corners
-    backgroundColor: '#FFFFFF', // Ensures a crisp background fill
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
   },
   timerContentSubtle: {
     paddingVertical: 12,
-    paddingHorizontal: 16, // Keeps content comfortably inset from the card border
+    paddingHorizontal: 16,
   },
   timerRow: {
     flexDirection: 'row',

@@ -82,11 +82,11 @@ export default function MeetOurTeamScreen() {
         {/* Hero Section Banner */}
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[styles.hero, { paddingTop: headerHeight + 20 }]}
+          style={[styles.hero, { paddingTop: insets.top + 70, paddingBottom: 28 }]}
           resizeMode="cover"
         >
           <LinearGradient
-            colors={theme.gradients.heroOverlay}
+            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.75)']}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.heroContent}>
@@ -200,6 +200,9 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     minHeight: 220,
     justifyContent: 'center',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
   },
   heroContent: {
     zIndex: 1,
