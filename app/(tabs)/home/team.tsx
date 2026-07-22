@@ -9,6 +9,7 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { TEAM_MEMBERS } from '@/constants/TeamData';
 import { useAppTheme } from '@/constants/Themes';
+import { DocumentStyles } from '@/styles/DocumentStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
@@ -26,8 +27,6 @@ export default function MeetOurTeamScreen() {
   const allLabels = {
     en: {
       title: 'Meet Our Team',
-      description:
-        'Our leadership is dedicated to serving the community and sharing the message of hope.',
       staffHeader: 'Staff',
       seniorPastor: 'Senior Pastor',
       bibleWorker: 'Bible Worker',
@@ -37,7 +36,6 @@ export default function MeetOurTeamScreen() {
     },
     zh: {
       title: '認識我們的團隊',
-      description: '我們的領導團隊致力於服務社群並分享希望的信息。',
       staffHeader: '教牧團隊',
       seniorPastor: '主任牧師',
       bibleWorker: '聖經助理',
@@ -47,7 +45,6 @@ export default function MeetOurTeamScreen() {
     },
     'zh-cn': {
       title: '认识我们的团队',
-      description: '我们的领导团队致力于服务社区并分享希望的信息。',
       staffHeader: '教牧团队',
       seniorPastor: '主任牧师',
       bibleWorker: '圣经助理',
@@ -57,8 +54,6 @@ export default function MeetOurTeamScreen() {
     },
     es: {
       title: 'Conoce a nuestro equipo',
-      description:
-        'Nuestro liderazgo está dedicado a servir a la comunidad y compartir el mensaje de esperanza.',
       staffHeader: 'Personal',
       seniorPastor: 'Pastor Principal',
       bibleWorker: 'Obrero Bíblico',
@@ -79,41 +74,21 @@ export default function MeetOurTeamScreen() {
           paddingBottom: insets.bottom + 40,
         }}
       >
-        {/* Hero Section Banner */}
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[styles.hero, { paddingTop: insets.top + 70, paddingBottom: 28 }]}
+          style={[DocumentStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
           resizeMode="cover"
         >
           <LinearGradient
-            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.75)']}
+            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)']}
             style={StyleSheet.absoluteFill}
           />
-          <View style={styles.heroContent}>
-            <View style={styles.quoteContainer}>
-              <Text
-                variant="headlineSmall"
-                style={[
-                  styles.heroTitle,
-                  { color: theme.dark ? theme.colors.primary : theme.colors.onSecondary },
-                ]}
-              >
-                {labels.title}
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={[
-                  styles.heroDescription,
-                  {
-                    color: theme.dark ? theme.colors.primary : theme.colors.onSecondary,
-                    opacity: 0.9,
-                  },
-                ]}
-              >
-                {labels.description}
-              </Text>
-            </View>
-          </View>
+          <Text
+            variant="headlineSmall"
+            style={[DocumentStyles.heroTitle, { color: '#FFFFFF' }]}
+          >
+            {labels.title}
+          </Text>
         </ImageBackground>
 
         {/* Content Body */}
@@ -123,7 +98,6 @@ export default function MeetOurTeamScreen() {
             <Text variant="titleLarge" style={[styles.sectionHeading, { color: theme.colors.onBackground }]}>
               {labels.staffHeader}
             </Text>
-            <Divider style={styles.headingDivider} />
           </View>
 
           {/* Cards for each team member */}
@@ -195,36 +169,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  hero: {
-    paddingHorizontal: 20,
-    paddingBottom: 28,
-    minHeight: 220,
-    justifyContent: 'center',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    overflow: 'hidden',
-  },
-  heroContent: {
-    zIndex: 1,
-  },
-  heroTitle: {
-    fontWeight: 'bold',
-    fontSize: 28,
-    lineHeight: 36,
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
   quoteContainer: {
     marginTop: 4,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     padding: 16,
     borderRadius: 8,
-  },
-  heroDescription: {
-    lineHeight: 22,
-    fontSize: 15,
   },
   body: {
     padding: 16,
@@ -239,6 +188,7 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     paddingTop: 16,
+    paddingBottom: 16,
   },
   cardSectionTitle: {
     fontWeight: 'bold',

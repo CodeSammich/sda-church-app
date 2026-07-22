@@ -69,7 +69,7 @@ export default function DiscoverScreen() {
         <View style={styles.grid}>
           <GridMenuCard
             title={labels.aboutSDA}
-            icon="pillar"
+            icon="cross"
             color={theme.colors.cardBgColors.aboutSDA}
             iconColor={theme.colors.iconColors.aboutSDA}
             onPress={() => router.push({ pathname: '/home/about-sda', params: { backTo: '/home/discover' } } as any)}
@@ -77,7 +77,7 @@ export default function DiscoverScreen() {
           />
           <GridMenuCard
             title={labels.aboutHistory}
-            icon="church"
+            icon="map-marker-path"
             color={theme.colors.cardBgColors.aboutHistory}
             iconColor={theme.colors.iconColors.aboutHistory}
             onPress={() => router.push({ pathname: '/home/about-my-church', params: { backTo: '/home/discover' } } as any)}
@@ -85,7 +85,7 @@ export default function DiscoverScreen() {
           />
           <GridMenuCard
             title={labels.meetTeam}
-            icon="account-group"
+            icon="card-account-phone"
             color={theme.colors.cardBgColors.meetTeam}
             iconColor={theme.colors.iconColors.meetTeam}
             onPress={() => router.push({ pathname: '/home/team', params: { backTo: '/home/discover' } } as any)}
@@ -93,7 +93,7 @@ export default function DiscoverScreen() {
           />
           <GridMenuCard
             title={labels.join}
-            icon="water"
+            icon="water-outline"
             color={theme.colors.cardBgColors.join}
             iconColor={theme.colors.iconColors.join}
             onPress={() => router.push({ pathname: '/home/baptism', params: { backTo: '/home/discover' } } as any)}

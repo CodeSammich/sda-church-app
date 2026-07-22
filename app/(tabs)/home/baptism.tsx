@@ -149,7 +149,7 @@ export default function BaptismScreen() {
           <Text
             variant="bodyMedium"
             style={{
-              color: theme.colors.onSurfaceVariant,
+              color: theme.colors.onSurface,
               marginBottom: 12,
               fontWeight: 'bold',
             }}
@@ -179,12 +179,13 @@ export default function BaptismScreen() {
                       </Text>
                     </View>
                   )}
-                  left={(props) => <List.Icon {...props} icon={point.icon} />}
+                  left={(props) => <List.Icon {...props} color={theme.colors.primary} icon={point.icon} />}
                   descriptionNumberOfLines={10}
                 />
                 {index < meaning.points.length - 1 && (
                   <List.Icon
                     icon="minus"
+                    color={theme.colors.primary}
                     style={{ alignSelf: 'center', height: 10, opacity: 0.1 }}
                   />
                 )}
@@ -208,7 +209,7 @@ export default function BaptismScreen() {
           </Text>
           <Text
             variant="bodyMedium"
-            style={{ marginBottom: 16, color: theme.colors.onSurfaceVariant }}
+            style={{ marginBottom: 16, color: theme.colors.onSurface}}
           >
             {pillars.intro}
           </Text>
@@ -256,7 +257,7 @@ export default function BaptismScreen() {
           </Text>
           <Text
             variant="bodyMedium"
-            style={{ marginBottom: 16, color: theme.colors.onSurfaceVariant }}
+            style={{ marginBottom: 16, color: theme.colors.onSurface}}
           >
             {joining.intro}
           </Text>
@@ -303,7 +304,7 @@ export default function BaptismScreen() {
             title={labels.vowsTitle}
             expanded={expanded === 'vows'}
             onPress={() => setExpanded(expanded === 'vows' ? null : 'vows')}
-            left={(props) => <List.Icon {...props} icon="check-decagram" />}
+            left={(props) => <List.Icon {...props} color={theme.colors.primary} icon="check-decagram" />}
             style={{ backgroundColor: theme.colors.surface }}
           >
             <Card style={DocumentStyles.card} mode="outlined">
@@ -323,7 +324,7 @@ export default function BaptismScreen() {
             onPress={() =>
               setExpanded(expanded === 'commandments' ? null : 'commandments')
             }
-            left={(props) => <List.Icon {...props} icon="script-text" />}
+            left={(props) => <List.Icon {...props} color={theme.colors.primary} icon="script-text" />}
             style={{ backgroundColor: theme.colors.surface }}
           >
             <Card style={DocumentStyles.card} mode="outlined">
@@ -362,7 +363,7 @@ export default function BaptismScreen() {
             title={labels.lifestyleTitle}
             expanded={expanded === 'lifestyle'}
             onPress={() => setExpanded(expanded === 'lifestyle' ? null : 'lifestyle')}
-            left={(props) => <List.Icon {...props} icon="heart-pulse" />}
+            left={(props) => <List.Icon {...props} color={theme.colors.primary} icon="heart-pulse" />}
             style={{ backgroundColor: theme.colors.surface }}
           >
             <Card style={DocumentStyles.card} mode="outlined">

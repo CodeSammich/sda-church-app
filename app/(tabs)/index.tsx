@@ -11,7 +11,6 @@ import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
 import { NavigationStyles } from '@/styles/NavigationStyles';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -24,7 +23,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Button, Card, Divider, List, Text } from 'react-native-paper';
+import { Button, Card, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -42,23 +41,17 @@ export default function HomeScreen() {
       readVerse: 'Read Verse',
       shareVerse: 'Share Verse',
       livestream: 'Watch Livestream',
-      aboutSDA: 'About Denomination',
-      aboutHistory: 'Locations & History',
       discover: 'Discover',
-      thisWeek: 'This Week',
-      contact: 'Connect with Us',
-      meetTeam: 'Meet Our Team',
-      join: 'Joining the Church',
       bulletin: 'Weekly Bulletin',
-      explore: 'Explore',
       give: 'Tithe & Offering',
       events: 'Upcoming Events',
       prayer: 'Prayer',
       sabbathStarts: 'Sabbath starts in',
       sabbathEnds: 'Sabbath ends in',
       isSabbath: 'Happy Sabbath!',
-      locationLocal: 'Location: Local',
-      locationDefault: 'Location: Elmhurst, NY',
+      // decided to remove the dynamic location since most people don't like to give away location
+      // instead, each congregation shuold adjust the code to use their own location coordinates
+      locationDefault: 'New York, NY',
     },
     zh: {
       welcome: '歡迎！',
@@ -67,23 +60,17 @@ export default function HomeScreen() {
       readVerse: '查閱經文',
       shareVerse: '分享經文',
       livestream: '觀看直播',
-      aboutSDA: '關於教派',
-      aboutHistory: '地點與歷史',
       discover: '探索',
-      thisWeek: '本週焦點',
-      contact: '聯繫我們',
-      meetTeam: '認識我們的團隊',
-      join: '加入教會',
       bulletin: '每週週報',
-      explore: '探索',
       give: '奉獻',
       events: '近期活動',
       prayer: '禱告',
       sabbathStarts: '距離安息日還有',
       sabbathEnds: '距離安息日結束還有',
       isSabbath: '安息日快樂！',
-      locationLocal: '位置：目前所在地',
-      locationDefault: '位置：紐約艾姆赫斯特',
+      // decided to remove the dynamic location since most people don't like to give away location
+      // instead, each congregation shuold adjust the code to use their own location coordinates
+      locationDefault: '紐約',
     },
     'zh-cn': {
       welcome: '欢迎！',
@@ -92,23 +79,15 @@ export default function HomeScreen() {
       readVerse: '查阅经文',
       shareVerse: '分享经文',
       livestream: '观看直播',
-      aboutSDA: '关于教派',
-      aboutHistory: '地点与历史',
       discover: '探索',
-      thisWeek: '本周焦点',
-      contact: '联系我们',
-      meetTeam: '认识我们的团队',
-      join: '加入教会',
       bulletin: '每周周报',
-      explore: '探索',
       give: '奉献',
       events: '近期活动',
       prayer: '祷告',
       sabbathStarts: '距离安息日还有',
       sabbathEnds: '距离安息日结束还有',
       isSabbath: '安息日快乐！',
-      locationLocal: '位置：当前所在地',
-      locationDefault: '位置：纽约艾姆赫斯特',
+      locationDefault: '纽约',
     },
     es: {
       welcome: '¡Bienvenido!',
@@ -117,23 +96,17 @@ export default function HomeScreen() {
       readVerse: 'Leer Versículo',
       shareVerse: 'Compartir',
       livestream: 'Ver Transmisión',
-      aboutSDA: 'Sobre la Denominación',
-      aboutHistory: 'Ubicaciones e Historia',
       discover: 'Descubrir',
-      thisWeek: 'Esta Semana',
-      contact: 'Conéctate con Nosotros',
-      meetTeam: 'Conoce a nuestro equipo',
-      join: 'Unirse a la Iglesia',
       bulletin: 'Boletín Semanal',
-      explore: 'Explorar',
       give: 'Diezmos y Ofrendas',
       events: 'Próximos Eventos',
       prayer: 'Oración',
       sabbathStarts: 'El Sábado comienza en',
       sabbathEnds: 'El Sábado termina en',
       isSabbath: '¡Feliz Sábado!',
-      locationLocal: 'Ubicación: Local',
-      locationDefault: 'Ubicación: Elmhurst, NY',
+      // decided to remove the dynamic location since most people don't like to give away location
+      // instead, each congregation shuold adjust the code to use their own location coordinates
+      locationDefault: 'New York, NY',
     },
   };
 
@@ -162,30 +135,34 @@ export default function HomeScreen() {
   const VOTD_CACHE_KEY = `votd_cache_${language}`;
 
   // Sabbath Countdown Logic
-  useEffect(() => {
-    // Detect Location via Web Geolocation API
-    if (Platform.OS === 'web' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // User allowed location
-          setUseGps(true);
-          setUserCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          // Permission denied or error
-          setUseGps(false);
-          console.log('Location access denied, falling back to Elmhurst.');
-        },
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 3600000 },
-      );
-    } else {
-      // Fallback for offline or unsupported browsers
-      setUseGps(false);
-    }
-  }, []);
+  // NOTE: There is nothing wrong with this logic itself, but after user testing it looks like most people turn off
+  // location tracking and there is not much demand. Instead, it may be better to let each congregation
+  // hard code their location coordinates. I've left this code in case people want to use it.
+  // All you need to do is add a local-set of labels and a conditional check on the timer display text below.
+  // useEffect(() => {
+  //   // Detect Location via Web Geolocation API
+  //   if (Platform.OS === 'web' && 'geolocation' in navigator) {
+  //     navigator.geolocation.getCurrentPosition(
+  //       (position) => {
+  //         // User allowed location
+  //         setUseGps(true);
+  //         setUserCoords({
+  //           lat: position.coords.latitude,
+  //           lng: position.coords.longitude,
+  //         });
+  //       },
+  //       (error) => {
+  //         // Permission denied or error
+  //         setUseGps(false);
+  //         console.log('Location access denied, falling back to New York.');
+  //       },
+  //       { enableHighAccuracy: false, timeout: 5000, maximumAge: 3600000 },
+  //     );
+  //   } else {
+  //     // Fallback for offline or unsupported browsers
+  //     setUseGps(false);
+  //   }
+  // }, []);
 
   useEffect(() => {
     const fetchSunsets = async () => {
@@ -509,12 +486,6 @@ export default function HomeScreen() {
         </ImageBackground>
 
         <List.Section style={NavigationStyles.contentContainer}>
-          <List.Subheader
-            style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
-          >
-            {labels.thisWeek}
-          </List.Subheader>
-
           {/* Sabbath Countdown Widget */}
           <Card
             style={[styles.timerCard, { backgroundColor: theme.colors.surface }]}
@@ -534,7 +505,7 @@ export default function HomeScreen() {
                   </Text>
                   {targetDate && (
                     <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                      {formatDisplayDate(targetDate)}
+                      {`${formatDisplayDate(targetDate)} — ${labels.locationDefault}`}
                     </Text>
                   )}
                 </View>
@@ -547,57 +518,17 @@ export default function HomeScreen() {
                   {countdown || '--:--:--'}
                 </Text>
               </View>
-
-              <Divider style={{ marginVertical: 8, opacity: 0.5 }} />
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, fontStyle: 'italic' }}>
-                  {useGps ? labels.locationLocal : labels.locationDefault}
-                </Text>
-                <Button
-                  mode="text"
-                  compact
-                  icon="video-outline"
-                  onPress={openSabbathStream}
-                  textColor={theme.colors.primary}
-                  labelStyle={{ fontSize: 12, marginHorizontal: 0 }}
-                >
-                  {labels.livestream}
-                </Button>
-              </View>
             </Card.Content>
           </Card>
 
-          <List.Subheader
-            style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
-          >
-            {labels.explore}
-          </List.Subheader>
           <View style={styles.grid}>
             <GridMenuCard
-              title={labels.aboutSDA}
-              icon="cross"
-              color={theme.colors.cardBgColors.aboutSDA}
-              iconColor={theme.colors.iconColors.aboutSDA}
-              onPress={() =>
-                router.push({
-                  pathname: '/home/about-sda',
-                  params: { backTo: '/' },
-                } as any)
-              }
-              style={styles.gridCell}
-            />
-            <GridMenuCard
-              title={labels.aboutHistory}
-              icon="map-marker-path"
-              color={theme.colors.cardBgColors.aboutHistory}
-              iconColor={theme.colors.iconColors.aboutHistory}
-              onPress={() =>
-                router.push({
-                  pathname: '/home/about-my-church',
-                  params: { backTo: '/' },
-                } as any)
-              }
+              title={labels.livestream}
+              subtitle={(labels as any).liveNow}
+              icon="youtube"
+              color={theme.colors.cardBgColors.livestream}
+              iconColor={theme.colors.iconColors.livestream}
+              onPress={openSabbathStream}
               style={styles.gridCell}
             />
             <GridMenuCard
@@ -614,65 +545,13 @@ export default function HomeScreen() {
               style={styles.gridCell}
             />
             <GridMenuCard
-              title={labels.contact}
-              icon="card-account-phone"
-              color={theme.colors.cardBgColors.meetTeam}
-              iconColor={theme.colors.iconColors.meetTeam}
-              onPress={() =>
-                router.push({
-                  pathname: '/home/contact',
-                  params: { backTo: '/' },
-                } as any)
-              }
-              style={styles.gridCell}
-            />
-            <GridMenuCard
-              title={labels.meetTeam}
-              icon="account-group"
-              color={theme.colors.cardBgColors.meetTeam}
-              iconColor={theme.colors.iconColors.meetTeam}
-              onPress={() =>
-                router.push({
-                  pathname: '/home/team',
-                  params: { backTo: '/' },
-                } as any)
-              }
-              style={styles.gridCell}
-            />
-            <GridMenuCard
-              title={labels.join}
-              icon="water-outline"
-              color={theme.colors.cardBgColors.join}
-              iconColor={theme.colors.iconColors.join}
-              onPress={() =>
-                router.push({
-                  pathname: '/home/baptism',
-                  params: { backTo: '/' },
-                } as any)
-              }
-              style={styles.gridCell}
-            />
-            <GridMenuCard
               title={labels.give}
-              icon="heart"
+              icon="hand-heart-outline"
               color={theme.colors.cardBgColors.tithe}
               iconColor={theme.colors.iconColors.tithe}
               onPress={() =>
                 router.push({
                   pathname: '/home/give',
-                  params: { backTo: '/' },
-                } as any)
-              }
-              style={styles.gridCell}
-            />
-            <GridMenuCard
-              title={labels.events}
-              icon="calendar"
-              color={theme.colors.cardBgColors.events}
-              iconColor={theme.colors.iconColors.events}
-              onPress={() =>
-                router.push({
-                  pathname: '/home/events',
                   params: { backTo: '/' },
                 } as any)
               }
@@ -686,6 +565,19 @@ export default function HomeScreen() {
               onPress={() =>
                 router.push({
                   pathname: '/home/prayer',
+                  params: { backTo: '/' },
+                } as any)
+              }
+              style={styles.gridCell}
+            />
+            <GridMenuCard
+              title={labels.events}
+              icon="calendar"
+              color={theme.colors.cardBgColors.events}
+              iconColor={theme.colors.iconColors.events}
+              onPress={() =>
+                router.push({
+                  pathname: '/home/events',
                   params: { backTo: '/' },
                 } as any)
               }

@@ -12,9 +12,11 @@ import {
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { DocumentStyles } from '@/styles/DocumentStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Divider, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,7 +29,7 @@ const allLabels = {
     foodBankDesc: 'We are actively seeking partnerships to expand our food bank program, with the goal of providing free meals to our neighbors and local communities. If you are interested in partnering with us, please don’t hesitate to reach out!',
     elmhurstHeader: 'Elmhurst, Queens',
     elmhurstVerse: '“These commandments that I give you today are to be on your hearts. Impress them on your children. Talk about them when you sit at home and when you walk along the road, when you lie down and when you get up.”',
-    elmhurstRef: 'Deuteronomy 6:6-7 (NIV)',
+    elmhurstRef: 'Deuteronomy 6:6-7',
     elmhurstDesc: 'In Elmhurst, we offer vibrant in-person ministries for young adults, providing opportunities for spiritual growth, fellowship, and community engagement. Our young adult’s ministry focuses on nurturing faith through interactive learning and activities, deepening our relationship with God. All services at this location are offered in Chinese and English.',
     elmhurstWorshipTitle: 'Sabbath Worship',
     elmhurstWorshipDesc: 'Saturday: 10:00 AM - 1:00 PM • Join us for song service, Sabbath school, and our weekly main worship service.',
@@ -40,8 +42,8 @@ const allLabels = {
     elmhurstBaptismDesc: 'We also offer baptism classes for those who are willing and ready to give their life to Christ, guiding you through the steps of faith and commitment.',
     elmhurstOutreach: 'We encourage you to reach out if you have any questions or would like to get involved. We are here to support you on your spiritual journey.',
     flushingHeader: 'Flushing, Queens',
-    flushingVerse: '“That each of them may eat and drink, and find satisfaction in all their toil—this is the gift of God.”',
-    flushingRef: 'Ecclesiastes 3:13 (NIV)',
+    flushingVerse: '“That each of them may eat and drink, and find satisfaction in all their toil — this is the gift of God.”',
+    flushingRef: 'Ecclesiastes 3:13',
     flushingDesc: 'In Flushing, we hold a Mandarin-only gathering. This gathering offers a space for fellowship, Bible study, and spiritual growth in a Mandarin-speaking environment.',
     flushingWeeklyTitle: 'Mandarin-Only Gathering',
     flushingWeeklyDesc: 'Thursday: 6:30 - 9:00 PM • Basement',
@@ -200,35 +202,62 @@ export default function FellowshipsAndFoodScreen() {
         }}
       >
         {/* Hero Section Banner */}
-        <Card style={styles.sectionCard} mode="outlined">
-          <Card.Cover source={{ uri: FELLOWSHIP_IMAGES_URLS[0] }} style={styles.heroImage} />
-          <View style={styles.heroQuoteBox}>
+        <ImageBackground
+          source={{ uri: FELLOWSHIP_IMAGES_URLS[0] }}
+          style={[DocumentStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)']}
+            style={StyleSheet.absoluteFill}
+          />
           <Text
-            variant="bodyMedium"
-            style={[
-              styles.heroQuote,
-              { color: theme.dark ? theme.colors.primary : theme.colors.onSecondary },
-            ]}
+            variant="headlineSmall"
+            style={[DocumentStyles.heroTitle, { color: '#FFFFFF' }]}
           >
-            {labels.expansionVerse}
+            {labels.title}
           </Text>
-          <Text
-            variant="labelSmall"
-            style={[
-              styles.heroRef,
-              {
-                color: theme.dark ? theme.colors.primary : theme.colors.onSecondary,
-                opacity: 0.9,
-              },
-            ]}
-          >
-            — {labels.expansionRef}
-          </Text>
-        </View>
-        </Card>
+        </ImageBackground>
+        {/* Hero Section Banner */}
 
         {/* Content Body */}
         <View style={styles.body}>
+          <Card
+            style={[
+              DocumentStyles.card,
+              {
+                backgroundColor: theme.colors.surfaceVariant,
+                borderLeftWidth: 4,
+                borderLeftColor: theme.colors.secondary,
+                marginBottom: 16,
+              },
+            ]}
+            mode="contained"
+          >
+            <Card.Content>
+              <Text
+                variant="bodyMedium"
+                style={{
+                  fontStyle: 'italic',
+                  color: theme.colors.onSurfaceVariant,
+                  textAlign: 'center',
+                }}
+              >
+                {labels.expansionVerse}
+              </Text>
+              <Text
+                variant="labelMedium"
+                style={{
+                  textAlign: 'right',
+                  marginTop: 8,
+                  fontWeight: 'bold',
+                  color: theme.colors.onSurfaceVariant,
+                }}
+              >
+                — {labels.expansionRef}
+              </Text>
+            </Card.Content>
+          </Card>
 
           {/* Food Bank Program */}
           <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} mode="outlined">
@@ -247,7 +276,6 @@ export default function FellowshipsAndFoodScreen() {
                 {labels.foodBankDesc}
               </Text>
             </Card.Content>
-            <Divider style={{ marginHorizontal: 16 }} />
             <Card.Actions style={styles.actionsRow}>
               <Button
                 icon="email-outline"
@@ -362,7 +390,6 @@ export default function FellowshipsAndFoodScreen() {
                 {labels.elmhurstOutreach}
               </Text>
             </Card.Content>
-            <Divider style={{ marginHorizontal: 16 }} />
             <Card.Actions style={styles.actionsRow}>
               <Button
                 icon="email-outline"
@@ -444,7 +471,6 @@ export default function FellowshipsAndFoodScreen() {
                 </Text>
               </View>
             </Card.Content>
-            <Divider style={{ marginHorizontal: 16 }} />
             <Card.Actions style={styles.actionsRow}>
               <Button
                 icon="email-outline"
