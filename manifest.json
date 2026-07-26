@@ -20,7 +20,6 @@
   ],
   "start_url": "/sda-church-app/",
   "display": "fullscreen",
-  "display_override": ["fullscreen", "standalone"],
   "orientation": "portrait",
   "scope": "/sda-church-app/"
 }
