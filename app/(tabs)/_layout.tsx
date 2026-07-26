@@ -35,7 +35,14 @@ export default function TabLayout() {
   const theme = useAppTheme();
   const { language } = useContext(LanguageContext);
   const insets = useSafeAreaInsets();
-  const [tabBarHeight, setTabBarHeight] = useState(49 + insets.bottom);
+  const usesChineseLabels = language === 'zh' || language === 'zh-cn';
+  // CJK glyphs use more of the font's vertical bounds than Latin glyphs. Give
+  // them an explicit line box and enough bar height so their tops/bottoms are
+  // not clipped by React Navigation's 49px default tab bar.
+  const tabBarBaseHeight = usesChineseLabels ? 55 : 49;
+  const [tabBarHeight, setTabBarHeight] = useState(
+    tabBarBaseHeight + insets.bottom,
+  );
 
   // Reader Mode state shared with child screens
   const menuAnim = useRef(new Animated.Value(1)).current;
@@ -116,10 +123,14 @@ export default function TabLayout() {
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
           tabBarStyle: {
+            height: tabBarBaseHeight + insets.bottom,
             elevation: 0,
             backgroundColor: 'transparent',
             borderTopWidth: 0,
           },
+          tabBarLabelStyle: usesChineseLabels
+            ? styles.chineseTabBarLabel
+            : undefined,
           tabBarBackground: () => (
             <View
               style={[
@@ -208,3 +219,9 @@ export default function TabLayout() {
     </UIStateContext.Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  chineseTabBarLabel: {
+    lineHeight: 16,
+  },
+});
