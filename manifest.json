@@ -19,7 +19,7 @@
     }
   ],
   "start_url": "/sda-church-app/",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "scope": "/sda-church-app/"
 }
