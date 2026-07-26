@@ -1,18 +1,20 @@
 import { UpdateContext } from '@/app/_layout';
 import { MenuCard } from '@/components/MenuCard';
+import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { ThemeContext, useAppTheme } from '@/constants/Themes';
 import packageJson from '@/package.json';
 import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ImageBackground, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { List, Switch, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const allLabels = {
   en: {
+    title: 'You',
     settings: 'Settings',
     darkMode: 'Dark Mode',
     darkModeSub: 'Toggle between light and dark themes',
@@ -26,6 +28,7 @@ const allLabels = {
     legalSub: 'Terms of use and data attribution (English only)',
   },
   zh: {
+    title: '您',
     settings: '設定',
     darkMode: '深色模式',
     darkModeSub: '切換淺色和深色主題',
@@ -39,6 +42,7 @@ const allLabels = {
     legalSub: '使用條款與資料歸屬 (僅限英文)',
   },
   'zh-cn': {
+    title: '您',
     settings: '设置',
     darkMode: '深色模式',
     darkModeSub: '切换浅色和深色主题',
@@ -52,6 +56,7 @@ const allLabels = {
     legalSub: '使用条款与数据归属 (仅限英文)',
   },
   es: {
+    title: 'Tú',
     settings: 'Ajustes',
     darkMode: 'Modo Oscuro',
     darkModeSub: 'Alternar entre temas claros y oscuros',
@@ -72,90 +77,111 @@ export default function YouScreen() {
   const { toggleTheme } = useContext(ThemeContext);
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.settings }} />
+      <Stack.Screen options={{ title: labels.title }} />
       <ScrollView
         style={NavigationStyles.container}
-        contentContainerStyle={[
-          NavigationStyles.contentContainer,
-          { paddingTop: headerHeight },
-        ]}
+        contentContainerStyle={{ paddingBottom: 80 }}
       >
-        <List.Section>
-          <List.Subheader
-            style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[
+            NavigationStyles.heroHeader,
+            { paddingTop: insets.top + 70, paddingBottom: 24 },
+          ]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text
+            variant="headlineSmall"
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
-            {labels.settings}
-          </List.Subheader>
-          <MenuCard
-            title={labels.darkMode}
-            description={labels.darkModeSub}
-            icon="theme-light-dark"
-            iconColor={theme.colors.primary} // Use primary color for dark mode toggle
-            rightElement={() => (
-              <Switch
-                value={theme.dark}
-                onValueChange={toggleTheme}
-                color={theme.colors.primary}
-              />
-            )}
-            onPress={() => toggleTheme()}
-          />
-          <MenuCard
-            title={labels.language}
-            description={labels.languageSub}
-            icon="translate"
-            iconColor={theme.colors.tertiary}
-            onPress={() =>
-              router.push({
-                pathname: '/you/language',
-                params: { backTo: '/you' },
-              } as any)
-            }
-          />
-          <MenuCard
-            title={labels.privacy}
-            description={labels.privacySub}
-            icon="shield-account"
-            iconColor={theme.colors.secondary}
-            onPress={() =>
-              router.push({
-                pathname: '/you/privacy',
-                params: { backTo: '/you' },
-              } as any)
-            }
-          />
-          <MenuCard
-            title={labels.legal}
-            description={labels.legalSub}
-            icon="file-document-outline"
-            iconColor={theme.colors.secondary}
-            onPress={() =>
-              router.push({
-                pathname: '/you/legal',
-                params: { backTo: '/you' },
-              } as any)
-            }
-          />
-        </List.Section>
+            {labels.title}
+          </Text>
+        </ImageBackground>
 
-        <View style={styles.footer}>
-          <TouchableRipple
-            onPress={Platform.OS === 'web' ? () => onManualCheck() : undefined}
-            disabled={updateStatus !== 'idle'}
-            style={styles.versionRipple}
-          >
-            <Text
-              variant="labelSmall"
-              style={[styles.versionText, { color: theme.colors.onSurfaceVariant }]}
+        <View style={styles.body}>
+          <List.Section>
+            <List.Subheader
+              style={[
+                NavigationStyles.subheader,
+                { color: theme.colors.onBackground },
+              ]}
             >
-              Version {packageJson.version}
-            </Text>
-          </TouchableRipple>
+              {labels.settings}
+            </List.Subheader>
+            <MenuCard
+              title={labels.darkMode}
+              description={labels.darkModeSub}
+              icon="theme-light-dark"
+              iconColor={theme.colors.primary} // Use primary color for dark mode toggle
+              rightElement={() => (
+                <Switch
+                  value={theme.dark}
+                  onValueChange={toggleTheme}
+                  color={theme.colors.primary}
+                />
+              )}
+              onPress={() => toggleTheme()}
+            />
+            <MenuCard
+              title={labels.language}
+              description={labels.languageSub}
+              icon="translate"
+              iconColor={theme.colors.tertiary}
+              onPress={() =>
+                router.push({
+                  pathname: '/you/language',
+                  params: { backTo: '/you' },
+                } as any)
+              }
+            />
+            <MenuCard
+              title={labels.privacy}
+              description={labels.privacySub}
+              icon="shield-account"
+              iconColor={theme.colors.secondary}
+              onPress={() =>
+                router.push({
+                  pathname: '/you/privacy',
+                  params: { backTo: '/you' },
+                } as any)
+              }
+            />
+            <MenuCard
+              title={labels.legal}
+              description={labels.legalSub}
+              icon="file-document-outline"
+              iconColor={theme.colors.secondary}
+              onPress={() =>
+                router.push({
+                  pathname: '/you/legal',
+                  params: { backTo: '/you' },
+                } as any)
+              }
+            />
+          </List.Section>
+
+          <View style={styles.footer}>
+            <TouchableRipple
+              onPress={Platform.OS === 'web' ? () => onManualCheck() : undefined}
+              disabled={updateStatus !== 'idle'}
+              style={styles.versionRipple}
+            >
+              <Text
+                variant="labelSmall"
+                style={[styles.versionText, { color: theme.colors.onSurfaceVariant }]}
+              >
+                Version {packageJson.version}
+              </Text>
+            </TouchableRipple>
+          </View>
         </View>
       </ScrollView>
     </>
@@ -163,6 +189,9 @@ export default function YouScreen() {
 }
 
 const styles = StyleSheet.create({
+  body: {
+    paddingHorizontal: 20,
+  },
   footer: {
     marginTop: 32,
     marginBottom: 48,

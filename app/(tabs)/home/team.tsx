@@ -9,6 +9,7 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { TEAM_MEMBERS } from '@/constants/TeamData';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { NavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -23,11 +24,11 @@ export default function MeetOurTeamScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
       title: 'Meet Our Team',
-      staffHeader: 'Staff',
       seniorPastor: 'Senior Pastor',
       bibleWorker: 'Bible Worker',
       childrensMinistry: "Children's Ministry",
@@ -36,7 +37,6 @@ export default function MeetOurTeamScreen() {
     },
     zh: {
       title: '認識我們的團隊',
-      staffHeader: '教牧團隊',
       seniorPastor: '主任牧師',
       bibleWorker: '聖經助理',
       childrensMinistry: '兒童事工',
@@ -45,7 +45,6 @@ export default function MeetOurTeamScreen() {
     },
     'zh-cn': {
       title: '认识我们的团队',
-      staffHeader: '教牧团队',
       seniorPastor: '主任牧师',
       bibleWorker: '圣经助理',
       childrensMinistry: '儿童事工',
@@ -54,7 +53,6 @@ export default function MeetOurTeamScreen() {
     },
     es: {
       title: 'Conoce a nuestro equipo',
-      staffHeader: 'Personal',
       seniorPastor: 'Pastor Principal',
       bibleWorker: 'Obrero Bíblico',
       childrensMinistry: 'Ministerio Infantil',
@@ -67,16 +65,23 @@ export default function MeetOurTeamScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingBottom: insets.bottom + 40,
         }}
       >
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          style={[
+            NavigationStyles.heroHeader,
+            { paddingTop: insets.top + 70, paddingBottom: 24 },
+          ]}
           resizeMode="cover"
         >
           <LinearGradient
@@ -93,13 +98,6 @@ export default function MeetOurTeamScreen() {
 
         {/* Content Body */}
         <View style={styles.body}>
-          {/* Section Header */}
-          <View style={styles.sectionHeaderContainer}>
-            <Text variant="titleLarge" style={[styles.sectionHeading, { color: theme.colors.onBackground }]}>
-              {labels.staffHeader}
-            </Text>
-          </View>
-
           {/* Cards for each team member */}
           {TEAM_MEMBERS.map((member, index) => (
             <Card
@@ -126,7 +124,10 @@ export default function MeetOurTeamScreen() {
                 </Text>
                 <Text
                   variant="bodyMedium"
-                  style={[styles.cardDescription, { color: theme.colors.onSurfaceVariant }]}
+                  style={[
+                    styles.cardDescription,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
                 >
                   {member.description[language as keyof typeof allLabels] ||
                     member.description.en}
@@ -140,7 +141,10 @@ export default function MeetOurTeamScreen() {
                       icon="email-outline"
                       mode="contained"
                       onPress={() => openEmail(CHURCH_EMAIL)}
-                      style={[styles.actionButton, { backgroundColor: theme.colors.tertiary }]}
+                      style={[
+                        styles.actionButton,
+                        { backgroundColor: theme.colors.tertiary },
+                      ]}
                       labelStyle={{ color: theme.colors.onSecondary }}
                     >
                       {labels.email}
@@ -149,7 +153,10 @@ export default function MeetOurTeamScreen() {
                       icon="phone"
                       mode="outlined"
                       onPress={() => openPhone(CHURCH_PHONE)}
-                      style={[styles.actionButton, { borderColor: theme.colors.tertiary }]}
+                      style={[
+                        styles.actionButton,
+                        { borderColor: theme.colors.tertiary },
+                      ]}
                       textColor={theme.colors.tertiary}
                     >
                       {labels.call}

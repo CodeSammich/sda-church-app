@@ -2,6 +2,7 @@ import { CHURCH_BUILDING_IMAGE_URL, openBeliefs } from '@/constants/ExternalLink
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { NavigationStyles } from '@/styles/NavigationStyles';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -18,6 +19,7 @@ export default function AboutSDAScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
@@ -320,9 +322,13 @@ export default function AboutSDAScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={DocumentStyles.container}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingTop: 0,
           paddingBottom: insets.bottom + 50,

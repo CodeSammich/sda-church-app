@@ -2,6 +2,7 @@ import { MenuCard } from '@/components/MenuCard';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { NavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +16,7 @@ export default function WeeklyBulletinScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
@@ -128,15 +130,22 @@ export default function WeeklyBulletinScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title }} />
+      <Stack.Screen
+        options={{ title: labels.title, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={DocumentStyles.container}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{ paddingTop: 0 }}
       >
         {/* Hero */}
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          style={[
+            NavigationStyles.heroHeader,
+            { paddingTop: insets.top + 70, paddingBottom: 24 },
+          ]}
           resizeMode="cover"
         >
           <LinearGradient
@@ -153,15 +162,7 @@ export default function WeeklyBulletinScreen() {
 
         {/* Body */}
         <View style={DocumentStyles.section}>
-          <Text
-            variant="headlineSmall"
-            style={[DocumentStyles.docTitle, { color: theme.colors.onSurface }]}
-          >
-            {labels.title}
-          </Text>
-          <Text
-            style={[DocumentStyles.description, { color: theme.colors.onSurface }]}
-          >
+          <Text style={[DocumentStyles.description, { color: theme.colors.onSurface }]}>
             {labels.description}
           </Text>
 
@@ -228,7 +229,6 @@ export default function WeeklyBulletinScreen() {
             }
           />
         </List.Section>
-
       </ScrollView>
     </>
   );

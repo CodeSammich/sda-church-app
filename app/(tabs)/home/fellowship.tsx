@@ -1,4 +1,5 @@
 import { MenuCard } from '@/components/MenuCard';
+import { VerseHero } from '@/components/VerseHero';
 import {
   CHURCH_EMAIL,
   CHURCH_PHONE,
@@ -10,14 +11,11 @@ import {
   openZoomClass,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
-import { DocumentStyles } from '@/styles/DocumentStyles';
-import { NavigationStyles } from '@/styles/NavigationStyles';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Divider, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,7 +28,7 @@ const allLabels = {
     foodBankDesc: 'We are actively seeking partnerships to expand our food bank program, with the goal of providing free meals to our neighbors and local communities. If you are interested in partnering with us, please don’t hesitate to reach out!',
     elmhurstHeader: 'Elmhurst, Queens',
     elmhurstVerse: '“These commandments that I give you today are to be on your hearts. Impress them on your children. Talk about them when you sit at home and when you walk along the road, when you lie down and when you get up.”',
-    elmhurstRef: 'Deuteronomy 6:6-7',
+    elmhurstRef: 'Deuteronomy 6:6-7 (NIV)',
     elmhurstDesc: 'In Elmhurst, we offer vibrant in-person ministries for young adults, providing opportunities for spiritual growth, fellowship, and community engagement. Our young adult’s ministry focuses on nurturing faith through interactive learning and activities, deepening our relationship with God. All services at this location are offered in Chinese and English.',
     elmhurstWorshipTitle: 'Sabbath Worship',
     elmhurstWorshipDesc: 'Saturday: 10:00 AM - 1:00 PM • Join us for song service, Sabbath school, and our weekly main worship service.',
@@ -44,7 +42,7 @@ const allLabels = {
     elmhurstOutreach: 'We encourage you to reach out if you have any questions or would like to get involved. We are here to support you on your spiritual journey.',
     flushingHeader: 'Flushing, Queens',
     flushingVerse: '“That each of them may eat and drink, and find satisfaction in all their toil — this is the gift of God.”',
-    flushingRef: 'Ecclesiastes 3:13',
+    flushingRef: 'Ecclesiastes 3:13 (NIV)',
     flushingDesc: 'In Flushing, we hold a Mandarin-only gathering. This gathering offers a space for fellowship, Bible study, and spiritual growth in a Mandarin-speaking environment.',
     flushingWeeklyTitle: 'Mandarin-Only Gathering',
     flushingWeeklyDesc: 'Thursday: 6:30 - 9:00 PM • Basement',
@@ -65,12 +63,12 @@ const allLabels = {
   zh: {
     title: '團契與食品事工',
     expansionVerse: '「因為我餓了，你們給我吃；渴了，你們給我喝；我作客旅，你們留我住；我赤身露體，你們給我穿；我病了，你們看顧我；我在監裡，你們來看我。」',
-    expansionRef: '馬太福音 25:35-36 (和合本)',
+    expansionRef: '馬太福音 25:35-36 (CUV)',
     foodBankTitle: '食品庫夥伴關係',
     foodBankDesc: '我們正積極尋求合作夥伴以擴大我們的食品庫計劃，目標是向鄰里和當地社區提供免費膳食。如果您有興趣與我們合作，請隨時與我們聯繫！',
     elmhurstHeader: '艾姆赫斯特 (Queens)',
     elmhurstVerse: '「我今日所吩咐你的話都要記在心上，也要慇勤教訓你的兒女。無論你坐在家裡，行在路上，躺下，起來，都要談論。」',
-    elmhurstRef: '申命記 6:6-7 (和合本)',
+    elmhurstRef: '申命記 6:6-7 (CUV)',
     elmhurstDesc: '在艾姆赫斯特，我們為年輕人提供充滿活力的實體事工，提供屬靈成長、團契和社區參與的機會。我們的青年事工專注於透過互動學習和活動來培育信仰，深化我們與上帝的關係。該地點的所有服務均提供中文和英文。',
     elmhurstWorshipTitle: '安息日崇拜',
     elmhurstWorshipDesc: '星期六上午 10:00 - 下午 1:00 • 歡迎參加我們的讚美詩歌、安息日學與每週的主日崇拜服務。',
@@ -84,7 +82,7 @@ const allLabels = {
     elmhurstOutreach: '如果您有任何問題或想參與其中，我們鼓勵您與我們聯繫。我們在這裡支持您的屬靈旅程。',
     flushingHeader: '法拉盛 (Queens)',
     flushingVerse: '「並且人人吃喝，在他一切勞碌中享福，這也是神的恩賜。」',
-    flushingRef: '傳道書 3:13 (和合本)',
+    flushingRef: '傳道書 3:13 (CUV)',
     flushingDesc: '在法拉盛，我們舉辦僅限國語的聚會。此聚會在國語環境中為團契、查經和屬靈成長提供空間。',
     flushingWeeklyTitle: '國語聚會',
     flushingWeeklyDesc: '星期四晚上 6:30 - 9:00 • 地下室',
@@ -105,12 +103,12 @@ const allLabels = {
   'zh-cn': {
     title: '团契与食品事工',
     expansionVerse: '“因为我饿了，你们给我吃；渴了，你们给我喝；我作客旅，你们留我住；我赤身露体，你们给我穿；我病了，你们看顾我；我在监里，你们来看我。”',
-    expansionRef: '马太福音 25:35-36 (和合本)',
+    expansionRef: '马太福音 25:35-36 (CUVS)',
     foodBankTitle: '食品库合作伙伴关系',
     foodBankDesc: '我们正积极寻求合作伙伴以扩大我们的食品库计划，目标是向邻里和当地社区提供免费膳食。如果您有兴趣与我们合作，请随时与我们联系！',
     elmhurstHeader: '艾姆赫斯特 (Queens)',
     elmhurstVerse: '“我今日所吩咐你的话都要记在心上，也要殷勤教训你的儿女。无论你坐在家里，行在路上，躺下，起来，都要谈论。”',
-    elmhurstRef: '申命记 6:6-7 (和合本)',
+    elmhurstRef: '申命记 6:6-7 (CUVS)',
     elmhurstDesc: '在艾姆赫斯特，我们为年轻人提供充满活力的实体事工，提供属灵成长、团契 and 社区参与的机会。我们的青年事工专注于通过互动学习和活动来培育信仰，深化我们与上帝的关系。该地点的所有服务均提供中文和英文。',
     elmhurstWorshipTitle: '安息日崇拜',
     elmhurstWorshipDesc: '星期六上午 10:00 - 下午 1:00 • 欢迎参加我们的赞美诗歌、安息日学与每周的主日崇拜服务。',
@@ -124,7 +122,7 @@ const allLabels = {
     elmhurstOutreach: '如果您有任何问题或想参与其中，我们鼓励您与我们联系。我们在这里支持您的属灵旅程。',
     flushingHeader: '法拉盛 (Queens)',
     flushingVerse: '“并且人人吃喝，在他一切劳碌中享福，这也是神的赐予。”',
-    flushingRef: '传道书 3:13 (和合本)',
+    flushingRef: '传道书 3:13 (CUVS)',
     flushingDesc: '在法拉盛，我们举办仅限国语的聚会。此聚会在国语环境中为团契、查经和属灵成长提供空间。',
     flushingWeeklyTitle: '国语聚会',
     flushingWeeklyDesc: '星期四晚上 6:30 - 9:00 • 地下室',
@@ -189,77 +187,35 @@ export default function FellowshipsAndFoodScreen() {
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
-  
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
+
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingBottom: insets.bottom + 40,
         }}
       >
-        {/* Hero Section Banner */}
-        <ImageBackground
-          source={{ uri: FELLOWSHIP_IMAGES_URLS[0] }}
-          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
-          resizeMode="cover"
-        >
-          <LinearGradient
-            colors={theme.gradients.heroOverlay}
-            style={StyleSheet.absoluteFill}
-          />
-          <Text
-            variant="headlineSmall"
-            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
-          >
-            {labels.title}
-          </Text>
-        </ImageBackground>
-        {/* Hero Section Banner */}
+        <VerseHero
+          title={labels.title}
+          verse={labels.expansionVerse}
+          reference={labels.expansionRef}
+          imageSource={{ uri: FELLOWSHIP_IMAGES_URLS[0] }}
+          verseColors={theme.dark
+            ? ['#241C3D', '#38245E', '#44306B']
+            : ['#312E81', '#5B21B6', '#7C3AED']}
+        />
 
         {/* Content Body */}
         <View style={styles.body}>
-          <Card
-            style={[
-              DocumentStyles.card,
-              {
-                backgroundColor: theme.colors.surfaceVariant,
-                borderLeftWidth: 4,
-                borderLeftColor: theme.colors.secondary,
-                marginBottom: 16,
-              },
-            ]}
-            mode="contained"
-          >
-            <Card.Content>
-              <Text
-                variant="bodyMedium"
-                style={{
-                  fontStyle: 'italic',
-                  color: theme.colors.onSurfaceVariant,
-                  textAlign: 'center',
-                }}
-              >
-                {labels.expansionVerse}
-              </Text>
-              <Text
-                variant="labelMedium"
-                style={{
-                  textAlign: 'right',
-                  marginTop: 8,
-                  fontWeight: 'bold',
-                  color: theme.colors.onSurfaceVariant,
-                }}
-              >
-                — {labels.expansionRef}
-              </Text>
-            </Card.Content>
-          </Card>
-
           {/* Food Bank Program */}
           <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} mode="outlined">
             <Card.Cover source={{ uri: FOOD_BANK_IMAGE_URL }} style={styles.cardCover} />

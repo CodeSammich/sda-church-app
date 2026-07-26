@@ -5,7 +5,12 @@ import { FlatList, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, Vi
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getSortedHymns, HydratedHymn, openHymnal } from '@/constants/EnglishHymnal';
+import {
+  formatHymnalScriptureReference,
+  getSortedHymns,
+  HydratedHymn,
+  openHymnal,
+} from '@/constants/EnglishHymnal';
 import { CHURCH_BUILDING_IMAGE_URL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
@@ -204,7 +209,7 @@ export default function HymnalScreen() {
                     numberOfLines={1}
                     style={[styles.buttonText, { color: theme.colors.primary }]}
                   >
-                    {item.scriptureReference}
+                    {formatHymnalScriptureReference(item.scriptureReference)}
                   </Text>
                 </View>
               </TouchableRipple>

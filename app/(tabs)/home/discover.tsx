@@ -2,6 +2,7 @@ import { GridMenuCard } from '@/components/GridMenuCard';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { NavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +17,7 @@ export default function DiscoverScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
@@ -60,8 +62,13 @@ export default function DiscoverScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title }} />
-      <ScrollView style={DocumentStyles.container} contentContainerStyle={{ paddingTop: headerHeight }}>
+      <Stack.Screen options={{ title: labels.title, showTitleChip: showHeaderTitle } as any} />
+      <ScrollView
+        style={DocumentStyles.container}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: headerHeight }}
+      >
         {/* Hero */}
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}

@@ -31,8 +31,6 @@ export default function HomeScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
 
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
-
   const allLabels = {
     en: {
       welcome: 'Welcome!',
@@ -418,7 +416,13 @@ export default function HomeScreen() {
       >
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[styles.hero, { paddingTop: insets.top + 70, paddingBottom: 28 }]}
+          style={[
+            styles.hero,
+            {
+              paddingTop: insets.top + DESIGN_TOKENS.VIEW_PADDING,
+              paddingBottom: 28,
+            },
+          ]}
           resizeMode="cover"
         >
           <LinearGradient

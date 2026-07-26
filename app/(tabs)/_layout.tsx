@@ -5,8 +5,9 @@ import { useAppTheme } from '@/constants/Themes';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
 import { Tabs, router } from 'expo-router';
-import React, { useContext, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import React, { useContext, useRef, useState } from 'react';
+import { Animated, LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -33,6 +34,8 @@ function TabBarIcon(props: {
 export default function TabLayout() {
   const theme = useAppTheme();
   const { language } = useContext(LanguageContext);
+  const insets = useSafeAreaInsets();
+  const [tabBarHeight, setTabBarHeight] = useState(49 + insets.bottom);
 
   // Reader Mode state shared with child screens
   const menuAnim = useRef(new Animated.Value(1)).current;
@@ -53,6 +56,13 @@ export default function TabLayout() {
     inputRange: [0, 1],
     outputRange: [120, 0],
   });
+
+  const handleTabBarLayout = (event: LayoutChangeEvent) => {
+    const nextHeight = event.nativeEvent.layout.height;
+    setTabBarHeight((currentHeight) =>
+      currentHeight === nextHeight ? currentHeight : nextHeight,
+    );
+  };
 
   const allLabels = {
     en: {
@@ -88,6 +98,7 @@ export default function TabLayout() {
       <Tabs
         tabBar={(props) => (
           <Animated.View
+            onLayout={handleTabBarLayout}
             style={{
               position: 'absolute',
               bottom: 0,
@@ -105,7 +116,6 @@ export default function TabLayout() {
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
           tabBarStyle: {
-            position: 'absolute',
             elevation: 0,
             backgroundColor: 'transparent',
             borderTopWidth: 0,
@@ -118,6 +128,9 @@ export default function TabLayout() {
               ]}
             />
           ),
+          // The animated tab bar is absolutely positioned, so React Navigation cannot
+          // reserve space for it. Keep every regular tab screen above the overlay.
+          sceneStyle: { paddingBottom: tabBarHeight },
         }}
       >
         {/* 1. Main Home Screen */}
@@ -125,9 +138,6 @@ export default function TabLayout() {
           name="index"
           options={{
             title: labels.home,
-            // Show search bar for main home screen, not overriden by home/_layout.tsx since index
-            // is to support / path to make manifest.json and +index.tsx easier to configure
-            // and install PWA
             headerShown: true,
             tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
               <TabBarIcon name="home" color={color} focused={focused} />
@@ -149,6 +159,9 @@ export default function TabLayout() {
           options={{
             title: labels.bible,
             headerShown: false, // Internal Stack handles header for consistency
+            // The Bible reader owns a coordinated bottom dock and already accounts
+            // for the tab bar height while its controls animate in and out.
+            sceneStyle: { paddingBottom: 0 },
             tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
               <TabBarIcon name="cross" color={color} focused={focused} />
             ),

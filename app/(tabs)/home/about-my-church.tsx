@@ -8,6 +8,7 @@ import {
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { NavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +24,7 @@ export default function AboutChurchHistoryScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
@@ -152,9 +154,13 @@ export default function AboutChurchHistoryScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={DocumentStyles.container}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingTop: 0,
           paddingBottom: insets.bottom + 50,
