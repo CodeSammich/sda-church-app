@@ -18,7 +18,7 @@ import { useFonts } from 'expo-font';
 import * as Localization from 'expo-localization';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   AppState,
   LogBox,
@@ -97,6 +97,13 @@ export default function RootLayout() {
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'up-to-date'>(
     'idle',
   );
+  const updateCheckInProgress = useRef(false);
+
+  const canUseServiceWorker = () =>
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    'serviceWorker' in navigator;
 
   const getSwUrl = () => {
     // If your app is at the root, use /sw.js. If hosted on GitHub Pages subpath, use /sda-church-app/sw.js
@@ -105,28 +112,8 @@ export default function RootLayout() {
       : '/sw.js';
   };
 
-  const nuclearRefresh = async () => {
-    if (Platform.OS === 'web') {
-      // If the user is offline, we must NOT clear the caches.
-      // Wiping the cache while offline would immediately break the PWA's
-      // ability to serve the app on the next reload or lazy-load navigation.
-      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-
-      try {
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map((key) => caches.delete(key)));
-        }
-        // Bypass HTTP cache for the main entry point to ensure fresh index.html
-        await fetch(window.location.href, { cache: 'reload' }).catch(() => {});
-      } catch (e) {
-        console.warn('Update cleanup failed:', e);
-      }
-    }
-  };
-
   const handleUpdate = async (workerOverride?: any) => {
-    await nuclearRefresh();
+    if (!canUseServiceWorker()) return;
 
     const worker = workerOverride || waitingWorker;
     if (worker) {
@@ -139,134 +126,130 @@ export default function RootLayout() {
   };
 
   const handleManualCheck = async (options?: { isAuto?: boolean }) => {
-    if ('serviceWorker' in navigator) {
-      // Do not attempt to check for updates if we know we are offline.
-      if (!navigator.onLine) return;
+    if (!canUseServiceWorker() || !navigator.onLine || updateCheckInProgress.current) {
+      return;
+    }
 
-      // Only show the "Checking..." snackbar for manual clicks to avoid UI noise on launch
-      if (!options?.isAuto) {
-        setUpdateStatus('checking');
-      }
+    updateCheckInProgress.current = true;
 
-      try {
-        const swUrl = getSwUrl();
+    // Only show the "Checking..." snackbar for manual clicks to avoid UI noise on launch
+    if (!options?.isAuto) {
+      setUpdateStatus('checking');
+    }
 
-        // Step 1: Nuclear Refresh (Clear all caches)
-        await nuclearRefresh();
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        // updateViaCache: 'none' on registration makes this a network check. Cache
+        // deletion is unnecessary and can remove files the currently running app
+        // still needs while the replacement worker is installing.
+        await registration.update();
 
-        // Step 2: Bypass sw.js cache
-        await fetch(swUrl, { cache: 'reload' }).catch(() => {});
-
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (registration) {
-          // Step 3: Trigger the browser's update check
-          await registration.update();
-
-          // Step 4: The Magic Wait - give registration properties time to populate
-          await new Promise((resolve) => setTimeout(resolve, 800));
-
-          if (registration.waiting) {
-            const worker = registration.waiting;
-            setWaitingWorker(worker);
-            setUpdateAvailable(true);
-            setUpdateStatus('idle');
-            await handleUpdate(worker);
-          } else if (registration.installing) {
-            const installingWorker = registration.installing;
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed') {
-                setWaitingWorker(installingWorker);
-                setUpdateAvailable(true);
-                handleUpdate(installingWorker);
-              }
-            };
-          } else {
-            // No update found
-            setUpdateAvailable(false);
-
-            if (!options?.isAuto) {
-              // For manual clicks, we show success and reload anyway to be safe
-              setUpdateStatus('up-to-date');
-              setTimeout(() => handleUpdate(), 1200);
-            } else {
-              // For auto-checks, we just go back to idle to avoid a reload loop
+        if (registration.waiting) {
+          const worker = registration.waiting;
+          setWaitingWorker(worker);
+          setUpdateAvailable(true);
+          setUpdateStatus('idle');
+          await handleUpdate(worker);
+        } else if (registration.installing) {
+          const installingWorker = registration.installing;
+          installingWorker.addEventListener('statechange', () => {
+            if (installingWorker.state === 'installed') {
+              setWaitingWorker(installingWorker);
+              setUpdateAvailable(true);
+              handleUpdate(installingWorker);
+            } else if (installingWorker.state === 'redundant') {
               setUpdateStatus('idle');
             }
-          }
+          });
         } else {
-          setUpdateStatus('idle');
+          setUpdateAvailable(false);
+          setUpdateStatus(options?.isAuto ? 'idle' : 'up-to-date');
         }
-      } catch (e) {
-        console.error('Manual update check failed:', e);
+      } else {
         setUpdateStatus('idle');
       }
+    } catch (e) {
+      console.error('Manual update check failed:', e);
+      setUpdateStatus('idle');
+    } finally {
+      updateCheckInProgress.current = false;
     }
   };
 
   useEffect(() => {
     // Register service worker for PWA support on web
     let subscription: { remove: () => void } | undefined;
-    if ('serviceWorker' in navigator) {
+    let removeControllerChangeListener: (() => void) | undefined;
+    let removeLoadListener: (() => void) | undefined;
+
+    if (canUseServiceWorker()) {
       let refreshing = false;
       const registerSW = async () => {
         const swUrl = getSwUrl();
 
         try {
-          // Ensure we start with a clean cache on every app launch to prevent reversions.
-          await nuclearRefresh();
-
-          // Bypassing the HTTP cache for the service worker file itself ensures that
-          // the browser sees the byte-change immediately on app start. This prevents
-          // "reversions" where the app might otherwise load an old cached registration
-          // during a cold start/restart.
-          await fetch(swUrl, { cache: 'reload' }).catch(() => {});
-
           const registration = await navigator.serviceWorker.register(swUrl, {
-            // Ensures the browser checks the network for sw.js instead of its HTTP cache,
-            // which is a primary cause of "reversion" issues on cold starts.
+            // Always check the network for sw.js, without destroying the active
+            // worker's caches while the current page is still using them.
             updateViaCache: 'none',
           });
           console.log('SW registered with scope:', registration.scope);
-          registration.update();
+
+          let watchedWorker: ServiceWorker | null = null;
+          const activateWhenInstalled = (worker: ServiceWorker | null) => {
+            if (!worker || worker === watchedWorker) return;
+            watchedWorker = worker;
+
+            const onStateChange = () => {
+              if (worker.state === 'installed') {
+                worker.removeEventListener('statechange', onStateChange);
+                if (navigator.serviceWorker.controller) {
+                  console.log('New SW content ready. Auto-updating...');
+                  worker.postMessage({ type: 'SKIP_WAITING' });
+                } else {
+                  console.log('SW installed for the first time.');
+                }
+              } else if (worker.state === 'redundant') {
+                worker.removeEventListener('statechange', onStateChange);
+              }
+            };
+
+            worker.addEventListener('statechange', onStateChange);
+            onStateChange();
+          };
+
+          // Registering may start an update before register() resolves, so attach
+          // the listener and inspect any existing installing worker before the
+          // explicit freshness check.
+          registration.onupdatefound = () => {
+            activateWhenInstalled(registration.installing);
+          };
+          activateWhenInstalled(registration.installing);
+          await registration.update();
 
           // 1. Check if there is already an updated worker waiting
           if (registration.waiting) {
             console.log('New SW already waiting. Auto-updating...');
-            // await nuclearRefresh();     TODO: Causes infinite loop and app crashes
             registration.waiting.postMessage({ type: 'SKIP_WAITING' });
           }
-
-          // 2. Listen for new updates being found
-          registration.onupdatefound = () => {
-            const installingWorker = registration.installing;
-            if (installingWorker) {
-              installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    console.log('New SW content ready. Auto-updating...');
-                    nuclearRefresh().then(() => {
-                      installingWorker.postMessage({ type: 'SKIP_WAITING' });
-                    });
-                  } else {
-                    console.log('SW installed for the first time.');
-                  }
-                }
-              };
-            }
-          };
+          activateWhenInstalled(registration.installing);
         } catch (error) {
           console.error('SW registration failed:', error);
         }
       };
 
       // Refresh the page automatically when the new service worker takes over
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
+      const onControllerChange = () => {
         if (!refreshing) {
           refreshing = true;
           console.log('New SW activated, reloading...');
           window.location.reload();
         }
-      });
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+      removeControllerChangeListener = () =>
+        navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
 
       // Use AppState to detect when the PWA is resumed from suspension (common on iOS)
       subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -282,6 +265,7 @@ export default function RootLayout() {
         registerSW();
       } else {
         window.addEventListener('load', registerSW);
+        removeLoadListener = () => window.removeEventListener('load', registerSW);
       }
     }
 
@@ -311,14 +295,14 @@ export default function RootLayout() {
         console.warn('Failed to load settings', e);
       } finally {
         setIsReady(true);
-        // LITERALLY "press" the check for updates button on every app launch
-        handleManualCheck({ isAuto: true });
       }
     }
     prepare();
 
     return () => {
       if (subscription) subscription.remove();
+      removeControllerChangeListener?.();
+      removeLoadListener?.();
     };
   }, []);
 
