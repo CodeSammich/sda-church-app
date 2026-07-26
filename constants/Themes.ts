@@ -143,7 +143,7 @@ export const customLightTheme = {
     glassBorder: 'rgba(0,0,0,0.1)',
   },
   gradients: {
-    heroOverlay: ['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)', 'transparent'] as [
+    heroOverlay: ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)'] as [
       string,
       string,
       ...string[],
@@ -255,7 +255,7 @@ export const customDarkTheme: AppTheme = {
     glassBorder: 'rgba(255, 255, 255, 0.1)',
   },
   gradients: {
-    heroOverlay: ['rgba(0,0,0,0.9)', 'rgba(0,0,0,0.6)', 'transparent'] as [
+    heroOverlay: ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)'] as [
       string,
       string,
       ...string[],

@@ -2,10 +2,13 @@ import { GridMenuCard } from '@/components/GridMenuCard';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
+import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,10 +17,11 @@ export default function DiscoverScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
-      discover: 'Discover',
+      title: 'Discover',
       aboutSDA: 'About Denomination',
       aboutHistory: 'Locations & History',
       meetTeam: 'Meet Our Team',
@@ -26,7 +30,7 @@ export default function DiscoverScreen() {
       join: 'Joining the Church',
     },
     zh: {
-      discover: '探索',
+      title: '探索',
       aboutSDA: '關於教派',
       aboutHistory: '地點與歷史',
       meetTeam: '認識我們的團隊',
@@ -35,7 +39,7 @@ export default function DiscoverScreen() {
       join: '加入教會',
     },
     'zh-cn': {
-      discover: '探索',
+      title: '探索',
       aboutSDA: '关于教派',
       aboutHistory: '地点与历史',
       meetTeam: '认识我们的团队',
@@ -44,7 +48,7 @@ export default function DiscoverScreen() {
       join: '加入教会',
     },
     es: {
-      discover: 'Descubrir',
+      title: 'Descubrir',
       aboutSDA: 'Sobre la Denominación',
       aboutHistory: 'Ubicaciones e Historia',
       meetTeam: 'Conoce a nuestro equipo',
@@ -58,18 +62,36 @@ export default function DiscoverScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.discover }} />
-      <ScrollView style={DocumentStyles.container} contentContainerStyle={{ paddingTop: headerHeight }}>
-        <View style={DocumentStyles.header}>
-          <Image source={{ uri: CHURCH_BUILDING_IMAGE_URL }} style={DocumentStyles.image} accessibilityLabel="Church banner" />
-          <Text variant="headlineSmall" style={[DocumentStyles.docTitle, { color: theme.colors.onSurface }]}>
-            {labels.discover}
+      <Stack.Screen options={{ title: labels.title, showTitleChip: showHeaderTitle } as any} />
+      <ScrollView
+        style={DocumentStyles.container}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: headerHeight }}
+      >
+        {/* Hero */}
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text
+            variant="headlineSmall"
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
+          >
+            {labels.title}
           </Text>
-        </View>
+        </ImageBackground>
+
+        {/* Body */}
         <View style={styles.grid}>
           <GridMenuCard
             title={labels.aboutSDA}
-            icon="pillar"
+            icon="cross"
             color={theme.colors.cardBgColors.aboutSDA}
             iconColor={theme.colors.iconColors.aboutSDA}
             onPress={() => router.push({ pathname: '/home/about-sda', params: { backTo: '/home/discover' } } as any)}
@@ -77,7 +99,7 @@ export default function DiscoverScreen() {
           />
           <GridMenuCard
             title={labels.aboutHistory}
-            icon="church"
+            icon="map-marker-path"
             color={theme.colors.cardBgColors.aboutHistory}
             iconColor={theme.colors.iconColors.aboutHistory}
             onPress={() => router.push({ pathname: '/home/about-my-church', params: { backTo: '/home/discover' } } as any)}
@@ -85,7 +107,7 @@ export default function DiscoverScreen() {
           />
           <GridMenuCard
             title={labels.meetTeam}
-            icon="account-group"
+            icon="card-account-phone"
             color={theme.colors.cardBgColors.meetTeam}
             iconColor={theme.colors.iconColors.meetTeam}
             onPress={() => router.push({ pathname: '/home/team', params: { backTo: '/home/discover' } } as any)}
@@ -93,7 +115,7 @@ export default function DiscoverScreen() {
           />
           <GridMenuCard
             title={labels.join}
-            icon="water"
+            icon="water-outline"
             color={theme.colors.cardBgColors.join}
             iconColor={theme.colors.iconColors.join}
             onPress={() => router.push({ pathname: '/home/baptism', params: { backTo: '/home/discover' } } as any)}

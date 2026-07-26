@@ -49,25 +49,25 @@ export const BAPTISM_MEANING_DATA = {
       {
         title: 'Believe',
         desc: 'To become a Christian, you must fully believe in the Father, Son, and Holy Spirit—the Trinity—as your Creator, Redeemer, Giver of Life, and only source of salvation.',
-        ref: '“For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.” (John 3:16)',
+        ref: '“For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.” (John 3:16) (NIV)',
         icon: 'book-open-variant',
       },
       {
         title: 'Confess',
         desc: 'To become a Christian, you must confess with your mouth and publicly declare the path you believe in.',
-        ref: '“If you confess with your mouth, ‘Jesus is Lord,’ and believe in your heart that God raised him from the dead, you will be saved.” (Romans 10:9-10)',
+        ref: '“If you confess with your mouth, ‘Jesus is Lord,’ and believe in your heart that God raised him from the dead, you will be saved.” (Romans 10:9-10) (NIV)',
         icon: 'account-voice',
       },
       {
         title: 'Hold and to be',
         desc: 'To become a Christian is to truly possess Him; He becomes your Savior and Heavenly Father, and we truly become His children.',
-        ref: '“See what great love the Father has lavished on us, that we should be called children of God! And that is what we are!” (1 John 3:1)',
+        ref: '“See what great love the Father has lavished on us, that we should be called children of God! And that is what we are!” (1 John 3:1) (NIV)',
         icon: 'heart-outline',
       },
       {
         title: 'Keep and Observe',
         desc: 'Being a Christian means we need to observe the Lord’s commands throughout our lives and witness for Jesus with our own lives.',
-        ref: '“...teaching them to obey everything I have commanded you.” (Matt 28:20); “...those who keep God’s commands and hold fast their testimony about Jesus.” (Rev 12:17, 14:12)',
+        ref: '“...teaching them to obey everything I have commanded you.” (Matt 28:20) (NIV); “...those who keep God’s commands and hold fast their testimony about Jesus.” (Rev 12:17, 14:12) (NIV)',
         icon: 'shield-check-outline',
       },
     ],
@@ -78,25 +78,25 @@ export const BAPTISM_MEANING_DATA = {
       {
         title: '信 Believe',
         desc: '成為基督徒，須全然相信聖父，聖子，聖靈，三一上帝，是你的創造主，救贖主，生命的賜予者，唯一的拯救來源。',
-        ref: '「上帝愛世人，甚至將他的獨生子賜給他們，叫一切信他的，不至滅亡，反得永生。(約翰福音 3:16 和合本)',
+        ref: '「上帝愛世人，甚至將他的獨生子賜給他們，叫一切信他的，不至滅亡，反得永生。(約翰福音 3:16) (CUV)',
         icon: 'book-open-variant',
       },
       {
         title: '奉 Confess',
         desc: '成為基督徒，須口裏承認，公開宣告所信之道。',
-        ref: '「你若口裏認耶穌為主，心裏信上帝叫他從死裏復活，就必得救。因為，人心裏相信就可以稱義，口裏承認就可以得救。」(羅馬書 10:9-10 和合本)',
+        ref: '「你若口裏認耶穌為主，心裏信上帝叫他從死裏復活，就必得救。因為，人心裏相信就可以稱義，口裏承認就可以得救。」(羅馬書 10:9-10) (CUV)',
         icon: 'account-voice',
       },
       {
         title: '持 Hold and to be',
         desc: '成為基督徒，是真實地擁有他，他成為你的救主，成為你的天父，我們真實地成為他的兒女。',
-        ref: '「你看父賜給我們是何等的慈愛，使我們得稱為上帝的兒女；我們也真是他的兒女。」 (約翰一書 3:1 和合本)',
+        ref: '「你看父賜給我們是何等的慈愛，使我們得稱為上帝的兒女；我們也真是他的兒女。」 (約翰一書 3:1) (CUV)',
         icon: 'heart-outline',
       },
       {
         title: '守 Keep and Observe',
         desc: '成為基督徒意味著，我們需要終生持守主的命令，並用自己的生命為耶穌做見證。',
-        ref: '凡我所吩咐你們的，都教訓他們遵守，我就常與你們同在，直到世界的末了。」(馬太福音 28:20 和合本)\n龍向婦人發怒，去與她其餘的兒女爭戰，這兒女就是那守上帝誡命、為耶穌作見證的。(啟示錄 12:17 和合本)\n聖徒的忍耐就在此；他們是守上帝誡命和耶穌真道的。(啟示錄 14:12 和合本)',
+        ref: '凡我所吩咐你們的，都教訓他們遵守，我就常與你們同在，直到世界的末了。」(馬太福音 28:20) (CUV)\n龍向婦人發怒，去與她其餘的兒女爭戰，這兒女就是那守上帝誡命、為耶穌作見證的。(啟示錄 12:17) (CUV)\n聖徒的忍耐就在此；他們是守上帝誡命和耶穌真道的。(啟示錄 14:12) (CUV)',
         icon: 'shield-check-outline',
       },
     ],
@@ -107,25 +107,25 @@ export const BAPTISM_MEANING_DATA = {
       {
         title: '信 Believe',
         desc: '成为基督徒，须全然相信圣父，圣子，圣灵，三一上帝，是你的创造主，救赎主，生命的赐予者，唯一的拯救来源。',
-        ref: '“上帝爱世人，甚至将他的独生子赐给他们，叫一切信他的，不至灭亡，反得永生。(约翰福音 3:16 和合本)',
+        ref: '“上帝爱世人，甚至将他的独生子赐给他们，叫一切信他的，不至灭亡，反得永生。(约翰福音 3:16) (CUVS)',
         icon: 'book-open-variant',
       },
       {
         title: '奉 Confess',
         desc: '成为基督徒，须口里承认，公开宣告所信之道。',
-        ref: '“你若口里认耶稣为主，心里信　神叫他从死里复活，就必得救。因为，人心里相信就可以称义，口里承认就可以得救。”(罗马书 10:9-10 和合本)',
+        ref: '“你若口里认耶稣为主，心里信　神叫他从死里复活，就必得救。因为，人心里相信就可以称义，口里承认就可以得救。”(罗马书 10:9-10) (CUVS)',
         icon: 'account-voice',
       },
       {
         title: '持 Hold and to be',
         desc: '成为基督徒，是真实地拥有他，他成为你的救主，成为你的天父，我们真实地成为他的儿女。',
-        ref: '“你看父赐给我们是何等的慈爱，使我们得称为　神的儿女；我们也真是他的儿女。” (约翰一书 3:1 和合本)',
+        ref: '“你看父赐给我们是何等的慈爱，使我们得称为　神的儿女；我们也真是他的儿女。” (约翰一书 3:1) (CUVS)',
         icon: 'heart-outline',
       },
       {
         title: '守 Keep and Observe',
         desc: '成为基督徒意味着，我们需要终生持守主的命令，并用自己的生命为耶稣做见证。',
-        ref: '凡我所吩咐你们的，都教训他们遵守，我就常与你们同在，直到世界的末了。”\n(马太福音 28:20 和合本)\n龙向妇人发怒，去与她其余的儿女争战，这儿女就是那守　神诫命、为耶稣作见证的。\n(启示录 12:17 和合本)\n圣徒的忍耐就在此；他们是守　神诫命和耶稣真道的。\n(启示录 14:12 和合本)',
+        ref: '凡我所吩咐你们的，都教训他们遵守，我就常与你们同在，直到世界的末了。”\n(马太福音 28:20) (CUVS)\n龙向妇人发怒，去与她其余的儿女争战，这儿女就是那守　神诫命、为耶稣作见证的。\n(启示录 12:17) (CUVS)\n圣徒的忍耐就在此；他们是守　神诫命和耶稣真道的。\n(启示录 14:12) (CUVS)',
         icon: 'shield-check-outline',
       },
     ],
@@ -144,7 +144,7 @@ export const CHURCH_LIFE_PILLARS: Record<
   en: {
     title: 'Four Pillars of Church Life',
     intro:
-      'According to biblical teaching, there are four pillars that constitute church life and Christian life: Truth, Fellowship, Sacraments, and Prayer (Acts 2:42).',
+      'According to biblical teaching, there are four pillars that constitute church life and Christian life: Truth, Fellowship, Sacraments, and Prayer (Acts 2:42) (NIV).',
     items: [
       {
         title: '1. Truth (Apostles’ Teaching)',
@@ -167,7 +167,7 @@ export const CHURCH_LIFE_PILLARS: Record<
   zh: {
     title: '教會生活的四大支柱',
     intro:
-      '根據聖經的教導，構成教會的生活和基督徒的生活有四個支柱：真理，團契，聖禮，祈禱。（使徒行傳2:42）',
+      '根據聖經的教導，構成教會的生活和基督徒的生活有四個支柱：真理，團契，聖禮，祈禱。（使徒行傳 2:42）(CUV)',
     items: [
       {
         title: '1. 真理（使徒的教導）',
@@ -190,7 +190,7 @@ export const CHURCH_LIFE_PILLARS: Record<
   'zh-cn': {
     title: '教会生活的四大支柱',
     intro:
-      '根据圣经的教导，构成教会的生活和基督徒的生活有四个支柱：真理，团契，圣礼，祈祷。（使徒行传2:42）',
+      '根据圣经的教导，构成教会的生活和基督徒的生活有四个支柱：真理，团契，圣礼，祈祷。（使徒行传 2:42）(CUVS)',
     items: [
       {
         title: '1. 真理（使徒的教导）',
@@ -279,7 +279,7 @@ export const BAPTISMAL_VOWS = {
     '我愿意接受基督而因信称义，承认祂是我天上圣所的中保，接受祂改造之恩的应许和力量，在家中和世人面前，度一种以基督为中心的爱的生活。',
     '我相信圣经乃是上帝所默示的圣言，乃是基督徒信仰与行为的唯一准则。我立约按时祷告并研读圣经。',
     '我接受十条诫命为上帝圣德的副本，也是祂旨意的启示。我立志靠着那住在心中的基督的能力，来遵行这律法，包括那要求遵守每周第七日为主的安息日，并记念祂创造大工的第四条诫命。',
-    '我盼望主耶稣快来，作为我的洪福之望，因为那时「必死的必变成不死的」(林前15:54) 。在我准备迎见主的同时，我愿意为祂慈爱的救恩作见证，用我的才干，致力救灵的工作，帮助他们也为主的荣耀显现作好准备。',
+    '我盼望主耶稣快来，作为我的洪福之望，因为那时「必死的必变成不死的」(林前 15:54) (CUVS)。在我准备迎见主的同时，我愿意为祂慈爱的救恩作见证，用我的才干，致力救灵的工作，帮助他们也为主的荣耀显现作好准备。',
     '我接受圣经中有关属灵恩赐的教训，并且相信这种预言的恩赐，乃是辨认余民教会的特别标记之一。',
     '我相信教会的组织。我愿意立志以十分之一和其他捐献，以及个人的努力和影响力，来支持教会。',
     '我相信我的身体乃是圣灵的殿。我愿意留心爱护身体来荣耀上帝：不用任何有害之物；戒绝不洁净的食物，和任何含有酒精的饮料或烟草；也不制造或贩卖这类物品给人服用；也不滥用或贩卖麻醉物或其他毒品。',
@@ -350,7 +350,7 @@ export const TEN_COMMANDMENTS: Record<
       '第九条 不可作假见证陷害人。',
       '第十条 不可贪恋人的房屋；也不可贪恋人的妻子、仆婢、牛驴，并他一切所有的。',
     ],
-    citation: '(出埃及记 20:1-17 和合本)',
+    citation: '(出埃及记 20:1-17) (CUVS)',
   },
   es: {
     items: [
@@ -372,7 +372,7 @@ export const DIETARY_PRINCIPLES = {
   en: {
     title: 'Biblical Dietary Laws',
     scripture:
-      'The LORD said to Moses and Aaron, “Say to the Israelites: ‘Of all the animals that live on land, these are the ones you may eat: You may eat any animal that has a divided hoof and that chews the cud... Of all the creatures living in the water of the seas and the streams, you may eat any that have fins and scales... These are the birds you are to regard as unclean and not eat because they are unclean: the eagle, the vulture... All flying insects that walk on all fours are to be regarded as unclean by you. There are, however, some flying insects that walk on all fours that you may eat: those that have jointed legs for hopping on the ground...’ (Leviticus 11:1-23 BSB)',
+      'The LORD said to Moses and Aaron, “Say to the Israelites: ‘Of all the animals that live on land, these are the ones you may eat: You may eat any animal that has a divided hoof and that chews the cud... Of all the creatures living in the water of the seas and the streams, you may eat any that have fins and scales... These are the birds you are to regard as unclean and not eat because they are unclean: the eagle, the vulture... All flying insects that walk on all fours are to be regarded as unclean by you. There are, however, some flying insects that walk on all fours that you may eat: those that have jointed legs for hopping on the ground...’ (Leviticus 11:1-23) (BSB)',
     summaryTitle: 'Summary:',
     land: 'Land animals must have divided hooves and chew the cud.',
     water: 'Water creatures must have fins and scales.',
@@ -408,7 +408,7 @@ export const DIETARY_PRINCIPLES = {
   es: {
     title: 'Leyes Dietéticas Bíblicas',
     scripture:
-      'Y habló Jehová á Moisés y á Aarón, diciéndoles: Hablad á los hijos de Israel, diciendo: Estos son los animales que comeréis de todos los animales que están sobre la tierra. De entre los animales, todo el que tiene pezuña, y que tiene la pezuña hendida, y que rumia, éste comeréis... Esto comeréis de todas las cosas que están en las aguas: todas las cosas que tienen aletas y escamas... Y de las aves, éstas habréis de tener en abominación... Todo insecto alado que anduviere sobre cuatro pies, tendréis en abominación. Pero esto comeréis... que tuviere piernas además de sus pies para saltar con ellas sobre la tierra... (Levítico 11:1-23 RVR09)',
+      'Y habló Jehová á Moisés y á Aarón, diciéndoles: Hablad á los hijos de Israel, diciendo: Estos son los animales que comeréis de todos los animales que están sobre la tierra. De entre los animales, todo el que tiene pezuña, y que tiene la pezuña hendida, y que rumia, éste comeréis... Esto comeréis de todas las cosas que están en las aguas: todas las cosas que tienen aletas y escamas... Y de las aves, éstas habréis de tener en abominación... Todo insecto alado que anduviere sobre cuatro pies, tendréis en abominación. Pero esto comeréis... que tuviere piernas además de sus pies para saltar con ellas sobre la tierra... (Levítico 11:1-23) (RVR09)',
     summaryTitle: 'Resumen:',
     land: 'Los animales terrestres deben tener pezuña hendida y rumiar.',
     water: 'Las criaturas acuáticas deben tener aletas y escamas.',
@@ -417,6 +417,13 @@ export const DIETARY_PRINCIPLES = {
     lifestyle: 'Evitamos el alcohol, el tabaco y las drogas dañinas.',
   },
 };
+
+(['zh', 'zh-cn'] as const).forEach((language) => {
+  const translation = language === 'zh' ? 'CUV' : 'CUVS';
+  const data = DIETARY_PRINCIPLES[language];
+  data.scripture = data.scripture.replace(/ 和合本\)/g, `) (${translation})`);
+  data.lifestyle = data.lifestyle.replace(/ 和合本\)/g, `) (${translation})`);
+});
 
 export const FOUR_PILLARS = {
   en: [

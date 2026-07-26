@@ -48,11 +48,15 @@ export const DocumentStyles = StyleSheet.create({
   },
   // Shared Header styles (used for banner images)
   header: {
-    marginBottom: 8,
+    marginBottom: 16,
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
-    height: 200,
+    height: 240,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
   },
   // Timeline styles (History sections)
   timelineContainer: {

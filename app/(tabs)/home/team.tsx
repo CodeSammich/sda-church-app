@@ -9,6 +9,8 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { TEAM_MEMBERS } from '@/constants/TeamData';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
+import { NavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
@@ -22,13 +24,11 @@ export default function MeetOurTeamScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
       title: 'Meet Our Team',
-      description:
-        'Our leadership is dedicated to serving the community and sharing the message of hope.',
-      staffHeader: 'Staff',
       seniorPastor: 'Senior Pastor',
       bibleWorker: 'Bible Worker',
       childrensMinistry: "Children's Ministry",
@@ -37,8 +37,6 @@ export default function MeetOurTeamScreen() {
     },
     zh: {
       title: '認識我們的團隊',
-      description: '我們的領導團隊致力於服務社群並分享希望的信息。',
-      staffHeader: '教牧團隊',
       seniorPastor: '主任牧師',
       bibleWorker: '聖經助理',
       childrensMinistry: '兒童事工',
@@ -47,8 +45,6 @@ export default function MeetOurTeamScreen() {
     },
     'zh-cn': {
       title: '认识我们的团队',
-      description: '我们的领导团队致力于服务社区并分享希望的信息。',
-      staffHeader: '教牧团队',
       seniorPastor: '主任牧师',
       bibleWorker: '圣经助理',
       childrensMinistry: '儿童事工',
@@ -57,9 +53,6 @@ export default function MeetOurTeamScreen() {
     },
     es: {
       title: 'Conoce a nuestro equipo',
-      description:
-        'Nuestro liderazgo está dedicado a servir a la comunidad y compartir el mensaje de esperanza.',
-      staffHeader: 'Personal',
       seniorPastor: 'Pastor Principal',
       bibleWorker: 'Obrero Bíblico',
       childrensMinistry: 'Ministerio Infantil',
@@ -72,60 +65,39 @@ export default function MeetOurTeamScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingBottom: insets.bottom + 40,
         }}
       >
-        {/* Hero Section Banner */}
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[styles.hero, { paddingTop: headerHeight + 20 }]}
+          style={[
+            NavigationStyles.heroHeader,
+            { paddingTop: insets.top + 70, paddingBottom: 24 },
+          ]}
           resizeMode="cover"
         >
           <LinearGradient
             colors={theme.gradients.heroOverlay}
             style={StyleSheet.absoluteFill}
           />
-          <View style={styles.heroContent}>
-            <View style={styles.quoteContainer}>
-              <Text
-                variant="headlineSmall"
-                style={[
-                  styles.heroTitle,
-                  { color: theme.dark ? theme.colors.primary : theme.colors.onSecondary },
-                ]}
-              >
-                {labels.title}
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={[
-                  styles.heroDescription,
-                  {
-                    color: theme.dark ? theme.colors.primary : theme.colors.onSecondary,
-                    opacity: 0.9,
-                  },
-                ]}
-              >
-                {labels.description}
-              </Text>
-            </View>
-          </View>
+          <Text
+            variant="headlineSmall"
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
+          >
+            {labels.title}
+          </Text>
         </ImageBackground>
 
         {/* Content Body */}
         <View style={styles.body}>
-          {/* Section Header */}
-          <View style={styles.sectionHeaderContainer}>
-            <Text variant="titleLarge" style={[styles.sectionHeading, { color: theme.colors.onBackground }]}>
-              {labels.staffHeader}
-            </Text>
-            <Divider style={styles.headingDivider} />
-          </View>
-
           {/* Cards for each team member */}
           {TEAM_MEMBERS.map((member, index) => (
             <Card
@@ -152,7 +124,10 @@ export default function MeetOurTeamScreen() {
                 </Text>
                 <Text
                   variant="bodyMedium"
-                  style={[styles.cardDescription, { color: theme.colors.onSurfaceVariant }]}
+                  style={[
+                    styles.cardDescription,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
                 >
                   {member.description[language as keyof typeof allLabels] ||
                     member.description.en}
@@ -166,7 +141,10 @@ export default function MeetOurTeamScreen() {
                       icon="email-outline"
                       mode="contained"
                       onPress={() => openEmail(CHURCH_EMAIL)}
-                      style={[styles.actionButton, { backgroundColor: theme.colors.tertiary }]}
+                      style={[
+                        styles.actionButton,
+                        { backgroundColor: theme.colors.tertiary },
+                      ]}
                       labelStyle={{ color: theme.colors.onSecondary }}
                     >
                       {labels.email}
@@ -175,7 +153,10 @@ export default function MeetOurTeamScreen() {
                       icon="phone"
                       mode="outlined"
                       onPress={() => openPhone(CHURCH_PHONE)}
-                      style={[styles.actionButton, { borderColor: theme.colors.tertiary }]}
+                      style={[
+                        styles.actionButton,
+                        { borderColor: theme.colors.tertiary },
+                      ]}
                       textColor={theme.colors.tertiary}
                     >
                       {labels.call}
@@ -195,33 +176,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  hero: {
-    paddingHorizontal: 20,
-    paddingBottom: 28,
-    minHeight: 220,
-    justifyContent: 'center',
-  },
-  heroContent: {
-    zIndex: 1,
-  },
-  heroTitle: {
-    fontWeight: 'bold',
-    fontSize: 28,
-    lineHeight: 36,
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
   quoteContainer: {
     marginTop: 4,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     padding: 16,
     borderRadius: 8,
-  },
-  heroDescription: {
-    lineHeight: 22,
-    fontSize: 15,
   },
   body: {
     padding: 16,
@@ -236,6 +195,7 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     paddingTop: 16,
+    paddingBottom: 16,
   },
   cardSectionTitle: {
     fontWeight: 'bold',

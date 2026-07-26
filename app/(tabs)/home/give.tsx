@@ -1,19 +1,18 @@
-import { openAdventistGiving } from '@/constants/ExternalLinks';
+import { VerseHero } from '@/components/VerseHero';
+import { CHURCH_BUILDING_IMAGE_URL, openAdventistGiving } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { Stack } from 'expo-router';
 import { useContext } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function GiveScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
-  const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
@@ -37,7 +36,7 @@ export default function GiveScreen() {
       onlineButton: 'AdventistGiving',
       quote:
         'Bring the full tithe into the storehouse, so that there may be food in My house. Test Me in this,” says the Lord of Hosts. “See if I will not open the windows of heaven and pour out for you blessing without measure.',
-      quoteRef: 'Malachi 3:10',
+      quoteRef: 'Malachi 3:10 (BSB)',
       taxNote:
         'All donations are tax-deductible. As a registered 501(c)(3) non-profit organization, we issue tax receipts for all contributions at the end of the fiscal year.',
     },
@@ -61,7 +60,7 @@ export default function GiveScreen() {
       onlineButton: 'AdventistGiving',
       quote:
         '萬軍之耶和華說：你們要將當納的十分之一全然送入倉庫，使我家有糧，以此試試我，是否為你們敞開天上的窗戶，傾福與你們，甚至無處可容。',
-      quoteRef: '瑪拉基書 3:10',
+      quoteRef: '瑪拉基書 3:10 (CUV)',
       taxNote:
         '所有捐款均可扣稅。作為註冊的 501(c)(3) 非營利組織，我們會在財政年度結束時為所有捐款提供報稅收據。',
     },
@@ -85,7 +84,7 @@ export default function GiveScreen() {
       onlineButton: 'AdventistGiving',
       quote:
         '万军之耶和华说：你们要将当纳的十分之一全然送入仓库，使我家有粮，以此试试我，是否为你们敞开天上的窗户，倾福与你们，甚至无处可容。',
-      quoteRef: '玛拉基书 3:10',
+      quoteRef: '玛拉基书 3:10 (CUVS)',
       taxNote:
         '所有捐款均可扣税。作为注册的 501(c)(3) 非营利组织，我们会在财政年度结束时为所有捐款提供报税收据。',
     },
@@ -110,7 +109,7 @@ export default function GiveScreen() {
       onlineButton: 'AdventistGiving',
       quote:
         'Traed todos los diezmos al alfolí, y haya alimento en mi casa; y probadme ahora en esto, dice Jehová de los ejércitos, si no os abriré las ventanas de los cielos, y vaciaré sobre vosotros bendición hasta que sobreabunde.',
-      quoteRef: 'Malaquías 3:10',
+      quoteRef: 'Malaquías 3:10 (RVR1960)',
       taxNote:
         'Todas las donaciones son deducibles de impuestos. Como organización sin fines de lucro 501(c)(3) registrada, emitimos recibos de impuestos por todas las contribuciones al final del año fiscal.',
     },
@@ -120,54 +119,30 @@ export default function GiveScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title }} />
+      <Stack.Screen options={{ title: labels.title, showTitleChip: showHeaderTitle } as any} />
       <ScrollView
         style={DocumentStyles.container}
-        contentContainerStyle={{
-          paddingTop: headerHeight,
-          paddingBottom: insets.bottom + 50,
-        }}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
+        <VerseHero
+          title={labels.title}
+          verse={labels.quote}
+          reference={labels.quoteRef}
+          imageSource={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          verseColors={theme.dark
+            ? ['#123831', '#164C43', '#1B5E52']
+            : ['#064E3B', '#0F766E', '#0D9488']}
+        />
+
+        {/* Body */}
         <View style={DocumentStyles.section}>
-          <Card
-            style={[
-              DocumentStyles.card,
-              {
-                backgroundColor: theme.colors.surfaceVariant,
-                borderLeftWidth: 4,
-                borderLeftColor: theme.colors.secondary,
-              },
-            ]}
-            mode="contained"
-          >
-            <Card.Content>
-              <Text
-                variant="bodyLarge"
-                style={{
-                  fontStyle: 'italic',
-                  color: theme.colors.onSurfaceVariant,
-                }}
-              >
-                {labels.quote}
-              </Text>
-              <Text
-                variant="labelMedium"
-                style={{
-                  textAlign: 'right',
-                  marginTop: 8,
-                  fontWeight: 'bold',
-                  color: theme.colors.onSurfaceVariant,
-                }}
-              >
-                — {labels.quoteRef}
-              </Text>
-            </Card.Content>
-          </Card>
           <Text
             variant="bodySmall"
             style={[
               DocumentStyles.note,
-              { color: theme.colors.onSurfaceVariant, marginTop: 8 },
+              { color: theme.colors.onSurfaceVariant, marginTop: 0 },
             ]}
           >
             {labels.taxNote}

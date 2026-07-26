@@ -1,17 +1,24 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useMemo, useRef } from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getSortedHymns, HydratedHymn, openHymnal } from '@/constants/EnglishHymnal';
-import { openYouTubeSearch } from '@/constants/ExternalLinks';
+import {
+  formatHymnalScriptureReference,
+  getSortedHymns,
+  HydratedHymn,
+  openHymnal,
+} from '@/constants/EnglishHymnal';
+import { CHURCH_BUILDING_IMAGE_URL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
+import { DocumentStyles } from '@/styles/DocumentStyles';
 import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const uiLabels = {
   en: {
@@ -202,7 +209,7 @@ export default function HymnalScreen() {
                     numberOfLines={1}
                     style={[styles.buttonText, { color: theme.colors.primary }]}
                   >
-                    {item.scriptureReference}
+                    {formatHymnalScriptureReference(item.scriptureReference)}
                   </Text>
                 </View>
               </TouchableRipple>
@@ -214,52 +221,70 @@ export default function HymnalScreen() {
   };
 
   return (
-    <View style={NavigationStyles.container}>
+    <>
       <Stack.Screen options={{ title: labels.title, backTo } as any} />
-
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE + 4 },
-        ]}
+      <ScrollView
+        style={DocumentStyles.container}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
-        <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: '/you/legal',
-              params: { backTo: '/resources/english-hymnal' },
-            } as any)
-          }
-          style={styles.legalNotice}
+        {/* Hero */}
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          resizeMode="cover"
         >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
           <Text
-            variant="bodySmall"
-            style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}
+            variant="headlineSmall"
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
-            <MaterialCommunityIcons
-              name="music-clef-treble"
-              size={14}
-              color={theme.colors.onSurfaceVariant}
-            />{' '}
-            {labels.attribution}{' '}
-            <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
-              {labels.legalLink}
-            </Text>
+            {labels.title}
           </Text>
-        </TouchableOpacity>
-      </View>
+        </ImageBackground>
 
-      <FlatList
-        ref={flatListRef}
-        data={displayHymns}
-        keyExtractor={(item) => item.number.toString()}
-        renderItem={renderHymnItem}
-        contentContainerStyle={[
-          NavigationStyles.contentContainer,
-          { paddingTop: 8, paddingBottom: insets.bottom + 50 },
-        ]}
-      />
-    </View>
+        {/* Body */}
+        <View style={DocumentStyles.section}>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: '/you/legal',
+                params: { backTo: '/resources/english-hymnal' },
+              } as any)
+            }
+            style={styles.legalNotice}
+          >
+            <Text
+              variant="bodySmall"
+              style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}
+            >
+              <MaterialCommunityIcons
+                name="music-clef-treble"
+                size={14}
+                color={theme.colors.onSurfaceVariant}
+              />{' '}
+              {labels.attribution}{' '}
+              <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
+                {labels.legalLink}
+              </Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          ref={flatListRef}
+          data={displayHymns}
+          keyExtractor={(item) => item.number.toString()}
+          renderItem={renderHymnItem}
+          contentContainerStyle={[
+            NavigationStyles.contentContainer,
+            { paddingTop: 8, paddingBottom: insets.bottom + 50 },
+          ]}
+        />
+      </ScrollView>
+    </>
   );
 }
 

@@ -1,12 +1,14 @@
 import { MenuCard } from '@/components/MenuCard';
+import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
 import { useContext } from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import { ImageBackground, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,7 +16,7 @@ export default function WeeklyBulletinScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
@@ -128,21 +130,39 @@ export default function WeeklyBulletinScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title }} />
+      <Stack.Screen
+        options={{ title: labels.title, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={DocumentStyles.container}
-        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: 40 }}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
-        <View style={DocumentStyles.section}>
+        {/* Hero */}
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[
+            NavigationStyles.heroHeader,
+            { paddingTop: insets.top + 70, paddingBottom: 24 },
+          ]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
           <Text
             variant="headlineSmall"
-            style={[DocumentStyles.docTitle, { color: theme.colors.onSurface }]}
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
             {labels.title}
           </Text>
-          <Text
-            style={[DocumentStyles.description, { color: theme.colors.onSurface }]}
-          >
+        </ImageBackground>
+
+        {/* Body */}
+        <View style={DocumentStyles.section}>
+          <Text style={[DocumentStyles.description, { color: theme.colors.onSurface }]}>
             {labels.description}
           </Text>
 
@@ -209,7 +229,6 @@ export default function WeeklyBulletinScreen() {
             }
           />
         </List.Section>
-
       </ScrollView>
     </>
   );

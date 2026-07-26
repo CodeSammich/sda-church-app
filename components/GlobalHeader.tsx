@@ -9,11 +9,26 @@ import {
   SearchableItem,
 } from '@/constants/SearchTerms';
 import { useAppTheme } from '@/constants/Themes';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useSegments } from 'expo-router';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
-import { Appbar, List, Portal, Searchbar } from 'react-native-paper';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Appbar, List, Portal, Searchbar, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const HERO_HEADER_ROUTES = new Set([
+  'about-my-church',
+  'about-sda',
+  'baptism',
+  'bulletin',
+  'discover',
+  'events',
+  'fellowship',
+  'give',
+  'hymnal-selection',
+  'prayer',
+  'team',
+]);
 
 /**
  * Context to drive global UI visibility (Reader Mode).
@@ -64,22 +79,49 @@ export const GlobalHeader = (props: any) => {
 
   const title = props.options?.title;
   const backTo = props.options?.backTo;
+  const isHeroHeaderRoute = HERO_HEADER_ROUTES.has(props.route?.name);
+  const showTitleChip = props.options?.showTitleChip ?? !isHeroHeaderRoute;
+  const titleChipAnim = useRef(new Animated.Value(showTitleChip ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(titleChipAnim, {
+      toValue: showTitleChip ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [showTitleChip, titleChipAnim]);
+
+  const titleChipTranslateY = titleChipAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-6, 0],
+  });
 
   const searchLabels =
     ALL_SEARCH_LABELS[language as keyof typeof ALL_SEARCH_LABELS] || ALL_SEARCH_LABELS.en;
 
-  // Centralized list of everything searchable in the app
-  const searchableItems = getSearchableItems(language);
+  // Search only the content belonging to the active reader. Other screens do
+  // not expose search or build a result set.
+  const searchableItems = getSearchableItems(language).filter((item) =>
+    isHymnalPage
+      ? item.isHymn
+      : isBiblePage
+        ? item.isBibleBook && item.route !== '/bible'
+        : false,
+  );
 
   const filtered = searchableItems.filter((item) =>
     isSearchMatch(item, searchQuery, language),
   );
 
-  // Deduplicate: If the query is a Bible reference, we only show the primary "Holy Bible" card
-  // as the smart gateway, hiding individual book entries to prevent redundant results.
-  const isBibleRef = !!resolveBibleReference(searchQuery, language);
-  const deduplicated = isBibleRef
-    ? filtered.filter((item) => !item.isBibleBook || item.route === '/bible')
+  // A reference such as "John 3:16" can loosely match several similarly named
+  // books. Keep only the resolved book while retaining any non-Bible matches on
+  // the general search screen.
+  const bibleReference = resolveBibleReference(searchQuery, language);
+  const deduplicated = bibleReference
+    ? filtered.filter(
+        (item) =>
+          !item.isBibleBook || item.route.includes(`bookId=${bibleReference.bookId}`),
+      )
     : filtered;
 
   const results = deduplicated.map((item) => ({
@@ -115,12 +157,28 @@ export const GlobalHeader = (props: any) => {
     });
   };
 
+  const handleBackPress = () => {
+    if (backTo) {
+      router.navigate(backTo as any);
+    } else if (segments.includes('you')) {
+      router.navigate('/you' as any);
+    } else if (segments.includes('resources')) {
+      router.navigate('/resources' as any);
+    } else if (segments.includes('community')) {
+      router.navigate('/community' as any);
+    } else if (segments.includes('home')) {
+      router.navigate('/' as any);
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <Animated.View
       style={[
         styles.headerWrapper,
         {
-          backgroundColor: theme.colors.background,
+          backgroundColor: 'transparent',
           paddingTop: insets.top,
           transform: [{ translateY: headerTranslateY }],
         },
@@ -136,34 +194,64 @@ export const GlobalHeader = (props: any) => {
         }}
       >
         {isSubPage && (
-          <Appbar.BackAction
-            onPress={() => {
-              if (backTo) {
-                router.navigate(backTo as any);
-              } else if (segments.includes('you')) {
-                router.navigate('/you' as any);
-              } else if (segments.includes('resources')) {
-                router.navigate('/resources' as any);
-              } else if (segments.includes('community')) {
-                router.navigate('/community' as any);
-              } else if (segments.includes('home')) {
-                router.navigate('/' as any);
-              } else {
-                router.back();
-              }
-            }}
-          />
+          <Pressable
+            onPress={handleBackPress}
+            style={({ pressed }) => [
+              styles.circleBackButton,
+              {
+                backgroundColor: theme.dark
+                  ? 'rgba(18, 18, 18, 0.88)'
+                  : 'rgba(255, 255, 255, 0.94)',
+                borderColor: theme.dark
+                  ? 'rgba(255, 255, 255, 0.28)'
+                  : 'rgba(255, 255, 255, 0.72)',
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <MaterialCommunityIcons
+              name="chevron-left"
+              size={26}
+              color={theme.dark ? '#FFFFFF' : '#17211F'}
+            />
+          </Pressable>
         )}
-        {isSubPage && !isBiblePage && !isHymnalPage ? (
-          <Appbar.Content
-            title={title}
-            titleStyle={{ color: theme.colors.onSurface, fontWeight: 'bold' }}
-          />
+        {!isBiblePage && !isHymnalPage ? (
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            {isSubPage && title && (
+              <Animated.View
+                pointerEvents={showTitleChip ? 'auto' : 'none'}
+                style={[
+                  styles.floatingTitleChip,
+                  {
+                    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+                    borderColor: 'rgba(255, 255, 255, 0.72)',
+                    opacity: titleChipAnim,
+                    transform: [{ translateY: titleChipTranslateY }],
+                  },
+                ]}
+              >
+                <Text
+                  variant="titleMedium"
+                  style={{ color: '#17211F', fontWeight: 'bold' }}
+                  numberOfLines={1}
+                >
+                  {title}
+                </Text>
+              </Animated.View>
+            )}
+          </View>
         ) : (
           <View style={{ flex: 1 }}>
             <Searchbar
               ref={searchRef}
-              placeholder={searchLabels.searchPlaceholder}
+              placeholder={
+                isBiblePage
+                  ? searchLabels.searchBiblePlaceholder
+                  : searchLabels.searchHymnalPlaceholder
+              }
               onChangeText={setSearchQuery}
               value={searchQuery}
               onFocus={() => setIsSearching(true)}
@@ -175,14 +263,16 @@ export const GlobalHeader = (props: any) => {
                 }
               }}
               onBlur={() => setTimeout(() => setIsSearching(false), 200)} // Delay to allow onPress to fire
-              style={{
-                backgroundColor: theme.colors.surface,
-                elevation: 0,
-                borderRadius: 24,
-                height: 44,
-                marginRight: 12,
-                marginLeft: 12,
-              }}
+              style={[
+                styles.floatingSearchbar,
+                {
+                  backgroundColor: theme.colors.surface,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 6,
+                },
+              ]}
               inputStyle={{
                 minHeight: 0,
                 paddingBottom: 0,
@@ -236,6 +326,43 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1000,
   },
+  circleBackButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+    marginRight: 8,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  floatingTitleChip: {
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  floatingSearchbar: {
+    elevation: 4,
+    borderRadius: 24,
+    height: 44,
+    marginRight: 12,
+    marginLeft: 12,
+  },
   resultsOverlay: {
     position: 'absolute',
     left: 0,
@@ -244,5 +371,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginTop: 8,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
 });

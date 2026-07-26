@@ -8,10 +8,13 @@ import {
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
+import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { Image, ScrollView, View } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,6 +24,7 @@ export default function AboutChurchHistoryScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
@@ -150,27 +154,34 @@ export default function AboutChurchHistoryScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={DocumentStyles.container}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingTop: headerHeight,
+          paddingTop: 0,
           paddingBottom: insets.bottom + 50,
         }}
       >
-        <View style={DocumentStyles.header}>
-          <Image
-            source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-            style={DocumentStyles.image}
-            accessibilityLabel="Church banner"
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
           />
           <Text
             variant="headlineSmall"
-            style={[DocumentStyles.docTitle, { color: theme.colors.onSurface }]}
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
             {labels.churchName}
           </Text>
-        </View>
+        </ImageBackground>
 
         <View style={DocumentStyles.section}>
           <Text
@@ -463,3 +474,25 @@ export default function AboutChurchHistoryScreen() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  heroHeader: {
+    width: '100%',
+    minHeight: 220,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  heroTitle: {
+    fontWeight: 'bold',
+    fontSize: 26,
+    lineHeight: 34,
+    textAlign: 'left',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+});

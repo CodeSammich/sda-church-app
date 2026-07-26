@@ -11,7 +11,6 @@ import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
 import { NavigationStyles } from '@/styles/NavigationStyles';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -32,8 +31,6 @@ export default function HomeScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
 
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
-
   const allLabels = {
     en: {
       welcome: 'Welcome!',
@@ -42,23 +39,17 @@ export default function HomeScreen() {
       readVerse: 'Read Verse',
       shareVerse: 'Share Verse',
       livestream: 'Watch Livestream',
-      aboutSDA: 'About Denomination',
-      aboutHistory: 'Locations & History',
       discover: 'Discover',
-      thisWeek: 'This Week',
-      contact: 'Connect with Us',
-      meetTeam: 'Meet Our Team',
-      join: 'Joining the Church',
       bulletin: 'Weekly Bulletin',
-      explore: 'Explore',
       give: 'Tithe & Offering',
       events: 'Upcoming Events',
       prayer: 'Prayer',
       sabbathStarts: 'Sabbath starts in',
       sabbathEnds: 'Sabbath ends in',
       isSabbath: 'Happy Sabbath!',
-      locationLocal: 'Location: Local',
-      locationDefault: 'Location: Elmhurst, NY',
+      // decided to remove the dynamic location since most people don't like to give away location
+      // instead, each congregation shuold adjust the code to use their own location coordinates
+      locationDefault: 'New York, NY',
     },
     zh: {
       welcome: '歡迎！',
@@ -67,23 +58,17 @@ export default function HomeScreen() {
       readVerse: '查閱經文',
       shareVerse: '分享經文',
       livestream: '觀看直播',
-      aboutSDA: '關於教派',
-      aboutHistory: '地點與歷史',
       discover: '探索',
-      thisWeek: '本週焦點',
-      contact: '聯繫我們',
-      meetTeam: '認識我們的團隊',
-      join: '加入教會',
       bulletin: '每週週報',
-      explore: '探索',
       give: '奉獻',
       events: '近期活動',
       prayer: '禱告',
       sabbathStarts: '距離安息日還有',
       sabbathEnds: '距離安息日結束還有',
       isSabbath: '安息日快樂！',
-      locationLocal: '位置：目前所在地',
-      locationDefault: '位置：紐約艾姆赫斯特',
+      // decided to remove the dynamic location since most people don't like to give away location
+      // instead, each congregation shuold adjust the code to use their own location coordinates
+      locationDefault: '紐約',
     },
     'zh-cn': {
       welcome: '欢迎！',
@@ -92,23 +77,15 @@ export default function HomeScreen() {
       readVerse: '查阅经文',
       shareVerse: '分享经文',
       livestream: '观看直播',
-      aboutSDA: '关于教派',
-      aboutHistory: '地点与历史',
       discover: '探索',
-      thisWeek: '本周焦点',
-      contact: '联系我们',
-      meetTeam: '认识我们的团队',
-      join: '加入教会',
       bulletin: '每周周报',
-      explore: '探索',
       give: '奉献',
       events: '近期活动',
       prayer: '祷告',
       sabbathStarts: '距离安息日还有',
       sabbathEnds: '距离安息日结束还有',
       isSabbath: '安息日快乐！',
-      locationLocal: '位置：当前所在地',
-      locationDefault: '位置：纽约艾姆赫斯特',
+      locationDefault: '纽约',
     },
     es: {
       welcome: '¡Bienvenido!',
@@ -117,23 +94,17 @@ export default function HomeScreen() {
       readVerse: 'Leer Versículo',
       shareVerse: 'Compartir',
       livestream: 'Ver Transmisión',
-      aboutSDA: 'Sobre la Denominación',
-      aboutHistory: 'Ubicaciones e Historia',
       discover: 'Descubrir',
-      thisWeek: 'Esta Semana',
-      contact: 'Conéctate con Nosotros',
-      meetTeam: 'Conoce a nuestro equipo',
-      join: 'Unirse a la Iglesia',
       bulletin: 'Boletín Semanal',
-      explore: 'Explorar',
       give: 'Diezmos y Ofrendas',
       events: 'Próximos Eventos',
       prayer: 'Oración',
       sabbathStarts: 'El Sábado comienza en',
       sabbathEnds: 'El Sábado termina en',
       isSabbath: '¡Feliz Sábado!',
-      locationLocal: 'Ubicación: Local',
-      locationDefault: 'Ubicación: Elmhurst, NY',
+      // decided to remove the dynamic location since most people don't like to give away location
+      // instead, each congregation shuold adjust the code to use their own location coordinates
+      locationDefault: 'New York, NY',
     },
   };
 
@@ -162,30 +133,34 @@ export default function HomeScreen() {
   const VOTD_CACHE_KEY = `votd_cache_${language}`;
 
   // Sabbath Countdown Logic
-  useEffect(() => {
-    // Detect Location via Web Geolocation API
-    if (Platform.OS === 'web' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // User allowed location
-          setUseGps(true);
-          setUserCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          // Permission denied or error
-          setUseGps(false);
-          console.log('Location access denied, falling back to Elmhurst.');
-        },
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 3600000 },
-      );
-    } else {
-      // Fallback for offline or unsupported browsers
-      setUseGps(false);
-    }
-  }, []);
+  // NOTE: There is nothing wrong with this logic itself, but after user testing it looks like most people turn off
+  // location tracking and there is not much demand. Instead, it may be better to let each congregation
+  // hard code their location coordinates. I've left this code in case people want to use it.
+  // All you need to do is add a local-set of labels and a conditional check on the timer display text below.
+  // useEffect(() => {
+  //   // Detect Location via Web Geolocation API
+  //   if (Platform.OS === 'web' && 'geolocation' in navigator) {
+  //     navigator.geolocation.getCurrentPosition(
+  //       (position) => {
+  //         // User allowed location
+  //         setUseGps(true);
+  //         setUserCoords({
+  //           lat: position.coords.latitude,
+  //           lng: position.coords.longitude,
+  //         });
+  //       },
+  //       (error) => {
+  //         // Permission denied or error
+  //         setUseGps(false);
+  //         console.log('Location access denied, falling back to New York.');
+  //       },
+  //       { enableHighAccuracy: false, timeout: 5000, maximumAge: 3600000 },
+  //     );
+  //   } else {
+  //     // Fallback for offline or unsupported browsers
+  //     setUseGps(false);
+  //   }
+  // }, []);
 
   useEffect(() => {
     const fetchSunsets = async () => {
@@ -437,11 +412,17 @@ export default function HomeScreen() {
     <>
       <ScrollView
         style={NavigationStyles.container}
-        contentContainerStyle={{ paddingTop: headerHeight }}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={styles.hero}
+          style={[
+            styles.hero,
+            {
+              paddingTop: insets.top + DESIGN_TOKENS.VIEW_PADDING,
+              paddingBottom: 28,
+            },
+          ]}
           resizeMode="cover"
         >
           <LinearGradient
@@ -509,62 +490,41 @@ export default function HomeScreen() {
         </ImageBackground>
 
         <List.Section style={NavigationStyles.contentContainer}>
-          <List.Subheader
-            style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
-          >
-            {labels.thisWeek}
-          </List.Subheader>
-
           {/* Sabbath Countdown Widget */}
           <Card
             style={[styles.timerCard, { backgroundColor: theme.colors.surface }]}
-            mode="outlined"
+            mode="contained"
           >
             <Card.Content style={styles.timerContentSubtle}>
               <View style={styles.timerRow}>
-                <MaterialCommunityIcons
-                  name="sun-clock-outline"
-                  size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
-                  color={theme.colors.tertiary}
-                  style={{ marginRight: 12 }}
-                />
                 <View style={styles.labelColumn}>
                   <Text
-                    variant="bodyLarge"
-                    style={{ color: theme.colors.onSurface, fontWeight: '600' }}
+                    variant="labelMedium"
+                    style={{
+                      color: isSabbath ? theme.colors.primary : theme.colors.secondary,
+                      fontWeight: 'bold',
+                    }}
                   >
-                    {isSabbath ? labels.sabbathEnds : labels.sabbathStarts}
+                    {isSabbath ? labels.isSabbath : labels.sabbathStarts}
                   </Text>
                   {targetDate && (
-                    <Text
-                      variant="labelSmall"
-                      style={{ color: theme.colors.primary, fontWeight: '700' }}
-                    >
-                      {formatDisplayDate(targetDate)}
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      {`${formatDisplayDate(targetDate)} — ${labels.locationDefault}`}
                     </Text>
                   )}
-                  <Text
-                    variant="labelSmall"
-                    style={{ color: theme.colors.onSurfaceVariant, opacity: 0.6 }}
-                  >
-                    {useGps ? labels.locationLocal : labels.locationDefault}
-                  </Text>
                 </View>
-
                 <Text
-                  variant="bodyLarge"
                   style={[
                     styles.timerValueSubtle,
-                    { color: theme.colors.onSurfaceVariant },
+                    { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
                   ]}
                 >
-                  {countdown || '00:00:00'}
+                  {countdown || '--:--:--'}
                 </Text>
               </View>
             </Card.Content>
           </Card>
 
-          {/* This Week — 2-column pastel grid */}
           <View style={styles.grid}>
             <GridMenuCard
               title={labels.livestream}
@@ -577,7 +537,7 @@ export default function HomeScreen() {
             />
             <GridMenuCard
               title={labels.bulletin}
-              icon="file-document-outline"
+              icon="newspaper-variant-outline"
               color={theme.colors.cardBgColors.bulletin}
               iconColor={theme.colors.iconColors.bulletin}
               onPress={() =>
@@ -616,7 +576,7 @@ export default function HomeScreen() {
             />
             <GridMenuCard
               title={labels.events}
-              icon="calendar-month"
+              icon="calendar"
               color={theme.colors.cardBgColors.events}
               iconColor={theme.colors.iconColors.events}
               onPress={() =>
@@ -648,7 +608,14 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: { padding: 24, alignItems: 'center', justifyContent: 'center' },
+  hero: {
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+  },
   welcomeText: {
     fontWeight: 'bold',
     textAlign: 'center',
@@ -657,12 +624,12 @@ const styles = StyleSheet.create({
   timerCard: {
     marginBottom: 16,
     borderRadius: 12,
-    overflow: 'hidden', // Prevents inner elements from clipping past rounded corners
-    backgroundColor: '#FFFFFF', // Ensures a crisp background fill
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
   },
   timerContentSubtle: {
     paddingVertical: 12,
-    paddingHorizontal: 16, // Keeps content comfortably inset from the card border
+    paddingHorizontal: 16,
   },
   timerRow: {
     flexDirection: 'row',

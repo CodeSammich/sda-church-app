@@ -1,3 +1,4 @@
+import { VerseHero } from '@/components/VerseHero';
 import {
   BAPTISM_MEANING_DATA,
   BAPTISMAL_VOWS,
@@ -6,31 +7,29 @@ import {
   JOINING_CHURCH,
   TEN_COMMANDMENTS,
 } from '@/constants/DoctrineData';
+import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Card, List, Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BaptismScreen() {
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
   const theme = useAppTheme();
-  const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const allLabels = {
     en: {
       title: 'Joining the Church',
-      baptismHeader: 'The Meaning of Baptism',
       baptismQuote: '“Whoever believes and is baptized will be saved.”',
-      baptismRef: 'Mark 16:16',
+      baptismRef: 'Mark 16:16 (BSB)',
       vowsTitle: 'Baptismal Vows',
       commandmentsTitle: 'The Ten Commandments',
       lifestyleTitle: 'Adventist Lifestyle',
@@ -38,9 +37,8 @@ export default function BaptismScreen() {
     },
     zh: {
       title: '加入教會',
-      baptismHeader: '受洗的意義',
       baptismQuote: '「信而受洗的必然得救。」',
-      baptismRef: '馬可福音 16:16',
+      baptismRef: '馬可福音 16:16 (CUV)',
       baptismIntro: '受洗之時，需信奉持守耶穌所傳的真道。',
       vowsTitle: '浸禮約言',
       commandmentsTitle: '十條誡命',
@@ -49,9 +47,8 @@ export default function BaptismScreen() {
     },
     'zh-cn': {
       title: '加入教会',
-      baptismHeader: '受洗的意义',
       baptismQuote: '“信而受洗的必然得救。”',
-      baptismRef: '马可福音 16:16',
+      baptismRef: '马可福音 16:16 (CUVS)',
       baptismIntro: '受洗之时，需信奉持守耶稣所传的真道。',
       vowsTitle: '浸礼约言',
       commandmentsTitle: '十条诫命',
@@ -60,9 +57,8 @@ export default function BaptismScreen() {
     },
     es: {
       title: 'Unirse a la Iglesia',
-      baptismHeader: 'El Significado del Bautismo',
       baptismQuote: '“El que creyere y fuere bautizado, será salvo.”',
-      baptismRef: 'Marcos 16:16',
+      baptismRef: 'Marcos 16:16 (RVR1960)',
       baptismIntro:
         'Al ser bautizado, uno debe creer, confesar, mantener y observar el verdadero camino enseñado por Jesús.',
       pillarsTitle: 'Cuatro Pilares de la Vida Eclesial',
@@ -94,62 +90,31 @@ export default function BaptismScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={DocumentStyles.container}
-        contentContainerStyle={{
-          paddingTop: headerHeight,
-          paddingBottom: insets.bottom + 50,
-        }}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
-        <View style={DocumentStyles.section}>
-          <Text
-            variant="headlineSmall"
-            style={[DocumentStyles.docTitle, { color: theme.colors.onSurface }]}
-          >
-            {labels.baptismHeader}
-          </Text>
-          <Card
-            style={[
-              DocumentStyles.card,
-              {
-                backgroundColor: theme.colors.surfaceVariant,
-                borderLeftWidth: 4,
-                borderLeftColor: theme.colors.secondary,
-                marginBottom: 16,
-              },
-            ]}
-            mode="contained"
-          >
-            <Card.Content>
-              <Text
-                variant="bodyMedium"
-                style={{
-                  fontStyle: 'italic',
-                  color: theme.colors.onSurfaceVariant,
-                  textAlign: 'center',
-                }}
-              >
-                {labels.baptismQuote}
-              </Text>
-              <Text
-                variant="labelMedium"
-                style={{
-                  textAlign: 'right',
-                  marginTop: 8,
-                  fontWeight: 'bold',
-                  color: theme.colors.onSurfaceVariant,
-                }}
-              >
-                — {labels.baptismRef}
-              </Text>
-            </Card.Content>
-          </Card>
+        <VerseHero
+          title={labels.title}
+          verse={labels.baptismQuote}
+          reference={labels.baptismRef}
+          imageSource={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          verseColors={theme.dark
+            ? ['#172554', '#1E3A70', '#244B8F']
+            : ['#1E3A8A', '#1D4ED8', '#2563EB']}
+        />
 
+        {/* Body */}
+        <View style={DocumentStyles.section}>
           <Text
             variant="bodyMedium"
             style={{
-              color: theme.colors.onSurfaceVariant,
+              color: theme.colors.onSurface,
               marginBottom: 12,
               fontWeight: 'bold',
             }}
@@ -179,12 +144,19 @@ export default function BaptismScreen() {
                       </Text>
                     </View>
                   )}
-                  left={(props) => <List.Icon {...props} icon={point.icon} />}
+                  left={(props) => (
+                    <List.Icon
+                      {...props}
+                      color={theme.colors.primary}
+                      icon={point.icon}
+                    />
+                  )}
                   descriptionNumberOfLines={10}
                 />
                 {index < meaning.points.length - 1 && (
                   <List.Icon
                     icon="minus"
+                    color={theme.colors.primary}
                     style={{ alignSelf: 'center', height: 10, opacity: 0.1 }}
                   />
                 )}
@@ -208,7 +180,7 @@ export default function BaptismScreen() {
           </Text>
           <Text
             variant="bodyMedium"
-            style={{ marginBottom: 16, color: theme.colors.onSurfaceVariant }}
+            style={{ marginBottom: 16, color: theme.colors.onSurface }}
           >
             {pillars.intro}
           </Text>
@@ -256,7 +228,7 @@ export default function BaptismScreen() {
           </Text>
           <Text
             variant="bodyMedium"
-            style={{ marginBottom: 16, color: theme.colors.onSurfaceVariant }}
+            style={{ marginBottom: 16, color: theme.colors.onSurface }}
           >
             {joining.intro}
           </Text>
@@ -303,7 +275,9 @@ export default function BaptismScreen() {
             title={labels.vowsTitle}
             expanded={expanded === 'vows'}
             onPress={() => setExpanded(expanded === 'vows' ? null : 'vows')}
-            left={(props) => <List.Icon {...props} icon="check-decagram" />}
+            left={(props) => (
+              <List.Icon {...props} color={theme.colors.primary} icon="check-decagram" />
+            )}
             style={{ backgroundColor: theme.colors.surface }}
           >
             <Card style={DocumentStyles.card} mode="outlined">
@@ -323,7 +297,9 @@ export default function BaptismScreen() {
             onPress={() =>
               setExpanded(expanded === 'commandments' ? null : 'commandments')
             }
-            left={(props) => <List.Icon {...props} icon="script-text" />}
+            left={(props) => (
+              <List.Icon {...props} color={theme.colors.primary} icon="script-text" />
+            )}
             style={{ backgroundColor: theme.colors.surface }}
           >
             <Card style={DocumentStyles.card} mode="outlined">
@@ -362,7 +338,9 @@ export default function BaptismScreen() {
             title={labels.lifestyleTitle}
             expanded={expanded === 'lifestyle'}
             onPress={() => setExpanded(expanded === 'lifestyle' ? null : 'lifestyle')}
-            left={(props) => <List.Icon {...props} icon="heart-pulse" />}
+            left={(props) => (
+              <List.Icon {...props} color={theme.colors.primary} icon="heart-pulse" />
+            )}
             style={{ backgroundColor: theme.colors.surface }}
           >
             <Card style={DocumentStyles.card} mode="outlined">

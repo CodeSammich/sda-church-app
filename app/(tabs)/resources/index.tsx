@@ -1,18 +1,19 @@
 import { MenuCard } from '@/components/MenuCard';
 import {
+  CHURCH_BUILDING_IMAGE_URL,
   openSabbathSchool,
   openSermonArchive,
   openSpotifyPodcast,
   openZoomClass,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { NavigationStyles } from '@/styles/NavigationStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
-import { ScrollView } from 'react-native';
-import { List } from 'react-native-paper';
+import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import { List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const allLabels = {
@@ -102,89 +103,119 @@ export default function ResourcesScreen() {
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
 
   return (
     <>
       <Stack.Screen options={{ title: labels.title }} />
       <ScrollView
         style={NavigationStyles.container}
-        contentContainerStyle={[
-          NavigationStyles.contentContainer,
-          { paddingTop: headerHeight },
-        ]}
+        contentContainerStyle={{ paddingBottom: 80 }}
       >
-        <List.Section>
-          <List.Subheader
-            style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[
+            NavigationStyles.heroHeader,
+            { paddingTop: insets.top + 70, paddingBottom: 24 },
+          ]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text
+            variant="headlineSmall"
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
-            {labels.studyLiturgy}
-          </List.Subheader>
-          <MenuCard
-            title={labels.hymnal}
-            description={labels.hymnalSub}
-            icon="music-note"
-            iconColor={theme.colors.tertiary}
-            onPress={() =>
-              router.push({
-                pathname: '/resources/hymnal-selection',
-                params: { backTo: '/resources' },
-              } as any)
-            }
-          />
+            {labels.title}
+          </Text>
+        </ImageBackground>
 
-          <MenuCard
-            title={labels.sabbathSchool}
-            description={labels.sabbathSchoolSub}
-            icon="book-open-variant"
-            iconColor={theme.colors.tertiary}
-            rightIcon="open-in-new"
-            onPress={() => openSabbathSchool(language)}
-          />
+        <View style={styles.body}>
+          <List.Section>
+            <List.Subheader
+              style={[
+                NavigationStyles.subheader,
+                { color: theme.colors.onBackground },
+              ]}
+            >
+              {labels.studyLiturgy}
+            </List.Subheader>
+            <MenuCard
+              title={labels.hymnal}
+              description={labels.hymnalSub}
+              icon="music-note"
+              iconColor={theme.colors.tertiary}
+              onPress={() =>
+                router.push({
+                  pathname: '/resources/hymnal-selection',
+                  params: { backTo: '/resources' },
+                } as any)
+              }
+            />
 
-          <MenuCard
-            title={labels.library}
-            description={labels.librarySub}
-            icon="bookshelf"
-            iconColor={theme.colors.tertiary}
-            onPress={() => {}} // TODO: Implement library page
-          />
-        </List.Section>
+            <MenuCard
+              title={labels.sabbathSchool}
+              description={labels.sabbathSchoolSub}
+              icon="book-open-variant"
+              iconColor={theme.colors.tertiary}
+              rightIcon="open-in-new"
+              onPress={() => openSabbathSchool(language)}
+            />
 
-        <List.Section>
-          <List.Subheader
-            style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
-          >
-            {labels.sermonsWorship}
-          </List.Subheader>
-          <MenuCard
-            title={labels.youtube}
-            description={labels.youtubeSub}
-            icon="youtube"
-            iconColor={(theme.colors as any).brandYoutube}
-            onPress={openSermonArchive}
-            rightIcon="open-in-new"
-          />
+            <MenuCard
+              title={labels.library}
+              description={labels.librarySub}
+              icon="bookshelf"
+              iconColor={theme.colors.tertiary}
+              onPress={() => {}} // TODO: Implement library page
+            />
+          </List.Section>
 
-          <MenuCard
-            title={labels.spotify}
-            description={labels.spotifySub}
-            icon="spotify"
-            iconColor={(theme.colors as any).brandSpotify}
-            onPress={openSpotifyPodcast}
-            rightIcon="open-in-new"
-          />
+          <List.Section>
+            <List.Subheader
+              style={[
+                NavigationStyles.subheader,
+                { color: theme.colors.onBackground },
+              ]}
+            >
+              {labels.sermonsWorship}
+            </List.Subheader>
+            <MenuCard
+              title={labels.youtube}
+              description={labels.youtubeSub}
+              icon="youtube"
+              iconColor={(theme.colors as any).brandYoutube}
+              onPress={openSermonArchive}
+              rightIcon="open-in-new"
+            />
 
-          <MenuCard
-            title={labels.zoomClass}
-            description={labels.zoomSub}
-            icon="video"
-            iconColor={(theme.colors as any).brandZoom}
-            onPress={openZoomClass}
-            rightIcon="open-in-new"
-          />
-        </List.Section>
+            <MenuCard
+              title={labels.spotify}
+              description={labels.spotifySub}
+              icon="spotify"
+              iconColor={(theme.colors as any).brandSpotify}
+              onPress={openSpotifyPodcast}
+              rightIcon="open-in-new"
+            />
+
+            <MenuCard
+              title={labels.zoomClass}
+              description={labels.zoomSub}
+              icon="video"
+              iconColor={(theme.colors as any).brandZoom}
+              onPress={openZoomClass}
+              rightIcon="open-in-new"
+            />
+          </List.Section>
+        </View>
       </ScrollView>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  body: {
+    paddingHorizontal: 20,
+  },
+});

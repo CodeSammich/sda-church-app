@@ -1,4 +1,7 @@
-import { getSortedHymns } from '@/constants/EnglishHymnal';
+import {
+  formatHymnalScriptureReference,
+  getSortedHymns,
+} from '@/constants/EnglishHymnal';
 import { SupportedLanguage } from '@/constants/LanguageContext';
 import * as BibleService from '@/services/BibleService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -706,7 +709,8 @@ const BIBLE_BOOKS_DATA: Record<
 
 export const ALL_SEARCH_LABELS: Record<string, any> = {
   en: {
-    searchPlaceholder: 'Search app...',
+    searchBiblePlaceholder: 'Search Bible...',
+    searchHymnalPlaceholder: 'Search hymnal...',
     goStraightTo: 'Go straight to {q}',
     goToHymn: 'Go directly to hymn',
     home: {
@@ -829,7 +833,8 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
     },
   },
   zh: {
-    searchPlaceholder: '搜尋...',
+    searchBiblePlaceholder: '搜尋聖經...',
+    searchHymnalPlaceholder: '搜尋詩歌...',
     goStraightTo: '直接前往 {q}',
     goToHymn: '直接前往讚美詩',
     home: {
@@ -939,7 +944,8 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
     },
   },
   'zh-cn': {
-    searchPlaceholder: '搜索...',
+    searchBiblePlaceholder: '搜索圣经...',
+    searchHymnalPlaceholder: '搜索诗歌...',
     goStraightTo: '直接前往 {q}',
     goToHymn: '直接前往赞美诗',
     home: {
@@ -1050,7 +1056,8 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
     },
   },
   es: {
-    searchPlaceholder: 'Buscar...',
+    searchBiblePlaceholder: 'Buscar en la Biblia...',
+    searchHymnalPlaceholder: 'Buscar himnos...',
     goStraightTo: 'Ir directamente a {q}',
     goToHymn: 'Ir directamente al himno',
     home: {
@@ -1231,7 +1238,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
 
       return {
         title: localizedName,
-        keywords: [localizedName, id, ...data.short, labels.bible?.title || 'Bible'],
+        keywords: [localizedName, id, ...data.short],
         icon: 'book-cross',
         route: `/bible?bookId=${id}&translationId=${defaultTransId}`,
         isBibleBook: true,
@@ -1243,7 +1250,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
   // This allows the unified search bar to act as the primary filter for the hymnal.
   const englishHymns: SearchableItem[] = getSortedHymns('en').map((h) => ({
     title: `${h.number}. ${h.title}`,
-    subtitle: h.scriptureReference,
+    subtitle: formatHymnalScriptureReference(h.scriptureReference),
     keywords: [
       h.number.toString(),
       h.title,

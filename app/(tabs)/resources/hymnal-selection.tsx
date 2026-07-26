@@ -1,21 +1,24 @@
 import { MenuCard } from '@/components/MenuCard';
+import { VerseHero } from '@/components/VerseHero';
 import {
+  CHURCH_BUILDING_IMAGE_URL,
   openChineseHymnalAndroid,
   openChineseHymnalIos,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { NavigationStyles } from '@/styles/NavigationStyles';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
 import { ScrollView } from 'react-native';
 import { List } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const uiLabels = {
   en: {
     title: 'Select Hymnal',
+    verse: '“Is anyone among you in trouble? Let them pray. Is anyone happy? Let them sing songs of praise.”',
+    verseRef: 'James 5:13 (NIV)',
     english: 'English Hymnal',
     englishSub: 'Lyrics and music for worship',
     chineseIos: 'Chinese Hymnal (iOS)',
@@ -25,6 +28,8 @@ const uiLabels = {
   },
   zh: {
     title: '選擇詩歌本',
+    verse: '「你們中間有受苦的呢，他就該禱告；有喜樂的呢，他就該歌頌。」',
+    verseRef: '雅各書 5:13 (CUV)',
     english: '英文詩歌本',
     englishSub: '敬拜用的歌詞與音樂',
     chineseIos: '506 讚美詩 (iOS)',
@@ -34,6 +39,8 @@ const uiLabels = {
   },
   'zh-cn': {
     title: '选择诗歌本',
+    verse: '“你们中间有受苦的呢，他就该祷告；有喜乐的呢，他就该歌颂。”',
+    verseRef: '雅各书 5:13 (CUVS)',
     english: '英文诗歌本',
     englishSub: '敬拜用的歌词与音乐',
     chineseIos: '506 赞美诗 (iOS)',
@@ -43,6 +50,8 @@ const uiLabels = {
   },
   es: {
     title: 'Seleccionar Himnario',
+    verse: '“¿Está alguno entre vosotros afligido? Haga oración. ¿Está alguno alegre? Cante alabanzas.”',
+    verseRef: 'Santiago 5:13 (RVR1960)',
     english: 'Himnario en Inglés',
     englishSub: 'Letras y música para la adoración',
     chineseIos: 'Himnario Chino (iOS)',
@@ -57,21 +66,33 @@ export default function HymnalSelectionScreen() {
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
-
-  const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={NavigationStyles.container}
-        contentContainerStyle={[
-          NavigationStyles.contentContainer,
-          { paddingTop: headerHeight },
-        ]}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: 0, paddingBottom: 80 }}
       >
-        <List.Section>
+        <VerseHero
+          title={labels.title}
+          verse={labels.verse}
+          reference={labels.verseRef}
+          imageSource={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          verseColors={
+            theme.dark
+              ? ['#242052', '#312B6B', '#3D3782']
+              : ['#312E81', '#4338CA', '#6366F1']
+          }
+        />
+
+        {/* Body */}
+        <List.Section style={{ paddingHorizontal: 20 }}>
           <MenuCard
             title={labels.english}
             description={labels.englishSub}

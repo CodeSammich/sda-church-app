@@ -2,11 +2,14 @@ import { CHURCH_BUILDING_IMAGE_URL, openBeliefs } from '@/constants/ExternalLink
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
+import { NavigationStyles } from '@/styles/NavigationStyles';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +19,7 @@ export default function AboutSDAScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
@@ -23,7 +27,7 @@ export default function AboutSDAScreen() {
       churchName: 'Seventh-day Adventist Church',
       aboutSDA: 'About the Denomination',
       sdaDescription:
-        'Seventh-day Adventists are a global Christian community that regards the Bible as the supreme authority in their lives. We adhere to the principle of Sola Scriptura (By Scripture Alone), which means that the Bible is the sole infallible source of authority for Christian faith and practice, and the standard by which all teachings and experiences are measured.',
+        'Seventh-day Adventists are a global Protestant Christian community that regards the Bible as the supreme authority in their lives. We adhere to the principle of Sola Scriptura (By Scripture Alone), which means that the Bible is the sole infallible source of authority for Christian faith and practice, and the standard by which all teachings and experiences are measured.',
       pillarItems: [
         { title: 'Bible-Centered', icon: 'book-cross' },
         { title: 'Faith & Love', icon: 'heart-flash' },
@@ -99,7 +103,7 @@ export default function AboutSDAScreen() {
       churchName: '基督復臨安息日會',
       aboutSDA: '關於教派',
       sdaDescription:
-        '基督復臨安息日會是一個全球性的基督徒團體, 將聖經視為生活的最高權威。我們堅持「唯獨聖經」(Sola Scriptura) 的原則, 這意味著聖經是基督徒信仰和實踐的唯一無誤權威來源, 也是衡量所有教導和經驗的標準。',
+        '基督復臨安息日會是一個全球性的新教徒團體, 將聖經視為生活的最高權威。我們堅持「唯獨聖經」(Sola Scriptura) 的原則, 這意味著聖經是基督徒信仰和實踐的唯一無誤權威來源, 也是衡量所有教導和經驗的標準。',
       pillarItems: [
         { title: '以聖經為中心', icon: 'book-cross' },
         { title: '信仰與愛', icon: 'heart-flash' },
@@ -170,7 +174,7 @@ export default function AboutSDAScreen() {
       churchName: '基督复临安息日会',
       aboutSDA: '关于教派',
       sdaDescription:
-        '基督复临安息日会是一个全球性的基督徒团体, 将圣经视为生活的最高权威。我们坚持“唯独圣经”(Sola Scriptura) 的原则, 这意味着圣经是基督徒信仰和实践的唯一无误权威来源, 也是衡量所有教导和经验的标准。',
+        '基督复临安息日会是一个全球性的新教徒团体, 将圣经视为生活的最高权威。我们坚持“唯独圣经”(Sola Scriptura) 的原则, 这意味着圣经是基督徒信仰和实践的唯一无误权威来源, 也是衡量所有教导和经验的标准。',
       pillarItems: [
         { title: '以圣经为中心', icon: 'book-cross' },
         { title: '信仰与爱', icon: 'heart-flash' },
@@ -241,7 +245,7 @@ export default function AboutSDAScreen() {
       churchName: 'Iglesia Adventista\ndel Séptimo Día',
       aboutSDA: 'Acerca de la Denominación',
       sdaDescription:
-        'Los Adventistas del Séptimo Día son una comunidad cristiana global que considera la Biblia como la autoridad suprema en sus vidas. Nos adherimos al principio de Sola Scriptura (Solo por la Escritura), lo que significa que la Biblia es la única fuente infalible de autoridad para la fe y la práctica cristiana, y el estándar por el cual se miden todas las enseñanzas y experiencias.',
+        'Los Adventistas del Séptimo Día son una comunidad Cristiana Protestante global que considera la Biblia como la autoridad suprema en sus vidas. Nos adherimos al principio de Sola Scriptura (Solo por la Escritura), lo que significa que la Biblia es la única fuente infalible de autoridad para la fe y la práctica cristiana, y el estándar por el cual se miden todas las enseñanzas y experiencias.',
       pillarItems: [
         { title: 'Biblia', icon: 'book-cross' },
         { title: 'Fe y Amor', icon: 'heart-flash' },
@@ -318,27 +322,34 @@ export default function AboutSDAScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, backTo, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={DocumentStyles.container}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingTop: headerHeight,
+          paddingTop: 0,
           paddingBottom: insets.bottom + 50,
         }}
       >
-        <View style={DocumentStyles.header}>
-          <Image
-            source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-            style={DocumentStyles.image}
-            accessibilityLabel="Church banner"
+        <ImageBackground
+          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
           />
           <Text
             variant="headlineSmall"
-            style={[DocumentStyles.docTitle, { color: theme.colors.onSurface }]}
+            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
           >
             {labels.churchName}
           </Text>
-        </View>
+        </ImageBackground>
 
         <View style={DocumentStyles.section}>
           <Text
