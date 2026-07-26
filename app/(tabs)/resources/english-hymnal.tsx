@@ -73,7 +73,6 @@ export default function HymnalScreen() {
   }>();
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
   const flatListRef = useRef<FlatList>(null);
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
 
   const allHymns = useMemo(() => getSortedHymns('en'), []);
 
@@ -221,7 +220,7 @@ export default function HymnalScreen() {
       <Stack.Screen options={{ title: labels.title, backTo } as any} />
       <ScrollView
         style={DocumentStyles.container}
-        contentContainerStyle={{ paddingTop: headerHeight }}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
         {/* Hero */}
         <ImageBackground

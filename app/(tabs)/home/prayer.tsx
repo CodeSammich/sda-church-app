@@ -1,6 +1,5 @@
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { DocumentStyles } from '@/styles/DocumentStyles';
 import { NavigationStyles } from '@/styles/NavigationStyles';
@@ -46,7 +45,6 @@ export default function PrayerWallScreen() {
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   return (
@@ -54,7 +52,7 @@ export default function PrayerWallScreen() {
       <Stack.Screen options={{ title: labels.title, backTo } as any} />
       <ScrollView
         style={DocumentStyles.container}
-        contentContainerStyle={{ paddingTop: headerHeight }}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
         {/* Hero */}
         <ImageBackground

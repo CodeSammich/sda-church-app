@@ -5,7 +5,6 @@ import {
   openChineseHymnalIos,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { NavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -61,17 +60,12 @@ export default function HymnalSelectionScreen() {
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
 
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
-
   return (
     <>
       <Stack.Screen options={{ title: labels.title, backTo } as any} />
       <ScrollView
         style={NavigationStyles.container}
-        contentContainerStyle={[
-          NavigationStyles.contentContainer,
-          { paddingTop: headerHeight },
-        ]}
+        contentContainerStyle={{ paddingTop: 0, paddingBottom: 80 }}
       >
         {/* Hero */}
         <ImageBackground
@@ -92,7 +86,7 @@ export default function HymnalSelectionScreen() {
         </ImageBackground>
 
         {/* Body */}
-        <List.Section>
+        <List.Section style={{ paddingHorizontal: 20 }}>
           <MenuCard
             title={labels.english}
             description={labels.englishSub}
