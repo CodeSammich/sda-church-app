@@ -17,7 +17,8 @@ import { List } from 'react-native-paper';
 const uiLabels = {
   en: {
     title: 'Select Hymnal',
-    verse: '“Is anyone among you in trouble? Let them pray. Is anyone happy? Let them sing songs of praise.”',
+    verse:
+      'Is anyone among you in trouble? Let them pray. Is anyone happy? Let them sing songs of praise.',
     verseRef: 'James 5:13 (NIV)',
     english: 'English Hymnal',
     englishSub: 'Lyrics and music for worship',
@@ -28,7 +29,7 @@ const uiLabels = {
   },
   zh: {
     title: '選擇詩歌本',
-    verse: '「你們中間有受苦的呢，他就該禱告；有喜樂的呢，他就該歌頌。」',
+    verse: '你們中間有受苦的呢，他就該禱告；有喜樂的呢，他就該歌頌。',
     verseRef: '雅各書 5:13 (CUV)',
     english: '英文詩歌本',
     englishSub: '敬拜用的歌詞與音樂',
@@ -39,7 +40,7 @@ const uiLabels = {
   },
   'zh-cn': {
     title: '选择诗歌本',
-    verse: '“你们中间有受苦的呢，他就该祷告；有喜乐的呢，他就该歌颂。”',
+    verse: '你们中间有受苦的呢，他就该祷告；有喜乐的呢，他就该歌颂。',
     verseRef: '雅各书 5:13 (CUVS)',
     english: '英文诗歌本',
     englishSub: '敬拜用的歌词与音乐',
@@ -50,7 +51,8 @@ const uiLabels = {
   },
   es: {
     title: 'Seleccionar Himnario',
-    verse: '“¿Está alguno entre vosotros afligido? Haga oración. ¿Está alguno alegre? Cante alabanzas.”',
+    verse:
+      '¿Está alguno entre vosotros afligido? Haga oración. ¿Está alguno alegre? Cante alabanzas.',
     verseRef: 'Santiago 5:13 (RVR1960)',
     english: 'Himnario en Inglés',
     englishSub: 'Letras y música para la adoración',
