@@ -3,7 +3,7 @@
   "name": "NY Chinese SDA",
   "description": "Seventh-day Adventist church community app.",
   "background_color": "#F2E6DF",
-  "theme_color": "#F2E6DF",
+  "theme_color": "#0F0F0F",
   "icons": [
     {
       "src": "icon-192x192.png",
