@@ -1,4 +1,7 @@
 import { InitialSetup } from '@/components/InitialSetup';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { getHeaderBackTarget, hasHeaderBackButton } from '@/constants/BackNavigation';
+import { openIosPwaInstallGuide } from '@/constants/ExternalLinks';
 import {
   DEFAULT_LANG,
   LanguageContext,
@@ -16,11 +19,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as Localization from 'expo-localization';
-import { Stack } from 'expo-router';
+import {
+  router,
+  Stack,
+  useGlobalSearchParams,
+  usePathname,
+  useSegments,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
-  AppState,
   LogBox,
   Platform,
   StatusBar,
@@ -44,29 +52,130 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-const getSystemLanguage = (): SupportedLanguage => {
-  const [primaryLocale] = Localization.getLocales();
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+};
 
-  if (!primaryLocale?.languageCode) {
-    return DEFAULT_LANG;
+const isInstalledPwa = () => {
+  if (
+    Platform.OS !== 'web' ||
+    typeof window === 'undefined' ||
+    typeof navigator === 'undefined'
+  ) {
+    return false;
   }
 
-  const { languageCode, languageTag } = primaryLocale;
-  const scriptCode = (primaryLocale as any).scriptCode;
+  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    navigatorWithStandalone.standalone === true
+  );
+};
 
-  // Handle Chinese variants (Simplified vs Traditional mapping)
-  if (languageCode === 'zh') {
-    // Prioritize scriptCode (standard for modern OS), fall back to region tags
-    const isSimplified = scriptCode === 'Hans' || /hans|cn|sg|my/i.test(languageTag);
+const isBibleReaderPath = (pathname: string) =>
+  /\/(?:\(tabs\)\/)?bible(?:\/index)?\/?$/.test(pathname);
+
+const DEFERRED_REFRESH_FLAG = '__sdaChurchDeferredRefresh';
+
+const isAndroidChromeBrowser = () => {
+  if (
+    Platform.OS !== 'web' ||
+    typeof window === 'undefined' ||
+    typeof navigator === 'undefined' ||
+    isInstalledPwa()
+  ) {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent;
+  const navigatorWithUserAgentData = navigator as Navigator & {
+    userAgentData?: { brands?: { brand: string }[] };
+  };
+  const brands = navigatorWithUserAgentData.userAgentData?.brands;
+  const isGoogleChrome = brands?.length
+    ? brands.some(({ brand }) => brand === 'Google Chrome')
+    : /Chrome\//i.test(userAgent) &&
+      !/(?:EdgA|OPR|SamsungBrowser|YaBrowser|DuckDuckGo)\//i.test(userAgent);
+
+  return /Android/i.test(userAgent) && isGoogleChrome;
+};
+
+const isIosSafariBrowser = () => {
+  if (
+    Platform.OS !== 'web' ||
+    typeof navigator === 'undefined' ||
+    isInstalledPwa()
+  ) {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent;
+  const isIosDevice =
+    /iPad|iPhone|iPod/i.test(userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari =
+    /Safari\//i.test(userAgent) &&
+    !/(?:CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo)\//i.test(userAgent);
+
+  return isIosDevice && isSafari;
+};
+
+const matchSupportedLanguage = (
+  languageTag?: string | null,
+  languageCode?: string | null,
+  scriptCode?: string | null,
+): SupportedLanguage | null => {
+  const normalizedTag = languageTag?.toLowerCase().replaceAll('_', '-') ?? '';
+  const normalizedCode = languageCode?.toLowerCase() || normalizedTag.split('-')[0];
+
+  if (normalizedCode === 'zh') {
+    const isSimplified =
+      scriptCode?.toLowerCase() === 'hans' ||
+      /(?:^|-)hans(?:-|$)|(?:^|-)(?:cn|sg|my)(?:-|$)/.test(normalizedTag);
     return isSimplified ? 'zh-cn' : 'zh';
   }
 
-  const SUPPORTED_MAP: Partial<Record<string, SupportedLanguage>> = {
-    es: 'es',
-    en: 'en',
-  };
-  return SUPPORTED_MAP[languageCode] ?? 'en';
+  if (normalizedCode === 'en' || normalizedCode === 'es') {
+    return normalizedCode;
+  }
+
+  return null;
 };
+
+const getSystemLanguage = (): SupportedLanguage => {
+  // Browsers expose an ordered preference list. Use the first language the app
+  // supports rather than assuming the browser's primary language is supported.
+  if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+    const browserLanguages = navigator.languages?.length
+      ? Array.from(navigator.languages)
+      : [navigator.language];
+
+    for (const languageTag of browserLanguages) {
+      const supportedLanguage = matchSupportedLanguage(languageTag);
+      if (supportedLanguage) return supportedLanguage;
+    }
+  } else {
+    // On native platforms Expo reads the operating system's ordered locales.
+    for (const locale of Localization.getLocales()) {
+      const supportedLanguage = matchSupportedLanguage(
+        locale.languageTag,
+        locale.languageCode,
+        (locale as any).scriptCode,
+      );
+      if (supportedLanguage) return supportedLanguage;
+    }
+  }
+
+  return DEFAULT_LANG;
+};
+
+const needsCjkSystemFont = (language: SupportedLanguage) =>
+  language === 'zh' || language === 'zh-cn';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -97,7 +206,100 @@ export default function RootLayout() {
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'up-to-date'>(
     'idle',
   );
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [installPromptDismissed, setInstallPromptDismissed] = useState(false);
   const updateCheckInProgress = useRef(false);
+  const updateStatusTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearUpdateStatusTimeout = () => {
+    if (updateStatusTimeout.current) {
+      clearTimeout(updateStatusTimeout.current);
+      updateStatusTimeout.current = null;
+    }
+  };
+
+  const dismissUpdateStatus = () => {
+    clearUpdateStatusTimeout();
+    setUpdateStatus('idle');
+  };
+
+  const showUpToDateStatus = () => {
+    clearUpdateStatusTimeout();
+    setUpdateStatus('up-to-date');
+    updateStatusTimeout.current = setTimeout(() => {
+      updateStatusTimeout.current = null;
+      setUpdateStatus('idle');
+    }, 3000);
+  };
+
+  useEffect(
+    () => () => {
+      clearUpdateStatusTimeout();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const onBeforeInstallPrompt = (event: Event) => {
+      if (!isAndroidChromeBrowser()) return;
+
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const onAppInstalled = () => {
+      setInstallPrompt(null);
+      setInstallPromptDismissed(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      typeof navigator === 'undefined' ||
+      !/Android/i.test(navigator.userAgent) ||
+      !isInstalledPwa()
+    ) {
+      return;
+    }
+
+    const requestImmersiveFullscreen = () => {
+      if (
+        typeof document === 'undefined' ||
+        document.fullscreenElement ||
+        !document.documentElement.requestFullscreen
+      ) {
+        return;
+      }
+
+      document.documentElement
+        .requestFullscreen({ navigationUI: 'hide' })
+        .catch(() => undefined);
+    };
+
+    // The Fullscreen API needs a real user activation. The window bubble phase
+    // runs after the route's click handler, so this does not reload navigation.
+    const onUserClick = (event: MouseEvent) => {
+      if (event.isTrusted) requestImmersiveFullscreen();
+    };
+
+    window.addEventListener('click', onUserClick);
+
+    return () => {
+      window.removeEventListener('click', onUserClick);
+    };
+  }, []);
 
   const canUseServiceWorker = () =>
     Platform.OS === 'web' &&
@@ -131,6 +333,7 @@ export default function RootLayout() {
     }
 
     updateCheckInProgress.current = true;
+    clearUpdateStatusTimeout();
 
     // Only show the "Checking..." snackbar for manual clicks to avoid UI noise on launch
     if (!options?.isAuto) {
@@ -153,18 +356,29 @@ export default function RootLayout() {
           await handleUpdate(worker);
         } else if (registration.installing) {
           const installingWorker = registration.installing;
-          installingWorker.addEventListener('statechange', () => {
+          const onStateChange = () => {
             if (installingWorker.state === 'installed') {
+              installingWorker.removeEventListener('statechange', onStateChange);
               setWaitingWorker(installingWorker);
               setUpdateAvailable(true);
+              setUpdateStatus('idle');
               handleUpdate(installingWorker);
             } else if (installingWorker.state === 'redundant') {
+              installingWorker.removeEventListener('statechange', onStateChange);
               setUpdateStatus('idle');
             }
-          });
+          };
+          installingWorker.addEventListener('statechange', onStateChange);
+          // The worker can finish between registration.update() resolving and
+          // this listener being attached, so inspect its current state too.
+          onStateChange();
         } else {
           setUpdateAvailable(false);
-          setUpdateStatus(options?.isAuto ? 'idle' : 'up-to-date');
+          if (options?.isAuto) {
+            setUpdateStatus('idle');
+          } else {
+            showUpToDateStatus();
+          }
         }
       } else {
         setUpdateStatus('idle');
@@ -179,7 +393,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     // Register service worker for PWA support on web
-    let subscription: { remove: () => void } | undefined;
     let removeControllerChangeListener: (() => void) | undefined;
     let removeLoadListener: (() => void) | undefined;
 
@@ -241,23 +454,23 @@ export default function RootLayout() {
 
       // Refresh the page automatically when the new service worker takes over
       const onControllerChange = () => {
-        if (!refreshing) {
-          refreshing = true;
-          console.log('New SW activated, reloading...');
-          window.location.reload();
+        if (refreshing) return;
+
+        if (isBibleReaderPath(window.location.pathname)) {
+          // Keep the active Sound instance, playback position, and sleep timer intact.
+          // The new worker can control subsequent requests without replacing this page.
+          (window as any)[DEFERRED_REFRESH_FLAG] = true;
+          console.log('New SW activated; deferring reload until leaving Bible reader.');
+          return;
         }
+
+        refreshing = true;
+        console.log('New SW activated, reloading...');
+        window.location.reload();
       };
       navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
       removeControllerChangeListener = () =>
         navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
-
-      // Use AppState to detect when the PWA is resumed from suspension (common on iOS)
-      subscription = AppState.addEventListener('change', (nextAppState) => {
-        if (nextAppState === 'active') {
-          console.log('App resumed - performing freshness check');
-          handleManualCheck({ isAuto: true });
-        }
-      });
 
       // Check both 'complete' and 'interactive' to ensure we start the SW
       // as soon as the browser allows, minimizing the "reversion" window.
@@ -281,11 +494,13 @@ export default function RootLayout() {
         const systemLang = getSystemLanguage();
 
         // Use saved settings if they exist, otherwise fallback to system defaults
-        setLanguage((savedLang as SupportedLanguage) || systemLang);
+        const preferredLanguage = (savedLang as SupportedLanguage) || systemLang;
+        const useDarkTheme = savedTheme
+          ? savedTheme === THEME_DARK
+          : colorScheme === THEME_DARK;
+        setLanguage(preferredLanguage);
         setTheme(
-          getAppTheme(
-            savedTheme ? savedTheme === THEME_DARK : colorScheme === THEME_DARK,
-          ),
+          getAppTheme(useDarkTheme, needsCjkSystemFont(preferredLanguage)),
         );
 
         if (setupDone !== 'true') {
@@ -300,7 +515,6 @@ export default function RootLayout() {
     prepare();
 
     return () => {
-      if (subscription) subscription.remove();
       removeControllerChangeListener?.();
       removeLoadListener?.();
     };
@@ -308,6 +522,7 @@ export default function RootLayout() {
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
+    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang)));
     await AsyncStorage.setItem('user-language', lang);
   };
 
@@ -320,7 +535,7 @@ export default function RootLayout() {
     } else {
       next = !theme.dark;
     }
-    setTheme(getAppTheme(next));
+    setTheme(getAppTheme(next, needsCjkSystemFont(language)));
     await AsyncStorage.setItem(THEME_STORAGE_KEY, next ? THEME_DARK : THEME_LIGHT);
   };
 
@@ -335,10 +550,31 @@ export default function RootLayout() {
     setShowSetup(false);
   };
 
+  const handleInstall = async () => {
+    setInstallPromptDismissed(true);
+
+    if (isIosSafariBrowser()) {
+      await openIosPwaInstallGuide();
+      return;
+    }
+
+    if (!installPrompt || !isAndroidChromeBrowser()) return;
+
+    const prompt = installPrompt;
+    setInstallPrompt(null);
+
+    try {
+      await prompt.prompt();
+      await prompt.userChoice;
+    } catch (error) {
+      console.warn('Unable to show the PWA install prompt', error);
+    }
+  };
+
   const [loaded, error] = useFonts({
-    'NotoSans-Regular': require('./../assets/fonts/NotoSans-Regular.ttf'),
-    'NotoSans-Medium': require('./../assets/fonts/NotoSans-Medium.ttf'),
-    'NotoSans-Bold': require('./../assets/fonts/NotoSans-Bold.ttf'),
+    'PlusJakartaSans-Regular': require('../assets/fonts/PlusJakartaSans-Regular.ttf'),
+    'PlusJakartaSans-Medium': require('../assets/fonts/PlusJakartaSans-Medium.ttf'),
+    'PlusJakartaSans-Bold': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),
     'material-community': require('../assets/fonts/MaterialCommunityIcons.ttf'),
   });
 
@@ -378,10 +614,16 @@ export default function RootLayout() {
               theme={theme}
               showSetup={showSetup}
               onCompleteSetup={onCompleteSetup}
+              installAvailable={
+                !installPromptDismissed &&
+                (installPrompt !== null || isIosSafariBrowser())
+              }
+              onInstall={handleInstall}
+              onDismissInstall={() => setInstallPromptDismissed(true)}
               updateAvailable={updateAvailable}
               onUpdate={handleUpdate}
               updateStatus={updateStatus}
-              onDismissStatus={() => setUpdateStatus('idle')}
+              onDismissStatus={dismissUpdateStatus}
             />
           </UpdateContext.Provider>
         </ThemeContext.Provider>
@@ -394,6 +636,9 @@ function RootLayoutNav({
   theme,
   showSetup,
   onCompleteSetup,
+  installAvailable,
+  onInstall,
+  onDismissInstall,
   updateAvailable,
   onUpdate,
   updateStatus,
@@ -402,6 +647,9 @@ function RootLayoutNav({
   theme: AppTheme;
   showSetup: boolean;
   onCompleteSetup: () => void;
+  installAvailable: boolean;
+  onInstall: () => Promise<void>;
+  onDismissInstall: () => void;
   updateAvailable: boolean;
   onUpdate: () => void;
   updateStatus: 'idle' | 'checking' | 'up-to-date';
@@ -409,20 +657,87 @@ function RootLayoutNav({
 }) {
   const { language } = useContext(LanguageContext);
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+  const segments = useSegments();
+  const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
+  const gestureBackTarget = hasHeaderBackButton(segments)
+    ? getHeaderBackTarget(segments, globalParams.backTo)
+    : '/';
+  const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
+
+  useEffect(() => {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      isBibleReaderPath(pathname) ||
+      !(window as any)[DEFERRED_REFRESH_FLAG]
+    ) {
+      return;
+    }
+
+    // An update activated while Bible audio was open. Apply its one deferred
+    // page refresh now that leaving the reader cannot discard active playback.
+    delete (window as any)[DEFERRED_REFRESH_FLAG];
+    window.location.reload();
+  }, [pathname]);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      typeof navigator === 'undefined' ||
+      !/Android/i.test(navigator.userAgent) ||
+      !isInstalledPwa()
+    ) {
+      return;
+    }
+
+    const guardKey = '__androidPwaBackGuard';
+
+    const armBackGuard = () => {
+      if (window.history.state?.[guardKey]) return;
+
+      window.history.pushState(
+        { ...(window.history.state ?? {}), [guardKey]: true },
+        '',
+        window.location.href,
+      );
+    };
+
+    const handleBrowserBack = (event: PopStateEvent) => {
+      // Moving forward into our guard should remain a browser-history operation.
+      if (event.state?.[guardKey]) return;
+
+      // The guard keeps the browser on the same URL. Stop Expo Router from also
+      // processing this pop and perform the same app navigation as the header arrow.
+      event.stopImmediatePropagation();
+      router.replace(gestureBackTarget as any);
+
+      // Navigating to Home while already there does not cause a route render, so
+      // ensure the guard is restored even when the target route stays unchanged.
+      window.setTimeout(armBackGuard, 100);
+    };
+
+    armBackGuard();
+    window.addEventListener('popstate', handleBrowserBack, true);
+
+    return () => {
+      window.removeEventListener('popstate', handleBrowserBack, true);
+    };
+  }, [gestureBackTarget, routeKey]);
 
   // Sync system bars and PWA theme-color meta tag
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const bodyBg = theme.colors.background;
+      const systemBarColor = '#000000';
 
       // 1. Sync all theme-color meta tags (Primary driver for Android/iOS bar colors)
       // Using querySelectorAll to update both light and dark preference tags
       const metas = document.querySelectorAll('meta[name="theme-color"]');
       metas.forEach((meta) => {
-        meta.setAttribute('content', bodyBg);
-        // Removing 'media' ensures the browser respects this color immediately,
-        // overriding the static system-preference tags in +html.tsx.
-        // meta.removeAttribute("media");
+        meta.setAttribute('content', systemBarColor);
+        meta.removeAttribute('media');
       });
 
       // 2. Sync backgrounds to eliminate logic overlap and satisfy Android PWA requirements
@@ -470,14 +785,19 @@ function RootLayoutNav({
     <PaperProvider theme={theme as any}>
       <ThemeProvider value={theme as any}>
         <StatusBar
-          barStyle={theme.statusBarScheme}
-          backgroundColor={undefined}
-          translucent
+          barStyle="light-content"
+          backgroundColor="#000000"
+          translucent={false}
         />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
-        {showSetup && <InitialSetup onComplete={onCompleteSetup} />}
+        {installAvailable && (
+          <InstallPrompt onInstall={onInstall} onDismiss={onDismissInstall} />
+        )}
+        {showSetup && !installAvailable && (
+          <InitialSetup onComplete={onCompleteSetup} />
+        )}
 
         <Snackbar
           visible={updateStatus !== 'idle' || updateAvailable}

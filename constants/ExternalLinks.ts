@@ -29,6 +29,9 @@ export const ELMHURST_SABBATH_URLS = [
   'https://assets.adventistconnect.org/newyork2/2026/07/19124827/elmhurst_sabbath.png'
 ]
 
+export const IOS_PWA_INSTALL_GUIDE_URL =
+  'https://youtu.be/5IwrG8BTylw?si=7FW6G4DWiJmLkz89&t=15';
+
 // Hardcoded to 760 41st Ave Elmhurst, NY 11373
 export const CHURCH_LATITUDE = 40.74546;
 export const CHURCH_LONGITUDE = -73.88914;
@@ -107,6 +110,13 @@ export const openYouTubeSearch = (query: string) => {
     'Could not open the YouTube search results.',
   );
 };
+
+export const openIosPwaInstallGuide = () =>
+  openURL(
+    IOS_PWA_INSTALL_GUIDE_URL,
+    'Error',
+    'Could not open the PWA installation guide.',
+  );
 
 // SABBATH SCHOOL DIGITAL ECOSYSTEM
 // DENOMINATIONAL CORE FRAMEWORK & PUBLIC DATA BACKBONE

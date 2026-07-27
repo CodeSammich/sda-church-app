@@ -97,8 +97,8 @@ export default function CommunityScreen() {
             iconColor={theme.colors.tertiary}
             onPress={() =>
               router.push({
-                pathname: '/community/fellowship',
-                params: { backTo: '/community' },
+                pathname: '/home/fellowship',
+                params: { backTo: '/bible/bible1' },
               } as any)
             }
           />
@@ -117,8 +117,8 @@ export default function CommunityScreen() {
             style={{ marginBottom: 12 }}
             onPress={() =>
               router.push({
-                pathname: '/community/roster',
-                params: { backTo: '/community' },
+                pathname: '/home/bulletin',
+                params: { backTo: '/bible/bible1' },
               } as any)
             }
           />
@@ -154,8 +154,8 @@ export default function CommunityScreen() {
             iconColor={theme.colors.tertiary}
             onPress={() =>
               router.push({
-                pathname: '/community/prayer',
-                params: { backTo: '/community' },
+                pathname: '/home/prayer',
+                params: { backTo: '/bible/bible1' },
               } as any)
             }
           />

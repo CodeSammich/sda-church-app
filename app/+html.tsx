@@ -23,15 +23,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
         />
         <meta
           name="theme-color"
-          content={customLightTheme.colors.background}
-          media="(prefers-color-scheme: light)"
-        />
-        <meta
-          name="theme-color"
-          content={customDarkTheme.colors.background}
-          media="(prefers-color-scheme: dark)"
+          content="#000000"
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black"
+        />
         <meta name="apple-mobile-web-app-title" content="NYCCSDA" />
         <link rel="apple-touch-icon" href="icon-192x192.png" />
         <link rel="manifest" href="manifest.json" />
