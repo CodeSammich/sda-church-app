@@ -2,7 +2,7 @@
   "expo": {
     "name": "NY Chinese SDA",
     "slug": "sda-church-app",
-    "version": "0.23.0",
+    "version": "0.24.0",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
@@ -20,7 +20,7 @@
       "bundler": "metro",
       "output": "static",
       "favicon": "./public/icon-48x48.png",
-      "display": "standalone",
+      "display": "fullscreen",
       "description": "Seventh-day Adventist church community application.",
       "shortName": "NYCCSDA",
       "lang": "en"
@@ -28,6 +28,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.sdachurchapp"
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#000000",
+      "barStyle": "light-content",
+      "translucent": false
     },
     "android": {
       "adaptiveIcon": {

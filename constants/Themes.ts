@@ -18,27 +18,33 @@ export const THEME_STORAGE_KEY = 'user-theme';
 export const THEME_DARK = 'dark';
 export const THEME_LIGHT = 'light';
 
+/** Script-specific families registered by the root Expo font loader. */
+export const SCRIPTURE_FONT_FAMILIES = {
+  greek: 'Gentium-Regular',
+  hebrew: 'EzraSIL-Regular',
+} as const;
+
 // AdventSans font is used for physical signage and branding
-// but NotoSans is used for digital interfaces for better readability and multilingual support
+// but Plus Jakarta Sans is used for Latin-script digital interfaces
 // AdventSans also has special branded styles for certain words that can be problematic
 // "SDA" becomes the Adventist logo inline, which can be difficult to render consistently
 // https://www.nadadventist.org/about/brand-guidelines/color-typography/
 const baseVariants = {
-  displayLarge: { fontFamily: 'NotoSans-Bold' },
-  displayMedium: { fontFamily: 'NotoSans-Bold' },
-  displaySmall: { fontFamily: 'NotoSans-Bold' },
-  headlineLarge: { fontFamily: 'NotoSans-Bold' },
-  headlineMedium: { fontFamily: 'NotoSans-Bold' },
-  headlineSmall: { fontFamily: 'NotoSans-Bold' },
-  titleLarge: { fontFamily: 'NotoSans-Medium' },
-  titleMedium: { fontFamily: 'NotoSans-Medium' },
-  titleSmall: { fontFamily: 'NotoSans-Medium' },
-  labelLarge: { fontFamily: 'NotoSans-Medium' },
-  labelMedium: { fontFamily: 'NotoSans-Medium' },
-  labelSmall: { fontFamily: 'NotoSans-Medium' },
-  bodyLarge: { fontFamily: 'NotoSans-Regular' },
-  bodyMedium: { fontFamily: 'NotoSans-Regular' },
-  bodySmall: { fontFamily: 'NotoSans-Regular' },
+  displayLarge: { fontFamily: 'PlusJakartaSans-Bold' },
+  displayMedium: { fontFamily: 'PlusJakartaSans-Bold' },
+  displaySmall: { fontFamily: 'PlusJakartaSans-Bold' },
+  headlineLarge: { fontFamily: 'PlusJakartaSans-Bold' },
+  headlineMedium: { fontFamily: 'PlusJakartaSans-Bold' },
+  headlineSmall: { fontFamily: 'PlusJakartaSans-Bold' },
+  titleLarge: { fontFamily: 'PlusJakartaSans-Medium' },
+  titleMedium: { fontFamily: 'PlusJakartaSans-Medium' },
+  titleSmall: { fontFamily: 'PlusJakartaSans-Medium' },
+  labelLarge: { fontFamily: 'PlusJakartaSans-Medium' },
+  labelMedium: { fontFamily: 'PlusJakartaSans-Medium' },
+  labelSmall: { fontFamily: 'PlusJakartaSans-Medium' },
+  bodyLarge: { fontFamily: 'PlusJakartaSans-Regular' },
+  bodyMedium: { fontFamily: 'PlusJakartaSans-Regular' },
+  bodySmall: { fontFamily: 'PlusJakartaSans-Regular' },
 };
 
 // Card background colors (light mode) moved into customLightTheme.colors
@@ -141,6 +147,8 @@ export const customLightTheme = {
 
     // Subtle Blur Effect for Glassmorphism Border for Search
     glassBorder: 'rgba(0,0,0,0.1)',
+    // Persistent highlight for saved Bible verses
+    verseHighlight: '#FFF0A6',
   },
   gradients: {
     heroOverlay: ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)'] as [
@@ -253,6 +261,8 @@ export const customDarkTheme: AppTheme = {
 
     // Subtle Blur Effect for Glassmorphism Border for Search
     glassBorder: 'rgba(255, 255, 255, 0.1)',
+    // Persistent highlight for saved Bible verses
+    verseHighlight: '#5A4B16',
   },
   gradients: {
     heroOverlay: ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)'] as [
@@ -277,7 +287,23 @@ export const ThemeContext = createContext({
 /**
  * Centralized helper to retrieve the correct theme object based on state.
  */
-export const getAppTheme = (isDark: boolean): AppTheme =>
-  isDark ? customDarkTheme : customLightTheme;
+export const getAppTheme = (
+  isDark: boolean,
+  useSystemFonts = false,
+): AppTheme => {
+  const theme = isDark ? customDarkTheme : customLightTheme;
+
+  // Plus Jakarta Sans is a Latin font and does not contain Han glyphs. React
+  // Native on iOS does not reliably fall back
+  // from a named custom font, so Chinese uses the platform's CJK-capable font.
+  if (useSystemFonts) {
+    return {
+      ...theme,
+      fonts: isDark ? MD3DarkTheme.fonts : MD3LightTheme.fonts,
+    };
+  }
+
+  return theme;
+};
 
 export const useAppTheme = () => useTheme<AppTheme>();

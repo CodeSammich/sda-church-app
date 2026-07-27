@@ -16,7 +16,6 @@ export default function DiscoverScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top;
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
@@ -67,7 +66,7 @@ export default function DiscoverScreen() {
         style={DocumentStyles.container}
         onScroll={handleHeroScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: headerHeight }}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
         {/* Hero */}
         <ImageBackground
@@ -81,7 +80,10 @@ export default function DiscoverScreen() {
           />
           <Text
             variant="headlineSmall"
-            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
+            style={[
+              NavigationStyles.heroTitle,
+              { color: theme.dark ? theme.colors.onSurface : theme.colors.onSecondary },
+            ]}
           >
             {labels.title}
           </Text>

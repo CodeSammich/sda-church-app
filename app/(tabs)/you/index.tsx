@@ -100,7 +100,10 @@ export default function YouScreen() {
           />
           <Text
             variant="headlineSmall"
-            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
+            style={[
+              NavigationStyles.heroTitle,
+              { color: theme.dark ? theme.colors.onSurface : theme.colors.onSecondary },
+            ]}
           >
             {labels.title}
           </Text>
@@ -171,7 +174,7 @@ export default function YouScreen() {
           <View style={styles.footer}>
             <TouchableRipple
               onPress={Platform.OS === 'web' ? () => onManualCheck() : undefined}
-              disabled={updateStatus !== 'idle'}
+              disabled={updateStatus === 'checking'}
               style={styles.versionRipple}
             >
               <Text

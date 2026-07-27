@@ -12,6 +12,7 @@ on Safari (iOS) or Chrome (Android).
 ## Table of Contents
 
 - [Technical Setup & Testing](docs/README.md)
+- [Known Bugs](#known-bugs)
 - [UI/UX Design](docs/UI_UX.md)
 - [Feature Designs](docs/feature_designs/)
 - [Contributing Code](docs/CONTRIBUTING.md)
@@ -90,6 +91,112 @@ remains internal to maintain spiritual focus.
 > _"Finally, brothers, whatever is true, whatever is honorable, whatever is right,
 > whatever is pure, whatever is lovely, whatever is admirable—if anything is excellent or
 > praiseworthy—think on these things."_ — **Philippians 4:8**
+
+---
+
+## Bible Sources and Licensing
+
+The Bible reader uses two separate content services with different roles:
+
+- [HelloAO](https://bible.helloao.org/) supplies the English reader text and the
+  shared translated-edition book catalog.
+- [fetch(bible)](https://fetch.bible/) supplies the Chinese Union Version,
+  Reina-Valera 1909, and the original-language critical editions shown in the
+  verse-detail popup. Its normalized Chinese and Spanish resources expose the
+  source editions' translation footnotes directly.
+
+The translated fetch(bible) resources are the public-domain `cmn_cut` (traditional
+CUV), `cmn_cus` (simplified CUV), and `spa_rv` (Reina-Valera 1909) editions.
+
+### “Free to access” does not mean “public domain”
+
+fetch(bible) provides an open CDN with no API key, usage fee, request quota, or
+provider-imposed caching limit. That permission applies to access to the
+fetch(bible) service; it does **not** erase or replace the license of each work
+distributed through the service. fetch(bible explicitly states that consumers
+must follow the terms of each individual Bible resource. See its
+[official access and licensing explanation](https://fetch.bible/access/#no-limits-from-us).
+
+The app currently requests these open critical editions:
+
+| Testament | fetch(bible) ID | Edition | License and source |
+| --- | --- | --- | --- |
+| Old Testament | `hbo_sr` | Solid Rock Hebrew Bible | [CC BY 4.0; Stephen L. Brown, editor](https://github.com/jjmccollum/solid-rock-hb#license-and-citation) |
+| New Testament | `grc_sr` | Statistical Restoration Greek New Testament | [CC BY 4.0; Alan Bunning / Center for New Testament Restoration](https://github.com/Center-for-New-Testament-Restoration/SR#license) |
+
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) is an open and free
+license. It permits copying, redistribution, adaptation, and commercial use
+without a fee or separate permission. It is **not condition-free** and it is
+not the same as a public-domain dedication. Users of the material must:
+
+1. give appropriate credit to the creator and designated attribution parties;
+2. link to the CC BY 4.0 license;
+3. indicate whether the material was changed; and
+4. avoid imposing legal or technological restrictions that prevent recipients
+   from exercising the rights granted by the license.
+
+The app preserves an edition-and-editor attribution in the verse-detail popup.
+For display, `BibleService.fetchOriginalLanguageVerse` omits the separate note
+objects in fetch(bible's plain-text payload and collapses source layout
+whitespace; the returned biblical character strings and textual sigla are
+otherwise displayed as provided. This formatting disclosure, the attribution,
+the edition source links above, and the CC BY 4.0 link must be retained. Any
+future replacement of either edition requires a fresh review of that resource's
+individual license; fetch(bible's free service access alone is not sufficient
+evidence that a replacement work may be redistributed.
+
+The licenses for the bundled Greek and Hebrew fonts are separate from the
+licenses for the biblical text. Font sources and exact terms are documented in
+[assets/fonts/README.md](assets/fonts/README.md).
+
+---
+
+## Known Bugs
+
+### Android PWA may require a notification-shade cycle for fullscreen
+
+The installed Android PWA uses `"display": "fullscreen"` in its web app manifest. On
+some Android and Chrome combinations, the app launches in its fullscreen window but does
+not immediately hide the Android status and navigation bars. Pulling down the notification
+shade and closing it causes Android and Chrome to recalculate the window insets and restore
+the expected immersive fullscreen state.
+
+**User workaround:** Swipe down from the top of the screen to open notifications, then
+swipe back up to close them. The Home screen displays an Android-only reminder once per
+fresh app session.
+
+The web app cannot perform the equivalent operation itself. A standard PWA runs inside the
+browser security sandbox and has no access to the Android `Window`,
+`WindowInsetsController`, or `WindowInsetsControllerCompat` APIs used by native apps to
+hide system bars. The browser Fullscreen API is a separate web capability: it generally
+requires a transient user interaction and does not provide direct control over the native
+Android activity's system-bar flags. CSS viewport changes, forced reflows, and page reloads
+also cannot reliably reproduce an operating-system notification-shade transition.
+
+A native Android or hybrid wrapper could explicitly call
+`WindowInsetsControllerCompat.hide(WindowInsetsCompat.Type.systemBars())` when its window
+regains focus. This project currently prioritizes the cross-platform, browser-installable
+PWA workflow, so it uses the user-facing workaround instead.
+
+References:
+
+- [Chromium fullscreen PWA issue](https://issues.chromium.org/issues/40780591#comment26)
+- [Fullscreen API security requirements](https://developer.mozilla.org/en-US/docs/Web/API/Element/requestFullscreen#security)
+- [Android immersive-mode system-bar API](https://developer.android.com/develop/ui/views/layout/immersive)
+
+### iOS installed PWAs do not support manifest fullscreen
+
+iOS and iPadOS do not support the web app manifest's `"display": "fullscreen"` mode.
+When this PWA is installed from Safari, the operating system falls back to a standalone
+app window. The iOS status area, Home indicator, and system gestures remain controlled by
+the operating system and a PWA cannot hide them permanently.
+
+Apple-specific metadata can adjust the appearance of the status area or allow content to
+extend behind it, but it does not provide the Android-style immersive fullscreen behavior.
+This is a platform limitation rather than an application bug, and there is no notification-
+shade workaround on iOS.
+
+Reference: [PWA fullscreen platform support](https://web.dev/learn/pwa/enhancements#fullscreen_support)
 
 ---
 

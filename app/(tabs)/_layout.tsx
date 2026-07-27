@@ -6,7 +6,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
 import { Tabs, router } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import { Animated, LayoutChangeEvent, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function TabBarIcon(props: {
@@ -35,7 +35,15 @@ export default function TabLayout() {
   const theme = useAppTheme();
   const { language } = useContext(LanguageContext);
   const insets = useSafeAreaInsets();
-  const [tabBarHeight, setTabBarHeight] = useState(49 + insets.bottom);
+  const isFullscreenWeb =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    window.matchMedia('(display-mode: fullscreen)').matches;
+  const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
+  const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  const [tabBarHeight, setTabBarHeight] = useState(
+    DESIGN_TOKENS.TAB_BAR_CONTENT_HEIGHT + bottomTabInset,
+  );
 
   // Reader Mode state shared with child screens
   const menuAnim = useRef(new Animated.Value(1)).current;
@@ -115,7 +123,13 @@ export default function TabLayout() {
           tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
+          tabBarLabelStyle: {
+            lineHeight: 14,
+          },
           tabBarStyle: {
+            height: DESIGN_TOKENS.TAB_BAR_CONTENT_HEIGHT + bottomTabInset,
+            paddingBottom: bottomTabInset,
+            paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
             backgroundColor: 'transparent',
             borderTopWidth: 0,

@@ -137,18 +137,6 @@ export const isSearchMatch = (
 };
 
 /**
- * Appends the search query to the route if it's a Bible-related item, enabling
- * direct navigation to specific chapters and verses.
- */
-export const getSearchRoute = (item: SearchableItem, query: string): string => {
-  if (item.isBibleBook && BIBLE_REF_REGEX.test(query)) {
-    const separator = item.route.includes('?') ? '&' : '?';
-    return `${item.route}${separator}q=${encodeURIComponent(query.trim())}`;
-  }
-  return item.route;
-};
-
-/**
  * Generates a dynamic subtitle for Bible items to guide users to specific coordinates.
  */
 export const getSearchSubtitle = (
@@ -709,7 +697,7 @@ const BIBLE_BOOKS_DATA: Record<
 
 export const ALL_SEARCH_LABELS: Record<string, any> = {
   en: {
-    searchBiblePlaceholder: 'Search Bible...',
+    searchBiblePlaceholder: 'Search this chapter...',
     searchHymnalPlaceholder: 'Search hymnal...',
     goStraightTo: 'Go straight to {q}',
     goToHymn: 'Go directly to hymn',
@@ -833,7 +821,7 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
     },
   },
   zh: {
-    searchBiblePlaceholder: '搜尋聖經...',
+    searchBiblePlaceholder: '搜尋本章...',
     searchHymnalPlaceholder: '搜尋詩歌...',
     goStraightTo: '直接前往 {q}',
     goToHymn: '直接前往讚美詩',
@@ -944,7 +932,7 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
     },
   },
   'zh-cn': {
-    searchBiblePlaceholder: '搜索圣经...',
+    searchBiblePlaceholder: '搜索本章...',
     searchHymnalPlaceholder: '搜索诗歌...',
     goStraightTo: '直接前往 {q}',
     goToHymn: '直接前往赞美诗',
@@ -1056,7 +1044,7 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
     },
   },
   es: {
-    searchBiblePlaceholder: 'Buscar en la Biblia...',
+    searchBiblePlaceholder: 'Buscar en este capítulo...',
     searchHymnalPlaceholder: 'Buscar himnos...',
     goStraightTo: 'Ir directamente a {q}',
     goToHymn: 'Ir directamente al himno',
@@ -1190,7 +1178,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
     {
       ...labels.community,
       icon: 'account-group',
-      route: '/community',
+      route: '/bible/bible1',
     },
     {
       ...labels.resources,
@@ -1220,12 +1208,12 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
     { ...labels.aboutHistory, icon: 'history', route: '/home/about-my-church' },
     { ...labels.team, icon: 'account-multiple', route: '/home/team' },
     { ...labels.bulletin, icon: 'file-document-outline', route: '/home/bulletin' },
-    { ...labels.events, icon: 'calendar-star', route: '/community' },
-    { ...labels.baptism, icon: 'water-outline', route: '/community/baptism' },
-    { ...labels.worship, icon: 'church', route: '/community/worship' },
-    { ...labels.fellowship, icon: 'account-group', route: '/community/fellowship' },
-    { ...labels.roster, icon: 'clipboard-text-outline', route: '/community/roster' },
-    { ...labels.prayer, icon: 'hands-pray', route: '/community/prayer' },
+    { ...labels.events, icon: 'calendar-star', route: '/home/events' },
+    { ...labels.baptism, icon: 'water-outline', route: '/home/baptism' },
+    { ...labels.worship, icon: 'church', route: '/home/worship' },
+    { ...labels.fellowship, icon: 'account-group', route: '/home/fellowship' },
+    { ...labels.roster, icon: 'clipboard-text-outline', route: '/home/bulletin' },
+    { ...labels.prayer, icon: 'hands-pray', route: '/home/prayer' },
   ];
 
   // Dynamically add all Bible books to the search list

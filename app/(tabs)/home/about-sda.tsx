@@ -1,15 +1,14 @@
+import { VerseHero } from '@/components/VerseHero';
 import { CHURCH_BUILDING_IMAGE_URL, openBeliefs } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { DocumentStyles } from '@/styles/DocumentStyles';
-import { NavigationStyles } from '@/styles/NavigationStyles';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,13 +17,15 @@ export default function AboutSDAScreen() {
   const { backTo } = useLocalSearchParams();
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
       title: 'About Denomination',
       churchName: 'Seventh-day Adventist Church',
+      verse:
+        'All Scripture is God-breathed and is useful for instruction, for conviction, for correction, and for training in righteousness, so that the man of God may be complete, fully equipped for every good work.',
+      verseRef: '2 Timothy 3:16–17 (BSB)',
       aboutSDA: 'About the Denomination',
       sdaDescription:
         'Seventh-day Adventists are a global Protestant Christian community that regards the Bible as the supreme authority in their lives. We adhere to the principle of Sola Scriptura (By Scripture Alone), which means that the Bible is the sole infallible source of authority for Christian faith and practice, and the standard by which all teachings and experiences are measured.',
@@ -101,6 +102,9 @@ export default function AboutSDAScreen() {
     zh: {
       title: '關於教派',
       churchName: '基督復臨安息日會',
+      verse:
+        '聖經都是神所默示的（或作：凡神所默示的聖經），於教訓、督責、使人歸正、教導人學義都是有益的，叫屬神的人得以完全，預備行各樣的善事。',
+      verseRef: '提摩太後書 3:16–17 (CUV)',
       aboutSDA: '關於教派',
       sdaDescription:
         '基督復臨安息日會是一個全球性的新教徒團體, 將聖經視為生活的最高權威。我們堅持「唯獨聖經」(Sola Scriptura) 的原則, 這意味著聖經是基督徒信仰和實踐的唯一無誤權威來源, 也是衡量所有教導和經驗的標準。',
@@ -172,6 +176,9 @@ export default function AboutSDAScreen() {
     'zh-cn': {
       title: '关于教派',
       churchName: '基督复临安息日会',
+      verse:
+        '圣经都是神所默示的（或作：凡神所默示的圣经），于教训、督责、使人归正、教导人学义都是有益的，叫属神的人得以完全，预备行各样的善事。',
+      verseRef: '提摩太后书 3:16–17 (CUVS)',
       aboutSDA: '关于教派',
       sdaDescription:
         '基督复临安息日会是一个全球性的新教徒团体, 将圣经视为生活的最高权威。我们坚持“唯独圣经”(Sola Scriptura) 的原则, 这意味着圣经是基督徒信仰和实践的唯一无误权威来源, 也是衡量所有教导和经验的标准。',
@@ -243,6 +250,9 @@ export default function AboutSDAScreen() {
     es: {
       title: 'Sobre la Denominación',
       churchName: 'Iglesia Adventista\ndel Séptimo Día',
+      verse:
+        'Toda la Escritura es inspirada por Dios, y útil para enseñar, para redargüir, para corregir, para instruir en justicia, a fin de que el hombre de Dios sea perfecto, enteramente preparado para toda buena obra.',
+      verseRef: '2 Timoteo 3:16–17 (RVR1960)',
       aboutSDA: 'Acerca de la Denominación',
       sdaDescription:
         'Los Adventistas del Séptimo Día son una comunidad Cristiana Protestante global que considera la Biblia como la autoridad suprema en sus vidas. Nos adherimos al principio de Sola Scriptura (Solo por la Escritura), lo que significa que la Biblia es la única fuente infalible de autoridad para la fe y la práctica cristiana, y el estándar por el cual se miden todas las enseñanzas y experiencias.',
@@ -334,22 +344,17 @@ export default function AboutSDAScreen() {
           paddingBottom: insets.bottom + 50,
         }}
       >
-        <ImageBackground
-          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
-          resizeMode="cover"
-        >
-          <LinearGradient
-            colors={theme.gradients.heroOverlay}
-            style={StyleSheet.absoluteFill}
-          />
-          <Text
-            variant="headlineSmall"
-            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
-          >
-            {labels.churchName}
-          </Text>
-        </ImageBackground>
+        <VerseHero
+          title={labels.churchName}
+          verse={labels.verse}
+          reference={labels.verseRef}
+          imageSource={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          verseColors={
+            theme.dark
+              ? ['#4A1717', '#632020', '#7A2929']
+              : ['#7F1D1D', '#B91C1C', '#DC2626']
+          }
+        />
 
         <View style={DocumentStyles.section}>
           <Text

@@ -1,4 +1,7 @@
 import { InitialSetup } from '@/components/InitialSetup';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { getHeaderBackTarget, hasHeaderBackButton } from '@/constants/BackNavigation';
+import { openIosPwaInstallGuide } from '@/constants/ExternalLinks';
 import {
   DEFAULT_LANG,
   LanguageContext,
@@ -7,20 +10,30 @@ import {
 import {
   AppTheme,
   getAppTheme,
+  SCRIPTURE_FONT_FAMILIES,
   THEME_DARK,
   THEME_LIGHT,
   THEME_STORAGE_KEY,
   ThemeContext,
 } from '@/constants/Themes';
+import {
+  BIBLE_TRANSLATION_STORAGE_KEY,
+  DEFAULT_TRANSLATION_MAP,
+} from '@/services/BibleService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as Localization from 'expo-localization';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { createContext, useContext, useEffect, useState } from 'react';
 import {
-  AppState,
+  router,
+  Stack,
+  useGlobalSearchParams,
+  usePathname,
+  useSegments,
+} from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import {
   LogBox,
   Platform,
   StatusBar,
@@ -44,29 +57,130 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-const getSystemLanguage = (): SupportedLanguage => {
-  const [primaryLocale] = Localization.getLocales();
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+};
 
-  if (!primaryLocale?.languageCode) {
-    return DEFAULT_LANG;
+const isInstalledPwa = () => {
+  if (
+    Platform.OS !== 'web' ||
+    typeof window === 'undefined' ||
+    typeof navigator === 'undefined'
+  ) {
+    return false;
   }
 
-  const { languageCode, languageTag } = primaryLocale;
-  const scriptCode = (primaryLocale as any).scriptCode;
+  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    navigatorWithStandalone.standalone === true
+  );
+};
 
-  // Handle Chinese variants (Simplified vs Traditional mapping)
-  if (languageCode === 'zh') {
-    // Prioritize scriptCode (standard for modern OS), fall back to region tags
-    const isSimplified = scriptCode === 'Hans' || /hans|cn|sg|my/i.test(languageTag);
+const isBibleReaderPath = (pathname: string) =>
+  /\/(?:\(tabs\)\/)?bible(?:\/index)?\/?$/.test(pathname);
+
+const DEFERRED_REFRESH_FLAG = '__sdaChurchDeferredRefresh';
+
+const isAndroidChromeBrowser = () => {
+  if (
+    Platform.OS !== 'web' ||
+    typeof window === 'undefined' ||
+    typeof navigator === 'undefined' ||
+    isInstalledPwa()
+  ) {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent;
+  const navigatorWithUserAgentData = navigator as Navigator & {
+    userAgentData?: { brands?: { brand: string }[] };
+  };
+  const brands = navigatorWithUserAgentData.userAgentData?.brands;
+  const isGoogleChrome = brands?.length
+    ? brands.some(({ brand }) => brand === 'Google Chrome')
+    : /Chrome\//i.test(userAgent) &&
+      !/(?:EdgA|OPR|SamsungBrowser|YaBrowser|DuckDuckGo)\//i.test(userAgent);
+
+  return /Android/i.test(userAgent) && isGoogleChrome;
+};
+
+const isIosSafariBrowser = () => {
+  if (
+    Platform.OS !== 'web' ||
+    typeof navigator === 'undefined' ||
+    isInstalledPwa()
+  ) {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent;
+  const isIosDevice =
+    /iPad|iPhone|iPod/i.test(userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari =
+    /Safari\//i.test(userAgent) &&
+    !/(?:CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo)\//i.test(userAgent);
+
+  return isIosDevice && isSafari;
+};
+
+const matchSupportedLanguage = (
+  languageTag?: string | null,
+  languageCode?: string | null,
+  scriptCode?: string | null,
+): SupportedLanguage | null => {
+  const normalizedTag = languageTag?.toLowerCase().replaceAll('_', '-') ?? '';
+  const normalizedCode = languageCode?.toLowerCase() || normalizedTag.split('-')[0];
+
+  if (normalizedCode === 'zh') {
+    const isSimplified =
+      scriptCode?.toLowerCase() === 'hans' ||
+      /(?:^|-)hans(?:-|$)|(?:^|-)(?:cn|sg|my)(?:-|$)/.test(normalizedTag);
     return isSimplified ? 'zh-cn' : 'zh';
   }
 
-  const SUPPORTED_MAP: Partial<Record<string, SupportedLanguage>> = {
-    es: 'es',
-    en: 'en',
-  };
-  return SUPPORTED_MAP[languageCode] ?? 'en';
+  if (normalizedCode === 'en' || normalizedCode === 'es') {
+    return normalizedCode;
+  }
+
+  return null;
 };
+
+const getSystemLanguage = (): SupportedLanguage => {
+  // Browsers expose an ordered preference list. Use the first language the app
+  // supports rather than assuming the browser's primary language is supported.
+  if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+    const browserLanguages = navigator.languages?.length
+      ? Array.from(navigator.languages)
+      : [navigator.language];
+
+    for (const languageTag of browserLanguages) {
+      const supportedLanguage = matchSupportedLanguage(languageTag);
+      if (supportedLanguage) return supportedLanguage;
+    }
+  } else {
+    // On native platforms Expo reads the operating system's ordered locales.
+    for (const locale of Localization.getLocales()) {
+      const supportedLanguage = matchSupportedLanguage(
+        locale.languageTag,
+        locale.languageCode,
+        (locale as any).scriptCode,
+      );
+      if (supportedLanguage) return supportedLanguage;
+    }
+  }
+
+  return DEFAULT_LANG;
+};
+
+const needsCjkSystemFont = (language: SupportedLanguage) =>
+  language === 'zh' || language === 'zh-cn';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -88,6 +202,7 @@ export const UpdateContext = createContext<{
 
 export default function RootLayout() {
   const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANG);
+  const [languageSelectionRevision, setLanguageSelectionRevision] = useState(0);
   const colorScheme = useColorScheme();
   const [theme, setTheme] = useState(() => getAppTheme(colorScheme === THEME_DARK));
   const [isReady, setIsReady] = useState(false);
@@ -97,6 +212,106 @@ export default function RootLayout() {
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'up-to-date'>(
     'idle',
   );
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [installPromptDismissed, setInstallPromptDismissed] = useState(false);
+  const updateCheckInProgress = useRef(false);
+  const updateStatusTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearUpdateStatusTimeout = () => {
+    if (updateStatusTimeout.current) {
+      clearTimeout(updateStatusTimeout.current);
+      updateStatusTimeout.current = null;
+    }
+  };
+
+  const dismissUpdateStatus = () => {
+    clearUpdateStatusTimeout();
+    setUpdateStatus('idle');
+  };
+
+  const showUpToDateStatus = () => {
+    clearUpdateStatusTimeout();
+    setUpdateStatus('up-to-date');
+    updateStatusTimeout.current = setTimeout(() => {
+      updateStatusTimeout.current = null;
+      setUpdateStatus('idle');
+    }, 3000);
+  };
+
+  useEffect(
+    () => () => {
+      clearUpdateStatusTimeout();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const onBeforeInstallPrompt = (event: Event) => {
+      if (!isAndroidChromeBrowser()) return;
+
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const onAppInstalled = () => {
+      setInstallPrompt(null);
+      setInstallPromptDismissed(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      typeof navigator === 'undefined' ||
+      !/Android/i.test(navigator.userAgent) ||
+      !isInstalledPwa()
+    ) {
+      return;
+    }
+
+    const requestImmersiveFullscreen = () => {
+      if (
+        typeof document === 'undefined' ||
+        document.fullscreenElement ||
+        !document.documentElement.requestFullscreen
+      ) {
+        return;
+      }
+
+      document.documentElement
+        .requestFullscreen({ navigationUI: 'hide' })
+        .catch(() => undefined);
+    };
+
+    // The Fullscreen API needs a real user activation. The window bubble phase
+    // runs after the route's click handler, so this does not reload navigation.
+    const onUserClick = (event: MouseEvent) => {
+      if (event.isTrusted) requestImmersiveFullscreen();
+    };
+
+    window.addEventListener('click', onUserClick);
+
+    return () => {
+      window.removeEventListener('click', onUserClick);
+    };
+  }, []);
+
+  const canUseServiceWorker = () =>
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    'serviceWorker' in navigator;
 
   const getSwUrl = () => {
     // If your app is at the root, use /sw.js. If hosted on GitHub Pages subpath, use /sda-church-app/sw.js
@@ -105,28 +320,8 @@ export default function RootLayout() {
       : '/sw.js';
   };
 
-  const nuclearRefresh = async () => {
-    if (Platform.OS === 'web') {
-      // If the user is offline, we must NOT clear the caches.
-      // Wiping the cache while offline would immediately break the PWA's
-      // ability to serve the app on the next reload or lazy-load navigation.
-      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-
-      try {
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map((key) => caches.delete(key)));
-        }
-        // Bypass HTTP cache for the main entry point to ensure fresh index.html
-        await fetch(window.location.href, { cache: 'reload' }).catch(() => {});
-      } catch (e) {
-        console.warn('Update cleanup failed:', e);
-      }
-    }
-  };
-
   const handleUpdate = async (workerOverride?: any) => {
-    await nuclearRefresh();
+    if (!canUseServiceWorker()) return;
 
     const worker = workerOverride || waitingWorker;
     if (worker) {
@@ -139,142 +334,149 @@ export default function RootLayout() {
   };
 
   const handleManualCheck = async (options?: { isAuto?: boolean }) => {
-    if ('serviceWorker' in navigator) {
-      // Do not attempt to check for updates if we know we are offline.
-      if (!navigator.onLine) return;
+    if (!canUseServiceWorker() || !navigator.onLine || updateCheckInProgress.current) {
+      return;
+    }
 
-      // Only show the "Checking..." snackbar for manual clicks to avoid UI noise on launch
-      if (!options?.isAuto) {
-        setUpdateStatus('checking');
-      }
+    updateCheckInProgress.current = true;
+    clearUpdateStatusTimeout();
 
-      try {
-        const swUrl = getSwUrl();
+    // Only show the "Checking..." snackbar for manual clicks to avoid UI noise on launch
+    if (!options?.isAuto) {
+      setUpdateStatus('checking');
+    }
 
-        // Step 1: Nuclear Refresh (Clear all caches)
-        await nuclearRefresh();
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        // updateViaCache: 'none' on registration makes this a network check. Cache
+        // deletion is unnecessary and can remove files the currently running app
+        // still needs while the replacement worker is installing.
+        await registration.update();
 
-        // Step 2: Bypass sw.js cache
-        await fetch(swUrl, { cache: 'reload' }).catch(() => {});
-
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (registration) {
-          // Step 3: Trigger the browser's update check
-          await registration.update();
-
-          // Step 4: The Magic Wait - give registration properties time to populate
-          await new Promise((resolve) => setTimeout(resolve, 800));
-
-          if (registration.waiting) {
-            const worker = registration.waiting;
-            setWaitingWorker(worker);
-            setUpdateAvailable(true);
-            setUpdateStatus('idle');
-            await handleUpdate(worker);
-          } else if (registration.installing) {
-            const installingWorker = registration.installing;
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed') {
-                setWaitingWorker(installingWorker);
-                setUpdateAvailable(true);
-                handleUpdate(installingWorker);
-              }
-            };
-          } else {
-            // No update found
-            setUpdateAvailable(false);
-
-            if (!options?.isAuto) {
-              // For manual clicks, we show success and reload anyway to be safe
-              setUpdateStatus('up-to-date');
-              setTimeout(() => handleUpdate(), 1200);
-            } else {
-              // For auto-checks, we just go back to idle to avoid a reload loop
+        if (registration.waiting) {
+          const worker = registration.waiting;
+          setWaitingWorker(worker);
+          setUpdateAvailable(true);
+          setUpdateStatus('idle');
+          await handleUpdate(worker);
+        } else if (registration.installing) {
+          const installingWorker = registration.installing;
+          const onStateChange = () => {
+            if (installingWorker.state === 'installed') {
+              installingWorker.removeEventListener('statechange', onStateChange);
+              setWaitingWorker(installingWorker);
+              setUpdateAvailable(true);
+              setUpdateStatus('idle');
+              handleUpdate(installingWorker);
+            } else if (installingWorker.state === 'redundant') {
+              installingWorker.removeEventListener('statechange', onStateChange);
               setUpdateStatus('idle');
             }
-          }
+          };
+          installingWorker.addEventListener('statechange', onStateChange);
+          // The worker can finish between registration.update() resolving and
+          // this listener being attached, so inspect its current state too.
+          onStateChange();
         } else {
-          setUpdateStatus('idle');
+          setUpdateAvailable(false);
+          if (options?.isAuto) {
+            setUpdateStatus('idle');
+          } else {
+            showUpToDateStatus();
+          }
         }
-      } catch (e) {
-        console.error('Manual update check failed:', e);
+      } else {
         setUpdateStatus('idle');
       }
+    } catch (e) {
+      console.error('Manual update check failed:', e);
+      setUpdateStatus('idle');
+    } finally {
+      updateCheckInProgress.current = false;
     }
   };
 
   useEffect(() => {
     // Register service worker for PWA support on web
-    let subscription: { remove: () => void } | undefined;
-    if ('serviceWorker' in navigator) {
+    let removeControllerChangeListener: (() => void) | undefined;
+    let removeLoadListener: (() => void) | undefined;
+
+    if (canUseServiceWorker()) {
       let refreshing = false;
       const registerSW = async () => {
         const swUrl = getSwUrl();
 
         try {
-          // Ensure we start with a clean cache on every app launch to prevent reversions.
-          await nuclearRefresh();
-
-          // Bypassing the HTTP cache for the service worker file itself ensures that
-          // the browser sees the byte-change immediately on app start. This prevents
-          // "reversions" where the app might otherwise load an old cached registration
-          // during a cold start/restart.
-          await fetch(swUrl, { cache: 'reload' }).catch(() => {});
-
           const registration = await navigator.serviceWorker.register(swUrl, {
-            // Ensures the browser checks the network for sw.js instead of its HTTP cache,
-            // which is a primary cause of "reversion" issues on cold starts.
+            // Always check the network for sw.js, without destroying the active
+            // worker's caches while the current page is still using them.
             updateViaCache: 'none',
           });
           console.log('SW registered with scope:', registration.scope);
-          registration.update();
+
+          let watchedWorker: ServiceWorker | null = null;
+          const activateWhenInstalled = (worker: ServiceWorker | null) => {
+            if (!worker || worker === watchedWorker) return;
+            watchedWorker = worker;
+
+            const onStateChange = () => {
+              if (worker.state === 'installed') {
+                worker.removeEventListener('statechange', onStateChange);
+                if (navigator.serviceWorker.controller) {
+                  console.log('New SW content ready. Auto-updating...');
+                  worker.postMessage({ type: 'SKIP_WAITING' });
+                } else {
+                  console.log('SW installed for the first time.');
+                }
+              } else if (worker.state === 'redundant') {
+                worker.removeEventListener('statechange', onStateChange);
+              }
+            };
+
+            worker.addEventListener('statechange', onStateChange);
+            onStateChange();
+          };
+
+          // Registering may start an update before register() resolves, so attach
+          // the listener and inspect any existing installing worker before the
+          // explicit freshness check.
+          registration.onupdatefound = () => {
+            activateWhenInstalled(registration.installing);
+          };
+          activateWhenInstalled(registration.installing);
+          await registration.update();
 
           // 1. Check if there is already an updated worker waiting
           if (registration.waiting) {
             console.log('New SW already waiting. Auto-updating...');
-            // await nuclearRefresh();     TODO: Causes infinite loop and app crashes
             registration.waiting.postMessage({ type: 'SKIP_WAITING' });
           }
-
-          // 2. Listen for new updates being found
-          registration.onupdatefound = () => {
-            const installingWorker = registration.installing;
-            if (installingWorker) {
-              installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    console.log('New SW content ready. Auto-updating...');
-                    nuclearRefresh().then(() => {
-                      installingWorker.postMessage({ type: 'SKIP_WAITING' });
-                    });
-                  } else {
-                    console.log('SW installed for the first time.');
-                  }
-                }
-              };
-            }
-          };
+          activateWhenInstalled(registration.installing);
         } catch (error) {
           console.error('SW registration failed:', error);
         }
       };
 
       // Refresh the page automatically when the new service worker takes over
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          console.log('New SW activated, reloading...');
-          window.location.reload();
-        }
-      });
+      const onControllerChange = () => {
+        if (refreshing) return;
 
-      // Use AppState to detect when the PWA is resumed from suspension (common on iOS)
-      subscription = AppState.addEventListener('change', (nextAppState) => {
-        if (nextAppState === 'active') {
-          console.log('App resumed - performing freshness check');
-          handleManualCheck({ isAuto: true });
+        if (isBibleReaderPath(window.location.pathname)) {
+          // Keep the active Sound instance, playback position, and sleep timer intact.
+          // The new worker can control subsequent requests without replacing this page.
+          (window as any)[DEFERRED_REFRESH_FLAG] = true;
+          console.log('New SW activated; deferring reload until leaving Bible reader.');
+          return;
         }
-      });
+
+        refreshing = true;
+        console.log('New SW activated, reloading...');
+        window.location.reload();
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+      removeControllerChangeListener = () =>
+        navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
 
       // Check both 'complete' and 'interactive' to ensure we start the SW
       // as soon as the browser allows, minimizing the "reversion" window.
@@ -282,6 +484,7 @@ export default function RootLayout() {
         registerSW();
       } else {
         window.addEventListener('load', registerSW);
+        removeLoadListener = () => window.removeEventListener('load', registerSW);
       }
     }
 
@@ -297,11 +500,13 @@ export default function RootLayout() {
         const systemLang = getSystemLanguage();
 
         // Use saved settings if they exist, otherwise fallback to system defaults
-        setLanguage((savedLang as SupportedLanguage) || systemLang);
+        const preferredLanguage = (savedLang as SupportedLanguage) || systemLang;
+        const useDarkTheme = savedTheme
+          ? savedTheme === THEME_DARK
+          : colorScheme === THEME_DARK;
+        setLanguage(preferredLanguage);
         setTheme(
-          getAppTheme(
-            savedTheme ? savedTheme === THEME_DARK : colorScheme === THEME_DARK,
-          ),
+          getAppTheme(useDarkTheme, needsCjkSystemFont(preferredLanguage)),
         );
 
         if (setupDone !== 'true') {
@@ -311,20 +516,24 @@ export default function RootLayout() {
         console.warn('Failed to load settings', e);
       } finally {
         setIsReady(true);
-        // LITERALLY "press" the check for updates button on every app launch
-        handleManualCheck({ isAuto: true });
       }
     }
     prepare();
 
     return () => {
-      if (subscription) subscription.remove();
+      removeControllerChangeListener?.();
+      removeLoadListener?.();
     };
   }, []);
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
-    await AsyncStorage.setItem('user-language', lang);
+    setLanguageSelectionRevision((revision) => revision + 1);
+    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang)));
+    await AsyncStorage.multiSet([
+      ['user-language', lang],
+      [BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP[lang] || 'BSB'],
+    ]);
   };
 
   const handleToggleTheme = async (val?: any) => {
@@ -336,25 +545,53 @@ export default function RootLayout() {
     } else {
       next = !theme.dark;
     }
-    setTheme(getAppTheme(next));
+    setTheme(getAppTheme(next, needsCjkSystemFont(language)));
     await AsyncStorage.setItem(THEME_STORAGE_KEY, next ? THEME_DARK : THEME_LIGHT);
   };
 
   const onCompleteSetup = async () => {
     // Persist current settings when completing setup to ensure they stick on reload
     // even if the user didn't explicitly change them from system defaults.
+    setLanguageSelectionRevision((revision) => revision + 1);
     await Promise.all([
       AsyncStorage.setItem('has-completed-setup', 'true'),
       AsyncStorage.setItem('user-language', language),
+      AsyncStorage.setItem(
+        BIBLE_TRANSLATION_STORAGE_KEY,
+        DEFAULT_TRANSLATION_MAP[language] || 'BSB',
+      ),
       AsyncStorage.setItem(THEME_STORAGE_KEY, theme.dark ? THEME_DARK : THEME_LIGHT),
     ]);
     setShowSetup(false);
   };
 
+  const handleInstall = async () => {
+    setInstallPromptDismissed(true);
+
+    if (isIosSafariBrowser()) {
+      await openIosPwaInstallGuide();
+      return;
+    }
+
+    if (!installPrompt || !isAndroidChromeBrowser()) return;
+
+    const prompt = installPrompt;
+    setInstallPrompt(null);
+
+    try {
+      await prompt.prompt();
+      await prompt.userChoice;
+    } catch (error) {
+      console.warn('Unable to show the PWA install prompt', error);
+    }
+  };
+
   const [loaded, error] = useFonts({
-    'NotoSans-Regular': require('./../assets/fonts/NotoSans-Regular.ttf'),
-    'NotoSans-Medium': require('./../assets/fonts/NotoSans-Medium.ttf'),
-    'NotoSans-Bold': require('./../assets/fonts/NotoSans-Bold.ttf'),
+    'PlusJakartaSans-Regular': require('../assets/fonts/PlusJakartaSans-Regular.ttf'),
+    'PlusJakartaSans-Medium': require('../assets/fonts/PlusJakartaSans-Medium.ttf'),
+    'PlusJakartaSans-Bold': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),
+    [SCRIPTURE_FONT_FAMILIES.greek]: require('../assets/fonts/Gentium-Regular.ttf'),
+    [SCRIPTURE_FONT_FAMILIES.hebrew]: require('../assets/fonts/EzraSIL-Regular.ttf'),
     'material-community': require('../assets/fonts/MaterialCommunityIcons.ttf'),
   });
 
@@ -380,7 +617,13 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage }}>
+      <LanguageContext.Provider
+        value={{
+          language,
+          languageSelectionRevision,
+          setLanguage: handleSetLanguage,
+        }}
+      >
         <ThemeContext.Provider value={{ toggleTheme: handleToggleTheme }}>
           <UpdateContext.Provider
             value={{
@@ -394,10 +637,16 @@ export default function RootLayout() {
               theme={theme}
               showSetup={showSetup}
               onCompleteSetup={onCompleteSetup}
+              installAvailable={
+                !installPromptDismissed &&
+                (installPrompt !== null || isIosSafariBrowser())
+              }
+              onInstall={handleInstall}
+              onDismissInstall={() => setInstallPromptDismissed(true)}
               updateAvailable={updateAvailable}
               onUpdate={handleUpdate}
               updateStatus={updateStatus}
-              onDismissStatus={() => setUpdateStatus('idle')}
+              onDismissStatus={dismissUpdateStatus}
             />
           </UpdateContext.Provider>
         </ThemeContext.Provider>
@@ -410,6 +659,9 @@ function RootLayoutNav({
   theme,
   showSetup,
   onCompleteSetup,
+  installAvailable,
+  onInstall,
+  onDismissInstall,
   updateAvailable,
   onUpdate,
   updateStatus,
@@ -418,6 +670,9 @@ function RootLayoutNav({
   theme: AppTheme;
   showSetup: boolean;
   onCompleteSetup: () => void;
+  installAvailable: boolean;
+  onInstall: () => Promise<void>;
+  onDismissInstall: () => void;
   updateAvailable: boolean;
   onUpdate: () => void;
   updateStatus: 'idle' | 'checking' | 'up-to-date';
@@ -425,20 +680,87 @@ function RootLayoutNav({
 }) {
   const { language } = useContext(LanguageContext);
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+  const segments = useSegments();
+  const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
+  const gestureBackTarget = hasHeaderBackButton(segments)
+    ? getHeaderBackTarget(segments, globalParams.backTo)
+    : '/';
+  const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
+
+  useEffect(() => {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      isBibleReaderPath(pathname) ||
+      !(window as any)[DEFERRED_REFRESH_FLAG]
+    ) {
+      return;
+    }
+
+    // An update activated while Bible audio was open. Apply its one deferred
+    // page refresh now that leaving the reader cannot discard active playback.
+    delete (window as any)[DEFERRED_REFRESH_FLAG];
+    window.location.reload();
+  }, [pathname]);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      typeof navigator === 'undefined' ||
+      !/Android/i.test(navigator.userAgent) ||
+      !isInstalledPwa()
+    ) {
+      return;
+    }
+
+    const guardKey = '__androidPwaBackGuard';
+
+    const armBackGuard = () => {
+      if (window.history.state?.[guardKey]) return;
+
+      window.history.pushState(
+        { ...(window.history.state ?? {}), [guardKey]: true },
+        '',
+        window.location.href,
+      );
+    };
+
+    const handleBrowserBack = (event: PopStateEvent) => {
+      // Moving forward into our guard should remain a browser-history operation.
+      if (event.state?.[guardKey]) return;
+
+      // The guard keeps the browser on the same URL. Stop Expo Router from also
+      // processing this pop and perform the same app navigation as the header arrow.
+      event.stopImmediatePropagation();
+      router.replace(gestureBackTarget as any);
+
+      // Navigating to Home while already there does not cause a route render, so
+      // ensure the guard is restored even when the target route stays unchanged.
+      window.setTimeout(armBackGuard, 100);
+    };
+
+    armBackGuard();
+    window.addEventListener('popstate', handleBrowserBack, true);
+
+    return () => {
+      window.removeEventListener('popstate', handleBrowserBack, true);
+    };
+  }, [gestureBackTarget, routeKey]);
 
   // Sync system bars and PWA theme-color meta tag
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const bodyBg = theme.colors.background;
+      const systemBarColor = '#000000';
 
       // 1. Sync all theme-color meta tags (Primary driver for Android/iOS bar colors)
       // Using querySelectorAll to update both light and dark preference tags
       const metas = document.querySelectorAll('meta[name="theme-color"]');
       metas.forEach((meta) => {
-        meta.setAttribute('content', bodyBg);
-        // Removing 'media' ensures the browser respects this color immediately,
-        // overriding the static system-preference tags in +html.tsx.
-        // meta.removeAttribute("media");
+        meta.setAttribute('content', systemBarColor);
+        meta.removeAttribute('media');
       });
 
       // 2. Sync backgrounds to eliminate logic overlap and satisfy Android PWA requirements
@@ -486,14 +808,19 @@ function RootLayoutNav({
     <PaperProvider theme={theme as any}>
       <ThemeProvider value={theme as any}>
         <StatusBar
-          barStyle={theme.statusBarScheme}
-          backgroundColor={undefined}
-          translucent
+          barStyle="light-content"
+          backgroundColor="#000000"
+          translucent={false}
         />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
-        {showSetup && <InitialSetup onComplete={onCompleteSetup} />}
+        {installAvailable && (
+          <InstallPrompt onInstall={onInstall} onDismiss={onDismissInstall} />
+        )}
+        {showSetup && !installAvailable && (
+          <InitialSetup onComplete={onCompleteSetup} />
+        )}
 
         <Snackbar
           visible={updateStatus !== 'idle' || updateAvailable}

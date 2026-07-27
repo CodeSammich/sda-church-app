@@ -295,8 +295,8 @@ export default function FellowshipsAndFoodScreen() {
                   descriptionNumberOfLines={20}
                   left={(props) => <List.Icon {...props} icon="church" color={theme.colors.tertiary} />}
                   onPress={() => router.push({
-                    pathname: '/community/worship',
-                    params: { backTo: '/community/fellowship' },
+                    pathname: '/home/worship',
+                    params: { backTo: '/home/fellowship' },
                   } as any)}
                 />
                 <Divider style={styles.listItemDivider} />

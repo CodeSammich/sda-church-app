@@ -154,7 +154,10 @@ export default function WeeklyBulletinScreen() {
           />
           <Text
             variant="headlineSmall"
-            style={[NavigationStyles.heroTitle, { color: theme.colors.onSecondary }]}
+            style={[
+              NavigationStyles.heroTitle,
+              { color: theme.dark ? theme.colors.onSurface : theme.colors.onSecondary },
+            ]}
           >
             {labels.title}
           </Text>
