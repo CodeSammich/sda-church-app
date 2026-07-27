@@ -42,8 +42,8 @@ import { ReaderStyles } from '@/styles/ReaderStyles';
 
 // Generalizing dimensions to ensure responsiveness across iPhone/Tablet
 const DOCK_HEIGHT = 60;
-// This margin should match the approximate height of the bottom tab bar to ensure they sit flush.
-const DOCK_BOTTOM_MARGIN = 49;
+// Keep the reader controls flush with the shared bottom tab bar.
+const DOCK_BOTTOM_MARGIN = DESIGN_TOKENS.TAB_BAR_CONTENT_HEIGHT;
 const FOOTER_PADDING_OFFSET = 150;
 const AUDIO_DOCK_HEIGHT = 84;
 const SELECTION_BAR_HEIGHT = 56;
@@ -96,7 +96,6 @@ const uiLabels = {
     prevChapter: 'Prev',
     nextChapter: 'Next',
     share: 'Share Verse',
-    selected: '{n} selected',
     cancel: 'Cancel',
     shareAction: 'Share',
     saveAction: 'Save',
@@ -141,7 +140,6 @@ const uiLabels = {
     prevChapter: '上一章',
     nextChapter: '下一章',
     share: '分享經文',
-    selected: '已選擇 {n} 節',
     cancel: '取消',
     shareAction: '分享',
     saveAction: '儲存',
@@ -186,7 +184,6 @@ const uiLabels = {
     prevChapter: '上一章',
     nextChapter: '下一章',
     share: '分享经文',
-    selected: '已选择 {n} 节',
     cancel: '取消',
     shareAction: '分享',
     saveAction: '保存',
@@ -231,7 +228,6 @@ const uiLabels = {
     prevChapter: 'Anterior',
     nextChapter: 'Siguiente',
     share: 'Compartir Versículo',
-    selected: '{n} seleccionados',
     cancel: 'Cancelar',
     shareAction: 'Compartir',
     saveAction: 'Guardar',
@@ -1668,13 +1664,6 @@ export default function BibleScreen() {
         {isSelectionActive && (
           <View style={{ height: SELECTION_BAR_HEIGHT }}>
             <View style={styles.selectionBarInner}>
-              <Text
-                variant="labelLarge"
-                style={{ marginLeft: 16, color: theme.colors.onSurface }}
-              >
-                {labels.selected.replace('{n}', selectedVerses.size.toString())}
-              </Text>
-              <View style={{ flex: 1 }} />
               <Button onPress={clearSelection}>{labels.cancel}</Button>
               <IconButton
                 mode="contained-tonal"
@@ -1698,7 +1687,7 @@ export default function BibleScreen() {
                 mode="contained"
                 icon="share-variant"
                 onPress={handleShare}
-                style={{ marginRight: 8, borderRadius: 20 }}
+                style={{ borderRadius: 20 }}
               >
                 {labels.shareAction}
               </Button>
@@ -2399,8 +2388,10 @@ const styles = StyleSheet.create({
   selectionBarInner: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
     height: '100%',
-    paddingRight: 8,
+    paddingHorizontal: 12,
   },
   detailActions: {
     flexDirection: 'row',

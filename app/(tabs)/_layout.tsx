@@ -41,7 +41,9 @@ export default function TabLayout() {
     window.matchMedia('(display-mode: fullscreen)').matches;
   const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
   const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
-  const [tabBarHeight, setTabBarHeight] = useState(49 + bottomTabInset);
+  const [tabBarHeight, setTabBarHeight] = useState(
+    DESIGN_TOKENS.TAB_BAR_CONTENT_HEIGHT + bottomTabInset,
+  );
 
   // Reader Mode state shared with child screens
   const menuAnim = useRef(new Animated.Value(1)).current;
@@ -121,8 +123,11 @@ export default function TabLayout() {
           tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
+          tabBarLabelStyle: {
+            lineHeight: 14,
+          },
           tabBarStyle: {
-            height: 49 + bottomTabInset,
+            height: DESIGN_TOKENS.TAB_BAR_CONTENT_HEIGHT + bottomTabInset,
             paddingBottom: bottomTabInset,
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,

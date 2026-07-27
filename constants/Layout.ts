@@ -21,6 +21,8 @@ export const DESIGN_TOKENS = {
   ICON_SIZE_FEATURED: 32,
   // Specific project standard for bottom tab bar visibility
   ICON_SIZE_TAB: 28,
+  // Leaves enough vertical room for CJK glyph metrics below the tab icons.
+  TAB_BAR_CONTENT_HEIGHT: 56,
   // Dimension for timeline markers in the History section
   TIMELINE_CIRCLE_SIZE: 50,
 };
