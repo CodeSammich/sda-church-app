@@ -11,7 +11,126 @@
 
 export const API_BASE = 'https://bible.helloao.org/api';
 
+/** Persisted Bible translation selected by the app language or the user. */
+export const BIBLE_TRANSLATION_STORAGE_KEY = 'user-bible-translation';
+
+/**
+ * fetch(bible) is used only for the original-language critical editions. The
+ * translated Bible reader continues to use HelloAO.
+ *
+ * IMPORTANT LICENSING DISTINCTION:
+ * - fetch(bible offers its CDN without an API key, usage fee, request quota, or
+ *   provider-imposed caching limit.
+ * - That free service access DOES NOT place every distributed work in the
+ *   public domain and DOES NOT replace each work's individual license.
+ * - The `hbo_sr` and `grc_sr` editions selected below are CC BY 4.0 works. CC BY
+ *   4.0 permits copying, redistribution, adaptation, and commercial use, but
+ *   requires appropriate attribution, a license link, and disclosure of
+ *   changes. These obligations apply even though fetch(bible itself is free.
+ *
+ * Do not remove the edition/editor attribution from the verse-detail UI or the
+ * source/license documentation in README.md. If either resource id changes,
+ * review the replacement work's license rather than assuming that availability
+ * through fetch(bible is sufficient permission to redistribute it.
+ *
+ * Service policy: https://fetch.bible/access/#no-limits-from-us
+ * CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+ */
+export const FETCH_BIBLE_BASE = 'https://v1.fetch.bible/bibles';
+
 import { SupportedLanguage } from '@/constants/LanguageContext';
+
+const OLD_TESTAMENT_BOOK_IDS = new Set([
+  'GEN',
+  'EXO',
+  'LEV',
+  'NUM',
+  'DEU',
+  'JOS',
+  'JDG',
+  'RUT',
+  '1SA',
+  '2SA',
+  '1KI',
+  '2KI',
+  '1CH',
+  '2CH',
+  'EZR',
+  'NEH',
+  'EST',
+  'JOB',
+  'PSA',
+  'PRO',
+  'ECC',
+  'SNG',
+  'ISA',
+  'JER',
+  'LAM',
+  'EZK',
+  'DAN',
+  'HOS',
+  'JOL',
+  'AMO',
+  'OBA',
+  'JON',
+  'MIC',
+  'NAH',
+  'HAB',
+  'ZEP',
+  'HAG',
+  'ZEC',
+  'MAL',
+]);
+
+const ORIGINAL_LANGUAGE_EDITIONS = {
+  // CC BY 4.0 source and required citation:
+  // https://github.com/jjmccollum/solid-rock-hb#license-and-citation
+  oldTestament: {
+    id: 'hbo_sr',
+    language: 'Hebrew / Aramaic',
+    textDirection: 'rtl' as const,
+    edition: 'Solid Rock Hebrew Bible',
+    attribution: 'Edited by Stephen L. Brown. Licensed CC BY 4.0.',
+    sourceUrl: 'https://github.com/jjmccollum/solid-rock-hb',
+  },
+  // CC BY 4.0 source and required attribution:
+  // https://github.com/Center-for-New-Testament-Restoration/SR#license
+  newTestament: {
+    id: 'grc_sr',
+    language: 'Koine Greek',
+    textDirection: 'ltr' as const,
+    edition: 'Statistical Restoration Greek New Testament',
+    attribution:
+      'Edited by Alan Bunning for the Center for New Testament Restoration. Licensed CC BY 4.0.',
+    sourceUrl: 'https://github.com/Center-for-New-Testament-Restoration/SR',
+  },
+};
+
+type FetchBibleTextPart =
+  | string
+  | {
+      type: string;
+      contents?: unknown;
+    };
+
+interface FetchBiblePlainTextBook {
+  book: string;
+  contents: FetchBibleTextPart[][][];
+}
+
+export interface OriginalLanguageVerse {
+  text: string;
+  language: string;
+  textDirection: 'ltr' | 'rtl';
+  edition: string;
+  attribution: string;
+  sourceUrl: string;
+}
+
+const originalLanguageBookCache = new Map<
+  string,
+  Promise<FetchBiblePlainTextBook>
+>();
 
 export const SUPPORTED_TRANSLATIONS = [
   { id: 'BSB', name: 'BSB', lang: 'en' },
@@ -535,6 +654,91 @@ export async function fetchChapter(
     console.error(`Failed to load chapter ${book} ${chapter}`, e);
     throw e;
   }
+}
+
+/**
+ * Fetches a verse from an open original-language critical edition.
+ *
+ * The lookup uses the canonical USFM book id and chapter/verse numbers, so it
+ * is independent of whichever translated language is currently displayed.
+ * fetch(bible)'s normalized plain-text format uses lowercase USFM book ids and
+ * array indexes that correspond to the familiar 1-based chapter/verse numbers.
+ * Whole-book responses are cached because the CDN exposes one file per book.
+ *
+ * LICENSE NOTE: The selected texts are CC BY 4.0, not public domain. Preserve
+ * their attribution and license documentation when displaying or reusing this
+ * result. This function removes separate note objects and normalizes layout
+ * whitespace for display; README.md explicitly discloses those presentation
+ * changes as required by the license.
+ */
+export async function fetchOriginalLanguageVerse(
+  book: string,
+  chapter: number,
+  verse: number,
+): Promise<OriginalLanguageVerse> {
+  if (
+    !Number.isInteger(chapter) ||
+    chapter < 1 ||
+    !Number.isInteger(verse) ||
+    verse < 1
+  ) {
+    throw new Error('Chapter and verse must be positive integers');
+  }
+
+  const normalizedBook = book.toUpperCase();
+  const source = OLD_TESTAMENT_BOOK_IDS.has(normalizedBook)
+    ? ORIGINAL_LANGUAGE_EDITIONS.oldTestament
+    : ORIGINAL_LANGUAGE_EDITIONS.newTestament;
+  const fetchBibleBookId = normalizedBook.toLowerCase();
+  const cacheKey = `${source.id}:${fetchBibleBookId}`;
+
+  let request = originalLanguageBookCache.get(cacheKey);
+  if (!request) {
+    request = fetch(
+      `${FETCH_BIBLE_BASE}/${source.id}/txt/${fetchBibleBookId}.json`,
+    ).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch original-language book ${normalizedBook}: ${response.status}`,
+        );
+      }
+      return (await response.json()) as FetchBiblePlainTextBook;
+    });
+    originalLanguageBookCache.set(cacheKey, request);
+    request.catch(() => originalLanguageBookCache.delete(cacheKey));
+  }
+
+  const data = await request;
+  const verseParts = data.contents?.[chapter]?.[verse];
+  if (!Array.isArray(verseParts)) {
+    throw new Error(
+      `Original-language verse not found: ${normalizedBook} ${chapter}:${verse}`,
+    );
+  }
+
+  // Notes are separate objects in fetch(bible)'s plain-text payload. The main
+  // strings retain the edition's textual sigla; only layout whitespace is
+  // collapsed so Greek word-per-line data reads naturally in the popup.
+  const text = verseParts
+    .filter((part): part is string => typeof part === 'string')
+    .join('')
+    .replace(/\s+/gu, ' ')
+    .trim();
+
+  if (!text) {
+    throw new Error(
+      `Original-language verse is empty: ${normalizedBook} ${chapter}:${verse}`,
+    );
+  }
+
+  return {
+    text,
+    language: source.language,
+    textDirection: source.textDirection,
+    edition: source.edition,
+    attribution: source.attribution,
+    sourceUrl: source.sourceUrl,
+  };
 }
 
 /**

@@ -1,4 +1,4 @@
-# Design Doc: Bible Integration (Bible.helloao.org)
+# Design Doc: Bible Integration (HelloAO and fetch(bible))
 
 ## 1. Objective
 
@@ -33,7 +33,83 @@ This architecture is chosen specifically to uphold our project tenets.
 
 https://bible.helloao.org/docs/reference/#available-translations
 
-#### 2.2 Longevity
+### 2.2 Original-Language Critical Editions from fetch(bible)
+
+HelloAO remains the primary service for translated Bible text. The app uses
+[fetch(bible)](https://fetch.bible/) as a second, narrowly scoped source for the
+Hebrew/Aramaic and Koine Greek text shown in the verse-detail popup.
+
+#### 2.2.1 Reference-Based Lookup
+
+The lookup is independent of the displayed translation. `BibleService` sends the
+canonical USFM book ID, chapter number, and verse number to fetch(bible's normalized
+plain-text collection. fetch(bible uses lowercase USFM book IDs and standardizes its
+distributed formats to the common KJV-style versification. Therefore an English, Chinese,
+or Spanish translation can resolve the same original-language verse without attempting a
+fragile one-to-one text match.
+
+The CDN exposes one JSON file per book. `BibleService` caches the resulting whole-book
+promise in memory and extracts the requested 1-based chapter and verse array. This keeps
+repeat popup views responsive without changing or replacing HelloAO's existing chapter
+flow.
+
+The displayed sources are critical editions reconstructed from manuscript witnesses;
+they are not scans, facsimiles, or diplomatic transcriptions of a single “latest
+manuscript.” The selected open editions are:
+
+| Testament | fetch(bible) ID | Edition | Display language |
+| --- | --- | --- | --- |
+| Old Testament | `hbo_sr` | Solid Rock Hebrew Bible | Hebrew, including the Biblical Aramaic passages |
+| New Testament | `grc_sr` | Statistical Restoration Greek New Testament | Koine Greek |
+
+For presentation, the parser omits separate note objects from fetch(bible's plain-text
+payload and collapses layout whitespace so word-per-line Greek data reads naturally in a
+React Native text block. It otherwise preserves the source character strings and textual
+sigla. Hebrew/Aramaic is rendered right-to-left with Ezra SIL; Greek is rendered
+left-to-right with Gentium. Font sources and their separate licenses are documented in
+[`assets/fonts/README.md`](../../assets/fonts/README.md).
+
+#### 2.2.2 Licensing Boundary: Free Service vs. Licensed Content
+
+This distinction is mandatory for maintenance and legal review:
+
+> **fetch(bible's CDN is free to access, but fetch(bible does not place every work it
+> distributes into the public domain.** Service access and content licensing are separate
+> grants of permission.
+
+[fetch(bible's official access policy](https://fetch.bible/access/#no-limits-from-us)
+states that the service itself imposes no usage limits and permits long-term caching, but
+also explicitly requires consumers to comply with the terms of each individual Bible
+resource. A future maintainer must never infer permission to redistribute a work solely
+because it appears on fetch(bible).
+
+Both editions currently selected by the app use
+[Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/):
+
+- [Solid Rock Hebrew Bible license and required citation](https://github.com/jjmccollum/solid-rock-hb#license-and-citation)
+- [Statistical Restoration Greek New Testament license and attribution](https://github.com/Center-for-New-Testament-Restoration/SR#license)
+
+CC BY 4.0 is free and open: it permits copying, redistribution, adaptation, and commercial
+use without a fee or separate permission. It is not public domain and it is not
+condition-free. Distribution must retain appropriate creator/editor credit, provide a
+link to CC BY 4.0, indicate presentation or other changes, and must not impose additional
+legal or technological restrictions that prevent recipients from exercising the licensed
+rights.
+
+Consequently:
+
+1. The edition/editor attribution in the verse-detail popup must not be removed.
+2. The source links, CC BY 4.0 link, and formatting-change disclosure in the repository
+   documentation must be retained.
+3. If the app later exposes clickable attribution, both the edition source and license
+   should be linked directly.
+4. Changing either fetch(bible) resource ID requires reviewing and documenting the new
+   work's individual license before release.
+5. The Bible-text licenses are separate from fetch(bible's service policy, HelloAO's
+   service behavior, the application source-code license, and the OFL/MIT licenses of the
+   bundled fonts.
+
+### 2.3 Longevity
 
 1. **Legal Sustainability (Non-Profit Governance) - Tenet 2**
 
@@ -61,7 +137,7 @@ static assets.
 This portability is essential for **Tenet 1 (Sustainable)**, ensuring the app remains free
 and maintainable regardless of external corporate changes.
 
-### 2.3 Contingency & Sustainability
+### 2.4 Contingency & Sustainability
 
 To ensure the longevity of the application and mitigate risks if the 501c3 (HelloAO Lab)
 shuts down:
@@ -72,9 +148,9 @@ shuts down:
   redeployed as a collection of static JSON files via GitHub Pages or a self-hosted
   instance.
 
-### 2.4 Alternatives
+### 2.5 Alternatives
 
-#### 2.4.1 Why YouVersion is not Preferred
+#### 2.5.1 Why YouVersion is not Preferred
 
 While YouVersion (Digital Bible Library) offers an extensive catalog, it was excluded for
 this specific native-first architecture due to:
@@ -89,7 +165,7 @@ this specific native-first architecture due to:
 4.  **UI Overhead:** Rerendering a WebView is heavier than rendering text strings, which
     violates **Tenet 5 (Simplicity)** regarding smooth performance on older hardware.
 
-#### 2.4.2 api.bible (American Bible Society)
+#### 2.5.2 api.bible (American Bible Society)
 
 While api.bible offers a wide range of translations, it was excluded due to the following
 technical and operational constraints:
@@ -102,7 +178,7 @@ technical and operational constraints:
 3. **Provisioning Requirements:** Access requires manual developer registration and
    approval, which introduces friction for open-source contributors.
 
-#### 2.4.3 bible-api.com
+#### 2.5.3 bible-api.com
 
 bible-api.com was considered for its simplicity but rejected for several technical
 reasons:

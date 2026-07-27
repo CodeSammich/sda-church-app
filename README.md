@@ -94,6 +94,60 @@ remains internal to maintain spiritual focus.
 
 ---
 
+## Bible Sources and Licensing
+
+The Bible reader uses two separate content services with different roles:
+
+- [HelloAO](https://bible.helloao.org/) remains the source for the translated
+  Bible text displayed by the reader.
+- [fetch(bible)](https://fetch.bible/) supplies the original-language critical
+  editions shown in the verse-detail popup. The lookup uses the canonical USFM
+  book ID plus chapter and verse number, so the same Hebrew/Aramaic or Greek
+  source works with every application language.
+
+### “Free to access” does not mean “public domain”
+
+fetch(bible) provides an open CDN with no API key, usage fee, request quota, or
+provider-imposed caching limit. That permission applies to access to the
+fetch(bible) service; it does **not** erase or replace the license of each work
+distributed through the service. fetch(bible explicitly states that consumers
+must follow the terms of each individual Bible resource. See its
+[official access and licensing explanation](https://fetch.bible/access/#no-limits-from-us).
+
+The app currently requests these open critical editions:
+
+| Testament | fetch(bible) ID | Edition | License and source |
+| --- | --- | --- | --- |
+| Old Testament | `hbo_sr` | Solid Rock Hebrew Bible | [CC BY 4.0; Stephen L. Brown, editor](https://github.com/jjmccollum/solid-rock-hb#license-and-citation) |
+| New Testament | `grc_sr` | Statistical Restoration Greek New Testament | [CC BY 4.0; Alan Bunning / Center for New Testament Restoration](https://github.com/Center-for-New-Testament-Restoration/SR#license) |
+
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) is an open and free
+license. It permits copying, redistribution, adaptation, and commercial use
+without a fee or separate permission. It is **not condition-free** and it is
+not the same as a public-domain dedication. Users of the material must:
+
+1. give appropriate credit to the creator and designated attribution parties;
+2. link to the CC BY 4.0 license;
+3. indicate whether the material was changed; and
+4. avoid imposing legal or technological restrictions that prevent recipients
+   from exercising the rights granted by the license.
+
+The app preserves an edition-and-editor attribution in the verse-detail popup.
+For display, `BibleService.fetchOriginalLanguageVerse` omits the separate note
+objects in fetch(bible's plain-text payload and collapses source layout
+whitespace; the returned biblical character strings and textual sigla are
+otherwise displayed as provided. This formatting disclosure, the attribution,
+the edition source links above, and the CC BY 4.0 link must be retained. Any
+future replacement of either edition requires a fresh review of that resource's
+individual license; fetch(bible's free service access alone is not sufficient
+evidence that a replacement work may be redistributed.
+
+The licenses for the bundled Greek and Hebrew fonts are separate from the
+licenses for the biblical text. Font sources and exact terms are documented in
+[assets/fonts/README.md](assets/fonts/README.md).
+
+---
+
 ## Known Bugs
 
 ### Android PWA may require a notification-shade cycle for fullscreen

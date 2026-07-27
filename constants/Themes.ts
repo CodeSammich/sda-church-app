@@ -18,6 +18,12 @@ export const THEME_STORAGE_KEY = 'user-theme';
 export const THEME_DARK = 'dark';
 export const THEME_LIGHT = 'light';
 
+/** Script-specific families registered by the root Expo font loader. */
+export const SCRIPTURE_FONT_FAMILIES = {
+  greek: 'Gentium-Regular',
+  hebrew: 'EzraSIL-Regular',
+} as const;
+
 // AdventSans font is used for physical signage and branding
 // but Plus Jakarta Sans is used for Latin-script digital interfaces
 // AdventSans also has special branded styles for certain words that can be problematic

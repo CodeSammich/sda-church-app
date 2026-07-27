@@ -10,11 +10,16 @@ import {
 import {
   AppTheme,
   getAppTheme,
+  SCRIPTURE_FONT_FAMILIES,
   THEME_DARK,
   THEME_LIGHT,
   THEME_STORAGE_KEY,
   ThemeContext,
 } from '@/constants/Themes';
+import {
+  BIBLE_TRANSLATION_STORAGE_KEY,
+  DEFAULT_TRANSLATION_MAP,
+} from '@/services/BibleService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -197,6 +202,7 @@ export const UpdateContext = createContext<{
 
 export default function RootLayout() {
   const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANG);
+  const [languageSelectionRevision, setLanguageSelectionRevision] = useState(0);
   const colorScheme = useColorScheme();
   const [theme, setTheme] = useState(() => getAppTheme(colorScheme === THEME_DARK));
   const [isReady, setIsReady] = useState(false);
@@ -522,8 +528,12 @@ export default function RootLayout() {
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
+    setLanguageSelectionRevision((revision) => revision + 1);
     setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang)));
-    await AsyncStorage.setItem('user-language', lang);
+    await AsyncStorage.multiSet([
+      ['user-language', lang],
+      [BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP[lang] || 'BSB'],
+    ]);
   };
 
   const handleToggleTheme = async (val?: any) => {
@@ -542,9 +552,14 @@ export default function RootLayout() {
   const onCompleteSetup = async () => {
     // Persist current settings when completing setup to ensure they stick on reload
     // even if the user didn't explicitly change them from system defaults.
+    setLanguageSelectionRevision((revision) => revision + 1);
     await Promise.all([
       AsyncStorage.setItem('has-completed-setup', 'true'),
       AsyncStorage.setItem('user-language', language),
+      AsyncStorage.setItem(
+        BIBLE_TRANSLATION_STORAGE_KEY,
+        DEFAULT_TRANSLATION_MAP[language] || 'BSB',
+      ),
       AsyncStorage.setItem(THEME_STORAGE_KEY, theme.dark ? THEME_DARK : THEME_LIGHT),
     ]);
     setShowSetup(false);
@@ -575,6 +590,8 @@ export default function RootLayout() {
     'PlusJakartaSans-Regular': require('../assets/fonts/PlusJakartaSans-Regular.ttf'),
     'PlusJakartaSans-Medium': require('../assets/fonts/PlusJakartaSans-Medium.ttf'),
     'PlusJakartaSans-Bold': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),
+    [SCRIPTURE_FONT_FAMILIES.greek]: require('../assets/fonts/Gentium-Regular.ttf'),
+    [SCRIPTURE_FONT_FAMILIES.hebrew]: require('../assets/fonts/EzraSIL-Regular.ttf'),
     'material-community': require('../assets/fonts/MaterialCommunityIcons.ttf'),
   });
 
@@ -600,7 +617,13 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage }}>
+      <LanguageContext.Provider
+        value={{
+          language,
+          languageSelectionRevision,
+          setLanguage: handleSetLanguage,
+        }}
+      >
         <ThemeContext.Provider value={{ toggleTheme: handleToggleTheme }}>
           <UpdateContext.Provider
             value={{

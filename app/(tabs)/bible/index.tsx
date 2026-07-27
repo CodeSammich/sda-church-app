@@ -29,7 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
-import { useAppTheme } from '@/constants/Themes';
+import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -50,7 +50,7 @@ const SELECTION_BAR_HEIGHT = 56;
 
 type SleepTimerSetting = 5 | 10 | 15 | 30 | 60 | 120 | 'chapter' | null;
 
-const BIBLE_TRANS_KEY = 'user-bible-translation';
+const BIBLE_TRANS_KEY = BibleService.BIBLE_TRANSLATION_STORAGE_KEY;
 const BIBLE_BOOK_KEY = 'user-bible-book';
 const BIBLE_CHAPTER_KEY = 'user-bible-chapter';
 
@@ -88,6 +88,11 @@ const uiLabels = {
     bible: 'Bible',
     footnote: 'Footnote',
     hebrewSubtitle: 'Hebrew (Original)',
+    hebrewAramaicOriginal: 'Hebrew / Aramaic (Original)',
+    greekOriginal: 'Koine Greek (Original)',
+    loadingOriginal: 'Loading original-language text…',
+    originalUnavailable: 'Original-language text is unavailable.',
+    source: 'Source',
     prevChapter: 'Prev',
     nextChapter: 'Next',
     share: 'Share Verse',
@@ -128,6 +133,11 @@ const uiLabels = {
     bible: '聖經',
     footnote: '腳注',
     hebrewSubtitle: '希伯來語 (原文)',
+    hebrewAramaicOriginal: '希伯來語／亞蘭語（原文）',
+    greekOriginal: '通用希臘語（原文）',
+    loadingOriginal: '正在載入原文…',
+    originalUnavailable: '無法載入原文。',
+    source: '來源',
     prevChapter: '上一章',
     nextChapter: '下一章',
     share: '分享經文',
@@ -168,6 +178,11 @@ const uiLabels = {
     bible: '圣经',
     footnote: '脚注',
     hebrewSubtitle: '希伯来语 (原文)',
+    hebrewAramaicOriginal: '希伯来语／亚兰语（原文）',
+    greekOriginal: '通用希腊语（原文）',
+    loadingOriginal: '正在加载原文…',
+    originalUnavailable: '无法加载原文。',
+    source: '来源',
     prevChapter: '上一章',
     nextChapter: '下一章',
     share: '分享经文',
@@ -208,6 +223,11 @@ const uiLabels = {
     bible: 'Biblia',
     footnote: 'Footnote',
     hebrewSubtitle: 'Hebreo (Original)',
+    hebrewAramaicOriginal: 'Hebreo / arameo (original)',
+    greekOriginal: 'Griego koiné (original)',
+    loadingOriginal: 'Cargando texto original…',
+    originalUnavailable: 'El texto original no está disponible.',
+    source: 'Fuente',
     prevChapter: 'Anterior',
     nextChapter: 'Siguiente',
     share: 'Compartir Versículo',
@@ -250,7 +270,7 @@ export default function BibleScreen() {
       ? 12
       : 0;
   const bottomDockInset = Math.max(insets.bottom, fullscreenEdgeInset);
-  const { language } = useContext(LanguageContext);
+  const { language, languageSelectionRevision } = useContext(LanguageContext);
   const { menuAnim, setMenuVisible: setGlobalMenuVisible } = useContext(UIStateContext);
   const [menuVisible, setMenuVisible] = useState(true);
 
@@ -267,6 +287,9 @@ export default function BibleScreen() {
   }>();
 
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
+  const translationParamSignature = paramTransId
+    ? `${paramTransId}:${paramBookId || ''}:${paramChapter || ''}`
+    : null;
   const getTranslationLabel = (
     translation: (typeof BibleService.SUPPORTED_TRANSLATIONS)[number],
   ) => `${translation.name} (${(labels as Record<string, string>)[translation.lang]})`;
@@ -289,6 +312,8 @@ export default function BibleScreen() {
   // Persistence state
   const [isPersistenceLoaded, setIsPersistenceLoaded] = useState(false);
   const initialBookId = useRef<string | null>(null);
+  const handledLanguageSelectionRevision = useRef(languageSelectionRevision);
+  const handledTranslationParamSignature = useRef<string | null>(null);
 
   // Data state
   const [books, setBooks] = useState<BibleService.TranslationBook[]>([]);
@@ -298,6 +323,10 @@ export default function BibleScreen() {
   const [savedVerses, setSavedVerses] = useState<SavedVerseReference[]>([]);
   const [savedVerseDisplays, setSavedVerseDisplays] = useState<SavedVerseDisplay[]>([]);
   const [savedVersesLoading, setSavedVersesLoading] = useState(false);
+  const [originalVerse, setOriginalVerse] =
+    useState<BibleService.OriginalLanguageVerse | null>(null);
+  const [originalVerseLoading, setOriginalVerseLoading] = useState(false);
+  const [originalVerseError, setOriginalVerseError] = useState(false);
   const pendingSavedVerseScroll = useRef<number | null>(null);
 
   // Modal states
@@ -381,11 +410,44 @@ export default function BibleScreen() {
     saveSelection();
   }, [supportedTranslation.id, book?.id, chapterNum, isPersistenceLoaded]);
 
+  // An app-language choice takes precedence over any Bible translation chosen
+  // before it. A later translation choice in this reader is persisted normally
+  // and remains in effect until the next app-language choice.
+  useEffect(() => {
+    if (
+      !isPersistenceLoaded ||
+      handledLanguageSelectionRevision.current === languageSelectionRevision
+    ) {
+      return;
+    }
+
+    handledLanguageSelectionRevision.current = languageSelectionRevision;
+    // Consume any parameters belonging to the route that was already open. They
+    // must not undo this newer app-language selection when the books reload.
+    handledTranslationParamSignature.current = translationParamSignature;
+    const defaultTranslationId = BibleService.DEFAULT_TRANSLATION_MAP[language] || 'BSB';
+    const defaultTranslation = BibleService.SUPPORTED_TRANSLATIONS.find(
+      (translation) => translation.id === defaultTranslationId,
+    );
+
+    if (defaultTranslation) setSupportedTranslation(defaultTranslation);
+  }, [
+    language,
+    languageSelectionRevision,
+    isPersistenceLoaded,
+    translationParamSignature,
+  ]);
+
   // Reactive effect to sync state with navigation parameters (e.g., from Hymnal)
   useEffect(() => {
     if (!isPersistenceLoaded) return;
 
-    if (paramTransId) {
+    if (!paramTransId) {
+      handledTranslationParamSignature.current = null;
+    } else if (
+      handledTranslationParamSignature.current !== translationParamSignature
+    ) {
+      handledTranslationParamSignature.current = translationParamSignature;
       const trans = BibleService.SUPPORTED_TRANSLATIONS.find(
         (t: any) => t.id === paramTransId,
       );
@@ -674,6 +736,40 @@ export default function BibleScreen() {
       setLastActiveType(modalType);
     }
   }, [modalType]);
+
+  // The original-language source is selected by canonical book id, not by the
+  // displayed translation. This keeps the same Hebrew/Greek lookup available
+  // in every application language.
+  useEffect(() => {
+    if (modalType !== 'verse-detail' || !book || !selectedVerseNum) return;
+
+    let cancelled = false;
+    setOriginalVerse(null);
+    setOriginalVerseError(false);
+    setOriginalVerseLoading(true);
+
+    BibleService.fetchOriginalLanguageVerse(
+      book.id,
+      chapterNum,
+      selectedVerseNum,
+    )
+      .then((verse) => {
+        if (!cancelled) setOriginalVerse(verse);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setOriginalVerseError(true);
+          console.error('Failed to load original-language Bible verse:', error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setOriginalVerseLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [modalType, book?.id, chapterNum, selectedVerseNum]);
 
   // Initial load: Fetch books for default translation
   // This effect loads the books for the selected translation and sets the current book.
@@ -1319,6 +1415,9 @@ export default function BibleScreen() {
    * and Hebrew subtitles relevant to the specific verse tapped.
    */
   const openVerseDetails = (num: number) => {
+    setOriginalVerse(null);
+    setOriginalVerseError(false);
+    setOriginalVerseLoading(true);
     setSelectedVerseNum(num);
     setModalType('verse-detail');
   };
@@ -2040,6 +2139,66 @@ export default function BibleScreen() {
                     </Text>
                   </View>
                   <Divider style={{ marginBottom: 16 }} />
+                  {originalVerseLoading ? (
+                    <View style={styles.originalVerseStatus}>
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                      <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                        {labels.loadingOriginal}
+                      </Text>
+                    </View>
+                  ) : originalVerse ? (
+                    <View style={ReaderStyles.detailSection}>
+                      <Text
+                        variant="labelSmall"
+                        style={{ color: theme.colors.tertiary, marginBottom: 6 }}
+                      >
+                        {originalVerse.textDirection === 'rtl'
+                          ? labels.hebrewAramaicOriginal
+                          : labels.greekOriginal}
+                      </Text>
+                      <Text
+                        selectable
+                        style={[
+                          styles.originalVerseText,
+                          {
+                            color: theme.colors.onSurface,
+                            textAlign:
+                              originalVerse.textDirection === 'rtl' ? 'right' : 'left',
+                            writingDirection: originalVerse.textDirection,
+                            fontFamily:
+                              originalVerse.textDirection === 'rtl'
+                                ? SCRIPTURE_FONT_FAMILIES.hebrew
+                                : SCRIPTURE_FONT_FAMILIES.greek,
+                          },
+                        ]}
+                      >
+                        {originalVerse.text}
+                      </Text>
+                      {/*
+                        Required CC BY 4.0 attribution for the original-language
+                        edition. fetch(bible's free CDN access does not waive the
+                        source edition's license. Do not remove this notice when
+                        changing the popup; see README.md and the Bible design doc.
+                      */}
+                      <Text
+                        variant="labelSmall"
+                        style={[
+                          styles.originalVerseAttribution,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        {labels.source}: {originalVerse.edition}.{' '}
+                        {originalVerse.attribution}
+                      </Text>
+                    </View>
+                  ) : originalVerseError ? (
+                    <View style={ReaderStyles.detailSection}>
+                      <Text style={{ color: theme.colors.error }}>
+                        {labels.originalUnavailable}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <Divider style={{ marginBottom: 16 }} />
                   {/* 
                       Aggregated Verse Content:
                       We calculate the subtitle text first to identify and filter
@@ -2185,6 +2344,8 @@ export default function BibleScreen() {
                           setShouldAutoPlay(true);
                         }
                         if (lastActiveType === 'translation') {
+                          handledTranslationParamSignature.current =
+                            translationParamSignature;
                           setSupportedTranslation(item as any);
                         } else if (lastActiveType === 'book') {
                           setBook(item as any);
@@ -2243,6 +2404,22 @@ const styles = StyleSheet.create({
   detailActionButton: {
     flex: 1,
     borderRadius: 24,
+  },
+  originalVerseStatus: {
+    minHeight: 72,
+    marginBottom: 16,
+    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  originalVerseText: {
+    fontSize: 20,
+    lineHeight: 32,
+    marginBottom: 10,
+  },
+  originalVerseAttribution: {
+    fontSize: 11,
+    lineHeight: 16,
   },
   savedEmptyState: {
     minHeight: 180,
