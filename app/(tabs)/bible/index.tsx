@@ -1213,10 +1213,13 @@ export default function BibleScreen() {
         <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
           {leading}
           <Text
-            style={{
-              textDecorationLine: 'underline',
-              textDecorationColor: theme.colors.primary,
-            }}
+            style={[
+              {
+                textDecorationLine: 'underline',
+                textDecorationColor: theme.colors.primary,
+              },
+              isBold && { fontWeight: 'bold' },
+            ]}
           >
             {core}
           </Text>
