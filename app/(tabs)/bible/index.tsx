@@ -2042,6 +2042,7 @@ export default function BibleScreen() {
           onDismiss={closeModal}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            lastActiveType === 'verse-detail' && styles.verseDetailModalContent,
             { backgroundColor: theme.colors.background },
           ]}
         >
@@ -2390,6 +2391,11 @@ export default function BibleScreen() {
 }
 
 const styles = StyleSheet.create({
+  verseDetailModalContent: {
+    maxHeight: '94%',
+    marginTop: 8,
+    marginBottom: 8,
+  },
   selectionBarInner: {
     flexDirection: 'row',
     alignItems: 'center',

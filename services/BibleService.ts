@@ -1,12 +1,14 @@
 /**
- * Service for interacting with the Bible.helloao.org API.
+ * Service for interacting with the HelloAO and fetch(bible) Bible collections.
  * Follows the design specs for multi-language, native-first rendering.
  *
  * Note: The `SupportedLanguage` type is imported from the global LanguageContext
  * to ensure consistency in language code mapping.
  *
  * Architectural Design: ../docs/feature_designs/bible_integration_design.md
- * API Reference: https://bible.helloao.org/docs/reference/
+ * API References:
+ * - https://bible.helloao.org/docs/reference/
+ * - https://fetch.bible/access/manual/
  */
 
 export const API_BASE = 'https://bible.helloao.org/api';
@@ -15,8 +17,9 @@ export const API_BASE = 'https://bible.helloao.org/api';
 export const BIBLE_TRANSLATION_STORAGE_KEY = 'user-bible-translation';
 
 /**
- * fetch(bible) is used only for the original-language critical editions. The
- * translated Bible reader continues to use HelloAO.
+ * fetch(bible) supplies the original-language critical editions and the
+ * Chinese Union Version / Reina-Valera 1909 reader text. Other translated
+ * editions continue to use HelloAO.
  *
  * IMPORTANT LICENSING DISTINCTION:
  * - fetch(bible offers its CDN without an API key, usage fee, request quota, or
@@ -387,6 +390,55 @@ export interface TranslationBookChapter {
   chapter: ChapterData;
 }
 
+interface FetchBibleTranslatedEdition {
+  resourceId: string;
+  name: string;
+  englishName: string;
+  language: string;
+  attribution: string;
+}
+
+/**
+ * These are the same public-domain editions previously loaded from HelloAO.
+ * fetch(bible's normalized resources are authoritative for their source text
+ * and translation-footnote metadata.
+ */
+const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
+  string,
+  FetchBibleTranslatedEdition
+> = {
+  cmn_cuv: {
+    resourceId: 'cmn_cut',
+    name: '新標點和合本',
+    englishName: 'Chinese Union Version (traditional)',
+    language: 'cmn',
+    attribution: 'Public domain. Text provided by fetch(bible).',
+  },
+  cmn_cu1: {
+    resourceId: 'cmn_cus',
+    name: '新标点和合本',
+    englishName: 'Chinese Union Version (simplified)',
+    language: 'cmn',
+    attribution: 'Public domain. Text provided by fetch(bible).',
+  },
+  spa_r09: {
+    resourceId: 'spa_rv',
+    name: 'Reina Valera',
+    englishName: 'Reina-Valera 1909',
+    language: 'spa',
+    attribution: 'Public domain. Text provided by fetch(bible).',
+  },
+};
+
+const translatedBibleBookCache = new Map<
+  string,
+  Promise<FetchBiblePlainTextBook>
+>();
+const translationBookListCache = new Map<
+  string,
+  Promise<TranslationBook[]>
+>();
+
 /**
  * Dataset (Cross-Reference) Types
  */
@@ -443,13 +495,21 @@ export function selectRandomChapter(books: TranslationBook[]) {
  * @returns {Promise<TranslationBook[]>}
  */
 export async function fetchBooks(translation: string): Promise<TranslationBook[]> {
+  let request = translationBookListCache.get(translation);
+  if (!request) {
+    request = fetch(`${API_BASE}/${translation}/books.json`).then(async (res) => {
+      if (!res.ok) {
+        throw new Error(`Failed to fetch books for ${translation}: ${res.status}`);
+      }
+      const data = await res.json();
+      return data.books as TranslationBook[];
+    });
+    translationBookListCache.set(translation, request);
+    request.catch(() => translationBookListCache.delete(translation));
+  }
+
   try {
-    const res = await fetch(`${API_BASE}/${translation}/books.json`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch books for ${translation}: ${res.status}`);
-    }
-    const data = await res.json();
-    return data.books;
+    return await request;
   } catch (e) {
     console.error(`Failed to load Bible books for ${translation}`, e);
     throw e;
@@ -613,6 +673,151 @@ export function renderVerseToPlainText(
   return result.replace(/^\n+/, '').trimEnd();
 }
 
+const fetchBibleMetadataText = (contents: unknown): string => {
+  if (typeof contents === 'string') return contents;
+  if (Array.isArray(contents)) {
+    return contents.map(fetchBibleMetadataText).join('');
+  }
+  return '';
+};
+
+const normalizeFetchBibleText = (text: string): string =>
+  text
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/^\n+|\n+$/g, '');
+
+const stripFetchBibleNoteReference = (
+  text: string,
+  chapter: number,
+  verse: number,
+): string => {
+  const withoutReference = text.replace(
+    new RegExp(`^\\s*${chapter}[.:]${verse}\\s*`),
+    '',
+  );
+  return withoutReference || text;
+};
+
+async function fetchTranslatedBibleBook(
+  resourceId: string,
+  book: string,
+): Promise<FetchBiblePlainTextBook> {
+  const normalizedBook = book.toLowerCase();
+  const cacheKey = `${resourceId}:${normalizedBook}`;
+  let request = translatedBibleBookCache.get(cacheKey);
+
+  if (!request) {
+    request = fetch(
+      `${FETCH_BIBLE_BASE}/${resourceId}/txt/${normalizedBook}.json`,
+    ).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch ${resourceId} book ${book}: ${response.status}`,
+        );
+      }
+      return (await response.json()) as FetchBiblePlainTextBook;
+    });
+    translatedBibleBookCache.set(cacheKey, request);
+    request.catch(() => translatedBibleBookCache.delete(cacheKey));
+  }
+
+  return request;
+}
+
+async function fetchChapterFromFetchBible(
+  translationId: string,
+  edition: FetchBibleTranslatedEdition,
+  bookId: string,
+  chapterNumber: number,
+): Promise<TranslationBookChapter> {
+  const [sourceBook, books] = await Promise.all([
+    fetchTranslatedBibleBook(edition.resourceId, bookId),
+    fetchBooks(translationId),
+  ]);
+  const book = books.find((candidate) => candidate.id === bookId.toUpperCase());
+  const sourceChapter = sourceBook.contents?.[chapterNumber];
+
+  if (!book) {
+    throw new Error(`Book ${bookId} is unavailable for ${translationId}`);
+  }
+  if (!Array.isArray(sourceChapter)) {
+    throw new Error(`Chapter ${bookId} ${chapterNumber} is unavailable`);
+  }
+
+  const content: ChapterContent[] = [];
+  const footnotes: ChapterFootnote[] = [];
+  let numberOfVerses = 0;
+
+  for (let verseNumber = 1; verseNumber < sourceChapter.length; verseNumber++) {
+    const sourceVerse = sourceChapter[verseNumber];
+    if (!Array.isArray(sourceVerse)) continue;
+
+    const verseContent: ChapterVerse['content'] = [];
+
+    for (const part of sourceVerse) {
+      if (typeof part === 'string') {
+        const text = normalizeFetchBibleText(part);
+        if (text) verseContent.push(text);
+        continue;
+      }
+
+      const metadataText = fetchBibleMetadataText(part.contents).trim();
+      if (part.type === 'heading') {
+        if (metadataText) content.push({ type: 'heading', content: [metadataText] });
+        continue;
+      }
+
+      if (part.type === 'note') {
+        const noteId = footnotes.length;
+        verseContent.push({ noteId });
+        footnotes.push({
+          noteId,
+          caller: String(noteId + 1),
+          text: stripFetchBibleNoteReference(
+            metadataText,
+            chapterNumber,
+            verseNumber,
+          ),
+          reference: { chapter: chapterNumber, verse: verseNumber },
+        });
+      }
+    }
+
+    content.push({
+      type: 'verse',
+      number: verseNumber,
+      content: normalizeContentSequence(
+        verseContent.length > 0 ? verseContent : [''],
+      ),
+    });
+    numberOfVerses = verseNumber;
+  }
+
+  const translation: Translation = {
+    id: translationId,
+    name: edition.name,
+    englishName: edition.englishName,
+    language: edition.language,
+    textDirection: 'ltr',
+    attribution: edition.attribution,
+  };
+  const thisChapterLink = `${FETCH_BIBLE_BASE}/${edition.resourceId}/txt/${bookId.toLowerCase()}.json`;
+
+  return {
+    translation,
+    book,
+    thisChapterLink,
+    thisChapterAudioLinks: {},
+    nextChapterApiLink: null,
+    nextChapterAudioLinks: null,
+    previousChapterApiLink: null,
+    previousChapterAudioLinks: null,
+    numberOfVerses,
+    chapter: { number: chapterNumber, content, footnotes },
+  };
+}
+
 /**
  * Fetches the verses for a specific chapter in a specific translation and book.
  *
@@ -628,6 +833,16 @@ export async function fetchChapter(
   chapter: number,
 ): Promise<TranslationBookChapter> {
   try {
+    const fetchBibleEdition = FETCH_BIBLE_TRANSLATED_EDITIONS[translation];
+    if (fetchBibleEdition) {
+      return await fetchChapterFromFetchBible(
+        translation,
+        fetchBibleEdition,
+        book,
+        chapter,
+      );
+    }
+
     const res = await fetch(`${API_BASE}/${translation}/${book}/${chapter}.json`);
     if (!res.ok) {
       throw new Error(`Failed to fetch chapter: ${res.status}`);

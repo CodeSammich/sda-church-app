@@ -98,12 +98,15 @@ remains internal to maintain spiritual focus.
 
 The Bible reader uses two separate content services with different roles:
 
-- [HelloAO](https://bible.helloao.org/) remains the source for the translated
-  Bible text displayed by the reader.
-- [fetch(bible)](https://fetch.bible/) supplies the original-language critical
-  editions shown in the verse-detail popup. The lookup uses the canonical USFM
-  book ID plus chapter and verse number, so the same Hebrew/Aramaic or Greek
-  source works with every application language.
+- [HelloAO](https://bible.helloao.org/) supplies the English reader text and the
+  shared translated-edition book catalog.
+- [fetch(bible)](https://fetch.bible/) supplies the Chinese Union Version,
+  Reina-Valera 1909, and the original-language critical editions shown in the
+  verse-detail popup. Its normalized Chinese and Spanish resources expose the
+  source editions' translation footnotes directly.
+
+The translated fetch(bible) resources are the public-domain `cmn_cut` (traditional
+CUV), `cmn_cus` (simplified CUV), and `spa_rv` (Reina-Valera 1909) editions.
 
 ### “Free to access” does not mean “public domain”
 

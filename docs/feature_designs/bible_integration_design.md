@@ -9,37 +9,58 @@ credentials.
 
 ## 2. Technical Architecture
 
-### 2.1 Data Source: API from Bible.helloao.org
+### 2.1 Translated Bible Source Routing
 
-Instead of proprietary embeds, the app consumes raw JSON from the Bible.helloao.org API.
-This architecture is chosen specifically to uphold our project tenets.
+Instead of proprietary embeds, the app consumes raw JSON from HelloAO and fetch(bible).
+The public app translation IDs remain stable even when their chapter provider differs:
 
-- **No Auth:** Open access to public domain and Creative Commons translations (BSB, WEB,
-  KJV, CUV) requires no API keys. This aligns with Tenet 1, 2, and 3 as we avoid the need
-  for user-tracked tokens or developer credentials.
-- **Format:** Returns flat JSON arrays of verses, allowing for native rendering in React
-  Native components.
-- **CORS:** The API is open-access, supporting direct requests from the PWA without proxy
-  overhead.
-- **Performance Optimization:** To prevent main-thread blocking on lower-end devices
-  during large JSON parsing (which can exceed 5-7MB for full translations), the
-  application utilizes a "Lazy-Load by Book/Chapter" strategy. Data parsing is handled
-  asynchronously to maintain 60fps UI responsiveness.
-- **Rate Limiting:** The service does not enforce restrictive per-user rate limits and
-  utilizes a global CDN for high availability. As it focuses on public domain and
-  open-licensed translations, there are no commercial usage tiers. The underlying
-  infrastructure (AWS S3/CloudFront) provides high scalability and cost-efficiency to
-  align with **Tenet 1 (Sustainable)**.
+| App translation | Chapter source | Provider resource | Reason |
+| --- | --- | --- | --- |
+| BSB (`BSB`) | HelloAO | `BSB` | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
+| KJV (`eng_kjv`) | HelloAO | `eng_kjv` | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
+| Traditional CUV (`cmn_cuv`) | fetch(bible) | `cmn_cut` | Use fetch(bible's normalized source text and translation-note metadata |
+| Simplified CUV (`cmn_cu1`) | fetch(bible) | `cmn_cus` | Use fetch(bible's normalized source text and translation-note metadata |
+| Reina-Valera 1909 (`spa_r09`) | fetch(bible) | `spa_rv` | HelloAO omits the edition's translation notes; fetch(bible retains them |
 
-https://bible.helloao.org/docs/reference/#available-translations
+The English routing was audited against Genesis 1, 4, 12, 22, 37, and 49. BSB
+and KJV had identical note counts between providers in every sampled chapter,
+and the Genesis 1 note contents matched after normalizing reference prefixes.
+Re-run this comparison if either provider revises its underlying resource.
 
-### 2.2 Original-Language Critical Editions from fetch(bible)
+HelloAO remains the shared source of translated-edition book names and chapter counts.
+`BibleService.fetchChapter` routes chapter content according to the table above.
 
-HelloAO remains the primary service for translated Bible text. The app uses
-[fetch(bible)](https://fetch.bible/) as a second, narrowly scoped source for the
-Hebrew/Aramaic and Koine Greek text shown in the verse-detail popup.
+- **No Auth:** Open access to the selected BSB, KJV, CUV, and Reina-Valera resources
+  requires no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
+  or developer credentials.
+- **Format:** Both services return structured JSON that is adapted into the app's native
+  chapter, verse, heading, and footnote model.
+- **CORS:** Both providers support direct requests from the PWA without proxy overhead.
+- **Performance Optimization:** HelloAO content is loaded by chapter. fetch(bible content
+  is delivered by book, cached as an in-memory promise, and sliced into chapters without
+  downloading a whole translation.
+- **Rate Limiting:** The selected static resources do not require a metered commercial API
+  tier. Their CDN-oriented delivery aligns with **Tenet 1 (Sustainable)**.
 
-#### 2.2.1 Reference-Based Lookup
+Provider references:
+
+- https://bible.helloao.org/docs/reference/#available-translations
+- https://fetch.bible/access/manual/
+
+### 2.2 fetch(bible) Resources
+
+#### 2.2.1 Translated Chapter Adapter
+
+fetch(bible's normalized plain-text JSON stores a whole book as 1-based chapter and verse
+arrays. Inline `heading` and `note` objects are converted into the existing
+`ChapterHeading`, `VerseFootnoteReference`, and `ChapterFootnote` models. This preserves
+the reader UI, saved references, search, sharing, and app-level translation IDs while
+allowing the richer provider resource to be authoritative.
+
+The translated book promise is cached by fetch(bible resource ID and canonical lowercase
+USFM book ID. Failed promises are evicted so a later request can retry.
+
+#### 2.2.2 Original-Language Reference Lookup
 
 The lookup is independent of the displayed translation. `BibleService` sends the
 canonical USFM book ID, chapter number, and verse number to fetch(bible's normalized
@@ -48,10 +69,8 @@ distributed formats to the common KJV-style versification. Therefore an English,
 or Spanish translation can resolve the same original-language verse without attempting a
 fragile one-to-one text match.
 
-The CDN exposes one JSON file per book. `BibleService` caches the resulting whole-book
-promise in memory and extracts the requested 1-based chapter and verse array. This keeps
-repeat popup views responsive without changing or replacing HelloAO's existing chapter
-flow.
+The original-language book promise uses the same book-level caching strategy and extracts
+the requested 1-based chapter and verse array. This keeps repeat popup views responsive.
 
 The displayed sources are critical editions reconstructed from manuscript witnesses;
 they are not scans, facsimiles, or diplomatic transcriptions of a single “latest
@@ -69,7 +88,7 @@ sigla. Hebrew/Aramaic is rendered right-to-left with Ezra SIL; Greek is rendered
 left-to-right with Gentium. Font sources and their separate licenses are documented in
 [`assets/fonts/README.md`](../../assets/fonts/README.md).
 
-#### 2.2.2 Licensing Boundary: Free Service vs. Licensed Content
+#### 2.2.3 Licensing Boundary: Free Service vs. Licensed Content
 
 This distinction is mandatory for maintenance and legal review:
 
@@ -83,7 +102,8 @@ also explicitly requires consumers to comply with the terms of each individual B
 resource. A future maintainer must never infer permission to redistribute a work solely
 because it appears on fetch(bible).
 
-Both editions currently selected by the app use
+The translated CUV and Reina-Valera resources above are public domain. Both
+original-language editions selected by the app use
 [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/):
 
 - [Solid Rock Hebrew Bible license and required citation](https://github.com/jjmccollum/solid-rock-hb#license-and-citation)
@@ -103,8 +123,8 @@ Consequently:
    documentation must be retained.
 3. If the app later exposes clickable attribution, both the edition source and license
    should be linked directly.
-4. Changing either fetch(bible) resource ID requires reviewing and documenting the new
-   work's individual license before release.
+4. Changing either original-language fetch(bible resource ID requires reviewing and
+   documenting the new work's individual license before release.
 5. The Bible-text licenses are separate from fetch(bible's service policy, HelloAO's
    service behavior, the application source-code license, and the OFL/MIT licenses of the
    bundled fonts.

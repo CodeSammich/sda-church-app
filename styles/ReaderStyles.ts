@@ -197,7 +197,7 @@ export const ReaderStyles = StyleSheet.create({
   },
   lineBreak: { height: 16 },
   poemText: {},
-  modalScroll: { padding: 16, maxHeight: 400 },
+  modalScroll: { padding: 16, flexShrink: 1 },
   detailSection: { marginBottom: 20 },
   detailText: { fontSize: 16, lineHeight: 24 },
   modalContent: { margin: 20, borderRadius: 12, maxHeight: '80%', overflow: 'hidden' },
