@@ -44,7 +44,12 @@ export const ReaderStyles = StyleSheet.create({
     marginBottom: 14,
     fontFamily: 'Georgia, "Times New Roman", serif',
   },
-  verseNumber: { fontSize: 12, fontWeight: 'bold' },
+  verseNumber: {
+    fontSize: 14,
+    lineHeight: 28,
+    fontWeight: '600',
+    paddingRight: 6,
+  },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   // Selection Overlays / Modals
@@ -111,8 +116,6 @@ export const ReaderStyles = StyleSheet.create({
   audioDock: {
     height: 84,
     paddingHorizontal: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   audioControlRow: {
     height: 52,

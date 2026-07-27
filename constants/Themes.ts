@@ -141,6 +141,8 @@ export const customLightTheme = {
 
     // Subtle Blur Effect for Glassmorphism Border for Search
     glassBorder: 'rgba(0,0,0,0.1)',
+    // Persistent highlight for saved Bible verses
+    verseHighlight: '#FFF0A6',
   },
   gradients: {
     heroOverlay: ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)'] as [
@@ -253,6 +255,8 @@ export const customDarkTheme: AppTheme = {
 
     // Subtle Blur Effect for Glassmorphism Border for Search
     glassBorder: 'rgba(255, 255, 255, 0.1)',
+    // Persistent highlight for saved Bible verses
+    verseHighlight: '#5A4B16',
   },
   gradients: {
     heroOverlay: ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)'] as [

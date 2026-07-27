@@ -94,6 +94,12 @@ export const GlobalHeader = (props: any) => {
   const onBibleTranslationPress = props.options?.onBibleTranslationPress as
     | (() => void)
     | undefined;
+  const onBibleSavedVersesPress = props.options?.onBibleSavedVersesPress as
+    | (() => void)
+    | undefined;
+  const bibleSavedVerseCount = (props.options?.bibleSavedVerseCount || 0) as number;
+  const bibleSavedVersesLabel =
+    (props.options?.bibleSavedVersesLabel as string | undefined) || 'Saved verses';
   const bibleChapterVerses = (props.options?.bibleChapterVerses || []) as Array<{
     number: number;
     text: string;
@@ -376,11 +382,15 @@ export const GlobalHeader = (props: any) => {
                     <MaterialCommunityIcons
                       name="translate"
                       size={18}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.primary}
                     />
                     <Text
                       numberOfLines={1}
-                      style={{ color: theme.colors.onSurface, fontWeight: '700' }}
+                      style={{
+                        color: theme.colors.onSurface,
+                        fontWeight: '700',
+                        flexShrink: 1,
+                      }}
                     >
                       {bibleTranslation}
                     </Text>
@@ -388,6 +398,34 @@ export const GlobalHeader = (props: any) => {
                       name="chevron-down"
                       size={17}
                       color={theme.colors.onSurfaceVariant}
+                    />
+                  </Pressable>
+                )}
+                {!isBibleSearchExpanded && onBibleSavedVersesPress && (
+                  <Pressable
+                    onPress={onBibleSavedVersesPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      bibleSavedVerseCount > 0
+                        ? `${bibleSavedVersesLabel}: ${bibleSavedVerseCount}`
+                        : bibleSavedVersesLabel
+                    }
+                    style={({ pressed }) => [
+                      styles.collapsedSearchButton,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        opacity: pressed ? 0.75 : 1,
+                      },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={bibleSavedVerseCount > 0 ? 'bookmark' : 'bookmark-outline'}
+                      size={23}
+                      color={
+                        bibleSavedVerseCount > 0
+                          ? theme.colors.primary
+                          : theme.colors.onSurfaceVariant
+                      }
                     />
                   </Pressable>
                 )}
@@ -425,7 +463,10 @@ export const GlobalHeader = (props: any) => {
                   style={[
                     styles.resultsOverlay,
                     {
-                      top: headerHeight,
+                      top: Math.max(
+                        headerHeight,
+                        insets.top + 64,
+                      ) + 8,
                       backgroundColor: theme.colors.background,
                     },
                   ]}
@@ -515,7 +556,8 @@ const styles = StyleSheet.create({
   },
   translationChip: {
     minWidth: 68,
-    maxWidth: 132,
+    maxWidth: 240,
+    flexShrink: 1,
     height: 44,
     borderRadius: 22,
     paddingHorizontal: 12,
@@ -558,7 +600,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 12,
     overflow: 'hidden',
-    marginTop: 8,
     maxHeight: 420,
     elevation: 6,
     shadowColor: '#000',
