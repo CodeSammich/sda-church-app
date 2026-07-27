@@ -12,6 +12,7 @@ on Safari (iOS) or Chrome (Android).
 ## Table of Contents
 
 - [Technical Setup & Testing](docs/README.md)
+- [Known Bugs](#known-bugs)
 - [UI/UX Design](docs/UI_UX.md)
 - [Feature Designs](docs/feature_designs/)
 - [Contributing Code](docs/CONTRIBUTING.md)
@@ -90,6 +91,41 @@ remains internal to maintain spiritual focus.
 > _"Finally, brothers, whatever is true, whatever is honorable, whatever is right,
 > whatever is pure, whatever is lovely, whatever is admirable—if anything is excellent or
 > praiseworthy—think on these things."_ — **Philippians 4:8**
+
+---
+
+## Known Bugs
+
+### Android PWA may require a notification-shade cycle for fullscreen
+
+The installed Android PWA uses `"display": "fullscreen"` in its web app manifest. On
+some Android and Chrome combinations, the app launches in its fullscreen window but does
+not immediately hide the Android status and navigation bars. Pulling down the notification
+shade and closing it causes Android and Chrome to recalculate the window insets and restore
+the expected immersive fullscreen state.
+
+**User workaround:** Swipe down from the top of the screen to open notifications, then
+swipe back up to close them. The Home screen displays an Android-only reminder once per
+fresh app session.
+
+The web app cannot perform the equivalent operation itself. A standard PWA runs inside the
+browser security sandbox and has no access to the Android `Window`,
+`WindowInsetsController`, or `WindowInsetsControllerCompat` APIs used by native apps to
+hide system bars. The browser Fullscreen API is a separate web capability: it generally
+requires a transient user interaction and does not provide direct control over the native
+Android activity's system-bar flags. CSS viewport changes, forced reflows, and page reloads
+also cannot reliably reproduce an operating-system notification-shade transition.
+
+A native Android or hybrid wrapper could explicitly call
+`WindowInsetsControllerCompat.hide(WindowInsetsCompat.Type.systemBars())` when its window
+regains focus. This project currently prioritizes the cross-platform, browser-installable
+PWA workflow, so it uses the user-facing workaround instead.
+
+References:
+
+- [Chromium fullscreen PWA issue](https://issues.chromium.org/issues/40780591#comment26)
+- [Fullscreen API security requirements](https://developer.mozilla.org/en-US/docs/Web/API/Element/requestFullscreen#security)
+- [Android immersive-mode system-bar API](https://developer.android.com/develop/ui/views/layout/immersive)
 
 ---
 
