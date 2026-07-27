@@ -127,6 +127,20 @@ References:
 - [Fullscreen API security requirements](https://developer.mozilla.org/en-US/docs/Web/API/Element/requestFullscreen#security)
 - [Android immersive-mode system-bar API](https://developer.android.com/develop/ui/views/layout/immersive)
 
+### iOS installed PWAs do not support manifest fullscreen
+
+iOS and iPadOS do not support the web app manifest's `"display": "fullscreen"` mode.
+When this PWA is installed from Safari, the operating system falls back to a standalone
+app window. The iOS status area, Home indicator, and system gestures remain controlled by
+the operating system and a PWA cannot hide them permanently.
+
+Apple-specific metadata can adjust the appearance of the status area or allow content to
+extend behind it, but it does not provide the Android-style immersive fullscreen behavior.
+This is a platform limitation rather than an application bug, and there is no notification-
+shade workaround on iOS.
+
+Reference: [PWA fullscreen platform support](https://web.dev/learn/pwa/enhancements#fullscreen_support)
+
 ---
 
 ## Branding & Trademarks
