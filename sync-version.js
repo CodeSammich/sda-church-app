@@ -41,8 +41,13 @@ if (fs.existsSync(appJsonPath)) {
 const swPath = path.join(__dirname, 'sw.js');
 if (fs.existsSync(swPath)) {
   let swContent = fs.readFileSync(swPath, 'utf8');
-  // Regex targets the VERSION constant
-  swContent = swContent.replace(/const VERSION = ".*";/, `const VERSION = "${version}";`);
+  // Accept either quote style so formatting changes cannot silently prevent
+  // the service-worker cache/update version from being refreshed.
+  const versionPattern = /const VERSION\s*=\s*(['"])[^'"]*\1;/;
+  if (!versionPattern.test(swContent)) {
+    throw new Error('Could not find the VERSION constant in public/sw.js');
+  }
+  swContent = swContent.replace(versionPattern, `const VERSION = '${version}';`);
   fs.writeFileSync(swPath, swContent);
   console.log('Successfully synced package.json version to sw.js');
 }
