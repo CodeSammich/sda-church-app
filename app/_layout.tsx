@@ -1,5 +1,13 @@
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import {
+  DEFAULT_TEXT_SCALE,
+  parseStoredTextScale,
+  persistTextScalePreference,
+  serializeTextScale,
+  TEXT_SCALE_STORAGE_KEY,
+  type TextScale,
+} from '@/constants/AppPreferences';
 import { getHeaderBackTarget, hasHeaderBackButton } from '@/constants/BackNavigation';
 import { openIosPwaInstallGuide } from '@/constants/ExternalLinks';
 import {
@@ -7,6 +15,7 @@ import {
   LanguageContext,
   SupportedLanguage,
 } from '@/constants/LanguageContext';
+import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
   AppTheme,
   getAppTheme,
@@ -204,7 +213,10 @@ export default function RootLayout() {
   const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANG);
   const [languageSelectionRevision, setLanguageSelectionRevision] = useState(0);
   const colorScheme = useColorScheme();
-  const [theme, setTheme] = useState(() => getAppTheme(colorScheme === THEME_DARK));
+  const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
+  const [theme, setTheme] = useState(() =>
+    getAppTheme(colorScheme === THEME_DARK, false, DEFAULT_TEXT_SCALE),
+  );
   const [isReady, setIsReady] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -490,10 +502,11 @@ export default function RootLayout() {
 
     async function prepare() {
       try {
-        const [savedLang, savedTheme, setupDone] = await Promise.all([
+        const [savedLang, savedTheme, setupDone, savedTextScale] = await Promise.all([
           AsyncStorage.getItem('user-language'),
           AsyncStorage.getItem(THEME_STORAGE_KEY),
           AsyncStorage.getItem('has-completed-setup'),
+          AsyncStorage.getItem(TEXT_SCALE_STORAGE_KEY),
         ]);
 
         // Always determine fallbacks first
@@ -504,9 +517,15 @@ export default function RootLayout() {
         const useDarkTheme = savedTheme
           ? savedTheme === THEME_DARK
           : colorScheme === THEME_DARK;
+        const preferredTextScale = parseStoredTextScale(savedTextScale);
         setLanguage(preferredLanguage);
+        setTextScale(preferredTextScale);
         setTheme(
-          getAppTheme(useDarkTheme, needsCjkSystemFont(preferredLanguage)),
+          getAppTheme(
+            useDarkTheme,
+            needsCjkSystemFont(preferredLanguage),
+            preferredTextScale,
+          ),
         );
 
         if (setupDone !== 'true') {
@@ -529,7 +548,7 @@ export default function RootLayout() {
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
     setLanguageSelectionRevision((revision) => revision + 1);
-    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang)));
+    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang), textScale));
     await AsyncStorage.multiSet([
       ['user-language', lang],
       [BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP[lang] || 'BSB'],
@@ -545,8 +564,25 @@ export default function RootLayout() {
     } else {
       next = !theme.dark;
     }
-    setTheme(getAppTheme(next, needsCjkSystemFont(language)));
+    setTheme(getAppTheme(next, needsCjkSystemFont(language), textScale));
     await AsyncStorage.setItem(THEME_STORAGE_KEY, next ? THEME_DARK : THEME_LIGHT);
+  };
+
+  const handleSetTextScale = async (nextScale: TextScale) => {
+    await persistTextScalePreference(
+      AsyncStorage,
+      nextScale,
+      (persistedScale) => {
+        setTextScale(persistedScale);
+        setTheme((currentTheme) =>
+          getAppTheme(
+            currentTheme.dark,
+            needsCjkSystemFont(language),
+            persistedScale,
+          ),
+        );
+      },
+    );
   };
 
   const onCompleteSetup = async () => {
@@ -561,6 +597,7 @@ export default function RootLayout() {
         DEFAULT_TRANSLATION_MAP[language] || 'BSB',
       ),
       AsyncStorage.setItem(THEME_STORAGE_KEY, theme.dark ? THEME_DARK : THEME_LIGHT),
+      AsyncStorage.setItem(TEXT_SCALE_STORAGE_KEY, serializeTextScale(textScale)),
     ]);
     setShowSetup(false);
   };
@@ -592,6 +629,7 @@ export default function RootLayout() {
     'PlusJakartaSans-Bold': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),
     [SCRIPTURE_FONT_FAMILIES.greek]: require('../assets/fonts/Gentium-Regular.ttf'),
     [SCRIPTURE_FONT_FAMILIES.hebrew]: require('../assets/fonts/EzraSIL-Regular.ttf'),
+    ionicons: require('../assets/fonts/Ionicons.ttf'),
     'material-community': require('../assets/fonts/MaterialCommunityIcons.ttf'),
   });
 
@@ -624,32 +662,36 @@ export default function RootLayout() {
           setLanguage: handleSetLanguage,
         }}
       >
-        <ThemeContext.Provider value={{ toggleTheme: handleToggleTheme }}>
-          <UpdateContext.Provider
-            value={{
-              updateAvailable,
-              onUpdate: handleUpdate,
-              onManualCheck: handleManualCheck,
-              updateStatus,
-            }}
-          >
-            <RootLayoutNav
-              theme={theme}
-              showSetup={showSetup}
-              onCompleteSetup={onCompleteSetup}
-              installAvailable={
-                !installPromptDismissed &&
-                (installPrompt !== null || isIosSafariBrowser())
-              }
-              onInstall={handleInstall}
-              onDismissInstall={() => setInstallPromptDismissed(true)}
-              updateAvailable={updateAvailable}
-              onUpdate={handleUpdate}
-              updateStatus={updateStatus}
-              onDismissStatus={dismissUpdateStatus}
-            />
-          </UpdateContext.Provider>
-        </ThemeContext.Provider>
+        <TextSizeContext.Provider
+          value={{ setTextScale: handleSetTextScale, textScale }}
+        >
+          <ThemeContext.Provider value={{ toggleTheme: handleToggleTheme }}>
+            <UpdateContext.Provider
+              value={{
+                updateAvailable,
+                onUpdate: handleUpdate,
+                onManualCheck: handleManualCheck,
+                updateStatus,
+              }}
+            >
+              <RootLayoutNav
+                theme={theme}
+                showSetup={showSetup}
+                onCompleteSetup={onCompleteSetup}
+                installAvailable={
+                  !installPromptDismissed &&
+                  (installPrompt !== null || isIosSafariBrowser())
+                }
+                onInstall={handleInstall}
+                onDismissInstall={() => setInstallPromptDismissed(true)}
+                updateAvailable={updateAvailable}
+                onUpdate={handleUpdate}
+                updateStatus={updateStatus}
+                onDismissStatus={dismissUpdateStatus}
+              />
+            </UpdateContext.Provider>
+          </ThemeContext.Provider>
+        </TextSizeContext.Provider>
       </LanguageContext.Provider>
     </SafeAreaProvider>
   );

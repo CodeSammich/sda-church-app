@@ -6,6 +6,11 @@ import {
   MD3LightTheme,
   useTheme,
 } from 'react-native-paper';
+import {
+  DEFAULT_TEXT_SCALE,
+  scaleTypographyRecord,
+  type TextScale,
+} from './AppPreferences';
 
 /**
  * Material Design 3 Theme definitions for both React Native Paper and React Navigation.
@@ -290,20 +295,30 @@ export const ThemeContext = createContext({
 export const getAppTheme = (
   isDark: boolean,
   useSystemFonts = false,
+  textScale: TextScale = DEFAULT_TEXT_SCALE,
 ): AppTheme => {
   const theme = isDark ? customDarkTheme : customLightTheme;
 
   // Plus Jakarta Sans is a Latin font and does not contain Han glyphs. React
   // Native on iOS does not reliably fall back
   // from a named custom font, so Chinese uses the platform's CJK-capable font.
-  if (useSystemFonts) {
-    return {
-      ...theme,
-      fonts: isDark ? MD3DarkTheme.fonts : MD3LightTheme.fonts,
-    };
+  const selectedFonts = useSystemFonts
+    ? isDark
+      ? MD3DarkTheme.fonts
+      : MD3LightTheme.fonts
+    : theme.fonts;
+
+  if (!useSystemFonts && textScale === DEFAULT_TEXT_SCALE) {
+    return theme;
   }
 
-  return theme;
+  return {
+    ...theme,
+    fonts:
+      textScale === DEFAULT_TEXT_SCALE
+        ? selectedFonts
+        : scaleTypographyRecord(selectedFonts, textScale),
+  } as AppTheme;
 };
 
 export const useAppTheme = () => useTheme<AppTheme>();

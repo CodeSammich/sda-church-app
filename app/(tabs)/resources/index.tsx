@@ -7,18 +7,19 @@ import {
   openZoomClass,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { APP_ICONOGRAPHY } from '@/constants/Iconography';
 import { useAppTheme } from '@/constants/Themes';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
 import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
 import { List, Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const allLabels = {
   en: {
-    title: 'Resources',
+    title: 'Explore',
     sermonsWorship: 'Watch & Listen',
     studyLiturgy: 'Study & Liturgy',
     bible: 'Holy Bible',
@@ -38,7 +39,7 @@ const allLabels = {
     librarySub: 'Devotionals, PDFs and guides',
   },
   zh: {
-    title: '資源庫',
+    title: '探索',
     sermonsWorship: '觀看與收聽',
     studyLiturgy: '研經與禮儀',
     bible: '聖經',
@@ -57,7 +58,7 @@ const allLabels = {
     librarySub: '靈修資料、PDF 與指南',
   },
   'zh-cn': {
-    title: '资源库',
+    title: '探索',
     sermonsWorship: '观看与收听',
     studyLiturgy: '研经与礼仪',
     bible: '圣经',
@@ -76,7 +77,7 @@ const allLabels = {
     librarySub: '灵修资料、PDF 与指南',
   },
   es: {
-    title: 'Recursos',
+    title: 'Explorar',
     sermonsWorship: 'Ver y Escuchar',
     studyLiturgy: 'Estudio y Liturgia',
     bible: 'Santa Biblia',
@@ -99,10 +100,11 @@ const allLabels = {
 
 export default function ResourcesScreen() {
   const theme = useAppTheme();
+  const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
-  const insets = useSafeAreaInsets();
+  const headerHeight = useGlobalHeaderHeight();
 
   return (
     <>
@@ -115,7 +117,7 @@ export default function ResourcesScreen() {
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
           style={[
             NavigationStyles.heroHeader,
-            { paddingTop: insets.top + 70, paddingBottom: 24 },
+            { paddingTop: headerHeight + 6, paddingBottom: 24 },
           ]}
           resizeMode="cover"
         >
@@ -137,6 +139,7 @@ export default function ResourcesScreen() {
         <View style={styles.body}>
           <List.Section>
             <List.Subheader
+              numberOfLines={0}
               style={[
                 NavigationStyles.subheader,
                 { color: theme.colors.onBackground },
@@ -147,7 +150,7 @@ export default function ResourcesScreen() {
             <MenuCard
               title={labels.hymnal}
               description={labels.hymnalSub}
-              icon="music-note"
+              icon={{ name: 'music-note' }}
               iconColor={theme.colors.tertiary}
               onPress={() =>
                 router.push({
@@ -160,16 +163,16 @@ export default function ResourcesScreen() {
             <MenuCard
               title={labels.sabbathSchool}
               description={labels.sabbathSchoolSub}
-              icon="book-open-variant"
+              icon={APP_ICONOGRAPHY.explore.sabbathSchool}
               iconColor={theme.colors.tertiary}
-              rightIcon="open-in-new"
+              rightIcon={{ name: 'open-in-new' }}
               onPress={() => openSabbathSchool(language)}
             />
 
             <MenuCard
               title={labels.library}
               description={labels.librarySub}
-              icon="bookshelf"
+              icon={APP_ICONOGRAPHY.explore.library}
               iconColor={theme.colors.tertiary}
               onPress={() => {}} // TODO: Implement library page
             />
@@ -177,6 +180,7 @@ export default function ResourcesScreen() {
 
           <List.Section>
             <List.Subheader
+              numberOfLines={0}
               style={[
                 NavigationStyles.subheader,
                 { color: theme.colors.onBackground },
@@ -187,28 +191,28 @@ export default function ResourcesScreen() {
             <MenuCard
               title={labels.youtube}
               description={labels.youtubeSub}
-              icon="youtube"
+              icon={{ name: 'youtube' }}
               iconColor={(theme.colors as any).brandYoutube}
               onPress={openSermonArchive}
-              rightIcon="open-in-new"
+              rightIcon={{ name: 'open-in-new' }}
             />
 
             <MenuCard
               title={labels.spotify}
               description={labels.spotifySub}
-              icon="spotify"
+              icon={{ name: 'spotify' }}
               iconColor={(theme.colors as any).brandSpotify}
               onPress={openSpotifyPodcast}
-              rightIcon="open-in-new"
+              rightIcon={{ name: 'open-in-new' }}
             />
 
             <MenuCard
               title={labels.zoomClass}
               description={labels.zoomSub}
-              icon="video"
+              icon={{ name: 'video' }}
               iconColor={(theme.colors as any).brandZoom}
               onPress={openZoomClass}
-              rightIcon="open-in-new"
+              rightIcon={{ name: 'open-in-new' }}
             />
           </List.Section>
         </View>

@@ -1,7 +1,7 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useMemo, useRef } from 'react';
-import { FlatList, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,13 +11,16 @@ import {
   HydratedHymn,
   openHymnal,
 } from '@/constants/EnglishHymnal';
+import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { CHURCH_BUILDING_IMAGE_URL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
+import { useTextSize } from '@/constants/TextSizeContext';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import * as BibleService from '@/services/BibleService';
-import { DocumentStyles } from '@/styles/DocumentStyles';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const uiLabels = {
@@ -68,7 +71,18 @@ let lastProcessedRefresh = '';
 
 export default function HymnalScreen() {
   const theme = useAppTheme();
+  const DocumentStyles = useDocumentStyles();
+  const NavigationStyles = useNavigationStyles();
+  const { textScale } = useTextSize();
+  const { fontScale, width } = useWindowDimensions();
+  const useStackedActions =
+    (width - 48) / 2 < 120 * Math.max(1, fontScale * textScale);
+  const styles = useMemo(
+    () => createStyles(textScale, fontScale * textScale, useStackedActions),
+    [fontScale, textScale, useStackedActions],
+  );
   const insets = useSafeAreaInsets();
+  const headerHeight = useGlobalHeaderHeight();
   const { language } = useContext(LanguageContext);
   const { backTo, refresh, hymnNum, highlight } = useLocalSearchParams<{
     backTo?: string;
@@ -128,7 +142,7 @@ export default function HymnalScreen() {
           style={styles.topSection}
         >
           <View style={styles.cardContent}>
-            <MaterialCommunityIcons
+            <AppIcon
               name="music-clef-treble"
               size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
               color={theme.colors.tertiary}
@@ -139,7 +153,7 @@ export default function HymnalScreen() {
                 {item.number}. {item.title}
               </Text>
             </View>
-            <MaterialCommunityIcons
+            <AppIcon
               name="open-in-new"
               size={DESIGN_TOKENS.ICON_SIZE_STANDARD}
               color={theme.colors.onSurfaceVariant}
@@ -157,7 +171,7 @@ export default function HymnalScreen() {
             style={styles.flexButton}
           >
             <View style={styles.buttonContent}>
-              <MaterialCommunityIcons
+              <AppIcon
                 name="youtube"
                 size={24}
                 color={(theme.colors as any).brandYoutube}
@@ -200,13 +214,12 @@ export default function HymnalScreen() {
                 style={styles.flexButton}
               >
                 <View style={styles.buttonContent}>
-                  <MaterialCommunityIcons
+                  <AppIcon
                     name="book-cross"
                     size={22}
                     color={theme.colors.primary}
                   />
                   <Text
-                    numberOfLines={1}
                     style={[styles.buttonText, { color: theme.colors.primary }]}
                   >
                     {formatHymnalScriptureReference(item.scriptureReference)}
@@ -230,7 +243,7 @@ export default function HymnalScreen() {
         {/* Hero */}
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          style={[NavigationStyles.heroHeader, { paddingTop: headerHeight + 6, paddingBottom: 24 }]}
           resizeMode="cover"
         >
           <LinearGradient
@@ -263,7 +276,7 @@ export default function HymnalScreen() {
               variant="bodySmall"
               style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}
             >
-              <MaterialCommunityIcons
+              <AppIcon
                 name="music-clef-treble"
                 size={14}
                 color={theme.colors.onSurfaceVariant}
@@ -291,7 +304,11 @@ export default function HymnalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (
+  textScale: Parameters<typeof scaleTypographyMetric>[1],
+  effectiveTextScale: number,
+  useStackedActions: boolean,
+) => StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -309,6 +326,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minWidth: 0,
   },
   textContainer: {
     flex: 1,
@@ -318,15 +336,17 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: scaleTypographyMetric(18, textScale),
+    lineHeight: scaleTypographyMetric(24, textScale),
     fontWeight: '700',
   },
   cardSubtitle: {
-    fontSize: 14,
+    fontSize: scaleTypographyMetric(14, textScale),
+    lineHeight: scaleTypographyMetric(20, textScale),
     marginTop: 2,
   },
   bottomSection: {
-    flexDirection: 'row',
+    flexDirection: useStackedActions ? 'column' : 'row',
     alignItems: 'center',
   },
   flexButton: {
@@ -334,29 +354,35 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    width: useStackedActions ? '100%' : undefined,
+    minHeight: Math.ceil(44 + Math.max(0, effectiveTextScale - 1) * 20),
   },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   buttonText: {
     marginLeft: 8,
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: scaleTypographyMetric(15, textScale),
+    lineHeight: scaleTypographyMetric(21, textScale),
+    flexShrink: 1,
   },
   verticalDivider: {
-    width: 1,
-    height: 24,
+    width: useStackedActions ? '100%' : 1,
+    height: useStackedActions ? 1 : 24,
   },
   searchbar: {
     borderRadius: 24,
-    height: 44,
+    minHeight: Math.ceil(44 + Math.max(0, effectiveTextScale - 1) * 20),
   },
   searchbarInput: {
     minHeight: 0,
     paddingBottom: 0,
     paddingTop: 0,
-    fontSize: 16,
+    fontSize: scaleTypographyMetric(16, textScale),
   },
   legalNotice: {
     marginTop: 10,

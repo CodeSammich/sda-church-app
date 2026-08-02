@@ -1,16 +1,42 @@
-import { StyleSheet } from "react-native";
+import {
+  DEFAULT_TEXT_SCALE,
+  scaleTypographyMetric,
+  type TextScale,
+} from '@/constants/AppPreferences';
+import { getBottomTabContentHeight } from '@/constants/Layout';
+import { useTextSize } from '@/constants/TextSizeContext';
+import { useMemo } from 'react';
+import { StyleSheet, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+type NavigationStyleOptions = Readonly<{
+  bottomInset?: number;
+  fontScale?: number;
+}>;
 
 /**
  * Shared styles for Menu/Navigation-heavy screens.
  * Preference given to the layout logic defined in ResourcesScreen.
  */
-export const NavigationStyles = StyleSheet.create({
+export const createNavigationStyles = (
+  textScale: TextScale,
+  options: NavigationStyleOptions = {},
+) => {
+  const bottomInset = Number.isFinite(options.bottomInset)
+    ? Math.max(0, options.bottomInset ?? 0)
+    : 0;
+  const fontScale = Number.isFinite(options.fontScale)
+    ? Math.max(1, options.fontScale ?? 1)
+    : 1;
+
+  return StyleSheet.create({
   container: {
     flex: 1,
   },
   contentContainer: {
     padding: 20, // Preference: resources.tsx
-    paddingBottom: 80, // Tab bar gutter
+    paddingBottom:
+      getBottomTabContentHeight(fontScale * textScale) + bottomInset + 24,
   },
   heroHeader: {
     width: '100%',
@@ -24,16 +50,33 @@ export const NavigationStyles = StyleSheet.create({
   },
   heroTitle: {
     fontWeight: 'bold',
-    fontSize: 26,
-    lineHeight: 34,
+    fontSize: scaleTypographyMetric(26, textScale),
+    lineHeight: scaleTypographyMetric(34, textScale),
     textAlign: 'left',
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   subheader: {
-    fontWeight: "bold",
-    fontSize: 16, // Preference: resources.tsx
-    lineHeight: 22,
+    fontWeight: 'bold',
+    fontSize: scaleTypographyMetric(16, textScale), // Preference: resources.tsx
+    lineHeight: scaleTypographyMetric(22, textScale),
   },
-});
+  });
+};
+
+export const NavigationStyles = createNavigationStyles(DEFAULT_TEXT_SCALE);
+
+export const useNavigationStyles = () => {
+  const { textScale } = useTextSize();
+  const { fontScale } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  return useMemo(
+    () =>
+      createNavigationStyles(textScale, {
+        bottomInset: insets.bottom,
+        fontScale,
+      }),
+    [fontScale, insets.bottom, textScale],
+  );
+};

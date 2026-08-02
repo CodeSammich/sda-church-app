@@ -1,6 +1,6 @@
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
@@ -17,9 +17,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  */
 export default function PrivacyPolicyScreen() {
   const theme = useAppTheme();
+  const NavigationStyles = useNavigationStyles();
   const { backTo } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const headerHeight = useGlobalHeaderHeight();
 
   return (
     <ScrollView
@@ -113,5 +114,5 @@ const styles = StyleSheet.create({
   title: { fontWeight: 'bold', marginBottom: 5 },
   lastUpdated: { marginBottom: 20 },
   sectionHeader: { fontWeight: 'bold', marginTop: 15, marginBottom: 5 },
-  bodyText: { lineHeight: 22 },
+  bodyText: {},
 });

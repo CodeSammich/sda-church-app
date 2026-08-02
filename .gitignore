@@ -12,9 +12,12 @@
 !/components/
 !/constants/
 !/docs/
+!/hooks/
 !/public/
+!/scripts/
 !/services/
 !/styles/
+!/test/
 
 # 3. Re-include root configuration files
 !/*.json

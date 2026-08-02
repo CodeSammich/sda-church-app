@@ -1,11 +1,15 @@
 import { useAppTheme } from '@/constants/Themes';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useRef } from 'react';
+import { scaleTypographyMetric } from '@/constants/AppPreferences';
+import { useTextSize } from '@/constants/TextSizeContext';
+import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
+import React, { useMemo, useRef } from 'react';
 import {
   Animated,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   ViewStyle,
 } from 'react-native';
@@ -14,7 +18,7 @@ interface GridMenuCardProps {
   title: string;
   subtitle?: string;
   /** MaterialCommunityIcons glyph for the decorative illustration area */
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  icon: MaterialCommunityIconName;
   /** Pastel background color for the card */
   color: string;
   /** Icon tint — defaults to a semi-transparent dark of the card color */
@@ -22,6 +26,16 @@ interface GridMenuCardProps {
   onPress?: () => void;
   style?: ViewStyle | any;
 }
+
+export const getGridMenuCardTitleBlockMinHeight = (effectiveScale: number) => {
+  const safeScale = Number.isFinite(effectiveScale)
+    ? Math.max(1, effectiveScale)
+    : 1;
+  // Two title lines (2 x 20) or one title plus its subtitle (20 + 3 + 18).
+  // Reserving this on every card keeps rows equal regardless of which label
+  // happens to wrap on a particular device or in a particular language.
+  return Math.ceil(41 * safeScale);
+};
 
 export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   title,
@@ -33,6 +47,12 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   style,
 }) => {
   const theme = useAppTheme();
+  const { textScale } = useTextSize();
+  const { fontScale } = useWindowDimensions();
+  const styles = useMemo(
+    () => createStyles(textScale, Math.max(1, fontScale * textScale)),
+    [fontScale, textScale],
+  );
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -55,28 +75,32 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
 
   // Derive a slightly darker icon color from the card color for the illustration
   const resolvedIconColor = iconColor ?? 'rgba(40, 40, 40, 0.18)';
-  // Compute a slightly more opaque version for the stroke (approx 80% opacity)
-  const strokeColor = iconColor ? iconColor.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, 'rgba($1,$2,$3,0.5)') : 'rgba(40, 40, 40, 0.3)';
-
   return (
     <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
       <TouchableOpacity
-        style={[styles.card, { backgroundColor: color, borderWidth: 1, borderColor: theme.colors.outlineVariant }]}
+        accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
+        accessibilityRole={onPress ? 'button' : undefined}
+        disabled={!onPress}
+        style={[
+          styles.card,
+          { backgroundColor: color, borderWidth: 1, borderColor: theme.colors.outlineVariant },
+          onPress && Platform.OS === 'web' ? styles.webPressable : null,
+        ]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
       >
         {/* Title block — top left */}
-        <View style={styles.titleBlock}>
+        <View pointerEvents="none" style={styles.titleBlock}>
             <Text style={[styles.title, { color: theme.colors.onSurface }]}>{title}</Text>
             {subtitle ? <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>{subtitle}</Text> : null}
         </View>
 
         {/* Illustration + arrow row — bottom */}
-        <View style={styles.bottomRow}>
+        <View pointerEvents="none" style={styles.bottomRow}>
           <View style={styles.decorIconContainer}>
-            <MaterialCommunityIcons
+            <AppIcon
               name={icon}
               size={68}
               color={resolvedIconColor}
@@ -84,8 +108,8 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
             />
           </View>
           {/* Diagonal arrow affordance */}
-          <View style={styles.arrowBadge}>
-            <MaterialCommunityIcons
+          <View testID="grid-menu-card-arrow-badge" style={styles.arrowBadge}>
+            <AppIcon
               name="arrow-top-right"
               size={14}
               color="#374151"
@@ -97,28 +121,33 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1], effectiveScale: number) => StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#374151', // crisp dark border
     padding: 18,
-    minHeight: 148,
+    minHeight: 148 + Math.round(Math.max(0, effectiveScale - 1) * 64),
     justifyContent: 'space-between',
     overflow: 'hidden',
   },
+  webPressable: {
+    cursor: 'pointer',
+  },
   titleBlock: {
     flex: 0,
+    minHeight: getGridMenuCardTitleBlockMinHeight(effectiveScale),
   },
   title: {
-    fontSize: 15,
+    fontSize: scaleTypographyMetric(15, textScale),
     fontWeight: '700',
     // color will be set via theme (onSurface) in component
-    lineHeight: 20,
+    lineHeight: scaleTypographyMetric(20, textScale),
     maxWidth: '90%',
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: scaleTypographyMetric(12, textScale),
+    lineHeight: scaleTypographyMetric(18, textScale),
     // color will be set via theme (onSurfaceVariant) in component
     marginTop: 3,
   },
@@ -142,9 +171,9 @@ const styles = StyleSheet.create({
     top: 0,
   },
   arrowBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: scaleTypographyMetric(28, textScale),
+    height: scaleTypographyMetric(28, textScale),
+    borderRadius: scaleTypographyMetric(14, textScale),
     backgroundColor: '#FFFFFF', // solid white
     borderWidth: 1,
     borderColor: '#374151', // crisp dark border

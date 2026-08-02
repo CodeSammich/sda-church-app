@@ -1,21 +1,24 @@
 import { MenuCard } from '@/components/MenuCard';
+import { WrappingButton as Button } from '@/components/WrappingButton';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
-import { DocumentStyles } from '@/styles/DocumentStyles';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
 import { useContext } from 'react';
 import { ImageBackground, Linking, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, List, Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Card, List, Text } from 'react-native-paper';
 
 export default function WeeklyBulletinScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const DocumentStyles = useDocumentStyles();
+  const NavigationStyles = useNavigationStyles();
+  const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
@@ -111,6 +114,7 @@ export default function WeeklyBulletinScreen() {
   const Section = ({ title, assignments }: { title: string; assignments: any[] }) => (
     <List.Section>
       <List.Subheader
+        numberOfLines={0}
         style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
       >
         {title}
@@ -144,7 +148,7 @@ export default function WeeklyBulletinScreen() {
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
           style={[
             NavigationStyles.heroHeader,
-            { paddingTop: insets.top + 70, paddingBottom: 24 },
+            { paddingTop: headerHeight + 6, paddingBottom: 24 },
           ]}
           resizeMode="cover"
         >
@@ -216,6 +220,7 @@ export default function WeeklyBulletinScreen() {
         <Section title={labels.nextWeek} assignments={nextWeekData} />
         <List.Section>
           <List.Subheader
+            numberOfLines={0}
             style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
           >
             {labels.rosterHeader}

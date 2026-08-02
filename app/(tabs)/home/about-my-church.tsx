@@ -1,4 +1,5 @@
 import { CHURCH_LOCATIONS, getLocationNames } from '@/constants/ChurchData';
+import { WrappingButton as Button } from '@/components/WrappingButton';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openAtlanticUnion,
@@ -6,24 +7,40 @@ import {
   openInMaps,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { shouldUseStackedTimelineLayout } from '@/constants/Layout';
+import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
-import { DocumentStyles } from '@/styles/DocumentStyles';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, Text } from 'react-native-paper';
+import {
+  ImageBackground,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AboutChurchHistoryScreen() {
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
   const theme = useAppTheme();
+  const DocumentStyles = useDocumentStyles();
+  const NavigationStyles = useNavigationStyles();
+  const { textScale } = useTextSize();
+  const { fontScale, width } = useWindowDimensions();
+  const stackTimeline = shouldUseStackedTimelineLayout(
+    width,
+    Math.max(1, fontScale * textScale),
+  );
   const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
@@ -168,7 +185,7 @@ export default function AboutChurchHistoryScreen() {
       >
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          style={[NavigationStyles.heroHeader, { paddingTop: headerHeight + 6, paddingBottom: 24 }]}
           resizeMode="cover"
         >
           <LinearGradient
@@ -205,9 +222,20 @@ export default function AboutChurchHistoryScreen() {
           >
             {labels.historySubtext}
           </Text>
-          <View style={DocumentStyles.timelineContainer}>
+          <View
+            style={[
+              DocumentStyles.timelineContainer,
+              stackTimeline && styles.stackedTimelineContainer,
+            ]}
+          >
             {(labels as any).milestoneItems.map((item: any, index: number) => (
-              <View key={index} style={DocumentStyles.timelineColumn}>
+              <View
+                key={index}
+                style={[
+                  DocumentStyles.timelineColumn,
+                  stackTimeline && styles.stackedTimelineColumn,
+                ]}
+              >
                 <View
                   style={[
                     DocumentStyles.yearCircle,
@@ -479,23 +507,14 @@ export default function AboutChurchHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  heroHeader: {
-    width: '100%',
-    minHeight: 220,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    overflow: 'hidden',
-    marginBottom: 20,
+  stackedTimelineContainer: {
+    flexDirection: 'column',
+    gap: 16,
   },
-  heroTitle: {
-    fontWeight: 'bold',
-    fontSize: 26,
-    lineHeight: 34,
-    textAlign: 'left',
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+  stackedTimelineColumn: {
+    flexBasis: 'auto',
+    flexGrow: 0,
+    flexShrink: 0,
+    width: '100%',
   },
 });

@@ -1,21 +1,37 @@
 import { GridMenuCard } from '@/components/GridMenuCard';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { shouldUseStackedHomeLayout } from '@/constants/Layout';
+import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
-import { DocumentStyles } from '@/styles/DocumentStyles';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
-import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ImageBackground,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DiscoverScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const DocumentStyles = useDocumentStyles();
+  const NavigationStyles = useNavigationStyles();
+  const { textScale } = useTextSize();
+  const { fontScale, width } = useWindowDimensions();
+  const stackCards = shouldUseStackedHomeLayout(
+    width,
+    Math.max(1, fontScale * textScale),
+  );
+  const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
@@ -71,7 +87,7 @@ export default function DiscoverScreen() {
         {/* Hero */}
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          style={[NavigationStyles.heroHeader, { paddingTop: insets.top + 70, paddingBottom: 24 }]}
+          style={[NavigationStyles.heroHeader, { paddingTop: headerHeight + 6, paddingBottom: 24 }]}
           resizeMode="cover"
         >
           <LinearGradient
@@ -97,7 +113,7 @@ export default function DiscoverScreen() {
             color={theme.colors.cardBgColors.aboutSDA}
             iconColor={theme.colors.iconColors.aboutSDA}
             onPress={() => router.push({ pathname: '/home/about-sda', params: { backTo: '/home/discover' } } as any)}
-            style={styles.gridCell}
+            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
           />
           <GridMenuCard
             title={labels.aboutHistory}
@@ -105,7 +121,7 @@ export default function DiscoverScreen() {
             color={theme.colors.cardBgColors.aboutHistory}
             iconColor={theme.colors.iconColors.aboutHistory}
             onPress={() => router.push({ pathname: '/home/about-my-church', params: { backTo: '/home/discover' } } as any)}
-            style={styles.gridCell}
+            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
           />
           <GridMenuCard
             title={labels.meetTeam}
@@ -113,7 +129,7 @@ export default function DiscoverScreen() {
             color={theme.colors.cardBgColors.meetTeam}
             iconColor={theme.colors.iconColors.meetTeam}
             onPress={() => router.push({ pathname: '/home/team', params: { backTo: '/home/discover' } } as any)}
-            style={styles.gridCell}
+            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
           />
           <GridMenuCard
             title={labels.join}
@@ -121,7 +137,7 @@ export default function DiscoverScreen() {
             color={theme.colors.cardBgColors.join}
             iconColor={theme.colors.iconColors.join}
             onPress={() => router.push({ pathname: '/home/baptism', params: { backTo: '/home/discover' } } as any)}
-            style={styles.gridCell}
+            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
           />
           <GridMenuCard
             title={labels.fellowship}
@@ -129,7 +145,7 @@ export default function DiscoverScreen() {
             color={theme.colors.cardBgColors.fellowship}
             iconColor={theme.colors.iconColors.fellowship}
             onPress={() => router.push({ pathname: '/home/fellowship', params: { backTo: '/home/discover' } } as any)}
-            style={styles.gridCell}
+            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
           />
           <GridMenuCard
             title={labels.bible}
@@ -137,7 +153,7 @@ export default function DiscoverScreen() {
             color={theme.colors.cardBgColors.bible}
             iconColor={theme.colors.iconColors.bible}
             onPress={() => router.push({ pathname: '/bible', params: { backTo: '/home/discover' } } as any)}
-            style={styles.gridCell}
+            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
           />
         </View>
       </ScrollView>
@@ -156,5 +172,9 @@ const styles = StyleSheet.create({
   gridCell: {
     flexBasis: '47.5%',
     flexGrow: 1,
+  },
+  stackedGridCell: {
+    flexBasis: '100%',
+    width: '100%',
   },
 });

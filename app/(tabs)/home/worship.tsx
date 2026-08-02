@@ -1,13 +1,12 @@
 import { MenuCard } from '@/components/MenuCard';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { List } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const allLabels = {
   en: {
@@ -110,10 +109,10 @@ const allLabels = {
 
 export default function WorshipScreen() {
   const theme = useAppTheme();
+  const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
-  const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const headerHeight = useGlobalHeaderHeight();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   const createEvents = (type: 'elmhurst' | 'brooklyn') => {
@@ -189,6 +188,7 @@ export default function WorshipScreen() {
   const Section = ({ title, events }: { title: string; events: any[] }) => (
     <List.Section>
       <List.Subheader
+        numberOfLines={0}
         style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
       >
         {title}

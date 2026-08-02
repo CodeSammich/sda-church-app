@@ -1,11 +1,18 @@
+import {
+  DEFAULT_TEXT_SCALE,
+  scaleTypographyMetric,
+  type TextScale,
+} from '@/constants/AppPreferences';
 import { DESIGN_TOKENS } from '@/constants/Layout';
+import { useTextSize } from '@/constants/TextSizeContext';
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
 /**
  * Global styles for informational/reading pages (e.g., About, Beliefs, Privacy).
  * Ensures a consistent look and feel across the application's document-style content.
  */
-export const DocumentStyles = StyleSheet.create({
+export const createDocumentStyles = (textScale: TextScale) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -14,8 +21,8 @@ export const DocumentStyles = StyleSheet.create({
     padding: 16,
     textAlign: 'center',
     fontWeight: 'bold',
-    fontSize: 26,
-    lineHeight: 34,
+    fontSize: scaleTypographyMetric(26, textScale),
+    lineHeight: scaleTypographyMetric(34, textScale),
   },
   section: {
     paddingHorizontal: 16,
@@ -27,18 +34,18 @@ export const DocumentStyles = StyleSheet.create({
     fontWeight: 'bold',
     borderBottomWidth: 2,
     paddingBottom: 4,
-    fontSize: 20,
-    lineHeight: 28,
+    fontSize: scaleTypographyMetric(20, textScale),
+    lineHeight: scaleTypographyMetric(28, textScale),
   },
   description: {
-    lineHeight: 22,
-    fontSize: 16,
+    lineHeight: scaleTypographyMetric(22, textScale),
+    fontSize: scaleTypographyMetric(16, textScale),
   },
   note: {
     marginVertical: 12,
     fontStyle: 'italic',
     opacity: 0.8,
-    lineHeight: 20,
+    lineHeight: scaleTypographyMetric(20, textScale),
   },
   card: {
     marginBottom: 12,
@@ -68,15 +75,16 @@ export const DocumentStyles = StyleSheet.create({
     alignItems: 'center',
   },
   yearCircle: {
-    width: DESIGN_TOKENS.TIMELINE_CIRCLE_SIZE,
-    height: DESIGN_TOKENS.TIMELINE_CIRCLE_SIZE,
-    borderRadius: DESIGN_TOKENS.TIMELINE_CIRCLE_SIZE / 2,
+    width: scaleTypographyMetric(DESIGN_TOKENS.TIMELINE_CIRCLE_SIZE, textScale),
+    height: scaleTypographyMetric(DESIGN_TOKENS.TIMELINE_CIRCLE_SIZE, textScale),
+    borderRadius:
+      scaleTypographyMetric(DESIGN_TOKENS.TIMELINE_CIRCLE_SIZE, textScale) / 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   yearText: {
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: scaleTypographyMetric(12, textScale),
   },
   connectorLine: {
     width: 2,
@@ -85,7 +93,7 @@ export const DocumentStyles = StyleSheet.create({
   milestoneEvent: {
     textAlign: 'center',
     marginTop: 4,
-    fontSize: 10,
+    fontSize: scaleTypographyMetric(10, textScale),
     paddingHorizontal: 2,
   },
   // Organizational/Affiliation Card styles
@@ -93,10 +101,17 @@ export const DocumentStyles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   orgName: {
-    fontSize: 18,
+    fontSize: scaleTypographyMetric(18, textScale),
     marginTop: 4,
   },
   orgDesc: {
     marginTop: 4,
   },
 });
+
+export const DocumentStyles = createDocumentStyles(DEFAULT_TEXT_SCALE);
+
+export const useDocumentStyles = () => {
+  const { textScale } = useTextSize();
+  return useMemo(() => createDocumentStyles(textScale), [textScale]);
+};

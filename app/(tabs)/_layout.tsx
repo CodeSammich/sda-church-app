@@ -1,18 +1,31 @@
 import { GlobalHeader, UIStateContext } from '@/components/GlobalHeader';
+import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { APP_ICONOGRAPHY } from '@/constants/Iconography';
+import {
+  getBottomTabIconTextScale,
+  scaleTypographyMetric,
+  type TextScale,
+} from '@/constants/AppPreferences';
+import { BottomTabHeightContext } from '@/constants/BottomTabHeightContext';
+import {
+  DESIGN_TOKENS,
+  getBottomTabContentHeight,
+  getMeasuredTextLineCount,
+} from '@/constants/Layout';
+import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
 import { Tabs, router } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Platform, StyleSheet, View } from 'react-native';
+import { Animated, LayoutChangeEvent, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function TabBarIcon(props: {
-  name: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  name: MaterialCommunityIconName;
   color: string;
   focused: boolean;
+  textScale: TextScale;
 }) {
   let iconName = props.name;
 
@@ -22,17 +35,71 @@ function TabBarIcon(props: {
   }
 
   return (
-    <MaterialCommunityIcons
+    <AppIcon
       name={iconName}
       size={DESIGN_TOKENS.ICON_SIZE_TAB}
+      textScale={getBottomTabIconTextScale(props.textScale)}
       style={{ marginBottom: -3 }}
       color={props.color}
     />
   );
 }
 
+function TabBarLabel(props: {
+  color: string;
+  fontScale: number;
+  label: string;
+  onLineCountChange: (lineCount: number) => void;
+  textScale: TextScale;
+}) {
+  const lineHeight = scaleTypographyMetric(
+    DESIGN_TOKENS.BOTTOM_TAB_LABEL_LINE_HEIGHT,
+    props.textScale,
+  );
+  const measuredLineHeight = lineHeight * Math.max(1, props.fontScale);
+  return (
+    <Text
+      onLayout={(event) =>
+        props.onLineCountChange(
+          getMeasuredTextLineCount(
+            event.nativeEvent.layout.height,
+            measuredLineHeight,
+          ),
+        )
+      }
+      style={{
+        color: props.color,
+        flexShrink: 1,
+        fontSize: scaleTypographyMetric(
+          DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE,
+          props.textScale,
+        ),
+        lineHeight,
+        paddingBottom: DESIGN_TOKENS.BOTTOM_TAB_LABEL_BOTTOM_PADDING,
+        textAlign: 'center',
+        width: '100%',
+      }}
+    >
+      {props.label}
+    </Text>
+  );
+}
+
 export default function TabLayout() {
   const theme = useAppTheme();
+  const { textScale } = useTextSize();
+  const { fontScale } = useWindowDimensions();
+  const [tabLabelLineCounts, setTabLabelLineCounts] = useState<
+    Record<string, number>
+  >({});
+  const maxTabLabelLines = Math.max(
+    1,
+    ...Object.values(tabLabelLineCounts),
+  );
+  const tabContentHeight = getBottomTabContentHeight(
+    Math.max(1, fontScale * textScale),
+    maxTabLabelLines,
+  );
   const { language } = useContext(LanguageContext);
   const insets = useSafeAreaInsets();
   const isFullscreenWeb =
@@ -42,7 +109,7 @@ export default function TabLayout() {
   const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
   const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
   const [tabBarHeight, setTabBarHeight] = useState(
-    DESIGN_TOKENS.TAB_BAR_CONTENT_HEIGHT + bottomTabInset,
+    tabContentHeight + bottomTabInset,
   );
 
   // Reader Mode state shared with child screens
@@ -62,7 +129,7 @@ export default function TabLayout() {
 
   const tabBarTranslateY = menuAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [120, 0],
+    outputRange: [tabContentHeight + bottomTabInset + 16, 0],
   });
 
   const handleTabBarLayout = (event: LayoutChangeEvent) => {
@@ -72,29 +139,37 @@ export default function TabLayout() {
     );
   };
 
+  const reportTabLabelLines = (tabName: string, lineCount: number) => {
+    setTabLabelLineCounts((currentCounts) =>
+      currentCounts[tabName] === lineCount
+        ? currentCounts
+        : { ...currentCounts, [tabName]: lineCount },
+    );
+  };
+
   const allLabels = {
     en: {
       home: 'Home',
       bible: 'Bible',
-      resources: 'Resources',
+      resources: 'Explore',
       you: 'You',
     },
     zh: {
       home: '首頁',
       bible: '聖經',
-      resources: '資源庫',
+      resources: '探索',
       you: '您',
     },
     'zh-cn': {
       home: '首页',
       bible: '圣经',
-      resources: '资源库',
+      resources: '探索',
       you: '您',
     },
     es: {
       home: 'Inicio',
       bible: 'Biblia',
-      resources: 'Recursos',
+      resources: 'Explorar',
       you: 'Tú',
     },
   };
@@ -102,8 +177,9 @@ export default function TabLayout() {
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   return (
-    <UIStateContext.Provider value={{ menuAnim, setMenuVisible }}>
-      <Tabs
+    <BottomTabHeightContext.Provider value={tabBarHeight}>
+      <UIStateContext.Provider value={{ menuAnim, setMenuVisible }}>
+        <Tabs
         tabBar={(props) => (
           <Animated.View
             onLayout={handleTabBarLayout}
@@ -123,11 +199,8 @@ export default function TabLayout() {
           tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
-          tabBarLabelStyle: {
-            lineHeight: 14,
-          },
           tabBarStyle: {
-            height: DESIGN_TOKENS.TAB_BAR_CONTENT_HEIGHT + bottomTabInset,
+            height: tabContentHeight + bottomTabInset,
             paddingBottom: bottomTabInset,
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
@@ -153,8 +226,24 @@ export default function TabLayout() {
           options={{
             title: labels.home,
             headerShown: true,
+            tabBarLabel: ({ color }) => (
+              <TabBarLabel
+                color={color}
+                fontScale={fontScale}
+                label={labels.home}
+                onLineCountChange={(lineCount) =>
+                  reportTabLabelLines('home', lineCount)
+                }
+                textScale={textScale}
+              />
+            ),
             tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-              <TabBarIcon name="home" color={color} focused={focused} />
+              <TabBarIcon
+                name="home"
+                color={color}
+                focused={focused}
+                textScale={textScale}
+              />
             ),
           }}
         />
@@ -173,11 +262,27 @@ export default function TabLayout() {
           options={{
             title: labels.bible,
             headerShown: false, // Internal Stack handles header for consistency
+            tabBarLabel: ({ color }) => (
+              <TabBarLabel
+                color={color}
+                fontScale={fontScale}
+                label={labels.bible}
+                onLineCountChange={(lineCount) =>
+                  reportTabLabelLines('bible', lineCount)
+                }
+                textScale={textScale}
+              />
+            ),
             // The Bible reader owns a coordinated bottom dock and already accounts
             // for the tab bar height while its controls animate in and out.
             sceneStyle: { paddingBottom: 0 },
             tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-              <TabBarIcon name="cross" color={color} focused={focused} />
+              <TabBarIcon
+                name="cross"
+                color={color}
+                focused={focused}
+                textScale={textScale}
+              />
             ),
           }}
           listeners={{
@@ -192,8 +297,24 @@ export default function TabLayout() {
           options={{
             title: labels.resources,
             headerShown: false, // Internal Stack handles header for consistency
+            tabBarLabel: ({ color }) => (
+              <TabBarLabel
+                color={color}
+                fontScale={fontScale}
+                label={labels.resources}
+                onLineCountChange={(lineCount) =>
+                  reportTabLabelLines('resources', lineCount)
+                }
+                textScale={textScale}
+              />
+            ),
             tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-              <TabBarIcon name="bookmark-multiple" color={color} focused={focused} />
+              <TabBarIcon
+                name={APP_ICONOGRAPHY.tabs.explore.name}
+                color={color}
+                focused={focused}
+                textScale={textScale}
+              />
             ),
           }}
         />
@@ -203,9 +324,25 @@ export default function TabLayout() {
             {
               title: labels.you,
               headerShown: false, // Internal Stack handles header for consistency
+              tabBarLabel: ({ color }: { color: string }) => (
+                <TabBarLabel
+                  color={color}
+                  fontScale={fontScale}
+                  label={labels.you}
+                  onLineCountChange={(lineCount) =>
+                    reportTabLabelLines('you', lineCount)
+                  }
+                  textScale={textScale}
+                />
+              ),
               unmountOnBlur: true as any, // Ensures the stack resets when leaving the tab
               tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-                <TabBarIcon name="account-circle" color={color} focused={focused} />
+                <TabBarIcon
+                  name="account-circle"
+                  color={color}
+                  focused={focused}
+                  textScale={textScale}
+                />
               ),
             } as any
           }
@@ -218,7 +355,8 @@ export default function TabLayout() {
             },
           }}
         />
-      </Tabs>
-    </UIStateContext.Provider>
+        </Tabs>
+      </UIStateContext.Provider>
+    </BottomTabHeightContext.Provider>
   );
 }

@@ -1,21 +1,30 @@
 import { VerseHero } from '@/components/VerseHero';
+import { WrappingButton as Button } from '@/components/WrappingButton';
 import { CHURCH_BUILDING_IMAGE_URL, openBeliefs } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { DESIGN_TOKENS, shouldUseStackedPillarLayout } from '@/constants/Layout';
+import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
-import { DocumentStyles } from '@/styles/DocumentStyles';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
+import { AppIcon } from '@/components/AppIcon';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, Text } from 'react-native-paper';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AboutSDAScreen() {
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
   const theme = useAppTheme();
+  const DocumentStyles = useDocumentStyles();
+  const { textScale } = useTextSize();
+  const { fontScale, width } = useWindowDimensions();
+  const stackPillars = shouldUseStackedPillarLayout(
+    width,
+    Math.max(1, fontScale * textScale),
+  );
   const insets = useSafeAreaInsets();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
@@ -375,18 +384,24 @@ export default function AboutSDAScreen() {
           >
             {labels.sdaDescription}
           </Text>
-          <View style={styles.pillarContainer}>
+          <View
+            style={[
+              styles.pillarContainer,
+              stackPillars && styles.stackedPillarContainer,
+            ]}
+          >
             {(labels as any).pillarItems.map((item: any, index: number) => (
               <Card
                 key={index}
                 style={[
                   styles.pillarCard,
+                  stackPillars && styles.stackedPillarCard,
                   { borderWidth: 1, borderColor: theme.colors.outlineVariant },
                 ]}
                 mode="contained"
               >
                 <View style={styles.pillarContent}>
-                  <MaterialCommunityIcons
+                  <AppIcon
                     name={item.icon as any}
                     size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
                     color={theme.colors.tertiary}
@@ -394,8 +409,6 @@ export default function AboutSDAScreen() {
                   <Text
                     variant="labelSmall"
                     style={[styles.pillarText, { color: theme.colors.onSurface }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
                   >
                     {item.title}
                   </Text>
@@ -430,7 +443,7 @@ export default function AboutSDAScreen() {
                 mode="contained"
               >
                 <View style={styles.cardHeader}>
-                  <MaterialCommunityIcons
+                  <AppIcon
                     name={item.icon as any}
                     size={DESIGN_TOKENS.ICON_SIZE_STANDARD}
                     color={theme.colors.tertiary}
@@ -500,6 +513,17 @@ const styles = StyleSheet.create({
   pillarCard: {
     flex: 1,
     marginHorizontal: 4,
+  },
+  stackedPillarContainer: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  stackedPillarCard: {
+    flexBasis: 'auto',
+    flexGrow: 0,
+    flexShrink: 0,
+    marginHorizontal: 0,
+    width: '100%',
   },
   pillarContent: {
     padding: 12,
