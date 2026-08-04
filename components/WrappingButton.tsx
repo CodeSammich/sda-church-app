@@ -4,6 +4,8 @@ import { useAppTheme } from '@/constants/Themes';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import { type ReactNode, useMemo } from 'react';
 import {
+  type AccessibilityRole,
+  type AccessibilityState,
   Platform,
   Pressable,
   type StyleProp,
@@ -16,6 +18,8 @@ import {
 
 interface WrappingButtonProps {
   accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityState?: AccessibilityState;
   buttonColor?: string;
   children: ReactNode;
   compact?: boolean;
@@ -31,6 +35,8 @@ interface WrappingButtonProps {
 
 export const WrappingButton = ({
   accessibilityLabel,
+  accessibilityRole = 'button',
+  accessibilityState,
   buttonColor,
   children,
   compact = false,
@@ -77,8 +83,8 @@ export const WrappingButton = ({
   return (
     <Pressable
       accessibilityLabel={spokenLabel}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled }}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={{ ...accessibilityState, disabled: isDisabled }}
       disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [

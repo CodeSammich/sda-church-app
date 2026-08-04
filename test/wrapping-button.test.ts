@@ -66,4 +66,18 @@ describe('wrapping replacement for Paper buttons', () => {
     fireEvent.press(button);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('supports selected tab semantics for in-page navigation', () => {
+    const view = render(
+      React.createElement(WrappingButton, {
+        accessibilityRole: 'tab',
+        accessibilityState: { selected: true },
+        children: 'This Week',
+        mode: 'contained-tonal',
+        onPress: jest.fn(),
+      }),
+    );
+
+    expect(view.getByRole('tab', { name: 'This Week', selected: true })).toBeTruthy();
+  });
 });

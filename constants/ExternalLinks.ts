@@ -43,6 +43,34 @@ export const getSunsetApiUrl = (lat: number, lng: number, date: string) =>
   `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${date}&formatted=0`;
 
 /**
+ * Production bulletin API. The public PWA sends only a Sabbath date; Apps
+ * Script joins the yearly schedule with Queens/Brooklyn worship responses and
+ * returns privacy-filtered JSON.
+ *
+ * Architecture, deployment, privacy, and verification documentation:
+ * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/apps-script/README.md
+ */
+export const BULLETIN_API_BASE_URL =
+  'https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec';
+
+export const getBulletinApiUrl = (date: string) =>
+  `${BULLETIN_API_BASE_URL}?date=${encodeURIComponent(date)}`;
+
+/**
+ * Staff-only source schedule. Google Drive enforces access for signed-in
+ * nyccsda.org accounts; the public PWA does not proxy or embed its contents.
+ */
+export const QUARTERLY_SCHEDULE_URL =
+  'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit?usp=sharing';
+
+export const openQuarterlySchedule = () =>
+  openURL(
+    QUARTERLY_SCHEDULE_URL,
+    'Access unavailable',
+    'Could not open the staff schedule.',
+  );
+
+/**
  * Centralized hub for external destinations.
  * Consolidating these here satisfies Tenet 5 (Simplicity) by providing
  * a single source of truth for the app's external touchpoints.

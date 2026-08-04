@@ -12,6 +12,7 @@ on Safari (iOS) or Chrome (Android).
 ## Table of Contents
 
 - [Technical Setup & Testing](docs/README.md)
+- [Bulletin API Architecture & Operations](apps-script/README.md)
 - [Accessibility Guidelines](docs/accessibility/README.md)
 - [Known Bugs](#known-bugs)
 - [UI/UX Design](docs/UI_UX.md)

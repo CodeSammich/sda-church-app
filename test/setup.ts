@@ -26,6 +26,10 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => ({
   default: mockCreateIcon(),
 }));
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 // This intentional TypeScript setup expression verifies that Jest transforms
 // root test/ support files before the behavioral suites execute.
 void createElement;

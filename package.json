@@ -1,7 +1,7 @@
 {
   "name": "sda-church-app",
   "main": "expo-router/entry",
-  "version": "0.25.0",
+  "version": "0.25.3",
   "homepage": "https://codesammich.github.io/sda-church-app",
   "scripts": {
     "build:web": "expo export --platform web --clear",
@@ -9,6 +9,7 @@
     "check:text-scale": "node scripts/check-text-scale-coverage.mjs",
     "sync-version": "node public/sync-version.js",
     "test": "jest --runInBand",
+    "test:integration:bulletin": "node test/integration/bulletin-api.mjs",
     "typecheck": "tsc --noEmit",
     "web": "expo start --web",
     "deploy": "node public/deploy-web.js $@"
