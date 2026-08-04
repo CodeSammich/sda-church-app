@@ -19,18 +19,22 @@ import {
   isBulletinLocationEmpty,
   setRefreshAvailableAt as persistRefreshAvailableAt,
 } from '@/services/BulletinService';
+import {
+  formatScriptureReference,
+  getScriptureReaderParams,
+  parseScriptureReference,
+} from '@/services/BibleService';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Card, Text } from 'react-native-paper';
+import { ActivityIndicator, Card, IconButton, Text } from 'react-native-paper';
 
 const LABELS = {
   en: {
     title: 'Weekly Bulletin',
-    description: 'View this week’s worship details and service assignments.',
     thisWeek: 'This Week',
     nextWeek: 'Next Week',
     loading: 'Loading bulletin…',
@@ -48,6 +52,8 @@ const LABELS = {
     possibleJointService: 'Brooklyn service details are not listed for this Sabbath.',
     possibleJointServiceHint: 'There may be a joint service at Elmhurst.',
     openElmhurst: 'Open Elmhurst Church',
+    openBibleReference: 'Open {reference} in the Bible reader',
+    readNow: 'Read now',
     quarterlySchedule: 'Quarterly Schedule (Church staff only)',
     metadata: {
       quarter: 'Quarter',
@@ -79,7 +85,6 @@ const LABELS = {
   },
   zh: {
     title: '每週週報',
-    description: '查看本週的崇拜內容與服事安排。',
     thisWeek: '本週',
     nextWeek: '下週',
     loading: '正在載入週報…',
@@ -97,6 +102,8 @@ const LABELS = {
     possibleJointService: '本安息日尚未列出布魯克林的聚會資料。',
     possibleJointServiceHint: '當天可能與艾姆赫斯特教會聯合聚會。',
     openElmhurst: '開啟艾姆赫斯特教會位置',
+    openBibleReference: '在聖經閱讀器中開啟 {reference}',
+    readNow: '立即閱讀',
     quarterlySchedule: '季度排班（僅限教會同工）',
     metadata: {
       quarter: '季度',
@@ -128,7 +135,6 @@ const LABELS = {
   },
   'zh-cn': {
     title: '每周周报',
-    description: '查看本周的崇拜内容与服事安排。',
     thisWeek: '本周',
     nextWeek: '下周',
     loading: '正在加载周报…',
@@ -146,6 +152,8 @@ const LABELS = {
     possibleJointService: '本安息日尚未列出布鲁克林的聚会资料。',
     possibleJointServiceHint: '当天可能与艾姆赫斯特教会联合聚会。',
     openElmhurst: '打开艾姆赫斯特教会位置',
+    openBibleReference: '在圣经阅读器中打开 {reference}',
+    readNow: '立即阅读',
     quarterlySchedule: '季度排班（仅限教会同工）',
     metadata: {
       quarter: '季度',
@@ -177,7 +185,6 @@ const LABELS = {
   },
   es: {
     title: 'Boletín Semanal',
-    description: 'Consulta los detalles del culto y las asignaciones de servicio.',
     thisWeek: 'Esta Semana',
     nextWeek: 'Próxima Semana',
     loading: 'Cargando el boletín…',
@@ -195,6 +202,8 @@ const LABELS = {
     possibleJointService: 'No hay detalles del servicio de Brooklyn para este sábado.',
     possibleJointServiceHint: 'Puede haber un servicio conjunto en Elmhurst.',
     openElmhurst: 'Abrir Iglesia de Elmhurst',
+    openBibleReference: 'Abrir {reference} en el lector de la Biblia',
+    readNow: 'Leer ahora',
     quarterlySchedule: 'Horario Trimestral (solo personal de la iglesia)',
     metadata: {
       quarter: 'Trimestre',
@@ -432,40 +441,68 @@ export default function WeeklyBulletinScreen() {
   };
 
   const renderProgram = (location: BulletinLocation) => {
-    // TODO(bulletin): Link Bible-verse values to the in-app Bible reader once we
-    // have reliable parsing for ranges, multiple passages, translations, and
-    // bilingual/free-form references.
     // TODO(bulletin): Link Hymn of Praise/Response values to the in-app hymnal
     // once hymn numbers and titles can be normalized safely across languages.
-    const rows = [
-      {
-        label: labels.program.hymnOfPraise,
-        value: getProgramValue(location.hymnOfPraise, language),
-      },
-      {
-        label: labels.program.sermonTitle,
-        value: getProgramValue(location.sermonTitle, language),
-      },
-      { label: labels.program.bibleVerses, value: location.bibleVerses },
-      {
-        label: labels.program.hymnOfResponse,
-        value: getProgramValue(location.hymnOfResponse, language),
-      },
-    ];
+    const parsedBibleReference = parseScriptureReference(location.bibleVerses);
+    const localizedBibleReference = parsedBibleReference
+      ? formatScriptureReference(parsedBibleReference, language)
+      : null;
+    const displayedBibleReference = localizedBibleReference || location.bibleVerses;
+    const openBibleReference = parsedBibleReference
+      ? () =>
+          router.push({
+            pathname: '/bible',
+            params: {
+              ...getScriptureReaderParams(parsedBibleReference, language),
+              referenceRequest: String(Date.now()),
+              backTo: '/home/bulletin',
+            },
+          } as any)
+      : undefined;
 
     return (
       <View style={styles.cardSection}>
         <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
           {labels.worshipProgram}
         </Text>
-        {rows.map((row, index) => (
-          <DataRow
-            key={row.label}
-            {...row}
-            emptyText={labels.notAvailable}
-            last={index === rows.length - 1}
-          />
-        ))}
+        <DataRow
+          label={labels.program.hymnOfPraise}
+          value={getProgramValue(location.hymnOfPraise, language)}
+          emptyText={labels.notAvailable}
+        />
+        <DataRow
+          label={labels.program.sermonTitle}
+          value={getProgramValue(location.sermonTitle, language)}
+          emptyText={labels.notAvailable}
+        />
+        <View style={[styles.dataRow, styles.dataRowBorder]}>
+          <Text variant="labelLarge">{labels.program.bibleVerses}</Text>
+          <View style={styles.scriptureActionRow}>
+            <Text variant="bodyMedium" style={styles.scriptureReference}>
+              {displayedBibleReference || labels.notAvailable}
+            </Text>
+            {openBibleReference && (
+              <Button
+                accessibilityLabel={labels.openBibleReference.replace(
+                  '{reference}',
+                  displayedBibleReference,
+                )}
+                mode="contained-tonal"
+                compact
+                icon="book-open-page-variant"
+                onPress={openBibleReference}
+              >
+                {labels.readNow}
+              </Button>
+            )}
+          </View>
+        </View>
+        <DataRow
+          label={labels.program.hymnOfResponse}
+          value={getProgramValue(location.hymnOfResponse, language)}
+          emptyText={labels.notAvailable}
+          last
+        />
       </View>
     );
   };
@@ -621,9 +658,6 @@ export default function WeeklyBulletinScreen() {
         </ImageBackground>
 
         <View style={DocumentStyles.section}>
-          <Text style={[DocumentStyles.description, { color: theme.colors.onSurface }]}>
-            {labels.description}
-          </Text>
           <Button
             mode="outlined"
             icon="file-table-outline"
@@ -683,16 +717,18 @@ export default function WeeklyBulletinScreen() {
               >
                 {formatDate(week.date)}
               </Text>
-              <Button
+              <IconButton
+                accessibilityLabel={
+                  cooldownSeconds > 0
+                    ? `${labels.refresh} (${cooldownLabel})`
+                    : labels.refresh
+                }
                 mode="contained-tonal"
                 disabled={week.loading || cooldownSeconds > 0}
                 icon="refresh"
                 onPress={() => void refreshWeek(index)}
-              >
-                {cooldownSeconds > 0
-                  ? `${labels.refresh} (${cooldownLabel})`
-                  : labels.refresh}
-              </Button>
+                style={styles.refreshButton}
+              />
             </View>
 
             {week.loading && (
@@ -745,13 +781,11 @@ const styles = StyleSheet.create({
   },
   scheduleButton: {
     alignSelf: 'stretch',
-    marginTop: 16,
   },
   weekHeader: {
     alignItems: 'center',
     borderBottomWidth: 2,
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
     justifyContent: 'space-between',
     marginBottom: 16,
@@ -761,6 +795,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexShrink: 1,
     fontWeight: 'bold',
+    minWidth: 0,
+  },
+  refreshButton: {
+    flexShrink: 0,
+    margin: 0,
   },
   card: {
     marginBottom: 16,
@@ -787,6 +826,15 @@ const styles = StyleSheet.create({
   dataRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(128, 128, 128, 0.35)',
+  },
+  scriptureActionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  scriptureReference: {
+    flexShrink: 1,
   },
   loadingContainer: {
     alignItems: 'center',

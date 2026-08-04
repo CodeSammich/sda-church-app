@@ -308,17 +308,28 @@ export default function BibleScreen() {
     bookId: paramBookId,
     chapter: paramChapter,
     translationId: paramTransId,
+    verseStart: paramVerseStart,
+    verseEnd: paramVerseEnd,
+    referenceRequest: paramReferenceRequest,
     backTo: paramBackTo,
   } = useLocalSearchParams<{
     bookId?: string;
     chapter?: string;
     translationId?: string;
+    verseStart?: string;
+    verseEnd?: string;
+    referenceRequest?: string;
     backTo?: string;
   }>();
 
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
   const translationParamSignature = paramTransId
     ? `${paramTransId}:${paramBookId || ''}:${paramChapter || ''}`
+    : null;
+  const scriptureParamSignature = paramBookId && paramChapter
+    ? `${paramTransId || ''}:${paramBookId}:${paramChapter}:${paramVerseStart || ''}:${
+        paramVerseEnd || ''
+      }:${paramReferenceRequest || ''}`
     : null;
   const getTranslationLabel = (
     translation: (typeof BibleService.SUPPORTED_TRANSLATIONS)[number],
@@ -343,6 +354,8 @@ export default function BibleScreen() {
   const initialBookId = useRef<string | null>(null);
   const handledLanguageSelectionRevision = useRef(languageSelectionRevision);
   const handledTranslationParamSignature = useRef<string | null>(null);
+  const handledScriptureParamSignature = useRef<string | null>(null);
+  const pendingScriptureRange = useRef<{ start: number; end: number } | null>(null);
 
   // Data state
   const [books, setBooks] = useState<BibleService.TranslationBook[]>([]);
@@ -512,6 +525,35 @@ export default function BibleScreen() {
     paramChapter,
     isPersistenceLoaded,
     books,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isPersistenceLoaded ||
+      !scriptureParamSignature ||
+      handledScriptureParamSignature.current === scriptureParamSignature
+    ) {
+      return;
+    }
+
+    handledScriptureParamSignature.current = scriptureParamSignature;
+    const start = Number(paramVerseStart);
+    const requestedEnd = Number(paramVerseEnd);
+    if (!Number.isInteger(start) || start < 1) {
+      pendingScriptureRange.current = null;
+      return;
+    }
+
+    pendingScriptureRange.current = {
+      start,
+      end:
+        Number.isInteger(requestedEnd) && requestedEnd >= start ? requestedEnd : start,
+    };
+  }, [
+    isPersistenceLoaded,
+    scriptureParamSignature,
+    paramVerseStart,
+    paramVerseEnd,
   ]);
 
   // Keep the Bible dock visible at the bottom of the screen at all times.
@@ -1178,6 +1220,45 @@ export default function BibleScreen() {
     }, 250);
     return () => clearTimeout(timeout);
   }, [chapterData]);
+
+  useEffect(() => {
+    const range = pendingScriptureRange.current;
+    if (
+      !chapterData ||
+      !range ||
+      chapterData.book.id !== paramBookId ||
+      chapterData.chapter.number !== Number(paramChapter) ||
+      chapterData.translation.id !== paramTransId
+    ) {
+      return;
+    }
+
+    const targetVerse = chapterData.chapter.content.find(
+      (content): content is BibleService.ChapterVerse =>
+        content.type === 'verse' && content.number === range.start,
+    );
+
+    if (!targetVerse) {
+      pendingScriptureRange.current = null;
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      const verseY = versePositions.current[targetVerse.number];
+      if (verseY !== undefined) {
+        scrollRef.current?.scrollTo({ y: Math.max(0, verseY - 20), animated: true });
+      }
+      pendingScriptureRange.current = null;
+    }, 250);
+
+    return () => clearTimeout(timeout);
+  }, [
+    chapterData,
+    scriptureParamSignature,
+    paramBookId,
+    paramChapter,
+    paramTransId,
+  ]);
 
   /**
    * Renders individual content items (text, formatted text, footnotes, etc.)

@@ -130,6 +130,7 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 | `services/BulletinService.ts` | PWA response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
 | `app/(tabs)/home/bulletin.tsx` | Localized This Week/Next Week UI, location cards, `TBD` rendering, and staff link |
 | `test/bulletin-service.test.ts` | PWA date, API error, and possible-joint-service behavior |
+| `test/bible-scripture-reference.test.ts` | Multilingual 66-book parsing, formatting, ranges, and safe rejection behavior |
 | `apps-script/README.md` | Architecture contract and operator runbook |
 
 ## Workbook and form layout
@@ -363,6 +364,16 @@ English fallback. English and Spanish modes prefer the English answer with a Chi
 fallback. Roster-role labels, empty-state text, `Choir`, and `Name withheld` are localized
 by the PWA; names themselves are never translated or reconstructed.
 
+When the Bible-verses answer is one recognized book and chapter with an optional verse or
+same-chapter range—for example, `Psalms 15:1-5`—the PWA displays the canonical book name
+in the current app language and makes the reference a link. The link opens the in-app
+Bible reader using that language's default translation, loads the canonical book and
+chapter, and scrolls to the first requested verse without activating selection mode.
+The canonical mapping in `BibleService.ts` includes English, Traditional Chinese,
+Simplified Chinese, and Spanish names for all 66 books. Unsupported free-form text,
+multiple passages, and cross-chapter ranges remain visible as entered but are not linked;
+the app must not guess at ambiguous references.
+
 Directly beneath the bulletin introduction, a full-width button links to the staff schedule
 in Google Drive. Its title explicitly says **Church staff only**. Google—not the PWA—requires
 the visitor to be signed in with an authorized `nyccsda.org` account. The public app neither
@@ -376,8 +387,9 @@ joint service at Elmhurst. That note includes a button to the established Elmhur
 map location from `constants/ChurchData.ts`. Any populated Brooklyn field suppresses the
 note.
 
-A **Refresh** button reloads only the currently selected week. After a manual refresh, that
-week enters a five-minute cooldown; the disabled button shows the remaining `M:SS` time.
+A contained **Refresh** icon beside the date reloads only the currently selected week and
+stays on the same header line in every language. After a manual refresh, that week enters
+a five-minute cooldown; its localized accessibility label includes the remaining `M:SS` time.
 The synchronous cooldown guard prevents rapid taps from starting parallel requests even
 before React rerenders. Its expiry is saved in device local storage, so reloading or
 reopening the PWA does not reset the cooldown. Manual refresh bypasses the device cache
