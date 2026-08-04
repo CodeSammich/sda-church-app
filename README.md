@@ -5,7 +5,7 @@ community features.
 
 For latest production build, you may install app directly from browser
 
-https://codesammich.github.io/sda-church-app/
+https://app.nyccsda.org
 
 on Safari (iOS) or Chrome (Android).
 
