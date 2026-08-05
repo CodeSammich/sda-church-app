@@ -66,7 +66,15 @@ export const getUpcomingSabbathDates = (from = new Date()): [string, string] => 
   return [toLocalIsoDate(first), toLocalIsoDate(second)];
 };
 
-const hasAssignedValue = (value: string | undefined) => {
+/** The first local midnight after the currently displayed Sabbath. */
+export const getNextBulletinRolloverAt = (from = new Date()) => {
+  const [currentSabbath] = getUpcomingSabbathDates(from);
+  const rollover = new Date(`${currentSabbath}T00:00:00`);
+  rollover.setDate(rollover.getDate() + 1);
+  return rollover.getTime();
+};
+
+export const hasBulletinValue = (value: string | undefined) => {
   const normalized = value?.trim();
   return Boolean(normalized && normalized.toUpperCase() !== 'TBD');
 };
@@ -93,7 +101,7 @@ export const isBulletinLocationEmpty = (location: BulletinLocation) =>
     location.openingPrayer,
     location.closingPrayer,
     location.sabbathSchool,
-  ].some(hasAssignedValue);
+  ].some(hasBulletinValue);
 
 const sabbathStart = (date: string) => new Date(`${date}T00:00:00`).getTime();
 

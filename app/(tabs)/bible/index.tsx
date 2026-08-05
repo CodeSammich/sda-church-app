@@ -47,7 +47,6 @@ import {
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import {
   createReaderStyles,
-  getCompactBibleAudioDockHeight,
   getBibleDockLayout,
   getBibleDockViewportLayout,
 } from '@/styles/ReaderStyles';
@@ -110,7 +109,6 @@ const uiLabels = {
     savedVersesSubtitle: 'Shown in {translation}',
     noSavedVerses: 'Your saved verses will appear here.',
     audioPlayer: 'Bible audio',
-    showAudioControls: 'Show full Bible audio controls',
     audio: 'Audio',
     audioUnavailable: 'Audio unavailable for this chapter',
     back10: 'Back 10 seconds',
@@ -155,7 +153,6 @@ const uiLabels = {
     savedVersesSubtitle: '以 {translation} 顯示',
     noSavedVerses: '您儲存的經文會顯示在這裡。',
     audioPlayer: '聖經有聲書',
-    showAudioControls: '顯示完整聖經有聲書控制項',
     audio: '有聲書',
     audioUnavailable: '此章節沒有有聲版本',
     back10: '後退 10 秒',
@@ -200,7 +197,6 @@ const uiLabels = {
     savedVersesSubtitle: '以 {translation} 显示',
     noSavedVerses: '您保存的经文会显示在这里。',
     audioPlayer: '圣经有声书',
-    showAudioControls: '显示完整圣经有声书控件',
     audio: '有声书',
     audioUnavailable: '此章节没有有声版本',
     back10: '后退 10 秒',
@@ -245,7 +241,6 @@ const uiLabels = {
     savedVersesSubtitle: 'Mostrados en {translation}',
     noSavedVerses: 'Tus versículos guardados aparecerán aquí.',
     audioPlayer: 'Audio de la Biblia',
-    showAudioControls: 'Mostrar todos los controles de audio bíblico',
     audio: 'Audio',
     audioUnavailable: 'Audio no disponible para este capítulo',
     back10: 'Retroceder 10 segundos',
@@ -302,7 +297,6 @@ export default function BibleScreen() {
       : Math.max(0, measuredBottomTabHeight - bottomDockInset);
   const { language, languageSelectionRevision } = useContext(LanguageContext);
   const { menuAnim, setMenuVisible: setGlobalMenuVisible } = useContext(UIStateContext);
-  const [menuVisible, setMenuVisible] = useState(true);
 
   const {
     bookId: paramBookId,
@@ -396,16 +390,9 @@ export default function BibleScreen() {
   const clearSelection = () => setSelectedVerses(new Set());
   const isSelectionActive = selectedVerses.size > 0;
 
-  const updateMenuVisibility = (visible: boolean) => {
-    setMenuVisible(visible);
-    setGlobalMenuVisible(visible);
-  };
-
   useEffect(() => {
-    if (isSelectionActive && !menuVisible) {
-      updateMenuVisibility(true);
-    }
-  }, [isSelectionActive]);
+    if (isSelectionActive) setGlobalMenuVisible(true);
+  }, [isSelectionActive, setGlobalMenuVisible]);
 
   // Load selection from storage on mount
   useEffect(() => {
@@ -1155,23 +1142,17 @@ export default function BibleScreen() {
     }
   };
 
-  /**
-   * Scroll handler to toggle Reader Mode (hiding/showing menus)
-   */
+  /** Hides the surrounding app chrome while keeping Bible controls visible. */
   const handleScroll = (event: any) => {
-    if (isSelectionActive) return; // Don't hide menus while selecting
+    if (isSelectionActive) return;
     const currentOffset = event.nativeEvent.contentOffset.y;
-    // Ignore bounces
     if (currentOffset < 0) return;
 
-    // If we've scrolled more than a small threshold, determine direction
     if (Math.abs(currentOffset - lastScrollY.current) > 15) {
       if (currentOffset > lastScrollY.current && currentOffset > 100) {
-        // Scrolling down: Hide menus
-        updateMenuVisibility(false);
+        setGlobalMenuVisible(false);
       } else {
-        // Scrolling up: Show menus
-        updateMenuVisibility(true);
+        setGlobalMenuVisible(true);
       }
       lastScrollY.current = currentOffset;
     }
@@ -1179,8 +1160,8 @@ export default function BibleScreen() {
 
   // Scroll to top when chapter content changes
   useEffect(() => {
-    // Ensure menus are visible on mount or chapter change
-    updateMenuVisibility(true);
+    // Restore the surrounding app chrome on mount or chapter change.
+    setGlobalMenuVisible(true);
 
     if (chapterData) {
       clearSelection();
@@ -1204,7 +1185,7 @@ export default function BibleScreen() {
       setAudioBufferedMillis(0);
       setScrubPositionMillis(null);
       // Always restore menus when leaving the reader
-      updateMenuVisibility(true);
+      setGlobalMenuVisible(true);
     };
   }, [chapterData, setGlobalMenuVisible]);
 
@@ -1677,17 +1658,12 @@ export default function BibleScreen() {
     (hasChapterAudio ? dockLayout.audioDockHeight : 0) +
     (isSelectionActive ? dockLayout.selectionBarHeight : 0);
   const fullDockContentHeight = dockLayout.dockHeight + dockExtraHeight;
-  const compactAudioDockHeight = getCompactBibleAudioDockHeight(effectiveTextScale);
-  const canCompactAudioDock = hasChapterAudio && !isSelectionActive;
-  const isCompactAudioDock = canCompactAudioDock && !menuVisible;
   const dockViewportLayout = getBibleDockViewportLayout({
     bottomInset: bottomDockInset,
     bottomTabHeight: bottomTabContentHeight,
     contentHeight: fullDockContentHeight,
     headerHeight,
-    hiddenContentHeight: canCompactAudioDock
-      ? compactAudioDockHeight
-      : fullDockContentHeight,
+    hiddenContentHeight: fullDockContentHeight,
     viewportHeight,
   });
   const animatedControlDockHeight = menuAnim.interpolate({
@@ -1817,6 +1793,33 @@ export default function BibleScreen() {
     </View>
   );
 
+  const renderChapterNavigationDock = () => (
+    <View
+      style={[
+        ReaderStyles.dockInner,
+        dockLayout.stackControls && styles.stackedDockInner,
+        { height: dockLayout.dockHeight },
+        fullscreenEdgeInset > 0 && { paddingHorizontal: fullscreenEdgeInset },
+      ]}
+    >
+      {dockLayout.stackControls ? (
+        <>
+          {renderChapterSelectors()}
+          <View style={styles.stackedNavigationRow}>
+            <View style={ReaderStyles.sideSlot}>{renderPreviousChapterButton()}</View>
+            <View style={ReaderStyles.sideSlot}>{renderNextChapterButton()}</View>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={ReaderStyles.sideSlot}>{renderPreviousChapterButton()}</View>
+          {renderChapterSelectors()}
+          <View style={ReaderStyles.sideSlot}>{renderNextChapterButton()}</View>
+        </>
+      )}
+    </View>
+  );
+
   return (
     <View style={NavigationStyles.container}>
       <Stack.Screen
@@ -1902,75 +1905,6 @@ export default function BibleScreen() {
           nestedScrollEnabled
           showsVerticalScrollIndicator={dockNeedsVerticalScroll}
         >
-
-        {isCompactAudioDock ? (
-          <View
-            style={[
-              styles.compactAudioDock,
-              { minHeight: compactAudioDockHeight },
-            ]}
-          >
-            <IconButton
-              icon={isPlaying ? 'pause' : 'play'}
-              mode="contained"
-              containerColor={theme.colors.tertiary}
-              iconColor={theme.colors.onPrimary}
-              size={scaleTypographyMetric(24, bibleUiTextScale)}
-              onPress={toggleAudio}
-              disabled={isAudioLoading && !soundRef.current}
-              accessibilityLabel={labels.audioPlayer}
-              style={styles.compactAudioPlayButton}
-            />
-            <View style={styles.compactAudioDetails}>
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.compactAudioTitle,
-                  { color: theme.colors.onSurface },
-                ]}
-              >
-                {book?.name || labels.bible} {chapterNum}
-              </Text>
-              <View
-                style={[
-                  styles.compactAudioTrack,
-                  { backgroundColor: theme.colors.outlineVariant },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.compactAudioProgress,
-                    {
-                      backgroundColor: theme.colors.tertiary,
-                      width: `${
-                        audioDurationMillis
-                          ? Math.min(
-                              100,
-                              (audioPositionMillis / audioDurationMillis) * 100,
-                            )
-                          : 0
-                      }%`,
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel={labels.showAudioControls}
-              onPress={() => updateMenuVisibility(true)}
-              style={styles.compactAudioExpandButton}
-            >
-              <AppIcon
-                name="chevron-up"
-                size={20}
-                textScale={bibleUiTextScale}
-                color={theme.colors.onSurfaceVariant}
-              />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
 
         {/* Selection Actions Bar (Integrated) */}
         {isSelectionActive && (
@@ -2269,40 +2203,10 @@ export default function BibleScreen() {
                 </Text>
               )}
             </View>
-
           </View>
         )}
 
-        <View
-          style={[
-            ReaderStyles.dockInner,
-            dockLayout.stackControls && styles.stackedDockInner,
-            { height: dockLayout.dockHeight },
-            fullscreenEdgeInset > 0 && { paddingHorizontal: fullscreenEdgeInset },
-          ]}
-        >
-          {dockLayout.stackControls ? (
-            <>
-              {renderChapterSelectors()}
-              <View style={styles.stackedNavigationRow}>
-                <View style={ReaderStyles.sideSlot}>
-                  {renderPreviousChapterButton()}
-                </View>
-                <View style={ReaderStyles.sideSlot}>{renderNextChapterButton()}</View>
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={ReaderStyles.sideSlot}>
-                {renderPreviousChapterButton()}
-              </View>
-              {renderChapterSelectors()}
-              <View style={ReaderStyles.sideSlot}>{renderNextChapterButton()}</View>
-            </>
-          )}
-        </View>
-          </>
-        )}
+        {renderChapterNavigationDock()}
         <Animated.View style={{ height: animatedDockBottomClearance }} />
         </ScrollView>
       </Animated.View>
@@ -2837,46 +2741,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
   },
   controlDockScrollContent: {
     flexGrow: 1,
-  },
-  compactAudioDock: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  compactAudioPlayButton: {
-    margin: 0,
-    minHeight: 48,
-    minWidth: 48,
-  },
-  compactAudioDetails: {
-    flex: 1,
-    gap: 6,
-    minWidth: 0,
-  },
-  compactAudioTitle: {
-    fontSize: scaleTypographyMetric(14, uiTextScale),
-    fontWeight: '700',
-    lineHeight: scaleTypographyMetric(18, uiTextScale),
-  },
-  compactAudioTrack: {
-    borderRadius: 2,
-    height: 4,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  compactAudioProgress: {
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    top: 0,
-  },
-  compactAudioExpandButton: {
-    alignItems: 'center',
-    height: 48,
-    justifyContent: 'center',
-    width: 48,
   },
   verseDetailModalContent: {
     maxHeight: '94%',

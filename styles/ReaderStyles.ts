@@ -76,13 +76,6 @@ export const getBibleDockViewportLayout = ({
   };
 };
 
-export const getCompactBibleAudioDockHeight = (effectiveTextScale: number) => {
-  const safeScale = Number.isFinite(effectiveTextScale)
-    ? Math.max(1, effectiveTextScale)
-    : 1;
-  return Math.max(56, Math.ceil(32 + 20 * safeScale));
-};
-
 /**
  * Computes enough space for the Bible's fixed controls without capping either
  * the app preference or the operating-system font scale. Narrow or enlarged

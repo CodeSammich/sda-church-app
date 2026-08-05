@@ -196,7 +196,7 @@ export default function YouScreen() {
           <View style={styles.footer}>
             <TouchableRipple
               onPress={Platform.OS === 'web' ? () => onManualCheck() : undefined}
-              disabled={updateStatus === 'checking'}
+              disabled={updateStatus === 'checking' || updateStatus === 'updating'}
               style={styles.versionRipple}
             >
               <Text

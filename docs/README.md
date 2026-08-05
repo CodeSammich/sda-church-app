@@ -54,6 +54,38 @@ mobile. Please remember to reset the version number when raising the final pull 
 npm run deploy -- --increment
 ```
 
+### PWA Update Prompt
+
+`public/sw.js` is the versioned service worker used to detect application releases. Keep
+its `VERSION` synchronized with `package.json` through `public/sync-version.js`; deploying
+changed bundles without changing the service worker would not create a new waiting worker
+for existing installations to detect.
+
+The update flow is intentionally user-controlled:
+
+1. Service-worker registration and the initial update check run after the application has
+   started; they do not block the first render.
+2. The app performs the browser equivalent of a no-cache `curl` against the small `sw.js`
+   file and compares its deployed `VERSION` with the version embedded in the running app
+   bundle. The last automatic check time is persisted in browser local storage, limiting
+   explicit checks to once every hour across launches and foreground resumes. This follows
+   [web.dev's service-worker lifecycle guidance](https://web.dev/articles/service-worker-lifecycle#manual_updates),
+   which recommends an interval such as hourly when an application may remain open for a
+   long time; this app applies that interval to launch and foreground-resume events rather
+   than running a continuous background polling timer.
+3. When a changed worker finishes installing, it remains in the browser's `waiting` state.
+   One localized, app-themed banner appears at the top of the app instead of interrupting
+   the user or adding update controls to individual pages.
+4. Pressing the banner action asks the browser to update its registration, resolves the
+   current waiting worker, and sends it `SKIP_WAITING`. Once the worker takes control, the
+   app performs a cache-busting navigation so the page shell is retrieved from the CDN.
+   The newly loaded bundle repeats the deployed-version comparison and hides the banner
+   when both versions match. If Bible audio is active, navigation is deferred until the
+   user leaves the Bible reader.
+
+This uses the standard service-worker lifecycle and does not poll application pages or
+download the full JavaScript bundle merely to discover whether an update exists.
+
 ### Mobile Installation
 
 - iOS (Safari): Open the URL -> Tap the Share button -> Add to Home Screen.

@@ -5,7 +5,6 @@ import { getBottomTabContentHeight } from '@/constants/Layout';
 import { createNavigationStyles } from '@/styles/NavigationStyles';
 import {
   createReaderStyles,
-  getCompactBibleAudioDockHeight,
   getBibleDockLayout,
   getBibleDockViewportLayout,
 } from '@/styles/ReaderStyles';
@@ -150,23 +149,24 @@ describe('Bible reader text scaling', () => {
     expect(viewport.visibleNeedsScroll).toBe(false);
   });
 
-  it('collapses a scrolling audio dock to one accessible control row', () => {
-    const effectiveScale = getBibleReaderUiTextScale(2);
+  it('keeps full audio controls and the verse selector visible when chrome hides', () => {
+    const effectiveScale = getBibleReaderUiTextScale(1);
     const dock = getBibleDockLayout(390, effectiveScale);
-    const compactHeight = getCompactBibleAudioDockHeight(effectiveScale);
     const fullContentHeight = dock.dockHeight + dock.audioDockHeight;
     const viewport = getBibleDockViewportLayout({
       bottomInset: 0,
       bottomTabHeight: getBottomTabContentHeight(effectiveScale),
       contentHeight: fullContentHeight,
       headerHeight: getGlobalHeaderHeightForScale(effectiveScale, true),
-      hiddenContentHeight: compactHeight,
+      hiddenContentHeight: fullContentHeight,
       viewportHeight: 800,
     });
 
-    expect(compactHeight).toBeGreaterThanOrEqual(56);
-    expect(viewport.hiddenHeight).toBe(compactHeight);
+    expect(viewport.hiddenHeight).toBe(fullContentHeight);
     expect(viewport.visibleHeight).toBeGreaterThan(viewport.hiddenHeight);
+    expect(viewport.visibleHeight - viewport.hiddenHeight).toBe(
+      getBottomTabContentHeight(effectiveScale),
+    );
   });
 
   it('places the audio dock breathing room above its controls', () => {

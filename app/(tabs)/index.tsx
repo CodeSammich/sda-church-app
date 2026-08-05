@@ -1,6 +1,5 @@
 import { GridMenuCard } from '@/components/GridMenuCard';
 import { WrappingActionButton } from '@/components/WrappingActionButton';
-import { WrappingButton as Button } from '@/components/WrappingButton';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -72,9 +71,6 @@ export default function HomeScreen() {
       sabbathStarts: 'Sabbath starts in',
       sabbathEnds: 'Sabbath ends in',
       isSabbath: 'Happy Sabbath!',
-      fullscreenReminder:
-        'For full screen, swipe down from the top to open notifications, then swipe back up.',
-      dismissReminder: 'Got it',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: 'New York, NY',
@@ -93,8 +89,6 @@ export default function HomeScreen() {
       sabbathStarts: '距離安息日還有',
       sabbathEnds: '距離安息日結束還有',
       isSabbath: '安息日快樂！',
-      fullscreenReminder: '若要進入全螢幕，請從頂端向下滑開啟通知，再向上滑關閉。',
-      dismissReminder: '知道了',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: '紐約',
@@ -113,8 +107,6 @@ export default function HomeScreen() {
       sabbathStarts: '距离安息日还有',
       sabbathEnds: '距离安息日结束还有',
       isSabbath: '安息日快乐！',
-      fullscreenReminder: '若要进入全屏，请从顶部向下滑打开通知，再向上滑关闭。',
-      dismissReminder: '知道了',
       locationDefault: '纽约',
     },
     es: {
@@ -131,9 +123,6 @@ export default function HomeScreen() {
       sabbathStarts: 'El Sábado comienza en',
       sabbathEnds: 'El Sábado termina en',
       isSabbath: '¡Feliz Sábado!',
-      fullscreenReminder:
-        'Para usar la pantalla completa, desliza hacia abajo para abrir las notificaciones y luego hacia arriba.',
-      dismissReminder: 'Entendido',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: 'New York, NY',
@@ -152,7 +141,6 @@ export default function HomeScreen() {
   } | null>(null);
 
   const [isSabbath, setIsSabbath] = useState(false);
-  const [showFullscreenReminder, setShowFullscreenReminder] = useState(false);
   const [countdown, setCountdown] = useState('');
   const [useGps, setUseGps] = useState(false);
   const [targetDate, setTargetDate] = useState<Date | null>(null);
@@ -164,27 +152,6 @@ export default function HomeScreen() {
 
   const VOTD_CONFIG_KEY = 'votd_selection_config';
   const VOTD_CACHE_KEY = `votd_cache_${language}`;
-
-  useEffect(() => {
-    if (
-      Platform.OS !== 'web' ||
-      typeof window === 'undefined' ||
-      typeof navigator === 'undefined' ||
-      !/Android/i.test(navigator.userAgent) ||
-      (!window.matchMedia('(display-mode: standalone)').matches &&
-        !window.matchMedia('(display-mode: fullscreen)').matches)
-    ) {
-      return;
-    }
-
-    const reminderKey = 'android-fullscreen-reminder-shown-v2';
-    if (window.sessionStorage.getItem(reminderKey) === 'done') return;
-
-    // Keep tab changes, back navigation, and app resume from being mistaken for
-    // a fresh launch. A new standalone app session receives a new page session.
-    window.sessionStorage.setItem(reminderKey, 'done');
-    setShowFullscreenReminder(true);
-  }, []);
 
   // Sabbath Countdown Logic
   // NOTE: There is nothing wrong with this logic itself, but after user testing it looks like most people turn off
@@ -400,7 +367,9 @@ export default function HomeScreen() {
         if (verseContent) {
           const text = BibleService.renderVerseToPlainText(transId, verseContent);
           const newVOTD = {
-            text: `"${text}"`,
+            // The Bible text can contain dialogue punctuation of its own. Keep
+            // it verbatim instead of adding decorative outer quotation marks.
+            text,
             reference: `${book.name} ${selection.chapter}:${selection.verse}`,
             bookId: book.id,
             chapter: selection.chapter,
@@ -527,32 +496,6 @@ export default function HomeScreen() {
         </ImageBackground>
 
         <List.Section style={navigationStyles.contentContainer}>
-          {showFullscreenReminder && (
-            <Card
-              style={[
-                styles.fullscreenReminder,
-                { backgroundColor: theme.colors.secondaryContainer },
-              ]}
-              mode="contained"
-            >
-              <Card.Content style={styles.fullscreenReminderContent}>
-                <List.Icon icon="gesture-swipe-down" color={theme.colors.secondary} />
-                <Text
-                  variant="bodyMedium"
-                  style={[
-                    styles.fullscreenReminderText,
-                    { color: theme.colors.onSecondaryContainer },
-                  ]}
-                >
-                  {labels.fullscreenReminder}
-                </Text>
-                <Button compact onPress={() => setShowFullscreenReminder(false)}>
-                  {labels.dismissReminder}
-                </Button>
-              </Card.Content>
-            </Card>
-          )}
-
           {/* Sabbath Countdown Widget */}
           <Card
             style={[styles.timerCard, { backgroundColor: theme.colors.surface }]}
@@ -704,21 +647,6 @@ const createStyles = (
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-  },
-  fullscreenReminder: {
-    marginBottom: 12,
-    borderRadius: 12,
-  },
-  fullscreenReminderContent: {
-    minHeight: 64,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    flexDirection: useStackedLayout ? 'column' : 'row',
-    alignItems: 'center',
-  },
-  fullscreenReminderText: {
-    flex: 1,
-    marginLeft: -4,
   },
   timerContentSubtle: {
     paddingVertical: 12,

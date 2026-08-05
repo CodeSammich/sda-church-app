@@ -396,8 +396,8 @@ export const GlobalHeader = (props: any) => {
                     paddingHorizontal: effectiveTextScale >= 1.75 ? 8 : 16,
                   },
                   {
-                    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-                    borderColor: 'rgba(255, 255, 255, 0.72)',
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
                     opacity: titleChipAnim,
                     transform: [{ translateY: titleChipTranslateY }],
                   },
@@ -406,7 +406,7 @@ export const GlobalHeader = (props: any) => {
                 <Text
                   variant="titleMedium"
                   style={{
-                    color: '#17211F',
+                    color: theme.colors.onSurface,
                     fontSize: scaleTypographyMetric(16, textScale),
                     fontWeight: 'bold',
                     lineHeight: scaleTypographyMetric(20, textScale),

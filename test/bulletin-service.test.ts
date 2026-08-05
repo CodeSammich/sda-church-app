@@ -1,7 +1,9 @@
 import {
   BulletinLocation,
   fetchBulletin,
+  getNextBulletinRolloverAt,
   getUpcomingSabbathDates,
+  hasBulletinValue,
   isBulletinCacheFresh,
   isBulletinLocationEmpty,
 } from '@/services/BulletinService';
@@ -31,6 +33,15 @@ describe('bulletin service', () => {
     ]);
   });
 
+  it('rolls the displayed weeks forward at the first midnight after Sabbath', () => {
+    const rollover = getNextBulletinRolloverAt(new Date(2026, 7, 8, 12));
+    expect(rollover).toBe(new Date(2026, 7, 9, 0).getTime());
+    expect(getUpcomingSabbathDates(new Date(rollover))).toEqual([
+      '2026-08-15',
+      '2026-08-22',
+    ]);
+  });
+
   it('surfaces an API error message', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
@@ -57,5 +68,12 @@ describe('bulletin service', () => {
     const location = emptyLocation();
     location.sabbathSchool = 'Jordan F.';
     expect(isBulletinLocationEmpty(location)).toBe(false);
+  });
+
+  it('treats only blank and TBD values as absent optional bulletin data', () => {
+    expect(hasBulletinValue('')).toBe(false);
+    expect(hasBulletinValue('  TBD  ')).toBe(false);
+    expect(hasBulletinValue('N/A')).toBe(true);
+    expect(hasBulletinValue('Communion Sabbath')).toBe(true);
   });
 });

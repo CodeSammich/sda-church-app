@@ -3,6 +3,7 @@ import {
   formatScriptureReference,
   getScriptureReaderParams,
   parseScriptureReference,
+  resolveScriptureReference,
 } from '@/services/BibleService';
 
 describe('Bible scripture references', () => {
@@ -71,9 +72,25 @@ describe('Bible scripture references', () => {
     });
   });
 
-  it('leaves unsupported or cross-chapter input unlinked', () => {
+  it('rejects unsupported or cross-chapter input before fallback resolution', () => {
     expect(parseScriptureReference('Psalms 15:1-16:2')).toBeNull();
     expect(parseScriptureReference('Unknown 1:1')).toBeNull();
     expect(parseScriptureReference('John 3:16-10')).toBeNull();
+  });
+
+  it('resolves malformed user input to Genesis 1:1', () => {
+    expect(resolveScriptureReference('not a valid reference')).toEqual({
+      bookId: 'GEN',
+      chapter: 1,
+      verseStart: 1,
+      verseEnd: 1,
+    });
+    expect(getScriptureReaderParams(resolveScriptureReference('???'), 'zh-cn')).toEqual({
+      translationId: 'cmn_cu1',
+      bookId: 'GEN',
+      chapter: '1',
+      verseStart: '1',
+      verseEnd: '1',
+    });
   });
 });

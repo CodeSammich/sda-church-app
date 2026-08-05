@@ -1,4 +1,5 @@
 import { WrappingButton as Button } from '@/components/WrappingButton';
+import { GridMenuCard } from '@/components/GridMenuCard';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -14,8 +15,10 @@ import {
   BulletinLocation,
   fetchBulletin,
   getCachedBulletin,
+  getNextBulletinRolloverAt,
   getRefreshAvailableAt,
   getUpcomingSabbathDates,
+  hasBulletinValue,
   isBulletinLocationEmpty,
   setRefreshAvailableAt as persistRefreshAvailableAt,
 } from '@/services/BulletinService';
@@ -23,6 +26,7 @@ import {
   formatScriptureReference,
   getScriptureReaderParams,
   parseScriptureReference,
+  resolveScriptureReference,
 } from '@/services/BibleService';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
@@ -54,7 +58,9 @@ const LABELS = {
     openElmhurst: 'Open Elmhurst Church',
     openBibleReference: 'Open {reference} in the Bible reader',
     readNow: 'Read now',
-    quarterlySchedule: 'Quarterly Schedule (Church staff only)',
+    planning: 'Planning',
+    quarterlySchedule: 'Quarterly Schedule',
+    churchStaffOnly: 'Church staff only',
     metadata: {
       quarter: 'Quarter',
       specialRemark: 'Special Remark',
@@ -104,7 +110,9 @@ const LABELS = {
     openElmhurst: '開啟艾姆赫斯特教會位置',
     openBibleReference: '在聖經閱讀器中開啟 {reference}',
     readNow: '立即閱讀',
-    quarterlySchedule: '季度排班（僅限教會同工）',
+    planning: '事工規劃',
+    quarterlySchedule: '季度排班',
+    churchStaffOnly: '僅限教會同工',
     metadata: {
       quarter: '季度',
       specialRemark: '特別事項',
@@ -154,7 +162,9 @@ const LABELS = {
     openElmhurst: '打开艾姆赫斯特教会位置',
     openBibleReference: '在圣经阅读器中打开 {reference}',
     readNow: '立即阅读',
-    quarterlySchedule: '季度排班（仅限教会同工）',
+    planning: '事工规划',
+    quarterlySchedule: '季度排班',
+    churchStaffOnly: '仅限教会同工',
     metadata: {
       quarter: '季度',
       specialRemark: '特别事项',
@@ -204,7 +214,9 @@ const LABELS = {
     openElmhurst: 'Abrir Iglesia de Elmhurst',
     openBibleReference: 'Abrir {reference} en el lector de la Biblia',
     readNow: 'Leer ahora',
-    quarterlySchedule: 'Horario Trimestral (solo personal de la iglesia)',
+    planning: 'Planificación',
+    quarterlySchedule: 'Horario Trimestral',
+    churchStaffOnly: 'Solo personal de la iglesia',
     metadata: {
       quarter: 'Trimestre',
       specialRemark: 'Observación Especial',
@@ -282,22 +294,38 @@ export default function WeeklyBulletinScreen() {
   const NavigationStyles = useNavigationStyles();
   const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
-  const [weekDates] = useState(() => getUpcomingSabbathDates());
+  const [weekDates, setWeekDates] = useState(() => getUpcomingSabbathDates());
   const [weeks, setWeeks] = useState<WeekState[]>(() =>
     weekDates.map((date) => ({ date, loading: false })),
   );
   const [selectedWeek, setSelectedWeek] = useState('0');
-  const loadingWeeksRef = useRef(new Set<number>());
+  const loadingWeeksRef = useRef(new Set<string>());
   const refreshAvailableAtRef = useRef<[number, number]>([0, 0]);
   const [refreshAvailableAt, setRefreshAvailableAt] = useState<[number, number]>([0, 0]);
   const [cooldownClock, setCooldownClock] = useState(() => Date.now());
 
+  const syncWeekDates = useCallback(() => {
+    const nextDates = getUpcomingSabbathDates();
+    if (nextDates[0] === weekDates[0] && nextDates[1] === weekDates[1]) {
+      return false;
+    }
+
+    loadingWeeksRef.current.clear();
+    refreshAvailableAtRef.current = [0, 0];
+    setRefreshAvailableAt([0, 0]);
+    setCooldownClock(Date.now());
+    setSelectedWeek('0');
+    setWeeks(nextDates.map((date) => ({ date, loading: false })));
+    setWeekDates(nextDates);
+    return true;
+  }, [weekDates]);
+
   const loadWeek = useCallback(
     async (index: number, signal?: AbortSignal, skipDeviceCache = false) => {
       const date = weekDates[index];
-      if (!date || loadingWeeksRef.current.has(index)) return;
+      if (!date || loadingWeeksRef.current.has(date)) return;
 
-      loadingWeeksRef.current.add(index);
+      loadingWeeksRef.current.add(date);
 
       try {
         const cached = skipDeviceCache ? undefined : await getCachedBulletin(date);
@@ -305,7 +333,7 @@ export default function WeeklyBulletinScreen() {
           if (!signal?.aborted) {
             setWeeks((current) =>
               current.map((week, weekIndex) =>
-                weekIndex === index
+                weekIndex === index && week.date === date
                   ? { date, bulletin: cached, error: undefined, loading: false }
                   : week,
               ),
@@ -316,14 +344,16 @@ export default function WeeklyBulletinScreen() {
 
         setWeeks((current) =>
           current.map((week, weekIndex) =>
-            weekIndex === index ? { ...week, error: undefined, loading: true } : week,
+            weekIndex === index && week.date === date
+              ? { ...week, error: undefined, loading: true }
+              : week,
           ),
         );
         const bulletin = await fetchBulletin(date, signal);
         if (!signal?.aborted) {
           setWeeks((current) =>
             current.map((week, weekIndex) =>
-              weekIndex === index
+              weekIndex === index && week.date === date
                 ? { date, bulletin, error: undefined, loading: false }
                 : week,
             ),
@@ -333,7 +363,7 @@ export default function WeeklyBulletinScreen() {
         if (!signal?.aborted) {
           setWeeks((current) =>
             current.map((week, weekIndex) =>
-              weekIndex === index
+              weekIndex === index && week.date === date
                 ? {
                     ...week,
                     error: error instanceof Error ? error.message : LABELS.en.loadError,
@@ -344,7 +374,7 @@ export default function WeeklyBulletinScreen() {
           );
         }
       } finally {
-        loadingWeeksRef.current.delete(index);
+        loadingWeeksRef.current.delete(date);
       }
     },
     [weekDates],
@@ -397,20 +427,32 @@ export default function WeeklyBulletinScreen() {
   }, [weekDates]);
 
   useEffect(() => {
-    const refreshSelectedIfStale = () => void loadWeek(Number(selectedWeek));
+    const refreshSelectedIfStale = () => {
+      if (!syncWeekDates()) void loadWeek(Number(selectedWeek));
+    };
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') refreshSelectedIfStale();
     });
 
     const sabbathStart = new Date(`${weekDates[0]}T00:00:00`).getTime();
-    const delay = sabbathStart - Date.now();
-    const timer = delay > 0 ? setTimeout(() => void loadWeek(0), delay + 1000) : undefined;
+    const sabbathStartDelay = sabbathStart - Date.now();
+    const sabbathStartTimer =
+      sabbathStartDelay > 0
+        ? setTimeout(() => void loadWeek(0), sabbathStartDelay + 1000)
+        : undefined;
+
+    const rolloverDelay = getNextBulletinRolloverAt() - Date.now();
+    const rolloverTimer =
+      rolloverDelay > 0
+        ? setTimeout(() => void syncWeekDates(), rolloverDelay + 1000)
+        : undefined;
 
     return () => {
       subscription.remove();
-      if (timer) clearTimeout(timer);
+      if (sabbathStartTimer) clearTimeout(sabbathStartTimer);
+      if (rolloverTimer) clearTimeout(rolloverTimer);
     };
-  }, [loadWeek, selectedWeek, weekDates]);
+  }, [loadWeek, selectedWeek, syncWeekDates, weekDates]);
 
   useEffect(() => {
     const latestExpiry = Math.max(...refreshAvailableAt);
@@ -448,12 +490,13 @@ export default function WeeklyBulletinScreen() {
       ? formatScriptureReference(parsedBibleReference, language)
       : null;
     const displayedBibleReference = localizedBibleReference || location.bibleVerses;
-    const openBibleReference = parsedBibleReference
+    const targetBibleReference = resolveScriptureReference(location.bibleVerses);
+    const openBibleReference = hasBulletinValue(location.bibleVerses)
       ? () =>
           router.push({
             pathname: '/bible',
             params: {
-              ...getScriptureReaderParams(parsedBibleReference, language),
+              ...getScriptureReaderParams(targetBibleReference, language),
               referenceRequest: String(Date.now()),
               backTo: '/home/bulletin',
             },
@@ -485,7 +528,8 @@ export default function WeeklyBulletinScreen() {
               <Button
                 accessibilityLabel={labels.openBibleReference.replace(
                   '{reference}',
-                  displayedBibleReference,
+                  formatScriptureReference(targetBibleReference, language) ||
+                    displayedBibleReference,
                 )}
                 mode="contained-tonal"
                 compact
@@ -557,19 +601,21 @@ export default function WeeklyBulletinScreen() {
     <Card mode="outlined" style={styles.card}>
       <Card.Title title={title} titleVariant="titleLarge" />
       <Card.Content>
-        <View
-          style={[
-            styles.remarkBanner,
-            { backgroundColor: theme.colors.secondaryContainer },
-          ]}
-        >
-          <Text variant="labelLarge" style={{ color: theme.colors.onSecondaryContainer }}>
-            {labels.metadata.specialRemark}
-          </Text>
-          <Text variant="titleMedium" style={{ color: theme.colors.onSecondaryContainer }}>
-            {specialRemark || labels.notAvailable}
-          </Text>
-        </View>
+        {hasBulletinValue(specialRemark) && (
+          <View
+            style={[
+              styles.remarkBanner,
+              { backgroundColor: theme.colors.secondaryContainer },
+            ]}
+          >
+            <Text variant="labelLarge" style={{ color: theme.colors.onSecondaryContainer }}>
+              {labels.metadata.specialRemark}
+            </Text>
+            <Text variant="titleMedium" style={{ color: theme.colors.onSecondaryContainer }}>
+              {specialRemark}
+            </Text>
+          </View>
+        )}
 
         {!isQueens && isBulletinLocationEmpty(location) && (
           <View
@@ -601,10 +647,12 @@ export default function WeeklyBulletinScreen() {
   );
 
   const renderBulletin = (bulletin: Bulletin) => {
-    const metadataRows = [
+    const metadataRows: Array<[string, string]> = [
       [labels.metadata.quarter, bulletin.quarter],
       [labels.metadata.tithePurpose, bulletin.tithePurpose],
-      [labels.metadata.pastorTravel, bulletin.pastorTravel],
+      ...(hasBulletinValue(bulletin.pastorTravel)
+        ? [[labels.metadata.pastorTravel, bulletin.pastorTravel] as [string, string]]
+        : []),
     ];
 
     return (
@@ -656,17 +704,6 @@ export default function WeeklyBulletinScreen() {
             {labels.title}
           </Text>
         </ImageBackground>
-
-        <View style={DocumentStyles.section}>
-          <Button
-            mode="outlined"
-            icon="file-table-outline"
-            onPress={openQuarterlySchedule}
-            style={styles.scheduleButton}
-          >
-            {labels.quarterlySchedule}
-          </Button>
-        </View>
 
         <View style={styles.weekTabsContainer}>
           <Button
@@ -756,6 +793,24 @@ export default function WeeklyBulletinScreen() {
           </View>
           );
         })()}
+
+        <View style={[DocumentStyles.section, styles.planningSection]}>
+          <Text
+            variant="titleLarge"
+            style={[DocumentStyles.sectionTitle, { color: theme.colors.primary }]}
+          >
+            {labels.planning}
+          </Text>
+          <GridMenuCard
+            title={labels.quarterlySchedule}
+            subtitle={labels.churchStaffOnly}
+            icon="file-table-outline"
+            color={theme.colors.cardBgColors.bulletin}
+            iconColor={theme.colors.iconColors.bulletin}
+            onPress={openQuarterlySchedule}
+            style={styles.scheduleCard}
+          />
+        </View>
       </ScrollView>
     </>
   );
@@ -779,8 +834,11 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  scheduleButton: {
-    alignSelf: 'stretch',
+  scheduleCard: {
+    width: '100%',
+  },
+  planningSection: {
+    marginTop: 0,
   },
   weekHeader: {
     alignItems: 'center',

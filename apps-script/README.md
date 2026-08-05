@@ -331,6 +331,12 @@ The full names are never included in the JSON response. The metadata fields `Qua
 Hymn names, sermon titles, and Bible verses are also preserved as entered because they
 are content rather than roster names.
 
+A first name and last initial may still identify someone within a church community. This
+transformation is a data-minimization and public-disclosure safeguard, not anonymization
+or a guarantee of compliance with any particular privacy law. The deploying church
+remains responsible for access, notice, retention, correction, and removal practices for
+the restricted source data.
+
 The API intentionally does not transliterate non-Latin names. Transliteration can be
 ambiguous and could disclose a complete identity. The PWA may translate the
 `Name withheld` placeholder for display, but it must not attempt to reconstruct the
@@ -353,6 +359,12 @@ loaded lazily the first time that sub-tab is opened, avoiding a second request f
 who never view it. A **This Week / Next Week** sub-tab control displays one response at a
 time, and each week maintains its own loading/error state. For each location, the screen shows:
 
+The displayed date pair rolls forward at the first local midnight after Sabbath and is
+also re-evaluated whenever the app returns to the foreground. This calendar rollover is
+independent of PWA code updates and does not require a deployment or an update-banner
+action. If the following week's form has not been submitted yet, its worship-content
+fields continue to use the documented `TBD` behavior.
+
 1. Hymn of Praise
 2. Sermon title
 3. Bible verses
@@ -370,17 +382,21 @@ in the current app language and makes the reference a link. The link opens the i
 Bible reader using that language's default translation, loads the canonical book and
 chapter, and scrolls to the first requested verse without activating selection mode.
 The canonical mapping in `BibleService.ts` includes English, Traditional Chinese,
-Simplified Chinese, and Spanish names for all 66 books. Unsupported free-form text,
-multiple passages, and cross-chapter ranges remain visible as entered but are not linked;
-the app must not guess at ambiguous references.
+Simplified Chinese, and Spanish names for all 66 books. Unsupported non-empty free-form
+text, multiple passages, and cross-chapter ranges remain visible as entered, but their
+**Read now** action safely falls back to Genesis 1:1 in the current app language's default
+translation. Blank and literal `TBD` scripture fields do not show the action.
 
-Directly beneath the bulletin introduction, a full-width button links to the staff schedule
-in Google Drive. Its title explicitly says **Church staff only**. Google—not the PWA—requires
-the visitor to be signed in with an authorized `nyccsda.org` account. The public app neither
-embeds nor proxies that restricted spreadsheet.
+After the weekly bulletin content, a separate **Planning** section links to the staff
+schedule in Google Drive. Its Explore-style card explicitly says **Church staff only**.
+Google—not the PWA—requires the visitor to be signed in with an authorized `nyccsda.org`
+account. The public app neither embeds nor proxies that restricted spreadsheet.
 
 The global `Special Remark` is displayed prominently inside both the Queens and Brooklyn
-cards. The PWA does not maintain a hardcoded list of communion, baptism, or other joint
+cards when it contains a value other than literal `TBD`; a blank or `TBD` remark hides the
+banner entirely. Likewise, a blank or `TBD` Pastor Travel value hides that metadata row.
+Every other blank bulletin field continues to render as `TBD`. The PWA does not maintain
+a hardcoded list of communion, baptism, or other joint
 service events. When every Brooklyn worship and roster field is blank or literally `TBD`,
 the Brooklyn card keeps all of its `TBD` rows and adds a cautious note that there may be a
 joint service at Elmhurst. That note includes a button to the established Elmhurst church

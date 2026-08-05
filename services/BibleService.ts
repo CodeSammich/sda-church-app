@@ -332,6 +332,13 @@ export type ParsedScriptureReference = {
   verseEnd?: number;
 };
 
+export const DEFAULT_SCRIPTURE_REFERENCE: ParsedScriptureReference = Object.freeze({
+  bookId: 'GEN',
+  chapter: 1,
+  verseStart: 1,
+  verseEnd: 1,
+});
+
 const normalizeBookName = (name: string) =>
   name
     .normalize('NFD')
@@ -396,6 +403,9 @@ export const parseScriptureReference = (
 
   return { bookId, chapter, verseStart, verseEnd };
 };
+
+export const resolveScriptureReference = (reference?: string) =>
+  parseScriptureReference(reference) || DEFAULT_SCRIPTURE_REFERENCE;
 
 export const formatScriptureReference = (
   reference: ParsedScriptureReference,
