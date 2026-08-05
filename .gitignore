@@ -7,6 +7,7 @@
 
 # 2. Re-include source and configuration directories
 !/.github/
+!/apps-script/
 !/app/
 !/assets/
 !/components/
@@ -14,8 +15,10 @@
 !/docs/
 !/hooks/
 !/public/
+!/scripts/
 !/services/
 !/styles/
+!/test/
 
 # 3. Re-include root configuration files
 !/*.json
@@ -38,3 +41,4 @@ web-build/
 expo-env.d.ts
 *.tsbuildinfo
 .env*
+apps-script/.clasp.json

@@ -5,13 +5,15 @@ community features.
 
 For latest production build, you may install app directly from browser
 
-https://codesammich.github.io/sda-church-app/
+https://app.nyccsda.org
 
 on Safari (iOS) or Chrome (Android).
 
 ## Table of Contents
 
 - [Technical Setup & Testing](docs/README.md)
+- [Bulletin API Architecture & Operations](apps-script/README.md)
+- [Accessibility Guidelines](docs/accessibility/README.md)
 - [Known Bugs](#known-bugs)
 - [UI/UX Design](docs/UI_UX.md)
 - [Feature Designs](docs/feature_designs/)
@@ -34,21 +36,26 @@ technical debt of traditional App Stores.
 
 ### 2. Liability-Free
 
-We proactively mitigate privacy and legal risks (e.g., CCPA, GDPR), even if the tradeoff
-results in fewer functional features. Protecting the congregation is a non-negotiable
-constraint; our volunteers should not be exposed to complex data liabilities or external
-legal vulnerabilities.
+We proactively reduce privacy and legal risk through purpose limitation, data
+minimization, restricted administrative access, and conservative public disclosure, even
+when the tradeoff results in fewer features. Privacy frameworks such as the CCPA and GDPR
+inform these design goals; mentioning them is not a certification or claim that this
+project, every deployment, or every organization using a fork automatically complies with
+those laws. Deploying organizations remain responsible for reviewing their own legal and
+operational obligations.
 
 > _"Behold, I am sending you out like sheep among wolves. Therefore be as shrewd as snakes
 > and as innocent as doves."_ — **Matthew 10:16**
 
 ### 3. Sanctuary
 
-We prioritize total anonymity, treating the digital experience as a secure refuge. While
-we use aggregate data to help leadership make Informed Decisions about community needs, we
-strictly reject the collection or storage of Personally Identifiable Information (PII). A
-church is a "third space" and a final refuge; our technology must be a shade from the
-heat, not a source of surveillance.
+We minimize the collection and public exposure of personal information, treating the
+digital experience as a secure refuge. The public PWA does not require an account for
+ordinary use. Restricted church administrative systems may contain personal information
+that is necessary for church operations, such as worship assignments, but public features
+must disclose only what is needed for their stated purpose. A church is a "third space"
+and a final refuge; our technology must be a shade from the heat, not a source of
+surveillance.
 
 > _"For You have been a refuge for the poor, a stronghold for the needy in distress, a
 > refuge from the storm, a shade from the heat."_ — **Isaiah 25:4**
@@ -58,7 +65,8 @@ heat, not a source of surveillance.
 Every feature must serve the goal of promoting **in-person fellowship**. Digital
 tools—such as event sign-ups or notifications—are high-value only if they make it easier
 for a member to show up to a physical gathering. We facilitate connection without
-requiring or compromising Personally Identifiable Information (PII).
+requiring public-app accounts or exposing more personal information than the feature
+needs.
 
 > _"And let us consider how to spur one another on to love and good deeds. Let us not
 > neglect meeting together, as some have made a habit, but let us encourage one
@@ -161,17 +169,19 @@ not immediately hide the Android status and navigation bars. Pulling down the no
 shade and closing it causes Android and Chrome to recalculate the window insets and restore
 the expected immersive fullscreen state.
 
-**User workaround:** Swipe down from the top of the screen to open notifications, then
-swipe back up to close them. The Home screen displays an Android-only reminder once per
-fresh app session.
+**User workaround:** Tap anywhere in the installed app after launch. That trusted user
+gesture lets the PWA request the browser Fullscreen API. Chrome may briefly display its
+own fullscreen confirmation; the site cannot reposition or style that browser-owned UI.
+Cycling the notification shade remains a fallback on devices where Chrome does not honor
+the fullscreen request.
 
-The web app cannot perform the equivalent operation itself. A standard PWA runs inside the
-browser security sandbox and has no access to the Android `Window`,
+The web app cannot directly control the equivalent native operation. A standard PWA runs
+inside the browser security sandbox and has no access to the Android `Window`,
 `WindowInsetsController`, or `WindowInsetsControllerCompat` APIs used by native apps to
-hide system bars. The browser Fullscreen API is a separate web capability: it generally
-requires a transient user interaction and does not provide direct control over the native
-Android activity's system-bar flags. CSS viewport changes, forced reflows, and page reloads
-also cannot reliably reproduce an operating-system notification-shade transition.
+hide system bars. The Fullscreen API requires a transient user interaction and does not
+provide direct control over the native Android activity's system-bar flags. CSS viewport
+changes and forced reflows also cannot reliably reproduce an operating-system
+notification-shade transition.
 
 A native Android or hybrid wrapper could explicitly call
 `WindowInsetsControllerCompat.hide(WindowInsetsCompat.Type.systemBars())` when its window
@@ -218,29 +228,65 @@ permissions and restrictions.
 
 ### 1. Introduction
 
-This application values your privacy. We do not host, store, or manage any personal
-identifiable information on our own servers. This section outlines how third-party
-services handle data to keep the application functional.
+This application values privacy and uses data minimization to limit what the public app
+receives. The PWA does not require a user account for ordinary use. Church administrative
+systems and service providers still process limited information needed to operate the
+app, as described below.
 
-### 2. Hosting (GitHub Pages)
+### 2. Worship Schedule Information (Google Workspace)
+
+Authorized church schedule managers enter participant names and worship assignments into
+a restricted, church-managed Google Sheet. Authorized form submitters provide weekly
+worship-program details through Google Forms; the restricted response Sheet may record a
+submitter's email address.
+
+A Google Apps Script web app reads the requested Sabbath schedule and form response and
+returns only an allowlisted bulletin response. Before the response becomes public, the
+script shortens Latin-script full names to a first name and last initial. A single-word
+Latin-script name may appear as entered, while unsupported non-Latin names are replaced
+with a privacy placeholder. Full names, form submitter email addresses, and other
+non-allowlisted spreadsheet fields are not included in the public API response. The
+shortened names may still identify people within the church community and are therefore
+treated as personal information rather than anonymous data.
+
+This information is used to communicate worship assignments and weekly program details.
+Access to the source Sheets is controlled by the church through Google Workspace, and
+source-data retention is governed by the church's administrative practices.
+
+### 3. Temporary Caching and Device Storage
+
+Google Apps Script temporarily caches privacy-filtered bulletin responses to reduce Sheet
+reads. The PWA may store the same filtered bulletin data and refresh timing in browser
+local storage so ordinary visits do not repeatedly call the API and the bulletin can
+refresh around Sabbath boundaries. Users can remove the device copy by clearing this
+site's browser data.
+
+### 4. Hosting and Traffic Services
 
 This web application is deployed using GitHub Pages. GitHub may collect basic server logs
 and IP addresses for security, debugging, and operational maintenance.
-
-### 3. Traffic Management (Cloudflare)
-
 We use Cloudflare to manage domain traffic and protect the application from common web
 threats. Cloudflare may process basic connection data (such as IP addresses) to identify
-malicious traffic and optimize performance. No user-level activity within the app is
-tracked by this service.
+malicious traffic and optimize performance. Google processes the restricted source data
+and API requests through Google Workspace, Google Sheets, Google Forms, and Google Apps
+Script. Each provider handles information under its own applicable terms and privacy
+policies.
 
-### 4. External Services
+### 5. External Links
 
-This application provides links to external platforms, such as YouTube, Spotify, and
-HymnsForWorship.org. When you interact with these links, you are subject to the privacy
-policies of those third-party providers. These services may collect data (such as IP
-addresses) as part of their standard operations. We do not have access to, nor do we
-store, any data collected by these external platforms.
+This application links to external platforms such as YouTube, Spotify, and
+HymnsForWorship.org. When you follow these links, you are subject to the privacy policies
+of those third-party providers. These services may collect information such as IP
+addresses as part of their standard operations. The church does not receive or store
+information those external platforms independently collect from you.
+
+### 6. Privacy Frameworks and Questions
+
+The project's minimization measures are informed by privacy principles found in laws such
+as the CCPA and GDPR, but they do not by themselves guarantee legal compliance. Which laws
+apply depends on the deploying organization, its users, and its data practices. Questions
+or requests concerning church-managed schedule information may be sent to
+`pastor@nyccsda.org`.
 
 ---
 

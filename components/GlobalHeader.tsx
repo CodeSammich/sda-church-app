@@ -1,5 +1,11 @@
 import { getHeaderBackTarget, hasHeaderBackButton } from '@/constants/BackNavigation';
+import {
+  getBibleReaderUiTextScale,
+  scaleTypographyMetric,
+} from '@/constants/AppPreferences';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { useTextSize } from '@/constants/TextSizeContext';
+import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
 import {
   ALL_SEARCH_LABELS,
   getSearchableItems,
@@ -8,7 +14,7 @@ import {
   SearchableItem,
 } from '@/constants/SearchTerms';
 import { useAppTheme } from '@/constants/Themes';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { AppIcon } from '@/components/AppIcon';
 import { router, useSegments } from 'expo-router';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
@@ -50,7 +56,13 @@ export const UIStateContext = createContext<{
 export const GlobalHeader = (props: any) => {
   const { language } = useContext(LanguageContext);
   const segments = useSegments();
+  // Expo typed routes expose segments as a tuple union. Widen it for generic
+  // route membership checks while preserving the runtime values.
+  const routeSegments: readonly string[] = segments;
+  const isBiblePage = routeSegments.includes('bible');
+  const bibleTranslation = props.options?.bibleTranslation as string | undefined;
   const theme = useAppTheme();
+  const { textScale } = useTextSize();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,7 +72,21 @@ export const GlobalHeader = (props: any) => {
   const searchRef = useRef<any>(null);
   const headerRef = useRef<View>(null);
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
+  const { fontScale, width: windowWidth } = useWindowDimensions();
+  const [measuredHeaderContentHeight, setMeasuredHeaderContentHeight] = useState(0);
+  const headerTextScale = isBiblePage
+    ? getBibleReaderUiTextScale(textScale)
+    : textScale;
+  const effectiveTextScale = Math.max(1, fontScale * headerTextScale);
+  const compactControlHeight = Math.ceil(44 + (effectiveTextScale - 1) * 24);
+  const wrappedControlHeight = Math.max(
+    compactControlHeight,
+    Math.ceil(40 * effectiveTextScale + 12),
+  );
+  const stackBibleControls =
+    isBiblePage &&
+    Boolean(bibleTranslation) &&
+    effectiveTextScale >= 1.5;
 
   const { menuAnim } = useContext(UIStateContext);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -82,15 +108,13 @@ export const GlobalHeader = (props: any) => {
   // A pillar root is the entry-point for one of our four main tabs (Tenet 5 & 7).
   // We use route segments to identify the root index files of the pillar folders.
   // In Expo Router, the (tabs) group and the tab names form the first 1-2 segments.
-  const isPillarRoot = !hasHeaderBackButton(segments);
+  const isPillarRoot = !hasHeaderBackButton(routeSegments);
 
-  const isBiblePage = segments.includes('bible');
-  const isHymnalPage = segments.includes('english-hymnal');
+  const isHymnalPage = routeSegments.includes('english-hymnal');
   const isSubPage = !isPillarRoot;
 
   const title = props.options?.title;
   const backTo = props.options?.backTo;
-  const bibleTranslation = props.options?.bibleTranslation as string | undefined;
   const onBibleTranslationPress = props.options?.onBibleTranslationPress as
     | (() => void)
     | undefined;
@@ -110,7 +134,16 @@ export const GlobalHeader = (props: any) => {
     | undefined;
   const isHeroHeaderRoute = HERO_HEADER_ROUTES.has(props.route?.name);
   const showTitleChip = props.options?.showTitleChip ?? !isHeroHeaderRoute;
+  const appBarHeight = getGlobalHeaderHeightForScale(
+    effectiveTextScale,
+    stackBibleControls,
+    showTitleChip ? measuredHeaderContentHeight : 0,
+  );
   const titleChipAnim = useRef(new Animated.Value(showTitleChip ? 1 : 0)).current;
+
+  useEffect(() => {
+    setMeasuredHeaderContentHeight(0);
+  }, [effectiveTextScale, title, windowWidth]);
 
   useEffect(() => {
     Animated.timing(titleChipAnim, {
@@ -193,7 +226,7 @@ export const GlobalHeader = (props: any) => {
   };
 
   const handleBackPress = () => {
-    router.replace(getHeaderBackTarget(segments, backTo) as any);
+    router.replace(getHeaderBackTarget(routeSegments, backTo) as any);
   };
 
   const expandBibleSearch = () => {
@@ -221,7 +254,7 @@ export const GlobalHeader = (props: any) => {
   );
   const bibleSearchWidth = searchExpansion.interpolate({
     inputRange: [0, 1],
-    outputRange: [44, expandedBibleSearchWidth],
+    outputRange: [compactControlHeight, expandedBibleSearchWidth],
   });
 
   const renderSearchbar = (isExpandableBible = false) => (
@@ -264,7 +297,12 @@ export const GlobalHeader = (props: any) => {
                 accessibilityLabel="Close search"
                 style={styles.searchCloseButton}
               >
-                <MaterialCommunityIcons name="close" size={21} color={color} />
+                <AppIcon
+                  name="close"
+                  size={21}
+                  textScale={headerTextScale}
+                  color={color}
+                />
               </Pressable>
             )
           : undefined
@@ -272,6 +310,7 @@ export const GlobalHeader = (props: any) => {
       style={[
         styles.floatingSearchbar,
         isExpandableBible && styles.expandedBibleSearchbar,
+        { minHeight: compactControlHeight },
         {
           backgroundColor: theme.colors.surface,
           shadowColor: '#000',
@@ -284,7 +323,7 @@ export const GlobalHeader = (props: any) => {
         minHeight: 0,
         paddingBottom: 0,
         paddingTop: 0,
-        fontSize: 16,
+        fontSize: scaleTypographyMetric(16, headerTextScale),
       }}
       iconColor={theme.colors.onSurfaceVariant}
       placeholderTextColor={theme.colors.onSurfaceVariant}
@@ -306,7 +345,7 @@ export const GlobalHeader = (props: any) => {
       <Appbar.Header
         ref={headerRef}
         statusBarHeight={0}
-        style={{ backgroundColor: 'transparent', elevation: 0, height: 64 }}
+        style={{ backgroundColor: 'transparent', elevation: 0, height: appBarHeight }}
         onLayout={(e) => {
           const { height } = e.nativeEvent.layout;
           setHeaderHeight(height + insets.top);
@@ -330,9 +369,10 @@ export const GlobalHeader = (props: any) => {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <MaterialCommunityIcons
+            <AppIcon
               name="chevron-left"
               size={26}
+              textScale={headerTextScale}
               color={theme.dark ? '#FFFFFF' : '#17211F'}
             />
           </Pressable>
@@ -342,11 +382,22 @@ export const GlobalHeader = (props: any) => {
             {isSubPage && title && (
               <Animated.View
                 pointerEvents={showTitleChip ? 'auto' : 'none'}
+                onLayout={(event) => {
+                  const nextHeight = Math.ceil(event.nativeEvent.layout.height);
+                  setMeasuredHeaderContentHeight((currentHeight) =>
+                    currentHeight === nextHeight ? currentHeight : nextHeight,
+                  );
+                }}
                 style={[
                   styles.floatingTitleChip,
                   {
-                    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-                    borderColor: 'rgba(255, 255, 255, 0.72)',
+                    minHeight: compactControlHeight,
+                    maxWidth: windowWidth - 86,
+                    paddingHorizontal: effectiveTextScale >= 1.75 ? 8 : 16,
+                  },
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant,
                     opacity: titleChipAnim,
                     transform: [{ translateY: titleChipTranslateY }],
                   },
@@ -354,8 +405,13 @@ export const GlobalHeader = (props: any) => {
               >
                 <Text
                   variant="titleMedium"
-                  style={{ color: '#17211F', fontWeight: 'bold' }}
-                  numberOfLines={1}
+                  style={{
+                    color: theme.colors.onSurface,
+                    fontSize: scaleTypographyMetric(16, textScale),
+                    fontWeight: 'bold',
+                    lineHeight: scaleTypographyMetric(20, textScale),
+                    textAlign: 'center',
+                  }}
                 >
                   {title}
                 </Text>
@@ -365,7 +421,12 @@ export const GlobalHeader = (props: any) => {
         ) : (
           <View style={{ flex: 1 }}>
             {isBiblePage ? (
-              <View style={styles.bibleSearchContainer}>
+              <View
+                style={[
+                  styles.bibleSearchContainer,
+                  stackBibleControls && styles.stackedBibleSearchContainer,
+                ]}
+              >
                 {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
                   <Pressable
                     onPress={onBibleTranslationPress}
@@ -374,29 +435,39 @@ export const GlobalHeader = (props: any) => {
                     style={({ pressed }) => [
                       styles.translationChip,
                       {
+                        minHeight: stackBibleControls
+                          ? wrappedControlHeight
+                          : compactControlHeight,
+                      },
+                      stackBibleControls && styles.stackedTranslationChip,
+                      {
                         backgroundColor: theme.colors.surface,
                         opacity: pressed ? 0.75 : 1,
                       },
                     ]}
                   >
-                    <MaterialCommunityIcons
+                    <AppIcon
                       name="translate"
                       size={18}
+                      textScale={headerTextScale}
                       color={theme.colors.primary}
                     />
                     <Text
-                      numberOfLines={1}
                       style={{
                         color: theme.colors.onSurface,
+                        fontSize: scaleTypographyMetric(14, headerTextScale),
                         fontWeight: '700',
+                        lineHeight: scaleTypographyMetric(19, headerTextScale),
+                        textAlign: 'center',
                         flexShrink: 1,
                       }}
                     >
                       {bibleTranslation}
                     </Text>
-                    <MaterialCommunityIcons
+                    <AppIcon
                       name="chevron-down"
                       size={17}
+                      textScale={headerTextScale}
                       color={theme.colors.onSurfaceVariant}
                     />
                   </Pressable>
@@ -412,15 +483,17 @@ export const GlobalHeader = (props: any) => {
                     }
                     style={({ pressed }) => [
                       styles.collapsedSearchButton,
+                      { height: compactControlHeight, width: compactControlHeight },
                       {
                         backgroundColor: theme.colors.surface,
                         opacity: pressed ? 0.75 : 1,
                       },
                     ]}
                   >
-                    <MaterialCommunityIcons
+                    <AppIcon
                       name={bibleSavedVerseCount > 0 ? 'bookmark' : 'bookmark-outline'}
                       size={23}
+                      textScale={headerTextScale}
                       color={
                         bibleSavedVerseCount > 0
                           ? theme.colors.primary
@@ -440,15 +513,17 @@ export const GlobalHeader = (props: any) => {
                     accessibilityLabel={searchLabels.searchBiblePlaceholder}
                     style={({ pressed }) => [
                       styles.collapsedSearchButton,
+                      { height: compactControlHeight, width: compactControlHeight },
                       {
                         backgroundColor: theme.colors.surface,
                         opacity: pressed ? 0.75 : 1,
                       },
                     ]}
                   >
-                    <MaterialCommunityIcons
+                    <AppIcon
                       name="magnify"
                       size={24}
+                      textScale={headerTextScale}
                       color={theme.colors.onSurfaceVariant}
                     />
                   </Pressable>
@@ -465,7 +540,7 @@ export const GlobalHeader = (props: any) => {
                     {
                       top: Math.max(
                         headerHeight,
-                        insets.top + 64,
+                        insets.top + appBarHeight,
                       ) + 8,
                       backgroundColor: theme.colors.background,
                     },
@@ -476,7 +551,18 @@ export const GlobalHeader = (props: any) => {
                     <List.Item
                       key={isBiblePage ? `verse-${(item as any).number}` : index}
                       title={item.title}
+                      titleNumberOfLines={0}
+                      titleStyle={{
+                        fontSize: scaleTypographyMetric(16, textScale),
+                        lineHeight: scaleTypographyMetric(22, textScale),
+                        fontWeight: '700',
+                      }}
                       description={item.subtitle}
+                      descriptionNumberOfLines={0}
+                      descriptionStyle={{
+                        fontSize: scaleTypographyMetric(14, textScale),
+                        lineHeight: scaleTypographyMetric(20, textScale),
+                      }}
                       left={(p) => (
                         <List.Icon
                           {...p}
@@ -525,9 +611,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   floatingTitleChip: {
-    height: 40,
+    minHeight: 40,
     borderRadius: 20,
     paddingHorizontal: 16,
+    paddingVertical: 8,
     alignSelf: 'flex-start',
     justifyContent: 'center',
     alignItems: 'center',
@@ -542,7 +629,7 @@ const styles = StyleSheet.create({
   floatingSearchbar: {
     elevation: 4,
     borderRadius: 24,
-    height: 44,
+    minHeight: 44,
     marginRight: 12,
     marginLeft: 12,
   },
@@ -554,11 +641,16 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     gap: 8,
   },
+  stackedBibleSearchContainer: {
+    flexWrap: 'wrap',
+    alignContent: 'center',
+    paddingVertical: 6,
+  },
   translationChip: {
     minWidth: 68,
     maxWidth: 240,
     flexShrink: 1,
-    height: 44,
+    minHeight: 44,
     borderRadius: 22,
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -570,6 +662,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
+  },
+  stackedTranslationChip: {
+    flexBasis: '100%',
+    maxWidth: '100%',
   },
   collapsedSearchButton: {
     width: 44,

@@ -1,5 +1,13 @@
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import {
+  DEFAULT_TEXT_SCALE,
+  parseStoredTextScale,
+  persistTextScalePreference,
+  serializeTextScale,
+  TEXT_SCALE_STORAGE_KEY,
+  type TextScale,
+} from '@/constants/AppPreferences';
 import { getHeaderBackTarget, hasHeaderBackButton } from '@/constants/BackNavigation';
 import { openIosPwaInstallGuide } from '@/constants/ExternalLinks';
 import {
@@ -7,6 +15,8 @@ import {
   LanguageContext,
   SupportedLanguage,
 } from '@/constants/LanguageContext';
+import { getBottomTabContentHeight } from '@/constants/Layout';
+import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
   AppTheme,
   getAppTheme,
@@ -20,6 +30,15 @@ import {
   BIBLE_TRANSLATION_STORAGE_KEY,
   DEFAULT_TRANSLATION_MAP,
 } from '@/services/BibleService';
+import {
+  APP_UPDATE_CACHE_BUSTER,
+  fetchDeployedAppVersion,
+  getUpdateReloadUrl,
+  isPwaUpdateCheckDue,
+  PWA_UPDATE_LAST_CHECK_KEY,
+  waitForServiceWorkerInstallation,
+} from '@/services/PwaUpdateService';
+import packageJson from '@/package.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -38,11 +57,15 @@ import {
   Platform,
   StatusBar,
   StyleSheet,
-  useColorScheme
+  useColorScheme,
+  useWindowDimensions,
 } from 'react-native';
 import { PaperProvider, Snackbar } from 'react-native-paper';
 import 'react-native-reanimated';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -86,6 +109,20 @@ const isBibleReaderPath = (pathname: string) =>
   /\/(?:\(tabs\)\/)?bible(?:\/index)?\/?$/.test(pathname);
 
 const DEFERRED_REFRESH_FLAG = '__sdaChurchDeferredRefresh';
+const AUTO_UPDATE_CHECK_COOLDOWN_MS = 60 * 60 * 1000;
+type UpdateStatus = 'idle' | 'checking' | 'up-to-date' | 'updating';
+
+const reloadFromCdn = () => {
+  window.location.replace(getUpdateReloadUrl(window.location.href));
+};
+
+const reloadAfterUpdate = () => {
+  if (isBibleReaderPath(window.location.pathname)) {
+    (window as any)[DEFERRED_REFRESH_FLAG] = true;
+    return;
+  }
+  reloadFromCdn();
+};
 
 const isAndroidChromeBrowser = () => {
   if (
@@ -192,7 +229,7 @@ export const UpdateContext = createContext<{
   updateAvailable: boolean;
   onUpdate: () => void;
   onManualCheck: (options?: { isAuto?: boolean }) => Promise<void>;
-  updateStatus: 'idle' | 'checking' | 'up-to-date';
+  updateStatus: UpdateStatus;
 }>({
   updateAvailable: false,
   onUpdate: () => {},
@@ -204,18 +241,20 @@ export default function RootLayout() {
   const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANG);
   const [languageSelectionRevision, setLanguageSelectionRevision] = useState(0);
   const colorScheme = useColorScheme();
-  const [theme, setTheme] = useState(() => getAppTheme(colorScheme === THEME_DARK));
+  const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
+  const [theme, setTheme] = useState(() =>
+    getAppTheme(colorScheme === THEME_DARK, false, DEFAULT_TEXT_SCALE),
+  );
   const [isReady, setIsReady] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<any>(null);
-  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'up-to-date'>(
-    'idle',
-  );
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [installPromptDismissed, setInstallPromptDismissed] = useState(false);
   const updateCheckInProgress = useRef(false);
+  const lastUpdateCheckAt = useRef(0);
   const updateStatusTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearUpdateStatusTimeout = () => {
@@ -320,15 +359,44 @@ export default function RootLayout() {
       : '/sw.js';
   };
 
-  const handleUpdate = async (workerOverride?: any) => {
+  const refreshUpdateAvailability = async () => {
+    const checkedAt = Date.now();
+    lastUpdateCheckAt.current = checkedAt;
+    try {
+      window.localStorage.setItem(PWA_UPDATE_LAST_CHECK_KEY, String(checkedAt));
+    } catch {
+      // Storage may be unavailable in private browsing; the in-memory cooldown remains.
+    }
+
+    const deployedVersion = await fetchDeployedAppVersion(getSwUrl());
+    if (!deployedVersion) return false;
+    const available = deployedVersion !== packageJson.version;
+    setUpdateAvailable(available);
+    return available;
+  };
+
+  const handleUpdate = async () => {
     if (!canUseServiceWorker()) return;
 
-    const worker = workerOverride || waitingWorker;
-    if (worker) {
-      worker.postMessage({ type: 'SKIP_WAITING' });
-    } else {
-      // Fallback: manually reload if no worker is found but update was requested
-      window.location.reload();
+    setUpdateStatus('updating');
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.update();
+      let worker = registration?.waiting || registration?.installing || waitingWorker;
+      if (worker) {
+        worker = await waitForServiceWorkerInstallation(worker);
+        // Resolve the live registration at press time. A state-held worker can be
+        // replaced if another release finishes installing while the prompt is open.
+        (registration?.waiting || worker).postMessage({ type: 'SKIP_WAITING' });
+        // controllerchange normally reloads first. This fallback still reaches the
+        // CDN if a browser activates the worker without dispatching that event here.
+        window.setTimeout(reloadAfterUpdate, 1500);
+      } else {
+        reloadAfterUpdate();
+      }
+    } catch (error) {
+      console.error('Unable to activate waiting app update:', error);
+      reloadAfterUpdate();
     }
     setUpdateAvailable(false);
   };
@@ -357,30 +425,17 @@ export default function RootLayout() {
         if (registration.waiting) {
           const worker = registration.waiting;
           setWaitingWorker(worker);
-          setUpdateAvailable(true);
+          await refreshUpdateAvailability();
           setUpdateStatus('idle');
-          await handleUpdate(worker);
         } else if (registration.installing) {
           const installingWorker = registration.installing;
-          const onStateChange = () => {
-            if (installingWorker.state === 'installed') {
-              installingWorker.removeEventListener('statechange', onStateChange);
-              setWaitingWorker(installingWorker);
-              setUpdateAvailable(true);
-              setUpdateStatus('idle');
-              handleUpdate(installingWorker);
-            } else if (installingWorker.state === 'redundant') {
-              installingWorker.removeEventListener('statechange', onStateChange);
-              setUpdateStatus('idle');
-            }
-          };
-          installingWorker.addEventListener('statechange', onStateChange);
-          // The worker can finish between registration.update() resolving and
-          // this listener being attached, so inspect its current state too.
-          onStateChange();
+          await waitForServiceWorkerInstallation(installingWorker);
+          setWaitingWorker(registration.waiting || installingWorker);
+          await refreshUpdateAvailability();
+          setUpdateStatus('idle');
         } else {
-          setUpdateAvailable(false);
-          if (options?.isAuto) {
+          const available = await refreshUpdateAvailability();
+          if (options?.isAuto || available) {
             setUpdateStatus('idle');
           } else {
             showUpToDateStatus();
@@ -401,8 +456,24 @@ export default function RootLayout() {
     // Register service worker for PWA support on web
     let removeControllerChangeListener: (() => void) | undefined;
     let removeLoadListener: (() => void) | undefined;
+    let removeVisibilityListener: (() => void) | undefined;
+    let activeRegistration: ServiceWorkerRegistration | undefined;
 
     if (canUseServiceWorker()) {
+      try {
+        lastUpdateCheckAt.current = Number(
+          window.localStorage.getItem(PWA_UPDATE_LAST_CHECK_KEY),
+        );
+      } catch {
+        lastUpdateCheckAt.current = 0;
+      }
+
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.searchParams.has(APP_UPDATE_CACHE_BUSTER)) {
+        currentUrl.searchParams.delete(APP_UPDATE_CACHE_BUSTER);
+        window.history.replaceState(window.history.state, '', currentUrl.toString());
+      }
+
       let refreshing = false;
       const registerSW = async () => {
         const swUrl = getSwUrl();
@@ -413,10 +484,11 @@ export default function RootLayout() {
             // worker's caches while the current page is still using them.
             updateViaCache: 'none',
           });
+          activeRegistration = registration;
           console.log('SW registered with scope:', registration.scope);
 
           let watchedWorker: ServiceWorker | null = null;
-          const activateWhenInstalled = (worker: ServiceWorker | null) => {
+          const announceWhenInstalled = (worker: ServiceWorker | null) => {
             if (!worker || worker === watchedWorker) return;
             watchedWorker = worker;
 
@@ -424,8 +496,9 @@ export default function RootLayout() {
               if (worker.state === 'installed') {
                 worker.removeEventListener('statechange', onStateChange);
                 if (navigator.serviceWorker.controller) {
-                  console.log('New SW content ready. Auto-updating...');
-                  worker.postMessage({ type: 'SKIP_WAITING' });
+                  console.log('New SW content ready. Waiting for user confirmation.');
+                  setWaitingWorker(worker);
+                  void refreshUpdateAvailability();
                 } else {
                   console.log('SW installed for the first time.');
                 }
@@ -442,17 +515,53 @@ export default function RootLayout() {
           // the listener and inspect any existing installing worker before the
           // explicit freshness check.
           registration.onupdatefound = () => {
-            activateWhenInstalled(registration.installing);
+            announceWhenInstalled(registration.installing);
           };
-          activateWhenInstalled(registration.installing);
-          await registration.update();
+          announceWhenInstalled(registration.installing);
+
+          if (
+            isPwaUpdateCheckDue(
+              lastUpdateCheckAt.current,
+              Date.now(),
+              AUTO_UPDATE_CHECK_COOLDOWN_MS,
+            )
+          ) {
+            await registration.update();
+            await refreshUpdateAvailability();
+          }
 
           // 1. Check if there is already an updated worker waiting
           if (registration.waiting) {
-            console.log('New SW already waiting. Auto-updating...');
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            console.log('New SW already waiting for user confirmation.');
+            setWaitingWorker(registration.waiting);
+            await refreshUpdateAvailability();
           }
-          activateWhenInstalled(registration.installing);
+          announceWhenInstalled(registration.installing);
+
+          const checkAfterResume = () => {
+            if (
+              document.visibilityState !== 'visible' ||
+              !navigator.onLine ||
+              !isPwaUpdateCheckDue(
+                lastUpdateCheckAt.current,
+                Date.now(),
+                AUTO_UPDATE_CHECK_COOLDOWN_MS,
+              )
+            ) {
+              return;
+            }
+
+            void registration
+              .update()
+              .then(() => refreshUpdateAvailability())
+              .catch((error) => {
+                console.error('Resumed app update check failed:', error);
+              });
+          };
+
+          document.addEventListener('visibilitychange', checkAfterResume);
+          removeVisibilityListener = () =>
+            document.removeEventListener('visibilitychange', checkAfterResume);
         } catch (error) {
           console.error('SW registration failed:', error);
         }
@@ -471,8 +580,8 @@ export default function RootLayout() {
         }
 
         refreshing = true;
-        console.log('New SW activated, reloading...');
-        window.location.reload();
+        console.log('New SW activated, reloading from CDN...');
+        reloadAfterUpdate();
       };
       navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
       removeControllerChangeListener = () =>
@@ -490,10 +599,11 @@ export default function RootLayout() {
 
     async function prepare() {
       try {
-        const [savedLang, savedTheme, setupDone] = await Promise.all([
+        const [savedLang, savedTheme, setupDone, savedTextScale] = await Promise.all([
           AsyncStorage.getItem('user-language'),
           AsyncStorage.getItem(THEME_STORAGE_KEY),
           AsyncStorage.getItem('has-completed-setup'),
+          AsyncStorage.getItem(TEXT_SCALE_STORAGE_KEY),
         ]);
 
         // Always determine fallbacks first
@@ -504,9 +614,15 @@ export default function RootLayout() {
         const useDarkTheme = savedTheme
           ? savedTheme === THEME_DARK
           : colorScheme === THEME_DARK;
+        const preferredTextScale = parseStoredTextScale(savedTextScale);
         setLanguage(preferredLanguage);
+        setTextScale(preferredTextScale);
         setTheme(
-          getAppTheme(useDarkTheme, needsCjkSystemFont(preferredLanguage)),
+          getAppTheme(
+            useDarkTheme,
+            needsCjkSystemFont(preferredLanguage),
+            preferredTextScale,
+          ),
         );
 
         if (setupDone !== 'true') {
@@ -523,13 +639,15 @@ export default function RootLayout() {
     return () => {
       removeControllerChangeListener?.();
       removeLoadListener?.();
+      removeVisibilityListener?.();
+      if (activeRegistration) activeRegistration.onupdatefound = null;
     };
   }, []);
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
     setLanguageSelectionRevision((revision) => revision + 1);
-    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang)));
+    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang), textScale));
     await AsyncStorage.multiSet([
       ['user-language', lang],
       [BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP[lang] || 'BSB'],
@@ -545,8 +663,25 @@ export default function RootLayout() {
     } else {
       next = !theme.dark;
     }
-    setTheme(getAppTheme(next, needsCjkSystemFont(language)));
+    setTheme(getAppTheme(next, needsCjkSystemFont(language), textScale));
     await AsyncStorage.setItem(THEME_STORAGE_KEY, next ? THEME_DARK : THEME_LIGHT);
+  };
+
+  const handleSetTextScale = async (nextScale: TextScale) => {
+    await persistTextScalePreference(
+      AsyncStorage,
+      nextScale,
+      (persistedScale) => {
+        setTextScale(persistedScale);
+        setTheme((currentTheme) =>
+          getAppTheme(
+            currentTheme.dark,
+            needsCjkSystemFont(language),
+            persistedScale,
+          ),
+        );
+      },
+    );
   };
 
   const onCompleteSetup = async () => {
@@ -561,6 +696,7 @@ export default function RootLayout() {
         DEFAULT_TRANSLATION_MAP[language] || 'BSB',
       ),
       AsyncStorage.setItem(THEME_STORAGE_KEY, theme.dark ? THEME_DARK : THEME_LIGHT),
+      AsyncStorage.setItem(TEXT_SCALE_STORAGE_KEY, serializeTextScale(textScale)),
     ]);
     setShowSetup(false);
   };
@@ -592,6 +728,7 @@ export default function RootLayout() {
     'PlusJakartaSans-Bold': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),
     [SCRIPTURE_FONT_FAMILIES.greek]: require('../assets/fonts/Gentium-Regular.ttf'),
     [SCRIPTURE_FONT_FAMILIES.hebrew]: require('../assets/fonts/EzraSIL-Regular.ttf'),
+    ionicons: require('../assets/fonts/Ionicons.ttf'),
     'material-community': require('../assets/fonts/MaterialCommunityIcons.ttf'),
   });
 
@@ -624,32 +761,36 @@ export default function RootLayout() {
           setLanguage: handleSetLanguage,
         }}
       >
-        <ThemeContext.Provider value={{ toggleTheme: handleToggleTheme }}>
-          <UpdateContext.Provider
-            value={{
-              updateAvailable,
-              onUpdate: handleUpdate,
-              onManualCheck: handleManualCheck,
-              updateStatus,
-            }}
-          >
-            <RootLayoutNav
-              theme={theme}
-              showSetup={showSetup}
-              onCompleteSetup={onCompleteSetup}
-              installAvailable={
-                !installPromptDismissed &&
-                (installPrompt !== null || isIosSafariBrowser())
-              }
-              onInstall={handleInstall}
-              onDismissInstall={() => setInstallPromptDismissed(true)}
-              updateAvailable={updateAvailable}
-              onUpdate={handleUpdate}
-              updateStatus={updateStatus}
-              onDismissStatus={dismissUpdateStatus}
-            />
-          </UpdateContext.Provider>
-        </ThemeContext.Provider>
+        <TextSizeContext.Provider
+          value={{ setTextScale: handleSetTextScale, textScale }}
+        >
+          <ThemeContext.Provider value={{ toggleTheme: handleToggleTheme }}>
+            <UpdateContext.Provider
+              value={{
+                updateAvailable,
+                onUpdate: handleUpdate,
+                onManualCheck: handleManualCheck,
+                updateStatus,
+              }}
+            >
+              <RootLayoutNav
+                theme={theme}
+                showSetup={showSetup}
+                onCompleteSetup={onCompleteSetup}
+                installAvailable={
+                  !installPromptDismissed &&
+                  (installPrompt !== null || isIosSafariBrowser())
+                }
+                onInstall={handleInstall}
+                onDismissInstall={() => setInstallPromptDismissed(true)}
+                updateAvailable={updateAvailable}
+                onUpdate={handleUpdate}
+                updateStatus={updateStatus}
+                onDismissStatus={dismissUpdateStatus}
+              />
+            </UpdateContext.Provider>
+          </ThemeContext.Provider>
+        </TextSizeContext.Provider>
       </LanguageContext.Provider>
     </SafeAreaProvider>
   );
@@ -675,10 +816,12 @@ function RootLayoutNav({
   onDismissInstall: () => void;
   updateAvailable: boolean;
   onUpdate: () => void;
-  updateStatus: 'idle' | 'checking' | 'up-to-date';
+  updateStatus: UpdateStatus;
   onDismissStatus: () => void;
 }) {
   const { language } = useContext(LanguageContext);
+  const { textScale } = useContext(TextSizeContext);
+  const { fontScale, width: viewportWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const segments = useSegments();
@@ -773,36 +916,53 @@ function RootLayoutNav({
   const snackbarLabels = {
     en: {
       checking: 'Checking for updates...',
+      updating: 'Updating app...',
       upToDate: 'App is up to date',
       available: 'Update available',
-      refresh: 'RESTART',
+      refresh: 'UPDATE',
     },
     zh: {
       checking: '正在檢查更新...',
+      updating: '正在更新應用程式...',
       upToDate: '應用程式已是最新版本',
       available: '發現新版本',
-      refresh: '重啟',
+      refresh: '更新',
     },
     'zh-cn': {
       checking: '正在检查更新...',
+      updating: '正在更新应用...',
       upToDate: '应用已是最新版本',
       available: '发现新版本',
-      refresh: '重启',
+      refresh: '更新',
     },
     es: {
       checking: 'Buscando actualizaciones...',
+      updating: 'Actualizando la aplicación...',
       upToDate: 'La aplicación está actualizada',
       available: 'Actualización disponible',
-      refresh: 'REINICIAR',
+      refresh: 'ACTUALIZAR',
     },
   };
 
   const labels =
     snackbarLabels[language as keyof typeof snackbarLabels] || snackbarLabels.en;
 
-  // Positioning the snackbar at the top avoids conflicts with bottom navigation,
-  // gesture indicators, and the software keyboard.
-  const topOffset = insets.top + 8;
+  const isFullscreenWeb =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    window.matchMedia('(display-mode: fullscreen)').matches;
+  const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
+  const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  const bottomTabHeight =
+    getBottomTabContentHeight(Math.max(1, fontScale * textScale)) +
+    bottomTabInset;
+  // Paper already adds the safe-area padding to the Snackbar wrapper, so only
+  // add the portion of the tab offset that it does not account for itself.
+  const snackbarBottomOffset = bottomTabHeight - insets.bottom;
+  const snackbarWidth = Math.min(
+    420,
+    Math.max(0, viewportWidth - Math.max(insets.left, insets.right) * 2 - 16),
+  );
 
   return (
     <PaperProvider theme={theme as any}>
@@ -825,8 +985,27 @@ function RootLayoutNav({
         <Snackbar
           visible={updateStatus !== 'idle' || updateAvailable}
           onDismiss={onDismissStatus}
-          duration={updateStatus === 'checking' || updateAvailable ? Infinity : 3000}
-          wrapperStyle={[styles.snackbarWrapper, { top: topOffset, bottom: 'auto' }]}
+          duration={
+            updateStatus === 'checking' ||
+            updateStatus === 'updating' ||
+            updateAvailable
+              ? Infinity
+              : 3000
+          }
+          wrapperStyle={[
+            styles.snackbarWrapper,
+            { bottom: snackbarBottomOffset, top: 'auto' },
+          ]}
+          style={[styles.snackbar, { width: snackbarWidth }]}
+          theme={{
+            ...theme,
+            colors: {
+              ...theme.colors,
+              inverseSurface: theme.colors.primaryContainer,
+              inverseOnSurface: theme.colors.onPrimaryContainer,
+              inversePrimary: theme.colors.primary,
+            },
+          } as any}
           action={
             updateAvailable
               ? {
@@ -840,6 +1019,8 @@ function RootLayoutNav({
             ? labels.available
             : updateStatus === 'checking'
               ? labels.checking
+              : updateStatus === 'updating'
+                ? labels.updating
               : labels.upToDate}
         </Snackbar>
       </ThemeProvider>
@@ -849,6 +1030,7 @@ function RootLayoutNav({
 
 const styles = StyleSheet.create({
   snackbarWrapper: {
-    // Positioned at the top to clear navigation and keyboard
+    alignItems: 'flex-end',
   },
+  snackbar: { maxWidth: 420 },
 });

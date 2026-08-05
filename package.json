@@ -1,10 +1,16 @@
 {
   "name": "sda-church-app",
   "main": "expo-router/entry",
-  "version": "0.24.1",
+  "version": "0.25.0",
   "homepage": "https://codesammich.github.io/sda-church-app",
   "scripts": {
+    "build:web": "expo export --platform web --clear",
+    "check": "npm run typecheck && npm test && npm run check:text-scale && npm run build:web",
+    "check:text-scale": "node scripts/check-text-scale-coverage.mjs",
     "sync-version": "node public/sync-version.js",
+    "test": "jest --runInBand",
+    "test:integration:bulletin": "node test/integration/bulletin-api.mjs",
+    "typecheck": "tsc --noEmit",
     "web": "expo start --web",
     "deploy": "node public/deploy-web.js $@"
   },
@@ -14,7 +20,8 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.1.8",
     "expo": "~55.0.23",
-    "expo-av": "^16.0.8",
+    "expo-asset": "~55.0.17",
+    "expo-audio": "~55.0.15",
     "expo-blur": "~55.0.14",
     "expo-build-properties": "~55.0.13",
     "expo-constants": "~55.0.16",
@@ -40,14 +47,37 @@
     "react-native-worklets": "0.7.4"
   },
   "devDependencies": {
+    "@testing-library/react-native": "13.3.3",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.43",
     "@types/react": "~19.2.10",
     "babel-preset-expo": "^57.0.2",
     "gh-pages": "^6.3.0",
-    "react-test-renderer": "19.1.0",
+    "jest": "29.7.0",
+    "jest-expo": "~55.0.20",
     "typescript": "~5.9.2"
   },
+  "jest": {
+    "preset": "jest-expo",
+    "clearMocks": true,
+    "restoreMocks": true,
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/setup.ts"
+    ],
+    "testMatch": [
+      "<rootDir>/test/**/*.test.ts"
+    ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|react-native-paper|react-native-safe-area-context))",
+      "/node_modules/react-native-reanimated/plugin/"
+    ]
+  },
   "overrides": {
-    "postcss": "^8.5.1"
+    "postcss": "^8.5.1",
+    "react-test-renderer": "19.2.0"
   },
   "private": true
 }

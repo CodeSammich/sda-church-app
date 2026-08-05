@@ -2,7 +2,7 @@
   "expo": {
     "name": "NY Chinese SDA",
     "slug": "sda-church-app",
-    "version": "0.24.1",
+    "version": "0.25.0",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
@@ -45,6 +45,14 @@
     "plugins": [
       "expo-router",
       "expo-localization",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true,
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
       "./withAndroidSDKOverride"
     ]
   }

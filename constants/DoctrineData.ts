@@ -44,7 +44,7 @@ export const JOINING_CHURCH = {
 export const BAPTISM_MEANING_DATA = {
   en: {
     intro:
-      'When being baptized, one must believe, confess, hold, and observe the true path taught by Jesus.',
+      'When being baptized, one must believe, confess, receive, and observe the true path taught by Jesus.',
     points: [
       {
         title: 'Believe',
@@ -59,7 +59,7 @@ export const BAPTISM_MEANING_DATA = {
         icon: 'account-voice',
       },
       {
-        title: 'Hold and to be',
+        title: 'Receive and Belong',
         desc: 'To become a Christian is to truly possess Him; He becomes your Savior and Heavenly Father, and we truly become His children.',
         ref: '“See what great love the Father has lavished on us, that we should be called children of God! And that is what we are!” (1 John 3:1) (NIV)',
         icon: 'heart-outline',
@@ -88,7 +88,7 @@ export const BAPTISM_MEANING_DATA = {
         icon: 'account-voice',
       },
       {
-        title: '持 Hold and to be',
+        title: '持 Receive and Belong',
         desc: '成為基督徒，是真實地擁有他，他成為你的救主，成為你的天父，我們真實地成為他的兒女。',
         ref: '「你看父賜給我們是何等的慈愛，使我們得稱為上帝的兒女；我們也真是他的兒女。」 (約翰一書 3:1) (CUV)',
         icon: 'heart-outline',
@@ -117,7 +117,7 @@ export const BAPTISM_MEANING_DATA = {
         icon: 'account-voice',
       },
       {
-        title: '持 Hold and to be',
+        title: '持 Receive and Belong',
         desc: '成为基督徒，是真实地拥有他，他成为你的救主，成为你的天父，我们真实地成为他的儿女。',
         ref: '“你看父赐给我们是何等的慈爱，使我们得称为　神的儿女；我们也真是他的儿女。” (约翰一书 3:1) (CUVS)',
         icon: 'heart-outline',

@@ -1,9 +1,18 @@
+import { scaleTypographyMetric } from '@/constants/AppPreferences';
+import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { AppIcon } from '@/components/AppIcon';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ImageBackground, ImageSourcePropType, StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
+import {
+  ImageBackground,
+  ImageSourcePropType,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type VerseHeroProps = {
   title: string;
@@ -26,7 +35,13 @@ export function VerseHero({
   verseColors,
 }: VerseHeroProps) {
   const theme = useAppTheme();
-  const insets = useSafeAreaInsets();
+  const headerHeight = useGlobalHeaderHeight();
+  const { textScale } = useTextSize();
+  const { fontScale } = useWindowDimensions();
+  const styles = useMemo(
+    () => createStyles(textScale, Math.max(1, fontScale * textScale)),
+    [fontScale, textScale],
+  );
 
   return (
     <View style={[styles.shadow, { shadowColor: theme.dark ? '#000000' : verseColors[0] }]}>
@@ -37,7 +52,7 @@ export function VerseHero({
             locations={[0, 0.46, 1]}
             style={StyleSheet.absoluteFill}
           />
-          <View style={[styles.titleArea, { paddingTop: insets.top + 70 }]}>
+          <View style={[styles.titleArea, { paddingTop: headerHeight + 6 }]}>
             <Text variant="headlineSmall" style={styles.title}>
               {title}
             </Text>
@@ -53,7 +68,7 @@ export function VerseHero({
           <View pointerEvents="none" style={styles.glow} />
           <View style={styles.verseLead}>
             <View style={styles.iconDisc}>
-              <MaterialCommunityIcons
+              <AppIcon
                 name="format-quote-open"
                 size={20}
                 color="rgba(255,255,255,0.92)"
@@ -73,7 +88,10 @@ export function VerseHero({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (
+  textScale: Parameters<typeof scaleTypographyMetric>[1],
+  effectiveScale: number,
+) => StyleSheet.create({
   shadow: {
     width: '100%',
     marginBottom: 24,
@@ -91,11 +109,11 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    minHeight: 220,
+    minHeight: 220 + Math.round(Math.max(0, effectiveScale - 1) * 48),
     justifyContent: 'flex-end',
   },
   titleArea: {
-    minHeight: 220,
+    minHeight: 220 + Math.round(Math.max(0, effectiveScale - 1) * 48),
     justifyContent: 'flex-end',
     paddingHorizontal: 20,
     paddingBottom: 22,
@@ -103,8 +121,8 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontWeight: 'bold',
-    fontSize: 28,
-    lineHeight: 36,
+    fontSize: scaleTypographyMetric(28, textScale),
+    lineHeight: scaleTypographyMetric(36, textScale),
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 5,
@@ -151,7 +169,7 @@ const styles = StyleSheet.create({
   verse: {
     color: '#FFFFFF',
     fontStyle: 'italic',
-    lineHeight: 25,
+    lineHeight: scaleTypographyMetric(25, textScale),
     letterSpacing: 0.1,
   },
   reference: {

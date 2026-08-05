@@ -30,6 +30,15 @@ Re-run this comparison if either provider revises its underlying resource.
 HelloAO remains the shared source of translated-edition book names and chapter counts.
 `BibleService.fetchChapter` routes chapter content according to the table above.
 
+`BibleService.parseScriptureReference` converts a single book/chapter reference and an
+optional same-chapter verse range into canonical USFM coordinates. Its localized 66-book
+table accepts and formats English, Traditional Chinese, Simplified Chinese, and Spanish
+book names. Bulletin links use those coordinates to open the current app language's
+default translation and scroll to the first requested verse without selecting it.
+Ambiguous, multi-passage, or cross-chapter strings retain their entered display text but
+their action falls back to Genesis 1:1 in that same language; blank and `TBD` fields remain
+non-actionable.
+
 - **No Auth:** Open access to the selected BSB, KJV, CUV, and Reina-Valera resources
   requires no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
   or developer credentials.

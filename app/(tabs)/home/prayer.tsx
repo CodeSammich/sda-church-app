@@ -1,13 +1,14 @@
 import { VerseHero } from '@/components/VerseHero';
+import { WrappingButton as Button } from '@/components/WrappingButton';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
-import { DocumentStyles } from '@/styles/DocumentStyles';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
 import { ScrollView, View } from 'react-native';
-import { Button, Card, Text } from 'react-native-paper';
+import { Card, Text } from 'react-native-paper';
 
 const allLabels = {
   en: {
@@ -43,6 +44,7 @@ const allLabels = {
 
 export default function PrayerWallScreen() {
   const theme = useAppTheme();
+  const DocumentStyles = useDocumentStyles();
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();

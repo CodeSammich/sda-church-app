@@ -1,21 +1,31 @@
 import { useCallback, useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
-/** Keeps the compact navigation title hidden until the hero heading scrolls away. */
-export function useHeroHeaderTitle(threshold = 120) {
+const SHOW_TITLE_OFFSET = 150;
+const HIDE_TITLE_OFFSET = 120;
+
+/**
+ * Shows the compact header title once the page hero has scrolled out of view.
+ * Separate show/hide thresholds avoid rapid toggling near the boundary.
+ */
+export function useHeroHeaderTitle() {
   const [showHeaderTitle, setShowHeaderTitle] = useState(false);
-  const showHeaderTitleRef = useRef(false);
+  const isShowingRef = useRef(false);
 
   const handleHeroScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const shouldShow = event.nativeEvent.contentOffset.y > threshold;
-      if (shouldShow !== showHeaderTitleRef.current) {
-        showHeaderTitleRef.current = shouldShow;
+      const offset = event.nativeEvent.contentOffset.y;
+      const shouldShow = isShowingRef.current
+        ? offset > HIDE_TITLE_OFFSET
+        : offset >= SHOW_TITLE_OFFSET;
+
+      if (shouldShow !== isShowingRef.current) {
+        isShowingRef.current = shouldShow;
         setShowHeaderTitle(shouldShow);
       }
     },
-    [threshold],
+    [],
   );
 
-  return { showHeaderTitle, handleHeroScroll };
+  return { handleHeroScroll, showHeaderTitle };
 }

@@ -65,7 +65,7 @@ export interface SDAHymnalData {
 }
 
 export const formatHymnalScriptureReference = (reference?: string) =>
-  reference ? `${reference} (BSB)` : undefined;
+  reference || undefined;
 
 /**
  * Converts the Record-based hymnal data into a sorted array.

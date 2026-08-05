@@ -1,16 +1,19 @@
 import { UpdateContext } from '@/app/_layout';
-import { MenuCard } from '@/components/MenuCard';
+import { MenuCard, MenuCardSwitchVisual } from '@/components/MenuCard';
+import { TextSizeDialog } from '@/components/TextSizeDialog';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { getTextSizeMenuCopy } from '@/constants/TextSizeCopy';
+import { useTextSize } from '@/constants/TextSizeContext';
 import { ThemeContext, useAppTheme } from '@/constants/Themes';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import packageJson from '@/package.json';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { ImageBackground, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { List, Switch, Text, TouchableRipple } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { List, Text, TouchableRipple } from 'react-native-paper';
 
 const allLabels = {
   en: {
@@ -73,11 +76,15 @@ const allLabels = {
 
 export default function YouScreen() {
   const theme = useAppTheme();
+  const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const { toggleTheme } = useContext(ThemeContext);
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
-  const insets = useSafeAreaInsets();
+  const { textScale } = useTextSize();
+  const [showTextSize, setShowTextSize] = useState(false);
+  const headerHeight = useGlobalHeaderHeight();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  const textSizeCopy = getTextSizeMenuCopy(language, textScale);
 
   return (
     <>
@@ -90,7 +97,7 @@ export default function YouScreen() {
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
           style={[
             NavigationStyles.heroHeader,
-            { paddingTop: insets.top + 70, paddingBottom: 24 },
+            { paddingTop: headerHeight + 6, paddingBottom: 24 },
           ]}
           resizeMode="cover"
         >
@@ -112,6 +119,7 @@ export default function YouScreen() {
         <View style={styles.body}>
           <List.Section>
             <List.Subheader
+              numberOfLines={0}
               style={[
                 NavigationStyles.subheader,
                 { color: theme.colors.onBackground },
@@ -119,20 +127,6 @@ export default function YouScreen() {
             >
               {labels.settings}
             </List.Subheader>
-            <MenuCard
-              title={labels.darkMode}
-              description={labels.darkModeSub}
-              icon="theme-light-dark"
-              iconColor={theme.colors.primary} // Use primary color for dark mode toggle
-              rightElement={() => (
-                <Switch
-                  value={theme.dark}
-                  onValueChange={toggleTheme}
-                  color={theme.colors.primary}
-                />
-              )}
-              onPress={() => toggleTheme()}
-            />
             <MenuCard
               title={labels.language}
               description={labels.languageSub}
@@ -144,6 +138,34 @@ export default function YouScreen() {
                   params: { backTo: '/you' },
                 } as any)
               }
+            />
+            <MenuCard
+              title={textSizeCopy.title}
+              description={textSizeCopy.description}
+              icon="format-size"
+              iconColor={theme.colors.tertiary}
+              onPress={() => setShowTextSize(true)}
+            />
+            <MenuCard
+              accessibilityRole="switch"
+              accessibilityState={{ checked: theme.dark }}
+              title={labels.darkMode}
+              description={labels.darkModeSub}
+              icon="theme-light-dark"
+              iconColor={theme.colors.primary}
+              rightElement={() => (
+                <MenuCardSwitchVisual
+                  active={theme.dark}
+                  activeColor={theme.colors.primary}
+                  inactiveColor={theme.colors.surfaceVariant}
+                  thumbColor={
+                    theme.dark
+                      ? theme.colors.onPrimary
+                      : theme.colors.onSurfaceVariant
+                  }
+                />
+              )}
+              onPress={() => toggleTheme()}
             />
             <MenuCard
               title={labels.privacy}
@@ -174,7 +196,7 @@ export default function YouScreen() {
           <View style={styles.footer}>
             <TouchableRipple
               onPress={Platform.OS === 'web' ? () => onManualCheck() : undefined}
-              disabled={updateStatus === 'checking'}
+              disabled={updateStatus === 'checking' || updateStatus === 'updating'}
               style={styles.versionRipple}
             >
               <Text
@@ -187,6 +209,10 @@ export default function YouScreen() {
           </View>
         </View>
       </ScrollView>
+      <TextSizeDialog
+        visible={showTextSize}
+        onDismiss={() => setShowTextSize(false)}
+      />
     </>
   );
 }

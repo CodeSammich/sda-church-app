@@ -1,13 +1,12 @@
 import { MenuCard } from '@/components/MenuCard';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
 import { Linking, ScrollView } from 'react-native';
 import { Card, List, Text } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const allLabels = {
   en: {
@@ -70,9 +69,9 @@ const allLabels = {
 
 export default function CommunityScreen() {
   const theme = useAppTheme();
+  const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
-  const insets = useSafeAreaInsets();
-  const headerHeight = insets.top + DESIGN_TOKENS.HEADER_HEIGHT_BASE;
+  const headerHeight = useGlobalHeaderHeight();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   return (
@@ -87,6 +86,7 @@ export default function CommunityScreen() {
       >
         <List.Section>
           <List.Subheader
+            numberOfLines={0}
             style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
           >
             {labels.weeklyHeader}
@@ -106,6 +106,7 @@ export default function CommunityScreen() {
 
         <List.Section>
           <List.Subheader
+            numberOfLines={0}
             style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
           >
             {labels.rosterHeader}
@@ -137,6 +138,7 @@ export default function CommunityScreen() {
 
         <List.Section>
           <List.Subheader
+            numberOfLines={0}
             style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
           >
             {labels.prayerHeader}
@@ -163,6 +165,7 @@ export default function CommunityScreen() {
 
         <List.Section>
           <List.Subheader
+            numberOfLines={0}
             style={[NavigationStyles.subheader, { color: theme.colors.onBackground }]}
           >
             {labels.upcomingHeader}

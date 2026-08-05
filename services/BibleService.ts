@@ -255,31 +255,189 @@ const BOOK_NAME_TO_ID: Record<string, string> = {
   Revelation: 'REV',
 };
 
+/** Canonical book labels used when a reference must follow the app language. */
+export const BIBLE_BOOK_NAMES: Record<string, Record<SupportedLanguage, string>> = {
+  GEN: { en: 'Genesis', zh: '創世記', 'zh-cn': '创世记', es: 'Génesis' },
+  EXO: { en: 'Exodus', zh: '出埃及記', 'zh-cn': '出埃及记', es: 'Éxodo' },
+  LEV: { en: 'Leviticus', zh: '利未記', 'zh-cn': '利未记', es: 'Levítico' },
+  NUM: { en: 'Numbers', zh: '民數記', 'zh-cn': '民数记', es: 'Números' },
+  DEU: { en: 'Deuteronomy', zh: '申命記', 'zh-cn': '申命记', es: 'Deuteronomio' },
+  JOS: { en: 'Joshua', zh: '約書亞記', 'zh-cn': '约书亚记', es: 'Josué' },
+  JDG: { en: 'Judges', zh: '士師記', 'zh-cn': '士师记', es: 'Jueces' },
+  RUT: { en: 'Ruth', zh: '路得記', 'zh-cn': '路得记', es: 'Rut' },
+  '1SA': { en: '1 Samuel', zh: '撒母耳記上', 'zh-cn': '撒母耳记上', es: '1 Samuel' },
+  '2SA': { en: '2 Samuel', zh: '撒母耳記下', 'zh-cn': '撒母耳记下', es: '2 Samuel' },
+  '1KI': { en: '1 Kings', zh: '列王紀上', 'zh-cn': '列王纪上', es: '1 Reyes' },
+  '2KI': { en: '2 Kings', zh: '列王紀下', 'zh-cn': '列王纪下', es: '2 Reyes' },
+  '1CH': { en: '1 Chronicles', zh: '歷代志上', 'zh-cn': '历代志上', es: '1 Crónicas' },
+  '2CH': { en: '2 Chronicles', zh: '歷代志下', 'zh-cn': '历代志下', es: '2 Crónicas' },
+  EZR: { en: 'Ezra', zh: '以斯拉記', 'zh-cn': '以斯拉记', es: 'Esdras' },
+  NEH: { en: 'Nehemiah', zh: '尼希米記', 'zh-cn': '尼希米记', es: 'Nehemías' },
+  EST: { en: 'Esther', zh: '以斯帖記', 'zh-cn': '以斯帖记', es: 'Ester' },
+  JOB: { en: 'Job', zh: '約伯記', 'zh-cn': '约伯记', es: 'Job' },
+  PSA: { en: 'Psalms', zh: '詩篇', 'zh-cn': '诗篇', es: 'Salmos' },
+  PRO: { en: 'Proverbs', zh: '箴言', 'zh-cn': '箴言', es: 'Proverbios' },
+  ECC: { en: 'Ecclesiastes', zh: '傳道書', 'zh-cn': '传道书', es: 'Eclesiastés' },
+  SNG: { en: 'Song of Solomon', zh: '雅歌', 'zh-cn': '雅歌', es: 'Cantares' },
+  ISA: { en: 'Isaiah', zh: '以賽亞書', 'zh-cn': '以赛亚书', es: 'Isaías' },
+  JER: { en: 'Jeremiah', zh: '耶利米書', 'zh-cn': '耶利米书', es: 'Jeremías' },
+  LAM: { en: 'Lamentations', zh: '耶利米哀歌', 'zh-cn': '耶利米哀歌', es: 'Lamentaciones' },
+  EZK: { en: 'Ezekiel', zh: '以西結書', 'zh-cn': '以西结书', es: 'Ezequiel' },
+  DAN: { en: 'Daniel', zh: '但以理書', 'zh-cn': '但以理书', es: 'Daniel' },
+  HOS: { en: 'Hosea', zh: '何西阿書', 'zh-cn': '何西阿书', es: 'Oseas' },
+  JOL: { en: 'Joel', zh: '約珥書', 'zh-cn': '约珥书', es: 'Joel' },
+  AMO: { en: 'Amos', zh: '阿摩司書', 'zh-cn': '阿摩司书', es: 'Amós' },
+  OBA: { en: 'Obadiah', zh: '俄巴底亞書', 'zh-cn': '俄巴底亚书', es: 'Abdías' },
+  JON: { en: 'Jonah', zh: '約拿書', 'zh-cn': '约拿书', es: 'Jonás' },
+  MIC: { en: 'Micah', zh: '彌迦書', 'zh-cn': '弥迦书', es: 'Miqueas' },
+  NAH: { en: 'Nahum', zh: '那鴻書', 'zh-cn': '那鸿书', es: 'Nahúm' },
+  HAB: { en: 'Habakkuk', zh: '哈巴谷書', 'zh-cn': '哈巴谷书', es: 'Habacuc' },
+  ZEP: { en: 'Zephaniah', zh: '西番雅書', 'zh-cn': '西番雅书', es: 'Sofonías' },
+  HAG: { en: 'Haggai', zh: '哈該書', 'zh-cn': '哈该书', es: 'Hageo' },
+  ZEC: { en: 'Zechariah', zh: '撒迦利亞書', 'zh-cn': '撒迦利亚书', es: 'Zacarías' },
+  MAL: { en: 'Malachi', zh: '瑪拉基書', 'zh-cn': '玛拉基书', es: 'Malaquías' },
+  MAT: { en: 'Matthew', zh: '馬太福音', 'zh-cn': '马太福音', es: 'Mateo' },
+  MRK: { en: 'Mark', zh: '馬可福音', 'zh-cn': '马可福音', es: 'Marcos' },
+  LUK: { en: 'Luke', zh: '路加福音', 'zh-cn': '路加福音', es: 'Lucas' },
+  JHN: { en: 'John', zh: '約翰福音', 'zh-cn': '约翰福音', es: 'Juan' },
+  ACT: { en: 'Acts', zh: '使徒行傳', 'zh-cn': '使徒行传', es: 'Hechos' },
+  ROM: { en: 'Romans', zh: '羅馬書', 'zh-cn': '罗马书', es: 'Romanos' },
+  '1CO': { en: '1 Corinthians', zh: '哥林多前書', 'zh-cn': '哥林多前书', es: '1 Corintios' },
+  '2CO': { en: '2 Corinthians', zh: '哥林多後書', 'zh-cn': '哥林多后书', es: '2 Corintios' },
+  GAL: { en: 'Galatians', zh: '加拉太書', 'zh-cn': '加拉太书', es: 'Gálatas' },
+  EPH: { en: 'Ephesians', zh: '以弗所書', 'zh-cn': '以弗所书', es: 'Efesios' },
+  PHP: { en: 'Philippians', zh: '腓立比書', 'zh-cn': '腓立比书', es: 'Filipenses' },
+  COL: { en: 'Colossians', zh: '歌羅西書', 'zh-cn': '歌罗西书', es: 'Colosenses' },
+  '1TH': { en: '1 Thessalonians', zh: '帖撒羅尼迦前書', 'zh-cn': '帖撒罗尼迦前书', es: '1 Tesalonicenses' },
+  '2TH': { en: '2 Thessalonians', zh: '帖撒羅尼迦後書', 'zh-cn': '帖撒罗尼迦后书', es: '2 Tesalonicenses' },
+  '1TI': { en: '1 Timothy', zh: '提摩太前書', 'zh-cn': '提摩太前书', es: '1 Timoteo' },
+  '2TI': { en: '2 Timothy', zh: '提摩太後書', 'zh-cn': '提摩太后书', es: '2 Timoteo' },
+  TIT: { en: 'Titus', zh: '提多書', 'zh-cn': '提多书', es: 'Tito' },
+  PHM: { en: 'Philemon', zh: '腓利門書', 'zh-cn': '腓利门书', es: 'Filemón' },
+  HEB: { en: 'Hebrews', zh: '希伯來書', 'zh-cn': '希伯来书', es: 'Hebreos' },
+  JAS: { en: 'James', zh: '雅各書', 'zh-cn': '雅各书', es: 'Santiago' },
+  '1PE': { en: '1 Peter', zh: '彼得前書', 'zh-cn': '彼得前书', es: '1 Pedro' },
+  '2PE': { en: '2 Peter', zh: '彼得後書', 'zh-cn': '彼得后书', es: '2 Pedro' },
+  '1JN': { en: '1 John', zh: '約翰一書', 'zh-cn': '约翰一书', es: '1 Juan' },
+  '2JN': { en: '2 John', zh: '約翰二書', 'zh-cn': '约翰二书', es: '2 Juan' },
+  '3JN': { en: '3 John', zh: '約翰三書', 'zh-cn': '约翰三书', es: '3 Juan' },
+  JUD: { en: 'Jude', zh: '猶大書', 'zh-cn': '犹大书', es: 'Judas' },
+  REV: { en: 'Revelation', zh: '啟示錄', 'zh-cn': '启示录', es: 'Apocalipsis' },
+};
+
+export type ParsedScriptureReference = {
+  bookId: string;
+  chapter: number;
+  verseStart?: number;
+  verseEnd?: number;
+};
+
+export const DEFAULT_SCRIPTURE_REFERENCE: ParsedScriptureReference = Object.freeze({
+  bookId: 'GEN',
+  chapter: 1,
+  verseStart: 1,
+  verseEnd: 1,
+});
+
+const normalizeBookName = (name: string) =>
+  name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase('en');
+
+const BOOK_ALIAS_TO_ID = Object.entries(BIBLE_BOOK_NAMES).reduce<Record<string, string>>(
+  (aliases, [bookId, names]) => {
+    Object.values(names).forEach((name) => {
+      aliases[normalizeBookName(name)] = bookId;
+    });
+    return aliases;
+  },
+  Object.entries(BOOK_NAME_TO_ID).reduce<Record<string, string>>(
+    (aliases, [name, bookId]) => {
+      aliases[normalizeBookName(name)] = bookId;
+      return aliases;
+    },
+    {
+      ps: 'PSA',
+      psa: 'PSA',
+      psalm: 'PSA',
+    },
+  ),
+);
+
 /**
- * Parses a scripture reference string into USFM book ID and chapter.
- * Supports formats like "Psalm 103:2-5", "1 Timothy 1:17", "Psalm 103".
+ * Parses one same-chapter scripture reference into a canonical USFM book ID,
+ * chapter, and optional verse range. Book names may be entered in any app
+ * language; common colon and dash variants are accepted.
  */
 export const parseScriptureReference = (
   ref?: string,
-): { bookId: string; chapter: number } | null => {
+): ParsedScriptureReference | null => {
   if (!ref) return null;
 
-  // Pattern: [Book Name] [Chapter][:Verse[-EndVerse]]
-  // Group 1: Book Name (allows digits/spaces for "1 Timothy")
-  // Group 2: Chapter
-  const regex = /^([\d\s]*[a-zA-Z\s]+)\s+(\d+)(?::\d+(?:-\d+)?)?$/;
-  const match = ref.trim().match(regex);
+  const withoutTranslation = ref.trim().replace(/\s*\([^)]*\)\s*$/, '');
+  const match = withoutTranslation.match(
+    /^(.+?)\s*(\d+)\s*(?:[:：]\s*(\d+)(?:\s*[-–—]\s*(\d+))?)?$/u,
+  );
 
   if (!match) return null;
 
-  const name = match[1].trim();
+  const name = normalizeBookName(match[1]);
   const chapter = parseInt(match[2], 10);
+  const verseStart = match[3] ? parseInt(match[3], 10) : undefined;
+  const verseEnd = match[4] ? parseInt(match[4], 10) : verseStart;
 
-  const bookId = BOOK_NAME_TO_ID[name];
-  if (!bookId) return null;
+  const bookId = BOOK_ALIAS_TO_ID[name];
+  if (
+    !bookId ||
+    !Number.isInteger(chapter) ||
+    chapter < 1 ||
+    (verseStart !== undefined && verseStart < 1) ||
+    (verseEnd !== undefined && (verseEnd < 1 || verseEnd < verseStart!))
+  ) {
+    return null;
+  }
 
-  return { bookId, chapter };
+  return { bookId, chapter, verseStart, verseEnd };
 };
+
+export const resolveScriptureReference = (reference?: string) =>
+  parseScriptureReference(reference) || DEFAULT_SCRIPTURE_REFERENCE;
+
+export const formatScriptureReference = (
+  reference: ParsedScriptureReference,
+  language: SupportedLanguage,
+) => {
+  const bookName = BIBLE_BOOK_NAMES[reference.bookId]?.[language];
+  if (!bookName) return null;
+
+  const verses = reference.verseStart
+    ? `:${reference.verseStart}${
+        reference.verseEnd && reference.verseEnd !== reference.verseStart
+          ? `-${reference.verseEnd}`
+          : ''
+      }`
+    : '';
+  return `${bookName} ${reference.chapter}${verses}`;
+};
+
+export const getScriptureReaderParams = (
+  reference: ParsedScriptureReference,
+  language: SupportedLanguage,
+) => ({
+  translationId: DEFAULT_TRANSLATION_MAP[language],
+  bookId: reference.bookId,
+  chapter: String(reference.chapter),
+  ...(reference.verseStart
+    ? {
+        verseStart: String(reference.verseStart),
+        verseEnd: String(reference.verseEnd || reference.verseStart),
+      }
+    : {}),
+});
 
 export interface Translation {
   id: string;

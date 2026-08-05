@@ -1,9 +1,13 @@
 import { useAppTheme } from "@/constants/Themes";
+import { scaleTypographyMetric } from "@/constants/AppPreferences";
+import { useTextSize } from "@/constants/TextSizeContext";
 import { Link, Stack } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function NotFoundScreen() {
   const theme = useAppTheme();
+  const { textScale } = useTextSize();
+  const styles = createStyles(textScale);
   return (
     <>
       <Stack.Screen options={{ title: "Oops!" }} />
@@ -24,7 +28,7 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
@@ -32,7 +36,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 20,
+    fontSize: scaleTypographyMetric(20, textScale),
+    lineHeight: scaleTypographyMetric(28, textScale),
     fontWeight: "bold",
   },
   link: {
@@ -40,6 +45,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   linkText: {
-    fontSize: 14,
+    fontSize: scaleTypographyMetric(14, textScale),
+    lineHeight: scaleTypographyMetric(20, textScale),
   },
 });

@@ -8,19 +8,27 @@ import {
   TEN_COMMANDMENTS,
 } from '@/constants/DoctrineData';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
+import { scaleTypographyMetric, type TextScale } from '@/constants/AppPreferences';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
-import { DocumentStyles } from '@/styles/DocumentStyles';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useContext, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, List, Text } from 'react-native-paper';
 
 export default function BaptismScreen() {
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
   const theme = useAppTheme();
+  const { textScale } = useTextSize();
+  const DocumentStyles = useDocumentStyles();
+  const BaptismStyles = useMemo(
+    () => createBaptismStyles(textScale),
+    [textScale],
+  );
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -113,11 +121,14 @@ export default function BaptismScreen() {
         <View style={DocumentStyles.section}>
           <Text
             variant="bodyMedium"
-            style={{
-              color: theme.colors.onSurface,
-              marginBottom: 12,
-              fontWeight: 'bold',
-            }}
+            style={[
+              DocumentStyles.description,
+              {
+                color: theme.colors.onSurface,
+                marginBottom: 12,
+                fontWeight: 'bold',
+              },
+            ]}
           >
             {meaning.intro}
           </Text>
@@ -126,19 +137,29 @@ export default function BaptismScreen() {
             {meaning.points.map((point: any, index: number) => (
               <View key={index}>
                 <List.Item
+                  titleNumberOfLines={0}
                   title={point.title}
-                  titleStyle={{ fontWeight: 'bold', color: theme.colors.onSurface }}
+                  titleStyle={[
+                    BaptismStyles.listTitle,
+                    { color: theme.colors.onSurface },
+                  ]}
                   description={() => (
                     <View style={{ marginTop: 4 }}>
-                      <Text variant="bodyMedium" style={{ marginBottom: 4 }}>
+                      <Text
+                        variant="bodyMedium"
+                        style={[DocumentStyles.description, { marginBottom: 4 }]}
+                      >
                         {point.desc}
                       </Text>
                       <Text
                         variant="labelSmall"
-                        style={{
-                          fontStyle: 'italic',
-                          color: theme.colors.onSurfaceVariant,
-                        }}
+                        style={[
+                          BaptismStyles.reference,
+                          {
+                            fontStyle: 'italic',
+                            color: theme.colors.onSurfaceVariant,
+                          },
+                        ]}
                       >
                         {point.ref}
                       </Text>
@@ -151,7 +172,7 @@ export default function BaptismScreen() {
                       icon={point.icon}
                     />
                   )}
-                  descriptionNumberOfLines={10}
+                  descriptionNumberOfLines={0}
                 />
                 {index < meaning.points.length - 1 && (
                   <List.Icon
@@ -180,7 +201,10 @@ export default function BaptismScreen() {
           </Text>
           <Text
             variant="bodyMedium"
-            style={{ marginBottom: 16, color: theme.colors.onSurface }}
+            style={[
+              DocumentStyles.description,
+              { marginBottom: 16, color: theme.colors.onSurface },
+            ]}
           >
             {pillars.intro}
           </Text>
@@ -193,11 +217,17 @@ export default function BaptismScreen() {
               <Card.Content>
                 <Text
                   variant="titleMedium"
-                  style={{ fontWeight: 'bold', color: theme.colors.onSurface }}
+                  style={[
+                    BaptismStyles.cardTitle,
+                    { fontWeight: 'bold', color: theme.colors.onSurface },
+                  ]}
                 >
                   {pillar.title}
                 </Text>
-                <Text variant="bodyMedium" style={{ marginTop: 4 }}>
+                <Text
+                  variant="bodyMedium"
+                  style={[DocumentStyles.description, { marginTop: 4 }]}
+                >
                   {pillar.desc}
                 </Text>
               </Card.Content>
@@ -206,7 +236,10 @@ export default function BaptismScreen() {
           {pillars.footer && (
             <Text
               variant="bodyMedium"
-              style={{ marginTop: 8, color: theme.colors.onSurfaceVariant }}
+              style={[
+                DocumentStyles.description,
+                { marginTop: 8, color: theme.colors.onSurfaceVariant },
+              ]}
             >
               {pillars.footer}
             </Text>
@@ -228,7 +261,10 @@ export default function BaptismScreen() {
           </Text>
           <Text
             variant="bodyMedium"
-            style={{ marginBottom: 16, color: theme.colors.onSurface }}
+            style={[
+              DocumentStyles.description,
+              { marginBottom: 16, color: theme.colors.onSurface },
+            ]}
           >
             {joining.intro}
           </Text>
@@ -242,12 +278,18 @@ export default function BaptismScreen() {
               <Card.Content>
                 <Text
                   variant="titleMedium"
-                  style={{ color: theme.colors.primary, fontWeight: 'bold' }}
+                  style={[
+                    BaptismStyles.cardTitle,
+                    { color: theme.colors.primary, fontWeight: 'bold' },
+                  ]}
                 >
                   {method.title}
                 </Text>
                 <Text
-                  style={{ color: theme.colors.onSurface, marginTop: 8 }}
+                  style={[
+                    DocumentStyles.description,
+                    { color: theme.colors.onSurface, marginTop: 8 },
+                  ]}
                   variant="bodyMedium"
                 >
                   {method.desc}
@@ -273,6 +315,8 @@ export default function BaptismScreen() {
 
           <List.Accordion
             title={labels.vowsTitle}
+            titleNumberOfLines={0}
+            titleStyle={BaptismStyles.accordionTitle}
             expanded={expanded === 'vows'}
             onPress={() => setExpanded(expanded === 'vows' ? null : 'vows')}
             left={(props) => (
@@ -283,7 +327,10 @@ export default function BaptismScreen() {
             <Card style={DocumentStyles.card} mode="outlined">
               <Card.Content>
                 {vows.map((vow, idx) => (
-                  <Text key={idx} style={{ marginBottom: 8 }}>
+                  <Text
+                    key={idx}
+                    style={[DocumentStyles.description, { marginBottom: 8 }]}
+                  >
                     {idx + 1}. {vow}
                   </Text>
                 ))}
@@ -293,6 +340,8 @@ export default function BaptismScreen() {
 
           <List.Accordion
             title={labels.commandmentsTitle}
+            titleNumberOfLines={0}
+            titleStyle={BaptismStyles.accordionTitle}
             expanded={expanded === 'commandments'}
             onPress={() =>
               setExpanded(expanded === 'commandments' ? null : 'commandments')
@@ -307,25 +356,34 @@ export default function BaptismScreen() {
                 {commandments.intro && (
                   <Text
                     variant="bodyMedium"
-                    style={{ marginBottom: 16, fontWeight: 'bold' }}
+                    style={[
+                      DocumentStyles.description,
+                      { marginBottom: 16, fontWeight: 'bold' },
+                    ]}
                   >
                     {commandments.intro}
                   </Text>
                 )}
                 {commandments.items.map((cmd: string, idx: number) => (
-                  <Text key={idx} style={{ marginBottom: 12 }}>
+                  <Text
+                    key={idx}
+                    style={[DocumentStyles.description, { marginBottom: 12 }]}
+                  >
                     {cmd}
                   </Text>
                 ))}
                 {commandments.citation && (
                   <Text
                     variant="labelSmall"
-                    style={{
-                      textAlign: 'right',
-                      marginTop: 8,
-                      fontStyle: 'italic',
-                      color: theme.colors.onSurfaceVariant,
-                    }}
+                    style={[
+                      BaptismStyles.reference,
+                      {
+                        textAlign: 'right',
+                        marginTop: 8,
+                        fontStyle: 'italic',
+                        color: theme.colors.onSurfaceVariant,
+                      },
+                    ]}
                   >
                     {commandments.citation}
                   </Text>
@@ -336,6 +394,8 @@ export default function BaptismScreen() {
 
           <List.Accordion
             title={labels.lifestyleTitle}
+            titleNumberOfLines={0}
+            titleStyle={BaptismStyles.accordionTitle}
             expanded={expanded === 'lifestyle'}
             onPress={() => setExpanded(expanded === 'lifestyle' ? null : 'lifestyle')}
             left={(props) => (
@@ -347,30 +407,55 @@ export default function BaptismScreen() {
               <Card.Content>
                 <Text
                   variant="titleMedium"
-                  style={{
-                    fontWeight: 'bold',
-                    marginBottom: 8,
-                    color: theme.colors.onSurface,
-                  }}
+                  style={[
+                    BaptismStyles.cardTitle,
+                    {
+                      fontWeight: 'bold',
+                      marginBottom: 8,
+                      color: theme.colors.onSurface,
+                    },
+                  ]}
                 >
                   {diet.title}
                 </Text>
                 <Text
                   variant="bodySmall"
-                  style={{ marginBottom: 16, color: theme.colors.onSurfaceVariant }}
+                  style={[
+                    BaptismStyles.supportingText,
+                    { marginBottom: 16, color: theme.colors.onSurfaceVariant },
+                  ]}
                 >
                   {diet.scripture}
                 </Text>
                 <Text
                   variant="labelLarge"
-                  style={{ fontWeight: 'bold', marginBottom: 8 }}
+                  style={[
+                    BaptismStyles.supportingText,
+                    { fontWeight: 'bold', marginBottom: 8 },
+                  ]}
                 >
                   {diet.summaryTitle}
                 </Text>
-                <List.Item title={diet.land} titleNumberOfLines={3} />
-                <List.Item title={diet.water} titleNumberOfLines={3} />
-                <List.Item title={diet.insects} titleNumberOfLines={3} />
-                <List.Item title={diet.birds} titleNumberOfLines={3} />
+                <List.Item
+                  title={diet.land}
+                  titleNumberOfLines={0}
+                  titleStyle={BaptismStyles.listBody}
+                />
+                <List.Item
+                  title={diet.water}
+                  titleNumberOfLines={0}
+                  titleStyle={BaptismStyles.listBody}
+                />
+                <List.Item
+                  title={diet.insects}
+                  titleNumberOfLines={0}
+                  titleStyle={BaptismStyles.listBody}
+                />
+                <List.Item
+                  title={diet.birds}
+                  titleNumberOfLines={0}
+                  titleStyle={BaptismStyles.listBody}
+                />
                 <View
                   style={{
                     marginTop: 8,
@@ -379,7 +464,10 @@ export default function BaptismScreen() {
                     borderRadius: 8,
                   }}
                 >
-                  <Text variant="bodyMedium" style={{ fontStyle: 'italic' }}>
+                  <Text
+                    variant="bodyMedium"
+                    style={[DocumentStyles.description, { fontStyle: 'italic' }]}
+                  >
                     {diet.lifestyle}
                   </Text>
                 </View>
@@ -391,3 +479,32 @@ export default function BaptismScreen() {
     </>
   );
 }
+
+const createBaptismStyles = (textScale: TextScale) => StyleSheet.create({
+  accordionTitle: {
+    fontSize: scaleTypographyMetric(16, textScale),
+    lineHeight: scaleTypographyMetric(22, textScale),
+    fontWeight: '700',
+  },
+  cardTitle: {
+    fontSize: scaleTypographyMetric(16, textScale),
+    lineHeight: scaleTypographyMetric(22, textScale),
+  },
+  listBody: {
+    fontSize: scaleTypographyMetric(16, textScale),
+    lineHeight: scaleTypographyMetric(22, textScale),
+  },
+  listTitle: {
+    fontSize: scaleTypographyMetric(18, textScale),
+    lineHeight: scaleTypographyMetric(24, textScale),
+    fontWeight: '700',
+  },
+  reference: {
+    fontSize: scaleTypographyMetric(12, textScale),
+    lineHeight: scaleTypographyMetric(18, textScale),
+  },
+  supportingText: {
+    fontSize: scaleTypographyMetric(14, textScale),
+    lineHeight: scaleTypographyMetric(20, textScale),
+  },
+});

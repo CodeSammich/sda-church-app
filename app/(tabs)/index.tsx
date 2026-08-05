@@ -1,4 +1,6 @@
 import { GridMenuCard } from '@/components/GridMenuCard';
+import { WrappingActionButton } from '@/components/WrappingActionButton';
+import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   CHURCH_LATITUDE,
@@ -7,35 +9,57 @@ import {
   openSabbathStream,
 } from '@/constants/ExternalLinks';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { DESIGN_TOKENS, shouldUseStackedHomeLayout } from '@/constants/Layout';
+import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
-import { NavigationStyles } from '@/styles/NavigationStyles';
+import { createNavigationStyles } from '@/styles/NavigationStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import {
   ImageBackground,
   Platform,
   ScrollView,
   Share,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { Button, Card, List, Text } from 'react-native-paper';
+import { Card, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { textScale } = useTextSize();
+  const { fontScale, width: windowWidth } = useWindowDimensions();
+  const effectiveTextScale = Math.max(1, fontScale * textScale);
+  // Preserve the upstream two-column phone grid at 100%, then stack only
+  // when the scaled text would leave each card too narrow to wrap cleanly.
+  const useStackedLayout = shouldUseStackedHomeLayout(
+    windowWidth,
+    effectiveTextScale,
+  );
+  const styles = useMemo(
+    () => createStyles(textScale, effectiveTextScale, useStackedLayout),
+    [effectiveTextScale, textScale, useStackedLayout],
+  );
+  const navigationStyles = useMemo(
+    () =>
+      createNavigationStyles(textScale, {
+        bottomInset: insets.bottom,
+        fontScale,
+      }),
+    [fontScale, insets.bottom, textScale],
+  );
 
   const allLabels = {
     en: {
-      welcome: 'Welcome!',
       subtitle: 'Loading daily verse...',
-      verseOfDay: 'A word for your unique journey today',
+      verseOfDay: 'Today’s Verse',
       readVerse: 'Read Verse',
       shareVerse: 'Share Verse',
       livestream: 'Watch Livestream',
@@ -47,17 +71,13 @@ export default function HomeScreen() {
       sabbathStarts: 'Sabbath starts in',
       sabbathEnds: 'Sabbath ends in',
       isSabbath: 'Happy Sabbath!',
-      fullscreenReminder:
-        'For full screen, swipe down from the top to open notifications, then swipe back up.',
-      dismissReminder: 'Got it',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: 'New York, NY',
     },
     zh: {
-      welcome: '歡迎！',
       subtitle: '正在載入經文...',
-      verseOfDay: '今日為您預備的話語',
+      verseOfDay: '今日經文',
       readVerse: '查閱經文',
       shareVerse: '分享經文',
       livestream: '觀看直播',
@@ -69,16 +89,13 @@ export default function HomeScreen() {
       sabbathStarts: '距離安息日還有',
       sabbathEnds: '距離安息日結束還有',
       isSabbath: '安息日快樂！',
-      fullscreenReminder: '若要進入全螢幕，請從頂端向下滑開啟通知，再向上滑關閉。',
-      dismissReminder: '知道了',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: '紐約',
     },
     'zh-cn': {
-      welcome: '欢迎！',
       subtitle: '正在载入经文...',
-      verseOfDay: '今日为您准备的话语',
+      verseOfDay: '今日经文',
       readVerse: '查阅经文',
       shareVerse: '分享经文',
       livestream: '观看直播',
@@ -90,14 +107,11 @@ export default function HomeScreen() {
       sabbathStarts: '距离安息日还有',
       sabbathEnds: '距离安息日结束还有',
       isSabbath: '安息日快乐！',
-      fullscreenReminder: '若要进入全屏，请从顶部向下滑打开通知，再向上滑关闭。',
-      dismissReminder: '知道了',
       locationDefault: '纽约',
     },
     es: {
-      welcome: '¡Bienvenido!',
       subtitle: 'Cargando versículo...',
-      verseOfDay: 'Una palabra para tu camino hoy',
+      verseOfDay: 'Versículo de hoy',
       readVerse: 'Leer Versículo',
       shareVerse: 'Compartir',
       livestream: 'Ver Transmisión',
@@ -109,9 +123,6 @@ export default function HomeScreen() {
       sabbathStarts: 'El Sábado comienza en',
       sabbathEnds: 'El Sábado termina en',
       isSabbath: '¡Feliz Sábado!',
-      fullscreenReminder:
-        'Para usar la pantalla completa, desliza hacia abajo para abrir las notificaciones y luego hacia arriba.',
-      dismissReminder: 'Entendido',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: 'New York, NY',
@@ -130,7 +141,6 @@ export default function HomeScreen() {
   } | null>(null);
 
   const [isSabbath, setIsSabbath] = useState(false);
-  const [showFullscreenReminder, setShowFullscreenReminder] = useState(false);
   const [countdown, setCountdown] = useState('');
   const [useGps, setUseGps] = useState(false);
   const [targetDate, setTargetDate] = useState<Date | null>(null);
@@ -142,27 +152,6 @@ export default function HomeScreen() {
 
   const VOTD_CONFIG_KEY = 'votd_selection_config';
   const VOTD_CACHE_KEY = `votd_cache_${language}`;
-
-  useEffect(() => {
-    if (
-      Platform.OS !== 'web' ||
-      typeof window === 'undefined' ||
-      typeof navigator === 'undefined' ||
-      !/Android/i.test(navigator.userAgent) ||
-      (!window.matchMedia('(display-mode: standalone)').matches &&
-        !window.matchMedia('(display-mode: fullscreen)').matches)
-    ) {
-      return;
-    }
-
-    const reminderKey = 'android-fullscreen-reminder-shown-v2';
-    if (window.sessionStorage.getItem(reminderKey) === 'done') return;
-
-    // Keep tab changes, back navigation, and app resume from being mistaken for
-    // a fresh launch. A new standalone app session receives a new page session.
-    window.sessionStorage.setItem(reminderKey, 'done');
-    setShowFullscreenReminder(true);
-  }, []);
 
   // Sabbath Countdown Logic
   // NOTE: There is nothing wrong with this logic itself, but after user testing it looks like most people turn off
@@ -378,7 +367,9 @@ export default function HomeScreen() {
         if (verseContent) {
           const text = BibleService.renderVerseToPlainText(transId, verseContent);
           const newVOTD = {
-            text: `"${text}"`,
+            // The Bible text can contain dialogue punctuation of its own. Keep
+            // it verbatim instead of adding decorative outer quotation marks.
+            text,
             reference: `${book.name} ${selection.chapter}:${selection.verse}`,
             bookId: book.id,
             chapter: selection.chapter,
@@ -443,7 +434,7 @@ export default function HomeScreen() {
   return (
     <>
       <ScrollView
-        style={NavigationStyles.container}
+        style={navigationStyles.container}
         contentContainerStyle={{ paddingTop: 0 }}
       >
         <ImageBackground
@@ -465,22 +456,13 @@ export default function HomeScreen() {
             variant="headlineMedium"
             style={[styles.welcomeText, { color: '#FFFFFF' }]}
           >
-            {labels.welcome}
-          </Text>
-          <Text
-            variant="labelLarge"
-            style={{
-              color: '#FFFFFF',
-              opacity: 0.8,
-              marginBottom: 4,
-            }}
-          >
-            {(labels as any).verseOfDay}
+            {labels.verseOfDay}
           </Text>
           <Text
             variant="titleMedium"
             style={{
               color: '#FFFFFF',
+              alignSelf: 'stretch',
               textAlign: 'center',
               fontStyle: 'italic',
               marginTop: 4,
@@ -490,64 +472,30 @@ export default function HomeScreen() {
               ? `${randomVerse.text}\n— ${randomVerse.reference}`
               : labels.subtitle}
           </Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              marginTop: 16,
-              gap: 12,
-              width: '100%',
-              paddingHorizontal: 16,
-            }}
-          >
-            <Button
-              mode="outlined"
+          <View style={styles.heroActions}>
+            <WrappingActionButton
+              borderColor="#FFFFFF"
+              disabled={!randomVerse}
               icon="share-variant"
+              label={(labels as any).shareVerse}
               onPress={handleShare}
-              disabled={!randomVerse}
-              style={{ borderRadius: 20, flex: 1, borderColor: '#FFFFFF' }}
               textColor="#FFFFFF"
-            >
-              {(labels as any).shareVerse}
-            </Button>
-            <Button
-              mode="contained"
-              icon="book-open-variant"
-              onPress={navigateToVerse}
+              style={styles.heroActionButton}
+            />
+            <WrappingActionButton
+              backgroundColor={theme.colors.primary}
+              borderColor={theme.colors.primary}
               disabled={!randomVerse}
-              style={{ borderRadius: 20, flex: 1 }}
-            >
-              {(labels as any).readVerse}
-            </Button>
+              icon="book-open-variant"
+              label={(labels as any).readVerse}
+              onPress={navigateToVerse}
+              textColor={theme.colors.onPrimary}
+              style={styles.heroActionButton}
+            />
           </View>
         </ImageBackground>
 
-        <List.Section style={NavigationStyles.contentContainer}>
-          {showFullscreenReminder && (
-            <Card
-              style={[
-                styles.fullscreenReminder,
-                { backgroundColor: theme.colors.secondaryContainer },
-              ]}
-              mode="contained"
-            >
-              <Card.Content style={styles.fullscreenReminderContent}>
-                <List.Icon icon="gesture-swipe-down" color={theme.colors.secondary} />
-                <Text
-                  variant="bodyMedium"
-                  style={[
-                    styles.fullscreenReminderText,
-                    { color: theme.colors.onSecondaryContainer },
-                  ]}
-                >
-                  {labels.fullscreenReminder}
-                </Text>
-                <Button compact onPress={() => setShowFullscreenReminder(false)}>
-                  {labels.dismissReminder}
-                </Button>
-              </Card.Content>
-            </Card>
-          )}
-
+        <List.Section style={navigationStyles.contentContainer}>
           {/* Sabbath Countdown Widget */}
           <Card
             style={[styles.timerCard, { backgroundColor: theme.colors.surface }]}
@@ -665,7 +613,11 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (
+  textScale: Parameters<typeof scaleTypographyMetric>[1],
+  effectiveTextScale: number,
+  useStackedLayout: boolean,
+) => StyleSheet.create({
   hero: {
     paddingHorizontal: 24,
     alignItems: 'center',
@@ -679,34 +631,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
+  heroActions: {
+    flexDirection: useStackedLayout ? 'column' : 'row',
+    marginTop: 16,
+    gap: 12,
+    width: '100%',
+    paddingHorizontal: 16,
+  },
+  heroActionButton: {
+    flex: useStackedLayout ? undefined : 1,
+    width: useStackedLayout ? '100%' : undefined,
+  },
   timerCard: {
     marginBottom: 16,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
   },
-  fullscreenReminder: {
-    marginBottom: 12,
-    borderRadius: 12,
-  },
-  fullscreenReminderContent: {
-    minHeight: 64,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  fullscreenReminderText: {
-    flex: 1,
-    marginLeft: -4,
-  },
   timerContentSubtle: {
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
   timerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: useStackedLayout ? 'column' : 'row',
+    alignItems: useStackedLayout ? 'flex-start' : 'center',
     justifyContent: 'space-between',
   },
   labelColumn: {
@@ -715,8 +663,11 @@ const styles = StyleSheet.create({
   timerValueSubtle: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontVariant: ['tabular-nums'],
-    fontSize: 16,
+    fontSize: scaleTypographyMetric(16, textScale),
+    lineHeight: scaleTypographyMetric(24, textScale),
     fontWeight: '700',
+    marginTop: useStackedLayout ? 8 : 0,
+    flexShrink: 0,
   },
   grid: {
     flexDirection: 'row',
@@ -726,7 +677,7 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   gridCell: {
-    flexBasis: '47.5%',
+    flexBasis: useStackedLayout ? '100%' : '47.5%',
     flexGrow: 1,
   },
 });

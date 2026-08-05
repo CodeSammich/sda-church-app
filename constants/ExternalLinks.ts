@@ -21,10 +21,8 @@ export const CHILDREN_MINISTRY_WORKER_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/13221357/geng_shuang-1536x1024.jpg';
 export const FOOD_BANK_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2025/09/28035000/mmexport1738506529402.jpg.jpg';
-export const FELLOWSHIP_IMAGES_URLS = [
-  'https://assets.adventistconnect.org/newyork2/2026/07/19120609/fellowship_1.png',
-  'https://assets.adventistconnect.org/newyork2/2026/07/19120602/fellowship_2.png',
-];
+export const FLUSHING_FELLOWSHIP_IMAGE_URL =
+  'https://assets.adventistconnect.org/newyork2/2026/07/01230029/flushing_fellowship_3.jpg';
 export const ELMHURST_SABBATH_URLS = [
   'https://assets.adventistconnect.org/newyork2/2026/07/19124827/elmhurst_sabbath.png'
 ]
@@ -43,6 +41,34 @@ export const CHURCH_LONGITUDE = -73.88914;
  */
 export const getSunsetApiUrl = (lat: number, lng: number, date: string) =>
   `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${date}&formatted=0`;
+
+/**
+ * Production bulletin API. The public PWA sends only a Sabbath date; Apps
+ * Script joins the yearly schedule with Queens/Brooklyn worship responses and
+ * returns privacy-filtered JSON.
+ *
+ * Architecture, deployment, privacy, and verification documentation:
+ * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/apps-script/README.md
+ */
+export const BULLETIN_API_BASE_URL =
+  'https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec';
+
+export const getBulletinApiUrl = (date: string) =>
+  `${BULLETIN_API_BASE_URL}?date=${encodeURIComponent(date)}`;
+
+/**
+ * Staff-only source schedule. Google Drive enforces access for signed-in
+ * nyccsda.org accounts; the public PWA does not proxy or embed its contents.
+ */
+export const QUARTERLY_SCHEDULE_URL =
+  'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit?usp=sharing';
+
+export const openQuarterlySchedule = () =>
+  openURL(
+    QUARTERLY_SCHEDULE_URL,
+    'Access unavailable',
+    'Could not open the staff schedule.',
+  );
 
 /**
  * Centralized hub for external destinations.
