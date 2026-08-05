@@ -32,3 +32,31 @@ export const fetchDeployedAppVersion = async (
   if (!response.ok) return null;
   return parseServiceWorkerVersion(await response.text());
 };
+
+/** Waits until a newly discovered service worker is ready to be activated. */
+export const waitForServiceWorkerInstallation = (
+  worker: ServiceWorker,
+): Promise<ServiceWorker> => {
+  if (worker.state === 'installed' || worker.state === 'activated') {
+    return Promise.resolve(worker);
+  }
+  if (worker.state === 'redundant') {
+    return Promise.reject(new Error('The app update service worker became redundant.'));
+  }
+
+  return new Promise((resolve, reject) => {
+    const onStateChange = () => {
+      if (worker.state === 'installed' || worker.state === 'activated') {
+        worker.removeEventListener('statechange', onStateChange);
+        resolve(worker);
+      } else if (worker.state === 'redundant') {
+        worker.removeEventListener('statechange', onStateChange);
+        reject(new Error('The app update service worker became redundant.'));
+      }
+    };
+
+    worker.addEventListener('statechange', onStateChange);
+    // Cover a state transition that occurred immediately before the listener.
+    onStateChange();
+  });
+};

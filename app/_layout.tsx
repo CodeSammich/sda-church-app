@@ -15,6 +15,7 @@ import {
   LanguageContext,
   SupportedLanguage,
 } from '@/constants/LanguageContext';
+import { getBottomTabContentHeight } from '@/constants/Layout';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
   AppTheme,
@@ -35,9 +36,9 @@ import {
   getUpdateReloadUrl,
   isPwaUpdateCheckDue,
   PWA_UPDATE_LAST_CHECK_KEY,
+  waitForServiceWorkerInstallation,
 } from '@/services/PwaUpdateService';
 import packageJson from '@/package.json';
-import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -56,11 +57,15 @@ import {
   Platform,
   StatusBar,
   StyleSheet,
-  useColorScheme
+  useColorScheme,
+  useWindowDimensions,
 } from 'react-native';
 import { PaperProvider, Snackbar } from 'react-native-paper';
 import 'react-native-reanimated';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -377,11 +382,12 @@ export default function RootLayout() {
     try {
       const registration = await navigator.serviceWorker.getRegistration();
       await registration?.update();
-      const worker = registration?.waiting || waitingWorker;
+      let worker = registration?.waiting || registration?.installing || waitingWorker;
       if (worker) {
+        worker = await waitForServiceWorkerInstallation(worker);
         // Resolve the live registration at press time. A state-held worker can be
         // replaced if another release finishes installing while the prompt is open.
-        worker.postMessage({ type: 'SKIP_WAITING' });
+        (registration?.waiting || worker).postMessage({ type: 'SKIP_WAITING' });
         // controllerchange normally reloads first. This fallback still reaches the
         // CDN if a browser activates the worker without dispatching that event here.
         window.setTimeout(reloadAfterUpdate, 1500);
@@ -423,21 +429,10 @@ export default function RootLayout() {
           setUpdateStatus('idle');
         } else if (registration.installing) {
           const installingWorker = registration.installing;
-          const onStateChange = () => {
-            if (installingWorker.state === 'installed') {
-              installingWorker.removeEventListener('statechange', onStateChange);
-              setWaitingWorker(installingWorker);
-              void refreshUpdateAvailability();
-              setUpdateStatus('idle');
-            } else if (installingWorker.state === 'redundant') {
-              installingWorker.removeEventListener('statechange', onStateChange);
-              setUpdateStatus('idle');
-            }
-          };
-          installingWorker.addEventListener('statechange', onStateChange);
-          // The worker can finish between registration.update() resolving and
-          // this listener being attached, so inspect its current state too.
-          onStateChange();
+          await waitForServiceWorkerInstallation(installingWorker);
+          setWaitingWorker(registration.waiting || installingWorker);
+          await refreshUpdateAvailability();
+          setUpdateStatus('idle');
         } else {
           const available = await refreshUpdateAvailability();
           if (options?.isAuto || available) {
@@ -825,8 +820,10 @@ function RootLayoutNav({
   onDismissStatus: () => void;
 }) {
   const { language } = useContext(LanguageContext);
+  const { textScale } = useContext(TextSizeContext);
+  const { fontScale, width: viewportWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const pathname = usePathname();
-  const globalHeaderHeight = useGlobalHeaderHeight(isBibleReaderPath(pathname));
   const segments = useSegments();
   const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
   const gestureBackTarget = hasHeaderBackButton(segments)
@@ -950,9 +947,22 @@ function RootLayoutNav({
   const labels =
     snackbarLabels[language as keyof typeof snackbarLabels] || snackbarLabels.en;
 
-  // Positioning the snackbar at the top avoids conflicts with bottom navigation,
-  // gesture indicators, and the software keyboard.
-  const topOffset = globalHeaderHeight + 8;
+  const isFullscreenWeb =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    window.matchMedia('(display-mode: fullscreen)').matches;
+  const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
+  const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  const bottomTabHeight =
+    getBottomTabContentHeight(Math.max(1, fontScale * textScale)) +
+    bottomTabInset;
+  // Paper already adds the safe-area padding to the Snackbar wrapper, so only
+  // add the portion of the tab offset that it does not account for itself.
+  const snackbarBottomOffset = bottomTabHeight - insets.bottom;
+  const snackbarWidth = Math.min(
+    420,
+    Math.max(0, viewportWidth - Math.max(insets.left, insets.right) * 2 - 16),
+  );
 
   return (
     <PaperProvider theme={theme as any}>
@@ -982,7 +992,11 @@ function RootLayoutNav({
               ? Infinity
               : 3000
           }
-          wrapperStyle={[styles.snackbarWrapper, { top: topOffset, bottom: 'auto' }]}
+          wrapperStyle={[
+            styles.snackbarWrapper,
+            { bottom: snackbarBottomOffset, top: 'auto' },
+          ]}
+          style={[styles.snackbar, { width: snackbarWidth }]}
           theme={{
             ...theme,
             colors: {
@@ -1016,6 +1030,7 @@ function RootLayoutNav({
 
 const styles = StyleSheet.create({
   snackbarWrapper: {
-    // Positioned at the top to clear navigation and keyboard
+    alignItems: 'flex-end',
   },
+  snackbar: { maxWidth: 420 },
 });

@@ -4,6 +4,7 @@ import {
   getUpdateReloadUrl,
   isPwaUpdateCheckDue,
   parseServiceWorkerVersion,
+  waitForServiceWorkerInstallation,
 } from '@/services/PwaUpdateService';
 
 describe('PWA update navigation', () => {
@@ -43,6 +44,29 @@ describe('PWA update navigation', () => {
     expect(fetcher).toHaveBeenCalledWith(
       expect.stringContaining('/sw.js?__appUpdate='),
       { cache: 'no-store' },
+    );
+  });
+
+  it('waits for an installing update worker before allowing activation', async () => {
+    let stateChangeListener: (() => void) | undefined;
+    const worker = {
+      state: 'installing',
+      addEventListener: jest.fn((_event, listener) => {
+        stateChangeListener = listener as () => void;
+      }),
+      removeEventListener: jest.fn(),
+    } as unknown as ServiceWorker;
+
+    const installed = waitForServiceWorkerInstallation(worker);
+    expect(stateChangeListener).toBeDefined();
+
+    Object.defineProperty(worker, 'state', { value: 'installed' });
+    stateChangeListener?.();
+
+    await expect(installed).resolves.toBe(worker);
+    expect(worker.removeEventListener).toHaveBeenCalledWith(
+      'statechange',
+      expect.any(Function),
     );
   });
 });

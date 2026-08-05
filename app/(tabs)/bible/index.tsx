@@ -1,7 +1,7 @@
 import { UIStateContext } from '@/components/GlobalHeader';
 import { AppIcon } from '@/components/AppIcon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -37,6 +37,10 @@ import { getBottomTabContentHeight } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import {
+  activateBibleAudioLockScreen,
+  configureBibleAudioPlayback,
+} from '@/services/BibleAudioService';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -570,8 +574,9 @@ export default function BibleScreen() {
     useState<SleepTimerSetting>(null);
   const [sleepTimerVisible, setSleepTimerVisible] = useState(false);
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const audioLoadIdRef = useRef(0);
+  const audioPlayer = useAudioPlayer(null, { updateInterval: 250 });
+  const audioStatus = useAudioPlayerStatus(audioPlayer);
+  const loadedAudioUrlRef = useRef<string | null>(null);
   const isScrubbingRef = useRef(false);
   const audioScrubberWidth = useRef(1);
   const sleepTimerSettingRef = useRef<SleepTimerSetting>(null);
@@ -601,7 +606,7 @@ export default function BibleScreen() {
       sleepTimerTimeoutRef.current = setTimeout(async () => {
         setShouldAutoPlay(false);
         try {
-          await soundRef.current?.pauseAsync();
+          audioPlayer.pause();
         } catch (e) {
           console.error('Sleep timer pause error:', e);
         } finally {
@@ -613,24 +618,20 @@ export default function BibleScreen() {
     }
   };
 
-  /**
-   * Handles automatic audio transition when a track finishes.
-   */
-  const onPlaybackStatusUpdate = (status: any) => {
-    if (!status.isLoaded) {
-      if (status.error) setIsAudioLoading(false);
-      return;
-    }
-
-    setIsAudioLoading(!!status.isBuffering);
-    setIsPlaying(status.isPlaying);
-    setAudioDurationMillis(status.durationMillis || 0);
-    setAudioBufferedMillis(status.playableDurationMillis || status.positionMillis || 0);
+  useEffect(() => {
+    const positionMillis = audioStatus.currentTime * 1000;
+    setIsAudioLoading(
+      loadedAudioUrlRef.current !== null &&
+        (!audioStatus.isLoaded || audioStatus.isBuffering),
+    );
+    setIsPlaying(audioStatus.playing);
+    setAudioDurationMillis(audioStatus.duration * 1000);
+    setAudioBufferedMillis(positionMillis);
     if (!isScrubbingRef.current) {
-      setAudioPositionMillis(status.positionMillis || 0);
+      setAudioPositionMillis(positionMillis);
     }
 
-    if (status.didJustFinish) {
+    if (audioStatus.didJustFinish) {
       setIsPlaying(false);
       if (sleepTimerSettingRef.current === 'chapter') {
         clearSleepTimer();
@@ -643,7 +644,7 @@ export default function BibleScreen() {
         navigateToChapter('next');
       }
     }
-  };
+  }, [audioStatus, isLastChapter]);
 
   const toggleAudio = async () => {
     const audioLinks = chapterData?.thisChapterAudioLinks;
@@ -654,32 +655,24 @@ export default function BibleScreen() {
 
     try {
       if (isPlaying) {
-        await soundRef.current?.pauseAsync();
+        audioPlayer.pause();
       } else {
-        if (!soundRef.current) {
+        await configureBibleAudioPlayback();
+        if (loadedAudioUrlRef.current !== audioUrl) {
           setIsAudioLoading(true);
-          const loadId = ++audioLoadIdRef.current;
-          const { sound, status } = await Audio.Sound.createAsync(
-            { uri: audioUrl as string },
-            {
-              shouldPlay: true,
-              rate: playbackRate,
-              shouldCorrectPitch: true,
-              progressUpdateIntervalMillis: 250,
-            },
-            undefined,
-            false,
-          );
-          if (loadId !== audioLoadIdRef.current) {
-            await sound.unloadAsync();
-            return;
-          }
-          soundRef.current = sound;
-          sound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
-          onPlaybackStatusUpdate(status);
-        } else {
-          await soundRef.current.playAsync();
+          loadedAudioUrlRef.current = audioUrl as string;
+          audioPlayer.replace({
+            uri: audioUrl as string,
+            name: `${book?.name || labels.bible} ${chapterNum}`,
+          });
+          audioPlayer.setPlaybackRate(playbackRate, 'high');
+          activateBibleAudioLockScreen(audioPlayer, {
+            title: `${book?.name || labels.bible} ${chapterNum}`,
+            artist: supportedTranslation.name,
+            albumTitle: labels.audioPlayer,
+          });
         }
+        audioPlayer.play();
       }
     } catch (e) {
       setIsAudioLoading(false);
@@ -711,7 +704,7 @@ export default function BibleScreen() {
     );
     setAudioPositionMillis(clampedPosition);
     try {
-      await soundRef.current?.setPositionAsync(clampedPosition);
+      await audioPlayer.seekTo(clampedPosition / 1000);
     } catch (e) {
       console.error('Audio seek error:', e);
     }
@@ -725,7 +718,7 @@ export default function BibleScreen() {
     const nextRate = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1;
     setPlaybackRate(nextRate);
     try {
-      await soundRef.current?.setRateAsync(nextRate, true);
+      audioPlayer.setPlaybackRate(nextRate, 'high');
     } catch (e) {
       console.error('Audio playback speed error:', e);
     }
@@ -1172,11 +1165,10 @@ export default function BibleScreen() {
 
     // Stop and unload audio when the chapter changes or the component unmounts
     return () => {
-      audioLoadIdRef.current += 1;
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-        soundRef.current = null;
-      }
+      audioPlayer.pause();
+      audioPlayer.clearLockScreenControls();
+      audioPlayer.replace(null);
+      loadedAudioUrlRef.current = null;
       isScrubbingRef.current = false;
       setIsPlaying(false);
       setIsAudioLoading(false);
@@ -2025,7 +2017,7 @@ export default function BibleScreen() {
                   icon="rewind-10"
                   size={scaleTypographyMetric(26, bibleUiTextScale)}
                   onPress={() => skipAudio(-10000)}
-                  disabled={!soundRef.current || !audioDurationMillis}
+                  disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
                   accessibilityLabel={labels.back10}
                   style={ReaderStyles.audioAction}
                 />
@@ -2036,7 +2028,7 @@ export default function BibleScreen() {
                   iconColor={theme.colors.onPrimary}
                   size={scaleTypographyMetric(26, bibleUiTextScale)}
                   onPress={toggleAudio}
-                  disabled={isAudioLoading && !soundRef.current}
+                  disabled={isAudioLoading && !loadedAudioUrlRef.current}
                   accessibilityLabel={labels.audioPlayer}
                   style={ReaderStyles.audioPlayButton}
                 />
@@ -2044,7 +2036,7 @@ export default function BibleScreen() {
                   icon="fast-forward-30"
                   size={scaleTypographyMetric(26, bibleUiTextScale)}
                   onPress={() => skipAudio(30000)}
-                  disabled={!soundRef.current || !audioDurationMillis}
+                  disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
                   accessibilityLabel={labels.forward30}
                   style={ReaderStyles.audioAction}
                 />
