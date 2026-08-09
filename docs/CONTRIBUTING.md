@@ -9,6 +9,12 @@ This project uses **Semantic Versioning** (npm SemVer Guide). The `package.json`
 Changes reach production through two distinct pull requests. Do not open a feature PR
 directly against `main`.
 
+- **Any contributor** may fork the repository, branch from the active release branch, and
+  open the first PR from their fork into that release branch.
+- **Code maintainers only** create and merge the second PR from the primary repository's
+  release branch into `main`. Contributors do not need write access to `main` or permission
+  to perform this release step.
+
 1. A maintainer creates `release/x.y.z` from the primary repository's `main` branch. If
    the release branch does not exist, ask a maintainer to create it.
 2. Create the feature branch from that release branch, then push it to your fork:
@@ -25,9 +31,9 @@ directly against `main`.
 4. Open the feature PR from the fork's feature branch into the primary repository's
    matching `release/x.y.z` branch. Complete the PR template and wait for all checks and
    reviews.
-5. After all planned feature PRs are merged, a maintainer opens the release PR from
-   `release/x.y.z` into `main`. The release PR is the second PR in the flow, not a direct
-   push or a feature PR retargeted to `main`.
+5. After all planned feature PRs are merged, a code maintainer opens the release PR from
+   `release/x.y.z` into `main`. Only maintainers perform this second stage; contributors
+   should not retarget their feature PRs to `main`.
 6. The merge to `main` triggers version synchronization, tagging, and deployment.
 
 ### Pull request format and issue closing
@@ -46,8 +52,9 @@ GitHub closes linked issues only when the closing reference reaches the default 
 Therefore, `Closes #133` in a feature PR to `release/x.y.z` links the work but does not
 close the issue when that feature PR merges. The maintainer must copy all closing
 references from the included feature PRs into the final `release/x.y.z` → `main` PR.
-Merging that final PR into `main` closes the issues. Do not rely on a reviewer to repair
-the merge commit message at the last moment.
+This is the code maintainer's responsibility, not the fork contributor's. Merging that
+final PR into `main` closes the issues. Do not rely on a reviewer to repair the merge
+commit message at the last moment.
 
 ## Branch Protection & Workflow
 
@@ -93,8 +100,8 @@ main (stable)
 3. Push to the fork and open a PR into the matching primary-repository release branch.
 4. Follow the PR template, including Related issues and the testing checklist.
 5. Merge the feature PR after checks and review pass; its issues remain open at this stage.
-6. Aggregate the feature PRs and their closing references in the final release PR to
-   `main`.
+6. A code maintainer aggregates the feature PRs and their closing references in the final
+   release PR to `main`.
 7. Merge the release PR after its checks and review pass. GitHub closes the referenced
    issues, and the deployment workflow creates the release tag.
 

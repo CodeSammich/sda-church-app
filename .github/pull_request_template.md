@@ -4,9 +4,10 @@ _What does your change do?_
 
 ## Related issues
 
-_List each related issue with a closing keyword, for example `Closes #XX`. For pull
-requests targeting a release branch, repeat these references in the eventual pull request
-to the default branch so GitHub closes the issues when that release is merged._
+_List each related issue with a closing keyword, for example `Closes #XX`. For contributor
+pull requests targeting a release branch, a code maintainer will repeat these references
+in the eventual release pull request to the default branch so GitHub closes the issues
+when that release is merged._
 
 ## Testing
 
