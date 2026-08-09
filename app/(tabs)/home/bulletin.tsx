@@ -25,9 +25,9 @@ import {
 } from '@/services/BulletinService';
 import {
   BulletinHymnDestination,
+  BulletinHymnPresentation,
   QUEENS_FIXED_HYMNS,
-  resolveBulletinHymnDisplayText,
-  resolveBulletinHymnDestination,
+  resolveBulletinHymnPresentation,
 } from '@/services/BulletinHymnalService';
 import {
   formatScriptureReference,
@@ -552,16 +552,15 @@ export default function WeeklyBulletinScreen() {
   };
 
   const getBulletinHymnAction = (
-    value: { english: string; chinese: string },
-    displayedValue: string,
+    presentation: BulletinHymnPresentation,
   ): DataRowProps['action'] => {
-    const destination = resolveBulletinHymnDestination(value, language);
+    const { destination, displayText } = presentation;
     if (!destination) return undefined;
 
     return {
       accessibilityLabel: labels.openHymnInHymnal.replace(
         '{hymn}',
-        displayedValue,
+        displayText,
       ),
       label: labels.openHymn,
       onPress: () => openBulletinHymn(destination),
@@ -569,25 +568,28 @@ export default function WeeklyBulletinScreen() {
   };
 
   const renderProgram = (location: BulletinLocation, isQueens: boolean) => {
-    // Display language follows available form data, not automatic translation:
-    // prefer the UI-language field when both are present; if only one field is
-    // filled, keep that English or Chinese source. The resolver may repair its
-    // title or detect a hymn entered in the wrong field, but never uses the
-    // cross-hymnal mapping to translate the bulletin label.
-    const displayedPraiseHymn = resolveBulletinHymnDisplayText(
+    // One resolver owns both visible text and routing for every bulletin hymn.
+    // See docs/feature_designs/bulletin_hymn_resolution.md before adding fields.
+    const praiseHymn = resolveBulletinHymnPresentation(
       location.hymnOfPraise,
       language,
     );
-    const displayedResponseHymn = resolveBulletinHymnDisplayText(
+    const responseHymn = resolveBulletinHymnPresentation(
       location.hymnOfResponse,
       language,
     );
-    const displayedDoxology = getProgramValue(QUEENS_FIXED_HYMNS.doxology, language);
-    const displayedPastoralPrayer = getProgramValue(
+    const getFixedHymnPresentation = (
+      value: (typeof QUEENS_FIXED_HYMNS)[keyof typeof QUEENS_FIXED_HYMNS],
+    ): BulletinHymnPresentation => ({
+      ...resolveBulletinHymnPresentation(value, language),
+      // Preserve the church-approved wording for fixed weekly responses.
+      displayText: getProgramValue(value, language),
+    });
+    const doxology = getFixedHymnPresentation(QUEENS_FIXED_HYMNS.doxology);
+    const pastoralPrayer = getFixedHymnPresentation(
       QUEENS_FIXED_HYMNS.pastoralPrayer,
-      language,
     );
-    const displayedPostlude = getProgramValue(QUEENS_FIXED_HYMNS.postlude, language);
+    const postlude = getFixedHymnPresentation(QUEENS_FIXED_HYMNS.postlude);
     const displayedHymnalName =
       language === 'zh' || language === 'zh-cn'
         ? BULLETIN_HYMNAL_DISPLAY_NAMES.chinese
@@ -624,22 +626,16 @@ export default function WeeklyBulletinScreen() {
         {isQueens && (
           <DataRow
             label={labels.program.doxology}
-            value={displayedDoxology}
+            value={doxology.displayText}
             emptyText={labels.notAvailable}
-            action={getBulletinHymnAction(
-              QUEENS_FIXED_HYMNS.doxology,
-              displayedDoxology,
-            )}
+            action={getBulletinHymnAction(doxology)}
           />
         )}
         <DataRow
           label={labels.program.hymnOfPraise}
-          value={displayedPraiseHymn}
+          value={praiseHymn.displayText}
           emptyText={labels.notAvailable}
-          action={getBulletinHymnAction(
-            location.hymnOfPraise,
-            displayedPraiseHymn,
-          )}
+          action={getBulletinHymnAction(praiseHymn)}
         />
         <DataRow
           label={labels.program.sermonTitle}
@@ -672,33 +668,24 @@ export default function WeeklyBulletinScreen() {
         {isQueens && (
           <DataRow
             label={labels.program.pastoralPrayer}
-            value={displayedPastoralPrayer}
+            value={pastoralPrayer.displayText}
             emptyText={labels.notAvailable}
-            action={getBulletinHymnAction(
-              QUEENS_FIXED_HYMNS.pastoralPrayer,
-              displayedPastoralPrayer,
-            )}
+            action={getBulletinHymnAction(pastoralPrayer)}
           />
         )}
         <DataRow
           label={labels.program.hymnOfResponse}
-          value={displayedResponseHymn}
+          value={responseHymn.displayText}
           emptyText={labels.notAvailable}
-          action={getBulletinHymnAction(
-            location.hymnOfResponse,
-            displayedResponseHymn,
-          )}
+          action={getBulletinHymnAction(responseHymn)}
           last={!isQueens}
         />
         {isQueens && (
           <DataRow
             label={labels.program.postlude}
-            value={displayedPostlude}
+            value={postlude.displayText}
             emptyText={labels.notAvailable}
-            action={getBulletinHymnAction(
-              QUEENS_FIXED_HYMNS.postlude,
-              displayedPostlude,
-            )}
+            action={getBulletinHymnAction(postlude)}
             last
           />
         )}
@@ -754,7 +741,7 @@ export default function WeeklyBulletinScreen() {
     specialRemark: string,
   ) => (
     <Card mode="outlined" style={styles.card}>
-      <Card.Title title={title} titleVariant="titleLarge" />
+      <Card.Title title={title} titleVariant="titleLarge" style={styles.locationCardTitle} />
       <Card.Content>
         {hasBulletinValue(specialRemark) && (
           <View
@@ -1016,6 +1003,9 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 16,
+  },
+  locationCardTitle: {
+    paddingTop: 8,
   },
   cardSection: {
     marginBottom: 16,

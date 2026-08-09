@@ -3,10 +3,10 @@ import type { HymnalId } from './HymnalNumberMappings';
 /**
  * The hymnals treated as primary by this church's bilingual bulletin.
  *
- * A fork for another church should change these IDs after adding that hymnal's
- * catalog/reader and its cross-reference data to HymnalNumberMappings.json.
- * BulletinHymnalService intentionally reads this configuration instead of
- * embedding a denomination choice throughout its matching logic.
+ * These IDs are the final selection point, not a complete hymnal plugin system.
+ * A fork must first add the hymnal's mapping metadata, searchable catalog,
+ * BulletinHymnalService adapter, and reader route. See the bulletin hymn
+ * resolution design document for the extension checklist.
  */
 export const PRIMARY_BULLETIN_HYMNALS = {
   english: 'sdah-1985-en',

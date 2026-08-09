@@ -33,14 +33,15 @@ export type BulletinHymnDestination = {
   route: '/resources/english-hymnal' | '/resources/chinese-505-hymnal';
 };
 
+export type BulletinHymnPresentation = {
+  displayText: string;
+  destination?: BulletinHymnDestination;
+};
+
 type SourceCandidate = {
   available: boolean;
   hymnNumber: number;
   hymnalId: HymnalId;
-  score: number;
-};
-
-type DestinationCandidate = BulletinHymnDestination & {
   score: number;
 };
 
@@ -282,93 +283,108 @@ const getMappedDestination = (
   };
 };
 
-/**
- * Resolves a bulletin's bilingual, human-entered hymn text to the most useful
- * in-app hymnal destination. Numbers are primary evidence; titles and the field
- * language disambiguate overlapping English/Chinese number ranges.
- */
-export const resolveBulletinHymnDestination = (
-  value: BulletinHymnText,
-  preferredLanguage: string,
-): BulletinHymnDestination | undefined => {
-  const preferredHymnalId =
-    preferredLanguage === 'zh' || preferredLanguage === 'zh-cn'
-      ? CHINESE_HYMNAL_ID
-      : ENGLISH_HYMNAL_ID;
+const prefersChineseHymnal = (preferredLanguage: string) =>
+  preferredLanguage === 'zh' || preferredLanguage === 'zh-cn';
 
-  const sources = [
-    resolveSourceCandidate(value.english, ENGLISH_HYMNAL_ID),
-    resolveSourceCandidate(value.chinese, CHINESE_HYMNAL_ID),
-  ].filter((candidate): candidate is SourceCandidate => Boolean(candidate));
-
-  const destinations: DestinationCandidate[] = [];
-  for (const source of sources) {
-    if (source.available) {
-      destinations.push({
-        hymnalId: source.hymnalId,
-        hymnNumber: source.hymnNumber,
-        route: getRoute(source.hymnalId),
-        score: source.score + (source.hymnalId === preferredHymnalId ? 30 : 0),
-      });
-    }
-
-    const alternateHymnalId =
-      source.hymnalId === ENGLISH_HYMNAL_ID ? CHINESE_HYMNAL_ID : ENGLISH_HYMNAL_ID;
-    const mapped = getMappedDestination(source, alternateHymnalId);
-    if (mapped) {
-      destinations.push({
-        ...mapped,
-        score: source.score + (mapped.hymnalId === preferredHymnalId ? 35 : 15),
-      });
-    }
-
-    if (!source.available && !mapped) {
-      destinations.push({
-        hymnalId: source.hymnalId,
-        route: getRoute(source.hymnalId),
-        score: source.score - 20,
-      });
-    }
-  }
-
-  const best = destinations.sort((left, right) => right.score - left.score)[0];
-  if (!best) return undefined;
-
-  const { score: _score, ...destination } = best;
-  return destination;
-};
-
-/**
- * Chooses a submitted form answer before considering the app language: the
- * selected-language field wins when both exist, but a lone English or Chinese
- * answer remains in its submitted language. The chosen answer is searched in
- * both catalogs, so content entered in the wrong form field can still resolve.
- * A recognized source hymn gets its canonical source title; cross-references
- * are deliberately not used to translate bulletin display text. Unrecognized
- * submissions remain unchanged.
- */
-export const resolveBulletinHymnDisplayText = (
+const selectBulletinHymnSubmission = (
   value: BulletinHymnText,
   preferredLanguage: string,
 ) => {
-  const prefersChinese =
-    preferredLanguage === 'zh' || preferredLanguage === 'zh-cn';
+  const prefersChinese = prefersChineseHymnal(preferredLanguage);
   const preferred = prefersChinese
     ? { text: value.chinese.trim(), declaredHymnalId: CHINESE_HYMNAL_ID }
     : { text: value.english.trim(), declaredHymnalId: ENGLISH_HYMNAL_ID };
   const alternate = prefersChinese
     ? { text: value.english.trim(), declaredHymnalId: ENGLISH_HYMNAL_ID }
     : { text: value.chinese.trim(), declaredHymnalId: CHINESE_HYMNAL_ID };
-  const submission = preferred.text ? preferred : alternate;
-  if (!submission.text) return '';
+
+  return preferred.text ? preferred : alternate;
+};
+
+/**
+ * Resolves both the visible bulletin label and its reader destination from the
+ * same selected form answer. Numbers are primary evidence; titles and scripts
+ * disambiguate overlapping ranges. If only the other-language answer exists, a
+ * known cross-reference supplies the preferred-language number and title. With
+ * no mapping, the canonical source entry is retained. Unrecognized text remains
+ * raw and does not receive an unrelated reader action.
+ */
+export const resolveBulletinHymnPresentation = (
+  value: BulletinHymnText,
+  preferredLanguage: string,
+): BulletinHymnPresentation => {
+  const prefersChinese = prefersChineseHymnal(preferredLanguage);
+  const preferredHymnalId = prefersChinese
+    ? CHINESE_HYMNAL_ID
+    : ENGLISH_HYMNAL_ID;
+  const submission = selectBulletinHymnSubmission(value, preferredLanguage);
+  if (!submission.text) return { displayText: '' };
 
   const source = resolveSourceCandidate(
     submission.text,
     submission.declaredHymnalId,
   );
-  if (!source?.available) return submission.text;
+  if (!source) return { displayText: submission.text };
+
+  if (source.hymnalId !== preferredHymnalId) {
+    const mappedPreferred = getMappedDestination(source, preferredHymnalId);
+    if (mappedPreferred?.hymnNumber) {
+      const preferredTitle = hymnalAdapters[preferredHymnalId].getHymn(
+        mappedPreferred.hymnNumber,
+      )?.title;
+      if (preferredTitle) {
+        return {
+          displayText: `${mappedPreferred.hymnNumber}. ${preferredTitle}`,
+          destination: mappedPreferred,
+        };
+      }
+    }
+  }
 
   const title = hymnalAdapters[source.hymnalId].getHymn(source.hymnNumber)?.title;
 
-  return title ? `${source.hymnNumber}. ${title}` : submission.text;
+  if (source.available && title) {
+    return {
+      displayText: `${source.hymnNumber}. ${title}`,
+      destination: {
+        hymnalId: source.hymnalId,
+        hymnNumber: source.hymnNumber,
+        route: getRoute(source.hymnalId),
+      },
+    };
+  }
+
+  const alternateHymnalId =
+    source.hymnalId === ENGLISH_HYMNAL_ID ? CHINESE_HYMNAL_ID : ENGLISH_HYMNAL_ID;
+  const mappedAlternate = getMappedDestination(source, alternateHymnalId);
+  if (mappedAlternate?.hymnNumber) {
+    const alternateTitle = hymnalAdapters[alternateHymnalId].getHymn(
+      mappedAlternate.hymnNumber,
+    )?.title;
+    return {
+      displayText: alternateTitle
+        ? `${mappedAlternate.hymnNumber}. ${alternateTitle}`
+        : submission.text,
+      destination: mappedAlternate,
+    };
+  }
+
+  return {
+    displayText: submission.text,
+    destination: {
+      hymnalId: source.hymnalId,
+      route: getRoute(source.hymnalId),
+    },
+  };
 };
+
+/** Compatibility helpers for consumers that need only one presentation field. */
+export const resolveBulletinHymnDisplayText = (
+  value: BulletinHymnText,
+  preferredLanguage: string,
+) => resolveBulletinHymnPresentation(value, preferredLanguage).displayText;
+
+export const resolveBulletinHymnDestination = (
+  value: BulletinHymnText,
+  preferredLanguage: string,
+) => resolveBulletinHymnPresentation(value, preferredLanguage).destination;

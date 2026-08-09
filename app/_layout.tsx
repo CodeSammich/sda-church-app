@@ -229,11 +229,13 @@ export const UpdateContext = createContext<{
   updateAvailable: boolean;
   onUpdate: () => void;
   onManualCheck: (options?: { isAuto?: boolean }) => Promise<void>;
+  onPassiveCheck: () => Promise<void>;
   updateStatus: UpdateStatus;
 }>({
   updateAvailable: false,
   onUpdate: () => {},
   onManualCheck: async () => {},
+  onPassiveCheck: async () => {},
   updateStatus: 'idle',
 });
 
@@ -399,6 +401,28 @@ export default function RootLayout() {
       reloadAfterUpdate();
     }
     setUpdateAvailable(false);
+  };
+
+  const handlePassiveCheck = async () => {
+    if (
+      !canUseServiceWorker() ||
+      !navigator.onLine ||
+      updateCheckInProgress.current
+    ) {
+      return;
+    }
+
+    updateCheckInProgress.current = true;
+    try {
+      // A Home-tab press checks only the small, versioned worker source. If its
+      // version differs, the existing update banner lets the user choose when
+      // to ask the browser to download and activate the full update.
+      await refreshUpdateAvailability();
+    } catch (error) {
+      console.error('Passive app update check failed:', error);
+    } finally {
+      updateCheckInProgress.current = false;
+    }
   };
 
   const handleManualCheck = async (options?: { isAuto?: boolean }) => {
@@ -770,6 +794,7 @@ export default function RootLayout() {
                 updateAvailable,
                 onUpdate: handleUpdate,
                 onManualCheck: handleManualCheck,
+                onPassiveCheck: handlePassiveCheck,
                 updateStatus,
               }}
             >

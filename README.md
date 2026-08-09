@@ -24,10 +24,11 @@ on Safari (iOS) or Chrome (Android).
 
 - [Technical Setup & Testing](docs/README.md)
 - [Bulletin API Architecture & Operations](apps-script/README.md)
-- [Offline Bulletin Translation: Bergamot Feasibility](docs/feature_designs/offline_bulletin_translation.md)
 - [Accessibility Guidelines](docs/accessibility/README.md)
 - [UI/UX Design](docs/UI_UX.md)
 - [Feature Designs](docs/feature_designs/)
+  - [Bulletin Hymn Resolution & Extension Guide](docs/feature_designs/bulletin_hymn_resolution.md)
+  - [Offline Bulletin Translation: Bergamot Feasibility](docs/feature_designs/offline_bulletin_translation.md)
 - [Contributing Code](docs/CONTRIBUTING.md)
 
 ## Project Tenets

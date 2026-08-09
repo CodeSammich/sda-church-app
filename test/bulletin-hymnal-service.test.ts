@@ -2,6 +2,7 @@ import {
   QUEENS_FIXED_HYMNS,
   resolveBulletinHymnDisplayText,
   resolveBulletinHymnDestination,
+  resolveBulletinHymnPresentation,
 } from '@/services/BulletinHymnalService';
 
 describe('bulletin hymnal resolution', () => {
@@ -121,22 +122,46 @@ describe('bulletin hymnal resolution', () => {
     ).toBeUndefined();
   });
 
-  it('keeps a lone English submission in English for a Chinese UI', () => {
+  it('keeps display text and routing on the same selected form answer', () => {
+    const conflictingAnswers = {
+      english: '1. Praise to the Lord',
+      chinese: '165. 奇哉生命之道',
+    };
+
+    expect(resolveBulletinHymnPresentation(conflictingAnswers, 'en')).toEqual({
+      displayText: '1. Praise to the Lord',
+      destination: {
+        hymnalId: 'sdah-1985-en',
+        hymnNumber: 1,
+        route: '/resources/english-hymnal',
+      },
+    });
+    expect(resolveBulletinHymnPresentation(conflictingAnswers, 'zh')).toEqual({
+      displayText: '165. 奇哉生命之道',
+      destination: {
+        hymnalId: 'chinese-hymnal-505',
+        hymnNumber: 165,
+        route: '/resources/chinese-505-hymnal',
+      },
+    });
+  });
+
+  it('maps a lone English submission for a Chinese UI', () => {
     expect(
       resolveBulletinHymnDisplayText(
         { english: '1. Praise to the Lord', chinese: '' },
         'zh',
       ),
-    ).toBe('1. Praise to the Lord');
+    ).toBe('5. 赞美上主');
   });
 
-  it('detects Chinese text put in the English field without translating it', () => {
+  it('maps Chinese text put in the English field for an English UI', () => {
     expect(
       resolveBulletinHymnDisplayText(
         { english: '5. 讚美上主', chinese: '' },
         'en',
       ),
-    ).toBe('5. 赞美上主');
+    ).toBe('1. Praise to the Lord');
   });
 
   it('keeps the source language when no cross-hymnal mapping exists', () => {
@@ -166,13 +191,22 @@ describe('bulletin hymnal resolution', () => {
     ).toBe('1. Praise to the Lord');
   });
 
-  it('keeps a lone Chinese submission in Chinese for an English UI', () => {
+  it('maps a lone Chinese submission for an English UI', () => {
     expect(
       resolveBulletinHymnDisplayText(
         { english: '', chinese: '5. 讚美上主' },
         'en',
       ),
-    ).toBe('5. 赞美上主');
+    ).toBe('1. Praise to the Lord');
+  });
+
+  it('keeps a lone Chinese submission when no English mapping exists', () => {
+    expect(
+      resolveBulletinHymnDisplayText(
+        { english: '', chinese: '8. 萬眾頌讚' },
+        'en',
+      ),
+    ).toBe('8. 万众颂赞');
   });
 
   it('fuzzy-matches a title-only submission across both catalogs', () => {
@@ -181,13 +215,28 @@ describe('bulletin hymnal resolution', () => {
         { english: 'Prais to the Lord', chinese: '' },
         'zh',
       ),
-    ).toBe('1. Praise to the Lord');
+    ).toBe('5. 赞美上主');
     expect(
       resolveBulletinHymnDisplayText(
         { english: '讚美上主', chinese: '' },
         'en',
       ),
-    ).toBe('5. 赞美上主');
+    ).toBe('1. Praise to the Lord');
+  });
+
+  it('expands the current Queens and Brooklyn number-only submissions', () => {
+    expect(
+      resolveBulletinHymnDisplayText(
+        { english: '286 Wonderful Words of Life', chinese: '' },
+        'zh',
+      ),
+    ).toBe('165. 奇哉生命之道');
+    expect(
+      resolveBulletinHymnDisplayText({ english: '200', chinese: '' }, 'en'),
+    ).toBe('200. The Lord Is Coming');
+    expect(
+      resolveBulletinHymnDisplayText({ english: '', chinese: '165' }, 'en'),
+    ).toBe('286. Wonderful Words of Life');
   });
 
   it.each([

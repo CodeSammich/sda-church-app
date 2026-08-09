@@ -1,5 +1,6 @@
-import { GlobalHeader, UIStateContext } from '@/components/GlobalHeader';
+import { UpdateContext } from '@/app/_layout';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
+import { GlobalHeader, UIStateContext } from '@/components/GlobalHeader';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { APP_ICONOGRAPHY } from '@/constants/Iconography';
 import {
@@ -101,6 +102,7 @@ export default function TabLayout() {
     maxTabLabelLines,
   );
   const { language } = useContext(LanguageContext);
+  const { onPassiveCheck } = useContext(UpdateContext);
   const insets = useSafeAreaInsets();
   const isFullscreenWeb =
     Platform.OS === 'web' &&
@@ -245,6 +247,13 @@ export default function TabLayout() {
                 textScale={textScale}
               />
             ),
+          }}
+          listeners={{
+            tabPress: () => {
+              // This intentionally bypasses the hourly launch/resume cooldown:
+              // the user explicitly pressed Home, and only sw.js is fetched.
+              void onPassiveCheck();
+            },
           }}
         />
 
