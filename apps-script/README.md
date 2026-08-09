@@ -129,10 +129,20 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 | `apps-script/appsscript.json` | Apps Script runtime, timezone, and web-app manifest settings |
 | `constants/ExternalLinks.ts` | Production `/exec` URL and restricted staff-schedule URL |
 | `services/BulletinService.ts` | PWA response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
+| `services/BulletinHymnalService.ts` | Number-first bulletin hymn resolution, English/Chinese edition detection, fuzzy title fallback, and cross-reference routing |
+| `constants/BulletinHymnalConfig.ts` | Church-level primary English/Chinese hymnal selection and displayed edition metadata |
+| `constants/HymnalNumberMappings.json` | Reviewed bidirectional English 1985 ↔ Chinese 505 hymn-number cross-references |
 | `app/(tabs)/home/bulletin.tsx` | Localized This Week/Next Week UI, location cards, `TBD` rendering, and staff link |
 | `test/bulletin-service.test.ts` | PWA date, API error, and possible-joint-service behavior |
+| `test/bulletin-hymnal-service.test.ts` | Bulletin hymn typo tolerance, language preference, mapping, and fallback behavior |
 | `test/bible-scripture-reference.test.ts` | Multilingual 66-book parsing, formatting, ranges, and safe rejection behavior |
 | `apps-script/README.md` | Architecture contract and operator runbook |
+
+The Queens worship program also renders three fixed congregational pieces directly in
+the PWA: Doxology (SDAH 694 / Chinese 497), Pastoral Prayer response (SDAH 684 /
+Chinese 498), and Postlude (SDAH 690 / Chinese 504). They are not workbook fields.
+Their score buttons use the same language-aware exact hymn routing as submitted hymns.
+The person assigned to Chair / Pastoral Prayer remains workbook-driven roster data.
 
 ## Workbook and form layout
 
@@ -379,6 +389,40 @@ Traditional and simplified Chinese app modes prefer the Chinese form answer with
 English fallback. English and Spanish modes prefer the English answer with a Chinese
 fallback. Roster-role labels, empty-state text, `Choir`, and `Name withheld` are localized
 by the PWA; names themselves are never translated or reconstructed.
+
+Hymn of Praise and Hymn of Response show an **Open hymn** action when either bilingual
+answer can be resolved. Submitted numbers are treated as the strongest evidence because
+form-entered titles may contain typos. The declared English/Chinese field and title/script
+similarity disambiguate numbers shared by both editions. The action prefers the English
+1985 or Chinese 505 reader that matches the app language and uses the reviewed
+cross-reference mapping when only the other edition was submitted. If no cross-reference
+exists, it opens the source edition that best matches the submitted number and title. A
+Chinese number whose source page is unavailable uses an English cross-reference when one
+exists; otherwise the action falls back to the matching hymnal directory. The reader
+receives the resolved number and a back link to the bulletin. A routed `hymnNum` is an
+exact preselection: the reader renders that hymn as the selected result instead of relying
+on a delayed virtual-list scroll.
+
+Praise and Response display language follows the available form answers rather than
+automatic translation. When both answers exist, the app language selects the preferred
+one. When only one exists, its English or Chinese language is retained in every UI
+language. The chosen answer is searched across both catalogs, allowing a correct number
+to repair a mistyped title and allowing Chinese content entered in the English field (or
+vice versa) to be identified. A title-only search compares normalized text against both
+catalogs with fuzzy edit/bigram similarity; writing system and declared field affect the
+ranking but never exclude the other catalog. If no source hymn can be identified reliably,
+the raw form response is preserved. Cross-references affect the score destination, not the
+displayed language.
+
+`PRIMARY_BULLETIN_HYMNALS` is the denomination/church customization point. A fork changing
+it must also provide the selected hymnal catalog and reader adapter, add the hymnal ID and
+cross-reference table to `HymnalNumberMappings.json`, and extend the resolver's catalog and
+route handling in `hymnalAdapters`. Once those supporting pieces exist, selection and
+cross-reference routing follow the configured IDs rather than denomination-specific mapping
+functions. Do not change only the ID: number matching is safe only when its catalog, route,
+and mappings move together. The bulletin includes a visible, screen-reader-readable note
+for the hymnal relevant to the UI language: Chinese modes identify the 505 Hymnal, while
+English and Spanish modes identify the SDA Hymnal (1985).
 
 When the Bible-verses answer is one recognized book and chapter with an optional verse or
 same-chapter range—for example, `Psalms 15:1-5`—the PWA displays the canonical book name

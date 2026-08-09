@@ -1,6 +1,6 @@
 import { AppIcon } from '@/components/AppIcon';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useEffect, useMemo, useRef } from 'react';
+import { useContext, useMemo } from 'react';
 import { FlatList, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
+import { getRoutedHymns } from '@/constants/HymnalRouting';
 import { useAppTheme } from '@/constants/Themes';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -91,39 +92,19 @@ export default function HymnalScreen() {
     highlight?: string;
   }>();
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
-  const flatListRef = useRef<FlatList>(null);
-
   const allHymns = useMemo(() => getSortedHymns('en'), []);
 
   // If we have a highlight query from the search bar, filter the list.
   // This allows the header search to behave like a filter for this view.
   const displayHymns = useMemo(() => {
     const query = (highlight || '').toLowerCase().trim();
-    if (!query) return allHymns;
-
-    return allHymns.filter(
-      (h) =>
+    return getRoutedHymns(allHymns, hymnNum, (h) =>
+      !query ||
         h.number.toString().includes(query) ||
         h.title.toLowerCase().includes(query) ||
-        h.scriptureReference?.toLowerCase().includes(query),
+        Boolean(h.scriptureReference?.toLowerCase().includes(query)),
     );
-  }, [highlight, allHymns]);
-
-  // Scroll to a specific hymn if requested via search params (hymnNum)
-  useEffect(() => {
-    if (hymnNum) {
-      const index = allHymns.findIndex((h) => h.number.toString() === hymnNum);
-      if (index !== -1) {
-        setTimeout(() => {
-          flatListRef.current?.scrollToIndex({
-            index,
-            animated: true,
-            viewPosition: 0,
-          });
-        }, 100);
-      }
-    }
-  }, [hymnNum, allHymns]);
+  }, [allHymns, highlight, hymnNum]);
 
   const renderHymnItem = ({ item }: { item: HydratedHymn }) => {
     return (
@@ -290,7 +271,6 @@ export default function HymnalScreen() {
         </View>
 
         <FlatList
-          ref={flatListRef}
           data={displayHymns}
           keyExtractor={(item) => item.number.toString()}
           renderItem={renderHymnItem}

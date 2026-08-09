@@ -1,6 +1,7 @@
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { GridMenuCard } from '@/components/GridMenuCard';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
+import { BULLETIN_HYMNAL_DISPLAY_NAMES } from '@/constants/BulletinHymnalConfig';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openInMaps,
@@ -22,6 +23,12 @@ import {
   isBulletinLocationEmpty,
   setRefreshAvailableAt as persistRefreshAvailableAt,
 } from '@/services/BulletinService';
+import {
+  BulletinHymnDestination,
+  QUEENS_FIXED_HYMNS,
+  resolveBulletinHymnDisplayText,
+  resolveBulletinHymnDestination,
+} from '@/services/BulletinHymnalService';
 import {
   formatScriptureReference,
   getScriptureReaderParams,
@@ -50,6 +57,7 @@ const LABELS = {
     nameWithheld: 'Name withheld',
     choir: 'Choir',
     worshipProgram: 'Worship Program',
+    hymnalNote: 'English hymn numbers use the {hymnal}.',
     serviceRoster: 'Service Roster',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
@@ -58,6 +66,8 @@ const LABELS = {
     openElmhurst: 'Open Elmhurst Church',
     openBibleReference: 'Open {reference} in the Bible reader',
     readNow: 'Read now',
+    openHymn: 'Open hymn',
+    openHymnInHymnal: 'Open {hymn} in the hymnal',
     planning: 'Planning',
     quarterlySchedule: 'Quarterly Schedule',
     churchStaffOnly: 'Church staff only',
@@ -68,10 +78,13 @@ const LABELS = {
       pastorTravel: 'Pastor Travel',
     },
     program: {
+      doxology: 'Doxology',
       hymnOfPraise: 'Hymn of Praise',
       sermonTitle: 'Sermon Title',
       bibleVerses: 'Bible Verses',
+      pastoralPrayer: 'Pastoral Prayer',
       hymnOfResponse: 'Hymn of Response',
+      postlude: 'Postlude',
     },
     roles: {
       sermon: 'Sermon Speaker',
@@ -97,11 +110,12 @@ const LABELS = {
     refresh: '重新整理',
     loadError: '無法載入本週週報。',
     retry: '重試',
-    notAssigned: 'TBD',
-    notAvailable: 'TBD',
+    notAssigned: '尚未安排',
+    notAvailable: '尚未確定',
     nameWithheld: '姓名保留',
     choir: '詩班',
     worshipProgram: '崇拜程序',
+    hymnalNote: '中文詩歌編號採用 {hymnal} 首詩歌本。',
     serviceRoster: '服事安排',
     queens: '皇后區',
     brooklyn: '布魯克林',
@@ -110,6 +124,8 @@ const LABELS = {
     openElmhurst: '開啟艾姆赫斯特教會位置',
     openBibleReference: '在聖經閱讀器中開啟 {reference}',
     readNow: '立即閱讀',
+    openHymn: '開啟詩歌',
+    openHymnInHymnal: '在詩歌本中開啟{hymn}',
     planning: '事工規劃',
     quarterlySchedule: '季度排班',
     churchStaffOnly: '僅限教會同工',
@@ -120,10 +136,13 @@ const LABELS = {
       pastorTravel: '牧師行程',
     },
     program: {
+      doxology: '讚美',
       hymnOfPraise: '讚美詩',
       sermonTitle: '講道題目',
       bibleVerses: '本週經文',
+      pastoralPrayer: '牧養禱告',
       hymnOfResponse: '回應詩',
+      postlude: '後奏曲',
     },
     roles: {
       sermon: '講員',
@@ -149,11 +168,12 @@ const LABELS = {
     refresh: '刷新',
     loadError: '无法加载本周周报。',
     retry: '重试',
-    notAssigned: 'TBD',
-    notAvailable: 'TBD',
+    notAssigned: '尚未安排',
+    notAvailable: '尚未确定',
     nameWithheld: '姓名保留',
     choir: '诗班',
     worshipProgram: '崇拜程序',
+    hymnalNote: '中文诗歌编号采用 {hymnal} 首诗歌本。',
     serviceRoster: '服事安排',
     queens: '皇后区',
     brooklyn: '布鲁克林',
@@ -162,6 +182,8 @@ const LABELS = {
     openElmhurst: '打开艾姆赫斯特教会位置',
     openBibleReference: '在圣经阅读器中打开 {reference}',
     readNow: '立即阅读',
+    openHymn: '打开诗歌',
+    openHymnInHymnal: '在诗歌本中打开{hymn}',
     planning: '事工规划',
     quarterlySchedule: '季度排班',
     churchStaffOnly: '仅限教会同工',
@@ -172,10 +194,13 @@ const LABELS = {
       pastorTravel: '牧师行程',
     },
     program: {
+      doxology: '颂美',
       hymnOfPraise: '赞美诗',
       sermonTitle: '讲道题目',
       bibleVerses: '本周经文',
+      pastoralPrayer: '牧养祷告',
       hymnOfResponse: '回应诗',
+      postlude: '后奏曲',
     },
     roles: {
       sermon: '讲员',
@@ -201,11 +226,12 @@ const LABELS = {
     refresh: 'Actualizar',
     loadError: 'No se pudo cargar este boletín.',
     retry: 'Intentar de Nuevo',
-    notAssigned: 'TBD',
-    notAvailable: 'TBD',
+    notAssigned: 'Por asignar',
+    notAvailable: 'Por determinar',
     nameWithheld: 'Nombre reservado',
     choir: 'Coro',
     worshipProgram: 'Programa de Adoración',
+    hymnalNote: 'Los números de los himnos en inglés usan el {hymnal}.',
     serviceRoster: 'Asignaciones de Servicio',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
@@ -214,6 +240,8 @@ const LABELS = {
     openElmhurst: 'Abrir Iglesia de Elmhurst',
     openBibleReference: 'Abrir {reference} en el lector de la Biblia',
     readNow: 'Leer ahora',
+    openHymn: 'Abrir himno',
+    openHymnInHymnal: 'Abrir {hymn} en el himnario',
     planning: 'Planificación',
     quarterlySchedule: 'Horario Trimestral',
     churchStaffOnly: 'Solo personal de la iglesia',
@@ -224,10 +252,13 @@ const LABELS = {
       pastorTravel: 'Viaje Pastoral',
     },
     program: {
+      doxology: 'Doxología',
       hymnOfPraise: 'Himno de Alabanza',
       sermonTitle: 'Título del Sermón',
       bibleVerses: 'Versículos Bíblicos',
+      pastoralPrayer: 'Oración Pastoral',
       hymnOfResponse: 'Himno de Respuesta',
+      postlude: 'Postludio',
     },
     roles: {
       sermon: 'Orador del Sermón',
@@ -266,12 +297,34 @@ type DataRowProps = {
   value?: string;
   emptyText: string;
   last?: boolean;
+  action?: {
+    accessibilityLabel: string;
+    label: string;
+    onPress: () => void;
+  };
 };
 
-const DataRow = ({ label, value, emptyText, last }: DataRowProps) => (
+const DataRow = ({ label, value, emptyText, last, action }: DataRowProps) => (
   <View style={[styles.dataRow, !last && styles.dataRowBorder]}>
     <Text variant="labelLarge">{label}</Text>
-    <Text variant="bodyMedium">{value || emptyText}</Text>
+    {action ? (
+      <View style={styles.programActionRow}>
+        <Text variant="bodyMedium" style={styles.programActionValue}>
+          {value || emptyText}
+        </Text>
+        <Button
+          accessibilityLabel={action.accessibilityLabel}
+          mode="contained-tonal"
+          compact
+          icon="music-note"
+          onPress={action.onPress}
+        >
+          {action.label}
+        </Button>
+      </View>
+    ) : (
+      <Text variant="bodyMedium">{value || emptyText}</Text>
+    )}
   </View>
 );
 
@@ -486,9 +539,59 @@ export default function WeeklyBulletinScreen() {
     void loadWeek(index);
   };
 
-  const renderProgram = (location: BulletinLocation) => {
-    // TODO(bulletin): Link Hymn of Praise/Response values to the in-app hymnal
-    // once hymn numbers and titles can be normalized safely across languages.
+  const openBulletinHymn = (destination: BulletinHymnDestination) => {
+    router.push({
+      pathname: destination.route,
+      params: {
+        backTo: '/home/bulletin',
+        ...(destination.hymnNumber
+          ? { hymnNum: destination.hymnNumber.toString() }
+          : {}),
+      },
+    } as any);
+  };
+
+  const getBulletinHymnAction = (
+    value: { english: string; chinese: string },
+    displayedValue: string,
+  ): DataRowProps['action'] => {
+    const destination = resolveBulletinHymnDestination(value, language);
+    if (!destination) return undefined;
+
+    return {
+      accessibilityLabel: labels.openHymnInHymnal.replace(
+        '{hymn}',
+        displayedValue,
+      ),
+      label: labels.openHymn,
+      onPress: () => openBulletinHymn(destination),
+    };
+  };
+
+  const renderProgram = (location: BulletinLocation, isQueens: boolean) => {
+    // Display language follows available form data, not automatic translation:
+    // prefer the UI-language field when both are present; if only one field is
+    // filled, keep that English or Chinese source. The resolver may repair its
+    // title or detect a hymn entered in the wrong field, but never uses the
+    // cross-hymnal mapping to translate the bulletin label.
+    const displayedPraiseHymn = resolveBulletinHymnDisplayText(
+      location.hymnOfPraise,
+      language,
+    );
+    const displayedResponseHymn = resolveBulletinHymnDisplayText(
+      location.hymnOfResponse,
+      language,
+    );
+    const displayedDoxology = getProgramValue(QUEENS_FIXED_HYMNS.doxology, language);
+    const displayedPastoralPrayer = getProgramValue(
+      QUEENS_FIXED_HYMNS.pastoralPrayer,
+      language,
+    );
+    const displayedPostlude = getProgramValue(QUEENS_FIXED_HYMNS.postlude, language);
+    const displayedHymnalName =
+      language === 'zh' || language === 'zh-cn'
+        ? BULLETIN_HYMNAL_DISPLAY_NAMES.chinese
+        : BULLETIN_HYMNAL_DISPLAY_NAMES.english;
     const parsedBibleReference = parseScriptureReference(location.bibleVerses);
     const localizedBibleReference = parsedBibleReference
       ? formatScriptureReference(parsedBibleReference, language)
@@ -512,10 +615,31 @@ export default function WeeklyBulletinScreen() {
         <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
           {labels.worshipProgram}
         </Text>
+        <Text
+          variant="bodySmall"
+          style={{ color: theme.colors.onSurfaceVariant }}
+        >
+          {labels.hymnalNote.replace('{hymnal}', displayedHymnalName)}
+        </Text>
+        {isQueens && (
+          <DataRow
+            label={labels.program.doxology}
+            value={displayedDoxology}
+            emptyText={labels.notAvailable}
+            action={getBulletinHymnAction(
+              QUEENS_FIXED_HYMNS.doxology,
+              displayedDoxology,
+            )}
+          />
+        )}
         <DataRow
           label={labels.program.hymnOfPraise}
-          value={getProgramValue(location.hymnOfPraise, language)}
+          value={displayedPraiseHymn}
           emptyText={labels.notAvailable}
+          action={getBulletinHymnAction(
+            location.hymnOfPraise,
+            displayedPraiseHymn,
+          )}
         />
         <DataRow
           label={labels.program.sermonTitle}
@@ -545,12 +669,39 @@ export default function WeeklyBulletinScreen() {
             )}
           </View>
         </View>
+        {isQueens && (
+          <DataRow
+            label={labels.program.pastoralPrayer}
+            value={displayedPastoralPrayer}
+            emptyText={labels.notAvailable}
+            action={getBulletinHymnAction(
+              QUEENS_FIXED_HYMNS.pastoralPrayer,
+              displayedPastoralPrayer,
+            )}
+          />
+        )}
         <DataRow
           label={labels.program.hymnOfResponse}
-          value={getProgramValue(location.hymnOfResponse, language)}
+          value={displayedResponseHymn}
           emptyText={labels.notAvailable}
-          last
+          action={getBulletinHymnAction(
+            location.hymnOfResponse,
+            displayedResponseHymn,
+          )}
+          last={!isQueens}
         />
+        {isQueens && (
+          <DataRow
+            label={labels.program.postlude}
+            value={displayedPostlude}
+            emptyText={labels.notAvailable}
+            action={getBulletinHymnAction(
+              QUEENS_FIXED_HYMNS.postlude,
+              displayedPostlude,
+            )}
+            last
+          />
+        )}
       </View>
     );
   };
@@ -644,7 +795,7 @@ export default function WeeklyBulletinScreen() {
           </View>
         )}
 
-        {renderProgram(location)}
+        {renderProgram(location, isQueens)}
         {renderRoster(location, isQueens)}
       </Card.Content>
     </Card>
@@ -896,6 +1047,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   scriptureReference: {
+    flexShrink: 1,
+  },
+  programActionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  programActionValue: {
     flexShrink: 1,
   },
   loadingContainer: {

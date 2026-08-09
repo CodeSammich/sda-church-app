@@ -3,6 +3,7 @@ import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
+import { getRoutedHymns } from '@/constants/HymnalRouting';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -10,7 +11,7 @@ import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useEffect, useMemo, useRef } from 'react';
+import { useContext, useMemo } from 'react';
 import {
   FlatList,
   ImageBackground,
@@ -100,38 +101,15 @@ export function ChineseHymnalReader({
   const uiLabels = useMemo(() => getUiLabels(edition), [edition]);
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
   const title = titles?.[language as keyof typeof titles] || labels.title;
-  const flatListRef = useRef<FlatList<ChineseHymnalEntry>>(null);
-
   const allHymns = useMemo(() => getHymns(), [getHymns]);
   const displayHymns = useMemo(() => {
     const query = (highlight || '').toLocaleLowerCase().trim();
-    if (!query) return allHymns;
-
-    return allHymns.filter(
-      (hymn) =>
+    return getRoutedHymns(allHymns, hymnNum, (hymn) =>
+      !query ||
         hymn.number.toString().includes(query) ||
         hymn.title.toLocaleLowerCase().includes(query),
     );
-  }, [allHymns, highlight]);
-
-  useEffect(() => {
-    if (!hymnNum) return;
-
-    const index = displayHymns.findIndex(
-      (hymn) => hymn.number.toString() === hymnNum,
-    );
-    if (index === -1) return;
-
-    const timeout = setTimeout(() => {
-      flatListRef.current?.scrollToIndex({
-        index,
-        animated: true,
-        viewPosition: 0,
-      });
-    }, 100);
-
-    return () => clearTimeout(timeout);
-  }, [displayHymns, hymnNum]);
+  }, [allHymns, highlight, hymnNum]);
 
   const renderHymnItem = ({ item }: { item: ChineseHymnalEntry }) => (
     <View style={styles.listItem}>
@@ -204,17 +182,10 @@ export function ChineseHymnalReader({
     <>
       <Stack.Screen options={{ title, backTo } as any} />
       <FlatList
-        ref={flatListRef}
         style={DocumentStyles.container}
         data={displayHymns}
         keyExtractor={(item) => item.number.toString()}
         renderItem={renderHymnItem}
-        onScrollToIndexFailed={({ index }) => {
-          flatListRef.current?.scrollToOffset({
-            offset: Math.max(0, index * 130),
-            animated: true,
-          });
-        }}
         ListHeaderComponent={
           <>
             <ImageBackground
