@@ -108,13 +108,26 @@ export const GlobalHeader = (props: any) => {
   // A pillar root is the entry-point for one of our four main tabs (Tenet 5 & 7).
   // We use route segments to identify the root index files of the pillar folders.
   // In Expo Router, the (tabs) group and the tab names form the first 1-2 segments.
-  const isPillarRoot = !hasHeaderBackButton(routeSegments);
+  const backTo = props.options?.backTo;
+  const isPillarRoot = !hasHeaderBackButton(routeSegments, backTo);
 
-  const isHymnalPage = routeSegments.includes('english-hymnal');
+  const activeHymnalRoute = routeSegments.includes('english-hymnal')
+    ? '/resources/english-hymnal'
+    : routeSegments.includes('chinese-505-hymnal')
+      ? '/resources/chinese-505-hymnal'
+      : routeSegments.includes('chinese-506-hymnal')
+        ? '/resources/chinese-506-hymnal'
+        : routeSegments.includes('chinese-707-new-simplified-hymnal')
+          ? '/resources/chinese-707-new-simplified-hymnal'
+          : routeSegments.includes('chinese-707-four-part-hymnal')
+            ? '/resources/chinese-707-four-part-hymnal'
+            : routeSegments.includes('chinese-707-standard-hymnal')
+              ? '/resources/chinese-707-standard-hymnal'
+              : undefined;
+  const isHymnalPage = Boolean(activeHymnalRoute);
   const isSubPage = !isPillarRoot;
 
   const title = props.options?.title;
-  const backTo = props.options?.backTo;
   const onBibleTranslationPress = props.options?.onBibleTranslationPress as
     | (() => void)
     | undefined;
@@ -164,7 +177,10 @@ export const GlobalHeader = (props: any) => {
   // Search only the content belonging to the active reader. Other screens do
   // not expose search or build a result set.
   const searchableItems = getSearchableItems(language).filter(
-    (item) => isHymnalPage && item.isHymn,
+    (item) =>
+      isHymnalPage &&
+      item.isHymn &&
+      item.route.split('?')[0] === activeHymnalRoute,
   );
 
   const filtered = searchableItems.filter((item) =>
@@ -356,6 +372,11 @@ export const GlobalHeader = (props: any) => {
             onPress={handleBackPress}
             style={({ pressed }) => [
               styles.circleBackButton,
+              {
+                width: compactControlHeight,
+                height: compactControlHeight,
+                borderRadius: compactControlHeight / 2,
+              },
               {
                 backgroundColor: theme.dark
                   ? 'rgba(18, 18, 18, 0.88)'
@@ -596,9 +617,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   circleBackButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,

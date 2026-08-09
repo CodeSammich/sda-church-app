@@ -51,6 +51,7 @@ import {
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import {
   createReaderStyles,
+  getBulletinVerseScrollOffset,
   getBibleDockLayout,
   getBibleDockViewportLayout,
 } from '@/styles/ReaderStyles';
@@ -1219,7 +1220,11 @@ export default function BibleScreen() {
     const timeout = setTimeout(() => {
       const verseY = versePositions.current[targetVerse.number];
       if (verseY !== undefined) {
-        scrollRef.current?.scrollTo({ y: Math.max(0, verseY - 20), animated: true });
+        const scrollY =
+          paramBackTo === '/home/bulletin'
+            ? getBulletinVerseScrollOffset(verseY, viewportHeight)
+            : Math.max(0, verseY - 20);
+        scrollRef.current?.scrollTo({ y: scrollY, animated: true });
       }
       pendingScriptureRange.current = null;
     }, 250);
@@ -1231,6 +1236,8 @@ export default function BibleScreen() {
     paramBookId,
     paramChapter,
     paramTransId,
+    paramBackTo,
+    viewportHeight,
   ]);
 
   /**

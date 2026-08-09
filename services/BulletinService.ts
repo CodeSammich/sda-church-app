@@ -45,7 +45,7 @@ type CachedBulletin = {
   fetchedAt: number;
 };
 
-const BULLETIN_CACHE_PREFIX = 'bulletin-cache-v1:';
+const BULLETIN_CACHE_PREFIX = 'bulletin-cache-v2:';
 const BULLETIN_REFRESH_PREFIX = 'bulletin-refresh-v1:';
 
 const toLocalIsoDate = (date: Date) => {

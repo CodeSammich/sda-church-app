@@ -13,6 +13,7 @@ on Safari (iOS) or Chrome (Android).
 
 - [Technical Setup & Testing](docs/README.md)
 - [Bulletin API Architecture & Operations](apps-script/README.md)
+- [Chinese Hymnal Source and Link Safety](#chinese-hymnal-source-and-link-safety-rationale)
 - [Accessibility Guidelines](docs/accessibility/README.md)
 - [Known Bugs](#known-bugs)
 - [UI/UX Design](docs/UI_UX.md)
@@ -159,6 +160,60 @@ licenses for the biblical text. Font sources and exact terms are documented in
 
 ---
 
+## Chinese Hymnal Source and Link-Safety Rationale
+
+The Chinese 505, 506, and 707 hymnal directories link to sheet-music pages on
+[zgaxr.com](https://www.zgaxr.com/). The site describes itself as a Chinese
+Seventh-day Adventist website, and its [contact page](https://www.zgaxr.com/footer/16.html)
+lists an address in Pingyang County, Zhejiang Province. It should not be described as a
+Zhejiang municipal-government website: neither its location nor its regulatory filings
+establish government ownership or endorsement.
+
+The site footer displays the following registrations:
+
+- ICP filing `浙ICP备12047548号`;
+- internet religious-information filing `浙民宗备（2022）0000033号`; and
+- public-security filing `浙公网安备33032602100278号`.
+
+These identifiers are positive accountability signals because they associate the public
+site with China's internet and religious-information regulatory processes. The
+[Internet Religious Information Services Measures](https://www.miit.gov.cn/gyhxxhb/jgsj/cyzcyfgs/bmgz/xxtxl/art/2022/art_36c84b53178948ffba50dffaa7503cb1.html)
+require a qualifying provider to apply through a provincial-level religious-affairs
+authority, maintain information-review and security-management measures, and display its
+license number. The filings are not, however, a technical security audit, copyright
+clearance, privacy certification, or guarantee that the domain and its content can never
+change.
+
+Linking to the source is considered a reasonable, limited risk for this app because:
+
+1. the repository stores only hymn numbers, titles, and zgaxr page IDs; it does not copy
+   or serve zgaxr's sheet music;
+2. destination URLs use a fixed `https://m.zgaxr.com` origin and locally checked-in page
+   IDs rather than user-supplied URLs;
+3. a hymn opens through the operating system's external-link handler, so zgaxr scripts
+   and pages are not embedded in or executed as part of the app; and
+4. the app does not create a zgaxr account, submit credentials, import zgaxr cookies, or
+   receive and store data that zgaxr may collect from a visitor.
+
+This is a defense-in-depth rationale, not a claim that any third-party website is
+unconditionally safe. After leaving the app, the user is subject to zgaxr's own content,
+privacy practices, and any future site changes. Maintainers should inspect generated
+hymnal-data diffs, keep every destination on the exact HTTPS host above, periodically
+verify the registration notices and representative hymn pages, and disable the links if
+the domain changes ownership, begins redirecting unexpectedly, or no longer serves the
+expected hymnal content.
+
+The checked-in mappings and their regeneration scripts are:
+
+- [`constants/Chinese505Hymnal.ts`](constants/Chinese505Hymnal.ts) and
+  [`scripts/scrape-chinese-505-hymnal.mjs`](scripts/scrape-chinese-505-hymnal.mjs);
+- [`constants/Chinese506Hymnal.ts`](constants/Chinese506Hymnal.ts) and
+  [`scripts/scrape-chinese-506-hymnal.mjs`](scripts/scrape-chinese-506-hymnal.mjs); and
+- [`constants/Chinese707Hymnal.ts`](constants/Chinese707Hymnal.ts) and
+  [`scripts/scrape-chinese-707-hymnals.mjs`](scripts/scrape-chinese-707-hymnals.mjs).
+
+---
+
 ## Known Bugs
 
 ### Android PWA may require a notification-shade cycle for fullscreen
@@ -274,11 +329,11 @@ policies.
 
 ### 5. External Links
 
-This application links to external platforms such as YouTube, Spotify, and
-HymnsForWorship.org. When you follow these links, you are subject to the privacy policies
-of those third-party providers. These services may collect information such as IP
-addresses as part of their standard operations. The church does not receive or store
-information those external platforms independently collect from you.
+This application links to external platforms such as YouTube, Spotify,
+HymnsForWorship.org, and zgaxr.com. When you follow these links, you are subject to the
+privacy policies of those third-party providers. These services may collect information
+such as IP addresses as part of their standard operations. The church does not receive or
+store information those external platforms independently collect from you.
 
 ### 6. Privacy Frameworks and Questions
 
@@ -294,10 +349,11 @@ or requests concerning church-managed schedule information may be sent to
 
 ### 1. Usage of External Resources
 
-This app links to HymnsForWorship.org for hymn resources. Please be aware that some hymns
-are copyrighted. When you follow these links, you are subject to HymnsForWorship.org’s
-terms and conditions. You may be prompted to accept their terms before viewing certain
-content. Please respect copyright laws and do not attempt to bypass these requirements.
+This app links to HymnsForWorship.org and zgaxr.com for hymn resources. Please be aware
+that some hymns are copyrighted. When you follow these links, you are subject to the
+destination provider’s terms and conditions. You may be prompted to accept their terms
+before viewing certain content. Please respect copyright laws and do not attempt to bypass
+these requirements.
 
 ### 2. Data Attribution
 
@@ -309,10 +365,10 @@ providers.
 ### 3. External Platforms & Services
 
 This application provides links to external platforms and third-party services (e.g.,
-YouTube, Spotify, HymnsForWorship.org) to assist users in locating musical performances,
-recordings, or sheet music. Please note that these are external platforms, and your use of
-them is subject to their respective terms and conditions. We do not host, curate, or
-endorse the specific content or search results returned by these services. Users are
-responsible for ensuring that their playback or usage of such content complies with their
-local copyright and performance licensing requirements; linking to these services does not
-constitute legal authorization for public performance.
+YouTube, Spotify, HymnsForWorship.org, and zgaxr.com) to assist users in locating musical
+performances, recordings, or sheet music. Please note that these are external platforms,
+and your use of them is subject to their respective terms and conditions. We do not host,
+curate, or endorse the specific content or search results returned by these services.
+Users are responsible for ensuring that their playback or usage of such content complies
+with their local copyright and performance licensing requirements; linking to these
+services does not constitute legal authorization for public performance.

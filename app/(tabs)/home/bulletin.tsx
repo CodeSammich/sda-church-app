@@ -248,6 +248,10 @@ const LABELS = {
 } as const;
 
 const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
+let scriptureReferenceRequestSequence = 0;
+
+const createScriptureReferenceRequest = () =>
+  `${Date.now()}-${++scriptureReferenceRequestSequence}`;
 
 type Labels = (typeof LABELS)['en'];
 type WeekState = {
@@ -493,11 +497,11 @@ export default function WeeklyBulletinScreen() {
     const targetBibleReference = resolveScriptureReference(location.bibleVerses);
     const openBibleReference = hasBulletinValue(location.bibleVerses)
       ? () =>
-          router.push({
+          router.replace({
             pathname: '/bible',
             params: {
               ...getScriptureReaderParams(targetBibleReference, language),
-              referenceRequest: String(Date.now()),
+              referenceRequest: createScriptureReferenceRequest(),
               backTo: '/home/bulletin',
             },
           } as any)

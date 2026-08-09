@@ -71,9 +71,9 @@ Apps Script web app (Code.gs, executes as the deploying account)
    |
    +--> YYYY Sabbath -------- roster and schedule assignments
    |
-   +--> Queens Worship Data - latest matching Queens form response
+   +--> Queens Worship Data - all matching Queens form responses
    |
-   +--> Brooklyn Worship Data - latest matching Brooklyn form response
+   +--> Brooklyn Worship Data - all matching Brooklyn form responses
    |
    v
 Allowlisted, privacy-filtered JSON
@@ -100,8 +100,9 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 4. On a cache miss, Apps Script validates the date and derives the `YYYY Sabbath` tab name. Non-Sabbath
    tabs are never queried.
 5. The matching schedule row supplies metadata and Queens/Brooklyn assignments.
-6. Each worship-data tab is independently filtered to the same date. When there are
-   multiple form submissions, the row with the latest `Timestamp` wins.
+6. Each worship-data tab is independently filtered to the same date. All matching form
+   submissions are merged field by field. Blank answers do not erase an earlier answer;
+   when multiple nonblank answers conflict, the latest `Timestamp` wins.
 7. Person-valued schedule fields are reduced to `First L.`; `Choir` is retained.
 8. Only allowlisted worship content is copied from the form rows. `Email Address` and
    other form metadata cannot enter the response object.
@@ -221,7 +222,7 @@ rename it without updating `FORM_RESPONSE_SCHEMA`, tests, and this table.
 
 | Google Form response column / English question prefix | Code use | JSON destination |
 | --- | --- | --- |
-| `Timestamp` | Sort matching responses; newest wins | Not returned |
+| `Timestamp` | Sort matching responses; newest nonblank answer wins per field | Not returned |
 | `Email Address` | None | Never returned |
 | `What date is this Sabbath?` | Match the requested bulletin date | Not returned separately |
 | `What is the English name and number for the Hymn of Praise this week?` | Allowlisted worship content | `location.hymnOfPraise.english` |
@@ -236,8 +237,11 @@ Operational rules for the forms:
 
 - Keep both forms' English question prefixes identical to the table above.
 - Let Forms append response rows; do not sort or restructure the response headers manually.
-- A corrected resubmission for the same Sabbath is supported: the latest `Timestamp` row
-  replaces the earlier response for that location.
+- Multiple people may submit different answers for the same Sabbath. All nonblank answers
+  are merged into that location's bulletin.
+- A corrected answer for the same Sabbath is supported: when two nonblank answers target
+  the same field, the answer from the latest `Timestamp` replaces the earlier answer.
+- A blank answer in a later submission does not erase an earlier nonblank answer.
 - If no response matches, roster data still loads and worship-content fields remain blank,
   which the PWA displays as `TBD`.
 - Adding an unrelated question does not expose it. New content remains unavailable to the
@@ -438,7 +442,7 @@ would produce. Service limits can change; maintainers should review Google's cur
 | No matching row in the yearly tab | JSON `No schedule found` error | Verify the Date cell, displayed date, year tab, and deployment version |
 | Missing response tab | That location has blank worship content; roster still loads | Restore the tab or update `CONFIG.responseSheets` |
 | No form submission for the date | Worship content displays `TBD`; roster still loads | Submit the location's form if content is available |
-| Multiple submissions for one date | Latest timestamp wins independently per location | No deletion is required; submit a correction |
+| Multiple submissions for one date | Nonblank fields merge; latest timestamp wins each conflict independently per location | No deletion is required; submit a correction |
 | Renamed/reordered schedule header | Field may be blank or mapped incorrectly | Restore the documented header contract and protections |
 | Renamed Form question prefix | Corresponding worship field becomes blank | Restore the question or update `FORM_RESPONSE_SCHEMA` |
 | HTTP 403 / Google access page | Public PWA cannot call the API | Redeploy as Web app, execute as deployer, access `Anyone` |

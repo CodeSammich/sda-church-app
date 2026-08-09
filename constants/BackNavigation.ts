@@ -1,5 +1,10 @@
-export const hasHeaderBackButton = (segments: readonly string[]) =>
-  segments.length > 2;
+export const hasHeaderBackButton = (
+  segments: readonly string[],
+  backTo?: string | string[],
+) => {
+  const explicitTarget = Array.isArray(backTo) ? backTo[0] : backTo;
+  return Boolean(explicitTarget) || segments.length > 2;
+};
 
 export const getHeaderBackTarget = (
   segments: readonly string[],

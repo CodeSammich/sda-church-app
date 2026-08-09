@@ -6,6 +6,14 @@ import {
 } from '@/constants/AppPreferences';
 import { StyleSheet } from 'react-native';
 
+const BULLETIN_VERSE_VIEWPORT_ANCHOR = 0.35;
+
+/** Places a bulletin-linked verse slightly above the viewport midpoint. */
+export const getBulletinVerseScrollOffset = (
+  verseY: number,
+  viewportHeight: number,
+) => Math.max(0, verseY - viewportHeight * BULLETIN_VERSE_VIEWPORT_ANCHOR);
+
 export type BibleDockLayout = Readonly<{
   audioDockHeight: number;
   controlHeight: number;

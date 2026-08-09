@@ -5,12 +5,22 @@ import { getBottomTabContentHeight } from '@/constants/Layout';
 import { createNavigationStyles } from '@/styles/NavigationStyles';
 import {
   createReaderStyles,
+  getBulletinVerseScrollOffset,
   getBibleDockLayout,
   getBibleDockViewportLayout,
 } from '@/styles/ReaderStyles';
 import { StyleSheet } from 'react-native';
 
 describe('Bible reader text scaling', () => {
+  it('positions bulletin-linked verses slightly above the viewport midpoint', () => {
+    expect(getBulletinVerseScrollOffset(700, 800)).toBe(420);
+    expect(700 - getBulletinVerseScrollOffset(700, 800)).toBe(280);
+  });
+
+  it('does not create a negative offset for verses near the chapter start', () => {
+    expect(getBulletinVerseScrollOffset(100, 800)).toBe(0);
+  });
+
   it('applies the full 200% app preference to scripture and document text', () => {
     const reader = createReaderStyles(2);
     const document = createDocumentStyles(2);

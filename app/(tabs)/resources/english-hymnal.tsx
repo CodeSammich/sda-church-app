@@ -12,7 +12,7 @@ import {
   openHymnal,
 } from '@/constants/EnglishHymnal';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
-import { CHURCH_BUILDING_IMAGE_URL, openYouTubeSearch } from '@/constants/ExternalLinks';
+import { openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
@@ -25,7 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const uiLabels = {
   en: {
-    title: 'English Hymnal',
+    title: 'SDA Hymnal — 1985 Edition',
     search: 'Search by number, title, or scripture...',
     externalLink: 'View on HymnsForWorship.org',
     legalLink: 'Legal Disclaimer',
@@ -35,7 +35,7 @@ const uiLabels = {
     readScripture: 'Bible',
   },
   zh: {
-    title: '英文詩歌本',
+    title: '英文 SDA 詩歌本 — 1985 年版',
     search: '按編號、標題或經文搜尋...',
     externalLink: '在 HymnsForWorship.org 查看',
     legalLink: '法律聲明',
@@ -44,7 +44,7 @@ const uiLabels = {
     readScripture: '查閱聖經',
   },
   'zh-cn': {
-    title: '英文诗歌本',
+    title: '英文 SDA 诗歌本 — 1985 年版',
     search: '按编号、标题或经文搜索...',
     externalLink: '在 HymnsForWorship.org 查看',
     legalLink: '法律声明',
@@ -53,7 +53,7 @@ const uiLabels = {
     readScripture: '查阅圣经',
   },
   es: {
-    title: 'Himnario en Inglés',
+    title: 'Himnario ASD — Edición 1985',
     search: 'Buscar por número, título o referencia...',
     externalLink: 'Ver en HymnsForWorship.org',
     legalLink: 'Aviso legal',
@@ -242,7 +242,7 @@ export default function HymnalScreen() {
       >
         {/* Hero */}
         <ImageBackground
-          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          source={require('../../../public/SDAH1985.jpg')}
           style={[NavigationStyles.heroHeader, { paddingTop: headerHeight + 6, paddingBottom: 24 }]}
           resizeMode="cover"
         >
