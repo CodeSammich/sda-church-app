@@ -72,10 +72,11 @@ export default function LegalScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This application provides access to non-copyrightable metadata (hymn titles and
-        index numbers) to facilitate navigation. We do not host or reproduce protected
-        musical notation or lyrics. All external content is accessed through direct links
-        to authorized third-party providers.
+        This application provides searchable hymn titles, index numbers, and related
+        reference metadata to facilitate navigation. We do not host or reproduce protected
+        musical notation or lyrics. External content is accessed through links to
+        third-party providers; a link does not represent that this project independently
+        verified every provider&apos;s copyright permissions.
       </Text>
 
       <Text

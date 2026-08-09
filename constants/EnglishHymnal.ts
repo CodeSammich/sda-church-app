@@ -5,22 +5,20 @@
  * Hymnal (1985 edition), mapping sequential indices to titles and factual reference
  * points for application routing and lookup features.
  *
- * LEGAL COMPLIANCE & REPOSITORY HOSTING NOTE:
- * This dataset consists strictly of non-copyrightable metadata and factual listings
- * (sequential numbers, brief titles, and historical scripture mappings). Under U.S.
- * Copyright Law (U.S. Copyright Office Circular 34), short phrases, titles, and mechanical
- * numbering systems lack the creative authorship required for copyright protection.
- * Furthermore, per Feist Publications, Inc. v. Rural Telephone Service Co., 499 U.S. 340 (1991),
- * purely factual compilations and cross-references are not eligible for copyright. Because
- * this file omits protected creative works (such as musical notation or proprietary lyric
- * texts), it is public factual data eligible for open distribution and public hosting.
+ * REPOSITORY HOSTING NOTE:
+ * This dataset is limited to sequential numbers, brief titles, and scripture-reference
+ * metadata. It deliberately omits musical notation and lyric texts. Facts and titles are
+ * generally not protected by copyright in isolation, although an original selection or
+ * arrangement of facts may be. Treat this metadata-only design as risk reduction rather
+ * than a categorical public-domain determination.
  *
  * EXTERNAL HYPERLINK ROUTING POLICY:
  * To provide the congregation with access to sheet music without hosting copyrighted
  * files, this application utilizes a standard redirect architecture to external, public
  * web pages on HymnsForWorship.org (an educational resource curated by a credentialed
- * SDA music educator). In accordance with established legal precedent (Perfect 10, Inc. v. Amazon.com, Inc.),
- * standard hyperlinking to a publicly accessible webpage does not constitute copyright infringement.
+ * SDA music educator). The app sends a URL to the external browser and does not store or
+ * display the score itself. Hyperlink and embedding law varies by jurisdiction, so this
+ * architecture should not be described as blanket immunity from copyright liability.
  *
  * IMPLEMENTATION CONSTRAINTS (DEVELOPER DISCLOSURE):
  * - All external links MUST open in the device's native web browser (Safari/Chrome).
@@ -28,21 +26,28 @@
  * - Do NOT hotlink directly to raw asset files (e.g., paths ending in .png, .jpg, or .pdf).
  *   You may only link to the official user-facing HTML landing pages. This respects the
  *   hosting platform's terms of use and preserves necessary copyright attribution context.
+ * - Deep-link hymn pages to their public `#hymn-score` section so the browser scrolls
+ *   directly to the sheet music without bypassing the surrounding source page.
+ *
+ * Evidence, legal limitations, and the maintenance decision record:
+ * docs/feature_designs/hymnal_integration_design.md
  */
 
 import { openURL } from './ExternalLinks';
 
-export const openHymnal = (hymnNumber?: string | number) => {
+export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
   const hId =
     typeof hymnNumber === 'string' || typeof hymnNumber === 'number' ? hymnNumber : '';
 
   if (hId === '') {
-    return openURL(
-      'https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/',
-    );
+    return 'https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/';
   }
 
-  return openURL(`https://hymnsforworship.org/sdah-${hId.toString().padStart(3, '0')}`);
+  return `https://hymnsforworship.org/sdah-${hId.toString().padStart(3, '0')}#hymn-score`;
+};
+
+export const openHymnal = (hymnNumber?: string | number) => {
+  return openURL(getEnglishHymnUrl(hymnNumber));
 };
 
 export interface HymnEntry {
