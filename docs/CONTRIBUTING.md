@@ -15,6 +15,10 @@ directly against `main`.
   release branch into `main`. Contributors do not need write access to `main` or permission
   to perform this release step.
 
+Release branch creation is currently a manual, code-maintainer action. No workflow creates
+`release/x.y.z` automatically. This is intentional: starting a release chooses the version
+and production scope and should remain an explicit decision.
+
 1. A maintainer creates `release/x.y.z` from the primary repository's `main` branch. If
    the release branch does not exist, ask a maintainer to create it.
 2. Create the feature branch from that release branch, then push it to your fork:
@@ -35,6 +39,21 @@ directly against `main`.
    `release/x.y.z` into `main`. Only maintainers perform this second stage; contributors
    should not retarget their feature PRs to `main`.
 6. The merge to `main` triggers version synchronization, tagging, and deployment.
+
+### Future release-branch automation
+
+If release creation is automated later, begin with a maintainer-run local helper that:
+
+1. validates the requested semantic version;
+2. confirms the release branch and version tag do not already exist;
+3. starts from the current primary-repository `main` branch;
+4. creates the release branch and synchronizes all version files; and
+5. stops before committing or pushing so the maintainer can review the result.
+
+Only consider a manually dispatched GitHub Actions workflow after that helper has been used
+successfully for multiple releases. The workflow must perform release validation itself:
+pushes made with the standard `GITHUB_TOKEN` generally do not trigger another workflow run.
+Do not create release branches automatically from dates, issue activity, or feature merges.
 
 ### Pull request format and issue closing
 
