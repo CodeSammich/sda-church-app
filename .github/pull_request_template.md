@@ -2,6 +2,13 @@
 
 _What does your change do?_
 
+## Related issues
+
+_List each related issue with a closing keyword, for example `Closes #XX`. For contributor
+pull requests targeting a release branch, a code maintainer will repeat these references
+in the eventual release pull request to the default branch so GitHub closes the issues
+when that release is merged._
+
 ## Testing
 
 - [ ] Incremented `version` field in `package.json` for this release and added version
@@ -15,8 +22,3 @@ _What does your change do?_
 
 Target version should always be
 [latest stable XCode](https://developer.apple.com/support/xcode/)
-
-## For PR reviewers
-
-When merging, please ensure the commit message has "resolves #XX" to let GitHub auto-close
-the issue.

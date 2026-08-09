@@ -44,7 +44,24 @@ assets and pushes them to the gh-pages branch.
 npm run deploy
 ```
 
-Once deployed, the app is live at: https://<username>.github.io/sda-church-app/
+Each fork is deployed under the GitHub Pages domain belonging to that fork's owner. For a
+fork that keeps the repository name `sda-church-app`, the URL is:
+
+```text
+https://<github-owner>.github.io/sda-church-app/
+```
+
+For example, the `CodeSammich` fork is hosted at
+`https://codesammich.github.io/sda-church-app/`. A fork owned by another user or
+organization must use that owner's `github.io` hostname; it should not assume that the
+CodeSammich URL or the NYCCSDA custom domain belongs to it.
+
+Before deploying a fork, update the `homepage` field in `package.json` to its GitHub Pages
+URL. When the fork retains the `sda-church-app` repository name, the existing
+`/sda-church-app` values in `app.json`, `public/manifest.json`, and the service-worker
+registration remain correct. If the repository is renamed, update those base-path,
+start-URL, scope, and service-worker-path values to the new repository path as well. A
+custom domain is optional and requires its own GitHub Pages and DNS configuration.
 
 For development accounts, you may use the increment flag to automatically update the patch
 version in `package.json` to quickly update the version number to trigger a new deploy on
@@ -68,15 +85,23 @@ The update flow is intentionally user-controlled:
 2. The app performs the browser equivalent of a no-cache `curl` against the small `sw.js`
    file and compares its deployed `VERSION` with the version embedded in the running app
    bundle. The last automatic check time is persisted in browser local storage, limiting
-   explicit checks to once every hour across launches and foreground resumes. This follows
+   automatic checks to once every hour across launches and foreground resumes. This follows
    [web.dev's service-worker lifecycle guidance](https://web.dev/articles/service-worker-lifecycle#manual_updates),
    which recommends an interval such as hourly when an application may remain open for a
    long time; this app applies that interval to launch and foreground-resume events rather
    than running a continuous background polling timer.
-3. When a changed worker finishes installing, it remains in the browser's `waiting` state.
+3. Pressing the version number in the You screen remains the explicit manual check. It
+   checks the service-worker registration and reports “checking,” “up to date,” or an
+   available update through the shared localized banner.
+4. Pressing the Home tab performs an additional silent, no-cache fetch of only `sw.js`.
+   This user-initiated check is not subject to the hourly launch/resume limit. It does not
+   show an “up to date” message or download the full application bundle. If the deployed
+   version differs, the normal update banner appears and lets the user choose whether to
+   install it. Repeated Home presses are ignored while one of these checks is in progress.
+5. When a changed worker finishes installing, it remains in the browser's `waiting` state.
    One localized, app-themed banner appears at the top of the app instead of interrupting
    the user or adding update controls to individual pages.
-4. Pressing the banner action asks the browser to update its registration, resolves the
+6. Pressing the banner action asks the browser to update its registration, resolves the
    current waiting worker, and sends it `SKIP_WAITING`. Once the worker takes control, the
    app performs a cache-busting navigation so the page shell is retrieved from the CDN.
    The newly loaded bundle repeats the deployed-version comparison and hides the banner

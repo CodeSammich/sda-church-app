@@ -42,7 +42,7 @@ export default function LegalScreen() {
         variant="labelSmall"
         style={[styles.lastUpdated, { color: theme.colors.onSurfaceVariant }]}
       >
-        Last Updated: May 2026
+        Last Updated: August 2026
       </Text>
 
       <Text
@@ -55,11 +55,11 @@ export default function LegalScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This app links to HymnsForWorship.org for hymn resources. Please be aware that
-        some hymns are copyrighted. When you follow these links, you are subject to
-        HymnsForWorship.org’s terms and conditions. You may be prompted to accept their
-        terms before viewing certain content. Please respect copyright laws and do not
-        attempt to bypass these requirements.
+        This app links to HymnsForWorship.org and zgaxr.com for hymn resources. Please be
+        aware that some hymns are copyrighted. When you follow these links, you are
+        subject to the destination provider’s terms and conditions. You may be prompted
+        to accept their terms before viewing certain content. Please respect copyright
+        laws and do not attempt to bypass these requirements.
       </Text>
 
       <Text
@@ -72,10 +72,11 @@ export default function LegalScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This application provides access to non-copyrightable metadata (hymn titles and
-        index numbers) to facilitate navigation. We do not host or reproduce protected
-        musical notation or lyrics. All external content is accessed through direct links
-        to authorized third-party providers.
+        This application provides searchable hymn titles, index numbers, and related
+        reference metadata to facilitate navigation. We do not host or reproduce protected
+        musical notation or lyrics. External content is accessed through links to
+        third-party providers; a link does not represent that this project independently
+        verified every provider&apos;s copyright permissions.
       </Text>
 
       <Text
@@ -89,10 +90,10 @@ export default function LegalScreen() {
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
         This application provides links to external platforms and third-party services
-        (e.g., YouTube, Spotify, and HymnsForWorship.org) to assist users in locating
-        musical performances, recordings, or sheet music. Please note that these are
-        external platforms, and your use of them is subject to their respective terms and
-        conditions. We do not host, curate, or endorse the specific content or search
+        (e.g., YouTube, Spotify, HymnsForWorship.org, and zgaxr.com) to assist users in
+        locating musical performances, recordings, or sheet music. Please note that these
+        are external platforms, and your use of them is subject to their respective terms
+        and conditions. We do not host, curate, or endorse the specific content or search
         results returned by these services. Users are responsible for ensuring that their
         playback or usage of such content complies with their local copyright and
         performance licensing requirements; linking to these services does not constitute

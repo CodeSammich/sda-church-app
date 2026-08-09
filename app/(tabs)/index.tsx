@@ -514,9 +514,14 @@ export default function HomeScreen() {
                     {isSabbath ? labels.isSabbath : labels.sabbathStarts}
                   </Text>
                   {targetDate && (
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                      {`${formatDisplayDate(targetDate)} — ${labels.locationDefault}`}
-                    </Text>
+                    <>
+                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                        {formatDisplayDate(targetDate)}
+                      </Text>
+                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                        {labels.locationDefault}
+                      </Text>
+                    </>
                   )}
                 </View>
                 <Text

@@ -45,7 +45,7 @@ type CachedBulletin = {
   fetchedAt: number;
 };
 
-const BULLETIN_CACHE_PREFIX = 'bulletin-cache-v1:';
+const BULLETIN_CACHE_PREFIX = 'bulletin-cache-v2:';
 const BULLETIN_REFRESH_PREFIX = 'bulletin-refresh-v1:';
 
 const toLocalIsoDate = (date: Date) => {
@@ -55,6 +55,11 @@ const toLocalIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+/**
+ * Local calendar-day precision is intentional here. These dates only trigger a
+ * bulletin refresh around the Sabbath transition; unlike the Home countdown,
+ * they do not need to track the exact start of Sabbath.
+ */
 export const getUpcomingSabbathDates = (from = new Date()): [string, string] => {
   const first = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   const daysUntilSaturday = (6 - first.getDay() + 7) % 7;

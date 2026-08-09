@@ -2,6 +2,9 @@ import {
   formatHymnalScriptureReference,
   getSortedHymns,
 } from '@/constants/EnglishHymnal';
+import { getSortedChinese505Hymns } from '@/constants/Chinese505Hymnal';
+import { getSortedChinese506Hymns } from '@/constants/Chinese506Hymnal';
+import { getSortedChinese707Hymns } from '@/constants/Chinese707Hymnal';
 import { SupportedLanguage } from '@/constants/LanguageContext';
 import * as BibleService from '@/services/BibleService';
 import type { MaterialCommunityIconName } from '@/components/AppIcon';
@@ -752,11 +755,24 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
       keywords: ['scripture', 'word', 'verse', 'read', 'chapter', 'testament'],
     },
     hymnal: {
-      title: 'English Hymnal',
-      keywords: ['songs', 'lyrics', 'music', 'sing', 'worship', 'praise'],
+      title: 'SDA Hymnal — 1985 Edition',
+      keywords: ['1985', 'sda', 'adventist', 'songs', 'lyrics', 'music', 'sing', 'worship', 'praise'],
     },
     chineseHymnal: {
-      title: 'Chinese Hymnal',
+      title: 'Chinese Hymnal — 505 Edition',
+      keywords: [
+        '505',
+        'songs',
+        'lyrics',
+        'music',
+        'praise',
+        'worship',
+        'traditional',
+        'simplified',
+      ],
+    },
+    chinese506Hymnal: {
+      title: 'Chinese Hymnal — 506 Edition',
       keywords: [
         '506',
         'songs',
@@ -767,6 +783,18 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
         'traditional',
         'simplified',
       ],
+    },
+    chinese707V1Hymnal: {
+      title: 'Hymns of Praise — 707 New Simplified Notation',
+      keywords: ['707', 'new', 'simplified', 'notation', 'hymns', 'praise'],
+    },
+    chinese707V2Hymnal: {
+      title: 'Hymns of Praise — 707 Four-Part Harmony',
+      keywords: ['707', 'simplified', 'notation', 'four-part', 'harmony'],
+    },
+    chinese707V3Hymnal: {
+      title: 'Hymns of Praise — 707 Standard Edition',
+      keywords: ['707', 'standard', 'classic', 'leather-bound', 'hymns'],
     },
     aboutSDA: {
       title: 'About Denomination',
@@ -872,12 +900,28 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
       keywords: ['經文', '閱讀', '聖言', 'scripture', 'bible'],
     },
     hymnal: {
-      title: '英文詩歌本',
-      keywords: ['讚美詩', '歌詞', '音樂', '敬拜', 'hymnal', 'music'],
+      title: '英文 SDA 詩歌本 — 1985 年版',
+      keywords: ['1985', 'SDA', '讚美詩', '歌詞', '音樂', '敬拜', 'hymnal', 'music'],
     },
     chineseHymnal: {
-      title: '506 讚美詩',
+      title: '中文讚美詩 — 505 版',
+      keywords: ['詩歌', '歌詞', '音樂', '505', '讚美詩', 'hymnal', 'chinese'],
+    },
+    chinese506Hymnal: {
+      title: '中文讚美詩 — 506 版',
       keywords: ['詩歌', '歌詞', '音樂', '506', '讚美詩', 'hymnal', 'chinese'],
+    },
+    chinese707V1Hymnal: {
+      title: '頌讚詩歌 — 707 新編簡譜版',
+      keywords: ['707', '頌讚詩歌', '新編', '簡譜', '讚美詩'],
+    },
+    chinese707V2Hymnal: {
+      title: '頌讚詩歌 — 707 簡譜四聲部版',
+      keywords: ['707', '頌讚詩歌', '簡譜', '四聲部', '讚美詩'],
+    },
+    chinese707V3Hymnal: {
+      title: '頌讚詩歌 — 707 標準版',
+      keywords: ['707', '頌讚詩歌', '標準版', '經典', '皮面版'],
     },
     aboutSDA: {
       title: '關於教派',
@@ -983,12 +1027,28 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
       keywords: ['经文', '阅读', '圣言', 'scripture', 'bible'],
     },
     hymnal: {
-      title: '英文诗歌本',
-      keywords: ['赞美诗', '歌词', '音乐', '敬拜', 'hymnal', 'music'],
+      title: '英文 SDA 诗歌本 — 1985 年版',
+      keywords: ['1985', 'SDA', '赞美诗', '歌词', '音乐', '敬拜', 'hymnal', 'music'],
     },
     chineseHymnal: {
-      title: '506 赞美诗',
+      title: '中文赞美诗 — 505 版',
+      keywords: ['诗歌', '歌词', '音乐', '505', '赞美诗', 'hymnal', 'chinese'],
+    },
+    chinese506Hymnal: {
+      title: '中文赞美诗 — 506 版',
       keywords: ['诗歌', '歌词', '音乐', '506', '赞美诗', 'hymnal', 'chinese'],
+    },
+    chinese707V1Hymnal: {
+      title: '颂赞诗歌 — 707 新编简谱版',
+      keywords: ['707', '颂赞诗歌', '新编', '简谱', '赞美诗'],
+    },
+    chinese707V2Hymnal: {
+      title: '颂赞诗歌 — 707 简谱四声部版',
+      keywords: ['707', '颂赞诗歌', '简谱', '四声部', '赞美诗'],
+    },
+    chinese707V3Hymnal: {
+      title: '颂赞诗歌 — 707 标准版',
+      keywords: ['707', '颂赞诗歌', '标准版', '经典', '皮面版'],
     },
     aboutSDA: {
       title: '关于教派',
@@ -1099,12 +1159,28 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
       keywords: ['escritura', 'palabra', 'versículo', 'leer', 'testamento'],
     },
     hymnal: {
-      title: 'Himnario en Inglés',
-      keywords: ['cantos', 'letras', 'música', 'cantar', 'adoración'],
+      title: 'Himnario ASD — Edición 1985',
+      keywords: ['1985', 'ASD', 'adventista', 'cantos', 'letras', 'música', 'cantar', 'adoración'],
     },
     chineseHymnal: {
-      title: 'Himnario Chino',
+      title: 'Himnario Chino — Edición 505',
+      keywords: ['cantos', 'letras', 'música', 'chino', '505'],
+    },
+    chinese506Hymnal: {
+      title: 'Himnario Chino — Edición 506',
       keywords: ['cantos', 'letras', 'música', 'chino', '506'],
+    },
+    chinese707V1Hymnal: {
+      title: 'Himnos de Alabanza — Edición 707 de Notación Nueva',
+      keywords: ['707', 'nueva', 'simplificada', 'notación', 'himnos'],
+    },
+    chinese707V2Hymnal: {
+      title: 'Himnos de Alabanza — Edición 707 a Cuatro Voces',
+      keywords: ['707', 'simplificada', 'cuatro voces', 'armonía'],
+    },
+    chinese707V3Hymnal: {
+      title: 'Himnos de Alabanza — Edición 707 Estándar',
+      keywords: ['707', 'estándar', 'clásica', 'himnos'],
     },
     aboutSDA: {
       title: 'Sobre la Denominación',
@@ -1199,7 +1275,27 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
     {
       ...labels.chineseHymnal,
       icon: 'music-note',
-      route: '/resources/hymnal-selection',
+      route: '/resources/chinese-505-hymnal',
+    },
+    {
+      ...labels.chinese506Hymnal,
+      icon: 'music-note',
+      route: '/resources/chinese-506-hymnal',
+    },
+    {
+      ...labels.chinese707V1Hymnal,
+      icon: 'music-note',
+      route: '/resources/chinese-707-new-simplified-hymnal',
+    },
+    {
+      ...labels.chinese707V2Hymnal,
+      icon: 'music-note',
+      route: '/resources/chinese-707-four-part-hymnal',
+    },
+    {
+      ...labels.chinese707V3Hymnal,
+      icon: 'music-note',
+      route: '/resources/chinese-707-standard-hymnal',
     },
     { ...labels.give, icon: 'gift', route: '/home/give' },
     { ...labels.darkMode, icon: 'theme-light-dark', route: '/you' },
@@ -1250,5 +1346,84 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
     isHymn: true,
   }));
 
-  return [...baseItems, ...bibleBooks, ...englishHymns];
+  const chinese505Hymns: SearchableItem[] = getSortedChinese505Hymns().map(
+    (hymn) => ({
+      title: `${hymn.number}. ${hymn.title}`,
+      keywords: [
+        hymn.number.toString(),
+        hymn.title,
+        labels.chineseHymnal?.title || 'Chinese Hymnal',
+      ],
+      icon: 'music-note',
+      route: `/resources/chinese-505-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      isHymn: true,
+    }),
+  );
+
+  const chinese506Hymns: SearchableItem[] = getSortedChinese506Hymns().map(
+    (hymn) => ({
+      title: `${hymn.number}. ${hymn.title}`,
+      keywords: [
+        hymn.number.toString(),
+        hymn.title,
+        labels.chinese506Hymnal?.title || 'Chinese Hymnal',
+      ],
+      icon: 'music-note',
+      route: `/resources/chinese-506-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      isHymn: true,
+    }),
+  );
+
+  const chinese707V1Hymns: SearchableItem[] = getSortedChinese707Hymns(1).map(
+    (hymn) => ({
+      title: `${hymn.number}. ${hymn.title}`,
+      keywords: [
+        hymn.number.toString(),
+        hymn.title,
+        labels.chinese707V1Hymnal.title,
+      ],
+      icon: 'music-note',
+      route: `/resources/chinese-707-new-simplified-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      isHymn: true,
+    }),
+  );
+
+  const chinese707V2Hymns: SearchableItem[] = getSortedChinese707Hymns(2).map(
+    (hymn) => ({
+      title: `${hymn.number}. ${hymn.title}`,
+      keywords: [
+        hymn.number.toString(),
+        hymn.title,
+        labels.chinese707V2Hymnal.title,
+      ],
+      icon: 'music-note',
+      route: `/resources/chinese-707-four-part-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      isHymn: true,
+    }),
+  );
+
+  const chinese707V3Hymns: SearchableItem[] = getSortedChinese707Hymns(3).map(
+    (hymn) => ({
+      title: `${hymn.number}. ${hymn.title}`,
+      keywords: [
+        hymn.number.toString(),
+        hymn.title,
+        labels.chinese707V3Hymnal.title,
+      ],
+      icon: 'music-note',
+      route: `/resources/chinese-707-standard-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      isHymn: true,
+    }),
+  );
+
+  return [
+    ...baseItems,
+    ...bibleBooks,
+    ...englishHymns,
+    ...chinese505Hymns,
+    ...chinese506Hymns,
+    ...chinese707V1Hymns,
+    ...chinese707V2Hymns,
+    ...chinese707V3Hymns,
+  ];
 };

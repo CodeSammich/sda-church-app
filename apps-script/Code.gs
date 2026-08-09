@@ -17,7 +17,7 @@
 var CONFIG = Object.freeze({
   scheduleSheetSuffix: ' Sabbath',
   cacheSeconds: 120,
-  cacheVersion: 'v1',
+  cacheVersion: 'v2',
   responseSheets: Object.freeze({
     queens: ['Queens Worship Data'],
     brooklyn: ['Brooklyn Worship Data'],
@@ -185,13 +185,13 @@ function buildBulletin_(requestedDate) {
     setPath_(bulletin, field.path, value);
   });
 
-  populateFormResponse_(
+  populateFormResponses_(
     bulletin.queens,
-    getLatestResponseRow_(spreadsheet, CONFIG.responseSheets.queens, requestedDate),
+    getResponseRows_(spreadsheet, CONFIG.responseSheets.queens, requestedDate),
   );
-  populateFormResponse_(
+  populateFormResponses_(
     bulletin.brooklyn,
-    getLatestResponseRow_(spreadsheet, CONFIG.responseSheets.brooklyn, requestedDate),
+    getResponseRows_(spreadsheet, CONFIG.responseSheets.brooklyn, requestedDate),
   );
 
   return bulletin;
@@ -210,18 +210,24 @@ function createLocation_() {
   };
 }
 
-function populateFormResponse_(location, responseRow) {
-  if (!responseRow) {
+function populateFormResponses_(location, responseRows) {
+  if (!responseRows) {
     return;
   }
 
-  FORM_RESPONSE_SCHEMA.forEach(function (field) {
-    var value = valueForAliases_(responseRow.headers, responseRow.values, field.headers);
-    setPath_(location, field.path, displayValue_(value));
+  // Rows are oldest-to-newest. Each nonblank answer is applied so submissions
+  // can contribute different fields, while the latest answer wins a conflict.
+  responseRows.rows.forEach(function (row) {
+    FORM_RESPONSE_SCHEMA.forEach(function (field) {
+      var value = valueForAliases_(responseRows.headers, row, field.headers);
+      if (!isBlank_(value)) {
+        setPath_(location, field.path, displayValue_(value));
+      }
+    });
   });
 }
 
-function getLatestResponseRow_(spreadsheet, sheetNames, requestedDate) {
+function getResponseRows_(spreadsheet, sheetNames, requestedDate) {
   var sheet = findFirstSheet_(spreadsheet, sheetNames);
   if (!sheet) {
     return null;
@@ -239,12 +245,17 @@ function getLatestResponseRow_(spreadsheet, sheetNames, requestedDate) {
   }
 
   var timestampColumn = findFirstHeaderIndex_(table.headers, CONFIG.timestampHeaders);
-  var matchingRows = table.rows.filter(function (row, index) {
-    return dateMatches_(
-      row[dateColumn],
-      table.displayRows[index][dateColumn],
-      requestedDate,
-    );
+  var matchingRows = [];
+  table.rows.forEach(function (row, index) {
+    if (
+      dateMatches_(
+        row[dateColumn],
+        table.displayRows[index][dateColumn],
+        requestedDate,
+      )
+    ) {
+      matchingRows.push({ values: row, sourceIndex: index });
+    }
   });
 
   if (!matchingRows.length) {
@@ -253,11 +264,20 @@ function getLatestResponseRow_(spreadsheet, sheetNames, requestedDate) {
 
   if (timestampColumn !== -1) {
     matchingRows.sort(function (left, right) {
-      return toTimestamp_(right[timestampColumn]) - toTimestamp_(left[timestampColumn]);
+      return (
+        toTimestamp_(left.values[timestampColumn]) -
+          toTimestamp_(right.values[timestampColumn]) ||
+        left.sourceIndex - right.sourceIndex
+      );
     });
   }
 
-  return { headers: table.headers, values: matchingRows[0] };
+  return {
+    headers: table.headers,
+    rows: matchingRows.map(function (row) {
+      return row.values;
+    }),
+  };
 }
 
 function findFirstSheet_(spreadsheet, sheetNames) {

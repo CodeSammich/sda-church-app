@@ -1,6 +1,6 @@
 import { AppIcon } from '@/components/AppIcon';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useEffect, useMemo, useRef } from 'react';
+import { useContext, useMemo } from 'react';
 import { FlatList, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,9 +12,10 @@ import {
   openHymnal,
 } from '@/constants/EnglishHymnal';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
-import { CHURCH_BUILDING_IMAGE_URL, openYouTubeSearch } from '@/constants/ExternalLinks';
+import { openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
+import { getRoutedHymns } from '@/constants/HymnalRouting';
 import { useAppTheme } from '@/constants/Themes';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -25,7 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const uiLabels = {
   en: {
-    title: 'English Hymnal',
+    title: 'SDA Hymnal — 1985 Edition',
     search: 'Search by number, title, or scripture...',
     externalLink: 'View on HymnsForWorship.org',
     legalLink: 'Legal Disclaimer',
@@ -35,7 +36,7 @@ const uiLabels = {
     readScripture: 'Bible',
   },
   zh: {
-    title: '英文詩歌本',
+    title: '英文 SDA 詩歌本 — 1985 年版',
     search: '按編號、標題或經文搜尋...',
     externalLink: '在 HymnsForWorship.org 查看',
     legalLink: '法律聲明',
@@ -44,7 +45,7 @@ const uiLabels = {
     readScripture: '查閱聖經',
   },
   'zh-cn': {
-    title: '英文诗歌本',
+    title: '英文 SDA 诗歌本 — 1985 年版',
     search: '按编号、标题或经文搜索...',
     externalLink: '在 HymnsForWorship.org 查看',
     legalLink: '法律声明',
@@ -53,7 +54,7 @@ const uiLabels = {
     readScripture: '查阅圣经',
   },
   es: {
-    title: 'Himnario en Inglés',
+    title: 'Himnario ASD — Edición 1985',
     search: 'Buscar por número, título o referencia...',
     externalLink: 'Ver en HymnsForWorship.org',
     legalLink: 'Aviso legal',
@@ -91,39 +92,19 @@ export default function HymnalScreen() {
     highlight?: string;
   }>();
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
-  const flatListRef = useRef<FlatList>(null);
-
   const allHymns = useMemo(() => getSortedHymns('en'), []);
 
   // If we have a highlight query from the search bar, filter the list.
   // This allows the header search to behave like a filter for this view.
   const displayHymns = useMemo(() => {
     const query = (highlight || '').toLowerCase().trim();
-    if (!query) return allHymns;
-
-    return allHymns.filter(
-      (h) =>
+    return getRoutedHymns(allHymns, hymnNum, (h) =>
+      !query ||
         h.number.toString().includes(query) ||
         h.title.toLowerCase().includes(query) ||
-        h.scriptureReference?.toLowerCase().includes(query),
+        Boolean(h.scriptureReference?.toLowerCase().includes(query)),
     );
-  }, [highlight, allHymns]);
-
-  // Scroll to a specific hymn if requested via search params (hymnNum)
-  useEffect(() => {
-    if (hymnNum) {
-      const index = allHymns.findIndex((h) => h.number.toString() === hymnNum);
-      if (index !== -1) {
-        setTimeout(() => {
-          flatListRef.current?.scrollToIndex({
-            index,
-            animated: true,
-            viewPosition: 0,
-          });
-        }, 100);
-      }
-    }
-  }, [hymnNum, allHymns]);
+  }, [allHymns, highlight, hymnNum]);
 
   const renderHymnItem = ({ item }: { item: HydratedHymn }) => {
     return (
@@ -242,7 +223,7 @@ export default function HymnalScreen() {
       >
         {/* Hero */}
         <ImageBackground
-          source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          source={require('../../../public/SDAH1985.jpg')}
           style={[NavigationStyles.heroHeader, { paddingTop: headerHeight + 6, paddingBottom: 24 }]}
           resizeMode="cover"
         >
@@ -290,7 +271,6 @@ export default function HymnalScreen() {
         </View>
 
         <FlatList
-          ref={flatListRef}
           data={displayHymns}
           keyExtractor={(item) => item.number.toString()}
           renderItem={renderHymnItem}

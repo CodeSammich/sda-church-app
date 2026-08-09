@@ -4,33 +4,76 @@
 
 This project uses **Semantic Versioning** (npm SemVer Guide). The `package.json` file serves as the single source of truth for the application version.
 
-### Release Process
+### Two-stage release process
 
-The versioning workflow is automated via GitHub Actions to ensure consistency across the mobile app, PWA, and repository tags.
+Changes reach production through two distinct pull requests. Do not open a feature PR
+directly against `main`.
 
-1. **Create a Release Branch** from `release/x.x.x` on the primary [New-York-Chinese-Seventh-day-Adventist/sda-church-app](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app). If a release branch is not created, please ask an administrator to create one. You **must not PR to main as that skips GitHub Actions workflows**:
+- **Any contributor** may fork the repository, branch from the active release branch, and
+  open the first PR from their fork into that release branch.
+- **Code maintainers only** create and merge the second PR from the primary repository's
+  release branch into `main`. Contributors do not need write access to `main` or permission
+  to perform this release step.
+
+Release branch creation is currently a manual, code-maintainer action. No workflow creates
+`release/x.y.z` automatically. This is intentional: starting a release chooses the version
+and production scope and should remain an explicit decision.
+
+1. A maintainer creates `release/x.y.z` from the primary repository's `main` branch. If
+   the release branch does not exist, ask a maintainer to create it.
+2. Create the feature branch from that release branch, then push it to your fork:
 
    ```bash
-   git checkout main
-   git pull origin main
-   git checkout -b release/v0.8.2     # as an example
-   git checkout -b feature/your-feat-name
+   git fetch upstream
+   git switch -c feature/your-feature upstream/release/0.26.0
+   git push -u origin feature/your-feature
    ```
 
-   Check the latest tag to determine the next version.
+3. Set `package.json` to the release branch's exact version, such as `0.26.0`, and run
+   `npm run sync-version`. This synchronizes `app.json` and `public/sw.js`; release CI also
+   synchronizes `package-lock.json` if necessary.
+4. Open the feature PR from the fork's feature branch into the primary repository's
+   matching `release/x.y.z` branch. Complete the PR template and wait for all checks and
+   reviews.
+5. After all planned feature PRs are merged, a code maintainer opens the release PR from
+   `release/x.y.z` into `main`. Only maintainers perform this second stage; contributors
+   should not retarget their feature PRs to `main`.
+6. The merge to `main` triggers version synchronization, tagging, and deployment.
 
-2. **Update the Version and Push to fork**:
-   - Increment the `version` field in `package.json` manually (or use `npm version patch`).
-   - Push the changes: `git push -u origin release/v0.8.2`.
-   - The CI will validate the bump and automatically synchronize `app.json` and `sw.js` via automated commits.
+### Future release-branch automation
 
-3. **Create a Pull Request**:
-   - Open a PR from your release branch → `New-York-Chinese-Seventh-day-Adventist/sda-church-app` corresponding release branch.
-   - The CI will validate that the version in `package.json` is higher than the current version on `main`.
-   - Complete the testing checklist and wait for reviews.
+If release creation is automated later, begin with a maintainer-run local helper that:
 
-4. **MAINTAINERS ONLY**:
-   - Once a `release/x.x.x` branch is ready for release, create a final PR and validate all GitHub Actions are successfully run, then approve and merge.
+1. validates the requested semantic version;
+2. confirms the release branch and version tag do not already exist;
+3. starts from the current primary-repository `main` branch;
+4. creates the release branch and synchronizes all version files; and
+5. stops before committing or pushing so the maintainer can review the result.
+
+Only consider a manually dispatched GitHub Actions workflow after that helper has been used
+successfully for multiple releases. The workflow must perform release validation itself:
+pushes made with the standard `GITHUB_TOKEN` generally do not trigger another workflow run.
+Do not create release branches automatically from dates, issue activity, or feature merges.
+
+### Pull request format and issue closing
+
+Every feature and release PR must follow `.github/pull_request_template.md`:
+
+- Start the PR title with the exact release version, for example
+  `0.26.0 Add bulletin navigation`.
+- Describe the user-visible and technical changes under **Description**.
+- Put issue references under **Related issues**, one per line, using a supported closing
+  keyword such as `Closes #133`.
+- Complete the automated and applicable Android/iOS testing items. Only check a platform
+  after it has actually been tested on the version named by the template.
+
+GitHub closes linked issues only when the closing reference reaches the default branch.
+Therefore, `Closes #133` in a feature PR to `release/x.y.z` links the work but does not
+close the issue when that feature PR merges. The maintainer must copy all closing
+references from the included feature PRs into the final `release/x.y.z` → `main` PR.
+This is the code maintainer's responsibility, not the fork contributor's. Merging that
+final PR into `main` closes the issues. Do not rely on a reviewer to repair the merge
+commit message at the last moment.
 
 ## Branch Protection & Workflow
 
@@ -65,24 +108,21 @@ main (stable)
 #### Feature/Work Branches
 
 - **Naming convention**: `feature/`, `bugfix/`, `chore/`, `docs/`, etc.
-- **Source**: Branch from `release/*` or directly from `main`
-- **PR**: Create PR to target release branch or main
-- **Target**: Should merge back to the appropriate release branch
+- **Source**: Branch from the active `release/*` branch
+- **PR target**: The matching release branch in the primary repository
+- **Never target `main` directly**: Only the final release PR targets `main`
 
 ### Pull Request Workflow
 
-1. **Create a branch** from `release/0.2.0` or `main`
-2. **Make your changes** and commit with clear messages
-3. **Push to origin** and create a PR
-4. **Fill PR template**:
-   - Complete testing checklist
-   - Add description of changes
-5. **Await checks**:
-   - Workflow validates version tag
-   - Version bump is verified against `main`
-   - Reviews are requested
-6. **Merge**: Once approved, merge the PR
-7. **If merging to main**: Automatic release tag is created
+1. Branch from the active `release/x.y.z` branch.
+2. Make the changes, set the exact release version, verify them, and commit clearly.
+3. Push to the fork and open a PR into the matching primary-repository release branch.
+4. Follow the PR template, including Related issues and the testing checklist.
+5. Merge the feature PR after checks and review pass; its issues remain open at this stage.
+6. A code maintainer aggregates the feature PRs and their closing references in the final
+   release PR to `main`.
+7. Merge the release PR after its checks and review pass. GitHub closes the referenced
+   issues, and the deployment workflow creates the release tag.
 
 ### Automated Checks
 
@@ -91,23 +131,25 @@ main (stable)
 - **Enforce Version Change**: Compares `package.json` against `main` to ensure a version bump occurred.
 - **Auto-Sync**: Synchronizes `package-lock.json`, `sw.js`, and `app.json`. Pushes a fix commit to the PR branch if files drift from the version in `package.json`.
 
-#### `Release - Tagging and Sync` (`.github/workflows/release-tagging.yml`)
+#### `Deploy and Tag` (`.github/workflows/deploy.yml`)
 
 - **Final Validation**: Ensures the merged version is unique.
 - **Automated Tagging**: Creates a new Git tag (e.g., `v0.8.2`) matching the `package.json` version.
 
-### Example Workflow
+### Example feature workflow
 
 ```bash
-# 1. Start from main
-git checkout main && git pull origin main
+# Start from the active release branch in the primary repository
+git fetch upstream
+git switch -c feature/bulletin-navigation upstream/release/0.26.0
 
-# 2. Create release branch
-git checkout -b release/0.2.0
+# Set and synchronize the exact release version
+npm pkg set version=0.26.0
+npm run sync-version
 
-# 3. Bump version and push
-npm version minor
-git push -u origin release/0.2.0
+# After implementation and verification, push to the fork
+git push -u origin feature/bulletin-navigation
 ```
 
-**Note**: All releases follow this same workflow. Create a `release/x.y.z` branch for any hotfixes or patch releases.
+Then open the feature PR into `upstream/release/0.26.0`. A maintainer later opens the
+separate `release/0.26.0` → `main` PR and repeats its closing issue references there.
