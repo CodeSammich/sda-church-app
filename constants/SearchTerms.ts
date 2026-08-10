@@ -1,10 +1,10 @@
 import {
   formatHymnalScriptureReference,
   getSortedHymns,
-} from '@/constants/EnglishHymnal';
-import { getSortedChinese505Hymns } from '@/constants/Chinese505Hymnal';
-import { getSortedChinese506Hymns } from '@/constants/Chinese506Hymnal';
-import { getSortedChinese707Hymns } from '@/constants/Chinese707Hymnal';
+} from '@/features/hymnal/EnglishHymnal';
+import { getSortedChinese505Hymns } from '@/features/hymnal/Chinese505Hymnal';
+import { getSortedChinese506Hymns } from '@/features/hymnal/Chinese506Hymnal';
+import { getSortedChinese707Hymns } from '@/features/hymnal/Chinese707Hymnal';
 import { SupportedLanguage } from '@/constants/LanguageContext';
 import * as BibleService from '@/services/BibleService';
 import type { MaterialCommunityIconName } from '@/components/AppIcon';
@@ -1266,32 +1266,32 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
     {
       ...labels.hymnal,
       icon: 'music-note',
-      route: '/resources/english-hymnal',
+      route: '/home/english-hymnal',
     },
     {
       ...labels.chineseHymnal,
       icon: 'music-note',
-      route: '/resources/chinese-505-hymnal',
+      route: '/home/chinese-505-hymnal',
     },
     {
       ...labels.chinese506Hymnal,
       icon: 'music-note',
-      route: '/resources/chinese-506-hymnal',
+      route: '/home/chinese-506-hymnal',
     },
     {
       ...labels.chinese707V1Hymnal,
       icon: 'music-note',
-      route: '/resources/chinese-707-new-simplified-hymnal',
+      route: '/home/chinese-707-new-simplified-hymnal',
     },
     {
       ...labels.chinese707V2Hymnal,
       icon: 'music-note',
-      route: '/resources/chinese-707-four-part-hymnal',
+      route: '/home/chinese-707-four-part-hymnal',
     },
     {
       ...labels.chinese707V3Hymnal,
       icon: 'music-note',
-      route: '/resources/chinese-707-standard-hymnal',
+      route: '/home/chinese-707-standard-hymnal',
     },
     { ...labels.give, icon: 'gift', route: '/home/give' },
     { ...labels.darkMode, icon: 'theme-light-dark', route: '/you' },
@@ -1337,7 +1337,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
       labels.hymnal?.title || 'Hymnal',
     ],
     icon: 'music-note',
-    route: `/resources/english-hymnal?hymnNum=${h.number}&backTo=/resources`,
+    route: `/home/english-hymnal?hymnNum=${h.number}&backTo=/home/hymnal-selection`,
     isHymn: true,
   }));
 
@@ -1350,7 +1350,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
         labels.chineseHymnal?.title || 'Chinese Hymnal',
       ],
       icon: 'music-note',
-      route: `/resources/chinese-505-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      route: `/home/chinese-505-hymnal?hymnNum=${hymn.number}&backTo=/home/hymnal-selection`,
       isHymn: true,
     }),
   );
@@ -1364,7 +1364,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
         labels.chinese506Hymnal?.title || 'Chinese Hymnal',
       ],
       icon: 'music-note',
-      route: `/resources/chinese-506-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      route: `/home/chinese-506-hymnal?hymnNum=${hymn.number}&backTo=/home/hymnal-selection`,
       isHymn: true,
     }),
   );
@@ -1378,7 +1378,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
         labels.chinese707V1Hymnal.title,
       ],
       icon: 'music-note',
-      route: `/resources/chinese-707-new-simplified-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      route: `/home/chinese-707-new-simplified-hymnal?hymnNum=${hymn.number}&backTo=/home/hymnal-selection`,
       isHymn: true,
     }),
   );
@@ -1392,7 +1392,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
         labels.chinese707V2Hymnal.title,
       ],
       icon: 'music-note',
-      route: `/resources/chinese-707-four-part-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      route: `/home/chinese-707-four-part-hymnal?hymnNum=${hymn.number}&backTo=/home/hymnal-selection`,
       isHymn: true,
     }),
   );
@@ -1406,7 +1406,7 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
         labels.chinese707V3Hymnal.title,
       ],
       icon: 'music-note',
-      route: `/resources/chinese-707-standard-hymnal?hymnNum=${hymn.number}&backTo=/resources/hymnal-selection`,
+      route: `/home/chinese-707-standard-hymnal?hymnNum=${hymn.number}&backTo=/home/hymnal-selection`,
       isHymn: true,
     }),
   );

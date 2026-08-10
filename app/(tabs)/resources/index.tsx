@@ -12,16 +12,14 @@ import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useContext } from 'react';
 import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
-import { List, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 
 const allLabels = {
   en: {
     title: 'Explore',
-    sermonsWorship: 'Watch & Listen',
-    studyLiturgy: 'Study & Liturgy',
     bible: 'Holy Bible',
     bibleSub: 'Read scripture in multiple languages',
     youtube: 'Sermon Archive',
@@ -33,15 +31,11 @@ const allLabels = {
     zoomClass: 'Zoom Class',
     zoomSub:
       'Interactive Bible study and fellowship',
-    hymnal: 'Hymnal',
-    hymnalSub: 'English and Chinese worship music',
     library: 'Library',
     librarySub: 'Devotionals, PDFs and guides',
   },
   zh: {
     title: '探索',
-    sermonsWorship: '觀看與收聽',
-    studyLiturgy: '研經與禮儀',
     bible: '聖經',
     bibleSub: '閱讀多種語言的聖經',
     youtube: '講道回顧',
@@ -52,15 +46,11 @@ const allLabels = {
     sabbathSchoolSub: '每週研經指南與討論',
     zoomClass: 'Zoom 課程',
     zoomSub: '互動式研經與團契。',
-    hymnal: '詩歌本',
-    hymnalSub: '中英文敬拜音樂',
     library: '圖書館',
     librarySub: '靈修資料、PDF 與指南',
   },
   'zh-cn': {
     title: '探索',
-    sermonsWorship: '观看与收听',
-    studyLiturgy: '研经与礼仪',
     bible: '圣经',
     bibleSub: '阅读多种语言的圣经',
     youtube: '讲道回顾',
@@ -71,15 +61,11 @@ const allLabels = {
     sabbathSchoolSub: '每周研经指南与讨论',
     zoomClass: 'Zoom 课程',
     zoomSub: '互动式研经与团契。',
-    hymnal: '诗歌本',
-    hymnalSub: '中英文敬拜音乐',
     library: '图书馆',
     librarySub: '灵修资料、PDF 与指南',
   },
   es: {
     title: 'Explorar',
-    sermonsWorship: 'Ver y Escuchar',
-    studyLiturgy: 'Estudio y Liturgia',
     bible: 'Santa Biblia',
     bibleSub: 'Lee las escrituras en varios idiomas',
     youtube: 'Archivo de Sermones',
@@ -91,8 +77,6 @@ const allLabels = {
     zoomClass: 'Clase de Zoom',
     zoomSub:
       'Estudio bíblico interactivo y compañerismo.',
-    hymnal: 'Himnario',
-    hymnalSub: 'Música de adoración en inglés y chino',
     library: 'Biblioteca',
     librarySub: 'Devocionales, PDFs y guías',
   },
@@ -111,7 +95,7 @@ export default function ResourcesScreen() {
       <Stack.Screen options={{ title: labels.title }} />
       <ScrollView
         style={NavigationStyles.container}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={styles.content}
       >
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
@@ -136,85 +120,47 @@ export default function ResourcesScreen() {
           </Text>
         </ImageBackground>
 
-        <View style={styles.body}>
-          <List.Section>
-            <List.Subheader
-              numberOfLines={0}
-              style={[
-                NavigationStyles.subheader,
-                { color: theme.colors.onBackground },
-              ]}
-            >
-              {labels.studyLiturgy}
-            </List.Subheader>
-            <MenuCard
-              title={labels.hymnal}
-              description={labels.hymnalSub}
-              icon={{ name: 'music-note' }}
-              iconColor={theme.colors.tertiary}
-              onPress={() =>
-                router.push({
-                  pathname: '/resources/hymnal-selection',
-                  params: { backTo: '/resources' },
-                } as any)
-              }
-            />
+        <View style={styles.cardList}>
+          <MenuCard
+            title={labels.sabbathSchool}
+            description={labels.sabbathSchoolSub}
+            icon={APP_ICONOGRAPHY.explore.sabbathSchool}
+            iconColor={theme.colors.tertiary}
+            rightIcon={{ name: 'chevron-right' }}
+            onPress={() => openSabbathSchool(language)}
+          />
 
-            <MenuCard
-              title={labels.sabbathSchool}
-              description={labels.sabbathSchoolSub}
-              icon={APP_ICONOGRAPHY.explore.sabbathSchool}
-              iconColor={theme.colors.tertiary}
-              rightIcon={{ name: 'open-in-new' }}
-              onPress={() => openSabbathSchool(language)}
-            />
+          <MenuCard
+            title={labels.library}
+            description={labels.librarySub}
+            icon={APP_ICONOGRAPHY.explore.library}
+            iconColor={theme.colors.tertiary}
+            onPress={() => {}} // TODO: Implement library page
+          />
 
-            <MenuCard
-              title={labels.library}
-              description={labels.librarySub}
-              icon={APP_ICONOGRAPHY.explore.library}
-              iconColor={theme.colors.tertiary}
-              onPress={() => {}} // TODO: Implement library page
-            />
-          </List.Section>
+          <MenuCard
+            title={labels.youtube}
+            description={labels.youtubeSub}
+            icon={{ name: 'youtube' }}
+            iconColor={(theme.colors as any).brandYoutube}
+            onPress={openSermonArchive}
+          />
 
-          <List.Section>
-            <List.Subheader
-              numberOfLines={0}
-              style={[
-                NavigationStyles.subheader,
-                { color: theme.colors.onBackground },
-              ]}
-            >
-              {labels.sermonsWorship}
-            </List.Subheader>
-            <MenuCard
-              title={labels.youtube}
-              description={labels.youtubeSub}
-              icon={{ name: 'youtube' }}
-              iconColor={(theme.colors as any).brandYoutube}
-              onPress={openSermonArchive}
-              rightIcon={{ name: 'open-in-new' }}
-            />
+          <MenuCard
+            title={labels.spotify}
+            description={labels.spotifySub}
+            icon={{ name: 'spotify' }}
+            iconColor={(theme.colors as any).brandSpotify}
+            onPress={openSpotifyPodcast}
+          />
 
-            <MenuCard
-              title={labels.spotify}
-              description={labels.spotifySub}
-              icon={{ name: 'spotify' }}
-              iconColor={(theme.colors as any).brandSpotify}
-              onPress={openSpotifyPodcast}
-              rightIcon={{ name: 'open-in-new' }}
-            />
-
-            <MenuCard
-              title={labels.zoomClass}
-              description={labels.zoomSub}
-              icon={{ name: 'video' }}
-              iconColor={(theme.colors as any).brandZoom}
-              onPress={openZoomClass}
-              rightIcon={{ name: 'open-in-new' }}
-            />
-          </List.Section>
+          <MenuCard
+            title={labels.zoomClass}
+            description={labels.zoomSub}
+            icon={{ name: 'video' }}
+            iconColor={(theme.colors as any).brandZoom}
+            onPress={openZoomClass}
+          />
         </View>
       </ScrollView>
     </>
@@ -222,7 +168,10 @@ export default function ResourcesScreen() {
 }
 
 const styles = StyleSheet.create({
-  body: {
+  content: {
+    paddingBottom: 16,
+  },
+  cardList: {
     paddingHorizontal: 20,
   },
 });

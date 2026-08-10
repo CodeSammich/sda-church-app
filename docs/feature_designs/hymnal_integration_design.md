@@ -139,7 +139,7 @@ publish.
 
 ### 5.1 Metadata and search
 
-`constants/EnglishHymnal.ts` stores the English hymn metadata as a
+`features/hymnal/EnglishHymnal.ts` stores the English hymn metadata as a
 `Record<number, HymnEntry>`. `getSortedHymns` hydrates and sorts that record for the
 reader and unified search. Search supports hymn numbers, titles, and scripture
 references. The app also provides YouTube discovery and Bible-reader navigation without

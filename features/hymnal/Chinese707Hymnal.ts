@@ -9,7 +9,7 @@
 import version1Data from './Chinese707HymnalV1.json';
 import version2Data from './Chinese707HymnalV2.json';
 import version3Data from './Chinese707HymnalV3.json';
-import { openURL } from './ExternalLinks';
+import { openURL } from '@/constants/ExternalLinks';
 
 export type Chinese707Version = 1 | 2 | 3;
 

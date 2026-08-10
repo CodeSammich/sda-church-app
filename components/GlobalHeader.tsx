@@ -111,17 +111,17 @@ export const GlobalHeader = (props: any) => {
   const isPillarRoot = !hasHeaderBackButton(routeSegments, backTo);
 
   const activeHymnalRoute = routeSegments.includes('english-hymnal')
-    ? '/resources/english-hymnal'
+    ? '/home/english-hymnal'
     : routeSegments.includes('chinese-505-hymnal')
-      ? '/resources/chinese-505-hymnal'
+      ? '/home/chinese-505-hymnal'
       : routeSegments.includes('chinese-506-hymnal')
-        ? '/resources/chinese-506-hymnal'
+        ? '/home/chinese-506-hymnal'
         : routeSegments.includes('chinese-707-new-simplified-hymnal')
-          ? '/resources/chinese-707-new-simplified-hymnal'
+          ? '/home/chinese-707-new-simplified-hymnal'
           : routeSegments.includes('chinese-707-four-part-hymnal')
-            ? '/resources/chinese-707-four-part-hymnal'
+            ? '/home/chinese-707-four-part-hymnal'
             : routeSegments.includes('chinese-707-standard-hymnal')
-              ? '/resources/chinese-707-standard-hymnal'
+              ? '/home/chinese-707-standard-hymnal'
               : undefined;
   const isHymnalPage = Boolean(activeHymnalRoute);
   const isSubPage = !isPillarRoot;

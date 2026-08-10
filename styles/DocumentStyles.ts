@@ -50,6 +50,9 @@ export const createDocumentStyles = (textScale: TextScale) => StyleSheet.create(
   card: {
     marginBottom: 12,
   },
+  leadCard: {
+    borderRadius: 16,
+  },
   button: {
     marginTop: 8,
   },
@@ -97,9 +100,7 @@ export const createDocumentStyles = (textScale: TextScale) => StyleSheet.create(
     paddingHorizontal: 2,
   },
   // Organizational/Affiliation Card styles
-  orgCard: {
-    backgroundColor: 'transparent',
-  },
+  orgCard: {},
   orgName: {
     fontSize: scaleTypographyMetric(18, textScale),
     marginTop: 4,

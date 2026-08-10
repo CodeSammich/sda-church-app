@@ -495,7 +495,7 @@ export default function HomeScreen() {
           </View>
         </ImageBackground>
 
-        <List.Section style={navigationStyles.contentContainer}>
+        <List.Section style={styles.content}>
           {/* Sabbath Countdown Widget */}
           <Card
             style={[styles.timerCard, { backgroundColor: theme.colors.surface }]}
@@ -630,6 +630,10 @@ const createStyles = (
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     overflow: 'hidden',
+  },
+  content: {
+    padding: 20,
+    paddingBottom: 16,
   },
   welcomeText: {
     fontWeight: 'bold',

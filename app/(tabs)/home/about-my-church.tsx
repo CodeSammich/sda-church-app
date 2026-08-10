@@ -56,11 +56,12 @@ export default function AboutChurchHistoryScreen() {
         { year: '1996', event: 'Joined conference' },
         { year: '1999', event: 'Opened permanent home' },
       ],
-      locationsTitle: 'Locations & Services',
+      worshipLocationsTitle: 'Worship Locations',
+      fellowshipsTitle: 'Fellowships',
       elmhurstText:
         'Church services are conducted in both English and Mandarin Chinese. We are blessed to have a vibrant, multiethnic congregation. Our members come from various backgrounds and speak many languages, including Spanish, French, German, Japanese, and more.',
       flushingText:
-        'A subgroup of our Elmhurst location where we foster community. This includes meals, personal testimony, a lesson/sermon, prayer, and worship.',
+        'A Mandarin fellowship in Flushing where we foster community through meals, personal testimonies, Bible lessons, prayer, and worship.',
       brooklynText:
         'In Bay Ridge, Brooklyn, we hold a traditional worship service on Sabbaths. This service is conducted in Mandarin and includes prayer, song service, a sermon, and offerings, providing a unique opportunity for spiritual growth and fellowship.',
       organization: 'Affiliations',
@@ -87,11 +88,12 @@ export default function AboutChurchHistoryScreen() {
         { year: '1996', event: '加入紐約區會' },
         { year: '1999', event: '永久會所落成' },
       ],
-      locationsTitle: '聚會地點與服務',
+      worshipLocationsTitle: '崇拜地點',
+      fellowshipsTitle: '團契',
       elmhurstText:
         '聚會以英語和國語進行。我們擁有一個充滿活力的多民族會眾。我們的成員來自不同的背景並說多種語言，包括西班牙語、法語、德語、日語等。',
       flushingText:
-        '艾姆赫斯特教會的子小組，我們在那裡建立社群。聚會內容包括用餐、個人見證、講道、禱告和敬拜。',
+        '在法拉盛舉行的國語團契，透過用餐、個人見證、查經、禱告和敬拜建立社群。',
       brooklynText:
         '在布魯克林的 Bay Ridge，我們在安息日舉行傳統崇拜服務。該服務以國語進行，包括禱告、詩歌讚美、證道和奉獻，為靈命成長和團契提供獨特機會。',
       organization: '教會組織',
@@ -116,11 +118,12 @@ export default function AboutChurchHistoryScreen() {
         { year: '1996', event: '加入纽约区会' },
         { year: '1999', event: '永久会所落成' },
       ],
-      locationsTitle: '聚会地点与服务',
+      worshipLocationsTitle: '崇拜地点',
+      fellowshipsTitle: '团契',
       elmhurstText:
         '聚会以英语和普通话进行。我们拥有一个充满活力的多民族会众。我们的成员来自不同的背景并说多种语言，包括西班牙语、法语、德语、日语等。',
       flushingText:
-        '艾姆赫斯特教会的子小组，我们在那里建立社区。聚会内容包括用餐、个人见证、讲道、祷告和敬拜。',
+        '在法拉盛举行的普通话团契，通过用餐、个人见证、查经、祷告和敬拜建立社区。',
       brooklynText:
         '在布鲁克林的 Bay Ridge，我们在安息日举行传统崇拜服务。该服务以普通话进行，包括祷告、诗歌赞美、证道和奉献，为灵命成长和团契提供独特机会。',
       organization: '教会组织',
@@ -145,11 +148,12 @@ export default function AboutChurchHistoryScreen() {
         { year: '1996', event: 'Unión a conferencia' },
         { year: '1999', event: 'Sede propia' },
       ],
-      locationsTitle: 'Ubicaciones y Servicios',
+      worshipLocationsTitle: 'Lugares de Adoración',
+      fellowshipsTitle: 'Grupos de Compañerismo',
       elmhurstText:
         'Los servicios de la iglesia se llevan a cabo tanto en inglés como en chino mandarín. Tenemos la bendición de tener una congregación multiétnica vibrante. Nuestros miembros provienen de diversos orígenes y hablan muchos idiomas, incluidos español, francés, alemán, japonés y más.',
       flushingText:
-        'Un subgrupo de nuestra ubicación de Elmhurst donde fomentamos la comunidad. Esto incluye comidas, testimonios personales, una lección/sermón, oración y adoración.',
+        'Un grupo de compañerismo en mandarín en Flushing donde fomentamos la comunidad mediante comidas, testimonios personales, estudios bíblicos, oración y adoración.',
       brooklynText:
         'En Bay Ridge, Brooklyn, llevamos a cabo un servicio de adoración tradicional los sábados. Este servicio se realiza en mandarín e incluye oración, servicio de cantos, un sermón y ofrendas, brindando una oportunidad única para el crecimiento espiritual y el compañerismo.',
       organization: 'Organización de la Iglesia',
@@ -216,12 +220,22 @@ export default function AboutChurchHistoryScreen() {
           >
             {labels.history}
           </Text>
-          <Text
-            variant="bodyMedium"
-            style={[DocumentStyles.description, { color: theme.colors.onSurface }]}
+          <Card
+            mode="outlined"
+            style={[DocumentStyles.card, DocumentStyles.leadCard]}
           >
-            {labels.historySubtext}
-          </Text>
+            <Card.Content>
+              <Text
+                variant="bodyMedium"
+                style={[
+                  DocumentStyles.description,
+                  { color: theme.colors.onSurface },
+                ]}
+              >
+                {labels.historySubtext}
+              </Text>
+            </Card.Content>
+          </Card>
           <View
             style={[
               DocumentStyles.timelineContainer,
@@ -279,7 +293,7 @@ export default function AboutChurchHistoryScreen() {
               },
             ]}
           >
-            {labels.locationsTitle}
+            {labels.worshipLocationsTitle}
           </Text>
 
           <Card style={[DocumentStyles.card, DocumentStyles.orgCard]} mode="outlined">
@@ -320,59 +334,6 @@ export default function AboutChurchHistoryScreen() {
             </Card.Actions>
           </Card>
 
-          {/* Nested Subgroup: Flushing Fellowship */}
-          <Card
-            style={[
-              DocumentStyles.card,
-              DocumentStyles.orgCard,
-              {
-                marginLeft: 16,
-                borderLeftWidth: 4,
-                borderLeftColor: theme.colors.secondary,
-              },
-            ]}
-            mode="outlined"
-          >
-            <Card.Content>
-              <Text
-                variant="labelMedium"
-                style={{ color: theme.colors.onSurfaceVariant }}
-              >
-                {CHURCH_LOCATIONS[2].address}
-              </Text>
-              <Text
-                variant="titleLarge"
-                style={[
-                  DocumentStyles.orgName,
-                  { color: theme.colors.secondary, fontWeight: 'bold' },
-                ]}
-              >
-                {locationNames[2]}
-              </Text>
-              <Text
-                style={[
-                  DocumentStyles.description,
-                  DocumentStyles.orgDesc,
-                  { color: theme.colors.onSurface },
-                ]}
-                variant="bodyMedium"
-              >
-                {labels.flushingText}
-              </Text>
-            </Card.Content>
-            <Card.Actions>
-              <Button
-                mode="contained"
-                icon="map-marker"
-                buttonColor={theme.colors.secondary}
-                textColor={theme.colors.onSecondary}
-                onPress={() => openInMaps(CHURCH_LOCATIONS[2].searchQuery)}
-              >
-                {labels.getDirections}
-              </Button>
-            </Card.Actions>
-          </Card>
-
           <Card style={[DocumentStyles.card, DocumentStyles.orgCard]} mode="outlined">
             <Card.Content>
               <Text
@@ -405,6 +366,59 @@ export default function AboutChurchHistoryScreen() {
                 buttonColor={theme.colors.primary}
                 textColor={theme.colors.onPrimary}
                 onPress={() => openInMaps(CHURCH_LOCATIONS[1].searchQuery)}
+              >
+                {labels.getDirections}
+              </Button>
+            </Card.Actions>
+          </Card>
+        </View>
+
+        <View style={DocumentStyles.section}>
+          <Text
+            variant="titleLarge"
+            style={[
+              DocumentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
+          >
+            {labels.fellowshipsTitle}
+          </Text>
+
+          <Card style={[DocumentStyles.card, DocumentStyles.orgCard]} mode="outlined">
+            <Card.Content>
+              <Text
+                variant="labelMedium"
+                style={{ color: theme.colors.onSurfaceVariant }}
+              >
+                {CHURCH_LOCATIONS[2].address}
+              </Text>
+              <Text
+                variant="titleLarge"
+                style={[DocumentStyles.orgName, { color: theme.colors.onSurface }]}
+              >
+                {locationNames[2]}
+              </Text>
+              <Text
+                style={[
+                  DocumentStyles.description,
+                  DocumentStyles.orgDesc,
+                  { color: theme.colors.onSurface },
+                ]}
+                variant="bodyMedium"
+              >
+                {labels.flushingText}
+              </Text>
+            </Card.Content>
+            <Card.Actions>
+              <Button
+                mode="contained"
+                icon="map-marker"
+                buttonColor={theme.colors.primary}
+                textColor={theme.colors.onPrimary}
+                onPress={() => openInMaps(CHURCH_LOCATIONS[2].searchQuery)}
               >
                 {labels.getDirections}
               </Button>

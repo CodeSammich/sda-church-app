@@ -1365,7 +1365,8 @@ export default function BibleScreen() {
                   isFootnoted
                     ? {
                         textDecorationLine: 'underline',
-                        textDecorationColor: theme.colors.primary,
+                        textDecorationColor:
+                          theme.colors.readerColors.footnoteIndicator,
                       }
                     : undefined,
                   isBold && { fontWeight: 'bold' },
@@ -1394,7 +1395,7 @@ export default function BibleScreen() {
             style={[
               {
                 textDecorationLine: 'underline',
-                textDecorationColor: theme.colors.primary,
+                textDecorationColor: theme.colors.readerColors.footnoteIndicator,
               },
               isBold && { fontWeight: 'bold' },
             ]}

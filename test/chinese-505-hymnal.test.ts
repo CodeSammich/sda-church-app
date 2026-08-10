@@ -2,7 +2,7 @@ import {
   CHINESE_505_DIRECTORY_URL,
   getChinese505HymnUrl,
   getSortedChinese505Hymns,
-} from '@/constants/Chinese505Hymnal';
+} from '@/features/hymnal/Chinese505Hymnal';
 import { getSearchableItems } from '@/constants/SearchTerms';
 
 describe('Chinese 505 hymnal directory', () => {
@@ -51,7 +51,7 @@ describe('Chinese 505 hymnal directory', () => {
 
     expect(item).toMatchObject({
       route:
-        '/resources/chinese-505-hymnal?hymnNum=91&backTo=/resources/hymnal-selection',
+        '/home/chinese-505-hymnal?hymnNum=91&backTo=/home/hymnal-selection',
       isHymn: true,
     });
   });

@@ -3,7 +3,7 @@ import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
-import { getRoutedHymns } from '@/constants/HymnalRouting';
+import { getRoutedHymns } from '@/features/hymnal/HymnalRouting';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -33,11 +33,11 @@ interface ChineseHymnalReaderProps {
   edition: 505 | 506 | 707;
   coverImage: ImageSourcePropType;
   route:
-    | '/resources/chinese-505-hymnal'
-    | '/resources/chinese-506-hymnal'
-    | '/resources/chinese-707-new-simplified-hymnal'
-    | '/resources/chinese-707-four-part-hymnal'
-    | '/resources/chinese-707-standard-hymnal';
+    | '/home/chinese-505-hymnal'
+    | '/home/chinese-506-hymnal'
+    | '/home/chinese-707-new-simplified-hymnal'
+    | '/home/chinese-707-four-part-hymnal'
+    | '/home/chinese-707-standard-hymnal';
   getHymns: () => ChineseHymnalEntry[];
   openHymn: (hymnNumber: number | string) => void;
   titles?: Record<'en' | 'zh' | 'zh-cn' | 'es', string>;

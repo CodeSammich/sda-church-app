@@ -1,7 +1,7 @@
 import {
   formatHymnalScriptureReference,
   getEnglishHymnUrl,
-} from '@/constants/EnglishHymnal';
+} from '@/features/hymnal/EnglishHymnal';
 
 describe('English hymnal scripture references', () => {
   it('keeps the visible reference concise without appending BSB', () => {

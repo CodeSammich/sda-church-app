@@ -18,7 +18,7 @@ describe('bulletin hymnal resolution', () => {
     ).toEqual({
       hymnalId: 'sdah-1985-en',
       hymnNumber: 1,
-      route: '/resources/english-hymnal',
+      route: '/home/english-hymnal',
     });
   });
 
@@ -34,7 +34,7 @@ describe('bulletin hymnal resolution', () => {
     ).toEqual({
       hymnalId: 'chinese-hymnal-505',
       hymnNumber: 5,
-      route: '/resources/chinese-505-hymnal',
+      route: '/home/chinese-505-hymnal',
     });
   });
 
@@ -47,7 +47,7 @@ describe('bulletin hymnal resolution', () => {
     ).toEqual({
       hymnalId: 'chinese-hymnal-505',
       hymnNumber: 5,
-      route: '/resources/chinese-505-hymnal',
+      route: '/home/chinese-505-hymnal',
     });
   });
 
@@ -60,7 +60,7 @@ describe('bulletin hymnal resolution', () => {
     ).toEqual({
       hymnalId: 'sdah-1985-en',
       hymnNumber: 1,
-      route: '/resources/english-hymnal',
+      route: '/home/english-hymnal',
     });
   });
 
@@ -73,7 +73,7 @@ describe('bulletin hymnal resolution', () => {
     ).toEqual({
       hymnalId: 'sdah-1985-en',
       hymnNumber: 3,
-      route: '/resources/english-hymnal',
+      route: '/home/english-hymnal',
     });
   });
 
@@ -86,7 +86,7 @@ describe('bulletin hymnal resolution', () => {
     ).toEqual({
       hymnalId: 'sdah-1985-en',
       hymnNumber: 254,
-      route: '/resources/english-hymnal',
+      route: '/home/english-hymnal',
     });
   });
 
@@ -99,7 +99,7 @@ describe('bulletin hymnal resolution', () => {
     ).toEqual({
       hymnalId: 'sdah-1985-en',
       hymnNumber: 1,
-      route: '/resources/english-hymnal',
+      route: '/home/english-hymnal',
     });
   });
 
@@ -112,7 +112,7 @@ describe('bulletin hymnal resolution', () => {
     ).toEqual({
       hymnalId: 'sdah-1985-en',
       hymnNumber: 1,
-      route: '/resources/english-hymnal',
+      route: '/home/english-hymnal',
     });
   });
 
@@ -133,7 +133,7 @@ describe('bulletin hymnal resolution', () => {
       destination: {
         hymnalId: 'sdah-1985-en',
         hymnNumber: 1,
-        route: '/resources/english-hymnal',
+        route: '/home/english-hymnal',
       },
     });
     expect(resolveBulletinHymnPresentation(conflictingAnswers, 'zh')).toEqual({
@@ -141,7 +141,7 @@ describe('bulletin hymnal resolution', () => {
       destination: {
         hymnalId: 'chinese-hymnal-505',
         hymnNumber: 165,
-        route: '/resources/chinese-505-hymnal',
+        route: '/home/chinese-505-hymnal',
       },
     });
   });
@@ -249,12 +249,12 @@ describe('bulletin hymnal resolution', () => {
       expect(resolveBulletinHymnDestination(QUEENS_FIXED_HYMNS[piece], 'en')).toEqual({
         hymnalId: 'sdah-1985-en',
         hymnNumber: englishNumber,
-        route: '/resources/english-hymnal',
+        route: '/home/english-hymnal',
       });
       expect(resolveBulletinHymnDestination(QUEENS_FIXED_HYMNS[piece], 'zh')).toEqual({
         hymnalId: 'chinese-hymnal-505',
         hymnNumber: chineseNumber,
-        route: '/resources/chinese-505-hymnal',
+        route: '/home/chinese-505-hymnal',
       });
     },
   );

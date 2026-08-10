@@ -2,7 +2,7 @@ import {
   CHINESE_506_DIRECTORY_URL,
   getChinese506HymnUrl,
   getSortedChinese506Hymns,
-} from '@/constants/Chinese506Hymnal';
+} from '@/features/hymnal/Chinese506Hymnal';
 import { getSearchableItems } from '@/constants/SearchTerms';
 
 describe('Chinese 506 hymnal directory', () => {
@@ -36,12 +36,12 @@ describe('Chinese 506 hymnal directory', () => {
     const item = getSearchableItems('zh-cn').find(
       ({ title, route }) =>
         title === '1. 圣哉真神' &&
-        route.startsWith('/resources/chinese-506-hymnal'),
+        route.startsWith('/home/chinese-506-hymnal'),
     );
 
     expect(item).toMatchObject({
       route:
-        '/resources/chinese-506-hymnal?hymnNum=1&backTo=/resources/hymnal-selection',
+        '/home/chinese-506-hymnal?hymnNum=1&backTo=/home/hymnal-selection',
       isHymn: true,
     });
   });

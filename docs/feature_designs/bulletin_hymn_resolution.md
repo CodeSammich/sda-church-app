@@ -31,7 +31,7 @@ UI language currently supported by the bulletin.
 | Both fields are blank | Display the localized empty state and provide no action. |
 
 Cross-hymnal mappings are curated number equivalences in
-`constants/HymnalNumberMappings.json`. They are not general translations, and missing
+`features/hymnal/HymnalNumberMappings.json`. They are not general translations, and missing
 entries must never be guessed from similar titles.
 
 ## Adding another bulletin hymn field
@@ -52,7 +52,7 @@ but deliberately retain their church-approved fixed wording for display.
 
 ## Changing or adding a primary hymnal
 
-`constants/BulletinHymnalConfig.ts` is the final selection point, not a complete hymnal
+`features/hymnal/BulletinHymnalConfig.ts` is the final selection point, not a complete hymnal
 plugin system. Before changing one of its primary IDs, a fork must:
 
 1. Add the hymnal metadata and number mappings to `HymnalNumberMappings.json`.

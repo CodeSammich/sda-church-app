@@ -2,7 +2,7 @@ import {
   getChinese707DirectoryUrl,
   getChinese707HymnUrl,
   getSortedChinese707Hymns,
-} from '@/constants/Chinese707Hymnal';
+} from '@/features/hymnal/Chinese707Hymnal';
 import { getSearchableItems } from '@/constants/SearchTerms';
 
 describe('Chinese 707 hymnal directories', () => {
@@ -66,12 +66,12 @@ describe('Chinese 707 hymnal directories', () => {
     const item = getSearchableItems('zh-cn').find(
       ({ title, route }) =>
         title === '260B. 三一颂' &&
-        route.startsWith('/resources/chinese-707-four-part-hymnal'),
+        route.startsWith('/home/chinese-707-four-part-hymnal'),
     );
 
     expect(item).toMatchObject({
       route:
-        '/resources/chinese-707-four-part-hymnal?hymnNum=260B&backTo=/resources/hymnal-selection',
+        '/home/chinese-707-four-part-hymnal?hymnNum=260B&backTo=/home/hymnal-selection',
       isHymn: true,
     });
   });

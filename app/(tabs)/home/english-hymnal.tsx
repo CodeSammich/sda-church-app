@@ -10,12 +10,12 @@ import {
   getSortedHymns,
   HydratedHymn,
   openHymnal,
-} from '@/constants/EnglishHymnal';
+} from '@/features/hymnal/EnglishHymnal';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
-import { getRoutedHymns } from '@/constants/HymnalRouting';
+import { getRoutedHymns } from '@/features/hymnal/HymnalRouting';
 import { useAppTheme } from '@/constants/Themes';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -182,7 +182,7 @@ export default function HymnalScreen() {
                     pathname: '/bible',
                     params: {
                       translationId: 'BSB',
-                      backTo: '/resources/english-hymnal',
+                      backTo: '/home/english-hymnal',
                       ...(scripture
                         ? {
                             bookId: scripture.bookId,
@@ -248,7 +248,7 @@ export default function HymnalScreen() {
             onPress={() =>
               router.push({
                 pathname: '/you/legal',
-                params: { backTo: '/resources/english-hymnal' },
+                params: { backTo: '/home/english-hymnal' },
               } as any)
             }
             style={styles.legalNotice}

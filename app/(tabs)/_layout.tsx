@@ -226,7 +226,10 @@ export default function TabLayout() {
           ),
           // The animated tab bar is absolutely positioned, so React Navigation cannot
           // reserve space for it. Keep every regular tab screen above the overlay.
-          sceneStyle: { paddingBottom: tabBarHeight },
+          sceneStyle: {
+            paddingBottom: tabBarHeight,
+            backgroundColor: theme.colors.background,
+          },
         }}
       >
         {/* 1. Main Home Screen */}

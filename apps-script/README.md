@@ -130,8 +130,8 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 | `constants/ExternalLinks.ts` | Production `/exec` URL and restricted staff-schedule URL |
 | `services/BulletinService.ts` | PWA response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
 | `services/BulletinHymnalService.ts` | Number-first bulletin hymn resolution, English/Chinese edition detection, fuzzy title fallback, and cross-reference routing |
-| `constants/BulletinHymnalConfig.ts` | Church-level primary English/Chinese hymnal selection and displayed edition metadata |
-| `constants/HymnalNumberMappings.json` | Reviewed bidirectional English 1985 ↔ Chinese 505 hymn-number cross-references |
+| `features/hymnal/BulletinHymnalConfig.ts` | Church-level primary English/Chinese hymnal selection and displayed edition metadata |
+| `features/hymnal/HymnalNumberMappings.json` | Reviewed bidirectional English 1985 ↔ Chinese 505 hymn-number cross-references |
 | `app/(tabs)/home/bulletin.tsx` | Localized This Week/Next Week UI, location cards, `TBD` rendering, and staff link |
 | `test/bulletin-service.test.ts` | PWA date, API error, and possible-joint-service behavior |
 | `test/bulletin-hymnal-service.test.ts` | Bulletin hymn typo tolerance, language preference, mapping, and fallback behavior |

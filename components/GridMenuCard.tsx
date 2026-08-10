@@ -108,11 +108,22 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
             />
           </View>
           {/* Diagonal arrow affordance */}
-          <View testID="grid-menu-card-arrow-badge" style={styles.arrowBadge}>
+          <View
+            testID="grid-menu-card-arrow-badge"
+            style={[
+              styles.arrowBadge,
+              theme.dark
+                ? {
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderColor: theme.colors.outline,
+                  }
+                : undefined,
+            ]}
+          >
             <AppIcon
               name="arrow-top-right"
               size={14}
-              color="#374151"
+              color={theme.dark ? theme.colors.onSurfaceVariant : '#374151'}
             />
           </View>
         </View>

@@ -139,11 +139,11 @@ expected hymnal content.
 
 The checked-in mappings and their regeneration scripts are:
 
-- [`constants/Chinese505Hymnal.ts`](../constants/Chinese505Hymnal.ts) and
+- [`features/hymnal/Chinese505Hymnal.ts`](../features/hymnal/Chinese505Hymnal.ts) and
   [`scripts/scrape-chinese-505-hymnal.mjs`](../scripts/scrape-chinese-505-hymnal.mjs);
-- [`constants/Chinese506Hymnal.ts`](../constants/Chinese506Hymnal.ts) and
+- [`features/hymnal/Chinese506Hymnal.ts`](../features/hymnal/Chinese506Hymnal.ts) and
   [`scripts/scrape-chinese-506-hymnal.mjs`](../scripts/scrape-chinese-506-hymnal.mjs); and
-- [`constants/Chinese707Hymnal.ts`](../constants/Chinese707Hymnal.ts) and
+- [`features/hymnal/Chinese707Hymnal.ts`](../features/hymnal/Chinese707Hymnal.ts) and
   [`scripts/scrape-chinese-707-hymnals.mjs`](../scripts/scrape-chinese-707-hymnals.mjs).
 
 ---
