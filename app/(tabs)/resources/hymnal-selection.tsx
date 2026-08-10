@@ -8,7 +8,7 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams, usePathname } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import {
   Image,
@@ -160,6 +160,10 @@ export default function HymnalSelectionScreen() {
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const { backTo } = useLocalSearchParams();
+  const pathname = usePathname();
+  const selectionRoute = pathname.includes('/home/')
+    ? '/home/hymnal-selection'
+    : '/resources/hymnal-selection';
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
@@ -196,7 +200,7 @@ export default function HymnalSelectionScreen() {
               router.push({
                 pathname: '/resources/english-hymnal',
                 params: {
-                  backTo: '/resources/hymnal-selection',
+                  backTo: selectionRoute,
                   refresh: Date.now().toString(),
                 },
               } as any)
@@ -211,7 +215,7 @@ export default function HymnalSelectionScreen() {
               router.push({
                 pathname: '/resources/chinese-505-hymnal',
                 params: {
-                  backTo: '/resources/hymnal-selection',
+                  backTo: selectionRoute,
                 },
               } as any)
             }
@@ -225,7 +229,7 @@ export default function HymnalSelectionScreen() {
               router.push({
                 pathname: '/resources/chinese-506-hymnal',
                 params: {
-                  backTo: '/resources/hymnal-selection',
+                  backTo: selectionRoute,
                 },
               } as any)
             }
@@ -238,7 +242,7 @@ export default function HymnalSelectionScreen() {
             onPress={() =>
               router.push({
                 pathname: '/resources/chinese-707-new-simplified-hymnal',
-                params: { backTo: '/resources/hymnal-selection' },
+                params: { backTo: selectionRoute },
               } as any)
             }
           />
@@ -250,7 +254,7 @@ export default function HymnalSelectionScreen() {
             onPress={() =>
               router.push({
                 pathname: '/resources/chinese-707-four-part-hymnal',
-                params: { backTo: '/resources/hymnal-selection' },
+                params: { backTo: selectionRoute },
               } as any)
             }
           />
@@ -262,7 +266,7 @@ export default function HymnalSelectionScreen() {
             onPress={() =>
               router.push({
                 pathname: '/resources/chinese-707-standard-hymnal',
-                params: { backTo: '/resources/hymnal-selection' },
+                params: { backTo: selectionRoute },
               } as any)
             }
           />

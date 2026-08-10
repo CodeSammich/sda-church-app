@@ -21,7 +21,6 @@ const allLabels = {
     quarterlySchedule: 'Quarterly Overview',
     prayerHeader: 'Prayer',
     privatePrayer: 'Private Prayer Request',
-    prayerRequest: 'Community Prayer Wall',
   },
   zh: {
     header: '教會社群',
@@ -35,7 +34,6 @@ const allLabels = {
     quarterlySchedule: '季度總表',
     prayerHeader: '禱告',
     privatePrayer: '私人代禱請求',
-    prayerRequest: '教會禱告牆',
   },
   'zh-cn': {
     header: '教会社区',
@@ -49,7 +47,6 @@ const allLabels = {
     quarterlySchedule: '季度总表',
     prayerHeader: '祷告',
     privatePrayer: '私人代祷请求',
-    prayerRequest: '教会祷告墙',
   },
   es: {
     header: 'Comunidad',
@@ -63,7 +60,6 @@ const allLabels = {
     quarterlySchedule: 'Horario Trimestral',
     prayerHeader: 'Oración',
     privatePrayer: 'Petición de Oración Privada',
-    prayerRequest: 'Muro de Oración Comunitario',
   },
 };
 
@@ -149,17 +145,6 @@ export default function CommunityScreen() {
             iconColor={theme.colors.tertiary}
             style={{ marginBottom: 12 }}
             onPress={() => {}} // TODO: Link to a private Google Form or email
-          />
-          <MenuCard
-            title={labels.prayerRequest}
-            icon="hands-pray"
-            iconColor={theme.colors.tertiary}
-            onPress={() =>
-              router.push({
-                pathname: '/home/prayer',
-                params: { backTo: '/bible/bible1' },
-              } as any)
-            }
           />
         </List.Section>
 

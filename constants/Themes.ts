@@ -77,7 +77,7 @@ export const customLightTheme = {
       bulletin:             '#FFFBEB', // Warm cream
       tithe:                '#F0FDF4', // Faint mint
       discover:             '#F5F3FF', // Soft periwinkle / lavender
-      prayer:               '#EBF5FF', // Sky blue
+      hymnal:               '#EBF5FF', // Sky blue
       events:               '#FFF4E6', // Peach / warm amber tones
       // discover page
       aboutSDA:             '#FCE8E6', // Soft blush
@@ -94,7 +94,7 @@ export const customLightTheme = {
       bulletin:             'rgba(146,64,14,1.00)',     // Warm amber/brown
       tithe:                'rgba(4,120,87,1.00)',      // Deep forest/emerald green
       discover:             'rgba(55,48,163,1.00)',     // Deep indigo/navy
-      prayer:               'rgba(2, 132, 199, 1.00)',  // Deep ocean blue
+      hymnal:               'rgba(2, 132, 199, 1.00)',  // Deep ocean blue
       events:               'rgba(217, 119, 6, 1.00)',  // Warm burnt amber / Terracotta
       // discover page
       aboutSDA:             'rgba(185,28,28,1.00)',     // Rich crimson
@@ -189,7 +189,7 @@ export const customDarkTheme: AppTheme = {
       bulletin:      '#1E1E1E',
       tithe:         '#1E1E1E',
       discover:      '#1E1E1E',
-      prayer:        '#1E1E1E',
+      hymnal:        '#1E1E1E',
       events:        '#1E1E1E',
       // discover page
       aboutSDA:      '#1E1E1E', 
@@ -206,7 +206,7 @@ export const customDarkTheme: AppTheme = {
       bulletin:     '#F5F5F5',
       tithe:        '#F5F5F5',
       discover:     '#F5F5F5',
-      prayer:       '#F5F5F5',
+      hymnal:       '#F5F5F5',
       events:       '#F5F5F5',
       // discover page
       aboutSDA:     '#F5F5F5', 

@@ -38,7 +38,6 @@ const HERO_HEADER_ROUTES = new Set([
   'fellowship',
   'give',
   'hymnal-selection',
-  'prayer',
   'team',
 ]);
 

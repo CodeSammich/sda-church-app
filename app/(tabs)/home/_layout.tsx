@@ -14,7 +14,7 @@ export default function HomeStackLayout() {
       <Stack.Screen name="worship" />
       <Stack.Screen name="fellowship" />
       <Stack.Screen name="roster" />
-      <Stack.Screen name="prayer" />
+      <Stack.Screen name="hymnal-selection" />
       <Stack.Screen name="baptism" />
       <Stack.Screen name="events" />
     </Stack>
