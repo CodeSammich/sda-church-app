@@ -1729,7 +1729,12 @@ export default function BibleScreen() {
         accessibilityRole="button"
         accessibilityLabel={`${labels.book}: ${book?.name || '...'}`}
       >
-        <Text pointerEvents="none" style={ReaderStyles.pillText}>
+        <Text
+          pointerEvents="none"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={ReaderStyles.pillText}
+        >
           {book?.name || '...'}
         </Text>
         <AppIcon
