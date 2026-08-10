@@ -271,6 +271,9 @@ export const createReaderStyles = (textScale: TextScale) => {
     fontSize: scaleTypographyMetric(11, uiTextScale),
     lineHeight: scaleTypographyMetric(16, uiTextScale),
   },
+  audioElapsedTimeText: {
+    marginRight: 4,
+  },
   audioDock: {
     minHeight: 84,
     paddingHorizontal: 12,

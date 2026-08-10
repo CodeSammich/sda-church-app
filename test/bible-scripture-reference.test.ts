@@ -1,4 +1,5 @@
 import {
+  createScriptureReferenceRequest,
   BIBLE_BOOK_NAMES,
   formatScriptureReference,
   getScriptureReaderParams,
@@ -7,6 +8,12 @@ import {
 } from '@/services/BibleService';
 
 describe('Bible scripture references', () => {
+  it('creates a new request token for repeated navigation to the same verse', () => {
+    expect(createScriptureReferenceRequest()).not.toBe(
+      createScriptureReferenceRequest(),
+    );
+  });
+
   it('parses an English verse range into canonical reader coordinates', () => {
     expect(parseScriptureReference('Psalms 15:1-5')).toEqual({
       bookId: 'PSA',

@@ -323,7 +323,9 @@ export default function BibleScreen() {
 
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
   const translationParamSignature = paramTransId
-    ? `${paramTransId}:${paramBookId || ''}:${paramChapter || ''}`
+    ? `${paramTransId}:${paramBookId || ''}:${paramChapter || ''}:${
+        paramReferenceRequest || ''
+      }`
     : null;
   const scriptureParamSignature = paramBookId && paramChapter
     ? `${paramTransId || ''}:${paramBookId}:${paramChapter}:${paramVerseStart || ''}:${
@@ -515,6 +517,7 @@ export default function BibleScreen() {
     paramTransId,
     paramBookId,
     paramChapter,
+    paramReferenceRequest,
     isPersistenceLoaded,
     books,
   ]);
@@ -2099,6 +2102,7 @@ export default function BibleScreen() {
               <Text
                 style={[
                   ReaderStyles.audioTimeText,
+                  !dockLayout.stackControls && ReaderStyles.audioElapsedTimeText,
                   { color: theme.colors.onSurfaceVariant },
                 ]}
               >

@@ -30,6 +30,7 @@ import {
   resolveBulletinHymnPresentation,
 } from '@/services/BulletinHymnalService';
 import {
+  createScriptureReferenceRequest,
   formatScriptureReference,
   getScriptureReaderParams,
   parseScriptureReference,
@@ -279,10 +280,6 @@ const LABELS = {
 } as const;
 
 const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
-let scriptureReferenceRequestSequence = 0;
-
-const createScriptureReferenceRequest = () =>
-  `${Date.now()}-${++scriptureReferenceRequestSequence}`;
 
 type Labels = (typeof LABELS)['en'];
 type WeekState = {

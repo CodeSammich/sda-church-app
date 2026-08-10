@@ -418,15 +418,19 @@ export default function HomeScreen() {
 
   const navigateToVerse = () => {
     if (!randomVerse) return;
-    router.push({
+    router.replace({
       pathname: '/bible',
       params: {
-        bookId: randomVerse.bookId,
-        chapter: randomVerse.chapter.toString(),
-        q: randomVerse.reference,
-        refresh: Date.now().toString(),
-        translationId:
-          BibleService.DEFAULT_TRANSLATION_MAP[language as SupportedLanguage] || 'BSB',
+        ...BibleService.getScriptureReaderParams(
+          {
+            bookId: randomVerse.bookId,
+            chapter: randomVerse.chapter,
+            verseStart: randomVerse.verse,
+            verseEnd: randomVerse.verse,
+          },
+          language as SupportedLanguage,
+        ),
+        referenceRequest: BibleService.createScriptureReferenceRequest(),
       },
     } as any);
   };

@@ -439,6 +439,12 @@ export const getScriptureReaderParams = (
     : {}),
 });
 
+let scriptureReferenceRequestSequence = 0;
+
+/** Creates a distinct navigation request even when the scripture is unchanged. */
+export const createScriptureReferenceRequest = () =>
+  `${Date.now()}-${++scriptureReferenceRequestSequence}`;
+
 export interface Translation {
   id: string;
   name: string;

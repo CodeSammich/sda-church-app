@@ -196,11 +196,11 @@ export default function HymnalSelectionScreen() {
           />
 
           <HymnalCard
-            title={labels.chinese707V1}
-            imageSource={require('../../../public/chinese_707_hymnal_original_simplified_notation_version.jpg')}
+            title={labels.chinese707V3}
+            imageSource={require('../../../public/chinese_707_hymnal_leather_bound_version.jpg')}
             onPress={() =>
               router.push({
-                pathname: '/home/chinese-707-new-simplified-hymnal',
+                pathname: '/home/chinese-707-standard-hymnal',
                 params: { backTo: selectionRoute },
               } as any)
             }
@@ -218,11 +218,11 @@ export default function HymnalSelectionScreen() {
           />
 
           <HymnalCard
-            title={labels.chinese707V3}
-            imageSource={require('../../../public/chinese_707_hymnal_leather_bound_version.jpg')}
+            title={labels.chinese707V1}
+            imageSource={require('../../../public/chinese_707_hymnal_original_simplified_notation_version.jpg')}
             onPress={() =>
               router.push({
-                pathname: '/home/chinese-707-standard-hymnal',
+                pathname: '/home/chinese-707-new-simplified-hymnal',
                 params: { backTo: selectionRoute },
               } as any)
             }
