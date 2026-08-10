@@ -414,7 +414,7 @@ export default function RootLayout() {
 
     updateCheckInProgress.current = true;
     try {
-      // A Home-tab press checks only the small, versioned worker source. If its
+      // A main-tab press checks only the small, versioned worker source. If its
       // version differs, the existing update banner lets the user choose when
       // to ask the browser to download and activate the full update.
       await refreshUpdateAvailability();
