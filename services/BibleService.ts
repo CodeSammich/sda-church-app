@@ -11,6 +11,8 @@
  * - https://fetch.bible/access/manual/
  */
 
+import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest';
+
 export const API_BASE = 'https://bible.helloao.org/api';
 
 /** Persisted Bible translation selected by the app language or the user. */
@@ -325,6 +327,65 @@ export const BIBLE_BOOK_NAMES: Record<string, Record<SupportedLanguage, string>>
   REV: { en: 'Revelation', zh: '啟示錄', 'zh-cn': '启示录', es: 'Apocalipsis' },
 };
 
+// Audio Power's owner, Phil, explicitly approved our use, download, and
+// self-hosting of these Bible recordings for the church app. Preserve this
+// permanent record of permission when changing providers or hosting strategy:
+// https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608
+const AUDIO_POWER_CUV_RECORDINGS_BASE =
+  'https://theaudiopower.com/CUV/Recordings';
+const ARCHIVE_ORG_CUV_RECORDINGS_BASE =
+  'https://archive.org/download/CUV_201911';
+const AUDIO_POWER_CUV_READER = '基督徒团契 (Audio Power)';
+const AUDIO_POWER_CUV_TRANSLATIONS = new Set(['cmn_cuv', 'cmn_cu1']);
+
+/** Resolves the church-controlled Adventist Connect copy used as tier one. */
+const getAdventistChurchCuvChapterUrl = (canonicalFilename: string) =>
+  CUV_ADVENTIST_AUDIO_URLS[canonicalFilename] || null;
+
+/**
+ * Builds the chapter-level CUV recording URL published by Audio Power.
+ *
+ * The recording filenames use simplified Chinese book names for both the
+ * traditional and simplified CUV reader text. Single-chapter books omit the
+ * chapter number from their filename.
+ */
+export const getAudioPowerCuvChapterLinks = (
+  bookId: string,
+  chapter: number,
+  numberOfChapters: number,
+): TranslationBookChapterAudioLinks => {
+  const simplifiedBookName =
+    BIBLE_BOOK_NAMES[bookId.toUpperCase()]?.['zh-cn'];
+
+  if (
+    !simplifiedBookName ||
+    !Number.isInteger(chapter) ||
+    chapter < 1 ||
+    !Number.isInteger(numberOfChapters) ||
+    numberOfChapters < 1 ||
+    chapter > numberOfChapters
+  ) {
+    return {};
+  }
+
+  const chapterSuffix = numberOfChapters === 1 ? '' : ` ${chapter}`;
+  const filename = encodeURIComponent(
+    `${simplifiedBookName}${chapterSuffix}.mp3`,
+  );
+  const canonicalFilename = `CUV_B${String(
+    Object.keys(BIBLE_BOOK_NAMES).indexOf(bookId.toUpperCase()) + 1,
+  ).padStart(2, '0')}C${String(chapter).padStart(3, '0')}.mp3`;
+  const adventistChurchUrl = getAdventistChurchCuvChapterUrl(canonicalFilename);
+
+  return {
+    [AUDIO_POWER_CUV_READER]: [
+      ...(adventistChurchUrl ? [adventistChurchUrl] : []),
+      `${AUDIO_POWER_CUV_RECORDINGS_BASE}/${filename}`,
+      `${ARCHIVE_ORG_CUV_RECORDINGS_BASE}/${canonicalFilename}`,
+    ],
+  };
+};
+
 export type ParsedScriptureReference = {
   bookId: string;
   chapter: number;
@@ -538,7 +599,7 @@ export interface ChapterData {
  * Maps reader names to their respective audio file URLs.
  */
 export interface TranslationBookChapterAudioLinks {
-  [reader: string]: string;
+  [reader: string]: string | string[];
 }
 
 export interface TranslationBookChapter {
@@ -967,16 +1028,31 @@ async function fetchChapterFromFetchBible(
     attribution: edition.attribution,
   };
   const thisChapterLink = `${FETCH_BIBLE_BASE}/${edition.resourceId}/txt/${bookId.toLowerCase()}.json`;
+  const supportsAudioPowerCuv = AUDIO_POWER_CUV_TRANSLATIONS.has(translationId);
+  const getAudioLinks = (audioChapter: number) =>
+    supportsAudioPowerCuv
+      ? getAudioPowerCuvChapterLinks(
+          book.id,
+          audioChapter,
+          book.numberOfChapters,
+        )
+      : {};
 
   return {
     translation,
     book,
     thisChapterLink,
-    thisChapterAudioLinks: {},
+    thisChapterAudioLinks: getAudioLinks(chapterNumber),
     nextChapterApiLink: null,
-    nextChapterAudioLinks: null,
+    nextChapterAudioLinks:
+      supportsAudioPowerCuv && chapterNumber < book.numberOfChapters
+        ? getAudioLinks(chapterNumber + 1)
+        : null,
     previousChapterApiLink: null,
-    previousChapterAudioLinks: null,
+    previousChapterAudioLinks:
+      supportsAudioPowerCuv && chapterNumber > 1
+        ? getAudioLinks(chapterNumber - 1)
+        : null,
     numberOfVerses,
     chapter: { number: chapterNumber, content, footnotes },
   };

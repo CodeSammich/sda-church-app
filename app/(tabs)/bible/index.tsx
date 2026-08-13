@@ -40,6 +40,8 @@ import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import {
   activateBibleAudioLockScreen,
   configureBibleAudioPlayback,
+  getBibleAudioSourceId,
+  prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
 import * as BibleService from '@/services/BibleService';
 import {
@@ -57,12 +59,37 @@ import {
 } from '@/styles/ReaderStyles';
 
 const FOOTER_PADDING_GUTTER = 34;
+const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 12_000;
 
 type SleepTimerSetting = 5 | 10 | 15 | 30 | 60 | 120 | 'chapter' | null;
 
 const BIBLE_TRANS_KEY = BibleService.BIBLE_TRANSLATION_STORAGE_KEY;
 const BIBLE_BOOK_KEY = 'user-bible-book';
 const BIBLE_CHAPTER_KEY = 'user-bible-chapter';
+const BIBLE_AUDIO_READERS_KEY = 'user-bible-audio-readers';
+const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
+const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const;
+
+const getAudioReaderLabel = (reader: string) =>
+  reader
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toLocaleUpperCase() + part.slice(1))
+    .join(' ');
+
+const getAudioSourceLabel = (url: string) => {
+  const host = getBibleAudioSourceId(url);
+  // The church-uploaded CUV copy is served through assets.adventistconnect.org.
+  // Hosting metadata identifies Wasabi's S3-compatible us-east-2 storage; the
+  // recordings are encoded at 24 kb/s CBR.
+  if (host === 'assets.adventistconnect.org') return 'NYCCSDA.org servers';
+  if (host === 'theaudiopower.com' || host === 'theaudiopower.org') {
+    return 'Audio Power';
+  }
+  if (host === 'archive.org') return 'Internet Archive';
+  if (host === 'bible.helloao.org') return 'HelloAO';
+  return host.replace(/^www\./, '');
+};
 
 type SavedVerseDisplay = SavedVerseReference & {
   bookName: string;
@@ -115,6 +142,11 @@ const uiLabels = {
     noSavedVerses: 'Your saved verses will appear here.',
     audioPlayer: 'Bible audio',
     audio: 'Audio',
+    narrator: 'Narrator',
+    chooseNarrator: 'Choose narrator',
+    audioSettings: 'Audio settings',
+    audioSource: 'Preferred source',
+    automaticFallback: 'If this source is unavailable, the next source is tried automatically.',
     audioUnavailable: 'Audio unavailable for this chapter',
     back10: 'Back 10 seconds',
     forward30: 'Forward 30 seconds',
@@ -159,6 +191,11 @@ const uiLabels = {
     noSavedVerses: '您儲存的經文會顯示在這裡。',
     audioPlayer: '聖經有聲書',
     audio: '有聲書',
+    narrator: '朗讀者',
+    chooseNarrator: '選擇朗讀者',
+    audioSettings: '有聲書設定',
+    audioSource: '優先音源',
+    automaticFallback: '如果此音源無法使用，將自動嘗試下一個音源。',
     audioUnavailable: '此章節沒有有聲版本',
     back10: '後退 10 秒',
     forward30: '前進 30 秒',
@@ -203,6 +240,11 @@ const uiLabels = {
     noSavedVerses: '您保存的经文会显示在这里。',
     audioPlayer: '圣经有声书',
     audio: '有声书',
+    narrator: '朗读者',
+    chooseNarrator: '选择朗读者',
+    audioSettings: '有声书设置',
+    audioSource: '优先音源',
+    automaticFallback: '如果此音源无法使用，将自动尝试下一个音源。',
     audioUnavailable: '此章节没有有声版本',
     back10: '后退 10 秒',
     forward30: '前进 30 秒',
@@ -247,6 +289,11 @@ const uiLabels = {
     noSavedVerses: 'Tus versículos guardados aparecerán aquí.',
     audioPlayer: 'Audio de la Biblia',
     audio: 'Audio',
+    narrator: 'Narrador',
+    chooseNarrator: 'Elegir narrador',
+    audioSettings: 'Ajustes de audio',
+    audioSource: 'Fuente preferida',
+    automaticFallback: 'Si esta fuente no está disponible, se probará la siguiente automáticamente.',
     audioUnavailable: 'Audio no disponible para este capítulo',
     back10: 'Retroceder 10 segundos',
     forward30: 'Avanzar 30 segundos',
@@ -362,6 +409,12 @@ export default function BibleScreen() {
   const [books, setBooks] = useState<BibleService.TranslationBook[]>([]);
   const [chapterData, setChapterData] =
     useState<BibleService.TranslationBookChapter | null>(null);
+  const [selectedAudioReaders, setSelectedAudioReaders] = useState<
+    Record<string, string>
+  >({});
+  const [selectedAudioSources, setSelectedAudioSources] = useState<
+    Record<string, string>
+  >({});
   const [loading, setLoading] = useState(false);
   const [savedVerses, setSavedVerses] = useState<SavedVerseReference[]>([]);
   const [savedVerseDisplays, setSavedVerseDisplays] = useState<SavedVerseDisplay[]>([]);
@@ -405,12 +458,22 @@ export default function BibleScreen() {
   useEffect(() => {
     const loadSelection = async () => {
       try {
-        const [savedTransId, savedBookId, savedChap, storedVerses] = await Promise.all([
-          AsyncStorage.getItem(BIBLE_TRANS_KEY),
-          AsyncStorage.getItem(BIBLE_BOOK_KEY),
-          AsyncStorage.getItem(BIBLE_CHAPTER_KEY),
-          loadSavedVerses(),
-        ]);
+        const [
+          savedTransId,
+          savedBookId,
+          savedChap,
+          savedAudioReaders,
+          savedAudioSources,
+          storedVerses,
+        ] =
+          await Promise.all([
+            AsyncStorage.getItem(BIBLE_TRANS_KEY),
+            AsyncStorage.getItem(BIBLE_BOOK_KEY),
+            AsyncStorage.getItem(BIBLE_CHAPTER_KEY),
+            AsyncStorage.getItem(BIBLE_AUDIO_READERS_KEY),
+            AsyncStorage.getItem(BIBLE_AUDIO_SOURCES_KEY),
+            loadSavedVerses(),
+          ]);
 
         if (savedTransId) {
           const trans = BibleService.SUPPORTED_TRANSLATIONS.find(
@@ -420,6 +483,26 @@ export default function BibleScreen() {
         }
         if (savedBookId) initialBookId.current = savedBookId;
         if (savedChap) setChapterNum(parseInt(savedChap, 10));
+        if (savedAudioReaders) {
+          const parsedAudioReaders = JSON.parse(savedAudioReaders);
+          if (
+            parsedAudioReaders &&
+            typeof parsedAudioReaders === 'object' &&
+            !Array.isArray(parsedAudioReaders)
+          ) {
+            setSelectedAudioReaders(parsedAudioReaders);
+          }
+        }
+        if (savedAudioSources) {
+          const parsedAudioSources = JSON.parse(savedAudioSources);
+          if (
+            parsedAudioSources &&
+            typeof parsedAudioSources === 'object' &&
+            !Array.isArray(parsedAudioSources)
+          ) {
+            setSelectedAudioSources(parsedAudioSources);
+          }
+        }
         setSavedVerses(storedVerses);
       } catch (e) {
         console.error('Failed to load Bible selection:', e);
@@ -445,6 +528,22 @@ export default function BibleScreen() {
     };
     saveSelection();
   }, [supportedTranslation.id, book?.id, chapterNum, isPersistenceLoaded]);
+
+  useEffect(() => {
+    if (!isPersistenceLoaded) return;
+    AsyncStorage.setItem(
+      BIBLE_AUDIO_READERS_KEY,
+      JSON.stringify(selectedAudioReaders),
+    ).catch((e) => console.error('Failed to save Bible audio narrator:', e));
+  }, [isPersistenceLoaded, selectedAudioReaders]);
+
+  useEffect(() => {
+    if (!isPersistenceLoaded) return;
+    AsyncStorage.setItem(
+      BIBLE_AUDIO_SOURCES_KEY,
+      JSON.stringify(selectedAudioSources),
+    ).catch((e) => console.error('Failed to save Bible audio source:', e));
+  }, [isPersistenceLoaded, selectedAudioSources]);
 
   // An app-language choice takes precedence over any Bible translation chosen
   // before it. A later translation choice in this reader is persisted normally
@@ -577,15 +676,64 @@ export default function BibleScreen() {
   const [sleepTimerSetting, setSleepTimerSetting] =
     useState<SleepTimerSetting>(null);
   const [sleepTimerVisible, setSleepTimerVisible] = useState(false);
+  const [audioSettingsVisible, setAudioSettingsVisible] = useState(false);
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
   const audioPlayer = useAudioPlayer(null, { updateInterval: 250 });
   const audioStatus = useAudioPlayerStatus(audioPlayer);
   const loadedAudioUrlRef = useRef<string | null>(null);
+  const audioSourceIndexRef = useRef(0);
+  const audioLoadAttemptRef = useRef(0);
+  const audioFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrubbingRef = useRef(false);
   const audioScrubberWidth = useRef(1);
   const sleepTimerSettingRef = useRef<SleepTimerSetting>(null);
   const sleepTimerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const chapterAudioLinks = chapterData?.thisChapterAudioLinks;
+  const audioReaderEntries = Object.entries(chapterAudioLinks || {});
+  const savedAudioReader = selectedAudioReaders[supportedTranslation.id];
+  const selectedAudioReader = chapterAudioLinks?.[savedAudioReader]
+    ? savedAudioReader
+    : audioReaderEntries[0]?.[0];
+  const selectedAudioSource = selectedAudioReader
+    ? chapterAudioLinks?.[selectedAudioReader]
+    : undefined;
+  const rawSelectedAudioUrls = selectedAudioSource
+    ? Array.isArray(selectedAudioSource)
+      ? selectedAudioSource
+      : [selectedAudioSource]
+    : [];
+  const audioSourcePreferenceKey = `${supportedTranslation.id}:${
+    selectedAudioReader || 'default'
+  }`;
+  const availableAudioSources = rawSelectedAudioUrls.filter(
+    (url, index, urls) =>
+      urls.findIndex(
+        (candidate) =>
+          getBibleAudioSourceId(candidate) === getBibleAudioSourceId(url),
+      ) === index,
+  );
+  const savedAudioSource = selectedAudioSources[audioSourcePreferenceKey];
+  const selectedAudioSourceId = availableAudioSources.some(
+    (url) => getBibleAudioSourceId(url) === savedAudioSource,
+  )
+    ? savedAudioSource
+    : availableAudioSources[0]
+      ? getBibleAudioSourceId(availableAudioSources[0])
+      : undefined;
+  const selectedAudioUrls = prioritizeBibleAudioSource(
+    rawSelectedAudioUrls,
+    selectedAudioSourceId,
+  );
+  const selectedAudioUrlsRef = useRef(selectedAudioUrls);
+  selectedAudioUrlsRef.current = selectedAudioUrls;
+
+  const clearAudioFallbackTimeout = () => {
+    if (audioFallbackTimeoutRef.current) {
+      clearTimeout(audioFallbackTimeoutRef.current);
+      audioFallbackTimeoutRef.current = null;
+    }
+  };
 
   const clearSleepTimer = () => {
     if (sleepTimerTimeoutRef.current) {
@@ -624,9 +772,12 @@ export default function BibleScreen() {
 
   useEffect(() => {
     const positionMillis = audioStatus.currentTime * 1000;
+    const currentPlayerStatus = audioPlayer.currentStatus;
+    const isCurrentSourceReady =
+      currentPlayerStatus.isLoaded && currentPlayerStatus.duration > 0;
     setIsAudioLoading(
       loadedAudioUrlRef.current !== null &&
-        (!audioStatus.isLoaded || audioStatus.isBuffering),
+        (!isCurrentSourceReady || audioStatus.isBuffering),
     );
     setIsPlaying(audioStatus.playing);
     setAudioDurationMillis(audioStatus.duration * 1000);
@@ -634,6 +785,7 @@ export default function BibleScreen() {
     if (!isScrubbingRef.current) {
       setAudioPositionMillis(positionMillis);
     }
+    if (isCurrentSourceReady) clearAudioFallbackTimeout();
 
     if (audioStatus.didJustFinish) {
       setIsPlaying(false);
@@ -650,38 +802,129 @@ export default function BibleScreen() {
     }
   }, [audioStatus, isLastChapter]);
 
-  const toggleAudio = async () => {
-    const audioLinks = chapterData?.thisChapterAudioLinks;
-    if (!audioLinks || Object.keys(audioLinks).length === 0) return;
+  const loadAudioSource = async (
+    sourceIndex: number,
+    resumePositionMillis = 0,
+  ): Promise<void> => {
+    const audioUrls = selectedAudioUrlsRef.current;
+    const audioUrl = audioUrls[sourceIndex];
+    if (!audioUrl) {
+      clearAudioFallbackTimeout();
+      loadedAudioUrlRef.current = null;
+      setIsAudioLoading(false);
+      console.error('Bible audio unavailable: every configured host failed.');
+      return;
+    }
 
-    // Get the first available reader's audio URL
-    const audioUrl = Object.values(audioLinks)[0];
+    const attempt = ++audioLoadAttemptRef.current;
+    audioSourceIndexRef.current = sourceIndex;
+    clearAudioFallbackTimeout();
+
+    try {
+      setIsAudioLoading(true);
+      loadedAudioUrlRef.current = audioUrl;
+      audioPlayer.replace({
+        uri: audioUrl,
+        name: `${book?.name || labels.bible} ${chapterNum}`,
+      });
+      audioPlayer.setPlaybackRate(playbackRate, 'high');
+      activateBibleAudioLockScreen(audioPlayer, {
+        title: `${book?.name || labels.bible} ${chapterNum}`,
+        artist: selectedAudioReader
+          ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
+          : supportedTranslation.name,
+        albumTitle: labels.audioPlayer,
+      });
+      if (resumePositionMillis > 0) {
+        await audioPlayer.seekTo(resumePositionMillis / 1000);
+      }
+      audioPlayer.play();
+
+      audioFallbackTimeoutRef.current = setTimeout(() => {
+        if (
+          attempt !== audioLoadAttemptRef.current ||
+          (audioPlayer.currentStatus.isLoaded &&
+            audioPlayer.currentStatus.duration > 0)
+        ) {
+          return;
+        }
+
+        if (sourceIndex + 1 < audioUrls.length) {
+          console.warn(
+            `Bible audio host failed to load; trying fallback ${sourceIndex + 2}/${audioUrls.length}.`,
+          );
+        }
+        loadAudioSource(sourceIndex + 1, resumePositionMillis);
+      }, AUDIO_SOURCE_LOAD_TIMEOUT_MS);
+    } catch (e) {
+      console.warn('Bible audio host failed; trying the next fallback.', e);
+      await loadAudioSource(sourceIndex + 1, resumePositionMillis);
+    }
+  };
+
+  const toggleAudio = async () => {
+    if (selectedAudioUrls.length === 0) return;
 
     try {
       if (isPlaying) {
+        clearAudioFallbackTimeout();
+        audioLoadAttemptRef.current += 1;
         audioPlayer.pause();
       } else {
         await configureBibleAudioPlayback();
-        if (loadedAudioUrlRef.current !== audioUrl) {
-          setIsAudioLoading(true);
-          loadedAudioUrlRef.current = audioUrl as string;
-          audioPlayer.replace({
-            uri: audioUrl as string,
-            name: `${book?.name || labels.bible} ${chapterNum}`,
-          });
-          audioPlayer.setPlaybackRate(playbackRate, 'high');
-          activateBibleAudioLockScreen(audioPlayer, {
-            title: `${book?.name || labels.bible} ${chapterNum}`,
-            artist: supportedTranslation.name,
-            albumTitle: labels.audioPlayer,
-          });
+        if (!loadedAudioUrlRef.current) {
+          await loadAudioSource(0);
+        } else {
+          audioPlayer.play();
         }
-        audioPlayer.play();
       }
     } catch (e) {
       setIsAudioLoading(false);
       console.error('Audio playback error:', e);
     }
+  };
+
+  const selectAudioReader = (reader: string) => {
+    if (reader === selectedAudioReader) return;
+
+    audioPlayer.pause();
+    clearAudioFallbackTimeout();
+    audioLoadAttemptRef.current += 1;
+    audioPlayer.clearLockScreenControls();
+    audioPlayer.replace(null);
+    loadedAudioUrlRef.current = null;
+    setIsPlaying(false);
+    setIsAudioLoading(false);
+    setAudioPositionMillis(0);
+    setAudioDurationMillis(0);
+    setAudioBufferedMillis(0);
+    setScrubPositionMillis(null);
+    setSelectedAudioReaders((current) => ({
+      ...current,
+      [supportedTranslation.id]: reader,
+    }));
+  };
+
+  const selectAudioSource = (sourceUrl: string) => {
+    const sourceId = getBibleAudioSourceId(sourceUrl);
+    if (sourceId === selectedAudioSourceId) return;
+
+    audioPlayer.pause();
+    clearAudioFallbackTimeout();
+    audioLoadAttemptRef.current += 1;
+    audioPlayer.clearLockScreenControls();
+    audioPlayer.replace(null);
+    loadedAudioUrlRef.current = null;
+    setIsPlaying(false);
+    setIsAudioLoading(false);
+    setAudioPositionMillis(0);
+    setAudioDurationMillis(0);
+    setAudioBufferedMillis(0);
+    setScrubPositionMillis(null);
+    setSelectedAudioSources((current) => ({
+      ...current,
+      [audioSourcePreferenceKey]: sourceId,
+    }));
   };
 
   const formatAudioTime = (millis: number) => {
@@ -718,8 +961,7 @@ export default function BibleScreen() {
     seekAudio(audioPositionMillis + offsetMillis);
   };
 
-  const cyclePlaybackRate = async () => {
-    const nextRate = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1;
+  const selectPlaybackRate = async (nextRate: number) => {
     setPlaybackRate(nextRate);
     try {
       audioPlayer.setPlaybackRate(nextRate, 'high');
@@ -1169,6 +1411,8 @@ export default function BibleScreen() {
 
     // Stop and unload audio when the chapter changes or the component unmounts
     return () => {
+      clearAudioFallbackTimeout();
+      audioLoadAttemptRef.current += 1;
       audioPlayer.pause();
       audioPlayer.clearLockScreenControls();
       audioPlayer.replace(null);
@@ -1655,8 +1899,7 @@ export default function BibleScreen() {
     }
   };
 
-  const audioLinks = chapterData?.thisChapterAudioLinks;
-  const hasChapterAudio = !!audioLinks && Object.keys(audioLinks).length > 0;
+  const hasChapterAudio = audioReaderEntries.length > 0;
   const dockExtraHeight =
     (hasChapterAudio ? dockLayout.audioDockHeight : 0) +
     (isSelectionActive ? dockLayout.selectionBarHeight : 0);
@@ -2006,9 +2249,10 @@ export default function BibleScreen() {
               ]}
             >
               <TouchableOpacity
-                onPress={cyclePlaybackRate}
+                onPress={() => setAudioSettingsVisible(true)}
                 accessibilityRole="button"
-                accessibilityLabel={`${labels.playbackSpeed}: ${playbackRate}×`}
+                accessibilityLabel={`${labels.audioSettings}: ${playbackRate}×`}
+                accessibilityHint={`${labels.narrator}, ${labels.playbackSpeed}, ${labels.audioSource}`}
                 style={[
                   ReaderStyles.audioSideControl,
                   dockLayout.stackControls && {
@@ -2026,6 +2270,13 @@ export default function BibleScreen() {
                 >
                   {playbackRate}×
                 </Text>
+                <AppIcon
+                  pointerEvents="none"
+                  name="tune-variant"
+                  size={13}
+                  textScale={bibleUiTextScale}
+                  color={theme.colors.onSurfaceVariant}
+                />
               </TouchableOpacity>
 
               <View style={ReaderStyles.audioTransportControls}>
@@ -2219,6 +2470,181 @@ export default function BibleScreen() {
         <Animated.View style={{ height: animatedDockBottomClearance }} />
         </ScrollView>
       </Animated.View>
+
+      <Portal>
+        <Modal
+          visible={audioSettingsVisible}
+          onDismiss={() => setAudioSettingsVisible(false)}
+          contentContainerStyle={[
+            ReaderStyles.audioSettingsContent,
+            { marginBottom: bottomDockInset + 12 },
+            { backgroundColor: theme.colors.background },
+          ]}
+        >
+          <View style={ReaderStyles.modalInner}>
+            <Text
+              variant="titleLarge"
+              style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
+            >
+              {labels.audioSettings}
+            </Text>
+            <Divider />
+            <ScrollView>
+              <Text
+                variant="titleMedium"
+                style={[styles.audioSettingsSectionTitle, { color: theme.colors.onSurface }]}
+              >
+                {labels.playbackSpeed}
+              </Text>
+              <View style={styles.audioSettingsRateRow}>
+                {PLAYBACK_RATES.map((rate) => {
+                  const isSelected = rate === playbackRate;
+                  return (
+                    <TouchableOpacity
+                      key={rate}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${labels.playbackSpeed}: ${rate}×`}
+                      accessibilityState={{ selected: isSelected }}
+                      onPress={() => selectPlaybackRate(rate)}
+                      style={[
+                        styles.audioSettingsRate,
+                        {
+                          backgroundColor: isSelected
+                            ? theme.colors.secondaryContainer
+                            : theme.colors.surfaceVariant,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: isSelected
+                            ? theme.colors.onSecondaryContainer
+                            : theme.colors.onSurfaceVariant,
+                          fontWeight: isSelected ? '700' : '600',
+                        }}
+                      >
+                        {rate}×
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Divider style={styles.audioSettingsDivider} />
+              <Text
+                variant="titleMedium"
+                style={[styles.audioSettingsSectionTitle, { color: theme.colors.onSurface }]}
+              >
+                {labels.narrator}
+              </Text>
+              {audioReaderEntries.map(([reader]) => {
+                const isSelected = reader === selectedAudioReader;
+                const readerLabel = getAudioReaderLabel(reader);
+                return (
+                  <TouchableOpacity
+                    key={reader}
+                    accessibilityRole="button"
+                    accessibilityLabel={readerLabel}
+                    accessibilityState={{ selected: isSelected }}
+                    onPress={() => selectAudioReader(reader)}
+                    style={styles.pressRow}
+                  >
+                    <AppIcon
+                      pointerEvents="none"
+                      name="account-voice"
+                      size={24}
+                      textScale={bibleUiTextScale}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                    <Text
+                      style={[
+                        styles.pressRowText,
+                        isSelected
+                          ? { color: theme.colors.primary, fontWeight: '700' }
+                          : { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {readerLabel}
+                    </Text>
+                    {isSelected && (
+                      <AppIcon
+                        pointerEvents="none"
+                        name="check"
+                        size={24}
+                        textScale={bibleUiTextScale}
+                        color={theme.colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {availableAudioSources.length > 0 && (
+                <>
+                  <Divider style={styles.audioSettingsDivider} />
+                  <Text
+                    variant="titleMedium"
+                    style={[styles.audioSettingsSectionTitle, { color: theme.colors.onSurface }]}
+                  >
+                    {labels.audioSource}
+                  </Text>
+                  {availableAudioSources.map((sourceUrl) => {
+                    const sourceId = getBibleAudioSourceId(sourceUrl);
+                    const isSelected = sourceId === selectedAudioSourceId;
+                    return (
+                      <TouchableOpacity
+                        key={sourceId}
+                        accessibilityRole="button"
+                        accessibilityLabel={getAudioSourceLabel(sourceUrl)}
+                        accessibilityState={{ selected: isSelected }}
+                        onPress={() => selectAudioSource(sourceUrl)}
+                        style={styles.pressRow}
+                      >
+                        <AppIcon
+                          pointerEvents="none"
+                          name="server-network"
+                          size={24}
+                          textScale={bibleUiTextScale}
+                          color={theme.colors.onSurfaceVariant}
+                        />
+                        <Text
+                          style={[
+                            styles.pressRowText,
+                            isSelected
+                              ? { color: theme.colors.primary, fontWeight: '700' }
+                              : { color: theme.colors.onSurface },
+                          ]}
+                        >
+                          {getAudioSourceLabel(sourceUrl)}
+                        </Text>
+                        {isSelected && (
+                          <AppIcon
+                            pointerEvents="none"
+                            name="check"
+                            size={24}
+                            textScale={bibleUiTextScale}
+                            color={theme.colors.primary}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {availableAudioSources.length > 1 && (
+                    <Text
+                      style={[
+                        styles.audioSettingsHelper,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {labels.automaticFallback}
+                    </Text>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </Modal>
+      </Portal>
 
       <Portal>
         <Modal
@@ -2896,6 +3322,37 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
     minWidth: 0,
     fontSize: scaleTypographyMetric(16, uiTextScale),
     lineHeight: scaleTypographyMetric(22, uiTextScale),
+  },
+  audioSettingsSectionTitle: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+    fontWeight: '700',
+  },
+  audioSettingsRateRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  audioSettingsRate: {
+    minWidth: 52,
+    minHeight: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  audioSettingsDivider: {
+    marginTop: 8,
+  },
+  audioSettingsHelper: {
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    paddingBottom: 14,
+    fontSize: scaleTypographyMetric(13, uiTextScale),
+    lineHeight: scaleTypographyMetric(18, uiTextScale),
   },
   savedVerseRow: {
     width: '100%',

@@ -6,6 +6,8 @@ import { setAudioModeAsync } from 'expo-audio';
 import {
   activateBibleAudioLockScreen,
   configureBibleAudioPlayback,
+  getBibleAudioSourceId,
+  prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
 
 describe('Bible audio playback', () => {
@@ -32,5 +34,21 @@ describe('Bible audio playback', () => {
       showSeekBackward: true,
       showSeekForward: true,
     });
+  });
+
+  it('prioritizes a chosen source while preserving every fallback', () => {
+    const urls = [
+      'https://assets.adventistconnect.org/chapter.mp3',
+      'https://theaudiopower.com/chapter.mp3',
+      'https://archive.org/chapter.mp3',
+    ];
+
+    expect(getBibleAudioSourceId(urls[1])).toBe('theaudiopower.com');
+    expect(prioritizeBibleAudioSource(urls, 'archive.org')).toEqual([
+      urls[2],
+      urls[0],
+      urls[1],
+    ]);
+    expect(prioritizeBibleAudioSource(urls, 'unknown.example')).toEqual(urls);
   });
 });

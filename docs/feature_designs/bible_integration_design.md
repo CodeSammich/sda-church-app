@@ -14,21 +14,35 @@ credentials.
 Instead of proprietary embeds, the app consumes raw JSON from HelloAO and fetch(bible).
 The public app translation IDs remain stable even when their chapter provider differs:
 
-| App translation | Chapter source | Provider resource | Reason |
-| --- | --- | --- | --- |
-| BSB (`BSB`) | HelloAO | `BSB` | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
-| KJV (`eng_kjv`) | HelloAO | `eng_kjv` | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
-| Traditional CUV (`cmn_cuv`) | fetch(bible) | `cmn_cut` | Use fetch(bible's normalized source text and translation-note metadata |
-| Simplified CUV (`cmn_cu1`) | fetch(bible) | `cmn_cus` | Use fetch(bible's normalized source text and translation-note metadata |
-| Reina-Valera 1909 (`spa_r09`) | fetch(bible) | `spa_rv` | HelloAO omits the edition's translation notes; fetch(bible retains them |
+| App translation               | Chapter source | Provider resource | Reason                                                                                                                       |
+| ----------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| BSB (`BSB`)                   | HelloAO        | `BSB`             | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
+| KJV (`eng_kjv`)               | HelloAO        | `eng_kjv`         | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
+| Traditional CUV (`cmn_cuv`)   | fetch(bible)   | `cmn_cut`         | Use fetch(bible's normalized source text and translation-note metadata                                                       |
+| Simplified CUV (`cmn_cu1`)    | fetch(bible)   | `cmn_cus`         | Use fetch(bible's normalized source text and translation-note metadata                                                       |
+| Reina-Valera 1909 (`spa_r09`) | fetch(bible)   | `spa_rv`          | HelloAO omits the edition's translation notes; fetch(bible retains them                                                      |
 
-The English routing was audited against Genesis 1, 4, 12, 22, 37, and 49. BSB
-and KJV had identical note counts between providers in every sampled chapter,
-and the Genesis 1 note contents matched after normalizing reference prefixes.
-Re-run this comparison if either provider revises its underlying resource.
+The English routing was audited against Genesis 1, 4, 12, 22, 37, and 49. BSB and KJV had
+identical note counts between providers in every sampled chapter, and the Genesis 1 note
+contents matched after normalizing reference prefixes. Re-run this comparison if either
+provider revises its underlying resource.
 
 HelloAO remains the shared source of translated-edition book names and chapter counts.
 `BibleService.fetchChapter` routes chapter content according to the table above.
+
+Traditional and simplified CUV chapters use the chapter-level Mandarin recordings
+published by [Audio Power](https://theaudiopower.org/translations/cuv/#nar1). The
+recordings are streamed from Audio Power's host and are not bundled, proxied, or cached by
+this repository. Audio Power credits the recordings to 基督徒团契 (Christian Fellowship);
+its simplified-Chinese filenames are shared by both CUV text variants. Each recording is
+represented as one narrator with ordered hosting sources rather than separate narrator
+choices. The generated Adventist Connect manifest is the primary, church-controlled tier,
+Audio Power is second, and the complete
+[Internet Archive collection](https://archive.org/download/CUV_201911) is third. A source
+that cannot load within the player timeout is skipped without asking the listener to
+select a different host. The manifest generator extracts only public asset URLs from the
+WordPress upload HAR; authentication data and other HAR contents must not be checked into
+the repository.
 
 `BibleService.parseScriptureReference` converts a single book/chapter reference and an
 optional same-chapter verse range into canonical USFM coordinates. Its localized 66-book
@@ -36,8 +50,8 @@ table accepts and formats English, Traditional Chinese, Simplified Chinese, and 
 book names. Bulletin links use those coordinates to open the current app language's
 default translation and scroll to the first requested verse without selecting it.
 Ambiguous, multi-passage, or cross-chapter strings retain their entered display text but
-their action falls back to Genesis 1:1 in that same language; blank and `TBD` fields remain
-non-actionable.
+their action falls back to Genesis 1:1 in that same language; blank and `TBD` fields
+remain non-actionable.
 
 - **No Auth:** Open access to the selected BSB, KJV, CUV, and Reina-Valera resources
   requires no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
@@ -71,24 +85,24 @@ USFM book ID. Failed promises are evicted so a later request can retry.
 
 #### 2.2.2 Original-Language Reference Lookup
 
-The lookup is independent of the displayed translation. `BibleService` sends the
-canonical USFM book ID, chapter number, and verse number to fetch(bible's normalized
-plain-text collection. fetch(bible uses lowercase USFM book IDs and standardizes its
-distributed formats to the common KJV-style versification. Therefore an English, Chinese,
-or Spanish translation can resolve the same original-language verse without attempting a
-fragile one-to-one text match.
+The lookup is independent of the displayed translation. `BibleService` sends the canonical
+USFM book ID, chapter number, and verse number to fetch(bible's normalized plain-text
+collection. fetch(bible uses lowercase USFM book IDs and standardizes its distributed
+formats to the common KJV-style versification. Therefore an English, Chinese, or Spanish
+translation can resolve the same original-language verse without attempting a fragile
+one-to-one text match.
 
 The original-language book promise uses the same book-level caching strategy and extracts
 the requested 1-based chapter and verse array. This keeps repeat popup views responsive.
 
-The displayed sources are critical editions reconstructed from manuscript witnesses;
-they are not scans, facsimiles, or diplomatic transcriptions of a single “latest
-manuscript.” The selected open editions are:
+The displayed sources are critical editions reconstructed from manuscript witnesses; they
+are not scans, facsimiles, or diplomatic transcriptions of a single “latest manuscript.”
+The selected open editions are:
 
-| Testament | fetch(bible) ID | Edition | Display language |
-| --- | --- | --- | --- |
-| Old Testament | `hbo_sr` | Solid Rock Hebrew Bible | Hebrew, including the Biblical Aramaic passages |
-| New Testament | `grc_sr` | Statistical Restoration Greek New Testament | Koine Greek |
+| Testament     | fetch(bible) ID | Edition                                     | Display language                                |
+| ------------- | --------------- | ------------------------------------------- | ----------------------------------------------- |
+| Old Testament | `hbo_sr`        | Solid Rock Hebrew Bible                     | Hebrew, including the Biblical Aramaic passages |
+| New Testament | `grc_sr`        | Statistical Restoration Greek New Testament | Koine Greek                                     |
 
 For presentation, the parser omits separate note objects from fetch(bible's plain-text
 payload and collapses layout whitespace so word-per-line Greek data reads naturally in a
@@ -120,10 +134,9 @@ original-language editions selected by the app use
 
 CC BY 4.0 is free and open: it permits copying, redistribution, adaptation, and commercial
 use without a fee or separate permission. It is not public domain and it is not
-condition-free. Distribution must retain appropriate creator/editor credit, provide a
-link to CC BY 4.0, indicate presentation or other changes, and must not impose additional
-legal or technological restrictions that prevent recipients from exercising the licensed
-rights.
+condition-free. Distribution must retain appropriate creator/editor credit, provide a link
+to CC BY 4.0, indicate presentation or other changes, and must not impose additional legal
+or technological restrictions that prevent recipients from exercising the licensed rights.
 
 Consequently:
 
@@ -334,7 +347,7 @@ While the PWA supports service worker caching, explicit persistence in `IndexedD
 planned. `IndexedDB` is preferred over `AsyncStorage` due to the large payload size of
 full Bible chapters and better performance with structured data queries.
 
-### 4.2 Bible Sharing Feature
+### 4.2 Bible Sharing Feature (done)
 
 - **Mechanism:** Standard Web Share API.
 - **Implementation:** A "Share" button on every verse or chapter header. The routing logic
@@ -351,7 +364,13 @@ Notably, Tibetan (Moravian Version Yoseb Gergan, 1948) is also public domain. Wh
 encoding was historically challenging, the HelloAO API provides TBTI (Central Tibetan) via
 their source metadata, offering a Unicode-encoded path for these scripts.
 
-### 4.4.Select Reader Fonts & Highlighting & Personal Saved Verses
+### 4.4. Highlighting & Personal Saved Verses (done)
 
-Like the YouVersion Bible app, users should be able to customize select high-quality fonts
-and add colored highlighting. Favorite verses will be saved to personal storage.
+Like the YouVersion Bible app, users should be able to and add colored highlighting.
+Favorite verses will be saved to personal storage.
+
+### 4.5 Custom Fonts
+
+Users should be able to select some high quality fonts for reading. Default is AdventSans
+which supports a wide variety of languages tested by the SDA international tradition of
+translating Bibles.

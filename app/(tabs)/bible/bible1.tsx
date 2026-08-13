@@ -1,11 +1,12 @@
 import { MenuCard } from '@/components/MenuCard';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { openQuarterlySchedule } from '@/constants/ExternalLinks';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
-import { Linking, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 import { Card, List, Text } from 'react-native-paper';
 
 const allLabels = {
@@ -124,11 +125,7 @@ export default function CommunityScreen() {
             icon="file-table-outline"
             iconColor={theme.colors.tertiary}
             rightIcon="open-in-new"
-            onPress={() =>
-              Linking.openURL(
-                'https://docs.google.com/spreadsheets/d/1uFp2L6BvXqK-uM6yB8-HhI...placeholder',
-              )
-            }
+            onPress={openQuarterlySchedule}
           />
         </List.Section>
 
