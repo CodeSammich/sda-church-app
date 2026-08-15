@@ -115,6 +115,56 @@ remains internal to maintain spiritual focus.
 
 ## Known Bugs
 
+### Bible background audio support differs between iOS and Android
+
+Tracked in [issue #126](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/126).
+
+The browser-installed PWA and a compiled Expo application do not have the same
+background-playback privileges:
+
+- **iOS/iPadOS installed PWA:** Background playback, lock-screen controls, and
+  automatic chapter transitions work with the custom web player. It keeps one active
+  document-attached audio element, preloads only the immediately following chapter in a
+  guarded standby element, and holds up to 24 lightweight future chapter descriptors.
+  Later audio files and chapter text are not fetched in advance. When the PWA becomes
+  visible, the Bible reader catches up to the chapter already selected by the audio
+  engine. iOS may still show the audio host (for example, `helloao.org`) as a
+  system-controlled origin even when Media Session metadata supplies the chapter,
+  translation, and provider title. The church-hosted Audio Power mirror is labeled
+  `NYCCSDAS.org`.
+- **Android installed PWA:** Background playback is not reliable. Chrome owns the PWA's
+  media notification and can suspend or end its web playback context when the app loses
+  focus or when a chapter finishes. A web page cannot create Android's required native
+  media foreground service. The rolling web queue improves browser behavior but cannot
+  guarantee that Chrome will retain the media session. Notification privacy settings and
+  battery optimization may affect presentation or process lifetime, but they do not
+  provide the missing native service.
+- **Compiled Expo app:** The repository already enables `expo-audio` background playback
+  in `app.json`; Expo generates Android's media foreground service and the iOS background
+  audio capability. The current native single-track adapter should therefore be tested in
+  a sideloaded Android APK. Reliable native chapter-to-chapter queueing remains separate
+  work under issue #126 and may require a native queue player such as React Native Track
+  Player if `expo-audio` cannot combine its playlist and lock-screen behavior adequately.
+
+Preloading every chapter at launch was rejected because the BSB recordings are roughly
+86 MB per hour at their current bitrate, and downloading more data does not prevent
+Android Chrome from suspending JavaScript at a track boundary. The web implementation
+instead preloads one chapter on demand after the user presses Play.
+
+Capacitor alone would not solve the Android limitation: it would wrap the web application
+in a WebView, which still needs a native audio plugin and foreground service for dependable
+background queueing. Because this project is already Expo/React Native and uses Expo's
+Continuous Native Generation workflow, adding a native Expo audio adapter is less
+disruptive than migrating the application to Capacitor and maintaining its generated
+native projects.
+
+References:
+
+- [Expo background audio](https://docs.expo.dev/versions/latest/sdk/audio/#playing-audio-in-the-background)
+- [Expo Continuous Native Generation](https://docs.expo.dev/workflow/continuous-native-generation/)
+- [Media Session API](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API)
+- [Capacitor native plugin model](https://github.com/ionic-team/capacitor#readme)
+
 ### Android PWA may require a notification-shade cycle for fullscreen
 
 The installed Android PWA uses `"display": "fullscreen"` in its web app manifest. On

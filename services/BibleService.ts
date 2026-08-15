@@ -377,6 +377,9 @@ export const getAudioPowerCuvChapterLinks = (
   ).padStart(2, '0')}C${String(chapter).padStart(3, '0')}.mp3`;
   const adventistChurchUrl = getAdventistChurchCuvChapterUrl(canonicalFilename);
 
+  // These are three host mirrors of the same Audio Power recording. They are
+  // valid only for AUDIO_POWER_CUV_READER and must not be presented as three
+  // narrators or reused to synthesize fallback URLs for another narrator.
   return {
     [AUDIO_POWER_CUV_READER]: [
       ...(adventistChurchUrl ? [adventistChurchUrl] : []),

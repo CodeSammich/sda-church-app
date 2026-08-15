@@ -1,7 +1,6 @@
 import { UIStateContext } from '@/components/GlobalHeader';
 import { AppIcon } from '@/components/AppIcon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -39,10 +38,18 @@ import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import {
   activateBibleAudioLockScreen,
+  buildBibleAudioQueue,
   configureBibleAudioPlayback,
+  getBibleAudioMediaTitle,
   getBibleAudioSourceId,
+  getBibleAudioSourceLabel,
+  getOrderedBibleAudioReaders,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
+import {
+  useBibleAudioPlayer,
+  useBibleAudioPlayerStatus,
+} from '@/services/BibleAudioPlayer';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -60,6 +67,7 @@ import {
 
 const FOOTER_PADDING_GUTTER = 34;
 const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 12_000;
+const AUDIO_QUEUE_CHAPTER_LIMIT = 24;
 
 type SleepTimerSetting = 5 | 10 | 15 | 30 | 60 | 120 | 'chapter' | null;
 
@@ -76,20 +84,6 @@ const getAudioReaderLabel = (reader: string) =>
     .filter(Boolean)
     .map((part) => part.charAt(0).toLocaleUpperCase() + part.slice(1))
     .join(' ');
-
-const getAudioSourceLabel = (url: string) => {
-  const host = getBibleAudioSourceId(url);
-  // The church-uploaded CUV copy is served through assets.adventistconnect.org.
-  // Hosting metadata identifies Wasabi's S3-compatible us-east-2 storage; the
-  // recordings are encoded at 24 kb/s CBR.
-  if (host === 'assets.adventistconnect.org') return 'NYCCSDA.org servers';
-  if (host === 'theaudiopower.com' || host === 'theaudiopower.org') {
-    return 'Audio Power';
-  }
-  if (host === 'archive.org') return 'Internet Archive';
-  if (host === 'bible.helloao.org') return 'HelloAO';
-  return host.replace(/^www\./, '');
-};
 
 type SavedVerseDisplay = SavedVerseReference & {
   bookName: string;
@@ -678,11 +672,12 @@ export default function BibleScreen() {
   const [sleepTimerVisible, setSleepTimerVisible] = useState(false);
   const [audioSettingsVisible, setAudioSettingsVisible] = useState(false);
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
-  const audioPlayer = useAudioPlayer(null, { updateInterval: 250 });
-  const audioStatus = useAudioPlayerStatus(audioPlayer);
+  const audioPlayer = useBibleAudioPlayer(null, { updateInterval: 250 });
+  const audioStatus = useBibleAudioPlayerStatus(audioPlayer);
   const loadedAudioUrlRef = useRef<string | null>(null);
-  const audioSourceIndexRef = useRef(0);
   const audioLoadAttemptRef = useRef(0);
+  const preserveAudioOnNextRouteChangeRef = useRef(false);
+  const lastSyncedAudioChapterRef = useRef<string | null>(null);
   const audioFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrubbingRef = useRef(false);
   const audioScrubberWidth = useRef(1);
@@ -690,7 +685,12 @@ export default function BibleScreen() {
   const sleepTimerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const chapterAudioLinks = chapterData?.thisChapterAudioLinks;
-  const audioReaderEntries = Object.entries(chapterAudioLinks || {});
+  // Ordering the URLs is metadata-only. The selected recording is still sent
+  // to the playback engine only after the user presses Play.
+  const audioReaderEntries = getOrderedBibleAudioReaders(
+    supportedTranslation.id,
+    chapterAudioLinks,
+  );
   const savedAudioReader = selectedAudioReaders[supportedTranslation.id];
   const selectedAudioReader = chapterAudioLinks?.[savedAudioReader]
     ? savedAudioReader
@@ -728,6 +728,23 @@ export default function BibleScreen() {
   const selectedAudioUrlsRef = useRef(selectedAudioUrls);
   selectedAudioUrlsRef.current = selectedAudioUrls;
 
+  const buildUpcomingAudioQueue = () =>
+    buildBibleAudioQueue({
+      albumTitle: labels.audioPlayer,
+      artist: selectedAudioReader
+        ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
+        : supportedTranslation.name,
+      books,
+      currentBookId: book?.id || '',
+      currentChapter: chapterNum,
+      limit: AUDIO_QUEUE_CHAPTER_LIMIT,
+      preferredSourceId: selectedAudioSourceId,
+      selectedAudioUrls,
+      selectedReader: selectedAudioReader,
+      translationId: supportedTranslation.id,
+      translationLabel: supportedTranslation.name,
+    });
+
   const clearAudioFallbackTimeout = () => {
     if (audioFallbackTimeoutRef.current) {
       clearTimeout(audioFallbackTimeoutRef.current);
@@ -754,8 +771,14 @@ export default function BibleScreen() {
     setSleepTimerSetting(setting);
     setSleepTimerVisible(false);
 
+    if (setting === 'chapter') {
+      audioPlayer.setQueue?.([]);
+    } else if (loadedAudioUrlRef.current) {
+      audioPlayer.setQueue?.(buildUpcomingAudioQueue());
+    }
+
     if (typeof setting === 'number') {
-      sleepTimerTimeoutRef.current = setTimeout(async () => {
+      sleepTimerTimeoutRef.current = setTimeout(() => {
         setShouldAutoPlay(false);
         try {
           audioPlayer.pause();
@@ -802,6 +825,53 @@ export default function BibleScreen() {
     }
   }, [audioStatus, isLastChapter]);
 
+  // A queued audio transition can happen while React is throttled in the
+  // background. Once the PWA is visible, catch the reader up to the chapter
+  // already chosen by the audio engine and fetch its text normally.
+  useEffect(() => {
+    const activeChapter = audioStatus.activeChapter;
+    if (!activeChapter || activeChapter.translationId !== supportedTranslation.id) {
+      lastSyncedAudioChapterRef.current = null;
+      return;
+    }
+
+    const syncVisibleChapter = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      const activeKey = `${activeChapter.translationId}:${activeChapter.bookId}:${activeChapter.chapter}`;
+      if (lastSyncedAudioChapterRef.current === activeKey) return;
+      if (book?.id === activeChapter.bookId && chapterNum === activeChapter.chapter) {
+        lastSyncedAudioChapterRef.current = activeKey;
+        return;
+      }
+
+      const activeBook = books.find(
+        (candidate) => candidate.id === activeChapter.bookId,
+      );
+      if (!activeBook) return;
+
+      lastSyncedAudioChapterRef.current = activeKey;
+      preserveAudioOnNextRouteChangeRef.current = true;
+      setBook(activeBook);
+      setChapterNum(activeChapter.chapter);
+    };
+
+    syncVisibleChapter();
+    if (typeof document === 'undefined') return;
+    document.addEventListener('visibilitychange', syncVisibleChapter);
+    return () =>
+      document.removeEventListener('visibilitychange', syncVisibleChapter);
+  }, [
+    audioStatus.activeChapter?.translationId,
+    audioStatus.activeChapter?.bookId,
+    audioStatus.activeChapter?.chapter,
+    supportedTranslation.id,
+    book?.id,
+    chapterNum,
+    books,
+  ]);
+
   const loadAudioSource = async (
     sourceIndex: number,
     resumePositionMillis = 0,
@@ -817,24 +887,31 @@ export default function BibleScreen() {
     }
 
     const attempt = ++audioLoadAttemptRef.current;
-    audioSourceIndexRef.current = sourceIndex;
     clearAudioFallbackTimeout();
 
     try {
       setIsAudioLoading(true);
       loadedAudioUrlRef.current = audioUrl;
+      const audioTitle = getBibleAudioMediaTitle(
+        `${book?.name || labels.bible} ${chapterNum}`,
+        supportedTranslation.name,
+        audioUrl,
+      );
       audioPlayer.replace({
         uri: audioUrl,
-        name: `${book?.name || labels.bible} ${chapterNum}`,
+        name: audioTitle,
       });
       audioPlayer.setPlaybackRate(playbackRate, 'high');
       activateBibleAudioLockScreen(audioPlayer, {
-        title: `${book?.name || labels.bible} ${chapterNum}`,
+        title: audioTitle,
         artist: selectedAudioReader
           ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
           : supportedTranslation.name,
         albumTitle: labels.audioPlayer,
       });
+      // Queueing is on demand: descriptors are created only after Play, and
+      // the web player assigns a URL only to the immediate next chapter.
+      audioPlayer.setQueue?.(buildUpcomingAudioQueue());
       if (resumePositionMillis > 0) {
         await audioPlayer.seekTo(resumePositionMillis / 1000);
       }
@@ -862,21 +939,14 @@ export default function BibleScreen() {
     }
   };
 
-  const toggleAudio = async () => {
-    if (selectedAudioUrls.length === 0) return;
-
+  const startAudio = async () => {
+    if (selectedAudioUrlsRef.current.length === 0) return;
     try {
-      if (isPlaying) {
-        clearAudioFallbackTimeout();
-        audioLoadAttemptRef.current += 1;
-        audioPlayer.pause();
+      await configureBibleAudioPlayback();
+      if (!loadedAudioUrlRef.current) {
+        await loadAudioSource(0);
       } else {
-        await configureBibleAudioPlayback();
-        if (!loadedAudioUrlRef.current) {
-          await loadAudioSource(0);
-        } else {
-          audioPlayer.play();
-        }
+        audioPlayer.play();
       }
     } catch (e) {
       setIsAudioLoading(false);
@@ -884,21 +954,37 @@ export default function BibleScreen() {
     }
   };
 
-  const selectAudioReader = (reader: string) => {
-    if (reader === selectedAudioReader) return;
+  const toggleAudio = async () => {
+    if (isPlaying) {
+      clearAudioFallbackTimeout();
+      audioLoadAttemptRef.current += 1;
+      audioPlayer.pause();
+      return;
+    }
 
-    audioPlayer.pause();
+    await startAudio();
+  };
+
+  const unloadAudio = () => {
     clearAudioFallbackTimeout();
     audioLoadAttemptRef.current += 1;
+    audioPlayer.pause();
     audioPlayer.clearLockScreenControls();
     audioPlayer.replace(null);
     loadedAudioUrlRef.current = null;
+    isScrubbingRef.current = false;
     setIsPlaying(false);
     setIsAudioLoading(false);
     setAudioPositionMillis(0);
     setAudioDurationMillis(0);
     setAudioBufferedMillis(0);
     setScrubPositionMillis(null);
+  };
+
+  const selectAudioReader = (reader: string) => {
+    if (reader === selectedAudioReader) return;
+
+    unloadAudio();
     setSelectedAudioReaders((current) => ({
       ...current,
       [supportedTranslation.id]: reader,
@@ -909,18 +995,7 @@ export default function BibleScreen() {
     const sourceId = getBibleAudioSourceId(sourceUrl);
     if (sourceId === selectedAudioSourceId) return;
 
-    audioPlayer.pause();
-    clearAudioFallbackTimeout();
-    audioLoadAttemptRef.current += 1;
-    audioPlayer.clearLockScreenControls();
-    audioPlayer.replace(null);
-    loadedAudioUrlRef.current = null;
-    setIsPlaying(false);
-    setIsAudioLoading(false);
-    setAudioPositionMillis(0);
-    setAudioDurationMillis(0);
-    setAudioBufferedMillis(0);
-    setScrubPositionMillis(null);
+    unloadAudio();
     setSelectedAudioSources((current) => ({
       ...current,
       [audioSourcePreferenceKey]: sourceId,
@@ -997,9 +1072,13 @@ export default function BibleScreen() {
   };
 
   useEffect(() => {
-    const autoPlayNext = async () => {
+    const autoPlayNext = () => {
       setShouldAutoPlay(false);
-      setTimeout(() => toggleAudio(), 500);
+      // Chapter completion must start playback explicitly. Reusing the toggle
+      // can observe the previous chapter's final `playing` status and pause the
+      // newly loaded chapter instead. Avoid a timer here because browsers may
+      // throttle it as soon as an installed PWA moves to the background.
+      void startAudio();
     };
 
     // Only trigger auto-play if:
@@ -1027,6 +1106,22 @@ export default function BibleScreen() {
     book?.id,
     supportedTranslation.id,
   ]);
+
+  useEffect(() => {
+    const activeChapter = audioStatus.activeChapter;
+    if (
+      !loadedAudioUrlRef.current ||
+      !activeChapter ||
+      !chapterData ||
+      chapterData.translation.id !== activeChapter.translationId ||
+      chapterData.book.id !== activeChapter.bookId ||
+      chapterData.chapter.number !== activeChapter.chapter
+    ) {
+      return;
+    }
+
+    audioPlayer.setQueue?.(buildUpcomingAudioQueue());
+  }, [chapterData, audioStatus.activeChapter]);
 
   useEffect(() => {
     if (modalType) {
@@ -1409,25 +1504,24 @@ export default function BibleScreen() {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
 
-    // Stop and unload audio when the chapter changes or the component unmounts
     return () => {
-      clearAudioFallbackTimeout();
-      audioLoadAttemptRef.current += 1;
-      audioPlayer.pause();
-      audioPlayer.clearLockScreenControls();
-      audioPlayer.replace(null);
-      loadedAudioUrlRef.current = null;
-      isScrubbingRef.current = false;
-      setIsPlaying(false);
-      setIsAudioLoading(false);
-      setAudioPositionMillis(0);
-      setAudioDurationMillis(0);
-      setAudioBufferedMillis(0);
-      setScrubPositionMillis(null);
-      // Always restore menus when leaving the reader
+      // Always restore menus when leaving the reader.
       setGlobalMenuVisible(true);
     };
   }, [chapterData, setGlobalMenuVisible]);
+
+  // Playback follows the selected route, not the lifecycle of its text request.
+  // A queued transition changes the route after audio has already advanced, so
+  // exactly that route cleanup is skipped.
+  useEffect(() => {
+    return () => {
+      if (preserveAudioOnNextRouteChangeRef.current) {
+        preserveAudioOnNextRouteChangeRef.current = false;
+        return;
+      }
+      unloadAudio();
+    };
+  }, [supportedTranslation.id, book?.id, chapterNum]);
 
   useEffect(() => {
     if (!chapterData || pendingSavedVerseScroll.current === null) return;
@@ -2595,7 +2689,7 @@ export default function BibleScreen() {
                       <TouchableOpacity
                         key={sourceId}
                         accessibilityRole="button"
-                        accessibilityLabel={getAudioSourceLabel(sourceUrl)}
+                        accessibilityLabel={getBibleAudioSourceLabel(sourceUrl)}
                         accessibilityState={{ selected: isSelected }}
                         onPress={() => selectAudioSource(sourceUrl)}
                         style={styles.pressRow}
@@ -2615,7 +2709,7 @@ export default function BibleScreen() {
                               : { color: theme.colors.onSurface },
                           ]}
                         >
-                          {getAudioSourceLabel(sourceUrl)}
+                          {getBibleAudioSourceLabel(sourceUrl)}
                         </Text>
                         {isSelected && (
                           <AppIcon
