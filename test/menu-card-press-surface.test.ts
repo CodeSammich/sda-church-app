@@ -11,17 +11,13 @@ import { MenuCard, MenuCardSwitchVisual } from '@/components/MenuCard';
 import { AppIcon } from '@/components/AppIcon';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 
-jest.mock('@/constants/Themes', () => ({
-  useAppTheme: () => ({
-    colors: {
-      onSurface: '#111111',
-      onSurfaceVariant: '#555555',
-      outlineVariant: '#dddddd',
-      surface: '#ffffff',
-      tertiary: '#0066cc',
-    },
-  }),
-}));
+jest.mock('@/constants/Themes', () => {
+  const themes = jest.requireActual('@/constants/Themes');
+  return {
+    ...themes,
+    useAppTheme: () => themes.customLightTheme,
+  };
+});
 
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');

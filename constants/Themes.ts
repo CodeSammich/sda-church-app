@@ -104,6 +104,14 @@ export const customLightTheme = {
       fellowship:           'rgba(55,48,163,1.00)',     // Deep indigo/navy   
       bible:                'rgba(217, 119, 6, 1.00)',  // Warm burnt amber / Terracotta
     },
+    // Shared GridMenuCard chrome. Category backgrounds and icons remain above.
+    gridMenuCard: {
+      border: '#E0E0E0',
+      decorativeIcon: 'rgba(40, 40, 40, 0.18)',
+      arrowBackground: '#FFFFFF',
+      arrowBorder: '#374151',
+      arrowForeground: '#374151',
+    },
     // Secondary: Utility UI (Chips, Muted Actions)
     secondary: '#606060',
     onSecondary: '#FFFFFF',
@@ -222,6 +230,14 @@ export const customDarkTheme: AppTheme = {
       join:         '#67C7F0',
       fellowship:   '#AFA8FF',
       bible:        '#F4B860',
+    },
+    // Low-glare equivalents of the GridMenuCard chrome used in light mode.
+    gridMenuCard: {
+      border: '#3F3F3F',
+      decorativeIcon: 'rgba(255, 255, 255, 0.18)',
+      arrowBackground: '#2C2C2C',
+      arrowBorder: '#938F99',
+      arrowForeground: '#AAAAAA',
     },
     // Secondary: Utility UI (Chips, Muted Actions)
     secondary: '#AAAAAA',
