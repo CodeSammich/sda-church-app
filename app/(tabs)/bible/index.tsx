@@ -2588,7 +2588,7 @@ export default function BibleScreen() {
                 variant="titleMedium"
                 style={[styles.audioSettingsSectionTitle, { color: theme.colors.onSurface }]}
               >
-                {labels.playbackSpeed}
+                {labels.playbackSpeed}: {playbackRate}×
               </Text>
               <View style={styles.audioSettingsRateRow}>
                 {PLAYBACK_RATES.map((rate) => {
@@ -2604,15 +2604,28 @@ export default function BibleScreen() {
                         styles.audioSettingsRate,
                         {
                           backgroundColor: isSelected
-                            ? theme.colors.secondaryContainer
+                            ? theme.colors.primaryContainer
                             : theme.colors.surfaceVariant,
+                          borderColor: isSelected
+                            ? theme.colors.primary
+                            : theme.colors.outlineVariant,
+                          borderWidth: isSelected ? 2 : 1,
                         },
                       ]}
                     >
+                      {isSelected && (
+                        <AppIcon
+                          pointerEvents="none"
+                          name="check-circle"
+                          size={16}
+                          textScale={bibleUiTextScale}
+                          color={theme.colors.onPrimaryContainer}
+                        />
+                      )}
                       <Text
                         style={{
                           color: isSelected
-                            ? theme.colors.onSecondaryContainer
+                            ? theme.colors.onPrimaryContainer
                             : theme.colors.onSurfaceVariant,
                           fontWeight: isSelected ? '700' : '600',
                         }}
@@ -3434,6 +3447,8 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
     minWidth: 52,
     minHeight: 44,
     borderRadius: 22,
+    flexDirection: 'row',
+    gap: 5,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
