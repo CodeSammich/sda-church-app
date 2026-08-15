@@ -1,7 +1,7 @@
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { GridMenuCard } from '@/components/GridMenuCard';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
-import { BULLETIN_HYMNAL_DISPLAY_NAMES } from '@/constants/BulletinHymnalConfig';
+import { BULLETIN_HYMNAL_DISPLAY_NAMES } from '@/features/hymnal/BulletinHymnalConfig';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openInMaps,
@@ -30,6 +30,7 @@ import {
   resolveBulletinHymnPresentation,
 } from '@/services/BulletinHymnalService';
 import {
+  createScriptureReferenceRequest,
   formatScriptureReference,
   getScriptureReaderParams,
   parseScriptureReference,
@@ -279,10 +280,6 @@ const LABELS = {
 } as const;
 
 const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
-let scriptureReferenceRequestSequence = 0;
-
-const createScriptureReferenceRequest = () =>
-  `${Date.now()}-${++scriptureReferenceRequestSequence}`;
 
 type Labels = (typeof LABELS)['en'];
 type WeekState = {
@@ -314,7 +311,7 @@ const DataRow = ({ label, value, emptyText, last, action }: DataRowProps) => (
         </Text>
         <Button
           accessibilityLabel={action.accessibilityLabel}
-          mode="contained-tonal"
+          mode="contained"
           compact
           icon="music-note"
           onPress={action.onPress}
@@ -655,7 +652,7 @@ export default function WeeklyBulletinScreen() {
                   formatScriptureReference(targetBibleReference, language) ||
                     displayedBibleReference,
                 )}
-                mode="contained-tonal"
+                mode="contained"
                 compact
                 icon="book-open-page-variant"
                 onPress={openBibleReference}
@@ -740,20 +737,29 @@ export default function WeeklyBulletinScreen() {
     isQueens: boolean,
     specialRemark: string,
   ) => (
-    <Card mode="outlined" style={styles.card}>
+    <Card
+      mode="outlined"
+      style={[styles.card, { backgroundColor: theme.colors.bulletinSurface }]}
+    >
       <Card.Title title={title} titleVariant="titleLarge" style={styles.locationCardTitle} />
       <Card.Content>
         {hasBulletinValue(specialRemark) && (
           <View
             style={[
               styles.remarkBanner,
-              { backgroundColor: theme.colors.secondaryContainer },
+              { backgroundColor: theme.colors.bulletinRemarkSurface },
             ]}
           >
-            <Text variant="labelLarge" style={{ color: theme.colors.onSecondaryContainer }}>
+            <Text
+              variant="labelLarge"
+              style={{ color: theme.colors.onBulletinRemarkSurface }}
+            >
               {labels.metadata.specialRemark}
             </Text>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSecondaryContainer }}>
+            <Text
+              variant="titleMedium"
+              style={{ color: theme.colors.onBulletinRemarkSurface }}
+            >
               {specialRemark}
             </Text>
           </View>
@@ -773,7 +779,7 @@ export default function WeeklyBulletinScreen() {
               {labels.possibleJointServiceHint}
             </Text>
             <Button
-              mode="contained-tonal"
+              mode="contained"
               icon="map-marker"
               onPress={() => openInMaps(CHURCH_LOCATIONS[0].searchQuery)}
             >
@@ -799,7 +805,10 @@ export default function WeeklyBulletinScreen() {
 
     return (
       <>
-        <Card mode="outlined" style={styles.card}>
+        <Card
+          mode="outlined"
+          style={[styles.card, { backgroundColor: theme.colors.bulletinSurface }]}
+        >
           <Card.Content>
             {metadataRows.map(([label, value], index) => (
               <DataRow
@@ -851,7 +860,7 @@ export default function WeeklyBulletinScreen() {
           <Button
             accessibilityRole="tab"
             accessibilityState={{ selected: selectedWeek === '0' }}
-            mode={selectedWeek === '0' ? 'contained-tonal' : 'outlined'}
+            mode={selectedWeek === '0' ? 'contained' : 'outlined'}
             icon="calendar-today"
             onPress={() => selectWeek(0)}
             style={styles.weekTab}
@@ -861,7 +870,7 @@ export default function WeeklyBulletinScreen() {
           <Button
             accessibilityRole="tab"
             accessibilityState={{ selected: selectedWeek === '1' }}
-            mode={selectedWeek === '1' ? 'contained-tonal' : 'outlined'}
+            mode={selectedWeek === '1' ? 'contained' : 'outlined'}
             icon="calendar-arrow-right"
             onPress={() => selectWeek(1)}
             style={styles.weekTab}
@@ -902,7 +911,9 @@ export default function WeeklyBulletinScreen() {
                     ? `${labels.refresh} (${cooldownLabel})`
                     : labels.refresh
                 }
-                mode="contained-tonal"
+                mode="contained"
+                containerColor={theme.colors.primary}
+                iconColor={theme.colors.onPrimary}
                 disabled={week.loading || cooldownSeconds > 0}
                 icon="refresh"
                 onPress={() => void refreshWeek(index)}
@@ -918,7 +929,13 @@ export default function WeeklyBulletinScreen() {
             )}
 
             {week.error && (
-              <Card mode="outlined" style={styles.card}>
+              <Card
+                mode="outlined"
+                style={[
+                  styles.card,
+                  { backgroundColor: theme.colors.bulletinSurface },
+                ]}
+              >
                 <Card.Content>
                   <Text variant="titleMedium">{labels.loadError}</Text>
                   <Text variant="bodyMedium" style={styles.errorDetail}>
@@ -947,8 +964,8 @@ export default function WeeklyBulletinScreen() {
             title={labels.quarterlySchedule}
             subtitle={labels.churchStaffOnly}
             icon="file-table-outline"
-            color={theme.colors.cardBgColors.bulletin}
-            iconColor={theme.colors.iconColors.bulletin}
+            color={theme.colors.bulletinSurface}
+            iconColor={theme.colors.primary}
             onPress={openQuarterlySchedule}
             style={styles.scheduleCard}
           />

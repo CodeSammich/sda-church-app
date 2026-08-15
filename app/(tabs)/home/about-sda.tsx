@@ -378,12 +378,22 @@ export default function AboutSDAScreen() {
           >
             {labels.aboutSDA}
           </Text>
-          <Text
-            variant="bodyMedium"
-            style={[DocumentStyles.description, { color: theme.colors.onSurface }]}
+          <Card
+            mode="outlined"
+            style={[DocumentStyles.card, DocumentStyles.leadCard]}
           >
-            {labels.sdaDescription}
-          </Text>
+            <Card.Content>
+              <Text
+                variant="bodyMedium"
+                style={[
+                  DocumentStyles.description,
+                  { color: theme.colors.onSurface },
+                ]}
+              >
+                {labels.sdaDescription}
+              </Text>
+            </Card.Content>
+          </Card>
           <View
             style={[
               styles.pillarContainer,
@@ -396,7 +406,11 @@ export default function AboutSDAScreen() {
                 style={[
                   styles.pillarCard,
                   stackPillars && styles.stackedPillarCard,
-                  { borderWidth: 1, borderColor: theme.colors.outlineVariant },
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderWidth: 1,
+                    borderColor: theme.colors.outlineVariant,
+                  },
                 ]}
                 mode="contained"
               >
@@ -438,7 +452,11 @@ export default function AboutSDAScreen() {
                 key={index}
                 style={[
                   DocumentStyles.card,
-                  { borderWidth: 1, borderColor: theme.colors.outlineVariant },
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderWidth: 1,
+                    borderColor: theme.colors.outlineVariant,
+                  },
                 ]}
                 mode="contained"
               >

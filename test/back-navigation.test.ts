@@ -13,7 +13,7 @@ describe('global header back navigation', () => {
       hasHeaderBackButton(['(tabs)', 'bible'], '/home/bulletin'),
     ).toBe(true);
     expect(
-      hasHeaderBackButton(['(tabs)', 'bible'], '/resources/english-hymnal'),
+      hasHeaderBackButton(['(tabs)', 'bible'], '/home/english-hymnal'),
     ).toBe(true);
   });
 

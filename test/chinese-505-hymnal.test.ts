@@ -2,8 +2,8 @@ import {
   CHINESE_505_DIRECTORY_URL,
   getChinese505HymnUrl,
   getSortedChinese505Hymns,
-} from '@/constants/Chinese505Hymnal';
-import { getSearchableItems } from '@/constants/SearchTerms';
+} from '@/features/hymnal/Chinese505Hymnal';
+import { getHymnalSearchItems } from '@/features/hymnal/HymnalSearch';
 
 describe('Chinese 505 hymnal directory', () => {
   const hymns = getSortedChinese505Hymns();
@@ -44,14 +44,14 @@ describe('Chinese 505 hymnal directory', () => {
     );
   });
 
-  it('adds Chinese hymns to unified search with their own reader route', () => {
-    const item = getSearchableItems('zh-cn').find(
+  it('adds Chinese hymns to reader search with their own route', () => {
+    const item = getHymnalSearchItems('zh-cn').find(
       ({ title }) => title === '91. 救主衣袍',
     );
 
     expect(item).toMatchObject({
       route:
-        '/resources/chinese-505-hymnal?hymnNum=91&backTo=/resources/hymnal-selection',
+        '/home/chinese-505-hymnal?hymnNum=91&backTo=/home/hymnal-selection',
       isHymn: true,
     });
   });

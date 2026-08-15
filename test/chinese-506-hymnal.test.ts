@@ -2,8 +2,8 @@ import {
   CHINESE_506_DIRECTORY_URL,
   getChinese506HymnUrl,
   getSortedChinese506Hymns,
-} from '@/constants/Chinese506Hymnal';
-import { getSearchableItems } from '@/constants/SearchTerms';
+} from '@/features/hymnal/Chinese506Hymnal';
+import { getHymnalSearchItems } from '@/features/hymnal/HymnalSearch';
 
 describe('Chinese 506 hymnal directory', () => {
   const hymns = getSortedChinese506Hymns();
@@ -32,16 +32,16 @@ describe('Chinese 506 hymnal directory', () => {
     expect(getChinese506HymnUrl(507)).toBe(CHINESE_506_DIRECTORY_URL);
   });
 
-  it('adds 506 hymns to unified search with their own reader route', () => {
-    const item = getSearchableItems('zh-cn').find(
+  it('adds 506 hymns to reader search with their own route', () => {
+    const item = getHymnalSearchItems('zh-cn').find(
       ({ title, route }) =>
         title === '1. 圣哉真神' &&
-        route.startsWith('/resources/chinese-506-hymnal'),
+        route.startsWith('/home/chinese-506-hymnal'),
     );
 
     expect(item).toMatchObject({
       route:
-        '/resources/chinese-506-hymnal?hymnNum=1&backTo=/resources/hymnal-selection',
+        '/home/chinese-506-hymnal?hymnNum=1&backTo=/home/hymnal-selection',
       isHymn: true,
     });
   });

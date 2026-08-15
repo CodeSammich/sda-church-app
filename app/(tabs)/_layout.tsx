@@ -182,6 +182,13 @@ export default function TabLayout() {
     <BottomTabHeightContext.Provider value={tabBarHeight}>
       <UIStateContext.Provider value={{ menuAnim, setMenuVisible }}>
         <Tabs
+        screenListeners={{
+          tabPress: () => {
+            // A deliberate press on any main tab checks the small versioned
+            // service worker source without waiting for the resume cooldown.
+            void onPassiveCheck();
+          },
+        }}
         tabBar={(props) => (
           <Animated.View
             onLayout={handleTabBarLayout}
@@ -219,7 +226,10 @@ export default function TabLayout() {
           ),
           // The animated tab bar is absolutely positioned, so React Navigation cannot
           // reserve space for it. Keep every regular tab screen above the overlay.
-          sceneStyle: { paddingBottom: tabBarHeight },
+          sceneStyle: {
+            paddingBottom: tabBarHeight,
+            backgroundColor: theme.colors.background,
+          },
         }}
       >
         {/* 1. Main Home Screen */}
@@ -247,13 +257,6 @@ export default function TabLayout() {
                 textScale={textScale}
               />
             ),
-          }}
-          listeners={{
-            tabPress: () => {
-              // This intentionally bypasses the hourly launch/resume cooldown:
-              // the user explicitly pressed Home, and only sw.js is fetched.
-              void onPassiveCheck();
-            },
           }}
         />
 

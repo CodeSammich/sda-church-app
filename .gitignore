@@ -13,6 +13,7 @@
 !/components/
 !/constants/
 !/docs/
+!/features/
 !/hooks/
 !/public/
 !/scripts/
@@ -38,7 +39,9 @@ node_modules/
 .expo/
 dist/
 web-build/
+downloads/
 expo-env.d.ts
 *.tsbuildinfo
+external-dependency-report.json
 .env*
 apps-script/.clasp.json

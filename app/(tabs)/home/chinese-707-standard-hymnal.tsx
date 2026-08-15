@@ -1,8 +1,8 @@
-import { ChineseHymnalReader } from '@/components/ChineseHymnalReader';
+import { ChineseHymnalReader } from '@/features/hymnal/ChineseHymnalReader';
 import {
   getSortedChinese707Hymns,
   openChinese707Hymn,
-} from '@/constants/Chinese707Hymnal';
+} from '@/features/hymnal/Chinese707Hymnal';
 
 const coverImage = require('../../../public/chinese_707_hymnal_leather_bound_version.jpg');
 const getHymns = () => getSortedChinese707Hymns(3);
@@ -20,7 +20,7 @@ export default function Chinese707StandardHymnalScreen() {
     <ChineseHymnalReader
       edition={707}
       coverImage={coverImage}
-      route="/resources/chinese-707-standard-hymnal"
+      route="/home/chinese-707-standard-hymnal"
       getHymns={getHymns}
       openHymn={openHymn}
       titles={titles}

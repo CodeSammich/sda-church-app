@@ -7,12 +7,11 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
 import {
-  ALL_SEARCH_LABELS,
-  getSearchableItems,
-  getSearchSubtitle,
-  isSearchMatch,
-  SearchableItem,
-} from '@/constants/SearchTerms';
+  getHymnalSearchItems,
+  getHymnalSearchSubtitle,
+  isHymnalSearchMatch,
+  type HymnalSearchItem,
+} from '@/features/hymnal/HymnalSearch';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
 import { router, useSegments } from 'expo-router';
@@ -38,9 +37,27 @@ const HERO_HEADER_ROUTES = new Set([
   'fellowship',
   'give',
   'hymnal-selection',
-  'prayer',
   'team',
 ]);
+
+const READER_SEARCH_LABELS = {
+  en: {
+    searchBiblePlaceholder: 'Search this chapter...',
+    searchHymnalPlaceholder: 'Search hymnal...',
+  },
+  zh: {
+    searchBiblePlaceholder: '搜尋本章...',
+    searchHymnalPlaceholder: '搜尋詩歌...',
+  },
+  'zh-cn': {
+    searchBiblePlaceholder: '搜索本章...',
+    searchHymnalPlaceholder: '搜索诗歌...',
+  },
+  es: {
+    searchBiblePlaceholder: 'Buscar en este capítulo...',
+    searchHymnalPlaceholder: 'Buscar himnos...',
+  },
+} as const;
 
 /**
  * Context to drive global UI visibility (Reader Mode).
@@ -112,17 +129,17 @@ export const GlobalHeader = (props: any) => {
   const isPillarRoot = !hasHeaderBackButton(routeSegments, backTo);
 
   const activeHymnalRoute = routeSegments.includes('english-hymnal')
-    ? '/resources/english-hymnal'
+    ? '/home/english-hymnal'
     : routeSegments.includes('chinese-505-hymnal')
-      ? '/resources/chinese-505-hymnal'
+      ? '/home/chinese-505-hymnal'
       : routeSegments.includes('chinese-506-hymnal')
-        ? '/resources/chinese-506-hymnal'
+        ? '/home/chinese-506-hymnal'
         : routeSegments.includes('chinese-707-new-simplified-hymnal')
-          ? '/resources/chinese-707-new-simplified-hymnal'
+          ? '/home/chinese-707-new-simplified-hymnal'
           : routeSegments.includes('chinese-707-four-part-hymnal')
-            ? '/resources/chinese-707-four-part-hymnal'
+            ? '/home/chinese-707-four-part-hymnal'
             : routeSegments.includes('chinese-707-standard-hymnal')
-              ? '/resources/chinese-707-standard-hymnal'
+              ? '/home/chinese-707-standard-hymnal'
               : undefined;
   const isHymnalPage = Boolean(activeHymnalRoute);
   const isSubPage = !isPillarRoot;
@@ -172,11 +189,12 @@ export const GlobalHeader = (props: any) => {
   });
 
   const searchLabels =
-    ALL_SEARCH_LABELS[language as keyof typeof ALL_SEARCH_LABELS] || ALL_SEARCH_LABELS.en;
+    READER_SEARCH_LABELS[language as keyof typeof READER_SEARCH_LABELS] ||
+    READER_SEARCH_LABELS.en;
 
   // Search only the content belonging to the active reader. Other screens do
   // not expose search or build a result set.
-  const searchableItems = getSearchableItems(language).filter(
+  const searchableItems = getHymnalSearchItems(language).filter(
     (item) =>
       isHymnalPage &&
       item.isHymn &&
@@ -184,12 +202,12 @@ export const GlobalHeader = (props: any) => {
   );
 
   const filtered = searchableItems.filter((item) =>
-    isSearchMatch(item, searchQuery, language),
+    isHymnalSearchMatch(item, searchQuery),
   );
 
   const hymnalResults = filtered.map((item) => ({
     ...item,
-    subtitle: getSearchSubtitle(item, searchQuery, language),
+    subtitle: getHymnalSearchSubtitle(language),
   }));
 
   const normalizedBibleQuery = searchQuery.trim().toLocaleLowerCase();
@@ -207,7 +225,7 @@ export const GlobalHeader = (props: any) => {
 
   const results = isBiblePage ? bibleResults : hymnalResults;
 
-  const handleSelectResult = (item: SearchableItem) => {
+  const handleSelectResult = (item: HymnalSearchItem) => {
     const q = searchQuery.toLowerCase();
     setSearchQuery('');
     setIsSearching(false);
@@ -291,7 +309,7 @@ export const GlobalHeader = (props: any) => {
           if (isBiblePage) {
             handleSelectBibleVerse((results[0] as (typeof bibleResults)[number]).number);
           } else {
-            handleSelectResult(results[0] as SearchableItem);
+            handleSelectResult(results[0] as HymnalSearchItem);
           }
         }
       }}
@@ -594,7 +612,7 @@ export const GlobalHeader = (props: any) => {
                       onPress={() =>
                         isBiblePage
                           ? handleSelectBibleVerse((item as any).number)
-                          : handleSelectResult(item as SearchableItem)
+                          : handleSelectResult(item as HymnalSearchItem)
                       }
                     />
                   ))}

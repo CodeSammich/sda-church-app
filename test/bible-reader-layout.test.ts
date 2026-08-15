@@ -182,8 +182,14 @@ describe('Bible reader text scaling', () => {
   it('places the audio dock breathing room above its controls', () => {
     const reader = createReaderStyles(2);
     const audioDock = StyleSheet.flatten(reader.audioDock);
+    const audioSettings = StyleSheet.flatten(reader.audioSettingsContent);
 
     expect(audioDock.paddingTop).toBe(8);
     expect(audioDock).not.toHaveProperty('paddingBottom');
+    expect(audioSettings).toMatchObject({
+      borderRadius: 24,
+      marginTop: 'auto',
+      maxHeight: '82%',
+    });
   });
 });

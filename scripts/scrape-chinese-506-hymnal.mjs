@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 const SOURCE_URL =
   'https://m.zgaxr.com/index.php?m=content&c=index&a=lists&catid=90';
-const DEFAULT_OUTPUT = resolve('constants/Chinese506Hymnal.json');
+const DEFAULT_OUTPUT = resolve('features/hymnal/Chinese506Hymnal.json');
 
 const args = process.argv.slice(2);
 const valueAfter = (flag) => {

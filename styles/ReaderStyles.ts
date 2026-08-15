@@ -118,7 +118,6 @@ export const getBibleDockLayout = (
   const audioTimelineHeight = stackControls
     ? Math.ceil(32 * safeScale + 52)
     : Math.max(30, Math.ceil(16 * safeScale + 14));
-
   return {
     audioDockHeight: audioControlHeight + audioTimelineHeight + 8,
     controlHeight,
@@ -271,6 +270,9 @@ export const createReaderStyles = (textScale: TextScale) => {
     fontSize: scaleTypographyMetric(11, uiTextScale),
     lineHeight: scaleTypographyMetric(16, uiTextScale),
   },
+  audioElapsedTimeText: {
+    marginRight: 4,
+  },
   audioDock: {
     minHeight: 84,
     paddingHorizontal: 12,
@@ -390,6 +392,13 @@ export const createReaderStyles = (textScale: TextScale) => {
     lineHeight: scaleTypographyMetric(24, textScale),
   },
   modalContent: { margin: 20, borderRadius: 12, maxHeight: '80%', overflow: 'hidden' },
+  audioSettingsContent: {
+    marginHorizontal: 12,
+    marginTop: 'auto',
+    borderRadius: 24,
+    maxHeight: '82%',
+    overflow: 'hidden',
+  },
   modalInner: { paddingVertical: 16, flexShrink: 1 },
   title: {
     fontSize: scaleTypographyMetric(20, textScale),

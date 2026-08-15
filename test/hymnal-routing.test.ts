@@ -1,4 +1,4 @@
-import { getRoutedHymns } from '@/constants/HymnalRouting';
+import { getRoutedHymns } from '@/features/hymnal/HymnalRouting';
 
 const hymns = [
   { number: 1, title: 'First' },

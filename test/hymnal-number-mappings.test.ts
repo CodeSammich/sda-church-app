@@ -1,10 +1,10 @@
-import mappingData from '@/constants/HymnalNumberMappings.json';
-import chinese505Data from '@/constants/Chinese505Hymnal.json';
-import { SDA_HYMNAL_1985 } from '@/constants/EnglishHymnal';
+import mappingData from '@/features/hymnal/HymnalNumberMappings.json';
+import chinese505Data from '@/features/hymnal/Chinese505Hymnal.json';
+import { SDA_HYMNAL_1985 } from '@/features/hymnal/EnglishHymnal';
 import {
   getChinese505NumbersForSDAH1985,
   getSDAH1985NumbersForChinese505,
-} from '@/constants/HymnalNumberMappings';
+} from '@/features/hymnal/HymnalNumberMappings';
 
 describe('hymnal number mappings', () => {
   type NumberMap = Record<string, number[] | null | undefined>;

@@ -19,6 +19,7 @@ const allLabels = {
   en: {
     title: 'You',
     settings: 'Settings',
+    aboutSupport: 'About & Support',
     darkMode: 'Dark Mode',
     darkModeSub: 'Toggle between light and dark themes',
     language: 'Language',
@@ -33,6 +34,7 @@ const allLabels = {
   zh: {
     title: '您',
     settings: '設定',
+    aboutSupport: '關於與支援',
     darkMode: '深色模式',
     darkModeSub: '切換淺色和深色主題',
     language: '語言',
@@ -47,6 +49,7 @@ const allLabels = {
   'zh-cn': {
     title: '您',
     settings: '设置',
+    aboutSupport: '关于与支持',
     darkMode: '深色模式',
     darkModeSub: '切换浅色和深色主题',
     language: '语言',
@@ -61,6 +64,7 @@ const allLabels = {
   es: {
     title: 'Tú',
     settings: 'Ajustes',
+    aboutSupport: 'Información y Ayuda',
     darkMode: 'Modo Oscuro',
     darkModeSub: 'Alternar entre temas claros y oscuros',
     language: 'Idioma',
@@ -91,7 +95,7 @@ export default function YouScreen() {
       <Stack.Screen options={{ title: labels.title }} />
       <ScrollView
         style={NavigationStyles.container}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={styles.content}
       >
         <ImageBackground
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
@@ -167,6 +171,18 @@ export default function YouScreen() {
               )}
               onPress={() => toggleTheme()}
             />
+          </List.Section>
+
+          <List.Section>
+            <List.Subheader
+              numberOfLines={0}
+              style={[
+                NavigationStyles.subheader,
+                { color: theme.colors.onBackground },
+              ]}
+            >
+              {labels.aboutSupport}
+            </List.Subheader>
             <MenuCard
               title={labels.privacy}
               description={labels.privacySub}
@@ -191,22 +207,25 @@ export default function YouScreen() {
                 } as any)
               }
             />
-          </List.Section>
 
-          <View style={styles.footer}>
-            <TouchableRipple
-              onPress={Platform.OS === 'web' ? () => onManualCheck() : undefined}
-              disabled={updateStatus === 'checking' || updateStatus === 'updating'}
-              style={styles.versionRipple}
-            >
-              <Text
-                variant="labelSmall"
-                style={[styles.versionText, { color: theme.colors.onSurfaceVariant }]}
+            <View style={styles.footer}>
+              <TouchableRipple
+                onPress={Platform.OS === 'web' ? () => onManualCheck() : undefined}
+                disabled={updateStatus === 'checking' || updateStatus === 'updating'}
+                style={styles.versionRipple}
               >
-                Version {packageJson.version}
-              </Text>
-            </TouchableRipple>
-          </View>
+                <Text
+                  variant="labelSmall"
+                  style={[
+                    styles.versionText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Version {packageJson.version}
+                </Text>
+              </TouchableRipple>
+            </View>
+          </List.Section>
         </View>
       </ScrollView>
       <TextSizeDialog
@@ -218,12 +237,15 @@ export default function YouScreen() {
 }
 
 const styles = StyleSheet.create({
+  content: {
+    paddingBottom: 16,
+  },
   body: {
     paddingHorizontal: 20,
   },
   footer: {
     marginTop: 32,
-    marginBottom: 48,
+    marginBottom: 16,
     alignItems: 'center',
   },
   versionRipple: {

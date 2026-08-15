@@ -67,7 +67,7 @@ export default function HomeScreen() {
       bulletin: 'Weekly Bulletin',
       give: 'Tithe & Offering',
       events: 'Upcoming Events',
-      prayer: 'Prayer',
+      hymnal: 'Hymnal',
       sabbathStarts: 'Sabbath starts in',
       sabbathEnds: 'Sabbath ends in',
       isSabbath: 'Happy Sabbath!',
@@ -85,7 +85,7 @@ export default function HomeScreen() {
       bulletin: '每週週報',
       give: '奉獻',
       events: '近期活動',
-      prayer: '禱告',
+      hymnal: '詩歌本',
       sabbathStarts: '距離安息日還有',
       sabbathEnds: '距離安息日結束還有',
       isSabbath: '安息日快樂！',
@@ -103,7 +103,7 @@ export default function HomeScreen() {
       bulletin: '每周周报',
       give: '奉献',
       events: '近期活动',
-      prayer: '祷告',
+      hymnal: '诗歌本',
       sabbathStarts: '距离安息日还有',
       sabbathEnds: '距离安息日结束还有',
       isSabbath: '安息日快乐！',
@@ -119,7 +119,7 @@ export default function HomeScreen() {
       bulletin: 'Boletín Semanal',
       give: 'Diezmos y Ofrendas',
       events: 'Próximos Eventos',
-      prayer: 'Oración',
+      hymnal: 'Himnario',
       sabbathStarts: 'El Sábado comienza en',
       sabbathEnds: 'El Sábado termina en',
       isSabbath: '¡Feliz Sábado!',
@@ -418,15 +418,19 @@ export default function HomeScreen() {
 
   const navigateToVerse = () => {
     if (!randomVerse) return;
-    router.push({
+    router.replace({
       pathname: '/bible',
       params: {
-        bookId: randomVerse.bookId,
-        chapter: randomVerse.chapter.toString(),
-        q: randomVerse.reference,
-        refresh: Date.now().toString(),
-        translationId:
-          BibleService.DEFAULT_TRANSLATION_MAP[language as SupportedLanguage] || 'BSB',
+        ...BibleService.getScriptureReaderParams(
+          {
+            bookId: randomVerse.bookId,
+            chapter: randomVerse.chapter,
+            verseStart: randomVerse.verse,
+            verseEnd: randomVerse.verse,
+          },
+          language as SupportedLanguage,
+        ),
+        referenceRequest: BibleService.createScriptureReferenceRequest(),
       },
     } as any);
   };
@@ -495,7 +499,7 @@ export default function HomeScreen() {
           </View>
         </ImageBackground>
 
-        <List.Section style={navigationStyles.contentContainer}>
+        <List.Section style={styles.content}>
           {/* Sabbath Countdown Widget */}
           <Card
             style={[styles.timerCard, { backgroundColor: theme.colors.surface }]}
@@ -573,13 +577,13 @@ export default function HomeScreen() {
               style={styles.gridCell}
             />
             <GridMenuCard
-              title={labels.prayer}
-              icon="hands-pray"
-              color={theme.colors.cardBgColors.prayer}
-              iconColor={theme.colors.iconColors.prayer}
+              title={labels.hymnal}
+              icon="music-note"
+              color={theme.colors.cardBgColors.hymnal}
+              iconColor={theme.colors.iconColors.hymnal}
               onPress={() =>
                 router.push({
-                  pathname: '/home/prayer',
+                  pathname: '/home/hymnal-selection',
                   params: { backTo: '/' },
                 } as any)
               }
@@ -630,6 +634,10 @@ const createStyles = (
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     overflow: 'hidden',
+  },
+  content: {
+    padding: 20,
+    paddingBottom: 16,
   },
   welcomeText: {
     fontWeight: 'bold',

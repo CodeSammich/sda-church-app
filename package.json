@@ -1,15 +1,18 @@
 {
   "name": "sda-church-app",
   "main": "expo-router/entry",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "homepage": "https://codesammich.github.io/sda-church-app",
   "scripts": {
     "build:web": "expo export --platform web --clear",
     "check": "npm run typecheck && npm test && npm run check:text-scale && npm run build:web",
     "check:text-scale": "node scripts/check-text-scale-coverage.mjs",
+    "download:cuv-audio": "node scripts/download-cuv-audio.mjs",
+    "extract:cuv-adventist-manifest": "node scripts/extract-cuv-adventist-audio-manifest.mjs",
     "sync-version": "node public/sync-version.js",
     "test": "jest --runInBand",
     "test:integration:bulletin": "node test/integration/bulletin-api.mjs",
+    "test:integration:external": "node test/integration/external-dependencies.mjs",
     "typecheck": "tsc --noEmit",
     "web": "expo start --web",
     "deploy": "node public/deploy-web.js $@"

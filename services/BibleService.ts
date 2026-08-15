@@ -11,6 +11,12 @@
  * - https://fetch.bible/access/manual/
  */
 
+import {
+  getAudioPowerCuvChapterLinks,
+  supportsAudioPowerCuv,
+  type TranslationBookChapterAudioLinks,
+} from './BibleAudioSources';
+
 export const API_BASE = 'https://bible.helloao.org/api';
 
 /** Persisted Bible translation selected by the app language or the user. */
@@ -439,6 +445,12 @@ export const getScriptureReaderParams = (
     : {}),
 });
 
+let scriptureReferenceRequestSequence = 0;
+
+/** Creates a distinct navigation request even when the scripture is unchanged. */
+export const createScriptureReferenceRequest = () =>
+  `${Date.now()}-${++scriptureReferenceRequestSequence}`;
+
 export interface Translation {
   id: string;
   name: string;
@@ -525,14 +537,6 @@ export interface ChapterData {
   number: number;
   content: ChapterContent[];
   footnotes: ChapterFootnote[];
-}
-
-/**
- * The audio links for a book chapter.
- * Maps reader names to their respective audio file URLs.
- */
-export interface TranslationBookChapterAudioLinks {
-  [reader: string]: string;
 }
 
 export interface TranslationBookChapter {
@@ -961,16 +965,27 @@ async function fetchChapterFromFetchBible(
     attribution: edition.attribution,
   };
   const thisChapterLink = `${FETCH_BIBLE_BASE}/${edition.resourceId}/txt/${bookId.toLowerCase()}.json`;
+  const hasAudioPowerCuv = supportsAudioPowerCuv(translationId);
+  const getAudioLinks = (audioChapter: number) =>
+    hasAudioPowerCuv
+      ? getAudioPowerCuvChapterLinks(book.id, audioChapter)
+      : {};
 
   return {
     translation,
     book,
     thisChapterLink,
-    thisChapterAudioLinks: {},
+    thisChapterAudioLinks: getAudioLinks(chapterNumber),
     nextChapterApiLink: null,
-    nextChapterAudioLinks: null,
+    nextChapterAudioLinks:
+      hasAudioPowerCuv && chapterNumber < book.numberOfChapters
+        ? getAudioLinks(chapterNumber + 1)
+        : null,
     previousChapterApiLink: null,
-    previousChapterAudioLinks: null,
+    previousChapterAudioLinks:
+      hasAudioPowerCuv && chapterNumber > 1
+        ? getAudioLinks(chapterNumber - 1)
+        : null,
     numberOfVerses,
     chapter: { number: chapterNumber, content, footnotes },
   };

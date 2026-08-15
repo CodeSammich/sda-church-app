@@ -7,7 +7,7 @@
  */
 
 import hymnalData from './Chinese505Hymnal.json';
-import { openURL } from './ExternalLinks';
+import { openURL } from '@/constants/ExternalLinks';
 
 export const CHINESE_505_DIRECTORY_URL =
   'https://m.zgaxr.com/index.php?m=content&c=index&a=lists&catid=59';

@@ -32,6 +32,14 @@ The Bible reader uses two separate content services with different roles:
 The translated fetch(bible) resources are the public-domain `cmn_cut` (traditional
 CUV), `cmn_cus` (simplified CUV), and `spa_rv` (Reina-Valera 1909) editions.
 
+Chinese Union Version audio is streamed chapter by chapter from
+[Audio Power](https://theaudiopower.org/translations/cuv/#nar1), which credits the
+recordings to 基督徒团契 (Christian Fellowship). The app links directly to the
+church's copies on Adventist Connect, with Audio Power and Internet Archive copies as
+playback fallbacks; the repository does not bundle the recordings. Audio Power's owner,
+Phil, explicitly approved the church app's use, download, and self-hosting of these recordings in
+[issue #134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608).
+
 ### “Free to access” does not mean “public domain”
 
 fetch(bible) provides an open CDN with no API key, usage fee, request quota, or
@@ -139,11 +147,11 @@ expected hymnal content.
 
 The checked-in mappings and their regeneration scripts are:
 
-- [`constants/Chinese505Hymnal.ts`](../constants/Chinese505Hymnal.ts) and
+- [`features/hymnal/Chinese505Hymnal.ts`](../features/hymnal/Chinese505Hymnal.ts) and
   [`scripts/scrape-chinese-505-hymnal.mjs`](../scripts/scrape-chinese-505-hymnal.mjs);
-- [`constants/Chinese506Hymnal.ts`](../constants/Chinese506Hymnal.ts) and
+- [`features/hymnal/Chinese506Hymnal.ts`](../features/hymnal/Chinese506Hymnal.ts) and
   [`scripts/scrape-chinese-506-hymnal.mjs`](../scripts/scrape-chinese-506-hymnal.mjs); and
-- [`constants/Chinese707Hymnal.ts`](../constants/Chinese707Hymnal.ts) and
+- [`features/hymnal/Chinese707Hymnal.ts`](../features/hymnal/Chinese707Hymnal.ts) and
   [`scripts/scrape-chinese-707-hymnals.mjs`](../scripts/scrape-chinese-707-hymnals.mjs).
 
 ---

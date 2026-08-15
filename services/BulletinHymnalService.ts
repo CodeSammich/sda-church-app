@@ -1,7 +1,7 @@
-import { getSortedChinese505Hymns } from '@/constants/Chinese505Hymnal';
-import { PRIMARY_BULLETIN_HYMNALS } from '@/constants/BulletinHymnalConfig';
-import { SDA_HYMNAL_1985 } from '@/constants/EnglishHymnal';
-import { getHymnalCrossReferences } from '@/constants/HymnalNumberMappings';
+import { getSortedChinese505Hymns } from '@/features/hymnal/Chinese505Hymnal';
+import { PRIMARY_BULLETIN_HYMNALS } from '@/features/hymnal/BulletinHymnalConfig';
+import { SDA_HYMNAL_1985 } from '@/features/hymnal/EnglishHymnal';
+import { getHymnalCrossReferences } from '@/features/hymnal/HymnalNumberMappings';
 
 export type BulletinHymnText = {
   english: string;
@@ -30,7 +30,7 @@ export const QUEENS_FIXED_HYMNS = {
 export type BulletinHymnDestination = {
   hymnalId: HymnalId;
   hymnNumber?: number;
-  route: '/resources/english-hymnal' | '/resources/chinese-505-hymnal';
+  route: '/home/english-hymnal' | '/home/chinese-505-hymnal';
 };
 
 export type BulletinHymnPresentation = {
@@ -74,14 +74,14 @@ const hymnalAdapters = {
     getHymn: (number: number) =>
       englishHymns.find((hymn) => hymn.number === number),
     includesNumber: (number: number) => number >= 1 && number <= 695,
-    route: '/resources/english-hymnal' as const,
+    route: '/home/english-hymnal' as const,
   },
   [CHINESE_HYMNAL_ID]: {
     hymns: chineseHymns,
     getHymn: (number: number) => chineseHymnsByNumber.get(number),
     // Some mapped 1–505 numbers lack a currently usable source page.
     includesNumber: (number: number) => number >= 1 && number <= 505,
-    route: '/resources/chinese-505-hymnal' as const,
+    route: '/home/chinese-505-hymnal' as const,
   },
 };
 

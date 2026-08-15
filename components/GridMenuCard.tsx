@@ -73,8 +73,8 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
     }).start();
   };
 
-  // Derive a slightly darker icon color from the card color for the illustration
-  const resolvedIconColor = iconColor ?? 'rgba(40, 40, 40, 0.18)';
+  const cardColors = theme.colors.gridMenuCard;
+  const resolvedIconColor = iconColor ?? cardColors.decorativeIcon;
   return (
     <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
       <TouchableOpacity
@@ -83,7 +83,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
         disabled={!onPress}
         style={[
           styles.card,
-          { backgroundColor: color, borderWidth: 1, borderColor: theme.colors.outlineVariant },
+          { backgroundColor: color, borderColor: cardColors.border },
           onPress && Platform.OS === 'web' ? styles.webPressable : null,
         ]}
         onPress={onPress}
@@ -108,11 +108,20 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
             />
           </View>
           {/* Diagonal arrow affordance */}
-          <View testID="grid-menu-card-arrow-badge" style={styles.arrowBadge}>
+          <View
+            testID="grid-menu-card-arrow-badge"
+            style={[
+              styles.arrowBadge,
+              {
+                backgroundColor: cardColors.arrowBackground,
+                borderColor: cardColors.arrowBorder,
+              },
+            ]}
+          >
             <AppIcon
               name="arrow-top-right"
               size={14}
-              color="#374151"
+              color={cardColors.arrowForeground}
             />
           </View>
         </View>
@@ -125,7 +134,6 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1], ef
   card: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#374151', // crisp dark border
     padding: 18,
     minHeight: 148 + Math.round(Math.max(0, effectiveScale - 1) * 64),
     justifyContent: 'space-between',
@@ -174,9 +182,7 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1], ef
     width: scaleTypographyMetric(28, textScale),
     height: scaleTypographyMetric(28, textScale),
     borderRadius: scaleTypographyMetric(14, textScale),
-    backgroundColor: '#FFFFFF', // solid white
     borderWidth: 1,
-    borderColor: '#374151', // crisp dark border
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-end',

@@ -33,7 +33,7 @@
  * docs/feature_designs/hymnal_integration_design.md
  */
 
-import { openURL } from './ExternalLinks';
+import { openURL } from '@/constants/ExternalLinks';
 
 export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
   const hId =

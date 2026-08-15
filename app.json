@@ -2,7 +2,7 @@
   "expo": {
     "name": "NY Chinese SDA",
     "slug": "sda-church-app",
-    "version": "0.26.0",
+    "version": "0.27.0",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
@@ -27,7 +27,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.sdachurchapp"
+      "bundleIdentifier": "org.nyccsda.app"
     },
     "androidStatusBar": {
       "backgroundColor": "#000000",
@@ -40,7 +40,7 @@
         "backgroundColor": "#00405C"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.sdachurchapp"
+      "package": "org.nyccsda.app"
     },
     "plugins": [
       "expo-router",
