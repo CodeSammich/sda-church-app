@@ -708,24 +708,6 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
       title: 'Home',
       keywords: ['welcome', 'start', 'pulse', 'livestream', 'happening'],
     },
-    community: {
-      title: 'Community',
-      keywords: [
-        'events',
-        'schedule',
-        'sabbath',
-        'groups',
-        'calendar',
-        'volunteer',
-        'in-person',
-        'hub',
-        'service',
-        'fellowship',
-        'small groups',
-        'gathering',
-        'roles',
-      ],
-    },
     resources: {
       title: 'Explore',
       keywords: [
@@ -856,23 +838,6 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
       title: '首頁',
       keywords: ['歡迎', '開始', 'home', '脈搏', '直播'],
     },
-    community: {
-      title: '教會社群',
-      keywords: [
-        '活動',
-        '時間表',
-        '安息日',
-        '小組',
-        '義工',
-        'calendar',
-        'community',
-        '中心',
-        '服事',
-        '團契',
-        '聚會',
-        '小組',
-      ],
-    },
     resources: {
       title: '探索',
       keywords: [
@@ -981,23 +946,6 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
     home: {
       title: '首页',
       keywords: ['欢迎', '开始', 'home', '脉搏', '直播'],
-    },
-    community: {
-      title: '教会社区',
-      keywords: [
-        '活动',
-        '时间表',
-        '安息日',
-        '日历',
-        '小组',
-        '义工',
-        'calendar',
-        'community',
-        '中心',
-        '服事',
-        '团契',
-        '聚会',
-      ],
     },
     resources: {
       title: '探索',
@@ -1108,25 +1056,6 @@ export const ALL_SEARCH_LABELS: Record<string, any> = {
     home: {
       title: 'Inicio',
       keywords: ['bienvenido', 'comenzar', 'home', 'pulso', 'en vivo'],
-    },
-    community: {
-      title: 'Comunidad',
-      keywords: [
-        'eventos',
-        'horario',
-        'sábado',
-        'grupos',
-        'voluntario',
-        'calendar',
-        'community',
-        'centro',
-        'servicio',
-        'compañerismo',
-        'grupos',
-        'reunión',
-        'horario',
-        'calendario',
-      ],
     },
     resources: {
       title: 'Explorar',
@@ -1247,11 +1176,6 @@ export const getSearchableItems = (language: string): SearchableItem[] => {
 
   const baseItems: SearchableItem[] = [
     { ...labels.home, icon: 'home', route: '/' },
-    {
-      ...labels.community,
-      icon: 'account-group',
-      route: '/bible/bible1',
-    },
     {
       ...labels.resources,
       icon: 'bookmark-multiple',
