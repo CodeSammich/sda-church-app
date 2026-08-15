@@ -6,8 +6,9 @@ import type {
 } from './BibleAudioPlayer.types';
 
 // Native builds continue to use expo-audio's foreground-capable AudioPlayer.
-// Its single-player API does not own the web rolling queue; dependable native
-// Android multi-chapter queueing remains follow-up work in issue #126.
+// Its single-player API does not own the installed-PWA rolling queue; native
+// queue behavior remains a fallback in issue #126 if Android Chrome cannot
+// sustain longer background sessions.
 export const useBibleAudioPlayer = (...args: Parameters<typeof useAudioPlayer>) =>
   useAudioPlayer(...args) as AudioPlayer & BibleAudioQueueControls;
 

@@ -12,8 +12,8 @@ export interface BibleAudioQueueItem extends BibleAudioChapterIdentity {
 }
 
 export interface BibleAudioQueueControls {
-  // Implemented by the web adapter. Optional until the native adapter gains a
-  // foreground-service-compatible queue (tracked in issue #126).
+  // The installed-PWA adapter owns the rolling chapter queue. Native builds use
+  // expo-audio's player unless issue #126 requires a native Android fallback.
   setQueue?: (items: BibleAudioQueueItem[]) => void;
 }
 

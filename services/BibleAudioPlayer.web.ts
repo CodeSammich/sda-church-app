@@ -30,10 +30,10 @@ const getSourceUri = (source: AudioSource) => {
  * element owns the media session while a standby element buffers only the next
  * queued chapter. Neither receives a source before the user starts playback.
  *
- * This supports tested iOS PWA chapter transitions, but it cannot create an
- * Android media foreground service. Chrome may still terminate an installed
- * Android PWA's media session when focus changes or a track ends. Native Android
- * queueing is intentionally tracked separately in issue #126.
+ * Background playback and consecutive chapter transitions are device-tested in
+ * installed iOS PWAs. Android testing shows several background transitions but
+ * playback may still pause after approximately three chapters. The operating
+ * system decides whether to show Media Session controls on its lock screen.
  */
 class BibleAudioPlayerWeb {
   private media: HTMLAudioElement | null = null;
