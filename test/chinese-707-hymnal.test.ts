@@ -3,7 +3,7 @@ import {
   getChinese707HymnUrl,
   getSortedChinese707Hymns,
 } from '@/features/hymnal/Chinese707Hymnal';
-import { getSearchableItems } from '@/constants/SearchTerms';
+import { getHymnalSearchItems } from '@/features/hymnal/HymnalSearch';
 
 describe('Chinese 707 hymnal directories', () => {
   it('keeps the three source mappings distinct', () => {
@@ -62,8 +62,8 @@ describe('Chinese 707 hymnal directories', () => {
     expect(getChinese707HymnUrl(2, 708)).toBe(getChinese707DirectoryUrl(2));
   });
 
-  it('adds each 707 edition and its B arrangements to unified search', () => {
-    const item = getSearchableItems('zh-cn').find(
+  it('adds each 707 edition and its B arrangements to reader search', () => {
+    const item = getHymnalSearchItems('zh-cn').find(
       ({ title, route }) =>
         title === '260B. 三一颂' &&
         route.startsWith('/home/chinese-707-four-part-hymnal'),

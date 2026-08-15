@@ -3,7 +3,7 @@ import {
   getChinese505HymnUrl,
   getSortedChinese505Hymns,
 } from '@/features/hymnal/Chinese505Hymnal';
-import { getSearchableItems } from '@/constants/SearchTerms';
+import { getHymnalSearchItems } from '@/features/hymnal/HymnalSearch';
 
 describe('Chinese 505 hymnal directory', () => {
   const hymns = getSortedChinese505Hymns();
@@ -44,8 +44,8 @@ describe('Chinese 505 hymnal directory', () => {
     );
   });
 
-  it('adds Chinese hymns to unified search with their own reader route', () => {
-    const item = getSearchableItems('zh-cn').find(
+  it('adds Chinese hymns to reader search with their own route', () => {
+    const item = getHymnalSearchItems('zh-cn').find(
       ({ title }) => title === '91. 救主衣袍',
     );
 
