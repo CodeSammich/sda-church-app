@@ -12,7 +12,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
 import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
@@ -135,7 +135,8 @@ export default function ResourcesScreen() {
             description={labels.librarySub}
             icon={APP_ICONOGRAPHY.explore.library}
             iconColor={theme.colors.tertiary}
-            onPress={() => {}} // TODO: Implement library page
+            rightIcon={{ name: 'chevron-right' }}
+            onPress={() => router.push('/resources/library')}
           />
 
           <MenuCard

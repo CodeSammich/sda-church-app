@@ -455,7 +455,7 @@ export const GlobalHeader = (props: any) => {
               name="chevron-left"
               size={26}
               textScale={headerTextScale}
-              color={theme.dark ? '#FFFFFF' : '#17211F'}
+              color={theme.colors.primary}
             />
           </Pressable>
         )}
@@ -550,7 +550,7 @@ export const GlobalHeader = (props: any) => {
                       name="chevron-down"
                       size={17}
                       textScale={headerTextScale}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.primary}
                     />
                   </Pressable>
                 )}

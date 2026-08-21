@@ -2270,7 +2270,7 @@ export default function BibleScreen() {
           name="chevron-down"
           size={14}
           scaleWithText={false}
-          color={theme.colors.onSurfaceVariant}
+          color={theme.colors.primary}
         />
       </TouchableOpacity>
 
@@ -2295,7 +2295,7 @@ export default function BibleScreen() {
           name="chevron-down"
           size={14}
           scaleWithText={false}
-          color={theme.colors.onSurfaceVariant}
+          color={theme.colors.primary}
         />
       </TouchableOpacity>
 
@@ -2320,7 +2320,7 @@ export default function BibleScreen() {
           name="chevron-down"
           size={14}
           scaleWithText={false}
-          color={theme.colors.onSurfaceVariant}
+          color={theme.colors.primary}
         />
       </TouchableOpacity>
     </View>
@@ -2974,7 +2974,7 @@ export default function BibleScreen() {
                       name="chevron-right"
                       size={24}
                       textScale={bibleUiTextScale}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.primary}
                     />
                   </TouchableOpacity>
                 </>

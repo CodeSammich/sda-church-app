@@ -113,7 +113,7 @@ function HymnalCard({
             pointerEvents="none"
             name="chevron-right"
             size={DESIGN_TOKENS.ICON_SIZE_STANDARD}
-            color={theme.colors.onSurfaceVariant}
+            color={theme.colors.primary}
           />
         </View>
       </Card.Content>
