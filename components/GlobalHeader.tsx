@@ -100,6 +100,9 @@ export const GlobalHeader = (props: any) => {
   const routeSegments: readonly string[] = segments;
   const isBiblePage = routeSegments.includes('bible');
   const bibleTranslation = props.options?.bibleTranslation as string | undefined;
+  const bibleTranslationAccessibilityLabel =
+    (props.options?.bibleTranslationAccessibilityLabel as string | undefined) ||
+    bibleTranslation;
   const theme = useAppTheme();
   const { textScale } = useTextSize();
 
@@ -513,7 +516,7 @@ export const GlobalHeader = (props: any) => {
                   <Pressable
                     onPress={onBibleTranslationPress}
                     accessibilityRole="button"
-                    accessibilityLabel={`Translation: ${bibleTranslation}`}
+                    accessibilityLabel={`Translation: ${bibleTranslationAccessibilityLabel}`}
                     style={({ pressed }) => [
                       styles.translationChip,
                       {

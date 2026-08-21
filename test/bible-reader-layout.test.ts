@@ -47,17 +47,57 @@ describe('Bible reader text scaling', () => {
     const ordinary = createReaderStyles(1);
     const enlarged = createReaderStyles(2);
 
-    expect(StyleSheet.flatten(ordinary.scrollContent).paddingHorizontal).toBe(20);
-    expect(StyleSheet.flatten(enlarged.scrollContent).paddingHorizontal).toBe(8);
+    expect(StyleSheet.flatten(ordinary.scrollContent)).toMatchObject({
+      paddingLeft: 4,
+      paddingRight: 20,
+    });
+    expect(StyleSheet.flatten(enlarged.scrollContent)).toMatchObject({
+      paddingLeft: 4,
+      paddingRight: 8,
+    });
     expect(StyleSheet.flatten(enlarged.verseContainer)).toMatchObject({
       fontSize: 36,
       lineHeight: 46.08,
+    });
+    expect(StyleSheet.flatten(enlarged.hangingVerseLine)).toMatchObject({
+      width: '100%',
+    });
+    expect(StyleSheet.flatten(enlarged.supportingVerseText)).toMatchObject({
+      fontSize: 32,
+      lineHeight: 40.96,
+    });
+    expect(StyleSheet.flatten(enlarged.supportingSelahMarker)).toMatchObject({
+      fontSize: 32,
+      lineHeight: 40.96,
+      textAlign: 'right',
     });
     expect(StyleSheet.flatten(enlarged.selahMarker)).toMatchObject({
       fontSize: 36,
       lineHeight: 46.08,
     });
     expect(StyleSheet.flatten(enlarged.pill).paddingHorizontal).toBe(8);
+  });
+
+  it('reserves a separate verse-number gutter at every text size', () => {
+    const ordinary = createReaderStyles(1);
+    const enlarged = createReaderStyles(2);
+
+    expect(StyleSheet.flatten(ordinary.verseRow)).toMatchObject({
+      flexDirection: 'row',
+      width: '100%',
+    });
+    expect(StyleSheet.flatten(ordinary.verseNumberColumn)).toMatchObject({
+      width: 29,
+      paddingRight: 6,
+    });
+    expect(StyleSheet.flatten(enlarged.verseNumberColumn)).toMatchObject({
+      width: 58,
+      paddingRight: 12,
+    });
+    expect(StyleSheet.flatten(enlarged.verseBody)).toMatchObject({
+      flex: 1,
+      minWidth: 0,
+    });
   });
 
   it('keeps Bible controls compact while honoring OS font scaling', () => {

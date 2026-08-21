@@ -1,5 +1,6 @@
 import { UIStateContext } from '@/components/GlobalHeader';
 import { AppIcon } from '@/components/AppIcon';
+import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -22,6 +23,7 @@ import {
   IconButton,
   Modal,
   Portal,
+  Switch,
   Text,
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +55,14 @@ import {
 } from '@/services/BibleAudioPlayer';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
 import {
+  getParallelStructuralContent,
+  indexChapterVerses,
+} from '@/services/BibleDualLanguage';
+import {
+  getBibleVersePinyin,
+  isChineseBibleTranslation,
+} from '@/services/BiblePinyinService';
+import {
   ANDROID_AUDIO_GUIDANCE_INTERRUPTION_THRESHOLD,
   getAndroidAppsSettingsIntent,
   getCurrentAndroidAudioBrowser,
@@ -83,6 +93,9 @@ const BIBLE_BOOK_KEY = 'user-bible-book';
 const BIBLE_CHAPTER_KEY = 'user-bible-chapter';
 const BIBLE_AUDIO_READERS_KEY = 'user-bible-audio-readers';
 const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
+const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
+const BIBLE_DUAL_LANGUAGE_KEY = 'user-bible-dual-language';
+const BIBLE_SUPPORTING_TRANSLATION_KEY = 'user-bible-supporting-translation';
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const;
 
 const getAudioReaderLabel = (reader: string) =>
@@ -117,7 +130,7 @@ const getSavedChapter = (translationId: string, bookId: string, chapter: number)
 
 const uiLabels = {
   en: {
-    translation: 'Translation',
+    translation: 'Reader languages',
     book: 'Book',
     chapter: 'Chapter',
     chapterItem: 'Chapter {n}',
@@ -172,13 +185,22 @@ const uiLabels = {
     endOfChapter: 'End of chapter',
     previousChapter: 'Previous chapter',
     nextChapterA11y: 'Next chapter',
+    pinyin: 'Pinyin',
+    showPinyin: 'Show pinyin above Chinese',
+    pinyinHelp: 'Generated on this device for Chinese learning translations.',
+    dualLanguage: 'Dual-language reading',
+    dualLanguageHelp: 'Show a supporting translation beneath each verse.',
+    primaryTranslation: 'Primary',
+    primaryTranslationHelp: 'Larger text and the default audio.',
+    supportingTranslation: 'Supporting',
+    supportingTranslationHelp: 'Smaller text for comparison.',
     en: 'English',
     zh: 'Traditional Chinese',
     'zh-cn': 'Simplified Chinese',
     es: 'Spanish',
   },
   zh: {
-    translation: '譯本',
+    translation: '閱讀語言',
     book: '書卷',
     chapter: '章節',
     chapterItem: '第 {n} 章',
@@ -233,13 +255,22 @@ const uiLabels = {
     endOfChapter: '本章結束',
     previousChapter: '上一章',
     nextChapterA11y: '下一章',
+    pinyin: '拼音',
+    showPinyin: '在中文上方顯示拼音',
+    pinyinHelp: '在此裝置上為中文學習譯本自動產生。',
+    dualLanguage: '雙語閱讀',
+    dualLanguageHelp: '在每節經文下方顯示輔助譯本。',
+    primaryTranslation: '主要譯本',
+    primaryTranslationHelp: '較大字體和預設有聲書。',
+    supportingTranslation: '輔助譯本',
+    supportingTranslationHelp: '較小字體方便對照。',
     en: '英文',
     zh: '繁體中文',
     'zh-cn': '簡體中文',
     es: '西班牙文',
   },
   'zh-cn': {
-    translation: '译本',
+    translation: '阅读语言',
     book: '书卷',
     chapter: '章节',
     chapterItem: '第 {n} 章',
@@ -294,13 +325,22 @@ const uiLabels = {
     endOfChapter: '本章结束',
     previousChapter: '上一章',
     nextChapterA11y: '下一章',
+    pinyin: '拼音',
+    showPinyin: '在中文上方显示拼音',
+    pinyinHelp: '在此设备上为中文学习译本自动生成。',
+    dualLanguage: '双语阅读',
+    dualLanguageHelp: '在每节经文下方显示辅助译本。',
+    primaryTranslation: '主要译本',
+    primaryTranslationHelp: '较大字体和默认有声书。',
+    supportingTranslation: '辅助译本',
+    supportingTranslationHelp: '较小字体方便对照。',
     en: '英文',
     zh: '繁体中文',
     'zh-cn': '简体中文',
     es: '西班牙文',
   },
   es: {
-    translation: 'Traducción',
+    translation: 'Idiomas de lectura',
     book: 'Libro',
     chapter: 'Capítulo',
     chapterItem: 'Capítulo {n}',
@@ -355,6 +395,15 @@ const uiLabels = {
     endOfChapter: 'Fin del capítulo',
     previousChapter: 'Capítulo anterior',
     nextChapterA11y: 'Capítulo siguiente',
+    pinyin: 'Pinyin',
+    showPinyin: 'Mostrar pinyin sobre el chino',
+    pinyinHelp: 'Generado en este dispositivo para traducciones de aprendizaje en chino.',
+    dualLanguage: 'Lectura bilingüe',
+    dualLanguageHelp: 'Muestra una traducción de apoyo debajo de cada versículo.',
+    primaryTranslation: 'Principal',
+    primaryTranslationHelp: 'Texto más grande y audio predeterminado.',
+    supportingTranslation: 'De apoyo',
+    supportingTranslationHelp: 'Texto más pequeño para comparar.',
     en: 'Inglés',
     zh: 'Chino tradicional',
     'zh-cn': 'Chino simplificado',
@@ -430,7 +479,17 @@ export default function BibleScreen() {
     : null;
   const getTranslationLabel = (
     translation: (typeof BibleService.SUPPORTED_TRANSLATIONS)[number],
-  ) => `${translation.name} (${(labels as Record<string, string>)[translation.lang]})`;
+  ) => {
+    if (translation.id === 'cmn_cuv') {
+      if (language === 'zh') return 'CUV (和合本繁體)';
+      if (language === 'zh-cn') return 'CUV (和合本繁体)';
+    }
+    if (translation.id === 'cmn_cu1') {
+      if (language === 'zh') return 'CUVS (和合本簡體)';
+      if (language === 'zh-cn') return 'CUVS (和合本简体)';
+    }
+    return `${translation.name} (${(labels as Record<string, string>)[translation.lang]})`;
+  };
   const scrollRef = useRef<ScrollView>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
@@ -443,8 +502,22 @@ export default function BibleScreen() {
       BibleService.SUPPORTED_TRANSLATIONS[0]
     );
   });
+  const [selectedSupportingTranslation, setSelectedSupportingTranslation] =
+    useState(() => {
+      const defaultId = BibleService.DEFAULT_TRANSLATION_MAP[language] || 'BSB';
+      return (
+        BibleService.SUPPORTED_TRANSLATIONS.find((t) => t.id === defaultId) ||
+        BibleService.SUPPORTED_TRANSLATIONS[0]
+      );
+    });
+  const [dualLanguageEnabled, setDualLanguageEnabled] = useState(true);
   const [book, setBook] = useState<BibleService.TranslationBook | null>(null);
   const [chapterNum, setChapterNum] = useState(1);
+  const supportingTranslation =
+    dualLanguageEnabled &&
+    selectedSupportingTranslation.id !== supportedTranslation.id
+      ? selectedSupportingTranslation
+      : null;
 
   // Persistence state
   const [isPersistenceLoaded, setIsPersistenceLoaded] = useState(false);
@@ -458,12 +531,16 @@ export default function BibleScreen() {
   const [books, setBooks] = useState<BibleService.TranslationBook[]>([]);
   const [chapterData, setChapterData] =
     useState<BibleService.TranslationBookChapter | null>(null);
+  const [supportingChapterData, setSupportingChapterData] =
+    useState<BibleService.TranslationBookChapter | null>(null);
+  const supportingChapterLoadAttemptRef = useRef(0);
   const [selectedAudioReaders, setSelectedAudioReaders] = useState<
     Record<string, string>
   >({});
   const [selectedAudioSources, setSelectedAudioSources] = useState<
     Record<string, string>
   >({});
+  const [showPinyin, setShowPinyin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [chapterReloadToken, setChapterReloadToken] = useState(0);
   const chapterLoadAttemptRef = useRef(0);
@@ -481,6 +558,9 @@ export default function BibleScreen() {
     'translation' | 'book' | 'chapter' | 'verse' | 'verse-detail' | 'saved' | null
   >(null);
   const [selectedVerseNum, setSelectedVerseNum] = useState<number | null>(null);
+  const [translationSelectionRole, setTranslationSelectionRole] = useState<
+    'primary' | 'supporting'
+  >('primary');
 
   // To prevent the "content flash" during modal dismissal
   const [lastActiveType, setLastActiveType] = useState<typeof modalType>(null);
@@ -516,6 +596,9 @@ export default function BibleScreen() {
           savedAudioReaders,
           savedAudioSources,
           storedVerses,
+          savedShowPinyin,
+          savedSupportingTranslationId,
+          savedDualLanguage,
         ] =
           await Promise.all([
             AsyncStorage.getItem(BIBLE_TRANS_KEY),
@@ -524,6 +607,9 @@ export default function BibleScreen() {
             AsyncStorage.getItem(BIBLE_AUDIO_READERS_KEY),
             AsyncStorage.getItem(BIBLE_AUDIO_SOURCES_KEY),
             loadSavedVerses(),
+            AsyncStorage.getItem(BIBLE_SHOW_PINYIN_KEY),
+            AsyncStorage.getItem(BIBLE_SUPPORTING_TRANSLATION_KEY),
+            AsyncStorage.getItem(BIBLE_DUAL_LANGUAGE_KEY),
           ]);
 
         if (savedTransId) {
@@ -553,6 +639,18 @@ export default function BibleScreen() {
           ) {
             setSelectedAudioSources(parsedAudioSources);
           }
+        }
+        if (savedShowPinyin !== null) {
+          setShowPinyin(savedShowPinyin !== 'false');
+        }
+        if (savedSupportingTranslationId) {
+          const supporting = BibleService.SUPPORTED_TRANSLATIONS.find(
+            (translation) => translation.id === savedSupportingTranslationId,
+          );
+          if (supporting) setSelectedSupportingTranslation(supporting);
+        }
+        if (savedDualLanguage !== null) {
+          setDualLanguageEnabled(savedDualLanguage !== 'false');
         }
         setSavedVerses(storedVerses);
       } catch (e) {
@@ -596,6 +694,33 @@ export default function BibleScreen() {
     ).catch((e) => console.error('Failed to save Bible audio source:', e));
   }, [isPersistenceLoaded, selectedAudioSources]);
 
+  useEffect(() => {
+    if (!isPersistenceLoaded) return;
+    AsyncStorage.setItem(BIBLE_SHOW_PINYIN_KEY, String(showPinyin)).catch((e) =>
+      console.error('Failed to save Bible pinyin preference:', e),
+    );
+  }, [isPersistenceLoaded, showPinyin]);
+
+  useEffect(() => {
+    if (!isPersistenceLoaded) return;
+    Promise.all([
+      AsyncStorage.setItem(
+        BIBLE_SUPPORTING_TRANSLATION_KEY,
+        selectedSupportingTranslation.id,
+      ),
+      AsyncStorage.setItem(
+        BIBLE_DUAL_LANGUAGE_KEY,
+        String(dualLanguageEnabled),
+      ),
+    ]).catch((e) =>
+      console.error('Failed to save Bible dual-language preferences:', e),
+    );
+  }, [
+    dualLanguageEnabled,
+    isPersistenceLoaded,
+    selectedSupportingTranslation.id,
+  ]);
+
   // An app-language choice takes precedence over any Bible translation chosen
   // before it. A later translation choice in this reader is persisted normally
   // and remains in effect until the next app-language choice.
@@ -616,7 +741,10 @@ export default function BibleScreen() {
       (translation) => translation.id === defaultTranslationId,
     );
 
-    if (defaultTranslation) setSupportedTranslation(defaultTranslation);
+    if (defaultTranslation) {
+      setSupportedTranslation(defaultTranslation);
+      setSelectedSupportingTranslation(defaultTranslation);
+    }
   }, [
     language,
     languageSelectionRevision,
@@ -1352,6 +1480,37 @@ export default function BibleScreen() {
     chapterReloadToken,
   ]);
 
+  // Pair the learner's selected translation with the user's app-language
+  // translation. This request is independent so a slow/unavailable supporting
+  // edition never prevents the primary scripture or its audio from loading.
+  useEffect(() => {
+    const attempt = ++supportingChapterLoadAttemptRef.current;
+    let cancelled = false;
+    setSupportingChapterData(null);
+
+    if (!supportingTranslation || !book) return;
+
+    void loadBibleChapterWithRetry(
+      supportingTranslation.id,
+      book.id,
+      chapterNum,
+    )
+      .then((data) => {
+        if (!cancelled && attempt === supportingChapterLoadAttemptRef.current) {
+          setSupportingChapterData(data);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled && attempt === supportingChapterLoadAttemptRef.current) {
+          console.warn('Supporting Bible translation is unavailable:', error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supportingTranslation?.id, book?.id, chapterNum, chapterReloadToken]);
+
   // Android can suspend an in-flight media or scripture request while the PWA
   // is locked. Retry the selected chapter and an unready audio element as soon
   // as the document is usable again, without requiring prev/next navigation.
@@ -1779,6 +1938,9 @@ export default function BibleScreen() {
     contentArray: any[],
     allowUnderline = true,
     isBold = false,
+    translationId = supportedTranslation.id,
+    selahStyle: any = ReaderStyles.selahMarker,
+    suppressPoeticLineBreak = false,
   ) => {
     const textValue = typeof item === 'string' ? item : (item as any).text || '';
     const isPoetic = typeof item === 'object' && item !== null && 'poem' in item;
@@ -1816,7 +1978,7 @@ export default function BibleScreen() {
         foundPreviousContent = true;
         const prevIsPoetic = typeof prev === 'object' && prev !== null && 'poem' in prev;
         const prevText = typeof prev === 'string' ? prev : (prev as any)?.text || '';
-        const prevIsSelah = BibleService.isSelahMarker(supportedTranslation.id, prevText);
+        const prevIsSelah = BibleService.isSelahMarker(translationId, prevText);
 
         // Only "heal" the line if we are on the exact same poetic level and the
         // raw text doesn't explicitly start with a newline.
@@ -1836,7 +1998,7 @@ export default function BibleScreen() {
 
     // Version-specific detection for liturgical/poetic markers.
     // This ensures we don't match modern academic terms in historical translations.
-    const isSelah = BibleService.isSelahMarker(supportedTranslation.id, textValue);
+    const isSelah = BibleService.isSelahMarker(translationId, textValue);
 
     // If we follow a footnote and don't start with whitespace or punctuation,
     // inject a space to prevent "welded" words like "allywith".
@@ -1885,9 +2047,7 @@ export default function BibleScreen() {
         // allowing `textAlign: 'right'` to work consistently across platforms.
         return (
           <View key={i} style={{ width: '100%' }}>
-            <Text
-              style={ReaderStyles.selahMarker}
-            >
+            <Text style={selahStyle}>
               <Text
                 style={[
                   style,
@@ -1943,20 +2103,16 @@ export default function BibleScreen() {
 
     // Formatted Text (Poetry)
     if ('text' in item) {
-      const indent =
-        isPoetic && item.poem && item.poem > 1 && !isSelah
-          ? '\u00A0'.repeat((item.poem - 1) * 3)
-          : '';
-
       const prefix =
-        (isPoetic &&
+        (!suppressPoeticLineBreak &&
+        isPoetic &&
         foundPreviousContent &&
         !isLineContinuation &&
         !isSelah &&
         i > 0 &&
         !prevIsLineBreak
           ? '\n'
-          : '') + (!isLineContinuation ? indent : '');
+          : '');
 
       return renderText(prefix + contentText);
     }
@@ -2034,35 +2190,163 @@ export default function BibleScreen() {
     setModalType('verse-detail');
   };
 
+  const supportingVerses = useMemo(
+    () => indexChapterVerses(supportingChapterData),
+    [supportingChapterData],
+  );
+
+  const renderStructuralText = (
+    content: BibleService.ChapterHeading | BibleService.ChapterHebrewSubtitle,
+  ) =>
+    content.content
+      .map((item) =>
+        typeof item === 'string' ? item : (item as BibleService.FormattedText).text || '',
+      )
+      .join(content.type === 'heading' ? ' ' : '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
   const renderContent = (content: BibleService.ChapterContent, index: number) => {
     switch (content.type) {
-      case 'heading':
-        return (
-          <Text
-            key={index}
-            style={[ReaderStyles.heading, { color: theme.colors.onBackground }]}
-          >
-            {content.content.join(' ')}
-          </Text>
+      case 'heading': {
+        const primaryText = renderStructuralText(content);
+        const supportingContent = getParallelStructuralContent(
+          chapterData,
+          supportingChapterData,
+          index,
         );
-      case 'hebrew_subtitle':
+        const supportingText = supportingContent
+          ? renderStructuralText(supportingContent)
+          : null;
         return (
-          <Text
-            key={index}
-            style={[
-              ReaderStyles.hebrewSubtitle,
-              { color: theme.colors.onSurfaceVariant },
-            ]}
-          >
-            {content.content.map((item, i) =>
-              renderItemContent(item, i, content.content, false),
+          <View key={index} style={ReaderStyles.headingGroup}>
+            {showPinyin && isChineseBibleTranslation(supportedTranslation.id) ? (
+              <PinyinRubyText
+                bold
+                numberColor={theme.colors.onBackground}
+                pinyinColor={theme.colors.tertiary}
+                text={primaryText}
+                textColor={theme.colors.onBackground}
+                textScale={textScale}
+              />
+            ) : (
+              <Text
+                style={[
+                  ReaderStyles.heading,
+                  ReaderStyles.groupedHeading,
+                  { color: theme.colors.onBackground },
+                ]}
+              >
+                {primaryText}
+              </Text>
             )}
-          </Text>
+            {supportingText && supportingTranslation &&
+              (showPinyin &&
+              isChineseBibleTranslation(supportingTranslation.id) ? (
+                <PinyinRubyText
+                  bold
+                  numberColor={theme.colors.secondary}
+                  pinyinColor={theme.colors.tertiary}
+                  text={supportingText}
+                  textColor={theme.colors.secondary}
+                  textScale={textScale}
+                  variant="supporting"
+                />
+              ) : (
+                <Text
+                  style={[
+                    ReaderStyles.supportingHeading,
+                    { color: theme.colors.secondary },
+                  ]}
+                >
+                  {supportingText}
+                </Text>
+              ))}
+          </View>
         );
+      }
+      case 'hebrew_subtitle': {
+        const primaryText = renderStructuralText(content);
+        const supportingContent = getParallelStructuralContent(
+          chapterData,
+          supportingChapterData,
+          index,
+        );
+        const supportingText = supportingContent
+          ? renderStructuralText(supportingContent)
+          : null;
+        return (
+          <View key={index} style={ReaderStyles.subtitleGroup}>
+            {showPinyin && isChineseBibleTranslation(supportedTranslation.id) ? (
+              <PinyinRubyText
+                numberColor={theme.colors.onSurface}
+                pinyinColor={theme.colors.tertiary}
+                text={primaryText}
+                textColor={theme.colors.onSurface}
+                textScale={textScale}
+                variant="supporting"
+              />
+            ) : (
+              <Text
+                style={[
+                  ReaderStyles.hebrewSubtitle,
+                  ReaderStyles.groupedSubtitle,
+                  { color: theme.colors.onSurface },
+                ]}
+              >
+                {content.content.map((item, i) =>
+                  renderItemContent(item, i, content.content, false),
+                )}
+              </Text>
+            )}
+            {supportingText && supportingTranslation &&
+              (showPinyin &&
+              isChineseBibleTranslation(supportingTranslation.id) ? (
+                <PinyinRubyText
+                  numberColor={theme.colors.secondary}
+                  pinyinColor={theme.colors.tertiary}
+                  text={supportingText}
+                  textColor={theme.colors.secondary}
+                  textScale={textScale}
+                  variant="supporting"
+                />
+              ) : (
+                <Text
+                  style={[
+                    ReaderStyles.supportingSubtitle,
+                    { color: theme.colors.secondary },
+                  ]}
+                >
+                  {supportingText}
+                </Text>
+              ))}
+          </View>
+        );
+      }
       case 'verse':
         const { hasFootnotes, hasSubtitle } = getVerseExtras(content.number);
         const isSelected = selectedVerses.has(content.number);
         const isSaved = isVerseSaved(content.number);
+        const supportingVerse = supportingVerses.get(content.number);
+        const primaryVerseText = BibleService.renderVerseToPlainText(
+          supportedTranslation.id,
+          content,
+        );
+        const showRubyPinyin =
+          showPinyin && isChineseBibleTranslation(supportedTranslation.id);
+        const supportingVerseText =
+          supportingVerse && supportingTranslation
+            ? BibleService.renderVerseToPlainText(
+                supportingTranslation.id,
+                supportingVerse,
+              )
+            : null;
+        const showSupportingRubyPinyin = Boolean(
+          supportingVerseText &&
+            supportingTranslation &&
+            showPinyin &&
+            isChineseBibleTranslation(supportingTranslation.id),
+        );
 
         // To support right-aligned liturgical markers (Selah, Higgaion) while
         // maintaining proper inline word-wrapping for prose/poetry, we segment
@@ -2072,33 +2356,17 @@ export default function BibleScreen() {
         let inlineBuffer: { item: any; index: number }[] = [];
 
         const flushBuffer = (key: string) => {
-          if (inlineBuffer.length === 0 && verseElements.length > 0) return;
+          if (inlineBuffer.length === 0) return;
           verseElements.push(
             <Text
               key={key}
               style={[
                 ReaderStyles.verseContainer,
+                ReaderStyles.hangingVerseLine,
                 { color: theme.colors.onBackground },
                 isSelected && { fontWeight: 'bold' },
               ]}
             >
-              {verseElements.length === 0 && (
-                <Text
-                  style={[
-                    ReaderStyles.verseNumber,
-                    {
-                      color:
-                        hasFootnotes || hasSubtitle
-                          ? theme.colors.onSurface
-                          : theme.colors.onSurfaceVariant,
-                      textDecorationLine: 'none',
-                    },
-                    isSelected && { fontWeight: 'bold' },
-                  ]}
-                >
-                  {content.number}{' '}
-                </Text>
-              )}
               {inlineBuffer.map((entry) =>
                 renderItemContent(
                   entry.item,
@@ -2106,6 +2374,9 @@ export default function BibleScreen() {
                   content.content,
                   hasFootnotes,
                   isSelected,
+                  supportedTranslation.id,
+                  ReaderStyles.selahMarker,
+                  true,
                 ),
               )}
             </Text>,
@@ -2122,11 +2393,106 @@ export default function BibleScreen() {
             verseElements.push(
               renderItemContent(item, i, content.content, hasFootnotes, isSelected),
             );
+          } else if (
+            typeof item === 'object' &&
+            item !== null &&
+            'lineBreak' in item
+          ) {
+            flushBuffer(`text-line-break-${i}`);
           } else {
+            if (
+              BibleService.startsNewBiblePoetryLine(
+                content.content,
+                i,
+                supportedTranslation.id,
+              )
+            ) {
+              flushBuffer(`text-line-${i}`);
+            }
             inlineBuffer.push({ item, index: i });
           }
         });
         flushBuffer('text-final');
+
+        const supportingVerseElements: React.ReactNode[] = [];
+        let supportingInlineBuffer: { item: any; index: number }[] = [];
+
+        const flushSupportingBuffer = (key: string) => {
+          if (supportingInlineBuffer.length === 0) return;
+          supportingVerseElements.push(
+            <Text
+              key={key}
+              style={[
+                ReaderStyles.supportingVerseText,
+                ReaderStyles.hangingVerseLine,
+                { color: theme.colors.secondary },
+                isSelected && { fontWeight: 'bold' },
+              ]}
+            >
+              {supportingInlineBuffer.map((entry) =>
+                renderItemContent(
+                  entry.item,
+                  entry.index,
+                  supportingVerse?.content || [],
+                  false,
+                  isSelected,
+                  supportingTranslation?.id,
+                  [
+                    ReaderStyles.supportingSelahMarker,
+                    { color: theme.colors.secondary },
+                  ],
+                  true,
+                ),
+              )}
+            </Text>,
+          );
+          supportingInlineBuffer = [];
+        };
+
+        supportingVerse?.content.forEach((item, i) => {
+          const textValue =
+            typeof item === 'string' ? item : (item as any).text || '';
+          const isSelah = supportingTranslation
+            ? BibleService.isSelahMarker(supportingTranslation.id, textValue)
+            : false;
+
+          if (isSelah) {
+            flushSupportingBuffer(`supporting-text-pre-${i}`);
+            supportingVerseElements.push(
+              renderItemContent(
+                item,
+                i,
+                supportingVerse.content,
+                false,
+                isSelected,
+                supportingTranslation?.id,
+                [
+                  ReaderStyles.supportingSelahMarker,
+                  { color: theme.colors.secondary },
+                ],
+              ),
+            );
+          } else if (
+            typeof item === 'object' &&
+            item !== null &&
+            'lineBreak' in item
+          ) {
+            flushSupportingBuffer(`supporting-line-break-${i}`);
+          } else {
+            if (
+              supportingTranslation &&
+              BibleService.startsNewBiblePoetryLine(
+                supportingVerse.content,
+                i,
+                supportingTranslation.id,
+              )
+            ) {
+              flushSupportingBuffer(`supporting-line-${i}`);
+            }
+            supportingInlineBuffer.push({ item, index: i });
+          }
+        });
+        flushSupportingBuffer('supporting-text-final');
 
         return (
           <TouchableOpacity
@@ -2154,7 +2520,92 @@ export default function BibleScreen() {
               versePositions.current[content.number] = e.nativeEvent.layout.y;
             }}
           >
-            <View style={{ width: '100%' }}>{verseElements}</View>
+            <View style={ReaderStyles.verseRow}>
+              <View
+                style={[
+                  ReaderStyles.verseNumberColumn,
+                  showRubyPinyin && ReaderStyles.pinyinVerseNumberColumn,
+                ]}
+              >
+                <Text
+                  style={[
+                    ReaderStyles.verseNumber,
+                    {
+                      color:
+                        hasFootnotes || hasSubtitle
+                          ? theme.colors.onSurface
+                          : theme.colors.onSurfaceVariant,
+                      textDecorationLine: 'none',
+                    },
+                    isSelected && { fontWeight: 'bold' },
+                  ]}
+                >
+                  {content.number}
+                </Text>
+              </View>
+              <View style={ReaderStyles.verseBody}>
+                {showRubyPinyin ? (
+                  <PinyinRubyText
+                    bold={isSelected}
+                    numberColor={
+                      hasFootnotes || hasSubtitle
+                        ? theme.colors.onSurface
+                        : theme.colors.onSurfaceVariant
+                    }
+                    pinyinColor={theme.colors.tertiary}
+                    rightAlignedLines={primaryVerseText
+                      .split('\n')
+                      .map((line) =>
+                        BibleService.isSelahMarker(supportedTranslation.id, line),
+                      )}
+                    text={primaryVerseText}
+                    textColor={theme.colors.onBackground}
+                    textScale={textScale}
+                  />
+                ) : (
+                  <View
+                    style={[
+                      ReaderStyles.primaryVerseBlock,
+                      supportingVerse &&
+                        supportingTranslation &&
+                        ReaderStyles.primaryVerseContainer,
+                    ]}
+                  >
+                    {verseElements}
+                  </View>
+                )}
+                {supportingVerse &&
+                  supportingTranslation &&
+                  supportingVerseText &&
+                  (showSupportingRubyPinyin ? (
+                <PinyinRubyText
+                  bold={isSelected}
+                  pinyinColor={theme.colors.tertiary}
+                  numberColor={theme.colors.secondary}
+                  rightAlignedLines={supportingVerseText
+                    .split('\n')
+                    .map((line) =>
+                      BibleService.isSelahMarker(
+                        supportingTranslation.id,
+                        line,
+                      ),
+                    )}
+                  text={supportingVerseText}
+                  textColor={theme.colors.secondary}
+                  textScale={textScale}
+                  variant="supporting"
+                />
+              ) : (
+                    <View
+                      accessible
+                      accessibilityLabel={`${getTranslationLabel(supportingTranslation)}: ${supportingVerseText}`}
+                      style={ReaderStyles.supportingVerseContainer}
+                    >
+                      {supportingVerseElements}
+                    </View>
+                  ))}
+              </View>
+            </View>
           </TouchableOpacity>
         );
       case 'line_break':
@@ -2171,7 +2622,33 @@ export default function BibleScreen() {
     .map((verse) => ({
       number: verse.number,
       title: `${book?.name || labels.bible} ${chapterNum}:${verse.number}`,
-      text: BibleService.renderVerseToPlainText(supportedTranslation.id, verse),
+      text: [
+        BibleService.renderVerseToPlainText(supportedTranslation.id, verse),
+        showPinyin && isChineseBibleTranslation(supportedTranslation.id)
+          ? getBibleVersePinyin(
+              BibleService.renderVerseToPlainText(supportedTranslation.id, verse),
+            )
+          : '',
+        supportingTranslation && supportingVerses.get(verse.number)
+          ? BibleService.renderVerseToPlainText(
+              supportingTranslation.id,
+              supportingVerses.get(verse.number)!,
+            )
+          : '',
+        showPinyin &&
+        supportingTranslation &&
+        isChineseBibleTranslation(supportingTranslation.id) &&
+        supportingVerses.get(verse.number)
+          ? getBibleVersePinyin(
+              BibleService.renderVerseToPlainText(
+                supportingTranslation.id,
+                supportingVerses.get(verse.number)!,
+              ),
+            )
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' · '),
     }));
 
   const handleBibleVerseSearchPress = (verseNumber: number) => {
@@ -2360,8 +2837,20 @@ export default function BibleScreen() {
           {
             title: book ? `${book.name} ${chapterNum}` : labels.bible,
             backTo: paramBackTo,
-            bibleTranslation: getTranslationLabel(supportedTranslation),
-            onBibleTranslationPress: () => setModalType('translation'),
+            bibleTranslation: supportingTranslation
+              ? `${supportedTranslation.shortName} + ${supportingTranslation.shortName}`
+              : supportedTranslation.shortName,
+            bibleTranslationAccessibilityLabel: supportingTranslation
+              ? `${labels.primaryTranslation}: ${getTranslationLabel(
+                  supportedTranslation,
+                )}. ${labels.supportingTranslation}: ${getTranslationLabel(
+                  supportingTranslation,
+                )}`
+              : getTranslationLabel(supportedTranslation),
+            onBibleTranslationPress: () => {
+              setTranslationSelectionRole('primary');
+              setModalType('translation');
+            },
             onBibleSavedVersesPress: () => setModalType('saved'),
             bibleSavedVerseCount: savedVerses.length,
             bibleSavedVersesLabel: labels.savedVerses,
@@ -3478,7 +3967,11 @@ export default function BibleScreen() {
                 >
                   data={
                     lastActiveType === 'translation'
-                      ? BibleService.SUPPORTED_TRANSLATIONS
+                      ? BibleService.SUPPORTED_TRANSLATIONS.filter(
+                          (translation) =>
+                            translationSelectionRole === 'primary' ||
+                            translation.id !== supportedTranslation.id,
+                        )
                       : lastActiveType === 'book'
                         ? books
                         : lastActiveType === 'verse'
@@ -3494,6 +3987,139 @@ export default function BibleScreen() {
                   keyExtractor={(item) =>
                     typeof item === 'object' ? item.id : item.toString()
                   }
+                  ListHeaderComponent={
+                    lastActiveType === 'translation' ? (
+                      <View>
+                        <View style={styles.translationRoleRow}>
+                          {(['primary', 'supporting'] as const).map((role) => {
+                            const isPrimary = role === 'primary';
+                            const isActive = translationSelectionRole === role;
+                            const disabled = !isPrimary && !dualLanguageEnabled;
+                            const roleTranslation = isPrimary
+                              ? supportedTranslation
+                              : selectedSupportingTranslation;
+                            return (
+                              <TouchableOpacity
+                                key={role}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: isActive, disabled }}
+                                disabled={disabled}
+                                onPress={() => setTranslationSelectionRole(role)}
+                                style={[
+                                  styles.translationRoleButton,
+                                  {
+                                    borderColor: isActive
+                                      ? theme.colors.primary
+                                      : theme.colors.outline,
+                                    backgroundColor: isActive
+                                      ? theme.colors.primaryContainer
+                                      : theme.colors.surface,
+                                  },
+                                  disabled && styles.disabledTranslationRole,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.translationRoleTitle,
+                                    {
+                                      color: isActive
+                                        ? theme.colors.onPrimaryContainer
+                                        : theme.colors.onSurface,
+                                    },
+                                  ]}
+                                >
+                                  {isPrimary
+                                    ? labels.primaryTranslation
+                                    : labels.supportingTranslation}
+                                </Text>
+                                <Text
+                                  numberOfLines={1}
+                                  style={[
+                                    styles.translationRoleValue,
+                                    { color: theme.colors.onSurfaceVariant },
+                                  ]}
+                                >
+                                  {roleTranslation.name}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                        <Text
+                          style={[
+                            styles.translationRoleHelp,
+                            { color: theme.colors.onSurfaceVariant },
+                          ]}
+                        >
+                          {translationSelectionRole === 'primary'
+                            ? labels.primaryTranslationHelp
+                            : labels.supportingTranslationHelp}
+                        </Text>
+                        <Divider />
+                      </View>
+                    ) : null
+                  }
+                  ListFooterComponent={
+                    lastActiveType === 'translation' ? (
+                      <View>
+                        <Divider />
+                        <View style={styles.pinyinPreferenceRow}>
+                          <View style={styles.pinyinPreferenceCopy}>
+                            <Text
+                              style={[
+                                styles.pressRowText,
+                                { color: theme.colors.onSurface },
+                              ]}
+                            >
+                              {labels.dualLanguage}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.pinyinPreferenceHelp,
+                                { color: theme.colors.onSurfaceVariant },
+                              ]}
+                            >
+                              {labels.dualLanguageHelp}
+                            </Text>
+                          </View>
+                          <Switch
+                            value={dualLanguageEnabled}
+                            onValueChange={(enabled) => {
+                              setDualLanguageEnabled(enabled);
+                              if (!enabled) setTranslationSelectionRole('primary');
+                            }}
+                            accessibilityLabel={labels.dualLanguage}
+                          />
+                        </View>
+                        <Divider />
+                        <View style={styles.pinyinPreferenceRow}>
+                          <View style={styles.pinyinPreferenceCopy}>
+                            <Text
+                              style={[
+                                styles.pressRowText,
+                                { color: theme.colors.onSurface },
+                              ]}
+                            >
+                              {labels.showPinyin}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.pinyinPreferenceHelp,
+                                { color: theme.colors.onSurfaceVariant },
+                              ]}
+                            >
+                              {labels.pinyinHelp}
+                            </Text>
+                          </View>
+                          <Switch
+                            value={showPinyin}
+                            onValueChange={setShowPinyin}
+                            accessibilityLabel={labels.showPinyin}
+                          />
+                        </View>
+                      </View>
+                    ) : null
+                  }
                   renderItem={({ item }) => {
                     const itemLabel =
                       typeof item === 'object'
@@ -3507,7 +4133,10 @@ export default function BibleScreen() {
                     const isSelectedItem =
                       (lastActiveType === 'translation' &&
                         typeof item === 'object' &&
-                        item.id === supportedTranslation.id) ||
+                        item.id ===
+                          (translationSelectionRole === 'primary'
+                            ? supportedTranslation.id
+                            : selectedSupportingTranslation.id)) ||
                       (lastActiveType === 'book' &&
                         typeof item === 'object' &&
                         item.id === book?.id) ||
@@ -3520,17 +4149,33 @@ export default function BibleScreen() {
                       accessibilityState={{ selected: isSelectedItem }}
                       onPress={() => {
                         const changesChapter =
-                          lastActiveType === 'translation' ||
                           lastActiveType === 'book' ||
-                          lastActiveType === 'chapter';
+                          lastActiveType === 'chapter' ||
+                          (lastActiveType === 'translation' &&
+                            translationSelectionRole === 'primary');
                         // Keep audio playing only when the selection loads a new chapter.
                         if (isPlaying && changesChapter) {
                           setShouldAutoPlay(true);
                         }
                         if (lastActiveType === 'translation') {
-                          handledTranslationParamSignature.current =
-                            translationParamSignature;
-                          setSupportedTranslation(item as any);
+                          const translation = item as (typeof BibleService.SUPPORTED_TRANSLATIONS)[number];
+                          if (translationSelectionRole === 'primary') {
+                            handledTranslationParamSignature.current =
+                              translationParamSignature;
+                            if (
+                              translation.id === selectedSupportingTranslation.id &&
+                              translation.id !== supportedTranslation.id
+                            ) {
+                              setSelectedSupportingTranslation(supportedTranslation);
+                            }
+                            setSupportedTranslation(translation);
+                            if (dualLanguageEnabled) {
+                              setTranslationSelectionRole('supporting');
+                              return;
+                            }
+                          } else {
+                            setSelectedSupportingTranslation(translation);
+                          }
                         } else if (lastActiveType === 'book') {
                           setBook(item as any);
                           setChapterNum(1);
@@ -3736,6 +4381,59 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
     minWidth: 0,
     fontSize: scaleTypographyMetric(16, uiTextScale),
     lineHeight: scaleTypographyMetric(22, uiTextScale),
+  },
+  pinyinPreferenceRow: {
+    minHeight: 64,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  pinyinPreferenceCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  pinyinPreferenceHelp: {
+    fontSize: scaleTypographyMetric(13, uiTextScale),
+    lineHeight: scaleTypographyMetric(18, uiTextScale),
+    marginTop: 2,
+  },
+  translationRoleRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  translationRoleButton: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 58,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    justifyContent: 'center',
+  },
+  disabledTranslationRole: {
+    opacity: 0.45,
+  },
+  translationRoleTitle: {
+    fontSize: scaleTypographyMetric(13, uiTextScale),
+    lineHeight: scaleTypographyMetric(18, uiTextScale),
+    fontWeight: '700',
+  },
+  translationRoleValue: {
+    fontSize: scaleTypographyMetric(12, uiTextScale),
+    lineHeight: scaleTypographyMetric(17, uiTextScale),
+    marginTop: 1,
+  },
+  translationRoleHelp: {
+    paddingHorizontal: 16,
+    paddingTop: 7,
+    paddingBottom: 12,
+    fontSize: scaleTypographyMetric(12, uiTextScale),
+    lineHeight: scaleTypographyMetric(17, uiTextScale),
   },
   audioSettingsSectionTitle: {
     paddingHorizontal: 16,
