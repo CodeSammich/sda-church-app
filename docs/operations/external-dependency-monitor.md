@@ -9,16 +9,19 @@ checks them daily at 5:17 PM America/New_York time and can also be run manually.
 The monitor must not request every generated chapter or hymn page. It uses two
 layers instead:
 
-- Jest validates every locally generated CUV and hymnal URL without network
-  traffic.
+- Jest validates every locally generated CUV, hymnal, public-domain library,
+  and curated EGW edition URL without network traffic.
 - The live monitor reads a provider's catalog once when one is available, then
   requests one stable pseudo-random file or page from each large collection per
   UTC day. Retries use the same sample.
 
 This means the 1,189-file CUV collections receive one sampled media request per
-host per daily run, not 1,189 requests. Fixed app destinations and small API
-contracts receive one request each. HTTP 429 is accepted only for navigational
-websites that commonly rate-limit bots; APIs, catalogs, and media remain strict.
+host per daily run, not 1,189 requests. Project Gutenberg receives one sampled
+public-domain book request, and EGW Writings receives one sampled book request
+for each supported edition language. Fixed app destinations and small API
+contracts receive one request each. HTTP 429 is accepted only for
+navigational websites that commonly rate-limit bots; APIs, catalogs, and media
+remain strict.
 
 Run it locally with:
 

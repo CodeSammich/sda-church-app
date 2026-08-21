@@ -4,7 +4,7 @@ import {
   scaleTypographyMetric,
   type TextScale,
 } from '@/constants/AppPreferences';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 const BULLETIN_VERSE_VIEWPORT_ANCHOR = 0.35;
 
@@ -107,9 +107,7 @@ export const getBibleDockLayout = (
   const dockHeight = stackControls
     ? selectorHeight * 3 + navigationHeight + 28
     : Math.max(60, controlHeight + 16);
-  const selectionBarHeight = stackControls
-    ? controlHeight * 3 + 40
-    : Math.max(56, Math.ceil(44 * safeScale + 16));
+  const selectionBarHeight = Math.max(64, Math.ceil(32 * safeScale + 28));
   const audioControlsNeedTwoRows =
     stackControls && safeWidth < controlHeight * 2 + 156;
   const audioControlHeight = audioControlsNeedTwoRows
@@ -186,9 +184,28 @@ export const createReaderStyles = (textScale: TextScale) => {
   },
   verseNumber: {
     fontSize: scaleTypographyMetric(14, textScale),
-    lineHeight: scaleTypographyMetric(28, textScale),
+    fontVariant: ['tabular-nums'],
+    lineHeight: scriptureLineHeight(18, 28),
     fontWeight: '600',
-    paddingRight: 6,
+    textAlign: 'right',
+  },
+  verseRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    width: '100%',
+  },
+  verseNumberColumn: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+    paddingRight: scaleTypographyMetric(6, textScale),
+    width: scaleTypographyMetric(29, textScale),
+  },
+  pinyinVerseNumberColumn: {
+    paddingTop: scaleTypographyMetric(12, textScale),
+  },
+  verseBody: {
+    flex: 1,
+    minWidth: 0,
   },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
@@ -343,7 +360,10 @@ export const createReaderStyles = (textScale: TextScale) => {
     borderRadius: 7,
     marginLeft: -7,
   },
-  scrollContent: { paddingHorizontal: enlargedReadingLayout ? 8 : 20 },
+  scrollContent: {
+    paddingLeft: 4,
+    paddingRight: enlargedReadingLayout ? 8 : 20,
+  },
   loader: { marginTop: 50 },
   heading: {
     fontSize: scaleTypographyMetric(20, textScale),
@@ -351,10 +371,57 @@ export const createReaderStyles = (textScale: TextScale) => {
     marginTop: 32,
     marginBottom: 8,
   },
+  headingGroup: {
+    marginLeft: enlargedReadingLayout ? 4 : 16,
+    marginTop: 32,
+    marginBottom: 8,
+  },
+  groupedHeading: {
+    marginTop: 0,
+    marginBottom: 3,
+  },
+  supportingHeading: {
+    fontSize: scaleTypographyMetric(17, textScale),
+    lineHeight: scriptureLineHeight(17, 26),
+    fontWeight: '700',
+    marginTop: 3,
+  },
   verseContainer: {
     fontSize: scaleTypographyMetric(18, textScale),
     lineHeight: scriptureLineHeight(18, 28),
+  },
+  hangingVerseLine: {
+    width: '100%',
+    ...Platform.select({
+      web: {
+        paddingLeft: scaleTypographyMetric(8, textScale),
+        textIndent: -scaleTypographyMetric(8, textScale),
+      } as any,
+      default: {},
+    }),
+  },
+  primaryVerseBlock: {
     marginBottom: 12,
+    width: '100%',
+  },
+  primaryVerseContainer: {
+    marginBottom: 3,
+  },
+  supportingVerseContainer: {
+    marginBottom: 14,
+  },
+  supportingVerseText: {
+    fontSize: scaleTypographyMetric(16, textScale),
+    lineHeight: scriptureLineHeight(16, 25),
+  },
+  supportingSelahMarker: {
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    fontSize: scaleTypographyMetric(16, textScale),
+    fontStyle: 'italic',
+    lineHeight: scriptureLineHeight(16, 25),
+    marginBottom: 2,
+    marginTop: 4,
+    textAlign: 'right',
   },
   selahMarker: {
     fontFamily: 'Georgia, "Times New Roman", serif',
@@ -370,6 +437,19 @@ export const createReaderStyles = (textScale: TextScale) => {
     fontSize: scaleTypographyMetric(16, textScale),
     marginBottom: 16,
     opacity: 0.8,
+  },
+  subtitleGroup: {
+    marginLeft: enlargedReadingLayout ? 4 : 16,
+    marginBottom: 16,
+  },
+  groupedSubtitle: {
+    marginBottom: 3,
+    opacity: 1,
+  },
+  supportingSubtitle: {
+    fontSize: scaleTypographyMetric(15, textScale),
+    lineHeight: scriptureLineHeight(15, 23),
+    marginTop: 3,
   },
   inlineHeading: {
     fontWeight: '700',

@@ -1,53 +1,97 @@
 const fs = require('fs');
 const path = require('path');
 
-// 1. Read the source of truth
-const pkgPath = path.join(__dirname, '../package.json');
-let pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-let version = pkg.version;
+const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
-// Check for optional increment flag (e.g. node sync-version.js --increment)
-if (process.argv.includes('--increment')) {
-  const parts = version.split('.');
-  console.log(parts);
-  if (parts.length === 3) {
-    parts[2] = parseInt(parts[2], 10) + 1;
+const writeJson = (filePath, value) => {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+};
+
+const syncVersion = ({
+  projectRoot = path.resolve(__dirname, '..'),
+  requestedVersion,
+  increment = false,
+  logger = console,
+} = {}) => {
+  if (requestedVersion && increment) {
+    throw new Error('Use either --version or --increment, not both');
+  }
+
+  const pkgPath = path.join(projectRoot, 'package.json');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  let version = requestedVersion || pkg.version;
+
+  if (increment) {
+    if (!SEMVER_PATTERN.test(version)) {
+      throw new Error(`Cannot increment invalid semantic version: ${version}`);
+    }
+    const parts = version.split('.').map(Number);
+    parts[2] += 1;
     version = parts.join('.');
-    pkg.version = version;
-    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  }
 
-    // Reread the package.json to ensure the updated version is used for the rest of the sync
-    pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    version = pkg.version;
+  if (!SEMVER_PATTERN.test(version)) {
+    throw new Error(
+      `Version must use major.minor.patch format; received: ${version || '<empty>'}`,
+    );
+  }
 
-    console.log(`Incremented version to ${version} in package.json`);
+  pkg.version = version;
+  writeJson(pkgPath, pkg);
+  logger.log(`Syncing version ${version} across configuration files...`);
+
+  const lockPath = path.join(projectRoot, 'package-lock.json');
+  if (fs.existsSync(lockPath)) {
+    const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    lock.version = version;
+    if (lock.packages && lock.packages['']) {
+      lock.packages[''].version = version;
+    }
+    writeJson(lockPath, lock);
+    logger.log('Successfully synced version to package-lock.json');
+  }
+
+  const appJsonPath = path.join(projectRoot, 'app.json');
+  if (fs.existsSync(appJsonPath)) {
+    const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
+    appJson.expo.version = version;
+    writeJson(appJsonPath, appJson);
+    logger.log('Successfully synced version to app.json');
+  }
+
+  const swPath = path.join(projectRoot, 'public/sw.js');
+  if (fs.existsSync(swPath)) {
+    let swContent = fs.readFileSync(swPath, 'utf8');
+    const versionPattern = /const VERSION\s*=\s*(['"])[^'"]*\1;/;
+    if (!versionPattern.test(swContent)) {
+      throw new Error('Could not find the VERSION constant in public/sw.js');
+    }
+    swContent = swContent.replace(versionPattern, `const VERSION = '${version}';`);
+    fs.writeFileSync(swPath, swContent);
+    logger.log('Successfully synced version to public/sw.js');
+  }
+
+  return version;
+};
+
+const parseArgs = (args) => {
+  const versionIndex = args.indexOf('--version');
+  if (versionIndex !== -1 && !args[versionIndex + 1]) {
+    throw new Error('--version requires a major.minor.patch value');
+  }
+  return {
+    increment: args.includes('--increment'),
+    requestedVersion: versionIndex === -1 ? undefined : args[versionIndex + 1],
+  };
+};
+
+if (require.main === module) {
+  try {
+    syncVersion(parseArgs(process.argv.slice(2)));
+  } catch (error) {
+    console.error(`Version sync failed: ${error.message}`);
+    process.exit(1);
   }
 }
 
-console.log(`Syncing version ${version} across configuration files...`);
-
-// 2. Update app.json (Expo config)
-const appJsonPath = path.join(__dirname, '../app.json');
-if (fs.existsSync(appJsonPath)) {
-  const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
-  appJson.expo.version = version;
-  // For Android/iOS specifically if you want to sync build numbers too:
-  // appJson.expo.android.versionCode = parseInt(version.replace(/\./g, ''));
-  fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n');
-  console.log('Successfully synced package.json version to app.json');
-}
-
-// 3. Update sw.js (Service Worker)
-const swPath = path.join(__dirname, 'sw.js');
-if (fs.existsSync(swPath)) {
-  let swContent = fs.readFileSync(swPath, 'utf8');
-  // Accept either quote style so formatting changes cannot silently prevent
-  // the service-worker cache/update version from being refreshed.
-  const versionPattern = /const VERSION\s*=\s*(['"])[^'"]*\1;/;
-  if (!versionPattern.test(swContent)) {
-    throw new Error('Could not find the VERSION constant in public/sw.js');
-  }
-  swContent = swContent.replace(versionPattern, `const VERSION = '${version}';`);
-  fs.writeFileSync(swPath, swContent);
-  console.log('Successfully synced package.json version to sw.js');
-}
+module.exports = { syncVersion };

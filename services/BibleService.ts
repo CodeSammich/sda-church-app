@@ -142,11 +142,11 @@ const originalLanguageBookCache = new Map<
 >();
 
 export const SUPPORTED_TRANSLATIONS = [
-  { id: 'BSB', name: 'BSB', lang: 'en' },
-  { id: 'eng_kjv', name: 'KJV', lang: 'en' },
-  { id: 'cmn_cuv', name: '和合本', lang: 'zh' },
-  { id: 'cmn_cu1', name: '和合本', lang: 'zh-cn' },
-  { id: 'spa_r09', name: 'RVR09', lang: 'es' },
+  { id: 'BSB', name: 'BSB', shortName: 'BSB', lang: 'en' },
+  { id: 'eng_kjv', name: 'KJV', shortName: 'KJV', lang: 'en' },
+  { id: 'cmn_cuv', name: 'CUV', shortName: 'CUV', lang: 'zh' },
+  { id: 'cmn_cu1', name: 'CUVS', shortName: 'CUVS', lang: 'zh-cn' },
+  { id: 'spa_r09', name: 'RVR09', shortName: 'RVR09', lang: 'es' },
 ];
 
 /**
@@ -769,9 +769,64 @@ export function segmentText(text: string) {
   };
 }
 
+/** Whether a structured item begins a new source-defined poetry line. */
+export function startsNewBiblePoetryLine(
+  content: ChapterVerse['content'],
+  index: number,
+  translationId: string,
+) {
+  const item = content[index];
+  if (
+    index <= 0 ||
+    typeof item !== 'object' ||
+    item === null ||
+    !('poem' in item)
+  ) {
+    return false;
+  }
+
+  let skippedInterruption = false;
+  for (let previousIndex = index - 1; previousIndex >= 0; previousIndex--) {
+    const previous = content[previousIndex];
+    const isMetadata =
+      typeof previous === 'object' &&
+      previous !== null &&
+      'noteId' in previous;
+    const isWhitespace =
+      typeof previous === 'string' && previous.trim().length === 0;
+
+    if (isMetadata || isWhitespace) {
+      skippedInterruption = true;
+      continue;
+    }
+    if (
+      typeof previous === 'object' &&
+      previous !== null &&
+      'lineBreak' in previous
+    ) {
+      return true;
+    }
+
+    const previousText =
+      typeof previous === 'string' ? previous : (previous as FormattedText).text || '';
+    const continuesInterruptedLine =
+      skippedInterruption &&
+      typeof previous === 'object' &&
+      previous !== null &&
+      'poem' in previous &&
+      previous.poem === item.poem &&
+      !isSelahMarker(translationId, previousText) &&
+      !item.text.startsWith('\n');
+
+    return !continuesInterruptedLine;
+  }
+
+  return false;
+}
+
 /**
  * Converts a structured verse object into a formatted plain-text string.
- * This preserves poetic indentation, line breaks, and handles liturgical markers (Selah)
+ * This preserves poetic line breaks and handles liturgical markers (Selah)
  * consistently across the app.
  */
 export function renderVerseToPlainText(
@@ -864,8 +919,6 @@ export function renderVerseToPlainText(
     if (isSelah) {
       result += (i > 0 && !prevIsLineBreak ? '\n' : '') + contentText;
     } else if (isPoetic) {
-      const indentCount = (item as any).poem > 1 ? (item as any).poem - 1 : 0;
-      const indent = '\u00A0'.repeat(indentCount * 3);
       const prefix =
         (i > 0 &&
         foundPreviousContent &&
@@ -873,7 +926,7 @@ export function renderVerseToPlainText(
         !isSelah &&
         !prevIsLineBreak
           ? '\n'
-          : '') + (!isLineContinuation ? indent : '');
+          : '');
       result += prefix + contentText;
     } else {
       result += contentText;
@@ -890,9 +943,12 @@ const fetchBibleMetadataText = (contents: unknown): string => {
   return '';
 };
 
-const normalizeFetchBibleText = (text: string): string =>
+export const normalizeFetchBibleText = (text: string): string =>
   text
     .replace(/\r\n?/g, '\n')
+    // fetch(bible)'s CUV resources use U+3000 honorific spacing before 神.
+    // Preserve the separation without rendering a full Han-cell-sized hole.
+    .replace(/\u3000/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/^\n+|\n+$/g, '');
 

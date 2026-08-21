@@ -206,6 +206,64 @@ await record('daily English hymn page sample', 'Hymns for Worship', () => {
   return probe(`https://hymnsforworship.org/sdah-${String(number).padStart(3, '0')}#hymn-score`);
 });
 
+const libraryCatalogSource = await readFile('features/library/LibraryCatalog.ts', 'utf8');
+const gutenbergBooks = [...libraryCatalogSource.matchAll(
+  /sourceUrl:\s*'(https:\/\/www\.gutenberg\.org\/ebooks\/(\d+))'/g,
+)].map(([, url, ebookId]) => ({ url, ebookId }));
+
+await record('catalog contains three unique public-domain book links', 'Project Gutenberg', async () => {
+  if (gutenbergBooks.length !== 3) {
+    throw new Error(`found ${gutenbergBooks.length} Project Gutenberg links`);
+  }
+  if (new Set(gutenbergBooks.map(({ url }) => url)).size !== gutenbergBooks.length) {
+    throw new Error('catalog contains duplicate Project Gutenberg links');
+  }
+  return '3 unique ebook records';
+});
+
+await record('daily public-domain book sample', 'Project Gutenberg', () => {
+  const sample = dailySample(gutenbergBooks, 131);
+  if (!sample) throw new Error('catalog has no Project Gutenberg book to sample');
+  return probe(sample.url, { allowed: [429] }).then(
+    (detail) => `${detail}: ebook ${sample.ebookId}`,
+  );
+});
+
+const egwCatalogSource = await readFile('features/library/EgwBookCatalog.ts', 'utf8');
+const egwEditions = [...egwCatalogSource.matchAll(
+  /edition\(\s*'(en|zh|es)'\s*,\s*'[^']+'\s*,\s*(\d+)\s*,\s*'(\d+\.\d+)'\s*\)/g,
+)].map(([, language, bookId, firstParagraph]) => ({
+  language,
+  bookId: Number(bookId),
+  firstParagraph,
+  url: `https://egwwritings.org/read?panels=p${firstParagraph}&index=0`,
+}));
+
+await record('catalog contains nine deep links per language', 'EGW Writings', async () => {
+  for (const language of ['en', 'zh', 'es']) {
+    const editions = egwEditions.filter((entry) => entry.language === language);
+    if (editions.length !== 9) throw new Error(`${language} has ${editions.length} editions`);
+    if (editions.some(({ bookId, firstParagraph }) => !firstParagraph.startsWith(`${bookId}.`))) {
+      throw new Error(`${language} contains a mismatched book and paragraph ID`);
+    }
+  }
+  if (new Set(egwEditions.map(({ url }) => url)).size !== 27) {
+    throw new Error('edition deep links are not unique');
+  }
+  return '27 unique English, Chinese, and Spanish edition links';
+});
+
+for (const language of ['en', 'zh', 'es']) {
+  await record(`daily ${language} edition sample`, 'EGW Writings', () => {
+    const editions = egwEditions.filter((entry) => entry.language === language);
+    const sample = dailySample(editions, language.charCodeAt(0));
+    if (!sample) throw new Error(`${language} has no edition to sample`);
+    return probe(sample.url, { allowed: [429] }).then(
+      (detail) => `${detail}: ${sample.firstParagraph}`,
+    );
+  });
+}
+
 await record('translation and audio catalog contract', 'HelloAO', async () => {
   const data = await getJson('https://bible.helloao.org/api/available_translations.json');
   const serialized = JSON.stringify(data);

@@ -171,7 +171,6 @@ interface TextScaleStepActionProps {
   disabled: boolean;
   label: string;
   onPress: () => void;
-  stacked: boolean;
 }
 
 const TextScaleStepAction = ({
@@ -179,7 +178,6 @@ const TextScaleStepAction = ({
   disabled,
   label,
   onPress,
-  stacked,
 }: TextScaleStepActionProps) => {
   const theme = useTheme();
 
@@ -192,7 +190,6 @@ const TextScaleStepAction = ({
       onPress={onPress}
       style={({ pressed }) => [
         styles.stepAction,
-        stacked && styles.stackedStepAction,
         {
           borderColor: theme.colors.outline,
           opacity: disabled ? 0.5 : pressed ? 0.78 : 1,
@@ -325,25 +322,8 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
             </Text>
 
             {Platform.OS === 'web' ? (
-              <View
-                style={[
-                  styles.nativeSliderRow,
-                  stackControls && styles.stackedNativeSliderRow,
-                ]}
-              >
-                <TextScaleStepAction
-                  accessibilityLabel={labels.decrease}
-                  disabled={isApplying || draftScale === TEXT_SCALE_MIN}
-                  label="−5%"
-                  onPress={() => adjustBySteps(-1)}
-                  stacked={stackControls}
-                />
-                <View
-                  style={[
-                    styles.webSlider,
-                    stackControls && styles.stackedNativeSlider,
-                  ]}
-                >
+              <View style={styles.nativeSliderRow}>
+                <View style={styles.webSlider}>
                   {createElement('input', {
                     'aria-label': labels.slider,
                     'aria-valuemax': TEXT_SCALE_MAX * 100,
@@ -367,28 +347,9 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
                     value: currentPercent,
                   })}
                 </View>
-                <TextScaleStepAction
-                  accessibilityLabel={labels.increase}
-                  disabled={isApplying || draftScale === TEXT_SCALE_MAX}
-                  label="+5%"
-                  onPress={() => adjustBySteps(1)}
-                  stacked={stackControls}
-                />
               </View>
             ) : (
-              <View
-                style={[
-                  styles.nativeSliderRow,
-                  stackControls && styles.stackedNativeSliderRow,
-                ]}
-              >
-                <TextScaleStepAction
-                  accessibilityLabel={labels.decrease}
-                  disabled={isApplying || draftScale === TEXT_SCALE_MIN}
-                  label="−5%"
-                  onPress={() => adjustBySteps(-1)}
-                  stacked={stackControls}
-                />
+              <View style={styles.nativeSliderRow}>
                 <View
                   accessible
                   accessibilityActions={[
@@ -417,10 +378,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
                   onResponderGrant={updateFromTouch}
                   onResponderMove={updateFromTouch}
                   onStartShouldSetResponder={() => !isApplying}
-                  style={[
-                    styles.nativeSlider,
-                    stackControls && styles.stackedNativeSlider,
-                  ]}
+                  style={styles.nativeSlider}
                 >
                   <View
                     pointerEvents="none"
@@ -454,19 +412,26 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
                     ]}
                   />
                 </View>
-                <TextScaleStepAction
-                  accessibilityLabel={labels.increase}
-                  disabled={isApplying || draftScale === TEXT_SCALE_MAX}
-                  label="+5%"
-                  onPress={() => adjustBySteps(1)}
-                  stacked={stackControls}
-                />
               </View>
             )}
 
             <View style={styles.rangeLabels} accessible={false}>
               <Text variant="labelMedium">100%</Text>
               <Text variant="labelMedium">200%</Text>
+            </View>
+            <View style={styles.stepActionsRow}>
+              <TextScaleStepAction
+                accessibilityLabel={labels.decrease}
+                disabled={isApplying || draftScale === TEXT_SCALE_MIN}
+                label="−5%"
+                onPress={() => adjustBySteps(-1)}
+              />
+              <TextScaleStepAction
+                accessibilityLabel={labels.increase}
+                disabled={isApplying || draftScale === TEXT_SCALE_MAX}
+                label="+5%"
+                onPress={() => adjustBySteps(1)}
+              />
             </View>
             <View
               accessibilityLabel={labels.previewAt(currentPercent)}
@@ -590,21 +555,6 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     width: '100%',
   },
-  stackedNativeSlider: {
-    alignSelf: 'stretch',
-    flexGrow: 0,
-    flexShrink: 0,
-    width: '100%',
-  },
-  stackedNativeSliderRow: {
-    alignItems: 'stretch',
-    flexDirection: 'column',
-    gap: 8,
-  },
-  stackedStepAction: {
-    alignSelf: 'stretch',
-    width: '100%',
-  },
   webSlider: {
     flex: 1,
     justifyContent: 'center',
@@ -614,11 +564,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 20,
     borderWidth: 1,
+    flex: 1,
     justifyContent: 'center',
     minHeight: 44,
     minWidth: 64,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  stepActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
   },
   stepActionText: {
     flexShrink: 1,

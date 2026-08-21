@@ -100,6 +100,9 @@ export const GlobalHeader = (props: any) => {
   const routeSegments: readonly string[] = segments;
   const isBiblePage = routeSegments.includes('bible');
   const bibleTranslation = props.options?.bibleTranslation as string | undefined;
+  const bibleTranslationAccessibilityLabel =
+    (props.options?.bibleTranslationAccessibilityLabel as string | undefined) ||
+    bibleTranslation;
   const theme = useAppTheme();
   const { textScale } = useTextSize();
 
@@ -173,6 +176,11 @@ export const GlobalHeader = (props: any) => {
   const onBibleTranslationPress = props.options?.onBibleTranslationPress as
     | (() => void)
     | undefined;
+  const onBibleVerseHelpPress = props.options?.onBibleVerseHelpPress as
+    | (() => void)
+    | undefined;
+  const bibleVerseHelpLabel =
+    (props.options?.bibleVerseHelpLabel as string | undefined) || 'Using verses';
   const onBibleSavedVersesPress = props.options?.onBibleSavedVersesPress as
     | (() => void)
     | undefined;
@@ -455,7 +463,7 @@ export const GlobalHeader = (props: any) => {
               name="chevron-left"
               size={26}
               textScale={headerTextScale}
-              color={theme.dark ? '#FFFFFF' : '#17211F'}
+              color={theme.colors.primary}
             />
           </Pressable>
         )}
@@ -513,7 +521,7 @@ export const GlobalHeader = (props: any) => {
                   <Pressable
                     onPress={onBibleTranslationPress}
                     accessibilityRole="button"
-                    accessibilityLabel={`Translation: ${bibleTranslation}`}
+                    accessibilityLabel={`Translation: ${bibleTranslationAccessibilityLabel}`}
                     style={({ pressed }) => [
                       styles.translationChip,
                       {
@@ -549,6 +557,28 @@ export const GlobalHeader = (props: any) => {
                     <AppIcon
                       name="chevron-down"
                       size={17}
+                      textScale={headerTextScale}
+                      color={theme.colors.primary}
+                    />
+                  </Pressable>
+                )}
+                {!isBibleSearchExpanded && onBibleVerseHelpPress && (
+                  <Pressable
+                    onPress={onBibleVerseHelpPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={bibleVerseHelpLabel}
+                    style={({ pressed }) => [
+                      styles.collapsedSearchButton,
+                      { height: compactControlHeight, width: compactControlHeight },
+                      {
+                        backgroundColor: theme.colors.surface,
+                        opacity: pressed ? 0.75 : 1,
+                      },
+                    ]}
+                  >
+                    <AppIcon
+                      name="gesture-tap-hold"
+                      size={23}
                       textScale={headerTextScale}
                       color={theme.colors.onSurfaceVariant}
                     />
