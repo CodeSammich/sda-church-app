@@ -325,28 +325,56 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
             </Text>
 
             {Platform.OS === 'web' ? (
-              createElement('input', {
-                'aria-label': labels.slider,
-                'aria-valuemax': TEXT_SCALE_MAX * 100,
-                'aria-valuemin': TEXT_SCALE_MIN * 100,
-                'aria-valuenow': currentPercent,
-                'aria-valuetext': labels.percent(currentPercent),
-                disabled: isApplying,
-                max: TEXT_SCALE_MAX * 100,
-                min: TEXT_SCALE_MIN * 100,
-                onInput: (event: { currentTarget: { value: string } }) =>
-                  setPercent(Number(event.currentTarget.value)),
-                onKeyDown: handleWebSliderKeyDown,
-                step: stepPercent,
-                style: {
-                  accentColor: theme.colors.primary,
-                  cursor: isApplying ? 'default' : 'pointer',
-                  height: 44,
-                  width: '100%',
-                },
-                type: 'range',
-                value: currentPercent,
-              })
+              <View
+                style={[
+                  styles.nativeSliderRow,
+                  stackControls && styles.stackedNativeSliderRow,
+                ]}
+              >
+                <TextScaleStepAction
+                  accessibilityLabel={labels.decrease}
+                  disabled={isApplying || draftScale === TEXT_SCALE_MIN}
+                  label="−5%"
+                  onPress={() => adjustBySteps(-1)}
+                  stacked={stackControls}
+                />
+                <View
+                  style={[
+                    styles.webSlider,
+                    stackControls && styles.stackedNativeSlider,
+                  ]}
+                >
+                  {createElement('input', {
+                    'aria-label': labels.slider,
+                    'aria-valuemax': TEXT_SCALE_MAX * 100,
+                    'aria-valuemin': TEXT_SCALE_MIN * 100,
+                    'aria-valuenow': currentPercent,
+                    'aria-valuetext': labels.percent(currentPercent),
+                    disabled: isApplying,
+                    max: TEXT_SCALE_MAX * 100,
+                    min: TEXT_SCALE_MIN * 100,
+                    onInput: (event: { currentTarget: { value: string } }) =>
+                      setPercent(Number(event.currentTarget.value)),
+                    onKeyDown: handleWebSliderKeyDown,
+                    step: stepPercent,
+                    style: {
+                      accentColor: theme.colors.primary,
+                      cursor: isApplying ? 'default' : 'pointer',
+                      height: 44,
+                      width: '100%',
+                    },
+                    type: 'range',
+                    value: currentPercent,
+                  })}
+                </View>
+                <TextScaleStepAction
+                  accessibilityLabel={labels.increase}
+                  disabled={isApplying || draftScale === TEXT_SCALE_MAX}
+                  label="+5%"
+                  onPress={() => adjustBySteps(1)}
+                  stacked={stackControls}
+                />
+              </View>
             ) : (
               <View
                 style={[
@@ -576,6 +604,11 @@ const styles = StyleSheet.create({
   stackedStepAction: {
     alignSelf: 'stretch',
     width: '100%',
+  },
+  webSlider: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 100,
   },
   stepAction: {
     alignItems: 'center',

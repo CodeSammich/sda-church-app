@@ -63,7 +63,7 @@ describe('Bible audio playback', () => {
       getBibleAudioSourceLabel(
         'https://assets.adventistconnect.org/bibles/cuv/chapter.mp3',
       ),
-    ).toBe('NYCCSDAS.org');
+    ).toBe('NYCCSDA.org');
     expect(
       getBibleAudioSourceLabel(
         'https://bible.helloao.org/api/BSB/GEN/1/audio/souer.mp3',
@@ -191,5 +191,42 @@ describe('Bible audio playback', () => {
         }),
       }),
     ]);
+  });
+
+  it('keeps every CUV mirror as a queued chapter fallback', () => {
+    const books = [
+      {
+        id: 'GEN',
+        name: 'Genesis',
+        commonName: 'Genesis',
+        title: null,
+        numberOfChapters: 2,
+        totalNumberOfVerses: 0,
+      },
+    ];
+
+    const [queued] = buildBibleAudioQueue({
+      albumTitle: 'Bible audio',
+      artist: 'CUV',
+      books,
+      currentBookId: 'GEN',
+      currentChapter: 1,
+      limit: 1,
+      preferredSourceId: 'archive.org',
+      selectedAudioUrls: [],
+      translationId: 'cmn_cuv',
+      translationLabel: 'CUV',
+    });
+
+    expect(queued.source).toEqual(
+      expect.objectContaining({ uri: expect.stringContaining('archive.org') }),
+    );
+    expect(queued.fallbacks).toHaveLength(2);
+    expect(queued.fallbacks?.map(({ source }) => (source as any).uri)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('assets.adventistconnect.org'),
+        expect.stringContaining('theaudiopower'),
+      ]),
+    );
   });
 });

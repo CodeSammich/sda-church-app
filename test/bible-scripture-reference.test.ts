@@ -47,6 +47,86 @@ describe('Bible scripture references', () => {
     });
   });
 
+  it('treats bare numbers in one-chapter books as verse references', () => {
+    expect(parseScriptureReference('Jude 9')).toEqual({
+      bookId: 'JUD',
+      chapter: 1,
+      verseStart: 9,
+      verseEnd: 9,
+    });
+    expect(parseScriptureReference('猶大書 9–11')).toEqual({
+      bookId: 'JUD',
+      chapter: 1,
+      verseStart: 9,
+      verseEnd: 11,
+    });
+    expect(parseScriptureReference('Philemon 6')).toEqual({
+      bookId: 'PHM',
+      chapter: 1,
+      verseStart: 6,
+      verseEnd: 6,
+    });
+    expect(parseScriptureReference('2 John 4')).toEqual({
+      bookId: '2JN',
+      chapter: 1,
+      verseStart: 4,
+      verseEnd: 4,
+    });
+    expect(parseScriptureReference('Obadiah 12')).toEqual({
+      bookId: 'OBA',
+      chapter: 1,
+      verseStart: 12,
+      verseEnd: 12,
+    });
+    expect(parseScriptureReference('3 John 5')).toEqual({
+      bookId: '3JN',
+      chapter: 1,
+      verseStart: 5,
+      verseEnd: 5,
+    });
+  });
+
+  it('keeps explicit chapter and verse notation authoritative', () => {
+    expect(parseScriptureReference('Jude 1:9')).toEqual({
+      bookId: 'JUD',
+      chapter: 1,
+      verseStart: 9,
+      verseEnd: 9,
+    });
+  });
+
+  it('opens chapter one when only a book name is supplied', () => {
+    expect(parseScriptureReference('Jude')).toEqual({
+      bookId: 'JUD',
+      chapter: 1,
+    });
+    expect(parseScriptureReference('約翰福音')).toEqual({
+      bookId: 'JHN',
+      chapter: 1,
+    });
+  });
+
+  it('uses the first passage in compound or cross-chapter input', () => {
+    expect(parseScriptureReference('Psalms 15:1-16:2')).toEqual({
+      bookId: 'PSA',
+      chapter: 15,
+      verseStart: 1,
+      verseEnd: 1,
+    });
+    expect(parseScriptureReference('John 3:16; Romans 8:1')).toEqual({
+      bookId: 'JHN',
+      chapter: 3,
+      verseStart: 16,
+      verseEnd: 16,
+    });
+    expect(parseScriptureReference('John 3:16, 18, 20')).toEqual({
+      bookId: 'JHN',
+      chapter: 3,
+      verseStart: 16,
+      verseEnd: 16,
+    });
+  });
+
   it('localizes a parsed reference without changing its coordinates', () => {
     const reference = parseScriptureReference('Psalms 15:1-5');
     expect(reference).not.toBeNull();
@@ -79,10 +159,10 @@ describe('Bible scripture references', () => {
     });
   });
 
-  it('rejects unsupported or cross-chapter input before fallback resolution', () => {
-    expect(parseScriptureReference('Psalms 15:1-16:2')).toBeNull();
+  it('rejects unsupported or backwards input before fallback resolution', () => {
     expect(parseScriptureReference('Unknown 1:1')).toBeNull();
     expect(parseScriptureReference('John 3:16-10')).toBeNull();
+    expect(parseScriptureReference('John 3-5')).toBeNull();
   });
 
   it('resolves malformed user input to Genesis 1:1', () => {

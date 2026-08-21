@@ -50,16 +50,33 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('node:fs');
             const title = '[monitor] External dependency health check failed';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            let failureDetails = '- The monitor exited before producing a readable report.';
+            try {
+              const report = JSON.parse(fs.readFileSync('external-dependency-report.json', 'utf8'));
+              const failed = report.checks.filter((check) => check.status === 'failed');
+              if (failed.length) {
+                failureDetails = failed
+                  .map((check) => `- **${check.provider}: ${check.name}** — ${check.error}`)
+                  .join('\n');
+              }
+            } catch (error) {
+              core.warning(`Could not read the dependency report: ${error.message}`);
+            }
             const body = [
               `@${context.actor}`,
               '',
               'The scheduled external dependency monitor failed.',
               '',
+              '### Failed checks',
+              '',
+              failureDetails,
+              '',
               `Run: ${runUrl}`,
               '',
-              'Download the `external-dependency-report` artifact for the failed providers and URLs.',
+              'The complete machine-readable report is attached as the `external-dependency-report` artifact.',
             ].join('\n');
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
@@ -113,6 +130,8 @@ jobs:
               });
             }
 
-      - name: Fail the workflow when a dependency is unhealthy
+      - name: Mark the workflow unhealthy
         if: steps.dependency-check.outcome == 'failure'
-        run: exit 1
+        run: |
+          echo "One or more external dependencies failed. See the job summary and alert issue for provider-level details."
+          exit 1

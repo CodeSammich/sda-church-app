@@ -44,7 +44,7 @@ export const getBibleAudioSourceId = (url: string) => {
 /** Returns the user-facing provider name shown in audio controls. */
 export const getBibleAudioSourceLabel = (url: string) => {
   const host = getBibleAudioSourceId(url);
-  if (host === 'assets.adventistconnect.org') return 'NYCCSDAS.org';
+  if (host === 'assets.adventistconnect.org') return 'NYCCSDA.org';
   if (host === 'theaudiopower.com' || host === 'theaudiopower.org') {
     return 'Audio Power';
   }
@@ -191,7 +191,7 @@ export const buildBibleAudioQueue = ({
     currentChapter,
     limit,
   ).flatMap(({ book, chapter }) => {
-    let queuedUrl: string | undefined;
+    let queuedUrls: string[] = [];
 
     if (supportsAudioPowerCuv(translationId)) {
       const links = getAudioPowerCuvChapterLinks(book.id, chapter);
@@ -199,28 +199,36 @@ export const buildBibleAudioQueue = ({
         ? links[selectedReader]
         : Object.values(links)[0];
       const urls = source ? (Array.isArray(source) ? source : [source]) : [];
-      queuedUrl = prioritizeBibleAudioSource(urls, preferredSourceId)[0];
+      queuedUrls = prioritizeBibleAudioSource(urls, preferredSourceId);
     } else {
-      queuedUrl = selectedAudioUrls
+      queuedUrls = selectedAudioUrls
         .map((url) =>
           retargetHelloAoAudioUrl(url, translationId, book.id, chapter),
         )
-        .find((url): url is string => !!url);
+        .filter((url): url is string => !!url);
     }
 
-    if (!queuedUrl) return [];
-    const title = getBibleAudioMediaTitle(
-      `${book.name} ${chapter}`,
-      translationLabel,
-      queuedUrl,
-    );
+    const tracks = queuedUrls.map((url) => {
+      const title = getBibleAudioMediaTitle(
+        `${book.name} ${chapter}`,
+        translationLabel,
+        url,
+      );
+      return {
+        source: { uri: url, name: title },
+        metadata: { title, artist, albumTitle },
+      };
+    });
+    const [primary, ...fallbacks] = tracks;
+    if (!primary) return [];
+
     return [
       {
         bookId: book.id,
         chapter,
         translationId,
-        source: { uri: queuedUrl, name: title },
-        metadata: { title, artist, albumTitle },
+        ...primary,
+        fallbacks,
       },
     ];
   });

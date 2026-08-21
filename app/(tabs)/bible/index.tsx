@@ -1,5 +1,6 @@
 import { UIStateContext } from '@/components/GlobalHeader';
 import { AppIcon } from '@/components/AppIcon';
+import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -50,6 +51,12 @@ import {
   useBibleAudioPlayer,
   useBibleAudioPlayerStatus,
 } from '@/services/BibleAudioPlayer';
+import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
+import {
+  ANDROID_AUDIO_GUIDANCE_INTERRUPTION_THRESHOLD,
+  getAndroidAppsSettingsIntent,
+  getCurrentAndroidAudioBrowser,
+} from '@/services/AndroidBackgroundAudioGuidance';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -141,6 +148,18 @@ const uiLabels = {
     audioSettings: 'Audio settings',
     audioSource: 'Preferred source',
     automaticFallback: 'If this source is unavailable, the next source is tried automatically.',
+    backgroundPlayback: 'Background playback on Android',
+    backgroundPlaybackHelp: 'Fix interrupted background playback',
+    backgroundAudioTitle: 'Experiencing interrupted audio?',
+    backgroundAudioBody:
+      'Android may pause browser audio after the screen locks. For more reliable playback, allow {browser} to use battery in the background.',
+    backgroundAudioSteps:
+      'Open Android Settings → Apps → {browser} → App battery usage (or Battery) → Allow background usage → Unrestricted. Setting names vary by phone.',
+    backgroundAudioNetworkNote:
+      'Adaptive Connectivity and automatic mobile-network switching do not need to be changed for this fix.',
+    notNow: 'Not now',
+    openBrowserSettings: 'Open Android app settings',
+    settingsFallback: 'If Android does not open the browser settings, follow the steps above.',
     audioUnavailable: 'Audio unavailable for this chapter',
     back10: 'Back 10 seconds',
     forward30: 'Forward 30 seconds',
@@ -190,6 +209,18 @@ const uiLabels = {
     audioSettings: '有聲書設定',
     audioSource: '優先音源',
     automaticFallback: '如果此音源無法使用，將自動嘗試下一個音源。',
+    backgroundPlayback: 'Android 背景播放',
+    backgroundPlaybackHelp: '修正背景播放中斷',
+    backgroundAudioTitle: '有聲聖經播放中斷嗎？',
+    backgroundAudioBody:
+      'Android 可能會在鎖定螢幕後暫停瀏覽器音訊。若要提高播放穩定性，請允許 {browser} 在背景使用電池。',
+    backgroundAudioSteps:
+      '開啟 Android「設定」→「應用程式」→「{browser}」→「應用程式耗電量」（或「電池」）→「允許背景使用」→「不受限制」。不同手機的名稱可能略有不同。',
+    backgroundAudioNetworkNote:
+      '此修正不需要更改「自動調整連線」或自動切換行動網路。',
+    notNow: '稍後',
+    openBrowserSettings: '開啟 Android 應用程式設定',
+    settingsFallback: '如果 Android 沒有開啟瀏覽器設定，請依照上方步驟操作。',
     audioUnavailable: '此章節沒有有聲版本',
     back10: '後退 10 秒',
     forward30: '前進 30 秒',
@@ -239,6 +270,18 @@ const uiLabels = {
     audioSettings: '有声书设置',
     audioSource: '优先音源',
     automaticFallback: '如果此音源无法使用，将自动尝试下一个音源。',
+    backgroundPlayback: 'Android 后台播放',
+    backgroundPlaybackHelp: '修复后台播放中断',
+    backgroundAudioTitle: '有声圣经播放中断吗？',
+    backgroundAudioBody:
+      'Android 可能会在锁定屏幕后暂停浏览器音频。若要提高播放稳定性，请允许 {browser} 在后台使用电池。',
+    backgroundAudioSteps:
+      '打开 Android“设置”→“应用”→“{browser}”→“应用耗电量”（或“电池”）→“允许后台使用”→“不受限制”。不同手机的名称可能略有不同。',
+    backgroundAudioNetworkNote:
+      '此修复不需要更改“自适应连接”或自动切换移动网络。',
+    notNow: '稍后',
+    openBrowserSettings: '打开 Android 应用设置',
+    settingsFallback: '如果 Android 没有打开浏览器设置，请按照上方步骤操作。',
     audioUnavailable: '此章节没有有声版本',
     back10: '后退 10 秒',
     forward30: '前进 30 秒',
@@ -288,6 +331,18 @@ const uiLabels = {
     audioSettings: 'Ajustes de audio',
     audioSource: 'Fuente preferida',
     automaticFallback: 'Si esta fuente no está disponible, se probará la siguiente automáticamente.',
+    backgroundPlayback: 'Reproducción en segundo plano en Android',
+    backgroundPlaybackHelp: 'Corregir interrupciones en segundo plano',
+    backgroundAudioTitle: '¿Se interrumpe el audio?',
+    backgroundAudioBody:
+      'Android puede pausar el audio del navegador al bloquear la pantalla. Para una reproducción más estable, permite que {browser} use la batería en segundo plano.',
+    backgroundAudioSteps:
+      'Abre Ajustes de Android → Aplicaciones → {browser} → Uso de batería de la aplicación (o Batería) → Permitir uso en segundo plano → Sin restricciones. Los nombres varían según el teléfono.',
+    backgroundAudioNetworkNote:
+      'No es necesario cambiar la Conectividad adaptativa ni el cambio automático a la red móvil.',
+    notNow: 'Ahora no',
+    openBrowserSettings: 'Abrir ajustes de aplicaciones',
+    settingsFallback: 'Si Android no abre los ajustes del navegador, sigue los pasos anteriores.',
     audioUnavailable: 'Audio no disponible para este capítulo',
     back10: 'Retroceder 10 segundos',
     forward30: 'Avanzar 30 segundos',
@@ -410,6 +465,8 @@ export default function BibleScreen() {
     Record<string, string>
   >({});
   const [loading, setLoading] = useState(false);
+  const [chapterReloadToken, setChapterReloadToken] = useState(0);
+  const chapterLoadAttemptRef = useRef(0);
   const [savedVerses, setSavedVerses] = useState<SavedVerseReference[]>([]);
   const [savedVerseDisplays, setSavedVerseDisplays] = useState<SavedVerseDisplay[]>([]);
   const [savedVersesLoading, setSavedVersesLoading] = useState(false);
@@ -671,6 +728,8 @@ export default function BibleScreen() {
     useState<SleepTimerSetting>(null);
   const [sleepTimerVisible, setSleepTimerVisible] = useState(false);
   const [audioSettingsVisible, setAudioSettingsVisible] = useState(false);
+  const [backgroundAudioGuidanceVisible, setBackgroundAudioGuidanceVisible] =
+    useState(false);
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
   const audioPlayer = useBibleAudioPlayer(null, { updateInterval: 250 });
   const audioStatus = useBibleAudioPlayerStatus(audioPlayer);
@@ -683,7 +742,13 @@ export default function BibleScreen() {
   const audioScrubberWidth = useRef(1);
   const sleepTimerSettingRef = useRef<SleepTimerSetting>(null);
   const sleepTimerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const backgroundAudioGuidanceCheckedRef = useRef(false);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const androidAudioBrowser = useMemo(
+    () => getCurrentAndroidAudioBrowser(),
+    [],
+  );
+  const androidAudioBrowserName = androidAudioBrowser?.name || null;
   const chapterAudioLinks = chapterData?.thisChapterAudioLinks;
   // Ordering the URLs is metadata-only. The selected recording is still sent
   // to the playback engine only after the user presses Play.
@@ -800,7 +865,9 @@ export default function BibleScreen() {
       currentPlayerStatus.isLoaded && currentPlayerStatus.duration > 0;
     setIsAudioLoading(
       loadedAudioUrlRef.current !== null &&
-        (!isCurrentSourceReady || audioStatus.isBuffering),
+        (!isCurrentSourceReady ||
+          audioStatus.isBuffering ||
+          !!audioStatus.loadError),
     );
     setIsPlaying(audioStatus.playing);
     setAudioDurationMillis(audioStatus.duration * 1000);
@@ -954,6 +1021,27 @@ export default function BibleScreen() {
     }
   };
 
+  const offerBackgroundAudioGuidance = () => {
+    if (
+      !androidAudioBrowserName ||
+      backgroundAudioGuidanceCheckedRef.current
+    ) {
+      return;
+    }
+    backgroundAudioGuidanceCheckedRef.current = true;
+    setBackgroundAudioGuidanceVisible(true);
+  };
+
+  const openBackgroundAudioGuidance = () => {
+    setAudioSettingsVisible(false);
+    setBackgroundAudioGuidanceVisible(true);
+  };
+
+  const openAndroidBackgroundSettings = () => {
+    if (!androidAudioBrowser || typeof window === 'undefined') return;
+    window.location.assign(getAndroidAppsSettingsIntent());
+  };
+
   const toggleAudio = async () => {
     if (isPlaying) {
       clearAudioFallbackTimeout();
@@ -964,6 +1052,15 @@ export default function BibleScreen() {
 
     await startAudio();
   };
+
+  useEffect(() => {
+    if (
+      (audioStatus.interruptionCount || 0) >=
+      ANDROID_AUDIO_GUIDANCE_INTERRUPTION_THRESHOLD
+    ) {
+      offerBackgroundAudioGuidance();
+    }
+  }, [audioStatus.interruptionCount, androidAudioBrowserName]);
 
   const unloadAudio = () => {
     clearAudioFallbackTimeout();
@@ -1217,25 +1314,81 @@ export default function BibleScreen() {
     );
 
     if (book && isBookValidForTranslation) {
+      const attempt = ++chapterLoadAttemptRef.current;
+      let cancelled = false;
       const loadChapter = async () => {
         setLoading(true);
         setChapterData(null); // Clear old content immediately
         try {
-          const data = await BibleService.fetchChapter(
+          const data = await loadBibleChapterWithRetry(
             supportedTranslation.id,
             book.id,
             chapterNum,
           );
-          setChapterData(data);
+          if (!cancelled && attempt === chapterLoadAttemptRef.current) {
+            setChapterData(data);
+          }
         } catch (e) {
-          console.error('Error loading chapter:', e);
+          if (!cancelled && attempt === chapterLoadAttemptRef.current) {
+            console.error('Error loading chapter:', e);
+          }
         } finally {
-          setLoading(false);
+          if (!cancelled && attempt === chapterLoadAttemptRef.current) {
+            setLoading(false);
+          }
         }
       };
-      loadChapter();
+      void loadChapter();
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [supportedTranslation.id, book?.id, chapterNum, books, isPersistenceLoaded]);
+  }, [
+    supportedTranslation.id,
+    book?.id,
+    chapterNum,
+    books,
+    isPersistenceLoaded,
+    chapterReloadToken,
+  ]);
+
+  // Android can suspend an in-flight media or scripture request while the PWA
+  // is locked. Retry the selected chapter and an unready audio element as soon
+  // as the document is usable again, without requiring prev/next navigation.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const recoverInterruptedLoads = () => {
+      if (document.visibilityState === 'hidden') return;
+      const chapterMatchesSelection =
+        chapterData?.translation.id === supportedTranslation.id &&
+        chapterData?.book.id === book?.id &&
+        chapterData?.chapter.number === chapterNum;
+
+      if (loading || !chapterMatchesSelection) {
+        setChapterReloadToken((current) => current + 1);
+      }
+      if (isAudioLoading && !audioStatus.playing) {
+        audioPlayer.play();
+      }
+    };
+
+    document.addEventListener('visibilitychange', recoverInterruptedLoads);
+    window.addEventListener('online', recoverInterruptedLoads);
+    return () => {
+      document.removeEventListener('visibilitychange', recoverInterruptedLoads);
+      window.removeEventListener('online', recoverInterruptedLoads);
+    };
+  }, [
+    loading,
+    chapterData,
+    supportedTranslation.id,
+    book?.id,
+    chapterNum,
+    isAudioLoading,
+    audioStatus.playing,
+    audioPlayer,
+  ]);
 
   // Resolve saved references only while the saved-verses view is open. References
   // are translation-independent; chapter requests are deduplicated and cached per
@@ -1446,28 +1599,35 @@ export default function BibleScreen() {
    * Navigates to the next or previous chapter.
    * Automatically handles transitioning between books (e.g., Matt 28 -> Mark 1).
    */
-  const navigateToChapter = (direction: 'prev' | 'next') => {
-    if (!book || books.length === 0) return;
+  const navigateToChapter = (
+    direction: 'prev' | 'next',
+    sourceBookId = book?.id,
+    sourceChapter = chapterNum,
+  ) => {
+    if (!sourceBookId || books.length === 0) return;
     const currentBookIdx = books.findIndex(
-      (b: BibleService.TranslationBook) => b.id === book.id,
+      (candidate: BibleService.TranslationBook) => candidate.id === sourceBookId,
     );
     if (currentBookIdx === -1) return;
+    const sourceBook = books[currentBookIdx];
 
     if (isPlaying) {
       setShouldAutoPlay(true);
     }
 
     if (direction === 'next') {
-      if (chapterNum < book.numberOfChapters) {
-        setChapterNum(chapterNum + 1);
+      if (sourceChapter < sourceBook.numberOfChapters) {
+        setBook(sourceBook);
+        setChapterNum(sourceChapter + 1);
       } else if (currentBookIdx < books.length - 1) {
         const nextBook = books[currentBookIdx + 1];
         setBook(nextBook);
         setChapterNum(1);
       }
     } else {
-      if (chapterNum > 1) {
-        setChapterNum(chapterNum - 1);
+      if (sourceChapter > 1) {
+        setBook(sourceBook);
+        setChapterNum(sourceChapter - 1);
       } else if (currentBookIdx > 0) {
         const prevBook = books[currentBookIdx - 1];
         setBook(prevBook);
@@ -1475,6 +1635,34 @@ export default function BibleScreen() {
       }
     }
   };
+
+  useEffect(() => {
+    audioPlayer.setRemoteChapterHandlers?.({
+      onNext: (activeChapter) => {
+        setShouldAutoPlay(true);
+        navigateToChapter(
+          'next',
+          activeChapter?.bookId,
+          activeChapter?.chapter,
+        );
+      },
+      onPrevious: (activeChapter) => {
+        setShouldAutoPlay(true);
+        navigateToChapter(
+          'prev',
+          activeChapter?.bookId,
+          activeChapter?.chapter,
+        );
+      },
+    });
+    return () => audioPlayer.setRemoteChapterHandlers?.();
+  }, [
+    audioPlayer,
+    isPlaying,
+    book?.id,
+    chapterNum,
+    books,
+  ]);
 
   /** Hides the surrounding app chrome while keeping Bible controls visible. */
   const handleScroll = (event: any) => {
@@ -2748,7 +2936,126 @@ export default function BibleScreen() {
                   )}
                 </>
               )}
+              {androidAudioBrowserName && (
+                <>
+                  <Divider style={styles.audioSettingsDivider} />
+                  <Text
+                    variant="titleMedium"
+                    style={[
+                      styles.audioSettingsSectionTitle,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {labels.backgroundPlayback}
+                  </Text>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={labels.backgroundPlaybackHelp}
+                    onPress={openBackgroundAudioGuidance}
+                    style={styles.pressRow}
+                  >
+                    <AppIcon
+                      pointerEvents="none"
+                      name="battery-lock-open"
+                      size={24}
+                      textScale={bibleUiTextScale}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                    <Text
+                      style={[
+                        styles.pressRowText,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {labels.backgroundPlaybackHelp}
+                    </Text>
+                    <AppIcon
+                      pointerEvents="none"
+                      name="chevron-right"
+                      size={24}
+                      textScale={bibleUiTextScale}
+                      color={theme.colors.onSurfaceVariant}
+                    />
+                  </TouchableOpacity>
+                </>
+              )}
             </ScrollView>
+          </View>
+        </Modal>
+      </Portal>
+
+      <Portal>
+        <Modal
+          visible={backgroundAudioGuidanceVisible}
+          onDismiss={() => setBackgroundAudioGuidanceVisible(false)}
+          contentContainerStyle={[
+            ReaderStyles.modalContent,
+            { backgroundColor: theme.colors.background },
+          ]}
+        >
+          <View style={ReaderStyles.modalInner}>
+            <Text
+              variant="titleLarge"
+              style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
+            >
+              {labels.backgroundAudioTitle}
+            </Text>
+            <Divider />
+            <ScrollView contentContainerStyle={styles.backgroundAudioGuidanceBody}>
+              <Text
+                variant="bodyLarge"
+                style={{ color: theme.colors.onSurface }}
+              >
+                {labels.backgroundAudioBody.replace(
+                  '{browser}',
+                  androidAudioBrowserName || 'browser',
+                )}
+              </Text>
+              <Text
+                variant="bodyMedium"
+                style={[
+                  styles.backgroundAudioGuidanceSteps,
+                  {
+                    color: theme.colors.onPrimaryContainer,
+                    backgroundColor: theme.colors.primaryContainer,
+                  },
+                ]}
+              >
+                {labels.backgroundAudioSteps.replace(
+                  '{browser}',
+                  androidAudioBrowserName || 'browser',
+                )}
+              </Text>
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant }}
+              >
+                {labels.backgroundAudioNetworkNote}
+              </Text>
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant }}
+              >
+                {labels.settingsFallback}
+              </Text>
+            </ScrollView>
+            <View style={styles.backgroundAudioGuidanceActions}>
+              <Button
+                mode="outlined"
+                onPress={() => setBackgroundAudioGuidanceVisible(false)}
+                style={styles.backgroundAudioGuidanceAction}
+              >
+                {labels.notNow}
+              </Button>
+              <Button
+                mode="contained"
+                icon="open-in-new"
+                onPress={openAndroidBackgroundSettings}
+                style={styles.backgroundAudioGuidanceAction}
+              >
+                {labels.openBrowserSettings}
+              </Button>
+            </View>
           </View>
         </Modal>
       </Portal>
@@ -3462,6 +3769,29 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
     paddingBottom: 14,
     fontSize: scaleTypographyMetric(13, uiTextScale),
     lineHeight: scaleTypographyMetric(18, uiTextScale),
+  },
+  backgroundAudioGuidanceBody: {
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+  },
+  backgroundAudioGuidanceSteps: {
+    borderRadius: 12,
+    fontSize: scaleTypographyMetric(15, uiTextScale),
+    lineHeight: scaleTypographyMetric(22, uiTextScale),
+    padding: 14,
+  },
+  backgroundAudioGuidanceActions: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backgroundAudioGuidanceAction: {
+    flexGrow: 1,
   },
   savedVerseRow: {
     width: '100%',
