@@ -8,23 +8,31 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
 import {
   getHymnalSearchItems,
+  getHymnalSearchResults,
   getHymnalSearchSubtitle,
-  isHymnalSearchMatch,
   type HymnalSearchItem,
 } from '@/features/hymnal/HymnalSearch';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
 import { router, useSegments } from 'expo-router';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Animated,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Appbar, List, Portal, Searchbar, Text } from 'react-native-paper';
+import { Appbar, List, Searchbar, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const HERO_HEADER_ROUTES = new Set([
@@ -43,19 +51,23 @@ const HERO_HEADER_ROUTES = new Set([
 const READER_SEARCH_LABELS = {
   en: {
     searchBiblePlaceholder: 'Search this chapter...',
-    searchHymnalPlaceholder: 'Search hymnal...',
+    searchCurrentHymnalPlaceholder: 'Search this hymnal...',
+    searchAllHymnalsPlaceholder: 'Search all hymnals...',
   },
   zh: {
     searchBiblePlaceholder: '搜尋本章...',
-    searchHymnalPlaceholder: '搜尋詩歌...',
+    searchCurrentHymnalPlaceholder: '搜尋這本詩歌...',
+    searchAllHymnalsPlaceholder: '搜尋所有詩歌本...',
   },
   'zh-cn': {
     searchBiblePlaceholder: '搜索本章...',
-    searchHymnalPlaceholder: '搜索诗歌...',
+    searchCurrentHymnalPlaceholder: '搜索当前诗歌本...',
+    searchAllHymnalsPlaceholder: '搜索所有诗歌本...',
   },
   es: {
     searchBiblePlaceholder: 'Buscar en este capítulo...',
-    searchHymnalPlaceholder: 'Buscar himnos...',
+    searchCurrentHymnalPlaceholder: 'Buscar en este himnario...',
+    searchAllHymnalsPlaceholder: 'Buscar en todos los himnarios...',
   },
 } as const;
 
@@ -70,6 +82,16 @@ export const UIStateContext = createContext<{
   setMenuVisible: () => {},
 });
 
+type BibleVerseSearchResult = {
+  icon: 'format-quote-close';
+  number: number;
+  subtitle: string;
+  text: string;
+  title: string;
+};
+type HymnalHeaderSearchResult = HymnalSearchItem & { subtitle: string };
+type HeaderSearchResult = BibleVerseSearchResult | HymnalHeaderSearchResult;
+
 export const GlobalHeader = (props: any) => {
   const { language } = useContext(LanguageContext);
   const segments = useSegments();
@@ -83,6 +105,7 @@ export const GlobalHeader = (props: any) => {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isSearching, setIsSearching] = useState(false);
   const [isBibleSearchExpanded, setIsBibleSearchExpanded] = useState(false);
   const searchExpansion = useRef(new Animated.Value(0)).current;
@@ -142,6 +165,8 @@ export const GlobalHeader = (props: any) => {
               ? '/home/chinese-707-standard-hymnal'
               : undefined;
   const isHymnalPage = Boolean(activeHymnalRoute);
+  const isHymnalSelectionPage = routeSegments.includes('hymnal-selection');
+  const isHymnalSearchPage = isHymnalPage || isHymnalSelectionPage;
   const isSubPage = !isPillarRoot;
 
   const title = props.options?.title;
@@ -192,26 +217,40 @@ export const GlobalHeader = (props: any) => {
     READER_SEARCH_LABELS[language as keyof typeof READER_SEARCH_LABELS] ||
     READER_SEARCH_LABELS.en;
 
-  // Search only the content belonging to the active reader. Other screens do
-  // not expose search or build a result set.
-  const searchableItems = getHymnalSearchItems(language).filter(
-    (item) =>
-      isHymnalPage &&
-      item.isHymn &&
-      item.route.split('?')[0] === activeHymnalRoute,
+  // Hymnal readers search the complete catalog so a title in either language
+  // can lead directly to the matching edition. Other screens build no results.
+  const searchableItems = useMemo(
+    () => {
+      if (!isHymnalSearchPage) return [];
+      const items = getHymnalSearchItems(language);
+      return isHymnalPage
+        ? items.filter(
+            (item) => item.route.split('?')[0] === activeHymnalRoute,
+          )
+        : items;
+    },
+    [activeHymnalRoute, isHymnalPage, isHymnalSearchPage, language],
   );
 
-  const filtered = searchableItems.filter((item) =>
-    isHymnalSearchMatch(item, searchQuery),
+  const filtered = useMemo(
+    () =>
+      getHymnalSearchResults(
+        searchableItems,
+        deferredSearchQuery,
+        activeHymnalRoute,
+      ),
+    [activeHymnalRoute, deferredSearchQuery, searchableItems],
   );
 
-  const hymnalResults = filtered.map((item) => ({
+  const hymnalResults: HymnalHeaderSearchResult[] = filtered.map((item) => ({
     ...item,
-    subtitle: getHymnalSearchSubtitle(language),
+    subtitle: isHymnalSelectionPage
+      ? `${getHymnalSearchSubtitle(language)} · ${item.hymnalLabel}`
+      : getHymnalSearchSubtitle(language),
   }));
 
   const normalizedBibleQuery = searchQuery.trim().toLocaleLowerCase();
-  const bibleResults = normalizedBibleQuery
+  const bibleResults: BibleVerseSearchResult[] = normalizedBibleQuery
     ? bibleChapterVerses
         .filter((verse) =>
           verse.text.toLocaleLowerCase().includes(normalizedBibleQuery),
@@ -223,7 +262,9 @@ export const GlobalHeader = (props: any) => {
         }))
     : [];
 
-  const results = isBiblePage ? bibleResults : hymnalResults;
+  const results: HeaderSearchResult[] = isBiblePage
+    ? bibleResults
+    : hymnalResults;
 
   const handleSelectResult = (item: HymnalSearchItem) => {
     const q = searchQuery.toLowerCase();
@@ -297,7 +338,9 @@ export const GlobalHeader = (props: any) => {
       placeholder={
         isBiblePage
           ? searchLabels.searchBiblePlaceholder
-          : searchLabels.searchHymnalPlaceholder
+          : isHymnalSelectionPage
+            ? searchLabels.searchAllHymnalsPlaceholder
+            : searchLabels.searchCurrentHymnalPlaceholder
       }
       onChangeText={setSearchQuery}
       value={searchQuery}
@@ -416,7 +459,7 @@ export const GlobalHeader = (props: any) => {
             />
           </Pressable>
         )}
-        {!isBiblePage && !isHymnalPage ? (
+        {!isBiblePage && !isHymnalSearchPage ? (
           <View style={{ flex: 1, justifyContent: 'center' }}>
             {isSubPage && title && (
               <Animated.View
@@ -571,57 +614,60 @@ export const GlobalHeader = (props: any) => {
             ) : (
               renderSearchbar()
             )}
-            {isSearching && searchQuery.length > 0 && results.length > 0 && (
-              <Portal>
-                <ScrollView
-                  style={[
-                    styles.resultsOverlay,
-                    {
-                      top: Math.max(
-                        headerHeight,
-                        insets.top + appBarHeight,
-                      ) + 8,
-                      backgroundColor: theme.colors.background,
-                    },
-                  ]}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {results.map((item, index) => (
-                    <List.Item
-                      key={isBiblePage ? `verse-${(item as any).number}` : index}
-                      title={item.title}
-                      titleNumberOfLines={0}
-                      titleStyle={{
-                        fontSize: scaleTypographyMetric(16, textScale),
-                        lineHeight: scaleTypographyMetric(22, textScale),
-                        fontWeight: '700',
-                      }}
-                      description={item.subtitle}
-                      descriptionNumberOfLines={0}
-                      descriptionStyle={{
-                        fontSize: scaleTypographyMetric(14, textScale),
-                        lineHeight: scaleTypographyMetric(20, textScale),
-                      }}
-                      left={(p) => (
-                        <List.Icon
-                          {...p}
-                          icon={item.icon}
-                          color={theme.colors.tertiary}
-                        />
-                      )}
-                      onPress={() =>
-                        isBiblePage
-                          ? handleSelectBibleVerse((item as any).number)
-                          : handleSelectResult(item as HymnalSearchItem)
-                      }
-                    />
-                  ))}
-                </ScrollView>
-              </Portal>
-            )}
           </View>
         )}
       </Appbar.Header>
+      {isSearching && searchQuery.length > 0 && results.length > 0 && (
+        <FlatList
+          data={results}
+          initialNumToRender={8}
+          keyboardShouldPersistTaps="handled"
+          keyExtractor={(item, index) =>
+            isBiblePage
+              ? `verse-${(item as any).number}`
+              : `${(item as HymnalSearchItem).hymnalId}-${(item as HymnalSearchItem).hymnNumber}-${index}`
+          }
+          maxToRenderPerBatch={8}
+          renderItem={({ item }) => (
+            <List.Item
+              title={item.title}
+              titleNumberOfLines={0}
+              titleStyle={{
+                fontSize: scaleTypographyMetric(16, textScale),
+                lineHeight: scaleTypographyMetric(22, textScale),
+                fontWeight: '700',
+              }}
+              description={item.subtitle}
+              descriptionNumberOfLines={0}
+              descriptionStyle={{
+                fontSize: scaleTypographyMetric(14, textScale),
+                lineHeight: scaleTypographyMetric(20, textScale),
+              }}
+              left={(p) => (
+                <List.Icon
+                  {...p}
+                  icon={item.icon}
+                  color={theme.colors.tertiary}
+                />
+              )}
+              onPress={() =>
+                isBiblePage
+                  ? handleSelectBibleVerse((item as any).number)
+                  : handleSelectResult(item as HymnalSearchItem)
+              }
+            />
+          )}
+          style={[
+            styles.resultsOverlay,
+            {
+              top:
+                Math.max(headerHeight, insets.top + appBarHeight) + 8,
+              backgroundColor: theme.colors.background,
+            },
+          ]}
+          windowSize={5}
+        />
+      )}
     </Animated.View>
   );
 };

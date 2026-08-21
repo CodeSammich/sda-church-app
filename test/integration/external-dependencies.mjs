@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, writeFile } from 'node:fs/promises';
 
 const REPORT_PATH = process.env.EXTERNAL_CHECK_REPORT || 'external-dependency-report.json';
 const TIMEOUT_MS = Number(process.env.EXTERNAL_CHECK_TIMEOUT_MS || 20_000);
@@ -46,7 +46,12 @@ const request = async (url, options = {}) => {
       return response;
     } catch (error) {
       clearTimeout(timeout);
-      lastError = error;
+      const reason = error instanceof Error ? error.message : String(error);
+      const timedOut = error instanceof Error && error.name === 'AbortError';
+      lastError = new Error(
+        `${url} ${timedOut ? `timed out after ${TIMEOUT_MS}ms` : `failed: ${reason}`} (attempt ${attempt + 1}/${RETRIES + 1})`,
+        error instanceof Error ? { cause: error } : undefined,
+      );
       if (attempt < RETRIES) {
         await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)));
         continue;
@@ -281,4 +286,29 @@ const report = {
 };
 await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
 console.log(`\n${report.summary.passed}/${report.summary.total} checks passed. Report: ${REPORT_PATH}`);
-if (failed.length) process.exitCode = 1;
+if (failed.length) {
+  console.error(`\n${failed.length} external dependency check${failed.length === 1 ? '' : 's'} failed:`);
+  for (const { provider, name, error } of failed) {
+    console.error(`- ${provider}: ${name} — ${error}`);
+  }
+  process.exitCode = 1;
+}
+
+if (process.env.GITHUB_STEP_SUMMARY) {
+  const escapeCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', '<br>');
+  const lines = [
+    '## External dependency monitor',
+    '',
+    `**${report.summary.passed}/${report.summary.total} checks passed; ${report.summary.failed} failed.**`,
+  ];
+  if (failed.length) {
+    lines.push(
+      '',
+      '| Provider | Check | Error |',
+      '| --- | --- | --- |',
+      ...failed.map(({ provider, name, error }) => `| ${escapeCell(provider)} | ${escapeCell(name)} | ${escapeCell(error)} |`),
+    );
+  }
+  lines.push('', `Full JSON report: \`${REPORT_PATH}\``);
+  await appendFile(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+}

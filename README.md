@@ -134,7 +134,7 @@ privacy/media settings may hide the player on the lock screen even while audio a
 notification-shade controls continue to work. iOS may show the audio host (for example,
 `helloao.org`) as a system-controlled origin even when Media Session metadata supplies the
 chapter, translation, and provider title. The church-hosted Audio Power mirror is labeled
-`NYCCSDAS.org`.
+`NYCCSDA.org`.
 
 Before the improved Pixel test, Android's **Show media on lock screen** setting was toggled
 off and back on, then left in its original state. That may have reset cached system/Chrome

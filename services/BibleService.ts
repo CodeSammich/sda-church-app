@@ -345,6 +345,9 @@ export const DEFAULT_SCRIPTURE_REFERENCE: ParsedScriptureReference = Object.free
   verseEnd: 1,
 });
 
+/** Books where a bare number conventionally identifies a verse, not a chapter. */
+const SINGLE_CHAPTER_BOOK_IDS = new Set(['OBA', 'PHM', '2JN', '3JN', 'JUD']);
+
 const normalizeBookName = (name: string) =>
   name
     .normalize('NFD')
@@ -375,9 +378,10 @@ const BOOK_ALIAS_TO_ID = Object.entries(BIBLE_BOOK_NAMES).reduce<Record<string, 
 );
 
 /**
- * Parses one same-chapter scripture reference into a canonical USFM book ID,
- * chapter, and optional verse range. Book names may be entered in any app
- * language; common colon and dash variants are accepted.
+ * Parses the first usable passage into a canonical USFM book ID, chapter, and
+ * optional verse range. Book names may be entered in any app language; common
+ * colon and dash variants are accepted. For a one-chapter book, a shorthand
+ * such as "Jude 9" means Jude 1:9.
  */
 export const parseScriptureReference = (
   ref?: string,
@@ -385,29 +389,72 @@ export const parseScriptureReference = (
   if (!ref) return null;
 
   const withoutTranslation = ref.trim().replace(/\s*\([^)]*\)\s*$/, '');
-  const match = withoutTranslation.match(
-    /^(.+?)\s*(\d+)\s*(?:[:：]\s*(\d+)(?:\s*[-–—]\s*(\d+))?)?$/u,
+  // Bulletin entries occasionally contain alternatives or non-contiguous
+  // selections. The reader opens the first passage and leaves the remainder as
+  // display-only text rather than falling all the way back to Genesis 1:1.
+  const firstSelection = withoutTranslation.split(/[;；,，\n]/u, 1)[0].trim();
+  const crossChapterStart = firstSelection.match(
+    /^(.+?\s*\d+\s*[:：]\s*\d+)\s*[-–—]\s*\d+\s*[:：]\s*\d+/u,
+  );
+  const candidate = (crossChapterStart?.[1] || firstSelection).trim();
+
+  const explicitVerse = candidate.match(
+    /^(.+?)\s*(\d+)\s*[:：]\s*(\d+)(?:\s*[-–—]\s*(\d+))?$/u,
   );
 
-  if (!match) return null;
+  if (explicitVerse) {
+    const bookId = BOOK_ALIAS_TO_ID[normalizeBookName(explicitVerse[1])];
+    const chapter = parseInt(explicitVerse[2], 10);
+    const verseStart = parseInt(explicitVerse[3], 10);
+    const verseEnd = explicitVerse[4]
+      ? parseInt(explicitVerse[4], 10)
+      : verseStart;
 
-  const name = normalizeBookName(match[1]);
-  const chapter = parseInt(match[2], 10);
-  const verseStart = match[3] ? parseInt(match[3], 10) : undefined;
-  const verseEnd = match[4] ? parseInt(match[4], 10) : verseStart;
+    if (
+      !bookId ||
+      chapter < 1 ||
+      verseStart < 1 ||
+      verseEnd < verseStart
+    ) {
+      return null;
+    }
 
-  const bookId = BOOK_ALIAS_TO_ID[name];
-  if (
-    !bookId ||
-    !Number.isInteger(chapter) ||
-    chapter < 1 ||
-    (verseStart !== undefined && verseStart < 1) ||
-    (verseEnd !== undefined && (verseEnd < 1 || verseEnd < verseStart!))
-  ) {
+    return { bookId, chapter, verseStart, verseEnd };
+  }
+
+  const bareBookId = BOOK_ALIAS_TO_ID[normalizeBookName(candidate)];
+  if (bareBookId) return { bookId: bareBookId, chapter: 1 };
+
+  const chapterOrSingleChapterVerse = candidate.match(
+    /^(.+?)\s*(\d+)(?:\s*[-–—]\s*(\d+))?$/u,
+  );
+
+  if (!chapterOrSingleChapterVerse) return null;
+
+  const bookId = BOOK_ALIAS_TO_ID[
+    normalizeBookName(chapterOrSingleChapterVerse[1])
+  ];
+  const number = parseInt(chapterOrSingleChapterVerse[2], 10);
+  const rangeEnd = chapterOrSingleChapterVerse[3]
+    ? parseInt(chapterOrSingleChapterVerse[3], 10)
+    : undefined;
+
+  if (!bookId || number < 1 || (rangeEnd !== undefined && rangeEnd < number)) {
     return null;
   }
 
-  return { bookId, chapter, verseStart, verseEnd };
+  if (SINGLE_CHAPTER_BOOK_IDS.has(bookId)) {
+    return {
+      bookId,
+      chapter: 1,
+      verseStart: number,
+      verseEnd: rangeEnd || number,
+    };
+  }
+
+  if (rangeEnd !== undefined) return null;
+
+  return { bookId, chapter: number };
 };
 
 export const resolveScriptureReference = (reference?: string) =>
@@ -864,7 +911,13 @@ const stripFetchBibleNoteReference = (
 async function fetchTranslatedBibleBook(
   resourceId: string,
   book: string,
+  signal?: AbortSignal,
 ): Promise<FetchBiblePlainTextBook> {
+  const abortError = () => {
+    const error = new Error('Aborted');
+    error.name = 'AbortError';
+    return error;
+  };
   const normalizedBook = book.toLowerCase();
   const cacheKey = `${resourceId}:${normalizedBook}`;
   let request = translatedBibleBookCache.get(cacheKey);
@@ -881,10 +934,36 @@ async function fetchTranslatedBibleBook(
       return (await response.json()) as FetchBiblePlainTextBook;
     });
     translatedBibleBookCache.set(cacheKey, request);
-    request.catch(() => translatedBibleBookCache.delete(cacheKey));
+    request.catch(() => {
+      if (translatedBibleBookCache.get(cacheKey) === request) {
+        translatedBibleBookCache.delete(cacheKey);
+      }
+    });
   }
 
-  return request;
+  if (!signal) return request;
+  if (signal.aborted) {
+    if (translatedBibleBookCache.get(cacheKey) === request) {
+      translatedBibleBookCache.delete(cacheKey);
+    }
+    throw abortError();
+  }
+
+  // Do not attach one consumer's AbortSignal to a shared cached fetch. Stop
+  // waiting and evict a stuck promise so the retry can create a fresh request;
+  // other consumers may still receive the original response if it recovers.
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      if (translatedBibleBookCache.get(cacheKey) === request) {
+        translatedBibleBookCache.delete(cacheKey);
+      }
+      reject(abortError());
+    };
+    signal.addEventListener('abort', abort, { once: true });
+    request.then(resolve, reject).finally(() => {
+      signal.removeEventListener('abort', abort);
+    });
+  });
 }
 
 async function fetchChapterFromFetchBible(
@@ -892,9 +971,10 @@ async function fetchChapterFromFetchBible(
   edition: FetchBibleTranslatedEdition,
   bookId: string,
   chapterNumber: number,
+  signal?: AbortSignal,
 ): Promise<TranslationBookChapter> {
   const [sourceBook, books] = await Promise.all([
-    fetchTranslatedBibleBook(edition.resourceId, bookId),
+    fetchTranslatedBibleBook(edition.resourceId, bookId, signal),
     fetchBooks(translationId),
   ]);
   const book = books.find((candidate) => candidate.id === bookId.toUpperCase());
@@ -1004,6 +1084,7 @@ export async function fetchChapter(
   translation: string,
   book: string,
   chapter: number,
+  options: { signal?: AbortSignal } = {},
 ): Promise<TranslationBookChapter> {
   try {
     const fetchBibleEdition = FETCH_BIBLE_TRANSLATED_EDITIONS[translation];
@@ -1013,10 +1094,13 @@ export async function fetchChapter(
         fetchBibleEdition,
         book,
         chapter,
+        options.signal,
       );
     }
 
-    const res = await fetch(`${API_BASE}/${translation}/${book}/${chapter}.json`);
+    const res = await fetch(`${API_BASE}/${translation}/${book}/${chapter}.json`, {
+      signal: options.signal,
+    });
     if (!res.ok) {
       throw new Error(`Failed to fetch chapter: ${res.status}`);
     }

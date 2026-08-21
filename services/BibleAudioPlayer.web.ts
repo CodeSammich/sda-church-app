@@ -4,16 +4,21 @@ import type { AudioMetadata, AudioSource } from 'expo-audio';
 
 import type {
   BibleAudioQueueItem,
+  BibleAudioQueueSource,
   BibleAudioStatus,
 } from './BibleAudioPlayer.types';
 
 type Listener = () => void;
+
+const ANDROID_PLAYBACK_WATCHDOG_MS = 2_000;
 
 const EMPTY_STATUS: BibleAudioStatus = {
   currentTime: 0,
   didJustFinish: false,
   duration: 0,
   isBuffering: false,
+  interruptionCount: 0,
+  loadError: false,
   playing: false,
 };
 
@@ -43,6 +48,22 @@ class BibleAudioPlayerWeb {
   private metadata: AudioMetadata | undefined;
   private lockScreenActive = false;
   private queue: BibleAudioQueueItem[] = [];
+  private activeSources: BibleAudioQueueSource[] = [];
+  private activeSourceIndex = 0;
+  private standbyItemKey: string | null = null;
+  private standbySourceIndex = 0;
+  private standbyLoadFailed = false;
+  private standbyReleasePending = false;
+  private continuePlaybackRequested = false;
+  private playbackWatchdogTimeout: ReturnType<typeof setTimeout> | null = null;
+  private playbackResumePending = false;
+  private interruptionCount = 0;
+  private remoteChapterHandlers:
+    | {
+        onNext?: (activeChapter?: BibleAudioStatus['activeChapter']) => void;
+        onPrevious?: (activeChapter?: BibleAudioStatus['activeChapter']) => void;
+      }
+    | undefined;
 
   get currentStatus() {
     const media = this.media;
@@ -77,6 +98,12 @@ class BibleAudioPlayerWeb {
     this.media = null;
     this.standbyMedia = null;
     this.queue = [];
+    this.activeSources = [];
+    this.interruptionCount = 0;
+    this.remoteChapterHandlers = undefined;
+    this.standbyReleasePending = false;
+    this.resetStandbyState();
+    this.stopPlaybackRecovery();
     this.status = EMPTY_STATUS;
     this.listeners.clear();
   }
@@ -95,9 +122,18 @@ class BibleAudioPlayerWeb {
     if (!media) return;
     const uri = getSourceUri(source);
     this.queue = [];
+    this.standbyReleasePending = false;
+    this.continuePlaybackRequested = false;
+    this.stopPlaybackRecovery();
+    this.activeSourceIndex = 0;
+    this.activeSources = uri
+      ? [{ source, metadata: this.metadata || {} }]
+      : [];
+    this.resetStandbyState();
     if (this.standbyMedia) this.unloadMedia(this.standbyMedia);
     media.pause();
     this.status = EMPTY_STATUS;
+    this.interruptionCount = 0;
     if (uri) {
       media.src = uri;
     } else {
@@ -109,23 +145,51 @@ class BibleAudioPlayerWeb {
 
   setQueue(items: BibleAudioQueueItem[]) {
     this.queue = items.slice();
-    this.prepareStandby();
+    if (!this.standbyReleasePending) this.prepareStandby();
+  }
+
+  setRemoteChapterHandlers(
+    handlers?: {
+      onNext?: (activeChapter?: BibleAudioStatus['activeChapter']) => void;
+      onPrevious?: (activeChapter?: BibleAudioStatus['activeChapter']) => void;
+    },
+  ) {
+    this.remoteChapterHandlers = handlers;
   }
 
   play() {
     const media = this.media;
     if (!media) return;
+    this.continuePlaybackRequested = true;
 
     // A pending play() can resolve after an iOS PWA resumes and the elements
     // have swapped roles. Keep the standby silent before starting the owner.
     this.standbyMedia?.pause();
+    // Android may discard or fail a background preload while leaving the
+    // element at HAVE_NOTHING. A later Play action must restart the request
+    // instead of repeatedly calling play() on the same unusable element.
+    if (
+      this.activeSources.length > 0 &&
+      (media.error || media.readyState === HTMLMediaElement.HAVE_NOTHING)
+    ) {
+      if (
+        media.error &&
+        this.activeSourceIndex === this.activeSources.length - 1
+      ) {
+        this.activeSourceIndex = 0;
+      }
+      this.loadActiveSource();
+    }
     void media.play().catch((error) => {
       console.error('Bible audio playback was rejected by the browser:', error);
       this.handleError();
     });
+    this.schedulePlaybackWatchdog();
   }
 
   pause() {
+    this.continuePlaybackRequested = false;
+    this.stopPlaybackRecovery();
     this.media?.pause();
     this.standbyMedia?.pause();
   }
@@ -144,6 +208,9 @@ class BibleAudioPlayerWeb {
   setActiveForLockScreen(active: boolean, metadata?: AudioMetadata) {
     this.lockScreenActive = active;
     this.metadata = metadata;
+    if (metadata && this.activeSources[this.activeSourceIndex]) {
+      this.activeSources[this.activeSourceIndex].metadata = metadata;
+    }
     if (!('mediaSession' in navigator)) return;
     if (!active) {
       this.clearLockScreenControls();
@@ -164,6 +231,14 @@ class BibleAudioPlayerWeb {
     navigator.mediaSession.setActionHandler('seekto', (details) => {
       if (details.seekTime !== undefined) void this.seekTo(details.seekTime);
     });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      if (!this.playQueuedChapter()) {
+        this.remoteChapterHandlers?.onNext?.(this.status.activeChapter);
+      }
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      this.remoteChapterHandlers?.onPrevious?.(this.status.activeChapter);
+    });
   }
 
   clearLockScreenControls() {
@@ -177,6 +252,8 @@ class BibleAudioPlayerWeb {
       'seekbackward',
       'seekforward',
       'seekto',
+      'nexttrack',
+      'previoustrack',
     ] as MediaSessionAction[]) {
       try {
         navigator.mediaSession.setActionHandler(action, null);
@@ -206,6 +283,7 @@ class BibleAudioPlayerWeb {
     media.addEventListener('play', () => {
       if (media !== this.media) media.pause();
     });
+    media.addEventListener('error', (event) => this.handleStandbyError(event));
     document.body.appendChild(media);
     return media;
   }
@@ -246,13 +324,24 @@ class BibleAudioPlayerWeb {
     const standby = this.standbyMedia;
     const next = this.queue[0];
     if (!standby) return;
-    const uri = next ? getSourceUri(next.source) : null;
+    const nextKey = next
+      ? `${next.translationId}:${next.bookId}:${next.chapter}`
+      : null;
+    if (nextKey !== this.standbyItemKey) {
+      this.standbyItemKey = nextKey;
+      this.standbySourceIndex = 0;
+      this.standbyLoadFailed = false;
+    }
+
+    const sources = next ? this.getQueueSources(next) : [];
+    const uri = getSourceUri(sources[this.standbySourceIndex]?.source);
     if (!uri) {
       standby.removeAttribute('src');
       standby.load();
       return;
     }
-    if (standby.src !== uri) {
+    if (standby.src !== uri || this.standbyLoadFailed) {
+      this.standbyLoadFailed = false;
       standby.src = uri;
       standby.load();
     }
@@ -264,16 +353,51 @@ class BibleAudioPlayerWeb {
     const nextMedia = this.standbyMedia;
     if (!next || !previousMedia || !nextMedia) return false;
 
+    // Chrome on Android can briefly start and then pause a different audio
+    // element when a locked PWA advances its playlist. Keep the element that
+    // received the original user gesture as the media-session owner there;
+    // the standby request still warms the browser cache for the next URL.
+    if (this.shouldReuseActiveMediaForQueue()) {
+      this.activeSources = this.getQueueSources(next);
+      this.activeSourceIndex = this.standbyLoadFailed
+        ? 0
+        : Math.min(this.standbySourceIndex, this.activeSources.length - 1);
+      this.metadata = this.activeSources[this.activeSourceIndex]?.metadata;
+      // Keep the partially downloaded standby request alive until the active
+      // element has enough data to play. Releasing it here can discard the
+      // only buffered bytes Chrome retained while the PWA was locked.
+      this.standbyReleasePending = true;
+      this.status = {
+        ...EMPTY_STATUS,
+        interruptionCount: this.interruptionCount,
+        activeChapter: {
+          bookId: next.bookId,
+          chapter: next.chapter,
+          translationId: next.translationId,
+        },
+        isBuffering: true,
+      };
+      this.loadActiveSource();
+      this.play();
+      return true;
+    }
+
     this.detachActiveMediaListeners(previousMedia);
     this.unloadMedia(previousMedia);
 
     this.media = nextMedia;
     this.standbyMedia = previousMedia;
     this.attachActiveMediaListeners(nextMedia);
-    this.metadata = next.metadata;
+    this.activeSources = this.getQueueSources(next);
+    this.activeSourceIndex = this.standbyLoadFailed
+      ? 0
+      : Math.min(this.standbySourceIndex, this.activeSources.length - 1);
+    this.metadata = this.activeSources[this.activeSourceIndex]?.metadata;
+    this.resetStandbyState();
     this.applyMetadata();
     this.status = {
       ...EMPTY_STATUS,
+      interruptionCount: this.interruptionCount,
       activeChapter: {
         bookId: next.bookId,
         chapter: next.chapter,
@@ -285,6 +409,161 @@ class BibleAudioPlayerWeb {
     this.prepareStandby();
     this.play();
     return true;
+  }
+
+  private shouldReuseActiveMediaForQueue() {
+    return (
+      typeof navigator !== 'undefined' &&
+      /Android/i.test(navigator.userAgent || '')
+    );
+  }
+
+  private stopPlaybackRecovery() {
+    if (this.playbackWatchdogTimeout) {
+      clearTimeout(this.playbackWatchdogTimeout);
+      this.playbackWatchdogTimeout = null;
+    }
+    this.playbackResumePending = false;
+  }
+
+  private schedulePlaybackWatchdog() {
+    if (
+      !this.shouldReuseActiveMediaForQueue() ||
+      !this.continuePlaybackRequested ||
+      this.playbackWatchdogTimeout
+    ) {
+      return;
+    }
+
+    this.playbackWatchdogTimeout = setTimeout(() => {
+      this.playbackWatchdogTimeout = null;
+      this.recoverDesiredPlayback();
+      this.schedulePlaybackWatchdog();
+    }, ANDROID_PLAYBACK_WATCHDOG_MS);
+  }
+
+  private recoverDesiredPlayback() {
+    const media = this.media;
+    if (
+      !media ||
+      !this.continuePlaybackRequested ||
+      media.ended ||
+      !media.paused ||
+      this.playbackResumePending
+    ) {
+      return;
+    }
+
+    this.playbackResumePending = true;
+    void Promise.resolve().then(() => {
+      this.playbackResumePending = false;
+      if (
+        media !== this.media ||
+        !this.continuePlaybackRequested ||
+        media.ended ||
+        !media.paused
+      ) {
+        return;
+      }
+      if (media.error && this.activeSources.length > 0) {
+        this.loadActiveSource();
+        return;
+      }
+      // A progressive MP3 download with insufficient buffered data is a wait,
+      // not a pause to fight. `canplay`/`playing` will retry after Chrome has
+      // retained enough future audio.
+      if (media.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+        return;
+      }
+      void media.play().catch((error) => {
+        console.warn(
+          'Android paused Bible audio while continuous playback was requested; resume was rejected:',
+          error,
+        );
+        this.handleError();
+      });
+    });
+  }
+
+  private releaseStandbyAfterActiveReady() {
+    if (
+      !this.standbyReleasePending ||
+      !this.media ||
+      this.media.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+    ) {
+      return;
+    }
+    this.standbyReleasePending = false;
+    if (this.standbyMedia) this.unloadMedia(this.standbyMedia);
+    this.resetStandbyState();
+    this.prepareStandby();
+  }
+
+  private recoverUnexpectedPause() {
+    if (
+      !this.shouldReuseActiveMediaForQueue() ||
+      !this.continuePlaybackRequested
+    ) {
+      return;
+    }
+    this.recoverDesiredPlayback();
+    this.schedulePlaybackWatchdog();
+  }
+
+  private getQueueSources(item: BibleAudioQueueItem): BibleAudioQueueSource[] {
+    return [
+      { source: item.source, metadata: item.metadata },
+      ...(item.fallbacks || []),
+    ];
+  }
+
+  private resetStandbyState() {
+    this.standbyItemKey = null;
+    this.standbySourceIndex = 0;
+    this.standbyLoadFailed = false;
+  }
+
+  private loadActiveSource() {
+    const media = this.media;
+    const track = this.activeSources[this.activeSourceIndex];
+    const uri = track ? getSourceUri(track.source) : null;
+    if (!media || !uri) return false;
+    media.src = uri;
+    media.load();
+    this.metadata = track.metadata;
+    this.applyMetadata();
+    this.updateStatus({ isBuffering: true, loadError: false, playing: false });
+    return true;
+  }
+
+  private tryNextActiveSource() {
+    if (this.activeSourceIndex + 1 >= this.activeSources.length) return false;
+    this.activeSourceIndex += 1;
+    if (!this.loadActiveSource()) return false;
+    const media = this.media;
+    if (media) {
+      void media.play().catch((error) => {
+        console.error('Bible audio fallback was rejected by the browser:', error);
+        this.handleError();
+      });
+    }
+    return true;
+  }
+
+  private handleStandbyError(event: Event) {
+    if (event.currentTarget !== this.standbyMedia) return;
+    const next = this.queue[0];
+    if (!next) return;
+    const sources = this.getQueueSources(next);
+    if (this.standbySourceIndex + 1 < sources.length) {
+      this.standbySourceIndex += 1;
+      this.standbyLoadFailed = true;
+      this.prepareStandby();
+      return;
+    }
+    // Keep the item queued. Promotion or a later Play action will retry the
+    // preferred request after Android restores network access.
+    this.standbyLoadFailed = true;
   }
 
   private updateStatus(next: Partial<BibleAudioStatus>) {
@@ -330,25 +609,45 @@ class BibleAudioPlayerWeb {
 
   private handleLoading = () => this.updateStatus({ isBuffering: true });
   private handleReady = () => {
-    this.updateStatus({ isBuffering: false });
+    this.updateStatus({ isBuffering: false, loadError: false });
     // Safari may replace custom metadata with the media URL's origin when the
     // newly loaded resource becomes ready, so publish it again afterward.
     this.applyMetadata();
     this.updateMediaPosition();
+    this.releaseStandbyAfterActiveReady();
+    this.recoverDesiredPlayback();
   };
   private handlePlaying = () => {
-    this.updateStatus({ didJustFinish: false, isBuffering: false, playing: true });
+    this.updateStatus({
+      didJustFinish: false,
+      isBuffering: false,
+      loadError: false,
+      playing: true,
+    });
     // iOS can perform another native Now Playing update at playback start.
     this.applyMetadata();
     if (this.lockScreenActive && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
     }
+    this.releaseStandbyAfterActiveReady();
+    this.schedulePlaybackWatchdog();
   };
   private handlePause = () => {
-    this.updateStatus({ isBuffering: false, playing: false });
+    const wasUnexpectedInterruption =
+      this.shouldReuseActiveMediaForQueue() &&
+      this.continuePlaybackRequested &&
+      this.status.playing &&
+      !this.media?.ended;
+    if (wasUnexpectedInterruption) this.interruptionCount += 1;
+    this.updateStatus({
+      interruptionCount: this.interruptionCount,
+      isBuffering: false,
+      playing: false,
+    });
     if (this.lockScreenActive && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
     }
+    this.recoverUnexpectedPause();
   };
   private handleTimeUpdate = () => {
     this.updateStatus({});
@@ -356,10 +655,19 @@ class BibleAudioPlayerWeb {
   };
   private handleEnded = () => {
     if (this.playQueuedChapter()) return;
+    this.continuePlaybackRequested = false;
+    this.stopPlaybackRecovery();
     this.updateStatus({ didJustFinish: true, isBuffering: false, playing: false });
   };
-  private handleError = () =>
-    this.updateStatus({ didJustFinish: false, isBuffering: false, playing: false });
+  private handleError = () => {
+    if (this.media?.error && this.tryNextActiveSource()) return;
+    this.updateStatus({
+      didJustFinish: false,
+      isBuffering: false,
+      loadError: true,
+      playing: false,
+    });
+  };
 }
 
 export const useBibleAudioPlayer = () => {

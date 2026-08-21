@@ -1,7 +1,7 @@
-import { WrappingButton as Button } from '@/components/WrappingButton';
 import { GridMenuCard } from '@/components/GridMenuCard';
+import { WrappingButton as Button } from '@/components/WrappingButton';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
-import { BULLETIN_HYMNAL_DISPLAY_NAMES } from '@/features/hymnal/BulletinHymnalConfig';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openInMaps,
@@ -11,6 +11,19 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
+import {
+  createScriptureReferenceRequest,
+  formatScriptureReference,
+  getScriptureReaderParams,
+  parseScriptureReference,
+  resolveScriptureReference,
+} from '@/services/BibleService';
+import {
+  BulletinHymnDestination,
+  BulletinHymnPresentation,
+  QUEENS_FIXED_HYMNS,
+  resolveBulletinHymnPresentation,
+} from '@/services/BulletinHymnalService';
 import {
   Bulletin,
   BulletinLocation,
@@ -23,26 +36,19 @@ import {
   isBulletinLocationEmpty,
   setRefreshAvailableAt as persistRefreshAvailableAt,
 } from '@/services/BulletinService';
-import {
-  BulletinHymnDestination,
-  BulletinHymnPresentation,
-  QUEENS_FIXED_HYMNS,
-  resolveBulletinHymnPresentation,
-} from '@/services/BulletinHymnalService';
-import {
-  createScriptureReferenceRequest,
-  formatScriptureReference,
-  getScriptureReaderParams,
-  parseScriptureReference,
-  resolveScriptureReference,
-} from '@/services/BibleService';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Card, IconButton, Text } from 'react-native-paper';
+import {
+  ActivityIndicator,
+  Card,
+  Divider,
+  IconButton,
+  Text,
+} from 'react-native-paper';
 
 const LABELS = {
   en: {
@@ -58,7 +64,6 @@ const LABELS = {
     nameWithheld: 'Name withheld',
     choir: 'Choir',
     worshipProgram: 'Worship Program',
-    hymnalNote: 'English hymn numbers use the {hymnal}.',
     serviceRoster: 'Service Roster',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
@@ -80,11 +85,16 @@ const LABELS = {
     },
     program: {
       doxology: 'Doxology',
+      invocation: 'Invocation',
       hymnOfPraise: 'Hymn of Praise',
       sermonTitle: 'Sermon Title',
       bibleVerses: 'Bible Verses',
       pastoralPrayer: 'Pastoral Prayer',
+      titheOffering: 'Tithe & Offering',
+      specialMusic: 'Special Music',
+      sermon: 'Sermon',
       hymnOfResponse: 'Hymn of Response',
+      benediction: 'Benediction',
       postlude: 'Postlude',
     },
     roles: {
@@ -116,7 +126,6 @@ const LABELS = {
     nameWithheld: '姓名保留',
     choir: '詩班',
     worshipProgram: '崇拜程序',
-    hymnalNote: '中文詩歌編號採用 {hymnal} 首詩歌本。',
     serviceRoster: '服事安排',
     queens: '皇后區',
     brooklyn: '布魯克林',
@@ -138,11 +147,16 @@ const LABELS = {
     },
     program: {
       doxology: '讚美',
+      invocation: '獻禱',
       hymnOfPraise: '讚美詩',
       sermonTitle: '講道題目',
       bibleVerses: '本週經文',
       pastoralPrayer: '牧養禱告',
+      titheOffering: '十一與奉獻',
+      specialMusic: '特別音樂',
+      sermon: '證道',
       hymnOfResponse: '回應詩',
+      benediction: '祝福',
       postlude: '後奏曲',
     },
     roles: {
@@ -174,7 +188,6 @@ const LABELS = {
     nameWithheld: '姓名保留',
     choir: '诗班',
     worshipProgram: '崇拜程序',
-    hymnalNote: '中文诗歌编号采用 {hymnal} 首诗歌本。',
     serviceRoster: '服事安排',
     queens: '皇后区',
     brooklyn: '布鲁克林',
@@ -196,11 +209,16 @@ const LABELS = {
     },
     program: {
       doxology: '颂美',
+      invocation: '献祷',
       hymnOfPraise: '赞美诗',
       sermonTitle: '讲道题目',
       bibleVerses: '本周经文',
       pastoralPrayer: '牧养祷告',
+      titheOffering: '十一与奉献',
+      specialMusic: '特别音乐',
+      sermon: '证道',
       hymnOfResponse: '回应诗',
+      benediction: '祝福',
       postlude: '后奏曲',
     },
     roles: {
@@ -232,7 +250,6 @@ const LABELS = {
     nameWithheld: 'Nombre reservado',
     choir: 'Coro',
     worshipProgram: 'Programa de Adoración',
-    hymnalNote: 'Los números de los himnos en inglés usan el {hymnal}.',
     serviceRoster: 'Asignaciones de Servicio',
     queens: 'Queens',
     brooklyn: 'Brooklyn',
@@ -254,11 +271,16 @@ const LABELS = {
     },
     program: {
       doxology: 'Doxología',
+      invocation: 'Invocación',
       hymnOfPraise: 'Himno de Alabanza',
       sermonTitle: 'Título del Sermón',
       bibleVerses: 'Versículos Bíblicos',
       pastoralPrayer: 'Oración Pastoral',
+      titheOffering: 'Diezmos y Ofrendas',
+      specialMusic: 'Música Especial',
+      sermon: 'Sermón',
       hymnOfResponse: 'Himno de Respuesta',
+      benediction: 'Bendición',
       postlude: 'Postludio',
     },
     roles: {
@@ -280,6 +302,7 @@ const LABELS = {
 } as const;
 
 const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
+const BULLETIN_LOCATION_STORAGE_KEY = 'preferred-bulletin-location';
 
 type Labels = (typeof LABELS)['en'];
 type WeekState = {
@@ -288,12 +311,17 @@ type WeekState = {
   error?: string;
   loading: boolean;
 };
+type BulletinLocationTab = 'queens' | 'brooklyn';
 
 type DataRowProps = {
   label: string;
   value?: string;
   emptyText: string;
   last?: boolean;
+  assignment?: {
+    label: string;
+    value: string;
+  };
   action?: {
     accessibilityLabel: string;
     label: string;
@@ -301,26 +329,39 @@ type DataRowProps = {
   };
 };
 
-const DataRow = ({ label, value, emptyText, last, action }: DataRowProps) => (
+const DataRow = ({
+  label,
+  value,
+  emptyText,
+  last,
+  assignment,
+  action,
+}: DataRowProps) => (
   <View style={[styles.dataRow, !last && styles.dataRowBorder]}>
-    <Text variant="labelLarge">{label}</Text>
-    {action ? (
-      <View style={styles.programActionRow}>
-        <Text variant="bodyMedium" style={styles.programActionValue}>
-          {value || emptyText}
+    <Text variant="labelLarge" style={styles.dataRowLabel}>
+      {label}
+    </Text>
+    <Text variant="bodyMedium">{value || emptyText}</Text>
+    {assignment && (
+      <View style={styles.programAssignment}>
+        <Text variant="labelMedium" style={styles.programAssignmentLabel}>
+          {assignment.label}
         </Text>
+        <Text variant="bodyMedium">{assignment.value}</Text>
+      </View>
+    )}
+    {action && (
+      <View style={styles.programActionLine}>
         <Button
           accessibilityLabel={action.accessibilityLabel}
           mode="contained"
-          compact
           icon="music-note"
           onPress={action.onPress}
+          style={styles.programActionButton}
         >
           {action.label}
         </Button>
       </View>
-    ) : (
-      <Text variant="bodyMedium">{value || emptyText}</Text>
     )}
   </View>
 );
@@ -340,6 +381,23 @@ const getRosterValue = (value: string | undefined, labels: Labels) => {
   return value;
 };
 
+const getProgramAssignment = (
+  assignmentLabel: string,
+  assignment: string | undefined,
+  labels: Labels,
+) => ({
+  label: assignmentLabel,
+  value: hasBulletinValue(assignment)
+    ? getRosterValue(assignment, labels)
+    : labels.notAssigned,
+});
+
+const getCompactQuarterLabel = (quarter: string | undefined) => {
+  if (!hasBulletinValue(quarter)) return '';
+  const quarterNumber = quarter?.match(/[1-4]/)?.[0];
+  return quarterNumber ? `Q${quarterNumber}` : quarter!.trim();
+};
+
 export default function WeeklyBulletinScreen() {
   const { language } = useContext(LanguageContext);
   const labels = (LABELS[language as keyof typeof LABELS] || LABELS.en) as Labels;
@@ -353,10 +411,40 @@ export default function WeeklyBulletinScreen() {
     weekDates.map((date) => ({ date, loading: false })),
   );
   const [selectedWeek, setSelectedWeek] = useState('0');
+  const [selectedLocation, setSelectedLocation] =
+    useState<BulletinLocationTab>('queens');
   const loadingWeeksRef = useRef(new Set<string>());
   const refreshAvailableAtRef = useRef<[number, number]>([0, 0]);
   const [refreshAvailableAt, setRefreshAvailableAt] = useState<[number, number]>([0, 0]);
   const [cooldownClock, setCooldownClock] = useState(() => Date.now());
+
+  useEffect(() => {
+    let active = true;
+    void AsyncStorage.getItem(BULLETIN_LOCATION_STORAGE_KEY)
+      .then((storedLocation) => {
+        if (
+          active &&
+          (storedLocation === 'queens' || storedLocation === 'brooklyn')
+        ) {
+          setSelectedLocation(storedLocation);
+        }
+      })
+      .catch((error) => {
+        console.warn('Could not restore the preferred bulletin location:', error);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const selectLocation = (location: BulletinLocationTab) => {
+    setSelectedLocation(location);
+    void AsyncStorage.setItem(BULLETIN_LOCATION_STORAGE_KEY, location).catch(
+      (error) => {
+        console.warn('Could not save the preferred bulletin location:', error);
+      },
+    );
+  };
 
   const syncWeekDates = useCallback(() => {
     const nextDates = getUpcomingSabbathDates();
@@ -541,9 +629,7 @@ export default function WeeklyBulletinScreen() {
       pathname: destination.route,
       params: {
         backTo: '/home/bulletin',
-        ...(destination.hymnNumber
-          ? { hymnNum: destination.hymnNumber.toString() }
-          : {}),
+        ...(destination.hymnNumber ? { hymnNum: destination.hymnNumber.toString() } : {}),
       },
     } as any);
   };
@@ -555,22 +641,20 @@ export default function WeeklyBulletinScreen() {
     if (!destination) return undefined;
 
     return {
-      accessibilityLabel: labels.openHymnInHymnal.replace(
-        '{hymn}',
-        displayText,
-      ),
+      accessibilityLabel: labels.openHymnInHymnal.replace('{hymn}', displayText),
       label: labels.openHymn,
       onPress: () => openBulletinHymn(destination),
     };
   };
 
-  const renderProgram = (location: BulletinLocation, isQueens: boolean) => {
+  const renderProgram = (
+    location: BulletinLocation,
+    isQueens: boolean,
+    tithePurpose: string,
+  ) => {
     // One resolver owns both visible text and routing for every bulletin hymn.
     // See docs/feature_designs/bulletin_hymn_resolution.md before adding fields.
-    const praiseHymn = resolveBulletinHymnPresentation(
-      location.hymnOfPraise,
-      language,
-    );
+    const praiseHymn = resolveBulletinHymnPresentation(location.hymnOfPraise, language);
     const responseHymn = resolveBulletinHymnPresentation(
       location.hymnOfResponse,
       language,
@@ -583,14 +667,8 @@ export default function WeeklyBulletinScreen() {
       displayText: getProgramValue(value, language),
     });
     const doxology = getFixedHymnPresentation(QUEENS_FIXED_HYMNS.doxology);
-    const pastoralPrayer = getFixedHymnPresentation(
-      QUEENS_FIXED_HYMNS.pastoralPrayer,
-    );
+    const pastoralPrayer = getFixedHymnPresentation(QUEENS_FIXED_HYMNS.pastoralPrayer);
     const postlude = getFixedHymnPresentation(QUEENS_FIXED_HYMNS.postlude);
-    const displayedHymnalName =
-      language === 'zh' || language === 'zh-cn'
-        ? BULLETIN_HYMNAL_DISPLAY_NAMES.chinese
-        : BULLETIN_HYMNAL_DISPLAY_NAMES.english;
     const parsedBibleReference = parseScriptureReference(location.bibleVerses);
     const localizedBibleReference = parsedBibleReference
       ? formatScriptureReference(parsedBibleReference, language)
@@ -611,15 +689,20 @@ export default function WeeklyBulletinScreen() {
 
     return (
       <View style={styles.cardSection}>
-        <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
-          {labels.worshipProgram}
-        </Text>
-        <Text
-          variant="bodySmall"
-          style={{ color: theme.colors.onSurfaceVariant }}
+        <View
+          style={[
+            styles.sectionHeading,
+            { borderLeftColor: theme.colors.primary },
+          ]}
         >
-          {labels.hymnalNote.replace('{hymnal}', displayedHymnalName)}
-        </Text>
+          <Text
+            variant="titleMedium"
+            style={{ color: theme.colors.primary, fontWeight: '700' }}
+          >
+            {labels.worshipProgram}
+          </Text>
+        </View>
+        <Divider style={styles.sectionHeadingDivider} />
         {isQueens && (
           <DataRow
             label={labels.program.doxology}
@@ -628,24 +711,28 @@ export default function WeeklyBulletinScreen() {
             action={getBulletinHymnAction(doxology)}
           />
         )}
+        {isQueens && (
+          <DataRow
+            label={labels.program.invocation}
+            value={getRosterValue(location.openingPrayer, labels)}
+            emptyText={labels.notAssigned}
+          />
+        )}
         <DataRow
           label={labels.program.hymnOfPraise}
           value={praiseHymn.displayText}
           emptyText={labels.notAvailable}
           action={getBulletinHymnAction(praiseHymn)}
         />
-        <DataRow
-          label={labels.program.sermonTitle}
-          value={getProgramValue(location.sermonTitle, language)}
-          emptyText={labels.notAvailable}
-        />
         <View style={[styles.dataRow, styles.dataRowBorder]}>
-          <Text variant="labelLarge">{labels.program.bibleVerses}</Text>
-          <View style={styles.scriptureActionRow}>
-            <Text variant="bodyMedium" style={styles.scriptureReference}>
-              {displayedBibleReference || labels.notAvailable}
-            </Text>
-            {openBibleReference && (
+          <Text variant="labelLarge" style={styles.dataRowLabel}>
+            {labels.program.bibleVerses}
+          </Text>
+          <Text variant="bodyMedium">
+            {displayedBibleReference || labels.notAvailable}
+          </Text>
+          {openBibleReference && (
+            <View style={styles.programActionLine}>
               <Button
                 accessibilityLabel={labels.openBibleReference.replace(
                   '{reference}',
@@ -653,23 +740,61 @@ export default function WeeklyBulletinScreen() {
                     displayedBibleReference,
                 )}
                 mode="contained"
-                compact
                 icon="book-open-page-variant"
                 onPress={openBibleReference}
+                style={styles.programActionButton}
               >
                 {labels.readNow}
               </Button>
-            )}
-          </View>
+            </View>
+          )}
         </View>
         {isQueens && (
           <DataRow
             label={labels.program.pastoralPrayer}
             value={pastoralPrayer.displayText}
+            assignment={getProgramAssignment(
+              labels.roles.chairPastoralPrayer,
+              location.chairPastoralPrayer,
+              labels,
+            )}
             emptyText={labels.notAvailable}
             action={getBulletinHymnAction(pastoralPrayer)}
           />
         )}
+        {isQueens && (
+          <DataRow
+            label={labels.program.titheOffering}
+            value={tithePurpose}
+            assignment={getProgramAssignment(
+              labels.roles.offeringPrayer,
+              location.offeringPrayer,
+              labels,
+            )}
+            emptyText={labels.notAvailable}
+          />
+        )}
+        {isQueens && (
+          <DataRow
+            label={labels.program.specialMusic}
+            value={getRosterValue(location.specialMusic, labels)}
+            emptyText={labels.notAssigned}
+          />
+        )}
+        <DataRow
+          label={isQueens ? labels.program.sermon : labels.program.sermonTitle}
+          value={getProgramValue(location.sermonTitle, language)}
+          assignment={
+            isQueens
+              ? getProgramAssignment(
+                  labels.roles.sermon,
+                  location.sermon,
+                  labels,
+                )
+              : undefined
+          }
+          emptyText={labels.notAvailable}
+        />
         <DataRow
           label={labels.program.hymnOfResponse}
           value={responseHymn.displayText}
@@ -677,6 +802,13 @@ export default function WeeklyBulletinScreen() {
           action={getBulletinHymnAction(responseHymn)}
           last={!isQueens}
         />
+        {isQueens && (
+          <DataRow
+            label={labels.program.benediction}
+            value={getRosterValue(location.closingPrayer, labels)}
+            emptyText={labels.notAssigned}
+          />
+        )}
         {isQueens && (
           <DataRow
             label={labels.program.postlude}
@@ -693,18 +825,12 @@ export default function WeeklyBulletinScreen() {
   const renderRoster = (location: BulletinLocation, isQueens: boolean) => {
     const rows: Array<[string, string | undefined]> = isQueens
       ? [
-          [labels.roles.sermon, location.sermon],
           [labels.roles.translation, location.translation],
           [labels.roles.chineseTeacher, location.chineseTeacher],
           [labels.roles.englishTeacher, location.englishTeacher],
           [labels.roles.childrenTeacher, location.childrenTeacher],
-          [labels.roles.chairPastoralPrayer, location.chairPastoralPrayer],
-          [labels.roles.specialMusic, location.specialMusic],
-          [labels.roles.offeringPrayer, location.offeringPrayer],
           [labels.roles.pianist, location.pianist],
           [labels.roles.ssChair, location.ssChair],
-          [labels.roles.openingPrayer, location.openingPrayer],
-          [labels.roles.closingPrayer, location.closingPrayer],
         ]
       : [
           [labels.roles.sermon, location.sermon],
@@ -715,9 +841,20 @@ export default function WeeklyBulletinScreen() {
 
     return (
       <View style={styles.cardSection}>
-        <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
-          {labels.serviceRoster}
-        </Text>
+        <View
+          style={[
+            styles.sectionHeading,
+            { borderLeftColor: theme.colors.primary },
+          ]}
+        >
+          <Text
+            variant="titleMedium"
+            style={{ color: theme.colors.primary, fontWeight: '700' }}
+          >
+            {labels.serviceRoster}
+          </Text>
+        </View>
+        <Divider style={styles.sectionHeadingDivider} />
         {rows.map(([label, value], index) => (
           <DataRow
             key={label}
@@ -732,16 +869,15 @@ export default function WeeklyBulletinScreen() {
   };
 
   const renderLocation = (
-    title: string,
     location: BulletinLocation,
     isQueens: boolean,
     specialRemark: string,
+    tithePurpose: string,
   ) => (
     <Card
       mode="outlined"
       style={[styles.card, { backgroundColor: theme.colors.bulletinSurface }]}
     >
-      <Card.Title title={title} titleVariant="titleLarge" style={styles.locationCardTitle} />
       <Card.Content>
         {hasBulletinValue(specialRemark) && (
           <View
@@ -772,10 +908,16 @@ export default function WeeklyBulletinScreen() {
               { backgroundColor: theme.colors.tertiaryContainer },
             ]}
           >
-            <Text variant="titleMedium" style={{ color: theme.colors.onTertiaryContainer }}>
+            <Text
+              variant="titleMedium"
+              style={{ color: theme.colors.onTertiaryContainer }}
+            >
               {labels.possibleJointService}
             </Text>
-            <Text variant="bodyMedium" style={{ color: theme.colors.onTertiaryContainer }}>
+            <Text
+              variant="bodyMedium"
+              style={{ color: theme.colors.onTertiaryContainer }}
+            >
               {labels.possibleJointServiceHint}
             </Text>
             <Button
@@ -788,48 +930,76 @@ export default function WeeklyBulletinScreen() {
           </View>
         )}
 
-        {renderProgram(location, isQueens)}
+        {renderProgram(location, isQueens, tithePurpose)}
         {renderRoster(location, isQueens)}
       </Card.Content>
     </Card>
   );
 
   const renderBulletin = (bulletin: Bulletin) => {
-    const metadataRows: Array<[string, string]> = [
-      [labels.metadata.quarter, bulletin.quarter],
-      [labels.metadata.tithePurpose, bulletin.tithePurpose],
-      ...(hasBulletinValue(bulletin.pastorTravel)
-        ? [[labels.metadata.pastorTravel, bulletin.pastorTravel] as [string, string]]
-        : []),
-    ];
+    const metadataRows: Array<[string, string]> = hasBulletinValue(
+      bulletin.pastorTravel,
+    )
+      ? [[labels.metadata.pastorTravel, bulletin.pastorTravel]]
+      : [];
+    const isQueens = selectedLocation === 'queens';
+    const location = isQueens ? bulletin.queens : bulletin.brooklyn;
 
     return (
       <>
-        <Card
-          mode="outlined"
-          style={[styles.card, { backgroundColor: theme.colors.bulletinSurface }]}
-        >
-          <Card.Content>
-            {metadataRows.map(([label, value], index) => (
-              <DataRow
-                key={label}
-                label={label}
-                value={value}
-                emptyText={labels.notAvailable}
-                last={index === metadataRows.length - 1}
-              />
-            ))}
-          </Card.Content>
-        </Card>
-        {renderLocation(labels.queens, bulletin.queens, true, bulletin.specialRemark)}
-        {renderLocation(labels.brooklyn, bulletin.brooklyn, false, bulletin.specialRemark)}
+        {metadataRows.length > 0 && (
+          <Card
+            mode="outlined"
+            style={[styles.card, { backgroundColor: theme.colors.bulletinSurface }]}
+          >
+            <Card.Content>
+              {metadataRows.map(([label, value], index) => (
+                <DataRow
+                  key={label}
+                  label={label}
+                  value={value}
+                  emptyText={labels.notAvailable}
+                  last={index === metadataRows.length - 1}
+                />
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+        <View style={styles.locationTabsContainer}>
+          <Button
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isQueens }}
+            mode={isQueens ? 'contained' : 'outlined'}
+            onPress={() => selectLocation('queens')}
+            style={styles.locationTab}
+          >
+            {labels.queens}
+          </Button>
+          <Button
+            accessibilityRole="tab"
+            accessibilityState={{ selected: !isQueens }}
+            mode={!isQueens ? 'contained' : 'outlined'}
+            onPress={() => selectLocation('brooklyn')}
+            style={styles.locationTab}
+          >
+            {labels.brooklyn}
+          </Button>
+        </View>
+        {renderLocation(
+          location,
+          isQueens,
+          bulletin.specialRemark,
+          bulletin.tithePurpose,
+        )}
       </>
     );
   };
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, showTitleChip: showHeaderTitle } as any} />
+      <Stack.Screen
+        options={{ title: labels.title, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={DocumentStyles.container}
         onScroll={handleHeroScroll}
@@ -844,7 +1014,10 @@ export default function WeeklyBulletinScreen() {
           ]}
           resizeMode="cover"
         >
-          <LinearGradient colors={theme.gradients.heroOverlay} style={StyleSheet.absoluteFill} />
+          <LinearGradient
+            colors={theme.gradients.heroOverlay}
+            style={StyleSheet.absoluteFill}
+          />
           <Text
             variant="headlineSmall"
             style={[
@@ -879,79 +1052,97 @@ export default function WeeklyBulletinScreen() {
           </Button>
         </View>
 
-        {weeks[Number(selectedWeek)] && (() => {
-          const index = Number(selectedWeek);
-          const week = weeks[index];
-          const cooldownSeconds = Math.max(
-            0,
-            Math.ceil((refreshAvailableAt[index] - cooldownClock) / 1000),
-          );
-          const cooldownLabel = `${Math.floor(cooldownSeconds / 60)}:${String(
-            cooldownSeconds % 60,
-          ).padStart(2, '0')}`;
-          return (
-          <View key={week.date} style={styles.weekSection}>
-            <View
-              style={[
-                styles.weekHeader,
-                {
-                  borderBottomColor: theme.colors.outlineVariant,
-                },
-              ]}
-            >
-              <Text
-                variant="titleLarge"
-                style={[styles.weekDate, { color: theme.colors.onSurface }]}
-              >
-                {formatDate(week.date)}
-              </Text>
-              <IconButton
-                accessibilityLabel={
-                  cooldownSeconds > 0
-                    ? `${labels.refresh} (${cooldownLabel})`
-                    : labels.refresh
-                }
-                mode="contained"
-                containerColor={theme.colors.primary}
-                iconColor={theme.colors.onPrimary}
-                disabled={week.loading || cooldownSeconds > 0}
-                icon="refresh"
-                onPress={() => void refreshWeek(index)}
-                style={styles.refreshButton}
-              />
-            </View>
+        {weeks[Number(selectedWeek)] &&
+          (() => {
+            const index = Number(selectedWeek);
+            const week = weeks[index];
+            const cooldownSeconds = Math.max(
+              0,
+              Math.ceil((refreshAvailableAt[index] - cooldownClock) / 1000),
+            );
+            const cooldownLabel = `${Math.floor(cooldownSeconds / 60)}:${String(
+              cooldownSeconds % 60,
+            ).padStart(2, '0')}`;
+            return (
+              <View key={week.date} style={styles.weekSection}>
+                <View
+                  style={[
+                    styles.weekHeader,
+                    {
+                      borderBottomColor: theme.colors.outlineVariant,
+                    },
+                  ]}
+                >
+                  <View style={styles.weekDateGroup}>
+                    <Text
+                      variant="titleLarge"
+                      style={[styles.weekDate, { color: theme.colors.onSurface }]}
+                    >
+                      {formatDate(week.date)}
+                    </Text>
+                    {getCompactQuarterLabel(week.bulletin?.quarter) && (
+                      <Text
+                        accessibilityLabel={`${labels.metadata.quarter}: ${week.bulletin?.quarter}`}
+                        variant="labelLarge"
+                        style={[
+                          styles.quarterBadge,
+                          {
+                            backgroundColor: theme.colors.primaryContainer,
+                            color: theme.colors.onPrimaryContainer,
+                          },
+                        ]}
+                      >
+                        {getCompactQuarterLabel(week.bulletin?.quarter)}
+                      </Text>
+                    )}
+                  </View>
+                  <IconButton
+                    accessibilityLabel={
+                      cooldownSeconds > 0
+                        ? `${labels.refresh} (${cooldownLabel})`
+                        : labels.refresh
+                    }
+                    mode="contained"
+                    containerColor={theme.colors.primary}
+                    iconColor={theme.colors.onPrimary}
+                    disabled={week.loading || cooldownSeconds > 0}
+                    icon="refresh"
+                    onPress={() => void refreshWeek(index)}
+                    style={styles.refreshButton}
+                  />
+                </View>
 
-            {week.loading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color={theme.colors.primary} />
-                <Text>{labels.loading}</Text>
+                {week.loading && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                    <Text>{labels.loading}</Text>
+                  </View>
+                )}
+
+                {week.error && (
+                  <Card
+                    mode="outlined"
+                    style={[
+                      styles.card,
+                      { backgroundColor: theme.colors.bulletinSurface },
+                    ]}
+                  >
+                    <Card.Content>
+                      <Text variant="titleMedium">{labels.loadError}</Text>
+                      <Text variant="bodyMedium" style={styles.errorDetail}>
+                        {week.error}
+                      </Text>
+                      <Button mode="outlined" onPress={() => void refreshWeek(index)}>
+                        {labels.retry}
+                      </Button>
+                    </Card.Content>
+                  </Card>
+                )}
+
+                {week.bulletin && renderBulletin(week.bulletin)}
               </View>
-            )}
-
-            {week.error && (
-              <Card
-                mode="outlined"
-                style={[
-                  styles.card,
-                  { backgroundColor: theme.colors.bulletinSurface },
-                ]}
-              >
-                <Card.Content>
-                  <Text variant="titleMedium">{labels.loadError}</Text>
-                  <Text variant="bodyMedium" style={styles.errorDetail}>
-                    {week.error}
-                  </Text>
-                  <Button mode="outlined" onPress={() => void refreshWeek(index)}>
-                    {labels.retry}
-                  </Button>
-                </Card.Content>
-              </Card>
-            )}
-
-            {week.bulletin && renderBulletin(week.bulletin)}
-          </View>
-          );
-        })()}
+            );
+          })()}
 
         <View style={[DocumentStyles.section, styles.planningSection]}>
           <Text
@@ -1009,10 +1200,24 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   weekDate: {
-    flexGrow: 1,
     flexShrink: 1,
     fontWeight: 'bold',
     minWidth: 0,
+  },
+  weekDateGroup: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    flexGrow: 1,
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    gap: 8,
+    minWidth: 0,
+  },
+  quarterBadge: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   refreshButton: {
     flexShrink: 0,
@@ -1021,11 +1226,26 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 16,
   },
-  locationCardTitle: {
-    paddingTop: 8,
+  locationTabsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  locationTab: {
+    flex: 1,
+    minWidth: 0,
   },
   cardSection: {
     marginBottom: 16,
+  },
+  sectionHeading: {
+    borderLeftWidth: 4,
+    paddingLeft: 10,
+    paddingVertical: 2,
+  },
+  sectionHeadingDivider: {
+    marginTop: 10,
+    marginBottom: 2,
   },
   remarkBanner: {
     borderRadius: 12,
@@ -1043,27 +1263,26 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 4,
   },
+  dataRowLabel: {
+    fontWeight: '700',
+  },
   dataRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(128, 128, 128, 0.35)',
   },
-  scriptureActionRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
+  programAssignment: {
+    gap: 2,
+    marginTop: 4,
   },
-  scriptureReference: {
-    flexShrink: 1,
+  programAssignmentLabel: {
+    opacity: 0.72,
   },
-  programActionRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
+  programActionLine: {
+    alignItems: 'stretch',
+    marginTop: 6,
   },
-  programActionValue: {
-    flexShrink: 1,
+  programActionButton: {
+    width: '100%',
   },
   loadingContainer: {
     alignItems: 'center',
