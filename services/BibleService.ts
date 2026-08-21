@@ -943,9 +943,12 @@ const fetchBibleMetadataText = (contents: unknown): string => {
   return '';
 };
 
-const normalizeFetchBibleText = (text: string): string =>
+export const normalizeFetchBibleText = (text: string): string =>
   text
     .replace(/\r\n?/g, '\n')
+    // fetch(bible)'s CUV resources use U+3000 honorific spacing before 神.
+    // Preserve the separation without rendering a full Han-cell-sized hole.
+    .replace(/\u3000/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/^\n+|\n+$/g, '');
 

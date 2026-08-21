@@ -176,6 +176,11 @@ export const GlobalHeader = (props: any) => {
   const onBibleTranslationPress = props.options?.onBibleTranslationPress as
     | (() => void)
     | undefined;
+  const onBibleVerseHelpPress = props.options?.onBibleVerseHelpPress as
+    | (() => void)
+    | undefined;
+  const bibleVerseHelpLabel =
+    (props.options?.bibleVerseHelpLabel as string | undefined) || 'Using verses';
   const onBibleSavedVersesPress = props.options?.onBibleSavedVersesPress as
     | (() => void)
     | undefined;
@@ -554,6 +559,28 @@ export const GlobalHeader = (props: any) => {
                       size={17}
                       textScale={headerTextScale}
                       color={theme.colors.primary}
+                    />
+                  </Pressable>
+                )}
+                {!isBibleSearchExpanded && onBibleVerseHelpPress && (
+                  <Pressable
+                    onPress={onBibleVerseHelpPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={bibleVerseHelpLabel}
+                    style={({ pressed }) => [
+                      styles.collapsedSearchButton,
+                      { height: compactControlHeight, width: compactControlHeight },
+                      {
+                        backgroundColor: theme.colors.surface,
+                        opacity: pressed ? 0.75 : 1,
+                      },
+                    ]}
+                  >
+                    <AppIcon
+                      name="gesture-tap-hold"
+                      size={23}
+                      textScale={headerTextScale}
+                      color={theme.colors.onSurfaceVariant}
                     />
                   </Pressable>
                 )}

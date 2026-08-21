@@ -14,8 +14,12 @@ export interface BiblePinyinToken {
   suffix?: string;
 }
 
-const OPENING_PUNCTUATION = /^[（(【\[“‘《〈「『]$/u;
-const CLOSING_PUNCTUATION = /^[）)】\]”’》〉」』，。！？；：、,.!?;:]$/u;
+// Bind punctuation to a neighbouring ruby token so it cannot wrap on its own
+// or make a pronunciation appear over the wrong visual cell. Unicode's Ps/Pi
+// categories cover Chinese opening quotes and brackets; every other punctuation
+// mark (including 。、，；：！？…— and their ASCII forms) binds backward.
+const OPENING_PUNCTUATION = /^[\p{Ps}\p{Pi}]$/u;
+const PUNCTUATION = /^\p{P}$/u;
 
 // pinyin-pro handles ordinary polyphonic words contextually. Keep this list
 // intentionally small and limited to Bible-specific readings that its general
@@ -58,7 +62,10 @@ export const getBiblePinyinLines = (text: string): BiblePinyinToken[][] =>
     const originalCharacters = Array.from(line);
     const pronunciationData = pinyin(traditionalToSimplified(line), {
       toneType: 'symbol',
-      nonZh: 'consecutive',
+      // Ruby alignment is character-based. Keeping punctuation and whitespace
+      // as separate records prevents an ideographic space from consuming the
+      // following Han character's pronunciation (as in CUVS Genesis 1:1).
+      nonZh: 'spaced',
       type: 'all',
     });
 
@@ -73,7 +80,7 @@ export const getBiblePinyinLines = (text: string): BiblePinyinToken[][] =>
       }
       if (
         !pronunciation?.isZh &&
-        CLOSING_PUNCTUATION.test(character) &&
+        PUNCTUATION.test(character) &&
         tokens.length > 0
       ) {
         const previous = tokens[tokens.length - 1];

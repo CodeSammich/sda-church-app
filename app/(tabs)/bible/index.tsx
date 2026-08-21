@@ -4,7 +4,7 @@ import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { Fragment, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -148,6 +148,7 @@ const uiLabels = {
     nextChapter: 'Next',
     share: 'Share Verse',
     cancel: 'Cancel',
+    closeAction: 'Close',
     shareAction: 'Share',
     saveAction: 'Save',
     removeAction: 'Remove',
@@ -157,6 +158,11 @@ const uiLabels = {
     selectedVersesLabel: (count: number) =>
       count === 1 ? '1 verse selected' : `${count} verses selected`,
     verseInteractionHint: 'Tap a verse for details • Press and hold to select',
+    verseHelpTitle: 'Using verses',
+    verseHelpTap: 'Tap a verse to view details, original text, and footnotes.',
+    verseHelpHold: 'Press and hold a verse to begin selecting multiple verses.',
+    verseHelpSelect:
+      'While selecting, tap more verses to add or remove them. Then save or share from the toolbar.',
     audioPlayer: 'Bible audio',
     audio: 'Audio',
     narrator: 'Narrator',
@@ -221,6 +227,7 @@ const uiLabels = {
     nextChapter: '下一章',
     share: '分享經文',
     cancel: '取消',
+    closeAction: '關閉',
     shareAction: '分享',
     saveAction: '儲存',
     removeAction: '移除',
@@ -229,6 +236,10 @@ const uiLabels = {
     noSavedVerses: '您儲存的經文會顯示在這裡。',
     selectedVersesLabel: (count: number) => `已選取 ${count} 節經文`,
     verseInteractionHint: '點按經文查看詳情 • 長按以選取',
+    verseHelpTitle: '經文操作',
+    verseHelpTap: '點按經文可查看詳情、原文和腳注。',
+    verseHelpHold: '長按一節經文可開始選取多節經文。',
+    verseHelpSelect: '選取時，點按其他經文可加入或移除，然後從工具列儲存或分享。',
     audioPlayer: '聖經有聲書',
     audio: '有聲書',
     narrator: '朗讀者',
@@ -293,6 +304,7 @@ const uiLabels = {
     nextChapter: '下一章',
     share: '分享经文',
     cancel: '取消',
+    closeAction: '关闭',
     shareAction: '分享',
     saveAction: '保存',
     removeAction: '移除',
@@ -301,6 +313,10 @@ const uiLabels = {
     noSavedVerses: '您保存的经文会显示在这里。',
     selectedVersesLabel: (count: number) => `已选择 ${count} 节经文`,
     verseInteractionHint: '点击经文查看详情 • 长按以选择',
+    verseHelpTitle: '经文操作',
+    verseHelpTap: '点击经文可查看详情、原文和脚注。',
+    verseHelpHold: '长按一节经文可开始选择多节经文。',
+    verseHelpSelect: '选择时，点击其他经文可加入或移除，然后从工具栏保存或分享。',
     audioPlayer: '圣经有声书',
     audio: '有声书',
     narrator: '朗读者',
@@ -365,6 +381,7 @@ const uiLabels = {
     nextChapter: 'Siguiente',
     share: 'Compartir Versículo',
     cancel: 'Cancelar',
+    closeAction: 'Cerrar',
     shareAction: 'Compartir',
     saveAction: 'Guardar',
     removeAction: 'Quitar',
@@ -377,6 +394,13 @@ const uiLabels = {
         : `${count} versículos seleccionados`,
     verseInteractionHint:
       'Toca un versículo para ver detalles • Mantén pulsado para seleccionar',
+    verseHelpTitle: 'Uso de los versículos',
+    verseHelpTap:
+      'Toca un versículo para ver detalles, el texto original y las notas.',
+    verseHelpHold:
+      'Mantén pulsado un versículo para comenzar a seleccionar varios.',
+    verseHelpSelect:
+      'Durante la selección, toca otros versículos para añadirlos o quitarlos. Después, guárdalos o compártelos desde la barra.',
     audioPlayer: 'Audio de la Biblia',
     audio: 'Audio',
     narrator: 'Narrador',
@@ -574,7 +598,14 @@ export default function BibleScreen() {
 
   // Modal states
   const [modalType, setModalType] = useState<
-    'translation' | 'book' | 'chapter' | 'verse' | 'verse-detail' | 'saved' | null
+    | 'translation'
+    | 'book'
+    | 'chapter'
+    | 'verse'
+    | 'verse-detail'
+    | 'verse-help'
+    | 'saved'
+    | null
   >(null);
   const [selectedVerseNum, setSelectedVerseNum] = useState<number | null>(null);
   const [translationSelectionRole, setTranslationSelectionRole] = useState<
@@ -2213,8 +2244,6 @@ export default function BibleScreen() {
     () => indexChapterVerses(supportingChapterData),
     [supportingChapterData],
   );
-  const firstVerseContentIndex =
-    chapterData?.chapter.content.findIndex((item) => item.type === 'verse') ?? -1;
 
   const renderStructuralText = (
     content: BibleService.ChapterHeading | BibleService.ChapterHebrewSubtitle,
@@ -2266,10 +2295,10 @@ export default function BibleScreen() {
               isChineseBibleTranslation(supportingTranslation.id) ? (
                 <PinyinRubyText
                   bold
-                  numberColor={theme.colors.secondary}
+                  numberColor={theme.colors.onBackground}
                   pinyinColor={theme.colors.tertiary}
                   text={supportingText}
-                  textColor={theme.colors.secondary}
+                  textColor={theme.colors.onBackground}
                   textScale={textScale}
                   variant="supporting"
                 />
@@ -2277,7 +2306,7 @@ export default function BibleScreen() {
                 <Text
                   style={[
                     ReaderStyles.supportingHeading,
-                    { color: theme.colors.secondary },
+                    { color: theme.colors.onBackground },
                   ]}
                 >
                   {supportingText}
@@ -2324,10 +2353,10 @@ export default function BibleScreen() {
               (showPinyin &&
               isChineseBibleTranslation(supportingTranslation.id) ? (
                 <PinyinRubyText
-                  numberColor={theme.colors.secondary}
+                  numberColor={theme.colors.onBackground}
                   pinyinColor={theme.colors.tertiary}
                   text={supportingText}
-                  textColor={theme.colors.secondary}
+                  textColor={theme.colors.onBackground}
                   textScale={textScale}
                   variant="supporting"
                 />
@@ -2335,7 +2364,7 @@ export default function BibleScreen() {
                 <Text
                   style={[
                     ReaderStyles.supportingSubtitle,
-                    { color: theme.colors.secondary },
+                    { color: theme.colors.onBackground },
                   ]}
                 >
                   {supportingText}
@@ -2446,7 +2475,7 @@ export default function BibleScreen() {
               style={[
                 ReaderStyles.supportingVerseText,
                 ReaderStyles.hangingVerseLine,
-                { color: theme.colors.secondary },
+                { color: theme.colors.onBackground },
                 isSelected && { fontWeight: 'bold' },
               ]}
             >
@@ -2460,7 +2489,7 @@ export default function BibleScreen() {
                   supportingTranslation?.id,
                   [
                     ReaderStyles.supportingSelahMarker,
-                    { color: theme.colors.secondary },
+                    { color: theme.colors.onBackground },
                   ],
                   true,
                 ),
@@ -2489,7 +2518,7 @@ export default function BibleScreen() {
                 supportingTranslation?.id,
                 [
                   ReaderStyles.supportingSelahMarker,
-                  { color: theme.colors.secondary },
+                  { color: theme.colors.onBackground },
                 ],
               ),
             );
@@ -2605,7 +2634,7 @@ export default function BibleScreen() {
                 <PinyinRubyText
                   bold={isSelected}
                   pinyinColor={theme.colors.tertiary}
-                  numberColor={theme.colors.secondary}
+                  numberColor={theme.colors.onBackground}
                   rightAlignedLines={supportingVerseText
                     .split('\n')
                     .map((line) =>
@@ -2615,7 +2644,7 @@ export default function BibleScreen() {
                       ),
                     )}
                   text={supportingVerseText}
-                  textColor={theme.colors.secondary}
+                  textColor={theme.colors.onBackground}
                   textScale={textScale}
                   variant="supporting"
                 />
@@ -2875,6 +2904,8 @@ export default function BibleScreen() {
               setTranslationSelectionRole('primary');
               setModalType('translation');
             },
+            onBibleVerseHelpPress: () => setModalType('verse-help'),
+            bibleVerseHelpLabel: labels.verseHelpTitle,
             onBibleSavedVersesPress: () => setModalType('saved'),
             bibleSavedVerseCount: savedVerses.length,
             bibleSavedVersesLabel: labels.savedVerses,
@@ -2902,21 +2933,7 @@ export default function BibleScreen() {
           <ActivityIndicator style={ReaderStyles.loader} color={theme.colors.primary} />
         ) : (
           <>
-            {chapterData?.chapter.content.map((c, i) => (
-              <Fragment key={`chapter-content-${i}`}>
-                {i === firstVerseContentIndex && (
-                  <Text
-                    style={[
-                      styles.verseInteractionHint,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    {labels.verseInteractionHint}
-                  </Text>
-                )}
-                {renderContent(c, i)}
-              </Fragment>
-            ))}
+            {chapterData?.chapter.content.map((c, i) => renderContent(c, i))}
             {chapterData?.translation.attribution && !loading && (
               <Text
                 variant="labelSmall"
@@ -3652,7 +3669,62 @@ export default function BibleScreen() {
           ]}
         >
           <View style={ReaderStyles.modalInner}>
-            {lastActiveType === 'saved' ? (
+            {lastActiveType === 'verse-help' ? (
+              <>
+                <Text
+                  variant="titleLarge"
+                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
+                >
+                  {labels.verseHelpTitle}
+                </Text>
+                <Divider />
+                <View style={styles.verseHelpContent}>
+                  <View style={styles.verseHelpRow}>
+                    <AppIcon
+                      name="gesture-tap"
+                      size={26}
+                      textScale={bibleUiTextScale}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.verseHelpText,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {labels.verseHelpTap}
+                    </Text>
+                  </View>
+                  <View style={styles.verseHelpRow}>
+                    <AppIcon
+                      name="gesture-tap-hold"
+                      size={26}
+                      textScale={bibleUiTextScale}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.verseHelpText,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {labels.verseHelpHold}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.verseHelpSupportingText,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {labels.verseHelpSelect}
+                  </Text>
+                  <Button mode="contained" onPress={closeModal}>
+                    {labels.closeAction}
+                  </Button>
+                </View>
+              </>
+            ) : lastActiveType === 'saved' ? (
               <>
                 <Text
                   variant="titleLarge"
@@ -4255,6 +4327,24 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
     marginTop: 8,
     marginBottom: 8,
   },
+  verseHelpContent: {
+    gap: 16,
+    padding: 20,
+  },
+  verseHelpRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  verseHelpText: {
+    flex: 1,
+    fontSize: scaleTypographyMetric(16, textScale),
+    lineHeight: scaleTypographyMetric(24, textScale),
+  },
+  verseHelpSupportingText: {
+    fontSize: scaleTypographyMetric(14, textScale),
+    lineHeight: scaleTypographyMetric(21, textScale),
+  },
   selectionBarInner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -4273,14 +4363,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
   },
   selectionIconAction: {
     margin: 0,
-  },
-  verseInteractionHint: {
-    fontSize: scaleTypographyMetric(12, uiTextScale),
-    lineHeight: scaleTypographyMetric(17, uiTextScale),
-    marginBottom: 12,
-    marginLeft: scaleTypographyMetric(29, textScale),
-    marginRight: 8,
-    marginTop: 6,
   },
   stackedAudioControlRow: {
     flexWrap: 'wrap',
