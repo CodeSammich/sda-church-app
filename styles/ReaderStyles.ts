@@ -107,9 +107,7 @@ export const getBibleDockLayout = (
   const dockHeight = stackControls
     ? selectorHeight * 3 + navigationHeight + 28
     : Math.max(60, controlHeight + 16);
-  const selectionBarHeight = stackControls
-    ? controlHeight * 3 + 40
-    : Math.max(56, Math.ceil(44 * safeScale + 16));
+  const selectionBarHeight = Math.max(64, Math.ceil(32 * safeScale + 28));
   const audioControlsNeedTwoRows =
     stackControls && safeWidth < controlHeight * 2 + 156;
   const audioControlHeight = audioControlsNeedTwoRows

@@ -4,7 +4,7 @@ import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -154,6 +154,9 @@ const uiLabels = {
     savedVerses: 'Saved Verses',
     savedVersesSubtitle: 'Shown in {translation}',
     noSavedVerses: 'Your saved verses will appear here.',
+    selectedVersesLabel: (count: number) =>
+      count === 1 ? '1 verse selected' : `${count} verses selected`,
+    verseInteractionHint: 'Tap a verse for details • Press and hold to select',
     audioPlayer: 'Bible audio',
     audio: 'Audio',
     narrator: 'Narrator',
@@ -224,6 +227,8 @@ const uiLabels = {
     savedVerses: '已儲存經文',
     savedVersesSubtitle: '以 {translation} 顯示',
     noSavedVerses: '您儲存的經文會顯示在這裡。',
+    selectedVersesLabel: (count: number) => `已選取 ${count} 節經文`,
+    verseInteractionHint: '點按經文查看詳情 • 長按以選取',
     audioPlayer: '聖經有聲書',
     audio: '有聲書',
     narrator: '朗讀者',
@@ -294,6 +299,8 @@ const uiLabels = {
     savedVerses: '已保存经文',
     savedVersesSubtitle: '以 {translation} 显示',
     noSavedVerses: '您保存的经文会显示在这里。',
+    selectedVersesLabel: (count: number) => `已选择 ${count} 节经文`,
+    verseInteractionHint: '点击经文查看详情 • 长按以选择',
     audioPlayer: '圣经有声书',
     audio: '有声书',
     narrator: '朗读者',
@@ -364,6 +371,12 @@ const uiLabels = {
     savedVerses: 'Versículos guardados',
     savedVersesSubtitle: 'Mostrados en {translation}',
     noSavedVerses: 'Tus versículos guardados aparecerán aquí.',
+    selectedVersesLabel: (count: number) =>
+      count === 1
+        ? '1 versículo seleccionado'
+        : `${count} versículos seleccionados`,
+    verseInteractionHint:
+      'Toca un versículo para ver detalles • Mantén pulsado para seleccionar',
     audioPlayer: 'Audio de la Biblia',
     audio: 'Audio',
     narrator: 'Narrador',
@@ -488,7 +501,13 @@ export default function BibleScreen() {
       if (language === 'zh') return 'CUVS (和合本簡體)';
       if (language === 'zh-cn') return 'CUVS (和合本简体)';
     }
-    return `${translation.name} (${(labels as Record<string, string>)[translation.lang]})`;
+    const translationLanguageLabel = {
+      en: labels.en,
+      es: labels.es,
+      zh: labels.zh,
+      'zh-cn': labels['zh-cn'],
+    }[translation.lang];
+    return `${translation.name} (${translationLanguageLabel})`;
   };
   const scrollRef = useRef<ScrollView>(null);
   const versePositions = useRef<Record<number, number>>({});
@@ -2194,6 +2213,8 @@ export default function BibleScreen() {
     () => indexChapterVerses(supportingChapterData),
     [supportingChapterData],
   );
+  const firstVerseContentIndex =
+    chapterData?.chapter.content.findIndex((item) => item.type === 'verse') ?? -1;
 
   const renderStructuralText = (
     content: BibleService.ChapterHeading | BibleService.ChapterHebrewSubtitle,
@@ -2497,6 +2518,8 @@ export default function BibleScreen() {
         return (
           <TouchableOpacity
             key={index}
+            accessibilityRole="button"
+            accessibilityHint={labels.verseInteractionHint}
             onPress={() => {
               if (selectedVerses.size > 0) {
                 toggleVerseSelection(content.number);
@@ -2505,6 +2528,7 @@ export default function BibleScreen() {
               }
             }}
             onLongPress={() => toggleVerseSelection(content.number)}
+            delayLongPress={400}
             activeOpacity={0.6}
             style={[
               (isSaved || isSelected) && {
@@ -2878,7 +2902,21 @@ export default function BibleScreen() {
           <ActivityIndicator style={ReaderStyles.loader} color={theme.colors.primary} />
         ) : (
           <>
-            {chapterData?.chapter.content.map((c, i) => renderContent(c, i))}
+            {chapterData?.chapter.content.map((c, i) => (
+              <Fragment key={`chapter-content-${i}`}>
+                {i === firstVerseContentIndex && (
+                  <Text
+                    style={[
+                      styles.verseInteractionHint,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {labels.verseInteractionHint}
+                  </Text>
+                )}
+                {renderContent(c, i)}
+              </Fragment>
+            ))}
             {chapterData?.translation.attribution && !loading && (
               <Text
                 variant="labelSmall"
@@ -2934,29 +2972,25 @@ export default function BibleScreen() {
             <View
               style={[
                 styles.selectionBarInner,
-                dockLayout.stackControls && styles.stackedSelectionBarInner,
                 { minHeight: dockLayout.selectionBarHeight },
               ]}
             >
-              <TouchableOpacity
-                accessibilityRole="button"
+              <IconButton
+                icon="close"
                 accessibilityLabel={labels.cancel}
                 onPress={clearSelection}
+                style={styles.selectionIconAction}
+              />
+              <Text
+                accessibilityLiveRegion="polite"
+                numberOfLines={2}
                 style={[
-                  styles.dockTextAction,
-                  dockLayout.stackControls && styles.stackedDockTextAction,
-                  { borderColor: theme.colors.outline },
+                  styles.selectionCount,
+                  { color: theme.colors.onBackground },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.dockActionText,
-                    { color: theme.colors.primary },
-                  ]}
-                >
-                  {labels.cancel}
-                </Text>
-              </TouchableOpacity>
+                {labels.selectedVersesLabel(selectedVerses.size)}
+              </Text>
               <IconButton
                 mode="contained-tonal"
                 icon={
@@ -2973,35 +3007,15 @@ export default function BibleScreen() {
                   await toggleSavedVerses(Array.from(selectedVerses));
                   clearSelection();
                 }}
-                style={{ margin: 0 }}
+                style={styles.selectionIconAction}
               />
-              <TouchableOpacity
-                accessibilityRole="button"
+              <IconButton
+                mode="contained"
+                icon="share-variant"
                 accessibilityLabel={labels.shareAction}
                 onPress={handleShare}
-                style={[
-                  styles.dockTextAction,
-                  styles.dockContainedAction,
-                  dockLayout.stackControls && styles.stackedDockTextAction,
-                  { backgroundColor: theme.colors.primary },
-                ]}
-              >
-                <AppIcon
-                  pointerEvents="none"
-                  name="share-variant"
-                  size={22}
-                  textScale={bibleUiTextScale}
-                  color={theme.colors.onPrimary}
-                />
-                <Text
-                  style={[
-                    styles.dockActionText,
-                    { color: theme.colors.onPrimary },
-                  ]}
-                >
-                  {labels.shareAction}
-                </Text>
-              </TouchableOpacity>
+                style={styles.selectionIconAction}
+              />
             </View>
           </View>
         )}
@@ -4243,44 +4257,30 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
   },
   selectionBarInner: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: 4,
+    paddingBottom: 4,
+    paddingHorizontal: 8,
+    paddingTop: 8,
   },
-  stackedSelectionBarInner: {
-    flexDirection: 'column',
-    flexWrap: 'nowrap',
-    alignItems: 'stretch',
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  dockTextAction: {
-    minHeight: 44,
-    minWidth: 44,
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  dockContainedAction: {
-    borderWidth: 0,
-  },
-  stackedDockTextAction: {
-    width: '100%',
-  },
-  dockActionText: {
+  selectionCount: {
+    flex: 1,
     flexShrink: 1,
     minWidth: 0,
     fontSize: scaleTypographyMetric(14, uiTextScale),
     lineHeight: scaleTypographyMetric(20, uiTextScale),
     fontWeight: '700',
-    textAlign: 'center',
+  },
+  selectionIconAction: {
+    margin: 0,
+  },
+  verseInteractionHint: {
+    fontSize: scaleTypographyMetric(12, uiTextScale),
+    lineHeight: scaleTypographyMetric(17, uiTextScale),
+    marginBottom: 12,
+    marginLeft: scaleTypographyMetric(29, textScale),
+    marginRight: 8,
+    marginTop: 6,
   },
   stackedAudioControlRow: {
     flexWrap: 'wrap',
