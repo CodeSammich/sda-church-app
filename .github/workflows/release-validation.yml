@@ -1,55 +1,77 @@
-name: Release - Commit Validation
+name: Release - PR Version Sync
+
 on:
-  # ensure that subsequent commits on PR also trigger the workflow
-  push:
-    branches:
-      - "release/**"
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
 
 env:
   # Opt into Node.js 24 for all JavaScript actions to resolve deprecation warnings
   # for actions/checkout@v4 and actions/setup-node@v4.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-jobs:
-  # Job 1: Ensures a version tag exists in the PR description
-  enforce-tag:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+concurrency:
+  group: release-version-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
-      - name: Check for version change
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release-version.outputs.version }}
+    steps:
+      - name: Validate PR release version
+        id: release-version
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          # Get the version from the main branch
-          git fetch origin main
-          BASE_VER=$(git show origin/main:package.json | jq -r .version)
-
-          # Get the version from the current branch
-          HEAD_VER=$(jq -r .version package.json)
-
-          echo "Base version (main): $BASE_VER"
-          echo "Current version: $HEAD_VER"
-
-          if [ "$BASE_VER" == "$HEAD_VER" ]; then
-            echo "::error::Validation Failed: The version in package.json has not been changed compared to main. Please update the version number manually."
+          if [[ "$PR_TITLE" =~ ^Release/([0-9]+\.[0-9]+\.[0-9]+)(:|[[:space:]]|$) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "::error title=Invalid PR title::PR title must use Release/<major.minor.patch> (for example: Release/1.2.3: Describe the changes)."
             exit 1
           fi
-          echo "Validation Passed: Version was changed from $BASE_VER to $HEAD_VER."
 
-  # Job 2: Automatically syncs configuration files if they are out of date
+          if [[ "$BASE_REF" =~ ^release/([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
+            if [[ "$VERSION" != "$BASE_VERSION" ]]; then
+              echo "::error title=Release version mismatch::PR title version $VERSION must match destination branch release/$BASE_VERSION."
+              exit 1
+            fi
+          fi
+
+          if [[ "$HEAD_REPOSITORY" == "$REPOSITORY" ]] &&
+            [[ "$HEAD_REF" =~ ^release/([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            HEAD_VERSION="${BASH_REMATCH[1]}"
+            if [[ "$VERSION" != "$HEAD_VERSION" ]]; then
+              echo "::error title=Release version mismatch::PR title version $VERSION must match source branch release/$HEAD_VERSION."
+              exit 1
+            fi
+          fi
+
+          echo "Validated release version $VERSION from PR title."
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
   sync:
-    needs: enforce-tag
+    needs: validate-pr
+    if: >-
+      startsWith(github.event.pull_request.head.ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.repository == 'New-York-Chinese-Seventh-day-Adventist/sda-church-app'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use GITHUB_TOKEN or a PAT if the release branch is protected
+          ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
@@ -57,25 +79,21 @@ jobs:
         with:
           node-version: "lts/*"
 
-      - name: Sync configuration files
+      - name: Sync release version
+        env:
+          VERSION: ${{ needs.validate-pr.outputs.version }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          set -euo pipefail
 
-          # Identify current version
-          VERSION=$(jq -r .version package.json)
-          echo "Syncing files to version: $VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Sync configuration files to match package.json
-          # This refreshes package-lock.json version without a full install
-          npm install --package-lock-only
-          npm run sync-version
-
-          git add app.json public/sw.js package-lock.json
+          npm run sync-version -- --version "$VERSION"
+          git add package.json package-lock.json app.json public/sw.js
 
           if ! git diff --cached --quiet; then
-            git commit -m "chore: sync configuration files to $VERSION [skip ci]"
-            git push origin HEAD:${{ github.ref }}
+            git commit -m "chore: sync configuration files to $VERSION"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
           else
-            echo "Files are already in sync."
+            echo "Files are already in sync with $VERSION."
           fi

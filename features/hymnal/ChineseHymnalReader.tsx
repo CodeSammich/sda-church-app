@@ -1,4 +1,5 @@
 import { AppIcon } from '@/components/AppIcon';
+import { SourceNoticePanel } from '@/components/SourceNoticePanel';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { openYouTubeSearch } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -17,7 +18,6 @@ import {
   ImageBackground,
   ImageSourcePropType,
   StyleSheet,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -46,24 +46,28 @@ interface ChineseHymnalReaderProps {
 const getUiLabels = (edition: number) => ({
   en: {
     title: `Chinese Hymnal — ${edition} Edition`,
+    sourceTitle: 'Hymnal source',
     attribution: `Tap a hymn to open its sheet music externally on the ${edition} hymnal directory at zgaxr.com.`,
     legalLink: 'Legal Disclaimer',
     watchYouTube: 'YouTube',
   },
   zh: {
     title: `中文讚美詩 — ${edition} 版`,
+    sourceTitle: '詩歌來源',
     attribution: `點擊詩歌即可在 zgaxr.com 的${edition}版詩歌目錄查看琴譜。`,
     legalLink: '法律聲明',
     watchYouTube: 'YouTube',
   },
   'zh-cn': {
     title: `中文赞美诗 — ${edition} 版`,
+    sourceTitle: '诗歌来源',
     attribution: `点击诗歌即可在 zgaxr.com 的${edition}版诗歌目录查看琴谱。`,
     legalLink: '法律声明',
     watchYouTube: 'YouTube',
   },
   es: {
     title: `Himnario Chino — Edición ${edition}`,
+    sourceTitle: 'Fuente del himnario',
     attribution: `Toca un himno para abrir su partitura en el directorio externo de la edición ${edition} en zgaxr.com.`,
     legalLink: 'Aviso legal',
     watchYouTube: 'YouTube',
@@ -209,33 +213,20 @@ export function ChineseHymnalReader({
             </ImageBackground>
 
             <View style={DocumentStyles.section}>
-              <TouchableOpacity
-                onPress={() =>
+              <SourceNoticePanel
+                items={[
+                  { icon: 'music-clef-treble', text: labels.attribution },
+                ]}
+                legalLabel={labels.legalLink}
+                onLegalPress={() =>
                   router.push({
                     pathname: '/you/legal',
                     params: { backTo: route },
                   } as any)
                 }
-                style={styles.legalNotice}
-              >
-                <Text
-                  variant="bodySmall"
-                  style={{
-                    color: theme.colors.onSurfaceVariant,
-                    textAlign: 'center',
-                  }}
-                >
-                  <AppIcon
-                    name="music-clef-treble"
-                    size={14}
-                    color={theme.colors.onSurfaceVariant}
-                  />{' '}
-                  {labels.attribution}{' '}
-                  <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
-                    {labels.legalLink}
-                  </Text>
-                </Text>
-              </TouchableOpacity>
+                style={styles.sourcePanel}
+                title={labels.sourceTitle}
+              />
             </View>
           </>
         }
@@ -306,8 +297,7 @@ const createStyles = (
       lineHeight: scaleTypographyMetric(21, textScale),
       flexShrink: 1,
     },
-    legalNotice: {
+    sourcePanel: {
       marginTop: 10,
-      paddingHorizontal: 4,
     },
   });

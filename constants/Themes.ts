@@ -9,6 +9,7 @@ import {
 import {
   DEFAULT_TEXT_SCALE,
   scaleTypographyRecord,
+  TEXT_SCALE_MIN,
   type TextScale,
 } from './AppPreferences';
 
@@ -336,17 +337,17 @@ export const getAppTheme = (
       ? MD3DarkTheme.fonts
       : MD3LightTheme.fonts
     : theme.fonts;
+  const usesBaseTextScale = textScale === TEXT_SCALE_MIN;
 
-  if (!useSystemFonts && textScale === DEFAULT_TEXT_SCALE) {
+  if (!useSystemFonts && usesBaseTextScale) {
     return theme;
   }
 
   return {
     ...theme,
-    fonts:
-      textScale === DEFAULT_TEXT_SCALE
-        ? selectedFonts
-        : scaleTypographyRecord(selectedFonts, textScale),
+    fonts: usesBaseTextScale
+      ? selectedFonts
+      : scaleTypographyRecord(selectedFonts, textScale),
   } as AppTheme;
 };
 

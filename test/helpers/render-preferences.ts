@@ -3,7 +3,10 @@ import { TextSizeContext } from '@/constants/TextSizeContext';
 import { ThemeContext } from '@/constants/Themes';
 import { render } from '@testing-library/react-native';
 import { createElement, type ReactElement } from 'react';
-import type { TextScale } from '@/constants/AppPreferences';
+import {
+  DEFAULT_TEXT_SCALE,
+  type TextScale,
+} from '@/constants/AppPreferences';
 import { PaperProvider } from 'react-native-paper';
 
 interface PreferenceRenderOptions {
@@ -20,7 +23,7 @@ export const renderWithPreferences = (
     language = 'en',
     setLanguage = jest.fn(),
     setTextScale = jest.fn().mockResolvedValue(undefined),
-    textScale = 1,
+    textScale = DEFAULT_TEXT_SCALE,
     toggleTheme = jest.fn(),
   }: PreferenceRenderOptions = {},
 ) =>

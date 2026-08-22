@@ -1,7 +1,8 @@
 import { AppIcon } from '@/components/AppIcon';
+import { SourceNoticePanel } from '@/components/SourceNoticePanel';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
-import { FlatList, ImageBackground, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { FlatList, ImageBackground, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,6 +28,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const uiLabels = {
   en: {
     title: 'SDA Hymnal — 1985 Edition',
+    sourceTitle: 'Hymnal source',
     search: 'Search by number, title, or scripture...',
     externalLink: 'View on HymnsForWorship.org',
     legalLink: 'Legal Disclaimer',
@@ -37,6 +39,7 @@ const uiLabels = {
   },
   zh: {
     title: '英文 SDA 詩歌本 — 1985 年版',
+    sourceTitle: '詩歌來源',
     search: '按編號、標題或經文搜尋...',
     externalLink: '在 HymnsForWorship.org 查看',
     legalLink: '法律聲明',
@@ -46,6 +49,7 @@ const uiLabels = {
   },
   'zh-cn': {
     title: '英文 SDA 诗歌本 — 1985 年版',
+    sourceTitle: '诗歌来源',
     search: '按编号、标题或经文搜索...',
     externalLink: '在 HymnsForWorship.org 查看',
     legalLink: '法律声明',
@@ -55,6 +59,7 @@ const uiLabels = {
   },
   es: {
     title: 'Himnario ASD — Edición 1985',
+    sourceTitle: 'Fuente del himnario',
     search: 'Buscar por número, título o referencia...',
     externalLink: 'Ver en HymnsForWorship.org',
     legalLink: 'Aviso legal',
@@ -244,30 +249,20 @@ export default function HymnalScreen() {
 
         {/* Body */}
         <View style={DocumentStyles.section}>
-          <TouchableOpacity
-            onPress={() =>
+          <SourceNoticePanel
+            items={[
+              { icon: 'music-clef-treble', text: labels.attribution },
+            ]}
+            legalLabel={labels.legalLink}
+            onLegalPress={() =>
               router.push({
                 pathname: '/you/legal',
                 params: { backTo: '/home/english-hymnal' },
               } as any)
             }
-            style={styles.legalNotice}
-          >
-            <Text
-              variant="bodySmall"
-              style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}
-            >
-              <AppIcon
-                name="music-clef-treble"
-                size={14}
-                color={theme.colors.onSurfaceVariant}
-              />{' '}
-              {labels.attribution}{' '}
-              <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
-                {labels.legalLink}
-              </Text>
-            </Text>
-          </TouchableOpacity>
+            style={styles.sourcePanel}
+            title={labels.sourceTitle}
+          />
         </View>
 
         <FlatList
@@ -364,13 +359,7 @@ const createStyles = (
     paddingTop: 0,
     fontSize: scaleTypographyMetric(16, textScale),
   },
-  legalNotice: {
+  sourcePanel: {
     marginTop: 10,
-    paddingHorizontal: 4,
-  },
-  attributionText: {
-    marginTop: 4,
-    paddingHorizontal: 4,
-    opacity: 0.8,
   },
 });

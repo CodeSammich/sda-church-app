@@ -26,4 +26,13 @@ describe('global header back navigation', () => {
       getHeaderBackTarget(['(tabs)', 'bible'], '/home/bulletin'),
     ).toBe('/home/bulletin');
   });
+
+  it('returns the legal page to an explicit library parent', () => {
+    expect(
+      getHeaderBackTarget(
+        ['(tabs)', 'you', 'legal'],
+        '/resources/library',
+      ),
+    ).toBe('/resources/library');
+  });
 });

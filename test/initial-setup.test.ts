@@ -69,6 +69,10 @@ describe('InitialSetup', () => {
     expect(screen.getAllByRole('radio')).toHaveLength(10);
     expect(screen.getByRole('radio', { name: 'EN' }).props.accessibilityState)
       .toMatchObject({ checked: true, disabled: false });
+    expect(
+      screen.getByRole('radio', { name: '125 percent text size' }).props
+        .accessibilityState,
+    ).toMatchObject({ checked: true, disabled: false });
 
     fireEvent.press(screen.getByRole('radio', { name: '繁體' }));
     fireEvent.press(screen.getByRole('radio', { name: 'Dark' }));

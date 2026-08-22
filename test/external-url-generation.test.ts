@@ -14,6 +14,7 @@ import {
   getSortedChinese707Hymns,
   type Chinese707Version,
 } from '@/features/hymnal/Chinese707Hymnal';
+import { EGW_BOOKS } from '@/features/library/EgwBookCatalog';
 
 const CUV_BOOKS = [
   ['GEN', 50], ['EXO', 40], ['LEV', 27], ['NUM', 36], ['DEU', 34],
@@ -98,5 +99,18 @@ describe('generated external dependency URLs', () => {
     expect(urls505).toHaveLength(500);
     expect(urls506).toHaveLength(506);
     expect(urls707).toHaveLength(2137);
+  });
+
+  it('generates every curated EGW edition URL on the official host', () => {
+    const editions = EGW_BOOKS.flatMap((work) => work.editions);
+
+    expect(editions).toHaveLength(27);
+    expect(editions.filter(({ language }) => language === 'en')).toHaveLength(9);
+    expect(editions.filter(({ language }) => language === 'zh')).toHaveLength(9);
+    expect(editions.filter(({ language }) => language === 'es')).toHaveLength(9);
+    assertHttpsUrls(
+      editions.map(({ url }) => url),
+      'egwwritings.org',
+    );
   });
 });

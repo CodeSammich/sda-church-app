@@ -146,7 +146,12 @@ export const MenuCard: React.FC<MenuCardProps> = ({
                 ? { name: rightIcon }
                 : rightIcon)}
               size={DESIGN_TOKENS.ICON_SIZE_STANDARD}
-              color={theme.colors.onSurfaceVariant}
+              color={
+                (typeof rightIcon === "string" ? rightIcon : rightIcon.name)
+                  .startsWith("chevron-")
+                  ? theme.colors.primary
+                  : theme.colors.onSurfaceVariant
+              }
             />
           )}
     </AnimatedTouchableOpacity>

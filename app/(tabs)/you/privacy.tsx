@@ -137,12 +137,12 @@ export default function PrivacyPolicyScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This application links to external platforms such as YouTube, Spotify, and
-        HymnsForWorship.org. When you follow these links, you are subject to the privacy
-        policies of those third-party providers. These services may collect information
-        such as IP addresses as part of their standard operations. The church does not
-        receive or store information those external platforms independently collect from
-        you.
+        This application links to external platforms such as YouTube, Spotify,
+        HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org). When you follow
+        these links, you are subject to the privacy policies of those third-party
+        providers. These services may collect information such as IP addresses as part of
+        their standard operations. The church does not receive or store information those
+        external platforms independently collect from you.
       </Text>
 
       <Text

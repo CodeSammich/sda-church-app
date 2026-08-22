@@ -221,10 +221,11 @@ policies.
 ### 5. External Links
 
 This application links to external platforms such as YouTube, Spotify,
-HymnsForWorship.org, and zgaxr.com. When you follow these links, you are subject to the
-privacy policies of those third-party providers. These services may collect information
-such as IP addresses as part of their standard operations. The church does not receive or
-store information those external platforms independently collect from you.
+HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org). When you follow these
+links, you are subject to the privacy policies of those third-party providers. These
+services may collect information such as IP addresses as part of their standard
+operations. The church does not receive or store information those external platforms
+independently collect from you.
 
 ### 6. Privacy Frameworks and Questions
 
@@ -240,27 +241,28 @@ or requests concerning church-managed schedule information may be sent to
 
 ### 1. Usage of External Resources
 
-This app links to HymnsForWorship.org and zgaxr.com for hymn resources. Please be aware
-that some hymns are copyrighted. When you follow these links, you are subject to the
-destination provider’s terms and conditions. You may be prompted to accept their terms
-before viewing certain content. Please respect copyright laws and do not attempt to bypass
-these requirements.
+This app links to HymnsForWorship.org and zgaxr.com for hymn resources and to EGW Writings
+(egwwritings.org) for externally hosted religious books. Some linked material may be
+copyrighted. When you follow these links, you are subject to the destination provider’s
+terms and conditions. Please respect copyright laws and do not attempt to bypass access
+requirements.
 
 ### 2. Data Attribution
 
-This application provides searchable hymn titles, index numbers, and related reference
-metadata to facilitate navigation. We do not host or reproduce protected musical notation
-or lyrics. External content is accessed through links to third-party providers; a link or
-the public availability of a destination is not a representation that this project has
-independently verified every provider's copyright permissions.
+This application provides searchable hymn metadata and a curated index of book titles and
+language editions to facilitate navigation. We do not host or reproduce the externally
+linked EGW book text, protected musical notation, or lyrics. External content is accessed
+through links to third-party providers; a link or the public availability of a destination
+is not a representation that this project has independently verified every provider's
+copyright permissions.
 
 ### 3. External Platforms & Services
 
 This application provides links to external platforms and third-party services (e.g.,
-YouTube, Spotify, HymnsForWorship.org, and zgaxr.com) to assist users in locating musical
-performances, recordings, or sheet music. Please note that these are external platforms,
-and your use of them is subject to their respective terms and conditions. We do not host,
-curate, or endorse the specific content or search results returned by these services.
-Users are responsible for ensuring that their playback or usage of such content complies
-with their local copyright and performance licensing requirements; linking to these
-services does not constitute legal authorization for public performance.
+YouTube, Spotify, HymnsForWorship.org, zgaxr.com, and EGW Writings at egwwritings.org) to
+assist users in locating books, musical performances, recordings, or sheet music. These
+are external platforms, and use of them is subject to their respective terms and
+conditions. We do not host, curate, or endorse the specific content or search results
+returned by these services. Users are responsible for ensuring their use complies with
+applicable copyright and performance licensing requirements; linking does not constitute
+legal authorization for public performance or reuse.

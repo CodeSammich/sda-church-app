@@ -1,3 +1,11 @@
+<!--
+PR title: Release/x.y.z: Brief description
+
+If the destination branch is named release/x.y.z, replace x.y.z with that exact
+version. Otherwise, replace x.y.z with the intended release version. Release CI
+uses the title as the source of truth and synchronizes all version files.
+-->
+
 ## Description
 
 _What does your change do?_
@@ -10,9 +18,6 @@ in the eventual release pull request to the default branch so GitHub closes the 
 when that release is merged._
 
 ## Testing
-
-- [ ] Incremented `version` field in `package.json` for this release and added version
-      number to PR title (e.g. 0.13.0 commit message)
 
 - [ ] Verified on Android SDK 36 (Target version must always be latest Android SDK) Target
       version should always be
