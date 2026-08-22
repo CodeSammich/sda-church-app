@@ -15,6 +15,10 @@ import {
 } from '@/constants/AppPreferences';
 
 describe('text scale preferences', () => {
+  it('defaults app text to 125%', () => {
+    expect(DEFAULT_TEXT_SCALE).toBe(1.25);
+  });
+
   it('caps only the Bible reader chrome at 130%', () => {
     expect(getBibleReaderUiTextScale(1.2)).toBe(1.2);
     expect(getBibleReaderUiTextScale(2)).toBe(
@@ -51,7 +55,7 @@ describe('text scale preferences', () => {
     },
   );
 
-  it('fails safely to 100% for missing or corrupt stored values', () => {
+  it('fails safely to 125% for missing or corrupt stored values', () => {
     expect(parseStoredTextScale(null)).toBe(DEFAULT_TEXT_SCALE);
     expect(parseStoredTextScale('')).toBe(DEFAULT_TEXT_SCALE);
     expect(parseStoredTextScale('not-a-number')).toBe(DEFAULT_TEXT_SCALE);

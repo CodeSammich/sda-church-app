@@ -35,7 +35,7 @@ export type TextScale =
   | 1.95
   | 2;
 
-export const DEFAULT_TEXT_SCALE: TextScale = 1;
+export const DEFAULT_TEXT_SCALE: TextScale = 1.25;
 
 export interface TypographyVariant {
   fontSize?: number;
