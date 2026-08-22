@@ -70,8 +70,10 @@ Every feature and release PR must follow `.github/pull_request_template.md`:
 
 GitHub closes linked issues only when the closing reference reaches the default branch.
 Therefore, `Closes #133` in a feature PR to `release/x.y.z` links the work but does not
-close the issue when that feature PR merges. The maintainer must copy all closing
-references from the included feature PRs into the final `release/x.y.z` → `main` PR.
+close the issue when that feature PR merges. Release automation adds the `pending release`
+label to show that the fix is merged and awaiting the production release. The maintainer
+must copy all closing references from the included feature PRs into the final
+`release/x.y.z` → `main` PR.
 This is the code maintainer's responsibility, not the fork contributor's. Merging that
 final PR into `main` closes the issues. Do not rely on a reviewer to repair the merge
 commit message at the last moment.
@@ -135,6 +137,12 @@ main (stable)
   `release/x.y.z` destination branch when applicable.
 - **Auto-Sync after merge**: Uses the merged PR title to synchronize `package.json`,
   `package-lock.json`, `app.json`, and `public/sw.js` on the release branch.
+
+#### `Issues - Pending Release Label` (`.github/workflows/pending-release-label.yml`)
+
+- Adds `pending release` to issues referenced with `Closes #<issue>` when a PR merges
+  into a `release/x.y.z` branch, including PRs submitted from forks.
+- Removes the label when the issue closes after the final release reaches `main`.
 
 #### `Deploy and Tag` (`.github/workflows/deploy.yml`)
 

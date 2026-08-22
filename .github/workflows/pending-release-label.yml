@@ -1,0 +1,88 @@
+name: Issues - Pending Release Label
+
+on:
+  pull_request_target:
+    types: [closed]
+  issues:
+    types: [closed]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PENDING_RELEASE_LABEL: pending release
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  label-linked-issues:
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add pending release label to closing issue references
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$BASE_REF" =~ ^release/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "PR #$PR_NUMBER did not merge into a release/x.y.z branch; no issues will be labeled."
+            exit 0
+          fi
+
+          ISSUE_NUMBERS=$(node -e '
+            const body = process.env.PR_BODY || "";
+            const matches = [...body.matchAll(/\bcloses\s+#([1-9][0-9]*)\b/gi)];
+            process.stdout.write([...new Set(matches.map((match) => match[1]))].join("\n"));
+          ')
+
+          if [[ -z "$ISSUE_NUMBERS" ]]; then
+            echo "PR #$PR_NUMBER has no Closes #<issue> references."
+            exit 0
+          fi
+
+          while IFS= read -r ISSUE_NUMBER; do
+            if [[ -z "$ISSUE_NUMBER" ]]; then
+              continue
+            fi
+
+            IS_PULL_REQUEST=$(gh api \
+              "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" \
+              --jq 'has("pull_request")')
+            if [[ "$IS_PULL_REQUEST" == "true" ]]; then
+              echo "::warning::Skipping #$ISSUE_NUMBER because it is a pull request, not an issue."
+              continue
+            fi
+
+            gh api --method POST \
+              "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/labels" \
+              -f "labels[]=$PENDING_RELEASE_LABEL" >/dev/null
+            echo "Added '$PENDING_RELEASE_LABEL' to issue #$ISSUE_NUMBER."
+          done <<< "$ISSUE_NUMBERS"
+
+  clear-label-on-close:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove obsolete pending release label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          HAS_LABEL=$(gh api \
+            "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/labels" \
+            --jq 'any(.[]; .name == "pending release")')
+          if [[ "$HAS_LABEL" == "true" ]]; then
+            gh api --method DELETE \
+              "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/labels/pending%20release" \
+              >/dev/null
+            echo "Removed '$PENDING_RELEASE_LABEL' from closed issue #$ISSUE_NUMBER."
+          else
+            echo "Issue #$ISSUE_NUMBER does not have '$PENDING_RELEASE_LABEL'."
+          fi
