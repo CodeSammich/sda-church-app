@@ -90,6 +90,7 @@ const LABELS = {
       sermonTitle: 'Sermon Title',
       bibleVerses: 'Bible Verses',
       pastoralPrayer: 'Pastoral Prayer',
+      hymn: 'Hymn',
       titheOffering: 'Tithe & Offering',
       specialMusic: 'Special Music',
       sermon: 'Sermon',
@@ -152,6 +153,7 @@ const LABELS = {
       sermonTitle: '講道題目',
       bibleVerses: '本週經文',
       pastoralPrayer: '牧養禱告',
+      hymn: '詩歌',
       titheOffering: '十一與奉獻',
       specialMusic: '特別音樂',
       sermon: '證道',
@@ -214,6 +216,7 @@ const LABELS = {
       sermonTitle: '讲道题目',
       bibleVerses: '本周经文',
       pastoralPrayer: '牧养祷告',
+      hymn: '诗歌',
       titheOffering: '十一与奉献',
       specialMusic: '特别音乐',
       sermon: '证道',
@@ -276,6 +279,7 @@ const LABELS = {
       sermonTitle: 'Título del Sermón',
       bibleVerses: 'Versículos Bíblicos',
       pastoralPrayer: 'Oración Pastoral',
+      hymn: 'Himno',
       titheOffering: 'Diezmos y Ofrendas',
       specialMusic: 'Música Especial',
       sermon: 'Sermón',
@@ -752,12 +756,8 @@ export default function WeeklyBulletinScreen() {
         {isQueens && (
           <DataRow
             label={labels.program.pastoralPrayer}
-            value={pastoralPrayer.displayText}
-            assignment={getProgramAssignment(
-              labels.roles.chairPastoralPrayer,
-              location.chairPastoralPrayer,
-              labels,
-            )}
+            value={getRosterValue(location.chairPastoralPrayer, labels)}
+            assignment={{ label: labels.program.hymn, value: pastoralPrayer.displayText }}
             emptyText={labels.notAvailable}
             action={getBulletinHymnAction(pastoralPrayer)}
           />
@@ -805,7 +805,7 @@ export default function WeeklyBulletinScreen() {
         {isQueens && (
           <DataRow
             label={labels.program.benediction}
-            value={getRosterValue(location.closingPrayer, labels)}
+            value={getRosterValue(location.sermon, labels)}
             emptyText={labels.notAssigned}
           />
         )}

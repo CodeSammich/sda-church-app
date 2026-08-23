@@ -90,7 +90,22 @@ type BibleVerseSearchResult = {
   title: string;
 };
 type HymnalHeaderSearchResult = HymnalSearchItem & { subtitle: string };
-type HeaderSearchResult = BibleVerseSearchResult | HymnalHeaderSearchResult;
+type CustomHeaderSearchItem = {
+  icon?: string;
+  key: string;
+  onPress: () => void;
+  searchText?: string;
+  subtitle: string;
+  title: string;
+};
+type CustomHeaderSearch = {
+  items: readonly CustomHeaderSearchItem[];
+  placeholder: string;
+};
+type HeaderSearchResult =
+  | BibleVerseSearchResult
+  | HymnalHeaderSearchResult
+  | CustomHeaderSearchItem;
 
 export const GlobalHeader = (props: any) => {
   const { language } = useContext(LanguageContext);
@@ -170,6 +185,10 @@ export const GlobalHeader = (props: any) => {
   const isHymnalPage = Boolean(activeHymnalRoute);
   const isHymnalSelectionPage = routeSegments.includes('hymnal-selection');
   const isHymnalSearchPage = isHymnalPage || isHymnalSelectionPage;
+  const customHeaderSearch = props.options?.headerSearch as
+    | CustomHeaderSearch
+    | undefined;
+  const isHeaderSearchPage = isHymnalSearchPage || Boolean(customHeaderSearch);
   const isSubPage = !isPillarRoot;
 
   const title = props.options?.title;
@@ -257,6 +276,18 @@ export const GlobalHeader = (props: any) => {
       : getHymnalSearchSubtitle(language),
   }));
 
+  const normalizedCustomQuery = deferredSearchQuery.trim().toLocaleLowerCase();
+  const customResults = useMemo(
+    () => normalizedCustomQuery && customHeaderSearch
+      ? customHeaderSearch.items.filter((item) =>
+          `${item.title} ${item.subtitle} ${item.searchText || ''}`
+            .toLocaleLowerCase()
+            .includes(normalizedCustomQuery),
+        )
+      : [],
+    [customHeaderSearch, normalizedCustomQuery],
+  );
+
   const normalizedBibleQuery = searchQuery.trim().toLocaleLowerCase();
   const bibleResults: BibleVerseSearchResult[] = normalizedBibleQuery
     ? bibleChapterVerses
@@ -272,7 +303,9 @@ export const GlobalHeader = (props: any) => {
 
   const results: HeaderSearchResult[] = isBiblePage
     ? bibleResults
-    : hymnalResults;
+    : customHeaderSearch
+      ? customResults
+      : hymnalResults;
 
   const handleSelectResult = (item: HymnalSearchItem) => {
     const q = searchQuery.toLowerCase();
@@ -306,6 +339,13 @@ export const GlobalHeader = (props: any) => {
   const handleSelectBibleVerse = (verseNumber: number) => {
     collapseBibleSearch();
     onBibleVerseSearchPress?.(verseNumber);
+  };
+
+  const handleSelectCustomResult = (item: CustomHeaderSearchItem) => {
+    setSearchQuery('');
+    setIsSearching(false);
+    searchRef.current?.blur();
+    item.onPress();
   };
 
   const handleBackPress = () => {
@@ -346,6 +386,8 @@ export const GlobalHeader = (props: any) => {
       placeholder={
         isBiblePage
           ? searchLabels.searchBiblePlaceholder
+          : customHeaderSearch
+            ? customHeaderSearch.placeholder
           : isHymnalSelectionPage
             ? searchLabels.searchAllHymnalsPlaceholder
             : searchLabels.searchCurrentHymnalPlaceholder
@@ -359,6 +401,8 @@ export const GlobalHeader = (props: any) => {
         if (results.length > 0) {
           if (isBiblePage) {
             handleSelectBibleVerse((results[0] as (typeof bibleResults)[number]).number);
+          } else if (customHeaderSearch) {
+            handleSelectCustomResult(results[0] as CustomHeaderSearchItem);
           } else {
             handleSelectResult(results[0] as HymnalSearchItem);
           }
@@ -467,7 +511,7 @@ export const GlobalHeader = (props: any) => {
             />
           </Pressable>
         )}
-        {!isBiblePage && !isHymnalSearchPage ? (
+        {!isBiblePage && !isHeaderSearchPage ? (
           <View style={{ flex: 1, justifyContent: 'center' }}>
             {isSubPage && title && (
               <Animated.View
@@ -655,6 +699,8 @@ export const GlobalHeader = (props: any) => {
           keyExtractor={(item, index) =>
             isBiblePage
               ? `verse-${(item as any).number}`
+              : customHeaderSearch
+                ? (item as CustomHeaderSearchItem).key
               : `${(item as HymnalSearchItem).hymnalId}-${(item as HymnalSearchItem).hymnNumber}-${index}`
           }
           maxToRenderPerBatch={8}
@@ -676,13 +722,15 @@ export const GlobalHeader = (props: any) => {
               left={(p) => (
                 <List.Icon
                   {...p}
-                  icon={item.icon}
+                  icon={item.icon || 'book-open-page-variant'}
                   color={theme.colors.tertiary}
                 />
               )}
               onPress={() =>
                 isBiblePage
                   ? handleSelectBibleVerse((item as any).number)
+                  : customHeaderSearch
+                    ? handleSelectCustomResult(item as CustomHeaderSearchItem)
                   : handleSelectResult(item as HymnalSearchItem)
               }
             />

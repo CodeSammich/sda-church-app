@@ -329,6 +329,12 @@ export default function TabLayout() {
               />
             ),
           }}
+          listeners={{
+            tabPress: (event) => {
+              event.preventDefault();
+              router.navigate('/resources');
+            },
+          }}
         />
         <Tabs.Screen
           name="you"

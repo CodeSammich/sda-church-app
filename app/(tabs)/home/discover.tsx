@@ -36,7 +36,7 @@ export default function DiscoverScreen() {
 
   const allLabels = {
     en: {
-      title: 'Discover',
+      title: 'New Member / Visitor',
       aboutSDA: 'About Denomination',
       aboutHistory: 'Locations & History',
       meetTeam: 'Meet Our Team',
@@ -45,7 +45,7 @@ export default function DiscoverScreen() {
       join: 'Joining the Church',
     },
     zh: {
-      title: '探索',
+      title: '新會友／訪客',
       aboutSDA: '關於教派',
       aboutHistory: '地點與歷史',
       meetTeam: '認識我們的團隊',
@@ -54,7 +54,7 @@ export default function DiscoverScreen() {
       join: '加入教會',
     },
     'zh-cn': {
-      title: '探索',
+      title: '新会友／访客',
       aboutSDA: '关于教派',
       aboutHistory: '地点与历史',
       meetTeam: '认识我们的团队',
@@ -63,7 +63,7 @@ export default function DiscoverScreen() {
       join: '加入教会',
     },
     es: {
-      title: 'Descubrir',
+      title: 'Nuevo miembro / Visitante',
       aboutSDA: 'Sobre la Denominación',
       aboutHistory: 'Ubicaciones e Historia',
       meetTeam: 'Conoce a nuestro equipo',

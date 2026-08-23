@@ -1,7 +1,11 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 
 export type LibraryRights = 'public-domain-us' | 'official-external';
-export type LibraryCollection = 'adventist-pioneers' | 'christian-classics';
+export type LibraryCollection =
+  | 'adventist-pioneers'
+  | 'christian-classics'
+  | 'youth'
+  | 'children';
 
 export type LibraryItem = Readonly<{
   id: string;
@@ -63,7 +67,19 @@ const publicDomainWorks: readonly LibraryItem[] = [
   },
 ];
 
-const officialCollections: readonly LibraryItem[] = [];
+const officialCollections: readonly LibraryItem[] = [
+  {
+    id: 'story-of-jesus',
+    title: 'The Story of Jesus',
+    author: 'Ellen G. White',
+    collection: 'children',
+    description: 'A concise, child-friendly account of the life and ministry of Jesus.',
+    language: 'en',
+    rights: 'official-external',
+    sourceName: 'EGW Writings',
+    sourceUrl: 'https://egwwritings.org/read?panels=p144.1&index=0',
+  },
+];
 
 export const LIBRARY_CATALOG = Object.freeze({
   publicDomainWorks,

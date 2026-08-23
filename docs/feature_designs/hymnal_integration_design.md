@@ -1,6 +1,6 @@
 # English Hymnal Integration: As-Built Design and Link-Safety Record
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-23
 
 ## 1. Purpose and Current Decision
 

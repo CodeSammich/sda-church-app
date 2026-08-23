@@ -7,11 +7,12 @@ describe('EGW book cover assets', () => {
   it('provides one optimized original cover for every curated work', () => {
     const assetDirectory = join(process.cwd(), 'public/library/egw');
     const filenames = readdirSync(assetDirectory)
-      .filter((filename) => filename.endsWith('.jpg'))
+      .filter((filename) => /\.(?:jpg|png)$/.test(filename))
+      .map((filename) => filename.replace(/\.(?:jpg|png)$/, ''))
       .sort();
 
     expect(filenames).toEqual(
-      EGW_BOOKS.map(({ id }) => `${id}.jpg`).sort(),
+      EGW_BOOKS.map(({ id }) => id).sort(),
     );
   });
 });

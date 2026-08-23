@@ -1,4 +1,5 @@
-import { Alert, Linking } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { Alert, Linking, Platform } from 'react-native';
 import { SupportedLanguage } from './LanguageContext';
 
 /**
@@ -89,6 +90,27 @@ export const openURL = async (
   }
 };
 
+/**
+ * Keeps external documents outside the app's rendering surface. Native builds
+ * use the system browser sheet/custom tab; web builds use a separate tab.
+ */
+export const openInSystemBrowser = async (
+  url: string,
+  errorTitle = 'Error',
+  errorMessage = 'Could not open the link.',
+) => {
+  try {
+    if (Platform.OS === 'web') {
+      await Linking.openURL(url);
+    } else {
+      await WebBrowser.openBrowserAsync(url);
+    }
+  } catch (error) {
+    Alert.alert(errorTitle, errorMessage);
+    console.error('External browser error:', error);
+  }
+};
+
 export const openAdventistGiving = async () => {
   return openURL(
     'https://adventistgiving.org/donate/AN48CO',
@@ -172,6 +194,169 @@ export const openSabbathSchool = (language: SupportedLanguage) => {
     'Could not open the Sabbath School link.',
   );
 };
+
+const getSabbathSchoolLanguage = (language: SupportedLanguage) =>
+  language === 'zh' || language === 'zh-cn' ? 'zh' : language || 'en';
+
+export const getCurrentSabbathSchoolUrl = (
+  language: SupportedLanguage,
+  date = new Date(),
+) => {
+  const candidates = [date.getFullYear() - 1, date.getFullYear(), date.getFullYear() + 1]
+    .flatMap((year) => [1, 2, 3, 4].map((quarter) => {
+      const start = new Date(year, (quarter - 1) * 3, 1);
+      start.setDate(start.getDate() - ((start.getDay() + 1) % 7));
+      return { quarter, start, year };
+    }))
+    .filter(({ start }) => start.getTime() <= date.getTime())
+    .sort((a, b) => b.start.getTime() - a.start.getTime());
+  const { quarter, start: quarterStart, year } = candidates[0];
+  const lesson = Math.max(
+    1,
+    Math.min(14, Math.floor((date.getTime() - quarterStart.getTime()) / 604_800_000) + 1),
+  );
+  return `https://sabbath-school.adventech.io/${getSabbathSchoolLanguage(language)}/${year}-${String(quarter).padStart(2, '0')}/${String(lesson).padStart(2, '0')}`;
+};
+
+export const openCurrentSabbathSchool = (language: SupportedLanguage) =>
+  openURL(
+    getCurrentSabbathSchoolUrl(language),
+    'Error',
+    'Could not open this week\'s Sabbath School lesson.',
+  );
+
+export const openChildrenSabbathSchool = () =>
+  openURL(
+    'https://aliveinjesus.info/',
+    'Error',
+    'Could not open the children\'s Sabbath School catalog.',
+  );
+
+export type ChildrenSabbathSchoolCurriculum =
+  | 'beginner-student'
+  | 'beginner-teacher'
+  | 'kindergarten-student'
+  | 'kindergarten-teacher'
+  | 'primary-student'
+  | 'primary-teacher'
+  | 'junior'
+  | 'junior-teacher'
+  | 'teen'
+  | 'teen-teacher'
+  | 'youth'
+  | 'youth-teacher';
+
+const CHILDREN_CURRICULUM_ROUTES: Readonly<
+  Record<ChildrenSabbathSchoolCurriculum, {
+    host: string;
+    pdfIndex: number;
+    suffix: string;
+    weekStartsOnSunday: boolean;
+  }>
+> = {
+  'beginner-student': { host: 'app.beginner.aliveinjesus.info', pdfIndex: 0, suffix: 'zaijbgsg', weekStartsOnSunday: true },
+  'beginner-teacher': { host: 'app.beginner.aliveinjesus.info', pdfIndex: 0, suffix: 'yaijbgtg', weekStartsOnSunday: true },
+  'kindergarten-student': { host: 'app.kindergarten.aliveinjesus.info', pdfIndex: 0, suffix: 'zaijkdsg', weekStartsOnSunday: true },
+  'kindergarten-teacher': { host: 'app.kindergarten.aliveinjesus.info', pdfIndex: 0, suffix: 'yaijkdtg', weekStartsOnSunday: true },
+  'primary-student': { host: 'app.primary.aliveinjesus.info', pdfIndex: 0, suffix: 'zaijprsg', weekStartsOnSunday: true },
+  'primary-teacher': { host: 'app.primary.aliveinjesus.info', pdfIndex: 0, suffix: 'yaijprtg', weekStartsOnSunday: true },
+  junior: { host: 'sabbath-school.adventech.io', pdfIndex: 0, suffix: 'pp', weekStartsOnSunday: false },
+  'junior-teacher': { host: 'sabbath-school.adventech.io', pdfIndex: 1, suffix: 'pp', weekStartsOnSunday: false },
+  teen: { host: 'sabbath-school.adventech.io', pdfIndex: 0, suffix: 'rt', weekStartsOnSunday: false },
+  'teen-teacher': { host: 'sabbath-school.adventech.io', pdfIndex: 1, suffix: 'rt', weekStartsOnSunday: false },
+  youth: { host: 'sabbath-school.adventech.io', pdfIndex: 0, suffix: 'cc', weekStartsOnSunday: false },
+  'youth-teacher': { host: 'sabbath-school.adventech.io', pdfIndex: 1, suffix: 'cc', weekStartsOnSunday: false },
+};
+
+export const getCurrentChildrenSabbathSchoolUrl = (
+  curriculum: ChildrenSabbathSchoolCurriculum,
+  date = new Date(),
+) => {
+  const route = CHILDREN_CURRICULUM_ROUTES[curriculum];
+  const candidates = [date.getFullYear() - 1, date.getFullYear(), date.getFullYear() + 1]
+    .flatMap((year) => [1, 2, 3, 4].map((quarter) => {
+      const start = new Date(year, (quarter - 1) * 3, 1);
+      const daysBack = route.weekStartsOnSunday
+        ? start.getDay()
+        : (start.getDay() + 1) % 7;
+      start.setDate(start.getDate() - daysBack);
+      return { quarter, start, year };
+    }))
+    .filter(({ start }) => start.getTime() <= date.getTime())
+    .sort((a, b) => b.start.getTime() - a.start.getTime());
+  const { quarter, start, year } = candidates[0];
+  const lesson = Math.max(
+    1,
+    Math.min(14, Math.floor((date.getTime() - start.getTime()) / 604_800_000) + 1),
+  );
+  return `https://${route.host}/en/${year}-${String(quarter).padStart(2, '0')}-${route.suffix}/${String(lesson).padStart(2, '0')}`;
+};
+
+type ChildrenLessonResponse = {
+  pdfs?: Array<{ src?: string }>;
+};
+
+export const getCurrentChildrenSabbathSchoolPdfUrl = async (
+  curriculum: ChildrenSabbathSchoolCurriculum,
+  date = new Date(),
+  fetchLesson: typeof fetch = fetch,
+) => {
+  const lessonUrl = new URL(getCurrentChildrenSabbathSchoolUrl(curriculum, date));
+  const [, language, quarterly, lesson] = lessonUrl.pathname.split('/');
+  const response = await fetchLesson(
+    `https://sabbath-school.adventech.io/api/v2/${language}/quarterlies/${quarterly}/lessons/${lesson}/index.json`,
+  );
+  if (!response.ok) throw new Error(`Lesson request failed: ${response.status}`);
+
+  const data = await response.json() as ChildrenLessonResponse;
+  const pdfUrl = data.pdfs?.[CHILDREN_CURRICULUM_ROUTES[curriculum].pdfIndex]?.src;
+  if (!pdfUrl || new URL(pdfUrl).hostname !== 'sabbath-school-pdf.adventech.io') {
+    throw new Error('The lesson does not include an official PDF.');
+  }
+  return pdfUrl;
+};
+
+export const openCurrentChildrenSabbathSchool = (
+  curriculum: ChildrenSabbathSchoolCurriculum,
+) => {
+  // Reserve the web browsing context during the original tap. Waiting for the
+  // API first can cause installed PWAs to treat the PDF as an in-app redirect.
+  const externalWindow = Platform.OS === 'web' && typeof window !== 'undefined'
+    ? window.open('about:blank', '_blank')
+    : null;
+  if (externalWindow) externalWindow.opener = null;
+
+  getCurrentChildrenSabbathSchoolPdfUrl(curriculum)
+    .then(async (pdfUrl) => {
+      if (Platform.OS === 'web') {
+        if (!externalWindow) {
+          throw new Error('The external browser window was blocked.');
+        }
+        externalWindow.location.replace(pdfUrl);
+      } else {
+        await openInSystemBrowser(
+          pdfUrl,
+          'Error',
+          'Could not open the children\'s Sabbath School PDF.',
+        );
+      }
+    })
+    .catch((error) => {
+      externalWindow?.close();
+      Alert.alert(
+        'Error',
+        'Could not open the current children\'s Sabbath School PDF in the external browser.',
+      );
+      console.error('Children Sabbath School PDF error:', error);
+    });
+};
+
+export const openBabiesSabbathSchool = () =>
+  openURL(
+    'https://babies.aliveinjesus.info/',
+    'Error',
+    'Could not open the Babies parent and teacher resources.',
+  );
 
 export const openChineseHymnalIos = () =>
   openURL(

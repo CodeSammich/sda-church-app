@@ -12,8 +12,16 @@ describe('library catalog', () => {
     }
   });
 
-  it('does not expose publisher synopsis pages as readable books', () => {
-    expect(LIBRARY_CATALOG.officialCollections).toEqual([]);
+  it('uses official reading links for the children starter shelf', () => {
+    expect(LIBRARY_CATALOG.officialCollections).toHaveLength(1);
+    expect(
+      LIBRARY_CATALOG.officialCollections.map(({ collection }) => collection).sort(),
+    ).toEqual(['children']);
+    for (const work of LIBRARY_CATALOG.officialCollections) {
+      expect(work.rights).toBe('official-external');
+      expect(work.sourceName).toBe('EGW Writings');
+      expect(work.sourceUrl).toMatch(/^https:\/\/egwwritings\.org\/read\?/);
+    }
   });
 
   it('separates Adventist pioneers from broader Christian classics', () => {
@@ -32,7 +40,9 @@ describe('library catalog', () => {
   it('prioritizes Chinese sources for Chinese readers without hiding English works', () => {
     const catalog = getLibraryItemsForLanguage('zh');
 
-    expect(catalog.officialCollections).toEqual([]);
+    expect(catalog.officialCollections).toHaveLength(
+      LIBRARY_CATALOG.officialCollections.length,
+    );
     expect(catalog.publicDomainWorks).toHaveLength(
       LIBRARY_CATALOG.publicDomainWorks.length,
     );

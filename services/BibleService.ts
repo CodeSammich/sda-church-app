@@ -159,6 +159,11 @@ export const DEFAULT_TRANSLATION_MAP: Record<SupportedLanguage, string> = {
   es: 'spa_r09',
 };
 
+/** Default comparison language: Chinese for English readers, English otherwise. */
+export const getDefaultSupportingTranslationId = (
+  language: SupportedLanguage,
+) => (language === 'en' ? 'cmn_cuv' : 'BSB');
+
 /**
  * Maps translation IDs to their specific liturgical/poetic marker detection patterns.
  *

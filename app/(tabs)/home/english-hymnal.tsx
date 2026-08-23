@@ -34,6 +34,8 @@ const uiLabels = {
     legalLink: 'Legal Disclaimer',
     attribution:
       'Tap a hymn card to open its lyrics and sheet music externally on HymnsForWorship.org.',
+    rotation:
+      'For a larger, easier-to-read score, rotate your device to landscape. Auto-rotate must be enabled.',
     watchYouTube: 'YouTube',
     readScripture: 'Bible',
   },
@@ -44,6 +46,7 @@ const uiLabels = {
     externalLink: '在 HymnsForWorship.org 查看',
     legalLink: '法律聲明',
     attribution: '點擊詩歌卡片即可在 HymnsForWorship.org 查看歌詞與琴譜。',
+    rotation: '將裝置旋轉至橫向可放大琴譜，方便閱讀。請先開啟自動旋轉。',
     watchYouTube: 'YouTube',
     readScripture: '查閱聖經',
   },
@@ -54,6 +57,7 @@ const uiLabels = {
     externalLink: '在 HymnsForWorship.org 查看',
     legalLink: '法律声明',
     attribution: '点击诗歌卡片即可在 HymnsForWorship.org 查看歌词与琴谱。',
+    rotation: '将设备旋转至横向可放大乐谱，方便阅读。请先开启自动旋转。',
     watchYouTube: 'YouTube',
     readScripture: '查阅圣经',
   },
@@ -65,6 +69,8 @@ const uiLabels = {
     legalLink: 'Aviso legal',
     attribution:
       'Toca una tarjeta de himno para abrir sus letras y partituras externamente en HymnsForWorship.org.',
+    rotation:
+      'Para ampliar y leer mejor la partitura, gira el dispositivo horizontalmente. La rotación automática debe estar activada.',
     watchYouTube: 'YouTube',
     readScripture: 'Biblia',
   },
@@ -252,6 +258,7 @@ export default function HymnalScreen() {
           <SourceNoticePanel
             items={[
               { icon: 'music-clef-treble', text: labels.attribution },
+              { icon: 'phone-rotate-landscape', text: labels.rotation },
             ]}
             legalLabel={labels.legalLink}
             onLegalPress={() =>
