@@ -8,6 +8,24 @@ const RETRIES = Number(process.env.EXTERNAL_CHECK_RETRIES || 2);
 const day = Math.floor(Date.now() / 86_400_000);
 const checks = [];
 
+const describeError = (error) => {
+  const details = [];
+  const seen = new Set();
+  let current = error;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    const code = typeof current === 'object' && current && 'code' in current
+      ? ` [${current.code}]`
+      : '';
+    const message = current instanceof Error ? current.message : String(current);
+    details.push(`${message}${code}`);
+    current = typeof current === 'object' && current && 'cause' in current
+      ? current.cause
+      : undefined;
+  }
+  return details.join(' <- ');
+};
+
 const record = async (name, provider, run) => {
   const started = Date.now();
   try {
@@ -15,7 +33,7 @@ const record = async (name, provider, run) => {
     checks.push({ name, provider, status: 'passed', durationMs: Date.now() - started, detail });
     console.log(`PASS ${provider}: ${name}`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = describeError(error);
     checks.push({ name, provider, status: 'failed', durationMs: Date.now() - started, error: message });
     console.error(`FAIL ${provider}: ${name} — ${message}`);
   }
@@ -38,7 +56,15 @@ const request = async (url, options = {}) => {
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      if (((response.status === 429 && !accept429) || response.status >= 500) && attempt < RETRIES) {
+      // fetch follows ordinary redirects. A surfaced 3xx usually means the
+      // provider returned a temporary challenge or an unusable Location header.
+      const retryableStatus =
+        (response.status >= 300 && response.status < 400) ||
+        response.status === 408 ||
+        response.status === 425 ||
+        (response.status === 429 && !accept429) ||
+        response.status >= 500;
+      if (retryableStatus && attempt < RETRIES) {
         await response.body?.cancel();
         await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)));
         continue;
@@ -46,7 +72,7 @@ const request = async (url, options = {}) => {
       return response;
     } catch (error) {
       clearTimeout(timeout);
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = describeError(error);
       const timedOut = error instanceof Error && error.name === 'AbortError';
       lastError = new Error(
         `${url} ${timedOut ? `timed out after ${TIMEOUT_MS}ms` : `failed: ${reason}`} (attempt ${attempt + 1}/${RETRIES + 1})`,
@@ -67,11 +93,25 @@ const expectOk = (response, url, allowed = []) => {
   }
 };
 
-const getText = async (url) => {
-  const response = await request(url);
-  expectOk(response, url);
-  return response.text();
+const expectFinalHost = (response, url, expectedHosts = []) => {
+  if (!expectedHosts.length) return;
+  const finalHost = new URL(response.url || url).hostname;
+  if (!expectedHosts.includes(finalHost)) {
+    throw new Error(`${url} redirected to unexpected host ${finalHost}`);
+  }
 };
+
+const describeResponse = (response) =>
+  `HTTP ${response.status}${response.redirected ? ` -> ${response.url}` : ''}`;
+
+const getTextPage = async (url, { allowed = [], expectedHosts = [] } = {}) => {
+  const response = await request(url);
+  expectOk(response, url, allowed);
+  expectFinalHost(response, url, expectedHosts);
+  return { response, text: await response.text() };
+};
+
+const getText = async (url, options) => (await getTextPage(url, options)).text;
 
 const getJson = async (url) => {
   const response = await request(url, { headers: { accept: 'application/json' } });
@@ -79,12 +119,13 @@ const getJson = async (url) => {
   return response.json();
 };
 
-const probe = async (url, { binary = false, allowed = [] } = {}) => {
+const probe = async (url, { binary = false, allowed = [], expectedHosts = [] } = {}) => {
   const response = await request(url, {
     ...(binary ? { headers: { range: 'bytes=0-1023' } } : {}),
     accept429: allowed.includes(429),
   });
   expectOk(response, url, allowed);
+  expectFinalHost(response, url, expectedHosts);
   if (binary) {
     const contentType = response.headers.get('content-type') || '';
     if (!/(audio|image|octet-stream)/i.test(contentType)) {
@@ -92,7 +133,7 @@ const probe = async (url, { binary = false, allowed = [] } = {}) => {
     }
   }
   await response.body?.cancel();
-  return `HTTP ${response.status}`;
+  return describeResponse(response);
 };
 
 const readJson = async (path) => JSON.parse(await readFile(path, 'utf8'));
@@ -192,18 +233,33 @@ for (const [name, catId, path] of hymnCatalogs) {
 }
 
 await record('directory publishes the expected English hymnal links', 'Hymns for Worship', async () => {
-  const html = await getText('https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/');
+  const url = 'https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/';
+  const { response, text: html } = await getTextPage(url, {
+    expectedHosts: ['hymnsforworship.org'],
+  });
   const numbers = new Set([...html.matchAll(/sdah-(\d{3})/g)].map((match) => Number(match[1])));
   // The provider currently omits #262 from its directory, although the generated page is probed in rotation.
   if (numbers.size < 690 || [...numbers].some((number) => number < 1 || number > 695)) {
     throw new Error(`directory lists ${numbers.size} valid hymn numbers`);
   }
-  return `${numbers.size} published hymn links`;
+  return `${numbers.size} published hymn links; ${describeResponse(response)}`;
 });
 
-await record('daily English hymn page sample', 'Hymns for Worship', () => {
+await record('daily English hymn page sample', 'Hymns for Worship', async () => {
   const number = dailySample(Array.from({ length: 695 }, (_, index) => index + 1), 695);
-  return probe(`https://hymnsforworship.org/sdah-${String(number).padStart(3, '0')}#hymn-score`);
+  const paddedNumber = String(number).padStart(3, '0');
+  const url = `https://hymnsforworship.org/sdah-${paddedNumber}#hymn-score`;
+  const { response, text: html } = await getTextPage(url, {
+    expectedHosts: ['hymnsforworship.org'],
+  });
+  const finalPath = new URL(response.url).pathname;
+  if (!finalPath.startsWith(`/sdah-${paddedNumber}`)) {
+    throw new Error(`${url} resolved to unexpected hymn path ${finalPath}`);
+  }
+  if (!html.includes(`SDAH ${paddedNumber}`) || !/id=["']hymn-score["']/.test(html)) {
+    throw new Error(`${url} did not publish the expected hymn heading and score anchor`);
+  }
+  return `${describeResponse(response)} with hymn heading and score anchor`;
 });
 
 const libraryCatalogSource = await readFile('features/library/LibraryCatalog.ts', 'utf8');
@@ -239,18 +295,18 @@ const egwEditions = [...egwCatalogSource.matchAll(
   url: `https://egwwritings.org/read?panels=p${firstParagraph}&index=0`,
 }));
 
-await record('catalog contains nine deep links per language', 'EGW Writings', async () => {
+await record('catalog contains eleven deep links per language', 'EGW Writings', async () => {
   for (const language of ['en', 'zh', 'es']) {
     const editions = egwEditions.filter((entry) => entry.language === language);
-    if (editions.length !== 9) throw new Error(`${language} has ${editions.length} editions`);
+    if (editions.length !== 11) throw new Error(`${language} has ${editions.length} editions`);
     if (editions.some(({ bookId, firstParagraph }) => !firstParagraph.startsWith(`${bookId}.`))) {
       throw new Error(`${language} contains a mismatched book and paragraph ID`);
     }
   }
-  if (new Set(egwEditions.map(({ url }) => url)).size !== 27) {
+  if (new Set(egwEditions.map(({ url }) => url)).size !== 33) {
     throw new Error('edition deep links are not unique');
   }
-  return '27 unique English, Chinese, and Spanish edition links';
+  return '33 unique English, Chinese, and Spanish edition links';
 });
 
 for (const language of ['en', 'zh', 'es']) {
