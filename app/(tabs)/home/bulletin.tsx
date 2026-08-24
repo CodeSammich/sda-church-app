@@ -85,7 +85,7 @@ const LABELS = {
     },
     program: {
       doxology: 'Doxology',
-      invocation: 'Invocation',
+      invocation: 'Invocation / Opening Prayer',
       hymnOfPraise: 'Hymn of Praise',
       sermonTitle: 'Sermon Title',
       bibleVerses: 'Bible Verses',
@@ -148,7 +148,7 @@ const LABELS = {
     },
     program: {
       doxology: '讚美',
-      invocation: '獻禱',
+      invocation: '獻禱／開始禱告',
       hymnOfPraise: '讚美詩',
       sermonTitle: '講道題目',
       bibleVerses: '本週經文',
@@ -211,7 +211,7 @@ const LABELS = {
     },
     program: {
       doxology: '颂美',
-      invocation: '献祷',
+      invocation: '献祷／开始祷告',
       hymnOfPraise: '赞美诗',
       sermonTitle: '讲道题目',
       bibleVerses: '本周经文',
@@ -274,7 +274,7 @@ const LABELS = {
     },
     program: {
       doxology: 'Doxología',
-      invocation: 'Invocación',
+      invocation: 'Invocación / Oración inicial',
       hymnOfPraise: 'Himno de Alabanza',
       sermonTitle: 'Título del Sermón',
       bibleVerses: 'Versículos Bíblicos',
@@ -782,18 +782,15 @@ export default function WeeklyBulletinScreen() {
           />
         )}
         <DataRow
-          label={isQueens ? labels.program.sermon : labels.program.sermonTitle}
-          value={getProgramValue(location.sermonTitle, language)}
-          assignment={
-            isQueens
-              ? getProgramAssignment(
-                  labels.roles.sermon,
-                  location.sermon,
-                  labels,
-                )
-              : undefined
-          }
-          emptyText={labels.notAvailable}
+          label={labels.program.sermon}
+          value={getRosterValue(location.sermon, labels)}
+          assignment={{
+            label: labels.program.sermonTitle,
+            value:
+              getProgramValue(location.sermonTitle, language) ||
+              labels.notAvailable,
+          }}
+          emptyText={labels.notAssigned}
         />
         <DataRow
           label={labels.program.hymnOfResponse}
@@ -833,7 +830,6 @@ export default function WeeklyBulletinScreen() {
           [labels.roles.ssChair, location.ssChair],
         ]
       : [
-          [labels.roles.sermon, location.sermon],
           [labels.roles.chairPastoralPrayer, location.chairPastoralPrayer],
           [labels.roles.offeringPrayer, location.offeringPrayer],
           [labels.roles.sabbathSchool, location.sabbathSchool],
