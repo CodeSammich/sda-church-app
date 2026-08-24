@@ -4,8 +4,26 @@ import {
   getSupportingBibleTranslation,
   indexChapterVerses,
 } from '@/services/BibleDualLanguage';
+import {
+  getBibleTranslationLanguageBadge,
+  getDefaultSupportingTranslationId,
+} from '@/services/BibleService';
 
 describe('dual-language Bible reader', () => {
+  it('defaults English readers to Chinese and all other readers to English', () => {
+    expect(getDefaultSupportingTranslationId('en')).toBe('cmn_cuv');
+    expect(getDefaultSupportingTranslationId('zh')).toBe('BSB');
+    expect(getDefaultSupportingTranslationId('zh-cn')).toBe('BSB');
+    expect(getDefaultSupportingTranslationId('es')).toBe('BSB');
+  });
+
+  it('uses compact, script-aware translation badges', () => {
+    expect(getBibleTranslationLanguageBadge('en')).toBe('EN');
+    expect(getBibleTranslationLanguageBadge('zh')).toBe('繁');
+    expect(getBibleTranslationLanguageBadge('zh-cn')).toBe('简');
+    expect(getBibleTranslationLanguageBadge('es')).toBe('ES');
+  });
+
   it('pairs a learning translation with the app-language edition', () => {
     expect(getSupportingBibleTranslation('cmn_cuv', 'en')?.id).toBe('BSB');
     expect(getSupportingBibleTranslation('BSB', 'zh-cn')?.id).toBe('cmn_cu1');

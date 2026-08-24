@@ -79,7 +79,7 @@ export const customLightTheme = {
       tithe:                '#F0FDF4', // Faint mint
       discover:             '#F5F3FF', // Soft periwinkle / lavender
       hymnal:               '#EBF5FF', // Sky blue
-      events:               '#FFF4E6', // Peach / warm amber tones
+      sabbathSchool:        '#FFF4E6', // Peach / warm amber tones
       // discover page
       aboutSDA:             '#FCE8E6', // Soft blush
       aboutHistory:         '#FFFBEB', // Warm cream
@@ -96,7 +96,7 @@ export const customLightTheme = {
       tithe:                'rgba(4,120,87,1.00)',      // Deep forest/emerald green
       discover:             'rgba(55,48,163,1.00)',     // Deep indigo/navy
       hymnal:               'rgba(2, 132, 199, 1.00)',  // Deep ocean blue
-      events:               'rgba(217, 119, 6, 1.00)',  // Warm burnt amber / Terracotta
+      sabbathSchool:        'rgba(217, 119, 6, 1.00)',  // Warm burnt amber / Terracotta
       // discover page
       aboutSDA:             'rgba(185,28,28,1.00)',     // Rich crimson
       aboutHistory:         'rgba(146,64,14,1.00)',     // Warm amber/brown
@@ -206,7 +206,7 @@ export const customDarkTheme: AppTheme = {
       tithe:         '#173028',
       discover:      '#25233B',
       hymnal:        '#172B36',
-      events:        '#332719',
+      sabbathSchool: '#332719',
       // discover page
       aboutSDA:      '#321C1C',
       aboutHistory:  '#302719',
@@ -223,7 +223,7 @@ export const customDarkTheme: AppTheme = {
       tithe:        '#6FD3A7',
       discover:     '#AFA8FF',
       hymnal:       '#67C7F0',
-      events:       '#F4B860',
+      sabbathSchool: '#F4B860',
       // discover page
       aboutSDA:     '#FF8A80',
       aboutHistory: '#F3C677',

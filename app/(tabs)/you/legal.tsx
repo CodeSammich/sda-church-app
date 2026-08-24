@@ -59,7 +59,11 @@ export default function LegalScreen() {
         Writings (egwwritings.org) for externally hosted religious books. Some linked
         material may be copyrighted. When you follow these links, you are subject to the
         destination provider’s terms and conditions. Please respect copyright laws and do
-        not attempt to bypass access requirements.
+        not attempt to bypass access requirements. For easier reading in the EGW Writings
+        text reader, use its own font and theme controls. Open its three-dot menu to choose
+        “Larger font” or “Smaller font.” The reader remembers these choices in your browser.
+        Because it is operated externally, this app does not transfer its text-size or
+        theme settings to EGW Writings.
       </Text>
 
       <Text

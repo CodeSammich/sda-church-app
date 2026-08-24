@@ -26,7 +26,7 @@ describe('EGW book catalog', () => {
           true,
         );
         expect(edition.url).toBe(
-          `https://egwwritings.org/read?panels=p${edition.firstParagraph}&index=0`,
+          `https://text.egwwritings.org/read/${edition.firstParagraph}`,
         );
       }
     }

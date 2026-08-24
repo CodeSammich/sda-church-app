@@ -1,5 +1,6 @@
 import { UpdateContext } from '@/app/_layout';
 import { MenuCard, MenuCardSwitchVisual } from '@/components/MenuCard';
+import { LanguageDialog } from '@/components/LanguageDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -86,6 +87,7 @@ export default function YouScreen() {
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
   const { textScale } = useTextSize();
   const [showTextSize, setShowTextSize] = useState(false);
+  const [showLanguage, setShowLanguage] = useState(false);
   const headerHeight = useGlobalHeaderHeight();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
@@ -136,12 +138,7 @@ export default function YouScreen() {
               description={labels.languageSub}
               icon="translate"
               iconColor={theme.colors.tertiary}
-              onPress={() =>
-                router.push({
-                  pathname: '/you/language',
-                  params: { backTo: '/you' },
-                } as any)
-              }
+              onPress={() => setShowLanguage(true)}
             />
             <MenuCard
               title={textSizeCopy.title}
@@ -231,6 +228,10 @@ export default function YouScreen() {
       <TextSizeDialog
         visible={showTextSize}
         onDismiss={() => setShowTextSize(false)}
+      />
+      <LanguageDialog
+        visible={showLanguage}
+        onDismiss={() => setShowLanguage(false)}
       />
     </>
   );

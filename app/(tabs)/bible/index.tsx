@@ -566,7 +566,7 @@ export default function BibleScreen() {
   });
   const [selectedSupportingTranslation, setSelectedSupportingTranslation] =
     useState(() => {
-      const defaultId = BibleService.DEFAULT_TRANSLATION_MAP[language] || 'BSB';
+      const defaultId = BibleService.getDefaultSupportingTranslationId(language);
       return (
         BibleService.SUPPORTED_TRANSLATIONS.find((t) => t.id === defaultId) ||
         BibleService.SUPPORTED_TRANSLATIONS[0]
@@ -602,7 +602,7 @@ export default function BibleScreen() {
   const [selectedAudioSources, setSelectedAudioSources] = useState<
     Record<string, string>
   >({});
-  const [showPinyin, setShowPinyin] = useState(true);
+  const [showPinyin, setShowPinyin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [chapterReloadToken, setChapterReloadToken] = useState(0);
   const chapterLoadAttemptRef = useRef(0);
@@ -813,7 +813,11 @@ export default function BibleScreen() {
 
     if (defaultTranslation) {
       setSupportedTranslation(defaultTranslation);
-      setSelectedSupportingTranslation(defaultTranslation);
+      const supportingId = BibleService.getDefaultSupportingTranslationId(language);
+      const supportingTranslation = BibleService.SUPPORTED_TRANSLATIONS.find(
+        (translation) => translation.id === supportingId,
+      );
+      if (supportingTranslation) setSelectedSupportingTranslation(supportingTranslation);
     }
   }, [
     language,
@@ -2950,6 +2954,15 @@ export default function BibleScreen() {
             bibleTranslation: supportingTranslation
               ? `${supportedTranslation.shortName} + ${supportingTranslation.shortName}`
               : supportedTranslation.shortName,
+            bibleTranslationItems: [
+              supportedTranslation,
+              ...(supportingTranslation ? [supportingTranslation] : []),
+            ].map((translation) => ({
+              badge: BibleService.getBibleTranslationLanguageBadge(
+                translation.lang,
+              ),
+              label: translation.shortName,
+            })),
             bibleTranslationAccessibilityLabel: supportingTranslation
               ? `${labels.primaryTranslation}: ${getTranslationLabel(
                   supportedTranslation,

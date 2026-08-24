@@ -33,6 +33,31 @@ export const normalizeHymnalSearchText = (value: string) =>
 
 export const HYMNAL_SEARCH_RESULT_LIMIT = 60;
 
+export type HeaderSearchCandidate = {
+  searchNumber?: string;
+  searchText?: string;
+  subtitle: string;
+  title: string;
+};
+
+export const filterHeaderSearchItems = <Item extends HeaderSearchCandidate>(
+  items: readonly Item[],
+  query: string,
+) => {
+  const normalizedQuery = normalizeHymnalSearchText(query);
+  if (!normalizedQuery) return [];
+
+  return items
+    .filter((item) =>
+      /^\d+$/.test(normalizedQuery) && item.searchNumber
+        ? item.searchNumber === normalizedQuery
+        : normalizeHymnalSearchText(
+            `${item.title} ${item.subtitle} ${item.searchText || ''}`,
+          ).includes(normalizedQuery),
+    )
+    .slice(0, HYMNAL_SEARCH_RESULT_LIMIT);
+};
+
 const HYMNAL_SEARCH_LABELS = {
   en: {
     goToHymn: 'Go directly to hymn',

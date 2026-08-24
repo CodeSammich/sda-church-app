@@ -1,7 +1,6 @@
 import { MenuCard } from '@/components/MenuCard';
 import {
   CHURCH_BUILDING_IMAGE_URL,
-  openSabbathSchool,
   openSermonArchive,
   openSpotifyPodcast,
   openZoomClass,
@@ -27,12 +26,12 @@ const allLabels = {
     spotify: 'Audio Archive',
     spotifySub: 'Listen to sermons and classes',
     sabbathSchool: 'Sabbath School',
-    sabbathSchoolSub: 'Weekly Bible study guides and discussion',
+    sabbathSchoolSub: 'This week\'s lesson and study-guide catalog',
     zoomClass: 'Zoom Class',
     zoomSub:
       'Interactive Bible study and fellowship',
     library: 'Library',
-    librarySub: 'Devotionals, PDFs and guides',
+    librarySub: 'Books by pioneers, for families, and by topic',
   },
   zh: {
     title: '探索',
@@ -43,11 +42,11 @@ const allLabels = {
     spotify: '音頻檔案',
     spotifySub: '收聽證道與課程',
     sabbathSchool: '安息日學',
-    sabbathSchoolSub: '每週研經指南與討論',
+    sabbathSchoolSub: '本週課程與研經目錄',
     zoomClass: 'Zoom 課程',
     zoomSub: '互動式研經與團契。',
     library: '圖書館',
-    librarySub: '靈修資料、PDF 與指南',
+    librarySub: '先驅、家庭與主題書籍',
   },
   'zh-cn': {
     title: '探索',
@@ -58,11 +57,11 @@ const allLabels = {
     spotify: '音频存档',
     spotifySub: '收听证道与课程',
     sabbathSchool: '安息日学',
-    sabbathSchoolSub: '每周研经指南与讨论',
+    sabbathSchoolSub: '本周课程与研经目录',
     zoomClass: 'Zoom 课程',
     zoomSub: '互动式研经与团契。',
     library: '图书馆',
-    librarySub: '灵修资料、PDF 与指南',
+    librarySub: '先驱、家庭与主题书籍',
   },
   es: {
     title: 'Explorar',
@@ -73,12 +72,12 @@ const allLabels = {
     spotify: 'Archivo de Audio',
     spotifySub: 'Escucha sermones y clases',
     sabbathSchool: 'Escuela Sabática',
-    sabbathSchoolSub: 'Guías de estudio bíblico semanal y discusión',
+    sabbathSchoolSub: 'Lección semanal y catálogo de estudio',
     zoomClass: 'Clase de Zoom',
     zoomSub:
       'Estudio bíblico interactivo y compañerismo.',
     library: 'Biblioteca',
-    librarySub: 'Devocionales, PDFs y guías',
+    librarySub: 'Libros de pioneros, familia y temas',
   },
 };
 
@@ -127,7 +126,7 @@ export default function ResourcesScreen() {
             icon={APP_ICONOGRAPHY.explore.sabbathSchool}
             iconColor={theme.colors.tertiary}
             rightIcon={{ name: 'chevron-right' }}
-            onPress={() => openSabbathSchool(language)}
+            onPress={() => router.push('/resources/sabbath-school')}
           />
 
           <MenuCard

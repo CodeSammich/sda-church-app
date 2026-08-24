@@ -33,7 +33,7 @@
  * docs/feature_designs/hymnal_integration_design.md
  */
 
-import { openURL } from '@/constants/ExternalLinks';
+import { openInSystemBrowser } from '@/constants/ExternalLinks';
 
 export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
   const hId =
@@ -47,7 +47,11 @@ export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
 };
 
 export const openHymnal = (hymnNumber?: string | number) => {
-  return openURL(getEnglishHymnUrl(hymnNumber));
+  return openInSystemBrowser(
+    getEnglishHymnUrl(hymnNumber),
+    'Error',
+    'Could not open the English hymnal page.',
+  );
 };
 
 export interface HymnEntry {

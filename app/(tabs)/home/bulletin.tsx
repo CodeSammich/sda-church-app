@@ -85,11 +85,12 @@ const LABELS = {
     },
     program: {
       doxology: 'Doxology',
-      invocation: 'Invocation',
+      invocation: 'Invocation / Opening Prayer',
       hymnOfPraise: 'Hymn of Praise',
       sermonTitle: 'Sermon Title',
       bibleVerses: 'Bible Verses',
       pastoralPrayer: 'Pastoral Prayer',
+      hymn: 'Hymn',
       titheOffering: 'Tithe & Offering',
       specialMusic: 'Special Music',
       sermon: 'Sermon',
@@ -147,11 +148,12 @@ const LABELS = {
     },
     program: {
       doxology: '讚美',
-      invocation: '獻禱',
+      invocation: '獻禱／開始禱告',
       hymnOfPraise: '讚美詩',
       sermonTitle: '講道題目',
       bibleVerses: '本週經文',
       pastoralPrayer: '牧養禱告',
+      hymn: '詩歌',
       titheOffering: '十一與奉獻',
       specialMusic: '特別音樂',
       sermon: '證道',
@@ -209,11 +211,12 @@ const LABELS = {
     },
     program: {
       doxology: '颂美',
-      invocation: '献祷',
+      invocation: '献祷／开始祷告',
       hymnOfPraise: '赞美诗',
       sermonTitle: '讲道题目',
       bibleVerses: '本周经文',
       pastoralPrayer: '牧养祷告',
+      hymn: '诗歌',
       titheOffering: '十一与奉献',
       specialMusic: '特别音乐',
       sermon: '证道',
@@ -271,11 +274,12 @@ const LABELS = {
     },
     program: {
       doxology: 'Doxología',
-      invocation: 'Invocación',
+      invocation: 'Invocación / Oración inicial',
       hymnOfPraise: 'Himno de Alabanza',
       sermonTitle: 'Título del Sermón',
       bibleVerses: 'Versículos Bíblicos',
       pastoralPrayer: 'Oración Pastoral',
+      hymn: 'Himno',
       titheOffering: 'Diezmos y Ofrendas',
       specialMusic: 'Música Especial',
       sermon: 'Sermón',
@@ -752,12 +756,8 @@ export default function WeeklyBulletinScreen() {
         {isQueens && (
           <DataRow
             label={labels.program.pastoralPrayer}
-            value={pastoralPrayer.displayText}
-            assignment={getProgramAssignment(
-              labels.roles.chairPastoralPrayer,
-              location.chairPastoralPrayer,
-              labels,
-            )}
+            value={getRosterValue(location.chairPastoralPrayer, labels)}
+            assignment={{ label: labels.program.hymn, value: pastoralPrayer.displayText }}
             emptyText={labels.notAvailable}
             action={getBulletinHymnAction(pastoralPrayer)}
           />
@@ -782,18 +782,15 @@ export default function WeeklyBulletinScreen() {
           />
         )}
         <DataRow
-          label={isQueens ? labels.program.sermon : labels.program.sermonTitle}
-          value={getProgramValue(location.sermonTitle, language)}
-          assignment={
-            isQueens
-              ? getProgramAssignment(
-                  labels.roles.sermon,
-                  location.sermon,
-                  labels,
-                )
-              : undefined
-          }
-          emptyText={labels.notAvailable}
+          label={labels.program.sermon}
+          value={getRosterValue(location.sermon, labels)}
+          assignment={{
+            label: labels.program.sermonTitle,
+            value:
+              getProgramValue(location.sermonTitle, language) ||
+              labels.notAvailable,
+          }}
+          emptyText={labels.notAssigned}
         />
         <DataRow
           label={labels.program.hymnOfResponse}
@@ -805,7 +802,7 @@ export default function WeeklyBulletinScreen() {
         {isQueens && (
           <DataRow
             label={labels.program.benediction}
-            value={getRosterValue(location.closingPrayer, labels)}
+            value={getRosterValue(location.sermon, labels)}
             emptyText={labels.notAssigned}
           />
         )}
@@ -833,7 +830,6 @@ export default function WeeklyBulletinScreen() {
           [labels.roles.ssChair, location.ssChair],
         ]
       : [
-          [labels.roles.sermon, location.sermon],
           [labels.roles.chairPastoralPrayer, location.chairPastoralPrayer],
           [labels.roles.offeringPrayer, location.offeringPrayer],
           [labels.roles.sabbathSchool, location.sabbathSchool],

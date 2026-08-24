@@ -19,7 +19,7 @@ export type EgwBookWork = Readonly<{
 }>;
 
 const readUrl = (firstParagraph: string) =>
-  `https://egwwritings.org/read?panels=p${firstParagraph}&index=0`;
+  `https://text.egwwritings.org/read/${firstParagraph}`;
 
 const edition = (
   language: EgwEditionLanguage,
@@ -168,6 +168,36 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
       edition('en', 'Education', 29, '29.5'),
       edition('zh', '教育论', 14488, '14488.1'),
       edition('es', 'La Educación', 1702, '1702.2'),
+    ],
+  },
+  {
+    id: 'child-guidance',
+    category: 'wholePerson',
+    workTitle: {
+      en: 'Child Guidance',
+      zh: '兒童教育指南',
+      'zh-cn': '儿童教育指南',
+      es: 'Conducción del Niño',
+    },
+    editions: [
+      edition('en', 'Child Guidance', 8, '8.4'),
+      edition('zh', '儿童教育指南', 14465, '14465.1'),
+      edition('es', 'Conducción del Niño', 157, '157.2'),
+    ],
+  },
+  {
+    id: 'messages-to-young-people',
+    category: 'growth',
+    workTitle: {
+      en: 'Messages to Young People',
+      zh: '告青年書',
+      'zh-cn': '告青年书',
+      es: 'Mensajes para los Jóvenes',
+    },
+    editions: [
+      edition('en', 'Messages to Young People', 76, '76.1'),
+      edition('zh', '告青年书', 14475, '14475.1'),
+      edition('es', 'Mensajes para los Jóvenes', 1769, '1769.1'),
     ],
   },
 ];

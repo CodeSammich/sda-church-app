@@ -17,7 +17,7 @@ import { Text } from 'react-native-paper';
 type LibraryBookCardProps = Readonly<{
   accessibilityHint?: string;
   author: string;
-  coverSource: ImageSourcePropType;
+  coverSource?: ImageSourcePropType;
   listLayout: boolean;
   onPress: () => void;
   title: string;
@@ -75,12 +75,13 @@ export function LibraryBookCard({
           { backgroundColor: theme.colors.surfaceVariant },
         ]}
       >
-        <Image
-          accessible={false}
-          resizeMode="cover"
-          source={coverSource}
-          style={styles.cover}
-        />
+        {coverSource ? (
+          <Image accessible={false} resizeMode="cover" source={coverSource} style={styles.cover} />
+        ) : (
+          <View style={styles.placeholderCover}>
+            <AppIcon name="book-open-page-variant" size={44} color={theme.colors.primary} />
+          </View>
+        )}
       </View>
 
       <View
@@ -140,6 +141,11 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
     cover: {
       height: '100%',
       width: '100%',
+    },
+    placeholderCover: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
     },
     details: {
       padding: 12,

@@ -1,4 +1,9 @@
 import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest';
+import {
+  getCurrentChildrenSabbathSchoolPdfUrl,
+  getCurrentChildrenSabbathSchoolUrl,
+  getCurrentSabbathSchoolUrl,
+} from '@/constants/ExternalLinks';
 import { getAudioPowerCuvChapterLinks } from '@/services/BibleAudioSources';
 import { getEnglishHymnUrl, getSortedHymns } from '@/features/hymnal/EnglishHymnal';
 import {
@@ -47,6 +52,95 @@ const assertHttpsUrls = (values: string[], expectedHost: string) => {
 };
 
 describe('generated external dependency URLs', () => {
+  it('links directly to the lesson containing the requested Sabbath School week', () => {
+    expect(getCurrentSabbathSchoolUrl('en', new Date(2026, 7, 23))).toBe(
+      'https://sabbath-school.adventech.io/en/2026-03/09',
+    );
+    expect(getCurrentSabbathSchoolUrl('zh-cn', new Date(2026, 7, 23))).toBe(
+      'https://sabbath-school.adventech.io/zh/2026-03/09',
+    );
+    expect(getCurrentSabbathSchoolUrl('en', new Date(2026, 8, 26))).toBe(
+      'https://sabbath-school.adventech.io/en/2026-04/01',
+    );
+  });
+
+  it('links each children\'s age bracket directly to its current lesson', () => {
+    const currentSunday = new Date(2026, 7, 23);
+
+    expect(getCurrentChildrenSabbathSchoolUrl('beginner-student', currentSunday)).toBe(
+      'https://app.beginner.aliveinjesus.info/en/2026-03-zaijbgsg/09',
+    );
+    expect(getCurrentChildrenSabbathSchoolUrl('beginner-teacher', currentSunday)).toBe(
+      'https://app.beginner.aliveinjesus.info/en/2026-03-yaijbgtg/09',
+    );
+    expect(getCurrentChildrenSabbathSchoolUrl('kindergarten-student', currentSunday)).toBe(
+      'https://app.kindergarten.aliveinjesus.info/en/2026-03-zaijkdsg/09',
+    );
+    expect(getCurrentChildrenSabbathSchoolUrl('primary-teacher', currentSunday)).toBe(
+      'https://app.primary.aliveinjesus.info/en/2026-03-yaijprtg/09',
+    );
+    expect(getCurrentChildrenSabbathSchoolUrl('junior', currentSunday)).toBe(
+      'https://sabbath-school.adventech.io/en/2026-03-pp/09',
+    );
+    expect(getCurrentChildrenSabbathSchoolUrl('teen', currentSunday)).toBe(
+      'https://sabbath-school.adventech.io/en/2026-03-rt/09',
+    );
+    expect(getCurrentChildrenSabbathSchoolUrl('youth', currentSunday)).toBe(
+      'https://sabbath-school.adventech.io/en/2026-03-cc/09',
+    );
+  });
+
+  it('starts the Alive in Jesus lesson week on Sunday', () => {
+    expect(
+      getCurrentChildrenSabbathSchoolUrl('primary-student', new Date(2026, 7, 22)),
+    ).toMatch(/\/2026-03-zaijprsg\/08$/);
+    expect(
+      getCurrentChildrenSabbathSchoolUrl('primary-student', new Date(2026, 7, 23)),
+    ).toMatch(/\/2026-03-zaijprsg\/09$/);
+    expect(
+      getCurrentChildrenSabbathSchoolUrl('primary-student', new Date(2026, 8, 27)),
+    ).toMatch(/\/2026-04-zaijprsg\/01$/);
+  });
+
+  it('resolves a children\'s lesson to its direct official PDF', async () => {
+    const fetchLesson = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        pdfs: [{ src: 'https://sabbath-school-pdf.adventech.io/pdf/en/current.pdf' }],
+      }),
+    });
+
+    await expect(getCurrentChildrenSabbathSchoolPdfUrl(
+      'beginner-teacher',
+      new Date(2026, 7, 23),
+      fetchLesson,
+    )).resolves.toBe('https://sabbath-school-pdf.adventech.io/pdf/en/current.pdf');
+    expect(fetchLesson).toHaveBeenCalledWith(
+      'https://sabbath-school.adventech.io/api/v2/en/quarterlies/2026-03-yaijbgtg/lessons/09/index.json',
+    );
+  });
+
+  it('selects the teacher PDF from older children\'s shared lesson feeds', async () => {
+    const fetchLesson = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        pdfs: [
+          { src: 'https://sabbath-school-pdf.adventech.io/pdf/en/student.pdf' },
+          { src: 'https://sabbath-school-pdf.adventech.io/pdf/en/teacher.pdf' },
+        ],
+      }),
+    });
+
+    await expect(getCurrentChildrenSabbathSchoolPdfUrl(
+      'junior-teacher',
+      new Date(2026, 7, 23),
+      fetchLesson,
+    )).resolves.toBe('https://sabbath-school-pdf.adventech.io/pdf/en/teacher.pdf');
+    expect(fetchLesson).toHaveBeenCalledWith(
+      'https://sabbath-school.adventech.io/api/v2/en/quarterlies/2026-03-pp/lessons/09/index.json',
+    );
+  });
+
   it('generates all 1,189 CUV chapters with three ordered, valid origins', () => {
     const chapters = CUV_BOOKS.flatMap(([book, count]) =>
       Array.from({ length: count }, (_, index) =>
@@ -104,13 +198,13 @@ describe('generated external dependency URLs', () => {
   it('generates every curated EGW edition URL on the official host', () => {
     const editions = EGW_BOOKS.flatMap((work) => work.editions);
 
-    expect(editions).toHaveLength(27);
-    expect(editions.filter(({ language }) => language === 'en')).toHaveLength(9);
-    expect(editions.filter(({ language }) => language === 'zh')).toHaveLength(9);
-    expect(editions.filter(({ language }) => language === 'es')).toHaveLength(9);
+    expect(editions).toHaveLength(33);
+    expect(editions.filter(({ language }) => language === 'en')).toHaveLength(11);
+    expect(editions.filter(({ language }) => language === 'zh')).toHaveLength(11);
+    expect(editions.filter(({ language }) => language === 'es')).toHaveLength(11);
     assertHttpsUrls(
       editions.map(({ url }) => url),
-      'egwwritings.org',
+      'text.egwwritings.org',
     );
   });
 });
