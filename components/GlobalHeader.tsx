@@ -41,7 +41,6 @@ const HERO_HEADER_ROUTES = new Set([
   'baptism',
   'bulletin',
   'discover',
-  'events',
   'fellowship',
   'give',
   'hymnal-selection',

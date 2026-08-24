@@ -22,7 +22,6 @@ export default function HomeStackLayout() {
       <Stack.Screen name="chinese-707-four-part-hymnal" />
       <Stack.Screen name="chinese-707-standard-hymnal" />
       <Stack.Screen name="baptism" />
-      <Stack.Screen name="events" />
     </Stack>
   );
 }

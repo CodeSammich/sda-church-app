@@ -5,6 +5,7 @@ import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { EGW_BOOKS } from '@/features/library/EgwBookCatalog';
 import {
@@ -14,7 +15,7 @@ import {
 import { router, Stack } from 'expo-router';
 import { useCallback, useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { List } from 'react-native-paper';
+import { List, Text } from 'react-native-paper';
 
 const copy = {
   en: { title: 'Library', verse: '“Give instruction to the wise, and they will be wiser still; teach the righteous, and they will add to their learning.”', verseRef: 'Proverbs 9:9 (BSB)', pioneers: 'Church Pioneers', readers: 'Youth & Children', topics: 'Topics', egw: 'Ellen G. White', egwSub: 'Books and multilingual official editions', bates: 'Joseph Bates', batesSub: 'Sabbath and early Adventist writings', andrews: 'J. N. Andrews', andrewsSub: 'History and early Adventist scholarship', youth: 'Youth / Young Adults', youthSub: 'A small starter shelf for growing faith', children: 'Children', childrenSub: 'A small starter shelf of Christ-centered stories', ministry: 'Ministry', ministrySub: 'Pastoral service, health, and mission', family: 'Family & Education', familySub: 'Home, character, and Christian education', classics: 'Christian Classics', classicsSub: 'Enduring Christian devotional literature' },
@@ -63,6 +64,7 @@ export default function LibraryHubScreen() {
   const sourceLabels = sourceCopy[language] || sourceCopy.en;
   const theme = useAppTheme();
   const navigationStyles = useNavigationStyles();
+  const documentStyles = useDocumentStyles();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
   const catalog = getLibraryItemsForLanguage(language);
   const open = useCallback((collection: string, q?: string) =>
@@ -150,33 +152,51 @@ export default function LibraryHubScreen() {
           title={sourceLabels.title}
         />
         <List.Section>
-          <List.Subheader
-            numberOfLines={0}
-            style={[navigationStyles.subheader, { color: theme.colors.onBackground }]}
+          <Text
+            variant="titleLarge"
+            style={[
+              documentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
           >
             {labels.pioneers}
-          </List.Subheader>
+          </Text>
           <MenuCard title={labels.egw} description={labels.egwSub} icon="bookshelf" onPress={() => open('egw')} />
           <MenuCard title={labels.bates} description={labels.batesSub} icon="book-open-variant" onPress={() => open('bates')} />
           <MenuCard title={labels.andrews} description={labels.andrewsSub} icon="history" onPress={() => open('andrews')} />
         </List.Section>
         <List.Section>
-          <List.Subheader
-            numberOfLines={0}
-            style={[navigationStyles.subheader, { color: theme.colors.onBackground }]}
+          <Text
+            variant="titleLarge"
+            style={[
+              documentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
           >
             {labels.readers}
-          </List.Subheader>
+          </Text>
           <MenuCard title={labels.youth} description={labels.youthSub} icon="account-group" onPress={() => open('youth')} />
           <MenuCard title={labels.children} description={labels.childrenSub} icon="account-child" onPress={() => open('children')} />
         </List.Section>
         <List.Section>
-          <List.Subheader
-            numberOfLines={0}
-            style={[navigationStyles.subheader, { color: theme.colors.onBackground }]}
+          <Text
+            variant="titleLarge"
+            style={[
+              documentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
           >
             {labels.topics}
-          </List.Subheader>
+          </Text>
           <MenuCard title={labels.ministry} description={labels.ministrySub} icon="hand-heart" onPress={() => open('ministry')} />
           <MenuCard title={labels.family} description={labels.familySub} icon="home-heart" onPress={() => open('family')} />
           <MenuCard title={labels.classics} description={labels.classicsSub} icon="book-cross" onPress={() => open('classics')} />

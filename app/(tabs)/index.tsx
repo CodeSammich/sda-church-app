@@ -66,7 +66,7 @@ export default function HomeScreen() {
       discover: 'New Member / Visitor',
       bulletin: 'Weekly Bulletin',
       give: 'Tithe & Offering',
-      events: 'Upcoming Events',
+      sabbathSchool: 'This Week’s Lesson',
       hymnal: 'Hymnal',
       sabbathStarts: 'Sabbath starts in',
       sabbathEnds: 'Sabbath ends in',
@@ -84,7 +84,7 @@ export default function HomeScreen() {
       discover: '新會友／訪客',
       bulletin: '每週週報',
       give: '奉獻',
-      events: '近期活動',
+      sabbathSchool: '本週安息日學課程',
       hymnal: '詩歌本',
       sabbathStarts: '距離安息日還有',
       sabbathEnds: '距離安息日結束還有',
@@ -102,7 +102,7 @@ export default function HomeScreen() {
       discover: '新会友／访客',
       bulletin: '每周周报',
       give: '奉献',
-      events: '近期活动',
+      sabbathSchool: '本周安息日学课程',
       hymnal: '诗歌本',
       sabbathStarts: '距离安息日还有',
       sabbathEnds: '距离安息日结束还有',
@@ -118,7 +118,7 @@ export default function HomeScreen() {
       discover: 'Nuevo miembro / Visitante',
       bulletin: 'Boletín Semanal',
       give: 'Diezmos y Ofrendas',
-      events: 'Próximos Eventos',
+      sabbathSchool: 'Lección de esta semana',
       hymnal: 'Himnario',
       sabbathStarts: 'El Sábado comienza en',
       sabbathEnds: 'El Sábado termina en',
@@ -590,13 +590,13 @@ export default function HomeScreen() {
               style={styles.gridCell}
             />
             <GridMenuCard
-              title={labels.events}
-              icon="calendar"
-              color={theme.colors.cardBgColors.events}
-              iconColor={theme.colors.iconColors.events}
+              title={labels.sabbathSchool}
+              icon="book-open-page-variant"
+              color={theme.colors.cardBgColors.sabbathSchool}
+              iconColor={theme.colors.iconColors.sabbathSchool}
               onPress={() =>
                 router.push({
-                  pathname: '/home/events',
+                  pathname: '/resources/sabbath-school',
                   params: { backTo: '/' },
                 } as any)
               }

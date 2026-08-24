@@ -9,11 +9,12 @@ import {
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { Stack } from 'expo-router';
 import { useContext, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, List } from 'react-native-paper';
+import { Button, List, Text } from 'react-native-paper';
 
 const copy = {
   en: {
@@ -73,6 +74,7 @@ export default function SabbathSchoolScreen() {
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
   const navigationStyles = useNavigationStyles();
+  const documentStyles = useDocumentStyles();
   const headerHeight = useGlobalHeaderHeight();
   const [childrenTab, setChildrenTab] = useState<'students' | 'teachers'>('students');
   const showingStudents = childrenTab === 'students';
@@ -85,12 +87,34 @@ export default function SabbathSchoolScreen() {
         contentContainerStyle={[styles.content, { paddingTop: headerHeight + 12 }]}
       >
         <List.Section>
-          <List.Subheader style={{ color: theme.colors.onBackground }}>{labels.adult}</List.Subheader>
+          <Text
+            variant="titleLarge"
+            style={[
+              documentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
+          >
+            {labels.adult}
+          </Text>
           <MenuCard title={labels.current} description={labels.currentAdult} icon="calendar-today" onPress={() => openCurrentSabbathSchool(language)} />
           <MenuCard title={labels.allAdult} description={labels.allAdultSub} icon="bookshelf" onPress={() => openSabbathSchool(language)} />
         </List.Section>
         <List.Section>
-          <List.Subheader style={{ color: theme.colors.onBackground }}>{labels.children}</List.Subheader>
+          <Text
+            variant="titleLarge"
+            style={[
+              documentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
+          >
+            {labels.children}
+          </Text>
           <View style={styles.childrenTabsContainer}>
             <Button
               accessibilityRole="tab"
@@ -132,7 +156,18 @@ export default function SabbathSchoolScreen() {
           )}
         </List.Section>
         <List.Section>
-          <List.Subheader style={{ color: theme.colors.onBackground }}>{labels.moreResources}</List.Subheader>
+          <Text
+            variant="titleLarge"
+            style={[
+              documentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
+          >
+            {labels.moreResources}
+          </Text>
           <MenuCard title={labels.babies} description={labels.babiesSub} icon="baby-face-outline" onPress={openBabiesSabbathSchool} />
           <MenuCard title={labels.allChildren} description={labels.allChildrenSub} icon="account-child" onPress={openChildrenSabbathSchool} />
         </List.Section>
