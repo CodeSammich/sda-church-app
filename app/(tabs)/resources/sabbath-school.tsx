@@ -1,5 +1,7 @@
 import { MenuCard } from '@/components/MenuCard';
+import { VerseHero } from '@/components/VerseHero';
 import {
+  CHURCH_BUILDING_IMAGE_URL,
   openChildrenSabbathSchool,
   openBabiesSabbathSchool,
   openCurrentChildrenSabbathSchool,
@@ -8,7 +10,7 @@ import {
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
-import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { Stack } from 'expo-router';
@@ -18,7 +20,7 @@ import { Button, List, Text } from 'react-native-paper';
 
 const copy = {
   en: {
-    title: 'Sabbath School', adult: 'Adult', children: 'Children',
+    title: 'Sabbath School', verse: '“Let the wise listen and gain instruction, and the discerning acquire wise counsel.”', verseRef: 'Proverbs 1:5 (BSB)', adult: 'Adult', children: 'Children',
     current: 'This Week', currentAdult: 'Open the current adult Bible study lesson',
     allAdult: 'All Adult Lessons', allAdultSub: 'Browse current and past adult quarterlies',
     babies: 'Babies (birth–12 months)', babiesSub: 'Parent and teacher curriculum resources',
@@ -31,7 +33,7 @@ const copy = {
     allChildren: "Children's Catalog", allChildrenSub: 'Browse Alive in Jesus age-level resources',
   },
   zh: {
-    title: '安息日學', adult: '成人', children: '兒童',
+    title: '安息日學', verse: '「使智慧人聽見，增長學問，使聰明人得著智謀。」', verseRef: '箴言 1:5（和合本）', adult: '成人', children: '兒童',
     current: '本週', currentAdult: '開啟本週成人研經課程',
     allAdult: '所有成人課程', allAdultSub: '瀏覽本季及過往季度課程',
     babies: '嬰兒（出生至 12 個月）', babiesSub: '家長與教師課程資源',
@@ -43,7 +45,7 @@ const copy = {
     allChildren: '兒童課程目錄', allChildrenSub: '瀏覽 Alive in Jesus 各年齡課程',
   },
   'zh-cn': {
-    title: '安息日学', adult: '成人', children: '儿童',
+    title: '安息日学', verse: '“使智慧人听见，增长学问，使聪明人得着智谋。”', verseRef: '箴言 1:5（和合本）', adult: '成人', children: '儿童',
     current: '本周', currentAdult: '打开本周成人研经课程',
     allAdult: '所有成人课程', allAdultSub: '浏览本季及过往季度课程',
     babies: '婴儿（出生至 12 个月）', babiesSub: '家长与教师课程资源',
@@ -55,7 +57,7 @@ const copy = {
     allChildren: '儿童课程目录', allChildrenSub: '浏览 Alive in Jesus 各年龄课程',
   },
   es: {
-    title: 'Escuela Sabática', adult: 'Adultos', children: 'Niños',
+    title: 'Escuela Sabática', verse: '«Oirá el sabio, y aumentará el saber, y el entendido adquirirá consejo.»', verseRef: 'Proverbios 1:5 (RVR1960)', adult: 'Adultos', children: 'Niños',
     current: 'Esta semana', currentAdult: 'Abre la lección actual para adultos',
     allAdult: 'Todas las lecciones para adultos', allAdultSub: 'Explora las guías actuales y anteriores',
     babies: 'Bebés (0–12 meses)', babiesSub: 'Recursos para padres y maestros',
@@ -75,17 +77,33 @@ export default function SabbathSchoolScreen() {
   const theme = useAppTheme();
   const navigationStyles = useNavigationStyles();
   const documentStyles = useDocumentStyles();
-  const headerHeight = useGlobalHeaderHeight();
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
   const [childrenTab, setChildrenTab] = useState<'students' | 'teachers'>('students');
   const showingStudents = childrenTab === 'students';
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title }} />
+      <Stack.Screen
+        options={{ title: labels.title, showTitleChip: showHeaderTitle } as any}
+      />
       <ScrollView
         style={navigationStyles.container}
-        contentContainerStyle={[styles.content, { paddingTop: headerHeight + 12 }]}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.scrollContent}
       >
+        <VerseHero
+          title={labels.title}
+          verse={labels.verse}
+          reference={labels.verseRef}
+          imageSource={{ uri: CHURCH_BUILDING_IMAGE_URL }}
+          verseColors={
+            theme.dark
+              ? ['#1D2B3A', '#26445D', '#315E7A']
+              : ['#1E4E79', '#2873A3', '#3B8FBD']
+          }
+        />
+        <View style={styles.content}>
         <List.Section>
           <Text
             variant="titleLarge"
@@ -171,6 +189,7 @@ export default function SabbathSchoolScreen() {
           <MenuCard title={labels.babies} description={labels.babiesSub} icon="baby-face-outline" onPress={openBabiesSabbathSchool} />
           <MenuCard title={labels.allChildren} description={labels.allChildrenSub} icon="account-child" onPress={openChildrenSabbathSchool} />
         </List.Section>
+        </View>
       </ScrollView>
     </>
   );
@@ -180,4 +199,5 @@ const styles = StyleSheet.create({
   childrenTabsContainer: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   childrenTab: { flex: 1 },
   content: { paddingBottom: 24, paddingHorizontal: 20 },
+  scrollContent: { paddingBottom: 24 },
 });
