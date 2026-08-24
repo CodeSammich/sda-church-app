@@ -20,7 +20,7 @@ describe('library catalog', () => {
     for (const work of LIBRARY_CATALOG.officialCollections) {
       expect(work.rights).toBe('official-external');
       expect(work.sourceName).toBe('EGW Writings');
-      expect(work.sourceUrl).toMatch(/^https:\/\/egwwritings\.org\/read\?/);
+      expect(work.sourceUrl).toMatch(/^https:\/\/text\.egwwritings\.org\/read\/\d+\.\d+$/);
     }
   });
 

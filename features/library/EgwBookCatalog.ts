@@ -19,7 +19,7 @@ export type EgwBookWork = Readonly<{
 }>;
 
 const readUrl = (firstParagraph: string) =>
-  `https://egwwritings.org/read?panels=p${firstParagraph}&index=0`;
+  `https://text.egwwritings.org/read/${firstParagraph}`;
 
 const edition = (
   language: EgwEditionLanguage,

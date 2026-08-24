@@ -292,7 +292,7 @@ const egwEditions = [...egwCatalogSource.matchAll(
   language,
   bookId: Number(bookId),
   firstParagraph,
-  url: `https://egwwritings.org/read?panels=p${firstParagraph}&index=0`,
+  url: `https://text.egwwritings.org/read/${firstParagraph}`,
 }));
 
 await record('catalog contains eleven deep links per language', 'EGW Writings', async () => {
@@ -310,13 +310,21 @@ await record('catalog contains eleven deep links per language', 'EGW Writings', 
 });
 
 for (const language of ['en', 'zh', 'es']) {
-  await record(`daily ${language} edition sample`, 'EGW Writings', () => {
+  await record(`daily ${language} text edition sample`, 'EGW Writings', async () => {
     const editions = egwEditions.filter((entry) => entry.language === language);
     const sample = dailySample(editions, language.charCodeAt(0));
     if (!sample) throw new Error(`${language} has no edition to sample`);
-    return probe(sample.url, { allowed: [429] }).then(
-      (detail) => `${detail}: ${sample.firstParagraph}`,
-    );
+    const { response, text: html } = await getTextPage(sample.url, {
+      expectedHosts: ['text.egwwritings.org'],
+    });
+    if (
+      !html.includes('data-booktype="egwwritings"') ||
+      !html.includes('reader-tools-fontsize-increase') ||
+      !html.includes('js-btn-set-theme')
+    ) {
+      throw new Error(`${sample.url} did not publish the expected text reader controls`);
+    }
+    return `${describeResponse(response)}: ${sample.firstParagraph} with text reader controls`;
   });
 }
 

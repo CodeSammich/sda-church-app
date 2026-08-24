@@ -204,7 +204,7 @@ describe('generated external dependency URLs', () => {
     expect(editions.filter(({ language }) => language === 'es')).toHaveLength(11);
     assertHttpsUrls(
       editions.map(({ url }) => url),
-      'egwwritings.org',
+      'text.egwwritings.org',
     );
   });
 });

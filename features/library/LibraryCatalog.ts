@@ -77,7 +77,7 @@ const officialCollections: readonly LibraryItem[] = [
     language: 'en',
     rights: 'official-external',
     sourceName: 'EGW Writings',
-    sourceUrl: 'https://egwwritings.org/read?panels=p144.1&index=0',
+    sourceUrl: 'https://text.egwwritings.org/read/144.1',
   },
 ];
 
