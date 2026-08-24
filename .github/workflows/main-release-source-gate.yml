@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  validate-release-source:
-    name: validate-release-source
+  ensure_pr_against_release_branch:
+    name: ensure_pr_against_release_branch
     runs-on: ubuntu-latest
     steps:
       - name: Require an organization release branch
