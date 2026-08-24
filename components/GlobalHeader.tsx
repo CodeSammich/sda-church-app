@@ -106,6 +106,11 @@ type HeaderSearchResult =
   | HymnalHeaderSearchResult
   | CustomHeaderSearchItem;
 
+type BibleTranslationChipItem = Readonly<{
+  badge: string;
+  label: string;
+}>;
+
 export const GlobalHeader = (props: any) => {
   const { language } = useContext(LanguageContext);
   const segments = useSegments();
@@ -114,6 +119,9 @@ export const GlobalHeader = (props: any) => {
   const routeSegments: readonly string[] = segments;
   const isBiblePage = routeSegments.includes('bible');
   const bibleTranslation = props.options?.bibleTranslation as string | undefined;
+  const bibleTranslationItems = props.options?.bibleTranslationItems as
+    | readonly BibleTranslationChipItem[]
+    | undefined;
   const bibleTranslationAccessibilityLabel =
     (props.options?.bibleTranslationAccessibilityLabel as string | undefined) ||
     bibleTranslation;
@@ -585,18 +593,74 @@ export const GlobalHeader = (props: any) => {
                       textScale={headerTextScale}
                       color={theme.colors.primary}
                     />
-                    <Text
-                      style={{
-                        color: theme.colors.onSurface,
-                        fontSize: scaleTypographyMetric(14, headerTextScale),
-                        fontWeight: '700',
-                        lineHeight: scaleTypographyMetric(19, headerTextScale),
-                        textAlign: 'center',
-                        flexShrink: 1,
-                      }}
-                    >
-                      {bibleTranslation}
-                    </Text>
+                    {bibleTranslationItems?.length ? (
+                      <View style={styles.translationChipItems}>
+                        {bibleTranslationItems.map((item, index) => (
+                          <View
+                            key={`${item.badge}-${item.label}-${index}`}
+                            style={styles.translationChipItem}
+                          >
+                            {index > 0 && (
+                              <Text
+                                style={{
+                                  color: theme.colors.onSurfaceVariant,
+                                  fontSize: scaleTypographyMetric(13, headerTextScale),
+                                  fontWeight: '700',
+                                  lineHeight: scaleTypographyMetric(18, headerTextScale),
+                                }}
+                              >
+                                +
+                              </Text>
+                            )}
+                            <View
+                              style={[
+                                styles.translationLanguageBadge,
+                                {
+                                  backgroundColor: theme.colors.primaryContainer,
+                                  borderColor: theme.colors.outlineVariant,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={{
+                                  color: theme.colors.onPrimaryContainer,
+                                  fontSize: scaleTypographyMetric(11, headerTextScale),
+                                  fontWeight: '800',
+                                  lineHeight: scaleTypographyMetric(15, headerTextScale),
+                                }}
+                              >
+                                {item.badge}
+                              </Text>
+                            </View>
+                            <Text
+                              numberOfLines={1}
+                              style={{
+                                color: theme.colors.onSurface,
+                                flexShrink: 1,
+                                fontSize: scaleTypographyMetric(14, headerTextScale),
+                                fontWeight: '700',
+                                lineHeight: scaleTypographyMetric(19, headerTextScale),
+                              }}
+                            >
+                              {item.label}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text
+                        style={{
+                          color: theme.colors.onSurface,
+                          fontSize: scaleTypographyMetric(14, headerTextScale),
+                          fontWeight: '700',
+                          lineHeight: scaleTypographyMetric(19, headerTextScale),
+                          textAlign: 'center',
+                          flexShrink: 1,
+                        }}
+                      >
+                        {bibleTranslation}
+                      </Text>
+                    )}
                     <AppIcon
                       name="chevron-down"
                       size={17}
@@ -821,6 +885,28 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
+  },
+  translationChipItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    gap: 3,
+  },
+  translationChipItems: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    gap: 4,
+    justifyContent: 'center',
+  },
+  translationLanguageBadge: {
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 22,
+    minWidth: 24,
+    paddingHorizontal: 4,
   },
   stackedTranslationChip: {
     flexBasis: '100%',

@@ -2952,8 +2952,17 @@ export default function BibleScreen() {
             title: book ? `${book.name} ${chapterNum}` : labels.bible,
             backTo: paramBackTo,
             bibleTranslation: supportingTranslation
-              ? `${supportedTranslation.shortName} → ${supportingTranslation.shortName}`
+              ? `${supportedTranslation.shortName} + ${supportingTranslation.shortName}`
               : supportedTranslation.shortName,
+            bibleTranslationItems: [
+              supportedTranslation,
+              ...(supportingTranslation ? [supportingTranslation] : []),
+            ].map((translation) => ({
+              badge: BibleService.getBibleTranslationLanguageBadge(
+                translation.lang,
+              ),
+              label: translation.shortName,
+            })),
             bibleTranslationAccessibilityLabel: supportingTranslation
               ? `${labels.primaryTranslation}: ${getTranslationLabel(
                   supportedTranslation,
