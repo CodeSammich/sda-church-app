@@ -1,0 +1,41 @@
+name: Main Release Source Gate
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  ensure_pr_to_main_from_release_branch:
+    name: ensure_pr_to_main_from_release_branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require an organization release branch
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$BASE_REF" != "main" ]]; then
+            echo "::error title=Unexpected destination::This gate only accepts pull requests targeting main."
+            exit 1
+          fi
+
+          if [[ "$HEAD_REPOSITORY" != "$REPOSITORY" ]]; then
+            echo "::error title=Fork pull request blocked::Pull requests to main must come from a release branch in $REPOSITORY, not $HEAD_REPOSITORY."
+            exit 1
+          fi
+
+          if [[ ! "$HEAD_REF" =~ ^release/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Invalid release source::Pull requests to main must come from an organization branch named release/x.y.z. Received $HEAD_REF."
+            exit 1
+          fi
+
+          echo "Validated $HEAD_REPOSITORY:$HEAD_REF as an approved source for main."
