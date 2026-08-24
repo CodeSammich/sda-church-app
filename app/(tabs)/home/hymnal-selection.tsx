@@ -1,4 +1,5 @@
 import { AppIcon } from '@/components/AppIcon';
+import { MenuCard } from '@/components/MenuCard';
 import { VerseHero } from '@/components/VerseHero';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
@@ -22,6 +23,8 @@ import { Card, Text } from 'react-native-paper';
 const uiLabels = {
   en: {
     title: 'Select Hymnal',
+    lookup: 'English–Chinese Hymn Lookup',
+    lookupDescription: 'Find matching numbers in the 1985 English and 505 Chinese hymnals.',
     verse: '“Is anyone among you in trouble? Let them pray. Is anyone happy? Let them sing songs of praise.”',
     verseRef: 'James 5:13 (NIV)',
     english: 'SDA Hymnal — 1985 Edition',
@@ -33,6 +36,8 @@ const uiLabels = {
   },
   zh: {
     title: '選擇詩歌本',
+    lookup: '英中詩歌編號對照',
+    lookupDescription: '查找 1985 年英文詩歌本與 505 版中文讚美詩的對應編號。',
     verse: '「你們中間有受苦的呢，他就該禱告；有喜樂的呢，他就該歌頌。」',
     verseRef: '雅各書 5:13 (CUV)',
     english: '英文 SDA 詩歌本 — 1985 年版',
@@ -44,6 +49,8 @@ const uiLabels = {
   },
   'zh-cn': {
     title: '选择诗歌本',
+    lookup: '英中诗歌编号对照',
+    lookupDescription: '查找 1985 年英文诗歌本与 505 版中文赞美诗的对应编号。',
     verse: '“你们中间有受苦的呢，他就该祷告；有喜乐的呢，他就该歌颂。”',
     verseRef: '雅各书 5:13 (CUVS)',
     english: '英文 SDA 诗歌本 — 1985 年版',
@@ -55,6 +62,8 @@ const uiLabels = {
   },
   es: {
     title: 'Seleccionar Himnario',
+    lookup: 'Correspondencia de Himnos en Inglés y Chino',
+    lookupDescription: 'Busca números equivalentes en los himnarios inglés de 1985 y chino de 505.',
     verse: '“¿Está alguno entre vosotros afligido? Haga oración. ¿Está alguno alegre? Cante alabanzas.”',
     verseRef: 'Santiago 5:13 (RVR1960)',
     english: 'Himnario ASD — Edición 1985',
@@ -155,6 +164,19 @@ export default function HymnalSelectionScreen() {
 
         {/* Body */}
         <View style={styles.cardList}>
+          <MenuCard
+            title={labels.lookup}
+            description={labels.lookupDescription}
+            icon="translate"
+            onPress={() =>
+              router.push({
+                pathname: '/home/hymn-lookup',
+                params: { backTo: selectionRoute },
+              } as any)
+            }
+            style={styles.lookupCard}
+          />
+
           <HymnalCard
             title={labels.english}
             imageSource={require('../../../public/SDAH1985.jpg')}
@@ -237,6 +259,9 @@ const styles = StyleSheet.create({
   cardList: {
     paddingHorizontal: 20,
     paddingTop: 8,
+  },
+  lookupCard: {
+    marginBottom: 20,
   },
 });
 

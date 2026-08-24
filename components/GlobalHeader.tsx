@@ -7,6 +7,7 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
 import {
+  filterHeaderSearchItems,
   getHymnalSearchItems,
   getHymnalSearchResults,
   getHymnalSearchSubtitle,
@@ -93,6 +94,7 @@ type CustomHeaderSearchItem = {
   icon?: string;
   key: string;
   onPress: () => void;
+  searchNumber?: string;
   searchText?: string;
   subtitle: string;
   title: string;
@@ -283,16 +285,14 @@ export const GlobalHeader = (props: any) => {
       : getHymnalSearchSubtitle(language),
   }));
 
-  const normalizedCustomQuery = deferredSearchQuery.trim().toLocaleLowerCase();
   const customResults = useMemo(
-    () => normalizedCustomQuery && customHeaderSearch
-      ? customHeaderSearch.items.filter((item) =>
-          `${item.title} ${item.subtitle} ${item.searchText || ''}`
-            .toLocaleLowerCase()
-            .includes(normalizedCustomQuery),
+    () => customHeaderSearch
+      ? filterHeaderSearchItems(
+          customHeaderSearch.items,
+          deferredSearchQuery,
         )
       : [],
-    [customHeaderSearch, normalizedCustomQuery],
+    [customHeaderSearch, deferredSearchQuery],
   );
 
   const normalizedBibleQuery = searchQuery.trim().toLocaleLowerCase();

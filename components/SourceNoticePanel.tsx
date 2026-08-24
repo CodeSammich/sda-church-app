@@ -22,8 +22,8 @@ export interface SourceNoticeItem {
 
 interface SourceNoticePanelProps {
   items: readonly SourceNoticeItem[];
-  legalLabel: string;
-  onLegalPress: () => void;
+  legalLabel?: string;
+  onLegalPress?: () => void;
   style?: StyleProp<ViewStyle>;
   title: string;
 }
@@ -80,19 +80,23 @@ export function SourceNoticePanel({
           </View>
         ))}
       </View>
-      <TouchableOpacity
-        accessibilityLabel={legalLabel}
-        accessibilityRole="link"
-        onPress={onLegalPress}
-        style={[
-          styles.legalLink,
-          { borderTopColor: theme.colors.outlineVariant },
-        ]}
-      >
-        <Text style={[styles.legalLinkText, { color: theme.colors.primary }]}>
-          {legalLabel}
-        </Text>
-      </TouchableOpacity>
+      {legalLabel && onLegalPress ? (
+        <TouchableOpacity
+          accessibilityLabel={legalLabel}
+          accessibilityRole="link"
+          onPress={onLegalPress}
+          style={[
+            styles.legalLink,
+            { borderTopColor: theme.colors.outlineVariant },
+          ]}
+        >
+          <Text
+            style={[styles.legalLinkText, { color: theme.colors.primary }]}
+          >
+            {legalLabel}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }

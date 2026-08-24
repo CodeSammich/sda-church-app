@@ -1,10 +1,10 @@
 import { EgwEditionDialog } from '@/components/EgwEditionDialog';
 import { MenuCard } from '@/components/MenuCard';
+import { TitleHero } from '@/components/TitleHero';
 import {
   LibraryBookCard,
   shouldUseLibraryListLayout,
 } from '@/components/LibraryBookCard';
-import { VerseHero } from '@/components/VerseHero';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -15,7 +15,6 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { EGW_BOOKS } from '@/features/library/EgwBookCatalog';
 import { getLibraryItemsForLanguage } from '@/features/library/LibraryCatalog';
-import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo, useState } from 'react';
 import {
@@ -30,9 +29,6 @@ import { List, Text } from 'react-native-paper';
 const allLabels = {
   en: {
     title: 'Library',
-    verse:
-      '“So they read from the Book of the Law of God, explaining it and giving insight, so that the people could understand what was being read.”',
-    verseRef: 'Nehemiah 8:8 (BSB)',
     egwAuthor: 'Ellen G. White',
     chooseEdition: 'Choose an edition. Your app language is listed first. The official text reader remembers its own font and theme settings.',
     opensOfficial: 'Opens the official EGW Writings text edition',
@@ -46,8 +42,6 @@ const allLabels = {
   },
   zh: {
     title: '圖書館',
-    verse: '「他們清清楚楚地念神的律法書，講明意思，使百姓明白所念的。」',
-    verseRef: '尼希米記 8:8（和合本）',
     egwAuthor: '懷愛倫',
     chooseEdition: '請選擇版本。應用程式語言會優先顯示。官方純文字閱讀器會記住其字體與主題設定。',
     opensOfficial: '開啟 EGW Writings 官方純文字版本',
@@ -61,8 +55,6 @@ const allLabels = {
   },
   'zh-cn': {
     title: '图书馆',
-    verse: '“他们清清楚楚地念神的律法书，讲明意思，使百姓明白所念的。”',
-    verseRef: '尼希米记 8:8（和合本）',
     egwAuthor: '怀爱伦',
     chooseEdition: '请选择版本。应用程序语言会优先显示。官方纯文字阅读器会记住其字体与主题设置。',
     opensOfficial: '打开 EGW Writings 官方纯文字版本',
@@ -76,9 +68,6 @@ const allLabels = {
   },
   es: {
     title: 'Biblioteca',
-    verse:
-      '“Leían en el libro de la ley de Dios claramente, y ponían el sentido, de modo que entendiesen la lectura.”',
-    verseRef: 'Nehemías 8:8 (RVR1909)',
     egwAuthor: 'Elena G. de White',
     chooseEdition: 'Elige una edición. El idioma de la aplicación aparece primero. El lector de texto oficial recuerda sus propios ajustes de fuente y tema.',
     opensOfficial: 'Abre la edición de texto oficial de EGW Writings',
@@ -146,7 +135,6 @@ export default function LibraryScreen() {
   const catalog = getLibraryItemsForLanguage(language);
   const [selectedEgwBookId, setSelectedEgwBookId] = useState<string | null>(null);
   const styles = useMemo(() => createStyles(textScale), [textScale]);
-  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
   const useListLayout = shouldUseLibraryListLayout(
     width,
     Math.max(1, fontScale * textScale),
@@ -201,27 +189,16 @@ export default function LibraryScreen() {
         options={{
           backTo: '/resources/library',
           title: collectionTitle,
-          showTitleChip: showHeaderTitle,
         } as any}
       />
       <ScrollView
         style={{ flex: 1 }}
-        onScroll={handleHeroScroll}
-        scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
       >
-        <VerseHero
-          title={collectionTitle}
-          verse={labels.verse}
-          reference={labels.verseRef}
+        <TitleHero
           imageSource={{ uri: CHURCH_BUILDING_IMAGE_URL }}
-          verseColors={
-            theme.dark
-              ? ['#18312D', '#204A43', '#2D6258']
-              : ['#28594F', '#367466', '#4C8F7D']
-          }
+          title={collectionTitle}
         />
-
         <View style={styles.content}>
           {collection === 'topics' ? (
             <List.Section>
@@ -231,7 +208,6 @@ export default function LibraryScreen() {
             </List.Section>
           ) : (
           <>
-          <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>{collectionTitle}</Text>
           <View style={[styles.bookGrid, useListLayout && styles.bookList]}>
             {egwWorks.map((work) => (
               <LibraryBookCard
@@ -272,7 +248,6 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
     },
     content: {
       paddingHorizontal: 20,
-      paddingTop: 12,
     },
     sectionTitle: {
       fontSize: scaleTypographyMetric(20, textScale),

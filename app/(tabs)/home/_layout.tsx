@@ -15,6 +15,7 @@ export default function HomeStackLayout() {
       <Stack.Screen name="fellowship" />
       <Stack.Screen name="roster" />
       <Stack.Screen name="hymnal-selection" />
+      <Stack.Screen name="hymn-lookup" />
       <Stack.Screen name="english-hymnal" />
       <Stack.Screen name="chinese-505-hymnal" />
       <Stack.Screen name="chinese-506-hymnal" />
