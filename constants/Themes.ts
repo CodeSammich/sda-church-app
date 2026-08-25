@@ -192,11 +192,13 @@ export const customDarkTheme: AppTheme = {
   fonts: configureFonts({ config: baseVariants }),
   colors: {
     ...MD3DarkTheme.colors,
-    // Primary: Soft Active Focus
-    primary: '#E2E8F0', // Cool off-white reduces glare on dark surfaces
-    onPrimary: '#0F172A', // Deep slate keeps action content highly legible
-    primaryContainer: '#2C2C2C', // Selection Container
-    onPrimaryContainer: '#E2E8F0', // General Iconography
+    // Primary: restrained gold on warm black, inspired by premium evening packaging.
+    // The palette is especially useful in readers: gold identifies interaction and
+    // annotation while warm-white body text remains the highest-contrast element.
+    primary: '#E6C768',
+    onPrimary: '#211A05',
+    primaryContainer: '#3A3018',
+    onPrimaryContainer: '#F7E3A1',
     // Chromatic dark card surfaces preserve Home and Discover category identity
     // without introducing bright, high-glare blocks.
     cardBgColors: {
@@ -234,68 +236,68 @@ export const customDarkTheme: AppTheme = {
     },
     // Low-glare equivalents of the GridMenuCard chrome used in light mode.
     gridMenuCard: {
-      border: '#3F3F3F',
-      decorativeIcon: 'rgba(255, 255, 255, 0.18)',
-      arrowBackground: '#2C2C2C',
-      arrowBorder: '#938F99',
-      arrowForeground: '#AAAAAA',
+      border: '#433B2B',
+      decorativeIcon: 'rgba(230, 199, 104, 0.18)',
+      arrowBackground: '#2A261E',
+      arrowBorder: '#9B8C66',
+      arrowForeground: '#D8C58E',
     },
     // Secondary: Utility UI (Chips, Muted Actions)
-    secondary: '#AAAAAA',
-    onSecondary: '#0F0F0F',
-    secondaryContainer: '#2C2C2C',
-    onSecondaryContainer: '#F5F5F5',
+    secondary: '#BDB5A2',
+    onSecondary: '#1C1912',
+    secondaryContainer: '#302B20',
+    onSecondaryContainer: '#F0E7D3',
 
-    // Tertiary: Matches Primary (Active Focus) in Dark Mode
-    tertiary: '#E2E8F0',
-    onTertiary: '#0F172A', // Matches softened primary action content
-    tertiaryContainer: '#2C2C2C',
-    onTertiaryContainer: '#E2E8F0',
+    // Tertiary: a deeper gold for narrative and reader annotations.
+    tertiary: '#D9B44A',
+    onTertiary: '#211A05',
+    tertiaryContainer: '#3A3018',
+    onTertiaryContainer: '#F7E3A1',
 
     // Backgrounds & Surfaces
-    background: '#0F0F0F', // The Canvas
-    onBackground: '#F5F5F5', // The Ink: Soft White to mitigate Irradiation Illusion
-    surface: '#1E1E1E', // The Object: Cards/Containers
-    bulletinSurface: '#1E1E1E', // Preserve the established charcoal card surface
-    bulletinRemarkSurface: '#332A18', // Low-glare amber notice surface
-    onBulletinRemarkSurface: '#F6D88A', // Warm notice text
-    onSurface: '#F5F5F5', // The Ink: Soft White to prevent Halation
+    background: '#0D0C0A', // Warm-black reader canvas
+    onBackground: '#F3EDE1', // Warm-white reading ink reduces cool-screen glare
+    surface: '#1A1814', // Warm charcoal cards and reader controls
+    bulletinSurface: '#1A1814',
+    bulletinRemarkSurface: '#332A18',
+    onBulletinRemarkSurface: '#F6D88A',
+    onSurface: '#F3EDE1',
 
     // UI Variants & Boundaries
-    surfaceVariant: '#2C2C2C', // Secondary UI
-    onSurfaceVariant: '#AAAAAA', // Muted Intent: Top Search Bar Icon/Text
-    outline: '#938F99', // Boundary (Outline)
-    outlineVariant: '#3F3F3F', // Boundary (Subtle) / Divider
+    surfaceVariant: '#2A261E',
+    onSurfaceVariant: '#BDB5A2',
+    outline: '#9B8C66',
+    outlineVariant: '#433B2B',
 
     // Navigation Compatibility Layer
-    card: '#1E1E1E', // The Object
-    text: '#F5F5F5', // The Ink
-    border: '#3F3F3F', // The Divider
-    notification: '#E2E8F0', // Soft active focus
+    card: '#1A1814',
+    text: '#F3EDE1',
+    border: '#433B2B',
+    notification: '#E6C768',
     readerColors: {
-      footnoteIndicator: '#3EA6FF', // Original sanctuary blue for dark-reader visibility
+      footnoteIndicator: '#E6C768',
     },
     // Preserve existing surface, onSurface, etc.
     // surface and onSurface are already defined above, so no duplicates here
 
-    // Branding (Standardized Monochrome in Dark Mode)
-    brandYoutube: '#FFFFFF',
-    brandSpotify: '#FFFFFF',
-    brandZoom: '#FFFFFF',
+    // External marks share the dark theme's restrained monochrome gold treatment.
+    brandYoutube: '#E6C768',
+    brandSpotify: '#E6C768',
+    brandZoom: '#E6C768',
 
     // Neutralizing Elevation (Hierarchy of Light)
     // This was not derived from the UI_UX.md spec, only recommended by Gemini
     elevation: {
       level0: 'transparent',
-      level1: '#1E1E1E',
-      level2: '#242424',
-      level3: '#2C2C2C',
-      level4: '#333333',
-      level5: '#383838',
+      level1: '#1A1814',
+      level2: '#211E18',
+      level3: '#2A261E',
+      level4: '#332E24',
+      level5: '#3A3428',
     },
 
     // Subtle Blur Effect for Glassmorphism Border for Search
-    glassBorder: 'rgba(255, 255, 255, 0.1)',
+    glassBorder: 'rgba(230, 199, 104, 0.14)',
     // Persistent highlight for saved Bible verses
     verseHighlight: '#5A4B16',
   },

@@ -21,16 +21,18 @@ screen's top and bottom bar colors. Please ensure these colors match the view co
 
 ### Primary Color Accent
 
-Deep Ocean Blue `#0369A1` is the light-mode interaction color. Dark mode replaces saturated
-blue actions with the softer off-white `#E2E8F0`, reducing glare while preserving clear
-focus. The brighter Sanctuary Blue `#3EA6FF` is reserved for the dark Bible reader's
-footnote indicator rather than used as the global primary color.
+Deep Ocean Blue `#0369A1` is the light-mode interaction color. Dark mode uses a restrained
+gold `#E6C768` over warm-black surfaces, giving controls and reader annotations a premium,
+evening-oriented identity while warm-white remains reserved for long-form reading text.
+This direction adapts the black-and-gold principle from Coca-Cola Zero Sugar Zero Caffeine's
+[premium evening redesign](https://www.cocacolaep.com/news-and-stories/zeroing-in-on-the-relaunch-of-coca-cola-zero-sugar-zero-caffeine/),
+without reproducing Coca-Cola trademarks or product graphics.
 
 <!-- prettier-ignore -->
 | Element | Light Mode Hex | Dark Mode Hex | Rationale |
 | :---| :---| :---| :---|
-| **Primary Interaction Color Accent** | #0369A1 | #E2E8F0 | **Luminance over Hue.** Light mode uses a deep accessible ocean blue; dark mode uses a softened off-white to avoid high-glare saturated controls. |
-| **Tertiary Decorative / Narrative Icons** | #0369A1 | #E2E8F0 | **Unified Action Language.** Primary and tertiary share one interaction treatment so controls remain predictable. |
+| **Primary Interaction Color Accent** | #0369A1 | #E6C768 | **Luminance over Hue.** Light mode uses a deep accessible ocean blue; dark mode uses restrained gold for premium, low-glare focus. |
+| **Tertiary Decorative / Narrative Icons** | #0369A1 | #D9B44A | **Related Action Language.** Dark mode uses a slightly deeper gold to distinguish narrative and reader annotations. |
 
 ### Core Surface Palette
 
@@ -55,16 +57,16 @@ interface consistent and spiritually focused while minimizing retinal distractio
 <!-- prettier-ignore -->
 | Element | Light Mode Hex | Dark Mode Hex | Rationale |
 | :---| :---| :---| :---|
-| **Background**    | #F2E6DF  | #0F0F0F | **The Canvas.** A warm low-glare light canvas and deep dark canvas. |
-| **Surface (Cards/Containers)**  | #FAF4EF  | #1E1E1E | **The Object.** Warm light cards and charcoal dark cards lift clearly from the canvas. |
-| **Surface Variant**    | #F1F3F4  | #2C2C2C | **Secondary UI.** Search bars, unselected controls, and subtle grouped UI. |
-| **On Surface**   | #1A1A1A  | #F5F5F5 | **The Ink.** High-contrast monochrome. Uses reduced-luminance white (#F5F5F5) to mitigate **Irradiation Illusion** ([NIH/PMC3939872](https://pmc.ncbi.nlm.nih.gov/articles/PMC3939872/)), preventing optical "bleeding" (halation) and maintaining sharp typography on OLED screens. |
-| **On Surface Variant**   | #606060  | #AAAAAA | **Muted Intent.** Recedes into the header to minimize distraction. Special case from [Material Design](https://m3.material.io/components/app-bars/specs) similar to YouTube.   |
-| **Text/Icon on Primary**  | #FFFFFF  | #0F172A | **The Stencil.** High-contrast content shown inside primary controls. |
-| **Selection Container**  | #E3F2FD  | #2C2C2C | **The State.** Used for active/selected states and primary containers to provide tactile feedback without shifting brand colors.   |
-| **Boundary (Outline)**   | #CAC4D0  | #938F99 | **The Frame.** Standard Material Design 3 boundary color for high-visibility component borders. |
-| **Boundary (Subtle)**   | #E0E0E0  | #3F3F3F | **The Divider.** Used for subtle dividers and non-critical borders within grouped cards to organize lists without visual noise.    |
-| **Functional Icons (e.g. Bottom Bar)** | #1A1A1A  | #F5F5F5 | **Active Focus.** Selection is indicated by a fill state while using `onBackground`. |
+| **Background**    | #F2E6DF  | #0D0C0A | **The Canvas.** A warm low-glare light canvas and warm-black evening canvas. |
+| **Surface (Cards/Containers)**  | #FAF4EF  | #1A1814 | **The Object.** Warm cards lift clearly from their respective canvases. |
+| **Surface Variant**    | #F1F3F4  | #2A261E | **Secondary UI.** Search bars, unselected controls, and subtle grouped UI. |
+| **On Surface**   | #1A1A1A  | #F3EDE1 | **The Ink.** Warm-white dark-mode text mitigates **Irradiation Illusion** ([NIH/PMC3939872](https://pmc.ncbi.nlm.nih.gov/articles/PMC3939872/)) and stays visually dominant over gold annotations. |
+| **On Surface Variant**   | #606060  | #BDB5A2 | **Muted Intent.** Warm neutral content recedes without becoming illegible. |
+| **Text/Icon on Primary**  | #FFFFFF  | #211A05 | **The Stencil.** High-contrast content shown inside primary controls. |
+| **Selection Container**  | #E3F2FD  | #3A3018 | **The State.** A quiet gold-brown selected state avoids large luminous blocks. |
+| **Boundary (Outline)**   | #CAC4D0  | #9B8C66 | **The Frame.** A visible warm boundary for controls and focus regions. |
+| **Boundary (Subtle)**   | #E0E0E0  | #433B2B | **The Divider.** Used for subtle organization within grouped cards. |
+| **Functional Icons (e.g. Bottom Bar)** | #1A1A1A  | #E6C768 | **Active Focus.** Gold identifies selected and actionable elements. |
 
 ### Grid Menu Card Tokens
 
@@ -75,11 +77,11 @@ the component.
 <!-- prettier-ignore -->
 | Token | Light Mode | Dark Mode | Purpose |
 | :---| :---| :---| :---|
-| **Card Border** | #E0E0E0 | #3F3F3F | Subtle boundary around each category card. |
-| **Decorative Icon** | rgba(40, 40, 40, 0.18) | rgba(255, 255, 255, 0.18) | Default low-emphasis illustration when no category icon color is supplied. |
-| **Arrow Background** | #FFFFFF | #2C2C2C | Circular navigation affordance surface. |
-| **Arrow Border** | #374151 | #938F99 | Crisp affordance boundary. |
-| **Arrow Foreground** | #374151 | #AAAAAA | Diagonal arrow icon. |
+| **Card Border** | #E0E0E0 | #433B2B | Subtle boundary around each category card. |
+| **Decorative Icon** | rgba(40, 40, 40, 0.18) | rgba(230, 199, 104, 0.18) | Default low-emphasis illustration when no category icon color is supplied. |
+| **Arrow Background** | #FFFFFF | #2A261E | Circular navigation affordance surface. |
+| **Arrow Border** | #374151 | #9B8C66 | Crisp affordance boundary. |
+| **Arrow Foreground** | #374151 | #D8C58E | Diagonal arrow icon. |
 
 ### Special External Brand Colors
 
@@ -88,9 +90,9 @@ These brand colors are used for third-party recognition in Light Mode and follow
 
 | Element           | Light Mode Hex | Dark Mode Hex | Rationale                                                   |
 | :---------------- | :------------- | :------------ | :---------------------------------------------------------- |
-| **YouTube Brand** | #FF0000        | #FFFFFF       | Official YouTube red in light; Monochrome in dark (Spec).   |
-| **Spotify Brand** | #1DB954        | #FFFFFF       | Official Spotify green in light; Monochrome in dark (Spec). |
-| **Zoom Brand**    | #0B5CFF        | #FFFFFF       | Official Zoom blue in light; Monochrome in dark.            |
+| **YouTube Brand** | #FF0000        | #E6C768       | Official red in light; shared monochrome gold in dark.      |
+| **Spotify Brand** | #1DB954        | #E6C768       | Official green in light; shared monochrome gold in dark.    |
+| **Zoom Brand**    | #0B5CFF        | #E6C768       | Official blue in light; shared monochrome gold in dark.     |
 
 ### Key Principles & Exceptions:
 

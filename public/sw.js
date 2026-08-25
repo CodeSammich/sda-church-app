@@ -2,7 +2,7 @@
 // via GitHub Actions and public/sync-version.js when creating or updating the PR.
 // This controls a pop-up notification to users when a new version of the app is available for install
 // DO NOT EDIT THIS MANUALLY, as it will be overwritten by the next PR update.
-const VERSION = '0.31.0';
+const VERSION = '0.32.0';
 const CACHE_NAME = `sda-church-v${VERSION}`;
 
 self.addEventListener('install', (event) => {});
