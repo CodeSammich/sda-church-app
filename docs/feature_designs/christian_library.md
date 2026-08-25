@@ -21,6 +21,8 @@ Public-domain works use original, text-free cover illustrations generated for th
 
 The EGW collection also uses original, text-free thematic illustrations generated for this app. Official White Estate covers were not supplied to the generator, copied, hotlinked, or used as style references. Prompts describe only broad themes from each work and explicitly exclude the official covers' distinctive imagery, typography, branding, and layouts. Edition titles and language actions remain accessible live text.
 
+For Chinese app languages, the curated EGW cards may replace that bundled fallback artwork with current cover thumbnails from the Chinese Union Mission's official catalog. The app fetches only catalog metadata and images, validates image URLs against the Mission's storage host, and does not copy or render the linked book text. If the catalog or an image is unavailable, the original bundled artwork remains visible.
+
 The Library is one browsing surface: EGW books appear first, followed by Adventist pioneers and Christian classics. Selecting an EGW cover opens an accessible edition dialog rather than navigating to a separate collection page. At enlarged text sizes or narrow widths, every shelf becomes a single-column list.
 
 | Work or collection | Access | Reason |
@@ -29,6 +31,7 @@ The Library is one browsing surface: EGW books appear first, followed by Adventi
 | J. N. Andrews, *History of the Sabbath and First Day of the Week* (1873) | Project Gutenberg record | Explicitly marked public domain in the U.S.; foundational Adventist scholarship |
 | John Bunyan, *The Pilgrim's Progress* (1678) | Project Gutenberg record | Explicitly marked public domain in the U.S.; broadly accepted Protestant classic |
 | Ellen G. White writings | Official EGW Writings website | Copyright and edition rights remain with the official service |
+| Chinese Adventist books and study resources | Chinese Union Mission library | The collection remains on the official external service; the app links to it rather than copying book content |
 
 ### EGW Writings editions
 

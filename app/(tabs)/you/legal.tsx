@@ -55,9 +55,11 @@ export default function LegalScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This app links to HymnsForWorship.org and zgaxr.com for hymn resources and to EGW
-        Writings (egwwritings.org) for externally hosted religious books. Some linked
-        material may be copyrighted. When you follow these links, you are subject to the
+        This app links to HymnsForWorship.org and zgaxr.com for hymn resources, to EGW
+        Writings (egwwritings.org) for externally hosted religious books, and to the
+        Chinese Union Mission library (sdabible.org) for Chinese-language books and study
+        resources. Some linked material may be copyrighted. When you follow these links,
+        you are subject to the
         destination provider’s terms and conditions. Please respect copyright laws and do
         not attempt to bypass access requirements. For easier reading in the EGW Writings
         text reader, use its own font and theme controls. Open its three-dot menu to choose
@@ -77,9 +79,12 @@ export default function LegalScreen() {
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
         This application provides searchable hymn metadata and a curated index of book
-        titles and language editions to facilitate navigation. We do not host or reproduce
-        the externally linked EGW book text, protected musical notation, or lyrics.
-        External content is accessed through links to third-party providers; a link does
+        titles and language editions to facilitate navigation. For Chinese app languages,
+        it also displays current cover thumbnails served by the Chinese Union Mission;
+        bundled original artwork remains the fallback. We do not host or reproduce the
+        externally linked EGW or Chinese Union Mission book text, protected musical
+        notation, or lyrics. External content is accessed through links to third-party
+        providers; a link does
         not represent that this project independently verified every provider&apos;s copyright
         permissions.
       </Text>
@@ -95,9 +100,10 @@ export default function LegalScreen() {
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
         This application provides links to external platforms and third-party services
-        (e.g., YouTube, Spotify, HymnsForWorship.org, zgaxr.com, and EGW Writings at
-        egwwritings.org) to assist users in locating books, musical performances,
-        recordings, or sheet music. These are external platforms, and use of them is
+        (e.g., YouTube, Spotify, HymnsForWorship.org, zgaxr.com, EGW Writings at
+        egwwritings.org, and the Chinese Union Mission library at sdabible.org) to assist
+        users in locating books, musical performances, recordings, or sheet music. These
+        are external platforms, and use of them is
         subject to their respective terms and conditions. We do not host, curate, or
         endorse the specific content or search results returned by these services. Users
         are responsible for ensuring their use complies with applicable copyright and

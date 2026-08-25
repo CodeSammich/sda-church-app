@@ -3,7 +3,7 @@ import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   ImageSourcePropType,
@@ -18,6 +18,7 @@ type LibraryBookCardProps = Readonly<{
   accessibilityHint?: string;
   author: string;
   coverSource?: ImageSourcePropType;
+  coverUrl?: string;
   listLayout: boolean;
   onPress: () => void;
   title: string;
@@ -41,14 +42,21 @@ export function LibraryBookCard({
   accessibilityHint,
   author,
   coverSource,
+  coverUrl,
   listLayout,
   onPress,
   title,
 }: LibraryBookCardProps) {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
+  const [remoteCoverFailed, setRemoteCoverFailed] = useState(false);
   const styles = useMemo(() => createStyles(textScale), [textScale]);
   const accessibilityLabel = `${title}. ${author}`;
+  const displayedCoverSource = coverUrl && !remoteCoverFailed
+    ? { uri: coverUrl }
+    : coverSource;
+
+  useEffect(() => setRemoteCoverFailed(false), [coverUrl]);
 
   return (
     <TouchableOpacity
@@ -75,8 +83,14 @@ export function LibraryBookCard({
           { backgroundColor: theme.colors.surfaceVariant },
         ]}
       >
-        {coverSource ? (
-          <Image accessible={false} resizeMode="cover" source={coverSource} style={styles.cover} />
+        {displayedCoverSource ? (
+          <Image
+            accessible={false}
+            onError={coverUrl ? () => setRemoteCoverFailed(true) : undefined}
+            resizeMode="cover"
+            source={displayedCoverSource}
+            style={styles.cover}
+          />
         ) : (
           <View style={styles.placeholderCover}>
             <AppIcon name="book-open-page-variant" size={44} color={theme.colors.primary} />
