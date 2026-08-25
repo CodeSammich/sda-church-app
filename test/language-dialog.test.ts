@@ -26,6 +26,10 @@ describe('LanguageDialog', () => {
         StyleSheet.flatten(screen.UNSAFE_getByType(Dialog.ScrollArea).props.style)
           .borderBottomWidth,
       ).toBe(0);
+      expect(
+        StyleSheet.flatten(screen.UNSAFE_getByType(Dialog.ScrollArea).props.style)
+          .marginBottom,
+      ).toBe(0);
     },
   );
 

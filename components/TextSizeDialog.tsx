@@ -614,6 +614,7 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     borderBottomWidth: 0,
+    marginBottom: 0,
     paddingHorizontal: 0,
   },
   scrollContent: {
