@@ -1,13 +1,11 @@
 import {
   CHINESE_LIBRARY_CATALOG_URL,
-  CHINESE_LIBRARY_URL,
   getChineseLibraryCoverUrls,
   shouldLoadChineseLibraryCovers,
 } from '@/features/library/ChineseLibrary';
 
 describe('Chinese Union Mission library', () => {
-  it('keeps the collection and live cover catalog on official HTTPS hosts', () => {
-    expect(CHINESE_LIBRARY_URL).toBe('https://www.sdabible.org/topic');
+  it('keeps the live cover catalog on the official HTTPS host', () => {
     expect(CHINESE_LIBRARY_CATALOG_URL).toBe(
       'https://api.sdabible.org/getResourceCategory/egw/cn',
     );

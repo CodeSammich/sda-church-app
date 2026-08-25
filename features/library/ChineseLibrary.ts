@@ -1,7 +1,5 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 
-export const CHINESE_LIBRARY_URL = 'https://www.sdabible.org/topic';
-
 export const CHINESE_LIBRARY_CATALOG_URL =
   'https://api.sdabible.org/getResourceCategory/egw/cn';
 

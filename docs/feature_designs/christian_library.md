@@ -31,7 +31,6 @@ The Library is one browsing surface: EGW books appear first, followed by Adventi
 | J. N. Andrews, *History of the Sabbath and First Day of the Week* (1873) | Project Gutenberg record | Explicitly marked public domain in the U.S.; foundational Adventist scholarship |
 | John Bunyan, *The Pilgrim's Progress* (1678) | Project Gutenberg record | Explicitly marked public domain in the U.S.; broadly accepted Protestant classic |
 | Ellen G. White writings | Official EGW Writings website | Copyright and edition rights remain with the official service |
-| Chinese Adventist books and study resources | Chinese Union Mission library | The collection remains on the official external service; the app links to it rather than copying book content |
 
 ### EGW Writings editions
 
@@ -57,3 +56,4 @@ Primary discovery sources are the [Encyclopedia of Seventh-day Adventists](https
 2. Add chapter-level navigation and saved reading position.
 3. Add catalog search, language filters, and favorites after the native-reader data model is stable.
 4. Ask 時兆出版社 and the relevant archives about licensed Chinese digital editions, starting with Guo Ziying's early works.
+5. Add verified, handpicked Chinese Adventist books and verified official English covers as tracked in [issue #176](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/176). The Chinese cover refresh alone does not complete that work.

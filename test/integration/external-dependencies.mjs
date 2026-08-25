@@ -286,23 +286,9 @@ await record('daily public-domain book sample', 'Project Gutenberg', () => {
 });
 
 const chineseLibrarySource = await readFile('features/library/ChineseLibrary.ts', 'utf8');
-const chineseLibraryUrl = chineseLibrarySource.match(
-  /CHINESE_LIBRARY_URL\s*=\s*'(https:\/\/www\.sdabible\.org\/topic)'/,
-)?.[1];
 const chineseLibraryCatalogUrl = chineseLibrarySource.match(
   /CHINESE_LIBRARY_CATALOG_URL\s*=\s*\n?\s*'(https:\/\/api\.sdabible\.org\/[^']+)'/,
 )?.[1];
-
-await record('official collection page', 'Chinese Union Mission library', async () => {
-  if (!chineseLibraryUrl) throw new Error('collection URL is missing');
-  const { response, text: html } = await getTextPage(chineseLibraryUrl, {
-    expectedHosts: ['www.sdabible.org'],
-  });
-  if (!html.includes('<div id="root"></div>')) {
-    throw new Error('collection page did not publish the expected app shell');
-  }
-  return describeResponse(response);
-});
 
 await record('current EGW cover catalog', 'Chinese Union Mission library', async () => {
   if (!chineseLibraryCatalogUrl) throw new Error('cover catalog URL is missing');
