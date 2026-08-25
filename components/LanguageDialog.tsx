@@ -50,7 +50,14 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={styles.dialog}>
+      <Dialog
+        visible={visible}
+        onDismiss={onDismiss}
+        style={[
+          styles.dialog,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
         <Dialog.Title>{labels.title}</Dialog.Title>
         <Dialog.ScrollArea style={styles.scrollArea}>
           <ScrollView contentContainerStyle={styles.scrollContent}>

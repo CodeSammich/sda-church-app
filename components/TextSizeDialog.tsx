@@ -307,7 +307,10 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
         onDismiss={dismissWithoutApplying}
         dismissable={!isApplying}
         dismissableBackButton={!isApplying}
-        style={styles.dialog}
+        style={[
+          styles.dialog,
+          { backgroundColor: theme.colors.background },
+        ]}
       >
         <Dialog.Title>{labels.title}</Dialog.Title>
         <Dialog.ScrollArea style={styles.scrollArea}>
