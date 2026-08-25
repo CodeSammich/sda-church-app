@@ -36,7 +36,9 @@ without reproducing Coca-Cola trademarks or product graphics.
 
 Dark mode uses a tonal range sampled from Coca-Cola's official product render instead of
 pretending metallic ink can be represented by one flat digital color. Opaque icons use the
-main or muted tone; prominent affordances may use the full gradient.
+main or muted tone; prominent affordances may use the full gradient. Home and New Member /
+Visitor category cards remain an intentional exception: their established chromatic
+backgrounds and icons provide destination wayfinding and must not be flattened into gold.
 
 | Metallic role | Hex |
 | :--- | :--- |

@@ -17,7 +17,6 @@ import {
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Tabs, router } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -227,25 +226,7 @@ export default function TabLayout() {
                 StyleSheet.absoluteFill,
                 { backgroundColor: theme.colors.background },
               ]}
-            >
-              {theme.dark ? (
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={theme.gradients.metallicGold}
-                  locations={[0, 0.38, 0.62, 1]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={{
-                    height: 1,
-                    left: 0,
-                    opacity: 0.85,
-                    position: 'absolute',
-                    right: 0,
-                    top: 0,
-                  }}
-                />
-              ) : null}
-            </View>
+            />
           ),
           // The animated tab bar is absolutely positioned, so React Navigation cannot
           // reserve space for it. Keep every regular tab screen above the overlay.

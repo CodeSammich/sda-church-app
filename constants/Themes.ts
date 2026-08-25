@@ -211,40 +211,40 @@ export const customDarkTheme: AppTheme = {
     onPrimary: '#181202',
     primaryContainer: '#302714',
     onPrimaryContainer: '#EBCD78',
-    // Alternating warm-black card surfaces keep the dark presentation cohesive
-    // while preserving enough tonal separation for the category grid.
+    // Chromatic dark card surfaces preserve Home and Discover category identity
+    // without introducing bright, high-glare blocks.
     cardBgColors: {
       // home page
-      livestream:    '#17150F',
-      bulletin:      '#1D1910',
-      tithe:         '#17150F',
-      discover:      '#1D1910',
-      hymnal:        '#17150F',
-      sabbathSchool: '#1D1910',
+      livestream:    '#321C1C',
+      bulletin:      '#302719',
+      tithe:         '#173028',
+      discover:      '#25233B',
+      hymnal:        '#172B36',
+      sabbathSchool: '#332719',
       // discover page
-      aboutSDA:      '#17150F',
-      aboutHistory:  '#1D1910',
-      meetTeam:      '#17150F',
-      join:          '#1D1910',
-      fellowship:    '#17150F',
-      bible:         '#1D1910',
+      aboutSDA:      '#321C1C',
+      aboutHistory:  '#302719',
+      meetTeam:      '#173028',
+      join:          '#172B36',
+      fellowship:    '#25233B',
+      bible:         '#332719',
     },
-    // Category icons share one metallic-gold identity in dark mode.
+    // Soft category colors preserve wayfinding while reducing icon glare.
     iconColors: {
       // home page
-      livestream:   '#D2B258',
-      bulletin:     '#D2B258',
-      tithe:        '#D2B258',
-      discover:     '#D2B258',
-      hymnal:       '#D2B258',
-      sabbathSchool: '#D2B258',
+      livestream:   '#FF8A80',
+      bulletin:     '#F3C677',
+      tithe:        '#6FD3A7',
+      discover:     '#AFA8FF',
+      hymnal:       '#67C7F0',
+      sabbathSchool: '#F4B860',
       // discover page
-      aboutSDA:     '#D2B258',
-      aboutHistory: '#D2B258',
-      meetTeam:     '#D2B258',
-      join:         '#D2B258',
-      fellowship:   '#D2B258',
-      bible:        '#D2B258',
+      aboutSDA:     '#FF8A80',
+      aboutHistory: '#F3C677',
+      meetTeam:     '#6FD3A7',
+      join:         '#67C7F0',
+      fellowship:   '#AFA8FF',
+      bible:        '#F4B860',
     },
     // Low-glare equivalents of the GridMenuCard chrome used in light mode.
     gridMenuCard: {

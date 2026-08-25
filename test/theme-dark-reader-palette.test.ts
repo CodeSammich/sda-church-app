@@ -39,6 +39,15 @@ describe('dark reader palette', () => {
     ]);
   });
 
+  it('preserves category wayfinding outside the reader palette', () => {
+    expect(new Set(Object.values(customDarkTheme.colors.cardBgColors)).size)
+      .toBeGreaterThan(2);
+    expect(new Set(Object.values(customDarkTheme.colors.iconColors)).size)
+      .toBeGreaterThan(2);
+    expect(customDarkTheme.colors.cardBgColors.discover).toBe('#25233B');
+    expect(customDarkTheme.colors.iconColors.discover).toBe('#AFA8FF');
+  });
+
   it.each([
     ['reading text', customDarkTheme.colors.onBackground, customDarkTheme.colors.background, 7],
     ['surface text', customDarkTheme.colors.onSurface, customDarkTheme.colors.surface, 7],
