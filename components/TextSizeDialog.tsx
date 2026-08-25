@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 16,
     paddingHorizontal: 24,
-    paddingTop: 12,
+    paddingTop: 8,
   },
   currentValue: {
     marginTop: 20,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   preview: {
     borderRadius: 12,
     borderWidth: 1,
-    marginTop: 12,
+    marginTop: 20,
     padding: 16,
   },
   rangeLabels: {
@@ -617,7 +617,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   scrollContent: {
+    paddingBottom: 4,
     paddingHorizontal: 24,
-    paddingVertical: 8,
+    paddingTop: 8,
   },
 });
