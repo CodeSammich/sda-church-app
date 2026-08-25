@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   preview: {
     borderRadius: 12,
     borderWidth: 1,
-    marginTop: 20,
+    marginTop: 12,
     padding: 16,
   },
   rangeLabels: {
