@@ -1,9 +1,23 @@
 import {
+  getHeaderBackButtonColors,
   getHeaderBackTarget,
   hasHeaderBackButton,
+  SABBATH_SCHOOL_BACK_TARGET,
 } from '@/constants/BackNavigation';
+import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 
 describe('global header back navigation', () => {
+  it.each([customLightTheme, customDarkTheme])(
+    'uses an opaque $dark back-button surface',
+    (theme) => {
+      expect(getHeaderBackButtonColors(theme)).toEqual({
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.outlineVariant,
+      });
+      expect(getHeaderBackButtonColors(theme).backgroundColor).toMatch(/^#[\dA-F]{6}$/i);
+    },
+  );
+
   it('keeps pillar roots free of a back button by default', () => {
     expect(hasHeaderBackButton(['(tabs)', 'bible'])).toBe(false);
   });
@@ -34,5 +48,15 @@ describe('global header back navigation', () => {
         '/resources/library',
       ),
     ).toBe('/resources/library');
+  });
+
+  it('returns the home-only Sabbath School entry point to Home', () => {
+    expect(SABBATH_SCHOOL_BACK_TARGET).toBe('/');
+    expect(
+      getHeaderBackTarget(
+        ['(tabs)', 'resources', 'sabbath-school'],
+        SABBATH_SCHOOL_BACK_TARGET,
+      ),
+    ).toBe('/');
   });
 });

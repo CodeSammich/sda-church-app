@@ -80,6 +80,7 @@ import {
   storeSavedVerses,
 } from '@/services/SavedVersesService';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
+import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 import {
   createReaderStyles,
   getBulletinVerseScrollOffset,
@@ -3351,7 +3352,7 @@ export default function BibleScreen() {
           contentContainerStyle={[
             ReaderStyles.audioSettingsContent,
             { marginBottom: bottomDockInset + 12 },
-            { backgroundColor: theme.colors.background },
+            getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>
@@ -3581,7 +3582,7 @@ export default function BibleScreen() {
           onDismiss={() => setBackgroundAudioGuidanceVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
-            { backgroundColor: theme.colors.background },
+            getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>
@@ -3657,7 +3658,7 @@ export default function BibleScreen() {
           onDismiss={() => setSleepTimerVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
-            { backgroundColor: theme.colors.background },
+            getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>
@@ -3736,7 +3737,7 @@ export default function BibleScreen() {
           contentContainerStyle={[
             ReaderStyles.modalContent,
             lastActiveType === 'verse-detail' && styles.verseDetailModalContent,
-            { backgroundColor: theme.colors.background },
+            getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>

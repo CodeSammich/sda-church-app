@@ -9,6 +9,7 @@ import {
 } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { ThemeContext, useAppTheme } from '@/constants/Themes';
+import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 import { AppIcon } from '@/components/AppIcon';
 import { useContext, useRef, useState } from 'react';
 import {
@@ -282,7 +283,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
         dismissable={false}
         contentContainerStyle={[
           styles.modal,
-          { backgroundColor: theme.colors.surface },
+          getPopupSurfaceStyle(theme),
         ]}
       >
         <ScrollView contentContainerStyle={styles.modalContent}>

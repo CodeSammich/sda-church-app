@@ -10,6 +10,8 @@ import {
 } from '@/constants/AppPreferences';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
+import { useAppTheme } from '@/constants/Themes';
+import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 import { createElement, useContext, useEffect, useState } from 'react';
 import {
   type GestureResponderEvent,
@@ -21,7 +23,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Dialog, Portal, Text, useTheme } from 'react-native-paper';
+import { Dialog, Portal, Text } from 'react-native-paper';
 
 interface TextSizeDialogProps {
   onDismiss: () => void;
@@ -129,7 +131,7 @@ const TextDialogAction = ({
   onPress,
   stacked,
 }: TextDialogActionProps) => {
-  const theme = useTheme();
+  const theme = useAppTheme();
   const contained = kind === 'contained';
 
   return (
@@ -179,7 +181,7 @@ const TextScaleStepAction = ({
   label,
   onPress,
 }: TextScaleStepActionProps) => {
-  const theme = useTheme();
+  const theme = useAppTheme();
 
   return (
     <Pressable
@@ -209,7 +211,7 @@ const TextScaleStepAction = ({
 export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   const { language } = useContext(LanguageContext);
   const { setTextScale, textScale } = useTextSize();
-  const theme = useTheme();
+  const theme = useAppTheme();
   const labels = labelsByLanguage[language] ?? labelsByLanguage.en;
   const [draftScale, setDraftScale] = useState<TextScale>(textScale);
   const [isApplying, setIsApplying] = useState(false);
@@ -309,7 +311,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
         dismissableBackButton={!isApplying}
         style={[
           styles.dialog,
-          { backgroundColor: theme.colors.background },
+          getPopupSurfaceStyle(theme),
         ]}
       >
         <Dialog.Title>{labels.title}</Dialog.Title>
@@ -611,6 +613,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   scrollArea: {
+    borderBottomWidth: 0,
     paddingHorizontal: 0,
   },
   scrollContent: {
