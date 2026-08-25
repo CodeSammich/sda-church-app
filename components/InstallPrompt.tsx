@@ -1,5 +1,6 @@
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
+import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { StyleSheet } from 'react-native';
 import { Button, Modal, Portal, Text } from 'react-native-paper';
@@ -48,7 +49,7 @@ export const InstallPrompt = ({ onDismiss, onInstall }: InstallPromptProps) => {
         onDismiss={onDismiss}
         contentContainerStyle={[
           styles.modal,
-          { backgroundColor: theme.colors.surface },
+          getPopupSurfaceStyle(theme),
         ]}
       >
         <Text variant="headlineSmall" style={styles.title}>

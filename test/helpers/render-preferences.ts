@@ -1,6 +1,6 @@
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { TextSizeContext } from '@/constants/TextSizeContext';
-import { ThemeContext } from '@/constants/Themes';
+import { ThemeContext, type AppTheme } from '@/constants/Themes';
 import { render } from '@testing-library/react-native';
 import { createElement, type ReactElement } from 'react';
 import {
@@ -14,6 +14,7 @@ interface PreferenceRenderOptions {
   setLanguage?: (language: SupportedLanguage) => void;
   setTextScale?: (scale: TextScale) => Promise<void>;
   textScale?: TextScale;
+  theme?: AppTheme;
   toggleTheme?: (value?: unknown) => void;
 }
 
@@ -24,13 +25,16 @@ export const renderWithPreferences = (
     setLanguage = jest.fn(),
     setTextScale = jest.fn().mockResolvedValue(undefined),
     textScale = DEFAULT_TEXT_SCALE,
+    theme,
     toggleTheme = jest.fn(),
   }: PreferenceRenderOptions = {},
 ) =>
   render(
     createElement(
       PaperProvider,
-      null,
+      theme
+        ? { children: undefined, theme: theme as any }
+        : { children: undefined },
       createElement(
         LanguageContext.Provider,
         {

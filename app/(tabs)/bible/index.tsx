@@ -4,6 +4,7 @@ import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -79,6 +80,7 @@ import {
   storeSavedVerses,
 } from '@/services/SavedVersesService';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
+import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 import {
   createReaderStyles,
   getBulletinVerseScrollOffset,
@@ -3350,7 +3352,7 @@ export default function BibleScreen() {
           contentContainerStyle={[
             ReaderStyles.audioSettingsContent,
             { marginBottom: bottomDockInset + 12 },
-            { backgroundColor: theme.colors.background },
+            getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>
@@ -3580,7 +3582,7 @@ export default function BibleScreen() {
           onDismiss={() => setBackgroundAudioGuidanceVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
-            { backgroundColor: theme.colors.background },
+            getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>
@@ -3656,7 +3658,7 @@ export default function BibleScreen() {
           onDismiss={() => setSleepTimerVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
-            { backgroundColor: theme.colors.background },
+            getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>
@@ -3735,7 +3737,7 @@ export default function BibleScreen() {
           contentContainerStyle={[
             ReaderStyles.modalContent,
             lastActiveType === 'verse-detail' && styles.verseDetailModalContent,
-            { backgroundColor: theme.colors.background },
+            getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>
@@ -4184,9 +4186,21 @@ export default function BibleScreen() {
                     style={[
                       styles.detailActionButton,
                       dockLayout.stackControls && styles.stackedDetailActionButton,
-                      { backgroundColor: theme.colors.primary },
+                      theme.dark
+                        ? null
+                        : { backgroundColor: theme.colors.primary },
                     ]}
                   >
+                    {theme.dark ? (
+                      <LinearGradient
+                        pointerEvents="none"
+                        colors={theme.gradients.metallicGold}
+                        locations={[0, 0.38, 0.62, 1]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    ) : null}
                     <AppIcon
                       pointerEvents="none"
                       name="share-variant"
@@ -4605,6 +4619,7 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    overflow: 'hidden',
   },
   detailOutlinedAction: {
     borderWidth: 1,

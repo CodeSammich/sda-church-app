@@ -9,6 +9,7 @@ import {
   openSabbathSchool,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { SABBATH_SCHOOL_BACK_TARGET } from '@/constants/BackNavigation';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
@@ -84,7 +85,11 @@ export default function SabbathSchoolScreen() {
   return (
     <>
       <Stack.Screen
-        options={{ title: labels.title, showTitleChip: showHeaderTitle } as any}
+        options={{
+          title: labels.title,
+          backTo: SABBATH_SCHOOL_BACK_TARGET,
+          showTitleChip: showHeaderTitle,
+        } as any}
       />
       <ScrollView
         style={navigationStyles.container}

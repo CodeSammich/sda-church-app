@@ -25,8 +25,6 @@ const allLabels = {
     youtubeSub: 'Watch our latest sermons and worship services',
     spotify: 'Audio Archive',
     spotifySub: 'Listen to sermons and classes',
-    sabbathSchool: 'Sabbath School',
-    sabbathSchoolSub: 'This week\'s lesson and study-guide catalog',
     zoomClass: 'Zoom Class',
     zoomSub:
       'Interactive Bible study and fellowship',
@@ -41,8 +39,6 @@ const allLabels = {
     youtubeSub: '觀看最新的講道與崇拜影片',
     spotify: '音頻檔案',
     spotifySub: '收聽證道與課程',
-    sabbathSchool: '安息日學',
-    sabbathSchoolSub: '本週課程與研經目錄',
     zoomClass: 'Zoom 課程',
     zoomSub: '互動式研經與團契。',
     library: '圖書館',
@@ -56,8 +52,6 @@ const allLabels = {
     youtubeSub: '观看最新的讲道与崇拜视频',
     spotify: '音频存档',
     spotifySub: '收听证道与课程',
-    sabbathSchool: '安息日学',
-    sabbathSchoolSub: '本周课程与研经目录',
     zoomClass: 'Zoom 课程',
     zoomSub: '互动式研经与团契。',
     library: '图书馆',
@@ -71,8 +65,6 @@ const allLabels = {
     youtubeSub: 'Vea nuestros últimos sermones y servicios de adoración',
     spotify: 'Archivo de Audio',
     spotifySub: 'Escucha sermones y clases',
-    sabbathSchool: 'Escuela Sabática',
-    sabbathSchoolSub: 'Lección semanal y catálogo de estudio',
     zoomClass: 'Clase de Zoom',
     zoomSub:
       'Estudio bíblico interactivo y compañerismo.',
@@ -120,15 +112,6 @@ export default function ResourcesScreen() {
         </ImageBackground>
 
         <View style={styles.cardList}>
-          <MenuCard
-            title={labels.sabbathSchool}
-            description={labels.sabbathSchoolSub}
-            icon={APP_ICONOGRAPHY.explore.sabbathSchool}
-            iconColor={theme.colors.tertiary}
-            rightIcon={{ name: 'chevron-right' }}
-            onPress={() => router.push('/resources/sabbath-school')}
-          />
-
           <MenuCard
             title={labels.library}
             description={labels.librarySub}

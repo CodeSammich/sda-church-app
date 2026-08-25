@@ -3,6 +3,7 @@ import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import React, { useMemo, useRef } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Animated,
   Platform,
@@ -108,12 +109,19 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
             />
           </View>
           {/* Diagonal arrow affordance */}
-          <View
+          <LinearGradient
             testID="grid-menu-card-arrow-badge"
+            colors={
+              theme.dark
+                ? theme.gradients.metallicGold
+                : [cardColors.arrowBackground, cardColors.arrowBackground]
+            }
+            locations={theme.dark ? [0, 0.38, 0.62, 1] : [0, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={[
               styles.arrowBadge,
               {
-                backgroundColor: cardColors.arrowBackground,
                 borderColor: cardColors.arrowBorder,
               },
             ]}
@@ -123,7 +131,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
               size={14}
               color={cardColors.arrowForeground}
             />
-          </View>
+          </LinearGradient>
         </View>
       </TouchableOpacity>
     </Animated.View>

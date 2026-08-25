@@ -9,6 +9,7 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { ThemeContext, useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import packageJson from '@/package.json';
+import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
@@ -81,6 +82,7 @@ const allLabels = {
 
 export default function YouScreen() {
   const theme = useAppTheme();
+  const DocumentStyles = useDocumentStyles();
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const { toggleTheme } = useContext(ThemeContext);
@@ -124,15 +126,19 @@ export default function YouScreen() {
 
         <View style={styles.body}>
           <List.Section>
-            <List.Subheader
+            <Text
+              variant="titleLarge"
               numberOfLines={0}
               style={[
-                NavigationStyles.subheader,
-                { color: theme.colors.onBackground },
+                DocumentStyles.sectionTitle,
+                {
+                  color: theme.colors.onSurface,
+                  borderBottomColor: theme.colors.outlineVariant,
+                },
               ]}
             >
               {labels.settings}
-            </List.Subheader>
+            </Text>
             <MenuCard
               title={labels.language}
               description={labels.languageSub}
@@ -171,15 +177,19 @@ export default function YouScreen() {
           </List.Section>
 
           <List.Section>
-            <List.Subheader
+            <Text
+              variant="titleLarge"
               numberOfLines={0}
               style={[
-                NavigationStyles.subheader,
-                { color: theme.colors.onBackground },
+                DocumentStyles.sectionTitle,
+                {
+                  color: theme.colors.onSurface,
+                  borderBottomColor: theme.colors.outlineVariant,
+                },
               ]}
             >
               {labels.aboutSupport}
-            </List.Subheader>
+            </Text>
             <MenuCard
               title={labels.privacy}
               description={labels.privacySub}
