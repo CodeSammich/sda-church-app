@@ -1,9 +1,11 @@
 <!--
-PR title: Release/x.y.z: Brief description
+Required PR title format: Release/<major.minor.patch>: Describe the changes
+Example: Release/1.2.3: Improve Sabbath School navigation
 
-If the destination branch is named release/x.y.z, replace x.y.z with that exact
-version. Otherwise, replace x.y.z with the intended release version. Release CI
-uses the title as the source of truth and synchronizes all version files.
+Release CI rejects titles that do not begin with `Release/<major.minor.patch>`.
+If the destination branch is named release/x.y.z, the title must use that exact
+version. Otherwise, use the intended release version. Release CI uses the title
+as the source of truth and synchronizes all version files.
 -->
 
 ## Description
