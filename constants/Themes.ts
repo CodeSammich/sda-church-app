@@ -148,6 +148,13 @@ export const customLightTheme = {
     readerColors: {
       footnoteIndicator: '#0284C7', // Bright, accessible underline on warm surfaces
     },
+    metallicGold: {
+      shadow: '#74612F',
+      muted: '#947D3F',
+      mid: '#B89C4D',
+      main: '#D2B258',
+      highlight: '#EBCD78',
+    },
 
     // Branding (Special External Brand Colors)
     brandYoutube: '#FF0000',
@@ -176,6 +183,11 @@ export const customLightTheme = {
       string,
       ...string[],
     ],
+    metallicGold: ['#74612F', '#D2B258', '#EBCD78', '#B89C4D'] as [
+      string,
+      string,
+      ...string[],
+    ],
   },
   blurTint: 'light' as 'light' | 'dark',
   statusBarScheme: 'dark-content' as StatusBarStyle,
@@ -195,114 +207,126 @@ export const customDarkTheme: AppTheme = {
     // Primary: restrained gold on warm black, inspired by premium evening packaging.
     // The palette is especially useful in readers: gold identifies interaction and
     // annotation while warm-white body text remains the highest-contrast element.
-    primary: '#E6C768',
-    onPrimary: '#211A05',
-    primaryContainer: '#3A3018',
-    onPrimaryContainer: '#F7E3A1',
-    // Chromatic dark card surfaces preserve Home and Discover category identity
-    // without introducing bright, high-glare blocks.
+    primary: '#D2B258',
+    onPrimary: '#181202',
+    primaryContainer: '#302714',
+    onPrimaryContainer: '#EBCD78',
+    // Alternating warm-black card surfaces keep the dark presentation cohesive
+    // while preserving enough tonal separation for the category grid.
     cardBgColors: {
       // home page
-      livestream:    '#321C1C',
-      bulletin:      '#302719',
-      tithe:         '#173028',
-      discover:      '#25233B',
-      hymnal:        '#172B36',
-      sabbathSchool: '#332719',
+      livestream:    '#17150F',
+      bulletin:      '#1D1910',
+      tithe:         '#17150F',
+      discover:      '#1D1910',
+      hymnal:        '#17150F',
+      sabbathSchool: '#1D1910',
       // discover page
-      aboutSDA:      '#321C1C',
-      aboutHistory:  '#302719',
-      meetTeam:      '#173028',
-      join:          '#172B36',
-      fellowship:    '#25233B',
-      bible:         '#332719',
+      aboutSDA:      '#17150F',
+      aboutHistory:  '#1D1910',
+      meetTeam:      '#17150F',
+      join:          '#1D1910',
+      fellowship:    '#17150F',
+      bible:         '#1D1910',
     },
-    // Soft category colors reduce the glare of large white icons.
+    // Category icons share one metallic-gold identity in dark mode.
     iconColors: {
       // home page
-      livestream:   '#FF8A80',
-      bulletin:     '#F3C677',
-      tithe:        '#6FD3A7',
-      discover:     '#AFA8FF',
-      hymnal:       '#67C7F0',
-      sabbathSchool: '#F4B860',
+      livestream:   '#D2B258',
+      bulletin:     '#D2B258',
+      tithe:        '#D2B258',
+      discover:     '#D2B258',
+      hymnal:       '#D2B258',
+      sabbathSchool: '#D2B258',
       // discover page
-      aboutSDA:     '#FF8A80',
-      aboutHistory: '#F3C677',
-      meetTeam:     '#6FD3A7',
-      join:         '#67C7F0',
-      fellowship:   '#AFA8FF',
-      bible:        '#F4B860',
+      aboutSDA:     '#D2B258',
+      aboutHistory: '#D2B258',
+      meetTeam:     '#D2B258',
+      join:         '#D2B258',
+      fellowship:   '#D2B258',
+      bible:        '#D2B258',
     },
     // Low-glare equivalents of the GridMenuCard chrome used in light mode.
     gridMenuCard: {
-      border: '#433B2B',
-      decorativeIcon: 'rgba(230, 199, 104, 0.18)',
-      arrowBackground: '#2A261E',
-      arrowBorder: '#9B8C66',
-      arrowForeground: '#D8C58E',
+      border: '#3B3423',
+      decorativeIcon: '#D2B258',
+      arrowBackground: '#D2B258',
+      arrowBorder: '#EBCD78',
+      arrowForeground: '#181202',
     },
     // Secondary: Utility UI (Chips, Muted Actions)
     secondary: '#BDB5A2',
     onSecondary: '#1C1912',
-    secondaryContainer: '#302B20',
+    secondaryContainer: '#272218',
     onSecondaryContainer: '#F0E7D3',
 
-    // Tertiary: a deeper gold for narrative and reader annotations.
-    tertiary: '#D9B44A',
-    onTertiary: '#211A05',
-    tertiaryContainer: '#3A3018',
-    onTertiaryContainer: '#F7E3A1',
+    // Tertiary: unified gold for narrative and reader annotations.
+    tertiary: '#D2B258',
+    onTertiary: '#181202',
+    tertiaryContainer: '#302714',
+    onTertiaryContainer: '#EBCD78',
 
     // Backgrounds & Surfaces
-    background: '#0D0C0A', // Warm-black reader canvas
+    background: '#080808', // Render-matched near-black reader canvas
     onBackground: '#F3EDE1', // Warm-white reading ink reduces cool-screen glare
-    surface: '#1A1814', // Warm charcoal cards and reader controls
-    bulletinSurface: '#1A1814',
+    surface: '#14130F', // Warm charcoal cards and reader controls
+    bulletinSurface: '#14130F',
     bulletinRemarkSurface: '#332A18',
     onBulletinRemarkSurface: '#F6D88A',
     onSurface: '#F3EDE1',
 
     // UI Variants & Boundaries
-    surfaceVariant: '#2A261E',
+    surfaceVariant: '#211F18',
     onSurfaceVariant: '#BDB5A2',
-    outline: '#9B8C66',
-    outlineVariant: '#433B2B',
+    outline: '#947D3F',
+    outlineVariant: '#3B3423',
 
     // Navigation Compatibility Layer
-    card: '#1A1814',
+    card: '#14130F',
     text: '#F3EDE1',
-    border: '#433B2B',
-    notification: '#E6C768',
+    border: '#3B3423',
+    notification: '#D2B258',
     readerColors: {
-      footnoteIndicator: '#E6C768',
+      footnoteIndicator: '#D2B258',
+    },
+    metallicGold: {
+      shadow: '#74612F',
+      muted: '#947D3F',
+      mid: '#B89C4D',
+      main: '#D2B258',
+      highlight: '#EBCD78',
     },
     // Preserve existing surface, onSurface, etc.
     // surface and onSurface are already defined above, so no duplicates here
 
     // External marks share the dark theme's restrained monochrome gold treatment.
-    brandYoutube: '#E6C768',
-    brandSpotify: '#E6C768',
-    brandZoom: '#E6C768',
+    brandYoutube: '#D2B258',
+    brandSpotify: '#D2B258',
+    brandZoom: '#D2B258',
 
     // Neutralizing Elevation (Hierarchy of Light)
     // This was not derived from the UI_UX.md spec, only recommended by Gemini
     elevation: {
       level0: 'transparent',
-      level1: '#1A1814',
-      level2: '#211E18',
-      level3: '#2A261E',
-      level4: '#332E24',
-      level5: '#3A3428',
+      level1: '#14130F',
+      level2: '#191710',
+      level3: '#211F18',
+      level4: '#29251A',
+      level5: '#302A1D',
     },
 
     // Subtle Blur Effect for Glassmorphism Border for Search
-    glassBorder: 'rgba(230, 199, 104, 0.14)',
+    glassBorder: 'rgba(210, 178, 88, 0.18)',
     // Persistent highlight for saved Bible verses
     verseHighlight: '#5A4B16',
   },
   gradients: {
     heroOverlay: ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.75)'] as [
+      string,
+      string,
+      ...string[],
+    ],
+    metallicGold: ['#74612F', '#D2B258', '#EBCD78', '#B89C4D'] as [
       string,
       string,
       ...string[],

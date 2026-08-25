@@ -22,7 +22,7 @@ screen's top and bottom bar colors. Please ensure these colors match the view co
 ### Primary Color Accent
 
 Deep Ocean Blue `#0369A1` is the light-mode interaction color. Dark mode uses a restrained
-gold `#E6C768` over warm-black surfaces, giving controls and reader annotations a premium,
+gold `#D2B258` over a near-black canvas, giving controls and reader annotations a premium,
 evening-oriented identity while warm-white remains reserved for long-form reading text.
 This direction adapts the black-and-gold principle from Coca-Cola Zero Sugar Zero Caffeine's
 [premium evening redesign](https://www.cocacolaep.com/news-and-stories/zeroing-in-on-the-relaunch-of-coca-cola-zero-sugar-zero-caffeine/),
@@ -31,8 +31,20 @@ without reproducing Coca-Cola trademarks or product graphics.
 <!-- prettier-ignore -->
 | Element | Light Mode Hex | Dark Mode Hex | Rationale |
 | :---| :---| :---| :---|
-| **Primary Interaction Color Accent** | #0369A1 | #E6C768 | **Luminance over Hue.** Light mode uses a deep accessible ocean blue; dark mode uses restrained gold for premium, low-glare focus. |
-| **Tertiary Decorative / Narrative Icons** | #0369A1 | #D9B44A | **Related Action Language.** Dark mode uses a slightly deeper gold to distinguish narrative and reader annotations. |
+| **Primary Interaction Color Accent** | #0369A1 | #D2B258 | **Luminance over Hue.** Light mode uses a deep accessible ocean blue; dark mode uses the sampled main gold for premium, low-glare focus. |
+| **Tertiary Decorative / Narrative Icons** | #0369A1 | #D2B258 | **Unified Metallic Identity.** Reader annotations and functional icons share the main gold. |
+
+Dark mode uses a tonal range sampled from Coca-Cola's official product render instead of
+pretending metallic ink can be represented by one flat digital color. Opaque icons use the
+main or muted tone; prominent affordances may use the full gradient.
+
+| Metallic role | Hex |
+| :--- | :--- |
+| Shadow | `#74612F` |
+| Muted | `#947D3F` |
+| Midtone | `#B89C4D` |
+| Main | `#D2B258` |
+| Highlight | `#EBCD78` |
 
 ### Core Surface Palette
 
@@ -57,16 +69,16 @@ interface consistent and spiritually focused while minimizing retinal distractio
 <!-- prettier-ignore -->
 | Element | Light Mode Hex | Dark Mode Hex | Rationale |
 | :---| :---| :---| :---|
-| **Background**    | #F2E6DF  | #0D0C0A | **The Canvas.** A warm low-glare light canvas and warm-black evening canvas. |
-| **Surface (Cards/Containers)**  | #FAF4EF  | #1A1814 | **The Object.** Warm cards lift clearly from their respective canvases. |
-| **Surface Variant**    | #F1F3F4  | #2A261E | **Secondary UI.** Search bars, unselected controls, and subtle grouped UI. |
+| **Background**    | #F2E6DF  | #080808 | **The Canvas.** A warm low-glare light canvas and render-matched near-black evening canvas. |
+| **Surface (Cards/Containers)**  | #FAF4EF  | #14130F | **The Object.** Warm cards lift clearly from their respective canvases. |
+| **Surface Variant**    | #F1F3F4  | #211F18 | **Secondary UI.** Search bars, unselected controls, and subtle grouped UI. |
 | **On Surface**   | #1A1A1A  | #F3EDE1 | **The Ink.** Warm-white dark-mode text mitigates **Irradiation Illusion** ([NIH/PMC3939872](https://pmc.ncbi.nlm.nih.gov/articles/PMC3939872/)) and stays visually dominant over gold annotations. |
 | **On Surface Variant**   | #606060  | #BDB5A2 | **Muted Intent.** Warm neutral content recedes without becoming illegible. |
-| **Text/Icon on Primary**  | #FFFFFF  | #211A05 | **The Stencil.** High-contrast content shown inside primary controls. |
-| **Selection Container**  | #E3F2FD  | #3A3018 | **The State.** A quiet gold-brown selected state avoids large luminous blocks. |
-| **Boundary (Outline)**   | #CAC4D0  | #9B8C66 | **The Frame.** A visible warm boundary for controls and focus regions. |
-| **Boundary (Subtle)**   | #E0E0E0  | #433B2B | **The Divider.** Used for subtle organization within grouped cards. |
-| **Functional Icons (e.g. Bottom Bar)** | #1A1A1A  | #E6C768 | **Active Focus.** Gold identifies selected and actionable elements. |
+| **Text/Icon on Primary**  | #FFFFFF  | #181202 | **The Stencil.** High-contrast content shown inside primary controls. |
+| **Selection Container**  | #E3F2FD  | #302714 | **The State.** A quiet gold-brown selected state avoids large luminous blocks. |
+| **Boundary (Outline)**   | #CAC4D0  | #947D3F | **The Frame.** A visible muted-gold boundary for controls and focus regions. |
+| **Boundary (Subtle)**   | #E0E0E0  | #3B3423 | **The Divider.** Used for subtle organization within grouped cards. |
+| **Functional Icons (e.g. Bottom Bar)** | #1A1A1A  | #D2B258 | **Active Focus.** Main gold identifies selected and actionable elements; inactive navigation uses `#947D3F`. |
 
 ### Grid Menu Card Tokens
 
@@ -77,11 +89,11 @@ the component.
 <!-- prettier-ignore -->
 | Token | Light Mode | Dark Mode | Purpose |
 | :---| :---| :---| :---|
-| **Card Border** | #E0E0E0 | #433B2B | Subtle boundary around each category card. |
-| **Decorative Icon** | rgba(40, 40, 40, 0.18) | rgba(230, 199, 104, 0.18) | Default low-emphasis illustration when no category icon color is supplied. |
-| **Arrow Background** | #FFFFFF | #2A261E | Circular navigation affordance surface. |
-| **Arrow Border** | #374151 | #9B8C66 | Crisp affordance boundary. |
-| **Arrow Foreground** | #374151 | #D8C58E | Diagonal arrow icon. |
+| **Card Border** | #E0E0E0 | #3B3423 | Subtle boundary around each category card. |
+| **Decorative Icon** | rgba(40, 40, 40, 0.18) | #D2B258 | Gold illustration on the near-black card surface. |
+| **Arrow Background** | #FFFFFF | Metallic gradient | Glossy circular navigation affordance using the five-tone gold range. |
+| **Arrow Border** | #374151 | #EBCD78 | Highlight boundary around the metallic affordance. |
+| **Arrow Foreground** | #374151 | #181202 | Dark icon over the metallic fill. |
 
 ### Special External Brand Colors
 
@@ -90,9 +102,9 @@ These brand colors are used for third-party recognition in Light Mode and follow
 
 | Element           | Light Mode Hex | Dark Mode Hex | Rationale                                                   |
 | :---------------- | :------------- | :------------ | :---------------------------------------------------------- |
-| **YouTube Brand** | #FF0000        | #E6C768       | Official red in light; shared monochrome gold in dark.      |
-| **Spotify Brand** | #1DB954        | #E6C768       | Official green in light; shared monochrome gold in dark.    |
-| **Zoom Brand**    | #0B5CFF        | #E6C768       | Official blue in light; shared monochrome gold in dark.     |
+| **YouTube Brand** | #FF0000        | #D2B258       | Official red in light; shared monochrome gold in dark.      |
+| **Spotify Brand** | #1DB954        | #D2B258       | Official green in light; shared monochrome gold in dark.    |
+| **Zoom Brand**    | #0B5CFF        | #D2B258       | Official blue in light; shared monochrome gold in dark.     |
 
 ### Key Principles & Exceptions:
 

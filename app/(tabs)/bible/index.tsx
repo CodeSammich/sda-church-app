@@ -4,6 +4,7 @@ import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -4184,9 +4185,21 @@ export default function BibleScreen() {
                     style={[
                       styles.detailActionButton,
                       dockLayout.stackControls && styles.stackedDetailActionButton,
-                      { backgroundColor: theme.colors.primary },
+                      theme.dark
+                        ? null
+                        : { backgroundColor: theme.colors.primary },
                     ]}
                   >
+                    {theme.dark ? (
+                      <LinearGradient
+                        pointerEvents="none"
+                        colors={theme.gradients.metallicGold}
+                        locations={[0, 0.38, 0.62, 1]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    ) : null}
                     <AppIcon
                       pointerEvents="none"
                       name="share-variant"
@@ -4605,6 +4618,7 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleShee
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    overflow: 'hidden',
   },
   detailOutlinedAction: {
     borderWidth: 1,

@@ -21,6 +21,24 @@ const contrastRatio = (foreground: string, background: string) => {
 };
 
 describe('dark reader palette', () => {
+  it('uses the sampled black and metallic-gold range', () => {
+    expect(customDarkTheme.colors.background).toBe('#080808');
+    expect(customDarkTheme.colors.primary).toBe('#D2B258');
+    expect(customDarkTheme.colors.metallicGold).toEqual({
+      shadow: '#74612F',
+      muted: '#947D3F',
+      mid: '#B89C4D',
+      main: '#D2B258',
+      highlight: '#EBCD78',
+    });
+    expect(customDarkTheme.gradients.metallicGold).toEqual([
+      '#74612F',
+      '#D2B258',
+      '#EBCD78',
+      '#B89C4D',
+    ]);
+  });
+
   it.each([
     ['reading text', customDarkTheme.colors.onBackground, customDarkTheme.colors.background, 7],
     ['surface text', customDarkTheme.colors.onSurface, customDarkTheme.colors.surface, 7],
