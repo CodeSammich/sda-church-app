@@ -56,21 +56,4 @@ export const TEAM_MEMBERS: TeamMember[] = [
       es: 'Sarah Hao es una trabajadora bíblica dedicada, quien lidera nuestra iglesia en el ministerio de adultos. Dirige un grupo de estudio bíblico diario y es muy respetada por haber fundado iglesias que reúnen a más de 7.000 personas en China.',
     },
   },
-  {
-    name: {
-      en: 'Shuang (Swan) Geng',
-      zh: '耿爽',
-      'zh-cn': '耿爽',
-      es: 'Shuang (Swan) Geng',
-    },
-    roleKey: 'childrensMinistry',
-    imageUrl: CHILDREN_MINISTRY_WORKER_IMAGE_URL,
-    description: {
-      en: 'Geng (Swan) Shuang is a dedicated childrens ministry worker, with a Masters degree in childhood education. She has transformed the characters of many children.',
-      zh: '耿爽是一位敬业的儿童事工工作者，拥有儿童教育硕士学位。她改变了许多孩子的性格。',
-      'zh-cn':
-        '耿爽是一位敬业的儿童事工工作者，拥有儿童教育硕士学位。她改变了许多孩子的性格。',
-      es: 'Geng (Swan) Shuang es una trabajadora de ministerio infantil dedicada, con un título de maestría en educación infantil. Ha transformado los caracteres de muchos niños.',
-    },
-  },
 ];
