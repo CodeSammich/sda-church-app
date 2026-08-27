@@ -65,8 +65,7 @@ jobs:
       github.repository == 'New-York-Chinese-Seventh-day-Adventist/sda-church-app'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: read
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -79,21 +78,17 @@ jobs:
         with:
           node-version: "lts/*"
 
-      - name: Sync release version
+      - name: Verify release version files
         env:
           VERSION: ${{ needs.validate-pr.outputs.version }}
         run: |
           set -euo pipefail
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
           npm run sync-version -- --version "$VERSION"
-          git add package.json package-lock.json app.json public/sw.js
 
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: sync configuration files to $VERSION"
-            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
-          else
-            echo "Files are already in sync with $VERSION."
+          if ! git diff --exit-code -- package.json package-lock.json app.json public/sw.js; then
+            echo "::error title=Version files out of sync::Run npm run sync-version -- --version $VERSION and commit the generated changes to this release branch through a pull request."
+            exit 1
           fi
+
+          echo "Files are in sync with $VERSION."

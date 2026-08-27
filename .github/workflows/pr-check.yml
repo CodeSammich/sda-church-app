@@ -18,6 +18,8 @@ jobs:
           fetch-depth: 0
 
       - name: Check for version change
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           set -euo pipefail
 
@@ -29,7 +31,18 @@ jobs:
           echo "PR version: $HEAD_VER"
 
           if [ "$BASE_VER" == "$HEAD_VER" ]; then
-            echo "::error::Validation Failed: The version in package.json has not been changed."
-            exit 1
+            if [ "$HEAD_REF" != "release/$HEAD_VER" ]; then
+              echo "::error::Validation Failed: The version in package.json has not been changed."
+              exit 1
+            fi
+
+            if git rev-parse --verify --quiet "refs/tags/v$HEAD_VER" >/dev/null; then
+              echo "::error::Validation Failed: Version $HEAD_VER has already been tagged."
+              exit 1
+            fi
+
+            echo "Validation Passed: allowing recovery of untagged version $HEAD_VER."
+            exit 0
           fi
+
           echo "Validation Passed."

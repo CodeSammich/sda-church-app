@@ -24,10 +24,12 @@ jobs:
         with:
           node-version: "lts/*"
 
-      - name: Sync and Tag from package.json
+      - name: Validate and tag package version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -38,17 +40,14 @@ jobs:
           TAG="v$VERSION"
           echo "Version identified: $VERSION"
 
-          npm install --package-lock-only
           npm run sync-version
 
-          git add app.json public/sw.js package-lock.json
-
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: sync configuration files for $TAG [skip ci]"
-            git push origin main
-          else
-            echo "Configuration files already in sync."
+          if ! git diff --exit-code -- package.json package-lock.json app.json public/sw.js; then
+            echo "::error title=Version files out of sync::Run npm run sync-version and commit the generated changes through the release pull request."
+            exit 1
           fi
+
+          echo "Configuration files are in sync."
 
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "Tag $TAG already exists, skipping tag creation."
