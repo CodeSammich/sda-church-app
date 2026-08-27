@@ -285,6 +285,30 @@ await record('daily public-domain book sample', 'Project Gutenberg', () => {
   );
 });
 
+const chineseLibrarySource = await readFile('features/library/ChineseLibrary.ts', 'utf8');
+const chineseLibraryCatalogUrl = chineseLibrarySource.match(
+  /CHINESE_LIBRARY_CATALOG_URL\s*=\s*\n?\s*'(https:\/\/api\.sdabible\.org\/[^']+)'/,
+)?.[1];
+
+await record('current EGW cover catalog', 'Chinese Union Mission library', async () => {
+  if (!chineseLibraryCatalogUrl) throw new Error('cover catalog URL is missing');
+  const catalog = await getJson(chineseLibraryCatalogUrl);
+  const books = Array.isArray(catalog.childCategories) ? catalog.childCategories : [];
+  const curatedIds = new Set([127, 128, 55, 81, 75, 120, 34, 16, 50, 13, 23]);
+  const availableIds = new Set(books.map(({ book_id }) => book_id));
+  assertContainsSet(availableIds, curatedIds, 'Chinese cover catalog');
+  const sample = dailySample(
+    books.filter(({ book_id, thumbnail }) => curatedIds.has(book_id) && thumbnail),
+    149,
+  );
+  if (!sample) throw new Error('catalog has no curated cover sample');
+  const coverUrl = new URL(sample.thumbnail, 'https://cms.sdabible.site/storage/').href;
+  return probe(coverUrl, {
+    binary: true,
+    expectedHosts: ['cms.sdabible.site'],
+  });
+});
+
 const egwCatalogSource = await readFile('features/library/EgwBookCatalog.ts', 'utf8');
 const egwEditions = [...egwCatalogSource.matchAll(
   /edition\(\s*'(en|zh|es)'\s*,\s*'[^']+'\s*,\s*(\d+)\s*,\s*'(\d+\.\d+)'\s*\)/g,

@@ -21,6 +21,8 @@ Public-domain works use original, text-free cover illustrations generated for th
 
 The EGW collection also uses original, text-free thematic illustrations generated for this app. Official White Estate covers were not supplied to the generator, copied, hotlinked, or used as style references. Prompts describe only broad themes from each work and explicitly exclude the official covers' distinctive imagery, typography, branding, and layouts. Edition titles and language actions remain accessible live text.
 
+For Chinese app languages, the curated EGW cards may replace that bundled fallback artwork with current cover thumbnails from the Chinese Union Mission's official catalog. The app fetches only catalog metadata and images, validates image URLs against the Mission's storage host, and does not copy or render the linked book text. If the catalog or an image is unavailable, the original bundled artwork remains visible.
+
 The Library is one browsing surface: EGW books appear first, followed by Adventist pioneers and Christian classics. Selecting an EGW cover opens an accessible edition dialog rather than navigating to a separate collection page. At enlarged text sizes or narrow widths, every shelf becomes a single-column list.
 
 | Work or collection | Access | Reason |
@@ -54,3 +56,4 @@ Primary discovery sources are the [Encyclopedia of Seventh-day Adventists](https
 2. Add chapter-level navigation and saved reading position.
 3. Add catalog search, language filters, and favorites after the native-reader data model is stable.
 4. Ask 時兆出版社 and the relevant archives about licensed Chinese digital editions, starting with Guo Ziying's early works.
+5. Add verified, handpicked Chinese Adventist books and verified official English covers as tracked in [issue #176](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/176). The Chinese cover refresh alone does not complete that work.

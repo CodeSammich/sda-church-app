@@ -77,9 +77,12 @@ export default function LegalScreen() {
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
         This application provides searchable hymn metadata and a curated index of book
-        titles and language editions to facilitate navigation. We do not host or reproduce
-        the externally linked EGW book text, protected musical notation, or lyrics.
-        External content is accessed through links to third-party providers; a link does
+        titles and language editions to facilitate navigation. For Chinese app languages,
+        it also displays current cover thumbnails served by the Chinese Union Mission;
+        bundled original artwork remains the fallback. We do not host or reproduce the
+        externally linked EGW book text, protected musical notation, or lyrics. External
+        content is accessed through links to third-party
+        providers; a link does
         not represent that this project independently verified every provider&apos;s copyright
         permissions.
       </Text>

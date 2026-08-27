@@ -4,6 +4,9 @@ import {
 } from '@/components/TextSizeDialog';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { createElement } from 'react';
+import { StyleSheet } from 'react-native';
+import { Dialog } from 'react-native-paper';
+import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 import { renderWithPreferences } from './helpers/render-preferences';
 
 const languageCases = [
@@ -51,6 +54,32 @@ const languageCases = [
 ];
 
 describe('TextSizeDialog', () => {
+  it.each([customLightTheme, customDarkTheme])(
+    'uses the $dark app canvas as its dialog background',
+    (theme) => {
+      const screen = renderWithPreferences(
+        createElement(TextSizeDialog, {
+          onDismiss: jest.fn(),
+          visible: true,
+        }),
+        { theme },
+      );
+
+      expect(
+        StyleSheet.flatten(screen.UNSAFE_getByType(Dialog).props.style)
+          .backgroundColor,
+      ).toBe(theme.colors.background);
+      expect(
+        StyleSheet.flatten(screen.UNSAFE_getByType(Dialog.ScrollArea).props.style)
+          .borderBottomWidth,
+      ).toBe(0);
+      expect(
+        StyleSheet.flatten(screen.UNSAFE_getByType(Dialog.ScrollArea).props.style)
+          .marginBottom,
+      ).toBe(0);
+    },
+  );
+
   it('reflows dense native controls for phone-width enlarged text', () => {
     expect(shouldStackTextSizeDialogControls(320, 4)).toBe(true);
     expect(shouldStackTextSizeDialogControls(320, 2)).toBe(true);

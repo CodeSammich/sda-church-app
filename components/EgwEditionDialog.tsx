@@ -2,6 +2,7 @@ import { WrappingButton } from '@/components/WrappingButton';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
+import { useAppTheme } from '@/constants/Themes';
 import { openURL } from '@/constants/ExternalLinks';
 import {
   getEgwEditionsForLanguage,
@@ -11,6 +12,7 @@ import {
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Dialog, Portal, Text } from 'react-native-paper';
+import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 
 const editionLanguageNames: Readonly<Record<EgwEditionLanguage, string>> = {
   en: 'English',
@@ -38,13 +40,18 @@ export function EgwEditionDialog({
   work,
 }: EgwEditionDialogProps) {
   const { textScale } = useTextSize();
+  const theme = useAppTheme();
   const styles = useMemo(() => createStyles(textScale), [textScale]);
 
   if (!work) return null;
 
   return (
     <Portal>
-      <Dialog visible onDismiss={onDismiss} style={styles.dialog}>
+      <Dialog
+        visible
+        onDismiss={onDismiss}
+        style={[styles.dialog, getPopupSurfaceStyle(theme)]}
+      >
         <Dialog.Title>{work.workTitle[language]}</Dialog.Title>
         <Dialog.Content>
           <Text style={styles.description}>{selectEditionLabel}</Text>

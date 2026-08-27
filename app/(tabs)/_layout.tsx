@@ -204,8 +204,12 @@ export default function TabLayout() {
           </Animated.View>
         )}
         screenOptions={{
-          tabBarActiveTintColor: theme.colors.onBackground,
-          tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+          tabBarActiveTintColor: theme.dark
+            ? theme.colors.metallicGold.main
+            : theme.colors.onBackground,
+          tabBarInactiveTintColor: theme.dark
+            ? theme.colors.metallicGold.muted
+            : theme.colors.onSurfaceVariant,
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
           tabBarStyle: {

@@ -14,9 +14,14 @@ import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageCon
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { EGW_BOOKS } from '@/features/library/EgwBookCatalog';
+import {
+  fetchChineseLibraryCoverUrls,
+  shouldLoadChineseLibraryCovers,
+  type ChineseLibraryCoverUrls,
+} from '@/features/library/ChineseLibrary';
 import { getLibraryItemsForLanguage } from '@/features/library/LibraryCatalog';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import {
   type ImageSourcePropType,
   ScrollView,
@@ -134,6 +139,7 @@ export default function LibraryScreen() {
   const labels = allLabels[language] || allLabels.en;
   const catalog = getLibraryItemsForLanguage(language);
   const [selectedEgwBookId, setSelectedEgwBookId] = useState<string | null>(null);
+  const [chineseCoverUrls, setChineseCoverUrls] = useState<ChineseLibraryCoverUrls>({});
   const styles = useMemo(() => createStyles(textScale), [textScale]);
   const useListLayout = shouldUseLibraryListLayout(
     width,
@@ -145,6 +151,7 @@ export default function LibraryScreen() {
   const unfilteredEgwWorks = collection === 'egw'
     ? EGW_BOOKS
     : EGW_BOOKS.filter(({ id }) => EGW_IDS_BY_COLLECTION[collection]?.includes(id));
+  const hasEgwWorks = unfilteredEgwWorks.length > 0;
   const unfilteredPublicWorks = catalog.publicDomainWorks.filter(({ id, collection: itemCollection }) =>
     (collection === 'bates' && id === 'bates-seventh-day-sabbath') ||
     (collection === 'andrews' && id === 'andrews-history-sabbath') ||
@@ -163,6 +170,23 @@ export default function LibraryScreen() {
   const officialWorks = unfilteredOfficialWorks.filter((work) =>
     `${work.title} ${work.author}`.toLocaleLowerCase().includes(normalizedQuery),
   );
+
+  useEffect(() => {
+    if (!shouldLoadChineseLibraryCovers(language) || !hasEgwWorks) {
+      setChineseCoverUrls({});
+      return;
+    }
+
+    const controller = new AbortController();
+    fetchChineseLibraryCoverUrls(controller.signal)
+      .then(setChineseCoverUrls)
+      .catch((error) => {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        console.warn('Could not refresh Chinese library covers:', error);
+      });
+
+    return () => controller.abort();
+  }, [hasEgwWorks, language]);
 
   const renderLibraryBookCards = (
     books: typeof catalog.publicDomainWorks,
@@ -215,6 +239,7 @@ export default function LibraryScreen() {
                 accessibilityHint={labels.chooseBook}
                 author={labels.egwAuthor}
                 coverSource={EGW_COVERS[work.id]}
+                coverUrl={chineseCoverUrls[work.id]}
                 listLayout={useListLayout}
                 onPress={() => setSelectedEgwBookId(work.id)}
                 title={work.workTitle[language]}

@@ -81,6 +81,10 @@ const officialCollections: readonly LibraryItem[] = [
   },
 ];
 
+// TODO: Add only verified, handpicked Chinese Adventist books and replace the
+// generated English covers with verified official covers. Track both in:
+// https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/176
+
 export const LIBRARY_CATALOG = Object.freeze({
   publicDomainWorks,
   officialCollections,

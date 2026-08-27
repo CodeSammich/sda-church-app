@@ -1,7 +1,9 @@
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
+import { useAppTheme } from '@/constants/Themes';
+import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Dialog, Portal, RadioButton, Text, useTheme } from 'react-native-paper';
+import { Dialog, Portal, RadioButton, Text } from 'react-native-paper';
 
 type LanguageDialogProps = Readonly<{ onDismiss: () => void; visible: boolean }>;
 
@@ -46,11 +48,18 @@ const copy = {
 export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
   const { language, setLanguage } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
-  const theme = useTheme();
+  const theme = useAppTheme();
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={styles.dialog}>
+      <Dialog
+        visible={visible}
+        onDismiss={onDismiss}
+        style={[
+          styles.dialog,
+          getPopupSurfaceStyle(theme),
+        ]}
+      >
         <Dialog.Title>{labels.title}</Dialog.Title>
         <Dialog.ScrollArea style={styles.scrollArea}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -195,6 +204,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   scrollArea: {
+    borderBottomWidth: 0,
+    marginBottom: 0,
     paddingHorizontal: 0,
   },
   scrollContent: {

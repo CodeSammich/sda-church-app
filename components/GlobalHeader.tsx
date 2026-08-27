@@ -1,4 +1,8 @@
-import { getHeaderBackTarget, hasHeaderBackButton } from '@/constants/BackNavigation';
+import {
+  getHeaderBackButtonColors,
+  getHeaderBackTarget,
+  hasHeaderBackButton,
+} from '@/constants/BackNavigation';
 import {
   getBibleReaderUiTextScale,
   scaleTypographyMetric,
@@ -498,12 +502,7 @@ export const GlobalHeader = (props: any) => {
                 borderRadius: compactControlHeight / 2,
               },
               {
-                backgroundColor: theme.dark
-                  ? 'rgba(18, 18, 18, 0.88)'
-                  : 'rgba(255, 255, 255, 0.94)',
-                borderColor: theme.dark
-                  ? 'rgba(255, 255, 255, 0.28)'
-                  : 'rgba(255, 255, 255, 0.72)',
+                ...getHeaderBackButtonColors(theme),
                 opacity: pressed ? 0.8 : 1,
               },
             ]}
