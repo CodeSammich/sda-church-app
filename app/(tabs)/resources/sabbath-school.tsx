@@ -2,6 +2,7 @@ import { MenuCard } from '@/components/MenuCard';
 import { VerseHero } from '@/components/VerseHero';
 import {
   CHURCH_BUILDING_IMAGE_URL,
+  getChildrenSabbathSchoolLanguage,
   openChildrenSabbathSchool,
   openBabiesSabbathSchool,
   openCurrentChildrenSabbathSchool,
@@ -28,8 +29,8 @@ const copy = {
     beginner: 'Beginner (ages 1–3)', kindergarten: 'Kindergarten (ages 4–6)',
     primary: 'Primary (ages 7–9)', junior: 'Junior (ages 10–12)',
     teen: 'Teen (ages 13–14)', youth: 'Youth (ages 15–18)',
-    studentGuide: 'Student PDF · English', teacher: 'Teacher',
-    teacherGuide: 'PDF · English',
+    studentGuide: 'Student PDF', teacher: 'Teacher',
+    teacherGuide: 'Teacher PDF', english: 'English', chinese: 'Chinese',
     studentsTab: 'Students', teachersTab: 'Teachers', moreResources: 'More resources',
     allChildren: "Children's Catalog", allChildrenSub: 'Browse Alive in Jesus age-level resources',
   },
@@ -41,7 +42,8 @@ const copy = {
     beginner: '幼兒級（1–3 歲）', kindergarten: '幼稚級（4–6 歲）',
     primary: '初小級（7–9 歲）', junior: '少年級（10–12 歲）',
     teen: '青少年級（13–14 歲）', youth: '青年級（15–18 歲）',
-    studentGuide: '學生 PDF · 英文', teacher: '教師版', teacherGuide: 'PDF · 英文',
+    studentGuide: '學生 PDF', teacher: '教師版', teacherGuide: '教師 PDF',
+    english: '英文', chinese: '中文',
     studentsTab: '學生', teachersTab: '教師', moreResources: '更多資源',
     allChildren: '兒童課程目錄', allChildrenSub: '瀏覽 Alive in Jesus 各年齡課程',
   },
@@ -53,7 +55,8 @@ const copy = {
     beginner: '幼儿组（1–3 岁）', kindergarten: '幼稚组（4–6 岁）',
     primary: '小学组（7–9 岁）', junior: '少年组（10–12 岁）',
     teen: '青少年组（13–14 岁）', youth: '青年组（15–18 岁）',
-    studentGuide: '学生 PDF · 英文', teacher: '教师版', teacherGuide: 'PDF · 英文',
+    studentGuide: '学生 PDF', teacher: '教师版', teacherGuide: '教师 PDF',
+    english: '英文', chinese: '中文',
     studentsTab: '学生', teachersTab: '教师', moreResources: '更多资源',
     allChildren: '儿童课程目录', allChildrenSub: '浏览 Alive in Jesus 各年龄课程',
   },
@@ -65,8 +68,8 @@ const copy = {
     beginner: 'Principiantes (1–3 años)', kindergarten: 'Jardín de infantes (4–6 años)',
     primary: 'Primarios (7–9 años)', junior: 'Menores (10–12 años)',
     teen: 'Adolescentes (13–14 años)', youth: 'Jóvenes (15–18 años)',
-    studentGuide: 'PDF del alumno · inglés', teacher: 'Maestro',
-    teacherGuide: 'PDF · inglés',
+    studentGuide: 'PDF del alumno', teacher: 'Maestro',
+    teacherGuide: 'PDF del maestro', english: 'inglés', chinese: 'chino',
     studentsTab: 'Alumnos', teachersTab: 'Maestros', moreResources: 'Más recursos',
     allChildren: 'Catálogo infantil', allChildrenSub: 'Explora los recursos de Alive in Jesus por edad',
   },
@@ -81,6 +84,15 @@ export default function SabbathSchoolScreen() {
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
   const [childrenTab, setChildrenTab] = useState<'students' | 'teachers'>('students');
   const showingStudents = childrenTab === 'students';
+  const guideDescription = (
+    curriculum: Parameters<typeof getChildrenSabbathSchoolLanguage>[0],
+    guide: 'student' | 'teacher',
+  ) => {
+    const guideLanguage = getChildrenSabbathSchoolLanguage(curriculum, language);
+    return `${guide === 'student' ? labels.studentGuide : labels.teacherGuide} · ${
+      guideLanguage === 'zh' ? labels.chinese : labels.english
+    }`;
+  };
 
   return (
     <>
@@ -160,21 +172,21 @@ export default function SabbathSchoolScreen() {
           </View>
           {showingStudents ? (
             <>
-              <MenuCard title={labels.beginner} description={labels.studentGuide} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('beginner-student')} />
-              <MenuCard title={labels.kindergarten} description={labels.studentGuide} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('kindergarten-student')} />
-              <MenuCard title={labels.primary} description={labels.studentGuide} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('primary-student')} />
-              <MenuCard title={labels.junior} description={labels.studentGuide} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('junior')} />
-              <MenuCard title={labels.teen} description={labels.studentGuide} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('teen')} />
-              <MenuCard title={labels.youth} description={labels.studentGuide} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('youth')} />
+              <MenuCard title={labels.beginner} description={guideDescription('beginner-student', 'student')} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('beginner-student', language)} />
+              <MenuCard title={labels.kindergarten} description={guideDescription('kindergarten-student', 'student')} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('kindergarten-student', language)} />
+              <MenuCard title={labels.primary} description={guideDescription('primary-student', 'student')} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('primary-student', language)} />
+              <MenuCard title={labels.junior} description={guideDescription('junior', 'student')} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('junior', language)} />
+              <MenuCard title={labels.teen} description={guideDescription('teen', 'student')} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('teen', language)} />
+              <MenuCard title={labels.youth} description={guideDescription('youth', 'student')} icon="book-open-page-variant" onPress={() => openCurrentChildrenSabbathSchool('youth', language)} />
             </>
           ) : (
             <>
-              <MenuCard title={labels.beginner} description={labels.teacherGuide} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('beginner-teacher')} />
-              <MenuCard title={labels.kindergarten} description={labels.teacherGuide} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('kindergarten-teacher')} />
-              <MenuCard title={labels.primary} description={labels.teacherGuide} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('primary-teacher')} />
-              <MenuCard title={labels.junior} description={labels.teacherGuide} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('junior-teacher')} />
-              <MenuCard title={labels.teen} description={labels.teacherGuide} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('teen-teacher')} />
-              <MenuCard title={labels.youth} description={labels.teacherGuide} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('youth-teacher')} />
+              <MenuCard title={labels.beginner} description={guideDescription('beginner-teacher', 'teacher')} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('beginner-teacher', language)} />
+              <MenuCard title={labels.kindergarten} description={guideDescription('kindergarten-teacher', 'teacher')} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('kindergarten-teacher', language)} />
+              <MenuCard title={labels.primary} description={guideDescription('primary-teacher', 'teacher')} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('primary-teacher', language)} />
+              <MenuCard title={labels.junior} description={guideDescription('junior-teacher', 'teacher')} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('junior-teacher', language)} />
+              <MenuCard title={labels.teen} description={guideDescription('teen-teacher', 'teacher')} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('teen-teacher', language)} />
+              <MenuCard title={labels.youth} description={guideDescription('youth-teacher', 'teacher')} icon="human-male-board" onPress={() => openCurrentChildrenSabbathSchool('youth-teacher', language)} />
             </>
           )}
         </List.Section>

@@ -246,33 +246,68 @@ export type ChildrenSabbathSchoolCurriculum =
   | 'youth'
   | 'youth-teacher';
 
-const CHILDREN_CURRICULUM_ROUTES: Readonly<
+type ChildrenCurriculumRoute = Readonly<{
+  host: string;
+  language: 'en' | 'zh';
+  pdfIndex: number;
+  suffix: string;
+  weekStartsOnSunday: boolean;
+  quarterlyGroup?: string;
+}>;
+
+const ENGLISH_CHILDREN_CURRICULUM_ROUTES: Readonly<
   Record<ChildrenSabbathSchoolCurriculum, {
     host: string;
+    language: 'en';
     pdfIndex: number;
     suffix: string;
     weekStartsOnSunday: boolean;
   }>
 > = {
-  'beginner-student': { host: 'app.beginner.aliveinjesus.info', pdfIndex: 0, suffix: 'zaijbgsg', weekStartsOnSunday: true },
-  'beginner-teacher': { host: 'app.beginner.aliveinjesus.info', pdfIndex: 0, suffix: 'yaijbgtg', weekStartsOnSunday: true },
-  'kindergarten-student': { host: 'app.kindergarten.aliveinjesus.info', pdfIndex: 0, suffix: 'zaijkdsg', weekStartsOnSunday: true },
-  'kindergarten-teacher': { host: 'app.kindergarten.aliveinjesus.info', pdfIndex: 0, suffix: 'yaijkdtg', weekStartsOnSunday: true },
-  'primary-student': { host: 'app.primary.aliveinjesus.info', pdfIndex: 0, suffix: 'zaijprsg', weekStartsOnSunday: true },
-  'primary-teacher': { host: 'app.primary.aliveinjesus.info', pdfIndex: 0, suffix: 'yaijprtg', weekStartsOnSunday: true },
-  junior: { host: 'sabbath-school.adventech.io', pdfIndex: 0, suffix: 'pp', weekStartsOnSunday: false },
-  'junior-teacher': { host: 'sabbath-school.adventech.io', pdfIndex: 1, suffix: 'pp', weekStartsOnSunday: false },
-  teen: { host: 'sabbath-school.adventech.io', pdfIndex: 0, suffix: 'rt', weekStartsOnSunday: false },
-  'teen-teacher': { host: 'sabbath-school.adventech.io', pdfIndex: 1, suffix: 'rt', weekStartsOnSunday: false },
-  youth: { host: 'sabbath-school.adventech.io', pdfIndex: 0, suffix: 'cc', weekStartsOnSunday: false },
-  'youth-teacher': { host: 'sabbath-school.adventech.io', pdfIndex: 1, suffix: 'cc', weekStartsOnSunday: false },
+  'beginner-student': { host: 'app.beginner.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'zaijbgsg', weekStartsOnSunday: true },
+  'beginner-teacher': { host: 'app.beginner.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'yaijbgtg', weekStartsOnSunday: true },
+  'kindergarten-student': { host: 'app.kindergarten.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'zaijkdsg', weekStartsOnSunday: true },
+  'kindergarten-teacher': { host: 'app.kindergarten.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'yaijkdtg', weekStartsOnSunday: true },
+  'primary-student': { host: 'app.primary.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'zaijprsg', weekStartsOnSunday: true },
+  'primary-teacher': { host: 'app.primary.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'yaijprtg', weekStartsOnSunday: true },
+  junior: { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 0, suffix: 'pp', weekStartsOnSunday: false },
+  'junior-teacher': { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 1, suffix: 'pp', weekStartsOnSunday: false },
+  teen: { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 0, suffix: 'rt', weekStartsOnSunday: false },
+  'teen-teacher': { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 1, suffix: 'rt', weekStartsOnSunday: false },
+  youth: { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 0, suffix: 'cc', weekStartsOnSunday: false },
+  'youth-teacher': { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 1, suffix: 'cc', weekStartsOnSunday: false },
 };
 
-export const getCurrentChildrenSabbathSchoolUrl = (
+const CHINESE_CHILDREN_CURRICULUM_ROUTES: Partial<
+  Readonly<Record<ChildrenSabbathSchoolCurriculum, ChildrenCurriculumRoute>>
+> = {
+  // Adventech currently publishes these two Chinese children's groups. The
+  // remaining age divisions, and every current Spanish children's division,
+  // use the complete English Alive in Jesus catalog below.
+  'beginner-student': { host: 'sabbath-school.adventech.io', language: 'zh', pdfIndex: 0, suffix: 'bg', weekStartsOnSunday: false, quarterlyGroup: '初级学课' },
+  'beginner-teacher': { host: 'sabbath-school.adventech.io', language: 'zh', pdfIndex: 1, suffix: 'bg', weekStartsOnSunday: false, quarterlyGroup: '初级学课' },
+  'kindergarten-student': { host: 'sabbath-school.adventech.io', language: 'zh', pdfIndex: 0, suffix: 'kd', weekStartsOnSunday: false, quarterlyGroup: '中级学课' },
+  'kindergarten-teacher': { host: 'sabbath-school.adventech.io', language: 'zh', pdfIndex: 1, suffix: 'kd', weekStartsOnSunday: false, quarterlyGroup: '中级学课' },
+};
+
+const getChildrenCurriculumRoute = (
   curriculum: ChildrenSabbathSchoolCurriculum,
-  date = new Date(),
+  language: SupportedLanguage,
+): ChildrenCurriculumRoute =>
+  language === 'zh' || language === 'zh-cn'
+    ? CHINESE_CHILDREN_CURRICULUM_ROUTES[curriculum] ||
+      ENGLISH_CHILDREN_CURRICULUM_ROUTES[curriculum]
+    : ENGLISH_CHILDREN_CURRICULUM_ROUTES[curriculum];
+
+export const getChildrenSabbathSchoolLanguage = (
+  curriculum: ChildrenSabbathSchoolCurriculum,
+  language: SupportedLanguage,
+) => getChildrenCurriculumRoute(curriculum, language).language;
+
+const getChildrenQuarterAndLesson = (
+  route: ChildrenCurriculumRoute,
+  date: Date,
 ) => {
-  const route = CHILDREN_CURRICULUM_ROUTES[curriculum];
   const candidates = [date.getFullYear() - 1, date.getFullYear(), date.getFullYear() + 1]
     .flatMap((year) => [1, 2, 3, 4].map((quarter) => {
       const start = new Date(year, (quarter - 1) * 3, 1);
@@ -289,35 +324,111 @@ export const getCurrentChildrenSabbathSchoolUrl = (
     1,
     Math.min(14, Math.floor((date.getTime() - start.getTime()) / 604_800_000) + 1),
   );
-  return `https://${route.host}/en/${year}-${String(quarter).padStart(2, '0')}-${route.suffix}/${String(lesson).padStart(2, '0')}`;
+  return {
+    lesson: String(lesson).padStart(2, '0'),
+    quarterly: `${year}-${String(quarter).padStart(2, '0')}-${route.suffix}`,
+  };
+};
+
+export const getCurrentChildrenSabbathSchoolUrl = (
+  curriculum: ChildrenSabbathSchoolCurriculum,
+  language: SupportedLanguage = 'en',
+  date = new Date(),
+) => {
+  const route = getChildrenCurriculumRoute(curriculum, language);
+  if (route.quarterlyGroup) {
+    return `https://${route.host}/${route.language}?group=${encodeURIComponent(route.quarterlyGroup)}`;
+  }
+  const { lesson, quarterly } = getChildrenQuarterAndLesson(route, date);
+  return `https://${route.host}/${route.language}/${quarterly}/${lesson}`;
 };
 
 type ChildrenLessonResponse = {
   pdfs?: Array<{ src?: string }>;
 };
 
-export const getCurrentChildrenSabbathSchoolPdfUrl = async (
-  curriculum: ChildrenSabbathSchoolCurriculum,
-  date = new Date(),
-  fetchLesson: typeof fetch = fetch,
+type ChildrenQuarterlyResponse = {
+  lessons?: Array<{
+    end_date?: string;
+    id?: string;
+    start_date?: string;
+  }>;
+};
+
+const parseAdventechDate = (value?: string) => {
+  const match = value?.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+};
+
+const fetchChildrenLessonPdfUrl = async (
+  route: ChildrenCurriculumRoute,
+  date: Date,
+  fetchLesson: typeof fetch,
 ) => {
-  const lessonUrl = new URL(getCurrentChildrenSabbathSchoolUrl(curriculum, date));
-  const [, language, quarterly, lesson] = lessonUrl.pathname.split('/');
+  const { lesson: weeklyLesson, quarterly } = getChildrenQuarterAndLesson(route, date);
+  let lesson = weeklyLesson;
+
+  if (route.quarterlyGroup) {
+    const quarterlyResponse = await fetchLesson(
+      `https://sabbath-school.adventech.io/api/v2/${route.language}/quarterlies/${quarterly}/index.json`,
+    );
+    if (!quarterlyResponse.ok) {
+      throw new Error(`Quarterly request failed: ${quarterlyResponse.status}`);
+    }
+    const quarterlyData = await quarterlyResponse.json() as ChildrenQuarterlyResponse;
+    const requestedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const lessonForDate = quarterlyData.lessons?.find((candidate) => {
+      const start = parseAdventechDate(candidate.start_date);
+      const end = parseAdventechDate(candidate.end_date);
+      return start && end &&
+        start.getTime() <= requestedDate.getTime() &&
+        requestedDate.getTime() <= end.getTime();
+    });
+    if (!lessonForDate?.id) throw new Error('The quarterly has no lesson for this date.');
+    lesson = lessonForDate.id;
+  }
+
   const response = await fetchLesson(
-    `https://sabbath-school.adventech.io/api/v2/${language}/quarterlies/${quarterly}/lessons/${lesson}/index.json`,
+    `https://sabbath-school.adventech.io/api/v2/${route.language}/quarterlies/${quarterly}/lessons/${lesson}/index.json`,
   );
   if (!response.ok) throw new Error(`Lesson request failed: ${response.status}`);
 
   const data = await response.json() as ChildrenLessonResponse;
-  const pdfUrl = data.pdfs?.[CHILDREN_CURRICULUM_ROUTES[curriculum].pdfIndex]?.src;
-  if (!pdfUrl || new URL(pdfUrl).hostname !== 'sabbath-school-pdf.adventech.io') {
+  const pdfUrl = data.pdfs?.[route.pdfIndex]?.src;
+  const parsedPdfUrl = pdfUrl ? new URL(pdfUrl) : null;
+  if (
+    !parsedPdfUrl ||
+    parsedPdfUrl.protocol !== 'https:' ||
+    parsedPdfUrl.hostname !== 'sabbath-school-pdf.adventech.io'
+  ) {
     throw new Error('The lesson does not include an official PDF.');
   }
-  return pdfUrl;
+  return parsedPdfUrl.href;
+};
+
+export const getCurrentChildrenSabbathSchoolPdfUrl = async (
+  curriculum: ChildrenSabbathSchoolCurriculum,
+  language: SupportedLanguage = 'en',
+  date = new Date(),
+  fetchLesson: typeof fetch = fetch,
+) => {
+  const route = getChildrenCurriculumRoute(curriculum, language);
+  try {
+    return await fetchChildrenLessonPdfUrl(route, date, fetchLesson);
+  } catch (error) {
+    if (route.language === 'en') throw error;
+    return fetchChildrenLessonPdfUrl(
+      ENGLISH_CHILDREN_CURRICULUM_ROUTES[curriculum],
+      date,
+      fetchLesson,
+    );
+  }
 };
 
 export const openCurrentChildrenSabbathSchool = (
   curriculum: ChildrenSabbathSchoolCurriculum,
+  language: SupportedLanguage = 'en',
 ) => {
   // Reserve the web browsing context during the original tap. Waiting for the
   // API first can cause installed PWAs to treat the PDF as an in-app redirect.
@@ -326,7 +437,7 @@ export const openCurrentChildrenSabbathSchool = (
     : null;
   if (externalWindow) externalWindow.opener = null;
 
-  getCurrentChildrenSabbathSchoolPdfUrl(curriculum)
+  getCurrentChildrenSabbathSchoolPdfUrl(curriculum, language)
     .then(async (pdfUrl) => {
       if (Platform.OS === 'web') {
         if (!externalWindow) {
