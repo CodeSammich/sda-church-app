@@ -13,7 +13,10 @@ import {
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { EGW_BOOKS } from '@/features/library/EgwBookCatalog';
+import {
+  EGW_BOOKS,
+  getEgwCoverUrlsForLanguage,
+} from '@/features/library/EgwBookCatalog';
 import {
   fetchChineseLibraryCoverUrls,
   shouldLoadChineseLibraryCovers,
@@ -239,7 +242,11 @@ export default function LibraryScreen() {
                 accessibilityHint={labels.chooseBook}
                 author={labels.egwAuthor}
                 coverSource={EGW_COVERS[work.id]}
-                coverUrl={chineseCoverUrls[work.id]}
+                coverUrls={getEgwCoverUrlsForLanguage(
+                  work,
+                  language,
+                  chineseCoverUrls[work.id],
+                )}
                 listLayout={useListLayout}
                 onPress={() => setSelectedEgwBookId(work.id)}
                 title={work.workTitle[language]}

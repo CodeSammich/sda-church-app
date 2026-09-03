@@ -138,13 +138,13 @@ export default function PrivacyPolicyScreen() {
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
         This application links to external platforms such as YouTube, Spotify,
-        HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org).
-        Chinese-language library screens also request the Chinese Union Mission&apos;s current
-        book-cover catalog and images. When you follow an external link or when those
-        images load, the provider may receive ordinary connection information such as
-        your IP address. Use of these services is subject to each provider&apos;s privacy
-        policy. The church does not receive or store information those external platforms
-        independently collect from you.
+        HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org). Library
+        screens request current book-cover thumbnails from EGW Writings and, for Chinese
+        languages, the Chinese Union Mission&apos;s cover catalog and image service. When you
+        follow an external link or when those images load, the provider may receive
+        ordinary connection information such as your IP address. Use of these services is
+        subject to each provider&apos;s privacy policy. The church does not receive or store
+        information those external platforms independently collect from you.
       </Text>
 
       <Text
