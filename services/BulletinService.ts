@@ -21,7 +21,7 @@ export type BulletinLocation = {
   specialMusic?: string;
   pianist?: string;
   ssChair?: string;
-  openingPrayer?: string;
+  ssOpeningPrayer?: string;
   closingPrayer?: string;
   sabbathSchool?: string;
 };
@@ -103,7 +103,7 @@ export const isBulletinLocationEmpty = (location: BulletinLocation) =>
     location.specialMusic,
     location.pianist,
     location.ssChair,
-    location.openingPrayer,
+    location.ssOpeningPrayer,
     location.closingPrayer,
     location.sabbathSchool,
   ].some(hasBulletinValue);

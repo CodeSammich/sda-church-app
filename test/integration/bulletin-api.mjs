@@ -94,7 +94,7 @@ assertLocation(payload.bulletin.queens, 'bulletin.queens', [
   'offeringPrayer',
   'pianist',
   'ssChair',
-  'openingPrayer',
+  'ssOpeningPrayer',
   'closingPrayer',
 ]);
 assertLocation(payload.bulletin.brooklyn, 'bulletin.brooklyn', [

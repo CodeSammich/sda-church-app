@@ -1,6 +1,5 @@
 import { GridMenuCard } from '@/components/GridMenuCard';
 import { WrappingButton as Button } from '@/components/WrappingButton';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -38,17 +37,12 @@ import {
 } from '@/services/BulletinService';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  ActivityIndicator,
-  Card,
-  Divider,
-  IconButton,
-  Text,
-} from 'react-native-paper';
+import { ActivityIndicator, Card, Divider, IconButton, Text } from 'react-native-paper';
 
 const LABELS = {
   en: {
@@ -109,7 +103,6 @@ const LABELS = {
       offeringPrayer: 'Offering Prayer',
       pianist: 'Pianist',
       ssChair: 'Sabbath School Chair',
-      openingPrayer: 'Opening Prayer',
       closingPrayer: 'Closing Prayer',
       sabbathSchool: 'Sabbath School',
     },
@@ -172,7 +165,6 @@ const LABELS = {
       offeringPrayer: '奉獻禱告',
       pianist: '司琴',
       ssChair: '安息日學主席',
-      openingPrayer: '開會禱告',
       closingPrayer: '閉會禱告',
       sabbathSchool: '安息日學',
     },
@@ -235,7 +227,6 @@ const LABELS = {
       offeringPrayer: '奉献祷告',
       pianist: '司琴',
       ssChair: '安息日学主席',
-      openingPrayer: '开会祷告',
       closingPrayer: '闭会祷告',
       sabbathSchool: '安息日学',
     },
@@ -298,7 +289,6 @@ const LABELS = {
       offeringPrayer: 'Oración de Ofrenda',
       pianist: 'Pianista',
       ssChair: 'Dirección de Escuela Sabática',
-      openingPrayer: 'Oración Inicial',
       closingPrayer: 'Oración Final',
       sabbathSchool: 'Escuela Sabática',
     },
@@ -333,14 +323,7 @@ type DataRowProps = {
   };
 };
 
-const DataRow = ({
-  label,
-  value,
-  emptyText,
-  last,
-  assignment,
-  action,
-}: DataRowProps) => (
+const DataRow = ({ label, value, emptyText, last, assignment, action }: DataRowProps) => (
   <View style={[styles.dataRow, !last && styles.dataRowBorder]}>
     <Text variant="labelLarge" style={styles.dataRowLabel}>
       {label}
@@ -415,8 +398,7 @@ export default function WeeklyBulletinScreen() {
     weekDates.map((date) => ({ date, loading: false })),
   );
   const [selectedWeek, setSelectedWeek] = useState('0');
-  const [selectedLocation, setSelectedLocation] =
-    useState<BulletinLocationTab>('queens');
+  const [selectedLocation, setSelectedLocation] = useState<BulletinLocationTab>('queens');
   const loadingWeeksRef = useRef(new Set<string>());
   const refreshAvailableAtRef = useRef<[number, number]>([0, 0]);
   const [refreshAvailableAt, setRefreshAvailableAt] = useState<[number, number]>([0, 0]);
@@ -426,10 +408,7 @@ export default function WeeklyBulletinScreen() {
     let active = true;
     void AsyncStorage.getItem(BULLETIN_LOCATION_STORAGE_KEY)
       .then((storedLocation) => {
-        if (
-          active &&
-          (storedLocation === 'queens' || storedLocation === 'brooklyn')
-        ) {
+        if (active && (storedLocation === 'queens' || storedLocation === 'brooklyn')) {
           setSelectedLocation(storedLocation);
         }
       })
@@ -443,11 +422,9 @@ export default function WeeklyBulletinScreen() {
 
   const selectLocation = (location: BulletinLocationTab) => {
     setSelectedLocation(location);
-    void AsyncStorage.setItem(BULLETIN_LOCATION_STORAGE_KEY, location).catch(
-      (error) => {
-        console.warn('Could not save the preferred bulletin location:', error);
-      },
-    );
+    void AsyncStorage.setItem(BULLETIN_LOCATION_STORAGE_KEY, location).catch((error) => {
+      console.warn('Could not save the preferred bulletin location:', error);
+    });
   };
 
   const syncWeekDates = useCallback(() => {
@@ -693,12 +670,7 @@ export default function WeeklyBulletinScreen() {
 
     return (
       <View style={styles.cardSection}>
-        <View
-          style={[
-            styles.sectionHeading,
-            { borderLeftColor: theme.colors.primary },
-          ]}
-        >
+        <View style={[styles.sectionHeading, { borderLeftColor: theme.colors.primary }]}>
           <Text
             variant="titleMedium"
             style={{ color: theme.colors.primary, fontWeight: '700' }}
@@ -718,7 +690,7 @@ export default function WeeklyBulletinScreen() {
         {isQueens && (
           <DataRow
             label={labels.program.invocation}
-            value={getRosterValue(location.openingPrayer, labels)}
+            value={getRosterValue(location.sermon, labels)}
             emptyText={labels.notAssigned}
           />
         )}
@@ -786,9 +758,7 @@ export default function WeeklyBulletinScreen() {
           value={getRosterValue(location.sermon, labels)}
           assignment={{
             label: labels.program.sermonTitle,
-            value:
-              getProgramValue(location.sermonTitle, language) ||
-              labels.notAvailable,
+            value: getProgramValue(location.sermonTitle, language) || labels.notAvailable,
           }}
           emptyText={labels.notAssigned}
         />
@@ -837,12 +807,7 @@ export default function WeeklyBulletinScreen() {
 
     return (
       <View style={styles.cardSection}>
-        <View
-          style={[
-            styles.sectionHeading,
-            { borderLeftColor: theme.colors.primary },
-          ]}
-        >
+        <View style={[styles.sectionHeading, { borderLeftColor: theme.colors.primary }]}>
           <Text
             variant="titleMedium"
             style={{ color: theme.colors.primary, fontWeight: '700' }}
@@ -933,9 +898,7 @@ export default function WeeklyBulletinScreen() {
   );
 
   const renderBulletin = (bulletin: Bulletin) => {
-    const metadataRows: Array<[string, string]> = hasBulletinValue(
-      bulletin.pastorTravel,
-    )
+    const metadataRows: Array<[string, string]> = hasBulletinValue(bulletin.pastorTravel)
       ? [[labels.metadata.pastorTravel, bulletin.pastorTravel]]
       : [];
     const isQueens = selectedLocation === 'queens';

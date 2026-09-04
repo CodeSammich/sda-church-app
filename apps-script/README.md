@@ -177,7 +177,7 @@ The schedule header row must use this order (the repeated headers are intentiona
 Date | Quarter | Special Remark | Tithe Purpose | Pastor Travel |
 Queens Sermon | Translation | Chinese Teacher | English Teacher |
 Children Teacher | Chair/Pastoral Prayer | Special Music |
-Offering Prayer | Pianist | SS Chair | Opening Prayer | Closing Prayer |
+Offering Prayer | Pianist | SS Chair | SS Opening Prayer | Closing Prayer |
 Brooklyn Sermon | Chair/Pastoral Prayer | Offering Prayer | Sabbath School
 ```
 
@@ -205,7 +205,7 @@ Brooklyn.
 | `Offering Prayer` | 1 | `bulletin.queens.offeringPrayer` | Person-name privacy filter |
 | `Pianist` | 1 | `bulletin.queens.pianist` | Person-name privacy filter |
 | `SS Chair` | 1 | `bulletin.queens.ssChair` | Person-name privacy filter |
-| `Opening Prayer` | 1 | `bulletin.queens.openingPrayer` | Person-name privacy filter |
+| `SS Opening Prayer` | 1 | `bulletin.queens.ssOpeningPrayer` | Person-name privacy filter |
 | `Closing Prayer` | 1 | `bulletin.queens.closingPrayer` | Person-name privacy filter |
 | `Brooklyn Sermon` | 1 | `bulletin.brooklyn.sermon` | Person-name privacy filter |
 | `Chair/Pastoral Prayer` | 2 | `bulletin.brooklyn.chairPastoralPrayer` | Person-name privacy filter |
@@ -669,7 +669,7 @@ emails, and response timestamps are intentionally absent.
       "offeringPrayer": "Pat B.",
       "pianist": "Robin K.",
       "ssChair": "Taylor M.",
-      "openingPrayer": "Lee H.",
+      "ssOpeningPrayer": "Lee H.",
       "closingPrayer": "Morgan Y."
     },
     "brooklyn": {

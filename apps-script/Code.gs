@@ -48,7 +48,11 @@ var COLUMN_SCHEMA = Object.freeze([
   { header: 'Offering Prayer', path: ['queens', 'offeringPrayer'], person: true },
   { header: 'Pianist', path: ['queens', 'pianist'], person: true },
   { header: 'SS Chair', path: ['queens', 'ssChair'], person: true },
-  { header: 'Opening Prayer', path: ['queens', 'openingPrayer'], person: true },
+  {
+    header: 'SS Opening Prayer',
+    path: ['queens', 'ssOpeningPrayer'],
+    person: true,
+  },
   { header: 'Closing Prayer', path: ['queens', 'closingPrayer'], person: true },
   { header: 'Brooklyn Sermon', path: ['brooklyn', 'sermon'], person: true },
   {

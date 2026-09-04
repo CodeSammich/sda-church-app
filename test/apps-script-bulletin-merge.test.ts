@@ -19,6 +19,27 @@ const createSheet = (rows: string[][]) => ({
 });
 
 describe('Apps Script bulletin response merging', () => {
+  it('maps the Sabbath School opening prayer under its explicit API field', () => {
+    const context = createContext({});
+    runInContext(
+      readFileSync(join(process.cwd(), 'apps-script/Code.gs'), 'utf8'),
+      context,
+    );
+
+    const field = JSON.parse(
+      runInContext(
+        "JSON.stringify(COLUMN_SCHEMA.find(function (entry) { return entry.header === 'SS Opening Prayer'; }))",
+        context,
+      ) as string,
+    );
+
+    expect(field).toEqual({
+      header: 'SS Opening Prayer',
+      path: ['queens', 'ssOpeningPrayer'],
+      person: true,
+    });
+  });
+
   it('merges every matching response and prefers the latest conflicting answer', () => {
     const rows = [
       [
