@@ -51,6 +51,8 @@ describe('menu card press surfaces', () => {
     expect(getGridMenuCardTitleBlockMinHeight(1.15)).toBe(48);
     expect(getGridMenuCardTitleBlockMinHeight(1.25)).toBe(52);
     expect(getGridMenuCardTitleBlockMinHeight(4)).toBe(164);
+    expect(getGridMenuCardTitleBlockMinHeight(1, 3)).toBe(60);
+    expect(getGridMenuCardTitleBlockMinHeight(1.25, 3)).toBe(75);
   });
 
   beforeEach(() => {

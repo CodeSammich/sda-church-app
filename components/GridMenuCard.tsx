@@ -26,16 +26,22 @@ interface GridMenuCardProps {
   iconColor?: string;
   onPress?: () => void;
   style?: ViewStyle | any;
+  /** Lines reserved equally across a grid so translated titles cannot resize one card. */
+  titleBlockLines?: 2 | 3;
 }
 
-export const getGridMenuCardTitleBlockMinHeight = (effectiveScale: number) => {
+export const getGridMenuCardTitleBlockMinHeight = (
+  effectiveScale: number,
+  titleBlockLines: 2 | 3 = 2,
+) => {
   const safeScale = Number.isFinite(effectiveScale)
     ? Math.max(1, effectiveScale)
     : 1;
-  // Two title lines (2 x 20) or one title plus its subtitle (20 + 3 + 18).
-  // Reserving this on every card keeps rows equal regardless of which label
-  // happens to wrap on a particular device or in a particular language.
-  return Math.ceil(41 * safeScale);
+  // Two lines also fit one title plus its subtitle (20 + 3 + 18). Compact
+  // translated grids can opt into three lines so every card reserves enough
+  // room for their longest label.
+  const unscaledHeight = titleBlockLines === 3 ? 60 : 41;
+  return Math.ceil(unscaledHeight * safeScale);
 };
 
 export const GridMenuCard: React.FC<GridMenuCardProps> = ({
@@ -46,13 +52,18 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   iconColor,
   onPress,
   style,
+  titleBlockLines = 2,
 }) => {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
   const styles = useMemo(
-    () => createStyles(textScale, Math.max(1, fontScale * textScale)),
-    [fontScale, textScale],
+    () => createStyles(
+      textScale,
+      Math.max(1, fontScale * textScale),
+      titleBlockLines,
+    ),
+    [fontScale, textScale, titleBlockLines],
   );
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -138,7 +149,11 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   );
 };
 
-const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1], effectiveScale: number) => StyleSheet.create({
+const createStyles = (
+  textScale: Parameters<typeof scaleTypographyMetric>[1],
+  effectiveScale: number,
+  titleBlockLines: 2 | 3,
+) => StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
@@ -152,7 +167,7 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1], ef
   },
   titleBlock: {
     flex: 0,
-    minHeight: getGridMenuCardTitleBlockMinHeight(effectiveScale),
+    minHeight: getGridMenuCardTitleBlockMinHeight(effectiveScale, titleBlockLines),
   },
   title: {
     fontSize: scaleTypographyMetric(15, textScale),
