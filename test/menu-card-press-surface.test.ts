@@ -51,6 +51,8 @@ describe('menu card press surfaces', () => {
     expect(getGridMenuCardTitleBlockMinHeight(1.15)).toBe(48);
     expect(getGridMenuCardTitleBlockMinHeight(1.25)).toBe(52);
     expect(getGridMenuCardTitleBlockMinHeight(4)).toBe(164);
+    expect(getGridMenuCardTitleBlockMinHeight(1, 3)).toBe(60);
+    expect(getGridMenuCardTitleBlockMinHeight(1.25, 3)).toBe(75);
   });
 
   beforeEach(() => {
@@ -89,6 +91,28 @@ describe('menu card press surfaces', () => {
     const titleStyle = StyleSheet.flatten(view.getByText('Prayer').props.style);
     expect(titleStyle.fontSize).toBe(36);
     expect(titleStyle.lineHeight).toBe(48);
+  });
+
+  it('announces and ignores a disabled MenuCard', () => {
+    const onPress = jest.fn();
+    const view = renderAtScale(
+      React.createElement(MenuCard, {
+        description: 'Not available in this language',
+        disabled: true,
+        icon: 'book-open-page-variant',
+        onPress,
+        title: 'Primary',
+      }),
+      1,
+    );
+
+    const card = view.getByRole('button');
+    expect(card.props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true }),
+    );
+    expect(StyleSheet.flatten(card.props.style).opacity).toBe(0.5);
+    fireEvent.press(card);
+    expect(onPress).not.toHaveBeenCalled();
   });
 
   it('allows reader UI icons to use a capped text scale', () => {

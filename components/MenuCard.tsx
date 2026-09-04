@@ -26,6 +26,7 @@ const AnimatedTouchableOpacity =
 interface MenuCardProps {
   accessibilityRole?: AccessibilityRole;
   accessibilityState?: AccessibilityState;
+  disabled?: boolean;
   title: string;
   description?: string;
   icon: MaterialCommunityIconName | AppIconProps;
@@ -86,6 +87,7 @@ export const MenuCardSwitchVisual = ({
 export const MenuCard: React.FC<MenuCardProps> = ({
   accessibilityRole,
   accessibilityState,
+  disabled = false,
   title,
   description,
   icon,
@@ -102,7 +104,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({
     <AnimatedTouchableOpacity
       accessibilityLabel={description ? `${title}. ${description}` : title}
       accessibilityRole={accessibilityRole ?? (onPress ? "button" : undefined)}
-      accessibilityState={accessibilityState}
+      accessibilityState={{ ...accessibilityState, disabled }}
       style={[
         styles.card,
         {
@@ -110,20 +112,34 @@ export const MenuCard: React.FC<MenuCardProps> = ({
           borderColor: theme.colors.outlineVariant,
         },
         onPress && Platform.OS === "web" ? styles.webPressable : null,
+        disabled ? styles.disabled : null,
         style,
       ]}
       onPress={onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-      disabled={!onPress}
+      activeOpacity={onPress && !disabled ? 0.7 : 1}
+      disabled={disabled || !onPress}
     >
       <AppIcon
         pointerEvents="none"
         {...(typeof icon === "string" ? { name: icon } : icon)}
         size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
-        color={iconColor || theme.colors.tertiary}
+        color={
+          disabled
+            ? theme.colors.onSurfaceDisabled
+            : iconColor || theme.colors.tertiary
+        }
       />
       <View pointerEvents="none" style={styles.cardContent}>
-        <Text style={[styles.cardTitle, { color: theme.colors.onSurface }]}>
+        <Text
+          style={[
+            styles.cardTitle,
+            {
+              color: disabled
+                ? theme.colors.onSurfaceDisabled
+                : theme.colors.onSurface,
+            },
+          ]}
+        >
           {title}
         </Text>
         {description && (
@@ -166,6 +182,9 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   webPressable: {
     cursor: "pointer",

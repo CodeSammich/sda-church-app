@@ -310,6 +310,9 @@ await record('current EGW cover catalog', 'Chinese Union Mission library', async
 });
 
 const egwCatalogSource = await readFile('features/library/EgwBookCatalog.ts', 'utf8');
+const egwCoverBaseUrl = egwCatalogSource.match(
+  /EGW_COVER_BASE_URL\s*=\s*'(https:\/\/[^']+)'/,
+)?.[1];
 const egwEditions = [...egwCatalogSource.matchAll(
   /edition\(\s*'(en|zh|es)'\s*,\s*'[^']+'\s*,\s*(\d+)\s*,\s*'(\d+\.\d+)'\s*\)/g,
 )].map(([, language, bookId, firstParagraph]) => ({
@@ -332,6 +335,19 @@ await record('catalog contains eleven deep links per language', 'EGW Writings', 
   }
   return '33 unique English, Chinese, and Spanish edition links';
 });
+
+for (const language of ['en', 'es']) {
+  await record(`daily ${language} cover sample`, 'EGW Writings', async () => {
+    if (!egwCoverBaseUrl) throw new Error('cover base URL is missing');
+    const editions = egwEditions.filter((entry) => entry.language === language);
+    const sample = dailySample(editions, language.charCodeAt(0) + 41);
+    if (!sample) throw new Error(`${language} has no cover sample`);
+    return probe(`${egwCoverBaseUrl}${sample.bookId}?type=small`, {
+      binary: true,
+      expectedHosts: ['a.egwwritings.org'],
+    });
+  });
+}
 
 for (const language of ['en', 'zh', 'es']) {
   await record(`daily ${language} text edition sample`, 'EGW Writings', async () => {

@@ -18,6 +18,8 @@ export type EgwBookWork = Readonly<{
   editions: readonly EgwBookEdition[];
 }>;
 
+export const EGW_COVER_BASE_URL = 'https://a.egwwritings.org/covers/';
+
 const readUrl = (firstParagraph: string) =>
   `https://text.egwwritings.org/read/${firstParagraph}`;
 
@@ -222,4 +224,27 @@ export const getEgwEditionsForLanguage = (
   return [...work.editions].sort((a, b) =>
     a.language === preferred ? -1 : b.language === preferred ? 1 : 0,
   );
+};
+
+const getOfficialCoverUrl = (edition: EgwBookEdition) =>
+  `${EGW_COVER_BASE_URL}${edition.bookId}?type=small`;
+
+export const getEgwCoverUrlsForLanguage = (
+  work: EgwBookWork,
+  language: SupportedLanguage,
+  chineseCoverUrl?: string,
+) => {
+  const englishEdition = work.editions.find((edition) => edition.language === 'en');
+  const spanishEdition = work.editions.find((edition) => edition.language === 'es');
+  const urls: string[] = [];
+
+  if ((language === 'zh' || language === 'zh-cn') && chineseCoverUrl) {
+    urls.push(chineseCoverUrl);
+  } else if (language === 'es' && spanishEdition) {
+    urls.push(getOfficialCoverUrl(spanishEdition));
+  }
+
+  if (englishEdition) urls.push(getOfficialCoverUrl(englishEdition));
+
+  return urls;
 };

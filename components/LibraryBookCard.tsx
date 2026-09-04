@@ -18,7 +18,7 @@ type LibraryBookCardProps = Readonly<{
   accessibilityHint?: string;
   author: string;
   coverSource?: ImageSourcePropType;
-  coverUrl?: string;
+  coverUrls?: readonly string[];
   listLayout: boolean;
   onPress: () => void;
   title: string;
@@ -42,21 +42,23 @@ export function LibraryBookCard({
   accessibilityHint,
   author,
   coverSource,
-  coverUrl,
+  coverUrls,
   listLayout,
   onPress,
   title,
 }: LibraryBookCardProps) {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
-  const [remoteCoverFailed, setRemoteCoverFailed] = useState(false);
+  const [remoteCoverIndex, setRemoteCoverIndex] = useState(0);
   const styles = useMemo(() => createStyles(textScale), [textScale]);
   const accessibilityLabel = `${title}. ${author}`;
-  const displayedCoverSource = coverUrl && !remoteCoverFailed
-    ? { uri: coverUrl }
+  const remoteCoverKey = coverUrls?.join('\n') || '';
+  const remoteCoverUrl = coverUrls?.[remoteCoverIndex];
+  const displayedCoverSource = remoteCoverUrl
+    ? { uri: remoteCoverUrl }
     : coverSource;
 
-  useEffect(() => setRemoteCoverFailed(false), [coverUrl]);
+  useEffect(() => setRemoteCoverIndex(0), [remoteCoverKey]);
 
   return (
     <TouchableOpacity
@@ -86,7 +88,9 @@ export function LibraryBookCard({
         {displayedCoverSource ? (
           <Image
             accessible={false}
-            onError={coverUrl ? () => setRemoteCoverFailed(true) : undefined}
+            onError={remoteCoverUrl
+              ? () => setRemoteCoverIndex((index) => index + 1)
+              : undefined}
             resizeMode="cover"
             source={displayedCoverSource}
             style={styles.cover}

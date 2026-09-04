@@ -221,11 +221,13 @@ policies.
 ### 5. External Links
 
 This application links to external platforms such as YouTube, Spotify,
-HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org). When you follow these
-links, you are subject to the privacy policies of those third-party providers. These
-services may collect information such as IP addresses as part of their standard
-operations. The church does not receive or store information those external platforms
-independently collect from you.
+HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org). Library screens request
+current book-cover thumbnails from EGW Writings and, for Chinese languages, the Chinese
+Union Mission's cover catalog and image service. When you follow these links or when those
+images load, you are subject to the privacy policies of those third-party providers. These
+services may collect information such as IP addresses as part of their standard operations.
+The church does not receive or store information those external platforms independently
+collect from you.
 
 ### 6. Privacy Frameworks and Questions
 
@@ -250,11 +252,13 @@ requirements.
 ### 2. Data Attribution
 
 This application provides searchable hymn metadata and a curated index of book titles and
-language editions to facilitate navigation. We do not host or reproduce the externally
-linked EGW book text, protected musical notation, or lyrics. External content is accessed
-through links to third-party providers; a link or the public availability of a destination
-is not a representation that this project has independently verified every provider's
-copyright permissions.
+language editions to facilitate navigation. It displays small current cover thumbnails
+served by EGW Writings and, for Chinese app languages, the Chinese Union Mission; bundled
+original artwork remains the fallback. We do not copy these covers into the app or host or
+reproduce the externally linked EGW book text, protected musical notation, or lyrics.
+External content is accessed through third-party providers; a link, thumbnail, or the
+public availability of a destination is not a representation that this project has
+independently verified every provider's copyright permissions.
 
 ### 3. External Platforms & Services
 

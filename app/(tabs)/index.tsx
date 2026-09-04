@@ -543,6 +543,7 @@ export default function HomeScreen() {
           <View style={styles.grid}>
             <GridMenuCard
               title={labels.livestream}
+              titleBlockLines={useStackedLayout ? 2 : 3}
               subtitle={(labels as any).liveNow}
               icon="youtube"
               color={theme.colors.cardBgColors.livestream}
@@ -552,6 +553,7 @@ export default function HomeScreen() {
             />
             <GridMenuCard
               title={labels.bulletin}
+              titleBlockLines={useStackedLayout ? 2 : 3}
               icon="newspaper-variant-outline"
               color={theme.colors.cardBgColors.bulletin}
               iconColor={theme.colors.iconColors.bulletin}
@@ -565,6 +567,7 @@ export default function HomeScreen() {
             />
             <GridMenuCard
               title={labels.give}
+              titleBlockLines={useStackedLayout ? 2 : 3}
               icon="hand-heart-outline"
               color={theme.colors.cardBgColors.tithe}
               iconColor={theme.colors.iconColors.tithe}
@@ -578,6 +581,7 @@ export default function HomeScreen() {
             />
             <GridMenuCard
               title={labels.hymnal}
+              titleBlockLines={useStackedLayout ? 2 : 3}
               icon="music-note"
               color={theme.colors.cardBgColors.hymnal}
               iconColor={theme.colors.iconColors.hymnal}
@@ -591,6 +595,7 @@ export default function HomeScreen() {
             />
             <GridMenuCard
               title={labels.sabbathSchool}
+              titleBlockLines={useStackedLayout ? 2 : 3}
               icon="book-open-page-variant"
               color={theme.colors.cardBgColors.sabbathSchool}
               iconColor={theme.colors.iconColors.sabbathSchool}
@@ -604,6 +609,7 @@ export default function HomeScreen() {
             />
             <GridMenuCard
               title={labels.discover}
+              titleBlockLines={useStackedLayout ? 2 : 3}
               icon="compass"
               color={theme.colors.cardBgColors.discover}
               iconColor={theme.colors.iconColors.discover}
