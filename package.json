@@ -16,13 +16,13 @@
     "typecheck": "tsc --noEmit",
     "web": "expo start --web",
     "deploy": "node public/deploy-web.js --quiet",
-    "build:ios": "node scripts/ensure-build-dir.mjs && npx eas-cli@23.2.0 build --platform ios --profile production --local --output build/app.ipa",
-    "build:ios:eas": "npx eas-cli@23.2.0 build --platform ios --profile production",
-    "build:android": "node scripts/ensure-build-dir.mjs && npx eas-cli@23.2.0 build --platform android --profile production --local --output build/app.aab",
-    "build:android:eas": "npx eas-cli@23.2.0 build --platform android --profile production",
-    "build:android:apk": "node scripts/ensure-build-dir.mjs && npx eas-cli@23.2.0 build --platform android --profile preview --local --output build/app.apk",
-    "submit:ios": "npx eas-cli@23.2.0 submit --platform ios",
-    "submit:android": "npx eas-cli@23.2.0 submit --platform android"
+    "build:ios": "node scripts/ensure-build-dir.mjs && eas build --platform ios --profile production --local --output build/app-${npm_package_version}-build-$(date +%Y%m%d%H%M%S).ipa",
+    "build:ios:eas": "eas build --platform ios --profile production",
+    "build:android": "node scripts/ensure-build-dir.mjs && eas build --platform android --profile production --local --output build/app-${npm_package_version}-build-$(date +%Y%m%d%H%M%S).aab",
+    "build:android:eas": "eas build --platform android --profile production",
+    "build:android:apk": "node scripts/ensure-build-dir.mjs && eas build --platform android --profile preview --local --output build/app-${npm_package_version}-build-$(date +%Y%m%d%H%M%S).apk",
+    "submit:ios": "eas submit --platform ios",
+    "submit:android": "eas submit --platform android"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.12",
@@ -63,6 +63,7 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^20.19.43",
     "@types/react": "~19.2.10",
+    "eas-cli": "23.2.0",
     "babel-preset-expo": "~55.0.23",
     "gh-pages": "^6.3.0",
     "jest": "29.7.0",
