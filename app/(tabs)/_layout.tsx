@@ -153,25 +153,25 @@ export default function TabLayout() {
     en: {
       home: 'Home',
       bible: 'Bible',
-      resources: 'Explore',
+      explore: 'Explore',
       you: 'You',
     },
     zh: {
       home: '首頁',
       bible: '聖經',
-      resources: '探索',
+      explore: '探索',
       you: '您',
     },
     'zh-cn': {
       home: '首页',
       bible: '圣经',
-      resources: '探索',
+      explore: '探索',
       you: '您',
     },
     es: {
       home: 'Inicio',
       bible: 'Biblia',
-      resources: 'Explorar',
+      explore: 'Explorar',
       you: 'Tú',
     },
   };
@@ -309,17 +309,17 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="resources"
+          name="explore"
           options={{
-            title: labels.resources,
+            title: labels.explore,
             headerShown: false, // Internal Stack handles header for consistency
             tabBarLabel: ({ color }) => (
               <TabBarLabel
                 color={color}
                 fontScale={fontScale}
-                label={labels.resources}
+                label={labels.explore}
                 onLineCountChange={(lineCount) =>
-                  reportTabLabelLines('resources', lineCount)
+                  reportTabLabelLines('explore', lineCount)
                 }
                 textScale={textScale}
               />
@@ -336,7 +336,7 @@ export default function TabLayout() {
           listeners={{
             tabPress: (event) => {
               event.preventDefault();
-              router.navigate('/resources');
+              router.navigate('/explore');
             },
           }}
         />

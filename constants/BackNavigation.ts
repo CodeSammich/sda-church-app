@@ -23,7 +23,7 @@ export const getHeaderBackTarget = (
 
   if (explicitTarget) return explicitTarget;
   if (segments.includes('you')) return '/you';
-  if (segments.includes('resources')) return '/resources';
+  if (segments.includes('explore')) return '/explore';
   if (segments.includes('bible')) return '/bible';
 
   return '/';

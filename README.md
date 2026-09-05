@@ -22,6 +22,7 @@ on Safari (iOS) or Chrome (Android).
 ### Project documentation
 
 - [Technical Setup & Testing](docs/README.md)
+- [Web and Native Build Workflows](docs/operations/native-builds.md)
 - [Bulletin API Architecture & Operations](apps-script/README.md)
 - [Accessibility Guidelines](docs/accessibility/README.md)
 - [UI/UX Design](docs/UI_UX.md)
@@ -109,3 +110,51 @@ remains internal to maintain spiritual focus.
 > _"Finally, brothers, whatever is true, whatever is honorable, whatever is right,
 > whatever is pure, whatever is lovely, whatever is admirable—if anything is excellent or
 > praiseworthy—think on these things."_ — **Philippians 4:8**
+
+## Build workflows
+
+The repository uses one Expo source for the website and native apps. Website deployment
+stays automatic: a push to `main` runs the existing GitHub Pages workflow. It can also be
+run manually with `npm run deploy`.
+
+Native binaries are opt-in. In GitHub Actions, open **Native binaries** and choose **Run
+workflow**. Select the source branch or tag, choose a builder, and check any combination
+of these targets:
+
+- iOS store build (`.ipa`) for App Store Connect and TestFlight.
+- Android store build (`.aab`) for Google Play.
+- Android preview build (`.apk`) for direct device installation.
+
+The default `github` builder compiles on GitHub-hosted runners and uploads the binary as a
+workflow artifact. Choose `eas` to compile on Expo's cloud builders. Both choices require
+the church-owned Expo project, configured signing credentials, and the `EXPO_TOKEN` GitHub
+secret. Native builds never publish to a store automatically, so review and submission
+remain separate steps.
+
+Signing credentials are managed by EAS by default. You can instead store Android
+and Apple signing files as encrypted GitHub secrets and use a local-credentials
+profile, but that requires additional workflow setup and ongoing certificate
+rotation. The [native build guide](docs/operations/native-builds.md) explains
+both approaches.
+
+The same targets are available locally:
+
+```sh
+eas --version                         # installed with: npm install --global eas-cli@23.2.0
+npm run build:ios
+npm run build:android
+npm run build:android:apk
+```
+
+The global `eas` command is optional; the npm scripts use the pinned CLI version.
+For GitHub Actions, create an access token in Expo under **Account settings →
+Access tokens**, then add it to the repository under **Settings → Secrets and
+variables → Actions** with the name `EXPO_TOKEN`. The **Native binaries** workflow
+uses that secret to access the church-owned Expo project. Keep the token out of
+source control. For a local session, use `export EXPO_TOKEN='your-token'` and
+remove it afterward with `unset EXPO_TOKEN`.
+
+Local Android compilation needs Java 17 and the Android SDK/NDK. Local iOS compilation
+needs macOS, Xcode, CocoaPods, and fastlane. See the
+[Web and Native Build Workflows](docs/operations/native-builds.md) guide for account
+setup, signing, runner details, artifact handling, and store submission commands.

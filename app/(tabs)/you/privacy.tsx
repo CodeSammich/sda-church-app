@@ -56,9 +56,10 @@ export default function PrivacyPolicyScreen() {
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
         This application values privacy and uses data minimization to limit what the
-        public app receives. The PWA does not require a user account for ordinary use.
+        public app receives. The app does not require a user account for ordinary use.
         Church administrative systems and service providers still process limited
-        information needed to operate the app, as described below.
+        information needed to operate the app, as described below. For any questions or
+        clarifications, please contact technology@nyccsda.org.
       </Text>
 
       <Text
@@ -74,20 +75,20 @@ export default function PrivacyPolicyScreen() {
         Authorized church schedule managers enter participant names and worship
         assignments into a restricted, church-managed Google Sheet. Authorized form
         submitters provide weekly worship-program details through Google Forms; the
-        restricted response Sheet may record a submitter&apos;s email address.{`\n\n`}
-        A Google Apps Script web app reads the requested Sabbath schedule and form response
+        restricted response Sheet may record a submitter&apos;s email address.{`\n\n`}A
+        Google Apps Script web app reads the requested Sabbath schedule and form response
         and returns only an allowlisted bulletin response. Before the response becomes
         public, the script shortens Latin-script full names to a first name and last
         initial. A single-word Latin-script name may appear as entered, while unsupported
-        non-Latin names are replaced with a privacy placeholder. Full names, form submitter
-        email addresses, and other non-allowlisted spreadsheet fields are not included in
-        the public API response. The shortened names may still identify people within the
-        church community and are therefore treated as personal information rather than
-        anonymous data.{`\n\n`}
+        non-Latin names are replaced with a privacy placeholder. Full names, form
+        submitter email addresses, and other non-allowlisted spreadsheet fields are not
+        included in the public API response. The shortened names may still identify people
+        within the church community and are therefore treated as personal information
+        rather than anonymous data.{`\n\n`}
         This information is used to communicate worship assignments and weekly program
         details. Access to the source Sheets is controlled by the church through Google
-        Workspace, and source-data retention is governed by the church&apos;s administrative
-        practices.
+        Workspace, and source-data retention is governed by the church&apos;s
+        administrative practices.
       </Text>
 
       <Text
@@ -100,11 +101,11 @@ export default function PrivacyPolicyScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        Google Apps Script temporarily caches privacy-filtered bulletin responses to reduce
-        Sheet reads. The PWA may store the same filtered bulletin data and refresh timing
-        in browser local storage so ordinary visits do not repeatedly call the API and the
-        bulletin can refresh around Sabbath boundaries. Users can remove the device copy
-        by clearing this site&apos;s browser data.
+        Google Apps Script temporarily caches privacy-filtered bulletin responses to
+        reduce Sheet reads. The PWA may store the same filtered bulletin data and refresh
+        timing in browser local storage so ordinary visits do not repeatedly call the API
+        and the bulletin can refresh around Sabbath boundaries. Users can remove the
+        device copy by clearing this site&apos;s browser data.
       </Text>
 
       <Text
@@ -140,11 +141,11 @@ export default function PrivacyPolicyScreen() {
         This application links to external platforms such as YouTube, Spotify,
         HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org). Library
         screens request current book-cover thumbnails from EGW Writings and, for Chinese
-        languages, the Chinese Union Mission&apos;s cover catalog and image service. When you
-        follow an external link or when those images load, the provider may receive
+        languages, the Chinese Union Mission&apos;s cover catalog and image service. When
+        you follow an external link or when those images load, the provider may receive
         ordinary connection information such as your IP address. Use of these services is
-        subject to each provider&apos;s privacy policy. The church does not receive or store
-        information those external platforms independently collect from you.
+        subject to each provider&apos;s privacy policy. The church does not receive or
+        store information those external platforms independently collect from you.
       </Text>
 
       <Text

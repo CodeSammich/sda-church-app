@@ -15,7 +15,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, List, Text } from 'react-native-paper';
 
@@ -30,8 +30,6 @@ export default function BaptismScreen() {
     [textScale],
   );
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
-
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   const allLabels = {
     en: {
@@ -300,30 +298,7 @@ export default function BaptismScreen() {
         </View>
 
         <View style={DocumentStyles.section}>
-          <Text
-            variant="titleLarge"
-            style={[
-              DocumentStyles.sectionTitle,
-              {
-                color: theme.colors.onSurface,
-                borderBottomColor: theme.colors.outlineVariant,
-              },
-            ]}
-          >
-            {labels.commitmentsHeader}
-          </Text>
-
-          <List.Accordion
-            title={labels.vowsTitle}
-            titleNumberOfLines={0}
-            titleStyle={BaptismStyles.accordionTitle}
-            expanded={expanded === 'vows'}
-            onPress={() => setExpanded(expanded === 'vows' ? null : 'vows')}
-            left={(props) => (
-              <List.Icon {...props} color={theme.colors.primary} icon="check-decagram" />
-            )}
-            style={{ backgroundColor: theme.colors.surface }}
-          >
+          <Text variant="titleLarge" style={[DocumentStyles.sectionTitle, { color: theme.colors.onSurface, borderBottomColor: theme.colors.outlineVariant }]}>{labels.vowsTitle}</Text>
             <Card style={DocumentStyles.card} mode="outlined">
               <Card.Content>
                 {vows.map((vow, idx) => (
@@ -336,21 +311,10 @@ export default function BaptismScreen() {
                 ))}
               </Card.Content>
             </Card>
-          </List.Accordion>
+        </View>
 
-          <List.Accordion
-            title={labels.commandmentsTitle}
-            titleNumberOfLines={0}
-            titleStyle={BaptismStyles.accordionTitle}
-            expanded={expanded === 'commandments'}
-            onPress={() =>
-              setExpanded(expanded === 'commandments' ? null : 'commandments')
-            }
-            left={(props) => (
-              <List.Icon {...props} color={theme.colors.primary} icon="script-text" />
-            )}
-            style={{ backgroundColor: theme.colors.surface }}
-          >
+        <View style={DocumentStyles.section}>
+          <Text variant="titleLarge" style={[DocumentStyles.sectionTitle, { color: theme.colors.onSurface, borderBottomColor: theme.colors.outlineVariant }]}>{labels.commandmentsTitle}</Text>
             <Card style={DocumentStyles.card} mode="outlined">
               <Card.Content>
                 {commandments.intro && (
@@ -390,19 +354,10 @@ export default function BaptismScreen() {
                 )}
               </Card.Content>
             </Card>
-          </List.Accordion>
+        </View>
 
-          <List.Accordion
-            title={labels.lifestyleTitle}
-            titleNumberOfLines={0}
-            titleStyle={BaptismStyles.accordionTitle}
-            expanded={expanded === 'lifestyle'}
-            onPress={() => setExpanded(expanded === 'lifestyle' ? null : 'lifestyle')}
-            left={(props) => (
-              <List.Icon {...props} color={theme.colors.primary} icon="heart-pulse" />
-            )}
-            style={{ backgroundColor: theme.colors.surface }}
-          >
+        <View style={DocumentStyles.section}>
+          <Text variant="titleLarge" style={[DocumentStyles.sectionTitle, { color: theme.colors.onSurface, borderBottomColor: theme.colors.outlineVariant }]}>{labels.lifestyleTitle}</Text>
             <Card style={DocumentStyles.card} mode="outlined">
               <Card.Content>
                 <Text
@@ -473,7 +428,6 @@ export default function BaptismScreen() {
                 </View>
               </Card.Content>
             </Card>
-          </List.Accordion>
         </View>
       </ScrollView>
     </>

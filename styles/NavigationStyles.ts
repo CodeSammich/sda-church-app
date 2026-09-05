@@ -16,7 +16,7 @@ type NavigationStyleOptions = Readonly<{
 
 /**
  * Shared styles for Menu/Navigation-heavy screens.
- * Preference given to the layout logic defined in ResourcesScreen.
+ * Preference given to the layout logic defined in ExploreScreen.
  */
 export const createNavigationStyles = (
   textScale: TextScale,
@@ -34,12 +34,16 @@ export const createNavigationStyles = (
     flex: 1,
   },
   contentContainer: {
-    padding: 20, // Preference: resources.tsx
+    padding: 20, // Preference: explore/index.tsx
     paddingBottom:
       getBottomTabContentHeight(fontScale * textScale) + bottomInset + 24,
   },
   heroHeader: {
-    width: '100%',
+    // Stretch against the ScrollView content width on native Android. A
+    // percentage width can resolve against the padded content box and leave
+    // a visible strip at the trailing edge.
+    alignSelf: 'stretch',
+    width: undefined,
     minHeight: 220,
     justifyContent: 'flex-end',
     paddingHorizontal: 20,
@@ -59,7 +63,7 @@ export const createNavigationStyles = (
   },
   subheader: {
     fontWeight: 'bold',
-    fontSize: scaleTypographyMetric(16, textScale), // Preference: resources.tsx
+    fontSize: scaleTypographyMetric(16, textScale), // Preference: explore/index.tsx
     lineHeight: scaleTypographyMetric(22, textScale),
   },
   });

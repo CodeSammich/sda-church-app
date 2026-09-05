@@ -601,7 +601,7 @@ export default function HomeScreen() {
               iconColor={theme.colors.iconColors.sabbathSchool}
               onPress={() =>
                 router.push({
-                  pathname: '/resources/sabbath-school',
+                  pathname: '/explore/sabbath-school',
                   params: { backTo: '/' },
                 } as any)
               }

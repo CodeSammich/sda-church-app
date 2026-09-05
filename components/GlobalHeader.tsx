@@ -360,6 +360,13 @@ export const GlobalHeader = (props: any) => {
   };
 
   const handleBackPress = () => {
+    // Preserve the native stack so Android's edge-swipe and the header back
+    // button resolve to the same previous screen. Explicit backTo remains a
+    // safe fallback when this screen was opened without stack history.
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
     router.replace(getHeaderBackTarget(routeSegments, backTo) as any);
   };
 

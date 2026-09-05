@@ -946,6 +946,16 @@ export default function BibleScreen() {
   const audioScrubberWidth = useRef(1);
   const sleepTimerSettingRef = useRef<SleepTimerSetting>(null);
   const sleepTimerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const safePauseAudio = () => {
+    try {
+      audioPlayer.pause();
+    } catch (error) {
+      // expo-audio may release its native shared object before a delayed
+      // timer/route cleanup reaches this component. Treat that as already
+      // paused instead of surfacing a native cast error to the user.
+      console.warn('Audio player was already released while pausing', error);
+    }
+  };
   const backgroundAudioGuidanceCheckedRef = useRef(false);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const androidAudioBrowser = useMemo(
@@ -1050,7 +1060,7 @@ export default function BibleScreen() {
       sleepTimerTimeoutRef.current = setTimeout(() => {
         setShouldAutoPlay(false);
         try {
-          audioPlayer.pause();
+          safePauseAudio();
         } catch (e) {
           console.error('Sleep timer pause error:', e);
         } finally {
@@ -1250,7 +1260,7 @@ export default function BibleScreen() {
     if (isPlaying) {
       clearAudioFallbackTimeout();
       audioLoadAttemptRef.current += 1;
-      audioPlayer.pause();
+      safePauseAudio();
       return;
     }
 
@@ -1269,7 +1279,7 @@ export default function BibleScreen() {
   const unloadAudio = () => {
     clearAudioFallbackTimeout();
     audioLoadAttemptRef.current += 1;
-    audioPlayer.pause();
+    safePauseAudio();
     audioPlayer.clearLockScreenControls();
     audioPlayer.replace(null);
     loadedAudioUrlRef.current = null;

@@ -67,7 +67,7 @@ export default function LibraryHubScreen() {
   const catalog = getLibraryItemsForLanguage(language);
   const open = useCallback((collection: string, q?: string) =>
     router.push({
-      pathname: '/resources/library/[collection]',
+      pathname: '/explore/library/[collection]',
       params: { collection, ...(q ? { q } : {}) },
     } as any), []);
   const searchItems = useMemo(() => {
@@ -140,7 +140,7 @@ export default function LibraryHubScreen() {
           onLegalPress={() =>
             router.push({
               pathname: '/you/legal',
-              params: { backTo: '/resources/library' },
+              params: { backTo: '/explore/library' },
             } as any)
           }
           style={styles.sourcePanel}

@@ -1,0 +1,137 @@
+name: Native binaries
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+  workflow_dispatch:
+    inputs:
+      ios:
+        description: Build iOS for TestFlight / App Store
+        type: boolean
+        default: false
+      android:
+        description: Build Android for Google Play (AAB)
+        type: boolean
+        default: false
+      android_apk:
+        description: Build Android for direct installation (APK)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: ${{ matrix.target.name }}
+    runs-on: ${{ matrix.target.platform == 'ios' && 'macos-15' || 'ubuntu-24.04' }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: iOS store
+            input: ios
+            platform: ios
+            profile: production
+            extension: ipa
+          - name: Android store
+            input: android
+            platform: android
+            extension: aab
+            profile: production
+          - name: Android APK
+            input: android_apk
+            platform: android
+            extension: apk
+            profile: preview
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')
+      - uses: actions/setup-node@v4
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check account setup
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          test -n "$EXPO_TOKEN" || { echo 'Set the EXPO_TOKEN repository secret first.'; exit 1; }
+          node -e 'if (!require("./app.json").expo.extra?.eas?.projectId) { console.error("Link the church Expo project with eas init first. See docs/operations/native-builds.md."); process.exit(1); }'
+      - name: Install dependencies
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')
+        run: npm ci
+      - uses: actions/setup-java@v4
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')) && matrix.target.platform == 'android'
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')) && matrix.target.platform == 'android'
+      - name: Install Android SDK tools
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')) && matrix.target.platform == 'android'
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
+      - name: Select and verify iOS tools
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')) && matrix.target.platform == 'ios'
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
+          pod --version
+          fastlane --version
+      # EAS cloud compilation is intentionally not used. EAS CLI's --local flag
+      # makes the GitHub-hosted runner compile the signed binary here instead.
+      - name: Compile signed binary on GitHub runner
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          BUILD_PLATFORM: ${{ matrix.target.platform }}
+          BUILD_PROFILE: ${{ matrix.target.profile }}
+          BUILD_EXTENSION: ${{ matrix.target.extension }}
+        run: npx eas-cli@23.2.0 build --platform "$BUILD_PLATFORM" --profile "$BUILD_PROFILE" --local --non-interactive --output "$RUNNER_TEMP/app.$BUILD_EXTENSION"
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/heads/release/') && matrix.target.input != 'android')
+        with:
+          name: native-${{ matrix.target.platform }}-${{ matrix.target.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/app.${{ matrix.target.extension }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: needs.build.result == 'success' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read release version
+        id: version
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+      - name: Download built binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: release-assets
+          merge-multiple: true
+      - name: Create GitHub release with binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "A GitHub release already exists for $RELEASE_TAG. Bump package.json version before building another release."
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Release $RELEASE_TAG" \
+            --notes "Signed native binaries built from commit $GITHUB_SHA." \
+            --latest
