@@ -47,6 +47,7 @@ expo-env.d.ts
 external-dependency-report.json
 .env*
 apps-script/.clasp.json
+.vscode/hunkwise/
 
 # Native signing credentials and build artifacts
 credentials.json
