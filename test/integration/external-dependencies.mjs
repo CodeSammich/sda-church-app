@@ -56,13 +56,15 @@ const request = async (url, options = {}) => {
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      // fetch follows ordinary redirects. A surfaced 3xx usually means the
-      // provider returned a temporary challenge or an unusable Location header.
+      // Fetch follows ordinary redirects. A surfaced retryable status can
+      // indicate a temporary provider challenge or an unusable response.
       const retryableStatus =
         (response.status >= 300 && response.status < 400) ||
+        response.status === 400 ||
         response.status === 408 ||
         response.status === 425 ||
         (response.status === 429 && !accept429) ||
+        response.status === 403 ||
         response.status >= 500;
       if (retryableStatus && attempt < RETRIES) {
         await response.body?.cancel();
@@ -344,7 +346,15 @@ for (const language of ['en', 'es']) {
     if (!sample) throw new Error(`${language} has no cover sample`);
     return probe(`${egwCoverBaseUrl}${sample.bookId}?type=small`, {
       binary: true,
-      expectedHosts: ['a.egwwritings.org'],
+      // EGW currently redirects cover thumbnails from the public API host to
+      // its media CDN. Both hosts are official EGW Writings endpoints.
+      expectedHosts: [
+        'a.egwwritings.org',
+        'media1.egwwritings.org',
+        'media2.egwwritings.org',
+        'media3.egwwritings.org',
+        'media4.egwwritings.org',
+      ],
     });
   });
 }
@@ -417,7 +427,6 @@ const navigationLinks = [
   ['church map', 'https://www.google.com/maps/search/?api=1&query=760%2041st%20Ave%20Elmhurst%20NY%2011373'],
   ['Adventist beliefs', 'https://adventist.org/beliefs#official-beliefs'],
   ['Greater New York Conference', 'https://gnyc.org/'],
-  ['Atlantic Union', 'https://atlantic-union.org/'],
 ];
 
 for (const [name, url, binary = false, allowed = []] of navigationLinks) {
