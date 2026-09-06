@@ -20,7 +20,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { Dialog, Portal, Text } from 'react-native-paper';
@@ -152,6 +151,8 @@ const TextDialogAction = ({
       ]}
     >
       <Text
+        numberOfLines={1}
+        ellipsizeMode="tail"
         style={[
           styles.dialogActionText,
           {
@@ -217,11 +218,9 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   const [isApplying, setIsApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [trackWidth, setTrackWidth] = useState(0);
-  const { fontScale, width: windowWidth } = useWindowDimensions();
-  const stackControls = shouldStackTextSizeDialogControls(
-    windowWidth,
-    fontScale * textScale,
-  );
+  // Keep the three dialog actions on one row. Their labels are allowed to
+  // shrink inside the dialog so Apply cannot be pushed off-screen at 165%.
+  const stackControls = false;
 
   useEffect(() => {
     if (visible) {
@@ -504,7 +503,7 @@ const styles = StyleSheet.create({
   actions: {
     alignItems: 'stretch',
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     gap: 8,
     justifyContent: 'flex-end',
     paddingBottom: 16,
@@ -525,13 +524,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 22,
     borderWidth: 1,
+    flexBasis: 0,
     flexGrow: 1,
     flexShrink: 1,
     gap: 8,
     justifyContent: 'center',
     minHeight: 48,
-    minWidth: 96,
-    paddingHorizontal: 14,
+    minWidth: 0,
+    paddingHorizontal: 8,
     paddingVertical: 10,
   },
   dialogActionText: {

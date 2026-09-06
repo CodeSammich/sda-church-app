@@ -25,8 +25,8 @@ export const FOOD_BANK_IMAGE_URL =
 export const FLUSHING_FELLOWSHIP_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/01230029/flushing_fellowship_3.jpg';
 export const ELMHURST_SABBATH_URLS = [
-  'https://assets.adventistconnect.org/newyork2/2026/07/19124827/elmhurst_sabbath.png'
-]
+  'https://assets.adventistconnect.org/newyork2/2026/07/19124827/elmhurst_sabbath.png',
+];
 
 export const IOS_PWA_INSTALL_GUIDE_URL =
   'https://youtu.be/5IwrG8BTylw?si=7FW6G4DWiJmLkz89&t=15';
@@ -203,11 +203,13 @@ export const getCurrentSabbathSchoolUrl = (
   date = new Date(),
 ) => {
   const candidates = [date.getFullYear() - 1, date.getFullYear(), date.getFullYear() + 1]
-    .flatMap((year) => [1, 2, 3, 4].map((quarter) => {
-      const start = new Date(year, (quarter - 1) * 3, 1);
-      start.setDate(start.getDate() - ((start.getDay() + 1) % 7));
-      return { quarter, start, year };
-    }))
+    .flatMap((year) =>
+      [1, 2, 3, 4].map((quarter) => {
+        const start = new Date(year, (quarter - 1) * 3, 1);
+        start.setDate(start.getDate() - ((start.getDay() + 1) % 7));
+        return { quarter, start, year };
+      }),
+    )
     .filter(({ start }) => start.getTime() <= date.getTime())
     .sort((a, b) => b.start.getTime() - a.start.getTime());
   const { quarter, start: quarterStart, year } = candidates[0];
@@ -222,14 +224,14 @@ export const openCurrentSabbathSchool = (language: SupportedLanguage) =>
   openURL(
     getCurrentSabbathSchoolUrl(language),
     'Error',
-    'Could not open this week\'s Sabbath School lesson.',
+    "Could not open this week's Sabbath School lesson.",
   );
 
 export const openChildrenSabbathSchool = () =>
   openURL(
     'https://aliveinjesus.info/',
     'Error',
-    'Could not open the children\'s Sabbath School catalog.',
+    "Could not open the children's Sabbath School catalog.",
   );
 
 export type ChildrenSabbathSchoolCurriculum =
@@ -256,26 +258,101 @@ type ChildrenCurriculumRoute = Readonly<{
 }>;
 
 const ENGLISH_CHILDREN_CURRICULUM_ROUTES: Readonly<
-  Record<ChildrenSabbathSchoolCurriculum, {
-    host: string;
-    language: 'en';
-    pdfIndex: number;
-    suffix: string;
-    weekStartsOnSunday: boolean;
-  }>
+  Record<
+    ChildrenSabbathSchoolCurriculum,
+    {
+      host: string;
+      language: 'en';
+      pdfIndex: number;
+      suffix: string;
+      weekStartsOnSunday: boolean;
+    }
+  >
 > = {
-  'beginner-student': { host: 'app.beginner.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'zaijbgsg', weekStartsOnSunday: true },
-  'beginner-teacher': { host: 'app.beginner.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'yaijbgtg', weekStartsOnSunday: true },
-  'kindergarten-student': { host: 'app.kindergarten.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'zaijkdsg', weekStartsOnSunday: true },
-  'kindergarten-teacher': { host: 'app.kindergarten.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'yaijkdtg', weekStartsOnSunday: true },
-  'primary-student': { host: 'app.primary.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'zaijprsg', weekStartsOnSunday: true },
-  'primary-teacher': { host: 'app.primary.aliveinjesus.info', language: 'en', pdfIndex: 0, suffix: 'yaijprtg', weekStartsOnSunday: true },
-  junior: { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 0, suffix: 'pp', weekStartsOnSunday: false },
-  'junior-teacher': { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 1, suffix: 'pp', weekStartsOnSunday: false },
-  teen: { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 0, suffix: 'rt', weekStartsOnSunday: false },
-  'teen-teacher': { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 1, suffix: 'rt', weekStartsOnSunday: false },
-  youth: { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 0, suffix: 'cc', weekStartsOnSunday: false },
-  'youth-teacher': { host: 'sabbath-school.adventech.io', language: 'en', pdfIndex: 1, suffix: 'cc', weekStartsOnSunday: false },
+  'beginner-student': {
+    host: 'app.beginner.aliveinjesus.info',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'zaijbgsg',
+    weekStartsOnSunday: true,
+  },
+  'beginner-teacher': {
+    host: 'app.beginner.aliveinjesus.info',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'yaijbgtg',
+    weekStartsOnSunday: true,
+  },
+  'kindergarten-student': {
+    host: 'app.kindergarten.aliveinjesus.info',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'zaijkdsg',
+    weekStartsOnSunday: true,
+  },
+  'kindergarten-teacher': {
+    host: 'app.kindergarten.aliveinjesus.info',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'yaijkdtg',
+    weekStartsOnSunday: true,
+  },
+  'primary-student': {
+    host: 'app.primary.aliveinjesus.info',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'zaijprsg',
+    weekStartsOnSunday: true,
+  },
+  'primary-teacher': {
+    host: 'app.primary.aliveinjesus.info',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'yaijprtg',
+    weekStartsOnSunday: true,
+  },
+  junior: {
+    host: 'sabbath-school.adventech.io',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'pp',
+    weekStartsOnSunday: false,
+  },
+  'junior-teacher': {
+    host: 'sabbath-school.adventech.io',
+    language: 'en',
+    pdfIndex: 1,
+    suffix: 'pp',
+    weekStartsOnSunday: false,
+  },
+  teen: {
+    host: 'sabbath-school.adventech.io',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'rt',
+    weekStartsOnSunday: false,
+  },
+  'teen-teacher': {
+    host: 'sabbath-school.adventech.io',
+    language: 'en',
+    pdfIndex: 1,
+    suffix: 'rt',
+    weekStartsOnSunday: false,
+  },
+  youth: {
+    host: 'sabbath-school.adventech.io',
+    language: 'en',
+    pdfIndex: 0,
+    suffix: 'cc',
+    weekStartsOnSunday: false,
+  },
+  'youth-teacher': {
+    host: 'sabbath-school.adventech.io',
+    language: 'en',
+    pdfIndex: 1,
+    suffix: 'cc',
+    weekStartsOnSunday: false,
+  },
 };
 
 const CHINESE_CHILDREN_CURRICULUM_ROUTES: Partial<
@@ -283,10 +360,38 @@ const CHINESE_CHILDREN_CURRICULUM_ROUTES: Partial<
 > = {
   // These routes support deterministic non-API links. Live availability and
   // localized category names come from the Adventech catalog below.
-  'beginner-student': { host: 'sabbath-school.adventech.io', language: 'zh', pdfIndex: 0, suffix: 'bg', weekStartsOnSunday: false, quarterlyGroup: '初级学课' },
-  'beginner-teacher': { host: 'sabbath-school.adventech.io', language: 'zh', pdfIndex: 1, suffix: 'bg', weekStartsOnSunday: false, quarterlyGroup: '初级学课' },
-  'kindergarten-student': { host: 'sabbath-school.adventech.io', language: 'zh', pdfIndex: 0, suffix: 'kd', weekStartsOnSunday: false, quarterlyGroup: '中级学课' },
-  'kindergarten-teacher': { host: 'sabbath-school.adventech.io', language: 'zh', pdfIndex: 1, suffix: 'kd', weekStartsOnSunday: false, quarterlyGroup: '中级学课' },
+  'beginner-student': {
+    host: 'sabbath-school.adventech.io',
+    language: 'zh',
+    pdfIndex: 0,
+    suffix: 'bg',
+    weekStartsOnSunday: false,
+    quarterlyGroup: '初级学课',
+  },
+  'beginner-teacher': {
+    host: 'sabbath-school.adventech.io',
+    language: 'zh',
+    pdfIndex: 1,
+    suffix: 'bg',
+    weekStartsOnSunday: false,
+    quarterlyGroup: '初级学课',
+  },
+  'kindergarten-student': {
+    host: 'sabbath-school.adventech.io',
+    language: 'zh',
+    pdfIndex: 0,
+    suffix: 'kd',
+    weekStartsOnSunday: false,
+    quarterlyGroup: '中级学课',
+  },
+  'kindergarten-teacher': {
+    host: 'sabbath-school.adventech.io',
+    language: 'zh',
+    pdfIndex: 1,
+    suffix: 'kd',
+    weekStartsOnSunday: false,
+    quarterlyGroup: '中级学课',
+  },
 };
 
 const getChildrenCurriculumRoute = (
@@ -303,19 +408,18 @@ export const getChildrenSabbathSchoolLanguage = (
   language: SupportedLanguage,
 ) => getChildrenProviderLanguage(language);
 
-const getChildrenQuarterAndLesson = (
-  route: ChildrenCurriculumRoute,
-  date: Date,
-) => {
+const getChildrenQuarterAndLesson = (route: ChildrenCurriculumRoute, date: Date) => {
   const candidates = [date.getFullYear() - 1, date.getFullYear(), date.getFullYear() + 1]
-    .flatMap((year) => [1, 2, 3, 4].map((quarter) => {
-      const start = new Date(year, (quarter - 1) * 3, 1);
-      const daysBack = route.weekStartsOnSunday
-        ? start.getDay()
-        : (start.getDay() + 1) % 7;
-      start.setDate(start.getDate() - daysBack);
-      return { quarter, start, year };
-    }))
+    .flatMap((year) =>
+      [1, 2, 3, 4].map((quarter) => {
+        const start = new Date(year, (quarter - 1) * 3, 1);
+        const daysBack = route.weekStartsOnSunday
+          ? start.getDay()
+          : (start.getDay() + 1) % 7;
+        start.setDate(start.getDate() - daysBack);
+        return { quarter, start, year };
+      }),
+    )
     .filter(({ start }) => start.getTime() <= date.getTime())
     .sort((a, b) => b.start.getTime() - a.start.getTime());
   const { quarter, start, year } = candidates[0];
@@ -421,16 +525,16 @@ const parseAdventechDate = (value?: string) => {
   return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
 };
 
-const isActiveOnDate = (
-  item: { start_date?: string; end_date?: string },
-  date: Date,
-) => {
+const isActiveOnDate = (item: { start_date?: string; end_date?: string }, date: Date) => {
   const start = parseAdventechDate(item.start_date);
   const end = parseAdventechDate(item.end_date);
   const requestedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  return !!start && !!end &&
+  return (
+    !!start &&
+    !!end &&
     start.getTime() <= requestedDate.getTime() &&
-    requestedDate.getTime() <= end.getTime();
+    requestedDate.getTime() <= end.getTime()
+  );
 };
 
 const getChildrenProviderLanguage = (language: SupportedLanguage): 'en' | 'es' | 'zh' =>
@@ -441,7 +545,9 @@ const findActiveChildrenQuarterly = (
   catalog: readonly ChildrenQuarterlySummary[],
   date: Date,
 ) => {
-  const activeQuarterlies = catalog.filter((quarterly) => isActiveOnDate(quarterly, date));
+  const activeQuarterlies = catalog.filter((quarterly) =>
+    isActiveOnDate(quarterly, date),
+  );
   return CHILDREN_CATALOG_CANDIDATES[curriculum]
     .map((candidate) => ({
       candidate,
@@ -464,11 +570,11 @@ export const getCurrentChildrenSabbathSchoolOptions = async (
   if (!response.ok) {
     throw new Error(`Quarterly catalog request failed: ${response.status}`);
   }
-  const data = await response.json() as ChildrenQuarterlySummary[];
+  const data = (await response.json()) as ChildrenQuarterlySummary[];
   const catalog = Array.isArray(data) ? data : [];
   return Object.fromEntries(
-    (Object.keys(CHILDREN_CATALOG_CANDIDATES) as ChildrenSabbathSchoolCurriculum[])
-      .map((curriculum) => {
+    (Object.keys(CHILDREN_CATALOG_CANDIDATES) as ChildrenSabbathSchoolCurriculum[]).map(
+      (curriculum) => {
         const match = findActiveChildrenQuarterly(curriculum, catalog, date);
         return [
           curriculum,
@@ -477,7 +583,8 @@ export const getCurrentChildrenSabbathSchoolOptions = async (
             categoryName: match?.quarterly?.quarterly_group?.name,
           },
         ];
-      }),
+      },
+    ),
   ) as Record<ChildrenSabbathSchoolCurriculum, ChildrenSabbathSchoolOption>;
 };
 
@@ -494,10 +601,11 @@ export const getCurrentChildrenSabbathSchoolAvailability = async (
     signal,
   );
   return Object.fromEntries(
-    (Object.entries(options) as Array<[
-      ChildrenSabbathSchoolCurriculum,
-      ChildrenSabbathSchoolOption,
-    ]>).map(([curriculum, option]) => [curriculum, option.available]),
+    (
+      Object.entries(options) as Array<
+        [ChildrenSabbathSchoolCurriculum, ChildrenSabbathSchoolOption]
+      >
+    ).map(([curriculum, option]) => [curriculum, option.available]),
   ) as Record<ChildrenSabbathSchoolCurriculum, boolean>;
 };
 
@@ -513,7 +621,7 @@ const fetchCurrentChildrenLessonPdfUrl = async (
   if (!catalogResponse.ok) {
     throw new Error(`Quarterly catalog request failed: ${catalogResponse.status}`);
   }
-  const catalogData = await catalogResponse.json() as ChildrenQuarterlySummary[];
+  const catalogData = (await catalogResponse.json()) as ChildrenQuarterlySummary[];
   const match = findActiveChildrenQuarterly(
     curriculum,
     Array.isArray(catalogData) ? catalogData : [],
@@ -530,11 +638,11 @@ const fetchCurrentChildrenLessonPdfUrl = async (
   if (!quarterlyResponse.ok) {
     throw new Error(`Quarterly request failed: ${quarterlyResponse.status}`);
   }
-  const quarterlyData = await quarterlyResponse.json() as ChildrenQuarterlyResponse;
-  const activeLessons = quarterlyData.lessons?.filter((lesson) =>
-    isActiveOnDate(lesson, date)
-  ) || [];
-  const lesson = activeLessons.find(({ id }) => /^\d+$/.test(id || '')) || activeLessons[0];
+  const quarterlyData = (await quarterlyResponse.json()) as ChildrenQuarterlyResponse;
+  const activeLessons =
+    quarterlyData.lessons?.filter((lesson) => isActiveOnDate(lesson, date)) || [];
+  const lesson =
+    activeLessons.find(({ id }) => /^\d+$/.test(id || '')) || activeLessons[0];
   if (!lesson?.id) throw new Error('The quarterly has no lesson for this date.');
 
   const response = await fetchLesson(
@@ -542,7 +650,7 @@ const fetchCurrentChildrenLessonPdfUrl = async (
   );
   if (!response.ok) throw new Error(`Lesson request failed: ${response.status}`);
 
-  const lessonData = await response.json() as ChildrenLessonResponse;
+  const lessonData = (await response.json()) as ChildrenLessonResponse;
   const pdfUrl = lessonData.pdfs?.[match.candidate.pdfIndex]?.src;
   const parsedPdfUrl = pdfUrl ? new URL(pdfUrl) : null;
   if (
@@ -575,9 +683,10 @@ export const openCurrentChildrenSabbathSchool = (
 ) => {
   // Reserve the web browsing context during the original tap. Waiting for the
   // API first can cause installed PWAs to treat the PDF as an in-app redirect.
-  const externalWindow = Platform.OS === 'web' && typeof window !== 'undefined'
-    ? window.open('about:blank', '_blank')
-    : null;
+  const externalWindow =
+    Platform.OS === 'web' && typeof window !== 'undefined'
+      ? window.open('about:blank', '_blank')
+      : null;
   if (externalWindow) externalWindow.opener = null;
 
   getCurrentChildrenSabbathSchoolPdfUrl(curriculum, language)
@@ -591,7 +700,7 @@ export const openCurrentChildrenSabbathSchool = (
         await openInSystemBrowser(
           pdfUrl,
           'Error',
-          'Could not open the children\'s Sabbath School PDF.',
+          "Could not open the children's Sabbath School PDF.",
         );
       }
     })
@@ -599,15 +708,13 @@ export const openCurrentChildrenSabbathSchool = (
       externalWindow?.close();
       Alert.alert(
         'Error',
-        'Could not open the current children\'s Sabbath School PDF in the external browser.',
+        "Could not open the current children's Sabbath School PDF in the external browser.",
       );
       console.error('Children Sabbath School PDF error:', error);
     });
 };
 
-export const getBabiesSabbathSchoolUrl = (
-  language: SupportedLanguage = 'en',
-) => {
+export const getBabiesSabbathSchoolUrl = (language: SupportedLanguage = 'en') => {
   if (language === 'zh' || language === 'zh-cn') {
     return 'https://babies.aliveinjesus.info/zh/resources';
   }
@@ -617,9 +724,7 @@ export const getBabiesSabbathSchoolUrl = (
   return 'https://babies.aliveinjesus.info/resources';
 };
 
-export const openBabiesSabbathSchool = (
-  language: SupportedLanguage = 'en',
-) =>
+export const openBabiesSabbathSchool = (language: SupportedLanguage = 'en') =>
   openURL(
     getBabiesSabbathSchoolUrl(language),
     'Error',
@@ -672,3 +777,7 @@ export const openEmail = (email: string) =>
     'Error',
     'Email is not configured on this device or emulator.',
   );
+
+// These are Google Forms locked by a password, so even though they're public links, they are safe to include
+export const QUEENS_SERMON_SPEAKER_FORM_URL = 'https://forms.gle/FV7S53eQ1jwt9R7p7';
+export const BROOKLYN_SERMON_SPEAKER_FORM_URL = 'https://forms.gle/wCsMmMeS8EqMKmJY8';

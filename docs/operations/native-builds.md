@@ -4,7 +4,159 @@ Website deployment remains automatic on pushes to `main`, or through `npm run de
 Native builds are opt-in and do not publish to either store. The same Expo source
 is used for all platforms.
 
+## Building an independent fork
+
+The checked-in configuration points to the church-owned Expo project and its
+package identifiers. A third party must not use that project or its signing
+credentials. Create an Expo account and a separate Expo project, then run
+`eas login` and `eas init` in the fork. Replace `expo.extra.eas.projectId` and
+the Expo owner in `app.json` with the new project values. Choose package and
+bundle identifiers that the third party owns, and create their own Apple
+Developer and Google Play accounts if they intend to distribute the apps.
+
+An EAS account is required for this repository's current `eas build` workflow,
+including `--local`, because the build configuration uses EAS project
+authentication, remote versioning, and EAS-managed signing credentials. The
+church's `EXPO_TOKEN` cannot be reused by an independent fork. A fork should
+create its own Expo access token and GitHub Actions secret, or authenticate
+locally with `eas login`.
+
+EAS is not strictly required to compile the generated native projects. An
+experienced maintainer can generate them with `npx expo prebuild`, then build
+Android with Gradle and iOS with Xcode on macOS. That route requires the
+maintainer to own and manage the Android keystore, Apple certificates and
+provisioning profiles, app identifiers, native configuration, and any future
+native regeneration. It is therefore a separate fork workflow, not a drop-in
+replacement for the repository's current EAS/local-build scripts. Do not copy
+the church's signing files, Expo token, or store credentials.
+
+## If the organization loses access to Apple, Google, or D&B
+
+Treat these accounts as organizational assets, not as one employee's personal
+accounts. Keep at least two authorized administrators, use organization-owned
+email addresses, store recovery methods securely, and record the legal entity
+name, address, EIN, D-U-N-S number, account IDs, and renewal dates.
+
+### Apple Developer
+
+The critical Apple role is called **Account Holder**. For an organization
+membership, the Account Holder must have legal authority to bind the
+organization. If the current Account Holder is still reachable, they can add
+the successor to the team and transfer the role from Apple Developer's
+[Transfer the Account Holder role](https://developer.apple.com/help/account/access/transfer-the-account-holder-role/)
+page. The successor needs an Apple Account with two-factor authentication and
+may need identity verification and to accept the transferee agreement.
+
+If the Account Holder is deceased, unreachable, or the organization cannot
+sign in, contact [Apple Developer Support](https://developer.apple.com/contact/)
+and explain that the organization has lost its Account Holder. Be prepared to
+show the successor's government ID and evidence that they are authorized to
+bind the legal entity, such as board authorization, corporate or nonprofit
+registration, an officer/director listing, and the organization's official
+contact information. Apple determines the exact documents and may request
+additional business records; do not assume an Admin can replace the Account
+Holder without Apple's help.
+
+Apple's organization enrollment and identity record must match the legal
+entity. A nonprofit should be enrolled as the nonprofit's organization, with
+the nonprofit's legal name, address, and D-U-N-S record—not as a sole
+proprietor or individual. See Apple's guidance on
+[updating organization information](https://developer.apple.com/help/account/membership/updating-your-account-information).
+
+### Google Play Console
+
+For Google Play, use an **Organization** developer account and an
+organization-type Google Payments profile. Google requires a D-U-N-S number
+for organization accounts and offers **Non-profit** as an organization type;
+do not leave the account as Personal/Individual or Sole Proprietor merely
+because that was the default selected during setup. The legal name and address
+in Google Payments must match the D&B profile.
+
+If the existing owner is available, add the successor under **Users and
+permissions** and use Google's [Transfer ownership of a Play Console
+developer account](https://support.google.com/googleplay/android-developer/answer/16909862)
+process. The current Google guidance includes a seven-day security cooling-off
+period. If the owner is no longer reachable, Google says to contact Play
+Console support through the Help section or its online form; the self-service
+transfer cannot be completed without the current owner. Be ready with the
+successor's government ID, organization relationship/authority, verified
+contact information, Google Payments access, and nonprofit/legal-entity
+documents requested by Google. See Google's [required account
+information](https://support.google.com/googleplay/android-developer/answer/13628312)
+and [identity/profile update guidance](https://support.google.com/googleplay/android-developer/answer/13634888).
+
+If recovery is impossible, create a new organization Play Console account and
+ask Google to transfer the apps. This is a recovery path, not a shortcut: the
+new account must be active and verified, and app signing, Firebase, API,
+analytics, payments, testing, and reports may need follow-up work.
+
+### D-U-N-S and Dun & Bradstreet recovery
+
+The relevant D&B product name is **D-U-N-S Profile Manager** (often shortened
+to D-U-N-S Manager), not “DNB business profile manager.” Use the official
+[D-U-N-S Profile Manager](https://www.dnb.com/en-us/smb/duns/duns-manager.html),
+[D&B company-profile manager](https://smallbusiness.dnb.com/duns-manager/company-profile),
+or [D&B sign-in](https://my.dnb.com/) entry points. D&B describes verified
+owners, directors, or officers as the people who can manage the profile.
+
+If the organization has no D-U-N-S number, request one through D&B's
+[D-U-N-S request service](https://www.dnb.com/duns-number/get-a-duns.html)
+and keep the confirmation. The practical wait we experienced was roughly
+**5–10 business days** for a new number; this is an operational estimate, not
+a guaranteed SLA. Apple and Google may also need additional time after D&B
+updates before their verification systems see the change.
+
+If the existing D&B profile is controlled by a departed contact, use Profile
+Manager's verification/recovery flow and request access as an authorized
+owner, director, or officer. Prepare the organization's exact legal name and
+address, D-U-N-S number, government-issued ID, work email/phone, and documents
+showing authority—typically formation/registration records, IRS EIN or
+tax-exempt determination documentation, nonprofit registration, and a board
+resolution or letter of authorization. D&B may request different or additional
+documents, so submit only what its support team asks for.
+
+In our experience, becoming the verified D-U-N-S profile manager took another
+roughly **5–10 business days**. The role we were looking for is best described
+as a verified owner/director/officer in D-U-N-S Profile Manager; D&B's exact
+label may vary by region and workflow.
+
+Most importantly, check the D&B legal-entity classification after recovery.
+For a nonprofit, the profile must identify the actual nonprofit legal entity,
+not Sole Proprietorship. A D-U-N-S request can default to an individual/sole-
+proprietor-style record even when the applicant selected nonprofit. Correct the
+D&B record first, using the nonprofit's legal documents, then wait for the
+change to propagate before submitting Apple or Google verification. Google
+explicitly says organization name, address, and D-U-N-S updates originate in
+D&B rather than being edited directly in Play Console.
+
 ## One-time account setup
+
+### Apple Developer versus Apple Business Manager
+
+Apple Business Manager is **not required** to enroll in or use the Apple
+Developer Program for App Store distribution. They are separate Apple
+services. The required service for this project is an Apple Developer Program
+organization membership; Apple requires the legal entity, D-U-N-S number,
+legal binding authority, a work email, and a public organization website
+([Apple's enrollment requirements](https://developer.apple.com/help/account/membership/program-enrollment/)).
+
+Do not assume that an Apple Business Manager login is the Apple Developer
+login. If the organization already uses Apple Business Manager, it can be
+useful for device management, Managed Apple Accounts, and distributing custom
+apps, but it does not replace Apple Developer enrollment. Apple describes the
+relationship in its [membership comparison](https://developer.apple.com/support/compare-memberships/):
+apps distributed through the App Store, Apple Business Manager, or Apple School
+Manager use the Apple Developer Program.
+
+For a small organization, the practical setup is an organization-controlled
+Apple Account with two-factor authentication used to enroll the Apple Developer
+Program organization membership. Then add at least one additional trusted
+Admin and keep recovery methods under organizational control. The enrolling
+person becomes the Apple Developer **Account Holder**, which is the role that
+renews membership and accepts legal agreements. If the organization uses
+Managed Apple Accounts through Apple Business Manager, Apple says Account
+Holder-role changes may require contacting Apple, so document the relationship
+and do not make the account dependent on one employee's personal Apple Account.
 
 1. Install dependencies with `npm ci`. Use Node 22 for parity with native CI.
 2. Install the pinned EAS CLI globally if you want the shorter `eas` command:
@@ -131,13 +283,15 @@ is not an offline build path. Build one platform at a time with `--local`.
 In GitHub Actions, select **Native binaries → Run workflow**, choose the source
 branch/tag, and check any combination of iOS, Android AAB, and Android APK. The
 workflow becomes available in the Actions UI after it reaches the default branch.
-Choose `github` (the default) to compile with EAS local builds on GitHub runners:
+The workflow compiles with EAS local builds on GitHub runners:
 Android uses Ubuntu 24.04 / Java 17 and iOS uses macOS 15 / Xcode 26.2.
 Download the signed binaries from the run’s Artifacts section (14-day retention).
-Choose `eas` to compile on Expo cloud builders instead; the workflow waits for
-completion and prints EAS artifact links. GitHub compilation uses GitHub runner
-minutes/storage; it does not use EAS cloud build capacity. Expo authentication
-and previously configured signing credentials are still required.
+The workflow does not expose an EAS cloud-builder option. Direct EAS cloud commands
+remain available as `npm run build:ios:eas` and `npm run build:android:eas`, but are
+not recommended for the release path because they use Expo cloud build capacity and
+are less tied to the repository's checked-in runner/toolchain configuration.
+GitHub compilation uses GitHub runner minutes/storage. Expo authentication and
+previously configured signing credentials are still required.
 No selection performs no builds. Native failures do not block website deployment.
 
 ## Upload separately

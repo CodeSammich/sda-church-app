@@ -1,8 +1,6 @@
 import { GridMenuCard } from '@/components/GridMenuCard';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { shouldUseStackedHomeLayout } from '@/constants/Layout';
-import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
@@ -15,7 +13,6 @@ import {
   ImageBackground,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { Text } from 'react-native-paper';
@@ -25,18 +22,12 @@ export default function DiscoverScreen() {
   const theme = useAppTheme();
   const DocumentStyles = useDocumentStyles();
   const NavigationStyles = useNavigationStyles();
-  const { textScale } = useTextSize();
-  const { fontScale, width } = useWindowDimensions();
-  const stackCards = shouldUseStackedHomeLayout(
-    width,
-    Math.max(1, fontScale * textScale),
-  );
   const headerHeight = useGlobalHeaderHeight();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
   const allLabels = {
     en: {
-      title: 'New Member / Visitor',
+      title: 'New Member & Visitor',
       aboutSDA: 'About Denomination',
       aboutHistory: 'Locations & History',
       meetTeam: 'Meet Our Team',
@@ -63,7 +54,7 @@ export default function DiscoverScreen() {
       join: '加入教会',
     },
     es: {
-      title: 'Nuevo miembro / Visitante',
+      title: 'Nuevo miembro & Visitante',
       aboutSDA: 'Sobre la Denominación',
       aboutHistory: 'Ubicaciones e Historia',
       meetTeam: 'Conoce a nuestro equipo',
@@ -109,51 +100,63 @@ export default function DiscoverScreen() {
         <View style={styles.grid}>
           <GridMenuCard
             title={labels.aboutSDA}
+            titleBlockLines={3}
             icon="cross"
             color={theme.colors.cardBgColors.aboutSDA}
             iconColor={theme.colors.iconColors.aboutSDA}
             onPress={() => router.push({ pathname: '/home/about-sda', params: { backTo: '/home/discover' } } as any)}
-            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
+    style={styles.gridCell}
+    showArrow={false}
           />
           <GridMenuCard
             title={labels.aboutHistory}
+            titleBlockLines={3}
             icon="map-marker-path"
             color={theme.colors.cardBgColors.aboutHistory}
             iconColor={theme.colors.iconColors.aboutHistory}
             onPress={() => router.push({ pathname: '/home/about-my-church', params: { backTo: '/home/discover' } } as any)}
-            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
+    style={styles.gridCell}
+    showArrow={false}
           />
           <GridMenuCard
             title={labels.meetTeam}
+            titleBlockLines={3}
             icon="card-account-phone"
             color={theme.colors.cardBgColors.meetTeam}
             iconColor={theme.colors.iconColors.meetTeam}
             onPress={() => router.push({ pathname: '/home/team', params: { backTo: '/home/discover' } } as any)}
-            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
+    style={styles.gridCell}
+    showArrow={false}
           />
           <GridMenuCard
             title={labels.join}
+            titleBlockLines={3}
             icon="water-outline"
             color={theme.colors.cardBgColors.join}
             iconColor={theme.colors.iconColors.join}
             onPress={() => router.push({ pathname: '/home/baptism', params: { backTo: '/home/discover' } } as any)}
-            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
+    style={styles.gridCell}
+    showArrow={false}
           />
           <GridMenuCard
             title={labels.fellowship}
+            titleBlockLines={3}
             icon="handshake"
             color={theme.colors.cardBgColors.fellowship}
             iconColor={theme.colors.iconColors.fellowship}
             onPress={() => router.push({ pathname: '/home/fellowship', params: { backTo: '/home/discover' } } as any)}
-            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
+    style={styles.gridCell}
+    showArrow={false}
           />
           <GridMenuCard
             title={labels.bible}
+            titleBlockLines={3}
             icon="book-cross"
             color={theme.colors.cardBgColors.bible}
             iconColor={theme.colors.iconColors.bible}
             onPress={() => router.push({ pathname: '/bible', params: { backTo: '/home/discover' } } as any)}
-            style={[styles.gridCell, stackCards && styles.stackedGridCell]}
+    style={styles.gridCell}
+    showArrow={false}
           />
         </View>
       </ScrollView>
@@ -172,9 +175,5 @@ const styles = StyleSheet.create({
   gridCell: {
     flexBasis: '47.5%',
     flexGrow: 1,
-  },
-  stackedGridCell: {
-    flexBasis: '100%',
-    width: '100%',
   },
 });

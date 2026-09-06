@@ -53,6 +53,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   LogBox,
   Platform,
   StatusBar,
@@ -851,7 +852,7 @@ function RootLayoutNav({
   const pathname = usePathname();
   const segments = useSegments();
   const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
-  const gestureBackTarget = hasHeaderBackButton(segments)
+  const gestureBackTarget = hasHeaderBackButton(segments, globalParams.backTo)
     ? getHeaderBackTarget(segments, globalParams.backTo)
     : '/';
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
@@ -917,11 +918,40 @@ function RootLayoutNav({
     };
   }, [gestureBackTarget, routeKey]);
 
+  // Native Android's edge gesture dispatches through BackHandler rather than
+  // browser history. Consume it here so sub-pages follow the same explicit
+  // backTo/fallback route order as the visible header arrow, without popping
+  // whatever stack happens to be underneath the current screen.
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !hasHeaderBackButton(segments, globalParams.backTo)) {
+      return;
+    }
+
+    const handleAndroidBack = () => {
+      router.replace(gestureBackTarget as any);
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleAndroidBack,
+    );
+    return () => subscription.remove();
+  }, [gestureBackTarget, globalParams.backTo, routeKey, segments]);
+
   // Sync system bars and PWA theme-color meta tag
   useEffect(() => {
+    if (Platform.OS === 'android') {
+      // Keep the native status bar aligned with the active in-app theme. The
+      // app theme already accounts for the system setting when that is the
+      // selected appearance mode.
+      StatusBar.setBarStyle(theme.statusBarScheme, true);
+      StatusBar.setBackgroundColor(theme.colors.background, false);
+    }
+
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const bodyBg = theme.colors.background;
-      const systemBarColor = '#000000';
+      const systemBarColor = bodyBg;
 
       // 1. Sync all theme-color meta tags (Primary driver for Android/iOS bar colors)
       // Using querySelectorAll to update both light and dark preference tags
@@ -993,8 +1023,8 @@ function RootLayoutNav({
     <PaperProvider theme={theme as any}>
       <ThemeProvider value={theme as any}>
         <StatusBar
-          barStyle="light-content"
-          backgroundColor="#000000"
+          barStyle={theme.statusBarScheme}
+          backgroundColor={theme.colors.background}
           translucent={false}
         />
         <Stack>

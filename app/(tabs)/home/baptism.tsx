@@ -34,6 +34,7 @@ export default function BaptismScreen() {
   const allLabels = {
     en: {
       title: 'Joining the Church',
+      baptismHeader: 'Baptism',
       baptismQuote: '“Whoever believes and is baptized will be saved.”',
       baptismRef: 'Mark 16:16 (BSB)',
       vowsTitle: 'Baptismal Vows',
@@ -43,6 +44,7 @@ export default function BaptismScreen() {
     },
     zh: {
       title: '加入教會',
+      baptismHeader: '浸禮',
       baptismQuote: '「信而受洗的必然得救。」',
       baptismRef: '馬可福音 16:16 (CUV)',
       baptismIntro: '受洗之時，需信奉持守耶穌所傳的真道。',
@@ -53,6 +55,7 @@ export default function BaptismScreen() {
     },
     'zh-cn': {
       title: '加入教会',
+      baptismHeader: '浸礼',
       baptismQuote: '“信而受洗的必然得救。”',
       baptismRef: '马可福音 16:16 (CUVS)',
       baptismIntro: '受洗之时，需信奉持守耶稣所传的真道。',
@@ -63,6 +66,7 @@ export default function BaptismScreen() {
     },
     es: {
       title: 'Unirse a la Iglesia',
+      baptismHeader: 'Bautismo',
       baptismQuote: '“El que creyere y fuere bautizado, será salvo.”',
       baptismRef: 'Marcos 16:16 (RVR1960)',
       baptismIntro:
@@ -117,6 +121,18 @@ export default function BaptismScreen() {
 
         {/* Body */}
         <View style={DocumentStyles.section}>
+          <Text
+            variant="titleLarge"
+            style={[
+              DocumentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
+          >
+            {labels.baptismHeader}
+          </Text>
           <Text
             variant="bodyMedium"
             style={[

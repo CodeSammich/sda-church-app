@@ -118,18 +118,24 @@ stays automatic: a push to `main` runs the existing GitHub Pages workflow. It ca
 run manually with `npm run deploy`.
 
 Native binaries are opt-in. In GitHub Actions, open **Native binaries** and choose **Run
-workflow**. Select the source branch or tag, choose a builder, and check any combination
-of these targets:
+workflow**. Select the source branch or tag and check any combination of these targets:
 
 - iOS store build (`.ipa`) for App Store Connect and TestFlight.
 - Android store build (`.aab`) for Google Play.
 - Android preview build (`.apk`) for direct device installation.
 
-The default `github` builder compiles on GitHub-hosted runners and uploads the binary as a
-workflow artifact. Choose `eas` to compile on Expo's cloud builders. Both choices require
-the church-owned Expo project, configured signing credentials, and the `EXPO_TOKEN` GitHub
-secret. Native builds never publish to a store automatically, so review and submission
-remain separate steps.
+The workflow compiles on GitHub-hosted runners with EAS CLI's `--local` mode and uploads
+the binary as a workflow artifact. It does not use Expo's cloud builders. This is the
+recommended release path because the runner versions and toolchain are explicit, the
+artifacts remain attached to the GitHub run, and the build does not consume EAS cloud
+build capacity. It still requires the church-owned Expo project, configured signing
+credentials, and the `EXPO_TOKEN` GitHub secret. Native builds never publish to a store
+automatically, so review and submission remain separate steps.
+
+Direct EAS cloud builds remain available through the `:eas` scripts below, but are not
+the recommended release workflow. They require Expo cloud access and may use EAS build
+capacity and cloud-managed settings that are less reproducible than the checked-in
+GitHub-runner workflow.
 
 Signing credentials are managed by EAS by default. You can instead store Android
 and Apple signing files as encrypted GitHub secrets and use a local-credentials
@@ -144,6 +150,10 @@ eas --version                         # installed with: npm install --global eas
 npm run build:ios
 npm run build:android
 npm run build:android:apk
+
+# Optional, not the recommended release path:
+npm run build:ios:eas
+npm run build:android:eas
 ```
 
 The global `eas` command is optional; the npm scripts use the pinned CLI version.

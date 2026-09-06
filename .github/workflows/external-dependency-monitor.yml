@@ -21,6 +21,9 @@ env:
 
 jobs:
   check-external-dependencies:
+    # Forks commonly disable Issues, while this monitor opens and updates an
+    # alert issue. Keep scheduled/manual monitoring scoped to the canonical repo.
+    if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

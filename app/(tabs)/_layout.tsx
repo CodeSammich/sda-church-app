@@ -36,13 +36,14 @@ function TabBarIcon(props: {
   }
 
   return (
-    <AppIcon
-      name={iconName}
-      size={DESIGN_TOKENS.ICON_SIZE_TAB}
-      textScale={getBottomTabIconTextScale(props.textScale)}
-      style={{ marginBottom: -3 }}
-      color={props.color}
-    />
+    <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+      <AppIcon
+        name={iconName}
+        size={DESIGN_TOKENS.ICON_SIZE_TAB}
+        textScale={getBottomTabIconTextScale(props.textScale)}
+        color={props.color}
+      />
+    </View>
   );
 }
 
@@ -109,7 +110,10 @@ export default function TabLayout() {
     typeof window !== 'undefined' &&
     window.matchMedia('(display-mode: fullscreen)').matches;
   const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
-  const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  // Android's rounded/gesture edge can sit just beyond the reported inset at
+  // enlarged text sizes. Keep the tab row visibly above that physical edge.
+  const bottomTabInset =
+    Math.max(insets.bottom, fullscreenEdgeInset) + (Platform.OS === 'android' ? 8 : 0);
   const [tabBarHeight, setTabBarHeight] = useState(
     tabContentHeight + bottomTabInset,
   );
@@ -213,12 +217,18 @@ export default function TabLayout() {
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
           tabBarStyle: {
-            height: tabContentHeight + bottomTabInset,
+            height: tabContentHeight + bottomTabInset + 4,
+            paddingTop: 4,
             paddingBottom: bottomTabInset,
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
             backgroundColor: 'transparent',
             borderTopWidth: 0,
+          },
+          tabBarItemStyle: {
+            flex: 1,
+            minWidth: 0,
+            overflow: 'visible',
           },
           tabBarBackground: () => (
             <View
