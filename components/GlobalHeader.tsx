@@ -202,6 +202,8 @@ export const GlobalHeader = (props: any) => {
     | CustomHeaderSearch
     | undefined;
   const isHeaderSearchPage = isHymnalSearchPage || Boolean(customHeaderSearch);
+  const hymnalSearchCollapsed =
+    isHymnalPage && props.options?.hymnalSearchCollapsed === true;
   const isSubPage = !isPillarRoot;
 
   const title = props.options?.title;
@@ -360,6 +362,13 @@ export const GlobalHeader = (props: any) => {
   };
 
   const handleBackPress = () => {
+    // Preserve the native stack so Android's edge-swipe and the header back
+    // button resolve to the same previous screen. Explicit backTo remains a
+    // safe fallback when this screen was opened without stack history.
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
     router.replace(getHeaderBackTarget(routeSegments, backTo) as any);
   };
 
@@ -371,6 +380,11 @@ export const GlobalHeader = (props: any) => {
       duration: 220,
       useNativeDriver: false,
     }).start();
+    setTimeout(() => searchRef.current?.focus(), 80);
+  };
+
+  const focusHymnalSearch = () => {
+    setIsSearching(true);
     setTimeout(() => searchRef.current?.focus(), 80);
   };
 
@@ -405,6 +419,7 @@ export const GlobalHeader = (props: any) => {
       }
       onChangeText={setSearchQuery}
       value={searchQuery}
+      numberOfLines={1}
       onFocus={() => setIsSearching(true)}
       blurOnSubmit={false}
       returnKeyType="search"
@@ -453,6 +468,8 @@ export const GlobalHeader = (props: any) => {
         { minHeight: compactControlHeight },
         {
           backgroundColor: theme.colors.surface,
+          borderWidth: 1,
+          borderColor: theme.colors.outline,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.15,
@@ -461,9 +478,10 @@ export const GlobalHeader = (props: any) => {
       ]}
       inputStyle={{
         minHeight: 0,
-        paddingBottom: 0,
+        paddingBottom: 2,
+        paddingRight: 8,
         paddingTop: 0,
-        fontSize: scaleTypographyMetric(16, headerTextScale),
+        fontSize: scaleTypographyMetric(15, headerTextScale),
       }}
       iconColor={theme.colors.onSurfaceVariant}
       placeholderTextColor={theme.colors.onSurfaceVariant}
@@ -747,6 +765,24 @@ export const GlobalHeader = (props: any) => {
                   </Pressable>
                 )}
               </View>
+            ) : hymnalSearchCollapsed ? (
+              <Pressable
+                onPress={focusHymnalSearch}
+                accessibilityRole="button"
+                accessibilityLabel="Search hymnal"
+                style={({ pressed }) => [
+                  styles.collapsedSearchButton,
+                  { height: compactControlHeight, width: compactControlHeight },
+                  { backgroundColor: theme.colors.surface, opacity: pressed ? 0.75 : 1 },
+                ]}
+              >
+                <AppIcon
+                  name="magnify"
+                  size={24}
+                  textScale={headerTextScale}
+                  color={theme.colors.onSurfaceVariant}
+                />
+              </Pressable>
             ) : (
               renderSearchbar()
             )}

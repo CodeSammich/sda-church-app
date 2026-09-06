@@ -20,6 +20,7 @@ import { getRoutedHymns } from '@/features/hymnal/HymnalRouting';
 import { useAppTheme } from '@/constants/Themes';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import * as BibleService from '@/services/BibleService';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
@@ -95,6 +96,7 @@ export default function HymnalScreen() {
   );
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight();
+  const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
   const { language } = useContext(LanguageContext);
   const { backTo, refresh, hymnNum, highlight } = useLocalSearchParams<{
     backTo?: string;
@@ -227,9 +229,11 @@ export default function HymnalScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title, backTo } as any} />
+      <Stack.Screen options={{ title: labels.title, backTo, hymnalSearchCollapsed: showHeaderTitle } as any} />
       <ScrollView
         style={DocumentStyles.container}
+        onScroll={handleHeroScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{ paddingTop: 0 }}
       >
         {/* Hero */}

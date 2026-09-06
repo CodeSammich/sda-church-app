@@ -73,7 +73,7 @@ const allLabels = {
   },
 };
 
-export default function ResourcesScreen() {
+export default function ExploreScreen() {
   const theme = useAppTheme();
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
@@ -118,7 +118,7 @@ export default function ResourcesScreen() {
             icon={APP_ICONOGRAPHY.explore.library}
             iconColor={theme.colors.tertiary}
             rightIcon={{ name: 'chevron-right' }}
-            onPress={() => router.push('/resources/library')}
+            onPress={() => router.push('/explore/library')}
           />
 
           <MenuCard

@@ -36,13 +36,14 @@ function TabBarIcon(props: {
   }
 
   return (
-    <AppIcon
-      name={iconName}
-      size={DESIGN_TOKENS.ICON_SIZE_TAB}
-      textScale={getBottomTabIconTextScale(props.textScale)}
-      style={{ marginBottom: -3 }}
-      color={props.color}
-    />
+    <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+      <AppIcon
+        name={iconName}
+        size={DESIGN_TOKENS.ICON_SIZE_TAB}
+        textScale={getBottomTabIconTextScale(props.textScale)}
+        color={props.color}
+      />
+    </View>
   );
 }
 
@@ -109,7 +110,10 @@ export default function TabLayout() {
     typeof window !== 'undefined' &&
     window.matchMedia('(display-mode: fullscreen)').matches;
   const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
-  const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  // Android's rounded/gesture edge can sit just beyond the reported inset at
+  // enlarged text sizes. Keep the tab row visibly above that physical edge.
+  const bottomTabInset =
+    Math.max(insets.bottom, fullscreenEdgeInset) + (Platform.OS === 'android' ? 8 : 0);
   const [tabBarHeight, setTabBarHeight] = useState(
     tabContentHeight + bottomTabInset,
   );
@@ -153,25 +157,25 @@ export default function TabLayout() {
     en: {
       home: 'Home',
       bible: 'Bible',
-      resources: 'Explore',
+      explore: 'Explore',
       you: 'You',
     },
     zh: {
       home: '首頁',
       bible: '聖經',
-      resources: '探索',
+      explore: '探索',
       you: '您',
     },
     'zh-cn': {
       home: '首页',
       bible: '圣经',
-      resources: '探索',
+      explore: '探索',
       you: '您',
     },
     es: {
       home: 'Inicio',
       bible: 'Biblia',
-      resources: 'Explorar',
+      explore: 'Explorar',
       you: 'Tú',
     },
   };
@@ -213,12 +217,18 @@ export default function TabLayout() {
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
           tabBarStyle: {
-            height: tabContentHeight + bottomTabInset,
+            height: tabContentHeight + bottomTabInset + 4,
+            paddingTop: 4,
             paddingBottom: bottomTabInset,
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
             backgroundColor: 'transparent',
             borderTopWidth: 0,
+          },
+          tabBarItemStyle: {
+            flex: 1,
+            minWidth: 0,
+            overflow: 'visible',
           },
           tabBarBackground: () => (
             <View
@@ -309,17 +319,17 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="resources"
+          name="explore"
           options={{
-            title: labels.resources,
+            title: labels.explore,
             headerShown: false, // Internal Stack handles header for consistency
             tabBarLabel: ({ color }) => (
               <TabBarLabel
                 color={color}
                 fontScale={fontScale}
-                label={labels.resources}
+                label={labels.explore}
                 onLineCountChange={(lineCount) =>
-                  reportTabLabelLines('resources', lineCount)
+                  reportTabLabelLines('explore', lineCount)
                 }
                 textScale={textScale}
               />
@@ -336,7 +346,7 @@ export default function TabLayout() {
           listeners={{
             tabPress: (event) => {
               event.preventDefault();
-              router.navigate('/resources');
+              router.navigate('/explore');
             },
           }}
         />

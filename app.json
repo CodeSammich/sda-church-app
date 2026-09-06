@@ -2,7 +2,7 @@
   "expo": {
     "name": "NY Chinese SDA",
     "slug": "sda-church-app",
-    "version": "0.33.1",
+    "version": "0.34.10",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
@@ -27,11 +27,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.nyccsda.app"
+      "bundleIdentifier": "org.nyccsda.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "androidStatusBar": {
-      "backgroundColor": "#000000",
-      "barStyle": "light-content",
+      "backgroundColor": "#FAF4EF",
+      "barStyle": "dark-content",
       "translucent": false
     },
     "android": {
@@ -40,7 +43,12 @@
         "backgroundColor": "#00405C"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "org.nyccsda.app"
+      "package": "org.nyccsda.app",
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -53,7 +61,16 @@
           "recordAudioAndroid": false
         }
       ],
-      "./withAndroidSDKOverride"
-    ]
+      "expo-asset",
+      "expo-build-properties",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "92100255-b9a3-4535-8500-b21d762bbf98"
+      }
+    },
+    "owner": "new-york-chinese-seventh-day-adventist-church"
   }
 }

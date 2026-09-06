@@ -15,7 +15,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, List, Text } from 'react-native-paper';
 
@@ -31,11 +31,10 @@ export default function BaptismScreen() {
   );
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
-  const [expanded, setExpanded] = useState<string | null>(null);
-
   const allLabels = {
     en: {
       title: 'Joining the Church',
+      baptismHeader: 'Baptism',
       baptismQuote: '“Whoever believes and is baptized will be saved.”',
       baptismRef: 'Mark 16:16 (BSB)',
       vowsTitle: 'Baptismal Vows',
@@ -45,6 +44,7 @@ export default function BaptismScreen() {
     },
     zh: {
       title: '加入教會',
+      baptismHeader: '浸禮',
       baptismQuote: '「信而受洗的必然得救。」',
       baptismRef: '馬可福音 16:16 (CUV)',
       baptismIntro: '受洗之時，需信奉持守耶穌所傳的真道。',
@@ -55,6 +55,7 @@ export default function BaptismScreen() {
     },
     'zh-cn': {
       title: '加入教会',
+      baptismHeader: '浸礼',
       baptismQuote: '“信而受洗的必然得救。”',
       baptismRef: '马可福音 16:16 (CUVS)',
       baptismIntro: '受洗之时，需信奉持守耶稣所传的真道。',
@@ -65,6 +66,7 @@ export default function BaptismScreen() {
     },
     es: {
       title: 'Unirse a la Iglesia',
+      baptismHeader: 'Bautismo',
       baptismQuote: '“El que creyere y fuere bautizado, será salvo.”',
       baptismRef: 'Marcos 16:16 (RVR1960)',
       baptismIntro:
@@ -119,6 +121,18 @@ export default function BaptismScreen() {
 
         {/* Body */}
         <View style={DocumentStyles.section}>
+          <Text
+            variant="titleLarge"
+            style={[
+              DocumentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
+          >
+            {labels.baptismHeader}
+          </Text>
           <Text
             variant="bodyMedium"
             style={[
@@ -300,30 +314,7 @@ export default function BaptismScreen() {
         </View>
 
         <View style={DocumentStyles.section}>
-          <Text
-            variant="titleLarge"
-            style={[
-              DocumentStyles.sectionTitle,
-              {
-                color: theme.colors.onSurface,
-                borderBottomColor: theme.colors.outlineVariant,
-              },
-            ]}
-          >
-            {labels.commitmentsHeader}
-          </Text>
-
-          <List.Accordion
-            title={labels.vowsTitle}
-            titleNumberOfLines={0}
-            titleStyle={BaptismStyles.accordionTitle}
-            expanded={expanded === 'vows'}
-            onPress={() => setExpanded(expanded === 'vows' ? null : 'vows')}
-            left={(props) => (
-              <List.Icon {...props} color={theme.colors.primary} icon="check-decagram" />
-            )}
-            style={{ backgroundColor: theme.colors.surface }}
-          >
+          <Text variant="titleLarge" style={[DocumentStyles.sectionTitle, { color: theme.colors.onSurface, borderBottomColor: theme.colors.outlineVariant }]}>{labels.vowsTitle}</Text>
             <Card style={DocumentStyles.card} mode="outlined">
               <Card.Content>
                 {vows.map((vow, idx) => (
@@ -336,21 +327,10 @@ export default function BaptismScreen() {
                 ))}
               </Card.Content>
             </Card>
-          </List.Accordion>
+        </View>
 
-          <List.Accordion
-            title={labels.commandmentsTitle}
-            titleNumberOfLines={0}
-            titleStyle={BaptismStyles.accordionTitle}
-            expanded={expanded === 'commandments'}
-            onPress={() =>
-              setExpanded(expanded === 'commandments' ? null : 'commandments')
-            }
-            left={(props) => (
-              <List.Icon {...props} color={theme.colors.primary} icon="script-text" />
-            )}
-            style={{ backgroundColor: theme.colors.surface }}
-          >
+        <View style={DocumentStyles.section}>
+          <Text variant="titleLarge" style={[DocumentStyles.sectionTitle, { color: theme.colors.onSurface, borderBottomColor: theme.colors.outlineVariant }]}>{labels.commandmentsTitle}</Text>
             <Card style={DocumentStyles.card} mode="outlined">
               <Card.Content>
                 {commandments.intro && (
@@ -390,19 +370,10 @@ export default function BaptismScreen() {
                 )}
               </Card.Content>
             </Card>
-          </List.Accordion>
+        </View>
 
-          <List.Accordion
-            title={labels.lifestyleTitle}
-            titleNumberOfLines={0}
-            titleStyle={BaptismStyles.accordionTitle}
-            expanded={expanded === 'lifestyle'}
-            onPress={() => setExpanded(expanded === 'lifestyle' ? null : 'lifestyle')}
-            left={(props) => (
-              <List.Icon {...props} color={theme.colors.primary} icon="heart-pulse" />
-            )}
-            style={{ backgroundColor: theme.colors.surface }}
-          >
+        <View style={DocumentStyles.section}>
+          <Text variant="titleLarge" style={[DocumentStyles.sectionTitle, { color: theme.colors.onSurface, borderBottomColor: theme.colors.outlineVariant }]}>{labels.lifestyleTitle}</Text>
             <Card style={DocumentStyles.card} mode="outlined">
               <Card.Content>
                 <Text
@@ -473,7 +444,6 @@ export default function BaptismScreen() {
                 </View>
               </Card.Content>
             </Card>
-          </List.Accordion>
         </View>
       </ScrollView>
     </>
