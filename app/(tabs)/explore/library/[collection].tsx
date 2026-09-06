@@ -214,7 +214,7 @@ export default function LibraryScreen() {
     <>
       <Stack.Screen
         options={{
-          backTo: '/resources/library',
+          backTo: '/explore/library',
           title: collectionTitle,
         } as any}
       />
@@ -229,9 +229,9 @@ export default function LibraryScreen() {
         <View style={styles.content}>
           {collection === 'topics' ? (
             <List.Section>
-              <MenuCard title={COLLECTION_TITLES.ministry[language]} description="Pastoral service, health, and mission" icon="hand-heart" onPress={() => router.push('/resources/library/ministry')} />
-              <MenuCard title={COLLECTION_TITLES.family[language]} description="Home, character, and Christian education" icon="home-heart" onPress={() => router.push('/resources/library/family')} />
-              <MenuCard title={COLLECTION_TITLES.classics[language]} description="Enduring Christian devotional literature" icon="book-cross" onPress={() => router.push('/resources/library/classics')} />
+              <MenuCard title={COLLECTION_TITLES.ministry[language]} description="Pastoral service, health, and mission" icon="hand-heart" onPress={() => router.push('/explore/library/ministry')} />
+              <MenuCard title={COLLECTION_TITLES.family[language]} description="Home, character, and Christian education" icon="home-heart" onPress={() => router.push('/explore/library/family')} />
+              <MenuCard title={COLLECTION_TITLES.classics[language]} description="Enduring Christian devotional literature" icon="book-cross" onPress={() => router.push('/explore/library/classics')} />
             </List.Section>
           ) : (
           <>

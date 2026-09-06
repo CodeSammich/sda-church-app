@@ -6,20 +6,21 @@
 /*
 
 # 2. Re-include source and configuration directories
-!/.github/
-!/apps-script/
-!/app/
-!/assets/
-!/components/
-!/constants/
-!/docs/
-!/features/
-!/hooks/
-!/public/
-!/scripts/
-!/services/
-!/styles/
-!/test/
+# Omit trailing slashes: EAS checks directory paths without a trailing slash.
+!/.github
+!/apps-script
+!/app
+!/assets
+!/components
+!/constants
+!/docs
+!/features
+!/hooks
+!/public
+!/scripts
+!/services
+!/styles
+!/test
 
 # 3. Re-include root configuration files
 !/*.json
@@ -39,9 +40,21 @@ node_modules/
 .expo/
 dist/
 web-build/
+build/
 downloads/
 expo-env.d.ts
 *.tsbuildinfo
 external-dependency-report.json
 .env*
 apps-script/.clasp.json
+.vscode/hunkwise/
+
+# Native signing credentials and build artifacts
+credentials.json
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+*.ipa
+*.apk
+*.aab

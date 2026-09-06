@@ -3,7 +3,10 @@ import { WrappingButton as Button } from '@/components/WrappingButton';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
 import {
   CHURCH_BUILDING_IMAGE_URL,
+  BROOKLYN_SERMON_SPEAKER_FORM_URL,
+  QUEENS_SERMON_SPEAKER_FORM_URL,
   openInMaps,
+  openURL,
   openQuarterlySchedule,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -69,8 +72,10 @@ const LABELS = {
     openHymn: 'Open hymn',
     openHymnInHymnal: 'Open {hymn} in the hymnal',
     planning: 'Planning',
-    quarterlySchedule: 'Quarterly Schedule',
+    quarterlySchedule: 'Speaker Schedule',
     churchStaffOnly: 'Church staff only',
+    sermonSpeaker: 'Submit Bulletin Info',
+    sermonSpeakerPasscode: 'Complete the form so the bulletin stays up to date. Ask the IT staff for the passcode if you do not know it.',
     metadata: {
       quarter: 'Quarter',
       specialRemark: 'Special Remark',
@@ -131,8 +136,10 @@ const LABELS = {
     openHymn: '開啟詩歌',
     openHymnInHymnal: '在詩歌本中開啟{hymn}',
     planning: '事工規劃',
-    quarterlySchedule: '季度排班',
+    quarterlySchedule: '講員排班',
     churchStaffOnly: '僅限教會同工',
+    sermonSpeaker: '提交週報資料',
+    sermonSpeakerPasscode: '如果不知道密碼，請向 IT 同工詢問。',
     metadata: {
       quarter: '季度',
       specialRemark: '特別事項',
@@ -193,8 +200,10 @@ const LABELS = {
     openHymn: '打开诗歌',
     openHymnInHymnal: '在诗歌本中打开{hymn}',
     planning: '事工规划',
-    quarterlySchedule: '季度排班',
+    quarterlySchedule: '讲员排班',
     churchStaffOnly: '仅限教会同工',
+    sermonSpeaker: '提交周报资料',
+    sermonSpeakerPasscode: '如果不知道密码，请向 IT 同工询问。',
     metadata: {
       quarter: '季度',
       specialRemark: '特别事项',
@@ -255,8 +264,10 @@ const LABELS = {
     openHymn: 'Abrir himno',
     openHymnInHymnal: 'Abrir {hymn} en el himnario',
     planning: 'Planificación',
-    quarterlySchedule: 'Horario Trimestral',
+    quarterlySchedule: 'Horario de oradores',
     churchStaffOnly: 'Solo personal de la iglesia',
+    sermonSpeaker: 'Enviar información del boletín',
+    sermonSpeakerPasscode: 'Si no conoce el código, pídaselo al personal de TI.',
     metadata: {
       quarter: 'Trimestre',
       specialRemark: 'Observación Especial',
@@ -398,6 +409,7 @@ export default function WeeklyBulletinScreen() {
     weekDates.map((date) => ({ date, loading: false })),
   );
   const [selectedWeek, setSelectedWeek] = useState('0');
+  const [selectedPanel, setSelectedPanel] = useState<'week' | 'speaker'>('week');
   const [selectedLocation, setSelectedLocation] = useState<BulletinLocationTab>('queens');
   const loadingWeeksRef = useRef(new Set<string>());
   const refreshAvailableAtRef = useRef<[number, number]>([0, 0]);
@@ -991,27 +1003,40 @@ export default function WeeklyBulletinScreen() {
         <View style={styles.weekTabsContainer}>
           <Button
             accessibilityRole="tab"
-            accessibilityState={{ selected: selectedWeek === '0' }}
-            mode={selectedWeek === '0' ? 'contained' : 'outlined'}
+            accessibilityState={{ selected: selectedPanel === 'week' && selectedWeek === '0' }}
+            mode={selectedPanel === 'week' && selectedWeek === '0' ? 'contained' : 'outlined'}
             icon="calendar-today"
-            onPress={() => selectWeek(0)}
+            onPress={() => { setSelectedPanel('week'); selectWeek(0); }}
             style={styles.weekTab}
           >
             {labels.thisWeek}
           </Button>
           <Button
             accessibilityRole="tab"
-            accessibilityState={{ selected: selectedWeek === '1' }}
-            mode={selectedWeek === '1' ? 'contained' : 'outlined'}
+            accessibilityState={{ selected: selectedPanel === 'week' && selectedWeek === '1' }}
+            mode={selectedPanel === 'week' && selectedWeek === '1' ? 'contained' : 'outlined'}
             icon="calendar-arrow-right"
-            onPress={() => selectWeek(1)}
+            onPress={() => { setSelectedPanel('week'); selectWeek(1); }}
             style={styles.weekTab}
           >
             {labels.nextWeek}
           </Button>
         </View>
 
-        {weeks[Number(selectedWeek)] &&
+        <View style={styles.sermonTabContainer}>
+          <Button
+            accessibilityRole="tab"
+            accessibilityState={{ selected: selectedPanel === 'speaker' }}
+            mode={selectedPanel === 'speaker' ? 'contained' : 'outlined'}
+            icon="microphone"
+            onPress={() => setSelectedPanel('speaker')}
+            style={styles.sermonTab}
+          >
+            {labels.sermonSpeaker}
+          </Button>
+        </View>
+
+        {selectedPanel === 'week' && weeks[Number(selectedWeek)] &&
           (() => {
             const index = Number(selectedWeek);
             const week = weeks[index];
@@ -1103,13 +1128,44 @@ export default function WeeklyBulletinScreen() {
             );
           })()}
 
-        <View style={[DocumentStyles.section, styles.planningSection]}>
+        {selectedPanel === 'speaker' && <View style={[DocumentStyles.section, styles.planningSection]}>
           <Text
             variant="titleLarge"
             style={[DocumentStyles.sectionTitle, { color: theme.colors.primary }]}
           >
             {labels.planning}
           </Text>
+          <Card
+            mode="outlined"
+            style={[styles.card, { backgroundColor: theme.colors.bulletinSurface }]}
+          >
+            <Card.Content>
+              <Text variant="titleMedium" style={[styles.sermonSpeakerTitle, { color: theme.colors.onSurface }]}>
+                {labels.sermonSpeaker}
+              </Text>
+              <Text variant="bodyMedium" style={[styles.sermonSpeakerHint, { color: theme.colors.onSurfaceVariant }]}>
+                {labels.sermonSpeakerPasscode}
+              </Text>
+              <View style={styles.sermonSpeakerActions}>
+                <Button
+                  mode="contained"
+                  icon="file-document-edit-outline"
+                  onPress={() => void openURL(QUEENS_SERMON_SPEAKER_FORM_URL)}
+                  style={styles.sermonSpeakerButton}
+                >
+                  {labels.queens}
+                </Button>
+                <Button
+                  mode="contained"
+                  icon="file-document-edit-outline"
+                  onPress={() => void openURL(BROOKLYN_SERMON_SPEAKER_FORM_URL)}
+                  style={styles.sermonSpeakerButton}
+                >
+                  {labels.brooklyn}
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
           <GridMenuCard
             title={labels.quarterlySchedule}
             subtitle={labels.churchStaffOnly}
@@ -1119,7 +1175,7 @@ export default function WeeklyBulletinScreen() {
             onPress={openQuarterlySchedule}
             style={styles.scheduleCard}
           />
-        </View>
+        </View>}
       </ScrollView>
     </>
   );
@@ -1142,6 +1198,29 @@ const styles = StyleSheet.create({
   weekTab: {
     flex: 1,
     minWidth: 0,
+  },
+  sermonTabContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  sermonTab: {
+    width: '100%',
+  },
+  sermonSpeakerTitle: {
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  sermonSpeakerHint: {
+    marginBottom: 12,
+  },
+  sermonSpeakerActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  sermonSpeakerButton: {
+    flexGrow: 1,
+    minWidth: 120,
   },
   scheduleCard: {
     width: '100%',

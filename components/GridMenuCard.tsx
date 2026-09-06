@@ -28,6 +28,7 @@ interface GridMenuCardProps {
   style?: ViewStyle | any;
   /** Lines reserved equally across a grid so translated titles cannot resize one card. */
   titleBlockLines?: 2 | 3;
+  showArrow?: boolean;
 }
 
 export const getGridMenuCardTitleBlockMinHeight = (
@@ -53,6 +54,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   onPress,
   style,
   titleBlockLines = 2,
+  showArrow = true,
 }) => {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
@@ -120,7 +122,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
             />
           </View>
           {/* Diagonal arrow affordance */}
-          <LinearGradient
+          {showArrow && <LinearGradient
             testID="grid-menu-card-arrow-badge"
             colors={
               theme.dark
@@ -142,7 +144,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
               size={14}
               color={cardColors.arrowForeground}
             />
-          </LinearGradient>
+          </LinearGradient>}
         </View>
       </TouchableOpacity>
     </Animated.View>

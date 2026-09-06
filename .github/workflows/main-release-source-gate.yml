@@ -12,6 +12,7 @@ permissions:
 jobs:
   ensure_pr_to_main_from_release_branch:
     name: ensure_pr_to_main_from_release_branch
+    if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     steps:
       - name: Require an organization release branch

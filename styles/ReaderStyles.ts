@@ -16,6 +16,7 @@ export const getBulletinVerseScrollOffset = (
 
 export type BibleDockLayout = Readonly<{
   audioDockHeight: number;
+  chapterDockHeight: number;
   controlHeight: number;
   dockHeight: number;
   selectionBarHeight: number;
@@ -108,16 +109,14 @@ export const getBibleDockLayout = (
     ? selectorHeight * 3 + navigationHeight + 28
     : Math.max(60, controlHeight + 16);
   const selectionBarHeight = Math.max(64, Math.ceil(32 * safeScale + 28));
-  const audioControlsNeedTwoRows =
-    stackControls && safeWidth < controlHeight * 2 + 156;
-  const audioControlHeight = audioControlsNeedTwoRows
-    ? controlHeight * 2 + 16
-    : Math.max(52, controlHeight + 8);
-  const audioTimelineHeight = stackControls
-    ? Math.ceil(32 * safeScale + 52)
-    : Math.max(30, Math.ceil(16 * safeScale + 14));
+  // Audio controls remain a single compact row at enlarged text sizes. The
+  // timestamp labels flank the scrubber, so reserving stacked-row height here
+  // would create a misleading blank gap above the chapter selectors.
+  const audioControlHeight = Math.max(52, controlHeight + 8);
+  const audioTimelineHeight = Math.max(30, Math.ceil(16 * safeScale + 14));
   return {
     audioDockHeight: audioControlHeight + audioTimelineHeight + 8,
+    chapterDockHeight: Math.max(60, controlHeight + 16),
     controlHeight,
     dockHeight,
     selectionBarHeight,
@@ -211,7 +210,7 @@ export const createReaderStyles = (textScale: TextScale) => {
 
   // Selection Overlays / Modals
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 100,
   },
   modalHeader: {

@@ -2,15 +2,14 @@ import { VerseHero } from '@/components/VerseHero';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { CHURCH_BUILDING_IMAGE_URL, openBeliefs } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS, shouldUseStackedPillarLayout } from '@/constants/Layout';
-import { useTextSize } from '@/constants/TextSizeContext';
+import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { AppIcon } from '@/components/AppIcon';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,12 +18,6 @@ export default function AboutSDAScreen() {
   const { backTo } = useLocalSearchParams();
   const theme = useAppTheme();
   const DocumentStyles = useDocumentStyles();
-  const { textScale } = useTextSize();
-  const { fontScale, width } = useWindowDimensions();
-  const stackPillars = shouldUseStackedPillarLayout(
-    width,
-    Math.max(1, fontScale * textScale),
-  );
   const insets = useSafeAreaInsets();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
 
@@ -397,7 +390,6 @@ export default function AboutSDAScreen() {
           <View
             style={[
               styles.pillarContainer,
-              stackPillars && styles.stackedPillarContainer,
             ]}
           >
             {(labels as any).pillarItems.map((item: any, index: number) => (
@@ -405,7 +397,6 @@ export default function AboutSDAScreen() {
                 key={index}
                 style={[
                   styles.pillarCard,
-                  stackPillars && styles.stackedPillarCard,
                   {
                     backgroundColor: theme.colors.surface,
                     borderWidth: 1,
@@ -422,6 +413,8 @@ export default function AboutSDAScreen() {
                   />
                   <Text
                     variant="labelSmall"
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
                     style={[styles.pillarText, { color: theme.colors.onSurface }]}
                   >
                     {item.title}
@@ -452,6 +445,7 @@ export default function AboutSDAScreen() {
                 key={index}
                 style={[
                   DocumentStyles.card,
+                  styles.beliefCard,
                   {
                     backgroundColor: theme.colors.surface,
                     borderWidth: 1,
@@ -468,6 +462,8 @@ export default function AboutSDAScreen() {
                   />
                   <Text
                     variant="titleMedium"
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
                     style={[styles.cardTitleText, { color: theme.colors.onSurface }]}
                   >
                     {item.title}
@@ -493,7 +489,7 @@ export default function AboutSDAScreen() {
             onPress={openBeliefs}
             buttonColor={theme.colors.primary}
             textColor={theme.colors.onPrimary}
-            style={DocumentStyles.button}
+            style={[DocumentStyles.button, styles.beliefsButton]}
             icon="open-in-new"
           >
             {labels.learnMore}
@@ -518,6 +514,12 @@ const styles = StyleSheet.create({
   cardTitleText: {
     marginLeft: 12,
     fontWeight: 'bold',
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  beliefCard: {
+    overflow: 'hidden',
   },
   cardContent: {
     paddingHorizontal: 16,
@@ -532,16 +534,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 4,
   },
-  stackedPillarContainer: {
-    flexDirection: 'column',
-    gap: 12,
-  },
-  stackedPillarCard: {
-    flexBasis: 'auto',
-    flexGrow: 0,
-    flexShrink: 0,
-    marginHorizontal: 0,
+  beliefsButton: {
+    alignSelf: 'center',
     width: '100%',
+    marginHorizontal: 16,
   },
   pillarContent: {
     padding: 12,

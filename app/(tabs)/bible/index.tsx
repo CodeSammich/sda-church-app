@@ -1,10 +1,10 @@
-import { UIStateContext } from '@/components/GlobalHeader';
 import { AppIcon } from '@/components/AppIcon';
+import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Stack, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,14 +19,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import {
-  Divider,
-  IconButton,
-  Modal,
-  Portal,
-  Switch,
-  Text,
-} from 'react-native-paper';
+import { Divider, IconButton, Modal, Portal, Switch, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -41,6 +34,15 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import {
+  ANDROID_AUDIO_GUIDANCE_INTERRUPTION_THRESHOLD,
+  getAndroidAppsSettingsIntent,
+  getCurrentAndroidAudioBrowser,
+} from '@/services/AndroidBackgroundAudioGuidance';
+import {
+  useBibleAudioPlayer,
+  useBibleAudioPlayerStatus,
+} from '@/services/BibleAudioPlayer';
+import {
   activateBibleAudioLockScreen,
   buildBibleAudioQueue,
   configureBibleAudioPlayback,
@@ -50,10 +52,6 @@ import {
   getOrderedBibleAudioReaders,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
-import {
-  useBibleAudioPlayer,
-  useBibleAudioPlayerStatus,
-} from '@/services/BibleAudioPlayer';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
 import {
   getParallelStructuralContent,
@@ -64,15 +62,10 @@ import {
   getBibleVersePinyin,
   isChineseBibleTranslation,
 } from '@/services/BiblePinyinService';
-import {
-  ANDROID_AUDIO_GUIDANCE_INTERRUPTION_THRESHOLD,
-  getAndroidAppsSettingsIntent,
-  getCurrentAndroidAudioBrowser,
-} from '@/services/AndroidBackgroundAudioGuidance';
 import * as BibleService from '@/services/BibleService';
 import {
-  groupSavedVerses,
   getSavedVerseKey,
+  groupSavedVerses,
   loadSavedVerses,
   SavedVerseGroup,
   SavedVerseReference,
@@ -83,9 +76,9 @@ import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 import {
   createReaderStyles,
-  getBulletinVerseScrollOffset,
   getBibleDockLayout,
   getBibleDockViewportLayout,
+  getBulletinVerseScrollOffset,
 } from '@/styles/ReaderStyles';
 
 const FOOTER_PADDING_GUTTER = 34;
@@ -97,6 +90,9 @@ type SleepTimerSetting = 5 | 10 | 15 | 30 | 60 | 120 | 'chapter' | null;
 const BIBLE_TRANS_KEY = BibleService.BIBLE_TRANSLATION_STORAGE_KEY;
 const BIBLE_BOOK_KEY = 'user-bible-book';
 const BIBLE_CHAPTER_KEY = 'user-bible-chapter';
+// Keep jumped-to verses below the translation/menu controls instead of
+// positioning them flush against the top edge of the reader.
+const VERSE_SCROLL_TOP_OFFSET = 96;
 const BIBLE_AUDIO_READERS_KEY = 'user-bible-audio-readers';
 const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
@@ -123,10 +119,7 @@ const getSavedVerseRangeLabel = (
     ? String(verse.verseStart)
     : `${verse.verseStart}-${verse.verseEnd}`;
 
-const savedChapterCache = new Map<
-  string,
-  Promise<BibleService.TranslationBookChapter>
->();
+const savedChapterCache = new Map<string, Promise<BibleService.TranslationBookChapter>>();
 
 const getSavedChapter = (translationId: string, bookId: string, chapter: number) => {
   const cacheKey = `${translationId}:${bookId}:${chapter}`;
@@ -184,7 +177,8 @@ const uiLabels = {
     chooseNarrator: 'Choose narrator',
     audioSettings: 'Audio settings',
     audioSource: 'Preferred source',
-    automaticFallback: 'If this source is unavailable, the next source is tried automatically.',
+    automaticFallback:
+      'If this source is unavailable, the next source is tried automatically.',
     backgroundPlayback: 'Background playback on Android',
     backgroundPlaybackHelp: 'Fix interrupted background playback',
     backgroundAudioTitle: 'Experiencing interrupted audio?',
@@ -196,7 +190,8 @@ const uiLabels = {
       'Adaptive Connectivity and automatic mobile-network switching do not need to be changed for this fix.',
     notNow: 'Not now',
     openBrowserSettings: 'Open Android app settings',
-    settingsFallback: 'If Android does not open the browser settings, follow the steps above.',
+    settingsFallback:
+      'If Android does not open the browser settings, follow the steps above.',
     audioUnavailable: 'Audio unavailable for this chapter',
     back10: 'Back 10 seconds',
     forward30: 'Forward 30 seconds',
@@ -271,8 +266,7 @@ const uiLabels = {
       'Android 可能會在鎖定螢幕後暫停瀏覽器音訊。若要提高播放穩定性，請允許 {browser} 在背景使用電池。',
     backgroundAudioSteps:
       '開啟 Android「設定」→「應用程式」→「{browser}」→「應用程式耗電量」（或「電池」）→「允許背景使用」→「不受限制」。不同手機的名稱可能略有不同。',
-    backgroundAudioNetworkNote:
-      '此修正不需要更改「自動調整連線」或自動切換行動網路。',
+    backgroundAudioNetworkNote: '此修正不需要更改「自動調整連線」或自動切換行動網路。',
     notNow: '稍後',
     openBrowserSettings: '開啟 Android 應用程式設定',
     settingsFallback: '如果 Android 沒有開啟瀏覽器設定，請依照上方步驟操作。',
@@ -350,8 +344,7 @@ const uiLabels = {
       'Android 可能会在锁定屏幕后暂停浏览器音频。若要提高播放稳定性，请允许 {browser} 在后台使用电池。',
     backgroundAudioSteps:
       '打开 Android“设置”→“应用”→“{browser}”→“应用耗电量”（或“电池”）→“允许后台使用”→“不受限制”。不同手机的名称可能略有不同。',
-    backgroundAudioNetworkNote:
-      '此修复不需要更改“自适应连接”或自动切换移动网络。',
+    backgroundAudioNetworkNote: '此修复不需要更改“自适应连接”或自动切换移动网络。',
     notNow: '稍后',
     openBrowserSettings: '打开 Android 应用设置',
     settingsFallback: '如果 Android 没有打开浏览器设置，请按照上方步骤操作。',
@@ -410,16 +403,12 @@ const uiLabels = {
     sortRecentlySaved: 'Guardados recientemente',
     sortBibleOrder: 'Orden bíblico',
     selectedVersesLabel: (count: number) =>
-      count === 1
-        ? '1 versículo seleccionado'
-        : `${count} versículos seleccionados`,
+      count === 1 ? '1 versículo seleccionado' : `${count} versículos seleccionados`,
     verseInteractionHint:
       'Toca un versículo para ver detalles • Mantén pulsado para seleccionar',
     verseHelpTitle: 'Uso de los versículos',
-    verseHelpTap:
-      'Toca un versículo para ver detalles, el texto original y las notas.',
-    verseHelpHold:
-      'Mantén pulsado un versículo para comenzar a seleccionar varios.',
+    verseHelpTap: 'Toca un versículo para ver detalles, el texto original y las notas.',
+    verseHelpHold: 'Mantén pulsado un versículo para comenzar a seleccionar varios.',
     verseHelpSelect:
       'Durante la selección, toca otros versículos para añadirlos o quitarlos. Después, guárdalos o compártelos desde la barra.',
     audioPlayer: 'Audio de la Biblia',
@@ -428,7 +417,8 @@ const uiLabels = {
     chooseNarrator: 'Elegir narrador',
     audioSettings: 'Ajustes de audio',
     audioSource: 'Fuente preferida',
-    automaticFallback: 'Si esta fuente no está disponible, se probará la siguiente automáticamente.',
+    automaticFallback:
+      'Si esta fuente no está disponible, se probará la siguiente automáticamente.',
     backgroundPlayback: 'Reproducción en segundo plano en Android',
     backgroundPlaybackHelp: 'Corregir interrupciones en segundo plano',
     backgroundAudioTitle: '¿Se interrumpe el audio?',
@@ -440,7 +430,8 @@ const uiLabels = {
       'No es necesario cambiar la Conectividad adaptativa ni el cambio automático a la red móvil.',
     notNow: 'Ahora no',
     openBrowserSettings: 'Abrir ajustes de aplicaciones',
-    settingsFallback: 'Si Android no abre los ajustes del navegador, sigue los pasos anteriores.',
+    settingsFallback:
+      'Si Android no abre los ajustes del navegador, sigue los pasos anteriores.',
     audioUnavailable: 'Audio no disponible para este capítulo',
     back10: 'Retroceder 10 segundos',
     forward30: 'Avanzar 30 segundos',
@@ -530,11 +521,12 @@ export default function BibleScreen() {
         paramReferenceRequest || ''
       }`
     : null;
-  const scriptureParamSignature = paramBookId && paramChapter
-    ? `${paramTransId || ''}:${paramBookId}:${paramChapter}:${paramVerseStart || ''}:${
-        paramVerseEnd || ''
-      }:${paramReferenceRequest || ''}`
-    : null;
+  const scriptureParamSignature =
+    paramBookId && paramChapter
+      ? `${paramTransId || ''}:${paramBookId}:${paramChapter}:${paramVerseStart || ''}:${
+          paramVerseEnd || ''
+        }:${paramReferenceRequest || ''}`
+      : null;
   const getTranslationLabel = (
     translation: (typeof BibleService.SUPPORTED_TRANSLATIONS)[number],
   ) => {
@@ -566,20 +558,20 @@ export default function BibleScreen() {
       BibleService.SUPPORTED_TRANSLATIONS[0]
     );
   });
-  const [selectedSupportingTranslation, setSelectedSupportingTranslation] =
-    useState(() => {
+  const [selectedSupportingTranslation, setSelectedSupportingTranslation] = useState(
+    () => {
       const defaultId = BibleService.getDefaultSupportingTranslationId(language);
       return (
         BibleService.SUPPORTED_TRANSLATIONS.find((t) => t.id === defaultId) ||
         BibleService.SUPPORTED_TRANSLATIONS[0]
       );
-    });
+    },
+  );
   const [dualLanguageEnabled, setDualLanguageEnabled] = useState(true);
   const [book, setBook] = useState<BibleService.TranslationBook | null>(null);
   const [chapterNum, setChapterNum] = useState(1);
   const supportingTranslation =
-    dualLanguageEnabled &&
-    selectedSupportingTranslation.id !== supportedTranslation.id
+    dualLanguageEnabled && selectedSupportingTranslation.id !== supportedTranslation.id
       ? selectedSupportingTranslation
       : null;
 
@@ -671,18 +663,17 @@ export default function BibleScreen() {
           savedShowPinyin,
           savedSupportingTranslationId,
           savedDualLanguage,
-        ] =
-          await Promise.all([
-            AsyncStorage.getItem(BIBLE_TRANS_KEY),
-            AsyncStorage.getItem(BIBLE_BOOK_KEY),
-            AsyncStorage.getItem(BIBLE_CHAPTER_KEY),
-            AsyncStorage.getItem(BIBLE_AUDIO_READERS_KEY),
-            AsyncStorage.getItem(BIBLE_AUDIO_SOURCES_KEY),
-            loadSavedVerses(),
-            AsyncStorage.getItem(BIBLE_SHOW_PINYIN_KEY),
-            AsyncStorage.getItem(BIBLE_SUPPORTING_TRANSLATION_KEY),
-            AsyncStorage.getItem(BIBLE_DUAL_LANGUAGE_KEY),
-          ]);
+        ] = await Promise.all([
+          AsyncStorage.getItem(BIBLE_TRANS_KEY),
+          AsyncStorage.getItem(BIBLE_BOOK_KEY),
+          AsyncStorage.getItem(BIBLE_CHAPTER_KEY),
+          AsyncStorage.getItem(BIBLE_AUDIO_READERS_KEY),
+          AsyncStorage.getItem(BIBLE_AUDIO_SOURCES_KEY),
+          loadSavedVerses(),
+          AsyncStorage.getItem(BIBLE_SHOW_PINYIN_KEY),
+          AsyncStorage.getItem(BIBLE_SUPPORTING_TRANSLATION_KEY),
+          AsyncStorage.getItem(BIBLE_DUAL_LANGUAGE_KEY),
+        ]);
 
         if (savedTransId) {
           const trans = BibleService.SUPPORTED_TRANSLATIONS.find(
@@ -780,18 +771,9 @@ export default function BibleScreen() {
         BIBLE_SUPPORTING_TRANSLATION_KEY,
         selectedSupportingTranslation.id,
       ),
-      AsyncStorage.setItem(
-        BIBLE_DUAL_LANGUAGE_KEY,
-        String(dualLanguageEnabled),
-      ),
-    ]).catch((e) =>
-      console.error('Failed to save Bible dual-language preferences:', e),
-    );
-  }, [
-    dualLanguageEnabled,
-    isPersistenceLoaded,
-    selectedSupportingTranslation.id,
-  ]);
+      AsyncStorage.setItem(BIBLE_DUAL_LANGUAGE_KEY, String(dualLanguageEnabled)),
+    ]).catch((e) => console.error('Failed to save Bible dual-language preferences:', e));
+  }, [dualLanguageEnabled, isPersistenceLoaded, selectedSupportingTranslation.id]);
 
   // An app-language choice takes precedence over any Bible translation chosen
   // before it. A later translation choice in this reader is persisted normally
@@ -834,9 +816,7 @@ export default function BibleScreen() {
 
     if (!paramTransId) {
       handledTranslationParamSignature.current = null;
-    } else if (
-      handledTranslationParamSignature.current !== translationParamSignature
-    ) {
+    } else if (handledTranslationParamSignature.current !== translationParamSignature) {
       handledTranslationParamSignature.current = translationParamSignature;
       const trans = BibleService.SUPPORTED_TRANSLATIONS.find(
         (t: any) => t.id === paramTransId,
@@ -895,15 +875,9 @@ export default function BibleScreen() {
 
     pendingScriptureRange.current = {
       start,
-      end:
-        Number.isInteger(requestedEnd) && requestedEnd >= start ? requestedEnd : start,
+      end: Number.isInteger(requestedEnd) && requestedEnd >= start ? requestedEnd : start,
     };
-  }, [
-    isPersistenceLoaded,
-    scriptureParamSignature,
-    paramVerseStart,
-    paramVerseEnd,
-  ]);
+  }, [isPersistenceLoaded, scriptureParamSignature, paramVerseStart, paramVerseEnd]);
 
   // Keep the Bible dock visible at the bottom of the screen at all times.
   // We only animate the height so it "drops" down to the bottom when the tab bar hides.
@@ -928,8 +902,7 @@ export default function BibleScreen() {
   const [audioDurationMillis, setAudioDurationMillis] = useState(0);
   const [audioBufferedMillis, setAudioBufferedMillis] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [sleepTimerSetting, setSleepTimerSetting] =
-    useState<SleepTimerSetting>(null);
+  const [sleepTimerSetting, setSleepTimerSetting] = useState<SleepTimerSetting>(null);
   const [sleepTimerVisible, setSleepTimerVisible] = useState(false);
   const [audioSettingsVisible, setAudioSettingsVisible] = useState(false);
   const [backgroundAudioGuidanceVisible, setBackgroundAudioGuidanceVisible] =
@@ -946,12 +919,19 @@ export default function BibleScreen() {
   const audioScrubberWidth = useRef(1);
   const sleepTimerSettingRef = useRef<SleepTimerSetting>(null);
   const sleepTimerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const safePauseAudio = () => {
+    try {
+      audioPlayer.pause();
+    } catch (error) {
+      // expo-audio may release its native shared object before a delayed
+      // timer/route cleanup reaches this component. Treat that as already
+      // paused instead of surfacing a native cast error to the user.
+      console.warn('Audio player was already released while pausing', error);
+    }
+  };
   const backgroundAudioGuidanceCheckedRef = useRef(false);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
-  const androidAudioBrowser = useMemo(
-    () => getCurrentAndroidAudioBrowser(),
-    [],
-  );
+  const androidAudioBrowser = useMemo(() => getCurrentAndroidAudioBrowser(), []);
   const androidAudioBrowserName = androidAudioBrowser?.name || null;
   const chapterAudioLinks = chapterData?.thisChapterAudioLinks;
   // Ordering the URLs is metadata-only. The selected recording is still sent
@@ -978,8 +958,7 @@ export default function BibleScreen() {
   const availableAudioSources = rawSelectedAudioUrls.filter(
     (url, index, urls) =>
       urls.findIndex(
-        (candidate) =>
-          getBibleAudioSourceId(candidate) === getBibleAudioSourceId(url),
+        (candidate) => getBibleAudioSourceId(candidate) === getBibleAudioSourceId(url),
       ) === index,
   );
   const savedAudioSource = selectedAudioSources[audioSourcePreferenceKey];
@@ -1047,18 +1026,21 @@ export default function BibleScreen() {
     }
 
     if (typeof setting === 'number') {
-      sleepTimerTimeoutRef.current = setTimeout(() => {
-        setShouldAutoPlay(false);
-        try {
-          audioPlayer.pause();
-        } catch (e) {
-          console.error('Sleep timer pause error:', e);
-        } finally {
-          sleepTimerTimeoutRef.current = null;
-          sleepTimerSettingRef.current = null;
-          setSleepTimerSetting(null);
-        }
-      }, setting * 60 * 1000);
+      sleepTimerTimeoutRef.current = setTimeout(
+        () => {
+          setShouldAutoPlay(false);
+          try {
+            safePauseAudio();
+          } catch (e) {
+            console.error('Sleep timer pause error:', e);
+          } finally {
+            sleepTimerTimeoutRef.current = null;
+            sleepTimerSettingRef.current = null;
+            setSleepTimerSetting(null);
+          }
+        },
+        setting * 60 * 1000,
+      );
     }
   };
 
@@ -1069,9 +1051,7 @@ export default function BibleScreen() {
       currentPlayerStatus.isLoaded && currentPlayerStatus.duration > 0;
     setIsAudioLoading(
       loadedAudioUrlRef.current !== null &&
-        (!isCurrentSourceReady ||
-          audioStatus.isBuffering ||
-          !!audioStatus.loadError),
+        (!isCurrentSourceReady || audioStatus.isBuffering || !!audioStatus.loadError),
     );
     setIsPlaying(audioStatus.playing);
     setAudioDurationMillis(audioStatus.duration * 1000);
@@ -1117,9 +1097,7 @@ export default function BibleScreen() {
         return;
       }
 
-      const activeBook = books.find(
-        (candidate) => candidate.id === activeChapter.bookId,
-      );
+      const activeBook = books.find((candidate) => candidate.id === activeChapter.bookId);
       if (!activeBook) return;
 
       lastSyncedAudioChapterRef.current = activeKey;
@@ -1131,8 +1109,7 @@ export default function BibleScreen() {
     syncVisibleChapter();
     if (typeof document === 'undefined') return;
     document.addEventListener('visibilitychange', syncVisibleChapter);
-    return () =>
-      document.removeEventListener('visibilitychange', syncVisibleChapter);
+    return () => document.removeEventListener('visibilitychange', syncVisibleChapter);
   }, [
     audioStatus.activeChapter?.translationId,
     audioStatus.activeChapter?.bookId,
@@ -1191,8 +1168,7 @@ export default function BibleScreen() {
       audioFallbackTimeoutRef.current = setTimeout(() => {
         if (
           attempt !== audioLoadAttemptRef.current ||
-          (audioPlayer.currentStatus.isLoaded &&
-            audioPlayer.currentStatus.duration > 0)
+          (audioPlayer.currentStatus.isLoaded && audioPlayer.currentStatus.duration > 0)
         ) {
           return;
         }
@@ -1226,10 +1202,7 @@ export default function BibleScreen() {
   };
 
   const offerBackgroundAudioGuidance = () => {
-    if (
-      !androidAudioBrowserName ||
-      backgroundAudioGuidanceCheckedRef.current
-    ) {
+    if (!androidAudioBrowserName || backgroundAudioGuidanceCheckedRef.current) {
       return;
     }
     backgroundAudioGuidanceCheckedRef.current = true;
@@ -1250,7 +1223,7 @@ export default function BibleScreen() {
     if (isPlaying) {
       clearAudioFallbackTimeout();
       audioLoadAttemptRef.current += 1;
-      audioPlayer.pause();
+      safePauseAudio();
       return;
     }
 
@@ -1269,9 +1242,18 @@ export default function BibleScreen() {
   const unloadAudio = () => {
     clearAudioFallbackTimeout();
     audioLoadAttemptRef.current += 1;
-    audioPlayer.pause();
-    audioPlayer.clearLockScreenControls();
-    audioPlayer.replace(null);
+    safePauseAudio();
+    if (Platform.OS === 'web') {
+      // expo-audio's native player manages lock-screen controls through its
+      // native lifecycle. The explicit cleanup method belongs to the web
+      // Media Session adapter; calling it on the native module makes older
+      // binaries reject the player argument at runtime.
+      audioPlayer.clearLockScreenControls();
+      // The native AudioPlayer accepts only a real source in replace(). The
+      // browser adapter supports null as its reset operation, so keep that
+      // fallback isolated to the PWA path.
+      audioPlayer.replace(null);
+    }
     loadedAudioUrlRef.current = null;
     isScrubbingRef.current = false;
     setIsPlaying(false);
@@ -1321,10 +1303,7 @@ export default function BibleScreen() {
   };
 
   const seekAudio = async (nextPosition: number) => {
-    const clampedPosition = Math.max(
-      0,
-      Math.min(audioDurationMillis, nextPosition),
-    );
+    const clampedPosition = Math.max(0, Math.min(audioDurationMillis, nextPosition));
     setAudioPositionMillis(clampedPosition);
     try {
       await audioPlayer.seekTo(clampedPosition / 1000);
@@ -1441,11 +1420,7 @@ export default function BibleScreen() {
     setOriginalVerseError(false);
     setOriginalVerseLoading(true);
 
-    BibleService.fetchOriginalLanguageVerse(
-      book.id,
-      chapterNum,
-      selectedVerseNum,
-    )
+    BibleService.fetchOriginalLanguageVerse(book.id, chapterNum, selectedVerseNum)
       .then((verse) => {
         if (!cancelled) setOriginalVerse(verse);
       })
@@ -1566,11 +1541,7 @@ export default function BibleScreen() {
 
     if (!supportingTranslation || !book) return;
 
-    void loadBibleChapterWithRetry(
-      supportingTranslation.id,
-      book.id,
-      chapterNum,
-    )
+    void loadBibleChapterWithRetry(supportingTranslation.id, book.id, chapterNum)
       .then((data) => {
         if (!cancelled && attempt === supportingChapterLoadAttemptRef.current) {
           setSupportingChapterData(data);
@@ -1769,7 +1740,7 @@ export default function BibleScreen() {
       setTimeout(() => {
         const verseY = versePositions.current[savedGroup.verseStart];
         if (verseY !== undefined) {
-          scrollRef.current?.scrollTo({ y: Math.max(0, verseY - 20), animated: true });
+          scrollRef.current?.scrollTo({ y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET), animated: true });
         }
       }, 250);
     }
@@ -1881,29 +1852,15 @@ export default function BibleScreen() {
     audioPlayer.setRemoteChapterHandlers?.({
       onNext: (activeChapter) => {
         setShouldAutoPlay(true);
-        navigateToChapter(
-          'next',
-          activeChapter?.bookId,
-          activeChapter?.chapter,
-        );
+        navigateToChapter('next', activeChapter?.bookId, activeChapter?.chapter);
       },
       onPrevious: (activeChapter) => {
         setShouldAutoPlay(true);
-        navigateToChapter(
-          'prev',
-          activeChapter?.bookId,
-          activeChapter?.chapter,
-        );
+        navigateToChapter('prev', activeChapter?.bookId, activeChapter?.chapter);
       },
     });
     return () => audioPlayer.setRemoteChapterHandlers?.();
-  }, [
-    audioPlayer,
-    isPlaying,
-    book?.id,
-    chapterNum,
-    books,
-  ]);
+  }, [audioPlayer, isPlaying, book?.id, chapterNum, books]);
 
   /** Hides the surrounding app chrome while keeping Bible controls visible. */
   const handleScroll = (event: any) => {
@@ -1958,7 +1915,7 @@ export default function BibleScreen() {
     const timeout = setTimeout(() => {
       const verseY = versePositions.current[verseNumber];
       if (verseY !== undefined) {
-        scrollRef.current?.scrollTo({ y: Math.max(0, verseY - 20), animated: true });
+        scrollRef.current?.scrollTo({ y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET), animated: true });
         pendingSavedVerseScroll.current = null;
       }
     }, 250);
@@ -1993,7 +1950,7 @@ export default function BibleScreen() {
         const scrollY =
           paramBackTo === '/home/bulletin'
             ? getBulletinVerseScrollOffset(verseY, viewportHeight)
-            : Math.max(0, verseY - 20);
+            : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
         scrollRef.current?.scrollTo({ y: scrollY, animated: true });
       }
       pendingScriptureRange.current = null;
@@ -2136,8 +2093,7 @@ export default function BibleScreen() {
                   isFootnoted
                     ? {
                         textDecorationLine: 'underline',
-                        textDecorationColor:
-                          theme.colors.readerColors.footnoteIndicator,
+                        textDecorationColor: theme.colors.readerColors.footnoteIndicator,
                       }
                     : undefined,
                   isBold && { fontWeight: 'bold' },
@@ -2186,7 +2142,7 @@ export default function BibleScreen() {
     // Formatted Text (Poetry)
     if ('text' in item) {
       const prefix =
-        (!suppressPoeticLineBreak &&
+        !suppressPoeticLineBreak &&
         isPoetic &&
         foundPreviousContent &&
         !isLineContinuation &&
@@ -2194,7 +2150,7 @@ export default function BibleScreen() {
         i > 0 &&
         !prevIsLineBreak
           ? '\n'
-          : '');
+          : '';
 
       return renderText(prefix + contentText);
     }
@@ -2353,9 +2309,9 @@ export default function BibleScreen() {
                 {primaryText}
               </Text>
             )}
-            {supportingText && supportingTranslation &&
-              (showPinyin &&
-              isChineseBibleTranslation(supportingTranslation.id) ? (
+            {supportingText &&
+              supportingTranslation &&
+              (showPinyin && isChineseBibleTranslation(supportingTranslation.id) ? (
                 <PinyinRubyText
                   bold
                   numberColor={theme.colors.onBackground}
@@ -2412,9 +2368,9 @@ export default function BibleScreen() {
                 )}
               </Text>
             )}
-            {supportingText && supportingTranslation &&
-              (showPinyin &&
-              isChineseBibleTranslation(supportingTranslation.id) ? (
+            {supportingText &&
+              supportingTranslation &&
+              (showPinyin && isChineseBibleTranslation(supportingTranslation.id) ? (
                 <PinyinRubyText
                   numberColor={theme.colors.onBackground}
                   pinyinColor={theme.colors.tertiary}
@@ -2456,9 +2412,9 @@ export default function BibleScreen() {
             : null;
         const showSupportingRubyPinyin = Boolean(
           supportingVerseText &&
-            supportingTranslation &&
-            showPinyin &&
-            isChineseBibleTranslation(supportingTranslation.id),
+          supportingTranslation &&
+          showPinyin &&
+          isChineseBibleTranslation(supportingTranslation.id),
         );
 
         // To support right-aligned liturgical markers (Selah, Higgaion) while
@@ -2506,11 +2462,7 @@ export default function BibleScreen() {
             verseElements.push(
               renderItemContent(item, i, content.content, hasFootnotes, isSelected),
             );
-          } else if (
-            typeof item === 'object' &&
-            item !== null &&
-            'lineBreak' in item
-          ) {
+          } else if (typeof item === 'object' && item !== null && 'lineBreak' in item) {
             flushBuffer(`text-line-break-${i}`);
           } else {
             if (
@@ -2563,8 +2515,7 @@ export default function BibleScreen() {
         };
 
         supportingVerse?.content.forEach((item, i) => {
-          const textValue =
-            typeof item === 'string' ? item : (item as any).text || '';
+          const textValue = typeof item === 'string' ? item : (item as any).text || '';
           const isSelah = supportingTranslation
             ? BibleService.isSelahMarker(supportingTranslation.id, textValue)
             : false;
@@ -2585,11 +2536,7 @@ export default function BibleScreen() {
                 ],
               ),
             );
-          } else if (
-            typeof item === 'object' &&
-            item !== null &&
-            'lineBreak' in item
-          ) {
+          } else if (typeof item === 'object' && item !== null && 'lineBreak' in item) {
             flushSupportingBuffer(`supporting-line-break-${i}`);
           } else {
             if (
@@ -2694,24 +2641,21 @@ export default function BibleScreen() {
                   supportingTranslation &&
                   supportingVerseText &&
                   (showSupportingRubyPinyin ? (
-                <PinyinRubyText
-                  bold={isSelected}
-                  pinyinColor={theme.colors.tertiary}
-                  numberColor={theme.colors.onBackground}
-                  rightAlignedLines={supportingVerseText
-                    .split('\n')
-                    .map((line) =>
-                      BibleService.isSelahMarker(
-                        supportingTranslation.id,
-                        line,
-                      ),
-                    )}
-                  text={supportingVerseText}
-                  textColor={theme.colors.onBackground}
-                  textScale={textScale}
-                  variant="supporting"
-                />
-              ) : (
+                    <PinyinRubyText
+                      bold={isSelected}
+                      pinyinColor={theme.colors.tertiary}
+                      numberColor={theme.colors.onBackground}
+                      rightAlignedLines={supportingVerseText
+                        .split('\n')
+                        .map((line) =>
+                          BibleService.isSelahMarker(supportingTranslation.id, line),
+                        )}
+                      text={supportingVerseText}
+                      textColor={theme.colors.onBackground}
+                      textScale={textScale}
+                      variant="supporting"
+                    />
+                  ) : (
                     <View
                       accessible
                       accessibilityLabel={`${getTranslationLabel(supportingTranslation)}: ${supportingVerseText}`}
@@ -2770,7 +2714,7 @@ export default function BibleScreen() {
   const handleBibleVerseSearchPress = (verseNumber: number) => {
     const verseY = versePositions.current[verseNumber];
     if (verseY !== undefined) {
-      scrollRef.current?.scrollTo({ y: Math.max(0, verseY - 20), animated: true });
+      scrollRef.current?.scrollTo({ y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET), animated: true });
     }
   };
 
@@ -2778,7 +2722,7 @@ export default function BibleScreen() {
   const dockExtraHeight =
     (hasChapterAudio ? dockLayout.audioDockHeight : 0) +
     (isSelectionActive ? dockLayout.selectionBarHeight : 0);
-  const fullDockContentHeight = dockLayout.dockHeight + dockExtraHeight;
+  const fullDockContentHeight = dockLayout.chapterDockHeight + dockExtraHeight;
   const dockViewportLayout = getBibleDockViewportLayout({
     bottomInset: bottomDockInset,
     bottomTabHeight: bottomTabContentHeight,
@@ -2789,20 +2733,18 @@ export default function BibleScreen() {
   });
   const animatedControlDockHeight = menuAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [
-      dockViewportLayout.hiddenHeight,
-      dockViewportLayout.visibleHeight,
-    ],
+    outputRange: [dockViewportLayout.hiddenHeight, dockViewportLayout.visibleHeight],
   });
   const animatedDockBottomClearance = menuAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [
-      bottomDockInset,
-      bottomDockInset + bottomTabContentHeight,
-    ],
+    outputRange: [bottomDockInset, bottomDockInset],
   });
   const dockNeedsVerticalScroll =
     dockViewportLayout.hiddenNeedsScroll || dockViewportLayout.visibleNeedsScroll;
+  // Keep the book/chapter/verse controls between the navigation arrows. Other
+  // dock controls may still stack at large text sizes, but these three compact
+  // selectors remain a single horizontal navigation row.
+  const stackChapterControls = false;
 
   const renderPreviousChapterButton = () =>
     !isFirstChapter ? (
@@ -2834,16 +2776,20 @@ export default function BibleScreen() {
     <View
       style={[
         ReaderStyles.pillsContainer,
-        dockLayout.stackControls && styles.stackedPillsContainer,
+        stackChapterControls && styles.stackedPillsContainer,
       ]}
     >
       <TouchableOpacity
         style={[
           ReaderStyles.pill,
-          dockLayout.stackControls && styles.stackedPill,
+          stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surfaceVariant,
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.outline,
+            borderWidth: 1,
             minHeight: dockLayout.controlHeight,
+            flexGrow: 50,
+            flexBasis: 0,
           },
         ]}
         onPress={() => setModalType('book')}
@@ -2870,17 +2816,21 @@ export default function BibleScreen() {
       <TouchableOpacity
         style={[
           ReaderStyles.pill,
-          dockLayout.stackControls && styles.stackedPill,
+          stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surfaceVariant,
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.outline,
+            borderWidth: 1,
             minHeight: dockLayout.controlHeight,
+            flexGrow: 35,
+            flexBasis: 0,
           },
         ]}
         onPress={() => setModalType('chapter')}
         accessibilityRole="button"
         accessibilityLabel={`${labels.chapter}: ${chapterNum}`}
       >
-        <Text pointerEvents="none" style={ReaderStyles.pillText}>
+        <Text pointerEvents="none" numberOfLines={1} ellipsizeMode="tail" style={ReaderStyles.pillText}>
           {chapterNum}
         </Text>
         <AppIcon
@@ -2895,17 +2845,21 @@ export default function BibleScreen() {
       <TouchableOpacity
         style={[
           ReaderStyles.pill,
-          dockLayout.stackControls && styles.stackedPill,
+          stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surfaceVariant,
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.outline,
+            borderWidth: 1,
             minHeight: dockLayout.controlHeight,
+            flexGrow: 15,
+            flexBasis: 0,
           },
         ]}
         onPress={() => setModalType('verse')}
         accessibilityRole="button"
         accessibilityLabel={labels.verse}
       >
-        <Text pointerEvents="none" style={ReaderStyles.pillText}>
+        <Text pointerEvents="none" numberOfLines={1} ellipsizeMode="tail" style={ReaderStyles.pillText}>
           {labels.verse}
         </Text>
         <AppIcon
@@ -2923,12 +2877,16 @@ export default function BibleScreen() {
     <View
       style={[
         ReaderStyles.dockInner,
-        dockLayout.stackControls && styles.stackedDockInner,
-        { height: dockLayout.dockHeight },
+        stackChapterControls && styles.stackedDockInner,
+        {
+          height: stackChapterControls
+            ? dockLayout.dockHeight
+            : dockLayout.chapterDockHeight,
+        },
         fullscreenEdgeInset > 0 && { paddingHorizontal: fullscreenEdgeInset },
       ]}
     >
-      {dockLayout.stackControls ? (
+      {stackChapterControls ? (
         <>
           {renderChapterSelectors()}
           <View style={styles.stackedNavigationRow}>
@@ -2960,9 +2918,7 @@ export default function BibleScreen() {
               supportedTranslation,
               ...(supportingTranslation ? [supportingTranslation] : []),
             ].map((translation) => ({
-              badge: BibleService.getBibleTranslationLanguageBadge(
-                translation.lang,
-              ),
+              badge: BibleService.getBibleTranslationLanguageBadge(translation.lang),
               label: translation.shortName,
             })),
             bibleTranslationAccessibilityLabel: supportingTranslation
@@ -2976,8 +2932,6 @@ export default function BibleScreen() {
               setTranslationSelectionRole('primary');
               setModalType('translation');
             },
-            onBibleVerseHelpPress: () => setModalType('verse-help'),
-            bibleVerseHelpLabel: labels.verseHelpTitle,
             onBibleSavedVersesPress: () => setModalType('saved'),
             bibleSavedVerseCount: savedVerses.length,
             bibleSavedVersesLabel: labels.savedVerses,
@@ -2996,8 +2950,7 @@ export default function BibleScreen() {
           ReaderStyles.scrollContent,
           {
             paddingTop: headerHeight + 10,
-            paddingBottom:
-              dockViewportLayout.visibleHeight + FOOTER_PADDING_GUTTER,
+            paddingBottom: dockViewportLayout.visibleHeight + FOOTER_PADDING_GUTTER,
           },
         ]}
       >
@@ -3022,7 +2975,6 @@ export default function BibleScreen() {
           </>
         )}
       </ScrollView>
-
 
       {/* Control Dock: Sticky Bottom Navigation & Action Bar */}
       <Animated.View
@@ -3054,294 +3006,292 @@ export default function BibleScreen() {
           nestedScrollEnabled
           showsVerticalScrollIndicator={dockNeedsVerticalScroll}
         >
-
-        {/* Selection Actions Bar (Integrated) */}
-        {isSelectionActive && (
-          <View>
-            <View
-              style={[
-                styles.selectionBarInner,
-                { minHeight: dockLayout.selectionBarHeight },
-              ]}
-            >
-              <IconButton
-                icon="close"
-                accessibilityLabel={labels.cancel}
-                onPress={clearSelection}
-                style={styles.selectionIconAction}
-              />
-              <Text
-                accessibilityLiveRegion="polite"
-                numberOfLines={2}
+          {/* Selection Actions Bar (Integrated) */}
+          {isSelectionActive && (
+            <View>
+              <View
                 style={[
-                  styles.selectionCount,
-                  { color: theme.colors.onBackground },
+                  styles.selectionBarInner,
+                  { minHeight: dockLayout.selectionBarHeight },
                 ]}
               >
-                {labels.selectedVersesLabel(selectedVerses.size)}
-              </Text>
-              <IconButton
-                mode="contained-tonal"
-                icon={
-                  areVersesSaved(Array.from(selectedVerses))
-                    ? 'bookmark-remove'
-                    : 'bookmark-plus'
-                }
-                accessibilityLabel={
-                  areVersesSaved(Array.from(selectedVerses))
-                    ? labels.removeAction
-                    : labels.saveAction
-                }
-                onPress={async () => {
-                  await toggleSavedVerses(Array.from(selectedVerses));
-                  clearSelection();
-                }}
-                style={styles.selectionIconAction}
-              />
-              <IconButton
-                mode="contained"
-                icon="share-variant"
-                accessibilityLabel={labels.shareAction}
-                onPress={handleShare}
-                style={styles.selectionIconAction}
-              />
-            </View>
-          </View>
-        )}
-
-        {hasChapterAudio && (
-          <View
-            style={[
-              ReaderStyles.audioDock,
-              { minHeight: dockLayout.audioDockHeight },
-            ]}
-          >
-            <View
-              style={[
-                ReaderStyles.audioControlRow,
-                dockLayout.stackControls && styles.stackedAudioControlRow,
-              ]}
-            >
-              <TouchableOpacity
-                onPress={() => setAudioSettingsVisible(true)}
-                accessibilityRole="button"
-                accessibilityLabel={`${labels.audioSettings}: ${playbackRate}×`}
-                accessibilityHint={`${labels.narrator}, ${labels.playbackSpeed}, ${labels.audioSource}`}
-                style={[
-                  ReaderStyles.audioSideControl,
-                  dockLayout.stackControls && {
-                    minHeight: dockLayout.controlHeight,
-                    minWidth: dockLayout.controlHeight,
-                  },
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              >
+                <IconButton
+                  icon="close"
+                  accessibilityLabel={labels.cancel}
+                  onPress={clearSelection}
+                  style={styles.selectionIconAction}
+                />
                 <Text
+                  accessibilityLiveRegion="polite"
+                  numberOfLines={2}
+                  style={[styles.selectionCount, { color: theme.colors.onBackground }]}
+                >
+                  {labels.selectedVersesLabel(selectedVerses.size)}
+                </Text>
+                <IconButton
+                  mode="contained-tonal"
+                  icon={
+                    areVersesSaved(Array.from(selectedVerses))
+                      ? 'bookmark-remove'
+                      : 'bookmark-plus'
+                  }
+                  accessibilityLabel={
+                    areVersesSaved(Array.from(selectedVerses))
+                      ? labels.removeAction
+                      : labels.saveAction
+                  }
+                  onPress={async () => {
+                    await toggleSavedVerses(Array.from(selectedVerses));
+                    clearSelection();
+                  }}
+                  style={styles.selectionIconAction}
+                />
+                <IconButton
+                  mode="contained"
+                  icon="share-variant"
+                  accessibilityLabel={labels.shareAction}
+                  onPress={handleShare}
+                  style={styles.selectionIconAction}
+                />
+              </View>
+            </View>
+          )}
+
+          {hasChapterAudio && (
+            <View
+              style={[ReaderStyles.audioDock, { minHeight: dockLayout.audioDockHeight }]}
+            >
+              <View
+                style={[
+                  ReaderStyles.audioControlRow,
+                  dockLayout.stackControls && styles.stackedAudioControlRow,
+                ]}
+              >
+                <TouchableOpacity
+                  onPress={() => setAudioSettingsVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${labels.audioSettings}: ${playbackRate}×`}
+                  accessibilityHint={`${labels.narrator}, ${labels.playbackSpeed}, ${labels.audioSource}`}
                   style={[
-                    ReaderStyles.audioControlText,
-                    { color: theme.colors.onSurface },
+                    ReaderStyles.audioSideControl,
+                    dockLayout.stackControls && {
+                      minHeight: dockLayout.controlHeight,
+                      minWidth: dockLayout.controlHeight,
+                    },
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.outline,
+                    },
                   ]}
                 >
-                  {playbackRate}×
-                </Text>
-                <AppIcon
-                  pointerEvents="none"
-                  name="tune-variant"
-                  size={13}
-                  textScale={bibleUiTextScale}
-                  color={theme.colors.onSurfaceVariant}
-                />
-              </TouchableOpacity>
-
-              <View style={ReaderStyles.audioTransportControls}>
-                <IconButton
-                  icon="rewind-10"
-                  size={scaleTypographyMetric(26, bibleUiTextScale)}
-                  onPress={() => skipAudio(-10000)}
-                  disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
-                  accessibilityLabel={labels.back10}
-                  style={ReaderStyles.audioAction}
-                />
-                <IconButton
-                  icon={isPlaying ? 'pause' : 'play'}
-                  mode="contained"
-                  containerColor={theme.colors.tertiary}
-                  iconColor={theme.colors.onPrimary}
-                  size={scaleTypographyMetric(26, bibleUiTextScale)}
-                  onPress={toggleAudio}
-                  disabled={isAudioLoading && !loadedAudioUrlRef.current}
-                  accessibilityLabel={labels.audioPlayer}
-                  style={ReaderStyles.audioPlayButton}
-                />
-                <IconButton
-                  icon="fast-forward-30"
-                  size={scaleTypographyMetric(26, bibleUiTextScale)}
-                  onPress={() => skipAudio(30000)}
-                  disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
-                  accessibilityLabel={labels.forward30}
-                  style={ReaderStyles.audioAction}
-                />
-              </View>
-
-              <TouchableOpacity
-                onPress={() => setSleepTimerVisible(true)}
-                accessibilityRole="button"
-                accessibilityLabel={labels.sleepTimer}
-                accessibilityState={{ selected: sleepTimerSetting !== null }}
-                style={[
-                  ReaderStyles.audioSideControl,
-                  dockLayout.stackControls && {
-                    minHeight: dockLayout.controlHeight,
-                    minWidth: dockLayout.controlHeight,
-                  },
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              >
-                <AppIcon
-                  name="timer-outline"
-                  size={25}
-                  textScale={bibleUiTextScale}
-                  color={
-                    sleepTimerSetting !== null
-                      ? theme.colors.tertiary
-                      : theme.colors.onSurface
-                  }
-                />
-                {sleepTimerSetting !== null && (
-                  <View
+                  <Text
                     style={[
-                      ReaderStyles.timerBadge,
-                      { backgroundColor: theme.colors.tertiary },
+                      ReaderStyles.audioControlText,
+                      { color: theme.colors.onSurface },
                     ]}
+                  >
+                    {playbackRate}×
+                  </Text>
+                  <AppIcon
+                    pointerEvents="none"
+                    name="tune-variant"
+                    size={13}
+                    textScale={bibleUiTextScale}
+                    color={theme.colors.onSurfaceVariant}
                   />
-                )}
-              </TouchableOpacity>
-            </View>
+                </TouchableOpacity>
 
-            <View
-              style={[
-                ReaderStyles.audioTimelineRow,
-                dockLayout.stackControls && styles.stackedAudioTimelineRow,
-              ]}
-            >
-              <Text
-                style={[
-                  ReaderStyles.audioTimeText,
-                  !dockLayout.stackControls && ReaderStyles.audioElapsedTimeText,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                {formatAudioTime(scrubPositionMillis ?? audioPositionMillis)}
-              </Text>
-              <View
-                accessible
-                accessibilityRole="adjustable"
-                accessibilityLabel={labels.audioPlayer}
-                accessibilityValue={{
-                  min: 0,
-                  max: Math.round(audioDurationMillis / 1000),
-                  now: Math.round(
-                    (scrubPositionMillis ?? audioPositionMillis) / 1000,
-                  ),
-                  text: `${formatAudioTime(
-                    scrubPositionMillis ?? audioPositionMillis,
-                  )} / ${formatAudioTime(audioDurationMillis)}`,
-                }}
-                accessibilityActions={[
-                  { name: 'decrement', label: labels.back10 },
-                  { name: 'increment', label: labels.forward30 },
-                ]}
-                onAccessibilityAction={(event) => {
-                  skipAudio(event.nativeEvent.actionName === 'increment' ? 30000 : -10000);
-                }}
-                style={[
-                  ReaderStyles.audioScrubberTouchTarget,
-                  dockLayout.stackControls && styles.stackedAudioScrubber,
-                ]}
-                onLayout={(event) => {
-                  audioScrubberWidth.current = event.nativeEvent.layout.width || 1;
-                }}
-                onStartShouldSetResponder={() => audioDurationMillis > 0}
-                onMoveShouldSetResponder={() => audioDurationMillis > 0}
-                onResponderGrant={beginScrubbing}
-                onResponderMove={updateScrubbing}
-                onResponderRelease={finishScrubbing}
-                onResponderTerminate={finishScrubbing}
-              >
-                <View style={ReaderStyles.audioTrack}>
-                  <View
-                    style={[
-                      ReaderStyles.audioBufferedTrack,
-                      {
-                        backgroundColor: theme.colors.outlineVariant,
-                        width: `${
-                          audioDurationMillis
-                            ? Math.min(
-                                100,
-                                (audioBufferedMillis / audioDurationMillis) * 100,
-                              )
-                            : 0
-                        }%`,
-                      },
-                    ]}
+                <View style={ReaderStyles.audioTransportControls}>
+                  <IconButton
+                    icon="rewind-10"
+                    size={scaleTypographyMetric(26, bibleUiTextScale)}
+                    onPress={() => skipAudio(-10000)}
+                    disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
+                    accessibilityLabel={labels.back10}
+                    style={ReaderStyles.audioAction}
                   />
-                  <View
-                    style={[
-                      ReaderStyles.audioPlayedTrack,
-                      {
-                        backgroundColor: theme.colors.tertiary,
-                        width: `${
-                          audioDurationMillis
-                            ? Math.min(
-                                100,
-                                ((scrubPositionMillis ?? audioPositionMillis) /
-                                  audioDurationMillis) *
-                                  100,
-                              )
-                            : 0
-                        }%`,
-                      },
-                    ]}
+                  <IconButton
+                    icon={isPlaying ? 'pause' : 'play'}
+                    mode="contained"
+                    containerColor={theme.colors.tertiary}
+                    iconColor={theme.colors.onPrimary}
+                    size={scaleTypographyMetric(26, bibleUiTextScale)}
+                    onPress={toggleAudio}
+                    disabled={isAudioLoading && !loadedAudioUrlRef.current}
+                    accessibilityLabel={labels.audioPlayer}
+                    style={ReaderStyles.audioPlayButton}
                   />
-                  <View
-                    style={[
-                      ReaderStyles.audioThumb,
-                      {
-                        backgroundColor: theme.colors.tertiary,
-                        left: `${
-                          audioDurationMillis
-                            ? Math.min(
-                                100,
-                                ((scrubPositionMillis ?? audioPositionMillis) /
-                                  audioDurationMillis) *
-                                  100,
-                              )
-                            : 0
-                        }%`,
-                      },
-                    ]}
+                  <IconButton
+                    icon="fast-forward-30"
+                    size={scaleTypographyMetric(26, bibleUiTextScale)}
+                    onPress={() => skipAudio(30000)}
+                    disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
+                    accessibilityLabel={labels.forward30}
+                    style={ReaderStyles.audioAction}
                   />
                 </View>
+
+                <TouchableOpacity
+                  onPress={() => setSleepTimerVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={labels.sleepTimer}
+                  accessibilityState={{ selected: sleepTimerSetting !== null }}
+                  style={[
+                    ReaderStyles.audioSideControl,
+                    dockLayout.stackControls && {
+                      minHeight: dockLayout.controlHeight,
+                      minWidth: dockLayout.controlHeight,
+                    },
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.outline,
+                    },
+                  ]}
+                >
+                  <AppIcon
+                    name="timer-outline"
+                    size={25}
+                    textScale={bibleUiTextScale}
+                    color={
+                      sleepTimerSetting !== null
+                        ? theme.colors.tertiary
+                        : theme.colors.onSurface
+                    }
+                  />
+                  {sleepTimerSetting !== null && (
+                    <View
+                      style={[
+                        ReaderStyles.timerBadge,
+                        { backgroundColor: theme.colors.tertiary },
+                      ]}
+                    />
+                  )}
+                </TouchableOpacity>
               </View>
-              {isAudioLoading ? (
-                <ActivityIndicator size={12} color={theme.colors.tertiary} />
-              ) : (
+
+              <View
+                style={[
+                  ReaderStyles.audioTimelineRow,
+                ]}
+              >
                 <Text
                   style={[
                     ReaderStyles.audioTimeText,
-                    dockLayout.stackControls && styles.audioDurationText,
+                    ReaderStyles.audioElapsedTimeText,
                     { color: theme.colors.onSurfaceVariant },
                   ]}
                 >
-                  {formatAudioTime(audioDurationMillis)}
+                  {formatAudioTime(scrubPositionMillis ?? audioPositionMillis)}
                 </Text>
-              )}
+                <View
+                  accessible
+                  accessibilityRole="adjustable"
+                  accessibilityLabel={labels.audioPlayer}
+                  accessibilityValue={{
+                    min: 0,
+                    max: Math.round(audioDurationMillis / 1000),
+                    now: Math.round((scrubPositionMillis ?? audioPositionMillis) / 1000),
+                    text: `${formatAudioTime(
+                      scrubPositionMillis ?? audioPositionMillis,
+                    )} / ${formatAudioTime(audioDurationMillis)}`,
+                  }}
+                  accessibilityActions={[
+                    { name: 'decrement', label: labels.back10 },
+                    { name: 'increment', label: labels.forward30 },
+                  ]}
+                  onAccessibilityAction={(event) => {
+                    skipAudio(
+                      event.nativeEvent.actionName === 'increment' ? 30000 : -10000,
+                    );
+                  }}
+                  style={[
+                    ReaderStyles.audioScrubberTouchTarget,
+                  ]}
+                  onLayout={(event) => {
+                    audioScrubberWidth.current = event.nativeEvent.layout.width || 1;
+                  }}
+                  onStartShouldSetResponder={() => audioDurationMillis > 0}
+                  onMoveShouldSetResponder={() => audioDurationMillis > 0}
+                  onResponderGrant={beginScrubbing}
+                  onResponderMove={updateScrubbing}
+                  onResponderRelease={finishScrubbing}
+                  onResponderTerminate={finishScrubbing}
+                >
+                  <View style={ReaderStyles.audioTrack}>
+                    <View
+                      style={[
+                        ReaderStyles.audioBufferedTrack,
+                        {
+                          backgroundColor: theme.colors.outlineVariant,
+                          width: `${
+                            audioDurationMillis
+                              ? Math.min(
+                                  100,
+                                  (audioBufferedMillis / audioDurationMillis) * 100,
+                                )
+                              : 0
+                          }%`,
+                        },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        ReaderStyles.audioPlayedTrack,
+                        {
+                          backgroundColor: theme.colors.tertiary,
+                          width: `${
+                            audioDurationMillis
+                              ? Math.min(
+                                  100,
+                                  ((scrubPositionMillis ?? audioPositionMillis) /
+                                    audioDurationMillis) *
+                                    100,
+                                )
+                              : 0
+                          }%`,
+                        },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        ReaderStyles.audioThumb,
+                        {
+                          backgroundColor: theme.colors.tertiary,
+                          left: `${
+                            audioDurationMillis
+                              ? Math.min(
+                                  100,
+                                  ((scrubPositionMillis ?? audioPositionMillis) /
+                                    audioDurationMillis) *
+                                    100,
+                                )
+                              : 0
+                          }%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+                {isAudioLoading ? (
+                  <ActivityIndicator size={12} color={theme.colors.tertiary} />
+                ) : (
+                  <Text
+                    style={[
+                      ReaderStyles.audioTimeText,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {formatAudioTime(audioDurationMillis)}
+                  </Text>
+                )}
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
-        {renderChapterNavigationDock()}
-        <Animated.View style={{ height: animatedDockBottomClearance }} />
+          {renderChapterNavigationDock()}
+          <Animated.View style={{ height: animatedDockBottomClearance }} />
         </ScrollView>
       </Animated.View>
 
@@ -3366,7 +3316,10 @@ export default function BibleScreen() {
             <ScrollView>
               <Text
                 variant="titleMedium"
-                style={[styles.audioSettingsSectionTitle, { color: theme.colors.onSurface }]}
+                style={[
+                  styles.audioSettingsSectionTitle,
+                  { color: theme.colors.onSurface },
+                ]}
               >
                 {labels.playbackSpeed}: {playbackRate}×
               </Text>
@@ -3420,7 +3373,10 @@ export default function BibleScreen() {
               <Divider style={styles.audioSettingsDivider} />
               <Text
                 variant="titleMedium"
-                style={[styles.audioSettingsSectionTitle, { color: theme.colors.onSurface }]}
+                style={[
+                  styles.audioSettingsSectionTitle,
+                  { color: theme.colors.onSurface },
+                ]}
               >
                 {labels.narrator}
               </Text>
@@ -3471,7 +3427,10 @@ export default function BibleScreen() {
                   <Divider style={styles.audioSettingsDivider} />
                   <Text
                     variant="titleMedium"
-                    style={[styles.audioSettingsSectionTitle, { color: theme.colors.onSurface }]}
+                    style={[
+                      styles.audioSettingsSectionTitle,
+                      { color: theme.colors.onSurface },
+                    ]}
                   >
                     {labels.audioSource}
                   </Text>
@@ -3554,10 +3513,7 @@ export default function BibleScreen() {
                       color={theme.colors.onSurfaceVariant}
                     />
                     <Text
-                      style={[
-                        styles.pressRowText,
-                        { color: theme.colors.onSurface },
-                      ]}
+                      style={[styles.pressRowText, { color: theme.colors.onSurface }]}
                     >
                       {labels.backgroundPlaybackHelp}
                     </Text>
@@ -3580,10 +3536,7 @@ export default function BibleScreen() {
         <Modal
           visible={backgroundAudioGuidanceVisible}
           onDismiss={() => setBackgroundAudioGuidanceVisible(false)}
-          contentContainerStyle={[
-            ReaderStyles.modalContent,
-            getPopupSurfaceStyle(theme),
-          ]}
+          contentContainerStyle={[ReaderStyles.modalContent, getPopupSurfaceStyle(theme)]}
         >
           <View style={ReaderStyles.modalInner}>
             <Text
@@ -3594,10 +3547,7 @@ export default function BibleScreen() {
             </Text>
             <Divider />
             <ScrollView contentContainerStyle={styles.backgroundAudioGuidanceBody}>
-              <Text
-                variant="bodyLarge"
-                style={{ color: theme.colors.onSurface }}
-              >
+              <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
                 {labels.backgroundAudioBody.replace(
                   '{browser}',
                   androidAudioBrowserName || 'browser',
@@ -3618,16 +3568,10 @@ export default function BibleScreen() {
                   androidAudioBrowserName || 'browser',
                 )}
               </Text>
-              <Text
-                variant="bodySmall"
-                style={{ color: theme.colors.onSurfaceVariant }}
-              >
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                 {labels.backgroundAudioNetworkNote}
               </Text>
-              <Text
-                variant="bodySmall"
-                style={{ color: theme.colors.onSurfaceVariant }}
-              >
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                 {labels.settingsFallback}
               </Text>
             </ScrollView>
@@ -3656,10 +3600,7 @@ export default function BibleScreen() {
         <Modal
           visible={sleepTimerVisible}
           onDismiss={() => setSleepTimerVisible(false)}
-          contentContainerStyle={[
-            ReaderStyles.modalContent,
-            getPopupSurfaceStyle(theme),
-          ]}
+          contentContainerStyle={[ReaderStyles.modalContent, getPopupSurfaceStyle(theme)]}
         >
           <View style={ReaderStyles.modalInner}>
             <Text
@@ -3695,9 +3636,7 @@ export default function BibleScreen() {
                   <AppIcon
                     pointerEvents="none"
                     name={
-                      option.value === 'chapter'
-                        ? 'book-clock-outline'
-                        : 'timer-outline'
+                      option.value === 'chapter' ? 'book-clock-outline' : 'timer-outline'
                     }
                     size={24}
                     textScale={bibleUiTextScale}
@@ -3759,10 +3698,7 @@ export default function BibleScreen() {
                       color={theme.colors.primary}
                     />
                     <Text
-                      style={[
-                        styles.verseHelpText,
-                        { color: theme.colors.onSurface },
-                      ]}
+                      style={[styles.verseHelpText, { color: theme.colors.onSurface }]}
                     >
                       {labels.verseHelpTap}
                     </Text>
@@ -3775,10 +3711,7 @@ export default function BibleScreen() {
                       color={theme.colors.primary}
                     />
                     <Text
-                      style={[
-                        styles.verseHelpText,
-                        { color: theme.colors.onSurface },
-                      ]}
+                      style={[styles.verseHelpText, { color: theme.colors.onSurface }]}
                     >
                       {labels.verseHelpHold}
                     </Text>
@@ -3913,7 +3846,8 @@ export default function BibleScreen() {
                                 },
                               ]}
                             >
-                              {item.bookName} {item.chapter}:{getSavedVerseRangeLabel(item)}
+                              {item.bookName} {item.chapter}:
+                              {getSavedVerseRangeLabel(item)}
                             </Text>
                             {(item.text || savedVersesLoading) && (
                               <Text
@@ -3955,7 +3889,8 @@ export default function BibleScreen() {
                         variant="labelSmall"
                         style={{ color: theme.colors.primary, marginBottom: 4 }}
                       >
-                        {labels.primaryTranslation}: {getTranslationLabel(supportedTranslation)}
+                        {labels.primaryTranslation}:{' '}
+                        {getTranslationLabel(supportedTranslation)}
                       </Text>
                     )}
                     {showSelectedPrimaryPinyin ? (
@@ -4139,7 +4074,6 @@ export default function BibleScreen() {
                 <View
                   style={[
                     styles.detailActions,
-                    dockLayout.stackControls && styles.stackedDetailActions,
                   ]}
                 >
                   <TouchableOpacity
@@ -4153,7 +4087,6 @@ export default function BibleScreen() {
                     style={[
                       styles.detailActionButton,
                       styles.detailOutlinedAction,
-                      dockLayout.stackControls && styles.stackedDetailActionButton,
                       { borderColor: theme.colors.outline },
                     ]}
                   >
@@ -4169,10 +4102,7 @@ export default function BibleScreen() {
                       color={theme.colors.primary}
                     />
                     <Text
-                      style={[
-                        styles.detailActionText,
-                        { color: theme.colors.primary },
-                      ]}
+                      style={[styles.detailActionText, { color: theme.colors.primary }]}
                     >
                       {isVerseSaved(selectedVerseNum || 0)
                         ? labels.removeAction
@@ -4185,10 +4115,7 @@ export default function BibleScreen() {
                     onPress={handleShare}
                     style={[
                       styles.detailActionButton,
-                      dockLayout.stackControls && styles.stackedDetailActionButton,
-                      theme.dark
-                        ? null
-                        : { backgroundColor: theme.colors.primary },
+                      theme.dark ? null : { backgroundColor: theme.colors.primary },
                     ]}
                   >
                     {theme.dark ? (
@@ -4209,12 +4136,30 @@ export default function BibleScreen() {
                       color={theme.colors.onPrimary}
                     />
                     <Text
-                      style={[
-                        styles.detailActionText,
-                        { color: theme.colors.onPrimary },
-                      ]}
+                      style={[styles.detailActionText, { color: theme.colors.onPrimary }]}
                     >
                       {labels.share}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={labels.verseHelpTitle}
+                    onPress={() => setModalType('verse-help')}
+                    style={[
+                      styles.detailActionButton,
+                      styles.detailOutlinedAction,
+                      { borderColor: theme.colors.outline },
+                    ]}
+                  >
+                    <AppIcon
+                      pointerEvents="none"
+                      name="gesture-tap-hold"
+                      size={22}
+                      textScale={bibleUiTextScale}
+                      color={theme.colors.primary}
+                    />
+                    <Text style={[styles.detailActionText, { color: theme.colors.primary }]}>
+                      {labels.verseHelpTitle}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -4417,80 +4362,81 @@ export default function BibleScreen() {
                       (lastActiveType === 'chapter' && item === chapterNum);
 
                     return (
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      accessibilityLabel={itemLabel}
-                      accessibilityState={{ selected: isSelectedItem }}
-                      onPress={() => {
-                        const changesChapter =
-                          lastActiveType === 'book' ||
-                          lastActiveType === 'chapter' ||
-                          (lastActiveType === 'translation' &&
-                            translationSelectionRole === 'primary');
-                        // Keep audio playing only when the selection loads a new chapter.
-                        if (isPlaying && changesChapter) {
-                          setShouldAutoPlay(true);
-                        }
-                        if (lastActiveType === 'translation') {
-                          const translation = item as (typeof BibleService.SUPPORTED_TRANSLATIONS)[number];
-                          if (translationSelectionRole === 'primary') {
-                            handledTranslationParamSignature.current =
-                              translationParamSignature;
-                            if (
-                              translation.id === selectedSupportingTranslation.id &&
-                              translation.id !== supportedTranslation.id
-                            ) {
-                              setSelectedSupportingTranslation(supportedTranslation);
-                            }
-                            setSupportedTranslation(translation);
-                            if (dualLanguageEnabled) {
-                              setTranslationSelectionRole('supporting');
-                              return;
-                            }
-                          } else {
-                            setSelectedSupportingTranslation(translation);
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel={itemLabel}
+                        accessibilityState={{ selected: isSelectedItem }}
+                        onPress={() => {
+                          const changesChapter =
+                            lastActiveType === 'book' ||
+                            lastActiveType === 'chapter' ||
+                            (lastActiveType === 'translation' &&
+                              translationSelectionRole === 'primary');
+                          // Keep audio playing only when the selection loads a new chapter.
+                          if (isPlaying && changesChapter) {
+                            setShouldAutoPlay(true);
                           }
-                        } else if (lastActiveType === 'book') {
-                          setBook(item as any);
-                          setChapterNum(1);
-                        } else if (lastActiveType === 'chapter') {
-                          setChapterNum(item as any);
-                        } else if (lastActiveType === 'verse') {
-                          const verseNumber = item as number;
-                          setTimeout(() => {
-                            const verseY = versePositions.current[verseNumber];
-                            if (verseY !== undefined) {
-                              scrollRef.current?.scrollTo({
-                                y: Math.max(0, verseY - 20),
-                                animated: true,
-                              });
+                          if (lastActiveType === 'translation') {
+                            const translation =
+                              item as (typeof BibleService.SUPPORTED_TRANSLATIONS)[number];
+                            if (translationSelectionRole === 'primary') {
+                              handledTranslationParamSignature.current =
+                                translationParamSignature;
+                              if (
+                                translation.id === selectedSupportingTranslation.id &&
+                                translation.id !== supportedTranslation.id
+                              ) {
+                                setSelectedSupportingTranslation(supportedTranslation);
+                              }
+                              setSupportedTranslation(translation);
+                              if (dualLanguageEnabled) {
+                                setTranslationSelectionRole('supporting');
+                                return;
+                              }
+                            } else {
+                              setSelectedSupportingTranslation(translation);
                             }
-                          }, 250);
-                        }
-                        closeModal();
-                      }}
-                      style={styles.pressRow}
-                    >
-                      <Text
-                        style={[
-                          styles.pressRowText,
-                          isSelectedItem
-                            ? { color: theme.colors.primary, fontWeight: '700' }
-                            : { color: theme.colors.onSurface },
-                        ]}
+                          } else if (lastActiveType === 'book') {
+                            setBook(item as any);
+                            setChapterNum(1);
+                          } else if (lastActiveType === 'chapter') {
+                            setChapterNum(item as any);
+                          } else if (lastActiveType === 'verse') {
+                            const verseNumber = item as number;
+                            setTimeout(() => {
+                              const verseY = versePositions.current[verseNumber];
+                              if (verseY !== undefined) {
+                                scrollRef.current?.scrollTo({
+                                  y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET),
+                                  animated: true,
+                                });
+                              }
+                            }, 250);
+                          }
+                          closeModal();
+                        }}
+                        style={styles.pressRow}
                       >
-                        {itemLabel}
-                      </Text>
-                      {isSelectedItem && (
-                        <AppIcon
-                          pointerEvents="none"
-                          name="check"
-                          size={24}
-                          textScale={bibleUiTextScale}
-                          color={theme.colors.primary}
-                        />
-                      )}
-                    </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.pressRowText,
+                            isSelectedItem
+                              ? { color: theme.colors.primary, fontWeight: '700' }
+                              : { color: theme.colors.onSurface },
+                          ]}
+                        >
+                          {itemLabel}
+                        </Text>
+                        {isSelectedItem && (
+                          <AppIcon
+                            pointerEvents="none"
+                            name="check"
+                            size={24}
+                            textScale={bibleUiTextScale}
+                            color={theme.colors.primary}
+                          />
+                        )}
+                      </TouchableOpacity>
                     );
                   }}
                 />
@@ -4503,336 +4449,338 @@ export default function BibleScreen() {
   );
 }
 
-const createStyles = (textScale: TextScale, uiTextScale: TextScale) => StyleSheet.create({
-  controlDockScroll: {
-    flex: 1,
-  },
-  controlDockScrollContent: {
-    flexGrow: 1,
-  },
-  verseDetailModalContent: {
-    maxHeight: '94%',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  verseHelpContent: {
-    gap: 16,
-    padding: 20,
-  },
-  verseHelpRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: 12,
-  },
-  verseHelpText: {
-    flex: 1,
-    fontSize: scaleTypographyMetric(16, textScale),
-    lineHeight: scaleTypographyMetric(24, textScale),
-  },
-  verseHelpSupportingText: {
-    fontSize: scaleTypographyMetric(14, textScale),
-    lineHeight: scaleTypographyMetric(21, textScale),
-  },
-  selectionBarInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingBottom: 4,
-    paddingHorizontal: 8,
-    paddingTop: 8,
-  },
-  selectionCount: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    fontSize: scaleTypographyMetric(14, uiTextScale),
-    lineHeight: scaleTypographyMetric(20, uiTextScale),
-    fontWeight: '700',
-  },
-  selectionIconAction: {
-    margin: 0,
-  },
-  stackedAudioControlRow: {
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 8,
-  },
-  stackedAudioTimelineRow: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 6,
-  },
-  stackedAudioScrubber: {
-    flex: 0,
-    width: '100%',
-  },
-  audioDurationText: {
-    alignSelf: 'flex-end',
-  },
-  stackedDockInner: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  stackedPillsContainer: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    justifyContent: 'center',
-    gap: 6,
-    width: '100%',
-  },
-  stackedPill: {
-    width: '100%',
-    paddingHorizontal: 12,
-  },
-  stackedNavigationRow: {
-    minHeight: 52,
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  detailActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    padding: 16,
-  },
-  stackedDetailActions: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-  },
-  detailActionButton: {
-    flexGrow: 1,
-    flexBasis: 140,
-    minWidth: 0,
-    minHeight: 44,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    overflow: 'hidden',
-  },
-  detailOutlinedAction: {
-    borderWidth: 1,
-  },
-  stackedDetailActionButton: {
-    width: '100%',
-    flexBasis: 'auto',
-    flexGrow: 0,
-  },
-  detailActionText: {
-    flexShrink: 1,
-    minWidth: 0,
-    fontSize: scaleTypographyMetric(14, uiTextScale),
-    lineHeight: scaleTypographyMetric(20, uiTextScale),
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  pressRow: {
-    width: '100%',
-    minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  pressRowText: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    fontSize: scaleTypographyMetric(16, uiTextScale),
-    lineHeight: scaleTypographyMetric(22, uiTextScale),
-  },
-  pinyinPreferenceRow: {
-    minHeight: 64,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  pinyinPreferenceCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pinyinPreferenceHelp: {
-    fontSize: scaleTypographyMetric(13, uiTextScale),
-    lineHeight: scaleTypographyMetric(18, uiTextScale),
-    marginTop: 2,
-  },
-  translationRoleRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  translationRoleButton: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 58,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    justifyContent: 'center',
-  },
-  disabledTranslationRole: {
-    opacity: 0.45,
-  },
-  translationRoleTitle: {
-    fontSize: scaleTypographyMetric(13, uiTextScale),
-    lineHeight: scaleTypographyMetric(18, uiTextScale),
-    fontWeight: '700',
-  },
-  translationRoleValue: {
-    fontSize: scaleTypographyMetric(12, uiTextScale),
-    lineHeight: scaleTypographyMetric(17, uiTextScale),
-    marginTop: 1,
-  },
-  translationRoleHelp: {
-    paddingHorizontal: 16,
-    paddingTop: 7,
-    paddingBottom: 12,
-    fontSize: scaleTypographyMetric(12, uiTextScale),
-    lineHeight: scaleTypographyMetric(17, uiTextScale),
-  },
-  audioSettingsSectionTitle: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 6,
-    fontWeight: '700',
-  },
-  audioSettingsRateRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  audioSettingsRate: {
-    minWidth: 52,
-    minHeight: 44,
-    borderRadius: 22,
-    flexDirection: 'row',
-    gap: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  audioSettingsDivider: {
-    marginTop: 8,
-  },
-  audioSettingsHelper: {
-    paddingHorizontal: 16,
-    paddingTop: 2,
-    paddingBottom: 14,
-    fontSize: scaleTypographyMetric(13, uiTextScale),
-    lineHeight: scaleTypographyMetric(18, uiTextScale),
-  },
-  backgroundAudioGuidanceBody: {
-    gap: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-  },
-  backgroundAudioGuidanceSteps: {
-    borderRadius: 12,
-    fontSize: scaleTypographyMetric(15, uiTextScale),
-    lineHeight: scaleTypographyMetric(22, uiTextScale),
-    padding: 14,
-  },
-  backgroundAudioGuidanceActions: {
-    alignItems: 'stretch',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backgroundAudioGuidanceAction: {
-    flexGrow: 1,
-  },
-  savedVerseRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  savedSortRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  savedSortButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    flexGrow: 1,
-    minHeight: 44,
-    minWidth: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  savedSortText: {
-    fontSize: scaleTypographyMetric(14, uiTextScale),
-    lineHeight: scaleTypographyMetric(20, uiTextScale),
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  savedVerseMainAction: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  savedVerseText: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  savedVerseDescription: {
-    flexShrink: 1,
-    marginTop: 4,
-    fontSize: scaleTypographyMetric(14, textScale),
-    lineHeight: scaleTypographyMetric(20, textScale),
-  },
-  originalVerseStatus: {
-    minHeight: 72,
-    marginBottom: 16,
-    gap: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  originalVerseText: {
-    fontSize: scaleTypographyMetric(20, textScale),
-    lineHeight: scaleTypographyMetric(32, textScale),
-    marginBottom: 10,
-  },
-  originalVerseAttribution: {
-    fontSize: scaleTypographyMetric(11, textScale),
-    lineHeight: scaleTypographyMetric(16, textScale),
-  },
-  savedEmptyState: {
-    minHeight: 180,
-    padding: 24,
-    gap: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
+  StyleSheet.create({
+    controlDockScroll: {
+      flex: 1,
+    },
+    controlDockScrollContent: {
+      flexGrow: 1,
+    },
+    verseDetailModalContent: {
+      maxHeight: '94%',
+      marginTop: 8,
+      marginBottom: 8,
+    },
+    verseHelpContent: {
+      gap: 16,
+      padding: 20,
+    },
+    verseHelpRow: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      gap: 12,
+    },
+    verseHelpText: {
+      flex: 1,
+      fontSize: scaleTypographyMetric(16, textScale),
+      lineHeight: scaleTypographyMetric(24, textScale),
+    },
+    verseHelpSupportingText: {
+      fontSize: scaleTypographyMetric(14, textScale),
+      lineHeight: scaleTypographyMetric(21, textScale),
+    },
+    selectionBarInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingBottom: 4,
+      paddingHorizontal: 8,
+      paddingTop: 8,
+    },
+    selectionCount: {
+      flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      fontSize: scaleTypographyMetric(14, uiTextScale),
+      lineHeight: scaleTypographyMetric(20, uiTextScale),
+      fontWeight: '700',
+    },
+    selectionIconAction: {
+      margin: 0,
+    },
+    stackedAudioControlRow: {
+      alignSelf: 'stretch',
+      flexWrap: 'nowrap',
+      justifyContent: 'space-between',
+      gap: 8,
+      paddingVertical: 8,
+    },
+    stackedAudioTimelineRow: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 6,
+    },
+    stackedAudioScrubber: {
+      flex: 0,
+      width: '100%',
+    },
+    audioDurationText: {
+      alignSelf: 'flex-end',
+    },
+    stackedDockInner: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+    },
+    stackedPillsContainer: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      justifyContent: 'center',
+      gap: 6,
+      width: '100%',
+    },
+    stackedPill: {
+      width: '100%',
+      paddingHorizontal: 12,
+    },
+    stackedNavigationRow: {
+      minHeight: 52,
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    detailActions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      padding: 16,
+    },
+    stackedDetailActions: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    },
+    detailActionButton: {
+      flexGrow: 1,
+      flexBasis: 140,
+      minWidth: 0,
+      minHeight: 44,
+      borderRadius: 24,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      overflow: 'hidden',
+    },
+    detailOutlinedAction: {
+      borderWidth: 1,
+    },
+    stackedDetailActionButton: {
+      width: '100%',
+      flexBasis: 'auto',
+      flexGrow: 0,
+    },
+    detailActionText: {
+      flexShrink: 1,
+      minWidth: 0,
+      fontSize: scaleTypographyMetric(14, uiTextScale),
+      lineHeight: scaleTypographyMetric(20, uiTextScale),
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    pressRow: {
+      width: '100%',
+      minHeight: 44,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    pressRowText: {
+      flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      fontSize: scaleTypographyMetric(16, uiTextScale),
+      lineHeight: scaleTypographyMetric(22, uiTextScale),
+    },
+    pinyinPreferenceRow: {
+      minHeight: 64,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    pinyinPreferenceCopy: {
+      flex: 1,
+      minWidth: 0,
+    },
+    pinyinPreferenceHelp: {
+      fontSize: scaleTypographyMetric(13, uiTextScale),
+      lineHeight: scaleTypographyMetric(18, uiTextScale),
+      marginTop: 2,
+    },
+    translationRoleRow: {
+      flexDirection: 'row',
+      gap: 10,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+    },
+    translationRoleButton: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 58,
+      borderWidth: 1.5,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      justifyContent: 'center',
+    },
+    disabledTranslationRole: {
+      opacity: 0.45,
+    },
+    translationRoleTitle: {
+      fontSize: scaleTypographyMetric(13, uiTextScale),
+      lineHeight: scaleTypographyMetric(18, uiTextScale),
+      fontWeight: '700',
+    },
+    translationRoleValue: {
+      fontSize: scaleTypographyMetric(12, uiTextScale),
+      lineHeight: scaleTypographyMetric(17, uiTextScale),
+      marginTop: 1,
+    },
+    translationRoleHelp: {
+      paddingHorizontal: 16,
+      paddingTop: 7,
+      paddingBottom: 12,
+      fontSize: scaleTypographyMetric(12, uiTextScale),
+      lineHeight: scaleTypographyMetric(17, uiTextScale),
+    },
+    audioSettingsSectionTitle: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 6,
+      fontWeight: '700',
+    },
+    audioSettingsRateRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    audioSettingsRate: {
+      minWidth: 52,
+      minHeight: 44,
+      borderRadius: 22,
+      flexDirection: 'row',
+      gap: 5,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+    },
+    audioSettingsDivider: {
+      marginTop: 8,
+    },
+    audioSettingsHelper: {
+      paddingHorizontal: 16,
+      paddingTop: 2,
+      paddingBottom: 14,
+      fontSize: scaleTypographyMetric(13, uiTextScale),
+      lineHeight: scaleTypographyMetric(18, uiTextScale),
+    },
+    backgroundAudioGuidanceBody: {
+      gap: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 18,
+    },
+    backgroundAudioGuidanceSteps: {
+      borderRadius: 12,
+      fontSize: scaleTypographyMetric(15, uiTextScale),
+      lineHeight: scaleTypographyMetric(22, uiTextScale),
+      padding: 14,
+    },
+    backgroundAudioGuidanceActions: {
+      alignItems: 'stretch',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      justifyContent: 'flex-end',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    backgroundAudioGuidanceAction: {
+      flexGrow: 1,
+    },
+    savedVerseRow: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    savedSortRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    savedSortButton: {
+      borderRadius: 999,
+      borderWidth: 1,
+      flexGrow: 1,
+      minHeight: 44,
+      minWidth: 120,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    savedSortText: {
+      fontSize: scaleTypographyMetric(14, uiTextScale),
+      lineHeight: scaleTypographyMetric(20, uiTextScale),
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    savedVerseMainAction: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 44,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+    },
+    savedVerseText: {
+      flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
+    },
+    savedVerseDescription: {
+      flexShrink: 1,
+      marginTop: 4,
+      fontSize: scaleTypographyMetric(14, textScale),
+      lineHeight: scaleTypographyMetric(20, textScale),
+    },
+    originalVerseStatus: {
+      minHeight: 72,
+      marginBottom: 16,
+      gap: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    originalVerseText: {
+      fontSize: scaleTypographyMetric(20, textScale),
+      lineHeight: scaleTypographyMetric(32, textScale),
+      marginBottom: 10,
+    },
+    originalVerseAttribution: {
+      fontSize: scaleTypographyMetric(11, textScale),
+      lineHeight: scaleTypographyMetric(16, textScale),
+    },
+    savedEmptyState: {
+      minHeight: 180,
+      padding: 24,
+      gap: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });

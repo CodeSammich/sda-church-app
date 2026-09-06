@@ -152,8 +152,9 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
       width: '100%',
     },
     listCoverFrame: {
-      alignSelf: 'stretch',
+      alignSelf: 'center',
       flexShrink: 0,
+      height: 168,
       width: 112,
     },
     cover: {

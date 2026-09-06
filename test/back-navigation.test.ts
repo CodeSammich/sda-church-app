@@ -45,16 +45,16 @@ describe('global header back navigation', () => {
     expect(
       getHeaderBackTarget(
         ['(tabs)', 'you', 'legal'],
-        '/resources/library',
+        '/explore/library',
       ),
-    ).toBe('/resources/library');
+    ).toBe('/explore/library');
   });
 
   it('returns the home-only Sabbath School entry point to Home', () => {
     expect(SABBATH_SCHOOL_BACK_TARGET).toBe('/');
     expect(
       getHeaderBackTarget(
-        ['(tabs)', 'resources', 'sabbath-school'],
+        ['(tabs)', 'explore', 'sabbath-school'],
         SABBATH_SCHOOL_BACK_TARGET,
       ),
     ).toBe('/');

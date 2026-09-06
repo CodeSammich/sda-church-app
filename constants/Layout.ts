@@ -86,7 +86,10 @@ export const shouldUseStackedHomeLayout = (
   effectiveTextScale: number,
 ) => {
   const safeScale = Math.max(1, effectiveTextScale);
-  return safeScale > 1 && (windowWidth - 48) / 2 < 145 * safeScale;
+  // Android can report a small platform font-scale adjustment at its default
+  // density. Do not turn that normal device rendering into a single-column
+  // layout; stack once text has actually been enlarged by the user.
+  return safeScale > 1.15 && (windowWidth - 48) / 2 < 145 * safeScale;
 };
 
 export const shouldUseStackedPillarLayout = (

@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const allLabels = {
   en: {
-    title: 'Fellowships & Food',
+    title: 'Fellowships',
     expansionVerse: '“For I was hungry and you gave me something to eat, I was thirsty and you gave me something to drink, I was a stranger and you invited me in, I needed clothes and you clothed me, I was sick and you looked after me, I was in prison and you came to visit me.”',
     expansionRef: 'Matthew 25:35-36 (NIV)',
     foodBankTitle: 'Food Bank Partnership',
@@ -332,6 +332,7 @@ export default function FellowshipsAndFoodScreen() {
                       </Text>
                       <Button 
                         mode="contained" 
+                        icon="video"
                         onPress={openZoomClass}
                         buttonColor={theme.colors.brandZoom}
                         textColor={theme.colors.onSecondary}

@@ -9,7 +9,7 @@ import {
   openSabbathStream,
 } from '@/constants/ExternalLinks';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS, shouldUseStackedHomeLayout } from '@/constants/Layout';
+import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
@@ -35,14 +35,10 @@ export default function HomeScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const { textScale } = useTextSize();
-  const { fontScale, width: windowWidth } = useWindowDimensions();
+  const { fontScale } = useWindowDimensions();
   const effectiveTextScale = Math.max(1, fontScale * textScale);
-  // Preserve the upstream two-column phone grid at 100%, then stack only
-  // when the scaled text would leave each card too narrow to wrap cleanly.
-  const useStackedLayout = shouldUseStackedHomeLayout(
-    windowWidth,
-    effectiveTextScale,
-  );
+  // Keep the home card grid at two columns at every text zoom level.
+  const useStackedLayout = false;
   const styles = useMemo(
     () => createStyles(textScale, effectiveTextScale, useStackedLayout),
     [effectiveTextScale, textScale, useStackedLayout],
@@ -63,7 +59,7 @@ export default function HomeScreen() {
       readVerse: 'Read Verse',
       shareVerse: 'Share Verse',
       livestream: 'Watch Livestream',
-      discover: 'New Member / Visitor',
+      discover: 'New Member & Visitor',
       bulletin: 'Weekly Bulletin',
       give: 'Tithe & Offering',
       sabbathSchool: 'This Week’s Lesson',
@@ -115,7 +111,7 @@ export default function HomeScreen() {
       readVerse: 'Leer Versículo',
       shareVerse: 'Compartir',
       livestream: 'Ver Transmisión',
-      discover: 'Nuevo miembro / Visitante',
+      discover: 'Nuevo miembro & Visitante',
       bulletin: 'Boletín Semanal',
       give: 'Diezmos y Ofrendas',
       sabbathSchool: 'Lección de esta semana',
@@ -543,17 +539,18 @@ export default function HomeScreen() {
           <View style={styles.grid}>
             <GridMenuCard
               title={labels.livestream}
-              titleBlockLines={useStackedLayout ? 2 : 3}
+              titleBlockLines={3}
               subtitle={(labels as any).liveNow}
               icon="youtube"
               color={theme.colors.cardBgColors.livestream}
               iconColor={theme.colors.iconColors.livestream}
               onPress={openSabbathStream}
               style={styles.gridCell}
+              showArrow={false}
             />
             <GridMenuCard
               title={labels.bulletin}
-              titleBlockLines={useStackedLayout ? 2 : 3}
+              titleBlockLines={3}
               icon="newspaper-variant-outline"
               color={theme.colors.cardBgColors.bulletin}
               iconColor={theme.colors.iconColors.bulletin}
@@ -564,10 +561,11 @@ export default function HomeScreen() {
                 } as any)
               }
               style={styles.gridCell}
+              showArrow={false}
             />
             <GridMenuCard
               title={labels.give}
-              titleBlockLines={useStackedLayout ? 2 : 3}
+              titleBlockLines={3}
               icon="hand-heart-outline"
               color={theme.colors.cardBgColors.tithe}
               iconColor={theme.colors.iconColors.tithe}
@@ -578,10 +576,11 @@ export default function HomeScreen() {
                 } as any)
               }
               style={styles.gridCell}
+              showArrow={false}
             />
             <GridMenuCard
               title={labels.hymnal}
-              titleBlockLines={useStackedLayout ? 2 : 3}
+              titleBlockLines={3}
               icon="music-note"
               color={theme.colors.cardBgColors.hymnal}
               iconColor={theme.colors.iconColors.hymnal}
@@ -592,24 +591,26 @@ export default function HomeScreen() {
                 } as any)
               }
               style={styles.gridCell}
+              showArrow={false}
             />
             <GridMenuCard
               title={labels.sabbathSchool}
-              titleBlockLines={useStackedLayout ? 2 : 3}
+              titleBlockLines={3}
               icon="book-open-page-variant"
               color={theme.colors.cardBgColors.sabbathSchool}
               iconColor={theme.colors.iconColors.sabbathSchool}
               onPress={() =>
                 router.push({
-                  pathname: '/resources/sabbath-school',
+                  pathname: '/explore/sabbath-school',
                   params: { backTo: '/' },
                 } as any)
               }
               style={styles.gridCell}
+              showArrow={false}
             />
             <GridMenuCard
               title={labels.discover}
-              titleBlockLines={useStackedLayout ? 2 : 3}
+              titleBlockLines={3}
               icon="compass"
               color={theme.colors.cardBgColors.discover}
               iconColor={theme.colors.iconColors.discover}
@@ -620,6 +621,7 @@ export default function HomeScreen() {
                 } as any)
               }
               style={styles.gridCell}
+              showArrow={false}
             />
           </View>
         </List.Section>
