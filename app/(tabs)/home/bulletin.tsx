@@ -66,7 +66,7 @@ const LABELS = {
     brooklyn: 'Brooklyn',
     possibleJointService: 'Brooklyn service details are not listed for this Sabbath.',
     possibleJointServiceHint: 'There may be a joint service at Elmhurst.',
-    openElmhurst: 'Open Elmhurst Church',
+    openElmhurst: 'Elmhurst Church Directions',
     openBibleReference: 'Open {reference} in the Bible reader',
     readNow: 'Read now',
     openHymn: 'Open hymn',
