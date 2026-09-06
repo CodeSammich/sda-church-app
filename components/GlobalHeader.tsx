@@ -468,6 +468,8 @@ export const GlobalHeader = (props: any) => {
         { minHeight: compactControlHeight },
         {
           backgroundColor: theme.colors.surface,
+          borderWidth: 1,
+          borderColor: theme.colors.outline,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.15,
