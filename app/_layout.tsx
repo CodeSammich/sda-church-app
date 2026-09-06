@@ -40,7 +40,7 @@ import {
 } from '@/services/PwaUpdateService';
 import packageJson from '@/package.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ThemeProvider } from '@react-navigation/native';
+import { ThemeProvider } from 'expo-router/react-navigation';
 import { useFonts } from 'expo-font';
 import * as Localization from 'expo-localization';
 import {

@@ -133,19 +133,26 @@ export default function BaptismScreen() {
           >
             {labels.baptismHeader}
           </Text>
-          <Text
-            variant="bodyMedium"
+          <Card
+            mode="outlined"
             style={[
-              DocumentStyles.description,
-              {
-                color: theme.colors.onSurface,
-                marginBottom: 12,
-                fontWeight: 'bold',
-              },
+              DocumentStyles.card,
+              BaptismStyles.introCard,
+              { backgroundColor: theme.colors.primaryContainer },
             ]}
           >
-            {meaning.intro}
-          </Text>
+            <Card.Content>
+              <Text
+                variant="bodyMedium"
+                style={{
+                  color: theme.colors.onPrimaryContainer,
+                  fontWeight: '600',
+                }}
+              >
+                {meaning.intro}
+              </Text>
+            </Card.Content>
+          </Card>
 
           <Card style={DocumentStyles.card} mode="outlined">
             {meaning.points.map((point: any, index: number) => (
@@ -476,5 +483,9 @@ const createBaptismStyles = (textScale: TextScale) => StyleSheet.create({
   supportingText: {
     fontSize: scaleTypographyMetric(14, textScale),
     lineHeight: scaleTypographyMetric(20, textScale),
+  },
+  introCard: {
+    borderRadius: 16,
+    marginBottom: 16,
   },
 });

@@ -16,7 +16,7 @@ import {
 } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { BottomTabBar } from '@react-navigation/bottom-tabs';
+import { BottomTabBar } from 'expo-router/js-tabs';
 import { Tabs, router } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -204,7 +204,7 @@ export default function TabLayout() {
               transform: [{ translateY: tabBarTranslateY }],
             }}
           >
-            <BottomTabBar {...props} />
+            <BottomTabBar {...(props as any)} />
           </Animated.View>
         )}
         screenOptions={{
@@ -254,7 +254,7 @@ export default function TabLayout() {
             headerShown: true,
             tabBarLabel: ({ color }) => (
               <TabBarLabel
-                color={color}
+                color={String(color)}
                 fontScale={fontScale}
                 label={labels.home}
                 onLineCountChange={(lineCount) =>
@@ -263,10 +263,10 @@ export default function TabLayout() {
                 textScale={textScale}
               />
             ),
-            tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+            tabBarIcon: ({ color, focused }) => (
               <TabBarIcon
                 name="home"
-                color={color}
+                color={String(color)}
                 focused={focused}
                 textScale={textScale}
               />
@@ -290,7 +290,7 @@ export default function TabLayout() {
             headerShown: false, // Internal Stack handles header for consistency
             tabBarLabel: ({ color }) => (
               <TabBarLabel
-                color={color}
+                color={String(color)}
                 fontScale={fontScale}
                 label={labels.bible}
                 onLineCountChange={(lineCount) =>
@@ -302,10 +302,10 @@ export default function TabLayout() {
             // The Bible reader owns a coordinated bottom dock and already accounts
             // for the tab bar height while its controls animate in and out.
             sceneStyle: { paddingBottom: 0 },
-            tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+            tabBarIcon: ({ color, focused }) => (
               <TabBarIcon
                 name="cross"
-                color={color}
+                color={String(color)}
                 focused={focused}
                 textScale={textScale}
               />
@@ -325,7 +325,7 @@ export default function TabLayout() {
             headerShown: false, // Internal Stack handles header for consistency
             tabBarLabel: ({ color }) => (
               <TabBarLabel
-                color={color}
+                color={String(color)}
                 fontScale={fontScale}
                 label={labels.explore}
                 onLineCountChange={(lineCount) =>
@@ -334,10 +334,10 @@ export default function TabLayout() {
                 textScale={textScale}
               />
             ),
-            tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+            tabBarIcon: ({ color, focused }) => (
               <TabBarIcon
                 name={APP_ICONOGRAPHY.tabs.explore.name}
-                color={color}
+                color={String(color)}
                 focused={focused}
                 textScale={textScale}
               />

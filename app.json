@@ -2,7 +2,7 @@
   "expo": {
     "name": "NY Chinese SDA",
     "slug": "sda-church-app",
-    "version": "0.34.10",
+    "version": "0.34.15",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
@@ -63,7 +63,10 @@
       ],
       "expo-asset",
       "expo-build-properties",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font",
+      "expo-splash-screen",
+      "expo-status-bar"
     ],
     "extra": {
       "router": {},

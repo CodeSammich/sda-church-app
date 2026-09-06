@@ -2788,7 +2788,7 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            flexGrow: 1,
+            flexGrow: 50,
             flexBasis: 0,
           },
         ]}
@@ -2822,11 +2822,8 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            // Give the chapter selector the extra width reclaimed from verse.
-            flexGrow: 1.7,
+            flexGrow: 35,
             flexBasis: 0,
-            flexShrink: 0,
-            minWidth: 72,
           },
         ]}
         onPress={() => setModalType('chapter')}
@@ -2854,7 +2851,7 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            flexGrow: 0.55,
+            flexGrow: 15,
             flexBasis: 0,
           },
         ]}

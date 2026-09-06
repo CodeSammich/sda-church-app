@@ -210,7 +210,7 @@ export const createReaderStyles = (textScale: TextScale) => {
 
   // Selection Overlays / Modals
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 100,
   },
   modalHeader: {
