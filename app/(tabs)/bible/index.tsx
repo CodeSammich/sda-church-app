@@ -937,6 +937,7 @@ export default function BibleScreen() {
   const lastSyncedAudioChapterRef = useRef<string | null>(null);
   const audioFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrubbingRef = useRef(false);
+  const scrubShouldResumeRef = useRef(false);
   const scrubPositionMillisRef = useRef<number | null>(null);
   const pendingSeekPositionMillisRef = useRef<number | null>(null);
   const audioScrubberWidth = useRef(1);
@@ -987,6 +988,7 @@ export default function BibleScreen() {
       Platform.OS === 'web' ||
       !nativePlaybackIntentRef.current ||
       !pendingNativeAutoplayRef.current ||
+      isScrubbingRef.current ||
       nativeAutoplayRetryTimeoutRef.current
     ) {
       return;
@@ -996,7 +998,8 @@ export default function BibleScreen() {
       nativeAutoplayRetryTimeoutRef.current = null;
       if (
         !nativePlaybackIntentRef.current ||
-        !pendingNativeAutoplayRef.current
+        !pendingNativeAutoplayRef.current ||
+        isScrubbingRef.current
       ) {
         return;
       }
@@ -1171,6 +1174,7 @@ export default function BibleScreen() {
       Platform.OS !== 'web' &&
       pendingNativeAutoplayRef.current &&
       isCurrentSourceReady &&
+      !isScrubbingRef.current &&
       !audioStatus.playing &&
       !audioStatus.isBuffering &&
       Date.now() - lastNativeAutoplayAttemptRef.current >= 1_000
@@ -1374,6 +1378,7 @@ export default function BibleScreen() {
     if (
       Platform.OS === 'web' ||
       !nativePlaybackIntentRef.current ||
+      isScrubbingRef.current ||
       audioStatus.playing ||
       (!audioStatus.isBuffering && !audioStatus.error)
     ) {
@@ -1469,6 +1474,7 @@ export default function BibleScreen() {
     setAudioDurationMillis(0);
     setAudioBufferedMillis(0);
     setScrubPositionMillis(null);
+    scrubShouldResumeRef.current = false;
     scrubPositionMillisRef.current = null;
     pendingSeekPositionMillisRef.current = null;
   };
@@ -1548,6 +1554,13 @@ export default function BibleScreen() {
 
   const beginScrubbing = (event: GestureResponderEvent) => {
     isScrubbingRef.current = true;
+    scrubShouldResumeRef.current =
+      isPlaying || audioStatus.playing || audioPlayer.currentStatus.playing;
+    clearNativeAutoplayRetryTimeout();
+    clearNativeRecoveryTimeout();
+    // Pause before recording the seek position so a tap or drag cannot let
+    // the player continue from the old position while the gesture is active.
+    safePauseAudio();
     const position = getSeekPosition(event);
     scrubPositionMillisRef.current = position;
     setScrubPositionMillis(position);
@@ -1566,30 +1579,19 @@ export default function BibleScreen() {
     // the second callback, whose native event may report locationX = 0.
     if (!isScrubbingRef.current) return;
     const nextPosition = scrubPositionMillisRef.current ?? getSeekPosition(event);
-    // Scrubbing is an explicit user interaction. If this player was the
-    // intended source before another app briefly took audio focus, resume it
-    // after the seek even if the native status has not caught up yet.
-    const shouldResume =
-      nativePlaybackIntentRef.current || isPlaying || audioStatus.playing;
+    const shouldResume = scrubShouldResumeRef.current;
     isScrubbingRef.current = false;
+    scrubShouldResumeRef.current = false;
     scrubPositionMillisRef.current = null;
     setScrubPositionMillis(null);
 
+    await seekAudio(nextPosition);
+    // Resume only after the seek completes. Starting playback before seeking
+    // lets a competing media app hear a brief flare during the gesture.
     if (shouldResume) {
       nativePlaybackIntentRef.current = true;
       pendingNativeAutoplayRef.current = Platform.OS !== 'web';
-      // Reclaim audio focus before seeking. Native seek can briefly transition
-      // through a paused state; waiting until after seek lets another app
-      // resume in that gap.
       await reactivateNativeAudioFocus();
-      audioPlayer.play();
-    }
-
-    await seekAudio(nextPosition);
-    // Some native/browser media sessions briefly pause while seeking. Restore
-    // playback only when the user was already listening; a paused track must
-    // remain paused so an external app can keep audio focus.
-    if (shouldResume) {
       audioPlayer.play();
       scheduleNativeAutoplayRetry();
     }
