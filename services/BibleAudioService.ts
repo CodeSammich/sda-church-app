@@ -14,7 +14,32 @@ import type { BibleAudioQueueItem } from './BibleAudioPlayer.types';
 
 const BSB_AUDIO_READER_PRIORITY = ['souer', 'hays', 'david'] as const;
 
-/** Configures Bible narration as long-form background media. */
+// TODO(#205): Replace the Android config-plugin backport and iOS `doNotMix`
+// fallback with Expo Audio's official `doNotMixPersistent` mode once it is
+// available in a stable release compatible with this Expo SDK. The merged
+// upstream implementation covers both platforms and includes more complete
+// interruption/deactivation handling than this temporary workaround:
+// https://github.com/expo/expo/pull/49101
+// Tracking issue and user-facing behavior summary:
+// https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/205
+
+/**
+ * Configures Bible narration as long-form background media.
+ *
+ * Platform behavior:
+ * - iOS maps `doNotMix` to an AVAudioSession `.playback` category without
+ *   `.mixWithOthers`. The system can interrupt Bible audio for calls or other
+ *   higher-priority audio, but a short player buffer/seek does not voluntarily
+ *   release the session.
+ * - Android uses the same shared mode, and the
+ *   `withAndroidSDKOverride` config plugin maps `doNotMix` to a
+ *   permanent `AUDIOFOCUS_GAIN`. The app explicitly releases that focus only
+ *   for a user pause, unload, sleep timer, or completed playback.
+ *
+ * Calling this again before a native retry or seek reasserts the app's audio
+ * session after a transient native interruption without auto-resuming a player
+ * the user intentionally paused.
+ */
 export const configureBibleAudioPlayback = () =>
   setAudioModeAsync({
     interruptionMode: 'doNotMix',

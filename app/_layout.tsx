@@ -8,7 +8,11 @@ import {
   TEXT_SCALE_STORAGE_KEY,
   type TextScale,
 } from '@/constants/AppPreferences';
-import { getHeaderBackTarget, hasHeaderBackButton } from '@/constants/BackNavigation';
+import {
+  getAndroidBackTarget,
+  getHeaderBackTarget,
+  hasHeaderBackButton,
+} from '@/constants/BackNavigation';
 import {
   CHURCH_LATITUDE,
   CHURCH_LONGITUDE,
@@ -917,6 +921,7 @@ function RootLayoutNav({
   const gestureBackTarget = hasHeaderBackButton(segments, globalParams.backTo)
     ? getHeaderBackTarget(segments, globalParams.backTo)
     : '/';
+  const androidBackTarget = getAndroidBackTarget(pathname, globalParams.backTo);
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
 
   useEffect(() => {
@@ -981,16 +986,19 @@ function RootLayoutNav({
   }, [gestureBackTarget, routeKey]);
 
   // Native Android's edge gesture dispatches through BackHandler rather than
-  // browser history. Consume it here so sub-pages follow the same explicit
-  // backTo/fallback route order as the visible header arrow, without popping
-  // whatever stack happens to be underneath the current screen.
+  // browser history. Consume it here so sub-pages follow the app's explicit
+  // route hierarchy instead of popping whatever stack happens to be beneath
+  // the current screen.
   useEffect(() => {
-    if (Platform.OS !== 'android' || !hasHeaderBackButton(segments, globalParams.backTo)) {
+    const shouldHandleAndroidBack =
+      Platform.OS === 'android' &&
+      (hasHeaderBackButton(segments, globalParams.backTo) || pathname === '/explore');
+    if (!shouldHandleAndroidBack) {
       return;
     }
 
     const handleAndroidBack = () => {
-      router.replace(gestureBackTarget as any);
+      router.replace(androidBackTarget as any);
       return true;
     };
 
@@ -999,7 +1007,7 @@ function RootLayoutNav({
       handleAndroidBack,
     );
     return () => subscription.remove();
-  }, [gestureBackTarget, globalParams.backTo, routeKey, segments]);
+  }, [androidBackTarget, globalParams.backTo, pathname, routeKey, segments]);
 
   // Sync system bars and PWA theme-color meta tag
   useEffect(() => {

@@ -3,6 +3,7 @@ import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setIsAudioActiveAsync } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -916,6 +917,11 @@ export default function BibleScreen() {
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
   const audioPlayer = useBibleAudioPlayer(null, {
     updateInterval: 250,
+    // On iOS this keeps the AVAudioSession active through player pauses and
+    // finishes. On Android the build-time plugin also prevents a brief native
+    // seek/buffer pause from releasing permanent audio focus. We still call
+    // setIsAudioActiveAsync(false) for deliberate app-level stops below.
+    keepAudioSessionActive: true,
     preferredForwardBufferDuration: NATIVE_AUDIO_FORWARD_BUFFER_SECONDS,
   });
   const audioStatus = useBibleAudioPlayerStatus(audioPlayer);
@@ -931,6 +937,8 @@ export default function BibleScreen() {
   const lastSyncedAudioChapterRef = useRef<string | null>(null);
   const audioFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrubbingRef = useRef(false);
+  const scrubPositionMillisRef = useRef<number | null>(null);
+  const pendingSeekPositionMillisRef = useRef<number | null>(null);
   const audioScrubberWidth = useRef(1);
   const sleepTimerSettingRef = useRef<SleepTimerSetting>(null);
   const sleepTimerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -942,6 +950,24 @@ export default function BibleScreen() {
       // timer/route cleanup reaches this component. Treat that as already
       // paused instead of surfacing a native cast error to the user.
       console.warn('Audio player was already released while pausing', error);
+    }
+  };
+  // Reasserts the platform audio session after a native seek/buffer transition.
+  // This is not an instruction to resume after an external app interrupts us;
+  // callers set nativePlaybackIntentRef only when playback was already wanted.
+  const reactivateNativeAudioFocus = async () => {
+    if (Platform.OS !== 'web') {
+      await setIsAudioActiveAsync(true);
+    }
+    await configureBibleAudioPlayback();
+  };
+  // Gives the platform audio session/focus back only for an intentional stop.
+  // A network buffer or ordinary external interruption must not call this.
+  const releaseNativeAudioFocus = () => {
+    if (Platform.OS !== 'web') {
+      void setIsAudioActiveAsync(false).catch((error) =>
+        console.warn('Native Bible audio focus release failed:', error),
+      );
     }
   };
   const clearNativeRecoveryTimeout = () => {
@@ -1091,6 +1117,7 @@ export default function BibleScreen() {
           pendingNativeAutoplayRef.current = false;
           clearNativeAutoplayRetryTimeout();
           clearNativeRecoveryTimeout();
+          releaseNativeAudioFocus();
           try {
             safePauseAudio();
           } catch (e) {
@@ -1122,7 +1149,17 @@ export default function BibleScreen() {
     setAudioDurationMillis(audioStatus.duration * 1000);
     setAudioBufferedMillis(positionMillis);
     if (!isScrubbingRef.current) {
-      setAudioPositionMillis(positionMillis);
+      const pendingSeekPositionMillis = pendingSeekPositionMillisRef.current;
+      if (pendingSeekPositionMillis === null) {
+        setAudioPositionMillis(positionMillis);
+      } else if (Math.abs(positionMillis - pendingSeekPositionMillis) < 1_000) {
+        pendingSeekPositionMillisRef.current = null;
+        setAudioPositionMillis(positionMillis);
+      } else {
+        // Keep the UI at the requested location while the native player is
+        // still publishing its pre-seek status.
+        setAudioPositionMillis(pendingSeekPositionMillis);
+      }
     }
     if (isCurrentSourceReady) clearAudioFallbackTimeout();
 
@@ -1163,6 +1200,7 @@ export default function BibleScreen() {
         pendingNativeAutoplayRef.current = false;
         clearNativeAutoplayRetryTimeout();
         clearNativeRecoveryTimeout();
+        releaseNativeAudioFocus();
         return;
       }
       if (!isLastChapter) {
@@ -1173,6 +1211,7 @@ export default function BibleScreen() {
         nativePlaybackIntentRef.current = false;
         pendingNativeAutoplayRef.current = false;
         clearNativeAutoplayRetryTimeout();
+        releaseNativeAudioFocus();
       }
     }
   }, [audioStatus, isLastChapter]);
@@ -1235,6 +1274,7 @@ export default function BibleScreen() {
       clearNativeAutoplayRetryTimeout();
       loadedAudioUrlRef.current = null;
       setIsAudioLoading(false);
+      releaseNativeAudioFocus();
       console.error('Bible audio unavailable: every configured host failed.');
       return;
     }
@@ -1301,7 +1341,7 @@ export default function BibleScreen() {
   const startAudio = async () => {
     if (selectedAudioUrlsRef.current.length === 0) return;
     try {
-      await configureBibleAudioPlayback();
+      await reactivateNativeAudioFocus();
       const loadedAudioUrl = loadedAudioUrlRef.current;
       if (
         !loadedAudioUrl ||
@@ -1320,6 +1360,7 @@ export default function BibleScreen() {
       nativePlaybackIntentRef.current = false;
       pendingNativeAutoplayRef.current = false;
       clearNativeAutoplayRetryTimeout();
+      releaseNativeAudioFocus();
       console.error('Audio playback error:', e);
     }
   };
@@ -1384,6 +1425,7 @@ export default function BibleScreen() {
       nativePlaybackIntentRef.current = false;
       pendingNativeAutoplayRef.current = false;
       safePauseAudio();
+      releaseNativeAudioFocus();
       return;
     }
 
@@ -1407,6 +1449,7 @@ export default function BibleScreen() {
     pendingNativeAutoplayRef.current = false;
     clearNativeAutoplayRetryTimeout();
     safePauseAudio();
+    releaseNativeAudioFocus();
     if (Platform.OS === 'web') {
       // expo-audio's native player manages lock-screen controls through its
       // native lifecycle. The explicit cleanup method belongs to the web
@@ -1426,6 +1469,8 @@ export default function BibleScreen() {
     setAudioDurationMillis(0);
     setAudioBufferedMillis(0);
     setScrubPositionMillis(null);
+    scrubPositionMillisRef.current = null;
+    pendingSeekPositionMillisRef.current = null;
   };
 
   const selectAudioReader = (reader: string) => {
@@ -1468,10 +1513,12 @@ export default function BibleScreen() {
 
   const seekAudio = async (nextPosition: number) => {
     const clampedPosition = Math.max(0, Math.min(audioDurationMillis, nextPosition));
+    pendingSeekPositionMillisRef.current = clampedPosition;
     setAudioPositionMillis(clampedPosition);
     try {
       await audioPlayer.seekTo(clampedPosition / 1000);
     } catch (e) {
+      pendingSeekPositionMillisRef.current = null;
       console.error('Audio seek error:', e);
     }
   };
@@ -1501,32 +1548,48 @@ export default function BibleScreen() {
 
   const beginScrubbing = (event: GestureResponderEvent) => {
     isScrubbingRef.current = true;
-    setScrubPositionMillis(getSeekPosition(event));
+    const position = getSeekPosition(event);
+    scrubPositionMillisRef.current = position;
+    setScrubPositionMillis(position);
   };
 
   const updateScrubbing = (event: GestureResponderEvent) => {
     if (isScrubbingRef.current) {
-      setScrubPositionMillis(getSeekPosition(event));
+      const position = getSeekPosition(event);
+      scrubPositionMillisRef.current = position;
+      setScrubPositionMillis(position);
     }
   };
 
   const finishScrubbing = async (event: GestureResponderEvent) => {
-    const nextPosition = getSeekPosition(event);
+    // A responder can receive both release and termination callbacks. Ignore
+    // the second callback, whose native event may report locationX = 0.
+    if (!isScrubbingRef.current) return;
+    const nextPosition = scrubPositionMillisRef.current ?? getSeekPosition(event);
     // Scrubbing is an explicit user interaction. If this player was the
     // intended source before another app briefly took audio focus, resume it
     // after the seek even if the native status has not caught up yet.
     const shouldResume =
       nativePlaybackIntentRef.current || isPlaying || audioStatus.playing;
     isScrubbingRef.current = false;
+    scrubPositionMillisRef.current = null;
     setScrubPositionMillis(null);
+
+    if (shouldResume) {
+      nativePlaybackIntentRef.current = true;
+      pendingNativeAutoplayRef.current = Platform.OS !== 'web';
+      // Reclaim audio focus before seeking. Native seek can briefly transition
+      // through a paused state; waiting until after seek lets another app
+      // resume in that gap.
+      await reactivateNativeAudioFocus();
+      audioPlayer.play();
+    }
+
     await seekAudio(nextPosition);
     // Some native/browser media sessions briefly pause while seeking. Restore
     // playback only when the user was already listening; a paused track must
     // remain paused so an external app can keep audio focus.
     if (shouldResume) {
-      nativePlaybackIntentRef.current = true;
-      pendingNativeAutoplayRef.current = Platform.OS !== 'web';
-      await configureBibleAudioPlayback();
       audioPlayer.play();
       scheduleNativeAutoplayRetry();
     }
@@ -3065,6 +3128,10 @@ export default function BibleScreen() {
           height: stackChapterControls
             ? dockLayout.dockHeight
             : dockLayout.chapterDockHeight,
+          // The first visible Bible surface owns the shared upper boundary.
+          // When audio exists, the audio dock receives it instead.
+          borderTopColor: theme.colors.outlineVariant,
+          borderTopWidth: hasChapterAudio ? 0 : StyleSheet.hairlineWidth,
         },
         fullscreenEdgeInset > 0 && { paddingHorizontal: fullscreenEdgeInset },
       ]}
@@ -3242,7 +3309,14 @@ export default function BibleScreen() {
 
           {hasChapterAudio && (
             <View
-              style={[ReaderStyles.audioDock, { minHeight: dockLayout.audioDockHeight }]}
+              style={[
+                ReaderStyles.audioDock,
+                {
+                  minHeight: dockLayout.audioDockHeight,
+                  borderTopColor: theme.colors.outlineVariant,
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                },
+              ]}
             >
               <View
                 style={[

@@ -45,6 +45,11 @@
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
+    "autolinking": {
+      "android": {
+        "buildFromSource": ["expo-audio"]
+      }
+    },
     "plugins": [
       "expo-router",
       "expo-localization",
@@ -56,6 +61,7 @@
           "recordAudioAndroid": false
         }
       ],
+      "./withAndroidSDKOverride",
       "expo-asset",
       "expo-build-properties",
       "expo-web-browser",

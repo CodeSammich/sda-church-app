@@ -12,6 +12,7 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
 import {
   filterHeaderSearchItems,
+  getHymnalSearchNavigation,
   getHymnalSearchItems,
   getHymnalSearchResults,
   getHymnalSearchSubtitle,
@@ -328,25 +329,16 @@ export const GlobalHeader = (props: any) => {
     searchExpansion.setValue(0);
     searchRef.current?.blur();
 
-    // If already on a subpage, replace to avoid history loops.
-    // Otherwise, navigate normally into the stack.
-    const navFn = isSubPage ? router.replace : router.navigate;
-
-    // Parse out existing query parameters from the route string if present.
-    // This ensures Expo Router handles discrete params correctly during navigation.
-    const [pathname, queryString] = item.route.split('?');
-    const routeParams: Record<string, string> = {};
-    if (queryString) {
-      queryString.split('&').forEach((pair) => {
-        const [key, value] = pair.split('=');
-        routeParams[key] = decodeURIComponent(value);
-      });
+    // If already on a subpage, replace to avoid history loops. Otherwise,
+    // navigate normally into the stack. Keep the router method attached to
+    // the router object; native router implementations may depend on that
+    // call shape.
+    const navigation = getHymnalSearchNavigation(item.route, q);
+    if (isSubPage) {
+      router.replace(navigation as any);
+    } else {
+      router.navigate(navigation as any);
     }
-
-    navFn({
-      pathname: pathname as any,
-      params: { ...routeParams, highlight: q },
-    });
   };
 
   const handleSelectBibleVerse = (verseNumber: number) => {
