@@ -5,10 +5,10 @@ import type {
   BibleAudioStatus,
 } from './BibleAudioPlayer.types';
 
-// Native builds continue to use expo-audio's foreground-capable AudioPlayer.
-// Its single-player API does not own the installed-PWA rolling queue; native
-// queue behavior remains a fallback in issue #126 if Android Chrome cannot
-// sustain longer background sessions.
+// Native builds use expo-audio's single active player. The Bible screen keeps
+// the native path deliberately separate from the installed-PWA rolling queue;
+// native buffering and chapter transitions are recovered by that screen's
+// explicit playback state instead of swapping between native player objects.
 export const useBibleAudioPlayer = (...args: Parameters<typeof useAudioPlayer>) =>
   useAudioPlayer(...args) as AudioPlayer & BibleAudioQueueControls;
 

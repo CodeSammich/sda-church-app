@@ -470,28 +470,28 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
             )}
           </ScrollView>
         </Dialog.ScrollArea>
-        <View
-          style={[styles.actions, stackControls && styles.stackedActions]}
-        >
-          <TextDialogAction
-            disabled={isApplying}
-            label={labels.close}
-            onPress={dismissWithoutApplying}
-            stacked={stackControls}
-          />
-          <TextDialogAction
-            disabled={isApplying || draftScale === DEFAULT_TEXT_SCALE}
-            label={labels.reset}
-            onPress={() => setDraftScale(DEFAULT_TEXT_SCALE)}
-            stacked={stackControls}
-          />
+        <View style={styles.actions}>
+          <View style={styles.secondaryActionsRow}>
+            <TextDialogAction
+              disabled={isApplying}
+              label={labels.close}
+              onPress={dismissWithoutApplying}
+              stacked={false}
+            />
+            <TextDialogAction
+              disabled={isApplying || draftScale === DEFAULT_TEXT_SCALE}
+              label={labels.reset}
+              onPress={() => setDraftScale(DEFAULT_TEXT_SCALE)}
+              stacked={false}
+            />
+          </View>
           <TextDialogAction
             busy={isApplying}
             kind="contained"
             disabled={isApplying || draftScale === textScale}
             label={applyError ? labels.retry : labels.apply}
             onPress={() => void applyDraft()}
-            stacked={stackControls}
+            stacked
           />
         </View>
       </Dialog>
@@ -553,8 +553,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 8,
   },
-  stackedActions: {
-    flexDirection: 'column',
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
   stackedDialogAction: {
     alignSelf: 'stretch',

@@ -74,7 +74,7 @@ const LABELS = {
     planning: 'Planning',
     quarterlySchedule: 'Speaker Schedule',
     churchStaffOnly: 'Church staff only',
-    sermonSpeaker: 'Submit Bulletin Info',
+    sermonSpeaker: 'Sermon Speaker & Admin',
     sermonSpeakerPasscode: 'Complete the form so the bulletin stays up to date. Ask the IT staff for the passcode if you do not know it.',
     metadata: {
       quarter: 'Quarter',
@@ -138,7 +138,7 @@ const LABELS = {
     planning: '事工規劃',
     quarterlySchedule: '講員排班',
     churchStaffOnly: '僅限教會同工',
-    sermonSpeaker: '提交週報資料',
+    sermonSpeaker: '講員與管理',
     sermonSpeakerPasscode: '如果不知道密碼，請向 IT 同工詢問。',
     metadata: {
       quarter: '季度',
@@ -202,7 +202,7 @@ const LABELS = {
     planning: '事工规划',
     quarterlySchedule: '讲员排班',
     churchStaffOnly: '仅限教会同工',
-    sermonSpeaker: '提交周报资料',
+    sermonSpeaker: '讲员与管理',
     sermonSpeakerPasscode: '如果不知道密码，请向 IT 同工询问。',
     metadata: {
       quarter: '季度',
@@ -266,7 +266,7 @@ const LABELS = {
     planning: 'Planificación',
     quarterlySchedule: 'Horario de oradores',
     churchStaffOnly: 'Solo personal de la iglesia',
-    sermonSpeaker: 'Enviar información del boletín',
+    sermonSpeaker: 'Orador y administración',
     sermonSpeakerPasscode: 'Si no conoce el código, pídaselo al personal de TI.',
     metadata: {
       quarter: 'Trimestre',

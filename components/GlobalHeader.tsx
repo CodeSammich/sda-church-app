@@ -555,7 +555,7 @@ export const GlobalHeader = (props: any) => {
                   },
                   {
                     backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.outlineVariant,
+                    borderColor: theme.colors.outline,
                     opacity: titleChipAnim,
                     transform: [{ translateY: titleChipTranslateY }],
                   },

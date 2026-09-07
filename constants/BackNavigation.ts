@@ -4,7 +4,7 @@ export const SABBATH_SCHOOL_BACK_TARGET = '/';
 
 export const getHeaderBackButtonColors = (theme: AppTheme) => ({
   backgroundColor: theme.colors.surface,
-  borderColor: theme.colors.outlineVariant,
+  borderColor: theme.colors.outline,
 });
 
 export const hasHeaderBackButton = (

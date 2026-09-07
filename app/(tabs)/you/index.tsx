@@ -1,12 +1,20 @@
 import { UpdateContext } from '@/app/_layout';
-import { MenuCard, MenuCardSwitchVisual } from '@/components/MenuCard';
+import { MenuCard } from '@/components/MenuCard';
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { getTextSizeMenuCopy } from '@/constants/TextSizeCopy';
 import { useTextSize } from '@/constants/TextSizeContext';
-import { ThemeContext, useAppTheme } from '@/constants/Themes';
+import {
+  THEME_DARK,
+  THEME_LIGHT,
+  THEME_SUNSET,
+  THEME_SYSTEM,
+  ThemeContext,
+  useAppTheme,
+  type ThemeMode,
+} from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import packageJson from '@/package.json';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
@@ -15,15 +23,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext, useState } from 'react';
 import { ImageBackground, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { List, Text, TouchableRipple } from 'react-native-paper';
+import { List, Menu, Text, TouchableRipple } from 'react-native-paper';
 
 const allLabels = {
   en: {
     title: 'You',
     settings: 'Settings',
     aboutSupport: 'About & Support',
-    darkMode: 'Dark Mode',
-    darkModeSub: 'Toggle between light and dark themes',
+    darkMode: 'Theme',
+    darkModeSub: 'Choose light, dark, sunset, or system theme',
     language: 'Language',
     languageSub: 'Change app language',
     contact: 'Connect',
@@ -37,8 +45,8 @@ const allLabels = {
     title: '您',
     settings: '設定',
     aboutSupport: '關於與支援',
-    darkMode: '深色模式',
-    darkModeSub: '切換淺色和深色主題',
+    darkMode: '主題',
+    darkModeSub: '選擇淺色、深色、日落或系統主題',
     language: '語言',
     languageSub: '更改應用程式語言',
     contact: '聯繫',
@@ -52,8 +60,8 @@ const allLabels = {
     title: '您',
     settings: '设置',
     aboutSupport: '关于与支持',
-    darkMode: '深色模式',
-    darkModeSub: '切换浅色和深色主题',
+    darkMode: '主题',
+    darkModeSub: '选择浅色、深色、日落或系统主题',
     language: '语言',
     languageSub: '更改应用语言',
     contact: '联系',
@@ -67,8 +75,8 @@ const allLabels = {
     title: 'Tú',
     settings: 'Ajustes',
     aboutSupport: 'Información y Ayuda',
-    darkMode: 'Modo Oscuro',
-    darkModeSub: 'Alternar entre temas claros y oscuros',
+    darkMode: 'Tema',
+    darkModeSub: 'Elige tema claro, oscuro, atardecer o del sistema',
     language: 'Idioma',
     languageSub: 'Cambiar idioma de la aplicación',
     contact: 'Conectar',
@@ -85,14 +93,22 @@ export default function YouScreen() {
   const DocumentStyles = useDocumentStyles();
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
-  const { toggleTheme } = useContext(ThemeContext);
+  const { themeMode, setThemeMode } = useContext(ThemeContext);
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
   const { textScale } = useTextSize();
   const [showTextSize, setShowTextSize] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
   const headerHeight = useGlobalHeaderHeight();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
+
+  const themeLabels: Record<ThemeMode, string> = {
+    [THEME_LIGHT]: 'Light',
+    [THEME_DARK]: 'Dark',
+    [THEME_SUNSET]: 'Sunset',
+    [THEME_SYSTEM]: 'System',
+  };
 
   return (
     <>
@@ -153,27 +169,31 @@ export default function YouScreen() {
               iconColor={theme.colors.tertiary}
               onPress={() => setShowTextSize(true)}
             />
-            <MenuCard
-              accessibilityRole="switch"
-              accessibilityState={{ checked: theme.dark }}
-              title={labels.darkMode}
-              description={labels.darkModeSub}
-              icon="theme-light-dark"
-              iconColor={theme.colors.primary}
-              rightElement={() => (
-                <MenuCardSwitchVisual
-                  active={theme.dark}
-                  activeColor={theme.colors.primary}
-                  inactiveColor={theme.colors.surfaceVariant}
-                  thumbColor={
-                    theme.dark
-                      ? theme.colors.onPrimary
-                      : theme.colors.onSurfaceVariant
-                  }
+            <Menu
+              visible={showThemeMenu}
+              onDismiss={() => setShowThemeMenu(false)}
+              anchor={
+                <TouchableRipple onPress={() => setShowThemeMenu(true)}>
+                  <List.Item
+                    title={labels.darkMode}
+                    description={`${labels.darkModeSub} · ${themeLabels[themeMode]}`}
+                    left={(props) => <List.Icon {...props} icon="theme-light-dark" color={theme.colors.primary} />}
+                  />
+                </TouchableRipple>
+              }
+            >
+              {(Object.keys(themeLabels) as ThemeMode[]).map((mode) => (
+                <Menu.Item
+                  key={mode}
+                  title={themeLabels[mode]}
+                  leadingIcon={themeMode === mode ? 'check' : undefined}
+                  onPress={() => {
+                    setShowThemeMenu(false);
+                    void setThemeMode(mode);
+                  }}
                 />
-              )}
-              onPress={() => toggleTheme()}
-            />
+              ))}
+            </Menu>
           </List.Section>
 
           <List.Section>

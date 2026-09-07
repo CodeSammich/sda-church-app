@@ -12,7 +12,7 @@ describe('global header back navigation', () => {
     (theme) => {
       expect(getHeaderBackButtonColors(theme)).toEqual({
         backgroundColor: theme.colors.surface,
-        borderColor: theme.colors.outlineVariant,
+        borderColor: theme.colors.outline,
       });
       expect(getHeaderBackButtonColors(theme).backgroundColor).toMatch(/^#[\dA-F]{6}$/i);
     },

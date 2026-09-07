@@ -223,7 +223,8 @@ export default function TabLayout() {
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
             backgroundColor: 'transparent',
-            borderTopWidth: 0,
+            borderTopWidth: 0.5,
+            borderTopColor: theme.colors.outlineVariant,
           },
           tabBarItemStyle: {
             flex: 1,
