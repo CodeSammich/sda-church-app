@@ -227,6 +227,10 @@ export default function TabLayout() {
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
             backgroundColor: 'transparent',
+            borderTopColor: isBibleRoute
+              ? 'transparent'
+              : theme.colors.outlineVariant,
+            borderTopWidth: isBibleRoute ? 0 : StyleSheet.hairlineWidth,
           },
           tabBarItemStyle: {
             flex: 1,
@@ -234,18 +238,12 @@ export default function TabLayout() {
             overflow: 'visible',
           },
           tabBarBackground: () => (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.background }]}>
-              {!isBibleRoute && (
-                <Animated.View
-                  pointerEvents="none"
-                  style={{
-                    height: StyleSheet.hairlineWidth,
-                    backgroundColor: theme.colors.outlineVariant,
-                    opacity: menuAnim,
-                  }}
-                />
-              )}
-            </View>
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: theme.colors.background },
+              ]}
+            />
           ),
           // The animated tab bar is absolutely positioned, so React Navigation cannot
           // reserve space for it. Keep every regular tab screen above the overlay.
