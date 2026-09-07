@@ -182,6 +182,14 @@ npm run build:android:eas
 ```
 
 The global `eas` command is optional; the npm scripts use the pinned CLI version.
+The local Android scripts automatically limit Gradle, CMake, and Ninja
+concurrency for WSL stability.
+Override it for a one-off build by setting `GRADLE_OPTS`:
+
+```sh
+GRADLE_OPTS="-Dorg.gradle.workers.max=4 -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx5g" npm run build:android:apk
+```
+
 For GitHub Actions, create an access token in Expo under **Account settings →
 Access tokens**, then add it to the repository under **Settings → Secrets and
 variables → Actions** with the name `EXPO_TOKEN`. The **Native binaries** workflow

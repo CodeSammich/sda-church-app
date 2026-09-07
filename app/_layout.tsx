@@ -1016,7 +1016,6 @@ function RootLayoutNav({
       // app theme already accounts for the system setting when that is the
       // selected appearance mode.
       StatusBar.setBarStyle(theme.statusBarScheme, true);
-      StatusBar.setBackgroundColor(theme.colors.background, false);
     }
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -1094,8 +1093,6 @@ function RootLayoutNav({
       <ThemeProvider value={theme as any}>
         <StatusBar
           barStyle={theme.statusBarScheme}
-          backgroundColor={theme.colors.background}
-          translucent={false}
         />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
