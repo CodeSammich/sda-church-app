@@ -1,5 +1,6 @@
 import { LanguageContext } from '@/constants/LanguageContext';
 import {
+  THEME_AMBIENT,
   THEME_DARK,
   THEME_LIGHT,
   THEME_SUNSET,
@@ -35,6 +36,15 @@ const OPTIONS: readonly {
       zh: { label: '深色', description: '始終使用深色主題' },
       'zh-cn': { label: '深色', description: '始终使用深色主题' },
       es: { label: 'Oscuro', description: 'Usar siempre el tema oscuro' },
+    },
+  },
+  {
+    value: THEME_AMBIENT,
+    labels: {
+      en: { label: 'Automatic', description: 'Use the ambient light sensor when available' },
+      zh: { label: '自動', description: '有可用時根據環境光線調整' },
+      'zh-cn': { label: '自动', description: '有可用时根据环境光线调整' },
+      es: { label: 'Automático', description: 'Usar el sensor de luz ambiental cuando esté disponible' },
     },
   },
   {

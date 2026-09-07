@@ -35,25 +35,21 @@ const sourceCopy = {
     title: 'Reading sources',
     egw: 'Ellen G. White editions are hosted externally on EGW Writings.',
     publicDomain: 'Adventist pioneer and Christian classic works are public domain in the U.S. and hosted externally on Project Gutenberg.',
-    legal: 'Legal Disclaimer',
   },
   zh: {
     title: '閱讀來源',
     egw: '懷愛倫著作版本由 EGW Writings 外部網站提供。',
     publicDomain: '復臨先賢與基督教經典著作在美國屬於公版，並由 Project Gutenberg 外部網站提供。',
-    legal: '法律聲明',
   },
   'zh-cn': {
     title: '阅读来源',
     egw: '怀爱伦著作版本由 EGW Writings 外部网站提供。',
     publicDomain: '复临先驱与基督教经典著作在美国属于公版，并由 Project Gutenberg 外部网站提供。',
-    legal: '法律声明',
   },
   es: {
     title: 'Fuentes de lectura',
     egw: 'Las ediciones de Elena G. de White están alojadas externamente en EGW Writings.',
     publicDomain: 'Las obras de pioneros adventistas y los clásicos cristianos son de dominio público en EE. UU. y están alojados externamente en Project Gutenberg.',
-    legal: 'Aviso legal',
   },
 } as const;
 
@@ -136,13 +132,6 @@ export default function LibraryHubScreen() {
             { icon: 'bookshelf', text: sourceLabels.egw },
             { icon: 'book-open-variant', text: sourceLabels.publicDomain },
           ]}
-          legalLabel={sourceLabels.legal}
-          onLegalPress={() =>
-            router.push({
-              pathname: '/you/legal',
-              params: { backTo: '/explore/library' },
-            } as any)
-          }
           style={styles.sourcePanel}
           title={sourceLabels.title}
         />

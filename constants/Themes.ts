@@ -23,11 +23,13 @@ import {
 export const THEME_STORAGE_KEY = 'user-theme';
 export const THEME_DARK = 'dark';
 export const THEME_LIGHT = 'light';
+export const THEME_AMBIENT = 'ambient';
 export const THEME_SUNSET = 'sunset';
 export const THEME_SYSTEM = 'system';
 export type ThemeMode =
   | typeof THEME_LIGHT
   | typeof THEME_DARK
+  | typeof THEME_AMBIENT
   | typeof THEME_SUNSET
   | typeof THEME_SYSTEM;
 
@@ -349,7 +351,7 @@ export const customDarkTheme: AppTheme = {
  * Moving this here centralizes all theme-related logic (Tenet 5).
  */
 export const ThemeContext = createContext({
-  themeMode: THEME_SYSTEM as ThemeMode,
+  themeMode: THEME_AMBIENT as ThemeMode,
   setThemeMode: (_mode: ThemeMode) => {},
   toggleTheme: (_dark?: boolean) => {},
 });

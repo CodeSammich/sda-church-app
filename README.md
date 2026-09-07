@@ -19,6 +19,10 @@ on Safari (iOS) or Chrome (Android).
 
 - [Legal, Licensing & Privacy](docs/LEGAL.md)
 
+User-facing legal text is centralized in the app under **You → Legal Disclaimer**.
+Hymnal and library screens show source/attribution notices only; the repository's
+licensing decisions and third-party source review live in [docs/LEGAL.md](docs/LEGAL.md).
+
 ### Project documentation
 
 - [Technical Setup & Testing](docs/README.md)

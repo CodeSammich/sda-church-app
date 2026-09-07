@@ -20,7 +20,6 @@ export default function Chinese707StandardHymnalScreen() {
     <ChineseHymnalReader
       edition={707}
       coverImage={coverImage}
-      route="/home/chinese-707-standard-hymnal"
       getHymns={getHymns}
       openHymn={openHymn}
       titles={titles}
