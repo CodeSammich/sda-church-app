@@ -190,9 +190,8 @@ npm run build:android:eas
 ```
 
 The global `eas` command is optional; the npm scripts use the pinned CLI version.
-The local Android scripts automatically limit Gradle, CMake, and Ninja
-concurrency for WSL stability.
-Override it for a one-off build by setting `GRADLE_OPTS`:
+The local Android scripts use the normal Gradle, CMake, and Ninja defaults.
+For a memory-constrained WSL session, override them for a one-off build:
 
 ```sh
 GRADLE_OPTS="-Dorg.gradle.workers.max=4 -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx5g" npm run build:android:apk
