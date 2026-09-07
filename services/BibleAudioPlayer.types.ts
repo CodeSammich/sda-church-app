@@ -35,6 +35,10 @@ export type BibleAudioStatus = Pick<
   'currentTime' | 'didJustFinish' | 'duration' | 'isBuffering' | 'playing'
 > & {
   activeChapter?: BibleAudioChapterIdentity;
+  error?: string | null;
   interruptionCount?: number;
+  isLoaded?: boolean;
   loadError?: boolean;
+  reasonForWaitingToPlay?: string;
+  timeControlStatus?: string;
 };

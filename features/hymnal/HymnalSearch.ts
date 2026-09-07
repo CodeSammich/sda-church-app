@@ -40,6 +40,41 @@ export type HeaderSearchCandidate = {
   title: string;
 };
 
+const decodeHymnalRouteValue = (value: string) => {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, ' '));
+  } catch {
+    // A malformed deep link should still open the hymnal instead of crashing
+    // the native app while a search result is being selected.
+    return value;
+  }
+};
+
+/** Converts a catalog route into the object shape expected by Expo Router. */
+export const getHymnalSearchNavigation = (
+  route: string,
+  highlight: string,
+): { pathname: string; params: Record<string, string> } => {
+  const separatorIndex = route.indexOf('?');
+  const pathname = separatorIndex === -1 ? route : route.slice(0, separatorIndex);
+  const queryString = separatorIndex === -1 ? '' : route.slice(separatorIndex + 1);
+  const params: Record<string, string> = {};
+
+  for (const pair of queryString.split('&')) {
+    if (!pair) continue;
+    const equalsIndex = pair.indexOf('=');
+    const rawKey = equalsIndex === -1 ? pair : pair.slice(0, equalsIndex);
+    if (!rawKey) continue;
+    const rawValue = equalsIndex === -1 ? '' : pair.slice(equalsIndex + 1);
+    params[decodeHymnalRouteValue(rawKey)] = decodeHymnalRouteValue(rawValue);
+  }
+
+  return {
+    pathname,
+    params: { ...params, highlight },
+  };
+};
+
 export const filterHeaderSearchItems = <Item extends HeaderSearchCandidate>(
   items: readonly Item[],
   query: string,

@@ -17,7 +17,7 @@ import {
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { BottomTabBar } from 'expo-router/js-tabs';
-import { Tabs, router } from 'expo-router';
+import { Tabs, router, usePathname } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -89,6 +89,7 @@ function TabBarLabel(props: {
 
 export default function TabLayout() {
   const theme = useAppTheme();
+  const pathname = usePathname();
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
   const [tabLabelLineCounts, setTabLabelLineCounts] = useState<
@@ -181,6 +182,9 @@ export default function TabLayout() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  // The Bible's fixed reader dock owns the upper boundary on this tab. Keep
+  // this broad enough for native/router variants that expose `/bible/index`.
+  const isBibleRoute = pathname === '/bible' || pathname.startsWith('/bible/');
 
   return (
     <BottomTabHeightContext.Provider value={tabBarHeight}>
@@ -223,7 +227,6 @@ export default function TabLayout() {
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
             backgroundColor: 'transparent',
-            borderTopWidth: 0,
           },
           tabBarItemStyle: {
             flex: 1,
@@ -231,12 +234,18 @@ export default function TabLayout() {
             overflow: 'visible',
           },
           tabBarBackground: () => (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: theme.colors.background },
-              ]}
-            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.background }]}>
+              {!isBibleRoute && (
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    height: StyleSheet.hairlineWidth,
+                    backgroundColor: theme.colors.outlineVariant,
+                    opacity: menuAnim,
+                  }}
+                />
+              )}
+            </View>
           ),
           // The animated tab bar is absolutely positioned, so React Navigation cannot
           // reserve space for it. Keep every regular tab screen above the overlay.
@@ -348,6 +357,13 @@ export default function TabLayout() {
               event.preventDefault();
               router.navigate('/explore');
             },
+          }}
+        />
+        <Tabs.Screen
+          name="sabbath-school"
+          options={{
+            href: null,
+            headerShown: true,
           }}
         />
         <Tabs.Screen

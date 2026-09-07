@@ -143,8 +143,9 @@ simple, blended colors.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
   height (Status Bar + 64px).
-- **Boundary Definition:** Do not use any boundary definition for the bottom tab
-  navigation bar
+- **Boundary Definition:** A restrained 0.5px top boundary using the theme's subtle
+  outline token is permitted for the bottom tab navigation bar and persistent audio
+  controls. Do not add shadows, strong dividers, or decorative glass effects.
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital
   Sanctuary."
 

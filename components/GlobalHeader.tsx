@@ -12,6 +12,7 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
 import {
   filterHeaderSearchItems,
+  getHymnalSearchNavigation,
   getHymnalSearchItems,
   getHymnalSearchResults,
   getHymnalSearchSubtitle,
@@ -328,25 +329,16 @@ export const GlobalHeader = (props: any) => {
     searchExpansion.setValue(0);
     searchRef.current?.blur();
 
-    // If already on a subpage, replace to avoid history loops.
-    // Otherwise, navigate normally into the stack.
-    const navFn = isSubPage ? router.replace : router.navigate;
-
-    // Parse out existing query parameters from the route string if present.
-    // This ensures Expo Router handles discrete params correctly during navigation.
-    const [pathname, queryString] = item.route.split('?');
-    const routeParams: Record<string, string> = {};
-    if (queryString) {
-      queryString.split('&').forEach((pair) => {
-        const [key, value] = pair.split('=');
-        routeParams[key] = decodeURIComponent(value);
-      });
+    // A search result on the current hymnal only changes its params. Replacing
+    // the same nested route while its header/list is handling a press can
+    // crash native navigation. A result for another hymnal gets a normal push
+    // so the nested home stack has a concrete destination to mount.
+    const navigation = getHymnalSearchNavigation(item.route, q);
+    if (navigation.pathname === activeHymnalRoute) {
+      router.setParams(navigation.params);
+    } else {
+      router.push(navigation as any);
     }
-
-    navFn({
-      pathname: pathname as any,
-      params: { ...routeParams, highlight: q },
-    });
   };
 
   const handleSelectBibleVerse = (verseNumber: number) => {
@@ -555,7 +547,7 @@ export const GlobalHeader = (props: any) => {
                   },
                   {
                     backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.outlineVariant,
+                    borderColor: theme.colors.outline,
                     opacity: titleChipAnim,
                     transform: [{ translateY: titleChipTranslateY }],
                   },

@@ -1,4 +1,5 @@
 import {
+  getAndroidBackTarget,
   getHeaderBackButtonColors,
   getHeaderBackTarget,
   hasHeaderBackButton,
@@ -12,7 +13,7 @@ describe('global header back navigation', () => {
     (theme) => {
       expect(getHeaderBackButtonColors(theme)).toEqual({
         backgroundColor: theme.colors.surface,
-        borderColor: theme.colors.outlineVariant,
+        borderColor: theme.colors.outline,
       });
       expect(getHeaderBackButtonColors(theme).backgroundColor).toMatch(/^#[\dA-F]{6}$/i);
     },
@@ -58,5 +59,24 @@ describe('global header back navigation', () => {
         SABBATH_SCHOOL_BACK_TARGET,
       ),
     ).toBe('/');
+  });
+
+  it('uses the canonical parent for nested library collections', () => {
+    expect(getAndroidBackTarget('/explore')).toBe('/');
+    expect(getAndroidBackTarget('/explore/library')).toBe('/explore');
+    expect(getAndroidBackTarget('/explore/library/egw')).toBe('/explore/library');
+  });
+
+  it('keeps Bible back navigation tied to its explicit entry point', () => {
+    expect(getAndroidBackTarget('/bible', '/home/discover')).toBe('/home/discover');
+    expect(getAndroidBackTarget('/bible', '/home/bulletin')).toBe('/home/bulletin');
+    expect(getAndroidBackTarget('/bible')).toBe('/');
+  });
+
+  it('uses canonical parents for fixed home and You sub-pages', () => {
+    expect(getAndroidBackTarget('/home/hymn-lookup')).toBe('/home/hymnal-selection');
+    expect(getAndroidBackTarget('/home/english-hymnal')).toBe('/home/hymnal-selection');
+    expect(getAndroidBackTarget('/you/legal')).toBe('/you');
+    expect(getAndroidBackTarget('/home/about-sda')).toBe('/home/discover');
   });
 });

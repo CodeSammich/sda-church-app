@@ -8,8 +8,17 @@ import {
   TEXT_SCALE_STORAGE_KEY,
   type TextScale,
 } from '@/constants/AppPreferences';
-import { getHeaderBackTarget, hasHeaderBackButton } from '@/constants/BackNavigation';
-import { openIosPwaInstallGuide } from '@/constants/ExternalLinks';
+import {
+  getAndroidBackTarget,
+  getHeaderBackTarget,
+  hasHeaderBackButton,
+} from '@/constants/BackNavigation';
+import {
+  CHURCH_LATITUDE,
+  CHURCH_LONGITUDE,
+  getSunsetApiUrl,
+  openIosPwaInstallGuide,
+} from '@/constants/ExternalLinks';
 import {
   DEFAULT_LANG,
   LanguageContext,
@@ -23,7 +32,10 @@ import {
   SCRIPTURE_FONT_FAMILIES,
   THEME_DARK,
   THEME_LIGHT,
+  THEME_SUNSET,
+  THEME_SYSTEM,
   THEME_STORAGE_KEY,
+  type ThemeMode,
   ThemeContext,
 } from '@/constants/Themes';
 import {
@@ -244,6 +256,8 @@ export default function RootLayout() {
   const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANG);
   const [languageSelectionRevision, setLanguageSelectionRevision] = useState(0);
   const colorScheme = useColorScheme();
+  const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_SYSTEM);
+  const [sunTimes, setSunTimes] = useState<{ sunrise: Date; sunset: Date } | null>(null);
   const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
   const [theme, setTheme] = useState(() =>
     getAppTheme(colorScheme === THEME_DARK, false, DEFAULT_TEXT_SCALE),
@@ -642,9 +656,18 @@ export default function RootLayout() {
         const preferredTextScale = parseStoredTextScale(savedTextScale);
         setLanguage(preferredLanguage);
         setTextScale(preferredTextScale);
+        const preferredThemeMode: ThemeMode =
+          savedTheme === THEME_DARK || savedTheme === THEME_LIGHT
+            ? savedTheme
+            : savedTheme === THEME_SUNSET || savedTheme === THEME_SYSTEM
+              ? savedTheme
+              : THEME_SYSTEM;
+        setThemeMode(preferredThemeMode);
         setTheme(
           getAppTheme(
-            useDarkTheme,
+            preferredThemeMode === THEME_DARK ||
+              (preferredThemeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
+              (preferredThemeMode === THEME_SUNSET && useDarkTheme),
             needsCjkSystemFont(preferredLanguage),
             preferredTextScale,
           ),
@@ -669,6 +692,45 @@ export default function RootLayout() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isReady || themeMode !== THEME_SUNSET) return;
+    let cancelled = false;
+    const loadSunTimes = async () => {
+      try {
+        const date = new Date().toISOString().slice(0, 10);
+        const response = await fetch(
+          getSunsetApiUrl(CHURCH_LATITUDE, CHURCH_LONGITUDE, date),
+        );
+        const data = await response.json();
+        if (!cancelled && data.status === 'OK') {
+          setSunTimes({
+            sunrise: new Date(data.results.sunrise),
+            sunset: new Date(data.results.sunset),
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to load sunset theme times:', error);
+      }
+    };
+    loadSunTimes();
+    const timer = setInterval(loadSunTimes, 60 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [isReady, themeMode]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    const now = new Date();
+    const isDark =
+      themeMode === THEME_DARK ||
+      (themeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
+      (themeMode === THEME_SUNSET &&
+        (sunTimes ? now < sunTimes.sunrise || now >= sunTimes.sunset : now.getHours() < 7 || now.getHours() >= 19));
+    setTheme(getAppTheme(isDark, needsCjkSystemFont(language), textScale));
+  }, [colorScheme, isReady, language, sunTimes, textScale, themeMode]);
+
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
     setLanguageSelectionRevision((revision) => revision + 1);
@@ -679,18 +741,16 @@ export default function RootLayout() {
     ]);
   };
 
-  const handleToggleTheme = async (val?: any) => {
-    let next: boolean;
-    if (typeof val === 'boolean') {
-      next = val;
-    } else if (typeof val === 'string') {
-      next = val === THEME_DARK;
-    } else {
-      next = !theme.dark;
-    }
-    setTheme(getAppTheme(next, needsCjkSystemFont(language), textScale));
-    await AsyncStorage.setItem(THEME_STORAGE_KEY, next ? THEME_DARK : THEME_LIGHT);
+  const handleSetThemeMode = async (mode: ThemeMode) => {
+    setThemeMode(mode);
+    await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
   };
+
+  const handleToggleTheme = (dark?: boolean) =>
+    handleSetThemeMode(
+      typeof dark === 'boolean' ? (dark ? THEME_DARK : THEME_LIGHT) :
+        theme.dark ? THEME_LIGHT : THEME_DARK,
+    );
 
   const handleSetTextScale = async (nextScale: TextScale) => {
     await persistTextScalePreference(
@@ -720,7 +780,7 @@ export default function RootLayout() {
         BIBLE_TRANSLATION_STORAGE_KEY,
         DEFAULT_TRANSLATION_MAP[language] || 'BSB',
       ),
-      AsyncStorage.setItem(THEME_STORAGE_KEY, theme.dark ? THEME_DARK : THEME_LIGHT),
+      AsyncStorage.setItem(THEME_STORAGE_KEY, themeMode),
       AsyncStorage.setItem(TEXT_SCALE_STORAGE_KEY, serializeTextScale(textScale)),
     ]);
     setShowSetup(false);
@@ -789,7 +849,13 @@ export default function RootLayout() {
         <TextSizeContext.Provider
           value={{ setTextScale: handleSetTextScale, textScale }}
         >
-          <ThemeContext.Provider value={{ toggleTheme: handleToggleTheme }}>
+          <ThemeContext.Provider
+            value={{
+              themeMode,
+              setThemeMode: handleSetThemeMode,
+              toggleTheme: handleToggleTheme,
+            }}
+          >
             <UpdateContext.Provider
               value={{
                 updateAvailable,
@@ -855,6 +921,7 @@ function RootLayoutNav({
   const gestureBackTarget = hasHeaderBackButton(segments, globalParams.backTo)
     ? getHeaderBackTarget(segments, globalParams.backTo)
     : '/';
+  const androidBackTarget = getAndroidBackTarget(pathname, globalParams.backTo);
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
 
   useEffect(() => {
@@ -919,16 +986,19 @@ function RootLayoutNav({
   }, [gestureBackTarget, routeKey]);
 
   // Native Android's edge gesture dispatches through BackHandler rather than
-  // browser history. Consume it here so sub-pages follow the same explicit
-  // backTo/fallback route order as the visible header arrow, without popping
-  // whatever stack happens to be underneath the current screen.
+  // browser history. Consume it here so sub-pages follow the app's explicit
+  // route hierarchy instead of popping whatever stack happens to be beneath
+  // the current screen.
   useEffect(() => {
-    if (Platform.OS !== 'android' || !hasHeaderBackButton(segments, globalParams.backTo)) {
+    const shouldHandleAndroidBack =
+      Platform.OS === 'android' &&
+      (hasHeaderBackButton(segments, globalParams.backTo) || pathname === '/explore');
+    if (!shouldHandleAndroidBack) {
       return;
     }
 
     const handleAndroidBack = () => {
-      router.replace(gestureBackTarget as any);
+      router.replace(androidBackTarget as any);
       return true;
     };
 
@@ -937,7 +1007,7 @@ function RootLayoutNav({
       handleAndroidBack,
     );
     return () => subscription.remove();
-  }, [gestureBackTarget, globalParams.backTo, routeKey, segments]);
+  }, [androidBackTarget, globalParams.backTo, pathname, routeKey, segments]);
 
   // Sync system bars and PWA theme-color meta tag
   useEffect(() => {
