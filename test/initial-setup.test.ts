@@ -66,7 +66,7 @@ describe('InitialSetup', () => {
       { setLanguage, setThemeMode },
     );
 
-    expect(screen.getAllByRole('radio')).toHaveLength(11);
+    expect(screen.getAllByRole('radio')).toHaveLength(13);
     expect(screen.getByRole('radio', { name: 'EN' }).props.accessibilityState)
       .toMatchObject({ checked: true, disabled: false });
     expect(

@@ -12,6 +12,8 @@ import {
   THEME_AMBIENT,
   THEME_DARK,
   THEME_LIGHT,
+  THEME_SUNSET,
+  THEME_SYSTEM,
   ThemeContext,
   useAppTheme,
   type ThemeMode,
@@ -41,6 +43,8 @@ const setupLabels = {
     dark: 'Dark',
     light: 'Light',
     automatic: 'Automatic',
+    system: 'System',
+    sunset: 'Sunset',
     textSize: 'Text size',
     textSizeHelp: 'Choose a comfortable starting size. You can change it later.',
     percentLabel: (percent: number) => `${percent} percent text size`,
@@ -60,6 +64,8 @@ const setupLabels = {
     dark: '深色',
     light: '淺色',
     automatic: '自動',
+    system: '系統',
+    sunset: '日落',
     textSize: '字體大小',
     textSizeHelp: '選擇舒適的起始大小，稍後仍可變更。',
     percentLabel: (percent: number) => `${percent}% 字體大小`,
@@ -79,6 +85,8 @@ const setupLabels = {
     dark: '深色',
     light: '浅色',
     automatic: '自动',
+    system: '系统',
+    sunset: '日落',
     textSize: '字体大小',
     textSizeHelp: '选择舒适的起始大小，稍后仍可更改。',
     percentLabel: (percent: number) => `${percent}% 字体大小`,
@@ -98,6 +106,8 @@ const setupLabels = {
     dark: 'Oscuro',
     light: 'Claro',
     automatic: 'Automático',
+    system: 'Sistema',
+    sunset: 'Atardecer',
     textSize: 'Tamaño del texto',
     textSizeHelp: 'Elige un tamaño inicial cómodo. Puedes cambiarlo después.',
     percentLabel: (percent: number) =>
@@ -340,13 +350,15 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                 }
               }}
               options={[
-                { value: THEME_LIGHT, label: labels.light, icon: 'weather-sunny' },
-                { value: THEME_DARK, label: labels.dark, icon: 'weather-night' },
                 {
                   value: THEME_AMBIENT,
                   label: labels.automatic,
                   icon: 'theme-light-dark',
                 },
+                { value: THEME_SYSTEM, label: labels.system },
+                { value: THEME_SUNSET, label: labels.sunset },
+                { value: THEME_LIGHT, label: labels.light, icon: 'weather-sunny' },
+                { value: THEME_DARK, label: labels.dark, icon: 'weather-night' },
               ]}
             />
           </View>
