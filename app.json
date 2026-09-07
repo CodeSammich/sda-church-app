@@ -37,7 +37,7 @@
         "foregroundImage": "./public/icon-1024x1024.png",
         "backgroundColor": "#00405C"
       },
-      "predictiveBackGestureEnabled": false,
+      "predictiveBackGestureEnabled": true,
       "package": "org.nyccsda.app",
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",

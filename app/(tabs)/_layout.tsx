@@ -287,8 +287,12 @@ export default function TabLayout() {
         <Tabs.Screen
           name="home"
           options={{
-            href: null, // This hides it from the bottom bar completely!
+            // Expo Router 58 redirects a focused `href: null` route to the
+            // first visible tab. Keep this nested stack registered and hide
+            // only its button so `/home/*` destinations remain navigable.
             headerShown: false,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
           }}
         />
 
@@ -362,8 +366,12 @@ export default function TabLayout() {
         <Tabs.Screen
           name="sabbath-school"
           options={{
-            href: null,
+            // This is a navigable screen outside the visible tab set. Using
+            // `href: null` here triggers Expo Router 58's hidden-route
+            // redirect back to Home before the screen can mount.
             headerShown: true,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
           }}
         />
         <Tabs.Screen

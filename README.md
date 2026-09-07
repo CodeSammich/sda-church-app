@@ -52,8 +52,16 @@ before merging the canary branch into a release branch:
 5. Review `app.json` carefully. It currently has no canary-only `autolinking` block and
    no custom Android Gradle override. Do not restore either one unless Expo's official
    SDK 58 build specifically requires it. Keep the `expo-audio` plugin and
-   `doNotMixPersistent` application code in `services/BibleAudioService.ts`.
-6. Run `npm install`, `npx expo-doctor`, `npm run typecheck`, `npm test`, and an Android
+   `doNotMixPersistent` application code in `services/BibleAudioService.ts`. Keep
+   `android.predictiveBackGestureEnabled` enabled for Android edge-back behavior.
+6. Expo Router 58 redirects a focused `href: null` tab to the first visible tab.
+   The hidden Home stack and Sabbath School route therefore use a null
+   `tabBarButton` plus `display: 'none'` in `app/(tabs)/_layout.tsx`; preserve this
+   until the tab architecture is deliberately migrated.
+7. `services/animationFramePolyfill.ts` works around the canary static-renderer
+   crash where Expo Router calls `requestAnimationFrame` in Node. Re-test and remove
+   it if the official Expo 58 web export no longer needs it.
+8. Run `npm install`, `npx expo-doctor`, `npm run typecheck`, `npm test`, and an Android
    APK build before removing the canary branch safeguards.
 
 ## Project Tenets

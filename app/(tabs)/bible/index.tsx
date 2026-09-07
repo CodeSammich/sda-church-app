@@ -934,6 +934,7 @@ export default function BibleScreen() {
   const chapterAutoplayRetryCountRef = useRef(0);
   const isScrubbingRef = useRef(false);
   const scrubFinishInFlightRef = useRef(false);
+  const scrubSessionRef = useRef(0);
   const scrubShouldResumeRef = useRef(false);
   const scrubPositionMillisRef = useRef<number | null>(null);
   const pendingSeekPositionMillisRef = useRef<number | null>(null);
@@ -1613,6 +1614,11 @@ export default function BibleScreen() {
   }, []);
 
   const beginScrubbing = (event: GestureResponderEvent) => {
+    // A responder can be reacquired before the previous seek promise settles.
+    // Give each gesture its own generation so an older completion cannot clear
+    // or resume a newer scrub session.
+    scrubSessionRef.current += 1;
+    scrubFinishInFlightRef.current = false;
     isScrubbingRef.current = true;
     scrubShouldResumeRef.current =
       isPlaying || audioStatus.playing || audioPlayer.currentStatus.playing;
@@ -1642,17 +1648,19 @@ export default function BibleScreen() {
     // the second callback, whose native event may report locationX = 0.
     if (!isScrubbingRef.current || scrubFinishInFlightRef.current) return;
     scrubFinishInFlightRef.current = true;
+    const session = scrubSessionRef.current;
     const nextPosition = scrubPositionMillisRef.current ?? getSeekPosition(event);
     const shouldResume = scrubShouldResumeRef.current;
-    scrubShouldResumeRef.current = false;
     scrubPositionMillisRef.current = null;
-    setScrubPositionMillis(null);
+    // Keep the finger position rendered while seekTo is still being applied.
+    // Clearing it here exposes the old native position and looks like a jump
+    // when Android terminates and re-grants the responder during a drag.
 
     try {
       const seekApplied = await seekAudio(nextPosition);
       // Resume only after the seek completes. Starting playback before seeking
       // lets a competing media app hear a brief flare during the gesture.
-      if (shouldResume && seekApplied) {
+      if (session === scrubSessionRef.current && shouldResume && seekApplied) {
         nativePlaybackIntentRef.current = true;
         pendingNativeAutoplayRef.current = Platform.OS !== 'web';
         await reactivateNativeAudioFocus();
@@ -1662,8 +1670,12 @@ export default function BibleScreen() {
     } finally {
       // Keep this true until seekTo() and the optional resume play have both
       // completed, so status-driven recovery cannot fight the gesture.
-      scrubFinishInFlightRef.current = false;
-      isScrubbingRef.current = false;
+      if (session === scrubSessionRef.current) {
+        scrubShouldResumeRef.current = false;
+        setScrubPositionMillis(null);
+        scrubFinishInFlightRef.current = false;
+        isScrubbingRef.current = false;
+      }
     }
   };
 

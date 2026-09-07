@@ -1,3 +1,4 @@
+import '@/services/animationFramePolyfill';
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import {
@@ -992,7 +993,9 @@ function RootLayoutNav({
   useEffect(() => {
     const shouldHandleAndroidBack =
       Platform.OS === 'android' &&
-      (hasHeaderBackButton(segments, globalParams.backTo) || pathname === '/explore');
+      (hasHeaderBackButton(segments, globalParams.backTo) ||
+        pathname === '/bible' ||
+        pathname === '/explore');
     if (!shouldHandleAndroidBack) {
       return;
     }
