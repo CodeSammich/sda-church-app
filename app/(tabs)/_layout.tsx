@@ -182,7 +182,9 @@ export default function TabLayout() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
-  const isBibleRoute = pathname === '/bible';
+  // The Bible's fixed reader dock owns the upper boundary on this tab. Keep
+  // this broad enough for native/router variants that expose `/bible/index`.
+  const isBibleRoute = pathname === '/bible' || pathname.startsWith('/bible/');
 
   return (
     <BottomTabHeightContext.Provider value={tabBarHeight}>

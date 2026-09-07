@@ -3131,7 +3131,7 @@ export default function BibleScreen() {
           // The first visible Bible surface owns the shared upper boundary.
           // When audio exists, the audio dock receives it instead.
           borderTopColor: theme.colors.outlineVariant,
-          borderTopWidth: hasChapterAudio ? 0 : StyleSheet.hairlineWidth,
+          borderTopWidth: hasChapterAudio ? 0 : 1,
         },
         fullscreenEdgeInset > 0 && { paddingHorizontal: fullscreenEdgeInset },
       ]}
@@ -3314,7 +3314,7 @@ export default function BibleScreen() {
                 {
                   minHeight: dockLayout.audioDockHeight,
                   borderTopColor: theme.colors.outlineVariant,
-                  borderTopWidth: StyleSheet.hairlineWidth,
+                  borderTopWidth: 1,
                 },
               ]}
             >
