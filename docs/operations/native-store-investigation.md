@@ -30,8 +30,8 @@ to a type with optional queue methods; that does not implement a native queue.
 The Bible screen advances chapters through a React effect on `didJustFinish`
 and implements timed sleep with JavaScript `setTimeout`. These are specific
 risks to verify under suspension, not evidence of a demonstrated native failure.
-The custom `withAndroidSDKOverride.js` and dependency versions also need checking
-against SDK 55 before attempting a native build.
+The canary dependency versions and generated native project should be checked
+before attempting a native build.
 
 ## Expo versus Capacitor
 

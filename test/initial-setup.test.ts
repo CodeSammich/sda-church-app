@@ -78,7 +78,7 @@ describe('InitialSetup', () => {
     fireEvent.press(screen.getByRole('radio', { name: 'Dark' }));
 
     expect(setLanguage).toHaveBeenCalledWith('zh');
-    expect(toggleTheme).toHaveBeenCalledWith('dark');
+    expect(toggleTheme).toHaveBeenCalledWith(true);
   });
 
   it.each(languageCases)(

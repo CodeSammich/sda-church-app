@@ -31,6 +31,31 @@ on Safari (iOS) or Chrome (Android).
   - [Offline Bulletin Translation: Bergamot Feasibility](docs/feature_designs/offline_bulletin_translation.md)
 - [Contributing Code](docs/CONTRIBUTING.md)
 
+### Expo 58 canary rollback checklist
+
+This branch intentionally uses an Expo 58 canary while `doNotMixPersistent` is tested
+for audio issue #205. When Expo 58 becomes an official release, use this checklist
+before merging the canary branch into a release branch:
+
+1. Replace every `58.0.0-canary-*` dependency in `package.json` and
+   `package-lock.json` with the official Expo 58 versions. Use `npx expo install --fix`
+   and confirm the Expo Doctor-required React Native, Reanimated, and Screens versions.
+2. Remove the explicit `expo-template-bare-minimum@...` prebuild command from the
+   `build:android` and `build:android:apk` scripts. The official `sdk-58` template tag
+   should allow the normal EAS prebuild flow again.
+3. Remove the generated-Android inclusion rules (`!/android` and `!/android/**`) from
+   `.easignore` if native projects are not being committed or otherwise required by
+   the official build workflow.
+4. Re-evaluate `.npmrc`. Its `legacy-peer-deps=true` setting exists only because npm's
+   peer resolver is unreliable with this canary dependency graph; remove it if a plain
+   `npm install` succeeds on the official release.
+5. Review `app.json` carefully. It currently has no canary-only `autolinking` block and
+   no custom Android Gradle override. Do not restore either one unless Expo's official
+   SDK 58 build specifically requires it. Keep the `expo-audio` plugin and
+   `doNotMixPersistent` application code in `services/BibleAudioService.ts`.
+6. Run `npm install`, `npx expo-doctor`, `npm run typecheck`, `npm test`, and an Android
+   APK build before removing the canary branch safeguards.
+
 ## Project Tenets
 
 _Guiding our design philosophy in decreasing order of priority._

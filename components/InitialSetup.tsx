@@ -324,7 +324,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
               value={theme.dark ? 'dark' : 'light'}
               disabled={isSavingTextScale}
               onValueChange={(value) => {
-                if (!textScaleWritePendingRef.current) toggleTheme(value);
+                if (!textScaleWritePendingRef.current) toggleTheme(value === 'dark');
               }}
               options={[
                 { value: 'light', label: labels.light, icon: 'weather-sunny' },
