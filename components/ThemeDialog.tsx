@@ -61,25 +61,21 @@ const copy = {
   en: {
     title: 'Theme',
     description: 'Choose how the app selects its light or dark appearance.',
-    selected: 'Selected',
     close: 'Close',
   },
   zh: {
     title: '主題',
     description: '選擇應用程式如何使用淺色或深色外觀。',
-    selected: '已選擇',
     close: '關閉',
   },
   'zh-cn': {
     title: '主题',
     description: '选择应用如何使用浅色或深色外观。',
-    selected: '已选择',
     close: '关闭',
   },
   es: {
     title: 'Tema',
     description: 'Elige cómo la aplicación selecciona su apariencia clara u oscura.',
-    selected: 'Seleccionado',
     close: 'Cerrar',
   },
 } as const;
@@ -141,7 +137,6 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
                       </Text>
                       <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                         {optionLabels.description}
-                        {selected ? ` · ${labels.selected}` : ''}
                       </Text>
                     </View>
                     <View

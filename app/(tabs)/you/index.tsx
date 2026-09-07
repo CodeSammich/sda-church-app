@@ -8,13 +8,7 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { getTextSizeMenuCopy } from '@/constants/TextSizeCopy';
 import { useTextSize } from '@/constants/TextSizeContext';
 import {
-  THEME_DARK,
-  THEME_LIGHT,
-  THEME_SUNSET,
-  THEME_SYSTEM,
-  ThemeContext,
   useAppTheme,
-  type ThemeMode,
 } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import packageJson from '@/package.json';
@@ -94,7 +88,6 @@ export default function YouScreen() {
   const DocumentStyles = useDocumentStyles();
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
-  const { themeMode } = useContext(ThemeContext);
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
   const { textScale } = useTextSize();
   const [showTextSize, setShowTextSize] = useState(false);
@@ -103,13 +96,6 @@ export default function YouScreen() {
   const headerHeight = useGlobalHeaderHeight();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
-
-  const themeLabels: Record<ThemeMode, string> = {
-    [THEME_LIGHT]: 'Light',
-    [THEME_DARK]: 'Dark',
-    [THEME_SUNSET]: 'Sunset',
-    [THEME_SYSTEM]: 'System',
-  };
 
   return (
     <>
@@ -172,7 +158,7 @@ export default function YouScreen() {
             />
             <MenuCard
               title={labels.darkMode}
-              description={`${labels.darkModeSub} · ${themeLabels[themeMode]}`}
+              description={labels.darkModeSub}
               icon="theme-light-dark"
               iconColor={theme.colors.primary}
               onPress={() => setShowThemeDialog(true)}
