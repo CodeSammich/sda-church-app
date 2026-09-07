@@ -223,8 +223,6 @@ export default function TabLayout() {
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
             backgroundColor: 'transparent',
-            borderTopWidth: 0.5,
-            borderTopColor: theme.colors.outlineVariant,
           },
           tabBarItemStyle: {
             flex: 1,
@@ -349,6 +347,13 @@ export default function TabLayout() {
               event.preventDefault();
               router.navigate('/explore');
             },
+          }}
+        />
+        <Tabs.Screen
+          name="sabbath-school"
+          options={{
+            href: null,
+            headerShown: true,
           }}
         />
         <Tabs.Screen

@@ -502,10 +502,8 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
 const styles = StyleSheet.create({
   actions: {
     alignItems: 'stretch',
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexDirection: 'column',
     gap: 8,
-    justifyContent: 'flex-end',
     paddingBottom: 16,
     paddingHorizontal: 24,
     paddingTop: 8,

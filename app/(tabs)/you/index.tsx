@@ -1,6 +1,7 @@
 import { UpdateContext } from '@/app/_layout';
 import { MenuCard } from '@/components/MenuCard';
 import { LanguageDialog } from '@/components/LanguageDialog';
+import { ThemeDialog } from '@/components/ThemeDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -23,7 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext, useState } from 'react';
 import { ImageBackground, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { List, Menu, Text, TouchableRipple } from 'react-native-paper';
+import { List, Text, TouchableRipple } from 'react-native-paper';
 
 const allLabels = {
   en: {
@@ -93,12 +94,12 @@ export default function YouScreen() {
   const DocumentStyles = useDocumentStyles();
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
-  const { themeMode, setThemeMode } = useContext(ThemeContext);
+  const { themeMode } = useContext(ThemeContext);
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
   const { textScale } = useTextSize();
   const [showTextSize, setShowTextSize] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
-  const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [showThemeDialog, setShowThemeDialog] = useState(false);
   const headerHeight = useGlobalHeaderHeight();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
@@ -169,31 +170,13 @@ export default function YouScreen() {
               iconColor={theme.colors.tertiary}
               onPress={() => setShowTextSize(true)}
             />
-            <Menu
-              visible={showThemeMenu}
-              onDismiss={() => setShowThemeMenu(false)}
-              anchor={
-                <TouchableRipple onPress={() => setShowThemeMenu(true)}>
-                  <List.Item
-                    title={labels.darkMode}
-                    description={`${labels.darkModeSub} · ${themeLabels[themeMode]}`}
-                    left={(props) => <List.Icon {...props} icon="theme-light-dark" color={theme.colors.primary} />}
-                  />
-                </TouchableRipple>
-              }
-            >
-              {(Object.keys(themeLabels) as ThemeMode[]).map((mode) => (
-                <Menu.Item
-                  key={mode}
-                  title={themeLabels[mode]}
-                  leadingIcon={themeMode === mode ? 'check' : undefined}
-                  onPress={() => {
-                    setShowThemeMenu(false);
-                    void setThemeMode(mode);
-                  }}
-                />
-              ))}
-            </Menu>
+            <MenuCard
+              title={labels.darkMode}
+              description={`${labels.darkModeSub} · ${themeLabels[themeMode]}`}
+              icon="theme-light-dark"
+              iconColor={theme.colors.primary}
+              onPress={() => setShowThemeDialog(true)}
+            />
           </List.Section>
 
           <List.Section>
@@ -262,6 +245,10 @@ export default function YouScreen() {
       <LanguageDialog
         visible={showLanguage}
         onDismiss={() => setShowLanguage(false)}
+      />
+      <ThemeDialog
+        visible={showThemeDialog}
+        onDismiss={() => setShowThemeDialog(false)}
       />
     </>
   );
