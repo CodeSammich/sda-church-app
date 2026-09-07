@@ -335,7 +335,7 @@ describe('Bible audio web player', () => {
     });
   });
 
-  it('resumes an unexpected Android pause immediately after chapter transition', async () => {
+  it('keeps an unexpected Android pause paused after chapter transition', async () => {
     jest
       .spyOn(navigator, 'userAgent', 'get')
       .mockReturnValue('Mozilla/5.0 (Linux; Android 16; Pixel 9a) Chrome/140');
@@ -375,7 +375,7 @@ describe('Bible audio web player', () => {
       await Promise.resolve();
     });
 
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
     expect(result.current.status.interruptionCount).toBe(1);
   });
 
@@ -423,7 +423,7 @@ describe('Bible audio web player', () => {
     expect(result.current.status.interruptionCount).toBe(0);
   });
 
-  it('keeps retrying while Android playback is desired and remains paused', async () => {
+  it('retries an Android interruption after five seconds', async () => {
     jest.useFakeTimers();
     jest
       .spyOn(navigator, 'userAgent', 'get')
@@ -440,9 +440,14 @@ describe('Bible audio web player', () => {
       value: HTMLMediaElement.HAVE_FUTURE_DATA,
     });
 
-    act(() => result.current.player.play());
+    act(() => {
+      result.current.player.play();
+      media.dispatchEvent(new Event('playing'));
+      media.dispatchEvent(new Event('waiting'));
+      media.dispatchEvent(new Event('pause'));
+    });
     (HTMLMediaElement.prototype.play as jest.Mock).mockClear();
-    await act(async () => jest.advanceTimersByTimeAsync(2_000));
+    await act(async () => jest.advanceTimersByTimeAsync(5_000));
 
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
     act(() => result.current.player.pause());
