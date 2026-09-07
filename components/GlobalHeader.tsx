@@ -329,15 +329,15 @@ export const GlobalHeader = (props: any) => {
     searchExpansion.setValue(0);
     searchRef.current?.blur();
 
-    // If already on a subpage, replace to avoid history loops. Otherwise,
-    // navigate normally into the stack. Keep the router method attached to
-    // the router object; native router implementations may depend on that
-    // call shape.
+    // A search result on the current hymnal only changes its params. Replacing
+    // the same nested route while its header/list is handling a press can
+    // crash native navigation. A result for another hymnal gets a normal push
+    // so the nested home stack has a concrete destination to mount.
     const navigation = getHymnalSearchNavigation(item.route, q);
-    if (isSubPage) {
-      router.replace(navigation as any);
+    if (navigation.pathname === activeHymnalRoute) {
+      router.setParams(navigation.params);
     } else {
-      router.navigate(navigation as any);
+      router.push(navigation as any);
     }
   };
 
