@@ -47,7 +47,9 @@
     },
     "autolinking": {
       "android": {
-        "buildFromSource": ["expo-audio"]
+        "buildFromSource": [
+          "expo-audio"
+        ]
       }
     },
     "plugins": [
