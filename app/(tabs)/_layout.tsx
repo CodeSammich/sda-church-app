@@ -17,7 +17,7 @@ import {
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { BottomTabBar } from 'expo-router/js-tabs';
-import { Tabs, router } from 'expo-router';
+import { Tabs, router, usePathname } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -89,6 +89,7 @@ function TabBarLabel(props: {
 
 export default function TabLayout() {
   const theme = useAppTheme();
+  const pathname = usePathname();
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
   const [tabLabelLineCounts, setTabLabelLineCounts] = useState<
@@ -181,6 +182,9 @@ export default function TabLayout() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  // The Bible's fixed reader dock owns the upper boundary on this tab. Keep
+  // this broad enough for native/router variants that expose `/bible/index`.
+  const isBibleRoute = pathname === '/bible' || pathname.startsWith('/bible/');
 
   return (
     <BottomTabHeightContext.Provider value={tabBarHeight}>
@@ -223,7 +227,10 @@ export default function TabLayout() {
             paddingHorizontal: fullscreenEdgeInset,
             elevation: 0,
             backgroundColor: 'transparent',
-            borderTopWidth: 0,
+            borderTopColor: isBibleRoute
+              ? 'transparent'
+              : theme.colors.outlineVariant,
+            borderTopWidth: isBibleRoute ? 0 : StyleSheet.hairlineWidth,
           },
           tabBarItemStyle: {
             flex: 1,
@@ -278,8 +285,12 @@ export default function TabLayout() {
         <Tabs.Screen
           name="home"
           options={{
-            href: null, // This hides it from the bottom bar completely!
+            // Expo Router 58 redirects a focused `href: null` route to the
+            // first visible tab. Keep this nested stack registered and hide
+            // only its button so `/home/*` destinations remain navigable.
             headerShown: false,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
           }}
         />
 
@@ -348,6 +359,17 @@ export default function TabLayout() {
               event.preventDefault();
               router.navigate('/explore');
             },
+          }}
+        />
+        <Tabs.Screen
+          name="sabbath-school"
+          options={{
+            // This is a navigable screen outside the visible tab set. Using
+            // `href: null` here triggers Expo Router 58's hidden-route
+            // redirect back to Home before the screen can mount.
+            headerShown: true,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
           }}
         />
         <Tabs.Screen

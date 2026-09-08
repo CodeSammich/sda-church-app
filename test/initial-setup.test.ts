@@ -60,13 +60,13 @@ describe('InitialSetup', () => {
 
   it('exposes every wrapping preset as an independent radio control', () => {
     const setLanguage = jest.fn();
-    const toggleTheme = jest.fn();
+    const setThemeMode = jest.fn();
     const screen = renderWithPreferences(
       createElement(InitialSetup, { onComplete: jest.fn() }),
-      { setLanguage, toggleTheme },
+      { setLanguage, setThemeMode },
     );
 
-    expect(screen.getAllByRole('radio')).toHaveLength(10);
+    expect(screen.getAllByRole('radio')).toHaveLength(13);
     expect(screen.getByRole('radio', { name: 'EN' }).props.accessibilityState)
       .toMatchObject({ checked: true, disabled: false });
     expect(
@@ -78,7 +78,8 @@ describe('InitialSetup', () => {
     fireEvent.press(screen.getByRole('radio', { name: 'Dark' }));
 
     expect(setLanguage).toHaveBeenCalledWith('zh');
-    expect(toggleTheme).toHaveBeenCalledWith('dark');
+    expect(setThemeMode).toHaveBeenCalledWith('dark');
+    expect(screen.getByRole('radio', { name: 'Automatic' })).toBeTruthy();
   });
 
   it.each(languageCases)(

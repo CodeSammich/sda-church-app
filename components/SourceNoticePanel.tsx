@@ -8,7 +8,6 @@ import { useAppTheme } from '@/constants/Themes';
 import { useMemo } from 'react';
 import {
   StyleSheet,
-  TouchableOpacity,
   type StyleProp,
   type ViewStyle,
   View,
@@ -22,16 +21,12 @@ export interface SourceNoticeItem {
 
 interface SourceNoticePanelProps {
   items: readonly SourceNoticeItem[];
-  legalLabel?: string;
-  onLegalPress?: () => void;
   style?: StyleProp<ViewStyle>;
   title: string;
 }
 
 export function SourceNoticePanel({
   items,
-  legalLabel,
-  onLegalPress,
   style,
   title,
 }: SourceNoticePanelProps) {
@@ -80,23 +75,6 @@ export function SourceNoticePanel({
           </View>
         ))}
       </View>
-      {legalLabel && onLegalPress ? (
-        <TouchableOpacity
-          accessibilityLabel={legalLabel}
-          accessibilityRole="link"
-          onPress={onLegalPress}
-          style={[
-            styles.legalLink,
-            { borderTopColor: theme.colors.outlineVariant },
-          ]}
-        >
-          <Text
-            style={[styles.legalLinkText, { color: theme.colors.primary }]}
-          >
-            {legalLabel}
-          </Text>
-        </TouchableOpacity>
-      ) : null}
     </View>
   );
 }
@@ -139,19 +117,5 @@ const createStyles = (
       fontSize: scaleTypographyMetric(14, textScale),
       lineHeight: scaleTypographyMetric(21, textScale),
       minWidth: 0,
-    },
-    legalLink: {
-      alignItems: 'center',
-      alignSelf: 'stretch',
-      borderTopWidth: 1,
-      justifyContent: 'center',
-      minHeight: 44,
-      paddingHorizontal: 16,
-    },
-    legalLinkText: {
-      fontSize: scaleTypographyMetric(13, textScale),
-      fontWeight: '700',
-      lineHeight: scaleTypographyMetric(19, textScale),
-      textAlign: 'center',
     },
   });

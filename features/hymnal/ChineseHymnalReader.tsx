@@ -12,7 +12,7 @@ import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import {
   FlatList,
@@ -33,12 +33,6 @@ export interface ChineseHymnalEntry {
 interface ChineseHymnalReaderProps {
   edition: 505 | 506 | 707;
   coverImage: ImageSourcePropType;
-  route:
-    | '/home/chinese-505-hymnal'
-    | '/home/chinese-506-hymnal'
-    | '/home/chinese-707-new-simplified-hymnal'
-    | '/home/chinese-707-four-part-hymnal'
-    | '/home/chinese-707-standard-hymnal';
   getHymns: () => ChineseHymnalEntry[];
   openHymn: (hymnNumber: number | string) => void;
   titles?: Record<'en' | 'zh' | 'zh-cn' | 'es', string>;
@@ -49,28 +43,24 @@ const getUiLabels = (edition: number) => ({
     title: `Chinese Hymnal — ${edition} Edition`,
     sourceTitle: 'Hymnal source',
     attribution: `Tap a hymn to open its sheet music externally on the ${edition} hymnal directory at zgaxr.com.`,
-    legalLink: 'Legal Disclaimer',
     watchYouTube: 'YouTube',
   },
   zh: {
     title: `中文讚美詩 — ${edition} 版`,
     sourceTitle: '詩歌來源',
     attribution: `點擊詩歌即可在 zgaxr.com 的${edition}版詩歌目錄查看琴譜。`,
-    legalLink: '法律聲明',
     watchYouTube: 'YouTube',
   },
   'zh-cn': {
     title: `中文赞美诗 — ${edition} 版`,
     sourceTitle: '诗歌来源',
     attribution: `点击诗歌即可在 zgaxr.com 的${edition}版诗歌目录查看琴谱。`,
-    legalLink: '法律声明',
     watchYouTube: 'YouTube',
   },
   es: {
     title: `Himnario Chino — Edición ${edition}`,
     sourceTitle: 'Fuente del himnario',
     attribution: `Toca un himno para abrir su partitura en el directorio externo de la edición ${edition} en zgaxr.com.`,
-    legalLink: 'Aviso legal',
     watchYouTube: 'YouTube',
   },
 });
@@ -78,7 +68,6 @@ const getUiLabels = (edition: number) => ({
 export function ChineseHymnalReader({
   edition,
   coverImage,
-  route,
   getHymns,
   openHymn,
   titles,
@@ -221,13 +210,6 @@ export function ChineseHymnalReader({
                 items={[
                   { icon: 'music-clef-treble', text: labels.attribution },
                 ]}
-                legalLabel={labels.legalLink}
-                onLegalPress={() =>
-                  router.push({
-                    pathname: '/you/legal',
-                    params: { backTo: route },
-                  } as any)
-                }
                 style={styles.sourcePanel}
                 title={labels.sourceTitle}
               />

@@ -20,7 +20,6 @@ export default function Chinese707FourPartHymnalScreen() {
     <ChineseHymnalReader
       edition={707}
       coverImage={coverImage}
-      route="/home/chinese-707-four-part-hymnal"
       getHymns={getHymns}
       openHymn={openHymn}
       titles={titles}

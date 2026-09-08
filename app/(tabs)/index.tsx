@@ -414,7 +414,7 @@ export default function HomeScreen() {
 
   const navigateToVerse = () => {
     if (!randomVerse) return;
-    router.replace({
+    router.push({
       pathname: '/bible',
       params: {
         ...BibleService.getScriptureReaderParams(
@@ -427,6 +427,7 @@ export default function HomeScreen() {
           language as SupportedLanguage,
         ),
         referenceRequest: BibleService.createScriptureReferenceRequest(),
+        backTo: '/',
       },
     } as any);
   };
@@ -601,7 +602,7 @@ export default function HomeScreen() {
               iconColor={theme.colors.iconColors.sabbathSchool}
               onPress={() =>
                 router.push({
-                  pathname: '/explore/sabbath-school',
+                  pathname: '/sabbath-school',
                   params: { backTo: '/' },
                 } as any)
               }

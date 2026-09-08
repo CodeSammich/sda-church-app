@@ -14,10 +14,28 @@ import type { BibleAudioQueueItem } from './BibleAudioPlayer.types';
 
 const BSB_AUDIO_READER_PRIORITY = ['souer', 'hays', 'david'] as const;
 
-/** Configures Bible narration as long-form background media. */
+// Expo Audio's persistent non-mixing mode keeps system interruptions from
+// being treated as an intentional app stop, so playback does not reclaim
+// focus and resume over another app's audio.
+// https://github.com/expo/expo/pull/49101
+// Tracking issue and user-facing behavior summary:
+// https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/205
+
+/**
+ * Configures Bible narration as long-form background media.
+ *
+ * Platform behavior:
+ * The native implementation handles interruption and deactivation on both
+ * platforms. The app explicitly releases audio focus only for a user pause,
+ * unload, sleep timer, or completed playback.
+ *
+ * Calling this again before a native retry or seek reasserts the app's audio
+ * session after a transient native interruption without auto-resuming a player
+ * the user intentionally paused.
+ */
 export const configureBibleAudioPlayback = () =>
   setAudioModeAsync({
-    interruptionMode: 'doNotMix',
+    interruptionMode: 'doNotMixPersistent',
     playsInSilentMode: true,
     shouldPlayInBackground: true,
   });

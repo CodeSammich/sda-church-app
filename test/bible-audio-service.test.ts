@@ -20,7 +20,7 @@ describe('Bible audio playback', () => {
     await configureBibleAudioPlayback();
 
     expect(setAudioModeAsync).toHaveBeenCalledWith({
-      interruptionMode: 'doNotMix',
+      interruptionMode: 'doNotMixPersistent',
       playsInSilentMode: true,
       shouldPlayInBackground: true,
     });

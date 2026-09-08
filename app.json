@@ -2,16 +2,11 @@
   "expo": {
     "name": "NY Chinese SDA",
     "slug": "sda-church-app",
-    "version": "0.34.0",
+    "version": "0.35.0",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./public/icon-2048x2048.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#00405C"
-    },
     "experiments": {
       "typedRoutes": true,
       "baseUrl": "/sda-church-app"
@@ -42,13 +37,20 @@
         "foregroundImage": "./public/icon-1024x1024.png",
         "backgroundColor": "#00405C"
       },
-      "predictiveBackGestureEnabled": false,
+      "predictiveBackGestureEnabled": true,
       "package": "org.nyccsda.app",
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
+    },
+    "autolinking": {
+      "android": {
+        "buildFromSource": [
+          "expo-audio"
+        ]
+      }
     },
     "plugins": [
       "expo-router",
@@ -61,11 +63,19 @@
           "recordAudioAndroid": false
         }
       ],
+      "./withAndroidSDKOverride",
       "expo-asset",
       "expo-build-properties",
       "expo-web-browser",
       "expo-font",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./public/icon-2048x2048.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#00405C"
+        }
+      ],
       "expo-status-bar"
     ],
     "extra": {
