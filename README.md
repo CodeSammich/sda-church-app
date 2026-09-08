@@ -20,8 +20,11 @@ on Safari (iOS) or Chrome (Android).
 - [Legal, Licensing & Privacy](docs/LEGAL.md)
 
 User-facing legal text is centralized in the app under **You → Legal Disclaimer**.
-Hymnal and library screens show source/attribution notices only; the repository's
-licensing decisions and third-party source review live in [docs/LEGAL.md](docs/LEGAL.md).
+Library reading-source notices are also collected there: Ellen G. White editions
+are hosted externally on EGW Writings; Adventist pioneer and Christian classic
+works are public domain in the U.S. and hosted externally on Project Gutenberg.
+The repository's licensing decisions and third-party source review live in
+[docs/LEGAL.md](docs/LEGAL.md).
 
 ### Project documentation
 
