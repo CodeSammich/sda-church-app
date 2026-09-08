@@ -1,5 +1,6 @@
 import { LanguageContext } from '@/constants/LanguageContext';
 import {
+  THEME_AMBIENT,
   THEME_DARK,
   THEME_LIGHT,
   THEME_SUNSET,
@@ -20,6 +21,33 @@ const OPTIONS: readonly {
   labels: Record<'en' | 'zh' | 'zh-cn' | 'es', { label: string; description: string }>;
 }[] = [
   {
+    value: THEME_AMBIENT,
+    labels: {
+      en: { label: 'Automatic', description: 'Use the ambient light sensor when available' },
+      zh: { label: '自動', description: '有可用時根據環境光線調整' },
+      'zh-cn': { label: '自动', description: '有可用时根据环境光线调整' },
+      es: { label: 'Automático', description: 'Usar el sensor de luz ambiental cuando esté disponible' },
+    },
+  },
+  {
+    value: THEME_SYSTEM,
+    labels: {
+      en: { label: 'System', description: 'Follow your device setting' },
+      zh: { label: '系統', description: '跟隨裝置設定' },
+      'zh-cn': { label: '系统', description: '跟随设备设置' },
+      es: { label: 'Sistema', description: 'Seguir la configuración del dispositivo' },
+    },
+  },
+  {
+    value: THEME_SUNSET,
+    labels: {
+      en: { label: 'Sunset', description: 'Follow sunset in New York' },
+      zh: { label: '日落', description: '跟隨紐約的日落時間' },
+      'zh-cn': { label: '日落', description: '跟随纽约的日落时间' },
+      es: { label: 'Atardecer', description: 'Seguir el atardecer en Nueva York' },
+    },
+  },
+  {
     value: THEME_LIGHT,
     labels: {
       en: { label: 'Light', description: 'Always use the light theme' },
@@ -35,24 +63,6 @@ const OPTIONS: readonly {
       zh: { label: '深色', description: '始終使用深色主題' },
       'zh-cn': { label: '深色', description: '始终使用深色主题' },
       es: { label: 'Oscuro', description: 'Usar siempre el tema oscuro' },
-    },
-  },
-  {
-    value: THEME_SUNSET,
-    labels: {
-      en: { label: 'Sunset', description: 'Follow sunset in New York' },
-      zh: { label: '日落', description: '跟隨紐約的日落時間' },
-      'zh-cn': { label: '日落', description: '跟随纽约的日落时间' },
-      es: { label: 'Atardecer', description: 'Seguir el atardecer en Nueva York' },
-    },
-  },
-  {
-    value: THEME_SYSTEM,
-    labels: {
-      en: { label: 'System', description: 'Follow your device setting' },
-      zh: { label: '系統', description: '跟隨裝置設定' },
-      'zh-cn': { label: '系统', description: '跟随设备设置' },
-      es: { label: 'Sistema', description: 'Seguir la configuración del dispositivo' },
     },
   },
 ];

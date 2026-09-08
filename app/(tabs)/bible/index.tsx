@@ -53,6 +53,8 @@ import {
   getOrderedBibleAudioReaders,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
+import { BibleAudioScrubGesture } from '@/services/BibleAudioScrubGesture';
+import { BibleAudioSeekController } from '@/services/BibleAudioSeekController';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
 import {
   getParallelStructuralContent,
@@ -83,7 +85,9 @@ import {
 } from '@/styles/ReaderStyles';
 
 const FOOTER_PADDING_GUTTER = 34;
-const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 12_000;
+// Allow slow or intermittent mobile connections (including subway dead zones)
+// to finish the initial request before trying another configured mirror.
+const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 45_000;
 // Native expo-audio owns one active player. The web adapter may warm one
 // immediate next chapter, but native preload downloads an entire file on
 // Android, which is too memory-heavy for long Bible chapters.
@@ -184,8 +188,6 @@ const uiLabels = {
     chooseNarrator: 'Choose narrator',
     audioSettings: 'Audio settings',
     audioSource: 'Preferred source',
-    automaticFallback:
-      'If this source is unavailable, the next source is tried automatically.',
     backgroundPlayback: 'Background playback on Android',
     backgroundPlaybackHelp: 'Fix interrupted background playback',
     backgroundAudioTitle: 'Experiencing interrupted audio?',
@@ -265,7 +267,6 @@ const uiLabels = {
     chooseNarrator: '選擇朗讀者',
     audioSettings: '有聲書設定',
     audioSource: '優先音源',
-    automaticFallback: '如果此音源無法使用，將自動嘗試下一個音源。',
     backgroundPlayback: 'Android 背景播放',
     backgroundPlaybackHelp: '修正背景播放中斷',
     backgroundAudioTitle: '有聲聖經播放中斷嗎？',
@@ -343,7 +344,6 @@ const uiLabels = {
     chooseNarrator: '选择朗读者',
     audioSettings: '有声书设置',
     audioSource: '优先音源',
-    automaticFallback: '如果此音源无法使用，将自动尝试下一个音源。',
     backgroundPlayback: 'Android 后台播放',
     backgroundPlaybackHelp: '修复后台播放中断',
     backgroundAudioTitle: '有声圣经播放中断吗？',
@@ -424,8 +424,6 @@ const uiLabels = {
     chooseNarrator: 'Elegir narrador',
     audioSettings: 'Ajustes de audio',
     audioSource: 'Fuente preferida',
-    automaticFallback:
-      'Si esta fuente no está disponible, se probará la siguiente automáticamente.',
     backgroundPlayback: 'Reproducción en segundo plano en Android',
     backgroundPlaybackHelp: 'Corregir interrupciones en segundo plano',
     backgroundAudioTitle: '¿Se interrumpe el audio?',
@@ -907,13 +905,14 @@ export default function BibleScreen() {
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [audioPositionMillis, setAudioPositionMillis] = useState(0);
   const [audioDurationMillis, setAudioDurationMillis] = useState(0);
-  const [audioBufferedMillis, setAudioBufferedMillis] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [sleepTimerSetting, setSleepTimerSetting] = useState<SleepTimerSetting>(null);
   const [sleepTimerVisible, setSleepTimerVisible] = useState(false);
   const [audioSettingsVisible, setAudioSettingsVisible] = useState(false);
   const [backgroundAudioGuidanceVisible, setBackgroundAudioGuidanceVisible] =
     useState(false);
+  const [isScrubGestureActive, setIsScrubGestureActive] = useState(false);
+  const scrubGestureRef = useRef(new BibleAudioScrubGesture());
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
   const audioPlayer = useBibleAudioPlayer(null, {
     updateInterval: 250,
@@ -926,7 +925,10 @@ export default function BibleScreen() {
   });
   const audioStatus = useBibleAudioPlayerStatus(audioPlayer);
   const loadedAudioUrlRef = useRef<string | null>(null);
-  const audioSourceIndexRef = useRef(0);
+  // `isLoaded` briefly becomes false while ExoPlayer seeks into an unbuffered
+  // range. Track whether this source has loaded at least once so a seek
+  // rebuffer is not mistaken for a new source load.
+  const audioSourceReadyRef = useRef(false);
   const audioLoadAttemptRef = useRef(0);
   const pendingNativeAutoplayRef = useRef(false);
   const lastNativeAutoplayAttemptRef = useRef(0);
@@ -935,11 +937,18 @@ export default function BibleScreen() {
   const nativeRecoveryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preserveAudioOnNextRouteChangeRef = useRef(false);
   const lastSyncedAudioChapterRef = useRef<string | null>(null);
-  const audioFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chapterAutoplayRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chapterAutoplayRetryCountRef = useRef(0);
   const isScrubbingRef = useRef(false);
-  const scrubShouldResumeRef = useRef(false);
-  const scrubPositionMillisRef = useRef<number | null>(null);
-  const pendingSeekPositionMillisRef = useRef<number | null>(null);
+  const seekController = useMemo(
+    () => new BibleAudioSeekController(
+      audioPlayer,
+      setAudioPositionMillis,
+      (error) => console.error('Audio seek error:', error),
+    ),
+    [audioPlayer],
+  );
+  useEffect(() => () => seekController.cancel(), [seekController]);
   const audioScrubberWidth = useRef(1);
   const sleepTimerSettingRef = useRef<SleepTimerSetting>(null);
   const sleepTimerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -953,9 +962,7 @@ export default function BibleScreen() {
       console.warn('Audio player was already released while pausing', error);
     }
   };
-  // Reasserts the platform audio session after a native seek/buffer transition.
-  // This is not an instruction to resume after an external app interrupts us;
-  // callers set nativePlaybackIntentRef only when playback was already wanted.
+  // Explicit Play reacquires the session; ordinary seeks preserve it.
   const reactivateNativeAudioFocus = async () => {
     if (Platform.OS !== 'web') {
       await setIsAudioActiveAsync(true);
@@ -1008,7 +1015,14 @@ export default function BibleScreen() {
       if (currentPlayerStatus.isLoaded && currentPlayerStatus.duration > 0) {
         lastNativeAutoplayAttemptRef.current = Date.now();
         void configureBibleAudioPlayback()
-          .then(() => audioPlayer.play())
+          .then(() => {
+            if (
+              !nativePlaybackIntentRef.current ||
+              isScrubbingRef.current ||
+              seekController.isSeeking
+            ) return;
+            audioPlayer.play();
+          })
           .catch((error) =>
             console.warn('Native Bible audio autoplay retry failed:', error),
           );
@@ -1080,10 +1094,10 @@ export default function BibleScreen() {
       translationLabel: supportedTranslation.name,
     });
 
-  const clearAudioFallbackTimeout = () => {
-    if (audioFallbackTimeoutRef.current) {
-      clearTimeout(audioFallbackTimeoutRef.current);
-      audioFallbackTimeoutRef.current = null;
+  const clearChapterAutoplayRetry = () => {
+    if (chapterAutoplayRetryTimeoutRef.current) {
+      clearTimeout(chapterAutoplayRetryTimeoutRef.current);
+      chapterAutoplayRetryTimeoutRef.current = null;
     }
   };
 
@@ -1137,35 +1151,26 @@ export default function BibleScreen() {
   };
 
   useEffect(() => {
-    const positionMillis = audioStatus.currentTime * 1000;
+    // React may consume a queued pre-seek event after seekTo has completed.
+    // Use one fresh snapshot for both readiness and position.
     const currentPlayerStatus = audioPlayer.currentStatus;
+    const positionMillis = currentPlayerStatus.currentTime * 1000;
     const isCurrentSourceReady =
       currentPlayerStatus.isLoaded && currentPlayerStatus.duration > 0;
+    if (isCurrentSourceReady) {
+      audioSourceReadyRef.current = true;
+    }
     setIsAudioLoading(
       loadedAudioUrlRef.current !== null &&
-        (!isCurrentSourceReady ||
-          audioStatus.isBuffering ||
-          !!audioStatus.error ||
-          !!audioStatus.loadError),
+        !audioSourceReadyRef.current,
     );
     setIsPlaying(audioStatus.playing);
-    setAudioDurationMillis(audioStatus.duration * 1000);
-    setAudioBufferedMillis(positionMillis);
-    if (!isScrubbingRef.current) {
-      const pendingSeekPositionMillis = pendingSeekPositionMillisRef.current;
-      if (pendingSeekPositionMillis === null) {
-        setAudioPositionMillis(positionMillis);
-      } else if (Math.abs(positionMillis - pendingSeekPositionMillis) < 1_000) {
-        pendingSeekPositionMillisRef.current = null;
-        setAudioPositionMillis(positionMillis);
-      } else {
-        // Keep the UI at the requested location while the native player is
-        // still publishing its pre-seek status.
-        setAudioPositionMillis(pendingSeekPositionMillis);
-      }
+    if (currentPlayerStatus.duration > 0) {
+      setAudioDurationMillis(currentPlayerStatus.duration * 1000);
     }
-    if (isCurrentSourceReady) clearAudioFallbackTimeout();
-
+    if (!isScrubbingRef.current) {
+      setAudioPositionMillis(seekController.pendingPositionMillis ?? positionMillis);
+    }
     // `replace()` can finish loading after the original play request. Native
     // players need one explicit play request at that point, but only for a
     // source we intentionally loaded. A normal pause from another app never
@@ -1181,7 +1186,14 @@ export default function BibleScreen() {
     ) {
       lastNativeAutoplayAttemptRef.current = Date.now();
       void configureBibleAudioPlayback()
-        .then(() => audioPlayer.play())
+        .then(() => {
+          if (
+            !nativePlaybackIntentRef.current ||
+            isScrubbingRef.current ||
+            seekController.isSeeking
+          ) return;
+          audioPlayer.play();
+        })
         .catch((error) => console.warn('Native Bible audio autoplay retry failed:', error));
     }
     if (audioStatus.playing && isCurrentSourceReady) {
@@ -1271,7 +1283,6 @@ export default function BibleScreen() {
     const audioUrls = selectedAudioUrlsRef.current;
     const audioUrl = audioUrls[sourceIndex];
     if (!audioUrl) {
-      clearAudioFallbackTimeout();
       clearNativeRecoveryTimeout();
       nativePlaybackIntentRef.current = false;
       pendingNativeAutoplayRef.current = false;
@@ -1284,8 +1295,6 @@ export default function BibleScreen() {
     }
 
     const attempt = ++audioLoadAttemptRef.current;
-    audioSourceIndexRef.current = sourceIndex;
-    clearAudioFallbackTimeout();
     clearNativeRecoveryTimeout();
 
     try {
@@ -1293,11 +1302,13 @@ export default function BibleScreen() {
       nativePlaybackIntentRef.current = true;
       pendingNativeAutoplayRef.current = Platform.OS !== 'web';
       loadedAudioUrlRef.current = audioUrl;
+      audioSourceReadyRef.current = false;
       const audioTitle = getBibleAudioMediaTitle(
         `${book?.name || labels.bible} ${chapterNum}`,
         supportedTranslation.name,
         audioUrl,
       );
+      seekController.cancel();
       audioPlayer.replace({
         uri: audioUrl,
         name: audioTitle,
@@ -1321,24 +1332,40 @@ export default function BibleScreen() {
       audioPlayer.play();
       scheduleNativeAutoplayRetry();
 
-      audioFallbackTimeoutRef.current = setTimeout(() => {
-        if (
-          attempt !== audioLoadAttemptRef.current ||
-          (audioPlayer.currentStatus.isLoaded && audioPlayer.currentStatus.duration > 0)
-        ) {
-          return;
-        }
+      // A slow initial request is not itself a source failure. Only try a
+      // mirror after 45 seconds if this source has never started, has no
+      // duration, and has made no progress. Once playback begins, this timer
+      // can never replace the active source.
+      setTimeout(() => {
+        const currentPlayerStatus = audioPlayer.currentStatus;
+        const sourceHasStarted =
+          currentPlayerStatus.playing ||
+          currentPlayerStatus.currentTime > 0 ||
+          (currentPlayerStatus.isLoaded && currentPlayerStatus.duration > 0);
+        if (attempt !== audioLoadAttemptRef.current || sourceHasStarted) return;
 
         if (sourceIndex + 1 < audioUrls.length) {
-          console.warn(
-            `Bible audio host failed to load; trying fallback ${sourceIndex + 2}/${audioUrls.length}.`,
-          );
+          console.warn('Bible audio initial load timed out; trying the next configured source.');
+          void loadAudioSource(sourceIndex + 1, resumePositionMillis);
+        } else {
+          console.warn('Bible audio is still buffering after 45 seconds; keeping the current source.');
         }
-        loadAudioSource(sourceIndex + 1, resumePositionMillis);
       }, AUDIO_SOURCE_LOAD_TIMEOUT_MS);
+
     } catch (e) {
-      console.warn('Bible audio host failed; trying the next fallback.', e);
-      await loadAudioSource(sourceIndex + 1, resumePositionMillis);
+      if (attempt !== audioLoadAttemptRef.current) return;
+      loadedAudioUrlRef.current = null;
+      setIsAudioLoading(false);
+      nativePlaybackIntentRef.current = false;
+      pendingNativeAutoplayRef.current = false;
+      clearNativeAutoplayRetryTimeout();
+      releaseNativeAudioFocus();
+      if (sourceIndex + 1 < audioUrls.length) {
+        console.warn('Bible audio source failed; trying the next configured source.', e);
+        await loadAudioSource(sourceIndex + 1, resumePositionMillis);
+      } else {
+        console.error('Bible audio source failed to load.', e);
+      }
     }
   };
 
@@ -1391,15 +1418,29 @@ export default function BibleScreen() {
       nativeRecoveryTimeoutRef.current = null;
       if (!nativePlaybackIntentRef.current) return;
 
-      const recovery = audioStatus.error
-        ? loadAudioSource(
-            audioSourceIndexRef.current,
-            audioStatus.currentTime * 1000,
-          )
-        : configureBibleAudioPlayback().then(() => audioPlayer.play());
-      void recovery.catch((error) =>
-        console.warn('Native Bible audio recovery failed:', error),
-      );
+      const currentPlayerStatus = audioPlayer.currentStatus;
+      const hasUsableProgress =
+        currentPlayerStatus.playing ||
+        currentPlayerStatus.currentTime > 0 ||
+        (currentPlayerStatus.isLoaded && currentPlayerStatus.duration > 0);
+      if (audioStatus.error && !hasUsableProgress) {
+        // The initial-load timeout owns source fallback. An early error can
+        // still be a temporary network blip, so do not switch mirrors here.
+        return;
+      }
+
+      void configureBibleAudioPlayback()
+        .then(() => {
+          if (
+            !nativePlaybackIntentRef.current ||
+            isScrubbingRef.current ||
+            seekController.isSeeking
+          ) return;
+          audioPlayer.play();
+        })
+        .catch((error) =>
+          console.warn('Native Bible audio recovery failed:', error),
+        );
     }, NATIVE_AUDIO_RECOVERY_MS);
   }, [audioPlayer, audioStatus.error, audioStatus.isBuffering, audioStatus.playing]);
 
@@ -1423,7 +1464,6 @@ export default function BibleScreen() {
 
   const toggleAudio = async () => {
     if (isPlaying || (Platform.OS !== 'web' && pendingNativeAutoplayRef.current)) {
-      clearAudioFallbackTimeout();
       clearNativeRecoveryTimeout();
       clearNativeAutoplayRetryTimeout();
       audioLoadAttemptRef.current += 1;
@@ -1447,7 +1487,9 @@ export default function BibleScreen() {
   }, [audioStatus.interruptionCount, androidAudioBrowserName]);
 
   const unloadAudio = () => {
-    clearAudioFallbackTimeout();
+    seekController.cancel();
+    clearChapterAutoplayRetry();
+    chapterAutoplayRetryCountRef.current = 0;
     clearNativeRecoveryTimeout();
     audioLoadAttemptRef.current += 1;
     nativePlaybackIntentRef.current = false;
@@ -1467,16 +1509,15 @@ export default function BibleScreen() {
       audioPlayer.replace(null);
     }
     loadedAudioUrlRef.current = null;
+    audioSourceReadyRef.current = false;
     isScrubbingRef.current = false;
     setIsPlaying(false);
     setIsAudioLoading(false);
     setAudioPositionMillis(0);
     setAudioDurationMillis(0);
-    setAudioBufferedMillis(0);
     setScrubPositionMillis(null);
-    scrubShouldResumeRef.current = false;
-    scrubPositionMillisRef.current = null;
-    pendingSeekPositionMillisRef.current = null;
+    setIsScrubGestureActive(false);
+    scrubGestureRef.current.cancel();
   };
 
   const selectAudioReader = (reader: string) => {
@@ -1508,29 +1549,24 @@ export default function BibleScreen() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const getSeekPosition = (event: GestureResponderEvent) => {
-    if (!audioDurationMillis) return 0;
-    const ratio = Math.max(
-      0,
-      Math.min(1, event.nativeEvent.locationX / audioScrubberWidth.current),
+  const seekAudio = (nextPosition: number) => {
+    if (!loadedAudioUrlRef.current) return;
+    const nativeDurationMillis = audioPlayer.currentStatus.duration * 1000;
+    return seekController.seek(
+      nextPosition,
+      nativeDurationMillis > 0 ? nativeDurationMillis : audioDurationMillis,
     );
-    return ratio * audioDurationMillis;
   };
 
-  const seekAudio = async (nextPosition: number) => {
-    const clampedPosition = Math.max(0, Math.min(audioDurationMillis, nextPosition));
-    pendingSeekPositionMillisRef.current = clampedPosition;
-    setAudioPositionMillis(clampedPosition);
-    try {
-      await audioPlayer.seekTo(clampedPosition / 1000);
-    } catch (e) {
-      pendingSeekPositionMillisRef.current = null;
-      console.error('Audio seek error:', e);
-    }
+  const getCurrentAudioPositionMillis = () => {
+    if (seekController.pendingPositionMillis !== null) return seekController.pendingPositionMillis;
+    const nativePositionMillis = audioPlayer.currentStatus.currentTime * 1000;
+    if (Number.isFinite(nativePositionMillis)) return nativePositionMillis;
+    return audioStatus.currentTime * 1000;
   };
 
   const skipAudio = (offsetMillis: number) => {
-    seekAudio(audioPositionMillis + offsetMillis);
+    void seekAudio(getCurrentAudioPositionMillis() + offsetMillis);
   };
 
   const selectPlaybackRate = async (nextRate: number) => {
@@ -1547,54 +1583,58 @@ export default function BibleScreen() {
       if (sleepTimerTimeoutRef.current) {
         clearTimeout(sleepTimerTimeoutRef.current);
       }
+      clearChapterAutoplayRetry();
       clearNativeAutoplayRetryTimeout();
       clearNativeRecoveryTimeout();
     };
   }, []);
 
   const beginScrubbing = (event: GestureResponderEvent) => {
+    const position = scrubGestureRef.current.begin(
+      event.nativeEvent.pageX,
+      event.nativeEvent.locationX,
+      audioScrubberWidth.current,
+      audioDurationMillis,
+    );
+    if (position === null) return;
+    setIsScrubGestureActive(true);
     isScrubbingRef.current = true;
-    scrubShouldResumeRef.current =
-      isPlaying || audioStatus.playing || audioPlayer.currentStatus.playing;
+    // Prevent the native autoplay/recovery effect from issuing a play command
+    // against the old position while the finger is still seeking.
+    pendingNativeAutoplayRef.current = false;
     clearNativeAutoplayRetryTimeout();
     clearNativeRecoveryTimeout();
-    // Pause before recording the seek position so a tap or drag cannot let
-    // the player continue from the old position while the gesture is active.
-    safePauseAudio();
-    const position = getSeekPosition(event);
-    scrubPositionMillisRef.current = position;
+    // Keep the player's play/pause state unchanged while seeking. The skip
+    // controls use this same path successfully; pausing here adds an audio
+    // session transition that can make Android replay the old position.
     setScrubPositionMillis(position);
+    // Like PanResponder's default grant handler, block Android native parents
+    // immediately; scrollEnabled updates only after the next React commit.
+    return true;
   };
 
   const updateScrubbing = (event: GestureResponderEvent) => {
     if (isScrubbingRef.current) {
-      const position = getSeekPosition(event);
-      scrubPositionMillisRef.current = position;
+      const position = scrubGestureRef.current.move(event.nativeEvent.pageX);
+      if (position === null) return;
       setScrubPositionMillis(position);
     }
   };
 
-  const finishScrubbing = async (event: GestureResponderEvent) => {
-    // A responder can receive both release and termination callbacks. Ignore
-    // the second callback, whose native event may report locationX = 0.
-    if (!isScrubbingRef.current) return;
-    const nextPosition = scrubPositionMillisRef.current ?? getSeekPosition(event);
-    const shouldResume = scrubShouldResumeRef.current;
+  const cancelScrubbing = () => {
+    // Native ScrollView/OS cancellation is not a finger-up seek request.
+    scrubGestureRef.current.cancel();
+    setIsScrubGestureActive(false);
     isScrubbingRef.current = false;
-    scrubShouldResumeRef.current = false;
-    scrubPositionMillisRef.current = null;
     setScrubPositionMillis(null);
+  };
 
-    await seekAudio(nextPosition);
-    // Resume only after the seek completes. Starting playback before seeking
-    // lets a competing media app hear a brief flare during the gesture.
-    if (shouldResume) {
-      nativePlaybackIntentRef.current = true;
-      pendingNativeAutoplayRef.current = Platform.OS !== 'web';
-      await reactivateNativeAudioFocus();
-      audioPlayer.play();
-      scheduleNativeAutoplayRetry();
-    }
+  const finishScrubbing = (event: GestureResponderEvent) => {
+    // release() consumes the gesture, so duplicate/cancelled releases do nothing.
+    const nextPosition = scrubGestureRef.current.release(event.nativeEvent.pageX);
+    if (nextPosition !== null) void seekAudio(nextPosition);
+    // seek() publishes its pending target synchronously before this preview clears.
+    cancelScrubbing();
   };
 
   useEffect(() => {
@@ -1604,7 +1644,19 @@ export default function BibleScreen() {
       // can observe the previous chapter's final `playing` status and pause the
       // newly loaded chapter instead. Avoid a timer here because browsers may
       // throttle it as soon as an installed PWA moves to the background.
-      void startAudio();
+      void startAudio().then(() => {
+        if (loadedAudioUrlRef.current || chapterAutoplayRetryCountRef.current >= 3) {
+          chapterAutoplayRetryCountRef.current = 0;
+          return;
+        }
+
+        chapterAutoplayRetryCountRef.current += 1;
+        clearChapterAutoplayRetry();
+        chapterAutoplayRetryTimeoutRef.current = setTimeout(() => {
+          chapterAutoplayRetryTimeoutRef.current = null;
+          setShouldAutoPlay(true);
+        }, 2_000);
+      });
     };
 
     // Only trigger auto-play if:
@@ -3252,6 +3304,7 @@ export default function BibleScreen() {
 
         <ScrollView
           style={styles.controlDockScroll}
+          scrollEnabled={!isScrubGestureActive}
           contentContainerStyle={styles.controlDockScrollContent}
           alwaysBounceVertical={false}
           bounces={dockNeedsVerticalScroll}
@@ -3445,6 +3498,7 @@ export default function BibleScreen() {
                   {formatAudioTime(scrubPositionMillis ?? audioPositionMillis)}
                 </Text>
                 <View
+                  pointerEvents="box-only"
                   accessible
                   accessibilityRole="adjustable"
                   accessibilityLabel={labels.audioPlayer}
@@ -3471,30 +3525,19 @@ export default function BibleScreen() {
                   onLayout={(event) => {
                     audioScrubberWidth.current = event.nativeEvent.layout.width || 1;
                   }}
-                  onStartShouldSetResponder={() => audioDurationMillis > 0}
-                  onMoveShouldSetResponder={() => audioDurationMillis > 0}
+                  onStartShouldSetResponder={() =>
+                    audioDurationMillis > 0 && !isAudioLoading
+                  }
+                  onMoveShouldSetResponder={() =>
+                    audioDurationMillis > 0 && !isAudioLoading
+                  }
+                  onResponderTerminationRequest={() => false}
                   onResponderGrant={beginScrubbing}
                   onResponderMove={updateScrubbing}
                   onResponderRelease={finishScrubbing}
-                  onResponderTerminate={finishScrubbing}
+                  onResponderTerminate={cancelScrubbing}
                 >
-                  <View style={ReaderStyles.audioTrack}>
-                    <View
-                      style={[
-                        ReaderStyles.audioBufferedTrack,
-                        {
-                          backgroundColor: theme.colors.outlineVariant,
-                          width: `${
-                            audioDurationMillis
-                              ? Math.min(
-                                  100,
-                                  (audioBufferedMillis / audioDurationMillis) * 100,
-                                )
-                              : 0
-                          }%`,
-                        },
-                      ]}
-                    />
+                  <View pointerEvents="none" style={ReaderStyles.audioTrack}>
                     <View
                       style={[
                         ReaderStyles.audioPlayedTrack,
@@ -3734,16 +3777,6 @@ export default function BibleScreen() {
                       </TouchableOpacity>
                     );
                   })}
-                  {availableAudioSources.length > 1 && (
-                    <Text
-                      style={[
-                        styles.audioSettingsHelper,
-                        { color: theme.colors.onSurfaceVariant },
-                      ]}
-                    >
-                      {labels.automaticFallback}
-                    </Text>
-                  )}
                 </>
               )}
               {androidAudioBrowserName && (

@@ -11,7 +11,6 @@ export default function Chinese506HymnalScreen() {
     <ChineseHymnalReader
       edition={506}
       coverImage={coverImage}
-      route="/home/chinese-506-hymnal"
       getHymns={getSortedChinese506Hymns}
       openHymn={(hymnNumber) => openChinese506Hymn(Number(hymnNumber))}
     />

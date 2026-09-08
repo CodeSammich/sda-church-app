@@ -32,7 +32,6 @@ const uiLabels = {
     sourceTitle: 'Hymnal source',
     search: 'Search by number, title, or scripture...',
     externalLink: 'View on HymnsForWorship.org',
-    legalLink: 'Legal Disclaimer',
     attribution:
       'Tap a hymn card to open its lyrics and sheet music externally on HymnsForWorship.org.',
     rotation:
@@ -45,7 +44,6 @@ const uiLabels = {
     sourceTitle: '詩歌來源',
     search: '按編號、標題或經文搜尋...',
     externalLink: '在 HymnsForWorship.org 查看',
-    legalLink: '法律聲明',
     attribution: '點擊詩歌卡片即可在 HymnsForWorship.org 查看歌詞與琴譜。',
     rotation: '將裝置旋轉至橫向可放大琴譜，方便閱讀。請先開啟自動旋轉。',
     watchYouTube: 'YouTube',
@@ -56,7 +54,6 @@ const uiLabels = {
     sourceTitle: '诗歌来源',
     search: '按编号、标题或经文搜索...',
     externalLink: '在 HymnsForWorship.org 查看',
-    legalLink: '法律声明',
     attribution: '点击诗歌卡片即可在 HymnsForWorship.org 查看歌词与琴谱。',
     rotation: '将设备旋转至横向可放大乐谱，方便阅读。请先开启自动旋转。',
     watchYouTube: 'YouTube',
@@ -67,7 +64,6 @@ const uiLabels = {
     sourceTitle: 'Fuente del himnario',
     search: 'Buscar por número, título o referencia...',
     externalLink: 'Ver en HymnsForWorship.org',
-    legalLink: 'Aviso legal',
     attribution:
       'Toca una tarjeta de himno para abrir sus letras y partituras externamente en HymnsForWorship.org.',
     rotation:
@@ -264,13 +260,6 @@ export default function HymnalScreen() {
               { icon: 'music-clef-treble', text: labels.attribution },
               { icon: 'phone-rotate-landscape', text: labels.rotation },
             ]}
-            legalLabel={labels.legalLink}
-            onLegalPress={() =>
-              router.push({
-                pathname: '/you/legal',
-                params: { backTo: '/home/english-hymnal' },
-              } as any)
-            }
             style={styles.sourcePanel}
             title={labels.sourceTitle}
           />

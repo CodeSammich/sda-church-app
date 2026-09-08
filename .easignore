@@ -3,6 +3,8 @@
 /*
 !/plugins/
 !/plugins/withAndroidPermanentAudioFocus.js
+!/android
+!/android/**
 
 !/.github
 !/apps-script

@@ -19,6 +19,13 @@ on Safari (iOS) or Chrome (Android).
 
 - [Legal, Licensing & Privacy](docs/LEGAL.md)
 
+User-facing legal text is centralized in the app under **You → Legal Disclaimer**.
+Library reading-source notices are also collected there: Ellen G. White editions
+are hosted externally on EGW Writings; Adventist pioneer and Christian classic
+works are public domain in the U.S. and hosted externally on Project Gutenberg.
+The repository's licensing decisions and third-party source review live in
+[docs/LEGAL.md](docs/LEGAL.md).
+
 ### Project documentation
 
 - [Technical Setup & Testing](docs/README.md)
@@ -30,6 +37,39 @@ on Safari (iOS) or Chrome (Android).
   - [Bulletin Hymn Resolution & Extension Guide](docs/feature_designs/bulletin_hymn_resolution.md)
   - [Offline Bulletin Translation: Bergamot Feasibility](docs/feature_designs/offline_bulletin_translation.md)
 - [Contributing Code](docs/CONTRIBUTING.md)
+
+### Expo 58 canary rollback checklist
+
+This branch intentionally uses an Expo 58 canary while `doNotMixPersistent` is tested
+for audio issue #205. When Expo 58 becomes an official release, use this checklist
+before merging the canary branch into a release branch:
+
+1. Replace every `58.0.0-canary-*` dependency in `package.json` and
+   `package-lock.json` with the official Expo 58 versions. Use `npx expo install --fix`
+   and confirm the Expo Doctor-required React Native, Reanimated, and Screens versions.
+2. Remove the explicit `expo-template-bare-minimum@...` prebuild command from the
+   `build:android` and `build:android:apk` scripts. The official `sdk-58` template tag
+   should allow the normal EAS prebuild flow again.
+3. Remove the generated-Android inclusion rules (`!/android` and `!/android/**`) from
+   `.easignore` if native projects are not being committed or otherwise required by
+   the official build workflow.
+4. Re-evaluate `.npmrc`. Its `legacy-peer-deps=true` setting exists only because npm's
+   peer resolver is unreliable with this canary dependency graph; remove it if a plain
+   `npm install` succeeds on the official release.
+5. Review `app.json` carefully. It currently has no canary-only `autolinking` block and
+   no custom Android Gradle override. Do not restore either one unless Expo's official
+   SDK 58 build specifically requires it. Keep the `expo-audio` plugin and
+   `doNotMixPersistent` application code in `services/BibleAudioService.ts`. Keep
+   `android.predictiveBackGestureEnabled` enabled for Android edge-back behavior.
+6. Expo Router 58 redirects a focused `href: null` tab to the first visible tab.
+   The hidden Home stack and Sabbath School route therefore use a null
+   `tabBarButton` plus `display: 'none'` in `app/(tabs)/_layout.tsx`; preserve this
+   until the tab architecture is deliberately migrated.
+7. `services/animationFramePolyfill.ts` works around the canary static-renderer
+   crash where Expo Router calls `requestAnimationFrame` in Node. Re-test and remove
+   it if the official Expo 58 web export no longer needs it.
+8. Run `npm install`, `npx expo-doctor`, `npm run typecheck`, `npm test`, and an Android
+   APK build before removing the canary branch safeguards.
 
 ## Project Tenets
 
@@ -157,6 +197,13 @@ npm run build:android:eas
 ```
 
 The global `eas` command is optional; the npm scripts use the pinned CLI version.
+The local Android scripts use the normal Gradle, CMake, and Ninja defaults.
+For a memory-constrained WSL session, override them for a one-off build:
+
+```sh
+GRADLE_OPTS="-Dorg.gradle.workers.max=4 -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx5g" npm run build:android:apk
+```
+
 For GitHub Actions, create an access token in Expo under **Account settings →
 Access tokens**, then add it to the repository under **Settings → Secrets and
 variables → Actions** with the name `EXPO_TOKEN`. The **Native binaries** workflow

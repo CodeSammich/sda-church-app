@@ -1,6 +1,12 @@
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { TextSizeContext } from '@/constants/TextSizeContext';
-import { ThemeContext, type AppTheme } from '@/constants/Themes';
+import {
+  ThemeContext,
+  THEME_DARK,
+  THEME_LIGHT,
+  type AppTheme,
+  type ThemeMode,
+} from '@/constants/Themes';
 import { render } from '@testing-library/react-native';
 import { createElement, type ReactElement } from 'react';
 import {
@@ -15,6 +21,8 @@ interface PreferenceRenderOptions {
   setTextScale?: (scale: TextScale) => Promise<void>;
   textScale?: TextScale;
   theme?: AppTheme;
+  themeMode?: ThemeMode;
+  setThemeMode?: (mode: ThemeMode) => void;
   toggleTheme?: (value?: unknown) => void;
 }
 
@@ -26,6 +34,8 @@ export const renderWithPreferences = (
     setTextScale = jest.fn().mockResolvedValue(undefined),
     textScale = DEFAULT_TEXT_SCALE,
     theme,
+    themeMode = theme?.dark ? THEME_DARK : THEME_LIGHT,
+    setThemeMode = jest.fn(),
     toggleTheme = jest.fn(),
   }: PreferenceRenderOptions = {},
 ) =>
@@ -49,7 +59,7 @@ export const renderWithPreferences = (
           { value: { setTextScale, textScale } },
           createElement(
             ThemeContext.Provider,
-            { value: { toggleTheme } },
+            { value: { themeMode, setThemeMode, toggleTheme } },
             element,
           ),
         ),

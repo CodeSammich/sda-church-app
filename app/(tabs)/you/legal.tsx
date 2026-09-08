@@ -42,7 +42,7 @@ export default function LegalScreen() {
         variant="labelSmall"
         style={[styles.lastUpdated, { color: theme.colors.onSurfaceVariant }]}
       >
-        Last Updated: August 2026
+        Last Updated: September 2026
       </Text>
 
       <Text
@@ -84,6 +84,15 @@ export default function LegalScreen() {
         text, protected musical notation, or lyrics. External content is accessed through
         third-party providers; a link or thumbnail does not represent that this project
         independently verified every provider&apos;s copyright permissions.
+      </Text>
+
+      <Text
+        variant="bodyMedium"
+        style={[styles.bodyText, { color: theme.colors.onSurface }]}
+      >
+        Library reading sources: Ellen G. White editions are hosted externally on
+        EGW Writings. Adventist pioneer and Christian classic works are public domain
+        in the U.S. and hosted externally on Project Gutenberg.
       </Text>
 
       <Text

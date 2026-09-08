@@ -1,3 +1,4 @@
+import '@/services/animationFramePolyfill';
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import {
@@ -30,6 +31,7 @@ import {
   AppTheme,
   getAppTheme,
   SCRIPTURE_FONT_FAMILIES,
+  THEME_AMBIENT,
   THEME_DARK,
   THEME_LIGHT,
   THEME_SUNSET,
@@ -52,6 +54,7 @@ import {
 } from '@/services/PwaUpdateService';
 import packageJson from '@/package.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LightSensor } from 'expo-sensors';
 import { ThemeProvider } from 'expo-router/react-navigation';
 import { useFonts } from 'expo-font';
 import * as Localization from 'expo-localization';
@@ -232,6 +235,18 @@ const getSystemLanguage = (): SupportedLanguage => {
 const needsCjkSystemFont = (language: SupportedLanguage) =>
   language === 'zh' || language === 'zh-cn';
 
+// Use hysteresis so small sensor fluctuations do not flip the entire app
+// between themes while a user is near the boundary between indoor light and
+// darkness. Values are ambient illuminance in lux.
+const AMBIENT_DARK_LUX = 20;
+const AMBIENT_LIGHT_LUX = 80;
+
+const resolveAmbientIsDark = (illuminance: number, previous: boolean) => {
+  if (!Number.isFinite(illuminance)) return previous;
+  if (previous) return illuminance < AMBIENT_LIGHT_LUX;
+  return illuminance <= AMBIENT_DARK_LUX;
+};
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -256,7 +271,10 @@ export default function RootLayout() {
   const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANG);
   const [languageSelectionRevision, setLanguageSelectionRevision] = useState(0);
   const colorScheme = useColorScheme();
-  const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_SYSTEM);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_AMBIENT);
+  const [ambientIsDark, setAmbientIsDark] = useState(
+    colorScheme === THEME_DARK,
+  );
   const [sunTimes, setSunTimes] = useState<{ sunrise: Date; sunset: Date } | null>(null);
   const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
   const [theme, setTheme] = useState(() =>
@@ -659,13 +677,16 @@ export default function RootLayout() {
         const preferredThemeMode: ThemeMode =
           savedTheme === THEME_DARK || savedTheme === THEME_LIGHT
             ? savedTheme
-            : savedTheme === THEME_SUNSET || savedTheme === THEME_SYSTEM
+            : savedTheme === THEME_AMBIENT ||
+                savedTheme === THEME_SUNSET ||
+                savedTheme === THEME_SYSTEM
               ? savedTheme
-              : THEME_SYSTEM;
+              : THEME_AMBIENT;
         setThemeMode(preferredThemeMode);
         setTheme(
           getAppTheme(
             preferredThemeMode === THEME_DARK ||
+              (preferredThemeMode === THEME_AMBIENT && ambientIsDark) ||
               (preferredThemeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
               (preferredThemeMode === THEME_SUNSET && useDarkTheme),
             needsCjkSystemFont(preferredLanguage),
@@ -691,6 +712,37 @@ export default function RootLayout() {
       if (activeRegistration) activeRegistration.onupdatefound = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isReady || themeMode !== THEME_AMBIENT || Platform.OS !== 'android') {
+      return;
+    }
+
+    let active = true;
+    let subscription: { remove: () => void } | null = null;
+    setAmbientIsDark(colorScheme === THEME_DARK);
+    LightSensor.setUpdateInterval(30_000);
+
+    LightSensor.isAvailableAsync()
+      .then((available) => {
+        if (!active || !available) return;
+        subscription = LightSensor.addListener(({ illuminance }) => {
+          if (!active) return;
+          setAmbientIsDark((previous) =>
+            resolveAmbientIsDark(illuminance, previous),
+          );
+        });
+      })
+      .catch((error) => {
+        console.warn('Ambient light sensor unavailable:', error);
+      });
+
+    return () => {
+      active = false;
+      subscription?.remove();
+      subscription = null;
+    };
+  }, [colorScheme, isReady, themeMode]);
 
   useEffect(() => {
     if (!isReady || themeMode !== THEME_SUNSET) return;
@@ -725,11 +777,12 @@ export default function RootLayout() {
     const now = new Date();
     const isDark =
       themeMode === THEME_DARK ||
+      (themeMode === THEME_AMBIENT && ambientIsDark) ||
       (themeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
       (themeMode === THEME_SUNSET &&
         (sunTimes ? now < sunTimes.sunrise || now >= sunTimes.sunset : now.getHours() < 7 || now.getHours() >= 19));
     setTheme(getAppTheme(isDark, needsCjkSystemFont(language), textScale));
-  }, [colorScheme, isReady, language, sunTimes, textScale, themeMode]);
+  }, [ambientIsDark, colorScheme, isReady, language, sunTimes, textScale, themeMode]);
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
@@ -992,7 +1045,9 @@ function RootLayoutNav({
   useEffect(() => {
     const shouldHandleAndroidBack =
       Platform.OS === 'android' &&
-      (hasHeaderBackButton(segments, globalParams.backTo) || pathname === '/explore');
+      (hasHeaderBackButton(segments, globalParams.backTo) ||
+        pathname === '/bible' ||
+        pathname === '/explore');
     if (!shouldHandleAndroidBack) {
       return;
     }
@@ -1016,7 +1071,6 @@ function RootLayoutNav({
       // app theme already accounts for the system setting when that is the
       // selected appearance mode.
       StatusBar.setBarStyle(theme.statusBarScheme, true);
-      StatusBar.setBackgroundColor(theme.colors.background, false);
     }
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -1094,8 +1148,6 @@ function RootLayoutNav({
       <ThemeProvider value={theme as any}>
         <StatusBar
           barStyle={theme.statusBarScheme}
-          backgroundColor={theme.colors.background}
-          translucent={false}
         />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

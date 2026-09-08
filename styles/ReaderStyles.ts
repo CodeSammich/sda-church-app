@@ -337,13 +337,6 @@ export const createReaderStyles = (textScale: TextScale) => {
     backgroundColor: 'rgba(128, 128, 128, 0.18)',
     position: 'relative',
   },
-  audioBufferedTrack: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    borderRadius: 2,
-  },
   audioPlayedTrack: {
     position: 'absolute',
     left: 0,

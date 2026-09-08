@@ -4,6 +4,35 @@ Website deployment remains automatic on pushes to `main`, or through `npm run de
 Native builds are opt-in and do not publish to either store. The same Expo source
 is used for all platforms.
 
+## Expo 58 canary Android prebuild
+
+This branch uses the Expo 58 canary. Until the SDK 58 template is published under
+the `sdk-58` npm tag, automatic prebuild can fail while resolving
+`expo-template-bare-minimum@sdk-58`. Generate the Android project with the exact
+canary template instead:
+
+```sh
+source ~/.nvm/nvm.sh
+nvm use 24
+npm install
+npx expo prebuild \
+  --template expo-template-bare-minimum@58.0.0-canary-20260902-26df09e \
+  --platform android
+```
+
+Do not add `--clean` unless you intentionally want to regenerate the native
+project. Once `android/` exists, local EAS builds can use the generated project:
+
+```sh
+npx eas-cli@23.2.0 build --platform android --profile preview --local
+```
+
+The repository's Android build scripts run this explicit prebuild automatically
+and include the generated `android/` directory in the EAS build input.
+
+If the canary version changes, update the template version in this section to the
+matching `expo` canary before regenerating native files.
+
 ## Building an independent fork
 
 The checked-in configuration points to the church-owned Expo project and its
