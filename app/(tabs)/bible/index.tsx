@@ -54,6 +54,7 @@ import {
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
 import { BibleAudioScrubGesture } from '@/services/BibleAudioScrubGesture';
+import { BibleAudioSeekController } from '@/services/BibleAudioSeekController';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
 import {
   getParallelStructuralContent,
@@ -94,9 +95,6 @@ const WEB_AUDIO_QUEUE_CHAPTER_LIMIT = 1;
 const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
-const AUDIO_SEEK_CONFIRMATION_TIMEOUT_MS = 5_000;
-const AUDIO_SEEK_RETRY_LIMIT = 2;
-const AUDIO_SEEK_POSITION_TOLERANCE_MS = 1_000;
 
 type SleepTimerSetting = 5 | 10 | 15 | 30 | 60 | 120 | 'chapter' | null;
 
@@ -942,12 +940,15 @@ export default function BibleScreen() {
   const chapterAutoplayRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chapterAutoplayRetryCountRef = useRef(0);
   const isScrubbingRef = useRef(false);
-  const scrubFinishInFlightRef = useRef(false);
-  const scrubSessionRef = useRef(0);
-  const scrubPositionMillisRef = useRef<number | null>(null);
-  const pendingSeekPositionMillisRef = useRef<number | null>(null);
-  const seekInFlightRef = useRef(false);
-  const queuedSeekPositionMillisRef = useRef<number | null>(null);
+  const seekController = useMemo(
+    () => new BibleAudioSeekController(
+      audioPlayer,
+      setAudioPositionMillis,
+      (error) => console.error('Audio seek error:', error),
+    ),
+    [audioPlayer],
+  );
+  useEffect(() => () => seekController.cancel(), [seekController]);
   const audioScrubberWidth = useRef(1);
   const sleepTimerSettingRef = useRef<SleepTimerSetting>(null);
   const sleepTimerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1015,9 +1016,13 @@ export default function BibleScreen() {
         lastNativeAutoplayAttemptRef.current = Date.now();
         void configureBibleAudioPlayback()
           .then(() => {
-          if (!nativePlaybackIntentRef.current || isScrubbingRef.current || seekInFlightRef.current) return;
-          audioPlayer.play();
-        })
+            if (
+              !nativePlaybackIntentRef.current ||
+              isScrubbingRef.current ||
+              seekController.isSeeking
+            ) return;
+            audioPlayer.play();
+          })
           .catch((error) =>
             console.warn('Native Bible audio autoplay retry failed:', error),
           );
@@ -1163,24 +1168,8 @@ export default function BibleScreen() {
     if (currentPlayerStatus.duration > 0) {
       setAudioDurationMillis(currentPlayerStatus.duration * 1000);
     }
-    // A source that reports a duration or starts playing is usable. Do not
-    // let the delayed alternate-host probe replace it and restart at 0:00.
     if (!isScrubbingRef.current) {
-      const pendingSeekPositionMillis = pendingSeekPositionMillisRef.current;
-      if (pendingSeekPositionMillis === null) {
-        setAudioPositionMillis(positionMillis);
-      } else if (
-        isCurrentSourceReady &&
-        Math.abs(positionMillis - pendingSeekPositionMillis) <
-          AUDIO_SEEK_POSITION_TOLERANCE_MS
-      ) {
-        pendingSeekPositionMillisRef.current = null;
-        setAudioPositionMillis(positionMillis);
-      } else {
-        // Keep the UI at the requested location while the native player is
-        // still publishing its pre-seek status.
-        setAudioPositionMillis(pendingSeekPositionMillis);
-      }
+      setAudioPositionMillis(seekController.pendingPositionMillis ?? positionMillis);
     }
     // `replace()` can finish loading after the original play request. Native
     // players need one explicit play request at that point, but only for a
@@ -1198,7 +1187,11 @@ export default function BibleScreen() {
       lastNativeAutoplayAttemptRef.current = Date.now();
       void configureBibleAudioPlayback()
         .then(() => {
-          if (!nativePlaybackIntentRef.current || isScrubbingRef.current || seekInFlightRef.current) return;
+          if (
+            !nativePlaybackIntentRef.current ||
+            isScrubbingRef.current ||
+            seekController.isSeeking
+          ) return;
           audioPlayer.play();
         })
         .catch((error) => console.warn('Native Bible audio autoplay retry failed:', error));
@@ -1315,6 +1308,7 @@ export default function BibleScreen() {
         supportedTranslation.name,
         audioUrl,
       );
+      seekController.cancel();
       audioPlayer.replace({
         uri: audioUrl,
         name: audioTitle,
@@ -1437,7 +1431,11 @@ export default function BibleScreen() {
 
       void configureBibleAudioPlayback()
         .then(() => {
-          if (!nativePlaybackIntentRef.current || isScrubbingRef.current || seekInFlightRef.current) return;
+          if (
+            !nativePlaybackIntentRef.current ||
+            isScrubbingRef.current ||
+            seekController.isSeeking
+          ) return;
           audioPlayer.play();
         })
         .catch((error) =>
@@ -1489,6 +1487,7 @@ export default function BibleScreen() {
   }, [audioStatus.interruptionCount, androidAudioBrowserName]);
 
   const unloadAudio = () => {
+    seekController.cancel();
     clearChapterAutoplayRetry();
     chapterAutoplayRetryCountRef.current = 0;
     clearNativeRecoveryTimeout();
@@ -1519,9 +1518,6 @@ export default function BibleScreen() {
     setScrubPositionMillis(null);
     setIsScrubGestureActive(false);
     scrubGestureRef.current.cancel();
-    scrubPositionMillisRef.current = null;
-    pendingSeekPositionMillisRef.current = null;
-    queuedSeekPositionMillisRef.current = null;
   };
 
   const selectAudioReader = (reader: string) => {
@@ -1553,90 +1549,17 @@ export default function BibleScreen() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const seekAudio = async (nextPosition: number): Promise<boolean> => {
-    // A loaded source can report `isLoaded: false` while it buffers the range
-    // requested by a seek. That is different from initial source preparation:
-    // once the source has a duration, seeking it remains safe.
-    const currentPlayerStatus = audioPlayer.currentStatus;
-    const nativeDurationMillis = currentPlayerStatus.duration * 1000;
-    const seekDurationMillis =
-      nativeDurationMillis > 0 ? nativeDurationMillis : audioDurationMillis;
-    const canSeekLoadedSource =
-      loadedAudioUrlRef.current !== null &&
-      seekDurationMillis > 0;
-    if (!canSeekLoadedSource || !Number.isFinite(nextPosition)) {
-      return false;
-    }
-    const clampedPosition = Math.max(0, Math.min(seekDurationMillis, nextPosition));
-    queuedSeekPositionMillisRef.current = clampedPosition;
-    pendingSeekPositionMillisRef.current = clampedPosition;
-    setAudioPositionMillis(clampedPosition);
-    if (seekInFlightRef.current) return false;
-
-    seekInFlightRef.current = true;
-    let latestSeekApplied = false;
-    try {
-      while (queuedSeekPositionMillisRef.current !== null) {
-        const queuedPosition = queuedSeekPositionMillisRef.current;
-        queuedSeekPositionMillisRef.current = null;
-        pendingSeekPositionMillisRef.current = queuedPosition;
-        try {
-          await audioPlayer.seekTo(queuedPosition / 1000);
-          const deadline = Date.now() + AUDIO_SEEK_CONFIRMATION_TIMEOUT_MS;
-          let seekRetryCount = 0;
-          let nextRetryAt = Date.now() + 500;
-          latestSeekApplied = false;
-          while (Date.now() < deadline) {
-            const nativeStatus = audioPlayer.currentStatus;
-            const nativePositionMillis = nativeStatus.currentTime * 1000;
-            const nativeSourceReady =
-              nativeStatus.isLoaded && nativeStatus.duration > 0;
-            if (
-              nativeSourceReady &&
-              Math.abs(nativePositionMillis - queuedPosition) <
-                AUDIO_SEEK_POSITION_TOLERANCE_MS
-            ) {
-              // Paused native players do not emit periodic updates. Commit here
-              // instead of waiting for a React status effect that may never run.
-              if (queuedSeekPositionMillisRef.current === null) {
-                setAudioPositionMillis(nativePositionMillis);
-                pendingSeekPositionMillisRef.current = null;
-              }
-              latestSeekApplied = true;
-              break;
-            }
-
-            // A newer gesture owns the player now. Stop waiting on the older
-            // target so the outer loop can apply the latest timestamp.
-            if (queuedSeekPositionMillisRef.current !== null) break;
-
-            // Give native events time to settle before retrying a ready player
-            // whose position still disagrees. Never restart an active buffer.
-            if (nativeSourceReady && Date.now() >= nextRetryAt && seekRetryCount < AUDIO_SEEK_RETRY_LIMIT) {
-              nextRetryAt = Date.now() + 500;
-              seekRetryCount += 1;
-              await audioPlayer.seekTo(queuedPosition / 1000);
-            }
-            await new Promise((resolve) => setTimeout(resolve, 50));
-          }
-          if (!latestSeekApplied && queuedSeekPositionMillisRef.current === null) {
-            pendingSeekPositionMillisRef.current = null;
-            setAudioPositionMillis(audioPlayer.currentStatus.currentTime * 1000);
-          }
-        } catch (e) {
-          pendingSeekPositionMillisRef.current = null;
-          latestSeekApplied = false;
-          console.error('Audio seek error:', e);
-        }
-      }
-    } finally {
-      seekInFlightRef.current = false;
-    }
-    return latestSeekApplied;
+  const seekAudio = (nextPosition: number) => {
+    if (!loadedAudioUrlRef.current) return;
+    const nativeDurationMillis = audioPlayer.currentStatus.duration * 1000;
+    return seekController.seek(
+      nextPosition,
+      nativeDurationMillis > 0 ? nativeDurationMillis : audioDurationMillis,
+    );
   };
 
   const getCurrentAudioPositionMillis = () => {
-    if (pendingSeekPositionMillisRef.current !== null) return pendingSeekPositionMillisRef.current;
+    if (seekController.pendingPositionMillis !== null) return seekController.pendingPositionMillis;
     const nativePositionMillis = audioPlayer.currentStatus.currentTime * 1000;
     if (Number.isFinite(nativePositionMillis)) return nativePositionMillis;
     return audioStatus.currentTime * 1000;
@@ -1675,11 +1598,6 @@ export default function BibleScreen() {
     );
     if (position === null) return;
     setIsScrubGestureActive(true);
-    // A responder can be reacquired before the previous seek promise settles.
-    // Give each gesture its own generation so an older completion cannot clear
-    // a newer scrub session.
-    scrubSessionRef.current += 1;
-    scrubFinishInFlightRef.current = false;
     isScrubbingRef.current = true;
     // Prevent the native autoplay/recovery effect from issuing a play command
     // against the old position while the finger is still seeking.
@@ -1689,7 +1607,6 @@ export default function BibleScreen() {
     // Keep the player's play/pause state unchanged while seeking. The skip
     // controls use this same path successfully; pausing here adds an audio
     // session transition that can make Android replay the old position.
-    scrubPositionMillisRef.current = position;
     setScrubPositionMillis(position);
     // Like PanResponder's default grant handler, block Android native parents
     // immediately; scrollEnabled updates only after the next React commit.
@@ -1700,7 +1617,6 @@ export default function BibleScreen() {
     if (isScrubbingRef.current) {
       const position = scrubGestureRef.current.move(event.nativeEvent.pageX);
       if (position === null) return;
-      scrubPositionMillisRef.current = position;
       setScrubPositionMillis(position);
     }
   };
@@ -1709,42 +1625,16 @@ export default function BibleScreen() {
     // Native ScrollView/OS cancellation is not a finger-up seek request.
     scrubGestureRef.current.cancel();
     setIsScrubGestureActive(false);
-    if (!isScrubbingRef.current || scrubFinishInFlightRef.current) return;
-    scrubSessionRef.current += 1;
     isScrubbingRef.current = false;
-    scrubPositionMillisRef.current = null;
     setScrubPositionMillis(null);
   };
 
-  const finishScrubbing = async (event: GestureResponderEvent) => {
-    // Release carries the final coordinate even if the last move was coalesced.
-    if (!isScrubbingRef.current || scrubFinishInFlightRef.current) return;
+  const finishScrubbing = (event: GestureResponderEvent) => {
+    // release() consumes the gesture, so duplicate/cancelled releases do nothing.
     const nextPosition = scrubGestureRef.current.release(event.nativeEvent.pageX);
-    setIsScrubGestureActive(false);
-    if (nextPosition === null) {
-      cancelScrubbing();
-      return;
-    }
-    scrubFinishInFlightRef.current = true;
-    const session = scrubSessionRef.current;
-    setScrubPositionMillis(nextPosition);
-    scrubPositionMillisRef.current = null;
-    // Keep the finger position rendered while seekTo is still being applied.
-    // Clearing it here exposes the old native position and looks like a jump
-    // when Android terminates and re-grants the responder during a drag.
-
-    try {
-      // ExoPlayer preserves playWhenReady across seek/buffer transitions. A
-      // scrub must not issue a delayed play that can undo a newer Pause.
-      await seekAudio(nextPosition);
-    } finally {
-      // Keep recovery suppressed until the seek worker finishes.
-      if (session === scrubSessionRef.current) {
-        setScrubPositionMillis(null);
-        scrubFinishInFlightRef.current = false;
-        isScrubbingRef.current = false;
-      }
-    }
+    if (nextPosition !== null) void seekAudio(nextPosition);
+    // seek() publishes its pending target synchronously before this preview clears.
+    cancelScrubbing();
   };
 
   useEffect(() => {
