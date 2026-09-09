@@ -175,13 +175,24 @@ export const retargetHelloAoAudioUrl = (
   }
 };
 
+export type BibleAudioSleepTimerSetting =
+  5 | 10 | 15 | 30 | 60 | 120 | 'chapter' | 'book' | null;
+
+export const shouldStopBibleAudioAtChapterEnd = (
+  setting: BibleAudioSleepTimerSetting,
+  chapter: number,
+  numberOfChapters?: number,
+) => setting === 'chapter' ||
+  (setting === 'book' && chapter === numberOfChapters);
+
 interface BibleAudioQueueOptions {
   albumTitle: string;
   artist: string;
   books: TranslationBook[];
   currentBookId: string;
   currentChapter: number;
-  limit: number;
+  limit?: number;
+  sleepTimer?: BibleAudioSleepTimerSetting;
   preferredSourceId?: string;
   selectedAudioUrls: string[];
   selectedReader?: string;
@@ -196,7 +207,10 @@ export const buildBibleAudioQueue = ({
   books,
   currentBookId,
   currentChapter,
-  limit,
+  // Keep descriptors available when background React effects are suspended.
+  // The web adapter still preloads only the immediate next recording.
+  limit = 24,
+  sleepTimer = null,
   preferredSourceId,
   selectedAudioUrls,
   selectedReader,
@@ -207,8 +221,10 @@ export const buildBibleAudioQueue = ({
     books,
     currentBookId,
     currentChapter,
-    limit,
-  ).flatMap(({ book, chapter }) => {
+    sleepTimer === 'chapter' ? 0 : limit,
+  )
+  .filter(({ book }) => sleepTimer !== 'book' || book.id === currentBookId)
+  .flatMap(({ book, chapter }) => {
     let queuedUrls: string[] = [];
 
     if (supportsAudioPowerCuv(translationId)) {

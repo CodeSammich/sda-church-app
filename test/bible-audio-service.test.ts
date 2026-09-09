@@ -13,6 +13,7 @@ import {
   getOrderedBibleAudioReaders,
   prioritizeBibleAudioSource,
   retargetHelloAoAudioUrl,
+  shouldStopBibleAudioAtChapterEnd,
 } from '@/services/BibleAudioService';
 
 describe('Bible audio playback', () => {
@@ -228,5 +229,45 @@ describe('Bible audio playback', () => {
         expect.stringContaining('theaudiopower'),
       ]),
     );
+  });
+});
+
+
+describe('Bible audio sleep timer boundaries', () => {
+  const options = {
+    albumTitle: 'Bible audio', artist: 'Souer',
+    books: ['GEN', 'EXO'].map((id) => ({
+      id, name: id, commonName: id, title: null,
+      numberOfChapters: 50, totalNumberOfVerses: 0,
+    })),
+    currentBookId: 'GEN', currentChapter: 48,
+    selectedAudioUrls: ['https://bible.helloao.org/api/BSB/GEN/48/audio/souer.mp3'],
+    translationId: 'BSB', translationLabel: 'BSB',
+  };
+
+  it('retains 24 chapter descriptors for background playback by default', () => {
+    const queue = buildBibleAudioQueue(options);
+    expect(queue).toHaveLength(24);
+    expect(queue[2]).toMatchObject({ bookId: 'EXO', chapter: 1 });
+  });
+
+  it('queues the remaining book and excludes the next book', () => {
+    expect(buildBibleAudioQueue({ ...options, sleepTimer: 'book' })
+      .map(({ bookId, chapter }) => [bookId, chapter]))
+      .toEqual([['GEN', 49], ['GEN', 50]]);
+    expect(buildBibleAudioQueue({ ...options, currentChapter: 50, sleepTimer: 'book' }))
+      .toEqual([]);
+  });
+
+  it('keeps a chapter timer effective when playback is started or the queue is refilled', () => {
+    expect(buildBibleAudioQueue({ ...options, sleepTimer: 'chapter' })).toEqual([]);
+    expect(buildBibleAudioQueue({ ...options, sleepTimer: null })).toHaveLength(24);
+  });
+
+  it.each([
+    ['book', 49, false], ['book', 50, true],
+    ['chapter', 49, true], [null, 50, false], [15, 50, false],
+  ] as const)('handles %s at chapter %s', (setting, chapter, stop) => {
+    expect(shouldStopBibleAudioAtChapterEnd(setting, chapter, 50)).toBe(stop);
   });
 });

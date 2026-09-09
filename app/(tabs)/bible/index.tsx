@@ -46,6 +46,8 @@ import {
 import {
   activateBibleAudioLockScreen,
   buildBibleAudioQueue,
+  shouldStopBibleAudioAtChapterEnd,
+  type BibleAudioSleepTimerSetting,
   configureBibleAudioPlayback,
   getBibleAudioMediaTitle,
   getBibleAudioSourceId,
@@ -53,6 +55,7 @@ import {
   getOrderedBibleAudioReaders,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
+import type { BibleAudioStatus } from '@/services/BibleAudioPlayer.types';
 import { BibleAudioScrubGesture } from '@/services/BibleAudioScrubGesture';
 import { BibleAudioSeekController } from '@/services/BibleAudioSeekController';
 import { loadBibleChapterWithRetry } from '@/services/BibleChapterLoader';
@@ -91,12 +94,11 @@ const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 45_000;
 // Native expo-audio owns one active player. The web adapter may warm one
 // immediate next chapter, but native preload downloads an entire file on
 // Android, which is too memory-heavy for long Bible chapters.
-const WEB_AUDIO_QUEUE_CHAPTER_LIMIT = 1;
 const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
 
-type SleepTimerSetting = 5 | 10 | 15 | 30 | 60 | 120 | 'chapter' | null;
+type SleepTimerSetting = BibleAudioSleepTimerSetting;
 
 const BIBLE_TRANS_KEY = BibleService.BIBLE_TRANSLATION_STORAGE_KEY;
 const BIBLE_BOOK_KEY = 'user-bible-book';
@@ -211,6 +213,7 @@ const uiLabels = {
     oneHour: '1 hour',
     twoHours: '2 hours',
     endOfChapter: 'End of chapter',
+    endOfBook: 'End of book',
     previousChapter: 'Previous chapter',
     nextChapterA11y: 'Next chapter',
     pinyin: 'Pinyin',
@@ -288,6 +291,7 @@ const uiLabels = {
     oneHour: '1 小時',
     twoHours: '2 小時',
     endOfChapter: '本章結束',
+    endOfBook: '本卷結束',
     previousChapter: '上一章',
     nextChapterA11y: '下一章',
     pinyin: '拼音',
@@ -365,6 +369,7 @@ const uiLabels = {
     oneHour: '1 小时',
     twoHours: '2 小时',
     endOfChapter: '本章结束',
+    endOfBook: '本卷结束',
     previousChapter: '上一章',
     nextChapterA11y: '下一章',
     pinyin: '拼音',
@@ -447,6 +452,7 @@ const uiLabels = {
     oneHour: '1 hora',
     twoHours: '2 horas',
     endOfChapter: 'Fin del capítulo',
+    endOfBook: 'Fin del libro',
     previousChapter: 'Capítulo anterior',
     nextChapterA11y: 'Capítulo siguiente',
     pinyin: 'Pinyin',
@@ -916,9 +922,9 @@ export default function BibleScreen() {
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
   const audioPlayer = useBibleAudioPlayer(null, {
     updateInterval: 250,
-    // On iOS this keeps the AVAudioSession active through player pauses and
-    // finishes. On Android the build-time plugin also prevents a brief native
-    // seek/buffer pause from releasing permanent audio focus. We still call
+    // Expo 58 keeps the iOS audio session and Android permanent audio focus
+    // active through player pauses, finishes, and seek/buffer transitions.
+    // We still call
     // setIsAudioActiveAsync(false) for deliberate app-level stops below.
     keepAudioSessionActive: true,
     preferredForwardBufferDuration: NATIVE_AUDIO_FORWARD_BUFFER_SECONDS,
@@ -1077,22 +1083,24 @@ export default function BibleScreen() {
   const selectedAudioUrlsRef = useRef(selectedAudioUrls);
   selectedAudioUrlsRef.current = selectedAudioUrls;
 
-  const buildUpcomingAudioQueue = () =>
-    buildBibleAudioQueue({
+  const buildUpcomingAudioQueue = () => {
+    const activeChapter = (audioPlayer.currentStatus as BibleAudioStatus).activeChapter;
+    return buildBibleAudioQueue({
       albumTitle: labels.audioPlayer,
       artist: selectedAudioReader
         ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
         : supportedTranslation.name,
       books,
-      currentBookId: book?.id || '',
-      currentChapter: chapterNum,
-      limit: WEB_AUDIO_QUEUE_CHAPTER_LIMIT,
+      currentBookId: activeChapter?.bookId || book?.id || '',
+      currentChapter: activeChapter?.chapter ?? chapterNum,
+      sleepTimer: sleepTimerSettingRef.current,
       preferredSourceId: selectedAudioSourceId,
       selectedAudioUrls,
       selectedReader: selectedAudioReader,
       translationId: supportedTranslation.id,
       translationLabel: supportedTranslation.name,
     });
+  };
 
   const clearChapterAutoplayRetry = () => {
     if (chapterAutoplayRetryTimeoutRef.current) {
@@ -1120,9 +1128,7 @@ export default function BibleScreen() {
     setSleepTimerSetting(setting);
     setSleepTimerVisible(false);
 
-    if (Platform.OS === 'web' && setting === 'chapter') {
-      audioPlayer.setQueue?.([]);
-    } else if (Platform.OS === 'web' && loadedAudioUrlRef.current) {
+    if (Platform.OS === 'web' && loadedAudioUrlRef.current) {
       audioPlayer.setQueue?.(buildUpcomingAudioQueue());
     }
 
@@ -1152,7 +1158,9 @@ export default function BibleScreen() {
 
   useEffect(() => {
     // React may consume a queued pre-seek event after seekTo has completed.
-    // Use one fresh snapshot for both readiness and position.
+    // Use one fresh snapshot for readiness, position, and playback. A queued
+    // playing event from the previous chapter must not cancel this source's
+    // pending autoplay retry while it is actually paused.
     const currentPlayerStatus = audioPlayer.currentStatus;
     const positionMillis = currentPlayerStatus.currentTime * 1000;
     const isCurrentSourceReady =
@@ -1164,7 +1172,7 @@ export default function BibleScreen() {
       loadedAudioUrlRef.current !== null &&
         !audioSourceReadyRef.current,
     );
-    setIsPlaying(audioStatus.playing);
+    setIsPlaying(currentPlayerStatus.playing);
     if (currentPlayerStatus.duration > 0) {
       setAudioDurationMillis(currentPlayerStatus.duration * 1000);
     }
@@ -1180,8 +1188,8 @@ export default function BibleScreen() {
       pendingNativeAutoplayRef.current &&
       isCurrentSourceReady &&
       !isScrubbingRef.current &&
-      !audioStatus.playing &&
-      !audioStatus.isBuffering &&
+      !currentPlayerStatus.playing &&
+      !currentPlayerStatus.isBuffering &&
       Date.now() - lastNativeAutoplayAttemptRef.current >= 1_000
     ) {
       lastNativeAutoplayAttemptRef.current = Date.now();
@@ -1196,7 +1204,7 @@ export default function BibleScreen() {
         })
         .catch((error) => console.warn('Native Bible audio autoplay retry failed:', error));
     }
-    if (audioStatus.playing && isCurrentSourceReady) {
+    if (currentPlayerStatus.playing && isCurrentSourceReady) {
       pendingNativeAutoplayRef.current = false;
       clearNativeAutoplayRetryTimeout();
     } else if (
@@ -1209,7 +1217,14 @@ export default function BibleScreen() {
 
     if (audioStatus.didJustFinish) {
       setIsPlaying(false);
-      if (sleepTimerSettingRef.current === 'chapter') {
+      const finishedChapter = (currentPlayerStatus as BibleAudioStatus).activeChapter;
+      const finishedBook = books.find((candidate) =>
+        candidate.id === (finishedChapter?.bookId || book?.id));
+      if (shouldStopBibleAudioAtChapterEnd(
+        sleepTimerSettingRef.current,
+        finishedChapter?.chapter ?? chapterNum,
+        finishedBook?.numberOfChapters,
+      )) {
         clearSleepTimer();
         setShouldAutoPlay(false);
         nativePlaybackIntentRef.current = false;
@@ -3913,6 +3928,7 @@ export default function BibleScreen() {
                   { value: 60, label: labels.oneHour },
                   { value: 120, label: labels.twoHours },
                   { value: 'chapter', label: labels.endOfChapter },
+                  { value: 'book', label: labels.endOfBook },
                 ] as { value: SleepTimerSetting; label: string }[]
               ).map((option) => (
                 <TouchableOpacity
