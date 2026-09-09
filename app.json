@@ -63,7 +63,6 @@
           "recordAudioAndroid": false
         }
       ],
-      "./withAndroidSDKOverride",
       "expo-asset",
       "expo-build-properties",
       "expo-web-browser",

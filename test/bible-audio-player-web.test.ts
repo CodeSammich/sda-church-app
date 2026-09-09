@@ -1,6 +1,11 @@
 /** @jest-environment jsdom */
 
 import { act, renderHook } from '@testing-library/react-native';
+jest.mock('expo-audio', () => ({
+  setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
+}));
+
+import { buildBibleAudioQueue } from '@/services/BibleAudioService';
 
 import {
   useBibleAudioPlayer,
@@ -203,6 +208,41 @@ describe('Bible audio web player', () => {
       'Genesis 3 · BSB (HelloAO)',
     );
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(3);
+  });
+
+  it('continues through a book without queue refills and stops before the next book', () => {
+    const { result } = renderHook(() => {
+      const player = useBibleAudioPlayer();
+      return { player, status: useBibleAudioPlayerStatus(player) };
+    });
+    const media = Array.from(document.querySelectorAll<HTMLAudioElement>(
+      'audio[data-bible-audio-player]',
+    ));
+    act(() => {
+      result.current.player.replace({ uri: 'https://bible.helloao.org/api/BSB/GEN/1/audio/souer.mp3' });
+      result.current.player.setQueue(buildBibleAudioQueue({
+        albumTitle: 'Bible audio', artist: 'Souer',
+        books: ['GEN', 'EXO'].map((id) => ({
+          id, name: id, commonName: id, title: null,
+          numberOfChapters: 4, totalNumberOfVerses: 0,
+        })),
+        currentBookId: 'GEN', currentChapter: 1, sleepTimer: 'book',
+        selectedAudioUrls: ['https://bible.helloao.org/api/BSB/GEN/1/audio/souer.mp3'],
+        translationId: 'BSB', translationLabel: 'BSB',
+      }));
+      result.current.player.play();
+    });
+    // No screen effect replenishes the queue between these chapters.
+    for (let chapter = 2; chapter <= 4; chapter += 1) {
+      act(() => media[(chapter - 2) % 2].dispatchEvent(new Event('ended')));
+      expect(result.current.status.activeChapter).toMatchObject({ bookId: 'GEN', chapter });
+      expect(result.current.status.didJustFinish).toBe(false);
+    }
+    act(() => media[1].dispatchEvent(new Event('ended')));
+    expect(result.current.status.didJustFinish).toBe(true);
+    expect(result.current.status.playing).toBe(false);
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(4);
+    expect(media.some((element) => element.src.includes('/EXO/'))).toBe(false);
   });
 
   it('falls back when Android rejects the standby chapter preload', () => {
