@@ -7,7 +7,6 @@ import {
   CHURCH_PHONE,
   ELMHURST_SABBATH_URLS,
   FLUSHING_FELLOWSHIP_IMAGE_URL,
-  FOOD_BANK_IMAGE_URL,
   openEmail,
   openPhone,
   openZoomClass,
@@ -27,8 +26,6 @@ const allLabels = {
     title: 'Fellowships',
     expansionVerse: '“For I was hungry and you gave me something to eat, I was thirsty and you gave me something to drink, I was a stranger and you invited me in, I needed clothes and you clothed me, I was sick and you looked after me, I was in prison and you came to visit me.”',
     expansionRef: 'Matthew 25:35-36 (NIV)',
-    foodBankTitle: 'Food Bank Partnership',
-    foodBankDesc: 'We are actively seeking partnerships to expand our food bank program, with the goal of providing free meals to our neighbors and local communities. If you are interested in partnering with us, please don’t hesitate to reach out!',
     elmhurstHeader: 'Elmhurst, Queens',
     elmhurstVerse: '“These commandments that I give you today are to be on your hearts. Impress them on your children. Talk about them when you sit at home and when you walk along the road, when you lie down and when you get up.”',
     elmhurstRef: 'Deuteronomy 6:6-7 (NIV)',
@@ -64,11 +61,9 @@ const allLabels = {
     callUs: 'Call Us',
   },
   zh: {
-    title: '團契與食品事工',
+    title: '團契',
     expansionVerse: '「因為我餓了，你們給我吃；渴了，你們給我喝；我作客旅，你們留我住；我赤身露體，你們給我穿；我病了，你們看顧我；我在監裡，你們來看我。」',
     expansionRef: '馬太福音 25:35-36 (CUV)',
-    foodBankTitle: '食品庫夥伴關係',
-    foodBankDesc: '我們正積極尋求合作夥伴以擴大我們的食品庫計劃，目標是向鄰里和當地社區提供免費膳食。如果您有興趣與我們合作，請隨時與我們聯繫！',
     elmhurstHeader: '艾姆赫斯特 (Queens)',
     elmhurstVerse: '「我今日所吩咐你的話都要記在心上，也要慇勤教訓你的兒女。無論你坐在家裡，行在路上，躺下，起來，都要談論。」',
     elmhurstRef: '申命記 6:6-7 (CUV)',
@@ -104,11 +99,9 @@ const allLabels = {
     callUs: '撥打電話',
   },
   'zh-cn': {
-    title: '团契与食品事工',
+    title: '团契',
     expansionVerse: '“因为我饿了，你们给我吃；渴了，你们给我喝；我作客旅，你们留我住；我赤身露体，你们给我穿；我病了，你们看顾我；我在监里，你们来看我。”',
     expansionRef: '马太福音 25:35-36 (CUVS)',
-    foodBankTitle: '食品库合作伙伴关系',
-    foodBankDesc: '我们正积极寻求合作伙伴以扩大我们的食品库计划，目标是向邻里和当地社区提供免费膳食。如果您有兴趣与我们合作，请随时与我们联系！',
     elmhurstHeader: '艾姆赫斯特 (Queens)',
     elmhurstVerse: '“我今日所吩咐你的话都要记在心上，也要殷勤教训你的儿女。无论你坐在家里，行在路上，躺下，起来，都要谈论。”',
     elmhurstRef: '申命记 6:6-7 (CUVS)',
@@ -144,11 +137,9 @@ const allLabels = {
     callUs: '拨打电话',
   },
   es: {
-    title: 'Compañerismo y Alimentos',
+    title: 'Compañerismo',
     expansionVerse: '“Porque tuve hambre, y me disteis de comer; tuve sed, y me disteis de beber; fui forastero, y me recogisteis; estuve desnudo, y me cubristeis; enfermo, y me visitasteis; en la cárcel, y vinisteis a mí.”',
     expansionRef: 'Mateo 25:35-36 (RVR1960)',
-    foodBankTitle: 'Asociación del Banco de Alimentos',
-    foodBankDesc: 'Buscamos activamente asociaciones para expandir nuestro programa de banco de alimentos, con el objetivo de proporcionar comidas gratuitas a nuestros vecinos y comunidades locales. Si está interesado en asociarse con nosotros, ¡no dude en contactarnos!',
     elmhurstHeader: 'Elmhurst, Queens',
     elmhurstVerse: '“Y estas palabras que yo te mando hoy, estarán sobre tu corazón; y las repetirás a tus hijos, y hablarás de ellas estando en tu casa, y andando por el camino, y al acostarte, y cuando te levantes.”',
     elmhurstRef: 'Deuteronomio 6:6-7 (RVR1960)',
@@ -185,7 +176,7 @@ const allLabels = {
   },
 };
 
-export default function FellowshipsAndFoodScreen() {
+export default function FellowshipsScreen() {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
@@ -226,45 +217,6 @@ export default function FellowshipsAndFoodScreen() {
 
         {/* Content Body */}
         <View style={styles.body}>
-          {/* Food Bank Program */}
-          <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]} mode="outlined">
-            <Card.Cover source={{ uri: FOOD_BANK_IMAGE_URL }} style={styles.cardCover} />
-            <Card.Content style={styles.cardContent}>
-              <Text
-                variant="titleMedium"
-                style={[styles.cardSectionTitle, { color: theme.colors.onSurface }]}
-              >
-                {labels.foodBankTitle}
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={[styles.cardDescription, { color: theme.colors.onSurfaceVariant }]}
-              >
-                {labels.foodBankDesc}
-              </Text>
-            </Card.Content>
-            <Card.Actions style={styles.actionsRow}>
-              <Button
-                icon="email-outline"
-                mode="contained"
-                onPress={() => openEmail(CHURCH_EMAIL)}
-                style={[styles.actionButton, { backgroundColor: theme.colors.tertiary }]}
-                labelStyle={{ color: theme.colors.onSecondary }}
-              >
-                {labels.emailUs}
-              </Button>
-              <Button
-                icon="phone"
-                mode="outlined"
-                onPress={() => openPhone(CHURCH_PHONE)}
-                style={[styles.actionButton, { borderColor: theme.colors.tertiary }]}
-                textColor={theme.colors.tertiary}
-              >
-                {labels.callUs}
-              </Button>
-            </Card.Actions>
-          </Card>
-
           {/* Section 2: Elmhurst, Queens */}
           <View style={styles.sectionHeaderContainer}>
             <Text variant="titleLarge" style={[styles.sectionHeading, { color: theme.colors.onBackground }]}>

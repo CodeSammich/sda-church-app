@@ -21,8 +21,6 @@ export const BIBLE_WORKER_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/13221317/sarah_fang-1536x1024.jpg';
 export const CHILDREN_MINISTRY_WORKER_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/13221357/geng_shuang-1536x1024.jpg';
-export const FOOD_BANK_IMAGE_URL =
-  'https://assets.adventistconnect.org/newyork2/2025/09/28035000/mmexport1738506529402.jpg.jpg';
 export const FLUSHING_FELLOWSHIP_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/01230029/flushing_fellowship_3.jpg';
 export const ELMHURST_SABBATH_URLS = [
