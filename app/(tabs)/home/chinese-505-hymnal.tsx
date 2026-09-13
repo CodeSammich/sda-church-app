@@ -4,7 +4,7 @@ import {
   openChinese505Hymn,
 } from '@/features/hymnal/Chinese505Hymnal';
 
-const coverImage = require('../../../public/chinese_505_hymnal.jpg');
+const coverImage = require('../../../assets/images/hymnals/chinese-505-hymnal.jpg');
 
 export default function Chinese505HymnalScreen() {
   return (

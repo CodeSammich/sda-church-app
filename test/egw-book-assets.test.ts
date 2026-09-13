@@ -5,7 +5,7 @@ import { EGW_BOOKS } from '@/features/library/EgwBookCatalog';
 
 describe('EGW book cover assets', () => {
   it('provides one optimized original cover for every curated work', () => {
-    const assetDirectory = join(process.cwd(), 'public/library/egw');
+    const assetDirectory = join(process.cwd(), 'assets/images/library/egw');
     const filenames = readdirSync(assetDirectory)
       .filter((filename) => /\.(?:jpg|png)$/.test(filename))
       .map((filename) => filename.replace(/\.(?:jpg|png)$/, ''))

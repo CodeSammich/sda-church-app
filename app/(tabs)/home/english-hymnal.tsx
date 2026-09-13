@@ -236,7 +236,7 @@ export default function HymnalScreen() {
       >
         {/* Hero */}
         <ImageBackground
-          source={require('../../../public/SDAH1985.jpg')}
+          source={require('../../../assets/images/hymnals/sdah-1985.jpg')}
           style={[NavigationStyles.heroHeader, { paddingTop: headerHeight + 6, paddingBottom: 24 }]}
           resizeMode="cover"
         >

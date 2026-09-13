@@ -174,7 +174,7 @@ not covered by this repository's software license; their provider brand rules re
 applicable. The Zoom destination currently uses a generic video icon because the
 available Zoom terms grant logo rights in narrower partner and SDK contexts. Asset
 sources and the implementation restrictions are recorded in
-[`public/brand/README.md`](../public/brand/README.md).
+[`assets/images/brand/README.md`](../assets/images/brand/README.md).
 
 ---
 

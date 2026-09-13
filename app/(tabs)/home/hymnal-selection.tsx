@@ -179,7 +179,7 @@ export default function HymnalSelectionScreen() {
 
           <HymnalCard
             title={labels.english}
-            imageSource={require('../../../public/SDAH1985.jpg')}
+            imageSource={require('../../../assets/images/hymnals/sdah-1985.jpg')}
             onPress={() =>
               router.push({
                 pathname: '/home/english-hymnal',
@@ -193,7 +193,7 @@ export default function HymnalSelectionScreen() {
 
           <HymnalCard
             title={labels.chinese505}
-            imageSource={require('../../../public/chinese_505_hymnal.jpg')}
+            imageSource={require('../../../assets/images/hymnals/chinese-505-hymnal.jpg')}
             onPress={() =>
               router.push({
                 pathname: '/home/chinese-505-hymnal',
@@ -206,7 +206,7 @@ export default function HymnalSelectionScreen() {
 
           <HymnalCard
             title={labels.chinese506}
-            imageSource={require('../../../public/chinese_506_hymnal.jpg')}
+            imageSource={require('../../../assets/images/hymnals/chinese-506-hymnal.jpg')}
             onPress={() =>
               router.push({
                 pathname: '/home/chinese-506-hymnal',
@@ -219,7 +219,7 @@ export default function HymnalSelectionScreen() {
 
           <HymnalCard
             title={labels.chinese707V3}
-            imageSource={require('../../../public/chinese_707_hymnal_leather_bound_version.jpg')}
+            imageSource={require('../../../assets/images/hymnals/chinese-707-leather-bound.jpg')}
             onPress={() =>
               router.push({
                 pathname: '/home/chinese-707-standard-hymnal',
@@ -230,7 +230,7 @@ export default function HymnalSelectionScreen() {
 
           <HymnalCard
             title={labels.chinese707V2}
-            imageSource={require('../../../public/chinese_707_hymnal_simplified_four_part_harmony.jpg')}
+            imageSource={require('../../../assets/images/hymnals/chinese-707-four-part-harmony.jpg')}
             onPress={() =>
               router.push({
                 pathname: '/home/chinese-707-four-part-hymnal',
@@ -241,7 +241,7 @@ export default function HymnalSelectionScreen() {
 
           <HymnalCard
             title={labels.chinese707V1}
-            imageSource={require('../../../public/chinese_707_hymnal_original_simplified_notation_version.jpg')}
+            imageSource={require('../../../assets/images/hymnals/chinese-707-simplified-notation.jpg')}
             onPress={() =>
               router.push({
                 pathname: '/home/chinese-707-new-simplified-hymnal',

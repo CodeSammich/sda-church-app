@@ -4,7 +4,7 @@ import {
   openChinese707Hymn,
 } from '@/features/hymnal/Chinese707Hymnal';
 
-const coverImage = require('../../../public/chinese_707_hymnal_original_simplified_notation_version.jpg');
+const coverImage = require('../../../assets/images/hymnals/chinese-707-simplified-notation.jpg');
 const getHymns = () => getSortedChinese707Hymns(1);
 const openHymn = (hymnNumber: number | string) =>
   openChinese707Hymn(1, hymnNumber);

@@ -4,11 +4,11 @@
  */
 export const EXTERNAL_BRAND_ASSETS = {
   youtubeIcon: {
-    light: require('../public/brand/youtube-icon-red.png'),
-    dark: require('../public/brand/youtube-icon-white.png'),
+    light: require('../assets/images/brand/youtube-icon-red.png'),
+    dark: require('../assets/images/brand/youtube-icon-white.png'),
   },
   spotifyIcon: {
-    light: require('../public/brand/spotify-icon-green.png'),
-    dark: require('../public/brand/spotify-icon-white.png'),
+    light: require('../assets/images/brand/spotify-icon-green.png'),
+    dark: require('../assets/images/brand/spotify-icon-white.png'),
   },
 } as const;
