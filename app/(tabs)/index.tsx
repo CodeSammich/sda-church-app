@@ -542,7 +542,7 @@ export default function HomeScreen() {
               title={labels.livestream}
               titleBlockLines={3}
               subtitle={(labels as any).liveNow}
-              icon="youtube"
+              icon="play-circle-outline"
               color={theme.colors.cardBgColors.livestream}
               iconColor={theme.colors.iconColors.livestream}
               onPress={openSabbathStream}

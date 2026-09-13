@@ -124,16 +124,16 @@ export default function ExploreScreen() {
           <MenuCard
             title={labels.youtube}
             description={labels.youtubeSub}
-            icon={{ name: 'youtube' }}
-            iconColor={(theme.colors as any).brandYoutube}
+            icon={{ name: 'play-circle-outline' }}
+            iconColor={theme.colors.primary}
             onPress={openSermonArchive}
           />
 
           <MenuCard
             title={labels.spotify}
             description={labels.spotifySub}
-            icon={{ name: 'spotify' }}
-            iconColor={(theme.colors as any).brandSpotify}
+            icon={{ name: 'music-note' }}
+            iconColor={theme.colors.primary}
             onPress={openSpotifyPodcast}
           />
 
@@ -141,7 +141,7 @@ export default function ExploreScreen() {
             title={labels.zoomClass}
             description={labels.zoomSub}
             icon={{ name: 'video' }}
-            iconColor={(theme.colors as any).brandZoom}
+            iconColor={theme.colors.primary}
             onPress={openZoomClass}
           />
         </View>

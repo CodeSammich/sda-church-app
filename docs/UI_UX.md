@@ -97,25 +97,19 @@ the component.
 | **Arrow Border** | #374151 | #EBCD78 | Highlight boundary around the metallic affordance. |
 | **Arrow Foreground** | #374151 | #181202 | Dark icon over the metallic fill. |
 
-### Special External Brand Colors
+### External Service Links
 
-These brand colors are used for third-party recognition in Light Mode and follow the
-"YouTube Treatment" (monochrome) in Dark Mode.
-
-| Element           | Light Mode Hex | Dark Mode Hex | Rationale                                                   |
-| :---------------- | :------------- | :------------ | :---------------------------------------------------------- |
-| **YouTube Brand** | #FF0000        | #D2B258       | Official red in light; shared monochrome gold in dark.      |
-| **Spotify Brand** | #1DB954        | #D2B258       | Official green in light; shared monochrome gold in dark.    |
-| **Zoom Brand**    | #0B5CFF        | #D2B258       | Official blue in light; shared monochrome gold in dark.     |
+Links to YouTube, Spotify, Zoom, and other external services use neutral generic
+icons and the app's theme colors. Service names may appear as plain descriptive text,
+but the app does not ship third-party logo artwork or brand-color treatments. If a
+future release needs a provider's logo or embedded content, record the applicable
+permission and brand-guideline review before adding it.
 
 ### Key Principles & Exceptions:
 
-1.  **Brand Neutrality:** Following YouTube's "Neutral Treatment" guidelines, third-party
-    logos are generally rendered in monochrome variants. By standardizing external logos,
-    we visually reinforce that the user remains within their "Digital Home," even when
-    accessing external media.
-    - **Exception:** YouTube and Spotify icons utilize their respective brand colors to
-      aid immediate recognition and content surfacing, as mentioned below.
+1.  **Brand Neutrality:** External service destinations use generic, neutral icons so
+    users can identify the action without suggesting sponsorship, endorsement, or
+    co-branding by the service provider.
 2.  **Visual Hierarchy (The 90/10 Rule):** Most of the interface uses warm neutrals or
     charcoal surfaces. Restrained category colors and the primary accent identify actions
     and destinations without competing with content.

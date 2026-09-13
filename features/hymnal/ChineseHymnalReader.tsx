@@ -154,14 +154,14 @@ export function ChineseHymnalReader({
           >
             <View style={styles.buttonContent}>
               <AppIcon
-                name="youtube"
+                name="play-circle-outline"
                 size={24}
-                color={(theme.colors as any).brandYoutube}
+                color={theme.colors.primary}
               />
               <Text
                 style={[
                   styles.buttonText,
-                  { color: (theme.colors as any).brandYoutube },
+                  { color: theme.colors.primary },
                 ]}
               >
                 {labels.watchYouTube}
