@@ -1,9 +1,10 @@
 import { useAppTheme } from '@/constants/Themes';
+import { openInSystemBrowser, PRIVACY_POLICY_URL } from '@/constants/ExternalLinks';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Button, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
@@ -42,8 +43,22 @@ export default function PrivacyPolicyScreen() {
         variant="labelSmall"
         style={[styles.lastUpdated, { color: theme.colors.onSurfaceVariant }]}
       >
-        Last Updated: August 2026
+        Last Updated: September 2026
       </Text>
+      <Button
+        mode="outlined"
+        icon="open-in-new"
+        onPress={() =>
+          void openInSystemBrowser(
+            PRIVACY_POLICY_URL,
+            'Could not open privacy policy',
+            'Please try again later.',
+          )
+        }
+        style={styles.onlineButton}
+      >
+        View online privacy policy
+      </Button>
 
       <Text
         variant="titleMedium"
@@ -55,11 +70,14 @@ export default function PrivacyPolicyScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This application values privacy and uses data minimization to limit what the
-        public app receives. The app does not require a user account for ordinary use.
-        Church administrative systems and service providers still process limited
-        information needed to operate the app, as described below. For any questions or
-        clarifications, please contact technology@nyccsda.org.
+        This application values privacy and uses data minimization. The app does not
+        require a user account for ordinary use, does not include advertising or
+        analytics, and does not provide public user profiles, chat, or user-generated
+        posting. Authorized church contributors may submit bulletin information through
+        linked Google Forms outside the app. Church administrative systems and service
+        providers still process limited
+        information needed to operate the app, as described below. For privacy questions
+        or requests, please contact pastor@nyccsda.org.
       </Text>
 
       <Text
@@ -102,10 +120,12 @@ export default function PrivacyPolicyScreen() {
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
         Google Apps Script temporarily caches privacy-filtered bulletin responses to
-        reduce Sheet reads. The PWA may store the same filtered bulletin data and refresh
-        timing in browser local storage so ordinary visits do not repeatedly call the API
-        and the bulletin can refresh around Sabbath boundaries. Users can remove the
-        device copy by clearing this site&apos;s browser data.
+        reduce Sheet reads. The app may store settings, saved verse references, cached
+        Bible selections, and the same filtered bulletin data in device-local storage.
+        This data is not synced to a church account. On the web, users can remove it by
+        clearing this site&apos;s browser data. On iOS or Android, users can remove it by
+        uninstalling the app or clearing its storage using the operating system&apos;s app
+        settings.
       </Text>
 
       <Text
@@ -118,14 +138,15 @@ export default function PrivacyPolicyScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This web application is deployed using GitHub Pages. GitHub may collect basic
-        server logs and IP addresses for security, debugging, and operational maintenance.
-        We use Cloudflare to manage domain traffic and protect the application from common
-        web threats. Cloudflare may process basic connection data, such as IP addresses,
-        to identify malicious traffic and optimize performance. Google processes the
-        restricted source data and API requests through Google Workspace, Google Sheets,
-        Google Forms, and Google Apps Script. Each provider handles information under its
-        own applicable terms and privacy policies.
+        This app requests Bible text, Bible-audio metadata or files, sunset times, cover
+        images, and privacy-filtered bulletin data from external services over HTTPS.
+        GitHub Pages, Cloudflare, Google Workspace/Apps Script, HelloAO, fetch(bible),
+        Audio Power, Adventist Connect, the Chinese Union Mission services, and the
+        sunrise-sunset service may process ordinary connection metadata such as an IP
+        address, user agent, request path, and request time for delivery, security, or
+        service operations. The app does not receive or store those providers&apos; server
+        logs. Each provider handles information under its own applicable terms and
+        privacy policy.
       </Text>
 
       <Text
@@ -138,21 +159,45 @@ export default function PrivacyPolicyScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This application links to external platforms such as YouTube, Spotify,
-        HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org). Library
-        screens request current book-cover thumbnails from EGW Writings and, for Chinese
-        languages, the Chinese Union Mission&apos;s cover catalog and image service. When
-        you follow an external link or when those images load, the provider may receive
-        ordinary connection information such as your IP address. Use of these services is
-        subject to each provider&apos;s privacy policy. The church does not receive or
-        store information those external platforms independently collect from you.
+        This application links to external platforms such as AdventistGiving, YouTube,
+        Spotify, Zoom, HymnsForWorship.org, zgaxr.com, EGW Writings (egwwritings.org),
+        and Sabbath School services. The donation button opens AdventistGiving outside
+        the app; payment details and any donation receipts are handled by that service
+        and the receiving organization, not by this app. Library screens request current
+        book-cover thumbnails from EGW Writings and, for Chinese languages, the Chinese
+        Union Mission&apos;s cover catalog and image service. When you follow an external link
+        or when those images load, the provider may receive ordinary connection
+        information such as your IP address. Use of these services is subject to their
+        privacy policies. The church does not receive or store information those external
+        platforms independently collect from you. When you choose to share a Bible verse,
+        the selected text is passed to the operating system share sheet and the app you
+        choose; this app does not receive the recipient&apos;s information.
       </Text>
 
       <Text
         variant="titleMedium"
         style={[styles.sectionHeader, { color: theme.colors.onBackground }]}
       >
-        6. Privacy Frameworks and Questions
+        6. Device Permissions and Data Requests
+      </Text>
+      <Text
+        variant="bodyMedium"
+        style={[styles.bodyText, { color: theme.colors.onSurface }]}
+      >
+        The native app uses audio playback, including background playback, and may read
+        the device light sensor to adjust its theme locally. It does not request device
+        location, camera, microphone, contacts, photos, or notifications. Because the app
+        does not create user accounts or maintain a personal server profile, there is no
+        account to delete. A user may request correction or removal of church-managed
+        bulletin information by contacting pastor@nyccsda.org. The church will handle
+        requests according to applicable law and its administrative retention practices.
+      </Text>
+
+      <Text
+        variant="titleMedium"
+        style={[styles.sectionHeader, { color: theme.colors.onBackground }]}
+      >
+        7. Privacy Frameworks and Questions
       </Text>
       <Text
         variant="bodyMedium"
@@ -161,8 +206,8 @@ export default function PrivacyPolicyScreen() {
         The project&apos;s minimization measures are informed by privacy principles found
         in laws such as the CCPA and GDPR, but they do not by themselves guarantee legal
         compliance. Which laws apply depends on the deploying organization, its users, and
-        its data practices. Questions or requests concerning church-managed schedule
-        information may be sent to pastor@nyccsda.org.
+        its data practices. This policy may be updated when the app&apos;s data practices
+        change.
       </Text>
     </ScrollView>
   );
@@ -171,6 +216,7 @@ export default function PrivacyPolicyScreen() {
 const styles = StyleSheet.create({
   title: { fontWeight: 'bold', marginBottom: 5 },
   lastUpdated: { marginBottom: 20 },
+  onlineButton: { alignSelf: 'flex-start', marginBottom: 8 },
   sectionHeader: { fontWeight: 'bold', marginTop: 15, marginBottom: 5 },
   bodyText: {},
 });

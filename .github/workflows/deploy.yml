@@ -63,4 +63,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         run: |
-          npm run deploy
+          npm run deploy:production

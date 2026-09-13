@@ -35,14 +35,18 @@ To start the app in a web browser for local testing (primarily to check for Netw
 npx expo start --web
 ```
 
-### Production Deployment (GitHub Pages)
+### Local Web Build and Production Deployment
 
-The project uses GitHub Pages for hosting. Running the deploy command builds the web
-assets and pushes them to the gh-pages branch.
+The project uses GitHub Pages for hosting. Running the local deploy command builds the web
+assets into `dist/` but does not push anything:
 
 ```bash
 npm run deploy
 ```
+
+Production publishing is performed by the canonical repository's GitHub workflow when
+`main` is updated. The production script refuses to publish from a local shell or a
+different repository.
 
 Each fork is deployed under the GitHub Pages domain belonging to that fork's owner. For a
 fork that keeps the repository name `sda-church-app`, the URL is:
@@ -63,9 +67,9 @@ registration remain correct. If the repository is renamed, update those base-pat
 start-URL, scope, and service-worker-path values to the new repository path as well. A
 custom domain is optional and requires its own GitHub Pages and DNS configuration.
 
-For development accounts, you may use the increment flag to automatically update the patch
-version in `package.json` to quickly update the version number to trigger a new deploy on
-mobile. Please remember to reset the version number when raising the final pull request.
+For development builds, you may use the increment flag to automatically update the patch
+version in `package.json` and prepare a versioned local web build. Please remember to reset
+the version number when raising the final pull request.
 
 ```bash
 npm run deploy -- --increment
@@ -128,7 +132,7 @@ We have prioritized the PWA workflow over native distribution for several key re
 
 1. Zero Fees: Avoids the $99/year Apple Developer Program fee and the one-time Google Play
    fee.
-2. Instant Delivery: npm run deploy pushes updates instantly to all users without waiting
-   for multi-day store reviews.
+2. Instant Delivery: the production GitHub workflow pushes website updates instantly to
+   all users without waiting for multi-day store reviews.
 3. Development Simplicity: Native development, particularly on WSL, introduces significant
    networking complexity that can slow down project progress.

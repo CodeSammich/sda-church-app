@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "NY Chinese SDA",
+    "name": "New York Chinese SDA Church",
     "slug": "sda-church-app",
     "version": "0.36.0",
     "orientation": "portrait",
@@ -43,6 +43,11 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "autolinking": {

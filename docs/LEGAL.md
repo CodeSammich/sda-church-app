@@ -174,10 +174,12 @@ permissions and restrictions.
 
 ### 1. Introduction
 
-This application values privacy and uses data minimization to limit what the public app
-receives. The PWA does not require a user account for ordinary use. Church administrative
-systems and service providers still process limited information needed to operate the
-app, as described below.
+This application values privacy and uses data minimization. The app does not require a
+user account for ordinary use, does not include advertising or analytics, and does not
+provide public user profiles, chat, or user-generated posting. Authorized church
+contributors may submit bulletin information through linked Google Forms outside the app.
+Church administrative systems and service providers still process limited information
+needed to operate the app, as described below.
 
 ### 2. Worship Schedule Information (Google Workspace)
 
@@ -202,40 +204,54 @@ source-data retention is governed by the church's administrative practices.
 ### 3. Temporary Caching and Device Storage
 
 Google Apps Script temporarily caches privacy-filtered bulletin responses to reduce Sheet
-reads. The PWA may store the same filtered bulletin data and refresh timing in browser
-local storage so ordinary visits do not repeatedly call the API and the bulletin can
-refresh around Sabbath boundaries. Users can remove the device copy by clearing this
-site's browser data.
+reads. The app may store settings, saved verse references, cached Bible selections, and
+the same filtered bulletin data in device-local storage. This data is not synced to a
+church account. Web users can remove the device copy by clearing this site's browser
+data; native users can uninstall the app or clear its storage using the operating
+system's app settings.
 
 ### 4. Hosting and Traffic Services
 
-This web application is deployed using GitHub Pages. GitHub may collect basic server logs
-and IP addresses for security, debugging, and operational maintenance.
-We use Cloudflare to manage domain traffic and protect the application from common web
-threats. Cloudflare may process basic connection data (such as IP addresses) to identify
-malicious traffic and optimize performance. Google processes the restricted source data
-and API requests through Google Workspace, Google Sheets, Google Forms, and Google Apps
-Script. Each provider handles information under its own applicable terms and privacy
-policies.
+This app requests Bible text, Bible-audio metadata or files, sunset times, cover images,
+and privacy-filtered bulletin data from external services over HTTPS. GitHub Pages,
+Cloudflare, Google Workspace/Apps Script, HelloAO, fetch(bible), Audio Power, Adventist
+Connect, the Chinese Union Mission services, and the sunrise-sunset service may process
+ordinary connection metadata such as an IP address, user agent, request path, and request
+time for delivery, security, or service operations. The app does not receive or store
+those providers' server logs. Each provider handles information under its own applicable
+terms and privacy policies.
 
 ### 5. External Links
 
-This application links to external platforms such as YouTube, Spotify,
-HymnsForWorship.org, zgaxr.com, and EGW Writings (egwwritings.org). Library screens request
-current book-cover thumbnails from EGW Writings and, for Chinese languages, the Chinese
-Union Mission's cover catalog and image service. When you follow these links or when those
-images load, you are subject to the privacy policies of those third-party providers. These
-services may collect information such as IP addresses as part of their standard operations.
-The church does not receive or store information those external platforms independently
-collect from you.
+This application links to external platforms such as AdventistGiving, YouTube, Spotify,
+Zoom, HymnsForWorship.org, zgaxr.com, EGW Writings (egwwritings.org), and Sabbath School
+services. The donation button opens AdventistGiving outside the app; payment details and
+any donation receipts are handled by that service and the receiving organization, not by
+this app. Library screens request current book-cover thumbnails from EGW Writings and,
+for Chinese languages, the Chinese Union Mission's cover catalog and image service. When
+you follow these links or when those images load, you are subject to the privacy policies
+of those third-party providers. These services may collect information such as IP
+addresses as part of their standard operations. The church does not receive or store
+information those external platforms independently collect from you. When you choose to
+share a Bible verse, the selected text is passed to the operating system share sheet and
+the app you choose; this app does not receive the recipient's information.
 
-### 6. Privacy Frameworks and Questions
+### Device Permissions and Data Requests
+
+The native app uses audio playback, including background playback, and may read the
+device light sensor to adjust its theme locally. It does not request device location,
+camera, microphone, contacts, photos, or notifications. Because the app does not create
+user accounts or maintain a personal server profile, there is no account to delete. A
+user may request correction or removal of church-managed bulletin information by
+contacting `pastor@nyccsda.org`. The church will handle requests according to applicable
+law and its administrative retention practices.
+
+### 7. Privacy Frameworks and Questions
 
 The project's minimization measures are informed by privacy principles found in laws such
 as the CCPA and GDPR, but they do not by themselves guarantee legal compliance. Which laws
-apply depends on the deploying organization, its users, and its data practices. Questions
-or requests concerning church-managed schedule information may be sent to
-`pastor@nyccsda.org`.
+apply depends on the deploying organization, its users, and its data practices. This
+policy should be updated whenever the app's data practices change.
 
 ---
 

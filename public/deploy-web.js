@@ -5,12 +5,14 @@ const path = require('path');
 const args = process.argv.slice(2);
 const increment = args.includes('--increment');
 const quiet = args.includes('--quiet') && !args.includes('--verbose');
+const publish = args.includes('--publish');
 const projectRoot = path.resolve(__dirname, '..');
 const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 if (args.includes('--help')) {
   console.log('Usage: npm run deploy -- [--increment] [--verbose]');
-  console.log('Deploy output is quiet by default; --verbose shows tool output.');
+  console.log('Builds dist locally without publishing; --verbose shows tool output.');
+  console.log('Production publishing is restricted to the GitHub workflow.');
   process.exit(0);
 }
 
@@ -42,6 +44,20 @@ const runStep = (label, command, commandArgs) => {
 };
 
 try {
+  if (publish) {
+    const isCanonicalGitHubAction =
+      process.env.GITHUB_ACTIONS === 'true' &&
+      process.env.GITHUB_REPOSITORY ===
+        'New-York-Chinese-Seventh-day-Adventist/sda-church-app' &&
+      process.env.GITHUB_REF === 'refs/heads/main';
+
+    if (!isCanonicalGitHubAction) {
+      throw new Error(
+        'Production publishing is restricted to the canonical repository main-branch GitHub workflow.',
+      );
+    }
+  }
+
   runStep('Syncing version', process.execPath, [
     path.resolve(__dirname, 'sync-version.js'),
     ...(increment ? ['--increment'] : []),
@@ -54,13 +70,17 @@ try {
     'web',
     '--clear',
   ]);
-  runStep('Publishing GitHub Pages', npxCommand, [
-    'gh-pages',
-    '-d',
-    'dist',
-    '--dotfiles',
-  ]);
-  console.log('Deployment completed successfully.');
+  if (publish) {
+    runStep('Publishing GitHub Pages', npxCommand, [
+      'gh-pages',
+      '-d',
+      'dist',
+      '--dotfiles',
+    ]);
+    console.log('Production deployment completed successfully.');
+  } else {
+    console.log('Local web build completed. No remote publishing was performed.');
+  }
 } catch (error) {
   console.error(`Deployment failed: ${error.message}`);
   process.exit(1);

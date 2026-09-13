@@ -10,6 +10,7 @@ import { SupportedLanguage } from './LanguageContext';
 export const CHURCH_NAME = 'New York Chinese SDA Church';
 export const CHURCH_PHONE = '(718) 205-8618';
 export const CHURCH_EMAIL = 'pastor@nyccsda.org';
+export const PRIVACY_POLICY_URL = 'https://app.nyccsda.org/privacy-policy.html';
 
 // Relative path to various church specific images in the public folder on GitHub Pages
 export const CHURCH_BUILDING_IMAGE_URL =

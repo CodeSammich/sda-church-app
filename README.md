@@ -154,8 +154,9 @@ remains internal to maintain spiritual focus.
 ## Build workflows
 
 The repository uses one Expo source for the website and native apps. Website deployment
-stays automatic: a push to `main` runs the existing GitHub Pages workflow. It can also be
-run manually with `npm run deploy`.
+stays automatic: a push to `main` runs the existing GitHub Pages workflow. Locally,
+`npm run deploy` builds the web output into `dist/` without publishing it. Production
+publishing is restricted to the canonical GitHub workflow.
 
 Native binaries are opt-in. In GitHub Actions, open **Native binaries** and choose **Run
 workflow**. Select the source branch or tag and check any combination of these targets:

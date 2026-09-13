@@ -1,8 +1,9 @@
 # Web and native builds
 
-Website deployment remains automatic on pushes to `main`, or through `npm run deploy`.
-Native builds are opt-in and do not publish to either store. The same Expo source
-is used for all platforms.
+Website deployment remains automatic on pushes to `main` through the canonical GitHub
+workflow. Local `npm run deploy` builds the web output without publishing it. Native
+builds are opt-in and do not publish to either store. The same Expo source is used for
+all platforms.
 
 ## Expo 58 canary Android prebuild
 
