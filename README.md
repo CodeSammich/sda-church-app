@@ -158,46 +158,54 @@ stays automatic: a push to `main` runs the existing GitHub Pages workflow. Local
 `npm run deploy` builds the web output into `dist/` without publishing it. Production
 publishing is restricted to the canonical GitHub workflow.
 
-Native binaries are opt-in. In GitHub Actions, open **Native binaries** and choose **Run
-workflow**. Select the source branch or tag and check any combination of these targets:
+Native binaries do not run for pull requests. A trusted push to `main` or
+`release/**` runs the configured targets; you can also open **Native binaries**
+and choose **Run workflow** to select a source branch/tag and any combination of
+these targets:
 
 - iOS store build (`.ipa`) for App Store Connect and TestFlight.
 - Android store build (`.aab`) for Google Play.
 - Android preview build (`.apk`) for direct device installation.
 
-The workflow compiles on GitHub-hosted runners with EAS CLI's `--local` mode and uploads
-the binary as a workflow artifact. It does not use Expo's cloud builders. This is the
-recommended release path because the runner versions and toolchain are explicit, the
-artifacts remain attached to the GitHub run, and the build does not consume EAS cloud
-build capacity. It still requires the church-owned Expo project, configured signing
-credentials, and the `EXPO_TOKEN` GitHub secret. Native builds never publish to a store
-automatically, so review and submission remain separate steps.
+Android compiles directly with Expo prebuild and Gradle on GitHub's Linux runner;
+the Android upload keystore is restored only from protected GitHub Environment
+secrets. Android therefore needs no Expo account, Expo token, or EAS credential
+storage. iOS currently compiles with EAS CLI's `--local` mode on the macOS runner
+while its direct-native signing/export path is being completed. Neither path uses
+an EAS Cloud builder in the recommended workflow. Native builds never publish to
+a store automatically, so review and submission remain separate steps.
 
 Direct EAS cloud builds remain available through the `:eas` scripts below, but are not
 the recommended release workflow. They require Expo cloud access and may use EAS build
 capacity and cloud-managed settings that are less reproducible than the checked-in
 GitHub-runner workflow.
 
-Signing credentials are managed by EAS by default. You can instead store Android
-and Apple signing files as encrypted GitHub secrets and use a local-credentials
-profile, but that requires additional workflow setup and ongoing certificate
-rotation. The [native build guide](docs/operations/native-builds.md) explains
-both approaches.
+For this church-owned release pipeline, the intended credential boundary is GitHub:
+Android upload signing, Apple distribution signing, Google Play submission, and App
+Store Connect submission credentials will be stored as protected GitHub Environment
+secrets and recreated only during the approved workflow. We will not upload those
+keys to EAS. Android is the first migrated platform; iOS still requires the church's
+temporary Expo control-plane token until its direct-native workflow is tested. This
+requires explicit workflow setup, careful secret access controls, and ongoing Apple
+certificate/profile renewal. The [native build guide](docs/operations/native-builds.md)
+documents the design, setup commands, research, and recovery procedures.
 
 The same targets are available locally:
 
 ```sh
-eas --version                         # installed with: npm install --global eas-cli@23.2.0
-npm run build:ios
-npm run build:android
-npm run build:android:apk
+eas --version                         # only needed for the iOS/EAS fallback
+npm run build:android:apk             # direct native APK; needs ANDROID_* variables
+npm run build:android                  # direct native AAB; needs ANDROID_* variables
+npm run build:ios                      # current iOS EAS-local path
 
 # Optional, not the recommended release path:
 npm run build:ios:eas
 npm run build:android:eas
 ```
 
-The global `eas` command is optional; the npm scripts use the pinned CLI version.
+The global `eas` command is optional; the iOS/EAS scripts use the pinned CLI version.
+Android direct builds require an explicit `expo.android.versionCode` in `app.json`;
+the script intentionally stops until that number is confirmed against Play Console.
 The local Android scripts use the normal Gradle, CMake, and Ninja defaults.
 For a memory-constrained WSL session, override them for a one-off build:
 
@@ -205,12 +213,21 @@ For a memory-constrained WSL session, override them for a one-off build:
 GRADLE_OPTS="-Dorg.gradle.workers.max=4 -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx5g" npm run build:android:apk
 ```
 
-For GitHub Actions, create an access token in Expo under **Account settings →
-Access tokens**, then add it to the repository under **Settings → Secrets and
-variables → Actions** with the name `EXPO_TOKEN`. The **Native binaries** workflow
-uses that secret to access the church-owned Expo project. Keep the token out of
-source control. For a local session, use `export EXPO_TOKEN='your-token'` and
-remove it afterward with `unset EXPO_TOKEN`.
+For GitHub Actions, add the Android upload-key secrets to the protected `production`
+Environment before running an Android target: `ANDROID_KEYSTORE_BASE64`,
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
+The **Native binaries** workflow decodes the keystore only in the temporary runner,
+then removes it. The iOS target still needs a least-privileged Expo robot-user token
+as `EXPO_TOKEN` until its direct-native migration is complete. Keep all credentials
+out of source control. The complete Android setup and EAS-retirement checklist are
+in [the native build guide](docs/operations/native-builds.md#android-setup-github-hosted-direct-builds).
+
+Android already follows the zero-token fallback: `npx expo prebuild` followed by
+direct Gradle. iOS still needs the EAS-local fallback until its temporary keychain,
+export, and signing workflow is implemented. Do not delete the Expo account until
+both platforms have produced verified store updates and any EAS-held credentials
+or version counters have been exported or replaced. The native guide includes the
+comparison, security rationale, rotation policy, and GitHub Actions estimate.
 
 Local Android compilation needs Java 17 and the Android SDK/NDK. Local iOS compilation
 needs macOS, Xcode, CocoaPods, and fastlane. See the

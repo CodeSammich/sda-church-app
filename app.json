@@ -39,6 +39,7 @@
       },
       "predictiveBackGestureEnabled": true,
       "package": "org.nyccsda.app",
+      "versionCode": 1,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
@@ -80,7 +81,8 @@
           "backgroundColor": "#00405C"
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      "./plugins/withAndroidLocalSigning"
     ],
     "extra": {
       "router": {},

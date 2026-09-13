@@ -1,8 +1,9 @@
 # Keep EAS local builds aligned with the repository whitelist while allowing
 # local validation of config plugins before they are committed.
 /*
-!/plugins/
-!/plugins/withAndroidPermanentAudioFocus.js
+!/plugins
+!/plugins/**
+!/plugins/withAndroidLocalSigning.js
 !/android
 !/android/**
 

@@ -1,7 +1,9 @@
 # Native store publishing investigation — issue #139
 
-Investigated September 5, 2026. Recommendation: retain Expo and validate native
-development and preview builds before committing to store distribution.
+Investigated September 5, 2026; updated September 13, 2026. Recommendation:
+retain Expo as the source framework, use direct native Android compilation, and
+validate native development and preview builds before committing to store
+distribution.
 This document records research and source inspection; no native build, device
 test, account enrollment, or store submission was performed.
 
@@ -22,8 +24,10 @@ This is already an Expo/React Native application, not a browser-only React app:
   lock-screen controls and metadata.
 - `services/BibleAudioPlayer.ts` uses native expo-audio, while the `.web.ts`
   implementation provides the browser player and rolling queue.
-- No `eas.json`, expo-dev-client dependency, or expo-updates dependency was found.
-  Native build distribution and OTA delivery still need configuration.
+- Native directories remain generated/ignored. Android direct builds now use the
+  committed local-signing config plugin and Gradle; iOS build distribution still
+  uses the temporary EAS CLI `--local` path while its direct-native workflow is
+  being implemented. OTA delivery still needs separate configuration.
 
 An implementation detail to monitor is queue ownership: the native adapter only casts the player
 to a type with optional queue methods; that does not implement a native queue.
@@ -94,8 +98,11 @@ Proposed setup, to execute in a separate implementation change:
    reachability fails. Test preview builds independently of Metro.
 
 EAS cloud builds/submission avoid needing a local Mac for iOS build/upload, but
-do not replace physical iPhone testing. EAS usage may have separate costs; choose
-a service plan after estimating build frequency and update traffic.
+do not replace physical iPhone testing. Android now uses the zero-token
+`expo prebuild` plus Gradle path on GitHub. iOS still uses EAS CLI with `--local`
+on GitHub, so it needs Expo project authentication but does not submit
+compilation jobs to EAS Cloud. The remaining zero-token work is the direct
+`expo prebuild` plus Xcode path, with more native workflow maintenance.
 [Expo submission workflow](https://docs.expo.dev/deploy/submit-to-app-stores/).
 
 ## OTA boundaries and issue corrections
@@ -141,10 +148,12 @@ does not exempt delivered JavaScript from Play policies.
    accessibility, content rights, privacy disclosures, support URLs, screenshots,
    age ratings, and current store SDK requirements. Verify the generated native
    permissions, rather than relying only on configuration intent.
-4. Build signed production binaries with EAS Build. Upload Android to an internal
-   track and iOS to TestFlight. EAS Submit supports uploads; finish metadata and
-   release review in the consoles. Establish the first Android upload manually
-   where required before automating subsequent submissions. Fastlane is optional.
+4. Build Android directly with Gradle and the protected GitHub upload key; build
+   iOS with EAS CLI's `--local` mode until its direct-native path is complete.
+   Upload Android to an internal track and iOS to TestFlight. Finish metadata
+   and release review in the consoles. Establish the first Android upload
+   manually where required before automating subsequent submissions. Fastlane is
+   optional.
    [Store submission](https://docs.expo.dev/deploy/submit-to-app-stores/).
 5. Promote only after device acceptance. Keep PWA distribution available while
    native behavior is being validated.
