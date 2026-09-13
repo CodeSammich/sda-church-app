@@ -12,6 +12,7 @@ import {
   AccessibilityRole,
   AccessibilityState,
   Animated,
+  type ImageSourcePropType,
   Platform,
   StyleSheet,
   Text,
@@ -19,6 +20,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { ExternalBrandIcon } from "@/components/ExternalBrandIcon";
 
 const AnimatedTouchableOpacity =
   Animated.createAnimatedComponent(TouchableOpacity);
@@ -29,7 +31,8 @@ interface MenuCardProps {
   disabled?: boolean;
   title: string;
   description?: string;
-  icon: MaterialCommunityIconName | AppIconProps;
+  icon?: MaterialCommunityIconName | AppIconProps;
+  imageSource?: ImageSourcePropType;
   iconColor?: string;
   onPress?: () => void;
   rightIcon?: MaterialCommunityIconName | AppIconProps | null;
@@ -91,6 +94,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({
   title,
   description,
   icon,
+  imageSource,
   iconColor,
   onPress,
   rightIcon = "chevron-right",
@@ -119,16 +123,23 @@ export const MenuCard: React.FC<MenuCardProps> = ({
       activeOpacity={onPress && !disabled ? 0.7 : 1}
       disabled={disabled || !onPress}
     >
-      <AppIcon
-        pointerEvents="none"
-        {...(typeof icon === "string" ? { name: icon } : icon)}
-        size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
-        color={
-          disabled
-            ? theme.colors.onSurfaceDisabled
-            : iconColor || theme.colors.tertiary
-        }
-      />
+      {imageSource ? (
+        <ExternalBrandIcon
+          source={imageSource}
+          size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
+        />
+      ) : icon ? (
+        <AppIcon
+          pointerEvents="none"
+          {...(typeof icon === "string" ? { name: icon } : icon)}
+          size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
+          color={
+            disabled
+              ? theme.colors.onSurfaceDisabled
+              : iconColor || theme.colors.tertiary
+          }
+        />
+      ) : null}
       <View pointerEvents="none" style={styles.cardContent}>
         <Text
           style={[

@@ -1,4 +1,5 @@
 import { MenuCard } from '@/components/MenuCard';
+import { EXTERNAL_BRAND_ASSETS } from '@/constants/ExternalBrandAssets';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openSermonArchive,
@@ -124,16 +125,14 @@ export default function ExploreScreen() {
           <MenuCard
             title={labels.youtube}
             description={labels.youtubeSub}
-            icon={{ name: 'play-circle-outline' }}
-            iconColor={theme.colors.brandYoutube}
+            imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon}
             onPress={openSermonArchive}
           />
 
           <MenuCard
             title={labels.spotify}
             description={labels.spotifySub}
-            icon={{ name: 'music-note' }}
-            iconColor={theme.colors.brandSpotify}
+            imageSource={EXTERNAL_BRAND_ASSETS.spotifyIcon}
             onPress={openSpotifyPodcast}
           />
 

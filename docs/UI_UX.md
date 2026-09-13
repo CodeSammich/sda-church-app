@@ -99,18 +99,19 @@ the component.
 
 ### External Service Links
 
-Links to YouTube, Spotify, Zoom, and other external services use neutral generic
-icons. Restrained service accent colors may help users recognize a destination, but
-the app does not ship third-party logo artwork or use a provider's logo in the app
-icon or store graphics. Service names may appear as plain descriptive text. If a
-future release needs a provider's logo or embedded content, record the applicable
-permission and brand-guideline review before adding it.
+Links to YouTube, Spotify, Zoom, and other external services use the provider's
+unmodified official logo assets where the provider's current guidelines permit that
+linking or attribution use. The assets are rendered as untinted, contain-fit images
+inside the existing controls; service names remain plain descriptive text. Provider
+logos are not used in the app icon or as the app's own branding. If a future release
+adds a provider logo or embedded content, record the applicable permission and
+brand-guideline review before adding it.
 
 ### Key Principles & Exceptions:
 
-1.  **Brand Neutrality:** External service destinations use generic, neutral icons so
-    users can identify the action without suggesting sponsorship, endorsement, or
-    co-branding by the service provider.
+1.  **Brand Neutrality:** External service destinations use official provider assets
+    only for truthful identification of the linked destination. Their placement must
+    not suggest sponsorship, endorsement, or co-branding by the service provider.
 2.  **Visual Hierarchy (The 90/10 Rule):** Most of the interface uses warm neutrals or
     charcoal surfaces. Restrained category colors and the primary accent identify actions
     and destinations without competing with content.

@@ -1,7 +1,9 @@
 import { AppIcon } from '@/components/AppIcon';
+import { ExternalBrandIcon } from '@/components/ExternalBrandIcon';
 import { SourceNoticePanel } from '@/components/SourceNoticePanel';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { openYouTubeSearch } from '@/constants/ExternalLinks';
+import { EXTERNAL_BRAND_ASSETS } from '@/constants/ExternalBrandAssets';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { getRoutedHymns } from '@/features/hymnal/HymnalRouting';
@@ -153,10 +155,9 @@ export function ChineseHymnalReader({
             style={styles.flexButton}
           >
             <View style={styles.buttonContent}>
-              <AppIcon
-                name="play-circle-outline"
+              <ExternalBrandIcon
+                source={EXTERNAL_BRAND_ASSETS.youtubeIcon}
                 size={24}
-                color={theme.colors.brandYoutube}
               />
               <Text
                 style={[

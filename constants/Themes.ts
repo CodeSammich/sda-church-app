@@ -100,7 +100,6 @@ export const customLightTheme = {
     // Icon colors for light mode
     iconColors: {
       // home page
-      livestream:           'rgba(255, 0, 0, 1.00)',       // Restrained YouTube destination accent
       bulletin:             'rgba(146,64,14,1.00)',     // Warm amber/brown
       tithe:                'rgba(4,120,87,1.00)',      // Deep forest/emerald green
       discover:             'rgba(55,48,163,1.00)',     // Deep indigo/navy
@@ -166,8 +165,8 @@ export const customLightTheme = {
     },
 
     // Destination accents only; official logo artwork is not bundled.
-    brandYoutube: '#FF0000',
-    brandSpotify: '#1DB954',
+    brandYoutube: '#FF0033',
+    brandSpotify: '#1ED760',
     brandZoom: '#0B5CFF',
 
     // Neutralizing Elevation (Hierarchy of Light - Light Mode)
@@ -241,7 +240,6 @@ export const customDarkTheme: AppTheme = {
     // Soft category colors preserve wayfinding while reducing icon glare.
     iconColors: {
       // home page
-      livestream:   '#FF8A80',
       bulletin:     '#F3C677',
       tithe:        '#6FD3A7',
       discover:     '#AFA8FF',

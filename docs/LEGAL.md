@@ -168,6 +168,14 @@ is strictly prohibited.**
 Please refer to the [Full Branding Policy](LEGAL_BRANDING.md) for detailed usage
 permissions and restrictions.
 
+The app bundles unmodified official YouTube and Spotify icon assets only inside
+clickable controls that open the corresponding fixed external URLs. Those assets are
+not covered by this repository's software license; their provider brand rules remain
+applicable. The Zoom destination currently uses a generic video icon because the
+available Zoom terms grant logo rights in narrower partner and SDK contexts. Asset
+sources and the implementation restrictions are recorded in
+[`public/brand/README.md`](../public/brand/README.md).
+
 ---
 
 ## Privacy Policy

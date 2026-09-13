@@ -1,4 +1,5 @@
 import { GridMenuCard } from '@/components/GridMenuCard';
+import { EXTERNAL_BRAND_ASSETS } from '@/constants/ExternalBrandAssets';
 import { WrappingActionButton } from '@/components/WrappingActionButton';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
@@ -542,9 +543,8 @@ export default function HomeScreen() {
               title={labels.livestream}
               titleBlockLines={3}
               subtitle={(labels as any).liveNow}
-              icon="play-circle-outline"
+              imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon}
               color={theme.colors.cardBgColors.livestream}
-              iconColor={theme.colors.iconColors.livestream}
               onPress={openSabbathStream}
               style={styles.gridCell}
               showArrow={false}

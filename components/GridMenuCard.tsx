@@ -6,6 +6,7 @@ import React, { useMemo, useRef } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Animated,
+  type ImageSourcePropType,
   Platform,
   StyleSheet,
   Text,
@@ -14,12 +15,14 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { ExternalBrandIcon } from '@/components/ExternalBrandIcon';
 
 interface GridMenuCardProps {
   title: string;
   subtitle?: string;
   /** MaterialCommunityIcons glyph for the decorative illustration area */
-  icon: MaterialCommunityIconName;
+  icon?: MaterialCommunityIconName;
+  imageSource?: ImageSourcePropType;
   /** Pastel background color for the card */
   color: string;
   /** Icon tint — defaults to a semi-transparent dark of the card color */
@@ -49,6 +52,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   title,
   subtitle,
   icon,
+  imageSource,
   color,
   iconColor,
   onPress,
@@ -114,12 +118,20 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
         {/* Illustration + arrow row — bottom */}
         <View pointerEvents="none" style={styles.bottomRow}>
           <View style={styles.decorIconContainer}>
-            <AppIcon
-              name={icon}
-              size={68}
-              color={resolvedIconColor}
-              style={styles.decorIcon}
-            />
+            {imageSource ? (
+              <ExternalBrandIcon
+                source={imageSource}
+                size={68}
+                style={styles.decorIcon}
+              />
+            ) : icon ? (
+              <AppIcon
+                name={icon}
+                size={68}
+                color={resolvedIconColor}
+                style={styles.decorIcon}
+              />
+            ) : null}
           </View>
           {/* Diagonal arrow affordance */}
           {showArrow && <LinearGradient
