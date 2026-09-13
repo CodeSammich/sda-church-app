@@ -1,6 +1,8 @@
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 import { ScrollViewStyleReset } from 'expo-router/html';
 
+const WEB_BASE_PATH = '/sda-church-app';
+
 // This file is web-only and used to configure the root HTML for every
 // web page during static rendering.
 // The contents of this function only run in Node.js environments and
@@ -32,8 +34,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
           content="black"
         />
         <meta name="apple-mobile-web-app-title" content="NYCCSDA" />
-        <link rel="apple-touch-icon" href="icon-192x192.png" />
-        <link rel="manifest" href="manifest.json" />
+        <link
+          rel="apple-touch-icon"
+          href={`${WEB_BASE_PATH}/icon-192x192.png`}
+        />
+        <link rel="manifest" href={`${WEB_BASE_PATH}/manifest.json`} />
 
         {/* 
           Disable body scrolling on web. This makes ScrollView components work closer to how they do on native. 
