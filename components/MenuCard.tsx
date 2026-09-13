@@ -33,6 +33,7 @@ interface MenuCardProps {
   description?: string;
   icon?: MaterialCommunityIconName | AppIconProps;
   imageSource?: ImageSourcePropType;
+  darkImageSource?: ImageSourcePropType;
   iconColor?: string;
   onPress?: () => void;
   rightIcon?: MaterialCommunityIconName | AppIconProps | null;
@@ -95,6 +96,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({
   description,
   icon,
   imageSource,
+  darkImageSource,
   iconColor,
   onPress,
   rightIcon = "chevron-right",
@@ -126,6 +128,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({
       {imageSource ? (
         <ExternalBrandIcon
           source={imageSource}
+          darkSource={darkImageSource}
           size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
         />
       ) : icon ? (

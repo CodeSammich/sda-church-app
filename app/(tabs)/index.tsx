@@ -543,7 +543,8 @@ export default function HomeScreen() {
               title={labels.livestream}
               titleBlockLines={3}
               subtitle={(labels as any).liveNow}
-              imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon}
+              imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.light}
+              darkImageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.dark}
               color={theme.colors.cardBgColors.livestream}
               onPress={openSabbathStream}
               style={styles.gridCell}

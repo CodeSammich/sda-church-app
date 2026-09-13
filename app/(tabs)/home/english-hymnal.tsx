@@ -164,7 +164,8 @@ export default function HymnalScreen() {
           >
             <View style={styles.buttonContent}>
               <ExternalBrandIcon
-                source={EXTERNAL_BRAND_ASSETS.youtubeIcon}
+                source={EXTERNAL_BRAND_ASSETS.youtubeIcon.light}
+                darkSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.dark}
                 size={24}
               />
               <Text

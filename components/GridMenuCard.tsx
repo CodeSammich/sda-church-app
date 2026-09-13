@@ -23,6 +23,7 @@ interface GridMenuCardProps {
   /** MaterialCommunityIcons glyph for the decorative illustration area */
   icon?: MaterialCommunityIconName;
   imageSource?: ImageSourcePropType;
+  darkImageSource?: ImageSourcePropType;
   /** Pastel background color for the card */
   color: string;
   /** Icon tint — defaults to a semi-transparent dark of the card color */
@@ -53,6 +54,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   subtitle,
   icon,
   imageSource,
+  darkImageSource,
   color,
   iconColor,
   onPress,
@@ -121,6 +123,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
             {imageSource ? (
               <ExternalBrandIcon
                 source={imageSource}
+                darkSource={darkImageSource}
                 size={68}
                 style={styles.decorIcon}
               />

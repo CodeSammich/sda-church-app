@@ -125,14 +125,16 @@ export default function ExploreScreen() {
           <MenuCard
             title={labels.youtube}
             description={labels.youtubeSub}
-            imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon}
+            imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.light}
+            darkImageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.dark}
             onPress={openSermonArchive}
           />
 
           <MenuCard
             title={labels.spotify}
             description={labels.spotifySub}
-            imageSource={EXTERNAL_BRAND_ASSETS.spotifyIcon}
+            imageSource={EXTERNAL_BRAND_ASSETS.spotifyIcon.light}
+            darkImageSource={EXTERNAL_BRAND_ASSETS.spotifyIcon.dark}
             onPress={openSpotifyPodcast}
           />
 
