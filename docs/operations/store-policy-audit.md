@@ -16,6 +16,51 @@ It should not be submitted until the release owner completes the confirmation it
 below, especially the donation recipient, public privacy URL, and content-rights
 records.
 
+## Google Play create-app declarations
+
+The Play Console create-app flow asks the organization to acknowledge the [Developer
+Program Policies](https://play.google.com/about/developer-content-policy.html), accept
+the [Play App Signing Terms of Service](https://support.google.com/googleplay/android-developer/answer/9842756),
+and acknowledge [US export-law compliance](https://support.google.com/googleplay/android-developer/answer/113770?hl=en).
+These are account-owner acknowledgements and legal/contractual certifications; this
+technical audit cannot accept them on the church's behalf.
+
+### Developer Program Policies
+
+The code review found no obvious policy violation: the app is a free church/community
+utility with substantial native functionality, no ads, no accounts, no public user
+posting, no deceptive device features, and no in-app digital purchases. The final
+account owner may acknowledge this declaration after confirming that the submitted
+binary, store listing, privacy disclosures, external links, permissions, and rights
+records remain accurate. Google requires the listing and declarations to describe the
+actual submitted app, not merely the source repository.
+
+### Play App Signing
+
+For this new Android App Bundle, accept the terms and use Google-managed Play App
+Signing unless the church has a documented reason to manage or reuse an existing app
+signing key. Google then signs the APKs delivered to users; the church/EAS build keeps
+an upload key used to submit bundles. Store the upload keystore and credentials in the
+church's secret-management system and never commit them to the repository. The Play
+Console administrator must accept the terms and confirm the selected key arrangement.
+
+### US export laws
+
+The app source contains no custom cryptography, VPN, proxy, security, or encryption
+feature. It makes ordinary HTTPS requests; the only direct `node:crypto` use is a
+build-time SHA-256 helper in `scripts/download-cuv-audio.mjs`, not an app feature. The
+iOS configuration also declares `usesNonExemptEncryption: false`. This evidence is
+consistent with a normal mass-market app using platform/network encryption, but it is
+not a legal export classification. The authorized organization representative should
+confirm that the final binary is authorized for export and that no additional
+restricted encryption or destinations have been introduced. Recheck this declaration
+if the app later adds custom cryptography, VPN/security functionality, or another
+encryption-dependent SDK.
+
+The optional advance-notice contact is not indicated for this ordinary church app; it
+is not a substitute for completing the required declarations. Google states that its
+export page is general information rather than legal advice.
+
 ## Changes made in this audit
 
 - Added a public privacy policy at `https://app.nyccsda.org/privacy-policy.html` for

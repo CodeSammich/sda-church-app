@@ -48,6 +48,16 @@ Production publishing is performed by the canonical repository's GitHub workflow
 `main` is updated. The production script refuses to publish from a local shell or a
 different repository.
 
+To publish a development preview to a fork, opt in explicitly and provide both the fork
+repository and its GitHub Pages URL. The URL must use the configured `/sda-church-app`
+base path; custom domains are rejected for preview publishing:
+
+```bash
+npm run deploy:dev -- \
+  --repo git@github.com:CodeSammich/sda-church-app.git \
+  --site-url https://codesammich.github.io/sda-church-app/
+```
+
 Each fork is deployed under the GitHub Pages domain belonging to that fork's owner. For a
 fork that keeps the repository name `sda-church-app`, the URL is:
 

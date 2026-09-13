@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit",
     "web": "expo start --web",
     "deploy": "node public/deploy-web.js --quiet",
+    "deploy:dev": "node public/deploy-web.js --preview --quiet",
     "deploy:production": "node public/deploy-web.js --publish --quiet",
     "build:ios": "node scripts/ensure-build-dir.mjs && npx eas-cli@23.2.0 build --platform ios --profile production --local --output build/app-${npm_package_version}-build-$(date +%Y%m%d%H%M%S).ipa",
     "build:ios:eas": "npx eas-cli@23.2.0 build --platform ios --profile production",

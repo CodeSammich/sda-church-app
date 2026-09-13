@@ -6,12 +6,28 @@ const args = process.argv.slice(2);
 const increment = args.includes('--increment');
 const quiet = args.includes('--quiet') && !args.includes('--verbose');
 const publish = args.includes('--publish');
+const preview = args.includes('--preview');
 const projectRoot = path.resolve(__dirname, '..');
 const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+
+const getOption = (name) => {
+  const inlinePrefix = `${name}=`;
+  const inline = args.find((arg) => arg.startsWith(inlinePrefix));
+  if (inline) return inline.slice(inlinePrefix.length);
+
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
+};
+
+const previewRepository = getOption('--repo');
+const previewSiteUrl = getOption('--site-url');
 
 if (args.includes('--help')) {
   console.log('Usage: npm run deploy -- [--increment] [--verbose]');
   console.log('Builds dist locally without publishing; --verbose shows tool output.');
+  console.log(
+    'Preview: npm run deploy:dev -- --repo <github-repo-url> --site-url <github-pages-url>',
+  );
   console.log('Production publishing is restricted to the GitHub workflow.');
   process.exit(0);
 }
@@ -44,6 +60,10 @@ const runStep = (label, command, commandArgs) => {
 };
 
 try {
+  if (publish && preview) {
+    throw new Error('Choose either production publishing or preview publishing, not both.');
+  }
+
   if (publish) {
     const isCanonicalGitHubAction =
       process.env.GITHUB_ACTIONS === 'true' &&
@@ -54,6 +74,52 @@ try {
     if (!isCanonicalGitHubAction) {
       throw new Error(
         'Production publishing is restricted to the canonical repository main-branch GitHub workflow.',
+      );
+    }
+  }
+
+  if (preview) {
+    if (!previewRepository || !previewSiteUrl) {
+      throw new Error(
+        'Preview publishing requires both --repo <github-repo-url> and --site-url <github-pages-url>.',
+      );
+    }
+
+    const normalizedRepository = previewRepository
+      .replace(/^https:\/\/github\.com\//, '')
+      .replace(/^git@github\.com:/, '')
+      .replace(/^ssh:\/\/git@github\.com\//, '')
+      .replace(/\.git\/?$/, '')
+      .replace(/\/$/, '');
+    const isGitHubRepository = /^(https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)/.test(
+      previewRepository,
+    );
+    const isCanonicalRepository =
+      normalizedRepository ===
+      'New-York-Chinese-Seventh-day-Adventist/sda-church-app';
+    if (!isGitHubRepository || isCanonicalRepository) {
+      throw new Error(
+        'Preview publishing requires a non-canonical GitHub repository; production publishing uses the protected workflow.',
+      );
+    }
+
+    let parsedPreviewUrl;
+    try {
+      parsedPreviewUrl = new URL(previewSiteUrl);
+    } catch {
+      throw new Error('Preview --site-url must be a valid HTTPS GitHub Pages URL.');
+    }
+
+    const configuredBasePath = require(path.resolve(projectRoot, 'app.json')).expo.experiments
+      ?.baseUrl;
+    const normalizePath = (value) => value.replace(/\/+$/, '') || '/';
+    if (
+      parsedPreviewUrl.protocol !== 'https:' ||
+      !parsedPreviewUrl.hostname.endsWith('.github.io') ||
+      normalizePath(parsedPreviewUrl.pathname) !== normalizePath(configuredBasePath || '/')
+    ) {
+      throw new Error(
+        `Preview --site-url must be an HTTPS *.github.io URL using the configured base path ${configuredBasePath || '/'}; the church custom domain is production-only.`,
       );
     }
   }
@@ -70,14 +136,26 @@ try {
     'web',
     '--clear',
   ]);
-  if (publish) {
-    runStep('Publishing GitHub Pages', npxCommand, [
+  if (publish || preview) {
+    const publishArgs = [
       'gh-pages',
       '-d',
       'dist',
       '--dotfiles',
-    ]);
-    console.log('Production deployment completed successfully.');
+    ];
+    if (preview) {
+      publishArgs.push('--repo', previewRepository);
+    }
+    runStep(
+      preview ? 'Publishing preview GitHub Pages' : 'Publishing GitHub Pages',
+      npxCommand,
+      publishArgs,
+    );
+    console.log(
+      preview
+        ? 'Preview deployment completed successfully.'
+        : 'Production deployment completed successfully.',
+    );
   } else {
     console.log('Local web build completed. No remote publishing was performed.');
   }
