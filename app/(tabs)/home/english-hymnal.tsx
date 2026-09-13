@@ -164,10 +164,10 @@ export default function HymnalScreen() {
               <AppIcon
                 name="play-circle-outline"
                 size={24}
-                color={theme.colors.primary}
+                color={theme.colors.brandYoutube}
               />
               <Text
-                style={[styles.buttonText, { color: theme.colors.primary }]}
+                style={[styles.buttonText, { color: theme.colors.brandYoutube }]}
               >
                 {labels.watchYouTube}
               </Text>

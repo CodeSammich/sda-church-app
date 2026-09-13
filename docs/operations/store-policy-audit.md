@@ -155,8 +155,9 @@ content policies similarly apply to content displayed by the app and content rea
 through app links. Public availability of an image, audio file, score, or webpage is
 not itself a redistribution license.
 
-The app’s external-service controls use neutral generic icons and theme colors. They do
-not ship YouTube, Spotify, or Zoom logo artwork. The service names and fixed HTTPS links
+The app’s external-service controls use neutral generic icons with restrained destination
+accent colors. They do not ship YouTube, Spotify, or Zoom logo artwork, and the app icon
+and store graphics do not use those marks. The service names and fixed HTTPS links
 identify the destinations truthfully, while the app does not embed, proxy, download, or
 reproduce those services’ content. This reduces logo/endorsement risk but does not grant
 permission to use provider content or marks in a future release; re-review any added

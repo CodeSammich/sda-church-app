@@ -334,8 +334,8 @@ export default function FellowshipsAndFoodScreen() {
                         mode="contained" 
                         icon="video"
                         onPress={openZoomClass}
-                        buttonColor={theme.colors.primary}
-                        textColor={theme.colors.onPrimary}
+                        buttonColor={theme.colors.brandZoom}
+                        textColor={theme.colors.onSecondary}
                         style={styles.descriptionButton}
                         labelStyle={styles.descriptionButtonLabel}
                       >

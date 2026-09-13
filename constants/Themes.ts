@@ -100,7 +100,7 @@ export const customLightTheme = {
     // Icon colors for light mode
     iconColors: {
       // home page
-      livestream:           '#0369A1',                    // Neutral action color for the livestream link
+      livestream:           'rgba(255, 0, 0, 1.00)',       // Restrained YouTube destination accent
       bulletin:             'rgba(146,64,14,1.00)',     // Warm amber/brown
       tithe:                'rgba(4,120,87,1.00)',      // Deep forest/emerald green
       discover:             'rgba(55,48,163,1.00)',     // Deep indigo/navy
@@ -164,6 +164,11 @@ export const customLightTheme = {
       main: '#D2B258',
       highlight: '#EBCD78',
     },
+
+    // Destination accents only; official logo artwork is not bundled.
+    brandYoutube: '#FF0000',
+    brandSpotify: '#1DB954',
+    brandZoom: '#0B5CFF',
 
     // Neutralizing Elevation (Hierarchy of Light - Light Mode)
     // This was not derived from the UI_UX.md spec, only recommended by Gemini
@@ -302,6 +307,11 @@ export const customDarkTheme: AppTheme = {
     },
     // Preserve existing surface, onSurface, etc.
     // surface and onSurface are already defined above, so no duplicates here
+
+    // Destination accents only; official logo artwork is not bundled.
+    brandYoutube: '#FF8A80',
+    brandSpotify: '#6FD3A7',
+    brandZoom: '#67C7F0',
 
     // Neutralizing Elevation (Hierarchy of Light)
     // This was not derived from the UI_UX.md spec, only recommended by Gemini

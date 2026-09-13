@@ -100,8 +100,9 @@ the component.
 ### External Service Links
 
 Links to YouTube, Spotify, Zoom, and other external services use neutral generic
-icons and the app's theme colors. Service names may appear as plain descriptive text,
-but the app does not ship third-party logo artwork or brand-color treatments. If a
+icons. Restrained service accent colors may help users recognize a destination, but
+the app does not ship third-party logo artwork or use a provider's logo in the app
+icon or store graphics. Service names may appear as plain descriptive text. If a
 future release needs a provider's logo or embedded content, record the applicable
 permission and brand-guideline review before adding it.
 

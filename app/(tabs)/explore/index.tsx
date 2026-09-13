@@ -125,7 +125,7 @@ export default function ExploreScreen() {
             title={labels.youtube}
             description={labels.youtubeSub}
             icon={{ name: 'play-circle-outline' }}
-            iconColor={theme.colors.primary}
+            iconColor={theme.colors.brandYoutube}
             onPress={openSermonArchive}
           />
 
@@ -133,7 +133,7 @@ export default function ExploreScreen() {
             title={labels.spotify}
             description={labels.spotifySub}
             icon={{ name: 'music-note' }}
-            iconColor={theme.colors.primary}
+            iconColor={theme.colors.brandSpotify}
             onPress={openSpotifyPodcast}
           />
 
@@ -141,7 +141,7 @@ export default function ExploreScreen() {
             title={labels.zoomClass}
             description={labels.zoomSub}
             icon={{ name: 'video' }}
-            iconColor={theme.colors.primary}
+            iconColor={theme.colors.brandZoom}
             onPress={openZoomClass}
           />
         </View>
