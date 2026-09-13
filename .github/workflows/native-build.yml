@@ -29,6 +29,10 @@ env:
 jobs:
   build:
     if: github.event.repository.fork == false
+    # SECURITY CONTRACT: This job can read production signing secrets. Never add
+    # `set -x`, secret-byte logging (`echo`/`printf`/`cat` to the terminal),
+    # debug dumps, or an artifact/upload step that includes secret files. Keep
+    # secret-bearing work limited to the explicitly reviewed steps below.
     environment: production
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.platform == 'ios' && 'macos-15' || 'ubuntu-24.04' }}
@@ -89,6 +93,10 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          # SECURITY: This is the only intentional shell write involving the
+          # encoded secret. Its stdout is piped directly into base64 decoding
+          # and redirected to a file; it must never be printed, inspected, or
+          # uploaded.
           set -euo pipefail
           test -n "$ANDROID_KEYSTORE_BASE64" || { echo 'Set the protected production Environment secret ANDROID_KEYSTORE_BASE64 first.'; exit 1; }
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nyccsda-upload.keystore"
@@ -114,6 +122,9 @@ jobs:
           BUILD_EXTENSION: ${{ matrix.target.extension }}
           BUILD_SYSTEM: ${{ matrix.target.buildSystem }}
         run: |
+          # SECURITY: Signing values are environment inputs for Gradle/EAS only.
+          # Never add shell tracing (`set -x`), verbose environment dumps, or
+          # commands that echo/cat these variables or include them in artifacts.
           set -euo pipefail
           if [ "$BUILD_SYSTEM" = 'native' ]; then
             if [ "$BUILD_EXTENSION" = 'aab' ]; then
@@ -135,7 +146,10 @@ jobs:
 
       - name: Remove Android signing material
         if: always() && matrix.target.buildSystem == 'native'
-        run: rm -f "$RUNNER_TEMP/nyccsda-upload.keystore"
+        run: |
+          # SECURITY: Always remove the decoded private keystore, including after
+          # failed builds. Do not replace this with an artifact upload or log dump.
+          rm -f "$RUNNER_TEMP/nyccsda-upload.keystore"
 
   release:
     if: github.event.repository.fork == false && needs.build.result == 'success' && github.ref == 'refs/heads/main'

@@ -222,6 +222,17 @@ as `EXPO_TOKEN` until its direct-native migration is complete. Keep all credenti
 out of source control. The complete Android setup and EAS-retirement checklist are
 in [the native build guide](docs/operations/native-builds.md#android-setup-github-hosted-direct-builds).
 
+### Secret-handling rule
+
+Treat the comments in `.github/workflows/native-build.yml` as a security contract:
+never add `set -x`, environment dumps, secret-byte logging, or artifacts containing
+the keystore, passwords, certificates, or tokens. The existing base64 decode is
+allowed only because its output is redirected directly to the temporary keystore;
+do not change it to write to the terminal. Secrets must remain limited to the
+explicitly reviewed build steps, must not be passed to pull requests from forks,
+and must be deleted from the runner in cleanup. Any automated or human workflow
+change must preserve these rules.
+
 Android already follows the zero-token fallback: `npx expo prebuild` followed by
 direct Gradle. iOS still needs the EAS-local fallback until its temporary keychain,
 export, and signing workflow is implemented. Do not delete the Expo account until
