@@ -94,9 +94,10 @@ try {
     const isGitHubRepository = /^(https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)/.test(
       previewRepository,
     );
-    const isCanonicalRepository =
-      normalizedRepository ===
+    const canonicalRepository =
       'New-York-Chinese-Seventh-day-Adventist/sda-church-app';
+    const isCanonicalRepository =
+      normalizedRepository.toLowerCase() === canonicalRepository.toLowerCase();
     if (!isGitHubRepository || isCanonicalRepository) {
       throw new Error(
         'Preview publishing requires a non-canonical GitHub repository; production publishing uses the protected workflow.',

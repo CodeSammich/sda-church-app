@@ -15,7 +15,11 @@ through environment variables, and `npm run build:android` /
 `npm run build:android:apk` use `expo prebuild` followed by Gradle directly.
 The GitHub workflow restores the Android upload keystore only inside the
 protected `production` Environment. Android builds do not need an Expo account,
-an Expo token, or EAS credential storage.
+an Expo token, or EAS credential storage. Its job-level guard permits both push
+and manual runs only from the upstream `main` or `release/**` branches; the
+manual dispatch cannot attach the production Environment to an arbitrary ref.
+During a signed build, the script removes signing values from the Expo prebuild
+environment and exposes them only to the Gradle invocation that signs the binary.
 
 The direct-native iOS workflow is now checked in separately as
 `.github/workflows/native-ios-build.yml`. It is manual-dispatch only, uses a

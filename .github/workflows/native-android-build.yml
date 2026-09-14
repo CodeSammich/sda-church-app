@@ -24,7 +24,11 @@ env:
 
 jobs:
   build:
-    if: github.event.repository.fork == false
+    # Do not attach the production Environment to a manual run from an
+    # arbitrary branch. Only trusted release refs may reach signing secrets.
+    if: >-
+      github.event.repository.fork == false &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
     # SECURITY CONTRACT: This job can read production signing secrets. Never add
     # `set -x`, secret-byte logging (`echo`/`printf`/`cat` to the terminal),
     # debug dumps, or an artifact/upload step that includes secret files. Keep

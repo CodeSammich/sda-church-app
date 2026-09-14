@@ -63,11 +63,11 @@ if (!isDebugSigning) {
 // production upload keystore or its passwords.
 process.env.ANDROID_DEBUG_SIGNING_BUILD = isDebugSigning ? 'true' : 'false';
 
-const run = (command, args, cwd = projectRoot) => {
+const run = (command, args, cwd = projectRoot, environment = process.env) => {
   const executable = process.platform === 'win32' && command === 'npx' ? 'npx.cmd' : command;
   const result = spawnSync(executable, args, {
     cwd,
-    env: process.env,
+    env: environment,
     stdio: 'inherit',
   });
 
@@ -81,6 +81,14 @@ const run = (command, args, cwd = projectRoot) => {
 
 mkdirSync(resolve(projectRoot, 'build'), { recursive: true });
 
+// Expo prebuild only needs the signing mode, not the production keystore or
+// passwords. Keep those values out of config plugins and npm child processes;
+// expose them only to the Gradle invocation that actually signs the binary.
+const prebuildEnvironment = { ...process.env };
+for (const name of requiredSigningVariables) {
+  delete prebuildEnvironment[name];
+}
+
 run('npx', [
   'expo',
   'prebuild',
@@ -90,7 +98,7 @@ run('npx', [
   'android',
   '--clean',
   '--no-install',
-]);
+], projectRoot, prebuildEnvironment);
 
 run('./gradlew', [
   ':app:' + (isApk ? 'assembleRelease' : 'bundleRelease'),
