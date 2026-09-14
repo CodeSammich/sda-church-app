@@ -344,6 +344,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
             <SetupChoiceGroup
               value={themeMode}
               disabled={isSavingTextScale}
+              twoColumn
               onValueChange={(value) => {
                 if (!textScaleWritePendingRef.current) {
                   void setThemeMode(value as ThemeMode);
