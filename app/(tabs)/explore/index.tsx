@@ -1,5 +1,8 @@
 import { MenuCard } from '@/components/MenuCard';
-import { EXTERNAL_BRAND_ASSETS } from '@/constants/ExternalBrandAssets';
+import {
+  EXTERNAL_BRAND_ASSETS,
+  EXTERNAL_BRAND_ICON_CONTENT_SCALE,
+} from '@/constants/ExternalBrandAssets';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openSermonArchive,
@@ -127,6 +130,7 @@ export default function ExploreScreen() {
             description={labels.youtubeSub}
             imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.light}
             darkImageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.dark}
+            imageContentScale={EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube}
             onPress={openSermonArchive}
           />
 

@@ -1,6 +1,7 @@
 const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { validateDeploymentRequest } = require('../scripts/deploy-web-safety.cjs');
 
 const args = process.argv.slice(2);
 const increment = args.includes('--increment');
@@ -60,70 +61,17 @@ const runStep = (label, command, commandArgs) => {
 };
 
 try {
-  if (publish && preview) {
-    throw new Error('Choose either production publishing or preview publishing, not both.');
-  }
-
-  if (publish) {
-    const isCanonicalGitHubAction =
-      process.env.GITHUB_ACTIONS === 'true' &&
-      process.env.GITHUB_REPOSITORY ===
-        'New-York-Chinese-Seventh-day-Adventist/sda-church-app' &&
-      process.env.GITHUB_REF === 'refs/heads/main';
-
-    if (!isCanonicalGitHubAction) {
-      throw new Error(
-        'Production publishing is restricted to the canonical repository main-branch GitHub workflow.',
-      );
-    }
-  }
-
-  if (preview) {
-    if (!previewRepository || !previewSiteUrl) {
-      throw new Error(
-        'Preview publishing requires both --repo <github-repo-url> and --site-url <github-pages-url>.',
-      );
-    }
-
-    const normalizedRepository = previewRepository
-      .replace(/^https:\/\/github\.com\//, '')
-      .replace(/^git@github\.com:/, '')
-      .replace(/^ssh:\/\/git@github\.com\//, '')
-      .replace(/\.git\/?$/, '')
-      .replace(/\/$/, '');
-    const isGitHubRepository = /^(https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)/.test(
-      previewRepository,
-    );
-    const canonicalRepository =
-      'New-York-Chinese-Seventh-day-Adventist/sda-church-app';
-    const isCanonicalRepository =
-      normalizedRepository.toLowerCase() === canonicalRepository.toLowerCase();
-    if (!isGitHubRepository || isCanonicalRepository) {
-      throw new Error(
-        'Preview publishing requires a non-canonical GitHub repository; production publishing uses the protected workflow.',
-      );
-    }
-
-    let parsedPreviewUrl;
-    try {
-      parsedPreviewUrl = new URL(previewSiteUrl);
-    } catch {
-      throw new Error('Preview --site-url must be a valid HTTPS GitHub Pages URL.');
-    }
-
-    const configuredBasePath = require(path.resolve(projectRoot, 'app.json')).expo.experiments
-      ?.baseUrl;
-    const normalizePath = (value) => value.replace(/\/+$/, '') || '/';
-    if (
-      parsedPreviewUrl.protocol !== 'https:' ||
-      !parsedPreviewUrl.hostname.endsWith('.github.io') ||
-      normalizePath(parsedPreviewUrl.pathname) !== normalizePath(configuredBasePath || '/')
-    ) {
-      throw new Error(
-        `Preview --site-url must be an HTTPS *.github.io URL using the configured base path ${configuredBasePath || '/'}; the church custom domain is production-only.`,
-      );
-    }
-  }
+  const configuredBasePath = preview
+    ? require(path.resolve(projectRoot, 'app.json')).expo.experiments?.baseUrl
+    : undefined;
+  validateDeploymentRequest({
+    configuredBasePath,
+    env: process.env,
+    preview,
+    previewRepository,
+    previewSiteUrl,
+    publish,
+  });
 
   runStep('Syncing version', process.execPath, [
     path.resolve(__dirname, 'sync-version.js'),

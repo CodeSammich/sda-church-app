@@ -34,6 +34,8 @@ interface MenuCardProps {
   icon?: MaterialCommunityIconName | AppIconProps;
   imageSource?: ImageSourcePropType;
   darkImageSource?: ImageSourcePropType;
+  /** Optional visual scale for provider assets with transparent canvas padding. */
+  imageContentScale?: number;
   iconColor?: string;
   onPress?: () => void;
   rightIcon?: MaterialCommunityIconName | AppIconProps | null;
@@ -97,6 +99,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({
   icon,
   imageSource,
   darkImageSource,
+  imageContentScale = 1,
   iconColor,
   onPress,
   rightIcon = "chevron-right",
@@ -130,6 +133,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({
           source={imageSource}
           darkSource={darkImageSource}
           size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
+          contentScale={imageContentScale}
         />
       ) : icon ? (
         <AppIcon

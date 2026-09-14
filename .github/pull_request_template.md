@@ -28,10 +28,12 @@ when that release is merged._
 - [ ] Signed Android AAB/APK — maintainer-only protected GitHub workflow; never commit or upload the JKS
 - [ ] Native iOS workflow — when iOS/native code changes; requires the protected Apple signing Environment and manual dispatch
 
-Target Android and Xcode versions must remain current:
+Target toolchains must satisfy the current store requirements and remain compatible
+with the pinned Expo/React Native toolchain:
 
-- [ ] Android target checked against the [latest stable Android SDK](https://developer.android.com/tools/releases/platforms)
-- [ ] Xcode checked against the [latest supported Xcode release](https://developer.apple.com/support/xcode/)
+- [ ] Android target API meets the [current Google Play target API requirement](https://developer.android.com/google/play/requirements/target-sdk); compile SDK, AGP, Gradle, JDK, and NDK versions are mutually compatible
+- [ ] Xcode/SDK meets the [current App Store Connect submission requirements](https://developer.apple.com/app-store/submitting/) and is compatible with Expo/React Native/CocoaPods
+- [ ] Any intentional version lag is documented
 
 ## Security and release checklist
 

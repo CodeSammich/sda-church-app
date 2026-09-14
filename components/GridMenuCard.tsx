@@ -24,6 +24,8 @@ interface GridMenuCardProps {
   icon?: MaterialCommunityIconName;
   imageSource?: ImageSourcePropType;
   darkImageSource?: ImageSourcePropType;
+  /** Optional visual scale for provider assets with transparent canvas padding. */
+  imageContentScale?: number;
   /** Pastel background color for the card */
   color: string;
   /** Icon tint — defaults to a semi-transparent dark of the card color */
@@ -55,6 +57,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   icon,
   imageSource,
   darkImageSource,
+  imageContentScale = 1,
   color,
   iconColor,
   onPress,
@@ -125,6 +128,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
                 source={imageSource}
                 darkSource={darkImageSource}
                 size={68}
+                contentScale={imageContentScale}
                 style={styles.decorIcon}
               />
             ) : icon ? (

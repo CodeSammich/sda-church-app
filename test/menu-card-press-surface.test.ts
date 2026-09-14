@@ -8,7 +8,12 @@ import {
   GridMenuCard,
 } from '@/components/GridMenuCard';
 import { MenuCard, MenuCardSwitchVisual } from '@/components/MenuCard';
+import { ExternalBrandIcon } from '@/components/ExternalBrandIcon';
 import { AppIcon } from '@/components/AppIcon';
+import {
+  EXTERNAL_BRAND_ASSETS,
+  EXTERNAL_BRAND_ICON_CONTENT_SCALE,
+} from '@/constants/ExternalBrandAssets';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 
 jest.mock('@/constants/Themes', () => {
@@ -126,6 +131,39 @@ describe('menu card press surfaces', () => {
     );
 
     expect(view.getByTestId('icon-play').props.size).toBe(26);
+  });
+
+  it('renders padded YouTube artwork larger inside a fixed visual frame', () => {
+    const view = renderAtScale(
+      React.createElement(ExternalBrandIcon, {
+        contentScale: EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube,
+        size: 68,
+        source: EXTERNAL_BRAND_ASSETS.youtubeIcon.light,
+      }),
+      1,
+    );
+
+    const image = view.UNSAFE_getByType(ReactNative.Image);
+    const imageStyle = StyleSheet.flatten(image.props.style);
+    const frameStyle = StyleSheet.flatten(image.parent?.props.style);
+
+    expect(imageStyle).toEqual(expect.objectContaining({ width: 102, height: 102 }));
+    expect(frameStyle).toEqual(
+      expect.objectContaining({
+        height: 68,
+        overflow: 'hidden',
+        width: 68,
+      }),
+    );
+  });
+
+  it('keeps official colored provider marks in dark mode', () => {
+    expect(EXTERNAL_BRAND_ASSETS.youtubeIcon.dark).toBe(
+      EXTERNAL_BRAND_ASSETS.youtubeIcon.light,
+    );
+    expect(EXTERNAL_BRAND_ASSETS.spotifyIcon.dark).toBe(
+      EXTERNAL_BRAND_ASSETS.spotifyIcon.light,
+    );
   });
 
   it('announces a switch card description and checked state', () => {

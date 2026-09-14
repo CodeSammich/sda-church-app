@@ -16,9 +16,11 @@ Downloaded September 12, 2026. Do not recolor, distort, crop, or use these asset
 in the app icon, app name, store listing graphics, or unrelated marketing. Review
 the current provider brand guidelines before changing their use. The app uses the
 high-resolution PNG exports because the project does not currently include a native
-SVG renderer; they are contain-fit at UI sizes so they remain sharp without tinting.
-The renderer selects the colored variant in light mode and the official white
-variant in dark mode.
+SVG renderer. They are rendered without tinting; YouTube's transparent canvas is
+visually compensated at render time so its mark has appropriate weight without
+changing the provider-supplied pixels. The renderer selects the official colored
+variant in both themes. The white exports remain available as provider-approved
+references if a future surface needs them.
 
 The app intentionally does not bundle a Zoom logo. The Zoom link uses a generic
 video icon because the current Zoom terms grant logo rights in narrower partner

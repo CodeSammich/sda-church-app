@@ -15,7 +15,10 @@ import {
 } from '@/features/hymnal/EnglishHymnal';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { openYouTubeSearch } from '@/constants/ExternalLinks';
-import { EXTERNAL_BRAND_ASSETS } from '@/constants/ExternalBrandAssets';
+import {
+  EXTERNAL_BRAND_ASSETS,
+  EXTERNAL_BRAND_ICON_CONTENT_SCALE,
+} from '@/constants/ExternalBrandAssets';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { getRoutedHymns } from '@/features/hymnal/HymnalRouting';
@@ -167,6 +170,7 @@ export default function HymnalScreen() {
                 source={EXTERNAL_BRAND_ASSETS.youtubeIcon.light}
                 darkSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.dark}
                 size={24}
+                contentScale={EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube}
               />
               <Text
                 style={[styles.buttonText, { color: theme.colors.brandYoutube }]}
