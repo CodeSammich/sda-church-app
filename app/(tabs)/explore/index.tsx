@@ -1,5 +1,9 @@
 import { MenuCard } from '@/components/MenuCard';
 import {
+  EXTERNAL_BRAND_ASSETS,
+  EXTERNAL_BRAND_ICON_CONTENT_SCALE,
+} from '@/constants/ExternalBrandAssets';
+import {
   CHURCH_BUILDING_IMAGE_URL,
   openSermonArchive,
   openSpotifyPodcast,
@@ -124,16 +128,17 @@ export default function ExploreScreen() {
           <MenuCard
             title={labels.youtube}
             description={labels.youtubeSub}
-            icon={{ name: 'youtube' }}
-            iconColor={(theme.colors as any).brandYoutube}
+            imageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.light}
+            darkImageSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.dark}
+            imageContentScale={EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube}
             onPress={openSermonArchive}
           />
 
           <MenuCard
             title={labels.spotify}
             description={labels.spotifySub}
-            icon={{ name: 'spotify' }}
-            iconColor={(theme.colors as any).brandSpotify}
+            imageSource={EXTERNAL_BRAND_ASSETS.spotifyIcon.light}
+            darkImageSource={EXTERNAL_BRAND_ASSETS.spotifyIcon.dark}
             onPress={openSpotifyPodcast}
           />
 
@@ -141,7 +146,7 @@ export default function ExploreScreen() {
             title={labels.zoomClass}
             description={labels.zoomSub}
             icon={{ name: 'video' }}
-            iconColor={(theme.colors as any).brandZoom}
+            iconColor={theme.colors.brandZoom}
             onPress={openZoomClass}
           />
         </View>

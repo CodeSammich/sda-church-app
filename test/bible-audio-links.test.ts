@@ -8,7 +8,13 @@ import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest'
 const audioUrls = (links: TranslationBookChapterAudioLinks) =>
   ([] as string[]).concat(Object.values(links)[0]);
 const audioPowerUrl = (links: TranslationBookChapterAudioLinks) =>
-  audioUrls(links).find((url) => url.includes('theaudiopower.com'));
+  audioUrls(links).find((url) => {
+    try {
+      return new URL(url).hostname === 'theaudiopower.com';
+    } catch {
+      return false;
+    }
+  });
 
 describe('Audio Power CUV chapter links', () => {
   it('builds an encoded multi-chapter Old Testament URL', () => {

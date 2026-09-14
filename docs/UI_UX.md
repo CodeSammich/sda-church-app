@@ -1,7 +1,8 @@
 # UI/UX Design: The Four-Tab App Structure
 
-This is a Progressive Web App (PWA) and not a native iOS or Android binary. Therefore,
-please be careful with the UI libraries you use.
+This is a shared Expo/React Native app with native iOS and Android builds plus a web/PWA
+testing preview. Core components must work across all three targets; platform-specific
+behavior should be explicit rather than assuming the browser is the primary runtime.
 
 ## Design Language: Warm Sanctuary & Uplifting Simplicity
 
@@ -97,25 +98,21 @@ the component.
 | **Arrow Border** | #374151 | #EBCD78 | Highlight boundary around the metallic affordance. |
 | **Arrow Foreground** | #374151 | #181202 | Dark icon over the metallic fill. |
 
-### Special External Brand Colors
+### External Service Links
 
-These brand colors are used for third-party recognition in Light Mode and follow the
-"YouTube Treatment" (monochrome) in Dark Mode.
-
-| Element           | Light Mode Hex | Dark Mode Hex | Rationale                                                   |
-| :---------------- | :------------- | :------------ | :---------------------------------------------------------- |
-| **YouTube Brand** | #FF0000        | #D2B258       | Official red in light; shared monochrome gold in dark.      |
-| **Spotify Brand** | #1DB954        | #D2B258       | Official green in light; shared monochrome gold in dark.    |
-| **Zoom Brand**    | #0B5CFF        | #D2B258       | Official blue in light; shared monochrome gold in dark.     |
+Links to YouTube, Spotify, Zoom, and other external services use the provider's
+unmodified official logo assets where the provider's current guidelines permit that
+linking or attribution use. The assets are rendered as untinted, contain-fit images
+inside the existing controls; service names remain plain descriptive text. Provider
+logos are not used in the app icon or as the app's own branding. If a future release
+adds a provider logo or embedded content, record the applicable permission and
+brand-guideline review before adding it.
 
 ### Key Principles & Exceptions:
 
-1.  **Brand Neutrality:** Following YouTube's "Neutral Treatment" guidelines, third-party
-    logos are generally rendered in monochrome variants. By standardizing external logos,
-    we visually reinforce that the user remains within their "Digital Home," even when
-    accessing external media.
-    - **Exception:** YouTube and Spotify icons utilize their respective brand colors to
-      aid immediate recognition and content surfacing, as mentioned below.
+1.  **Brand Neutrality:** External service destinations use official provider assets
+    only for truthful identification of the linked destination. Their placement must
+    not suggest sponsorship, endorsement, or co-branding by the service provider.
 2.  **Visual Hierarchy (The 90/10 Rule):** Most of the interface uses warm neutrals or
     charcoal surfaces. Restrained category colors and the primary accent identify actions
     and destinations without competing with content.
@@ -133,7 +130,7 @@ simple, blended colors.
   and bottom (home indicator/navigation bar).
   - **Immersive Canvas:** Eliminate "letterboxing" or hard-coded safe area gutters. The
     background content or navigation bars should bleed into the system safe areas (using
-    `viewport-fit=cover` for PWA).
+    `viewport-fit=cover` for the web/PWA preview).
   - **Hardware-Software Synergy:** Like the YouTube app, this design choice removes the
     visual separation between the app and the device hardware, reinforcing the "Digital
     Sanctuary" metaphor by making the interface feel like an integrated environment rather
