@@ -15,17 +15,22 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "lts/*"
 
-      - name: Validate and tag package version
+      # Keep npm lifecycle scripts away from any write-capable GitHub token.
+      # The checkout above deliberately does not persist credentials in .git/config.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate, tag package version, and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -34,8 +39,13 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Rewrite the remote URL to include the authentication token
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          # This token-bearing remote is needed only after npm ci has completed.
+          # Always scrub it from Git metadata before the step exits.
+          cleanup() {
+            git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
           VERSION=$(jq -r .version package.json)
           TAG="v$VERSION"
@@ -57,10 +67,4 @@ jobs:
             git push origin "$TAG"
             echo "Successfully tagged $TAG"
           fi
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Deploy web/PWA preview to GitHub Pages
-        run: |
           npm run deploy:production

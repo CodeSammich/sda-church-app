@@ -1,10 +1,9 @@
 import { useAppTheme } from '@/constants/Themes';
-import { openInSystemBrowser, PRIVACY_POLICY_URL } from '@/constants/ExternalLinks';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
@@ -45,21 +44,6 @@ export default function PrivacyPolicyScreen() {
       >
         Last Updated: September 2026
       </Text>
-      <Button
-        mode="outlined"
-        icon="open-in-new"
-        onPress={() =>
-          void openInSystemBrowser(
-            PRIVACY_POLICY_URL,
-            'Could not open privacy policy',
-            'Please try again later.',
-          )
-        }
-        style={styles.onlineButton}
-      >
-        View online privacy policy
-      </Button>
-
       <Text
         variant="titleMedium"
         style={[styles.sectionHeader, { color: theme.colors.onBackground }]}
@@ -216,7 +200,6 @@ export default function PrivacyPolicyScreen() {
 const styles = StyleSheet.create({
   title: { fontWeight: 'bold', marginBottom: 5 },
   lastUpdated: { marginBottom: 20 },
-  onlineButton: { alignSelf: 'flex-start', marginBottom: 8 },
   sectionHeader: { fontWeight: 'bold', marginTop: 15, marginBottom: 5 },
   bodyText: {},
 });

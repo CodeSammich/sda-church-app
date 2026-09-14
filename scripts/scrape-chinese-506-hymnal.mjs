@@ -27,11 +27,13 @@ const html = inputPath
 
 const decodeHtml = (value) =>
   value
-    .replaceAll('&amp;', '&')
     .replaceAll('&quot;', '"')
     .replaceAll('&#039;', "'")
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
+    // Decode ampersands last so an encoded entity such as &amp;quot; is not
+    // decoded twice in one pass.
+    .replaceAll('&amp;', '&')
     .trim();
 
 const linkPattern =

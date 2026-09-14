@@ -54,6 +54,16 @@ credentials.json
 *.keystore
 *.p12
 *.mobileprovision
+*.provisionprofile
 *.ipa
 *.apk
 *.aab
+*.p8
+*.pem
+*.key
+*.cer
+*.crt
+*.der
+*.keychain
+*.keychain-db
+*.xcarchive
