@@ -28,7 +28,19 @@ function withAndroidLocalSigning(config) {
     }
 
     const signingConfig = `    // ${MARKER}: values are provided through CI/local environment variables.\n`;
-    const releaseConfig = `        release {\n            def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')\n            def keystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')\n            def keyAlias = System.getenv('ANDROID_KEY_ALIAS')\n            def keyPassword = System.getenv('ANDROID_KEY_PASSWORD')\n            if (keystorePath && keystorePassword && keyAlias && keyPassword) {\n                storeFile file(keystorePath)\n                storePassword keystorePassword\n                keyAlias keyAlias\n                keyPassword keyPassword\n            }\n        }\n`;
+    const releaseConfig = `        release {
+            def signingKeystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
+            def signingKeystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            def signingKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
+            def signingKeyPassword = System.getenv('ANDROID_KEY_PASSWORD')
+            if (signingKeystorePath && signingKeystorePassword && signingKeyAlias && signingKeyPassword) {
+                storeFile file(signingKeystorePath)
+                storePassword signingKeystorePassword
+                keyAlias signingKeyAlias
+                keyPassword signingKeyPassword
+            }
+        }
+`;
     contents = contents.replace(
       signingConfigsMarker,
       `${signingConfigsMarker}${signingConfig}${releaseConfig}`,
