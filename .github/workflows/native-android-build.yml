@@ -71,7 +71,7 @@ jobs:
         if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
       - name: Install Android SDK tools
         if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
+        run: sdkmanager "platforms;android-36" "platforms;android-37" "build-tools;36.0.0" "build-tools;37.0.0" "ndk;27.1.12297006"
 
       - name: Restore Android upload keystore
         if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
@@ -122,7 +122,13 @@ jobs:
           retention-days: 14
 
   release:
-    if: github.event.repository.fork == false && needs.build.result == 'success' && github.ref == 'refs/heads/main'
+    # A manual build should produce artifacts only; publish a GitHub Release
+    # only after a successful push to main.
+    if: >-
+      github.event.repository.fork == false &&
+      github.event_name == 'push' &&
+      needs.build.result == 'success' &&
+      github.ref == 'refs/heads/main'
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-24.04

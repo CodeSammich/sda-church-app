@@ -23,7 +23,11 @@ concurrency:
 
 jobs:
   build:
-    if: github.event.repository.fork == false
+    # Do not attach the production Environment to a manual run from an
+    # arbitrary branch. Only trusted release refs may reach signing secrets.
+    if: >-
+      github.event.repository.fork == false &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
     # SECURITY CONTRACT: This job can read Apple signing secrets. Never add
     # `set -x`, secret-byte logging, environment dumps, or artifacts containing
     # certificates, profiles, keychains, passwords, or tokens. Keep signing
