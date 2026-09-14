@@ -13,13 +13,17 @@ Android uses the zero-Expo-authentication build path. The repository contains a
 config plugin that teaches the generated Gradle project to use a keystore supplied
 through environment variables, and `npm run build:android` /
 `npm run build:android:apk` use `expo prebuild` followed by Gradle directly.
-The GitHub workflow restores the Android upload keystore only inside the
-protected `production` Environment. Android builds do not need an Expo account,
-an Expo token, or EAS credential storage. Its job-level guard permits both push
-and manual runs only from the upstream `main` or `release/**` branches; the
-manual dispatch cannot attach the production Environment to an arbitrary ref.
-During a signed build, the script removes signing values from the Expo prebuild
-environment and exposes them only to the Gradle invocation that signs the binary.
+The intended GitHub configuration keeps the four Android signing values in the
+protected `production` Environment. The workflow decodes only the base64 keystore
+into `$RUNNER_TEMP`, derives `ANDROID_KEYSTORE_PATH` from that temporary location,
+and exposes the signing values only to the Gradle invocation that signs the binary.
+The path is not itself a secret, and no keystore or password is passed to Expo
+prebuild. Android builds do not need an Expo account, an Expo token, or EAS
+credential storage. Its job-level guard permits both push and manual runs only from
+trusted `main` or `release/**` refs; the manual dispatch cannot attach the
+production Environment to an arbitrary ref. If the values were initially entered
+as ordinary repository secrets, move them to the protected Environment and remove
+the repository-level copies before the first signed release run.
 
 The direct-native iOS workflow is now checked in separately as
 `.github/workflows/native-ios-build.yml`. It is manual-dispatch only, uses a
@@ -45,7 +49,7 @@ the counter should not be changed casually just to produce that artifact.
 | --- | --- | --- |
 | Build Android with prebuild + Gradle | Removes Expo authentication and EAS credential custody from Android while using the public repository's free standard Linux runner | Expo template, Gradle, Java, SDK, and NDK updates still need periodic validation |
 | Keep native directories ignored | Expo Continuous Native Generation makes `app.json` and config plugins the source of truth and avoids hand-edited generated files | A clean prebuild can overwrite manual native edits; keep native behavior in config/plugins |
-| Store only the Android upload key in GitHub | Google retains the final Play app-signing key; CI needs only the upload key certificate/private key pair | A malicious trusted workflow could read secrets; protected Environment approval, branch restrictions, least privilege, and reviewed Actions are required |
+| Store Android signing values in the protected GitHub Environment | Google retains the final Play app-signing key; CI needs only the upload key and four narrowly scoped values, while GitHub provides reviewer approval and branch controls | Repository-level copies weaken environment scoping; keep the four values only in `production`, require approval, restrict trusted refs, use least privilege, and review Actions |
 | Do not rotate the Android key annually | Upload keys do not expire annually; keeping the same key preserves the Play update path | Maintain encrypted backups; use Play's upload-key reset process after loss or compromise |
 | Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using a manual macOS workflow | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
 | Build artifacts but submit manually first | Compilation and signing can be automated without granting store-publishing access to every build | Upload the AAB to Play internal testing and verify an update before adding submission automation |
@@ -55,6 +59,25 @@ This is why the migration is not just “put the JKS in a GitHub secret.” The
 keystore must be the key Google expects, the version code must be monotonic, the
 workflow must restore and delete the secret safely, and the resulting AAB must
 be tested as an update. These controls matter more than the build command itself.
+
+### Why the final credential boundary is a GitHub Environment
+
+The final design is a protected GitHub `production` Environment, not a general
+repository-secret bucket. Environment secrets are limited to jobs that name that
+Environment and are made available only after its protection rules—especially
+required-reviewer approval—have passed. Repository secrets are available to all
+workflows in the repository and are read earlier in the workflow lifecycle. See
+GitHub's [secrets reference](https://docs.github.com/en/actions/reference/security/secrets)
+and [deployment-environment guidance](https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments).
+
+The Android workflow still references the normal `${{ secrets.NAME }}` context;
+the job's `environment: production` determines which Environment-level values are
+available. If the same name exists at repository and Environment scope, the
+Environment value takes precedence, but keeping duplicates is confusing and
+weakens the intended boundary. Therefore the four Android values must be added to
+`production`, verified with a protected run, and then removed from Repository
+secrets. `ANDROID_KEYSTORE_PATH` remains a derived runner-temporary path rather
+than a stored credential, and `EXPO_TOKEN` has no role in this architecture.
 
 ## Credential-custody decision
 
@@ -66,11 +89,11 @@ The intended credential boundary for the church-owned project is GitHub Actions:
 
 | Credential | Custodian | CI location |
 | --- | --- | --- |
-| Android upload keystore | Church / Google Play account | Protected GitHub secret |
-| Google Play service-account key | Church / Google Play account | Protected GitHub secret |
-| Apple distribution certificate (`.p12`) | Church Apple Developer account | Protected GitHub secret |
-| Apple App Store provisioning profile | Church Apple Developer account | Protected GitHub secret |
-| App Store Connect API key (`.p8`) | Church App Store Connect account | Protected GitHub secret |
+| Android upload keystore | Church / Google Play account | Protected `production` Environment secret |
+| Google Play service-account key | Church / Google Play account | Separate protected `production` Environment secret, not currently configured |
+| Apple distribution certificate (`.p12`) | Church Apple Developer account | Protected `production` Environment secret, pending Apple enrollment |
+| Apple App Store provisioning profile | Church Apple Developer account | Protected `production` Environment secret, pending Apple enrollment |
+| App Store Connect API key (`.p8`) | Church App Store Connect account | Separate protected `production` Environment secret, not currently configured |
 
 The Android keystore above is the **upload key**, not Google's Play app-signing key.
 With Play App Signing, Google protects the final signing key and the CI pipeline only
@@ -397,6 +420,14 @@ also deletes its temporary keychain and installed provisioning profile. Base64 i
 only an encoding for binary files; the GitHub secret is the protection. Never echo
 either the encoded or decoded value.
 
+The current Android workflow needs only these four production Environment secrets:
+`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
+`ANDROID_KEY_PASSWORD`. `ANDROID_KEYSTORE_PATH` is deliberately not a stored
+secret: the workflow creates the keystore at a fresh runner-temporary path and
+passes that derived path to the build script. `EXPO_TOKEN` is not read by any
+recommended workflow and should be removed after the PR that removes EAS support
+has merged.
+
 Use separate secrets rather than one large structured secret where practical:
 
 ```text
@@ -554,6 +585,12 @@ ANDROID_KEYSTORE_PASSWORD
 ANDROID_KEY_ALIAS              # e.g. nyccsda-upload
 ANDROID_KEY_PASSWORD
 ```
+
+Use the Environment secret form—not **Repository secrets**—for these values.
+Environment approval is the release gate that keeps a maintainer in the loop
+before a job can use production signing material. If duplicate values currently
+exist under Repository secrets, add the values to `production`, verify the
+protected workflow uses that Environment, then delete the repository-level copies.
 
 Create the base64 value locally and paste it into the secret without printing
 the keystore or password. On macOS, for example:
