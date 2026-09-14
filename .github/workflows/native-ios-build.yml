@@ -1,4 +1,4 @@
-name: Native iOS binary
+name: iOS Build IPA
 
 on:
   # Signed iOS builds run only from trusted release refs. There is deliberately
