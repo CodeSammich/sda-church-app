@@ -26,7 +26,7 @@ when that release is merged._
 - [ ] `npm run deploy` — confirms a local build only; use `npm run deploy:dev -- --repo <fork> --site-url <fork-pages-url>` only for an intentional fork preview
 - [ ] `npm run build:android:apk:debug` — when Android/native code changes; this is the local installable APK path and does not use production signing secrets
 - [ ] Signed Android AAB/APK — maintainer-only protected GitHub workflow; never commit or upload the JKS
-- [ ] Native iOS workflow — when iOS/native code changes; requires the protected Apple signing Environment and manual dispatch
+- [ ] Native iOS workflow — when iOS/native code changes; requires the protected Apple signing Environment and runs only on trusted `main`/`release/**` pushes or manual dispatch
 
 Target toolchains must satisfy the current store requirements and remain compatible
 with the pinned Expo/React Native toolchain:
