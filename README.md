@@ -149,14 +149,17 @@ preview deployment stays automatic: a push to `main` runs the existing GitHub Pa
 workflow. Locally, `npm run deploy` builds the web output into `dist/` without publishing
 it. Web preview publishing is restricted to the canonical GitHub workflow.
 
-Native binaries do not run for pull requests. A trusted push to `main` or
+Android binaries do not run for pull requests. A trusted push to `main` or
 `release/**` runs the Android targets; you can also open **Native Android build**
 and choose **Run workflow** for an Android AAB or APK. Android compiles directly with
 Expo prebuild and Gradle on GitHub's Linux runner; the Android upload keystore is
-restored only from protected GitHub Environment secrets.
+restored only from protected GitHub Environment secrets. The iOS workflow additionally
+runs for an upstream `release/**` to `main` pull request after protected Environment
+approval, so the release PR can validate its signed IPA.
 
 The separate **Native iOS build** workflow runs on trusted pushes to `main` and
-`release/**`, and also supports manual dispatch. It runs Expo prebuild and Xcode on a
+`release/**`, upstream `release/**` to `main` pull requests, and manual dispatch. It
+runs Expo prebuild and Xcode on a
 macOS runner, restores Apple signing material from protected GitHub Environment
 secrets, and produces an IPA artifact for App Store Connect or TestFlight. It does not
 use EAS or an Expo token. Native builds never publish to a store automatically, so
@@ -179,8 +182,9 @@ npm run build:android:apk:debug       # standalone local APK; uses Gradle's debu
 ```
 
 The iOS store build is provided by the protected **Native iOS build** GitHub Actions
-workflow on trusted `main`/`release/**` pushes or manual dispatch because iOS signing
-requires a macOS/Xcode environment. The repository has no EAS build or submission
+workflow on trusted `main`/`release/**` pushes, upstream `release/**` to `main` pull
+requests, or manual dispatch because iOS signing requires a macOS/Xcode environment.
+The repository has no EAS build or submission
 commands.
 Android direct builds require an explicit `expo.android.versionCode` in `app.json`;
 the script intentionally stops until that number is confirmed against Play Console.
