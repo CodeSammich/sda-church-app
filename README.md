@@ -3,12 +3,6 @@
 A React Native mobile application built with Expo for Seventh-day Adventist church
 community features.
 
-For latest production build, you may install app directly from browser
-
-https://app.nyccsda.org
-
-on Safari (iOS) or Chrome (Android).
-
 ## Table of Contents
 
 ### Project overview
@@ -29,7 +23,7 @@ The repository's licensing decisions and third-party source review live in
 ### Project documentation
 
 - [Technical Setup & Testing](docs/README.md)
-- [Web and Native Build Workflows](docs/operations/native-builds.md)
+  - [Web and Native Build Workflows](docs/operations/native-builds.md)
 - [Bulletin API Architecture & Operations](apps-script/README.md)
 - [Accessibility Guidelines](docs/accessibility/README.md)
 - [UI/UX Design](docs/UI_UX.md)
@@ -49,26 +43,23 @@ before merging the canary branch into a release branch:
    and confirm the Expo Doctor-required React Native, Reanimated, and Screens versions.
 2. Remove the explicit `expo-template-bare-minimum@...` prebuild command from the
    `build:android` and `build:android:apk` scripts. The official `sdk-58` template tag
-   should allow the normal EAS prebuild flow again.
-3. Remove the generated-Android inclusion rules (`!/android` and `!/android/**`) from
-   `.easignore` if native projects are not being committed or otherwise required by
-   the official build workflow.
-4. Re-evaluate `.npmrc`. Its `legacy-peer-deps=true` setting exists only because npm's
+   should allow the normal Expo prebuild flow again.
+3. Re-evaluate `.npmrc`. Its `legacy-peer-deps=true` setting exists only because npm's
    peer resolver is unreliable with this canary dependency graph; remove it if a plain
    `npm install` succeeds on the official release.
-5. Review `app.json` carefully. It currently has no canary-only `autolinking` block and
+4. Review `app.json` carefully. It currently has no canary-only `autolinking` block and
    no custom Android Gradle override. Do not restore either one unless Expo's official
    SDK 58 build specifically requires it. Keep the `expo-audio` plugin and
    `doNotMixPersistent` application code in `services/BibleAudioService.ts`. Keep
    `android.predictiveBackGestureEnabled` enabled for Android edge-back behavior.
-6. Expo Router 58 redirects a focused `href: null` tab to the first visible tab.
+5. Expo Router 58 redirects a focused `href: null` tab to the first visible tab.
    The hidden Home stack and Sabbath School route therefore use a null
    `tabBarButton` plus `display: 'none'` in `app/(tabs)/_layout.tsx`; preserve this
    until the tab architecture is deliberately migrated.
-7. `services/animationFramePolyfill.ts` works around the canary static-renderer
+6. `services/animationFramePolyfill.ts` works around the canary static-renderer
    crash where Expo Router calls `requestAnimationFrame` in Node. Re-test and remove
    it if the official Expo 58 web export no longer needs it.
-8. Run `npm install`, `npx expo-doctor`, `npm run typecheck`, `npm test`, and an Android
+7. Run `npm install`, `npx expo-doctor`, `npm run typecheck`, `npm test`, and an Android
    APK build before removing the canary branch safeguards.
 
 ## Project Tenets
@@ -78,9 +69,9 @@ _Guiding our design philosophy in decreasing order of priority._
 ### 1. Sustainable
 
 The app must be cost-effective, preferably free to maintain, and support both iOS and
-Android. We prioritize the **Progressive Web App (PWA)** workflow to ensure long-term
-viability, zero distribution fees, and instant updates without the gatekeeping or
-technical debt of traditional App Stores.
+Android. Native iOS and Android are the primary distribution targets; the **Progressive
+Web App (PWA)** remains a low-cost testing, preview, demo, and fallback surface. The web
+path should stay useful without becoming the canonical release channel.
 
 > _"For which of you, wanting to build a tower, does not first sit down and calculate the
 > cost to see if he has enough to complete it?"_ — **Luke 14:28**
@@ -101,12 +92,12 @@ operational obligations.
 ### 3. Sanctuary
 
 We minimize the collection and public exposure of personal information, treating the
-digital experience as a secure refuge. The public PWA does not require an account for
-ordinary use. Restricted church administrative systems may contain personal information
-that is necessary for church operations, such as worship assignments, but public features
-must disclose only what is needed for their stated purpose. A church is a "third space"
-and a final refuge; our technology must be a shade from the heat, not a source of
-surveillance.
+digital experience as a secure refuge. The public app and its web/PWA preview do not
+require an account for ordinary use. Restricted church administrative systems may contain
+personal information that is necessary for church operations, such as worship assignments,
+but public features must disclose only what is needed for their stated purpose. A church
+is a "third space" and a final refuge; our technology must be a shade from the heat, not a
+source of surveillance.
 
 > _"For You have been a refuge for the poor, a stronghold for the needy in distress, a
 > refuge from the storm, a shade from the heat."_ — **Isaiah 25:4**
@@ -153,57 +144,41 @@ remains internal to maintain spiritual focus.
 
 ## Build workflows
 
-The repository uses one Expo source for the website and native apps. Website deployment
-stays automatic: a push to `main` runs the existing GitHub Pages workflow. Locally,
-`npm run deploy` builds the web output into `dist/` without publishing it. Production
-publishing is restricted to the canonical GitHub workflow.
+The repository uses one Expo source for the native apps and the web/PWA preview. Web
+preview deployment stays automatic: a push to `main` runs the existing GitHub Pages
+workflow. Locally, `npm run deploy` builds the web output into `dist/` without publishing
+it. Web preview publishing is restricted to the canonical GitHub workflow.
 
 Native binaries do not run for pull requests. A trusted push to `main` or
-`release/**` runs the configured targets; you can also open **Native binaries**
-and choose **Run workflow** to select a source branch/tag and any combination of
-these targets:
+`release/**` runs the Android targets; you can also open **Native Android build**
+and choose **Run workflow** for an Android AAB or APK. Android compiles directly with
+Expo prebuild and Gradle on GitHub's Linux runner; the Android upload keystore is
+restored only from protected GitHub Environment secrets.
 
-- iOS store build (`.ipa`) for App Store Connect and TestFlight.
-- Android store build (`.aab`) for Google Play.
-- Android preview build (`.apk`) for direct device installation.
-
-Android compiles directly with Expo prebuild and Gradle on GitHub's Linux runner;
-the Android upload keystore is restored only from protected GitHub Environment
-secrets. Android therefore needs no Expo account, Expo token, or EAS credential
-storage. iOS currently compiles with EAS CLI's `--local` mode on the macOS runner
-while its direct-native signing/export path is being completed. Neither path uses
-an EAS Cloud builder in the recommended workflow. Native builds never publish to
-a store automatically, so review and submission remain separate steps.
-
-Direct EAS cloud builds remain available through the `:eas` scripts below, but are not
-the recommended release workflow. They require Expo cloud access and may use EAS build
-capacity and cloud-managed settings that are less reproducible than the checked-in
-GitHub-runner workflow.
+The separate **Native iOS binary** workflow is manual-dispatch only. It runs Expo
+prebuild and Xcode on a macOS runner, restores Apple signing material from protected
+GitHub Environment secrets, and produces an IPA artifact for App Store Connect or
+TestFlight. It does not use EAS or an Expo token. Native builds never publish to a
+store automatically, so review and submission remain separate steps.
 
 For this church-owned release pipeline, the intended credential boundary is GitHub:
 Android upload signing, Apple distribution signing, Google Play submission, and App
 Store Connect submission credentials will be stored as protected GitHub Environment
 secrets and recreated only during the approved workflow. We will not upload those
-keys to EAS. Android is the first migrated platform; iOS still requires the church's
-temporary Expo control-plane token until its direct-native workflow is tested. This
-requires explicit workflow setup, careful secret access controls, and ongoing Apple
-certificate/profile renewal. The [native build guide](docs/operations/native-builds.md)
+keys to a build vendor. This requires explicit workflow setup, careful secret access controls,
+and ongoing Apple certificate/profile renewal. The [native build guide](docs/operations/native-builds.md)
 documents the design, setup commands, research, and recovery procedures.
 
 The same targets are available locally:
 
 ```sh
-eas --version                         # only needed for the iOS/EAS fallback
 npm run build:android:apk             # direct native APK; needs ANDROID_* variables
 npm run build:android                  # direct native AAB; needs ANDROID_* variables
-npm run build:ios                      # current iOS EAS-local path
-
-# Optional, not the recommended release path:
-npm run build:ios:eas
-npm run build:android:eas
 ```
 
-The global `eas` command is optional; the iOS/EAS scripts use the pinned CLI version.
+The iOS store build is provided by the manual **Native iOS binary** GitHub Actions
+workflow because iOS signing requires a macOS/Xcode environment. The repository has
+no EAS build or submission commands.
 Android direct builds require an explicit `expo.android.versionCode` in `app.json`;
 the script intentionally stops until that number is confirmed against Play Console.
 The local Android scripts use the normal Gradle, CMake, and Ninja defaults.
@@ -216,15 +191,17 @@ GRADLE_OPTS="-Dorg.gradle.workers.max=4 -Dorg.gradle.parallel=true -Dorg.gradle.
 For GitHub Actions, add the Android upload-key secrets to the protected `production`
 Environment before running an Android target: `ANDROID_KEYSTORE_BASE64`,
 `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
-The **Native binaries** workflow decodes the keystore only in the temporary runner,
-then removes it. The iOS target still needs a least-privileged Expo robot-user token
-as `EXPO_TOKEN` until its direct-native migration is complete. Keep all credentials
-out of source control. The complete Android setup and EAS-retirement checklist are
-in [the native build guide](docs/operations/native-builds.md#android-setup-github-hosted-direct-builds).
+The **Native Android build** workflow decodes the keystore only in the temporary runner,
+then removes it. Before running **Native iOS binary**, add
+`IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`,
+`IOS_PROVISIONING_PROFILE_BASE64`, and `IOS_TEAM_ID` to that same protected
+Environment. The iOS workflow creates a temporary keychain and removes all signing
+material in cleanup. Keep all credentials out of source control. The complete setup
+and the native-build checklist are in [the native build guide](docs/operations/native-builds.md#github-hosted-direct-ios-builds).
 
 ### Secret-handling rule
 
-Treat the comments in `.github/workflows/native-build.yml` as a security contract:
+Treat the comments in `.github/workflows/native-android-build.yml` as a security contract:
 never add `set -x`, environment dumps, secret-byte logging, or artifacts containing
 the keystore, passwords, certificates, or tokens. The existing base64 decode is
 allowed only because its output is redirected directly to the temporary keystore;
@@ -233,14 +210,11 @@ explicitly reviewed build steps, must not be passed to pull requests from forks,
 and must be deleted from the runner in cleanup. Any automated or human workflow
 change must preserve these rules.
 
-Android already follows the zero-token fallback: `npx expo prebuild` followed by
-direct Gradle. iOS still needs the EAS-local fallback until its temporary keychain,
-export, and signing workflow is implemented. Do not delete the Expo account until
-both platforms have produced verified store updates and any EAS-held credentials
-or version counters have been exported or replaced. The native guide includes the
-comparison, security rationale, rotation policy, and GitHub Actions estimate.
+Both recommended GitHub workflows follow the zero-token path: `npx expo prebuild`
+followed by Gradle or Xcode. The native guide includes the comparison, security
+rationale, rotation policy, and GitHub Actions estimate.
 
-Local Android compilation needs Java 17 and the Android SDK/NDK. Local iOS compilation
-needs macOS, Xcode, CocoaPods, and fastlane. See the
+Local Android compilation needs Java 17 and the Android SDK/NDK. Direct local iOS
+compilation needs macOS, Xcode, and CocoaPods. See the
 [Web and Native Build Workflows](docs/operations/native-builds.md) guide for account
 setup, signing, runner details, artifact handling, and store submission commands.

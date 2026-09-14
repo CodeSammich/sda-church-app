@@ -1,4 +1,4 @@
-name: Deploy and Tag
+name: Deploy Web Preview and Tag
 
 on:
   push:
@@ -61,6 +61,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy web/PWA preview to GitHub Pages
         run: |
           npm run deploy:production

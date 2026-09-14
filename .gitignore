@@ -5,7 +5,6 @@
 # 1. Ignore everything by default
 /*
 # 2. Re-include source and configuration directories
-# Omit trailing slashes: EAS checks directory paths without a trailing slash.
 !/.github
 !/apps-script
 !/app
@@ -30,7 +29,6 @@
 !/*.tsx
 !/*.html
 !/.gitignore
-!/.easignore
 !/.aiexclude
 !/.env.example
 !/.vscode

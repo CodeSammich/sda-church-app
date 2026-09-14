@@ -85,11 +85,7 @@
       "./plugins/withAndroidLocalSigning"
     ],
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "92100255-b9a3-4535-8500-b21d762bbf98"
-      }
-    },
-    "owner": "new-york-chinese-seventh-day-adventist-church"
+      "router": {}
+    }
   }
 }

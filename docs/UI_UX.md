@@ -1,7 +1,8 @@
 # UI/UX Design: The Four-Tab App Structure
 
-This is a Progressive Web App (PWA) and not a native iOS or Android binary. Therefore,
-please be careful with the UI libraries you use.
+This is a shared Expo/React Native app with native iOS and Android builds plus a web/PWA
+testing preview. Core components must work across all three targets; platform-specific
+behavior should be explicit rather than assuming the browser is the primary runtime.
 
 ## Design Language: Warm Sanctuary & Uplifting Simplicity
 
@@ -129,7 +130,7 @@ simple, blended colors.
   and bottom (home indicator/navigation bar).
   - **Immersive Canvas:** Eliminate "letterboxing" or hard-coded safe area gutters. The
     background content or navigation bars should bleed into the system safe areas (using
-    `viewport-fit=cover` for PWA).
+    `viewport-fit=cover` for the web/PWA preview).
   - **Hardware-Software Synergy:** Like the YouTube app, this design choice removes the
     visual separation between the app and the device hardware, reinforcing the "Digital
     Sanctuary" metaphor by making the interface feel like an integrated environment rather

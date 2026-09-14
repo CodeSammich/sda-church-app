@@ -39,7 +39,7 @@ actual submitted app, not merely the source repository.
 
 For this new Android App Bundle, accept the terms and use Google-managed Play App
 Signing unless the church has a documented reason to manage or reuse an existing app
-signing key. Google then signs the APKs delivered to users; the church/EAS build keeps
+signing key. Google then signs the APKs delivered to users; the direct native build keeps
 an upload key used to submit bundles. Store the upload keystore and credentials in the
 church's secret-management system and never commit them to the repository. The Play
 Console administrator must accept the terms and confirm the selected key arrangement.
@@ -221,7 +221,7 @@ organization type in the verified Google Payments profile. Google’s [account-t
 guidance](https://support.google.com/googleplay/android-developer/answer/13634885)
 requires a D-U-N-S number for organization accounts. Keep the legal name, address,
 D-U-N-S record, nonprofit documentation, organization website, and account-owner
-identity consistent across Google Payments, Play Console, D&B, Expo/EAS, and the
+identity consistent across Google Payments, Play Console, D&B, and the Expo/native
 store listing. Google’s current published enrollment terms include a one-time USD
 $25 registration fee; nonprofit status is not a substitute for identity verification.
 

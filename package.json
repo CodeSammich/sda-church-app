@@ -18,13 +18,8 @@
     "deploy": "node public/deploy-web.js --quiet",
     "deploy:dev": "node public/deploy-web.js --preview --quiet",
     "deploy:production": "node public/deploy-web.js --publish --quiet",
-    "build:ios": "node scripts/ensure-build-dir.mjs && npx eas-cli@23.2.0 build --platform ios --profile production --local --output build/app-${npm_package_version}-build-$(date +%Y%m%d%H%M%S).ipa",
-    "build:ios:eas": "npx eas-cli@23.2.0 build --platform ios --profile production",
     "build:android": "node scripts/build-android-native.mjs",
-    "build:android:eas": "npx eas-cli@23.2.0 build --platform android --profile production",
-    "build:android:apk": "node scripts/build-android-native.mjs --apk",
-    "submit:ios": "npx eas-cli@23.2.0 submit --platform ios",
-    "submit:android": "npx eas-cli@23.2.0 submit --platform android"
+    "build:android:apk": "node scripts/build-android-native.mjs --apk"
   },
   "dependencies": {
     "@expo/metro-runtime": "58.0.0-canary-20260902-26df09e",

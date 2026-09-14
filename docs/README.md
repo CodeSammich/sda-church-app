@@ -16,15 +16,17 @@ npm install
 Make sure to fill out information specific to your church in
 [the Constants folder](/constants/).
 
-## Web & PWA Deployment (Primary Workflow)
+## Web & PWA Testing and Preview
 
-This application is primarily distributed as a Progressive Web App (PWA) to ensure maximum
-accessibility, instant updates, and zero distribution fees.
+Native iOS and Android builds are the primary distribution path. The Progressive Web App
+(PWA) remains a maintained browser testing and preview surface for UI regression checks,
+accessibility testing, demos, and fast fork previews. It is not the canonical release
+channel for the church's installed-app users.
 
-Originally, this app was conceptualized on native but that idea quickly proved difficult
-due to heavy App Store fees and compliance overhead, as well as technical development
-challenges. A copy of the original documentation is preserved
-[for reference](./legacy_README.md)
+The web and native targets continue to share one Expo source tree. A web preview is useful
+for testing browser-specific behavior, but passing the web build is not evidence that a
+signed iOS or Android binary is ready for store submission. The older native rationale is
+preserved in [OLD_README.md](./OLD_README.md) for historical reference only.
 
 ### Local Development
 
@@ -35,7 +37,7 @@ To start the app in a web browser for local testing (primarily to check for Netw
 npx expo start --web
 ```
 
-### Local Web Build and Production Deployment
+### Local Web Build and Preview Deployment
 
 The project uses GitHub Pages for hosting. Running the local deploy command builds the web
 assets into `dist/` but does not push anything:
@@ -44,9 +46,10 @@ assets into `dist/` but does not push anything:
 npm run deploy
 ```
 
-Production publishing is performed by the canonical repository's GitHub workflow when
-`main` is updated. The production script refuses to publish from a local shell or a
-different repository.
+The canonical repository's GitHub workflow publishes the web/PWA preview when `main` is
+updated. This deployment is for browser testing, demos, and a quickly accessible fallback;
+it does not publish or update the native store applications. The protected publishing mode
+refuses to publish from a local shell or a different repository.
 
 To publish a development preview to a fork, opt in explicitly and provide both the fork
 repository and its GitHub Pages URL. The URL must use the configured `/sda-church-app`
@@ -85,7 +88,7 @@ the version number when raising the final pull request.
 npm run deploy -- --increment
 ```
 
-### PWA Update Prompt
+### Web/PWA update prompt (preview only)
 
 `public/sw.js` is the versioned service worker used to detect application releases. Keep
 its `VERSION` synchronized with `package.json` through `public/sync-version.js`; deploying
@@ -125,24 +128,30 @@ The update flow is intentionally user-controlled:
 This uses the standard service-worker lifecycle and does not poll application pages or
 download the full JavaScript bundle merely to discover whether an update exists.
 
-### Mobile Installation
+### Optional PWA installation for testing
 
-- iOS (Safari): Open the URL -> Tap the Share button -> Add to Home Screen.
-- Android (Chrome): Open the URL -> Tap the Three Dots -> Install App or Add to Home
-  Screen.
+- iOS (Safari): Open the preview URL -> Tap the Share button -> Add to Home Screen.
+- Android (Chrome): Open the preview URL -> Tap the Three Dots -> Install App or Add to
+  Home Screen.
+
+This is a convenient way to test the browser-installed experience. It is not a substitute
+for installing a signed native build from TestFlight or Google Play.
 
 Note: If you encounter a black screen on launch, check the browser's Network tab for 404s
 or 400s. Any failed asset load will prevent the Expo bundle from initializing.
 
 ---
 
-## Why PWA instead of Native Store Apps?
+## Why Keep a PWA Testing Surface?
 
-We have prioritized the PWA workflow over native distribution for several key reasons:
+The PWA is retained as a secondary engineering and preview surface:
 
-1. Zero Fees: Avoids the $99/year Apple Developer Program fee and the one-time Google Play
-   fee.
-2. Instant Delivery: the production GitHub workflow pushes website updates instantly to
-   all users without waiting for multi-day store reviews.
-3. Development Simplicity: Native development, particularly on WSL, introduces significant
-   networking complexity that can slow down project progress.
+1. Fast browser regression testing for layout, accessibility, links, caching, and web-only
+   behavior.
+2. Easy previews for contributors, maintainers, and church stakeholders before a native
+   binary is built.
+3. A low-friction demo and fallback surface that does not require store installation.
+
+Native iOS and Android binaries remain the supported primary release targets. Native
+signing, device testing, store review, and store submission are documented in the
+[native build guide](operations/native-builds.md).

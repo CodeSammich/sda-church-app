@@ -8,7 +8,8 @@ Preserved for technical reference in case the project resumes native distributio
 npm run ios
 ```
 
-This command launches the iOS simulator, but PWA installation via Safari is the preferred testing method.
+This command launches the iOS simulator. Browser/PWA installation via Safari is retained
+only for web testing; signed native builds are the primary distribution path.
 
 ### Android Reference
 
