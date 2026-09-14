@@ -1,9 +1,14 @@
+import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 const androidBuildScript = resolve(
   process.cwd(),
   'scripts/build-android-native.mjs',
+);
+const androidSigningPlugin = readFileSync(
+  resolve(process.cwd(), 'plugins/withAndroidLocalSigning.js'),
+  'utf8',
 );
 const signingVariables = [
   'ANDROID_KEYSTORE_PATH',
@@ -41,5 +46,14 @@ describe('native Android build safety gates', () => {
     expect(runAndroidBuild(['--debug'])).toContain(
       '--debug is supported only for an Android APK build',
     );
+  });
+
+  it('avoids Groovy signing-variable names that shadow DSL methods', () => {
+    expect(androidSigningPlugin).toContain('def signingKeyAlias');
+    expect(androidSigningPlugin).toContain('def signingKeyPassword');
+    expect(androidSigningPlugin).toContain('keyAlias signingKeyAlias');
+    expect(androidSigningPlugin).toContain('keyPassword signingKeyPassword');
+    expect(androidSigningPlugin).not.toContain('def keyAlias =');
+    expect(androidSigningPlugin).not.toContain('def keyPassword =');
   });
 });
