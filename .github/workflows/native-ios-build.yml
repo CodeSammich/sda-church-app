@@ -1,8 +1,9 @@
 name: iOS Build IPA
 
 on:
-  # Signed iOS builds run only from trusted release refs. There is deliberately
-  # no pull_request trigger because this job reads production signing secrets.
+  # Signed iOS builds run only from trusted main/release refs or protected manual
+  # dispatches. There is deliberately no pull_request trigger because this job
+  # reads production signing secrets.
   push:
     branches:
       - main
