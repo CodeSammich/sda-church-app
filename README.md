@@ -181,6 +181,10 @@ workflow because iOS signing requires a macOS/Xcode environment. The repository 
 no EAS build or submission commands.
 Android direct builds require an explicit `expo.android.versionCode` in `app.json`;
 the script intentionally stops until that number is confirmed against Play Console.
+This is a separate Play release counter, not the user-facing `0.37.0` version. Only a
+code maintainer changes it, as part of final release preparation immediately before a
+Play upload. It stays unchanged across ordinary feature PRs and local/test builds, and
+must increase above the last version accepted by Play for every uploaded AAB.
 The local Android scripts use the normal Gradle, CMake, and Ninja defaults.
 For a memory-constrained WSL session, override them for a one-off build:
 

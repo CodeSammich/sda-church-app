@@ -25,8 +25,7 @@ channel for the church's installed-app users.
 
 The web and native targets continue to share one Expo source tree. A web preview is useful
 for testing browser-specific behavior, but passing the web build is not evidence that a
-signed iOS or Android binary is ready for store submission. The older native rationale is
-preserved in [OLD_README.md](./OLD_README.md) for historical reference only.
+signed iOS or Android binary is ready for store submission.
 
 ### Local Development
 

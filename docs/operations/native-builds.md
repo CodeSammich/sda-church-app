@@ -26,9 +26,14 @@ external account only if the church wants to preserve unrelated project history.
 
 The Play Console currently shows no uploaded app bundle, so `app.json` uses the
 initial Android `versionCode` of `1`. The Android native build script refuses
-to create a store binary unless this field remains explicit. Increase it to `2`,
-`3`, and so on for later uploads; never reuse or lower a value already uploaded
-to Google Play.
+to create a store binary unless this field remains explicit. `versionCode` is
+separate from the user-facing `package.json`/`app.json` version such as `0.37.0`.
+Only a code maintainer changes it, as part of final release preparation immediately
+before a Google Play upload. Do not bump it for ordinary feature PRs, local builds,
+or browser previews. Increase it to `2`, `3`, and so on for later uploads; never
+reuse or lower a value already uploaded to Google Play. If an AAB is built on a
+release branch before the final merge, it must use the already chosen counter, but
+the counter should not be changed casually just to produce that artifact.
 
 ## Decision rationale and risk register
 
@@ -687,12 +692,13 @@ An APK is for direct Android testing; upload an AAB for this app's Play listing.
 
 ## Versions and maintenance
 
-`package.json` / `app.json` retain the existing shared release version managed by
-`npm run sync-version`. Android direct builds use the explicit checked-in
-`expo.android.versionCode`; the script refuses to build until it exists. Before
-adding it, record the latest Play value and choose a higher number. Do not use a
-remote auto-increment system alongside a checked-in local number. Keep the checked-in
-Android number and manually supplied iOS number independent;
+`package.json` / `app.json` retain the shared user-facing release version managed by
+`npm run sync-version`. That version should be changed explicitly for each planned
+release, and release CI can synchronize it from the release PR title. Android direct
+builds use the explicit checked-in `expo.android.versionCode`; the script refuses to
+build until it exists. Before a Play upload, a code maintainer records the latest Play
+value and chooses a higher number. Do not use a remote auto-increment system alongside
+a checked-in local number. Keep the checked-in Android number and manually supplied iOS number independent;
 do not reuse or lower either store's build number.
 The direct iOS workflow receives an explicit `ios_build_number` input and passes
 it to Xcode as `CURRENT_PROJECT_VERSION`; increase it for every App Store upload.
