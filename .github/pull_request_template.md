@@ -26,13 +26,15 @@ when that release is merged._
 - [ ] `npm run deploy` — confirms a local build only; use `npm run deploy:dev -- --repo <fork> --site-url <fork-pages-url>` only for an intentional fork preview
 - [ ] `npm run build:android:apk:debug` — when Android/native code changes; this is the local installable APK path and does not use production signing secrets
 - [ ] Signed Android AAB/APK — maintainer-only protected GitHub workflow; never commit or upload the JKS
-- [ ] Native iOS workflow — when iOS/native code changes; requires the protected Apple signing Environment and runs only on trusted `main`/`release/**` pushes or manual dispatch
+- [ ] Native iOS build workflow — when iOS/native code changes; requires the protected Apple signing Environment and runs on trusted `main`/`release/**` pushes, upstream `release/**` → `main` pull requests, or manual dispatch
 
 Target toolchains must satisfy the current store requirements and remain compatible
-with the pinned Expo/React Native toolchain:
+with the pinned Expo/React Native toolchain. The versions below are a human-maintained
+checklist snapshot, not an automated version source:
 
-- [ ] Android target API meets the [current Google Play target API requirement](https://developer.android.com/google/play/requirements/target-sdk); compile SDK, AGP, Gradle, JDK, and NDK versions are mutually compatible
-- [ ] Xcode/SDK meets the [current App Store Connect submission requirements](https://developer.apple.com/app-store/submitting/) and is compatible with Expo/React Native/CocoaPods
+- [ ] Android is tested/buildable with Android API 36; verify the available platform against the [official Android platform releases](https://developer.android.com/tools/releases/platforms) and verify the [current Google Play target API requirement](https://developer.android.com/google/play/requirements/target-sdk). Confirm compile SDK, build tools, AGP, Gradle, JDK, and NDK compatibility.
+- [ ] iOS is tested/buildable with Xcode 26.3 / iOS 26.3 SDK; verify the supported pairing against Apple's [Xcode system requirements](https://developer.apple.com/xcode/system-requirements/) and the [current App Store Connect submission requirements](https://developer.apple.com/app-store/submitting/). Confirm compatibility with Expo/React Native/CocoaPods.
+- [ ] A maintainer manually reviews and updates the Android API and Xcode/iOS SDK snapshots above when Google or Apple changes its requirements; do not automate this checklist update.
 - [ ] Any intentional version lag is documented
 
 ## Security and release checklist

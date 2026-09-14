@@ -2,10 +2,12 @@
 
 Web/PWA preview deployment remains automatic on pushes to `main` through the canonical
 GitHub workflow. Local `npm run deploy` builds the web output without publishing it.
-Native builds run on trusted `main`/`release/**` pushes or manual dispatches, have no
-pull request trigger, and do not publish to either store. Native iOS and Android are
-the primary release targets; the web/PWA build is retained for browser testing and
-previews. The same Expo source is used for all platforms.
+Native builds run on trusted `main`/`release/**` pushes or manual dispatches, and the
+Native iOS build additionally runs for upstream `release/**` → `main` pull requests
+after Environment approval. Android has no pull request trigger. Native builds do not
+publish to either store. Native iOS and Android are the primary release targets; the
+web/PWA build is retained for browser testing and previews. The same Expo source is
+used for all platforms.
 
 ## Current migration status
 
@@ -27,11 +29,13 @@ the repository-level copies before the first signed release run.
 
 The direct-native iOS workflow is now checked in separately as
 `.github/workflows/native-ios-build.yml`. It runs on trusted pushes to `main` and
-`release/**`, and also supports manual dispatch. It uses a GitHub-hosted macOS runner
-with Expo prebuild and Xcode, and remains unable to complete until the church adds its
-Apple signing secrets. It does not use EAS or an Expo token. The repository no longer
-depends on an Expo account; keep any external account only if the church wants to
-preserve unrelated project history.
+`release/**`, upstream `release/**` → `main` pull requests, and manual dispatch. The
+pull-request path is narrowly guarded to reject fork-head branches and unrelated PRs;
+all signing paths require the protected `production` Environment. It uses a
+GitHub-hosted macOS runner with Expo prebuild and Xcode, and remains unable to complete
+until the church adds its Apple signing secrets. It does not use EAS or an Expo token.
+The repository no longer depends on an Expo account; keep any external account only if
+the church wants to preserve unrelated project history.
 
 The Play Console currently shows no uploaded app bundle, so `app.json` uses the
 initial Android `versionCode` of `1`. The Android native build script refuses
@@ -54,7 +58,7 @@ the counter should not be changed casually just to produce that artifact.
 | Do not rotate the Android key annually | Upload keys do not expire annually; keeping the same key preserves the Play update path | Maintain encrypted backups; use Play's upload-key reset process after loss or compromise |
 | Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using trusted-branch or manual macOS workflows | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
 | Build artifacts but submit manually first | Compilation and signing can be automated without granting store-publishing access to every build | Upload the AAB to Play internal testing and verify an update before adding submission automation |
-| Do not build signed binaries for fork PRs | GitHub does not pass secrets to fork pull requests, and trusted release credentials must not be exposed | Use unsigned/Linux checks for PRs; run signed builds only on protected branches or approved dispatches |
+| Do not build signed binaries for fork PRs | GitHub does not pass secrets to fork pull requests, and trusted release credentials must not be exposed | Use unsigned/Linux checks for fork PRs; signed iOS builds are limited to upstream release-to-main PRs, protected branches, or approved dispatches |
 
 This is why the migration is not just “put the JKS in a GitHub secret.” The
 keystore must be the key Google expects, the version code must be monotonic, the
@@ -173,26 +177,27 @@ before relying on a quota.
 
 The automatic native workflow can run two Android jobs on a `main` push: Android AAB
 and Android APK. The iOS workflow is separate and runs on trusted `main`/`release/**`
-pushes or manual dispatch. A rough private-repository estimate for the automatic
-Android workflow is:
+pushes, upstream `release/**` → `main` pull requests, or manual dispatch. A rough
+private-repository estimate for the automatic Android workflow is:
 
 ```text
 Linux-equivalent minutes per run ≈ Android AAB minutes + Android APK minutes
 ```
 
 For example, a 15-minute AAB plus 10-minute APK run is about 25 Linux-equivalent
-minutes. An iOS run is counted separately for each trusted-branch push or manual
-dispatch.
+minutes. An iOS run is counted separately for each trusted-branch push, eligible
+release-to-main pull-request revision, or manual dispatch.
 This is an estimate, not a measured guarantee; use completed workflow durations from
-GitHub's Actions usage view. Keep signed builds restricted to trusted branches or
-manual dispatch, add concurrency cancellation, retain artifacts only as long as needed,
+GitHub's Actions usage view. Keep signed builds restricted to trusted branches,
+eligible release-to-main pull requests, or manual dispatch, add concurrency cancellation,
+retain artifacts only as long as needed,
 and configure GitHub to stop usage at the account budget rather than silently incur
 charges.
 
 The current `Native Android build` workflow has no `pull_request` trigger, so it does not
-start a macOS build for every PR or every new commit pushed to a PR. If a future
-workflow adds PR iOS builds, plan approximately as follows for a private GitHub Free
-organization, assuming the rough 10× macOS billing weight:
+start a macOS build for every PR or every new commit pushed to a PR. The iOS workflow
+does run for the narrow upstream release-to-main PR path; plan approximately as follows
+for a private GitHub Free organization, assuming the rough 10× macOS billing weight:
 
 | iOS runner time | Approximate iOS builds from 2,000 Linux-equivalent minutes |
 | ---: | ---: |
@@ -202,10 +207,10 @@ organization, assuming the rough 10× macOS billing weight:
 | 45 minutes | 4 |
 
 These counts exclude Android jobs and other workflows, and every pushed revision or
-manual rerun counts as another job. For that reason, PR validation should normally
-use the existing Linux checks; reserve signed iOS builds for manual dispatch or a
-release branch, and optionally add a narrow path filter for changes to app config,
-native dependencies, or config plugins. If the upstream repository is public, the
+manual rerun counts as another job. For that reason, ordinary PR validation should
+normally use the existing Linux checks; the release-to-main path is the deliberate
+exception, while other signed iOS builds remain reserved for manual dispatch or a
+release branch. If the upstream repository is public, the
 standard macOS runner is currently free and unlimited, though concurrency and fair-use
 limits still apply. See [GitHub's runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 
@@ -451,17 +456,19 @@ workflows intentionally omit them. For a manual release, upload the finished
 `.aab`/`.ipa` through the store consoles instead.
 
 The production secret Environment should require reviewer approval, be
-available only to protected branches or deliberate manual dispatches, and use
+available only to protected branches, approved upstream release-to-main pull
+requests, or deliberate manual dispatches, and use
 read-only repository permissions for the build job. Keep third-party Actions
 pinned and review workflow changes before approving a signing run. The current
 fork check is necessary but is not a substitute for these controls.
 
 ## iOS setup: GitHub-hosted direct builds
 
-The separate `.github/workflows/native-ios-build.yml` workflow runs only on trusted
-pushes to `main` and `release/**` or manual dispatch. It does not run for pull
-requests, does not receive `EXPO_TOKEN`, and does not upload to App Store Connect.
-It creates an IPA artifact for manual upload or TestFlight processing.
+The separate `.github/workflows/native-ios-build.yml` workflow runs on trusted pushes
+to `main` and `release/**`, upstream `release/**` → `main` pull requests, or manual
+dispatch. Its job guard rejects fork-head and unrelated pull requests, it does not
+receive `EXPO_TOKEN`, and it does not upload to App Store Connect. It creates an IPA
+artifact for manual upload or TestFlight processing.
 
 Before running it, configure these secrets in the protected `production`
 Environment in the upstream repository:
@@ -715,7 +722,7 @@ The signed APK is for direct installation/testing, and the AAB is the Google Pla
 
 | Target | Recommended build path |
 | --- | --- |
-| iOS IPA (TestFlight/App Store) | **Native iOS binary** workflow |
+| iOS IPA (TestFlight/App Store) | **Native iOS build** workflow |
 | Android AAB (Google Play) | `npm run build:android` |
 | Android APK (direct installation) | `npm run build:android:apk` |
 | Android APK (local debug key) | `npm run build:android:apk:debug` |
@@ -735,7 +742,7 @@ the Expo template, and CocoaPods, but not Expo authentication. They are not
 offline build paths. Build one platform at a time.
 
 In GitHub Actions, select **Native Android build → Run workflow** for an Android AAB
-or APK. Select **Native iOS binary → Run workflow** for an iOS IPA; its build number
+or APK. Select **Native iOS build → Run workflow** for an iOS IPA; its build number
 comes from `expo.ios.buildNumber` in the selected branch's `app.json`. These workflows
 become available in the Actions UI after they reach the default branch. Android compiles
 directly with Gradle on Ubuntu 24.04 / Java 17; iOS compiles directly with Xcode
