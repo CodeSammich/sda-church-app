@@ -3,7 +3,7 @@ name: Native iOS build
 on:
   # Signed iOS builds run from trusted main/release pushes, protected manual
   # dispatches, and release/** -> main pull requests whose head branch is in
-  # this repository. The PR job guard rejects fork and unrelated pull requests
+  # this repository. There is deliberately no generic pull-request trigger
   # because this job reads production signing secrets.
   push:
     branches:

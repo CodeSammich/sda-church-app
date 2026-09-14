@@ -158,7 +158,8 @@ runs for an upstream `release/**` to `main` pull request after protected Environ
 approval, so the release PR can validate its signed IPA.
 
 The separate **Native iOS build** workflow runs on trusted pushes to `main` and
-`release/**`, upstream `release/**` to `main` pull requests, and manual dispatch. It runs Expo prebuild and Xcode on a
+`release/**`, upstream `release/**` to `main` pull requests, and manual dispatch. It
+runs Expo prebuild and Xcode on a
 macOS runner, restores Apple signing material from protected GitHub Environment
 secrets, and produces an IPA artifact for App Store Connect or TestFlight. It does not
 use EAS or an Expo token. Native builds never publish to a store automatically, so
@@ -182,7 +183,8 @@ npm run build:android:apk:debug       # standalone local APK; uses Gradle's debu
 
 The iOS store build is provided by the protected **Native iOS build** GitHub Actions
 workflow on trusted `main`/`release/**` pushes, upstream `release/**` to `main` pull
-requests, or manual dispatch because iOS signing requires a macOS/Xcode environment. The repository has no EAS build or submission
+requests, or manual dispatch because iOS signing requires a macOS/Xcode environment.
+The repository has no EAS build or submission
 commands.
 Android direct builds require an explicit `expo.android.versionCode` in `app.json`;
 the script intentionally stops until that number is confirmed against Play Console.
