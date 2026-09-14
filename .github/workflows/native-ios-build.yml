@@ -1,8 +1,12 @@
 name: Native iOS binary
 
 on:
-  # Keep signed iOS builds manual. This avoids spending macOS runner time on
-  # every push and makes each use of Apple signing material intentional.
+  # Signed iOS builds run only from trusted release refs. There is deliberately
+  # no pull_request trigger because this job reads production signing secrets.
+  push:
+    branches:
+      - main
+      - 'release/**'
   workflow_dispatch:
     inputs:
       ios_build_number:
