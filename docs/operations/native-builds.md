@@ -715,7 +715,7 @@ The signed APK is for direct installation/testing, and the AAB is the Google Pla
 
 | Target | Recommended build path |
 | --- | --- |
-| iOS IPA (TestFlight/App Store) | **iOS Build IPA** workflow |
+| iOS IPA (TestFlight/App Store) | **Native iOS build** workflow |
 | Android AAB (Google Play) | `npm run build:android` |
 | Android APK (direct installation) | `npm run build:android:apk` |
 | Android APK (local debug key) | `npm run build:android:apk:debug` |
@@ -735,7 +735,7 @@ the Expo template, and CocoaPods, but not Expo authentication. They are not
 offline build paths. Build one platform at a time.
 
 In GitHub Actions, select **Native Android build → Run workflow** for an Android AAB
-or APK. Select **iOS Build IPA → Run workflow** for an iOS IPA; its build number
+or APK. Select **Native iOS build → Run workflow** for an iOS IPA; its build number
 comes from `expo.ios.buildNumber` in the selected branch's `app.json`. These workflows
 become available in the Actions UI after they reach the default branch. Android compiles
 directly with Gradle on Ubuntu 24.04 / Java 17; iOS compiles directly with Xcode

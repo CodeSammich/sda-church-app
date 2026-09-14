@@ -155,7 +155,7 @@ and choose **Run workflow** for an Android AAB or APK. Android compiles directly
 Expo prebuild and Gradle on GitHub's Linux runner; the Android upload keystore is
 restored only from protected GitHub Environment secrets.
 
-The separate **iOS Build IPA** workflow runs on trusted pushes to `main` and
+The separate **Native iOS build** workflow runs on trusted pushes to `main` and
 `release/**`, and also supports manual dispatch. It runs Expo prebuild and Xcode on a
 macOS runner, restores Apple signing material from protected GitHub Environment
 secrets, and produces an IPA artifact for App Store Connect or TestFlight. It does not
@@ -178,7 +178,7 @@ npm run build:android                  # direct native AAB; needs ANDROID_* vari
 npm run build:android:apk:debug       # standalone local APK; uses Gradle's debug key
 ```
 
-The iOS store build is provided by the protected **iOS Build IPA** GitHub Actions
+The iOS store build is provided by the protected **Native iOS build** GitHub Actions
 workflow on trusted `main`/`release/**` pushes or manual dispatch because iOS signing
 requires a macOS/Xcode environment. The repository has no EAS build or submission
 commands.
@@ -206,7 +206,7 @@ For GitHub Actions, add the Android upload-key secrets to the protected `product
 Environment before running an Android target: `ANDROID_KEYSTORE_BASE64`,
 `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
 The **Native Android build** workflow decodes the keystore only in the temporary runner,
-then removes it. Before running **iOS Build IPA**, add
+then removes it. Before running **Native iOS build**, add
 `IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`,
 `IOS_PROVISIONING_PROFILE_BASE64`, and `IOS_TEAM_ID` to that same protected
 Environment. The iOS workflow creates a temporary keychain and removes all signing
