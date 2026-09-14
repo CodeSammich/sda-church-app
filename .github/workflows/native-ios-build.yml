@@ -174,7 +174,10 @@ jobs:
 
       - name: Archive and export IPA
         env:
-          IOS_BUILD_NUMBER: ${{ inputs.ios_build_number }}
+          # Manual runs use the maintainer-supplied App Store Connect counter;
+          # trusted pushes use this workflow's monotonically increasing run
+          # number so the push-triggered archive has a valid build number.
+          IOS_BUILD_NUMBER: ${{ inputs.ios_build_number || github.run_number }}
         run: |
           set -euo pipefail
           case "$IOS_BUILD_NUMBER" in

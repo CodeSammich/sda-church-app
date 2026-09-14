@@ -155,11 +155,12 @@ and choose **Run workflow** for an Android AAB or APK. Android compiles directly
 Expo prebuild and Gradle on GitHub's Linux runner; the Android upload keystore is
 restored only from protected GitHub Environment secrets.
 
-The separate **Native iOS binary** workflow is manual-dispatch only. It runs Expo
-prebuild and Xcode on a macOS runner, restores Apple signing material from protected
-GitHub Environment secrets, and produces an IPA artifact for App Store Connect or
-TestFlight. It does not use EAS or an Expo token. Native builds never publish to a
-store automatically, so review and submission remain separate steps.
+The separate **Native iOS binary** workflow runs on trusted pushes to `main` and
+`release/**`, and also supports manual dispatch. It runs Expo prebuild and Xcode on a
+macOS runner, restores Apple signing material from protected GitHub Environment
+secrets, and produces an IPA artifact for App Store Connect or TestFlight. It does not
+use EAS or an Expo token. Native builds never publish to a store automatically, so
+review and submission remain separate steps.
 
 For this church-owned release pipeline, the intended credential boundary is GitHub:
 Android upload signing, Apple distribution signing, Google Play submission, and App
@@ -177,9 +178,10 @@ npm run build:android                  # direct native AAB; needs ANDROID_* vari
 npm run build:android:apk:debug       # standalone local APK; uses Gradle's debug key
 ```
 
-The iOS store build is provided by the manual **Native iOS binary** GitHub Actions
-workflow because iOS signing requires a macOS/Xcode environment. The repository has
-no EAS build or submission commands.
+The iOS store build is provided by the protected **Native iOS binary** GitHub Actions
+workflow on trusted `main`/`release/**` pushes or manual dispatch because iOS signing
+requires a macOS/Xcode environment. The repository has no EAS build or submission
+commands.
 Android direct builds require an explicit `expo.android.versionCode` in `app.json`;
 the script intentionally stops until that number is confirmed against Play Console.
 This is a separate Play release counter, not the user-facing `0.37.0` version. Only a

@@ -26,11 +26,12 @@ as ordinary repository secrets, move them to the protected Environment and remov
 the repository-level copies before the first signed release run.
 
 The direct-native iOS workflow is now checked in separately as
-`.github/workflows/native-ios-build.yml`. It is manual-dispatch only, uses a
-GitHub-hosted macOS runner with Expo prebuild and Xcode, and is intentionally
-disabled until the church adds its Apple signing secrets. It does not use EAS or
-an Expo token. The repository no longer depends on an Expo account; keep any
-external account only if the church wants to preserve unrelated project history.
+`.github/workflows/native-ios-build.yml`. It runs on trusted pushes to `main` and
+`release/**`, and also supports manual dispatch. It uses a GitHub-hosted macOS runner
+with Expo prebuild and Xcode, and remains unable to complete until the church adds its
+Apple signing secrets. It does not use EAS or an Expo token. The repository no longer
+depends on an Expo account; keep any external account only if the church wants to
+preserve unrelated project history.
 
 The Play Console currently shows no uploaded app bundle, so `app.json` uses the
 initial Android `versionCode` of `1`. The Android native build script refuses
@@ -51,7 +52,7 @@ the counter should not be changed casually just to produce that artifact.
 | Keep native directories ignored | Expo Continuous Native Generation makes `app.json` and config plugins the source of truth and avoids hand-edited generated files | A clean prebuild can overwrite manual native edits; keep native behavior in config/plugins |
 | Store Android signing values in the protected GitHub Environment | Google retains the final Play app-signing key; CI needs only the upload key and four narrowly scoped values, while GitHub provides reviewer approval and branch controls | Repository-level copies weaken environment scoping; keep the four values only in `production`, require approval, restrict trusted refs, use least privilege, and review Actions |
 | Do not rotate the Android key annually | Upload keys do not expire annually; keeping the same key preserves the Play update path | Maintain encrypted backups; use Play's upload-key reset process after loss or compromise |
-| Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using a manual macOS workflow | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
+| Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using trusted-branch or manual macOS workflows | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
 | Build artifacts but submit manually first | Compilation and signing can be automated without granting store-publishing access to every build | Upload the AAB to Play internal testing and verify an update before adding submission automation |
 | Do not build signed binaries for fork PRs | GitHub does not pass secrets to fork pull requests, and trusted release credentials must not be exposed | Use unsigned/Linux checks for PRs; run signed builds only on protected branches or approved dispatches |
 
@@ -171,15 +172,17 @@ belong to the repository owner's GitHub plan; check [GitHub Actions billing](htt
 before relying on a quota.
 
 The automatic native workflow can run two Android jobs on a `main` push: Android AAB
-and Android APK. The iOS workflow is separate and manual-dispatch only. A rough
-private-repository estimate for the automatic Android workflow is:
+and Android APK. The iOS workflow is separate and runs on trusted `main`/`release/**`
+pushes or manual dispatch. A rough private-repository estimate for the automatic
+Android workflow is:
 
 ```text
 Linux-equivalent minutes per run ≈ Android AAB minutes + Android APK minutes
 ```
 
 For example, a 15-minute AAB plus 10-minute APK run is about 25 Linux-equivalent
-minutes. An iOS run is counted separately when a maintainer manually dispatches it.
+minutes. An iOS run is counted separately for each trusted-branch push or manual
+dispatch.
 This is an estimate, not a measured guarantee; use completed workflow durations from
 GitHub's Actions usage view. Keep signed builds restricted to trusted branches or
 manual dispatch, add concurrency cancellation, retain artifacts only as long as needed,
@@ -455,10 +458,10 @@ fork check is necessary but is not a substitute for these controls.
 
 ## iOS setup: GitHub-hosted direct builds
 
-The separate `.github/workflows/native-ios-build.yml` workflow is manual-dispatch
-only. It does not run for pull requests, does not receive `EXPO_TOKEN`, and does
-not upload to App Store Connect. It creates an IPA artifact for manual upload or
-TestFlight processing.
+The separate `.github/workflows/native-ios-build.yml` workflow runs only on trusted
+pushes to `main` and `release/**` or manual dispatch. It does not run for pull
+requests, does not receive `EXPO_TOKEN`, and does not upload to App Store Connect.
+It creates an IPA artifact for manual upload or TestFlight processing.
 
 Before running it, configure these secrets in the protected `production`
 Environment in the upstream repository:
@@ -495,10 +498,13 @@ profile, archives with Xcode, exports an App Store IPA, uploads only the IPA, an
 deletes the certificate, profile, keychain, archive, and export files in an
 `always()` cleanup step.
 
-Run **Native iOS binary → Run workflow** from `main` or `release/**` and provide
-an `ios_build_number`. Start at `1` for an app with no prior App Store build, then
-increase it for every later upload. It is independent of the marketing version
-in `app.json`; App Store Connect rejects a reused or lower build number.
+For a manual run, use **Native iOS binary → Run workflow** from `main` or
+`release/**` and provide an `ios_build_number`. Start at `1` for an app with no prior
+App Store build, then increase it for every later upload. Trusted push runs use the
+workflow run number automatically, which gives their archived artifacts a valid
+build number; record the number of any push artifact you upload and keep later manual
+numbers above it. The build number is independent of the marketing version in
+`app.json`; App Store Connect rejects a reused or lower build number.
 
 The action intentionally has no App Store Connect API key. Upload the resulting
 IPA manually first. Submission automation, if added later, must be a separate
