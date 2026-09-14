@@ -20,7 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  ios_build_ipa:
+    name: iOS Build IPA
     # Do not attach the production Environment to a manual run from an
     # arbitrary branch. Only trusted release refs may reach signing secrets.
     if: >-
