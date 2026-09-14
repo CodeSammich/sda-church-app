@@ -1,8 +1,9 @@
-name: Native iOS binary
+name: Native iOS build
 
 on:
-  # Signed iOS builds run only from trusted release refs. There is deliberately
-  # no pull_request trigger because this job reads production signing secrets.
+  # Signed iOS builds run only from trusted main/release refs or protected manual
+  # dispatches. There is deliberately no generic pull-request trigger because
+  # this job reads production signing secrets.
   push:
     branches:
       - main
@@ -20,7 +21,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  ios_build_ipa:
+    name: iOS Build IPA
     # Do not attach the production Environment to a manual run from an
     # arbitrary branch. Only trusted release refs may reach signing secrets.
     if: >-

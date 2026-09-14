@@ -90,7 +90,7 @@ Current direct-native setup:
    findings, including the custom Android signing plugin.
 2. Use `npm run build:android:apk` for a directly installable Android preview and
    `npm run build:android` for the Play AAB.
-3. Use the **Native iOS binary** GitHub workflow for a signed IPA, or local Xcode
+3. Use the **Native iOS build** GitHub workflow for a signed IPA, or local Xcode
    commands for simulator/device development.
 4. Test standalone binaries independently of Metro, then verify background audio,
    offline behavior, and update behavior on physical devices.
