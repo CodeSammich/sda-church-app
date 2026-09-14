@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - name: Android store
+          - name: Android AAB
             input: android
             platform: android
             extension: aab
