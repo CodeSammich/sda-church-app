@@ -50,7 +50,11 @@ function withAndroidLocalSigning(config) {
 
     contents =
       contents.slice(0, releaseSigningLine) +
-      'signingConfig signingConfigs.release' +
+      `if (System.getenv('ANDROID_DEBUG_SIGNING_BUILD') == 'true') {
+            signingConfig signingConfigs.debug
+        } else {
+            signingConfig signingConfigs.release
+        }` +
       contents.slice(releaseSigningLine + releaseSigningText.length);
 
     const dependenciesMarker = '\ndependencies {';
@@ -63,22 +67,24 @@ function withAndroidLocalSigning(config) {
 tasks.configureEach { task ->
     if (task.name == 'bundleRelease' || task.name == 'assembleRelease') {
         doFirst {
-            def signingValues = [
-                'ANDROID_KEYSTORE_PATH': System.getenv('ANDROID_KEYSTORE_PATH'),
-                'ANDROID_KEYSTORE_PASSWORD': System.getenv('ANDROID_KEYSTORE_PASSWORD'),
-                'ANDROID_KEY_ALIAS': System.getenv('ANDROID_KEY_ALIAS'),
-                'ANDROID_KEY_PASSWORD': System.getenv('ANDROID_KEY_PASSWORD')
-            ]
-            def missingValues = signingValues.findAll { name, value -> !value }
-            if (!missingValues.isEmpty()) {
-                throw new GradleException(
-                    "Missing Android release signing environment variables: \${missingValues.keySet().join(', ')}"
-                )
-            }
-            if (!file(System.getenv('ANDROID_KEYSTORE_PATH')).isFile()) {
-                throw new GradleException(
-                    "Android keystore does not exist at \${System.getenv('ANDROID_KEYSTORE_PATH')}"
-                )
+            if (System.getenv('ANDROID_DEBUG_SIGNING_BUILD') != 'true') {
+                def signingValues = [
+                    'ANDROID_KEYSTORE_PATH': System.getenv('ANDROID_KEYSTORE_PATH'),
+                    'ANDROID_KEYSTORE_PASSWORD': System.getenv('ANDROID_KEYSTORE_PASSWORD'),
+                    'ANDROID_KEY_ALIAS': System.getenv('ANDROID_KEY_ALIAS'),
+                    'ANDROID_KEY_PASSWORD': System.getenv('ANDROID_KEY_PASSWORD')
+                ]
+                def missingValues = signingValues.findAll { name, value -> !value }
+                if (!missingValues.isEmpty()) {
+                    throw new GradleException(
+                        "Missing Android release signing environment variables: \${missingValues.keySet().join(', ')}"
+                    )
+                }
+                if (!file(System.getenv('ANDROID_KEYSTORE_PATH')).isFile()) {
+                    throw new GradleException(
+                        "Android keystore does not exist at \${System.getenv('ANDROID_KEYSTORE_PATH')}"
+                    )
+                }
             }
         }
     }

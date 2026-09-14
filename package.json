@@ -19,7 +19,8 @@
     "deploy:dev": "node public/deploy-web.js --preview --quiet",
     "deploy:production": "node public/deploy-web.js --publish --quiet",
     "build:android": "node scripts/build-android-native.mjs",
-    "build:android:apk": "node scripts/build-android-native.mjs --apk"
+    "build:android:apk": "node scripts/build-android-native.mjs --apk",
+    "build:android:apk:debug": "node scripts/build-android-native.mjs --apk --debug"
   },
   "dependencies": {
     "@expo/metro-runtime": "58.0.0-canary-20260902-26df09e",

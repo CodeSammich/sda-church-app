@@ -174,6 +174,7 @@ The same targets are available locally:
 ```sh
 npm run build:android:apk             # direct native APK; needs ANDROID_* variables
 npm run build:android                  # direct native AAB; needs ANDROID_* variables
+npm run build:android:apk:debug       # standalone local APK; uses Gradle's debug key
 ```
 
 The iOS store build is provided by the manual **Native iOS binary** GitHub Actions
@@ -185,7 +186,10 @@ This is a separate Play release counter, not the user-facing `0.37.0` version. O
 code maintainer changes it, as part of final release preparation immediately before a
 Play upload. It stays unchanged across ordinary feature PRs and local/test builds, and
 must increase above the last version accepted by Play for every uploaded AAB.
-The local Android scripts use the normal Gradle, CMake, and Ninja defaults.
+The debug APK command is the safe local-testing path: it is signed with Gradle's
+automatically generated debug key, does not require or touch the production upload JKS,
+and must never be uploaded to Google Play. A truly unsigned APK is generally not
+installable. The local Android scripts use the normal Gradle, CMake, and Ninja defaults.
 For a memory-constrained WSL session, override them for a one-off build:
 
 ```sh

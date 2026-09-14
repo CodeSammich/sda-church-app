@@ -222,8 +222,8 @@ npx expo prebuild \
   --no-install
 ```
 
-Then use `npm run build:android` or `npm run build:android:apk`; those scripts
-run the prebuild automatically.
+Then use `npm run build:android`, `npm run build:android:apk`, or
+`npm run build:android:apk:debug`; those scripts run the prebuild automatically.
 
 If the canary version changes, update the template version in this section to the
 matching `expo` canary before regenerating native files.
@@ -567,9 +567,21 @@ secrets.
 
 ### 5. Build and verify before uploading
 
-For a local smoke test, set the four signing variables only in the current
-terminal session. `ANDROID_KEYSTORE_PATH` points to the real JKS file; the
-other values are the values recorded in the password manager:
+For ordinary local smoke testing, use the debug-signed APK. It does not need
+the production upload keystore or any signing secrets:
+
+```sh
+npm ci
+npm run build:android:apk:debug -- --output /tmp/nyccsda-local-preview.apk
+```
+
+The debug APK is suitable for installing on a test device, but it must never
+be uploaded to Google Play. A truly unsigned APK is generally not installable.
+
+Only a maintainer on a trusted machine should create a locally signed release
+artifact. If that is necessary, set the four signing variables only in the
+current terminal session. `ANDROID_KEYSTORE_PATH` points to the real JKS file;
+the other values are the values recorded in the password manager:
 
 ```sh
 export ANDROID_KEYSTORE_PATH=/path/outside/repo/nyccsda-upload.jks
@@ -584,11 +596,11 @@ npm run build:android -- --output /tmp/nyccsda-release.aab
 unset ANDROID_KEYSTORE_PATH ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD
 ```
 
-The script regenerates the ignored Android project with Expo prebuild, applies
-the committed signing plugin, invokes `bundleRelease` for the AAB or
-`assembleRelease` for the APK, and copies the result to the requested path. It
-refuses to build without an explicit `versionCode` or complete signing values.
-The APK is useful for physical-device testing; upload the AAB to Play Console.
+Both paths regenerate the ignored Android project with Expo prebuild, apply the
+committed signing plugin, invoke Gradle, and copy the result to the requested
+path. The signed path refuses to build without an explicit `versionCode` or
+complete signing values. The signed APK is useful for physical-device testing;
+upload the AAB to Play Console.
 
 Verify the artifact locally before uploading:
 
@@ -636,23 +648,31 @@ lost or compromised upload key. See [Google Play App Signing](https://support.go
 
 ### Android direct-native commands
 
-The Android scripts generate the ignored native project, apply
-`plugins/withAndroidLocalSigning.js`, and invoke Gradle directly:
+The Android scripts regenerate the ignored native project with Expo prebuild, apply
+`plugins/withAndroidLocalSigning.js`, and invoke Gradle directly. Signed release
+commands require the four `ANDROID_*` variables; the local preview command does not:
 
 ```sh
 npm run build:android:apk -- --output /absolute/path/app.apk
 npm run build:android -- --output /absolute/path/app.aab
+npm run build:android:apk:debug -- --output /absolute/path/local-preview.apk
 ```
 
-Both commands require the four `ANDROID_*` signing environment variables and an
+The signed commands require the four `ANDROID_*` signing environment variables and an
 explicit `expo.android.versionCode`; see [Android setup](#android-setup-github-hosted-direct-builds).
-The APK is for direct installation/testing. The AAB is the Google Play artifact.
+The debug command uses Gradle's automatically generated debug key and does not require
+or touch the production upload keystore. It creates a standalone APK for local device
+testing and must never be uploaded to Google Play. A truly unsigned APK is generally
+not installable.
+
+The signed APK is for direct installation/testing, and the AAB is the Google Play artifact.
 
 | Target | Recommended build path |
 | --- | --- |
 | iOS IPA (TestFlight/App Store) | **Native iOS binary** workflow |
 | Android AAB (Google Play) | `npm run build:android` |
 | Android APK (direct installation) | `npm run build:android:apk` |
+| Android APK (local debug key) | `npm run build:android:apk:debug` |
 
 The direct Android commands output a binary on this computer; append
 `--output /absolute/path/app.aab` or `.apk` to choose its destination. The

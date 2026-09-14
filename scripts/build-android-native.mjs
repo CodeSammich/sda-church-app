@@ -11,11 +11,16 @@ const packageJson = JSON.parse(
 );
 const appJson = JSON.parse(await readFile(resolve(projectRoot, 'app.json'), 'utf8'));
 const isApk = process.argv.includes('--apk');
+const isDebugSigning = process.argv.includes('--debug');
 const outputIndex = process.argv.indexOf('--output');
 const requestedOutput = outputIndex === -1 ? undefined : process.argv[outputIndex + 1];
 
 if (outputIndex !== -1 && !requestedOutput) {
   throw new Error('--output requires a destination file');
+}
+
+if (isDebugSigning && !isApk) {
+  throw new Error('--debug is supported only for an Android APK build');
 }
 
 const androidConfig = appJson.expo?.android || {};
@@ -35,21 +40,28 @@ const requiredSigningVariables = [
   'ANDROID_KEY_ALIAS',
   'ANDROID_KEY_PASSWORD',
 ];
-const missingSigningVariables = requiredSigningVariables.filter(
-  (name) => !process.env[name],
-);
-
-if (missingSigningVariables.length > 0) {
-  throw new Error(
-    `Android release signing is required. Set: ${missingSigningVariables.join(', ')}`,
+if (!isDebugSigning) {
+  const missingSigningVariables = requiredSigningVariables.filter(
+    (name) => !process.env[name],
   );
+
+  if (missingSigningVariables.length > 0) {
+    throw new Error(
+      `Android release signing is required. Set: ${missingSigningVariables.join(', ')}. For local device testing, use build:android:apk:debug instead.`,
+    );
+  }
+
+  if (!existsSync(process.env.ANDROID_KEYSTORE_PATH)) {
+    throw new Error(
+      `Android keystore does not exist: ${process.env.ANDROID_KEYSTORE_PATH}`,
+    );
+  }
 }
 
-if (!existsSync(process.env.ANDROID_KEYSTORE_PATH)) {
-  throw new Error(
-    `Android keystore does not exist: ${process.env.ANDROID_KEYSTORE_PATH}`,
-  );
-}
+// Tell the config plugin which release signing mode was explicitly requested.
+// A debug-signed APK uses Gradle's generated local debug key and never uses the
+// production upload keystore or its passwords.
+process.env.ANDROID_DEBUG_SIGNING_BUILD = isDebugSigning ? 'true' : 'false';
 
 const run = (command, args, cwd = projectRoot) => {
   const executable = process.platform === 'win32' && command === 'npx' ? 'npx.cmd' : command;
@@ -76,6 +88,7 @@ run('npx', [
   'expo-template-bare-minimum@58.0.0-canary-20260902-26df09e',
   '--platform',
   'android',
+  '--clean',
   '--no-install',
 ]);
 
@@ -106,4 +119,6 @@ if (!existsSync(sourcePath)) {
 }
 
 copyFileSync(sourcePath, outputPath);
-console.log(`Android ${extension.toUpperCase()} written to ${outputPath}`);
+console.log(
+  `Android ${isDebugSigning ? 'debug-signed ' : ''}${extension.toUpperCase()} written to ${outputPath}`,
+);
