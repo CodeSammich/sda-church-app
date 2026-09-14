@@ -7,7 +7,7 @@
 - Java Development Kit (JDK) 17
 - For iOS: Xcode (macOS only) supporting iOS 15.0 - 26.3
 - For Android: Android Studio, the platform/target SDK required by the current Expo
-  canary (currently Android 36 plus compile/build tools 37 on CI), and ANDROID_HOME
+  canary (currently target API 36 plus compile/build tools 37 on CI), and ANDROID_HOME
   environment
   variable
 

@@ -779,12 +779,14 @@ by a code maintainer, and do not reuse or lower either store's build number.
 Keep generated `ios/` and `android/` projects out of Git and express native
 configuration through Expo config/plugins. SDK upgrades require checking
 Node/Java/Xcode/Android tooling and revalidating physical-device behavior. The app
-explicitly pins Android compile/target API 36 and build tools 36.0.0 through
-`expo-build-properties`. This is intentional: Google Play requires new apps and
-updates to target API 36 from August 31, 2026, while the Expo canary's default compile
-SDK 37 is not available from the hosted runner's SDK repository. The workflow installs
-the matching API 36 platform/build tools and NDK. Revisit this pin together when the
-next stable Android SDK is available and compatible with the Expo template.
+explicitly pins Android compile API 37, target API 36, and build tools 37.0.0 through
+`expo-build-properties`. This split is intentional: the Expo canary's native AARs
+require compile API 37, while Google Play currently requires new apps and updates to
+target API 36 from August 31, 2026. Android's compile SDK and target SDK are separate;
+compiling against API 37 does not opt the app into API 37 runtime behavior. The
+workflow installs the versioned `platforms;android-37.0` package, matching the current
+runner image, plus build tools and NDK. Revisit this preview-SDK pin when Expo ships a
+compatible stable SDK and when the Android platform requirement changes.
 
 Before release, run `npx expo install --check`, `npx expo-doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices,

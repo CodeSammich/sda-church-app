@@ -88,7 +88,18 @@ jobs:
           test "$license_status" -eq 0
       - name: Install Android SDK tools
         if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
+        run: |
+          # Android 37 uses the versioned 37.0 platform package name.
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
+          test -d "$ANDROID_HOME/platforms/android-37.0" || {
+            echo 'Android SDK platform android-37.0 is unavailable on this runner.' >&2
+            exit 1
+          }
+          test -d "$ANDROID_HOME/build-tools/37.0.0" || {
+            echo 'Android build tools 37.0.0 are unavailable on this runner.' >&2
+            exit 1
+          }
 
       - name: Restore Android upload keystore
         if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
