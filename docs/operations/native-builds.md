@@ -498,13 +498,12 @@ profile, archives with Xcode, exports an App Store IPA, uploads only the IPA, an
 deletes the certificate, profile, keychain, archive, and export files in an
 `always()` cleanup step.
 
-For a manual run, use **Native iOS binary → Run workflow** from `main` or
-`release/**` and provide an `ios_build_number`. Start at `1` for an app with no prior
-App Store build, then increase it for every later upload. Trusted push runs use the
-workflow run number automatically, which gives their archived artifacts a valid
-build number; record the number of any push artifact you upload and keep later manual
-numbers above it. The build number is independent of the marketing version in
-`app.json`; App Store Connect rejects a reused or lower build number.
+The iOS build number is the checked-in `expo.ios.buildNumber` value in `app.json`.
+Both trusted push runs and manual dispatch use this same source of truth; there is no
+separate Actions input or GitHub run-number fallback. Start at `1` for an app with no
+prior App Store build, then have a code maintainer increase it before each later IPA
+uploaded to App Store Connect. The build number is independent of the marketing
+version in `app.json`; App Store Connect rejects a reused or lower build number.
 
 The action intentionally has no App Store Connect API key. Upload the resulting
 IPA manually first. Submission automation, if added later, must be a separate
@@ -736,9 +735,9 @@ the Expo template, and CocoaPods, but not Expo authentication. They are not
 offline build paths. Build one platform at a time.
 
 In GitHub Actions, select **Native Android build → Run workflow** for an Android AAB
-or APK. Select **Native iOS binary → Run workflow** for an iOS IPA, choose the
-source branch, and enter the next iOS build number. These workflows become
-available in the Actions UI after they reach the default branch. Android compiles
+or APK. Select **Native iOS binary → Run workflow** for an iOS IPA; its build number
+comes from `expo.ios.buildNumber` in the selected branch's `app.json`. These workflows
+become available in the Actions UI after they reach the default branch. Android compiles
 directly with Gradle on Ubuntu 24.04 / Java 17; iOS compiles directly with Xcode
 on macOS 15 / Xcode 26.2. Download the signed binaries from the run's Artifacts
 section (14-day retention). Neither recommended workflow requires Expo
@@ -765,12 +764,10 @@ release, and release CI can synchronize it from the release PR title. Android di
 builds use the explicit checked-in `expo.android.versionCode`; the script refuses to
 build until it exists. Before a Play upload, a code maintainer records the latest Play
 value and chooses a higher number. Do not use a remote auto-increment system alongside
-a checked-in local number. Keep the checked-in Android number and manually supplied iOS number independent;
-do not reuse or lower either store's build number.
-The direct iOS workflow receives an explicit `ios_build_number` input and passes
-it to Xcode as `CURRENT_PROJECT_VERSION`; increase it for every App Store upload.
-Record both store counters before changing either platform's version source; a
-duplicate or lower store build number will be rejected.
+a checked-in local number. iOS builds use the explicit checked-in
+`expo.ios.buildNumber` in `app.json`; the workflow passes it to Xcode as
+`CURRENT_PROJECT_VERSION` for every trigger. Keep both platform counters maintained
+by a code maintainer, and do not reuse or lower either store's build number.
 
 Keep generated `ios/` and `android/` projects out of Git and express native
 configuration through Expo config/plugins. SDK upgrades require checking

@@ -8,12 +8,6 @@ on:
       - main
       - 'release/**'
   workflow_dispatch:
-    inputs:
-      ios_build_number:
-        description: 'Increasing App Store Connect build number (CFBundleVersion)'
-        required: true
-        default: '1'
-        type: string
 
 permissions:
   contents: read
@@ -82,6 +76,20 @@ jobs:
 
       - name: Install CocoaPods dependencies
         run: pod install --project-directory=ios
+
+      - name: Read iOS build number
+        id: ios-version
+        run: |
+          set -euo pipefail
+          IOS_BUILD_NUMBER="$(node -p "require('./app.json').expo.ios.buildNumber || ''")"
+          case "$IOS_BUILD_NUMBER" in
+            ''|*[!0-9]*) echo 'Set expo.ios.buildNumber in app.json to a positive integer.' >&2; exit 1 ;;
+          esac
+          test "$IOS_BUILD_NUMBER" -ge 1 || {
+            echo 'expo.ios.buildNumber must be at least 1.' >&2
+            exit 1
+          }
+          printf 'ios_build_number=%s\n' "$IOS_BUILD_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Restore Apple signing material
         env:
@@ -174,17 +182,16 @@ jobs:
 
       - name: Archive and export IPA
         env:
-          # Manual runs use the maintainer-supplied App Store Connect counter;
-          # trusted pushes use this workflow's monotonically increasing run
-          # number so the push-triggered archive has a valid build number.
-          IOS_BUILD_NUMBER: ${{ inputs.ios_build_number || github.run_number }}
+          # Pushes and manual runs deliberately share the same checked-in
+          # maintainer-controlled source of truth.
+          IOS_BUILD_NUMBER: ${{ steps.ios-version.outputs.ios_build_number }}
         run: |
           set -euo pipefail
           case "$IOS_BUILD_NUMBER" in
-            ''|*[!0-9]*) echo 'ios_build_number must be a positive integer.' >&2; exit 1 ;;
+            ''|*[!0-9]*) echo 'expo.ios.buildNumber must be a positive integer.' >&2; exit 1 ;;
           esac
           test "$IOS_BUILD_NUMBER" -ge 1 || {
-            echo 'ios_build_number must be at least 1.' >&2
+            echo 'expo.ios.buildNumber must be at least 1.' >&2
             exit 1
           }
 

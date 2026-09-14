@@ -188,6 +188,10 @@ This is a separate Play release counter, not the user-facing `0.37.0` version. O
 code maintainer changes it, as part of final release preparation immediately before a
 Play upload. It stays unchanged across ordinary feature PRs and local/test builds, and
 must increase above the last version accepted by Play for every uploaded AAB.
+The iOS build counter is likewise checked in as `expo.ios.buildNumber` in `app.json`;
+both automatic trusted-branch archives and manual iOS runs use that same value. A
+maintainer must increase it before uploading a later IPA to App Store Connect. Do not
+enter an independent build number in the Actions UI.
 The debug APK command is the safe local-testing path: it is signed with Gradle's
 automatically generated debug key, does not require or touch the production upload JKS,
 and must never be uploaded to Google Play. A truly unsigned APK is generally not
