@@ -4,6 +4,10 @@ Last reviewed: 2026-08-09
 
 Status: **Deferred; do not implement in the production app yet**
 
+Native iOS and Android builds are the primary release targets. The web/PWA build remains
+available for browser testing, but a web-only translation implementation would not satisfy
+the app's native parity requirement.
+
 ## 1. Decision Summary
 
 Mozilla's Bergamot approach satisfies the desired privacy and operating-cost goals: text
@@ -171,8 +175,8 @@ Use deterministic and human-reviewed data before local neural translation:
    exists.
 4. Never silently present a guessed ecclesiastical translation as submitted church data.
 
-This approach is tiny, instant, offline, consistent across PWA/iOS/Android, and has no API
-keys or recurring cost.
+This approach is tiny, instant, offline, consistent across the native apps and web/PWA
+preview, and has no API keys or recurring cost.
 
 ## 8. Reconsideration Gates
 

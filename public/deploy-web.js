@@ -1,16 +1,35 @@
 const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { validateDeploymentRequest } = require('../scripts/deploy-web-safety.cjs');
 
 const args = process.argv.slice(2);
 const increment = args.includes('--increment');
 const quiet = args.includes('--quiet') && !args.includes('--verbose');
+const publish = args.includes('--publish');
+const preview = args.includes('--preview');
 const projectRoot = path.resolve(__dirname, '..');
 const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
+const getOption = (name) => {
+  const inlinePrefix = `${name}=`;
+  const inline = args.find((arg) => arg.startsWith(inlinePrefix));
+  if (inline) return inline.slice(inlinePrefix.length);
+
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
+};
+
+const previewRepository = getOption('--repo');
+const previewSiteUrl = getOption('--site-url');
+
 if (args.includes('--help')) {
   console.log('Usage: npm run deploy -- [--increment] [--verbose]');
-  console.log('Deploy output is quiet by default; --verbose shows tool output.');
+  console.log('Builds dist locally without publishing; --verbose shows tool output.');
+  console.log(
+    'Preview: npm run deploy:dev -- --repo <github-repo-url> --site-url <github-pages-url>',
+  );
+  console.log('Production publishing is restricted to the GitHub workflow.');
   process.exit(0);
 }
 
@@ -42,6 +61,18 @@ const runStep = (label, command, commandArgs) => {
 };
 
 try {
+  const configuredBasePath = preview
+    ? require(path.resolve(projectRoot, 'app.json')).expo.experiments?.baseUrl
+    : undefined;
+  validateDeploymentRequest({
+    configuredBasePath,
+    env: process.env,
+    preview,
+    previewRepository,
+    previewSiteUrl,
+    publish,
+  });
+
   runStep('Syncing version', process.execPath, [
     path.resolve(__dirname, 'sync-version.js'),
     ...(increment ? ['--increment'] : []),
@@ -54,13 +85,29 @@ try {
     'web',
     '--clear',
   ]);
-  runStep('Publishing GitHub Pages', npxCommand, [
-    'gh-pages',
-    '-d',
-    'dist',
-    '--dotfiles',
-  ]);
-  console.log('Deployment completed successfully.');
+  if (publish || preview) {
+    const publishArgs = [
+      'gh-pages',
+      '-d',
+      'dist',
+      '--dotfiles',
+    ];
+    if (preview) {
+      publishArgs.push('--repo', previewRepository);
+    }
+    runStep(
+      preview ? 'Publishing preview GitHub Pages' : 'Publishing GitHub Pages',
+      npxCommand,
+      publishArgs,
+    );
+    console.log(
+      preview
+        ? 'Preview deployment completed successfully.'
+        : 'Production deployment completed successfully.',
+    );
+  } else {
+    console.log('Local web build completed. No remote publishing was performed.');
+  }
 } catch (error) {
   console.error(`Deployment failed: ${error.message}`);
   process.exit(1);

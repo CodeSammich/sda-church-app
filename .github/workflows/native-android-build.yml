@@ -1,0 +1,162 @@
+name: Native Android build
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+  workflow_dispatch:
+    inputs:
+      android:
+        description: Build Android for Google Play (AAB)
+        type: boolean
+        default: false
+      android_apk:
+        description: Build Android for direct installation (APK)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    # Do not attach the production Environment to a manual run from an
+    # arbitrary branch. Only trusted release refs may reach signing secrets.
+    if: >-
+      github.event.repository.fork == false &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+    # SECURITY CONTRACT: This job can read production signing secrets. Never add
+    # `set -x`, secret-byte logging (`echo`/`printf`/`cat` to the terminal),
+    # debug dumps, or an artifact/upload step that includes secret files. Keep
+    # secret-bearing work limited to the explicitly reviewed steps below.
+    environment: production
+    name: ${{ matrix.target.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: Android store
+            input: android
+            platform: android
+            extension: aab
+            profile: production
+          - name: Android APK
+            input: android_apk
+            platform: android
+            extension: apk
+            profile: preview
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        run: npm ci
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+      - name: Install Android SDK tools
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+        run: sdkmanager "platforms;android-36" "platforms;android-37" "build-tools;36.0.0" "build-tools;37.0.0" "ndk;27.1.12297006"
+
+      - name: Restore Android upload keystore
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          # SECURITY: This is the only intentional shell write involving the
+          # encoded secret. Its stdout is piped directly into base64 decoding
+          # and redirected to a file; it must never be printed, inspected, or
+          # uploaded.
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo 'Set the protected production Environment secret ANDROID_KEYSTORE_BASE64 first.'; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nyccsda-upload.keystore"
+          chmod 600 "$RUNNER_TEMP/nyccsda-upload.keystore"
+          test -s "$RUNNER_TEMP/nyccsda-upload.keystore"
+      - name: Compile signed binary on GitHub runner
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nyccsda-upload.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          BUILD_EXTENSION: ${{ matrix.target.extension }}
+        run: |
+          # SECURITY: Signing values are environment inputs for Gradle only.
+          # Never add shell tracing (`set -x`), verbose environment dumps, or
+          # commands that echo/cat these variables or include them in artifacts.
+          set -euo pipefail
+          if [ "$BUILD_EXTENSION" = 'aab' ]; then
+            npm run build:android -- --output "$RUNNER_TEMP/app.$BUILD_EXTENSION"
+          else
+            npm run build:android:apk -- --output "$RUNNER_TEMP/app.$BUILD_EXTENSION"
+          fi
+      - name: Remove Android signing material
+        if: always()
+        run: |
+          # SECURITY: Always remove the decoded private keystore, including after
+          # failed builds. Do not replace this with an artifact upload or log dump.
+          rm -f "$RUNNER_TEMP/nyccsda-upload.keystore"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: success()
+        with:
+          name: native-${{ matrix.target.platform }}-${{ matrix.target.profile }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/app.${{ matrix.target.extension }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    # A manual build should produce artifacts only; publish a GitHub Release
+    # only after a successful push to main.
+    if: >-
+      github.event.repository.fork == false &&
+      github.event_name == 'push' &&
+      needs.build.result == 'success' &&
+      github.ref == 'refs/heads/main'
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Read release version
+        id: version
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+      - name: Download built binaries
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: native-*
+          path: release-assets
+          merge-multiple: true
+      - name: Create GitHub release with binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "A GitHub release already exists for $RELEASE_TAG. Bump package.json version before building another release."
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Release $RELEASE_TAG" \
+            --notes "Signed native binaries built from commit $GITHUB_SHA." \
+            --latest

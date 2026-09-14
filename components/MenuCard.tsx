@@ -12,6 +12,7 @@ import {
   AccessibilityRole,
   AccessibilityState,
   Animated,
+  type ImageSourcePropType,
   Platform,
   StyleSheet,
   Text,
@@ -19,6 +20,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { ExternalBrandIcon } from "@/components/ExternalBrandIcon";
 
 const AnimatedTouchableOpacity =
   Animated.createAnimatedComponent(TouchableOpacity);
@@ -29,7 +31,11 @@ interface MenuCardProps {
   disabled?: boolean;
   title: string;
   description?: string;
-  icon: MaterialCommunityIconName | AppIconProps;
+  icon?: MaterialCommunityIconName | AppIconProps;
+  imageSource?: ImageSourcePropType;
+  darkImageSource?: ImageSourcePropType;
+  /** Optional visual scale for provider assets with transparent canvas padding. */
+  imageContentScale?: number;
   iconColor?: string;
   onPress?: () => void;
   rightIcon?: MaterialCommunityIconName | AppIconProps | null;
@@ -91,6 +97,9 @@ export const MenuCard: React.FC<MenuCardProps> = ({
   title,
   description,
   icon,
+  imageSource,
+  darkImageSource,
+  imageContentScale = 1,
   iconColor,
   onPress,
   rightIcon = "chevron-right",
@@ -119,16 +128,25 @@ export const MenuCard: React.FC<MenuCardProps> = ({
       activeOpacity={onPress && !disabled ? 0.7 : 1}
       disabled={disabled || !onPress}
     >
-      <AppIcon
-        pointerEvents="none"
-        {...(typeof icon === "string" ? { name: icon } : icon)}
-        size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
-        color={
-          disabled
-            ? theme.colors.onSurfaceDisabled
-            : iconColor || theme.colors.tertiary
-        }
-      />
+      {imageSource ? (
+        <ExternalBrandIcon
+          source={imageSource}
+          darkSource={darkImageSource}
+          size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
+          contentScale={imageContentScale}
+        />
+      ) : icon ? (
+        <AppIcon
+          pointerEvents="none"
+          {...(typeof icon === "string" ? { name: icon } : icon)}
+          size={DESIGN_TOKENS.ICON_SIZE_FEATURED}
+          color={
+            disabled
+              ? theme.colors.onSurfaceDisabled
+              : iconColor || theme.colors.tertiary
+          }
+        />
+      ) : null}
       <View pointerEvents="none" style={styles.cardContent}>
         <Text
           style={[

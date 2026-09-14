@@ -38,7 +38,8 @@ and production scope and should remain an explicit decision.
 4. After all planned feature PRs are merged, a code maintainer opens the release PR from
    `release/x.y.z` into `main`. Only maintainers perform this second stage; contributors
    should not retarget their feature PRs to `main`.
-5. The merge to `main` triggers version synchronization, tagging, and deployment.
+5. The merge to `main` triggers version synchronization, tagging, and web/PWA preview
+   deployment. It does not publish a native iOS or Android release.
 
 ### Future release-branch automation
 
@@ -147,10 +148,12 @@ main (stable)
   into a `release/x.y.z` branch, including PRs submitted from forks.
 - Removes the label when the issue closes after the final release reaches `main`.
 
-#### `Deploy and Tag` (`.github/workflows/deploy.yml`)
+#### `Deploy Web Preview and Tag` (`.github/workflows/deploy.yml`)
 
 - **Final Validation**: Ensures the merged version is unique.
 - **Automated Tagging**: Creates a new Git tag (e.g., `v0.8.2`) matching the `package.json` version.
+- **Web/PWA Preview**: Publishes the browser build to GitHub Pages for testing and demos;
+  native binaries still require their separate, signed workflows and store review.
 
 ### Example feature workflow
 

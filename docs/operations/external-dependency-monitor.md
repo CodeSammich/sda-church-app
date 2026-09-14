@@ -1,7 +1,7 @@
 # External dependency monitor
 
-The PWA depends on public APIs, media hosts, hymn directories, and user-facing
-external destinations. `.github/workflows/external-dependency-monitor.yml`
+The app's web/PWA preview and native clients depend on public APIs, media hosts, hymn
+directories, and user-facing external destinations. `.github/workflows/external-dependency-monitor.yml`
 checks them daily at 5:17 PM America/New_York time and can also be run manually.
 
 ## Traffic policy

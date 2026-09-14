@@ -4,6 +4,7 @@ import {
 } from '@/components/InitialSetup';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { createElement } from 'react';
+import { StyleSheet } from 'react-native';
 import { renderWithPreferences } from './helpers/render-preferences';
 
 const languageCases = [
@@ -80,6 +81,19 @@ describe('InitialSetup', () => {
     expect(setLanguage).toHaveBeenCalledWith('zh');
     expect(setThemeMode).toHaveBeenCalledWith('dark');
     expect(screen.getByRole('radio', { name: 'Automatic' })).toBeTruthy();
+  });
+
+  it('keeps Automatic full width and exposes System and Sunset choices', () => {
+    const screen = renderWithPreferences(
+      createElement(InitialSetup, { onComplete: jest.fn() }),
+    );
+
+    const automatic = screen.getByRole('radio', { name: 'Automatic' });
+    const style = StyleSheet.flatten(automatic.props.style);
+
+    expect(style).toEqual(expect.objectContaining({ flexBasis: '100%' }));
+    expect(screen.getByRole('radio', { name: 'System' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Sunset' })).toBeTruthy();
   });
 
   it.each(languageCases)(

@@ -100,7 +100,6 @@ export const customLightTheme = {
     // Icon colors for light mode
     iconColors: {
       // home page
-      livestream:           'rgba(255, 0, 0, 1.00)',            // YouTube official red at full opacity since special brand
       bulletin:             'rgba(146,64,14,1.00)',     // Warm amber/brown
       tithe:                'rgba(4,120,87,1.00)',      // Deep forest/emerald green
       discover:             'rgba(55,48,163,1.00)',     // Deep indigo/navy
@@ -165,9 +164,9 @@ export const customLightTheme = {
       highlight: '#EBCD78',
     },
 
-    // Branding (Special External Brand Colors)
-    brandYoutube: '#FF0000',
-    brandSpotify: '#1DB954',
+    // Destination accents only; official logo artwork is not bundled.
+    brandYoutube: '#FF0033',
+    brandSpotify: '#1ED760',
     brandZoom: '#0B5CFF',
 
     // Neutralizing Elevation (Hierarchy of Light - Light Mode)
@@ -241,7 +240,6 @@ export const customDarkTheme: AppTheme = {
     // Soft category colors preserve wayfinding while reducing icon glare.
     iconColors: {
       // home page
-      livestream:   '#FF8A80',
       bulletin:     '#F3C677',
       tithe:        '#6FD3A7',
       discover:     '#AFA8FF',
@@ -308,10 +306,10 @@ export const customDarkTheme: AppTheme = {
     // Preserve existing surface, onSurface, etc.
     // surface and onSurface are already defined above, so no duplicates here
 
-    // External marks share the dark theme's restrained monochrome gold treatment.
-    brandYoutube: '#D2B258',
-    brandSpotify: '#D2B258',
-    brandZoom: '#D2B258',
+    // Destination accents only; official logo artwork is not bundled.
+    brandYoutube: '#FF8A80',
+    brandSpotify: '#6FD3A7',
+    brandZoom: '#67C7F0',
 
     // Neutralizing Elevation (Hierarchy of Light)
     // This was not derived from the UI_UX.md spec, only recommended by Gemini

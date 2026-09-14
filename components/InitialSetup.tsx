@@ -124,13 +124,19 @@ const setupLabels = {
 
 interface SetupChoice {
   accessibilityLabel?: string;
-  icon?: 'theme-light-dark' | 'weather-night' | 'weather-sunny';
+  icon?:
+    | 'monitor-cellphone'
+    | 'theme-light-dark'
+    | 'weather-night'
+    | 'weather-sunny'
+    | 'weather-sunset-down';
   label: string;
   value: string;
 }
 
 interface SetupChoiceGroupProps {
   disabled: boolean;
+  firstOptionFullWidth?: boolean;
   onValueChange: (value: string) => void;
   options: SetupChoice[];
   twoColumn?: boolean;
@@ -142,6 +148,7 @@ export const shouldUseTwoColumnOnboardingChoices = (viewportWidth: number) =>
 
 const SetupChoiceGroup = ({
   disabled,
+  firstOptionFullWidth = false,
   onValueChange,
   options,
   twoColumn = false,
@@ -151,7 +158,7 @@ const SetupChoiceGroup = ({
 
   return (
     <View accessibilityRole="radiogroup" style={styles.choiceGroup}>
-      {options.map((option) => {
+      {options.map((option, index) => {
         const selected = option.value === value;
         return (
           <Pressable
@@ -164,6 +171,10 @@ const SetupChoiceGroup = ({
             style={({ pressed }) => [
               styles.choiceButton,
               twoColumn && styles.twoColumnChoiceButton,
+              twoColumn &&
+                firstOptionFullWidth &&
+                index === 0 &&
+                styles.fullWidthChoiceButton,
               {
                 backgroundColor: selected
                   ? theme.colors.secondaryContainer
@@ -344,6 +355,8 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
             <SetupChoiceGroup
               value={themeMode}
               disabled={isSavingTextScale}
+              twoColumn
+              firstOptionFullWidth
               onValueChange={(value) => {
                 if (!textScaleWritePendingRef.current) {
                   void setThemeMode(value as ThemeMode);
@@ -355,8 +368,16 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                   label: labels.automatic,
                   icon: 'theme-light-dark',
                 },
-                { value: THEME_SYSTEM, label: labels.system },
-                { value: THEME_SUNSET, label: labels.sunset },
+                {
+                  value: THEME_SYSTEM,
+                  label: labels.system,
+                  icon: 'monitor-cellphone',
+                },
+                {
+                  value: THEME_SUNSET,
+                  label: labels.sunset,
+                  icon: 'weather-sunset-down',
+                },
                 { value: THEME_LIGHT, label: labels.light, icon: 'weather-sunny' },
                 { value: THEME_DARK, label: labels.dark, icon: 'weather-night' },
               ]}
@@ -503,6 +524,9 @@ const styles = StyleSheet.create({
   },
   twoColumnChoiceButton: {
     flexBasis: '45%',
+  },
+  fullWidthChoiceButton: {
+    flexBasis: '100%',
   },
   choiceGroup: {
     alignItems: 'stretch',

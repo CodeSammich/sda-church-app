@@ -21,11 +21,23 @@ when that release is merged._
 
 ## Testing
 
-- [ ] Verified on Android SDK 36 (Target version must always be latest Android SDK) Target
-      version should always be
-      [latest stable Android SDK](https://developer.android.com/tools/releases/platforms)
+- [ ] `npm test` — include the suite/test count or explain any failure
+- [ ] `npm run build:web` — when web/PWA or shared app code changes
+- [ ] `npm run deploy` — confirms a local build only; use `npm run deploy:dev -- --repo <fork> --site-url <fork-pages-url>` only for an intentional fork preview
+- [ ] `npm run build:android:apk:debug` — when Android/native code changes; this is the local installable APK path and does not use production signing secrets
+- [ ] Signed Android AAB/APK — maintainer-only protected GitHub workflow; never commit or upload the JKS
+- [ ] Native iOS workflow — when iOS/native code changes; requires the protected Apple signing Environment and manual dispatch
 
-- [ ] Verified on XCode/iOS 26.3 or higher
+Target toolchains must satisfy the current store requirements and remain compatible
+with the pinned Expo/React Native toolchain:
 
-Target version should always be
-[latest stable XCode](https://developer.apple.com/support/xcode/)
+- [ ] Android target API meets the [current Google Play target API requirement](https://developer.android.com/google/play/requirements/target-sdk); compile SDK, AGP, Gradle, JDK, and NDK versions are mutually compatible
+- [ ] Xcode/SDK meets the [current App Store Connect submission requirements](https://developer.apple.com/app-store/submitting/) and is compatible with Expo/React Native/CocoaPods
+- [ ] Any intentional version lag is documented
+
+## Security and release checklist
+
+- [ ] No secrets, private keys, certificates, passwords, `.env` files, or generated native/signing artifacts are included
+- [ ] Workflow changes do not print secrets, dump environments, or upload secret-bearing files
+- [ ] Android `versionCode` is unchanged for ordinary PRs; only a maintainer bumps it immediately before a Google Play upload
+- [ ] If this is a release PR, the user-facing version files remain synchronized by the release validation workflow

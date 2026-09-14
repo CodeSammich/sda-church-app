@@ -90,24 +90,24 @@ const allLabels = {
 };
 
 const BOOK_COVERS: Readonly<Record<string, ImageSourcePropType>> = {
-  'bates-seventh-day-sabbath': require('../../../../public/library/bates-seventh-day-sabbath.png'),
-  'andrews-history-sabbath': require('../../../../public/library/andrews-history-sabbath.png'),
-  'bunyan-pilgrims-progress': require('../../../../public/library/bunyan-pilgrims-progress.png'),
-  'story-of-jesus': require('../../../../public/library/story-of-jesus.png'),
+  'bates-seventh-day-sabbath': require('../../../../assets/images/library/bates-seventh-day-sabbath.png'),
+  'andrews-history-sabbath': require('../../../../assets/images/library/andrews-history-sabbath.png'),
+  'bunyan-pilgrims-progress': require('../../../../assets/images/library/bunyan-pilgrims-progress.png'),
+  'story-of-jesus': require('../../../../assets/images/library/story-of-jesus.png'),
 };
 
 const EGW_COVERS: Readonly<Record<string, ImageSourcePropType>> = {
-  'patriarchs-and-prophets': require('../../../../public/library/egw/patriarchs-and-prophets.jpg'),
-  'prophets-and-kings': require('../../../../public/library/egw/prophets-and-kings.jpg'),
-  'desire-of-ages': require('../../../../public/library/egw/desire-of-ages.jpg'),
-  'acts-of-the-apostles': require('../../../../public/library/egw/acts-of-the-apostles.jpg'),
-  'great-controversy': require('../../../../public/library/egw/great-controversy.jpg'),
-  'steps-to-christ': require('../../../../public/library/egw/steps-to-christ.jpg'),
-  'christs-object-lessons': require('../../../../public/library/egw/christs-object-lessons.jpg'),
-  'ministry-of-healing': require('../../../../public/library/egw/ministry-of-healing.jpg'),
-  education: require('../../../../public/library/egw/education.jpg'),
-  'child-guidance': require('../../../../public/library/egw/child-guidance.png'),
-  'messages-to-young-people': require('../../../../public/library/egw/messages-to-young-people.png'),
+  'patriarchs-and-prophets': require('../../../../assets/images/library/egw/patriarchs-and-prophets.jpg'),
+  'prophets-and-kings': require('../../../../assets/images/library/egw/prophets-and-kings.jpg'),
+  'desire-of-ages': require('../../../../assets/images/library/egw/desire-of-ages.jpg'),
+  'acts-of-the-apostles': require('../../../../assets/images/library/egw/acts-of-the-apostles.jpg'),
+  'great-controversy': require('../../../../assets/images/library/egw/great-controversy.jpg'),
+  'steps-to-christ': require('../../../../assets/images/library/egw/steps-to-christ.jpg'),
+  'christs-object-lessons': require('../../../../assets/images/library/egw/christs-object-lessons.jpg'),
+  'ministry-of-healing': require('../../../../assets/images/library/egw/ministry-of-healing.jpg'),
+  education: require('../../../../assets/images/library/egw/education.jpg'),
+  'child-guidance': require('../../../../assets/images/library/egw/child-guidance.png'),
+  'messages-to-young-people': require('../../../../assets/images/library/egw/messages-to-young-people.png'),
 };
 
 const COLLECTION_TITLES: Readonly<Record<string, Readonly<Record<SupportedLanguage, string>>>> = {

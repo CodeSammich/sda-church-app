@@ -1,7 +1,12 @@
 import { AppIcon } from '@/components/AppIcon';
+import { ExternalBrandIcon } from '@/components/ExternalBrandIcon';
 import { SourceNoticePanel } from '@/components/SourceNoticePanel';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { openYouTubeSearch } from '@/constants/ExternalLinks';
+import {
+  EXTERNAL_BRAND_ASSETS,
+  EXTERNAL_BRAND_ICON_CONTENT_SCALE,
+} from '@/constants/ExternalBrandAssets';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { getRoutedHymns } from '@/features/hymnal/HymnalRouting';
@@ -153,15 +158,16 @@ export function ChineseHymnalReader({
             style={styles.flexButton}
           >
             <View style={styles.buttonContent}>
-              <AppIcon
-                name="youtube"
+              <ExternalBrandIcon
+                source={EXTERNAL_BRAND_ASSETS.youtubeIcon.light}
+                darkSource={EXTERNAL_BRAND_ASSETS.youtubeIcon.dark}
                 size={24}
-                color={(theme.colors as any).brandYoutube}
+                contentScale={EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube}
               />
               <Text
                 style={[
                   styles.buttonText,
-                  { color: (theme.colors as any).brandYoutube },
+                  { color: theme.colors.brandYoutube },
                 ]}
               >
                 {labels.watchYouTube}

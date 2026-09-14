@@ -3,9 +3,9 @@
 ## 1. Objective
 
 Provide a seamless, multi-language Bible reading experience (English, Chinese Traditional,
-Chinese Simplified, Spanish) within the PWA. The goal is to provide a fast,
-offline-capable interface that respects API rate limits and protects developer
-credentials.
+Chinese Simplified, Spanish) in the native apps and web/PWA preview. The goal is to provide
+a fast, offline-capable interface that respects API rate limits and protects developer
+credentials across every supported target.
 
 ## 2. Technical Architecture
 
@@ -82,7 +82,8 @@ remain non-actionable.
   or developer credentials.
 - **Format:** Both services return structured JSON that is adapted into the app's native
   chapter, verse, heading, and footnote model.
-- **CORS:** Both providers support direct requests from the PWA without proxy overhead.
+- **CORS:** Both providers support direct requests from the web/PWA preview without proxy
+  overhead; native clients use the same provider adapter without browser CORS limits.
 - **Performance Optimization:** HelloAO content is loaded by chapter. fetch(bible content
   is delivered by book, cached as an in-memory promise, and sliced into chapters without
   downloading a whole translation.
@@ -367,9 +368,10 @@ serve as the default.
 
 ### 4.1 Caching and Offline Access
 
-While the PWA supports service worker caching, explicit persistence in `IndexedDB` is
-planned. `IndexedDB` is preferred over `AsyncStorage` due to the large payload size of
-full Bible chapters and better performance with structured data queries.
+The web/PWA preview supports service-worker caching, while explicit persistence in
+`IndexedDB` is planned for that browser target. `IndexedDB` is preferred there over
+`AsyncStorage` due to the large payload size of full Bible chapters and better performance
+with structured data queries. Native targets continue to use the platform storage path.
 
 ### 4.2 Bible Sharing Feature (done)
 
@@ -377,7 +379,7 @@ full Bible chapters and better performance with structured data queries.
 - **Implementation:** A "Share" button on every verse or chapter header. The routing logic
   utilizes "Smart Parsing" to handle case-insensitivity and common short-codes (e.g.,
   `Jn 1:1` vs `John 1:1`) to ensure deep-link reliability.
-- **Payload:** Generates a deep link back to the PWA (e.g.,
+- **Payload:** Generates a deep link back to the app's web preview (e.g.,
   `church-app.io/bible?v=john.1.1&t=cuvs`) or a plain-text snippet for WhatsApp.
 
 ### 4.3 Additional Language Support
