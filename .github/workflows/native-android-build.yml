@@ -69,9 +69,26 @@ jobs:
           java-version: 17
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+        with:
+          # License acceptance is performed in the next step so this action
+          # cannot block on an interactive prompt on the hosted runner.
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+          packages: ''
+      - name: Accept Android SDK licenses noninteractively
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+        run: |
+          # SECURITY: SDK license text is not a secret, but keep it out of the
+          # log. This step must remain noninteractive on GitHub-hosted runners.
+          set -euo pipefail
+          license_status=0
+          set +o pipefail
+          yes | sdkmanager --licenses >/dev/null 2>&1 || license_status=$?
+          set -o pipefail
+          test "$license_status" -eq 0
       - name: Install Android SDK tools
         if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
-        run: sdkmanager "platforms;android-36" "platforms;android-37" "build-tools;36.0.0" "build-tools;37.0.0" "ndk;27.1.12297006"
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
 
       - name: Restore Android upload keystore
         if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
