@@ -1,7 +1,7 @@
 /**
  * Bulletin API for the SDA Church PWA.
  * Canonical source:
- * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/apps-script/Code.gs
+ * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/apps-script/BulletinApi.gs
  *
  * Deployment settings:
  *   Type: Web app
@@ -136,7 +136,7 @@ function getBulletin_(requestedDate) {
   return bulletin;
 }
 
-function buildBulletin_(requestedDate) {
+function buildBulletin_(requestedDate, options) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var scheduleSheetName = getScheduleSheetName_(requestedDate);
   var scheduleSheet = spreadsheet.getSheetByName(scheduleSheetName);
@@ -180,7 +180,7 @@ function buildBulletin_(requestedDate) {
     );
     var value = scheduleValue;
 
-    if (field.person) {
+    if (field.person && !(options && options.includeFullNames)) {
       value = redactNameValue_(value);
     } else {
       value = displayValue_(value);
@@ -188,6 +188,16 @@ function buildBulletin_(requestedDate) {
 
     setPath_(bulletin, field.path, value);
   });
+
+  // These optional Brooklyn fields are used by the staff-only physical
+  // renderer. They are intentionally not added to the public API object.
+  if (options && options.includeFullNames) {
+    populateOptionalBrooklynScheduleFields_(
+      bulletin.brooklyn,
+      scheduleTable.headers,
+      scheduleRow,
+    );
+  }
 
   populateFormResponses_(
     bulletin.queens,
@@ -199,6 +209,36 @@ function buildBulletin_(requestedDate) {
   );
 
   return bulletin;
+}
+
+function populateOptionalBrooklynScheduleFields_(location, headers, row) {
+  [
+    {
+      aliases: ['Brooklyn Chair', 'Brooklyn Chairman', 'Chair', 'Chairman'],
+      path: ['chair'],
+    },
+    { aliases: ['Brooklyn Song Leader', 'Song Leader'], path: ['songLeader'] },
+    {
+      aliases: ['Brooklyn Sabbath Message', 'Sabbath Message'],
+      path: ['sabbathMessage'],
+    },
+    {
+      aliases: ['Brooklyn Sabbath Message Title', 'Sabbath Message Title'],
+      path: ['sabbathMessageTitle'],
+    },
+    { aliases: ['Brooklyn Technician', 'Technician'], path: ['technician'] },
+    { aliases: ['Brooklyn Testimonies', 'Testimonies'], path: ['testimonies'] },
+    {
+      aliases: ['Brooklyn Sunset Time', 'Brooklyn Sunset Times', 'Sunset Time', 'Sunset Times'],
+      path: ['sunsetTime'],
+    },
+  ].forEach(function (field) {
+    var value = valueForAliases_(headers, row, field.aliases);
+    if (isBlank_(value)) {
+      return;
+    }
+    setPath_(location, field.path, displayValue_(value));
+  });
 }
 
 function getScheduleSheetName_(requestedDate) {

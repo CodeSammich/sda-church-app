@@ -11,6 +11,7 @@ part of the public Expo bundle.
 - [Annual schedule rollover](#annual-schedule-rollover)
 - [Structural sheet protection](#structural-sheet-protection)
 - [Name privacy](#name-privacy)
+- [Physical Google Doc output](#physical-google-doc-output)
 - [PWA presentation](#pwa-presentation)
 - [Failure behavior](#failure-behavior-and-troubleshooting)
 - [Change management](#change-management-checklist)
@@ -35,7 +36,7 @@ Each part has one narrow responsibility:
 | GitHub Pages PWA | Presents the bulletin and makes read-only HTTP requests | Static hosting; no application server to operate |
 | Google Forms | Gives authorized church workers a familiar way to submit worship content | No custom administrative UI to build or host |
 | Google Sheets | Stores yearly rosters and the two form-response tables | Existing church workflow remains the source of truth |
-| Google Apps Script | Joins the three data sources, removes private fields, shortens names, and returns JSON | Runs beside the spreadsheet without a separate backend account |
+| Google Apps Script | Joins data for the public API and, for authorized staff triggers, renders the Queens or Brooklyn physical bulletin to Docs/PDF | Runs beside the spreadsheet without a separate backend account |
 | Google Workspace for Nonprofits | Provides church-domain ownership, collaboration, Forms, Sheets, Drive, and administration | Eligible organizations can use the nonprofit Workspace offer instead of volunteer-owned consumer accounts |
 
 This is best described as **no additional application-hosting fee within the programs and
@@ -65,7 +66,7 @@ Public PWA
    |
    | GET /exec?date=YYYY-MM-DD
    v
-Apps Script web app (Code.gs, executes as the deploying account)
+Apps Script web app (BulletinApi.gs, executes as the deploying account)
    |
    +--> Script cache -------- two-minute privacy-filtered response cache
    |
@@ -82,6 +83,19 @@ Allowlisted, privacy-filtered JSON
 Bulletin screen
    |
    +--> device local storage - bulletin + successful-fetch time per date
+```
+
+The same project has a separate staff-triggered path:
+
+```text
+Queens or Brooklyn Google Form
+   |
+   v
+Matching worship-data response tab
+   |
+   | spreadsheet On form submit trigger
+   v
+PhysicalBulletin.gs --> one location-specific Google Doc + one PDF per Sabbath date
 ```
 
 The browser never reads Google Sheets directly and receives no spreadsheet ID, Google
@@ -116,16 +130,17 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 - Human collaborators may view the response tabs. Protecting those tabs is recommended
   to prevent accidental edits, but sheet protection is not a confidentiality boundary.
 - The deployed `/exec` endpoint is public because an unauthenticated PWA must be able to
-  fetch it. Therefore every value returned by `Code.gs` must be treated as public.
+  fetch it. Therefore every value returned by `BulletinApi.gs` must be treated as public.
 - The PWA is read-only. It does not submit changes to the spreadsheet through this API.
-- `Code.gs` in this repository is the canonical source. Changes copied into Apps Script
+- `BulletinApi.gs` in this repository is the canonical source. Changes copied into Apps Script
   should be reviewed here first so the deployed version and repository do not drift.
 
 ### Repository source map
 
 | File | Role |
 | --- | --- |
-| `apps-script/Code.gs` | Deployed backend logic, allowlists, date matching, and name privacy |
+| `apps-script/BulletinApi.gs` | Deployed backend logic, allowlists, date matching, and name privacy |
+| `apps-script/PhysicalBulletin.gs` | Staff-only Queens/Brooklyn Google Docs generator using the same spreadsheet data and full names |
 | `apps-script/appsscript.json` | Apps Script runtime, timezone, and web-app manifest settings |
 | `constants/ExternalLinks.ts` | Production `/exec` URL and restricted staff-schedule URL |
 | `services/BulletinService.ts` | PWA response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
@@ -161,6 +176,7 @@ The workbook is organized as follows:
 Official Schedule for NYCCSDA Queens and Brooklyn
 ├── Queens Worship Data       linked Queens Google Form responses
 ├── Brooklyn Worship Data     linked Brooklyn Google Form responses
+├── Name Dictionary            English/Chinese name pairs for physical printing
 ├── 2026 Sabbath              2026 roster and schedule source
 ├── 2026 Non-Sabbath          ignored by this API
 ├── 2027 Sabbath              2027 roster and schedule source
@@ -183,7 +199,7 @@ Brooklyn Sermon | Chair/Pastoral Prayer | Offering Prayer | Sabbath School
 
 ### Yearly schedule column contract
 
-`COLUMN_SCHEMA` in `Code.gs` is an explicit allowlist. Columns must remain in the order
+`COLUMN_SCHEMA` in `BulletinApi.gs` is an explicit allowlist. Columns must remain in the order
 below because the two repeated headers are disambiguated by occurrence: the first
 `Chair/Pastoral Prayer` and `Offering Prayer` belong to Queens; the second pair belongs to
 Brooklyn.
@@ -325,7 +341,7 @@ official church workflow. A fork or independently deployed copy must replace
 `technology@nyccsda.org` with its own developer/administrator group and document that local
 ownership policy rather than requesting access to the NYCCSDA group.
 
-If a fork uses different sheet-tab names, update `CONFIG.responseSheets` in `Code.gs` and
+If a fork uses different sheet-tab names, update `CONFIG.responseSheets` in `BulletinApi.gs` and
 the local documentation together.
 
 ## Name privacy
@@ -365,6 +381,78 @@ Additional value rules:
   while its schedule assignments can still be displayed.
 - A missing yearly schedule row is a request error because the bulletin has no canonical
   roster record for that date.
+
+## Physical Google Doc output
+
+`PhysicalBulletin.gs` is an additional source file in the **same spreadsheet-bound Apps
+Script project** as `BulletinApi.gs`; it is not a second backend or deployment. It reads the
+spreadsheet directly through the shared `buildBulletin_` function with full names enabled.
+The public `doGet` path continues to use the privacy-filtered default, so full names never
+enter the public JSON API.
+
+After saving both files in the bound Apps Script project, reload the spreadsheet and use
+**Physical Bulletin → Create Google Doc…**. Enter the Sabbath date and choose `regular`,
+`communion`, or leave the format blank to detect `Communion`/`Foot Washing` from
+`Special Remark`. The function creates or updates the Google Doc for that date and also
+creates or replaces a PDF export for printing. It returns the URLs for both. It requires
+the staff member running it to authorize Google Docs and Drive access; the function is
+never called by the anonymous web-app endpoint.
+
+To generate or refresh either document after a form submission, choose **Physical Bulletin
+→ Install form auto-generation** once. This creates one authorized spreadsheet **On form
+submit** trigger. The handler identifies the source response tab, routes Queens and
+Brooklyn to their respective layouts, and rebuilds the merged bulletin for the submitted
+Sabbath. Multiple submissions and corrections for one location/date update the same
+document, identified by private Script Properties, instead of creating duplicates. A
+Queens trigger installed by an older version continues to work because the legacy handler
+name is retained. The trigger is not created merely by deployment because Google requires
+an authorized staff member to approve it.
+
+The generated document uses landscape US Letter pages with two vertical panels per sheet.
+Queens regular bulletins use four panels—announcements/schedule, cover, church at study,
+and church at worship. Brooklyn regular bulletins use four panels—Sabbath School, worship,
+the meetings schedule, and the fellowship cover/contact block. Communion adds four
+ceremony panels to the selected location's regular layout.
+
+The Queens template uses English and Traditional Chinese labels. The Brooklyn template
+follows the supplied two-page landscape reference: Sabbath School, worship, the rotating
+Today/Next Sabbath names table, online study times, and the fellowship contact/cover block.
+The long `TESTIMONIES OF SABBATH` reading is intentionally omitted; the `Testimonies` row
+in the rotating names table remains. Bilingual hymns and sermon titles are printed on
+separate lines, while names and other submitted Chinese content remain exactly as entered
+in the Forms/Sheets data.
+
+The regular Queens and Brooklyn covers use `churchsketch.png`; communion covers use
+`lastsupper.png`. The current file IDs are configured as defaults in `PhysicalBulletin.gs`.
+If either image is replaced, set these Script Properties to the new Drive file IDs:
+`CHURCH_SKETCH_IMAGE_FILE_ID` and `LAST_SUPPER_IMAGE_FILE_ID`. The files only need to be
+accessible to the account running the trigger; they do not need to be public. If an image
+is unavailable, the generated cover uses a text fallback and the rest of the layout is
+unchanged.
+
+Physical person names are enriched from the `Name Dictionary` sheet when it exists. The
+header row is `English Name | Chinese Name`, and data begins on row 2. A matched English
+name prints English plus Chinese; a matched Chinese name prints English plus Chinese in
+the same order. If either side is missing or unmatched, only the source name is printed.
+This lookup is used only by the private physical generator and is never added to the
+public API response.
+
+For a folded handout, print landscape, double-sided, with the printer set to flip on the
+short edge, then fold at the center. The generator currently includes the fields already
+available to the digital bulletin: schedule assignments, hymns, sermon title/speaker,
+Bible references, offering purpose, and special remark. The existing Sheets/API contract
+does not contain free-form announcement text, Sabbath School lesson/hymn fields, or full
+Scripture passages, so those are not invented by the generator. Add such fields to the
+allowlisted sheet/form schema before trying to print them.
+
+Generated documents default to the shared Drive folder configured in `PhysicalBulletin.gs`.
+To replace that destination, add a Script Property named `PHYSICAL_BULLETIN_FOLDER_ID`
+containing another folder's ID. The account running the manual action or installed
+trigger must have permission to create and move files there. A manual run or form
+submission updates the existing Google Doc for that location/date and creates a
+replacement PDF when one has already been created; the previous PDF is moved to Trash. An
+invalid or deleted saved document ID causes a replacement to be created. This means a
+Queens and Brooklyn submission for the same Sabbath produce two distinct output pairs.
 
 ## PWA presentation
 
@@ -506,14 +594,16 @@ forms:
 | --- | --- | --- |
 | Correct a cell value or submit a replacement form response | None | None; next request reads the new value |
 | Add a new yearly `YYYY Sabbath` tab with the existing schema | Documentation only if conventions change | None; test the first date |
+| Change the physical Google Doc layout or ceremony copy | `PhysicalBulletin.gs`, Apps Script tests, and this section when operation changes | New version of the same Apps Script project; no new web-app URL |
+| Add a physical-bulletin data field | `BulletinApi.gs` allowlist, `PhysicalBulletin.gs`, tests, and the sheet/form contract | New version of the same Apps Script project |
 | Rename a response tab | `CONFIG.responseSheets`, documentation, Apps Script tests | New version of existing Apps Script deployment |
 | Rename/add/reorder a schedule role | `COLUMN_SCHEMA`, TypeScript `BulletinLocation`, UI labels/rendering, tests, mapping table | Apps Script deployment and PWA deployment |
 | Rename/add a Form question used by the PWA | `FORM_RESPONSE_SCHEMA`, TypeScript schema/UI when applicable, tests, mapping table | Apps Script deployment and possibly PWA deployment |
 | Change JSON field names or nesting | Apps Script, `BulletinService.ts`, bulletin UI, tests, example JSON | Apps Script deployment and PWA deployment coordinated together |
-| Create a replacement web-app deployment | `BULLETIN_API_BASE_URL`, `Code.gs` comment, this README | PWA deployment |
+| Create a replacement web-app deployment | `BULLETIN_API_BASE_URL`, `BulletinApi.gs` comment, this README | PWA deployment |
 | Change only bulletin layout/copy | React Native screen and tests | PWA deployment only |
 
-For Apps Script changes, copy the reviewed `Code.gs` into the bound project and edit the
+For Apps Script changes, copy the reviewed `.gs` files into the bound project and edit the
 existing deployment to use a **New version**; this preserves the `/exec` URL. Creating a
 brand-new deployment changes the URL and requires a PWA update. For PWA changes, run the
 full project check before publishing.
@@ -554,15 +644,17 @@ concurrency cancels an older in-progress run when a newer commit supersedes it. 
 and name privacy without depending on whether next week's form has been submitted. This
 workflow never opens the PWA page and never writes to Forms or Sheets.
 
-Because a pull request cannot deploy its proposed `Code.gs` safely, this live check verifies
+Because a pull request cannot deploy its proposed `BulletinApi.gs` safely, this live check verifies
 the PR's PWA contract against the currently deployed production Apps Script. Changes to
-`Code.gs` still require the local/unit checks, review of the mapping tables, deployment as
+`BulletinApi.gs` still require the local/unit checks, review of the mapping tables, deployment as
 a new version, and a post-deployment integration run.
 
 ## Deploy
 
 1. In the spreadsheet, open **Extensions → Apps Script**.
-2. Copy `Code.gs` into the editor and use the settings from `appsscript.json`.
+2. Copy both `BulletinApi.gs` and `PhysicalBulletin.gs` into the editor. Apps Script treats
+   multiple `.gs` files in one project as one script, so they deploy together. Use the
+   settings from `appsscript.json`.
 3. Select **Deploy → New deployment → Web app**.
 4. Set **Execute as** to the deploying account.
 5. Set **Who has access** to **Anyone**, including anonymous users. A public PWA cannot
@@ -582,7 +674,8 @@ a new version, and a post-deployment integration run.
    ```
 
 9. Each Apps Script code change requires a new deployment version. Re-test the `/exec`
-   URL after updating the deployment.
+   URL after updating the deployment. The physical bulletin menu is available after
+   reloading the bound spreadsheet and authorizing the new Docs/Drive permissions.
 
 The current production deployment is:
 
