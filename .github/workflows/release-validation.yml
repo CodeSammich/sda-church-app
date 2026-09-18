@@ -22,6 +22,12 @@ jobs:
     outputs:
       version: ${{ steps.release-version.outputs.version }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
       - name: Validate PR release version
         id: release-version
         env:
@@ -33,29 +39,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$PR_TITLE" =~ ^Release/([0-9]+\.[0-9]+\.[0-9]+)(:|[[:space:]]|$) ]]; then
-            VERSION="${BASH_REMATCH[1]}"
-          else
-            echo "::error title=Invalid PR title::PR title must use Release/<major.minor.patch> (for example: Release/1.2.3: Describe the changes)."
-            exit 1
-          fi
-
-          if [[ "$BASE_REF" =~ ^release/([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            BASE_VERSION="${BASH_REMATCH[1]}"
-            if [[ "$VERSION" != "$BASE_VERSION" ]]; then
-              echo "::error title=Release version mismatch::PR title version $VERSION must match destination branch release/$BASE_VERSION."
-              exit 1
-            fi
-          fi
-
-          if [[ "$HEAD_REPOSITORY" == "$REPOSITORY" ]] &&
-            [[ "$HEAD_REF" =~ ^release/([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            HEAD_VERSION="${BASH_REMATCH[1]}"
-            if [[ "$VERSION" != "$HEAD_VERSION" ]]; then
-              echo "::error title=Release version mismatch::PR title version $VERSION must match source branch release/$HEAD_VERSION."
-              exit 1
-            fi
-          fi
+          VERSION="$(node scripts/release-version-policy.cjs)"
 
           echo "Validated release version $VERSION from PR title."
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"

@@ -1,11 +1,13 @@
 <!--
-Required PR title format: Release/<major.minor.patch>: Describe the changes
-Example: Release/1.2.3: Improve Sabbath School navigation
+Required PR title format: Release/<major.minor>.<patch-or-x>: Describe the changes
+Examples: Release/1.2.3: Improve Sabbath School navigation
+          Release/1.2.x: Prepare the 1.2 release line
 
-Release CI rejects titles that do not begin with `Release/<major.minor.patch>`.
-If the destination branch is named release/x.y.z, the title must use that exact
-version. Otherwise, use the intended release version. Release CI uses the title
-as the source of truth and synchronizes all version files.
+Release CI accepts either a concrete patch or the `x` patch wildcard. If the title
+uses `Release/x.y.x`, CI takes the concrete patch from the checked-in `package.json`.
+The title and any applicable `release/x.y.(patch|x)` branch must use the same major
+and minor release line; their patch values may differ. Release CI synchronizes all
+version files to the concrete version it validates.
 -->
 
 ## Description
