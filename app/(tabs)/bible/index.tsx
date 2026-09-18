@@ -45,7 +45,6 @@ import {
   useBibleAudioPlayerStatus,
 } from '@/services/BibleAudioPlayer';
 import {
-  activateBibleAudioLockScreen,
   buildBibleAudioQueue,
   shouldStopBibleAudioAtChapterEnd,
   type BibleAudioSleepTimerSetting,
@@ -54,6 +53,7 @@ import {
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getOrderedBibleAudioReaders,
+  initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
 import type { BibleAudioStatus } from '@/services/BibleAudioPlayer.types';
@@ -1370,37 +1370,34 @@ export default function BibleScreen() {
           : supportedTranslation.name,
         albumTitle: labels.audioPlayer,
       };
-      if (book) {
-        audioPlayer.setCurrentChapter?.({
-          bookId: book.id,
-          chapter: chapterNum,
-          translationId: supportedTranslation.id,
-          source: { uri: audioUrl, name: audioTitle },
-          metadata,
-        });
-      }
-      // Seed the native playlist once. After this, Android owns transitions;
-      // mutating its tail while ExoPlayer changes media items can crash the
-      // native bridge. The web adapter is replenished later by chapter data.
-      try {
-        audioPlayer.setQueue?.(buildUpcomingAudioQueue());
-      } catch (error) {
-        // The current source is already loaded; keep playing if a future-track
-        // descriptor is rejected by the native bridge.
-        console.warn('Bible audio queue seed failed; continuing current track.', error);
-      }
-      // Build the complete initial playlist before Expo creates its Android
-      // lock-screen MediaSession. Creating that session while only the current
-      // item exists leaves Media3 with a stale one-item PlayerInfo snapshot;
-      // when ExoPlayer advances to index 1, the session then crashes with
-      // "Invalid PlayerInfo update ... count=1, new index=1".
-      try {
-        activateBibleAudioLockScreen(audioPlayer, metadata);
-      } catch (error) {
-        // Lock-screen controls are optional. A canary bridge cast failure must
-        // not prevent the recording itself from starting.
-        console.warn('Bible audio lock-screen activation failed; continuing playback.', error);
-      }
+      const currentChapter = book
+        ? {
+            bookId: book.id,
+            chapter: chapterNum,
+            translationId: supportedTranslation.id,
+            source: { uri: audioUrl, name: audioTitle },
+            metadata,
+          }
+        : undefined;
+      // Seed the native playlist once, then publish it to lock-screen controls.
+      // Android's MediaSession must observe the complete initial playlist before
+      // ExoPlayer advances to its first queued chapter.
+      initializeBibleAudioPlayback({
+        player: audioPlayer,
+        currentChapter,
+        queue: buildUpcomingAudioQueue(),
+        metadata,
+        onQueueError: (error) => {
+          // The current source is already loaded; keep playing if a future-track
+          // descriptor is rejected by the native bridge.
+          console.warn('Bible audio queue seed failed; continuing current track.', error);
+        },
+        onLockScreenError: (error) => {
+          // Lock-screen controls are optional. A canary bridge cast failure must
+          // not prevent the recording itself from starting.
+          console.warn('Bible audio lock-screen activation failed; continuing playback.', error);
+        },
+      });
       if (resumePositionMillis > 0) {
         await audioPlayer.seekTo(resumePositionMillis / 1000);
       }
