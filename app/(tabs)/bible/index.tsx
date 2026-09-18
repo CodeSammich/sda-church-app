@@ -1370,13 +1370,6 @@ export default function BibleScreen() {
           : supportedTranslation.name,
         albumTitle: labels.audioPlayer,
       };
-      try {
-        activateBibleAudioLockScreen(audioPlayer, metadata);
-      } catch (error) {
-        // Lock-screen controls are optional. A canary bridge cast failure must
-        // not prevent the recording itself from starting.
-        console.warn('Bible audio lock-screen activation failed; continuing playback.', error);
-      }
       if (book) {
         audioPlayer.setCurrentChapter?.({
           bookId: book.id,
@@ -1395,6 +1388,18 @@ export default function BibleScreen() {
         // The current source is already loaded; keep playing if a future-track
         // descriptor is rejected by the native bridge.
         console.warn('Bible audio queue seed failed; continuing current track.', error);
+      }
+      // Build the complete initial playlist before Expo creates its Android
+      // lock-screen MediaSession. Creating that session while only the current
+      // item exists leaves Media3 with a stale one-item PlayerInfo snapshot;
+      // when ExoPlayer advances to index 1, the session then crashes with
+      // "Invalid PlayerInfo update ... count=1, new index=1".
+      try {
+        activateBibleAudioLockScreen(audioPlayer, metadata);
+      } catch (error) {
+        // Lock-screen controls are optional. A canary bridge cast failure must
+        // not prevent the recording itself from starting.
+        console.warn('Bible audio lock-screen activation failed; continuing playback.', error);
       }
       if (resumePositionMillis > 0) {
         await audioPlayer.seekTo(resumePositionMillis / 1000);
