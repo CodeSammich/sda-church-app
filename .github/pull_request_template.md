@@ -22,7 +22,7 @@ when that release is merged._
 ## Testing
 
 - [ ] `npm test` — include the suite/test count or explain any failure
-- [ ] `npm run build:web` — when web/PWA or shared app code changes
+- [ ] `npm run build:web` — only when web/PWA behavior is intentionally changed; native-only changes do not require this check
 - [ ] `npm run deploy` — confirms a local build only; use `npm run deploy:dev -- --repo <fork> --site-url <fork-pages-url>` only for an intentional fork preview
 - [ ] `npm run build:android:apk:debug` — when Android/native code changes; this is the local installable APK path and does not use production signing secrets
 - [ ] Signed Android AAB/APK — maintainer-only protected GitHub workflow; never commit or upload the JKS
