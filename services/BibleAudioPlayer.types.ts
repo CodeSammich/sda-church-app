@@ -19,8 +19,8 @@ export interface BibleAudioQueueItem extends BibleAudioChapterIdentity {
 }
 
 export interface BibleAudioQueueControls {
-  // The installed-PWA adapter owns the rolling chapter queue. Native builds use
-  // expo-audio's player unless issue #126 requires a native Android fallback.
+  // Web and Android adapters own chapter queues; iOS uses the single player.
+  setCurrentChapter?: (item: BibleAudioQueueItem) => void;
   setQueue?: (items: BibleAudioQueueItem[]) => void;
   setRemoteChapterHandlers?: (
     handlers?: {
@@ -35,6 +35,7 @@ export type BibleAudioStatus = Pick<
   'currentTime' | 'didJustFinish' | 'duration' | 'isBuffering' | 'playing'
 > & {
   activeChapter?: BibleAudioChapterIdentity;
+  activeSourceUrl?: string;
   error?: string | null;
   interruptionCount?: number;
   isLoaded?: boolean;

@@ -32,21 +32,19 @@ The repository's licensing decisions and third-party source review live in
   - [Offline Bulletin Translation: Bergamot Feasibility](docs/feature_designs/offline_bulletin_translation.md)
 - [Contributing Code](docs/CONTRIBUTING.md)
 
-### Expo 58 canary rollback checklist
+### Expo 58 upgrade checklist
 
-This branch intentionally uses an Expo 58 canary while `doNotMixPersistent` is tested
-for audio issue #205. When Expo 58 becomes an official release, use this checklist
-before merging the canary branch into a release branch:
+This branch uses the Expo 58 preview dependency set while `doNotMixPersistent` is
+tested for audio issue #205. Keep this checklist with the native build until the
+Expo 58 line is fully stable:
 
-1. Replace every `58.0.0-canary-*` dependency in `package.json` and
-   `package-lock.json` with the official Expo 58 versions. Use `npx expo install --fix`
-   and confirm the Expo Doctor-required React Native, Reanimated, and Screens versions.
-2. Remove the explicit `expo-template-bare-minimum@...` prebuild command from the
-   `build:android` and `build:android:apk` scripts. The official `sdk-58` template tag
-   should allow the normal Expo prebuild flow again.
-3. Re-evaluate `.npmrc`. Its `legacy-peer-deps=true` setting exists only because npm's
-   peer resolver is unreliable with this canary dependency graph; remove it if a plain
-   `npm install` succeeds on the official release.
+1. Use `npx expo install --check` and confirm the Expo Doctor-required React Native,
+   Reanimated, and Screens versions after every Expo 58 update.
+2. Keep the explicit `expo-template-bare-minimum` version in the native build scripts
+   synchronized with the installed Expo 58 preview until the SDK tag is stable.
+3. Keep npm's normal peer-dependency resolver enabled. The repository no longer uses
+   a `legacy-peer-deps` override; CI uses an explicit `npm ci --force` only because the
+   preview's React Native release candidate is rejected by older peer ranges.
 4. Review `app.json` carefully. It currently has no canary-only `autolinking` block and
    no custom Android Gradle override. Do not restore either one unless Expo's official
    SDK 58 build specifically requires it. Keep the `expo-audio` plugin and
@@ -56,11 +54,11 @@ before merging the canary branch into a release branch:
    The hidden Home stack and Sabbath School route therefore use a null
    `tabBarButton` plus `display: 'none'` in `app/(tabs)/_layout.tsx`; preserve this
    until the tab architecture is deliberately migrated.
-6. `services/animationFramePolyfill.ts` works around the canary static-renderer
+6. `services/animationFramePolyfill.ts` works around the preview static-renderer
    crash where Expo Router calls `requestAnimationFrame` in Node. Re-test and remove
    it if the official Expo 58 web export no longer needs it.
-7. Run `npm install`, `npx expo-doctor`, `npm run typecheck`, `npm test`, and an Android
-   APK build before removing the canary branch safeguards.
+7. Run `npm ci --force`, `npx expo-doctor`, `npm run typecheck`, `npm test`, and an Android
+   APK build after every SDK dependency update.
 
 ## Project Tenets
 

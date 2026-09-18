@@ -93,7 +93,7 @@ run('npx', [
   'expo',
   'prebuild',
   '--template',
-  'expo-template-bare-minimum@58.0.0-canary-20260902-26df09e',
+  'expo-template-bare-minimum@58.0.3',
   '--platform',
   'android',
   '--clean',

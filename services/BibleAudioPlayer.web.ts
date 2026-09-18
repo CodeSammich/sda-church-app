@@ -198,12 +198,6 @@ class BibleAudioPlayerWeb {
     return Promise.resolve();
   }
 
-  setPlaybackRate(rate: number) {
-    if (this.media) this.media.playbackRate = rate;
-    if (this.standbyMedia) this.standbyMedia.playbackRate = rate;
-    this.updateMediaPosition();
-  }
-
   setActiveForLockScreen(active: boolean, metadata?: AudioMetadata) {
     this.lockScreenActive = active;
     this.metadata = metadata;
