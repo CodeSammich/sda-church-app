@@ -1,7 +1,7 @@
 /**
  * Bulletin API for the SDA Church PWA.
  * Canonical source:
- * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/apps-script/Code.gs
+ * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/google-apps-script/BulletinApi.gs
  *
  * Deployment settings:
  *   Type: Web app
@@ -15,7 +15,7 @@
  */
 
 var CONFIG = Object.freeze({
-  scheduleSheetSuffix: ' Sabbath',
+  scheduleSheetName: 'Sabbath Calendar',
   cacheSeconds: 120,
   cacheVersion: 'v2',
   responseSheets: Object.freeze({
@@ -34,6 +34,8 @@ var COLUMN_SCHEMA = Object.freeze([
   { header: 'Special Remark', path: ['specialRemark'] },
   { header: 'Tithe Purpose', path: ['tithePurpose'] },
   { header: 'Pastor Travel', path: ['pastorTravel'] },
+  { header: 'Announcements', path: ['announcements'] },
+  { header: 'Sunset Time', path: ['sunsetTime'] },
   { header: 'Queens Sermon', path: ['queens', 'sermon'], person: true },
   { header: 'Translation', path: ['queens', 'translation'], person: true },
   { header: 'Chinese Teacher', path: ['queens', 'chineseTeacher'], person: true },
@@ -103,8 +105,34 @@ var FORM_RESPONSE_SCHEMA = Object.freeze([
     path: ['hymnOfResponse', 'chinese'],
   },
   {
-    headers: ['What are the Bible verses for this week?'],
+    headers: [
+      'What are the Bible verses for this week?',
+      'What is the Bible verse for this week?',
+      'Bible Verse',
+      'Bible Verses',
+      'Bible passage',
+      'Scripture reference',
+      'What scripture is being used?',
+      'What is the scripture for this week?',
+      'What verse should appear at the bottom of Church at Study?',
+      'What is the Church at Study Bible verse?',
+      '聖經經文',
+      '本週聖經經文',
+    ],
     path: ['bibleVerses'],
+  },
+  // Announcements remain available to the printed/admin workflow. The mobile
+  // digital bulletin intentionally does not render them: their content and
+  // formatting are fluid, and they are already delivered in person and on the
+  // livestream. A future digital announcement must be an explicitly curated,
+  // short summary rather than an automatic mirror of this field.
+  {
+    headers: [
+      'Announcements',
+      'Announcement',
+      'What announcements should appear in the bulletin?',
+    ],
+    path: ['announcements'],
   },
 ]);
 
@@ -136,7 +164,7 @@ function getBulletin_(requestedDate) {
   return bulletin;
 }
 
-function buildBulletin_(requestedDate) {
+function buildBulletin_(requestedDate, options) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var scheduleSheetName = getScheduleSheetName_(requestedDate);
   var scheduleSheet = spreadsheet.getSheetByName(scheduleSheetName);
@@ -158,6 +186,8 @@ function buildBulletin_(requestedDate) {
     specialRemark: '',
     tithePurpose: '',
     pastorTravel: '',
+    announcements: '',
+    sunsetTime: '',
     queens: createLocation_(),
     brooklyn: createLocation_(),
   };
@@ -180,7 +210,7 @@ function buildBulletin_(requestedDate) {
     );
     var value = scheduleValue;
 
-    if (field.person) {
+    if (field.person && !(options && options.includeFullNames)) {
       value = redactNameValue_(value);
     } else {
       value = displayValue_(value);
@@ -188,6 +218,16 @@ function buildBulletin_(requestedDate) {
 
     setPath_(bulletin, field.path, value);
   });
+
+  // These optional Brooklyn fields are used by the staff-only physical
+  // renderer. They are intentionally not added to the public API object.
+  if (options && options.includeFullNames) {
+    populateOptionalBrooklynScheduleFields_(
+      bulletin.brooklyn,
+      scheduleTable.headers,
+      scheduleRow,
+    );
+  }
 
   populateFormResponses_(
     bulletin.queens,
@@ -201,8 +241,38 @@ function buildBulletin_(requestedDate) {
   return bulletin;
 }
 
+function populateOptionalBrooklynScheduleFields_(location, headers, row) {
+  [
+    {
+      aliases: ['Brooklyn Chair', 'Brooklyn Chairman', 'Chair', 'Chairman'],
+      path: ['chair'],
+    },
+    { aliases: ['Brooklyn Song Leader', 'Song Leader'], path: ['songLeader'] },
+    {
+      aliases: ['Brooklyn Sabbath Message', 'Sabbath Message'],
+      path: ['sabbathMessage'],
+    },
+    {
+      aliases: ['Brooklyn Sabbath Message Title', 'Sabbath Message Title'],
+      path: ['sabbathMessageTitle'],
+    },
+    { aliases: ['Brooklyn Technician', 'Technician'], path: ['technician'] },
+    { aliases: ['Brooklyn Testimonies', 'Testimonies'], path: ['testimonies'] },
+    {
+      aliases: ['Brooklyn Sunset Time', 'Brooklyn Sunset Times', 'Sunset Time', 'Sunset Times'],
+      path: ['sunsetTime'],
+    },
+  ].forEach(function (field) {
+    var value = valueForAliases_(headers, row, field.aliases);
+    if (isBlank_(value)) {
+      return;
+    }
+    setPath_(location, field.path, displayValue_(value));
+  });
+}
+
 function getScheduleSheetName_(requestedDate) {
-  return requestedDate.slice(0, 4) + CONFIG.scheduleSheetSuffix;
+  return CONFIG.scheduleSheetName;
 }
 
 function createLocation_() {
@@ -211,6 +281,7 @@ function createLocation_() {
     sermonTitle: { english: '', chinese: '' },
     hymnOfResponse: { english: '', chinese: '' },
     bibleVerses: '',
+    announcements: '',
   };
 }
 
@@ -223,7 +294,10 @@ function populateFormResponses_(location, responseRows) {
   // can contribute different fields, while the latest answer wins a conflict.
   responseRows.rows.forEach(function (row) {
     FORM_RESPONSE_SCHEMA.forEach(function (field) {
-      var value = valueForAliases_(responseRows.headers, row, field.headers);
+      var value =
+        field.path.length === 1 && field.path[0] === 'bibleVerses'
+          ? valueForBibleVerse_(responseRows.headers, row, field.headers)
+          : valueForAliases_(responseRows.headers, row, field.headers);
       if (!isBlank_(value)) {
         setPath_(location, field.path, displayValue_(value));
       }
@@ -356,6 +430,30 @@ function valueForHeader_(headers, row, expectedHeader, occurrence) {
 function valueForAliases_(headers, row, aliases) {
   var index = findFirstHeaderIndex_(headers, aliases);
   return index === -1 ? '' : row[index];
+}
+
+function valueForBibleVerse_(headers, row, aliases) {
+  var value = valueForAliases_(headers, row, aliases);
+  if (!isBlank_(value)) {
+    return value;
+  }
+
+  // Form titles can drift slightly between the Queens and Brooklyn forms.
+  // Keep the explicit aliases above as the contract, then recognize the
+  // narrow family of Bible-verse/scripture headers without accidentally
+  // treating a general Bible-reading question as the sermon verse.
+  for (var index = 0; index < headers.length; index += 1) {
+    var normalizedHeader = normalizeHeader_(headers[index]);
+    if (
+      /(bible\s+(verse|verses|passage)|(?:verse|verses)\s+(reference|for this week)|scripture\s+(reference|for this week)|church at study.*verse|聖經.*經文|經文.*聖經)/i.test(
+        normalizedHeader,
+      )
+    ) {
+      return row[index];
+    }
+  }
+
+  return '';
 }
 
 function findFirstHeaderIndex_(headers, candidates) {

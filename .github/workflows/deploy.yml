@@ -28,7 +28,7 @@ jobs:
       # Keep npm lifecycle scripts away from any write-capable GitHub token.
       # The checkout above deliberately does not persist credentials in .git/config.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --force
 
       - name: Validate, tag package version, and deploy
         env:

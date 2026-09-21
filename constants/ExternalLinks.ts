@@ -47,7 +47,7 @@ export const getSunsetApiUrl = (lat: number, lng: number, date: string) =>
  * returns privacy-filtered JSON.
  *
  * Architecture, deployment, privacy, and verification documentation:
- * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/apps-script/README.md
+ * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/google-apps-script/README.md
  */
 export const BULLETIN_API_BASE_URL =
   'https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec';

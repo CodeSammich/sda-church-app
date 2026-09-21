@@ -28,15 +28,19 @@ export default function GiveScreen() {
       zelleLabel: 'Direct Bank Transfer',
       zelleTitle: 'Zelle',
       zelleDesc:
-        'Electronic transfers via Zelle are currently being established. Please check back soon for the official church handle.',
-      zelleButton: 'Zelle (TBD)',
+        'Send your Zelle donation to zelle@nyccsda.org.',
       onlineSection: 'Online Portal',
       onlineLabel: 'Official Platform',
-      onlineTitle: 'AdventistGiving',
+      onlineTitle: 'Online Giving',
       onlineDesc:
-        'AdventistGiving allows you to return your tithe and give your offerings online while you are at home or on the go. This button opens an external website; payment details are entered there, not in this app.',
-      onlineButton: 'AdventistGiving',
+        'Our online giving portal lets you return tithe and give offerings by ACH bank transfer or by credit/debit card from home or on the go. Payment details are entered on the external website, not in this app.',
+      onlineButton: 'Give Online',
       externalNote: 'External donation portal',
+      dafSection: 'Donor-Advised Fund',
+      dafLabel: 'Fidelity Charitable',
+      dafTitle: 'Stocks/Equities',
+      dafDesc:
+        'We prefer Fidelity Charitable. For Charles Schwab Charitable, Vanguard Charitable, or another charitable sponsor or brokerage, please contact church staff in advance. If you already know how to recommend a grant, direct it to New York Chinese Seventh-day Adventist Church using EIN 11-3004814.',
       quote:
         'Bring the full tithe into the storehouse, so that there may be food in My house. Test Me in this,” says the Lord of Hosts. “See if I will not open the windows of heaven and pour out for you blessing without measure.',
       quoteRef: 'Malachi 3:10 (BSB)',
@@ -53,15 +57,19 @@ export default function GiveScreen() {
       zelleSection: '電子轉賬',
       zelleLabel: '直接銀行轉賬',
       zelleTitle: 'Zelle',
-      zelleDesc: 'Zelle 電子轉賬正在建立中。請稍後查看教會賬號。',
-      zelleButton: 'Zelle (待定)',
+      zelleDesc: '請將 Zelle 奉獻發送至 zelle@nyccsda.org。',
       onlineSection: '網上平台',
       onlineLabel: '官方平台',
-      onlineTitle: 'AdventistGiving',
+      onlineTitle: '網上奉獻',
       onlineDesc:
-        'AdventistGiving 讓您無論是在家或在外，都能在線歸還什一奉獻並進行捐款。此按鈕會開啟外部網站；您將在該網站輸入付款資料，而不是在本應用程式中輸入。',
-      onlineButton: 'AdventistGiving',
+        '我們的網上奉獻平台讓您可以在家中或外出時，透過 ACH 銀行轉賬或信用卡／扣賬卡歸還什一奉獻及進行其他奉獻。付款資料會在外部網站輸入，而不是在本應用程式中輸入。',
+      onlineButton: '網上奉獻',
       externalNote: '外部捐款平台',
+      dafSection: '捐贈者建議基金',
+      dafLabel: 'Fidelity Charitable',
+      dafTitle: '股票／證券',
+      dafDesc:
+        '本教會較偏好使用 Fidelity Charitable。如要使用 Charles Schwab Charitable、Vanguard Charitable 或其他慈善贊助機構或券商，請提前聯絡教會同工。如您已知道如何建議撥款，請將撥款指定給紐約華人基督復臨安息日會，並使用 EIN 11-3004814。',
       quote:
         '萬軍之耶和華說：你們要將當納的十分之一全然送入倉庫，使我家有糧，以此試試我，是否為你們敞開天上的窗戶，傾福與你們，甚至無處可容。',
       quoteRef: '瑪拉基書 3:10 (CUV)',
@@ -78,15 +86,19 @@ export default function GiveScreen() {
       zelleSection: '电子转账',
       zelleLabel: '直接银行转账',
       zelleTitle: 'Zelle',
-      zelleDesc: 'Zelle 电子转账正在建立中。请稍后查看教会账号。',
-      zelleButton: 'Zelle (待定)',
+      zelleDesc: '请将 Zelle 奉献发送至 zelle@nyccsda.org。',
       onlineSection: '网上平台',
       onlineLabel: '官方平台',
-      onlineTitle: 'AdventistGiving',
+      onlineTitle: '网上奉献',
       onlineDesc:
-        'AdventistGiving 让您无论是在家或在外，都能在线归还什一奉献并进行捐款。此按钮会打开外部网站；您将在该网站输入付款资料，而不是在本应用中输入。',
-      onlineButton: 'AdventistGiving',
+        '我们的网上奉献平台让您可以在家中或外出时，通过 ACH 银行转账或信用卡／借记卡归还什一奉献及进行其他奉献。付款资料会在外部网站输入，而不是在本应用程序中输入。',
+      onlineButton: '网上奉献',
       externalNote: '外部捐款平台',
+      dafSection: '捐赠者建议基金',
+      dafLabel: 'Fidelity Charitable',
+      dafTitle: '股票／证券',
+      dafDesc:
+        '本教会更倾向使用 Fidelity Charitable。如要使用 Charles Schwab Charitable、Vanguard Charitable 或其他慈善赞助机构或券商，请提前联系教会同工。如您已知道如何建议拨款，请将拨款指定给纽约华人基督复临安息日会，并使用 EIN 11-3004814。',
       quote:
         '万军之耶和华说：你们要将当纳的十分之一全然送入仓库，使我家有粮，以此试试我，是否为你们敞开天上的窗户，倾福与你们，甚至无处可容。',
       quoteRef: '玛拉基书 3:10 (CUVS)',
@@ -104,15 +116,19 @@ export default function GiveScreen() {
       zelleLabel: 'Transferencia Directa',
       zelleTitle: 'Zelle',
       zelleDesc:
-        'Las transferencias electrónicas a través de Zelle se están estableciendo actualmente. Vuelva pronto para ver el identificador.',
-      zelleButton: 'Zelle (TBD)',
+        'Envíe su donación por Zelle a zelle@nyccsda.org.',
       onlineSection: 'Portal en Línea',
       onlineLabel: 'Plataforma Oficial',
-      onlineTitle: 'AdventistGiving',
+      onlineTitle: 'Donaciones en línea',
       onlineDesc:
-        'AdventistGiving le permite devolver su diezmo y dar sus ofrendas en línea mientras está en casa o fuera. Este botón abre un sitio web externo; los datos de pago se introducen allí, no en esta aplicación.',
-      onlineButton: 'AdventistGiving',
+        'Nuestro portal de donaciones en línea le permite devolver el diezmo y hacer ofrendas mediante transferencia bancaria ACH o tarjeta de crédito/débito desde casa o mientras está fuera. Los datos de pago se introducen en el sitio web externo, no en esta aplicación.',
+      onlineButton: 'Donar en línea',
       externalNote: 'Portal externo de donaciones',
+      dafSection: 'Fondo asesorado por donantes',
+      dafLabel: 'Fidelity Charitable',
+      dafTitle: 'Acciones/Valores',
+      dafDesc:
+        'Preferimos Fidelity Charitable. Para Charles Schwab Charitable, Vanguard Charitable u otra organización patrocinadora o casa de corretaje, comuníquese con el personal de la iglesia con anticipación. Si ya sabe cómo recomendar una donación, diríjala a New York Chinese Seventh-day Adventist Church usando el EIN 11-3004814.',
       quote:
         'Traed todos los diezmos al alfolí, y haya alimento en mi casa; y probadme ahora en esto, dice Jehová de los ejércitos, si no os abriré las ventanas de los cielos, y vaciaré sobre vosotros bendición hasta que sobreabunde.',
       quoteRef: 'Malaquías 3:10 (RVR1960)',
@@ -251,17 +267,47 @@ export default function GiveScreen() {
                 {labels.zelleDesc}
               </Text>
             </Card.Content>
-            <Card.Actions>
-              <Button
-                mode="contained"
-                icon="bank-transfer"
-                disabled
-                buttonColor={theme.colors.surfaceVariant}
-                textColor={theme.colors.onSurfaceVariant}
+          </Card>
+        </View>
+
+        <View style={DocumentStyles.section}>
+          <Text
+            variant="titleLarge"
+            style={[
+              DocumentStyles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                borderBottomColor: theme.colors.outlineVariant,
+              },
+            ]}
+          >
+            {labels.dafSection}
+          </Text>
+          <Card style={[DocumentStyles.card, DocumentStyles.orgCard]} mode="outlined">
+            <Card.Content>
+              <Text
+                variant="labelMedium"
+                style={{ color: theme.colors.onSurfaceVariant }}
               >
-                {labels.zelleButton}
-              </Button>
-            </Card.Actions>
+                {labels.dafLabel}
+              </Text>
+              <Text
+                variant="titleLarge"
+                style={[DocumentStyles.orgName, { color: theme.colors.onSurface }]}
+              >
+                {labels.dafTitle}
+              </Text>
+              <Text
+                style={[
+                  DocumentStyles.description,
+                  DocumentStyles.orgDesc,
+                  { color: theme.colors.onSurface },
+                ]}
+                variant="bodyMedium"
+              >
+                {labels.dafDesc}
+              </Text>
+            </Card.Content>
           </Card>
         </View>
 

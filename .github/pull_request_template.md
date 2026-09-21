@@ -1,11 +1,13 @@
 <!--
-Required PR title format: Release/<major.minor.patch>: Describe the changes
-Example: Release/1.2.3: Improve Sabbath School navigation
+Required PR title format: Release/<major.minor>.<patch-or-x>: Describe the changes
+Examples: Release/1.2.3: Improve Sabbath School navigation
+          Release/1.2.x: Prepare the 1.2 release line
 
-Release CI rejects titles that do not begin with `Release/<major.minor.patch>`.
-If the destination branch is named release/x.y.z, the title must use that exact
-version. Otherwise, use the intended release version. Release CI uses the title
-as the source of truth and synchronizes all version files.
+Release CI accepts either a concrete patch or the `x` patch wildcard. If the title
+uses `Release/x.y.x`, CI takes the concrete patch from the checked-in `package.json`.
+The title and any applicable `release/x.y.(patch|x)` branch must use the same major
+and minor release line; their patch values may differ. Release CI synchronizes all
+version files to the concrete version it validates.
 -->
 
 ## Description
@@ -22,7 +24,7 @@ when that release is merged._
 ## Testing
 
 - [ ] `npm test` — include the suite/test count or explain any failure
-- [ ] `npm run build:web` — when web/PWA or shared app code changes
+- [ ] `npm run build:web` — only when web/PWA behavior is intentionally changed; native-only changes do not require this check
 - [ ] `npm run deploy` — confirms a local build only; use `npm run deploy:dev -- --repo <fork> --site-url <fork-pages-url>` only for an intentional fork preview
 - [ ] `npm run build:android:apk:debug` — when Android/native code changes; this is the local installable APK path and does not use production signing secrets
 - [ ] Signed Android AAB/APK — maintainer-only protected GitHub workflow; never commit or upload the JKS
@@ -32,7 +34,7 @@ Target toolchains must satisfy the current store requirements and remain compati
 with the pinned Expo/React Native toolchain. The versions below are a human-maintained
 checklist snapshot, not an automated version source:
 
-- [ ] Android is tested/buildable with target API 36 and the current required compile SDK (this app currently needs compile API 37 for its Expo canary); verify the available platform against the [official Android platform releases](https://developer.android.com/tools/releases/platforms) and verify the [current Google Play target API requirement](https://developer.android.com/google/play/requirements/target-sdk). Confirm compile SDK, build tools, AGP, Gradle, JDK, and NDK compatibility.
+- [ ] Android is tested/buildable with target API 36 and the current required compile SDK (this app currently needs compile API 37 for its Expo 58 preview); verify the available platform against the [official Android platform releases](https://developer.android.com/tools/releases/platforms) and verify the [current Google Play target API requirement](https://developer.android.com/google/play/requirements/target-sdk). Confirm compile SDK, build tools, AGP, Gradle, JDK, and NDK compatibility.
 - [ ] iOS is tested/buildable with Xcode 26.3 / iOS 26.3 SDK; verify the supported pairing against Apple's [Xcode system requirements](https://developer.apple.com/xcode/system-requirements/) and the [current App Store Connect submission requirements](https://developer.apple.com/app-store/submitting/). Confirm compatibility with Expo/React Native/CocoaPods.
 - [ ] A maintainer manually reviews and updates the Android API and Xcode/iOS SDK snapshots above when Google or Apple changes its requirements; do not automate this checklist update.
 - [ ] Any intentional version lag is documented

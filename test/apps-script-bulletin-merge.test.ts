@@ -22,7 +22,7 @@ describe('Apps Script bulletin response merging', () => {
   it('maps the Sabbath School opening prayer under its explicit API field', () => {
     const context = createContext({});
     runInContext(
-      readFileSync(join(process.cwd(), 'apps-script/Code.gs'), 'utf8'),
+      readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8'),
       context,
     );
 
@@ -77,7 +77,7 @@ describe('Apps Script bulletin response merging', () => {
     };
     const context = createContext({ testSpreadsheet: spreadsheet });
     runInContext(
-      readFileSync(join(process.cwd(), 'apps-script/Code.gs'), 'utf8'),
+      readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8'),
       context,
     );
 

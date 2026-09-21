@@ -230,19 +230,18 @@ build, not a `package.json` edit. Pinning the runner (the current workflow uses
 deliberate update when GitHub retires that image. The direct workflows keep build
 orchestration visible in this repository and avoid another credential boundary.
 
-## Expo 58 canary Android prebuild
+## Expo 58 Android prebuild
 
-This branch uses the Expo 58 canary. Until the SDK 58 template is published under
-the `sdk-58` npm tag, automatic prebuild can fail while resolving
-`expo-template-bare-minimum@sdk-58`. Generate the Android project with the exact
-canary template instead:
+This branch uses the Expo 58 preview SDK and its matching stable template package.
+Generate the Android project with the exact template version used by the build
+script:
 
 ```sh
 source ~/.nvm/nvm.sh
 nvm use 24
-npm install
+npm install --force
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.0-canary-20260902-26df09e \
+  --template expo-template-bare-minimum@58.0.3 \
   --platform android
 ```
 
@@ -252,7 +251,7 @@ from this template. Do not hand-edit `android/`; put durable changes in
 
 ```sh
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.0-canary-20260902-26df09e \
+  --template expo-template-bare-minimum@58.0.3 \
   --platform android \
   --no-install
 ```
@@ -260,8 +259,8 @@ npx expo prebuild \
 Then use `npm run build:android`, `npm run build:android:apk`, or
 `npm run build:android:apk:debug`; those scripts run the prebuild automatically.
 
-If the canary version changes, update the template version in this section to the
-matching `expo` canary before regenerating native files.
+If the Expo 58 preview version changes, update the template version in this section
+to the matching template before regenerating native files.
 
 ## Building an independent fork
 
@@ -404,7 +403,10 @@ Managed Apple Accounts through Apple Business Manager, Apple says Account
 Holder-role changes may require contacting Apple, so document the relationship
 and do not make the account dependent on one employee's personal Apple Account.
 
-1. Install dependencies with `npm ci`. Use Node 22 for parity with native CI.
+1. Install dependencies with `npm ci --force`. Expo 58 preview currently pairs a
+   React Native release candidate with peer ranges that exclude prereleases; remove
+   `--force` when the SDK publishes a stable React Native dependency graph. Use Node
+   22 for parity with native CI.
 2. Confirm `org.nyccsda.app` is the intended identifier in both stores. Configure
    the organization's Apple Developer/App Store Connect and Google Play accounts.
 3. Decide the credential source before the first store build. This project uses
@@ -624,7 +626,7 @@ For ordinary local smoke testing, use the debug-signed APK. It does not need
 the production upload keystore or any signing secrets:
 
 ```sh
-npm ci
+npm ci --force
 npm run build:android:apk:debug -- --output /tmp/nyccsda-local-preview.apk
 ```
 
@@ -642,7 +644,7 @@ export ANDROID_KEYSTORE_PASSWORD='paste-only-in-your-terminal'
 export ANDROID_KEY_ALIAS='nyccsda-upload'
 export ANDROID_KEY_PASSWORD='paste-only-in-your-terminal'
 
-npm ci
+npm ci --force
 npm run build:android:apk -- --output /tmp/nyccsda-preview.apk
 npm run build:android -- --output /tmp/nyccsda-release.aab
 
@@ -735,7 +737,7 @@ iOS distribution is not TestFlight.
 
 Local iOS builds require macOS, Xcode with command-line tools, and CocoaPods. Local Android builds require macOS or Linux, Java 17, Android SDK/NDK
 and accepted SDK licenses; install Android Studio and the SDK tooling required by
-the Expo 58 canary dependency set. Configure `ANDROID_HOME` and the Android
+the Expo 58 preview dependency set. Configure `ANDROID_HOME` and the Android
 command-line tools on PATH.
 Direct Android and iOS compilation require network access for npm dependencies,
 the Expo template, and CocoaPods, but not Expo authentication. They are not
@@ -780,7 +782,7 @@ Keep generated `ios/` and `android/` projects out of Git and express native
 configuration through Expo config/plugins. SDK upgrades require checking
 Node/Java/Xcode/Android tooling and revalidating physical-device behavior. The app
 explicitly pins Android compile API 37, target API 36, and build tools 37.0.0 through
-`expo-build-properties`. This split is intentional: the Expo canary's native AARs
+`expo-build-properties`. This split is intentional: the Expo preview's native AARs
 require compile API 37, while Google Play currently requires new apps and updates to
 target API 36 from August 31, 2026. Android's compile SDK and target SDK are separate;
 compiling against API 37 does not opt the app into API 37 runtime behavior. The

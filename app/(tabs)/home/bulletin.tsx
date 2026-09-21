@@ -76,7 +76,8 @@ const LABELS = {
     churchStaffOnly: 'Church staff only',
     sermonSpeaker: 'Sermon Speaker & Admin',
     submitBulletinInfo: 'Submit Bulletin Info',
-    sermonSpeakerPasscode: 'Complete the form so the bulletin stays up to date. Ask the IT staff for the passcode if you do not know it.',
+    sermonSpeakerPasscode:
+      'Use the Queens or Brooklyn form below. If the speaker has not submitted this week, an administrator should complete it on their behalf after checking the current bulletin in this app or the corresponding Worship Data sheet. Ask the IT staff for the passcode if you do not know it.',
     metadata: {
       quarter: 'Quarter',
       specialRemark: 'Special Remark',
@@ -141,7 +142,8 @@ const LABELS = {
     churchStaffOnly: '僅限教會同工',
     sermonSpeaker: '講員與管理',
     submitBulletinInfo: '提交週報資料',
-    sermonSpeakerPasscode: '如果不知道密碼，請向 IT 同工詢問。',
+    sermonSpeakerPasscode:
+      '請使用下方的皇后區或布魯克林表單。如果講員本週尚未提交，管理員應先查看本應用程式中的週報或相應的 Worship Data 工作表，再代為填寫。如不知道密碼，請向 IT 同工詢問。',
     metadata: {
       quarter: '季度',
       specialRemark: '特別事項',
@@ -206,7 +208,8 @@ const LABELS = {
     churchStaffOnly: '仅限教会同工',
     sermonSpeaker: '讲员与管理',
     submitBulletinInfo: '提交周报信息',
-    sermonSpeakerPasscode: '如果不知道密码，请向 IT 同工询问。',
+    sermonSpeakerPasscode:
+      '请使用下方的皇后区或布鲁克林表单。如果讲员本周尚未提交，管理员应先查看本应用中的周报或相应的 Worship Data 工作表，再代为填写。如不知道密码，请向 IT 同工询问。',
     metadata: {
       quarter: '季度',
       specialRemark: '特别事项',
@@ -271,7 +274,8 @@ const LABELS = {
     churchStaffOnly: 'Solo personal de la iglesia',
     sermonSpeaker: 'Orador y administración',
     submitBulletinInfo: 'Enviar información del boletín',
-    sermonSpeakerPasscode: 'Si no conoce el código, pídaselo al personal de TI.',
+    sermonSpeakerPasscode:
+      'Use el formulario de Queens o Brooklyn a continuación. Si el orador no lo ha enviado esta semana, un administrador debe completarlo en su nombre después de revisar el boletín actual en esta aplicación o la hoja de Worship Data correspondiente. Pida la contraseña al personal de TI si es necesario.',
     metadata: {
       quarter: 'Trimestre',
       specialRemark: 'Observación Especial',
