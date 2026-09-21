@@ -2320,7 +2320,7 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
     var footerRightCell = footerTable.getCell(0, 1);
     footerLeftCell.clear();
     footerRightCell.clear();
-    footerLeftCell.setPaddingTop(0);
+    footerLeftCell.setPaddingTop(3);
     footerLeftCell.setPaddingBottom(0);
     footerRightCell.setPaddingTop(0);
     footerRightCell.setPaddingBottom(0);
@@ -2584,7 +2584,7 @@ function appendGivingText_(cell) {
   appendCompactCenteredText_(
     cell,
     'Tithes & Offerings | 什一奉獻與自由奉獻',
-    9,
+    10.5,
     true,
   );
   appendHalfSpacer_(cell);
@@ -2594,14 +2594,14 @@ function appendGivingText_(cell) {
       'Cash offerings: for a tax-deductible receipt, use a church envelope and write your name in English.',
       '現金奉獻：如需可扣稅收據，請使用教會奉獻信封並以英文寫上姓名。',
     ),
-    7,
+    8.5,
     false,
   );
   appendHalfSpacer_(cell);
   appendCompactCenteredText_(
     cell,
     'Stocks/equities: for Donor-advised fund information, see the mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
-    6.5,
+    7.5,
     false,
   );
 }
@@ -2642,7 +2642,7 @@ function appendGivingQrPlaceholders_(cell) {
         Logger.log(item.label + ' QR image could not be loaded: ' + error);
       }
     }
-    appendCompactCenteredText_(tableCell, item.label, 6.5, true);
+    appendCompactCenteredText_(tableCell, item.label, 8, true);
   });
 }
 
