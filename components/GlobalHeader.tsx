@@ -260,19 +260,15 @@ export const GlobalHeader = (props: any) => {
     READER_SEARCH_LABELS[language as keyof typeof READER_SEARCH_LABELS] ||
     READER_SEARCH_LABELS.en;
 
-  // Hymnal readers search the complete catalog so a title in either language
-  // can lead directly to the matching edition. Other screens build no results.
+  // Hymnal readers search the complete catalog so a title or number in either
+  // language can lead directly to the matching edition. This also gives the
+  // cross-language number mapping access to both sides of the result pair.
   const searchableItems = useMemo(
     () => {
       if (!isHymnalSearchPage) return [];
-      const items = getHymnalSearchItems(language);
-      return isHymnalPage
-        ? items.filter(
-            (item) => item.route.split('?')[0] === activeHymnalRoute,
-          )
-        : items;
+      return getHymnalSearchItems(language);
     },
-    [activeHymnalRoute, isHymnalPage, isHymnalSearchPage, language],
+    [isHymnalSearchPage, language],
   );
 
   const filtered = useMemo(
@@ -287,9 +283,7 @@ export const GlobalHeader = (props: any) => {
 
   const hymnalResults: HymnalHeaderSearchResult[] = filtered.map((item) => ({
     ...item,
-    subtitle: isHymnalSelectionPage
-      ? `${getHymnalSearchSubtitle(language)} · ${item.hymnalLabel}`
-      : getHymnalSearchSubtitle(language),
+    subtitle: `${getHymnalSearchSubtitle(language)} · ${item.hymnalLabel}`,
   }));
 
   const customResults = useMemo(

@@ -20,6 +20,7 @@ import {
   getSunsetApiUrl,
   openIosPwaInstallGuide,
 } from '@/constants/ExternalLinks';
+import { resolveAmbientIsDark } from '@/constants/AmbientTheme';
 import {
   DEFAULT_LANG,
   LanguageContext,
@@ -234,18 +235,6 @@ const getSystemLanguage = (): SupportedLanguage => {
 
 const needsCjkSystemFont = (language: SupportedLanguage) =>
   language === 'zh' || language === 'zh-cn';
-
-// Use hysteresis so small sensor fluctuations do not flip the entire app
-// between themes while a user is near the boundary between indoor light and
-// darkness. Values are ambient illuminance in lux.
-const AMBIENT_DARK_LUX = 20;
-const AMBIENT_LIGHT_LUX = 80;
-
-const resolveAmbientIsDark = (illuminance: number, previous: boolean) => {
-  if (!Number.isFinite(illuminance)) return previous;
-  if (previous) return illuminance < AMBIENT_LIGHT_LUX;
-  return illuminance <= AMBIENT_DARK_LUX;
-};
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

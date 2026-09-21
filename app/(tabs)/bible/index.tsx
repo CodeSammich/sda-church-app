@@ -2490,6 +2490,11 @@ export default function BibleScreen() {
     const renderText = (text: string, style?: any) => {
       const { leading, core, trailingPunct, trailingSpace } =
         BibleService.segmentText(text);
+      const footnoteUnderlineStyle = {
+        textDecorationLine: 'underline' as const,
+        textDecorationStyle: 'double' as const,
+        textDecorationColor: theme.colors.readerColors.footnoteIndicator,
+      };
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
@@ -2502,10 +2507,7 @@ export default function BibleScreen() {
                 style={[
                   style,
                   isFootnoted
-                    ? {
-                        textDecorationLine: 'underline',
-                        textDecorationColor: theme.colors.readerColors.footnoteIndicator,
-                      }
+                    ? footnoteUnderlineStyle
                     : undefined,
                   isBold && { fontWeight: 'bold' },
                 ]}
@@ -2531,10 +2533,7 @@ export default function BibleScreen() {
           {leading}
           <Text
             style={[
-              {
-                textDecorationLine: 'underline',
-                textDecorationColor: theme.colors.readerColors.footnoteIndicator,
-              },
+              footnoteUnderlineStyle,
               isBold && { fontWeight: 'bold' },
             ]}
           >
@@ -3510,7 +3509,7 @@ export default function BibleScreen() {
                 >
                   <AppIcon
                     pointerEvents="none"
-                    name="tune-variant"
+                    name="volume-high"
                     size={13}
                     textScale={bibleUiTextScale}
                     color={theme.colors.onSurfaceVariant}
