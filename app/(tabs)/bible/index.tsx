@@ -3509,8 +3509,8 @@ export default function BibleScreen() {
                 >
                   <AppIcon
                     pointerEvents="none"
-                    name="volume-high"
-                    size={13}
+                    name="account-voice"
+                    size={24}
                     textScale={bibleUiTextScale}
                     color={theme.colors.onSurfaceVariant}
                   />
