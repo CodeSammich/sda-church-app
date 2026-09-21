@@ -16,6 +16,7 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   lastSupperImageProperty: 'LAST_SUPPER_IMAGE_FILE_ID',
   sdaLogoImageProperty: 'SDA_LOGO_IMAGE_FILE_ID',
   adventistGivingQrImageProperty: 'ADVENTIST_GIVING_QR_IMAGE_FILE_ID',
+  zelleQrImageProperty: 'ZELLE_QR_IMAGE_FILE_ID',
   mobileAppQrImageProperty: 'MOBILE_APP_QR_IMAGE_FILE_ID',
   legacyBrooklynCoverImageProperty: 'BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID',
   queensIntakeFormUrl: 'https://forms.gle/FV7S53eQ1jwt9R7p7',
@@ -27,6 +28,7 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   churchSketchImageFileId: '1ZmxAI0l-689nnz5l1pEtmpNTDquA8_No',
   lastSupperImageFileId: '1ZGPxK1cidxies9jAguiAIPVlk9Vqk-Kd',
   sdaLogoImageFileId: '19NBpTBQZyj2oSYY9qSQOvEkoPFd4M3E5',
+  qrPlaceholderImageFileId: '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
   documentPropertyPrefix: 'PHYSICAL_BULLETIN_DOC_ID_',
   pdfPropertyPrefix: 'PHYSICAL_BULLETIN_PDF_ID_',
   pageWidth: 792,
@@ -2611,7 +2613,7 @@ function appendGivingQrPlaceholders_(cell) {
     { label: printedBilingualText_('Mobile App', '手機應用程式'), kind: 'mobileApp' },
     {
       label: printedBilingualText_('Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'),
-      kind: '',
+      kind: 'zelle',
     },
     {
       label: printedBilingualText_('ACH or credit/debit card', 'ACH 銀行轉賬或信用卡／扣賬卡'),
@@ -2650,11 +2652,13 @@ function getPrintedBulletinQrImageFileId_(kind) {
       ? PRINTED_BULLETIN_CONFIG.adventistGivingQrImageProperty
       : kind === 'mobileApp'
         ? PRINTED_BULLETIN_CONFIG.mobileAppQrImageProperty
-        : '';
-  if (!propertyName) {
-    return '';
-  }
-  return PropertiesService.getScriptProperties().getProperty(propertyName) || '';
+        : kind === 'zelle'
+          ? PRINTED_BULLETIN_CONFIG.zelleQrImageProperty
+          : '';
+  var configuredFileId = propertyName
+    ? PropertiesService.getScriptProperties().getProperty(propertyName) || ''
+    : '';
+  return configuredFileId || PRINTED_BULLETIN_CONFIG.qrPlaceholderImageFileId;
 }
 
 function appendScheduleTable_(cell, bulletin, nextBulletin) {

@@ -355,6 +355,24 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(givingQr).toContain("'Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'");
   });
 
+  it('uses the shared dummy QR image until slot-specific Drive IDs are configured', () => {
+    const context = loadAppsScript({
+      PropertiesService: {
+        getScriptProperties: () => ({ getProperty: () => '' }),
+      },
+    });
+
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('mobileApp')`, context)).toBe(
+      '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
+    );
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('zelle')`, context)).toBe(
+      '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
+    );
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving')`, context)).toBe(
+      '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
+    );
+  });
+
   it('splits printed bilingual values into horizontal English and Chinese columns', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(

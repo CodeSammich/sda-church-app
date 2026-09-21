@@ -512,10 +512,11 @@ horizontal QR-code placeholders for AdventistGiving and Zelle. The mobile-app QR
 is on the front cover, while the DAF note follows the back-page QR codes. The church is set up
 with Fidelity Charitable; staff should be contacted in advance for Schwab Charitable, Vanguard
 Charitable, or another provider.
-The AdventistGiving slot can display a Drive-hosted PNG after setting the
-`ADVENTIST_GIVING_QR_IMAGE_FILE_ID` Script Property; the Zelle slot remains empty until its
-destination is supplied. The mobile-app slot can use `MOBILE_APP_QR_IMAGE_FILE_ID` when its
-destination is ready. Sunset times in the printed meeting schedule are fetched for the current
+All three slots currently use the shared dummy QR image in the configuration so the layout can
+be reviewed before the final destinations are ready. Replace the slot-specific values by setting
+`ADVENTIST_GIVING_QR_IMAGE_FILE_ID`, `ZELLE_QR_IMAGE_FILE_ID`, and
+`MOBILE_APP_QR_IMAGE_FILE_ID` Script Properties. If a slot-specific property is absent, the
+dummy image remains in place. Sunset times in the printed meeting schedule are fetched for the current
 and next Sabbath from the same `api.sunrise-sunset.org` endpoint used by the app. The camp-meeting announcement is not
 included in the generated standing note.
 
