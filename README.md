@@ -24,7 +24,8 @@ The repository's licensing decisions and third-party source review live in
 
 - [Technical Setup & Testing](docs/README.md)
   - [Web and Native Build Workflows](docs/operations/native-builds.md)
-- [Bulletin API Architecture & Operations](apps-script/README.md)
+- [Bulletin API Architecture & Operations](google-apps-script/README.md)
+  - [Apps Script Deployment Workflow](google-apps-script/README.md#automated-deployment-from-wsl-or-github-actions)
 - [Accessibility Guidelines](docs/accessibility/README.md)
 - [UI/UX Design](docs/UI_UX.md)
 - [Feature Designs](docs/feature_designs/)

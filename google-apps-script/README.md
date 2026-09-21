@@ -17,6 +17,7 @@ part of the public Expo bundle.
 - [Change management](#change-management-checklist)
 - [Production integration monitoring](#production-integration-monitoring)
 - [Deployment](#deploy)
+- [Automated deployment from WSL or GitHub Actions](#automated-deployment-from-wsl-or-github-actions)
 - [Google for Nonprofits](#google-for-nonprofits)
 - [Example API response](#example-api-response)
 
@@ -36,7 +37,7 @@ Each part has one narrow responsibility:
 | GitHub Pages PWA | Presents the bulletin and makes read-only HTTP requests | Static hosting; no application server to operate |
 | Google Forms | Gives authorized church workers a familiar way to submit worship content | No custom administrative UI to build or host |
 | Google Sheets | Stores yearly rosters and the two form-response tables | Existing church workflow remains the source of truth |
-| Google Apps Script | Joins data for the public API and, for authorized staff triggers, renders the Queens or Brooklyn physical bulletin to Docs/PDF | Runs beside the spreadsheet without a separate backend account |
+| Google Apps Script | Joins data for the public API and, for authorized staff triggers, renders the Queens or Brooklyn printed bulletin to Docs/PDF | Runs beside the spreadsheet without a separate backend account |
 | Google Workspace for Nonprofits | Provides church-domain ownership, collaboration, Forms, Sheets, Drive, and administration | Eligible organizations can use the nonprofit Workspace offer instead of volunteer-owned consumer accounts |
 
 This is best described as **no additional application-hosting fee within the programs and
@@ -95,7 +96,7 @@ Matching worship-data response tab
    |
    | spreadsheet On form submit trigger
    v
-PhysicalBulletin.gs --> one location-specific Google Doc + one PDF per Sabbath date
+PrintedBulletin.gs --> one location-specific Google Doc + one PDF per Sabbath date
 ```
 
 The browser never reads Google Sheets directly and receives no spreadsheet ID, Google
@@ -139,9 +140,9 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 
 | File | Role |
 | --- | --- |
-| `apps-script/BulletinApi.gs` | Deployed backend logic, allowlists, date matching, and name privacy |
-| `apps-script/PhysicalBulletin.gs` | Staff-only Queens/Brooklyn Google Docs generator using the same spreadsheet data and full names |
-| `apps-script/appsscript.json` | Apps Script runtime, timezone, and web-app manifest settings |
+| `google-apps-script/BulletinApi.gs` | Deployed backend logic, allowlists, date matching, and name privacy |
+| `google-apps-script/PrintedBulletin.gs` | Staff-only Queens/Brooklyn Google Docs generator using the same spreadsheet data and full names |
+| `google-apps-script/appsscript.json` | Apps Script runtime, timezone, and web-app manifest settings |
 | `constants/ExternalLinks.ts` | Production `/exec` URL and restricted staff-schedule URL |
 | `services/BulletinService.ts` | PWA response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
 | `services/BulletinHymnalService.ts` | Number-first bulletin hymn resolution, English/Chinese edition detection, fuzzy title fallback, and cross-reference routing |
@@ -151,7 +152,7 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 | `test/bulletin-service.test.ts` | PWA date, API error, and possible-joint-service behavior |
 | `test/bulletin-hymnal-service.test.ts` | Bulletin hymn typo tolerance, language preference, mapping, and fallback behavior |
 | `test/bible-scripture-reference.test.ts` | Multilingual 66-book parsing, formatting, ranges, and safe rejection behavior |
-| `apps-script/README.md` | Architecture contract and operator runbook |
+| `google-apps-script/README.md` | Architecture contract and operator runbook |
 
 The Queens worship program also renders three fixed congregational pieces directly in
 the PWA: Doxology (SDAH 694 / Chinese 497), Pastoral Prayer response (SDAH 684 /
@@ -162,11 +163,8 @@ The person assigned to Chair / Pastoral Prayer remains workbook-driven roster da
 ## Workbook and form layout
 
 The script is intended to be bound to **Official Schedule for NYCCSDA Queens and
-Brooklyn**. It derives the yearly Sabbath schedule tab from the requested date:
-
-- A request such as `?date=2026-08-08` reads `2026 Sabbath`.
-- A future Saturday automatically moves to the corresponding tab, such as
-  `2027 Sabbath`.
+Brooklyn**. Every requested date is looked up in the single `Sabbath Calendar` tab.
+There is no annual Apps Script rollover or yearly tab rename.
 
 Tabs such as `2026 Non-Sabbath` are intentionally ignored by the bulletin API.
 
@@ -177,9 +175,8 @@ Official Schedule for NYCCSDA Queens and Brooklyn
 ├── Queens Worship Data       linked Queens Google Form responses
 ├── Brooklyn Worship Data     linked Brooklyn Google Form responses
 ├── Name Dictionary            English/Chinese name pairs for physical printing
-├── 2026 Sabbath              2026 roster and schedule source
+├── Sabbath Calendar          all Sabbath roster and schedule rows
 ├── 2026 Non-Sabbath          ignored by this API
-├── 2027 Sabbath              2027 roster and schedule source
 └── ...
 ```
 
@@ -190,7 +187,7 @@ not tab names, and Apps Script does not address them.
 The schedule header row must use this order (the repeated headers are intentional):
 
 ```text
-Date | Quarter | Special Remark | Tithe Purpose | Pastor Travel |
+Date | Quarter | Special Remark | Tithe Purpose | Pastor Travel | Announcements | Sunset Time |
 Queens Sermon | Translation | Chinese Teacher | English Teacher |
 Children Teacher | Chair/Pastoral Prayer | Special Music |
 Offering Prayer | Pianist | SS Chair | SS Opening Prayer | Closing Prayer |
@@ -211,6 +208,8 @@ Brooklyn.
 | `Special Remark` | 1 | `bulletin.specialRemark` | Public metadata; displayed prominently for both churches |
 | `Tithe Purpose` | 1 | `bulletin.tithePurpose` | Public metadata |
 | `Pastor Travel` | 1 | `bulletin.pastorTravel` | Public metadata |
+| `Announcements` | 1 | `bulletin.announcements` | Optional multiline back-page announcement text |
+| `Sunset Time` | 1 | `bulletin.sunsetTime` | Optional current/next Sabbath schedule value |
 | `Queens Sermon` | 1 | `bulletin.queens.sermon` | Person-name privacy filter |
 | `Translation` | 1 | `bulletin.queens.translation` | Person-name privacy filter |
 | `Chinese Teacher` | 1 | `bulletin.queens.chineseTeacher` | Person-name privacy filter |
@@ -257,7 +256,7 @@ rename it without updating `FORM_RESPONSE_SCHEMA`, tests, and this table.
 | `What is the sermon title in Chinese?` | Allowlisted worship content | `location.sermonTitle.chinese` |
 | `What is the Hymn of Response in English?` | Allowlisted worship content | `location.hymnOfResponse.english` |
 | `What is the Hymn of Response in Chinese?` | Allowlisted worship content | `location.hymnOfResponse.chinese` |
-| `What are the Bible verses for this week?` | Allowlisted worship content | `location.bibleVerses` |
+| `What are the Bible verses for this week?` or `What verse should appear at the bottom of Church at Study?` | Allowlisted worship content | `location.bibleVerses` |
 
 Operational rules for the forms:
 
@@ -278,36 +277,25 @@ Operational rules for the forms:
 
 ## Annual schedule rollover
 
-Create one new Sabbath schedule tab before each calendar year begins. The API derives the
-tab name directly from the requested date, so the name must be exactly `YYYY Sabbath`:
-
-```text
-2026 Sabbath
-2027 Sabbath
-2028 Sabbath
-```
+Keep one `Sabbath Calendar` tab for all years. Add future Sabbath rows to that tab while
+retaining its formatting, formulas, and data validation.
 
 Recommended rollover procedure:
 
-1. Duplicate the prior year's Sabbath tab, or duplicate a clean schedule template if one
-   is available.
-2. Rename the new tab to the four-digit year followed by one space and `Sabbath`, such as
-   `2027 Sabbath`. Do not add punctuation or extra words.
-3. Remove the copied assignments and other prior-year data while retaining the header
-   row, formatting, formulas, and data validation that belong to the template.
-4. Populate the new year's Sabbath dates and quarter values.
-5. Confirm that every required header remains in the documented order. The repeated
+1. Add the next year's Sabbath dates and quarter values to `Sabbath Calendar`.
+2. Confirm that every required header remains in the documented order. The repeated
    `Chair/Pastoral Prayer` and `Offering Prayer` headers must remain repeated and in their
    original Queens/Brooklyn positions.
-6. Reapply and verify the structural protections described below. Do not assume duplicated
+5. Reapply and verify the structural protections described below. Do not assume duplicated
    protection settings are correct.
-7. Test at least the first Sabbath with the production API before the new year begins:
+6. Test at least the first Sabbath with the production API before the new year begins:
 
    ```text
    /exec?date=2027-01-02
    ```
 
-   The response must contain `"ok":true` and data from `2027 Sabbath`.
+   The response must contain `"ok":true` and data from the matching row in
+   `Sabbath Calendar`.
 
 Non-Sabbath tabs may remain in the workbook, but the bulletin API intentionally ignores
 them.
@@ -379,34 +367,56 @@ Additional value rules:
 - Blank worship-content cells return `""`; the PWA displays **TBD**.
 - If no form response matches a date, the location's worship-content fields remain blank
   while its schedule assignments can still be displayed.
-- A missing yearly schedule row is a request error because the bulletin has no canonical
-  roster record for that date.
+- A missing schedule row in `Sabbath Calendar` is a request error because the bulletin has
+  no canonical roster record for that date.
 
 ## Physical Google Doc output
 
-`PhysicalBulletin.gs` is an additional source file in the **same spreadsheet-bound Apps
+`PrintedBulletin.gs` is an additional source file in the **same spreadsheet-bound Apps
 Script project** as `BulletinApi.gs`; it is not a second backend or deployment. It reads the
 spreadsheet directly through the shared `buildBulletin_` function with full names enabled.
 The public `doGet` path continues to use the privacy-filtered default, so full names never
 enter the public JSON API.
 
 After saving both files in the bound Apps Script project, reload the spreadsheet and use
-**Physical Bulletin → Create Google Doc…**. Enter the Sabbath date and choose `regular`,
-`communion`, or leave the format blank to detect `Communion`/`Foot Washing` from
-`Special Remark`. The function creates or updates the Google Doc for that date and also
-creates or replaces a PDF export for printing. It returns the URLs for both. It requires
-the staff member running it to authorize Google Docs and Drive access; the function is
-never called by the anonymous web-app endpoint.
+**Printed Bulletin → Create Google Doc + PDF…**. The bilingual dialog provides buttons for
+Queens/Brooklyn and regular/communion format selection, defaulting to Regular. The dialog
+first links to the Queens/Brooklyn digital-bulletin intake Forms so an administrator can fill
+one in on behalf of a speaker if the current week is missing. It then preloads the matching
+Form verse when available. An administrator can edit that verse for the printed bulletin only.
+Choose the optional Bible book and chapter from dropdowns, then type a verse or range such as
+`11` or `11-15`. Choose BSB or KJV for English. Chinese text is fixed to
+CUV（和合本, Traditional Chinese） for now. The
+reference is looked up through the HelloAO API
+and printed only under Church at Study. Church at Worship
+does not receive a duplicate verse box. Longer selections show an English/Traditional
+Chinese warning before generation. The function creates or updates the Google Doc for that
+date and also creates or replaces a PDF export for printing. It returns the URLs for both.
+It requires the staff member running it to authorize Google Docs and Drive access; the
+function is never called by the anonymous web-app endpoint.
 
-To generate or refresh either document after a form submission, choose **Physical Bulletin
-→ Install form auto-generation** once. This creates one authorized spreadsheet **On form
-submit** trigger. The handler identifies the source response tab, routes Queens and
-Brooklyn to their respective layouts, and rebuilds the merged bulletin for the submitted
-Sabbath. Multiple submissions and corrections for one location/date update the same
-document, identified by private Script Properties, instead of creating duplicates. A
-Queens trigger installed by an older version continues to work because the legacy handler
-name is retained. The trigger is not created merely by deployment because Google requires
-an authorized staff member to approve it.
+### Setup actions and normal workflow
+
+The Sheets menu intentionally exposes only **Printed Bulletin → Create Google Doc + PDF…**.
+The one-time configuration actions—installing the form-submit trigger and adding the
+Bible-verse question to both Forms—are not shown to any user, including admins.
+They remain in the source only for deliberate maintenance or migration work and are
+protected by the `PHYSICAL_BULLETIN_ADMIN_EMAILS` Script Property if they ever need to
+be run directly from the Apps Script editor. Normal bulletin generation, including
+printed-only verse and announcement edits, uses the Sheet's existing access controls
+and does not require that maintenance property.
+
+In the normal workflow, the existing trigger identifies whether a submission came from
+Queens or Brooklyn, merges submissions by Sabbath date, and creates or updates the
+matching document/PDF. The Bible-verse question should be added to both Forms once
+during setup with `addBibleVerseQuestions()`; each response is merged by Sabbath date like the other form fields. A
+reference such as `John 12:24` or `Psalm 119:103` is looked up through the BSB/CUV
+HelloAO API and printed in a borderless bilingual box under Church at Study.
+
+Multiple submissions and corrections for one location/date update the same document,
+identified by private Script Properties, instead of creating duplicates. A Queens trigger
+installed by an older version continues to work because the legacy handler name is
+retained.
 
 The generated document uses landscape US Letter pages with two vertical panels per sheet.
 Queens regular bulletins use four panels—announcements/schedule, cover, church at study,
@@ -414,38 +424,123 @@ and church at worship. Brooklyn regular bulletins use four panels—Sabbath Scho
 the meetings schedule, and the fellowship cover/contact block. Communion adds four
 ceremony panels to the selected location's regular layout.
 
+The communion PDF is booklet-imposed rather than simple reading order. From the first PDF
+page to the last, the landscape faces are: `(back/announcements | cover)`,
+`(church at study | closing)`, `(communion readings | church at worship)`, and
+`(foot washing | Holy Communion)`. Print duplex and fold at the center; the folded reading
+order is cover, study, worship, foot washing, communion, communion readings, closing, and
+back/announcements.
+
 The Queens template uses English and Traditional Chinese labels. The Brooklyn template
 follows the supplied two-page landscape reference: Sabbath School, worship, the rotating
 Today/Next Sabbath names table, online study times, and the fellowship contact/cover block.
 The long `TESTIMONIES OF SABBATH` reading is intentionally omitted; the `Testimonies` row
 in the rotating names table remains. Bilingual hymns and sermon titles are printed on
-separate lines, while names and other submitted Chinese content remain exactly as entered
-in the Forms/Sheets data.
+separate Chinese/English lines in three-column service tables (item, details/hymn, and
+person), while names and other submitted Chinese content remain exactly as entered in the
+Forms/Sheets data. These service tables are borderless; the back-page meeting schedule is
+the only table with a visible black border. The Bible-reading table and QR placeholders
+are borderless. Missing Chinese/English offering text is shown with an em dash so the two
+language rows stay aligned.
 
 The regular Queens and Brooklyn covers use `churchsketch.png`; communion covers use
-`lastsupper.png`. The current file IDs are configured as defaults in `PhysicalBulletin.gs`.
+`lastsupper.png`. The current file IDs are configured as defaults in `PrintedBulletin.gs`.
 If either image is replaced, set these Script Properties to the new Drive file IDs:
-`CHURCH_SKETCH_IMAGE_FILE_ID` and `LAST_SUPPER_IMAGE_FILE_ID`. The files only need to be
-accessible to the account running the trigger; they do not need to be public. If an image
-is unavailable, the generated cover uses a text fallback and the rest of the layout is
-unchanged.
+`CHURCH_SKETCH_IMAGE_FILE_ID` and `LAST_SUPPER_IMAGE_FILE_ID`. The cover also supports the
+black SDA logo through `SDA_LOGO_IMAGE_FILE_ID`. The files only need to be accessible to
+the account running the trigger; they do not need to be public. If an image is unavailable,
+the generated cover uses a text fallback and the rest of the layout is unchanged.
 
 Physical person names are enriched from the `Name Dictionary` sheet when it exists. The
-header row is `English Name | Chinese Name`, and data begins on row 2. A matched English
-name prints English plus Chinese; a matched Chinese name prints English plus Chinese in
-the same order. If either side is missing or unmatched, only the source name is printed.
+header row is `English Name | Chinese Name`, and data begins on row 2. A matched name
+prints the Chinese line followed by the English line; if either side is missing or
+unmatched, only the source name is printed.
 This lookup is used only by the private physical generator and is never added to the
 public API response.
 
 For a folded handout, print landscape, double-sided, with the printer set to flip on the
 short edge, then fold at the center. The generator currently includes the fields already
 available to the digital bulletin: schedule assignments, hymns, sermon title/speaker,
-Bible references, offering purpose, and special remark. The existing Sheets/API contract
-does not contain free-form announcement text, Sabbath School lesson/hymn fields, or full
-Scripture passages, so those are not invented by the generator. Add such fields to the
-allowlisted sheet/form schema before trying to print them.
+Bible references, offering purpose, and special remark. The Bible reference answer may be
+entered as `Book Chapter:verse-range` (for example, `Jeremiah 29:11-15`; the shorthand
+`Jeremiah:29:11-15` is also accepted). The physical generator uses the reference to
+retrieve the English BSB and Traditional Chinese 和合本 text from the HelloAO Bible API,
+prints the English and Chinese book names with the selected translation labels, and flows
+each language's passage as one paragraph. Before asking for confirmation, the popup fetches
+the selected passage and measures the English text; it warns when the passage is over roughly
+180 words or 1,000 characters, or is a full chapter. If the lookup is unavailable, it falls
+back to warning at nine or more verses. If the reference cannot be parsed or the API is
+unavailable during generation, the reference itself is retained instead.
+For the meeting schedule's offering-purpose value only, an English-only entry is translated
+with Apps Script `LanguageApp` into Traditional Chinese (`zh-TW`); existing Chinese or
+bilingual text is left alone. If the translation service fails or reaches its quota, the
+missing language is shown as `—` so the rows remain aligned.
+For the long text shown above the back-page schedule in the reference bulletin, add an
+`Announcements` column to `Sabbath Calendar` or an `Announcements`/`Announcement`
+form question. Its multiline text is printed before the back-page schedule.
 
-Generated documents default to the shared Drive folder configured in `PhysicalBulletin.gs`.
+Announcements are intentionally a printed/admin feature rather than a normal mobile
+bulletin section. Their content and formatting are fluid, and the congregation already
+hears them in person and on the livestream. The mobile client may eventually support an
+explicitly curated short summary, but it must not automatically mirror arbitrary printed
+announcement text.
+
+The planned printed workflow should let an administrator add a repeatable list of
+announcement entries for a Sabbath instead of forcing several announcements into one
+cell. Each entry should have optional English and Traditional Chinese text, and the
+interface should provide an **Add announcement** button plus a remove button. The saved
+entries should preserve their order and be rendered as a single human-approved block
+above the back-page schedule. This workflow is separate from the speaker form; the
+generated Google Doc/PDF remains output rather than the source of truth.
+
+The same printed-only property store keeps an optional Bible-reference override per
+Sabbath and location. The digital bulletin continues to use the Form response; the
+printed generator uses the saved override only when an administrator has deliberately
+changed it.
+
+Because these are small, printed-only admin overrides, the implementation stores the
+ordered entries in Apps Script `PropertiesService`, keyed by Sabbath date, instead of
+adding another visible spreadsheet tab. Each entry carries its location scope. The editor
+enforces the property-size limit, uses a script-wide property store so all authorized
+administrators see the same content, and uses a script lock when saving. Browser storage
+and `CacheService` may preserve an unfinished draft or speed up a read, but neither is a
+durable source of bulletin content.
+
+The back/announcements panel includes the standing offering notice, donor-advised-fund/Zelle/
+AdventistGiving note, DAF EIN `11-3004814`, Zelle destination `zelle@nyccsda.org`, and
+horizontal QR-code placeholders for AdventistGiving and Zelle. The mobile-app QR placeholder
+is on the front cover, while the DAF note follows the back-page QR codes. The church is set up
+with Fidelity Charitable; staff should be contacted in advance for Schwab Charitable, Vanguard
+Charitable, or another provider.
+The AdventistGiving slot can display a Drive-hosted PNG after setting the
+`ADVENTIST_GIVING_QR_IMAGE_FILE_ID` Script Property; the Zelle slot remains empty until its
+destination is supplied. The mobile-app slot can use `MOBILE_APP_QR_IMAGE_FILE_ID` when its
+destination is ready. Sunset times in the printed meeting schedule are fetched for the current
+and next Sabbath from the same `api.sunrise-sunset.org` endpoint used by the app. The camp-meeting announcement is not
+included in the generated standing note.
+
+### Generate a QR image
+
+The repository includes a one-time QR generator. It creates a local PNG only; it does
+not upload files to Drive or require any Google credential:
+
+```sh
+npm run generate:qr
+```
+
+The default output is `build/qr/adventistgiving.png`, encoding
+`https://adventistgiving.org/donate/AN48CO`. Inspect the PNG, upload it manually to the
+shared Drive assets folder, copy its Drive file ID, and add that ID as the
+`ADVENTIST_GIVING_QR_IMAGE_FILE_ID` Script Property. The Apps Script account must be able
+to read the file; it does not need to be public. The same generator accepts another
+HTTPS destination with `node scripts/generate-qr.mjs --url URL --output build/qr/name.png`.
+
+For a remote one-time run, open **Actions → Generate physical bulletin QR code → Run
+workflow**. Download the resulting `physical-bulletin-qr` artifact and upload the PNG to
+Drive manually. The workflow intentionally has no Drive-upload step, so the GitHub
+Actions credentials cannot write arbitrary files into the church’s shared drive.
+
+Generated documents default to the shared Drive folder configured in `PrintedBulletin.gs`.
 To replace that destination, add a Script Property named `PHYSICAL_BULLETIN_FOLDER_ID`
 containing another folder's ID. The account running the manual action or installed
 trigger must have permission to create and move files there. A manual run or form
@@ -594,8 +689,8 @@ forms:
 | --- | --- | --- |
 | Correct a cell value or submit a replacement form response | None | None; next request reads the new value |
 | Add a new yearly `YYYY Sabbath` tab with the existing schema | Documentation only if conventions change | None; test the first date |
-| Change the physical Google Doc layout or ceremony copy | `PhysicalBulletin.gs`, Apps Script tests, and this section when operation changes | New version of the same Apps Script project; no new web-app URL |
-| Add a physical-bulletin data field | `BulletinApi.gs` allowlist, `PhysicalBulletin.gs`, tests, and the sheet/form contract | New version of the same Apps Script project |
+| Change the physical Google Doc layout or ceremony copy | `PrintedBulletin.gs`, Apps Script tests, and this section when operation changes | New version of the same Apps Script project; no new web-app URL |
+| Add a physical-bulletin data field | `BulletinApi.gs` allowlist, `PrintedBulletin.gs`, tests, and the sheet/form contract | New version of the same Apps Script project |
 | Rename a response tab | `CONFIG.responseSheets`, documentation, Apps Script tests | New version of existing Apps Script deployment |
 | Rename/add/reorder a schedule role | `COLUMN_SCHEMA`, TypeScript `BulletinLocation`, UI labels/rendering, tests, mapping table | Apps Script deployment and PWA deployment |
 | Rename/add a Form question used by the PWA | `FORM_RESPONSE_SCHEMA`, TypeScript schema/UI when applicable, tests, mapping table | Apps Script deployment and possibly PWA deployment |
@@ -651,8 +746,12 @@ a new version, and a post-deployment integration run.
 
 ## Deploy
 
+This section describes the one-time browser setup or a manual fallback. For ordinary
+source changes, use the automated deployment procedure below so the repository remains
+the source of truth.
+
 1. In the spreadsheet, open **Extensions → Apps Script**.
-2. Copy both `BulletinApi.gs` and `PhysicalBulletin.gs` into the editor. Apps Script treats
+2. Copy both `BulletinApi.gs` and `PrintedBulletin.gs` into the editor. Apps Script treats
    multiple `.gs` files in one project as one script, so they deploy together. Use the
    settings from `appsscript.json`.
 3. Select **Deploy → New deployment → Web app**.
@@ -674,7 +773,7 @@ a new version, and a post-deployment integration run.
    ```
 
 9. Each Apps Script code change requires a new deployment version. Re-test the `/exec`
-   URL after updating the deployment. The physical bulletin menu is available after
+   URL after updating the deployment. The printed bulletin menu is available after
    reloading the bound spreadsheet and authorizing the new Docs/Drive permissions.
 
 The current production deployment is:
@@ -687,6 +786,175 @@ https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6N
 public by design, but it exposes only the allowlisted, privacy-filtered response.
 
 Official reference: [Deploy an Apps Script web app](https://developers.google.com/apps-script/guides/web).
+
+## Automated deployment from WSL or GitHub Actions
+
+This project is one spreadsheet-bound Apps Script project. `BulletinApi.gs` and
+`PrintedBulletin.gs` are uploaded and deployed together. The project uses Google Sheets,
+Forms, Docs, and Drive, so deployment requires more than just a GitHub repository:
+
+```text
+Google Sheet ── bound Apps Script ──┬── public bulletin API
+                                    ├── Forms and submit triggers
+                                    ├── printable Google Docs/PDFs
+                                    └── Drive/shared-drive assets and output
+```
+
+### Google-side prerequisites
+
+Before configuring a computer or GitHub, confirm that these already exist:
+
+1. The main Google Sheet and its bound Apps Script project.
+2. The Queens/Brooklyn Google Forms and their response sheets.
+3. The Drive/shared-drive folder used for generated Docs and PDFs.
+4. The source images used by the printed bulletin.
+5. An existing production web-app deployment whose `/exec` URL is used by the app.
+
+The Google account used for setup should be able to open the Sheet's **Extensions → Apps
+Script**, edit the bound project, view its IDs and deployments, read the source images,
+and create/edit files in the output folder. Spreadsheet access by itself does not grant
+Shared Drive access.
+
+The account that first runs physical-bulletin actions must also approve Google's runtime
+permissions for Sheets, Forms, Docs, and Drive. A Workspace administrator may need to
+allow `clasp` or third-party OAuth access. Deployment does not automatically authorize
+every person who later opens the Sheet.
+
+### Which ID goes where
+
+These values are different:
+
+| Value | Where to find it | Use |
+| --- | --- | --- |
+| Apps Script project ID / Script ID | Apps Script → **Project Settings → IDs** | `APPS_SCRIPT_PROJECT_ID` |
+| Existing deployment ID | Apps Script → **Deploy → Manage deployments** | `APPS_SCRIPT_DEPLOYMENT_ID` |
+| Production `/exec` URL | The web-app deployment details | Used by the PWA, never as the deployment ID |
+
+Reuse the existing deployment ID. Updating it creates a new version while preserving the
+same production `/exec` URL. Creating a new deployment creates a different URL.
+
+### Local setup in WSL
+
+Run this in WSL, not Windows PowerShell. A WSL login is stored separately from a Windows
+login:
+
+```sh
+cd /home/dev/dev/sda-church-app
+npm install --global @google/clasp
+clasp login
+```
+
+If WSL cannot open a browser, use `clasp login --no-localhost` and follow the displayed
+instructions. A successful login creates `~/.clasprc.json` in WSL. Check it without
+printing the OAuth credential:
+
+```sh
+test -f ~/.clasprc.json && echo 'clasp credentials found'
+```
+
+Do not commit that file or put it in `.zshrc`. It contains a refresh token. Local `clasp`
+uses it automatically; it does not need to be copied into the repository.
+
+Export the two non-secret IDs in the shell. Replace the placeholder values with the IDs
+from the Google-side steps above:
+
+```sh
+export APPS_SCRIPT_PROJECT_ID='your Apps Script project ID'
+export APPS_SCRIPT_DEPLOYMENT_ID='your existing deployment ID'
+```
+
+These exports last for the current shell session. To load them for every WSL zsh session,
+put the same two lines in `~/.zshrc`, then run `source ~/.zshrc`. The local deploy helper
+uses these variables to create the ignored `.clasp` config files. The alternative is to
+copy the templates and fill them in manually:
+
+```sh
+cp google-apps-script/.clasp.json.example google-apps-script/.clasp.json
+cp google-apps-script/.clasp-deployment.json.example google-apps-script/.clasp-deployment.json
+```
+
+### Local commands
+
+Run tests before deploying a reviewed change:
+
+```sh
+npm test -- --runInBand
+```
+
+Upload the source without changing the live web-app version:
+
+```sh
+npm run apps-script:push
+```
+
+Upload the source and update the existing production deployment:
+
+```sh
+npm run apps-script:deploy
+```
+
+After deployment, reload the main Sheet and test the relevant menu action. The first use
+of Docs/Drive or installation of a Form trigger may require a one-time authorization.
+
+### GitHub Actions setup
+
+GitHub Actions is the remote, repeatable deployment path. It is intentionally manual and
+does not deploy every push or pull request. The workflow is
+[`.github/workflows/apps-script-deploy.yml`](../.github/workflows/apps-script-deploy.yml).
+
+In GitHub, open **Settings → Environments → production**. Create the `production`
+Environment if necessary, optionally require an approval, and add these Environment
+secrets:
+
+| Secret | Value |
+| --- | --- |
+| `APPS_SCRIPT_PROJECT_ID` | The Apps Script project ID, not the `/exec` URL |
+| `APPS_SCRIPT_DEPLOYMENT_ID` | The existing production deployment ID |
+| `CLASPRC_JSON` | The complete contents of WSL's `~/.clasprc.json` |
+
+To copy the OAuth JSON for the GitHub secret:
+
+```sh
+cat ~/.clasprc.json
+```
+
+Copy the entire JSON object into GitHub's `CLASPRC_JSON` secret. Never commit it, put it
+in a workflow file, or print it in a build log. The local WSL file remains the credential
+for local deployment; the GitHub secret is the credential for the temporary runner.
+
+To deploy remotely:
+
+1. Push the reviewed branch to the repository.
+2. Open GitHub **Actions**.
+3. Select **Deploy Bulletin Apps Script**.
+4. Choose **Run workflow**.
+5. Select the intended branch, such as `release/0.38.0`.
+6. Add an optional deployment description and start the run.
+7. Approve the `production` Environment if GitHub asks.
+
+The runner installs `clasp`, writes temporary config and credential files, pushes the
+checked-in Apps Script files, updates the existing deployment ID, and then is discarded.
+GitHub secrets are not available to untrusted pull requests from forks.
+
+### Credentials, permissions, and recovery
+
+The `CLASPRC_JSON` value does not need to be replaced for every deployment. It contains a
+refresh token. Re-run `clasp login` and replace the secret only if the account revokes the
+credential, Workspace policy changes, or the refresh token otherwise stops working.
+
+If local deployment says it is unauthorized, run `clasp login` in the same WSL environment.
+If Docs or Drive operations fail, run the relevant Sheet menu action once as the intended
+staff account, approve the prompts, and verify Shared Drive permissions. If the app stops
+reaching the API, verify that the existing deployment ID—not a newly created deployment—
+was used. The production URL must only change intentionally.
+
+`clasp push --force` makes the repository authoritative for the files it manages. Manual
+Apps Script editor changes can be overwritten; reproduce them in the repository or inspect
+them with `clasp pull` before deploying again.
+
+Official references: [Apps Script web apps](https://developers.google.com/apps-script/guides/web),
+[clasp configuration](https://github.com/google/clasp/blob/master/docs/config-files.md),
+and [clasp commands](https://github.com/google/clasp/blob/master/README.md).
 
 ## Google for Nonprofits
 
@@ -788,8 +1056,10 @@ emails, and response timestamps are intentionally absent.
 }
 ```
 
-## Optional `clasp` workflow
+## Deployment reference
 
-You can manage this as a standalone Apps Script project with `clasp`. Keep the local
-`.clasp.json` uncommitted if it contains a spreadsheet or script identifier that should
-not be shared.
+The complete local WSL and remote GitHub Actions deployment procedure is documented in
+the [Automated deployment from WSL or GitHub Actions](#automated-deployment-from-wsl-or-github-actions)
+section above. The older
+[operations page](../docs/operations/apps-script-deployment.md) remains as a redirect for
+existing links.
