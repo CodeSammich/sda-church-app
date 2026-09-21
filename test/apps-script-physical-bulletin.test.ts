@@ -347,7 +347,9 @@ describe('printed bulletin Apps Script helpers', () => {
     const givingText = source.slice(givingTextStart, givingQrStart);
     const givingQr = source.slice(givingQrStart, source.indexOf('\nfunction ', givingQrStart + 10));
 
-    expect(givingText).toContain('Stocks/equities:');
+    expect(givingText.replace(/\\'/g, "'")).toContain(
+      "Stocks/equities: We recommend donor-advised funds; see our church's mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.",
+    );
     expect(givingText).toContain('contact treasury@nyccsda.org.');
     expect(givingText).toContain('Nonprofit EIN: 11-3004814.');
     expect(givingText).toContain('Tithes & Offerings | 什一奉獻與自由奉獻');

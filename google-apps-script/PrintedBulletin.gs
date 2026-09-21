@@ -2600,7 +2600,7 @@ function appendGivingText_(cell) {
   appendHalfSpacer_(cell);
   appendCompactCenteredText_(
     cell,
-    'Stocks/equities: for Donor-advised fund information, see the mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
+    'Stocks/equities: We recommend donor-advised funds; see our church\'s mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
     7.5,
     false,
   );
@@ -2610,13 +2610,13 @@ function appendGivingQrPlaceholders_(cell) {
   var table = cell.appendTable([['', '', '']]);
   table.setBorderWidth(0);
   [
-    { label: printedBilingualText_('Mobile App', '手機應用程式'), kind: 'mobileApp' },
+    { label: printedBilingualText_('Download Mobile App', '下載手機應用程式'), kind: 'mobileApp' },
     {
       label: printedBilingualText_('Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'),
       kind: 'zelle',
     },
     {
-      label: printedBilingualText_('ACH or credit/debit card', 'ACH 銀行轉賬或信用卡／扣賬卡'),
+      label: printedBilingualText_('ACH or card', 'ACH／信用卡'),
       kind: 'adventistGiving',
     },
   ].forEach(function (item, index) {
