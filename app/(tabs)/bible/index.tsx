@@ -101,6 +101,19 @@ const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
 const NATIVE_AUDIO_STATUS_UPDATE_INTERVAL_MS = 1_000;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
+const SUPERSCRIPT_CHARACTERS: Record<string, string> = {
+  '0': '⁰',
+  '1': '¹',
+  '2': '²',
+  '3': '³',
+  '4': '⁴',
+  '5': '⁵',
+  '6': '⁶',
+  '7': '⁷',
+  '8': '⁸',
+  '9': '⁹',
+  '+': '⁺',
+};
 type SleepTimerSetting = BibleAudioSleepTimerSetting;
 
 const BIBLE_TRANS_KEY = BibleService.BIBLE_TRANSLATION_STORAGE_KEY;
@@ -2388,7 +2401,7 @@ export default function BibleScreen() {
     item: any,
     i: number,
     contentArray: any[],
-    allowUnderline = true,
+    allowFootnoteMarker = true,
     isBold = false,
     translationId = supportedTranslation.id,
     selahStyle: any = ReaderStyles.selahMarker,
@@ -2475,13 +2488,20 @@ export default function BibleScreen() {
       contentText = ' ' + contentText;
     }
 
-    // Peek ahead for footnote markers to apply underlining to the current word
-    let isFootnoted = false;
-    if (allowUnderline) {
+    // Peek ahead for a footnote marker to place after the current word.
+    let footnoteCaller: string | null = null;
+    if (allowFootnoteMarker) {
       for (let j = i + 1; j < contentArray.length; j++) {
         const next = contentArray[j];
         if (typeof next === 'object' && 'noteId' in next) {
-          isFootnoted = true;
+          const footnoteSource =
+            translationId === supportedTranslation.id
+              ? chapterData
+              : supportingChapterData;
+          footnoteCaller =
+            footnoteSource?.chapter.footnotes.find(
+              (footnote) => footnote.noteId === next.noteId,
+            )?.caller ?? String(next.noteId + 1);
           break;
         }
         if (typeof next === 'string' && next.trim().length > 0) break;
@@ -2493,10 +2513,16 @@ export default function BibleScreen() {
       const { leading, core, trailingPunct, trailingSpace } =
         BibleService.segmentText(text);
       const themeRenderKey = `${i}-${theme.colors.primary}`;
-      const footnoteUnderlineStyle = {
-        textDecorationLine: 'underline' as const,
-        textDecorationColor: theme.colors.primary,
-      };
+      const footnoteMarker = footnoteCaller ? (
+        <Text
+          key={`footnote-marker-${themeRenderKey}-${footnoteCaller}`}
+          style={{ color: theme.colors.primary }}
+        >
+          {Array.from(footnoteCaller, (character) =>
+            SUPERSCRIPT_CHARACTERS[character] || character,
+          ).join('')}
+        </Text>
+      ) : null;
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
@@ -2511,11 +2537,11 @@ export default function BibleScreen() {
               <Text
                 style={[
                   style,
-                  isFootnoted ? footnoteUnderlineStyle : undefined,
                   isBold && { fontWeight: 'bold' },
                 ]}
               >
                 {core}
+                {footnoteMarker}
               </Text>
               {trailingPunct}
             </Text>
@@ -2523,7 +2549,7 @@ export default function BibleScreen() {
         );
       }
 
-      if (!isFootnoted || !core) {
+      if (!footnoteCaller || !core) {
         return (
           <Text key={themeRenderKey} style={[style, isBold && { fontWeight: 'bold' }]}>
             {text}
@@ -2536,12 +2562,10 @@ export default function BibleScreen() {
           {leading}
           <Text
             key={`footnote-${themeRenderKey}`}
-            style={[
-              footnoteUnderlineStyle,
-              isBold && { fontWeight: 'bold' },
-            ]}
+            style={isBold ? { fontWeight: 'bold' } : undefined}
           >
             {core}
+            {footnoteMarker}
           </Text>
           <Text style={[style, isBold && { fontWeight: 'bold' }]}>{trailingPunct}</Text>
           {trailingSpace}
