@@ -2503,8 +2503,11 @@ export default function BibleScreen() {
         // Wrap Selah in a View to ensure it behaves as a block-level element
         // allowing `textAlign: 'right'` to work consistently across platforms.
         return (
-          <View key={themeRenderKey} style={{ width: '100%' }}>
-            <Text style={[selahStyle, { width: '100%', textAlign: 'right' }]}>
+          <View
+            key={themeRenderKey}
+            style={{ width: '100%', alignItems: 'flex-end' }}
+          >
+            <Text style={[selahStyle, { textAlign: 'right' }]}>
               <Text
                 style={[
                   style,
