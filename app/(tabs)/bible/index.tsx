@@ -96,9 +96,24 @@ const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 45_000;
 // immediate next chapter, but native preload downloads an entire file on
 // Android, which is too memory-heavy for long Bible chapters.
 const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
+// The status subscription re-renders the whole Bible reader. Keep this low
+// frequency so native text drawing cannot compete with playback on phones.
+const NATIVE_AUDIO_STATUS_UPDATE_INTERVAL_MS = 1_000;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
-
+const SUPERSCRIPT_CHARACTERS: Record<string, string> = {
+  '0': '⁰',
+  '1': '¹',
+  '2': '²',
+  '3': '³',
+  '4': '⁴',
+  '5': '⁵',
+  '6': '⁶',
+  '7': '⁷',
+  '8': '⁸',
+  '9': '⁹',
+  '+': '⁺',
+};
 type SleepTimerSetting = BibleAudioSleepTimerSetting;
 
 const BIBLE_TRANS_KEY = BibleService.BIBLE_TRANSLATION_STORAGE_KEY;
@@ -916,7 +931,7 @@ export default function BibleScreen() {
   const scrubGestureRef = useRef(new BibleAudioScrubGesture());
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
   const audioPlayer = useBibleAudioPlayer(null, {
-    updateInterval: 250,
+    updateInterval: NATIVE_AUDIO_STATUS_UPDATE_INTERVAL_MS,
     // Expo 58 keeps the iOS audio session and Android permanent audio focus
     // active through player pauses, finishes, and seek/buffer transitions.
     // We still call
@@ -2386,7 +2401,7 @@ export default function BibleScreen() {
     item: any,
     i: number,
     contentArray: any[],
-    allowUnderline = true,
+    allowFootnoteMarker = true,
     isBold = false,
     translationId = supportedTranslation.id,
     selahStyle: any = ReaderStyles.selahMarker,
@@ -2473,13 +2488,25 @@ export default function BibleScreen() {
       contentText = ' ' + contentText;
     }
 
-    // Peek ahead for footnote markers to apply underlining to the current word
-    let isFootnoted = false;
-    if (allowUnderline) {
+    // Peek ahead for a footnote marker to place after the current word.
+    let footnoteCaller: string | null = null;
+    if (allowFootnoteMarker) {
       for (let j = i + 1; j < contentArray.length; j++) {
         const next = contentArray[j];
         if (typeof next === 'object' && 'noteId' in next) {
-          isFootnoted = true;
+          const footnoteSource =
+            translationId === supportedTranslation.id
+              ? chapterData
+              : supportingChapterData;
+          const footnotes = footnoteSource?.chapter.footnotes ?? [];
+          const footnoteIndex = footnotes.findIndex(
+            (footnote) => footnote.noteId === next.noteId,
+          );
+          // Use chapter-local numbering instead of source callers such as "+".
+          // Footnotes are stored in reading order, so this resets at 1 per chapter.
+          footnoteCaller = String(
+            (footnoteIndex >= 0 ? footnoteIndex : next.noteId) + 1,
+          );
           break;
         }
         if (typeof next === 'string' && next.trim().length > 0) break;
@@ -2490,27 +2517,36 @@ export default function BibleScreen() {
     const renderText = (text: string, style?: any) => {
       const { leading, core, trailingPunct, trailingSpace } =
         BibleService.segmentText(text);
+      const themeRenderKey = `${i}-${theme.colors.primary}`;
+      const footnoteMarker = footnoteCaller ? (
+        <Text
+          key={`footnote-marker-${themeRenderKey}-${footnoteCaller}`}
+          style={{ color: theme.colors.primary }}
+        >
+          {Array.from(footnoteCaller, (character) =>
+            SUPERSCRIPT_CHARACTERS[character] || character,
+          ).join('')}
+        </Text>
+      ) : null;
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
         // Wrap Selah in a View to ensure it behaves as a block-level element
         // allowing `textAlign: 'right'` to work consistently across platforms.
         return (
-          <View key={i} style={{ width: '100%' }}>
-            <Text style={selahStyle}>
+          <View
+            key={themeRenderKey}
+            style={{ width: '100%', alignItems: 'flex-end' }}
+          >
+            <Text style={[selahStyle, { textAlign: 'right' }]}>
               <Text
                 style={[
                   style,
-                  isFootnoted
-                    ? {
-                        textDecorationLine: 'underline',
-                        textDecorationColor: theme.colors.readerColors.footnoteIndicator,
-                      }
-                    : undefined,
                   isBold && { fontWeight: 'bold' },
                 ]}
               >
                 {core}
+                {footnoteMarker}
               </Text>
               {trailingPunct}
             </Text>
@@ -2518,27 +2554,23 @@ export default function BibleScreen() {
         );
       }
 
-      if (!isFootnoted || !core) {
+      if (!footnoteCaller || !core) {
         return (
-          <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
+          <Text key={themeRenderKey} style={[style, isBold && { fontWeight: 'bold' }]}>
             {text}
           </Text>
         );
       }
 
       return (
-        <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
+        <Text key={themeRenderKey} style={[style, isBold && { fontWeight: 'bold' }]}>
           {leading}
           <Text
-            style={[
-              {
-                textDecorationLine: 'underline',
-                textDecorationColor: theme.colors.readerColors.footnoteIndicator,
-              },
-              isBold && { fontWeight: 'bold' },
-            ]}
+            key={`footnote-${themeRenderKey}`}
+            style={isBold ? { fontWeight: 'bold' } : undefined}
           >
             {core}
+            {footnoteMarker}
           </Text>
           <Text style={[style, isBold && { fontWeight: 'bold' }]}>{trailingPunct}</Text>
           {trailingSpace}
@@ -2571,8 +2603,7 @@ export default function BibleScreen() {
       return <Text key={i}>{'\n'}</Text>;
     }
 
-    // Footnote Markers: Now that we have underlines, we skip rendering the literal
-    // superscript caller (e.g., * or a) to maintain a cleaner reading experience.
+    // Footnote markers are metadata; their full text is shown in the verse detail modal.
     if ('noteId' in item) return null;
 
     return null;
@@ -3510,16 +3541,17 @@ export default function BibleScreen() {
                 >
                   <AppIcon
                     pointerEvents="none"
-                    name="tune-variant"
-                    size={13}
+                    name="account-voice"
+                    size={24}
                     textScale={bibleUiTextScale}
-                    color={theme.colors.onSurfaceVariant}
+                    color={theme.colors.onSurface}
                   />
                 </TouchableOpacity>
 
                 <View style={ReaderStyles.audioTransportControls}>
                   <IconButton
                     icon="rewind-10"
+                    iconColor={theme.colors.onSurface}
                     size={scaleTypographyMetric(26, bibleUiTextScale)}
                     onPress={() => skipAudio(-10000)}
                     disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
@@ -3539,6 +3571,7 @@ export default function BibleScreen() {
                   />
                   <IconButton
                     icon="fast-forward-30"
+                    iconColor={theme.colors.onSurface}
                     size={scaleTypographyMetric(26, bibleUiTextScale)}
                     onPress={() => skipAudio(30000)}
                     disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
@@ -3745,7 +3778,7 @@ export default function BibleScreen() {
                       name="account-voice"
                       size={24}
                       textScale={bibleUiTextScale}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.onSurface}
                     />
                     <Text
                       style={[
@@ -3799,7 +3832,7 @@ export default function BibleScreen() {
                           name="server-network"
                           size={24}
                           textScale={bibleUiTextScale}
-                          color={theme.colors.onSurfaceVariant}
+                          color={theme.colors.onSurface}
                         />
                         <Text
                           style={[
@@ -3848,7 +3881,7 @@ export default function BibleScreen() {
                       name="battery-lock-open"
                       size={24}
                       textScale={bibleUiTextScale}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.onSurface}
                     />
                     <Text
                       style={[styles.pressRowText, { color: theme.colors.onSurface }]}
@@ -3979,7 +4012,7 @@ export default function BibleScreen() {
                     }
                     size={24}
                     textScale={bibleUiTextScale}
-                    color={theme.colors.onSurfaceVariant}
+                    color={theme.colors.onSurface}
                   />
                   <Text
                     style={[
@@ -4401,7 +4434,11 @@ export default function BibleScreen() {
                                 variant="labelSmall"
                                 style={{ color: theme.colors.primary, marginBottom: 4 }}
                               >
-                                {labels.footnote} ({f.caller})
+                                {labels.footnote} (
+                                  {chapterData.chapter.footnotes.findIndex(
+                                    (footnote) => footnote.noteId === f.noteId,
+                                  ) + 1}
+                                )
                               </Text>
                               <Text style={ReaderStyles.detailText}>{f.text}</Text>
                             </View>

@@ -168,9 +168,8 @@ export default function PrivacyPolicyScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        The native app uses audio playback, including background playback, and may read
-        the device light sensor to adjust its theme locally. It does not request device
-        location, camera, microphone, contacts, photos, or notifications. Because the app
+        The native app uses audio playback, including background playback. It does not
+        request device location, camera, microphone, contacts, photos, or notifications. Because the app
         does not create user accounts or maintain a personal server profile, there is no
         account to delete. A user may request correction or removal of church-managed
         bulletin information by contacting pastor@nyccsda.org. The church will handle

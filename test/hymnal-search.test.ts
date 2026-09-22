@@ -67,6 +67,24 @@ describe('hymnal search', () => {
     });
   });
 
+  it('adds the mapped English result to a Chinese-number search', () => {
+    const results = getHymnalSearchResults(
+      items,
+      '497',
+      '/home/chinese-505-hymnal',
+    );
+    const chineseIndex = results.findIndex(
+      (item) =>
+        item.hymnalId === 'chinese-hymnal-505' && item.hymnNumber === 497,
+    );
+
+    expect(chineseIndex).toBeGreaterThanOrEqual(0);
+    expect(results[chineseIndex + 1]).toMatchObject({
+      hymnalId: 'sdah-1985-en',
+      hymnNumber: 694,
+    });
+  });
+
   it('returns the same hymn number from every indexed hymnal edition', () => {
     const results = getHymnalSearchResults(items, '1');
 
@@ -119,5 +137,27 @@ describe('hymnal search', () => {
 
     expect(filterHeaderSearchItems([candidate], '我們')).toEqual([candidate]);
     expect(filterHeaderSearchItems([candidate], '我们')).toEqual([candidate]);
+  });
+
+  it('prioritizes the preferred lookup edition for ambiguous numbers', () => {
+    const english = {
+      searchNumber: '497',
+      searchPriority: 0,
+      searchText: 'English hymn',
+      subtitle: 'English hymnal',
+      title: '497. English hymn',
+    };
+    const chinese = {
+      searchNumber: '497',
+      searchPriority: 1,
+      searchText: 'Chinese hymn',
+      subtitle: 'Chinese hymnal',
+      title: '497. Chinese hymn',
+    };
+
+    expect(filterHeaderSearchItems([english, chinese], '497')).toEqual([
+      chinese,
+      english,
+    ]);
   });
 });
