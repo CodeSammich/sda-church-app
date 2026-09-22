@@ -4,7 +4,6 @@ import {
 } from '@/components/InitialSetup';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { createElement } from 'react';
-import { StyleSheet } from 'react-native';
 import { renderWithPreferences } from './helpers/render-preferences';
 
 const languageCases = [
@@ -67,7 +66,7 @@ describe('InitialSetup', () => {
       { setLanguage, setThemeMode },
     );
 
-    expect(screen.getAllByRole('radio')).toHaveLength(13);
+    expect(screen.getAllByRole('radio')).toHaveLength(12);
     expect(screen.getByRole('radio', { name: 'EN' }).props.accessibilityState)
       .toMatchObject({ checked: true, disabled: false });
     expect(
@@ -80,20 +79,18 @@ describe('InitialSetup', () => {
 
     expect(setLanguage).toHaveBeenCalledWith('zh');
     expect(setThemeMode).toHaveBeenCalledWith('dark');
-    expect(screen.getByRole('radio', { name: 'Automatic' })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: 'Automatic' })).toBeNull();
   });
 
-  it('keeps Automatic full width and exposes System and Sunset choices', () => {
+  it('exposes the four explicit appearance choices', () => {
     const screen = renderWithPreferences(
       createElement(InitialSetup, { onComplete: jest.fn() }),
     );
 
-    const automatic = screen.getByRole('radio', { name: 'Automatic' });
-    const style = StyleSheet.flatten(automatic.props.style);
-
-    expect(style).toEqual(expect.objectContaining({ flexBasis: '100%' }));
     expect(screen.getByRole('radio', { name: 'System' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Sunset' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Light' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Dark' })).toBeTruthy();
   });
 
   it.each(languageCases)(

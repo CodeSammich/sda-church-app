@@ -20,7 +20,6 @@ import {
   getSunsetApiUrl,
   openIosPwaInstallGuide,
 } from '@/constants/ExternalLinks';
-import { resolveAmbientIsDark } from '@/constants/AmbientTheme';
 import {
   DEFAULT_LANG,
   LanguageContext,
@@ -32,7 +31,6 @@ import {
   AppTheme,
   getAppTheme,
   SCRIPTURE_FONT_FAMILIES,
-  THEME_AMBIENT,
   THEME_DARK,
   THEME_LIGHT,
   THEME_SUNSET,
@@ -55,7 +53,6 @@ import {
 } from '@/services/PwaUpdateService';
 import packageJson from '@/package.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LightSensor } from 'expo-sensors';
 import { ThemeProvider } from 'expo-router/react-navigation';
 import { useFonts } from 'expo-font';
 import * as Localization from 'expo-localization';
@@ -260,10 +257,9 @@ export default function RootLayout() {
   const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANG);
   const [languageSelectionRevision, setLanguageSelectionRevision] = useState(0);
   const colorScheme = useColorScheme();
-  const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_AMBIENT);
-  const [ambientIsDark, setAmbientIsDark] = useState(
-    colorScheme === THEME_DARK,
-  );
+  // System is the predictable default; users can explicitly choose Sunset,
+  // Light, or Dark from the theme settings.
+  const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_SYSTEM);
   const [sunTimes, setSunTimes] = useState<{ sunrise: Date; sunset: Date } | null>(null);
   const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
   const [theme, setTheme] = useState(() =>
@@ -657,25 +653,21 @@ export default function RootLayout() {
 
         // Use saved settings if they exist, otherwise fallback to system defaults
         const preferredLanguage = (savedLang as SupportedLanguage) || systemLang;
-        const useDarkTheme = savedTheme
-          ? savedTheme === THEME_DARK
-          : colorScheme === THEME_DARK;
+        const useDarkTheme = colorScheme === THEME_DARK;
         const preferredTextScale = parseStoredTextScale(savedTextScale);
         setLanguage(preferredLanguage);
         setTextScale(preferredTextScale);
         const preferredThemeMode: ThemeMode =
           savedTheme === THEME_DARK || savedTheme === THEME_LIGHT
             ? savedTheme
-            : savedTheme === THEME_AMBIENT ||
-                savedTheme === THEME_SUNSET ||
+            : savedTheme === THEME_SUNSET ||
                 savedTheme === THEME_SYSTEM
               ? savedTheme
-              : THEME_AMBIENT;
+              : THEME_SYSTEM;
         setThemeMode(preferredThemeMode);
         setTheme(
           getAppTheme(
             preferredThemeMode === THEME_DARK ||
-              (preferredThemeMode === THEME_AMBIENT && ambientIsDark) ||
               (preferredThemeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
               (preferredThemeMode === THEME_SUNSET && useDarkTheme),
             needsCjkSystemFont(preferredLanguage),
@@ -701,37 +693,6 @@ export default function RootLayout() {
       if (activeRegistration) activeRegistration.onupdatefound = null;
     };
   }, []);
-
-  useEffect(() => {
-    if (!isReady || themeMode !== THEME_AMBIENT || Platform.OS !== 'android') {
-      return;
-    }
-
-    let active = true;
-    let subscription: { remove: () => void } | null = null;
-    setAmbientIsDark(colorScheme === THEME_DARK);
-    LightSensor.setUpdateInterval(30_000);
-
-    LightSensor.isAvailableAsync()
-      .then((available) => {
-        if (!active || !available) return;
-        subscription = LightSensor.addListener(({ illuminance }) => {
-          if (!active) return;
-          setAmbientIsDark((previous) =>
-            resolveAmbientIsDark(illuminance, previous),
-          );
-        });
-      })
-      .catch((error) => {
-        console.warn('Ambient light sensor unavailable:', error);
-      });
-
-    return () => {
-      active = false;
-      subscription?.remove();
-      subscription = null;
-    };
-  }, [colorScheme, isReady, themeMode]);
 
   useEffect(() => {
     if (!isReady || themeMode !== THEME_SUNSET) return;
@@ -766,12 +727,11 @@ export default function RootLayout() {
     const now = new Date();
     const isDark =
       themeMode === THEME_DARK ||
-      (themeMode === THEME_AMBIENT && ambientIsDark) ||
       (themeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
       (themeMode === THEME_SUNSET &&
         (sunTimes ? now < sunTimes.sunrise || now >= sunTimes.sunset : now.getHours() < 7 || now.getHours() >= 19));
     setTheme(getAppTheme(isDark, needsCjkSystemFont(language), textScale));
-  }, [ambientIsDark, colorScheme, isReady, language, sunTimes, textScale, themeMode]);
+  }, [colorScheme, isReady, language, sunTimes, textScale, themeMode]);
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);

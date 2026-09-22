@@ -1,6 +1,5 @@
 import { LanguageContext } from '@/constants/LanguageContext';
 import {
-  THEME_AMBIENT,
   THEME_DARK,
   THEME_LIGHT,
   THEME_SUNSET,
@@ -20,15 +19,6 @@ const OPTIONS: readonly {
   value: ThemeMode;
   labels: Record<'en' | 'zh' | 'zh-cn' | 'es', { label: string; description: string }>;
 }[] = [
-  {
-    value: THEME_AMBIENT,
-    labels: {
-      en: { label: 'Automatic', description: 'Use the ambient light sensor when available' },
-      zh: { label: '自動', description: '有可用時根據環境光線調整' },
-      'zh-cn': { label: '自动', description: '有可用时根据环境光线调整' },
-      es: { label: 'Automático', description: 'Usar el sensor de luz ambiental cuando esté disponible' },
-    },
-  },
   {
     value: THEME_SYSTEM,
     labels: {

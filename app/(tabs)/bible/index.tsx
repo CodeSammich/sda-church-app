@@ -2498,10 +2498,15 @@ export default function BibleScreen() {
             translationId === supportedTranslation.id
               ? chapterData
               : supportingChapterData;
-          footnoteCaller =
-            footnoteSource?.chapter.footnotes.find(
-              (footnote) => footnote.noteId === next.noteId,
-            )?.caller ?? String(next.noteId + 1);
+          const footnotes = footnoteSource?.chapter.footnotes ?? [];
+          const footnoteIndex = footnotes.findIndex(
+            (footnote) => footnote.noteId === next.noteId,
+          );
+          // Use chapter-local numbering instead of source callers such as "+".
+          // Footnotes are stored in reading order, so this resets at 1 per chapter.
+          footnoteCaller = String(
+            (footnoteIndex >= 0 ? footnoteIndex : next.noteId) + 1,
+          );
           break;
         }
         if (typeof next === 'string' && next.trim().length > 0) break;
@@ -4429,7 +4434,11 @@ export default function BibleScreen() {
                                 variant="labelSmall"
                                 style={{ color: theme.colors.primary, marginBottom: 4 }}
                               >
-                                {labels.footnote} ({f.caller})
+                                {labels.footnote} (
+                                  {chapterData.chapter.footnotes.findIndex(
+                                    (footnote) => footnote.noteId === f.noteId,
+                                  ) + 1}
+                                )
                               </Text>
                               <Text style={ReaderStyles.detailText}>{f.text}</Text>
                             </View>

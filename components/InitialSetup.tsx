@@ -9,7 +9,6 @@ import {
 } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import {
-  THEME_AMBIENT,
   THEME_DARK,
   THEME_LIGHT,
   THEME_SUNSET,
@@ -42,7 +41,6 @@ const setupLabels = {
     appearance: 'Appearance',
     dark: 'Dark',
     light: 'Light',
-    automatic: 'Automatic',
     system: 'System',
     sunset: 'Sunset',
     textSize: 'Text size',
@@ -63,7 +61,6 @@ const setupLabels = {
     appearance: '外觀模式',
     dark: '深色',
     light: '淺色',
-    automatic: '自動',
     system: '系統',
     sunset: '日落',
     textSize: '字體大小',
@@ -84,7 +81,6 @@ const setupLabels = {
     appearance: '外观模式',
     dark: '深色',
     light: '浅色',
-    automatic: '自动',
     system: '系统',
     sunset: '日落',
     textSize: '字体大小',
@@ -105,7 +101,6 @@ const setupLabels = {
     appearance: 'Apariencia',
     dark: 'Oscuro',
     light: 'Claro',
-    automatic: 'Automático',
     system: 'Sistema',
     sunset: 'Atardecer',
     textSize: 'Tamaño del texto',
@@ -126,7 +121,6 @@ interface SetupChoice {
   accessibilityLabel?: string;
   icon?:
     | 'monitor-cellphone'
-    | 'theme-light-dark'
     | 'weather-night'
     | 'weather-sunny'
     | 'weather-sunset-down';
@@ -136,7 +130,6 @@ interface SetupChoice {
 
 interface SetupChoiceGroupProps {
   disabled: boolean;
-  firstOptionFullWidth?: boolean;
   onValueChange: (value: string) => void;
   options: SetupChoice[];
   twoColumn?: boolean;
@@ -148,7 +141,6 @@ export const shouldUseTwoColumnOnboardingChoices = (viewportWidth: number) =>
 
 const SetupChoiceGroup = ({
   disabled,
-  firstOptionFullWidth = false,
   onValueChange,
   options,
   twoColumn = false,
@@ -158,7 +150,7 @@ const SetupChoiceGroup = ({
 
   return (
     <View accessibilityRole="radiogroup" style={styles.choiceGroup}>
-      {options.map((option, index) => {
+      {options.map((option) => {
         const selected = option.value === value;
         return (
           <Pressable
@@ -171,10 +163,6 @@ const SetupChoiceGroup = ({
             style={({ pressed }) => [
               styles.choiceButton,
               twoColumn && styles.twoColumnChoiceButton,
-              twoColumn &&
-                firstOptionFullWidth &&
-                index === 0 &&
-                styles.fullWidthChoiceButton,
               {
                 backgroundColor: selected
                   ? theme.colors.secondaryContainer
@@ -356,18 +344,12 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
               value={themeMode}
               disabled={isSavingTextScale}
               twoColumn
-              firstOptionFullWidth
               onValueChange={(value) => {
                 if (!textScaleWritePendingRef.current) {
                   void setThemeMode(value as ThemeMode);
                 }
               }}
               options={[
-                {
-                  value: THEME_AMBIENT,
-                  label: labels.automatic,
-                  icon: 'theme-light-dark',
-                },
                 {
                   value: THEME_SYSTEM,
                   label: labels.system,
@@ -524,9 +506,6 @@ const styles = StyleSheet.create({
   },
   twoColumnChoiceButton: {
     flexBasis: '45%',
-  },
-  fullWidthChoiceButton: {
-    flexBasis: '100%',
   },
   choiceGroup: {
     alignItems: 'stretch',
