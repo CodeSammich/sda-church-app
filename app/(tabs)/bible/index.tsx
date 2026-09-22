@@ -2385,7 +2385,7 @@ export default function BibleScreen() {
     item: any,
     i: number,
     contentArray: any[],
-    _allowUnderline = true,
+    allowUnderline = true,
     isBold = false,
     translationId = supportedTranslation.id,
     selahStyle: any = ReaderStyles.selahMarker,
@@ -2472,9 +2472,29 @@ export default function BibleScreen() {
       contentText = ' ' + contentText;
     }
 
+    // Apply a single native underline to the text immediately before a footnote
+    // marker. Native decoration preserves glyphs and wrapping on Android.
+    let isFootnoted = false;
+    if (allowUnderline) {
+      for (let j = i + 1; j < contentArray.length; j++) {
+        const next = contentArray[j];
+        if (typeof next === 'object' && 'noteId' in next) {
+          isFootnoted = true;
+          break;
+        }
+        if (typeof next === 'string' && next.trim().length > 0) break;
+        if (typeof next === 'object' && ('text' in next || 'heading' in next)) break;
+      }
+    }
+
     const renderText = (text: string, style?: any) => {
-      const { core, trailingPunct } =
+      const { leading, core, trailingPunct, trailingSpace } =
         BibleService.segmentText(text);
+      const footnoteUnderlineStyle = {
+        textDecorationLine: 'underline' as const,
+        textDecorationStyle: 'solid' as const,
+        textDecorationColor: theme.colors.primary,
+      };
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
@@ -2486,6 +2506,7 @@ export default function BibleScreen() {
               <Text
                 style={[
                   style,
+                  isFootnoted && footnoteUnderlineStyle,
                   isBold && { fontWeight: 'bold' },
                 ]}
               >
@@ -2497,9 +2518,27 @@ export default function BibleScreen() {
         );
       }
 
+      if (!isFootnoted || !core) {
+        return (
+          <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
+            {text}
+          </Text>
+        );
+      }
+
       return (
         <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
-          {text}
+          {leading}
+          <Text
+            style={[
+              footnoteUnderlineStyle,
+              isBold && { fontWeight: 'bold' },
+            ]}
+          >
+            {core}
+          </Text>
+          <Text style={[style, isBold && { fontWeight: 'bold' }]}>{trailingPunct}</Text>
+          {trailingSpace}
         </Text>
       );
     };
