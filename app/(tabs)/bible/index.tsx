@@ -2492,6 +2492,7 @@ export default function BibleScreen() {
         BibleService.segmentText(text);
       const footnoteUnderlineStyle = {
         textDecorationLine: 'underline' as const,
+        textDecorationStyle: 'double' as const,
         textDecorationColor: theme.colors.primary,
       };
 
