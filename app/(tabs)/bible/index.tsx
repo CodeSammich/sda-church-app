@@ -96,6 +96,9 @@ const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 45_000;
 // immediate next chapter, but native preload downloads an entire file on
 // Android, which is too memory-heavy for long Bible chapters.
 const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
+// The status subscription re-renders the whole Bible reader. Keep this low
+// frequency so native text drawing cannot compete with playback on phones.
+const NATIVE_AUDIO_STATUS_UPDATE_INTERVAL_MS = 1_000;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
 type SleepTimerSetting = BibleAudioSleepTimerSetting;
@@ -915,7 +918,7 @@ export default function BibleScreen() {
   const scrubGestureRef = useRef(new BibleAudioScrubGesture());
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
   const audioPlayer = useBibleAudioPlayer(null, {
-    updateInterval: 250,
+    updateInterval: NATIVE_AUDIO_STATUS_UPDATE_INTERVAL_MS,
     // Expo 58 keeps the iOS audio session and Android permanent audio focus
     // active through player pauses, finishes, and seek/buffer transitions.
     // We still call
