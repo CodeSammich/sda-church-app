@@ -100,9 +100,16 @@ run('npx', [
   '--no-install',
 ], projectRoot, prebuildEnvironment);
 
-run('./gradlew', [
+// Direct-install APKs are intended for current Android phones. Keep them
+// small enough to distribute through services with 100 MiB file limits while
+// leaving AAB builds on the full architecture set for Google Play delivery.
+const gradleArguments = [
   ':app:' + (isApk ? 'assembleRelease' : 'bundleRelease'),
-], androidRoot);
+];
+if (isApk) {
+  gradleArguments.push('-PreactNativeArchitectures=arm64-v8a');
+}
+run('./gradlew', gradleArguments, androidRoot);
 
 const extension = isApk ? 'apk' : 'aab';
 const sourcePath = resolve(
