@@ -2472,8 +2472,7 @@ export default function BibleScreen() {
       contentText = ' ' + contentText;
     }
 
-    // Apply a single native underline to the text immediately before a footnote
-    // marker. Native decoration preserves glyphs and wrapping on Android.
+    // Peek ahead for footnote markers to apply underlining to the current word
     let isFootnoted = false;
     if (allowUnderline) {
       for (let j = i + 1; j < contentArray.length; j++) {
@@ -2490,11 +2489,6 @@ export default function BibleScreen() {
     const renderText = (text: string, style?: any) => {
       const { leading, core, trailingPunct, trailingSpace } =
         BibleService.segmentText(text);
-      const footnoteUnderlineStyle = {
-        textDecorationLine: 'underline' as const,
-        textDecorationStyle: 'solid' as const,
-        textDecorationColor: theme.colors.primary,
-      };
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
@@ -2506,7 +2500,12 @@ export default function BibleScreen() {
               <Text
                 style={[
                   style,
-                  isFootnoted && footnoteUnderlineStyle,
+                  isFootnoted
+                    ? {
+                        textDecorationLine: 'underline',
+                        textDecorationColor: theme.colors.readerColors.footnoteIndicator,
+                      }
+                    : undefined,
                   isBold && { fontWeight: 'bold' },
                 ]}
               >
@@ -2531,7 +2530,10 @@ export default function BibleScreen() {
           {leading}
           <Text
             style={[
-              footnoteUnderlineStyle,
+              {
+                textDecorationLine: 'underline',
+                textDecorationColor: theme.colors.readerColors.footnoteIndicator,
+              },
               isBold && { fontWeight: 'bold' },
             ]}
           >
