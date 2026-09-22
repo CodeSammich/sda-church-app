@@ -2385,7 +2385,7 @@ export default function BibleScreen() {
     item: any,
     i: number,
     contentArray: any[],
-    allowUnderline = true,
+    _allowUnderline = true,
     isBold = false,
     translationId = supportedTranslation.id,
     selahStyle: any = ReaderStyles.selahMarker,
@@ -2472,28 +2472,9 @@ export default function BibleScreen() {
       contentText = ' ' + contentText;
     }
 
-    // Peek ahead for footnote markers to apply underlining to the current word
-    let isFootnoted = false;
-    if (allowUnderline) {
-      for (let j = i + 1; j < contentArray.length; j++) {
-        const next = contentArray[j];
-        if (typeof next === 'object' && 'noteId' in next) {
-          isFootnoted = true;
-          break;
-        }
-        if (typeof next === 'string' && next.trim().length > 0) break;
-        if (typeof next === 'object' && ('text' in next || 'heading' in next)) break;
-      }
-    }
-
     const renderText = (text: string, style?: any) => {
-      const { leading, core, trailingPunct, trailingSpace } =
+      const { core, trailingPunct } =
         BibleService.segmentText(text);
-      const footnoteUnderlineStyle = {
-        textDecorationLine: 'underline' as const,
-        textDecorationStyle: 'solid' as const,
-        textDecorationColor: theme.colors.primary,
-      };
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
@@ -2505,7 +2486,6 @@ export default function BibleScreen() {
               <Text
                 style={[
                   style,
-                  isFootnoted && footnoteUnderlineStyle,
                   isBold && { fontWeight: 'bold' },
                 ]}
               >
@@ -2517,27 +2497,9 @@ export default function BibleScreen() {
         );
       }
 
-      if (!isFootnoted || !core) {
-        return (
-          <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
-            {text}
-          </Text>
-        );
-      }
-
       return (
         <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
-          {leading}
-          <Text
-            style={[
-              footnoteUnderlineStyle,
-              isBold && { fontWeight: 'bold' },
-            ]}
-          >
-            {core}
-          </Text>
-          <Text style={[style, isBold && { fontWeight: 'bold' }]}>{trailingPunct}</Text>
-          {trailingSpace}
+          {text}
         </Text>
       );
     };
@@ -2567,8 +2529,7 @@ export default function BibleScreen() {
       return <Text key={i}>{'\n'}</Text>;
     }
 
-    // Footnote Markers: Now that we have underlines, we skip rendering the literal
-    // superscript caller (e.g., * or a) to maintain a cleaner reading experience.
+    // Footnote markers are metadata; their full text is shown in the verse detail modal.
     if ('noteId' in item) return null;
 
     return null;
