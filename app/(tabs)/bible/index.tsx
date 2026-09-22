@@ -98,9 +98,9 @@ const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 45_000;
 const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
-// Android's native text decoration is a fixed hairline. Repeating the same
-// low-line mark overlaps it into one filled, text-size-scaled underline.
-const FOOTNOTE_UNDERLINE_MARK = '\u0332\u0332';
+// Use one primary-colored low-line mark per glyph so Android renders one
+// text-size-scaled underline instead of its native double-decoration pair.
+const FOOTNOTE_UNDERLINE_MARK = '\u0332';
 
 type SleepTimerSetting = BibleAudioSleepTimerSetting;
 
