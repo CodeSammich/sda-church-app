@@ -23,7 +23,7 @@ export default function GiveScreen() {
       cashLabel: 'Sabbath Service',
       cashTitle: 'Cash',
       cashDesc:
-        'We welcome cash donations during our weekly meetings. Envelopes are provided for your convenience to specify tithe or designate your gift to various offering categories and local ministries.',
+        'We welcome cash donations during our weekly meetings. Please write your name in English on the envelope. Envelopes are provided for your convenience to specify tithe or designate your gift to various offering categories and local ministries.',
       zelleSection: 'Electronic Transfer',
       zelleLabel: 'Direct Bank Transfer',
       zelleTitle: 'Zelle',
@@ -44,8 +44,6 @@ export default function GiveScreen() {
       quote:
         'Bring the full tithe into the storehouse, so that there may be food in My house. Test Me in this,” says the Lord of Hosts. “See if I will not open the windows of heaven and pour out for you blessing without measure.',
       quoteRef: 'Malachi 3:10 (BSB)',
-      taxNote:
-        'Tax treatment and receipt availability depend on the recipient organization and applicable law. Please consult a tax professional with questions about your contribution.',
     },
     zh: {
       title: '奉獻',
@@ -53,7 +51,7 @@ export default function GiveScreen() {
       cashLabel: '安息日聚會',
       cashTitle: '現金',
       cashDesc:
-        '我們歡迎在每週聚會期間進行現金捐款。我們提供奉獻袋，方便您註明什一奉獻或將捐款指定用於特定的事工類別或在地項目。',
+        '我們歡迎在每週聚會期間進行現金捐款。請在奉獻袋上用英文寫下您的姓名。我們提供奉獻袋，方便您註明什一奉獻或將捐款指定用於特定的事工類別或在地項目。',
       zelleSection: '電子轉賬',
       zelleLabel: '直接銀行轉賬',
       zelleTitle: 'Zelle',
@@ -73,8 +71,6 @@ export default function GiveScreen() {
       quote:
         '萬軍之耶和華說：你們要將當納的十分之一全然送入倉庫，使我家有糧，以此試試我，是否為你們敞開天上的窗戶，傾福與你們，甚至無處可容。',
       quoteRef: '瑪拉基書 3:10 (CUV)',
-      taxNote:
-        '捐款的稅務處理及收據安排取決於收款組織和適用法律。如對捐款的稅務待遇有疑問，請諮詢稅務專業人士。',
     },
     'zh-cn': {
       title: '奉献',
@@ -82,7 +78,7 @@ export default function GiveScreen() {
       cashLabel: '安息日聚会',
       cashTitle: '现金',
       cashDesc:
-        '我们欢迎在每周聚会期间进行现金捐款。我们提供奉献袋，方便您注明什一奉献或将捐款指定用于特定的事工类别或本地项目。',
+        '我们欢迎在每周聚会期间进行现金捐款。请在奉献袋上用英文写下您的姓名。我们提供奉献袋，方便您注明什一奉献或将捐款指定用于特定的事工类别或本地项目。',
       zelleSection: '电子转账',
       zelleLabel: '直接银行转账',
       zelleTitle: 'Zelle',
@@ -102,8 +98,6 @@ export default function GiveScreen() {
       quote:
         '万军之耶和华说：你们要将当纳的十分之一全然送入仓库，使我家有粮，以此试试我，是否为你们敞开天上的窗户，倾福与你们，甚至无处可容。',
       quoteRef: '玛拉基书 3:10 (CUVS)',
-      taxNote:
-        '捐款的税务处理及收据安排取决于收款组织和适用法律。如对捐款的税务待遇有疑问，请咨询税务专业人士。',
     },
     es: {
       title: 'Diezmos y Ofrendas',
@@ -111,7 +105,7 @@ export default function GiveScreen() {
       cashLabel: 'Servicio Sabático',
       cashTitle: 'Efectivo',
       cashDesc:
-        'Aceptamos donaciones en efectivo durante nuestras reuniones semanales. Se proporcionan sobres para su conveniencia, permitiéndole especificar el diezmo o asignar su donación a diversas categorías de ofrendas y ministerios locales.',
+        'Aceptamos donaciones en efectivo durante nuestras reuniones semanales. Escriba su nombre en inglés en el sobre. Se proporcionan sobres para su conveniencia, permitiéndole especificar el diezmo o asignar su donación a diversas categorías de ofrendas y ministerios locales.',
       zelleSection: 'Transferencia Electrónica',
       zelleLabel: 'Transferencia Directa',
       zelleTitle: 'Zelle',
@@ -132,8 +126,6 @@ export default function GiveScreen() {
       quote:
         'Traed todos los diezmos al alfolí, y haya alimento en mi casa; y probadme ahora en esto, dice Jehová de los ejércitos, si no os abriré las ventanas de los cielos, y vaciaré sobre vosotros bendición hasta que sobreabunde.',
       quoteRef: 'Malaquías 3:10 (RVR1960)',
-      taxNote:
-        'El tratamiento fiscal y la disponibilidad de recibos dependen de la organización receptora y de la ley aplicable. Consulte a un profesional de impuestos si tiene preguntas sobre su contribución.',
     },
   };
 
@@ -159,18 +151,6 @@ export default function GiveScreen() {
         />
 
         {/* Body */}
-        <View style={DocumentStyles.section}>
-          <Text
-            variant="bodySmall"
-            style={[
-              DocumentStyles.note,
-              { color: theme.colors.onSurfaceVariant, marginTop: 0 },
-            ]}
-          >
-            {labels.taxNote}
-          </Text>
-        </View>
-
         <View style={DocumentStyles.section}>
           <Text
             variant="titleLarge"
