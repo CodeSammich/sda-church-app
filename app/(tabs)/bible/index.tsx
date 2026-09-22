@@ -2504,7 +2504,7 @@ export default function BibleScreen() {
         // allowing `textAlign: 'right'` to work consistently across platforms.
         return (
           <View key={themeRenderKey} style={{ width: '100%' }}>
-            <Text style={selahStyle}>
+            <Text style={[selahStyle, { width: '100%', textAlign: 'right' }]}>
               <Text
                 style={[
                   style,

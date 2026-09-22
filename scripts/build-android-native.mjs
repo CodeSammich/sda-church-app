@@ -100,11 +100,6 @@ run('npx', [
   '--no-install',
 ], projectRoot, prebuildEnvironment);
 
-// Keep the native single underline continuous while making it readable on
-// Android. The patch is version-guarded and also runs from npm postinstall so
-// iOS native builds receive the matching thick solid underline.
-run(process.execPath, [resolve(projectRoot, 'scripts/patch-native-underlines.mjs')]);
-
 // Direct-install APKs default to arm64-v8a so most current phones get a small
 // APK and local testing iterations stay fast. If you need older ARM devices
 // or x86 emulators, replace this value with
