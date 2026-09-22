@@ -3512,13 +3512,14 @@ export default function BibleScreen() {
                     name="account-voice"
                     size={24}
                     textScale={bibleUiTextScale}
-                    color={theme.colors.onSurfaceVariant}
+                    color={theme.colors.onSurface}
                   />
                 </TouchableOpacity>
 
                 <View style={ReaderStyles.audioTransportControls}>
                   <IconButton
                     icon="rewind-10"
+                    iconColor={theme.colors.onSurface}
                     size={scaleTypographyMetric(26, bibleUiTextScale)}
                     onPress={() => skipAudio(-10000)}
                     disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
@@ -3538,6 +3539,7 @@ export default function BibleScreen() {
                   />
                   <IconButton
                     icon="fast-forward-30"
+                    iconColor={theme.colors.onSurface}
                     size={scaleTypographyMetric(26, bibleUiTextScale)}
                     onPress={() => skipAudio(30000)}
                     disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
@@ -3744,7 +3746,7 @@ export default function BibleScreen() {
                       name="account-voice"
                       size={24}
                       textScale={bibleUiTextScale}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.onSurface}
                     />
                     <Text
                       style={[
@@ -3798,7 +3800,7 @@ export default function BibleScreen() {
                           name="server-network"
                           size={24}
                           textScale={bibleUiTextScale}
-                          color={theme.colors.onSurfaceVariant}
+                          color={theme.colors.onSurface}
                         />
                         <Text
                           style={[
@@ -3847,7 +3849,7 @@ export default function BibleScreen() {
                       name="battery-lock-open"
                       size={24}
                       textScale={bibleUiTextScale}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.onSurface}
                     />
                     <Text
                       style={[styles.pressRowText, { color: theme.colors.onSurface }]}
@@ -3978,7 +3980,7 @@ export default function BibleScreen() {
                     }
                     size={24}
                     textScale={bibleUiTextScale}
-                    color={theme.colors.onSurfaceVariant}
+                    color={theme.colors.onSurface}
                   />
                   <Text
                     style={[
