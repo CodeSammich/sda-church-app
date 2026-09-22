@@ -96,7 +96,8 @@ Matching worship-data response tab
    |
    | spreadsheet On form submit trigger
    v
-PrintedBulletin.gs --> one location-specific Google Doc + one PDF per Sabbath date
+PrintedQueensBulletin.gs + PrintedQueensCommunionBulletin.gs + PrintedBrooklynBulletin.gs
+  --> one location-specific Google Doc + one PDF per Sabbath date
 ```
 
 The browser never reads Google Sheets directly and receives no spreadsheet ID, Google
@@ -141,9 +142,9 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 | File | Role |
 | --- | --- |
 | `google-apps-script/BulletinApi.gs` | Deployed backend logic, allowlists, date matching, and name privacy |
-| `google-apps-script/PrintedBulletin.gs` | Shared data preparation, stable Queens regular renderer, and common Google Docs helpers |
-| `google-apps-script/CommunionBulletin.gs` | Communion page order and fixed foot-washing/Communion Scripture references |
-| `google-apps-script/BrooklynBulletin.gs` | Brooklyn-specific cover presentation and location copy |
+| `google-apps-script/PrintedQueensBulletin.gs` | Shared data preparation, stable Queens regular renderer, and common Google Docs helpers |
+| `google-apps-script/PrintedQueensCommunionBulletin.gs` | Communion page order and fixed foot-washing/Communion Scripture references |
+| `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn-specific cover presentation and location copy |
 | `google-apps-script/appsscript.json` | Apps Script runtime, timezone, and web-app manifest settings |
 | `constants/ExternalLinks.ts` | Production `/exec` URL and restricted staff-schedule URL |
 | `services/BulletinService.ts` | PWA response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
@@ -374,7 +375,8 @@ Additional value rules:
 
 ## Physical Google Doc output
 
-`PrintedBulletin.gs` is an additional source file in the **same spreadsheet-bound Apps
+`PrintedQueensBulletin.gs`, `PrintedQueensCommunionBulletin.gs`, and
+`PrintedBrooklynBulletin.gs` are additional source files in the **same spreadsheet-bound Apps
 Script project** as `BulletinApi.gs`; it is not a second backend or deployment. It reads the
 spreadsheet directly through the shared `buildBulletin_` function with full names enabled.
 The public `doGet` path continues to use the privacy-filtered default, so full names never
@@ -448,10 +450,10 @@ are borderless. Missing Chinese/English offering text is shown with an em dash s
 language rows stay aligned.
 
 The regular Queens and Brooklyn covers use `churchsketch.png`; communion covers use
-`lastsupper.png`. The current file IDs are configured as defaults in `PrintedBulletin.gs`.
-The Communion Scripture references are fixed in `CommunionBulletin.gs`, so the selected
+`lastsupper.png`. The current file IDs are configured as defaults in `PrintedQueensBulletin.gs`.
+The Communion Scripture references are fixed in `PrintedQueensCommunionBulletin.gs`, so the selected
 Church-at-Study verse cannot replace the bread, cup, proclamation, or foot-washing
-references. Brooklyn cover title/address copy is isolated in `BrooklynBulletin.gs`.
+references. Brooklyn cover title/address copy is isolated in `PrintedBrooklynBulletin.gs`.
 If either image is replaced, set these Script Properties to the new Drive file IDs:
 `CHURCH_SKETCH_IMAGE_FILE_ID` and `LAST_SUPPER_IMAGE_FILE_ID`. The cover also supports the
 black SDA logo through `SDA_LOGO_IMAGE_FILE_ID`. The files only need to be accessible to
@@ -548,7 +550,7 @@ workflow**. Download the resulting `physical-bulletin-qr` artifact and upload th
 Drive manually. The workflow intentionally has no Drive-upload step, so the GitHub
 Actions credentials cannot write arbitrary files into the church’s shared drive.
 
-Generated documents default to the shared Drive folder configured in `PrintedBulletin.gs`.
+Generated documents default to the shared Drive folder configured in `PrintedQueensBulletin.gs`.
 To replace that destination, add a Script Property named `PHYSICAL_BULLETIN_FOLDER_ID`
 containing another folder's ID. The account running the manual action or installed
 trigger must have permission to create and move files there. A manual run or form
@@ -697,8 +699,8 @@ forms:
 | --- | --- | --- |
 | Correct a cell value or submit a replacement form response | None | None; next request reads the new value |
 | Add a new yearly `YYYY Sabbath` tab with the existing schema | Documentation only if conventions change | None; test the first date |
-| Change the physical Google Doc layout or ceremony copy | `PrintedBulletin.gs`, Apps Script tests, and this section when operation changes | New version of the same Apps Script project; no new web-app URL |
-| Add a physical-bulletin data field | `BulletinApi.gs` allowlist, `PrintedBulletin.gs`, tests, and the sheet/form contract | New version of the same Apps Script project |
+| Change the physical Google Doc layout or ceremony copy | The relevant `Printed*.gs` file, Apps Script tests, and this section when operation changes | New version of the same Apps Script project; no new web-app URL |
+| Add a physical-bulletin data field | `BulletinApi.gs` allowlist, the relevant `Printed*.gs` file, tests, and the sheet/form contract | New version of the same Apps Script project |
 | Rename a response tab | `CONFIG.responseSheets`, documentation, Apps Script tests | New version of existing Apps Script deployment |
 | Rename/add/reorder a schedule role | `COLUMN_SCHEMA`, TypeScript `BulletinLocation`, UI labels/rendering, tests, mapping table | Apps Script deployment and PWA deployment |
 | Rename/add a Form question used by the PWA | `FORM_RESPONSE_SCHEMA`, TypeScript schema/UI when applicable, tests, mapping table | Apps Script deployment and possibly PWA deployment |
@@ -759,7 +761,7 @@ source changes, use the automated deployment procedure below so the repository r
 the source of truth.
 
 1. In the spreadsheet, open **Extensions → Apps Script**.
-2. Copy both `BulletinApi.gs` and `PrintedBulletin.gs` into the editor. Apps Script treats
+2. Copy `BulletinApi.gs` and the three `Printed*.gs` files into the editor. Apps Script treats
    multiple `.gs` files in one project as one script, so they deploy together. Use the
    settings from `appsscript.json`.
 3. Select **Deploy → New deployment → Web app**.
@@ -798,7 +800,7 @@ Official reference: [Deploy an Apps Script web app](https://developers.google.co
 ## Automated deployment from WSL or GitHub Actions
 
 This project is one spreadsheet-bound Apps Script project. `BulletinApi.gs` and
-`PrintedBulletin.gs` are uploaded and deployed together. The project uses Google Sheets,
+`Printed*.gs` files are uploaded and deployed together. The project uses Google Sheets,
 Forms, Docs, and Drive, so deployment requires more than just a GitHub repository:
 
 ```text

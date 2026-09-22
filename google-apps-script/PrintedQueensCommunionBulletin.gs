@@ -1,7 +1,7 @@
 /**
  * Communion-only printed bulletin layout.
  *
- * Queens regular bulletins intentionally stay in PrintedBulletin.gs. This file
+ * Queens regular bulletins intentionally stay in PrintedQueensBulletin.gs. This file
  * owns the ceremony page order and the fixed Scripture references so a
  * Communion bulletin cannot accidentally inherit or overwrite the regular
  * Queens schedule layout.

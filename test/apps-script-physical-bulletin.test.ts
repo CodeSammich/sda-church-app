@@ -7,11 +7,11 @@ const loadAppsScript = (context: Record<string, unknown>) => {
   runInContext(
       readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8') +
       '\n' +
-      readFileSync(join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'), 'utf8') +
+      readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensBulletin.gs'), 'utf8') +
       '\n' +
-      readFileSync(join(process.cwd(), 'google-apps-script/CommunionBulletin.gs'), 'utf8') +
+      readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensCommunionBulletin.gs'), 'utf8') +
       '\n' +
-      readFileSync(join(process.cwd(), 'google-apps-script/BrooklynBulletin.gs'), 'utf8'),
+      readFileSync(join(process.cwd(), 'google-apps-script/PrintedBrooklynBulletin.gs'), 'utf8'),
     vmContext,
   );
   return vmContext;
@@ -343,7 +343,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
   it('keeps the DAF note with the left-side giving content', () => {
     const source = readFileSync(
-      join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'),
+      join(process.cwd(), 'google-apps-script/PrintedQueensBulletin.gs'),
       'utf8',
     );
     const givingTextStart = source.indexOf('function appendGivingText_');
