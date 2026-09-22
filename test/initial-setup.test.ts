@@ -88,7 +88,7 @@ describe('InitialSetup', () => {
     );
 
     expect(screen.getByRole('radio', { name: 'System' })).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Sunset' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Sunrise/Sunset' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Light' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Dark' })).toBeTruthy();
   });

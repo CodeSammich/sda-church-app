@@ -42,7 +42,7 @@ const setupLabels = {
     dark: 'Dark',
     light: 'Light',
     system: 'System',
-    sunset: 'Sunset',
+    sunset: 'Sunrise/Sunset',
     textSize: 'Text size',
     textSizeHelp: 'Choose a comfortable starting size. You can change it later.',
     percentLabel: (percent: number) => `${percent} percent text size`,
@@ -62,7 +62,7 @@ const setupLabels = {
     dark: '深色',
     light: '淺色',
     system: '系統',
-    sunset: '日落',
+    sunset: '日出/日落',
     textSize: '字體大小',
     textSizeHelp: '選擇舒適的起始大小，稍後仍可變更。',
     percentLabel: (percent: number) => `${percent}% 字體大小`,
@@ -82,7 +82,7 @@ const setupLabels = {
     dark: '深色',
     light: '浅色',
     system: '系统',
-    sunset: '日落',
+    sunset: '日出/日落',
     textSize: '字体大小',
     textSizeHelp: '选择舒适的起始大小，稍后仍可更改。',
     percentLabel: (percent: number) => `${percent}% 字体大小`,
@@ -102,7 +102,7 @@ const setupLabels = {
     dark: 'Oscuro',
     light: 'Claro',
     system: 'Sistema',
-    sunset: 'Atardecer',
+    sunset: 'Amanecer/Atardecer',
     textSize: 'Tamaño del texto',
     textSizeHelp: 'Elige un tamaño inicial cómodo. Puedes cambiarlo después.',
     percentLabel: (percent: number) =>
@@ -186,6 +186,8 @@ const SetupChoiceGroup = ({
               />
             )}
             <Text
+              adjustsFontSizeToFit
+              numberOfLines={1}
               style={[
                 styles.choiceButtonText,
                 {

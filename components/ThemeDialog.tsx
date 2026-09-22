@@ -31,10 +31,16 @@ const OPTIONS: readonly {
   {
     value: THEME_SUNSET,
     labels: {
-      en: { label: 'Sunset', description: 'Follow sunset in New York' },
-      zh: { label: '日落', description: '跟隨紐約的日落時間' },
-      'zh-cn': { label: '日落', description: '跟随纽约的日落时间' },
-      es: { label: 'Atardecer', description: 'Seguir el atardecer en Nueva York' },
+      en: {
+        label: 'Sunrise/Sunset',
+        description: 'Follow sunrise and sunset in New York',
+      },
+      zh: { label: '日出/日落', description: '跟隨紐約的日出和日落時間' },
+      'zh-cn': { label: '日出/日落', description: '跟随纽约的日出和日落时间' },
+      es: {
+        label: 'Amanecer/Atardecer',
+        description: 'Seguir el amanecer y el atardecer en Nueva York',
+      },
     },
   },
   {
