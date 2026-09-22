@@ -98,6 +98,9 @@ const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 45_000;
 const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
+// Android's native text decoration is a fixed hairline. Repeating the same
+// low-line mark overlaps it into one filled, text-size-scaled underline.
+const FOOTNOTE_UNDERLINE_MARK = '\u0332\u0332';
 
 type SleepTimerSetting = BibleAudioSleepTimerSetting;
 
@@ -2490,11 +2493,15 @@ export default function BibleScreen() {
     const renderText = (text: string, style?: any) => {
       const { leading, core, trailingPunct, trailingSpace } =
         BibleService.segmentText(text);
-      const footnoteUnderlineStyle = {
-        textDecorationLine: 'underline' as const,
-        textDecorationStyle: 'double' as const,
-        textDecorationColor: theme.colors.primary,
-      };
+      const renderFootnoteCore = (value: string) =>
+        Array.from(value).map((character, characterIndex) => (
+          <Text key={`footnote-character-${i}-${characterIndex}`}>
+            {character}
+            <Text style={{ color: theme.colors.primary }}>
+              {FOOTNOTE_UNDERLINE_MARK}
+            </Text>
+          </Text>
+        ));
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
@@ -2506,13 +2513,10 @@ export default function BibleScreen() {
               <Text
                 style={[
                   style,
-                  isFootnoted
-                    ? footnoteUnderlineStyle
-                    : undefined,
                   isBold && { fontWeight: 'bold' },
                 ]}
               >
-                {core}
+                {isFootnoted ? renderFootnoteCore(core) : core}
               </Text>
               {trailingPunct}
             </Text>
@@ -2531,14 +2535,7 @@ export default function BibleScreen() {
       return (
         <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
           {leading}
-          <Text
-            style={[
-              footnoteUnderlineStyle,
-              isBold && { fontWeight: 'bold' },
-            ]}
-          >
-            {core}
-          </Text>
+          {renderFootnoteCore(core)}
           <Text style={[style, isBold && { fontWeight: 'bold' }]}>{trailingPunct}</Text>
           {trailingSpace}
         </Text>
