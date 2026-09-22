@@ -2492,23 +2492,23 @@ export default function BibleScreen() {
     const renderText = (text: string, style?: any) => {
       const { leading, core, trailingPunct, trailingSpace } =
         BibleService.segmentText(text);
+      const themeRenderKey = `${i}-${theme.colors.primary}`;
+      const footnoteUnderlineStyle = {
+        textDecorationLine: 'underline' as const,
+        textDecorationColor: theme.colors.primary,
+      };
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
         // Wrap Selah in a View to ensure it behaves as a block-level element
         // allowing `textAlign: 'right'` to work consistently across platforms.
         return (
-          <View key={i} style={{ width: '100%' }}>
+          <View key={themeRenderKey} style={{ width: '100%' }}>
             <Text style={selahStyle}>
               <Text
                 style={[
                   style,
-                  isFootnoted
-                    ? {
-                        textDecorationLine: 'underline',
-                        textDecorationColor: theme.colors.readerColors.footnoteIndicator,
-                      }
-                    : undefined,
+                  isFootnoted ? footnoteUnderlineStyle : undefined,
                   isBold && { fontWeight: 'bold' },
                 ]}
               >
@@ -2522,21 +2522,19 @@ export default function BibleScreen() {
 
       if (!isFootnoted || !core) {
         return (
-          <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
+          <Text key={themeRenderKey} style={[style, isBold && { fontWeight: 'bold' }]}>
             {text}
           </Text>
         );
       }
 
       return (
-        <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
+        <Text key={themeRenderKey} style={[style, isBold && { fontWeight: 'bold' }]}>
           {leading}
           <Text
+            key={`footnote-${themeRenderKey}`}
             style={[
-              {
-                textDecorationLine: 'underline',
-                textDecorationColor: theme.colors.readerColors.footnoteIndicator,
-              },
+              footnoteUnderlineStyle,
               isBold && { fontWeight: 'bold' },
             ]}
           >

@@ -23,7 +23,7 @@ const patchFile = async ({ relativePath, marker, needle, replacement }) => {
 await patchFile({
   relativePath:
     'node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/text/TextDecorationStyle.kt',
-  marker: '// sda-church-app: thicker solid underline',
+  marker: '// sda-church-app: thicker solid underline (3x)',
   needle: `  val thickness =
       if (style == TextDecorationStyle.SOLID || style == TextDecorationStyle.DOUBLE) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -56,10 +56,10 @@ await patchFile({
         }
       }
 
-  // sda-church-app: thicker solid underline
+  // sda-church-app: thicker solid underline (3x)
   // Keep one continuous stroke; the multiplier scales with the font size.
   val thickness =
-      if (style == TextDecorationStyle.SOLID) baseThickness * 2f else baseThickness
+      if (style == TextDecorationStyle.SOLID) baseThickness * 3f else baseThickness
 `,
 });
 
