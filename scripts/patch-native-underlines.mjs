@@ -65,6 +65,22 @@ await patchFile({
 
 await patchFile({
   relativePath:
+    'node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/text/TextDecorationStyle.kt',
+  marker: '// sda-church-app: join adjacent solid underline spans',
+  needle: `    val x1 = min(rawX1, rawX2)
+    val x2 = max(rawX1, rawX2)
+`,
+  replacement: `    // sda-church-app: join adjacent solid underline spans
+    // Extend each solid span by the stroke width so neighboring spans meet
+    // instead of producing visible breaks at their boundaries.
+    val horizontalPadding = if (style == TextDecorationStyle.SOLID) thickness * 2f else 0f
+    val x1 = min(rawX1, rawX2) - horizontalPadding
+    val x2 = max(rawX1, rawX2) + horizontalPadding
+`,
+});
+
+await patchFile({
+  relativePath:
     'node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextPrimitivesConversions.h',
   marker: '// sda-church-app: thicker solid underline',
   needle: `    case facebook::react::TextDecorationStyle::Solid:
