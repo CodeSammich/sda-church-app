@@ -141,7 +141,9 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 | File | Role |
 | --- | --- |
 | `google-apps-script/BulletinApi.gs` | Deployed backend logic, allowlists, date matching, and name privacy |
-| `google-apps-script/PrintedBulletin.gs` | Staff-only Queens/Brooklyn Google Docs generator using the same spreadsheet data and full names |
+| `google-apps-script/PrintedBulletin.gs` | Shared data preparation, stable Queens regular renderer, and common Google Docs helpers |
+| `google-apps-script/CommunionBulletin.gs` | Communion page order and fixed foot-washing/Communion Scripture references |
+| `google-apps-script/BrooklynBulletin.gs` | Brooklyn-specific cover presentation and location copy |
 | `google-apps-script/appsscript.json` | Apps Script runtime, timezone, and web-app manifest settings |
 | `constants/ExternalLinks.ts` | Production `/exec` URL and restricted staff-schedule URL |
 | `services/BulletinService.ts` | PWA response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
@@ -420,9 +422,11 @@ retained.
 
 The generated document uses landscape US Letter pages with two vertical panels per sheet.
 Queens regular bulletins use four panels—announcements/schedule, cover, church at study,
-and church at worship. Brooklyn regular bulletins use four panels—Sabbath School, worship,
-the meetings schedule, and the fellowship cover/contact block. Communion adds four
-ceremony panels to the selected location's regular layout.
+and church at worship. That renderer remains the stable reference path. Communion page
+order and Brooklyn cover copy live in their own `.gs` files: Brooklyn regular bulletins
+use four panels—Sabbath School, worship, the meetings schedule, and the fellowship
+cover/contact block; Communion adds four ceremony panels to the selected location's
+regular layout.
 
 The communion PDF is booklet-imposed rather than simple reading order. From the first PDF
 page to the last, the landscape faces are: `(back/announcements | cover)`,
@@ -445,6 +449,9 @@ language rows stay aligned.
 
 The regular Queens and Brooklyn covers use `churchsketch.png`; communion covers use
 `lastsupper.png`. The current file IDs are configured as defaults in `PrintedBulletin.gs`.
+The Communion Scripture references are fixed in `CommunionBulletin.gs`, so the selected
+Church-at-Study verse cannot replace the bread, cup, proclamation, or foot-washing
+references. Brooklyn cover title/address copy is isolated in `BrooklynBulletin.gs`.
 If either image is replaced, set these Script Properties to the new Drive file IDs:
 `CHURCH_SKETCH_IMAGE_FILE_ID` and `LAST_SUPPER_IMAGE_FILE_ID`. The cover also supports the
 black SDA logo through `SDA_LOGO_IMAGE_FILE_ID`. The files only need to be accessible to

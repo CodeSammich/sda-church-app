@@ -36,8 +36,6 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   pageMargin: 28,
   studyTime: '10:00 am–11:25 am  |  上午 10:00–11:25',
   worshipTime: '11:30 am–1:00 pm  |  上午 11:30–下午 1:00',
-  communionScripture: '1 Corinthians 11:23–26',
-  footWashingScripture: 'John 13:1–10; 12–17',
   bibleApiBaseUrl: 'https://bible.helloao.org/api',
   bibleEnglishTranslation: 'BSB',
   bibleChineseTranslation: 'cmn_cuv',
@@ -46,8 +44,6 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   sunsetLatitude: 40.74546,
   sunsetLongitude: -73.88914,
   sunsetTimeZone: 'America/New_York',
-  footWashingInstruction:
-    'Please quietly proceed downstairs for foot washing: brothers to the basement, sisters to the second floor.\n請安靜地前往樓下洗腳：弟兄到地下室，姊妹到二樓。',
 });
 
 var PRINTED_BIBLE_TRANSLATION_OPTIONS = Object.freeze({
@@ -1347,55 +1343,13 @@ function renderPrintedBulletinDocument_(document, bulletin, nextBulletin, format
     return;
   }
 
-  if (format !== 'communion') {
-    renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulletin, format);
+  if (format === 'communion') {
+    renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin);
     return;
   }
 
-  {
-    appendBookletPage_(
-      body,
-      function (cell) {
-        appendAnnouncementsPanel_(cell, bulletin, nextBulletin);
-      },
-      function (cell) {
-        appendCoverPanel_(cell, bulletin, format);
-      },
-      true,
-    );
-    appendBookletPage_(
-      body,
-      function (cell) {
-        appendStudyPanel_(cell, bulletin);
-      },
-      function (cell) {
-        appendCommunionClosingPanel_(cell, bulletin);
-      },
-      false,
-      appendGivingFooter_,
-    );
-    appendBookletPage_(
-      body,
-      function (cell) {
-        appendCommunionReadingPanel_(cell, bulletin);
-      },
-      function (cell) {
-        appendWorshipPanel_(cell, bulletin, false);
-      },
-      false,
-    );
-
-    appendBookletPage_(
-      body,
-      function (cell) {
-        appendFootWashingPanel_(cell, bulletin);
-      },
-      function (cell) {
-        appendCommunionPanel_(cell, bulletin);
-      },
-      false,
-    );
-  }
+  // Keep the Queens regular renderer as the stable reference layout.
+  renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulletin, format);
 }
 
 function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulletin, format) {
@@ -1585,7 +1539,7 @@ function appendBrooklynMeetingsPanel_(cell, bulletin, nextBulletin) {
 }
 
 function appendBrooklynCoverPanel_(cell, bulletin, format) {
-  appendSharedCoverPanel_(cell, bulletin, format);
+  renderPrintedBrooklynCoverPanel_(cell, bulletin, format);
 }
 
 function appendSharedCoverPanel_(cell, bulletin, format) {
@@ -1744,10 +1698,14 @@ function appendBrooklynContactBlock_(cell) {
 
 function appendBrooklynCommunionPanel_(cell, bulletin) {
   var location = bulletin.brooklyn;
-  appendPanelHeading_(cell, printedBilingualText_('HOLY COMMUNION', '聖餐禮'), '1 Corinthians 11:23–26');
+  appendPanelHeading_(
+    cell,
+    printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
+    getPrintedCommunionServiceScripture_(),
+  );
   appendBrooklynProgramTable_(cell, [
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Bible Reading', '讀經'), '1 Corinthians 11:23–26', printedBilingualText_('Congregation', '會眾')],
+    [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Blessing the Bread', '祝福餅'), physicalTbdText_(), physicalTbdText_('尚未安排')],
     [printedBilingualText_('Breaking the Bread', '擘餅'), physicalTbdText_(), physicalTbdText_('尚未安排')],
     [printedBilingualText_('Blessing the Cup', '祝福杯'), physicalTbdText_(), physicalTbdText_('尚未安排')],
@@ -1756,12 +1714,12 @@ function appendBrooklynCommunionPanel_(cell, bulletin) {
 }
 
 function appendBrooklynCommunionReadingPanel_(cell) {
-  appendPanelHeading_(cell, printedBilingualText_('COMMUNION READINGS', '聖餐經文'), '1 Corinthians 11:23–26');
-  appendBrooklynProgramTable_(cell, [
-    [printedBilingualText_('The Bread', '餅'), '1 Corinthians 11:24', printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('The Cup', '杯'), '1 Corinthians 11:25', printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('The Proclamation', '宣告'), '1 Corinthians 11:26', printedBilingualText_('Congregation', '會眾')],
-  ]);
+  appendPanelHeading_(
+    cell,
+    printedBilingualText_('COMMUNION READINGS', '聖餐經文'),
+    getPrintedCommunionServiceScripture_(),
+  );
+  appendBrooklynProgramTable_(cell, getPrintedCommunionReadingRows_());
 }
 
 function appendBrooklynClosingPanel_(cell, bulletin) {
@@ -2799,13 +2757,13 @@ function appendFootWashingPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('FOOT WASHING', '洗腳禮'),
-    PRINTED_BULLETIN_CONFIG.footWashingScripture,
+    getPrintedCommunionFootWashingScripture_(),
   );
   appendProgramTable_(cell, [
-    [printedBilingualText_('Bible Reading', '讀經'), PRINTED_BULLETIN_CONFIG.footWashingScripture, printedBilingualText_('Congregation', '會眾')],
+    [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionFootWashingScripture_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
   ]);
-  appendBodyText_(cell, PRINTED_BULLETIN_CONFIG.footWashingInstruction);
+  appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
   appendSilentPrayerHeading_(cell, 'Prayer of Silence', '靜默禱告');
   appendBodyText_(cell, printedBilingualText_('Congregation', '會眾'));
   appendBodyText_(cell, printedBilingualText_('The service continues with the Holy Communion section.', '接著進行聖餐禮。'));
@@ -2816,11 +2774,11 @@ function appendCommunionPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
-    PRINTED_BULLETIN_CONFIG.communionScripture,
+    getPrintedCommunionServiceScripture_(),
   );
   appendProgramTable_(cell, [
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Bible Reading', '讀經'), PRINTED_BULLETIN_CONFIG.communionScripture, printedBilingualText_('Congregation', '會眾')],
+    [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Blessing the Bread', '祝福餅'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Breaking the Bread', '擘餅'), '', printValue_(location.sermon)],
     [printedBilingualText_('Blessing the Cup', '祝福杯'), '', printValue_(location.chairPastoralPrayer)],
@@ -2833,14 +2791,13 @@ function appendCommunionReadingPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('COMMUNION READINGS', '聖餐經文'),
-    PRINTED_BULLETIN_CONFIG.communionScripture,
+    getPrintedCommunionServiceScripture_(),
   );
-  appendDataTable_(cell, [
-    [printedBilingualText_('The Bread', '餅'), '1 Corinthians 11:24'],
-    [printedBilingualText_('The Cup', '杯'), '1 Corinthians 11:25'],
-    [printedBilingualText_('The Proclamation', '宣告'), '1 Corinthians 11:26'],
+  appendDataTable_(cell, getPrintedCommunionReadingRows_().map(function (row) {
+    return [row[0], row[1]];
+  }).concat([
     [printedBilingualText_('Reader', '讀經者'), printedBilingualText_('Congregation', '會眾')],
-  ]);
+  ]));
   appendBodyText_(cell, printedBilingualText_('See the Scripture references above.', '請參閱以上經文。'));
 }
 

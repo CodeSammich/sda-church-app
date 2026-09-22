@@ -7,7 +7,11 @@ const loadAppsScript = (context: Record<string, unknown>) => {
   runInContext(
       readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8') +
       '\n' +
-      readFileSync(join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'), 'utf8'),
+      readFileSync(join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'), 'utf8') +
+      '\n' +
+      readFileSync(join(process.cwd(), 'google-apps-script/CommunionBulletin.gs'), 'utf8') +
+      '\n' +
+      readFileSync(join(process.cwd(), 'google-apps-script/BrooklynBulletin.gs'), 'utf8'),
     vmContext,
   );
   return vmContext;
@@ -453,6 +457,67 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(format).toBe('communion');
   });
 
+  it('keeps Communion references fixed and separate from the submitted study verse', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `JSON.stringify({
+          service: getPrintedCommunionServiceScripture_(),
+          footWashing: getPrintedCommunionFootWashingScripture_(),
+          instruction: getPrintedCommunionFootWashingInstruction_(),
+          readings: getPrintedCommunionReadingRows_()
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(output.service).toBe('1 Corinthians 11:23–26');
+    expect(output.footWashing).toBe('John 13:1–10; 12–17');
+    expect(output.instruction).toContain('brothers to the basement');
+    expect(output.instruction).toContain('弟兄到地下室');
+    expect(output.readings).toEqual([
+      ['餅\nThe Bread', '1 Corinthians 11:24', '會眾\nCongregation'],
+      ['杯\nThe Cup', '1 Corinthians 11:25', '會眾\nCongregation'],
+      ['宣告\nThe Proclamation', '1 Corinthians 11:26', '會眾\nCongregation'],
+    ]);
+  });
+
+  it('routes Queens regular, Communion, and Brooklyn output through separate renderers', () => {
+    const calls: string[] = [];
+    const body = {
+      clear: () => undefined,
+      setPageWidth: () => undefined,
+      setPageHeight: () => undefined,
+      setMarginTop: () => undefined,
+      setMarginBottom: () => undefined,
+      setMarginLeft: () => undefined,
+      setMarginRight: () => undefined,
+    };
+    const context = loadAppsScript({
+      DocumentApp: {},
+    });
+    Object.assign(context, {
+      renderQueensRegularPrintedBulletinDocument_: () => calls.push('queens-regular'),
+      renderCommunionPrintedBulletinDocument_: () => calls.push('communion'),
+      renderBrooklynPrintedBulletinDocument_: () => calls.push('brooklyn'),
+    });
+
+    runInContext(
+      `renderPrintedBulletinDocument_({ getBody: () => testBody }, {}, {}, 'regular', 'queens')`,
+      Object.assign(context, { testBody: body }),
+    );
+    runInContext(
+      `renderPrintedBulletinDocument_({ getBody: () => testBody }, {}, {}, 'communion', 'queens')`,
+      Object.assign(context, { testBody: body }),
+    );
+    runInContext(
+      `renderPrintedBulletinDocument_({ getBody: () => testBody }, {}, {}, 'regular', 'brooklyn')`,
+      Object.assign(context, { testBody: body }),
+    );
+
+    expect(calls).toEqual(['queens-regular', 'communion', 'brooklyn']);
+  });
+
   it('defaults a blank date to the closest upcoming Saturday', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
@@ -514,6 +579,28 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.key).toBe('PHYSICAL_BULLETIN_DOC_ID_BROOKLYN_2026-08-22');
     expect(output.title).toContain('Brooklyn Fellowship');
     expect(output.title).toContain('August 22, 2026');
+  });
+
+  it('keeps Brooklyn cover copy location-specific', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `JSON.stringify({
+          title: PRINTED_BROOKLYN_BULLETIN_CONFIG.titleEnglish,
+          titleChinese: PRINTED_BROOKLYN_BULLETIN_CONFIG.titleChinese,
+          address: PRINTED_BROOKLYN_BULLETIN_CONFIG.addressEnglish,
+          service: PRINTED_BROOKLYN_BULLETIN_CONFIG.serviceEnglish
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(output).toEqual({
+      title: 'New York Chinese SDA Church — Brooklyn Fellowship',
+      titleChinese: '紐約華人基督復臨安息日教會——布魯克林團契',
+      address: '5318 4th Avenue, Brooklyn, NY 11220',
+      service: 'Brooklyn Service | Saturdays 10:30 AM',
+    });
   });
 
   it('selects the church sketch for regular covers and Last Supper for communion', () => {
