@@ -213,9 +213,9 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     },
     function (cell) {
       appendWorshipPanel_(cell, bulletin, false);
+      appendCommunionVerticalGivingPanel_(cell);
     },
     false,
-    appendGivingFooter_,
   );
   appendBookletPage_(
     body,
@@ -227,6 +227,13 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     },
     false,
   );
+}
+
+function appendCommunionVerticalGivingPanel_(cell) {
+  appendSpacer_(cell);
+  appendGivingText_(cell);
+  appendSpacer_(cell);
+  appendGivingQrPlaceholders_(cell);
 }
 
 function appendCommunionStudyContinuationRows_(cell, bulletin) {
