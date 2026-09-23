@@ -9,6 +9,8 @@
 
 var PRINTED_COMMUNION_LAYOUT = Object.freeze({
   serviceScripture: '1 Corinthians 11:23–26',
+  responseHymn: 'AH 348 The Church Has One Foundation',
+  responseHymnChinese: '第413首 教會基礎',
   footWashingScripture: 'John 13:1–10; 12–17',
   footWashingLookupScripture: 'John 13:1–10; John 13:12–17',
   footWashingBoxScripture: 'John 13:1–10',
@@ -41,6 +43,13 @@ var PRINTED_COMMUNION_LAYOUT = Object.freeze({
 
 function getPrintedCommunionServiceScripture_() {
   return PRINTED_COMMUNION_LAYOUT.serviceScripture;
+}
+
+function getPrintedCommunionResponseHymn_() {
+  return printedBilingualText_(
+    PRINTED_COMMUNION_LAYOUT.responseHymn,
+    PRINTED_COMMUNION_LAYOUT.responseHymnChinese,
+  );
 }
 
 function getPrintedCommunionFootWashingScripture_() {
@@ -167,7 +176,7 @@ function getPrintedCommunionReadingRows_() {
 
 function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   // Keep this imposed order in sync with the Communion reference PDF:
-  // back/announcements | cover, study | closing, readings | worship, then
+  // back/announcements | cover, study continuation | worship, then
   // foot washing | Communion.
   appendBookletPage_(
     body,
@@ -185,7 +194,7 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
       appendStudyPanel_(cell, bulletin);
     },
     function (cell) {
-      appendCommunionClosingPanel_(cell, bulletin);
+      appendCommunionStudyContinuationPanel_(cell, bulletin);
     },
     false,
   );
@@ -210,4 +219,26 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     },
     false,
   );
+}
+
+function appendCommunionStudyContinuationPanel_(cell, bulletin) {
+  var location = bulletin.queens;
+  appendProgramTable_(cell, [
+    [
+      printedBilingualText_('Hymn of Response', '回應詩'),
+      getPrintedCommunionResponseHymn_(),
+      printedBilingualText_('Congregation', '會眾'),
+    ],
+    [
+      printedBilingualText_('Benediction', '祝禱'),
+      '',
+      printValue_(location.sermon),
+    ],
+    [
+      printedBilingualText_('Postlude', '後奏'),
+      printedBilingualText_('SDAH 690 — Dismiss Us, Lord', '第504首 散會頌'),
+      printedBilingualText_('Congregation', '會眾'),
+    ],
+  ]);
+  appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
 }

@@ -2799,14 +2799,11 @@ function appendFootWashingPanel_(cell, bulletin) {
   appendProgramTable_(cell, [
     [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
   ]);
+  appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
 }
 
 function appendCommunionPanel_(cell, bulletin) {
   var location = bulletin.queens;
-  appendProgramTable_(cell, [
-    [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
-  ]);
-  appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
   appendPanelHeading_(
     cell,
     printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
@@ -2817,6 +2814,14 @@ function appendCommunionPanel_(cell, bulletin) {
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
   appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', printValue_(location.chairPastoralPrayer)],
+    [printedBilingualText_('Breaking the Bread', '分餅'), '', printValue_(location.sermon)],
+  ]);
+  appendPrintedCommunionReadingPassageBox_(cell, bulletin, 0);
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
+  ]);
 }
 
 function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
@@ -2836,20 +2841,6 @@ function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
     [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
   ]);
   appendPrintedCommunionReadingPassageBox_(cell, bulletin, 2);
-}
-
-function appendCommunionClosingPanel_(cell, bulletin) {
-  var location = bulletin.queens;
-  appendPanelHeading_(
-    cell,
-    printedBilingualText_('CLOSING', '結束'),
-    printedBilingualText_(
-      PRINTED_BULLETIN_CONFIG.churchName,
-      PRINTED_BULLETIN_CONFIG.churchNameChinese,
-    ),
-  );
-  appendQueensClosingRows_(cell, bulletin);
-  appendCenteredText_(cell, printedBilingualText_('Thank you for worshiping with us.', '感謝您與我們一同崇拜。'), 10, false);
 }
 
 function appendPanelHeading_(cell, title, subtitle) {

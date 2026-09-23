@@ -484,6 +484,7 @@ describe('printed bulletin Apps Script helpers', () => {
       runInContext(
         `JSON.stringify({
           service: getPrintedCommunionServiceScripture_(),
+          responseHymn: getPrintedCommunionResponseHymn_(),
           footWashing: getPrintedCommunionFootWashingScripture_(),
           footWashingLookup: getPrintedCommunionFootWashingLookupScripture_(),
           passageDefinitions: {
@@ -498,6 +499,7 @@ describe('printed bulletin Apps Script helpers', () => {
     );
 
     expect(output.service).toBe('1 Corinthians 11:23–26');
+    expect(output.responseHymn).toBe('第413首 教會基礎\nAH 348 The Church Has One Foundation');
     expect(output.footWashing).toBe('John 13:1–10; 12–17');
     expect(output.footWashingLookup).toBe('John 13:1–10; John 13:12–17');
     expect(output.passageDefinitions).toEqual({
