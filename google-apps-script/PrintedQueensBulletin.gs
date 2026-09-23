@@ -2622,7 +2622,10 @@ function getFirstPrintedAnnouncementSentenceLength_(text) {
 
 function appendGivingFooter_(leftCell, rightCell) {
   appendGivingText_(leftCell);
-  appendGivingQrPlaceholders_(rightCell);
+  // The regular Queens spread now includes the Flower Offering row. Keep its
+  // bottom giving block together on the same page instead of allowing the QR
+  // captions to spill onto a new page.
+  appendGivingQrPlaceholders_(rightCell, { compact: true });
 }
 
 function appendGivingText_(cell) {
@@ -2651,7 +2654,12 @@ function appendGivingText_(cell) {
   );
 }
 
-function appendGivingQrPlaceholders_(cell) {
+function appendGivingQrPlaceholders_(cell, options) {
+  options = options || {};
+  var compact = Boolean(options.compact);
+  var imageMaxWidth = compact ? 50 : 58;
+  var cellPadding = compact ? 0 : 3;
+  var labelFontSize = compact ? 7.5 : 8;
   var table = cell.appendTable([['', '', '']]);
   table.setBorderWidth(0);
   [
@@ -2669,25 +2677,24 @@ function appendGivingQrPlaceholders_(cell) {
     table.setColumnWidth(index, width);
     var tableCell = table.getCell(0, index);
     tableCell.clear();
-    tableCell.setPaddingTop(3);
-    tableCell.setPaddingBottom(3);
+    tableCell.setPaddingTop(cellPadding);
+    tableCell.setPaddingBottom(cellPadding);
     var fileId = getPrintedBulletinQrImageFileId_(item.kind);
     if (fileId) {
       try {
         var image = tableCell.appendImage(DriveApp.getFileById(fileId).getBlob());
         var imageWidth = image.getWidth();
         var imageHeight = image.getHeight();
-        var maxWidth = 58;
-        if (imageWidth > maxWidth) {
-          image.setWidth(maxWidth);
-          image.setHeight(Math.round((imageHeight * maxWidth) / imageWidth));
+        if (imageWidth > imageMaxWidth) {
+          image.setWidth(imageMaxWidth);
+          image.setHeight(Math.round((imageHeight * imageMaxWidth) / imageWidth));
         }
         centerPrintedBulletinImage_(image);
       } catch (error) {
         Logger.log(item.label + ' QR image could not be loaded: ' + error);
       }
     }
-    appendCompactCenteredText_(tableCell, item.label, 8, true);
+    appendCompactCenteredText_(tableCell, item.label, labelFontSize, true);
   });
 }
 
