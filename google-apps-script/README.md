@@ -550,14 +550,19 @@ workflow**. Download the resulting `physical-bulletin-qr` artifact and upload th
 Drive manually. The workflow intentionally has no Drive-upload step, so the GitHub
 Actions credentials cannot write arbitrary files into the church’s shared drive.
 
-Generated documents default to the shared Drive folder configured in `PrintedQueensBulletin.gs`.
-To replace that destination, add a Script Property named `PHYSICAL_BULLETIN_FOLDER_ID`
-containing another folder's ID. The account running the manual action or installed
-trigger must have permission to create and move files there. A manual run or form
-submission updates the existing Google Doc for that location/date and creates a
-replacement PDF when one has already been created; the previous PDF is moved to Trash. An
-invalid or deleted saved document ID causes a replacement to be created. This means a
-Queens and Brooklyn submission for the same Sabbath produce two distinct output pairs.
+Generated Queens documents default to the Queens output folder and Brooklyn documents
+default to the Brooklyn output folder configured in `PrintedQueensBulletin.gs`. To override
+them, set `PHYSICAL_BULLETIN_QUEENS_FOLDER_ID` or
+`PHYSICAL_BULLETIN_BROOKLYN_FOLDER_ID`; the legacy `PHYSICAL_BULLETIN_FOLDER_ID` remains
+the final fallback. The account running the manual action or installed trigger must have
+permission to create and move files there. Output names use the short format
+`YYYY-MM-DD - regular worship` or `YYYY-MM-DD - holy communion`.
+
+A manual run or form submission updates the existing Google Doc for that location/date and
+creates a replacement PDF when one has already been created; the previous PDF is moved to
+Trash. An invalid or deleted saved document ID causes a replacement to be created. This
+means a Queens and Brooklyn submission for the same Sabbath produce two distinct output
+pairs in their respective folders.
 
 ## PWA presentation
 

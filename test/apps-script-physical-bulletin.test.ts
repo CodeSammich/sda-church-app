@@ -607,21 +607,30 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(locations).toEqual(['queens', 'brooklyn', '']);
   });
 
-  it('uses location-specific output keys and Brooklyn titles', () => {
-    const context = loadAppsScript({});
+  it('uses location-specific output keys, folders, and short format titles', () => {
+    const context = loadAppsScript({
+      PropertiesService: {
+        getScriptProperties: () => ({ getProperty: () => '' }),
+      },
+    });
     const output = JSON.parse(
       runInContext(
         `JSON.stringify({
           key: getPrintedBulletinPropertyKey_('PHYSICAL_BULLETIN_DOC_ID_', 'brooklyn', '2026-08-22'),
-          title: getPrintedBulletinTitle_('brooklyn', '2026-08-22', 'regular')
+          regularTitle: getPrintedBulletinTitle_('brooklyn', '2026-08-22', 'regular'),
+          communionTitle: getPrintedBulletinTitle_('queens', '2026-08-22', 'communion'),
+          queensFolder: getPrintedBulletinOutputFolderId_('queens'),
+          brooklynFolder: getPrintedBulletinOutputFolderId_('brooklyn')
         })`,
         context,
       ) as string,
     );
 
     expect(output.key).toBe('PHYSICAL_BULLETIN_DOC_ID_BROOKLYN_2026-08-22');
-    expect(output.title).toContain('Brooklyn Fellowship');
-    expect(output.title).toContain('August 22, 2026');
+    expect(output.regularTitle).toBe('2026-08-22 - regular worship');
+    expect(output.communionTitle).toBe('2026-08-22 - holy communion');
+    expect(output.queensFolder).toBe('1S5Z2ls_ixCb2-ToTsU-T4ImJrf0vJ8Lu');
+    expect(output.brooklynFolder).toBe('1C1L98At-T_a9Dyq7mo-ZPCj2FkHddx3J');
   });
 
   it('keeps Brooklyn cover copy location-specific', () => {
@@ -681,7 +690,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(widths).toEqual({ regular: 490, communion: 340 });
   });
 
-  it('defaults physical output to the configured shared Drive folder', () => {
+  it('defaults physical output to the configured Queens Drive folder', () => {
     const context = loadAppsScript({
       PropertiesService: {
         getScriptProperties: () => ({ getProperty: () => '' }),
@@ -690,7 +699,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
     const folderId = runInContext(`getPrintedBulletinOutputFolderId_()`, context);
 
-    expect(folderId).toBe('11p4-PzJNGLNfWdZBAMNIBlLxmBrgo_zZ');
+    expect(folderId).toBe('1S5Z2ls_ixCb2-ToTsU-T4ImJrf0vJ8Lu');
   });
 
   it('looks up either name direction and leaves an unmatched language alone', () => {

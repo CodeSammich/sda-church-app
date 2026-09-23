@@ -10,8 +10,12 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   churchName: 'New York Chinese Seventh-day Adventist Church',
   churchNameChinese: '基督復臨安息日會紐約華人教會',
   outputFolderProperty: 'PHYSICAL_BULLETIN_FOLDER_ID',
+  queensOutputFolderProperty: 'PHYSICAL_BULLETIN_QUEENS_FOLDER_ID',
+  brooklynOutputFolderProperty: 'PHYSICAL_BULLETIN_BROOKLYN_FOLDER_ID',
   adminEmailsProperty: 'PHYSICAL_BULLETIN_ADMIN_EMAILS',
   outputFolderId: '11p4-PzJNGLNfWdZBAMNIBlLxmBrgo_zZ',
+  queensOutputFolderId: '1S5Z2ls_ixCb2-ToTsU-T4ImJrf0vJ8Lu',
+  brooklynOutputFolderId: '1C1L98At-T_a9Dyq7mo-ZPCj2FkHddx3J',
   churchSketchImageProperty: 'CHURCH_SKETCH_IMAGE_FILE_ID',
   lastSupperImageProperty: 'LAST_SUPPER_IMAGE_FILE_ID',
   sdaLogoImageProperty: 'SDA_LOGO_IMAGE_FILE_ID',
@@ -1283,7 +1287,7 @@ function createPrintedBulletinUnlocked_(
   renderPrintedBulletinDocument_(document, bulletin, nextBulletin, format, location);
   document.saveAndClose();
 
-  movePrintedBulletinToConfiguredFolder_(document.getId());
+  movePrintedBulletinToConfiguredFolder_(document.getId(), location);
   properties.setProperty(documentPropertyKey, document.getId());
   if (location === 'queens' && legacyDocumentPropertyKey !== documentPropertyKey) {
     properties.deleteProperty(legacyDocumentPropertyKey);
@@ -1299,6 +1303,7 @@ function createPrintedBulletinUnlocked_(
     document.getId(),
     title,
     pdfPropertyKey,
+    location,
   );
 
   return {
@@ -1322,15 +1327,10 @@ function normalizePrintedBulletinLocation_(requestedLocation) {
 }
 
 function getPrintedBulletinTitle_(location, date, format) {
-  var churchName =
-    location === 'brooklyn'
-      ? 'New York Chinese SDA Church — Brooklyn Fellowship'
-      : PRINTED_BULLETIN_CONFIG.churchName;
   return (
-    churchName +
-    ' — ' +
-    formatDateForPrint_(date) +
-    (format === 'communion' ? ' — Communion' : '')
+    date +
+    ' - ' +
+    (format === 'communion' ? 'holy communion' : 'regular worship')
   );
 }
 
@@ -2229,15 +2229,32 @@ function normalizePhysicalNameKey_(value) {
     .toLowerCase();
 }
 
-function movePrintedBulletinToConfiguredFolder_(documentId) {
-  var folderId = getPrintedBulletinOutputFolderId_();
+function movePrintedBulletinToConfiguredFolder_(documentId, location) {
+  var folderId = getPrintedBulletinOutputFolderId_(location);
   if (!folderId) {
     return;
   }
   DriveApp.getFileById(documentId).moveTo(DriveApp.getFolderById(folderId));
 }
 
-function getPrintedBulletinOutputFolderId_() {
+function getPrintedBulletinOutputFolderId_(location) {
+  var normalizedLocation = normalizePrintedBulletinLocation_(location);
+  var locationProperty =
+    normalizedLocation === 'brooklyn'
+      ? PRINTED_BULLETIN_CONFIG.brooklynOutputFolderProperty
+      : PRINTED_BULLETIN_CONFIG.queensOutputFolderProperty;
+  var locationFolderId =
+    PropertiesService.getScriptProperties().getProperty(locationProperty);
+  if (locationFolderId) {
+    return locationFolderId;
+  }
+  var configuredFolderId =
+    normalizedLocation === 'brooklyn'
+      ? PRINTED_BULLETIN_CONFIG.brooklynOutputFolderId
+      : PRINTED_BULLETIN_CONFIG.queensOutputFolderId;
+  if (configuredFolderId) {
+    return configuredFolderId;
+  }
   return (
     PropertiesService.getScriptProperties().getProperty(
       PRINTED_BULLETIN_CONFIG.outputFolderProperty,
@@ -2245,13 +2262,13 @@ function getPrintedBulletinOutputFolderId_() {
   );
 }
 
-function createOrReplacePrintedBulletinPdf_(documentId, title, propertyKey) {
+function createOrReplacePrintedBulletinPdf_(documentId, title, propertyKey, location) {
   var properties = PropertiesService.getScriptProperties();
   var previousPdfId = properties.getProperty(propertyKey);
   var pdfBlob = DocumentApp.openById(documentId)
     .getAs(MimeType.PDF)
     .setName(title + '.pdf');
-  var folderId = getPrintedBulletinOutputFolderId_();
+  var folderId = getPrintedBulletinOutputFolderId_(location);
   var folder = folderId
     ? DriveApp.getFolderById(folderId)
     : DriveApp.getRootFolder();
