@@ -976,11 +976,30 @@ The runner installs `clasp`, writes temporary config and credential files, pushe
 checked-in Apps Script files, updates the existing deployment ID, and then is discarded.
 GitHub secrets are not available to untrusted pull requests from forks.
 
+### Google Workspace session-control requirement
+
+The OAuth refresh token in `CLASPRC_JSON` is intended to be long-lived, but Google Cloud
+session control can still invalidate refresh attempts when the Workspace account's
+reauthentication window expires. The failure appears as `invalid_grant` with
+`error_subtype: invalid_rapt`; it is not evidence that the Apps Script project or the
+JSON file is malformed. A 16-hour reauthentication policy caused this failure in the
+church deployment.
+
+For the church's deployment account, configure the Apps Script OAuth application as
+**Trusted** in the Google Workspace Admin console, then enable **Exempt trusted apps**
+under **Security → Google Cloud session control**. This prevents the trusted Apps Script
+deployment client from being forced through the ordinary 16-hour reauthentication window.
+If the refresh token was already rejected, authenticate once more after changing the
+policy and replace the protected `CLASPRC_JSON` secret with the new complete
+`~/.clasprc.json` contents.
+
 ### Credentials, permissions, and recovery
 
 The `CLASPRC_JSON` value does not need to be replaced for every deployment. It contains a
 refresh token. Re-run `clasp login` and replace the secret only if the account revokes the
-credential, Workspace policy changes, or the refresh token otherwise stops working.
+credential, the Workspace session-control policy changes, or the refresh token otherwise
+stops working. If `invalid_rapt` appears, check the trusted-app exemption above before
+rotating credentials repeatedly.
 
 If local deployment says it is unauthorized, run `clasp login` in the same WSL environment.
 If Docs or Drive operations fail, run the relevant Sheet menu action once as the intended
