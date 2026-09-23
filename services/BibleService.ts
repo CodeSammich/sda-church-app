@@ -47,6 +47,23 @@ export const BIBLE_TRANSLATION_STORAGE_KEY = 'user-bible-translation';
  */
 export const FETCH_BIBLE_BASE = 'https://v1.fetch.bible/bibles';
 
+export const SUPERSCRIPT_CHARACTERS: Record<string, string> = {
+  '0': '⁰',
+  '1': '¹',
+  '2': '²',
+  '3': '³',
+  '4': '⁴',
+  '5': '⁵',
+  '6': '⁶',
+  '7': '⁷',
+  '8': '⁸',
+  '9': '⁹',
+  '+': '⁺',
+};
+
+export const toSuperscript = (value: string | number): string =>
+  Array.from(String(value), (character) => SUPERSCRIPT_CHARACTERS[character] || character).join('');
+
 import { SupportedLanguage } from '@/constants/LanguageContext';
 
 const OLD_TESTAMENT_BOOK_IDS = new Set([
