@@ -2303,11 +2303,11 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
     var footerRightCell = footerTable.getCell(0, 1);
     footerLeftCell.clear();
     footerRightCell.clear();
-    footerLeftCell.setPaddingTop(3);
+    footerLeftCell.setPaddingTop(0);
     footerLeftCell.setPaddingBottom(0);
     footerRightCell.setPaddingTop(0);
     footerRightCell.setPaddingBottom(0);
-    footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.BOTTOM);
+    footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
     footerRightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
     footerRenderer(footerLeftCell, footerRightCell);
   }
@@ -2571,7 +2571,7 @@ function appendGivingText_(cell) {
     true,
   );
   appendHalfSpacer_(cell);
-  appendCompactCenteredText_(
+  appendCenteredText_(
     cell,
     printedBilingualText_(
       'Cash offerings: for a tax-deductible receipt, use a church envelope and write your name in English.',
@@ -2581,10 +2581,10 @@ function appendGivingText_(cell) {
     false,
   );
   appendHalfSpacer_(cell);
-  appendCompactCenteredText_(
+  appendCenteredText_(
     cell,
     'Stocks/equities: We recommend donor-advised funds; see our church\'s mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
-    7.5,
+    8.5,
     false,
   );
 }
