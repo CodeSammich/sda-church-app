@@ -2665,10 +2665,11 @@ export default function BibleScreen() {
         ? getParallelVerseTexts(
             chapterData,
             supportedTranslation.id,
-            supportingChapterData,
-            supportingTranslation?.id || null,
-            selectedVerseNum,
-          )
+          supportingChapterData,
+          supportingTranslation?.id || null,
+          selectedVerseNum,
+          true,
+        )
         : null,
     [
       chapterData,
@@ -4421,9 +4422,10 @@ export default function BibleScreen() {
                               >
                                 {labels.footnote}{' '}
                                 {BibleService.toSuperscript(
-                                  chapterData.chapter.footnotes.findIndex(
-                                    (footnote) => footnote.noteId === f.noteId,
-                                  ) + 1,
+                                  BibleService.getChapterFootnoteNumber(
+                                    chapterData.chapter.footnotes,
+                                    f.noteId,
+                                  ),
                                 )}
                               </Text>
                               <Text style={ReaderStyles.detailText}>{f.text}</Text>

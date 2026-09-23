@@ -64,6 +64,14 @@ export const SUPERSCRIPT_CHARACTERS: Record<string, string> = {
 export const toSuperscript = (value: string | number): string =>
   Array.from(String(value), (character) => SUPERSCRIPT_CHARACTERS[character] || character).join('');
 
+export const getChapterFootnoteNumber = (
+  footnotes: ChapterFootnote[],
+  noteId: number,
+): number => {
+  const footnoteIndex = footnotes.findIndex((footnote) => footnote.noteId === noteId);
+  return (footnoteIndex >= 0 ? footnoteIndex : noteId) + 1;
+};
+
 import { SupportedLanguage } from '@/constants/LanguageContext';
 
 const OLD_TESTAMENT_BOOK_IDS = new Set([
@@ -858,6 +866,7 @@ export function startsNewBiblePoetryLine(
 export function renderVerseToPlainText(
   translationId: string,
   verse: ChapterVerse,
+  footnotes: ChapterFootnote[] = [],
 ): string {
   let result = '';
   verse.content.forEach((item, i) => {
@@ -873,6 +882,26 @@ export function renderVerseToPlainText(
     const textValue = typeof item === 'string' ? item : (item as any).text || '';
     const isPoetic = typeof item === 'object' && item !== null && 'poem' in item;
     const isSelah = isSelahMarker(translationId, textValue);
+
+    let footnoteMarker = '';
+    if (footnotes.length > 0) {
+      for (let j = i + 1; j < verse.content.length; j++) {
+        const next = verse.content[j];
+        if (typeof next === 'object' && next !== null && 'noteId' in next) {
+          footnoteMarker = toSuperscript(
+            getChapterFootnoteNumber(footnotes, next.noteId),
+          );
+          break;
+        }
+        if (typeof next === 'string' && next.trim().length > 0) break;
+        if (
+          typeof next === 'object' &&
+          ('text' in next || 'heading' in next)
+        ) {
+          break;
+        }
+      }
+    }
 
     const prevItem = i > 0 ? verse.content[i - 1] : null;
     const prevIsLineBreak = !!(
@@ -940,6 +969,11 @@ export function renderVerseToPlainText(
       !startsWithPunctuationOrSpace(contentText)
     ) {
       contentText = ' ' + contentText;
+    }
+
+    if (footnoteMarker) {
+      const { leading, core, trailingPunct, trailingSpace } = segmentText(contentText);
+      contentText = `${leading}${core}${footnoteMarker}${trailingPunct}${trailingSpace}`;
     }
 
     if (isSelah) {

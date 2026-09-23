@@ -68,6 +68,28 @@ describe('dual-language Bible reader', () => {
     });
   });
 
+  it('adds chapter-local superscript footnote markers for verse-detail surfaces', () => {
+    const primary = {
+      chapter: {
+        content: [
+          {
+            type: 'verse',
+            number: 3,
+            content: ['God is love.', { noteId: 10 }],
+          },
+        ],
+        footnotes: [{ noteId: 10, text: 'Love note', caller: '+' }],
+      },
+    } as any;
+
+    expect(
+      getParallelVerseTexts(primary, 'BSB', null, null, 3, true),
+    ).toEqual({
+      primaryText: 'God is love¹.',
+      supportingText: null,
+    });
+  });
+
   it('pairs Psalm superscriptions even when sources classify them differently', () => {
     const primary = {
       chapter: {
