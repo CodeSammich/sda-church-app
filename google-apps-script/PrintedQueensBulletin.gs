@@ -1915,7 +1915,7 @@ function getPhysicalSunsetTime_(date) {
   }
 }
 
-function resolvePhysicalBiblePassage_(reference, bibleTranslations) {
+function resolvePhysicalBiblePassage_(reference, bibleTranslations, includeVerseLines) {
   var references = parsePhysicalBibleReferences_(reference);
   if (!references.length) {
     return null;
@@ -1939,11 +1939,16 @@ function resolvePhysicalBiblePassage_(reference, bibleTranslations) {
     );
   });
 
-  return {
+  var result = {
     english: englishParts.join(' '),
     chinese: chineseParts.join(' '),
     references: references,
   };
+  if (includeVerseLines) {
+    result.englishVerses = englishParts;
+    result.chineseVerses = chineseParts;
+  }
+  return result;
 }
 
 function parsePhysicalBibleReferences_(value) {

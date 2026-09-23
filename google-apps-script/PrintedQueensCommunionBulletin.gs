@@ -100,6 +100,7 @@ function hydratePrintedCommunionPassages_(bulletin, bibleTranslations) {
       bulletin[propertyName] = resolvePhysicalBiblePassage_(
         definition.lookup,
         bibleTranslations,
+        kind === 'footWashing',
       );
     } catch (error) {
       Logger.log('Fixed ' + kind + ' passage lookup failed: ' + error);
@@ -125,11 +126,19 @@ function appendPrintedCommunionPassageBox_(cell, bulletin, kind) {
       ? 'physicalFootWashingPassageText'
       : 'physicalCommunionPassageText';
   var passage = bulletin[propertyName] || {};
+  var chineseText =
+    kind === 'footWashing' && passage.chineseVerses
+      ? passage.chineseVerses.join('\n')
+      : passage.chinese;
+  var englishText =
+    kind === 'footWashing' && passage.englishVerses
+      ? passage.englishVerses.join('\n')
+      : passage.english;
   appendDataTable_(
     cell,
     [
       [definition.chinese, definition.english],
-      [passage.chinese || definition.chinese, passage.english || definition.english],
+      [chineseText || definition.chinese, englishText || definition.english],
     ],
     {
       borderWidth: 0.75,
