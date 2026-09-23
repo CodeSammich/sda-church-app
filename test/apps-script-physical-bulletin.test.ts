@@ -617,7 +617,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(calls).toEqual(['queens-regular', 'communion', 'brooklyn']);
   });
 
-  it('leaves a narrow explicit fold gutter between booklet halves and footers', () => {
+  it('preserves full-width booklet panels beside the explicit fold gutter', () => {
     const columnWidths: Array<[number, number]> = [];
     const makeCell = () => ({
       clear: () => undefined,
@@ -647,9 +647,9 @@ describe('printed bulletin Apps Script helpers', () => {
     );
 
     expect(columnWidths).toEqual([
-      [0, 354],
+      [0, 368],
       [1, 28],
-      [2, 354],
+      [2, 368],
     ]);
   });
 

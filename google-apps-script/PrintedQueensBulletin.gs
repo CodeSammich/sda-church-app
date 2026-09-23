@@ -38,7 +38,11 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   pageWidth: 792,
   pageHeight: 612,
   pageMargin: 28,
-  bookletHalfWidth: 354,
+  // Preserve the original 368-point content panels. The horizontal margins
+  // are narrowed only for booklet pages so the fold gutter is added without
+  // squeezing or clipping the fixed-width inner tables.
+  bookletHorizontalMargin: 14,
+  bookletHalfWidth: 368,
   bookletFoldGutter: 28,
   regularCoverImageMaxWidth: 490,
   communionCoverImageMaxWidth: 340,
@@ -1395,8 +1399,8 @@ function renderPrintedBulletinDocument_(document, bulletin, nextBulletin, format
       ? PRINTED_BULLETIN_CONFIG.pageMargin - 10
       : PRINTED_BULLETIN_CONFIG.pageMargin,
   );
-  body.setMarginLeft(PRINTED_BULLETIN_CONFIG.pageMargin);
-  body.setMarginRight(PRINTED_BULLETIN_CONFIG.pageMargin);
+  body.setMarginLeft(PRINTED_BULLETIN_CONFIG.bookletHorizontalMargin);
+  body.setMarginRight(PRINTED_BULLETIN_CONFIG.bookletHorizontalMargin);
 
   if (location === 'brooklyn') {
     renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, format);
@@ -1610,8 +1614,8 @@ function appendBrooklynCoverPanel_(cell, bulletin, format) {
 }
 
 function appendSharedCoverPanel_(cell, bulletin, format) {
-  // US Letter landscape leaves 368 points for each folded cover panel after
-  // the 28-point page margins.
+  // Keep the cover's 368-point inner layout stable while the booklet page
+  // gutter is handled by appendBookletPage_.
   cell.setPaddingLeft(0);
   cell.setPaddingRight(0);
   appendPrintedBulletinLogo_(cell);
