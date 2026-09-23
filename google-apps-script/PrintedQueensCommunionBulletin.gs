@@ -20,7 +20,7 @@ var PRINTED_COMMUNION_LAYOUT = Object.freeze({
   footWashingReferenceChinese: '約翰福音 13:1–10; 12–17',
   footWashingBoxReferenceChinese: '約翰福音 13:1–10',
   footWashingInstruction:
-    'Please quietly proceed downstairs for foot washing: brothers to the basement, sisters to the second floor.\n請安靜地前往樓下洗腳：弟兄到地下室，姊妹到二樓。',
+    '請安靜地前往樓下洗腳：弟兄到地下室，姊妹到二樓。\nPlease quietly proceed downstairs for foot washing: brothers to the basement, sisters to the second floor.',
   readings: Object.freeze([
     Object.freeze({
       english: 'The Bread',
