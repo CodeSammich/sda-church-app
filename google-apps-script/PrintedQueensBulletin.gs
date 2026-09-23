@@ -1329,8 +1329,8 @@ function normalizePrintedBulletinLocation_(requestedLocation) {
 function getPrintedBulletinTitle_(location, date, format) {
   return (
     date +
-    ' - ' +
-    (format === 'communion' ? 'holy communion' : 'regular worship')
+    ' Bulletin - ' +
+    (format === 'communion' ? 'Holy Communion' : 'Regular Worship')
   );
 }
 

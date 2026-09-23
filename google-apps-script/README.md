@@ -556,7 +556,7 @@ them, set `PHYSICAL_BULLETIN_QUEENS_FOLDER_ID` or
 `PHYSICAL_BULLETIN_BROOKLYN_FOLDER_ID`; the legacy `PHYSICAL_BULLETIN_FOLDER_ID` remains
 the final fallback. The account running the manual action or installed trigger must have
 permission to create and move files there. Output names use the short format
-`YYYY-MM-DD - regular worship` or `YYYY-MM-DD - holy communion`.
+`YYYY-MM-DD Bulletin - Regular Worship` or `YYYY-MM-DD Bulletin - Holy Communion`.
 
 A manual run or form submission updates the existing Google Doc for that location/date and
 creates a replacement PDF when one has already been created; the previous PDF is moved to

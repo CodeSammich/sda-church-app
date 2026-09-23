@@ -627,8 +627,8 @@ describe('printed bulletin Apps Script helpers', () => {
     );
 
     expect(output.key).toBe('PHYSICAL_BULLETIN_DOC_ID_BROOKLYN_2026-08-22');
-    expect(output.regularTitle).toBe('2026-08-22 - regular worship');
-    expect(output.communionTitle).toBe('2026-08-22 - holy communion');
+    expect(output.regularTitle).toBe('2026-08-22 Bulletin - Regular Worship');
+    expect(output.communionTitle).toBe('2026-08-22 Bulletin - Holy Communion');
     expect(output.queensFolder).toBe('1S5Z2ls_ixCb2-ToTsU-T4ImJrf0vJ8Lu');
     expect(output.brooklynFolder).toBe('1C1L98At-T_a9Dyq7mo-ZPCj2FkHddx3J');
   });
