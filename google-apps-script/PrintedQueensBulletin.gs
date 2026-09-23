@@ -2815,14 +2815,7 @@ function appendCommunionPanel_(cell, bulletin) {
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
   appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
-  appendProgramTable_(cell, [
-    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', printValue_(location.chairPastoralPrayer)],
-    [printedBilingualText_('Breaking the Bread', '分餅'), '', printValue_(location.sermon)],
-  ]);
-  appendPrintedCommunionReadingPassageBox_(cell, bulletin, 0);
-  appendProgramTable_(cell, [
-    [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
-  ]);
+  appendCommunionActionsPanel_(cell, bulletin);
   appendCommunionStudyContinuationRows_(cell, bulletin);
 }
 
