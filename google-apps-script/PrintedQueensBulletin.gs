@@ -1385,7 +1385,14 @@ function renderPrintedBulletinDocument_(document, bulletin, nextBulletin, format
   body.setPageWidth(PRINTED_BULLETIN_CONFIG.pageWidth);
   body.setPageHeight(PRINTED_BULLETIN_CONFIG.pageHeight);
   body.setMarginTop(PRINTED_BULLETIN_CONFIG.pageMargin);
-  body.setMarginBottom(PRINTED_BULLETIN_CONFIG.pageMargin);
+  // Regular bulletins place a footer immediately before the imposed page
+  // break. A slightly smaller bottom margin leaves room for the break
+  // paragraph itself and prevents an otherwise blank intervening page.
+  body.setMarginBottom(
+    format === 'regular'
+      ? PRINTED_BULLETIN_CONFIG.pageMargin - 10
+      : PRINTED_BULLETIN_CONFIG.pageMargin,
+  );
   body.setMarginLeft(PRINTED_BULLETIN_CONFIG.pageMargin);
   body.setMarginRight(PRINTED_BULLETIN_CONFIG.pageMargin);
 
