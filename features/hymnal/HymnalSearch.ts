@@ -34,6 +34,7 @@ export const normalizeHymnalSearchText = (value: string) =>
 export const HYMNAL_SEARCH_RESULT_LIMIT = 60;
 
 export type HeaderSearchCandidate = {
+  searchPriority?: number;
   searchNumber?: string;
   searchText?: string;
   subtitle: string;
@@ -89,6 +90,10 @@ export const filterHeaderSearchItems = <Item extends HeaderSearchCandidate>(
         : normalizeHymnalSearchText(
             `${item.title} ${item.subtitle} ${item.searchText || ''}`,
           ).includes(normalizedQuery),
+    )
+    .sort(
+      (left, right) =>
+        (right.searchPriority || 0) - (left.searchPriority || 0),
     )
     .slice(0, HYMNAL_SEARCH_RESULT_LIMIT);
 };

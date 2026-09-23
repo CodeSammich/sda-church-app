@@ -149,6 +149,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({
       ) : null}
       <View pointerEvents="none" style={styles.cardContent}>
         <Text
+          key={`menu-card-title-${title}-${theme.colors.onSurface}`}
           style={[
             styles.cardTitle,
             {
@@ -162,6 +163,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({
         </Text>
         {description && (
           <Text
+            key={`menu-card-subtitle-${title}-${theme.colors.onSurfaceVariant}`}
             style={[
               styles.cardSubtitle,
               { color: theme.colors.onSurfaceVariant },

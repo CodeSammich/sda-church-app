@@ -1,6 +1,5 @@
 import { LanguageContext } from '@/constants/LanguageContext';
 import {
-  THEME_AMBIENT,
   THEME_DARK,
   THEME_LIGHT,
   THEME_SUNSET,
@@ -21,15 +20,6 @@ const OPTIONS: readonly {
   labels: Record<'en' | 'zh' | 'zh-cn' | 'es', { label: string; description: string }>;
 }[] = [
   {
-    value: THEME_AMBIENT,
-    labels: {
-      en: { label: 'Automatic', description: 'Use the ambient light sensor when available' },
-      zh: { label: '自動', description: '有可用時根據環境光線調整' },
-      'zh-cn': { label: '自动', description: '有可用时根据环境光线调整' },
-      es: { label: 'Automático', description: 'Usar el sensor de luz ambiental cuando esté disponible' },
-    },
-  },
-  {
     value: THEME_SYSTEM,
     labels: {
       en: { label: 'System', description: 'Follow your device setting' },
@@ -41,10 +31,16 @@ const OPTIONS: readonly {
   {
     value: THEME_SUNSET,
     labels: {
-      en: { label: 'Sunset', description: 'Follow sunset in New York' },
-      zh: { label: '日落', description: '跟隨紐約的日落時間' },
-      'zh-cn': { label: '日落', description: '跟随纽约的日落时间' },
-      es: { label: 'Atardecer', description: 'Seguir el atardecer en Nueva York' },
+      en: {
+        label: 'Sunrise/Sunset',
+        description: 'Follow sunrise and sunset in New York',
+      },
+      zh: { label: '日出/日落', description: '跟隨紐約的日出和日落時間' },
+      'zh-cn': { label: '日出/日落', description: '跟随纽约的日出和日落时间' },
+      es: {
+        label: 'Amanecer/Atardecer',
+        description: 'Seguir el amanecer y el atardecer en Nueva York',
+      },
     },
   },
   {

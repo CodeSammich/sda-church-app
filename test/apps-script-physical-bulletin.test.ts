@@ -719,26 +719,21 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.brooklynFolder).toBe('1C1L98At-T_a9Dyq7mo-ZPCj2FkHddx3J');
   });
 
-  it('keeps Brooklyn cover copy location-specific', () => {
+  it('uses the shared three-location cover for Brooklyn bulletins', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
       runInContext(
-        `JSON.stringify({
-          title: PRINTED_BROOKLYN_BULLETIN_CONFIG.titleEnglish,
-          titleChinese: PRINTED_BROOKLYN_BULLETIN_CONFIG.titleChinese,
-          address: PRINTED_BROOKLYN_BULLETIN_CONFIG.addressEnglish,
-          service: PRINTED_BROOKLYN_BULLETIN_CONFIG.serviceEnglish
-        })`,
+        `var calls = [];
+         appendSharedCoverPanel_ = function(cell, bulletin, format) {
+           calls.push({ cell: cell, date: bulletin.date, format: format });
+         };
+         renderPrintedBrooklynCoverPanel_('cover-cell', { date: '2026-09-26' }, 'regular');
+         JSON.stringify(calls)`,
         context,
       ) as string,
     );
 
-    expect(output).toEqual({
-      title: 'New York Chinese SDA Church — Brooklyn Fellowship',
-      titleChinese: '紐約華人基督復臨安息日教會——布魯克林團契',
-      address: '5318 4th Avenue, Brooklyn, NY 11220',
-      service: 'Brooklyn Service | Saturdays 10:30 AM',
-    });
+    expect(output).toEqual([{ cell: 'cover-cell', date: '2026-09-26', format: 'regular' }]);
   });
 
   it('selects the church sketch for regular covers and Last Supper for communion', () => {
