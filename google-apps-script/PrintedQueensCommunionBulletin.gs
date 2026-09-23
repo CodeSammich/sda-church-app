@@ -203,8 +203,8 @@ function getPrintedCommunionReadingRows_() {
 
 function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   // Keep this imposed order in sync with the Communion reference PDF:
-  // back/announcements | cover, study | blank, Communion continued |
-  // worship + giving, then foot washing | Communion opening.
+  // back/announcements | cover, study | blank, worship + giving |
+  // foot washing | the complete Holy Communion service.
   appendBookletPage_(
     body,
     function (cell) {
@@ -225,10 +225,7 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   );
   appendBookletPage_(
     body,
-    function (cell) {
-      appendCommunionContinuationPanel_(cell, bulletin);
-      appendCommunionStudyContinuationRows_(cell, bulletin);
-    },
+    function (cell) {},
     function (cell) {
       appendWorshipPanel_(cell, bulletin, false);
       appendCommunionVerticalGivingPanel_(cell);
@@ -266,8 +263,7 @@ function appendCommunionSectionDivider_(cell) {
   }
 }
 
-function appendCommunionStudyContinuationRows_(cell, bulletin) {
-  var location = bulletin.queens;
+function appendCommunionClosingRows_(cell, bulletin, locationKey) {
   appendProgramTable_(cell, [
     [
       printedBilingualText_('Hymn of Response', '回應詩'),
@@ -277,7 +273,7 @@ function appendCommunionStudyContinuationRows_(cell, bulletin) {
     [
       printedBilingualText_('Benediction', '祝禱'),
       '',
-      printValue_(location.sermon),
+      getPrintedCommunionPastor_(),
     ],
     [
       printedBilingualText_('Postlude', '後奏'),

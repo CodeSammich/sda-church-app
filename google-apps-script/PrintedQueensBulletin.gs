@@ -2877,6 +2877,7 @@ function appendFootWashingPanel_(cell, bulletin) {
     [printedBilingualText_('Foot Washing', '洗腳禮'), '', getPrintedCommunionWholeCongregation_()],
   ]);
   appendSpacer_(cell);
+  appendSpacer_(cell);
   appendCompactItalicCenteredText_(cell, getPrintedCommunionFootWashingInstruction_(), 8.5);
 }
 
@@ -2892,12 +2893,8 @@ function appendCommunionPanel_(cell, bulletin) {
   ]);
   appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
   appendCommunionOpeningActionsPanel_(cell, bulletin);
-  appendSpacer_(cell);
-  appendCompactItalicCenteredText_(
-    cell,
-    '請翻到下一頁繼續聖餐禮。\nPlease continue on the next page with Holy Communion — continued.',
-    8.5,
-  );
+  appendCommunionContinuationActionsPanel_(cell, bulletin);
+  appendCommunionClosingRows_(cell, bulletin);
 }
 
 function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
@@ -2910,11 +2907,7 @@ function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
   ]);
 }
 
-function appendCommunionContinuationPanel_(cell, bulletin, locationKey) {
-  appendPanelHeading_(
-    cell,
-    printedBilingualText_('HOLY COMMUNION — continued', '聖餐禮（續）'),
-  );
+function appendCommunionContinuationActionsPanel_(cell, bulletin, locationKey) {
   appendProgramTable_(cell, [
     [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', getPrintedCommunionPastor_()],
     [printedBilingualText_('Share the Cup', '分杯'), '', getPrintedCommunionPastor_()],
@@ -2926,7 +2919,8 @@ function appendCommunionContinuationPanel_(cell, bulletin, locationKey) {
 
 function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
   appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey);
-  appendCommunionContinuationPanel_(cell, bulletin, locationKey);
+  appendCommunionContinuationActionsPanel_(cell, bulletin, locationKey);
+  appendCommunionClosingRows_(cell, bulletin, locationKey);
 }
 
 function appendPanelHeading_(cell, title, subtitle) {
