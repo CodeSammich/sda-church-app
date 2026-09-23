@@ -2890,6 +2890,7 @@ function appendCommunionPanel_(cell, bulletin) {
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
+  appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
   appendCommunionOpeningActionsPanel_(cell, bulletin);
   appendSpacer_(cell);
   appendCompactItalicCenteredText_(
