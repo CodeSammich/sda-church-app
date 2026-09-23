@@ -3034,7 +3034,9 @@ function appendInfoTable_(cell, rows) {
   );
 }
 
-function appendProgramTable_(cell, rows) {
+function appendProgramTable_(cell, rows, options) {
+  options = options || {};
+  var columnWidths = options.columnWidths || [105, 160, 95];
   var table = cell.appendTable(
     rows.map(function (row) {
       return row.map(function (value) {
@@ -3043,9 +3045,9 @@ function appendProgramTable_(cell, rows) {
     }),
   );
   table.setBorderWidth(0);
-  table.setColumnWidth(0, 105);
-  table.setColumnWidth(1, 160);
-  table.setColumnWidth(2, 95);
+  columnWidths.forEach(function (width, columnIndex) {
+    table.setColumnWidth(columnIndex, width);
+  });
   rows.forEach(function (row, rowIndex) {
     var tableRow = table.getRow(rowIndex);
     for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {

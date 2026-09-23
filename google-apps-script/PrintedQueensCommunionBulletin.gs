@@ -280,7 +280,7 @@ function appendCommunionClosingRows_(cell, bulletin, locationKey) {
       printedBilingualText_('SDAH 690 — Dismiss Us, Lord', '第504首 散會頌'),
       printedBilingualText_('Congregation', '會眾'),
     ],
-  ]);
+  ], { columnWidths: [90, 200, 70] });
   appendSpacer_(cell);
   appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
 }
