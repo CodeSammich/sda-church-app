@@ -464,6 +464,11 @@ describe('printed bulletin Apps Script helpers', () => {
         `JSON.stringify({
           service: getPrintedCommunionServiceScripture_(),
           footWashing: getPrintedCommunionFootWashingScripture_(),
+          footWashingLookup: getPrintedCommunionFootWashingLookupScripture_(),
+          passageDefinitions: {
+            communion: getPrintedCommunionPassageDefinition_('communion'),
+            footWashing: getPrintedCommunionPassageDefinition_('footWashing')
+          },
           instruction: getPrintedCommunionFootWashingInstruction_(),
           readings: getPrintedCommunionReadingRows_()
         })`,
@@ -473,6 +478,19 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(output.service).toBe('1 Corinthians 11:23–26');
     expect(output.footWashing).toBe('John 13:1–10; 12–17');
+    expect(output.footWashingLookup).toBe('John 13:1–10; John 13:12–17');
+    expect(output.passageDefinitions).toEqual({
+      communion: {
+        lookup: '1 Corinthians 11:23–26',
+        english: '1 Corinthians 11:23–26',
+        chinese: '哥林多前書 11:23–26',
+      },
+      footWashing: {
+        lookup: 'John 13:1–10; John 13:12–17',
+        english: 'John 13:1–10; 12–17',
+        chinese: '約翰福音 13:1–10; 12–17',
+      },
+    });
     expect(output.instruction).toContain('brothers to the basement');
     expect(output.instruction).toContain('弟兄到地下室');
     expect(output.readings).toEqual([
@@ -621,6 +639,21 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(imageIds.regular).toBe('1ZmxAI0l-689nnz5l1pEtmpNTDquA8_No');
     expect(imageIds.communion).toBe('1ZGPxK1cidxies9jAguiAIPVlk9Vqk-Kd');
+  });
+
+  it('keeps regular covers large while constraining Communion covers', () => {
+    const context = loadAppsScript({});
+    const widths = JSON.parse(
+      runInContext(
+        `JSON.stringify({
+          regular: PRINTED_BULLETIN_CONFIG.regularCoverImageMaxWidth,
+          communion: PRINTED_BULLETIN_CONFIG.communionCoverImageMaxWidth
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(widths).toEqual({ regular: 490, communion: 300 });
   });
 
   it('defaults physical output to the configured shared Drive folder', () => {

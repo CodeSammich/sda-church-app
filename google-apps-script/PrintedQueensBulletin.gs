@@ -34,6 +34,8 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   pageWidth: 792,
   pageHeight: 612,
   pageMargin: 28,
+  regularCoverImageMaxWidth: 490,
+  communionCoverImageMaxWidth: 300,
   studyTime: '10:00 am–11:25 am  |  上午 10:00–11:25',
   worshipTime: '11:30 am–1:00 pm  |  上午 11:30–下午 1:00',
   bibleApiBaseUrl: 'https://bible.helloao.org/api',
@@ -1415,7 +1417,6 @@ function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, fo
         appendBrooklynClosingPanel_(cell, bulletin);
       },
       false,
-      appendGivingFooter_,
     );
     appendBookletPage_(
       body,
@@ -1426,6 +1427,7 @@ function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, fo
         appendBrooklynWorshipPanel_(cell, bulletin, false);
       },
       false,
+      appendGivingFooter_,
     );
     appendBookletPage_(
       body,
@@ -1481,7 +1483,7 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
   );
   appendCenteredText_(cell, '11:30 am–1:00 pm', 9, false);
 
-  var worshipRows = [
+  var worshipRowsBeforeSermon = [
     [printedBilingualText_('Chairman', '主席'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
     [printedBilingualText_('Doxology', '讚美'), printedBilingualText_('AH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Invocation', '獻禱'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
@@ -1490,22 +1492,30 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
     [printedBilingualText_('Pastoral Prayer', '牧養禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一與奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
     [printedBilingualText_('Special Music', '特別音樂'), '', printValue_(location.specialMusic)],
-    [printedBilingualText_('Sermon', '講道'), formatSermonTitleForPrint_(location), printValue_(location.sermon)],
+  ];
+  var worshipRowsAfterSermon = [
     [printedBilingualText_('Hymn of Response', '回應詩'), formatHymnForPrint_(location.hymnOfResponse), printedBilingualText_('Congregation', '會眾')],
   ];
+  var sermonRow = [
+    printedBilingualText_('Sermon', '講道'),
+    formatSermonTitleForPrint_(location),
+    printValue_(location.sermon),
+  ];
   if (includeClosingRows) {
-    worshipRows.push([
+    worshipRowsAfterSermon.push([
       printedBilingualText_('Benediction', '散會禱告'),
       '',
       printValue_(location.sermon),
     ]);
-    worshipRows.push([
+    worshipRowsAfterSermon.push([
       printedBilingualText_('Postlude', '後奏曲'),
       printedBilingualText_('SDAH 690 — Dismiss Us, Lord', '第504首 散會頌'),
       printedBilingualText_('Congregation', '會眾'),
     ]);
   }
-  appendBrooklynProgramTable_(cell, worshipRows);
+  appendBrooklynProgramTable_(cell, worshipRowsBeforeSermon);
+  appendSermonHighlightRow_(cell, sermonRow);
+  appendBrooklynProgramTable_(cell, worshipRowsAfterSermon);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
   }
@@ -1628,11 +1638,13 @@ function appendPrintedBulletinCoverImage_(cell, format) {
     var image = cell.appendImage(DriveApp.getFileById(fileId).getBlob());
     var width = image.getWidth();
     var height = image.getHeight();
-    // Each cover is one half of the landscape booklet page. Keep the sketch
-    // nearly full-width so it becomes a full-width image after folding.
     // InlineImage#setWidth uses CSS pixels, while the Letter layout above is
-    // measured in points. 490 px is approximately 368 points at 96 dpi.
-    var maxWidth = 490;
+    // measured in points. Communion uses a smaller square image so its title,
+    // contacts, and cover content stay on the cover face.
+    var maxWidth =
+      format === 'communion'
+        ? PRINTED_BULLETIN_CONFIG.communionCoverImageMaxWidth
+        : PRINTED_BULLETIN_CONFIG.regularCoverImageMaxWidth;
     if (width > maxWidth) {
       image.setWidth(maxWidth);
       image.setHeight(Math.round((height * maxWidth) / width));
@@ -1706,6 +1718,9 @@ function appendBrooklynCommunionPanel_(cell, bulletin) {
   appendBrooklynProgramTable_(cell, [
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
+  ]);
+  appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
+  appendBrooklynProgramTable_(cell, [
     [printedBilingualText_('Blessing the Bread', '祝福餅'), physicalTbdText_(), physicalTbdText_('尚未安排')],
     [printedBilingualText_('Breaking the Bread', '擘餅'), physicalTbdText_(), physicalTbdText_('尚未安排')],
     [printedBilingualText_('Blessing the Cup', '祝福杯'), physicalTbdText_(), physicalTbdText_('尚未安排')],
@@ -1719,7 +1734,12 @@ function appendBrooklynCommunionReadingPanel_(cell) {
     printedBilingualText_('COMMUNION READINGS', '聖餐經文'),
     getPrintedCommunionServiceScripture_(),
   );
-  appendBrooklynProgramTable_(cell, getPrintedCommunionReadingRows_());
+  appendDataTable_(cell, getPrintedCommunionReadingRows_().map(function (row) {
+    return [row[0], row[1]];
+  }).concat([
+    [printedBilingualText_('Reader', '讀經者'), printedBilingualText_('Congregation', '會眾')],
+  ]));
+  appendBodyText_(cell, printedBilingualText_('See the Scripture references above.', '請參閱以上經文。'));
 }
 
 function appendBrooklynClosingPanel_(cell, bulletin) {
@@ -1832,6 +1852,7 @@ function hydratePhysicalBibleVerses_(bulletin, bibleTranslations) {
       location.bibleVerseText = null;
     }
   });
+  hydratePrintedCommunionPassages_(bulletin, translations);
   return bulletin;
 }
 
@@ -2723,7 +2744,7 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
     printedBilingualText_('THE CHURCH AT WORSHIP', '崇拜聚會'),
   );
   appendCenteredText_(cell, PRINTED_BULLETIN_CONFIG.worshipTime, 9, false);
-  var worshipRows = [
+  var worshipRowsBeforeSermon = [
     [printedBilingualText_('Chairman', '主席'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Doxology', '頌讚'), printedBilingualText_('SDAH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Invocation', '宣召'), '', printValue_(location.chairPastoralPrayer)],
@@ -2732,22 +2753,30 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
     [printedBilingualText_('Pastoral Prayer', '牧者禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
     [printedBilingualText_('Special Music', '特別音樂'), '', printValue_(location.specialMusic)],
-    [printedBilingualText_('Sermon', '講道'), formatSermonTitleForPrint_(location), printValue_(location.sermon)],
+  ];
+  var worshipRowsAfterSermon = [
     [printedBilingualText_('Hymn of Response', '回應詩'), formatHymnForPrint_(location.hymnOfResponse), printedBilingualText_('Congregation', '會眾')],
   ];
+  var sermonRow = [
+    printedBilingualText_('Sermon', '講道'),
+    formatSermonTitleForPrint_(location),
+    printValue_(location.sermon),
+  ];
   if (includeClosingRows) {
-    worshipRows.push([
+    worshipRowsAfterSermon.push([
       printedBilingualText_('Benediction', '祝禱'),
       '',
       printValue_(location.sermon),
     ]);
-    worshipRows.push([
+    worshipRowsAfterSermon.push([
       printedBilingualText_('Postlude', '後奏'),
       printedBilingualText_('SDAH 690 — Dismiss Us, Lord', '第504首 散會頌'),
       printedBilingualText_('Congregation', '會眾'),
     ]);
   }
-  appendProgramTable_(cell, worshipRows);
+  appendProgramTable_(cell, worshipRowsBeforeSermon);
+  appendSermonHighlightRow_(cell, sermonRow);
+  appendProgramTable_(cell, worshipRowsAfterSermon);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
   }
@@ -2759,8 +2788,8 @@ function appendFootWashingPanel_(cell, bulletin) {
     printedBilingualText_('FOOT WASHING', '洗腳禮'),
     getPrintedCommunionFootWashingScripture_(),
   );
+  appendPrintedCommunionPassageBox_(cell, bulletin, 'footWashing');
   appendProgramTable_(cell, [
-    [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionFootWashingScripture_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
   ]);
   appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
@@ -2779,6 +2808,9 @@ function appendCommunionPanel_(cell, bulletin) {
   appendProgramTable_(cell, [
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
+  ]);
+  appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
+  appendProgramTable_(cell, [
     [printedBilingualText_('Blessing the Bread', '祝福餅'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Breaking the Bread', '擘餅'), '', printValue_(location.sermon)],
     [printedBilingualText_('Blessing the Cup', '祝福杯'), '', printValue_(location.chairPastoralPrayer)],
@@ -2940,6 +2972,36 @@ function appendProgramTable_(cell, rows) {
       );
     }
   });
+}
+
+function appendSermonHighlightRow_(cell, row) {
+  appendHalfSpacer_(cell);
+  var table = cell.appendTable([
+    row.map(function (value) {
+      return String(value === null || typeof value === 'undefined' ? '' : value);
+    }),
+  ]);
+  table.setBorderWidth(0.75);
+  table.setBorderColor('#000000');
+  table.setColumnWidth(0, 105);
+  table.setColumnWidth(1, 160);
+  table.setColumnWidth(2, 95);
+  for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {
+    var tableCell = table.getCell(0, columnIndex);
+    tableCell.setPaddingTop(1.5);
+    tableCell.setPaddingBottom(1.5);
+    styleTableCell_(
+      tableCell,
+      9,
+      columnIndex === 1,
+      columnIndex === 0
+        ? DocumentApp.HorizontalAlignment.LEFT
+        : columnIndex === 1
+          ? DocumentApp.HorizontalAlignment.CENTER
+          : DocumentApp.HorizontalAlignment.RIGHT,
+    );
+  }
+  appendHalfSpacer_(cell);
 }
 
 function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslations) {
