@@ -11,8 +11,8 @@ var PRINTED_COMMUNION_LAYOUT = Object.freeze({
   serviceScripture: '1 Corinthians 11:23–26',
   responseHymn: 'AH 348 The Church Has One Foundation',
   responseHymnChinese: '第413首 教會基礎',
-  wholeCongregation: 'Whole Congregation',
-  wholeCongregationChinese: '全體會眾',
+  wholeCongregation: 'Congregation',
+  wholeCongregationChinese: '會眾',
   footWashingScripture: 'John 13:1–10; 12–17',
   footWashingLookupScripture: 'John 13:1–10; John 13:12–17',
   footWashingBoxScripture: 'John 13:1–10',
@@ -194,8 +194,8 @@ function getPrintedCommunionReadingRows_() {
 
 function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   // Keep this imposed order in sync with the Communion reference PDF:
-  // back/announcements | cover, study | blank, Communion actions/closing |
-  // worship + giving, then foot washing | Communion.
+  // back/announcements | cover, study | blank, Communion continued |
+  // worship + giving, then foot washing | Communion opening.
   appendBookletPage_(
     body,
     function (cell) {
@@ -217,7 +217,7 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   appendBookletPage_(
     body,
     function (cell) {
-      appendCommunionActionsPanel_(cell, bulletin);
+      appendCommunionContinuationPanel_(cell, bulletin);
       appendCommunionStudyContinuationRows_(cell, bulletin);
     },
     function (cell) {

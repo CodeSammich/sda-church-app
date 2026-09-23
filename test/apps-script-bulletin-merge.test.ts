@@ -40,6 +40,27 @@ describe('Apps Script bulletin response merging', () => {
     });
   });
 
+  it('maps the Queens flower offering after the closing prayer', () => {
+    const context = createContext({});
+    runInContext(
+      readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8'),
+      context,
+    );
+
+    const field = JSON.parse(
+      runInContext(
+        "JSON.stringify(COLUMN_SCHEMA.find(function (entry) { return entry.header === 'Flower Offering'; }))",
+        context,
+      ) as string,
+    );
+
+    expect(field).toEqual({
+      header: 'Flower Offering',
+      path: ['queens', 'flowerOffering'],
+      person: true,
+    });
+  });
+
   it('merges every matching response and prefers the latest conflicting answer', () => {
     const rows = [
       [

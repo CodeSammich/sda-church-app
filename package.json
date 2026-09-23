@@ -23,7 +23,9 @@
     "deploy:production": "node public/deploy-web.js --publish --quiet",
     "build:android": "node scripts/build-android-native.mjs",
     "build:android:apk": "node scripts/build-android-native.mjs --apk",
-    "build:android:apk:debug": "node scripts/build-android-native.mjs --apk --debug"
+    "build:android:apk:debug": "node scripts/build-android-native.mjs --apk --debug",
+    "build:android:apk:debug:arm": "node scripts/build-android-native.mjs --apk --debug --architectures arm",
+    "build:android:apk:debug:intel": "node scripts/build-android-native.mjs --apk --debug --architectures intel"
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.3",

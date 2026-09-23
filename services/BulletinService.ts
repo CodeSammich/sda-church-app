@@ -23,6 +23,7 @@ export type BulletinLocation = {
   ssChair?: string;
   ssOpeningPrayer?: string;
   closingPrayer?: string;
+  flowerOffering?: string;
   sabbathSchool?: string;
 };
 
@@ -105,6 +106,7 @@ export const isBulletinLocationEmpty = (location: BulletinLocation) =>
     location.ssChair,
     location.ssOpeningPrayer,
     location.closingPrayer,
+    location.flowerOffering,
     location.sabbathSchool,
   ].some(hasBulletinValue);
 

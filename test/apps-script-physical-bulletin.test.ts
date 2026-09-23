@@ -7,6 +7,8 @@ const loadAppsScript = (context: Record<string, unknown>) => {
   runInContext(
       readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8') +
       '\n' +
+      readFileSync(join(process.cwd(), 'google-apps-script/BulletinScheduleMaintenance.gs'), 'utf8') +
+      '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensBulletin.gs'), 'utf8') +
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensCommunionBulletin.gs'), 'utf8') +
@@ -42,7 +44,59 @@ describe('printed bulletin Apps Script helpers', () => {
     runInContext(`onOpen()`, context);
 
     expect(menuTitle).toBe('Printed Bulletin');
-    expect(menuItems).toEqual(['Create Google Doc + PDF…']);
+    expect(menuItems).toEqual([
+      'Create Google Doc + PDF…',
+    ]);
+  });
+
+  it('calculates quarter boundaries and next-quarter Saturday values', () => {
+    const context = loadAppsScript({});
+    const values = JSON.parse(
+      runInContext(
+        `JSON.stringify({
+          start: formatBulletinMaintenanceDateKey_(getBulletinQuarterStart_(new Date(2026, 8, 22))),
+          end: formatBulletinMaintenanceDateKey_(getBulletinQuarterEnd_(new Date(2026, 8, 22))),
+          key: formatBulletinMaintenanceDateKey_(new Date(2026, 9, 3))
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(values).toEqual({
+      start: '2026-07-01',
+      end: '2026-09-30',
+      key: '2026-10-03',
+    });
+  });
+
+  it('does not advance past an already complete next quarter', () => {
+    const context = loadAppsScript({});
+    const values = JSON.parse(
+      runInContext(
+        `JSON.stringify((function() {
+          var start = new Date(2026, 9, 1);
+          var end = new Date(2026, 11, 31);
+          var dates = getBulletinQuarterSaturdays_(start, end);
+          var existing = {};
+          dates.forEach(function(date) {
+            existing[formatBulletinMaintenanceDateKey_(date)] = true;
+          });
+          var missing = getBulletinMissingQuarterSaturdays_(start, end, existing);
+          return {
+            count: dates.length,
+            missing: missing.length,
+            followingQuarter: formatBulletinMaintenanceDateKey_(new Date(2027, 0, 1))
+          };
+        })())`,
+        context,
+      ) as string,
+    );
+
+    expect(values).toEqual({
+      count: 13,
+      missing: 0,
+      followingQuarter: '2027-01-01',
+    });
   });
 
   it('does not treat setup actions as public when no admin allowlist is configured', () => {
@@ -501,7 +555,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(output.service).toBe('1 Corinthians 11:23–26');
     expect(output.responseHymn).toBe('第413首 教會基礎\nAH 348 The Church Has One Foundation');
-    expect(output.wholeCongregation).toBe('全體會眾\nWhole Congregation');
+    expect(output.wholeCongregation).toBe('會眾\nCongregation');
     expect(output.footWashing).toBe('John 13:1–10; 12–17');
     expect(output.footWashingLookup).toBe('John 13:1–10; John 13:12–17');
     expect(output.passageDefinitions).toEqual({
@@ -1006,6 +1060,7 @@ describe('printed bulletin Apps Script helpers', () => {
       'SS Chair',
       'SS Opening Prayer',
       'Closing Prayer',
+      'Flower Offering',
       'Brooklyn Sermon',
       'Chair/Pastoral Prayer',
       'Offering Prayer',
@@ -1029,6 +1084,7 @@ describe('printed bulletin Apps Script helpers', () => {
       'Caiyun Zhao',
       'Jane Gao',
       'Susie Zhang',
+      'Lily Chee',
       'Moses Fang',
       'Daniel Zhang',
       'Grace Wu',

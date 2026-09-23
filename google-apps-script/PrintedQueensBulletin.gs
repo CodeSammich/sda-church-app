@@ -273,6 +273,13 @@ var PRINTED_BIBLE_CHAPTER_COUNTS = Object.freeze({
 var PRINTED_OFFERING_TRANSLATION_CACHE = {};
 
 function onOpen() {
+  try {
+    maintainBulletinScheduleOnOpen_();
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Automatic schedule maintenance skipped: ' + error);
+    }
+  }
   SpreadsheetApp.getUi()
     .createMenu('Printed Bulletin')
     .addItem('Create Google Doc + PDF…', 'createPrintedBulletinFromPrompt')
@@ -2158,6 +2165,7 @@ function preparePrintedBulletinForPrint_(bulletin, nameDictionary) {
     'ssChair',
     'ssOpeningPrayer',
     'closingPrayer',
+    'flowerOffering',
     'sabbathSchool',
     'chair',
     'songLeader',
@@ -2678,6 +2686,7 @@ function appendScheduleTable_(cell, bulletin, nextBulletin) {
     [printedBilingualText_('DS Sermon', '崇拜證道'), function (location) { return location.sermon; }],
     [printedBilingualText_('DS Interpreter', '崇拜翻譯'), function (location) { return location.translation; }],
     [printedBilingualText_('Special Music', '特別音樂'), function (location) { return location.specialMusic; }],
+    [printedBilingualText_('Flower Offering', '花卉奉獻'), function (location) { return location.flowerOffering; }],
     [printedBilingualText_('Offerings', '奉獻事項'), function (location, data) { return formatPhysicalOfferingValue_(data.tithePurpose); }],
     [printedBilingualText_('Sunset Times', '日落時間'), function (location, data) { return data.sunsetTime; }],
   ], bulletin, nextBulletin);
@@ -2757,6 +2766,7 @@ function appendStudyPanel_(cell, bulletin) {
     [printedBilingualText_('Lesson / Study', '課程／學習'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Closing Hymn', '結會詩歌'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Closing Prayer', '結會禱告'), '', printValue_(location.closingPrayer)],
+    [printedBilingualText_('Flower Offering', '花卉奉獻'), '', printValue_(location.flowerOffering)],
   ];
   appendProgramTable_(cell, studyRows);
   appendBibleReadingPanel_(cell, location, true, bulletin.physicalBibleTranslations);
@@ -2833,10 +2843,16 @@ function appendCommunionPanel_(cell, bulletin) {
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
-  appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
+  appendCommunionOpeningActionsPanel_(cell, bulletin);
+  appendSpacer_(cell);
+  appendCompactItalicCenteredText_(
+    cell,
+    '請翻到下一頁繼續聖餐禮。\nPlease continue on the next page with Holy Communion — continued.',
+    8.5,
+  );
 }
 
-function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
+function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
   var location = bulletin[locationKey || 'queens'];
   appendProgramTable_(cell, [
     [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', printValue_(location.chairPastoralPrayer)],
@@ -2845,6 +2861,16 @@ function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
   appendPrintedCommunionReadingPassageBox_(cell, bulletin, 0);
   appendProgramTable_(cell, [
     [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
+  ]);
+}
+
+function appendCommunionContinuationPanel_(cell, bulletin, locationKey) {
+  var location = bulletin[locationKey || 'queens'];
+  appendPanelHeading_(
+    cell,
+    printedBilingualText_('HOLY COMMUNION — continued', '聖餐禮（續）'),
+  );
+  appendProgramTable_(cell, [
     [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Share the Cup', '分杯'), '', printValue_(location.sermon)],
   ]);
@@ -2853,6 +2879,11 @@ function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
     [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
   ]);
   appendPrintedCommunionReadingPassageBox_(cell, bulletin, 2);
+}
+
+function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
+  appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey);
+  appendCommunionContinuationPanel_(cell, bulletin, locationKey);
 }
 
 function appendPanelHeading_(cell, title, subtitle) {

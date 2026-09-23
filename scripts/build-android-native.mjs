@@ -12,11 +12,29 @@ const packageJson = JSON.parse(
 const appJson = JSON.parse(await readFile(resolve(projectRoot, 'app.json'), 'utf8'));
 const isApk = process.argv.includes('--apk');
 const isDebugSigning = process.argv.includes('--debug');
+const architecturesIndex = process.argv.indexOf('--architectures');
+const architecturePreset =
+  architecturesIndex === -1 ? undefined : process.argv[architecturesIndex + 1];
 const outputIndex = process.argv.indexOf('--output');
 const requestedOutput = outputIndex === -1 ? undefined : process.argv[outputIndex + 1];
 
+const architecturePresets = {
+  arm: 'armeabi-v7a,arm64-v8a',
+  intel: 'x86,x86_64',
+};
+
 if (outputIndex !== -1 && !requestedOutput) {
   throw new Error('--output requires a destination file');
+}
+
+if (architecturesIndex !== -1 && !architecturePreset) {
+  throw new Error('--architectures requires arm or intel');
+}
+
+if (architecturePreset && !architecturePresets[architecturePreset]) {
+  throw new Error(
+    `Unknown architecture preset: ${architecturePreset}. Use arm or intel.`,
+  );
 }
 
 if (isDebugSigning && !isApk) {
@@ -100,9 +118,13 @@ run('npx', [
   '--no-install',
 ], projectRoot, prebuildEnvironment);
 
-run('./gradlew', [
-  ':app:' + (isApk ? 'assembleRelease' : 'bundleRelease'),
-], androidRoot);
+const gradleArgs = [':app:' + (isApk ? 'assembleRelease' : 'bundleRelease')];
+if (architecturePreset) {
+  gradleArgs.push(
+    `-PreactNativeArchitectures=${architecturePresets[architecturePreset]}`,
+  );
+}
+run('./gradlew', gradleArgs, androidRoot);
 
 const extension = isApk ? 'apk' : 'aab';
 const sourcePath = resolve(
@@ -119,7 +141,7 @@ const outputPath = resolve(
   requestedOutput ||
     `build/app-${packageJson.version}-build-${new Date()
       .toISOString()
-      .replace(/[-:TZ.]/g, '')}.${extension}`,
+      .replace(/[-:TZ.]/g, '')}${architecturePreset ? `-${architecturePreset}` : ''}.${extension}`,
 );
 
 if (!existsSync(sourcePath)) {

@@ -187,6 +187,25 @@ Official Schedule for NYCCSDA Queens and Brooklyn
 `Form_Responses` and `Form_Responses2` labels visible inside Google Sheets are table names,
 not tab names, and Apps Script does not address them.
 
+### Automatic schedule maintenance
+
+`BulletinScheduleMaintenance.gs` keeps the `Sabbath Calendar` usable without deleting
+historical planning data. The existing bound `onOpen` trigger runs this quietly for
+every user who can open the spreadsheet; no email allowlist or setup action is needed.
+Each sheet open will:
+
+- keep the current calendar quarter visible;
+- keep the immediately preceding seven days visible at a quarter boundary;
+- hide older dated rows instead of deleting them; and
+- during the final 21 days of a quarter, append every missing Saturday in the
+  immediately following quarter with blank assignment cells and the matching
+  quarter value. If that quarter is already complete, the script waits until the
+  next quarter boundary rather than pre-populating a later quarter.
+
+The operation is idempotent: it compares dates before appending, so repeated opens do
+not create duplicate rows. The only visible **Printed Bulletin** menu action remains
+the Google Doc/PDF workflow; schedule maintenance is intentionally background-only.
+
 The schedule header row must use this order (the repeated headers are intentional):
 
 ```text
@@ -194,6 +213,7 @@ Date | Quarter | Special Remark | Tithe Purpose | Pastor Travel | Announcements 
 Queens Sermon | Translation | Chinese Teacher | English Teacher |
 Children Teacher | Chair/Pastoral Prayer | Special Music |
 Offering Prayer | Pianist | SS Chair | SS Opening Prayer | Closing Prayer |
+Flower Offering |
 Brooklyn Sermon | Chair/Pastoral Prayer | Offering Prayer | Sabbath School
 ```
 
@@ -225,6 +245,7 @@ Brooklyn.
 | `SS Chair` | 1 | `bulletin.queens.ssChair` | Person-name privacy filter |
 | `SS Opening Prayer` | 1 | `bulletin.queens.ssOpeningPrayer` | Person-name privacy filter |
 | `Closing Prayer` | 1 | `bulletin.queens.closingPrayer` | Person-name privacy filter |
+| `Flower Offering` | 1 | `bulletin.queens.flowerOffering` | Person-name privacy filter |
 | `Brooklyn Sermon` | 1 | `bulletin.brooklyn.sermon` | Person-name privacy filter |
 | `Chair/Pastoral Prayer` | 2 | `bulletin.brooklyn.chairPastoralPrayer` | Person-name privacy filter |
 | `Offering Prayer` | 2 | `bulletin.brooklyn.offeringPrayer` | Person-name privacy filter |
@@ -432,10 +453,12 @@ regular layout.
 
 The communion PDF is booklet-imposed rather than simple reading order. From the first PDF
 page to the last, the landscape faces are: `(back/announcements | cover)`,
-`(church at study | closing)`, `(communion readings | church at worship)`, and
-`(foot washing | Holy Communion)`. Print duplex and fold at the center; the folded reading
-order is cover, study, worship, foot washing, communion, communion readings, closing, and
-back/announcements.
+`(church at study | closing)`, `(Holy Communion—continued | church at worship)`, and
+`(foot washing | Holy Communion)`. The opening Communion actions appear on the final
+right-hand panel, and the remaining actions continue on the preceding left-hand panel
+when the booklet is folded. Print duplex and fold at the center; the folded reading
+order is cover, study, worship, foot washing, Holy Communion, Holy Communion—continued,
+closing, and back/announcements.
 
 The Queens template uses English and Traditional Chinese labels. The Brooklyn template
 follows the supplied two-page landscape reference: Sabbath School, worship, the rotating
@@ -1046,7 +1069,8 @@ emails, and response timestamps are intentionally absent.
       "pianist": "Robin K.",
       "ssChair": "Taylor M.",
       "ssOpeningPrayer": "Lee H.",
-      "closingPrayer": "Morgan Y."
+      "closingPrayer": "Morgan Y.",
+      "flowerOffering": "Lily C."
     },
     "brooklyn": {
       "sermon": "Jamie N.",

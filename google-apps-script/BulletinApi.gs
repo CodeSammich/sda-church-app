@@ -17,7 +17,7 @@
 var CONFIG = Object.freeze({
   scheduleSheetName: 'Sabbath Calendar',
   cacheSeconds: 120,
-  cacheVersion: 'v2',
+  cacheVersion: 'v3',
   responseSheets: Object.freeze({
     queens: ['Queens Worship Data'],
     brooklyn: ['Brooklyn Worship Data'],
@@ -56,6 +56,7 @@ var COLUMN_SCHEMA = Object.freeze([
     person: true,
   },
   { header: 'Closing Prayer', path: ['queens', 'closingPrayer'], person: true },
+  { header: 'Flower Offering', path: ['queens', 'flowerOffering'], person: true },
   { header: 'Brooklyn Sermon', path: ['brooklyn', 'sermon'], person: true },
   {
     header: 'Chair/Pastoral Prayer',
