@@ -198,6 +198,7 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
       appendWorshipPanel_(cell, bulletin, false);
     },
     false,
+    appendGivingFooter_,
   );
   appendBookletPage_(
     body,
