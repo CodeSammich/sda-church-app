@@ -13,6 +13,7 @@ var PRINTED_COMMUNION_LAYOUT = Object.freeze({
   responseHymnChinese: '第413首 教會基礎',
   wholeCongregation: 'Congregation',
   wholeCongregationChinese: '會眾',
+  communionPastor: 'Moses Fang',
   footWashingScripture: 'John 13:1–10; 12–17',
   footWashingLookupScripture: 'John 13:1–10; John 13:12–17',
   footWashingBoxScripture: 'John 13:1–10',
@@ -59,6 +60,10 @@ function getPrintedCommunionWholeCongregation_() {
     PRINTED_COMMUNION_LAYOUT.wholeCongregation,
     PRINTED_COMMUNION_LAYOUT.wholeCongregationChinese,
   );
+}
+
+function getPrintedCommunionPastor_() {
+  return PRINTED_COMMUNION_LAYOUT.communionPastor;
 }
 
 function getPrintedCommunionFootWashingScripture_() {

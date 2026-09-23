@@ -2901,32 +2901,27 @@ function appendCommunionPanel_(cell, bulletin) {
 }
 
 function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
-  var location = bulletin[locationKey || 'queens'];
   appendProgramTable_(cell, [
-    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', printValue_(location.chairPastoralPrayer)],
-    [printedBilingualText_('Breaking the Bread', '分餅'), '', printValue_(location.sermon)],
+    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', getPrintedCommunionPastor_()],
+    [printedBilingualText_('Breaking the Bread', '分餅'), '', getPrintedCommunionPastor_()],
   ]);
-  appendPrintedCommunionReadingPassageBox_(cell, bulletin, 0);
   appendProgramTable_(cell, [
     [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
   ]);
 }
 
 function appendCommunionContinuationPanel_(cell, bulletin, locationKey) {
-  var location = bulletin[locationKey || 'queens'];
   appendPanelHeading_(
     cell,
     printedBilingualText_('HOLY COMMUNION — continued', '聖餐禮（續）'),
   );
   appendProgramTable_(cell, [
-    [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', printValue_(location.chairPastoralPrayer)],
-    [printedBilingualText_('Share the Cup', '分杯'), '', printValue_(location.sermon)],
+    [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', getPrintedCommunionPastor_()],
+    [printedBilingualText_('Share the Cup', '分杯'), '', getPrintedCommunionPastor_()],
   ]);
-  appendPrintedCommunionReadingPassageBox_(cell, bulletin, 1);
   appendProgramTable_(cell, [
     [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
   ]);
-  appendPrintedCommunionReadingPassageBox_(cell, bulletin, 2);
 }
 
 function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
