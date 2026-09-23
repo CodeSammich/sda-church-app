@@ -35,7 +35,7 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   pageHeight: 612,
   pageMargin: 28,
   regularCoverImageMaxWidth: 490,
-  communionCoverImageMaxWidth: 300,
+  communionCoverImageMaxWidth: 340,
   studyTime: '10:00 am–11:25 am  |  上午 10:00–11:25',
   worshipTime: '11:30 am–1:00 pm  |  上午 11:30–下午 1:00',
   bibleApiBaseUrl: 'https://bible.helloao.org/api',
@@ -399,6 +399,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'color:#3c4043;cursor:pointer;font-size:13px;padding:8px 13px;}' +
     '.choice.selected{background:#e8f0fe;border-color:#1a73e8;color:#174ea6;' +
     'box-shadow:inset 0 0 0 1px #1a73e8;}' +
+    '.choice:disabled{cursor:not-allowed;opacity:.48;box-shadow:none;}' +
     '.row{display:grid;grid-template-columns:1fr 150px;gap:10px;}' +
     '.announcement-entry{border:1px solid #dadce0;border-radius:8px;margin:10px 0;padding:12px;}' +
     '.announcement-header{align-items:center;display:flex;justify-content:space-between;gap:8px;}' +
@@ -452,6 +453,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<button type="button" class="choice selected" data-value="regular">Regular / 普通</button>' +
     '<button type="button" class="choice" data-value="communion">Communion / 聖餐</button>' +
     '</div>' +
+    '<div class="help">Brooklyn Communion is not currently available. Choose Regular for Brooklyn.<br>目前尚未提供布碌崙聖餐禮週刊；布碌崙請選擇普通格式。</div>' +
     '<label for="englishTranslation">English Bible translation<br>英文聖經譯本</label>' +
     '<select id="englishTranslation">' +
     englishTranslationOptions +
@@ -486,8 +488,9 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'Array.prototype.forEach.call(buttons,function(button){' +
     'var selected=button.getAttribute("data-value")===value;' +
     'button.classList.toggle("selected",selected);button.setAttribute("aria-pressed",selected?"true":"false");});}' +
+    'function updateLocationFormatAvailability(){var brooklynButton=document.querySelector("#locationChoices .choice[data-value=brooklyn]");var communionButton=document.querySelector("#formatChoices .choice[data-value=communion]");var brooklynDisabled=formatValue==="communion";var communionDisabled=locationValue==="brooklyn";brooklynButton.disabled=brooklynDisabled;communionButton.disabled=communionDisabled;brooklynButton.setAttribute("aria-disabled",brooklynDisabled?"true":"false");communionButton.setAttribute("aria-disabled",communionDisabled?"true":"false");}' +
     'function escapeHtml(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\\x27/g,"&#39;");}' +
-    'function updateSubmitState(){var date=document.getElementById("date").value.trim();var book=document.getElementById("book").value;var chapter=document.getElementById("chapter").value;var verses=document.getElementById("verses").value.trim();document.getElementById("submit").disabled=!(date&&book&&chapter&&verses);}' +
+    'function updateSubmitState(){var date=document.getElementById("date").value.trim();var book=document.getElementById("book").value;var chapter=document.getElementById("chapter").value;var verses=document.getElementById("verses").value.trim();var unsupported=locationValue==="brooklyn"&&formatValue==="communion";document.getElementById("submit").disabled=Boolean(unsupported||!(date&&book&&chapter&&verses));}' +
     'function showError(message){var error=document.getElementById("error");error.textContent=message;error.hidden=false;updateSubmitState();}' +
     'function announcementMarkup(entry,index){entry=entry||{};var scope=entry.scope||"all";return "<div class=\\"announcement-entry\\"><div class=\\"announcement-header\\"><strong>Announcement "+(index+1)+" / 消息 "+(index+1)+"</strong><button type=\\"button\\" class=\\"announcement-remove\\">Remove / 移除</button></div><select class=\\"announcement-scope\\"><option value=\\"all\\""+(scope==="all"?" selected":"")+">Both locations / 兩地</option><option value=\\"queens\\""+(scope==="queens"?" selected":"")+">Queens / 皇后區</option><option value=\\"brooklyn\\""+(scope==="brooklyn"?" selected":"")+">Brooklyn / 布碌崙</option></select><label>English announcement / 英文消息</label><textarea class=\\"announcement-english\\" placeholder=\\"Optional English announcement\\">"+escapeHtml(entry.english||"")+"</textarea><label>Traditional Chinese announcement / 繁體中文消息</label><textarea class=\\"announcement-chinese\\" placeholder=\\"Optional Traditional Chinese announcement\\">"+escapeHtml(entry.chinese||"")+"</textarea></div>";}' +
     'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 消息 "+(index+1);});}' +
@@ -511,8 +514,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'if(result&&result.requiresConfirmation){var message=result.warning+"\\n\\n"+result.warningChinese+"\\n\\nContinue anyway? / 仍要繼續嗎？";if(window.confirm(message)){request.confirmLongVerse=true;runRequest(request);}else{updateSubmitState();}return;}' +
     'showLoading();google.script.run.withSuccessHandler(showResult).withFailureHandler(function(error){showGenerationError(error);}).createPrintedBulletinFromRequest(request);' +
     '}).withFailureHandler(function(error){showError(error&&error.message?error.message:String(error));}).getPrintedBulletinPromptWarning(request.verse||"",Boolean(request.confirmLongVerse),{englishTranslation:request.englishTranslation});}' +
-    'document.getElementById("locationChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")){locationValue=event.target.getAttribute("data-value");selectChoice("locationChoices",locationValue);loadPromptData();}});' +
-    'document.getElementById("formatChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")){formatValue=event.target.getAttribute("data-value");selectChoice("formatChoices",formatValue);}});' +
+    'document.getElementById("locationChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){locationValue=event.target.getAttribute("data-value");selectChoice("locationChoices",locationValue);updateLocationFormatAvailability();loadPromptData();}});' +
+    'document.getElementById("formatChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){formatValue=event.target.getAttribute("data-value");selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();updateSubmitState();}});' +
     'document.getElementById("addAnnouncement").addEventListener("click",function(){addAnnouncementEntry({});announcementsDirty=true;});' +
     'document.getElementById("announcementList").addEventListener("input",function(){announcementsDirty=true;});' +
     'document.getElementById("announcementList").addEventListener("change",function(){announcementsDirty=true;});' +
@@ -522,7 +525,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'document.getElementById("chapter").addEventListener("change",function(){if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
     'document.getElementById("verses").addEventListener("input",function(){if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
     'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses").value.trim();if(!date||!book.value||!chapter.value||!verses){showError("Sabbath date, Bible book, chapter, and verse/range are required. / 安息日日期、聖經書卷、章和節數（或節數範圍）均為必填。");return;}if(verses&&!/^\\d+(?:-\\d+)?$/.test(verses)){showError("Verse(s) must look like 11 or 11-15. / 節數格式應為 11 或 11-15。");return;}var range=verses.split("-");if(range.length===2&&Number(range[1])<Number(range[0])){showError("The ending verse must not be smaller than the starting verse. / 結束節數不可小於開始節數。");return;}var reference=book.options[book.selectedIndex].getAttribute("data-english")+" "+chapter.value+":"+verses;var request={date:date,format:formatValue,location:locationValue,verse:reference,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}if(verseDirty){request.verseOverrideDirty=true;}runRequest(request);});' +
-    'loadPromptData();' +
+    'selectChoice("locationChoices",locationValue);selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();loadPromptData();' +
     '</script></body></html>'
   );
 }
@@ -681,6 +684,11 @@ function createPrintedBulletinFromRequest(request) {
 function validatePrintedBulletinRequest_(request) {
   if (!toIsoDate_(request.date)) {
     throw new Error('Sabbath date is required. / 安息日日期為必填。');
+  }
+  var location = normalizePrintedBulletinLocation_(request.location);
+  var requestedFormat = String(request.format || '').trim().toLowerCase();
+  if (requestedFormat === 'communion') {
+    validatePrintedBulletinCombination_(location, requestedFormat);
   }
   var verse = String(request.verse || '').trim();
   if (!verse) {
@@ -1235,6 +1243,7 @@ function createPrintedBulletinUnlocked_(
   bulletin.physicalBibleTranslations = bibleTranslations;
   hydratePhysicalBibleVerses_(bulletin, bibleTranslations);
   var format = resolvePrintedBulletinFormat_(requestedFormat, bulletin);
+  validatePrintedBulletinCombination_(location, format);
   var nextBulletin = tryBuildPrivateBulletin_(getNextSabbathDate_(date), nameDictionary);
   hydratePhysicalSunsetTimes_(bulletin, nextBulletin);
   var title = getPrintedBulletinTitle_(location, date, format);
@@ -1421,13 +1430,12 @@ function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, fo
     appendBookletPage_(
       body,
       function (cell) {
-        appendBrooklynCommunionReadingPanel_(cell);
+        appendBrooklynCommunionActionsPanel_(cell, bulletin);
       },
       function (cell) {
         appendBrooklynWorshipPanel_(cell, bulletin, false);
       },
       false,
-      appendGivingFooter_,
     );
     appendBookletPage_(
       body,
@@ -1514,7 +1522,7 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
     ]);
   }
   appendBrooklynProgramTable_(cell, worshipRowsBeforeSermon);
-  appendSermonHighlightRow_(cell, sermonRow);
+  appendSermonRow_(cell, sermonRow);
   appendBrooklynProgramTable_(cell, worshipRowsAfterSermon);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
@@ -1710,6 +1718,10 @@ function appendBrooklynContactBlock_(cell) {
 
 function appendBrooklynCommunionPanel_(cell, bulletin) {
   var location = bulletin.brooklyn;
+  appendBrooklynProgramTable_(cell, [
+    [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
+  ]);
+  appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
   appendPanelHeading_(
     cell,
     printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
@@ -1720,26 +1732,10 @@ function appendBrooklynCommunionPanel_(cell, bulletin) {
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
   appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
-  appendBrooklynProgramTable_(cell, [
-    [printedBilingualText_('Blessing the Bread', '祝福餅'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-    [printedBilingualText_('Breaking the Bread', '擘餅'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-    [printedBilingualText_('Blessing the Cup', '祝福杯'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-    [printedBilingualText_('Share the Cup', '分杯'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-  ], bulletin, nextBulletin);
 }
 
-function appendBrooklynCommunionReadingPanel_(cell) {
-  appendPanelHeading_(
-    cell,
-    printedBilingualText_('COMMUNION READINGS', '聖餐經文'),
-    getPrintedCommunionServiceScripture_(),
-  );
-  appendDataTable_(cell, getPrintedCommunionReadingRows_().map(function (row) {
-    return [row[0], row[1]];
-  }).concat([
-    [printedBilingualText_('Reader', '讀經者'), printedBilingualText_('Congregation', '會眾')],
-  ]));
-  appendBodyText_(cell, printedBilingualText_('See the Scripture references above.', '請參閱以上經文。'));
+function appendBrooklynCommunionActionsPanel_(cell, bulletin) {
+  appendCommunionActionsPanel_(cell, bulletin, 'brooklyn');
 }
 
 function appendBrooklynClosingPanel_(cell, bulletin) {
@@ -1768,6 +1764,14 @@ function resolvePrintedBulletinFormat_(requestedFormat, bulletin) {
     return format;
   }
   throw new Error('Format must be regular or communion');
+}
+
+function validatePrintedBulletinCombination_(location, format) {
+  if (location === 'brooklyn' && format === 'communion') {
+    throw new Error(
+      'Brooklyn Communion bulletins are not available yet. Choose Regular for Brooklyn. / 目前尚未提供布碌崙聖餐禮週刊；布碌崙請選擇普通格式。',
+    );
+  }
 }
 
 function getNextSabbathDate_(requestedDate) {
@@ -2775,7 +2779,7 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
     ]);
   }
   appendProgramTable_(cell, worshipRowsBeforeSermon);
-  appendSermonHighlightRow_(cell, sermonRow);
+  appendSermonRow_(cell, sermonRow);
   appendProgramTable_(cell, worshipRowsAfterSermon);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
@@ -2788,18 +2792,21 @@ function appendFootWashingPanel_(cell, bulletin) {
     printedBilingualText_('FOOT WASHING', '洗腳禮'),
     getPrintedCommunionFootWashingScripture_(),
   );
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Bible Readings', '讀經'), getPrintedCommunionFootWashingScripture_(), printedBilingualText_('Congregation', '會眾')],
+  ]);
   appendPrintedCommunionPassageBox_(cell, bulletin, 'footWashing');
   appendProgramTable_(cell, [
     [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
   ]);
-  appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
-  appendSilentPrayerHeading_(cell, 'Prayer of Silence', '靜默禱告');
-  appendBodyText_(cell, printedBilingualText_('Congregation', '會眾'));
-  appendBodyText_(cell, printedBilingualText_('The service continues with the Holy Communion section.', '接著進行聖餐禮。'));
 }
 
 function appendCommunionPanel_(cell, bulletin) {
   var location = bulletin.queens;
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
+  ]);
+  appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
   appendPanelHeading_(
     cell,
     printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
@@ -2810,27 +2817,25 @@ function appendCommunionPanel_(cell, bulletin) {
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
   appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
-  appendProgramTable_(cell, [
-    [printedBilingualText_('Blessing the Bread', '祝福餅'), '', printValue_(location.chairPastoralPrayer)],
-    [printedBilingualText_('Breaking the Bread', '擘餅'), '', printValue_(location.sermon)],
-    [printedBilingualText_('Blessing the Cup', '祝福杯'), '', printValue_(location.chairPastoralPrayer)],
-    [printedBilingualText_('Share the Cup', '分杯'), '', printValue_(location.sermon)],
-  ]);
-  appendBodyText_(cell, printedBilingualText_('Prayer of silence follows each communion action.', '每項聖餐禮儀後進行靜默禱告。'));
 }
 
-function appendCommunionReadingPanel_(cell, bulletin) {
-  appendPanelHeading_(
-    cell,
-    printedBilingualText_('COMMUNION READINGS', '聖餐經文'),
-    getPrintedCommunionServiceScripture_(),
-  );
-  appendDataTable_(cell, getPrintedCommunionReadingRows_().map(function (row) {
-    return [row[0], row[1]];
-  }).concat([
-    [printedBilingualText_('Reader', '讀經者'), printedBilingualText_('Congregation', '會眾')],
-  ]));
-  appendBodyText_(cell, printedBilingualText_('See the Scripture references above.', '請參閱以上經文。'));
+function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
+  var location = bulletin[locationKey || 'queens'];
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', printValue_(location.chairPastoralPrayer)],
+    [printedBilingualText_('Breaking the Bread', '分餅'), '', printValue_(location.sermon)],
+  ]);
+  appendPrintedCommunionReadingPassageBox_(cell, bulletin, 0);
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
+    [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', printValue_(location.chairPastoralPrayer)],
+    [printedBilingualText_('Share the Cup', '分杯'), '', printValue_(location.sermon)],
+  ]);
+  appendPrintedCommunionReadingPassageBox_(cell, bulletin, 1);
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
+  ]);
+  appendPrintedCommunionReadingPassageBox_(cell, bulletin, 2);
 }
 
 function appendCommunionClosingPanel_(cell, bulletin) {
@@ -2974,15 +2979,13 @@ function appendProgramTable_(cell, rows) {
   });
 }
 
-function appendSermonHighlightRow_(cell, row) {
-  appendHalfSpacer_(cell);
+function appendSermonRow_(cell, row) {
   var table = cell.appendTable([
     row.map(function (value) {
       return String(value === null || typeof value === 'undefined' ? '' : value);
     }),
   ]);
-  table.setBorderWidth(0.75);
-  table.setBorderColor('#000000');
+  table.setBorderWidth(0);
   table.setColumnWidth(0, 105);
   table.setColumnWidth(1, 160);
   table.setColumnWidth(2, 95);
@@ -3001,7 +3004,6 @@ function appendSermonHighlightRow_(cell, row) {
           : DocumentApp.HorizontalAlignment.RIGHT,
     );
   }
-  appendHalfSpacer_(cell);
 }
 
 function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslations) {

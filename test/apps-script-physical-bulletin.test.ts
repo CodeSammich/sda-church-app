@@ -197,6 +197,9 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('Queens / 皇后區');
     expect(html).toContain('Regular / 普通');
     expect(html).toContain('Communion / 聖餐');
+    expect(html).toContain('Brooklyn Communion is not currently available');
+    expect(html).toContain('updateLocationFormatAvailability');
+    expect(html).toContain('.choice:disabled');
     expect(html).not.toContain('Detect from response');
     expect(html).toContain('Bible book ');
     expect(html).toContain('聖經書卷</label>');
@@ -457,6 +460,24 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(format).toBe('communion');
   });
 
+  it('rejects the unsupported Brooklyn Communion combination server-side', () => {
+    const context = loadAppsScript({});
+    const message = runInContext(
+      `try {
+        validatePrintedBulletinRequest_({
+          date: '2026-09-26',
+          location: 'brooklyn',
+          format: 'communion',
+          verse: 'John 12:24'
+        });
+        'allowed';
+      } catch (error) { error.message; }`,
+      context,
+    );
+
+    expect(message).toContain('Brooklyn Communion bulletins are not available yet');
+  });
+
   it('keeps Communion references fixed and separate from the submitted study verse', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
@@ -486,9 +507,9 @@ describe('printed bulletin Apps Script helpers', () => {
         chinese: '哥林多前書 11:23–26',
       },
       footWashing: {
-        lookup: 'John 13:1–10; John 13:12–17',
-        english: 'John 13:1–10; 12–17',
-        chinese: '約翰福音 13:1–10; 12–17',
+        lookup: 'John 13:1–10',
+        english: 'John 13:1–10',
+        chinese: '約翰福音 13:1–10',
       },
     });
     expect(output.instruction).toContain('brothers to the basement');
@@ -653,7 +674,7 @@ describe('printed bulletin Apps Script helpers', () => {
       ) as string,
     );
 
-    expect(widths).toEqual({ regular: 490, communion: 300 });
+    expect(widths).toEqual({ regular: 490, communion: 340 });
   });
 
   it('defaults physical output to the configured shared Drive folder', () => {

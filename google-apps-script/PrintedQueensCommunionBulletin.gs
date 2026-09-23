@@ -11,8 +11,10 @@ var PRINTED_COMMUNION_LAYOUT = Object.freeze({
   serviceScripture: '1 Corinthians 11:23–26',
   footWashingScripture: 'John 13:1–10; 12–17',
   footWashingLookupScripture: 'John 13:1–10; John 13:12–17',
+  footWashingBoxScripture: 'John 13:1–10',
   communionReferenceChinese: '哥林多前書 11:23–26',
   footWashingReferenceChinese: '約翰福音 13:1–10; 12–17',
+  footWashingBoxReferenceChinese: '約翰福音 13:1–10',
   footWashingInstruction:
     'Please quietly proceed downstairs for foot washing: brothers to the basement, sisters to the second floor.\n請安靜地前往樓下洗腳：弟兄到地下室，姊妹到二樓。',
   readings: Object.freeze([
@@ -20,16 +22,19 @@ var PRINTED_COMMUNION_LAYOUT = Object.freeze({
       english: 'The Bread',
       chinese: '餅',
       reference: '1 Corinthians 11:24',
+      referenceChinese: '哥林多前書 11:24',
     }),
     Object.freeze({
       english: 'The Cup',
       chinese: '杯',
       reference: '1 Corinthians 11:25',
+      referenceChinese: '哥林多前書 11:25',
     }),
     Object.freeze({
       english: 'The Proclamation',
       chinese: '宣告',
       reference: '1 Corinthians 11:26',
+      referenceChinese: '哥林多前書 11:26',
     }),
   ]),
 });
@@ -53,9 +58,9 @@ function getPrintedCommunionFootWashingInstruction_() {
 function getPrintedCommunionPassageDefinition_(kind) {
   if (kind === 'footWashing') {
     return {
-      lookup: getPrintedCommunionFootWashingLookupScripture_(),
-      english: getPrintedCommunionFootWashingScripture_(),
-      chinese: PRINTED_COMMUNION_LAYOUT.footWashingReferenceChinese,
+      lookup: PRINTED_COMMUNION_LAYOUT.footWashingBoxScripture,
+      english: PRINTED_COMMUNION_LAYOUT.footWashingBoxScripture,
+      chinese: PRINTED_COMMUNION_LAYOUT.footWashingBoxReferenceChinese,
     };
   }
   return {
@@ -66,6 +71,7 @@ function getPrintedCommunionPassageDefinition_(kind) {
 }
 
 function hydratePrintedCommunionPassages_(bulletin, bibleTranslations) {
+  bulletin.physicalCommunionReadingPassages = {};
   ['communion', 'footWashing'].forEach(function (kind) {
     var definition = getPrintedCommunionPassageDefinition_(kind);
     var propertyName =
@@ -80,6 +86,15 @@ function hydratePrintedCommunionPassages_(bulletin, bibleTranslations) {
     } catch (error) {
       Logger.log('Fixed ' + kind + ' passage lookup failed: ' + error);
       bulletin[propertyName] = null;
+    }
+  });
+  PRINTED_COMMUNION_LAYOUT.readings.forEach(function (reading) {
+    try {
+      bulletin.physicalCommunionReadingPassages[reading.reference] =
+        resolvePhysicalBiblePassage_(reading.reference, bibleTranslations);
+    } catch (error) {
+      Logger.log('Fixed Communion reading lookup failed: ' + error);
+      bulletin.physicalCommunionReadingPassages[reading.reference] = null;
     }
   });
   return bulletin;
@@ -97,6 +112,32 @@ function appendPrintedCommunionPassageBox_(cell, bulletin, kind) {
     [
       [definition.chinese, definition.english],
       [passage.chinese || definition.chinese, passage.english || definition.english],
+    ],
+    {
+      borderWidth: 0.75,
+      borderColor: '#000000',
+      columnWidths: [170, 190],
+      alignments: [
+        DocumentApp.HorizontalAlignment.LEFT,
+        DocumentApp.HorizontalAlignment.LEFT,
+      ],
+      fontSize: 8,
+      headerFontSize: 8,
+      paddingTop: 1,
+      paddingBottom: 1,
+    },
+  );
+}
+
+function appendPrintedCommunionReadingPassageBox_(cell, bulletin, readingIndex) {
+  var reading = PRINTED_COMMUNION_LAYOUT.readings[readingIndex];
+  var passages = bulletin.physicalCommunionReadingPassages || {};
+  var passage = passages[reading.reference] || {};
+  appendDataTable_(
+    cell,
+    [
+      [reading.referenceChinese, reading.reference],
+      [passage.chinese || reading.referenceChinese, passage.english || reading.reference],
     ],
     {
       borderWidth: 0.75,
@@ -151,13 +192,12 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   appendBookletPage_(
     body,
     function (cell) {
-      appendCommunionReadingPanel_(cell, bulletin);
+      appendCommunionActionsPanel_(cell, bulletin);
     },
     function (cell) {
       appendWorshipPanel_(cell, bulletin, false);
     },
     false,
-    appendGivingFooter_,
   );
   appendBookletPage_(
     body,
