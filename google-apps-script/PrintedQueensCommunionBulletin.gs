@@ -11,6 +11,8 @@ var PRINTED_COMMUNION_LAYOUT = Object.freeze({
   serviceScripture: '1 Corinthians 11:23–26',
   responseHymn: 'AH 348 The Church Has One Foundation',
   responseHymnChinese: '第413首 教會基礎',
+  wholeCongregation: 'Whole Congregation',
+  wholeCongregationChinese: '全體會眾',
   footWashingScripture: 'John 13:1–10; 12–17',
   footWashingLookupScripture: 'John 13:1–10; John 13:12–17',
   footWashingBoxScripture: 'John 13:1–10',
@@ -49,6 +51,13 @@ function getPrintedCommunionResponseHymn_() {
   return printedBilingualText_(
     PRINTED_COMMUNION_LAYOUT.responseHymn,
     PRINTED_COMMUNION_LAYOUT.responseHymnChinese,
+  );
+}
+
+function getPrintedCommunionWholeCongregation_() {
+  return printedBilingualText_(
+    PRINTED_COMMUNION_LAYOUT.wholeCongregation,
+    PRINTED_COMMUNION_LAYOUT.wholeCongregationChinese,
   );
 }
 
@@ -222,6 +231,10 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
 }
 
 function appendCommunionStudyContinuationPanel_(cell, bulletin) {
+  appendCommunionStudyContinuationRows_(cell, bulletin);
+}
+
+function appendCommunionStudyContinuationRows_(cell, bulletin) {
   var location = bulletin.queens;
   appendProgramTable_(cell, [
     [

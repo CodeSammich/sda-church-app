@@ -1719,7 +1719,7 @@ function appendBrooklynContactBlock_(cell) {
 function appendBrooklynCommunionPanel_(cell, bulletin) {
   var location = bulletin.brooklyn;
   appendBrooklynProgramTable_(cell, [
-    [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
+    [printedBilingualText_('Foot Washing', '洗腳禮'), '', getPrintedCommunionWholeCongregation_()],
   ]);
   appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
   appendPanelHeading_(
@@ -2307,7 +2307,7 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
     footerLeftCell.setPaddingBottom(0);
     footerRightCell.setPaddingTop(0);
     footerRightCell.setPaddingBottom(0);
-    footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+    footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.BOTTOM);
     footerRightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
     footerRenderer(footerLeftCell, footerRightCell);
   }
@@ -2797,9 +2797,10 @@ function appendFootWashingPanel_(cell, bulletin) {
   ]);
   appendPrintedCommunionPassageBox_(cell, bulletin, 'footWashing');
   appendProgramTable_(cell, [
-    [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
+    [printedBilingualText_('Foot Washing', '洗腳禮'), '', getPrintedCommunionWholeCongregation_()],
   ]);
-  appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
+  appendSpacer_(cell);
+  appendCompactItalicCenteredText_(cell, getPrintedCommunionFootWashingInstruction_(), 8.5);
 }
 
 function appendCommunionPanel_(cell, bulletin) {
@@ -2822,6 +2823,7 @@ function appendCommunionPanel_(cell, bulletin) {
   appendProgramTable_(cell, [
     [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
   ]);
+  appendCommunionStudyContinuationRows_(cell, bulletin);
 }
 
 function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
