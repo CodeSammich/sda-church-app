@@ -1725,7 +1725,6 @@ function appendBrooklynCommunionPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
-    getPrintedCommunionServiceScripture_(),
   );
   appendBrooklynProgramTable_(cell, [
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
@@ -2790,7 +2789,6 @@ function appendFootWashingPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('FOOT WASHING', '洗腳禮'),
-    getPrintedCommunionFootWashingScripture_(),
   );
   appendProgramTable_(cell, [
     [printedBilingualText_('Bible Readings', '讀經'), getPrintedCommunionFootWashingScripture_(), printedBilingualText_('Congregation', '會眾')],
@@ -2808,7 +2806,6 @@ function appendCommunionPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
-    getPrintedCommunionServiceScripture_(),
   );
   appendProgramTable_(cell, [
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
