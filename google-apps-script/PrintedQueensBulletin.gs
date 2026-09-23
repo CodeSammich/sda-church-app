@@ -2815,8 +2815,6 @@ function appendCommunionPanel_(cell, bulletin) {
     [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
   appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
-  appendCommunionActionsPanel_(cell, bulletin);
-  appendCommunionStudyContinuationRows_(cell, bulletin);
 }
 
 function appendCommunionActionsPanel_(cell, bulletin, locationKey) {

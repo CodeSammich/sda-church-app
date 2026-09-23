@@ -185,8 +185,8 @@ function getPrintedCommunionReadingRows_() {
 
 function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   // Keep this imposed order in sync with the Communion reference PDF:
-  // back/announcements | cover, study continuation | worship, then
-  // foot washing | Communion.
+  // back/announcements | cover, study | giving, Communion actions/closing |
+  // worship, then foot washing | Communion.
   appendBookletPage_(
     body,
     function (cell) {
@@ -203,7 +203,7 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
       appendStudyPanel_(cell, bulletin);
     },
     function (cell) {
-      appendCommunionStudyContinuationPanel_(cell, bulletin);
+      appendCommunionGivingPanel_(cell);
     },
     false,
   );
@@ -211,12 +211,12 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
     body,
     function (cell) {
       appendCommunionActionsPanel_(cell, bulletin);
+      appendCommunionStudyContinuationRows_(cell, bulletin);
     },
     function (cell) {
       appendWorshipPanel_(cell, bulletin, false);
     },
     false,
-    appendGivingFooter_,
   );
   appendBookletPage_(
     body,
@@ -230,8 +230,10 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
   );
 }
 
-function appendCommunionStudyContinuationPanel_(cell, bulletin) {
-  appendCommunionStudyContinuationRows_(cell, bulletin);
+function appendCommunionGivingPanel_(cell) {
+  appendGivingText_(cell);
+  appendSpacer_(cell);
+  appendGivingQrPlaceholders_(cell);
 }
 
 function appendCommunionStudyContinuationRows_(cell, bulletin) {
