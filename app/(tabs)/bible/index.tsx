@@ -114,6 +114,7 @@ const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
 const BIBLE_DUAL_LANGUAGE_KEY = 'user-bible-dual-language';
 const BIBLE_SUPPORTING_TRANSLATION_KEY = 'user-bible-supporting-translation';
+const SUPERSCRIPT_MARKER_PATTERN = /([⁰¹²³⁴⁵⁶⁷⁸⁹⁺]+)/g;
 
 const getAudioReaderLabel = (reader: string) =>
   reader
@@ -2692,6 +2693,17 @@ export default function BibleScreen() {
     !!supportingTranslation &&
     isChineseBibleTranslation(supportingTranslation.id);
 
+  const renderPopupVerseText = (text: string) =>
+    text.split(SUPERSCRIPT_MARKER_PATTERN).map((part, index) =>
+      /^[⁰¹²³⁴⁵⁶⁷⁸⁹⁺]+$/.test(part) ? (
+        <Text key={`popup-footnote-marker-${index}`} style={{ color: theme.colors.primary }}>
+          {part}
+        </Text>
+      ) : (
+        part
+      ),
+    );
+
   const renderStructuralText = (
     content: BibleService.ChapterHeading | BibleService.ChapterHebrewSubtitle,
   ) =>
@@ -4263,10 +4275,11 @@ export default function BibleScreen() {
                         text={selectedPrimaryVerseText}
                         textColor={theme.colors.onSurface}
                         textScale={textScale}
+                        footnoteColor={theme.colors.primary}
                       />
                     ) : (
                       <Text style={[ReaderStyles.detailText, { fontWeight: '500' }]}>
-                        {selectedPrimaryVerseText}
+                        {renderPopupVerseText(selectedPrimaryVerseText)}
                       </Text>
                     )}
                     {supportingTranslation && selectedVerseTexts?.supportingText && (
@@ -4293,6 +4306,7 @@ export default function BibleScreen() {
                             text={selectedVerseTexts.supportingText}
                             textColor={theme.colors.onSurfaceVariant}
                             textScale={textScale}
+                            footnoteColor={theme.colors.primary}
                             variant="supporting"
                           />
                         ) : (
@@ -4302,7 +4316,7 @@ export default function BibleScreen() {
                               { color: theme.colors.onSurfaceVariant },
                             ]}
                           >
-                            {selectedVerseTexts.supportingText}
+                            {renderPopupVerseText(selectedVerseTexts.supportingText)}
                           </Text>
                         )}
                       </View>

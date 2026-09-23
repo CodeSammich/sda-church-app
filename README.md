@@ -148,9 +148,13 @@ preview deployment stays automatic: a push to `main` runs the existing GitHub Pa
 workflow. Locally, `npm run deploy` builds the web output into `dist/` without publishing
 it. Web preview publishing is restricted to the canonical GitHub workflow.
 
-Android binaries do not run for pull requests. A trusted push to `main` or
-`release/**` runs the Android targets; you can also open **Native Android build**
-and choose **Run workflow** for an Android AAB or APK. Android compiles directly with
+Android release binaries do not run automatically for pull requests. A trusted push to
+`main` or `release/**` runs the Android targets; you can also open **Native Android build**
+and choose **Run workflow** for an Android AAB or APK. For an installable preview of an
+open PR, an administrator can run **Android PR preview** from `main`, enter the PR number,
+and approve the protected `production` Environment upload. That workflow builds an
+ARM debug APK without signing secrets, then uploads the APK to personal Google Drive
+using the existing protected `CLASPRC_JSON` secret. Android compiles directly with
 Expo prebuild and Gradle on GitHub's Linux runner; the Android upload keystore is
 restored only from protected GitHub Environment secrets. The iOS workflow additionally
 runs for an upstream `release/**` to `main` pull request after protected Environment

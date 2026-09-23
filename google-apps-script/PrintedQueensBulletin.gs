@@ -38,6 +38,8 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   pageWidth: 792,
   pageHeight: 612,
   pageMargin: 28,
+  bookletHalfWidth: 354,
+  bookletFoldGutter: 28,
   regularCoverImageMaxWidth: 490,
   communionCoverImageMaxWidth: 340,
   studyTime: '10:00 am–11:25 am  |  上午 10:00–11:25',
@@ -2343,15 +2345,20 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
     body.appendPageBreak();
   }
 
-  var table = body.appendTable([['', '']]);
+  var table = body.appendTable([['', '', '']]);
   table.setBorderWidth(0);
-  table.setColumnWidth(0, 368);
-  table.setColumnWidth(1, 368);
+  table.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+  table.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
+  table.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
   var leftCell = table.getCell(0, 0);
-  var rightCell = table.getCell(0, 1);
+  var gutterCell = table.getCell(0, 1);
+  var rightCell = table.getCell(0, 2);
   leftCell.clear();
+  gutterCell.clear();
   rightCell.clear();
   leftCell.setPaddingBottom(0);
+  gutterCell.setPaddingLeft(0);
+  gutterCell.setPaddingRight(0);
   rightCell.setPaddingBottom(0);
   leftRenderer(leftCell);
   rightRenderer(rightCell);
@@ -2364,14 +2371,19 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
       ruleParent.asParagraph().setSpacingBefore(0);
       ruleParent.asParagraph().setSpacingAfter(0);
     }
-    var footerTable = body.appendTable([['', '']]);
+    var footerTable = body.appendTable([['', '', '']]);
     footerTable.setBorderWidth(0);
-    footerTable.setColumnWidth(0, 368);
-    footerTable.setColumnWidth(1, 368);
+    footerTable.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+    footerTable.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
+    footerTable.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
     var footerLeftCell = footerTable.getCell(0, 0);
-    var footerRightCell = footerTable.getCell(0, 1);
+    var footerGutterCell = footerTable.getCell(0, 1);
+    var footerRightCell = footerTable.getCell(0, 2);
     footerLeftCell.clear();
+    footerGutterCell.clear();
     footerRightCell.clear();
+    footerGutterCell.setPaddingLeft(0);
+    footerGutterCell.setPaddingRight(0);
     footerLeftCell.setPaddingTop(0);
     footerLeftCell.setPaddingBottom(0);
     footerRightCell.setPaddingTop(0);

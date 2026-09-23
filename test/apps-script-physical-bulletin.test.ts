@@ -617,6 +617,42 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(calls).toEqual(['queens-regular', 'communion', 'brooklyn']);
   });
 
+  it('leaves a narrow explicit fold gutter between booklet halves and footers', () => {
+    const columnWidths: Array<[number, number]> = [];
+    const makeCell = () => ({
+      clear: () => undefined,
+      setPaddingBottom: () => undefined,
+      setPaddingLeft: () => undefined,
+      setPaddingRight: () => undefined,
+      setPaddingTop: () => undefined,
+      setVerticalAlignment: () => undefined,
+    });
+    const cells = [makeCell(), makeCell(), makeCell()];
+    const table = {
+      setBorderWidth: () => undefined,
+      setColumnWidth: (column: number, width: number) => columnWidths.push([column, width]),
+      getCell: (_row: number, column: number) => cells[column],
+    };
+    const body = {
+      appendTable: (rows: string[][]) => {
+        expect(rows).toEqual([['', '', '']]);
+        return table;
+      },
+    };
+    const context = loadAppsScript({});
+
+    runInContext(
+      `appendBookletPage_(testBody, function() {}, function() {}, true)`,
+      Object.assign(context, { testBody: body }),
+    );
+
+    expect(columnWidths).toEqual([
+      [0, 354],
+      [1, 28],
+      [2, 354],
+    ]);
+  });
+
   it('treats a trashed saved Google Doc as missing and clears both property keys', () => {
     const deletedKeys: string[] = [];
     const context = loadAppsScript({

@@ -12,6 +12,7 @@ interface PinyinRubyTextProps {
   bold?: boolean;
   number?: number;
   numberColor: string;
+  footnoteColor?: string;
   pinyinColor: string;
   rightAlignedLines?: boolean[];
   text: string;
@@ -29,6 +30,7 @@ export function PinyinRubyText({
   bold = false,
   number,
   numberColor,
+  footnoteColor,
   pinyinColor,
   rightAlignedLines = [],
   text,
@@ -41,6 +43,7 @@ export function PinyinRubyText({
     () => createStyles(textScale, variant === 'supporting'),
     [textScale, variant],
   );
+  const isFootnoteMarker = (text: string) => /^[⁰¹²³⁴⁵⁶⁷⁸⁹⁺]+$/.test(text);
 
   return (
     <View
@@ -93,7 +96,12 @@ export function PinyinRubyText({
                     aria-hidden
                     style={[
                       styles.character,
-                      { color: textColor },
+                      {
+                        color:
+                          footnoteColor && isFootnoteMarker(token.text)
+                            ? footnoteColor
+                            : textColor,
+                      },
                       bold && styles.bold,
                     ]}
                   >
@@ -101,16 +109,21 @@ export function PinyinRubyText({
                   </Text>
                 </View>
               ) : (
-              <Text
-                aria-hidden
-                style={[
-                  styles.character,
-                  { color: textColor },
-                  bold && styles.bold,
-                ]}
-              >
-                {token.text === ' ' ? '\u00a0' : token.text}
-              </Text>
+                <Text
+                  aria-hidden
+                  style={[
+                    styles.character,
+                    {
+                      color:
+                        footnoteColor && isFootnoteMarker(token.text)
+                          ? footnoteColor
+                          : textColor,
+                    },
+                    bold && styles.bold,
+                  ]}
+                >
+                  {token.text === ' ' ? '\u00a0' : token.text}
+                </Text>
               )}
               {token.suffix && (
                 <Text aria-hidden style={[styles.character, { color: textColor }]}>

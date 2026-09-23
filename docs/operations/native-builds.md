@@ -4,7 +4,7 @@ Web/PWA preview deployment remains automatic on pushes to `main` through the can
 GitHub workflow. Local `npm run deploy` builds the web output without publishing it.
 Native builds run on trusted `main`/`release/**` pushes or manual dispatches, and the
 Native iOS build additionally runs for upstream `release/**` → `main` pull requests
-after Environment approval. Android has no pull request trigger. Native builds do not
+after Environment approval. Android has no automatic pull request trigger. Native builds do not
 publish to either store. Native iOS and Android are the primary release targets; the
 web/PWA build is retained for browser testing and previews. The same Expo source is
 used for all platforms.
@@ -83,6 +83,29 @@ weakens the intended boundary. Therefore the four Android values must be added t
 `production`, verified with a protected run, and then removed from Repository
 secrets. `ANDROID_KEYSTORE_PATH` remains a derived runner-temporary path rather
 than a stored credential, and `EXPO_TOKEN` has no role in this architecture.
+
+### Manual Android PR preview and Drive upload
+
+The signed **Native Android build** workflow intentionally does not run on ordinary pull
+requests. The separate **Android PR preview** workflow is a manual dispatch from `main`:
+an administrator enters an open PR number, the workflow resolves that PR's exact head
+commit, and a credential-free job builds an ARM debug APK from that commit. The result is
+retained as a GitHub artifact for 14 days.
+
+If the administrator leaves Drive upload enabled, a separate protected `production`
+Environment job downloads only the APK artifact and checks out the upload helper from the
+trusted workflow commit. It does not check out or execute PR code while the Google
+credential is available. The helper refreshes the existing `CLASPRC_JSON` OAuth token and
+uploads a private APK file to the connected user's My Drive root. The OAuth account must
+retain the `drive.file` scope. If a dedicated folder is later preferred, set
+`GOOGLE_DRIVE_FOLDER_ID` in the protected upload job and pass it to the helper.
+
+The workflow requires both an administrator dispatch and protected Environment approval.
+Configure `production` with required reviewers and a `main` deployment-branch policy; the
+workflow itself also rejects dispatches from non-`main` refs and non-administrator
+repository collaborators. The build job receives no signing or Google credentials, so
+fork PR code cannot read them. The Drive upload job must remain separate from the build
+job, and the upload helper must be checked out from the trusted workflow commit.
 
 ## Credential-custody decision
 
