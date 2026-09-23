@@ -1279,11 +1279,16 @@ function createPrintedBulletinUnlocked_(
   var action = 'created';
 
   if (existingDocumentId) {
-    try {
-      document = DocumentApp.openById(existingDocumentId);
+    var existingDocument = tryOpenExistingPrintedBulletinDocument_(
+      existingDocumentId,
+      properties,
+      documentPropertyKey,
+      legacyDocumentPropertyKey,
+      location,
+    );
+    if (existingDocument) {
+      document = existingDocument.document;
       action = 'updated';
-    } catch (error) {
-      properties.deleteProperty(documentPropertyKey);
     }
   }
 
@@ -1323,6 +1328,34 @@ function createPrintedBulletinUnlocked_(
     pdfId: pdf.id,
     pdfUrl: pdf.url,
   };
+}
+
+function tryOpenExistingPrintedBulletinDocument_(
+  documentId,
+  properties,
+  documentPropertyKey,
+  legacyDocumentPropertyKey,
+  location,
+) {
+  try {
+    var file = DriveApp.getFileById(documentId);
+    if (file.isTrashed()) {
+      throw new Error('Saved bulletin document is in the Drive trash.');
+    }
+    return {
+      document: DocumentApp.openById(documentId),
+      action: 'updated',
+    };
+  } catch (error) {
+    // A manually trashed document can still be opened by ID in some Apps Script
+    // contexts. Treat it as missing so the next run creates a fresh document in
+    // the configured location folder instead of updating the trashed copy.
+    properties.deleteProperty(documentPropertyKey);
+    if (location === 'queens' && legacyDocumentPropertyKey !== documentPropertyKey) {
+      properties.deleteProperty(legacyDocumentPropertyKey);
+    }
+    return null;
+  }
 }
 
 function normalizePrintedBulletinLocation_(requestedLocation) {

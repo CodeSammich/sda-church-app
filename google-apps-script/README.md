@@ -583,9 +583,11 @@ permission to create and move files there. Output names use the short format
 
 A manual run or form submission updates the existing Google Doc for that location/date and
 creates a replacement PDF when one has already been created; the previous PDF is moved to
-Trash. An invalid or deleted saved document ID causes a replacement to be created. This
-means a Queens and Brooklyn submission for the same Sabbath produce two distinct output
-pairs in their respective folders.
+Trash. A saved Google Doc that has been moved to Drive Trash is treated as missing, so a
+fresh document is created in the configured location folder instead of updating the
+trashed copy. An invalid or deleted saved document ID also causes a replacement to be
+created. This means a Queens and Brooklyn submission for the same Sabbath produce two
+distinct output pairs in their respective folders.
 
 ## PWA presentation
 

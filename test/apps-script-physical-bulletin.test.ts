@@ -615,6 +615,36 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(calls).toEqual(['queens-regular', 'communion', 'brooklyn']);
   });
 
+  it('treats a trashed saved Google Doc as missing and clears both property keys', () => {
+    const deletedKeys: string[] = [];
+    const context = loadAppsScript({
+      DriveApp: {
+        getFileById: () => ({ isTrashed: () => true }),
+      },
+      DocumentApp: {
+        openById: () => {
+          throw new Error('A trashed document must not be opened.');
+        },
+      },
+    });
+    const result = runInContext(
+      `tryOpenExistingPrintedBulletinDocument_(
+        'trashed-id',
+        { deleteProperty: (key) => deletedKeys.push(key) },
+        'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-26',
+        'PHYSICAL_BULLETIN_DOC_ID_2026-09-26',
+        'queens'
+      )`,
+      Object.assign(context, { deletedKeys }),
+    );
+
+    expect(result).toBeNull();
+    expect(deletedKeys).toEqual([
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-26',
+      'PHYSICAL_BULLETIN_DOC_ID_2026-09-26',
+    ]);
+  });
+
   it('defaults a blank date to the closest upcoming Saturday', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
