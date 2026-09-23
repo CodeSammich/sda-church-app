@@ -1,7 +1,7 @@
 # Bulletin Apps Script API
 
-This directory stores the Google Apps Script source used by the bulletin PWA. It is not
-part of the public Expo bundle.
+This directory stores the Google Apps Script source used by the church's bulletin mobile
+app. It is not part of the mobile app bundle.
 
 ## Contents
 
@@ -12,7 +12,7 @@ part of the public Expo bundle.
 - [Structural sheet protection](#structural-sheet-protection)
 - [Name privacy](#name-privacy)
 - [Physical Google Doc output](#physical-google-doc-output)
-- [PWA presentation](#pwa-presentation)
+- [Mobile app presentation](#mobile-app-presentation)
 - [Failure behavior](#failure-behavior-and-troubleshooting)
 - [Change management](#change-management-checklist)
 - [Production integration monitoring](#production-integration-monitoring)
@@ -25,16 +25,16 @@ part of the public Expo bundle.
 
 This feature deliberately follows the project's
 [Sustainable/no-fee tenet](../README.md#1-sustainable). The church already uses Google
-Workspace through Google for Nonprofits, and the PWA is hosted as static files on GitHub
-Pages. Using Google Sheets, Google Forms, and a bound Google Apps Script web app lets the
-bulletin operate without introducing a separately billed database, application server,
+Workspace through Google for Nonprofits, and the bulletin is presented by the Expo/React
+Native mobile app. Using Google Sheets, Google Forms, and a bound Google Apps Script web
+app lets the bulletin operate without introducing a separately billed database, application server,
 API gateway, secret-management service, or user-authentication product.
 
 Each part has one narrow responsibility:
 
 | Component | Responsibility | Why it fits the tenet |
 | --- | --- | --- |
-| GitHub Pages PWA | Presents the bulletin and makes read-only HTTP requests | Static hosting; no application server to operate |
+| Expo/React Native mobile app | Presents the bulletin and makes read-only HTTP requests | Native app client; no application server to operate |
 | Google Forms | Gives authorized church workers a familiar way to submit worship content | No custom administrative UI to build or host |
 | Google Sheets | Stores yearly rosters and the two form-response tables | Existing church workflow remains the source of truth |
 | Google Apps Script | Joins data for the public API and, for authorized staff triggers, renders the Queens or Brooklyn printed bulletin to Docs/PDF | Runs beside the spreadsheet without a separate backend account |
@@ -48,22 +48,22 @@ the current [Google Workspace for Nonprofits offer](https://www.google.com/nonpr
 and [Apps Script quotas](https://developers.google.com/apps-script/guides/services/quotas)
 during annual maintenance.
 
-### Why the PWA does not read Sheets directly
+### Why the mobile app does not read Sheets directly
 
-A browser-side Sheets integration would require exposing a public data surface or adding
-Google OAuth/API configuration to the PWA. It would also make every device download and
+A mobile-app Sheets integration would require exposing a public data surface or adding
+Google OAuth/API configuration to the app. It would also make every device download and
 join the yearly roster plus both form-response datasets. The Apps Script boundary keeps
 Google authorization on the server side, performs one date-specific join, and returns a
 small allowlisted object. No credential, API key, spreadsheet ID, or form-response email
-address is shipped in the PWA bundle or API response.
+address is shipped in the mobile app bundle or API response.
 
 ## Architecture
 
-The bulletin uses Google Apps Script as a small read-only API between the public PWA and
+The bulletin uses Google Apps Script as a small read-only API between the public mobile app and
 the private working spreadsheet:
 
 ```text
-Public PWA
+Public mobile app
    |
    | GET /exec?date=YYYY-MM-DD
    v
@@ -100,17 +100,17 @@ PrintedQueensBulletin.gs + PrintedQueensCommunionBulletin.gs + PrintedBrooklynBu
   --> one location-specific Google Doc + one PDF per Sabbath date
 ```
 
-The browser never reads Google Sheets directly and receives no spreadsheet ID, Google
+The mobile app never reads Google Sheets directly and receives no spreadsheet ID, Google
 credentials, OAuth token, form-response email address, timestamp, or full roster last
 name. Apps Script performs the join server-side and exposes only the JSON fields defined
 in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 
 ### Request lifecycle
 
-1. The PWA chooses a bulletin date. It first checks the device's local cache. A cached
+1. The mobile app chooses a bulletin date. It first checks the device's local cache. A cached
    future bulletin remains usable until that Sabbath begins; a bulletin fetched before
    its own Sabbath becomes stale at local midnight on that Sabbath.
-2. When data is absent or stale, the PWA requests `/exec?date=YYYY-MM-DD`.
+2. When data is absent or stale, the mobile app requests `/exec?date=YYYY-MM-DD`.
 3. Apps Script checks a two-minute script-wide cache containing only the already
    allowlisted, privacy-filtered bulletin JSON. A hit avoids reading and joining Sheets.
 4. On a cache miss, Apps Script validates the date and derives the `YYYY Sabbath` tab name. Non-Sabbath
@@ -122,7 +122,7 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 7. Person-valued schedule fields are reduced to `First L.`; `Choir` is retained.
 8. Only allowlisted worship content is copied from the form rows. `Email Address` and
    other form metadata cannot enter the response object.
-9. Apps Script caches and serializes the result as JSON. The PWA stores the successful
+9. Apps Script caches and serializes the result as JSON. The mobile app stores the successful
    result and fetch time locally for later visits.
 
 ### Ownership and trust boundaries
@@ -131,9 +131,9 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
   Google Workspace account.
 - Human collaborators may view the response tabs. Protecting those tabs is recommended
   to prevent accidental edits, but sheet protection is not a confidentiality boundary.
-- The deployed `/exec` endpoint is public because an unauthenticated PWA must be able to
+- The deployed `/exec` endpoint is public because an unauthenticated mobile app must be able to
   fetch it. Therefore every value returned by `BulletinApi.gs` must be treated as public.
-- The PWA is read-only. It does not submit changes to the spreadsheet through this API.
+- The mobile app is read-only. It does not submit changes to the spreadsheet through this API.
 - `BulletinApi.gs` in this repository is the canonical source. Changes copied into Apps Script
   should be reviewed here first so the deployed version and repository do not drift.
 
@@ -147,18 +147,18 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 | `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn-specific cover presentation and location copy |
 | `google-apps-script/appsscript.json` | Apps Script runtime, timezone, and web-app manifest settings |
 | `constants/ExternalLinks.ts` | Production `/exec` URL and restricted staff-schedule URL |
-| `services/BulletinService.ts` | PWA response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
+| `services/BulletinService.ts` | Mobile-app response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
 | `services/BulletinHymnalService.ts` | Number-first bulletin hymn resolution, English/Chinese edition detection, fuzzy title fallback, and cross-reference routing |
 | `features/hymnal/BulletinHymnalConfig.ts` | Church-level primary English/Chinese hymnal selection and displayed edition metadata |
 | `features/hymnal/HymnalNumberMappings.json` | Reviewed bidirectional English 1985 ↔ Chinese 505 hymn-number cross-references |
 | `app/(tabs)/home/bulletin.tsx` | Localized This Week/Next Week UI, location cards, `TBD` rendering, and staff link |
-| `test/bulletin-service.test.ts` | PWA date, API error, and possible-joint-service behavior |
+| `test/bulletin-service.test.ts` | Mobile-app date, API error, and possible-joint-service behavior |
 | `test/bulletin-hymnal-service.test.ts` | Bulletin hymn typo tolerance, language preference, mapping, and fallback behavior |
 | `test/bible-scripture-reference.test.ts` | Multilingual 66-book parsing, formatting, ranges, and safe rejection behavior |
 | `google-apps-script/README.md` | Architecture contract and operator runbook |
 
 The Queens worship program also renders three fixed congregational pieces directly in
-the PWA: Doxology (SDAH 694 / Chinese 497), Pastoral Prayer response (SDAH 684 /
+the mobile app: Doxology (SDAH 694 / Chinese 497), Pastoral Prayer response (SDAH 684 /
 Chinese 498), and Postlude (SDAH 690 / Chinese 504). They are not workbook fields.
 Their score buttons use the same language-aware exact hymn routing as submitted hymns.
 The person assigned to Chair / Pastoral Prayer remains workbook-driven roster data.
@@ -251,7 +251,7 @@ Brooklyn.
 | `Offering Prayer` | 2 | `bulletin.brooklyn.offeringPrayer` | Person-name privacy filter |
 | `Sabbath School` | 1 | `bulletin.brooklyn.sabbathSchool` | Person-name privacy filter |
 
-Blank schedule cells become empty strings in JSON and `TBD` in the PWA. Columns outside
+Blank schedule cells become empty strings in JSON and `TBD` in the mobile app. Columns outside
 this allowlist are not copied to the response.
 
 ### Google Forms and response-tab contract
@@ -292,9 +292,9 @@ Operational rules for the forms:
   the same field, the answer from the latest `Timestamp` replaces the earlier answer.
 - A blank answer in a later submission does not erase an earlier nonblank answer.
 - If no response matches, roster data still loads and worship-content fields remain blank,
-  which the PWA displays as `TBD`.
+  which the mobile app displays as `TBD`.
 - Adding an unrelated question does not expose it. New content remains unavailable to the
-  PWA until it is deliberately added to `FORM_RESPONSE_SCHEMA` and the TypeScript/UI schema.
+  mobile app until it is deliberately added to `FORM_RESPONSE_SCHEMA` and the TypeScript/UI schema.
 - `Email Address` remains stored in the protected church workbook even though it is never
   sent to the public API. Spreadsheet access must therefore remain limited to trusted
   collaborators under the church's Workspace policies.
@@ -338,7 +338,7 @@ person to the wrong role.
 
 For the official NYCCSDA deployment, protected-range editing must be restricted to the
 Google Workspace group **technology@nyccsda.org**. Membership in that group is reserved
-for developers responsible for the PWA/mobile app. Ordinary schedule editors may edit the
+for developers responsible for the mobile app. Ordinary schedule editors may edit the
 unprotected assignment and remark cells but should not be able to alter the protected API
 structure.
 
@@ -380,15 +380,15 @@ remains responsible for access, notice, retention, correction, and removal pract
 the restricted source data.
 
 The API intentionally does not transliterate non-Latin names. Transliteration can be
-ambiguous and could disclose a complete identity. The PWA may translate the
+ambiguous and could disclose a complete identity. The mobile app may translate the
 `Name withheld` placeholder for display, but it must not attempt to reconstruct the
 original name.
 
 Additional value rules:
 
 - Hyphenated Latin first names are preserved: `Mary-Jane Smith` becomes `Mary-Jane S.`.
-- Blank roster cells return `""`; the PWA displays **TBD**.
-- Blank worship-content cells return `""`; the PWA displays **TBD**.
+- Blank roster cells return `""`; the mobile app displays **TBD**.
+- Blank worship-content cells return `""`; the mobile app displays **TBD**.
 - If no form response matches a date, the location's worship-content fields remain blank
   while its schedule assignments can still be displayed.
 - A missing schedule row in `Sabbath Calendar` is a request error because the bulletin has
@@ -589,7 +589,7 @@ trashed copy. An invalid or deleted saved document ID also causes a replacement 
 created. This means a Queens and Brooklyn submission for the same Sabbath produce two
 distinct output pairs in their respective folders.
 
-## PWA presentation
+## Mobile app presentation
 
 The bulletin screen loads only the upcoming Sabbath on initial entry. **Next Week** is
 loaded lazily the first time that sub-tab is opened, avoiding a second request for users
@@ -598,7 +598,7 @@ time, and each week maintains its own loading/error state. For each location, th
 
 The displayed date pair rolls forward at the first local midnight after Sabbath and is
 also re-evaluated whenever the app returns to the foreground. This calendar rollover is
-independent of PWA code updates and does not require a deployment or an update-banner
+independent of mobile-app code updates and does not require a deployment or an update-banner
 action. If the following week's form has not been submitted yet, its worship-content
 fields continue to use the documented `TBD` behavior.
 
@@ -611,7 +611,7 @@ fields continue to use the documented `TBD` behavior.
 Traditional and simplified Chinese app modes prefer the Chinese form answer with an
 English fallback. English and Spanish modes prefer the English answer with a Chinese
 fallback. Roster-role labels, empty-state text, `Choir`, and `Name withheld` are localized
-by the PWA; names themselves are never translated or reconstructed.
+by the mobile app; names themselves are never translated or reconstructed.
 
 Hymn of Praise and Hymn of Response show an **Open hymn** action when either bilingual
 answer can be resolved. Submitted numbers are treated as the strongest evidence because
@@ -648,7 +648,7 @@ for the hymnal relevant to the UI language: Chinese modes identify the 505 Hymna
 English and Spanish modes identify the SDA Hymnal (1985).
 
 When the Bible-verses answer is one recognized book and chapter with an optional verse or
-same-chapter range—for example, `Psalms 15:1-5`—the PWA displays the canonical book name
+same-chapter range—for example, `Psalms 15:1-5`—the mobile app displays the canonical book name
 in the current app language and makes the reference a link. The link opens the in-app
 Bible reader using that language's default translation, loads the canonical book and
 chapter, and scrolls to the first requested verse without activating selection mode.
@@ -660,13 +660,13 @@ translation. Blank and literal `TBD` scripture fields do not show the action.
 
 After the weekly bulletin content, a separate **Planning** section links to the staff
 schedule in Google Drive. Its Explore-style card explicitly says **Church staff only**.
-Google—not the PWA—requires the visitor to be signed in with an authorized `nyccsda.org`
+Google—not the mobile app—requires the visitor to be signed in with an authorized `nyccsda.org`
 account. The public app neither embeds nor proxies that restricted spreadsheet.
 
 The global `Special Remark` is displayed prominently inside both the Queens and Brooklyn
 cards when it contains a value other than literal `TBD`; a blank or `TBD` remark hides the
 banner entirely. Likewise, a blank or `TBD` Pastor Travel value hides that metadata row.
-Every other blank bulletin field continues to render as `TBD`. The PWA does not maintain
+Every other blank bulletin field continues to render as `TBD`. The mobile app does not maintain
 a hardcoded list of communion, baptism, or other joint
 service events. When every Brooklyn worship and roster field is blank or literally `TBD`,
 the Brooklyn card keeps all of its `TBD` rows and adds a cautious note that there may be a
@@ -679,7 +679,7 @@ stays on the same header line in every language. After a manual refresh, that we
 a five-minute cooldown; its localized accessibility label includes the remaining `M:SS` time.
 The synchronous cooldown guard prevents rapid taps from starting parallel requests even
 before React rerenders. Its expiry is saved in device local storage, so reloading or
-reopening the PWA does not reset the cooldown. Manual refresh bypasses the device cache
+reopening the mobile app does not reset the cooldown. Manual refresh bypasses the device cache
 and makes a new API request. It intentionally continues to respect the
 two-minute shared Apps Script cache, preventing many users from forcing simultaneous
 spreadsheet reads. Therefore a just-edited Sheet can take up to two minutes to appear.
@@ -702,9 +702,9 @@ would produce. Service limits can change; maintainers should review Google's cur
 
 ## Failure behavior and troubleshooting
 
-| Condition | API/PWA behavior | Corrective action |
+| Condition | API/mobile-app behavior | Corrective action |
 | --- | --- | --- |
-| Missing `date` or invalid `YYYY-MM-DD` | JSON error | Fix the PWA/request URL |
+| Missing `date` or invalid `YYYY-MM-DD` | JSON error | Fix the mobile-app request URL |
 | Missing `YYYY Sabbath` tab | JSON `Schedule sheet not found` error | Create and protect the correctly named yearly tab |
 | No matching row in the yearly tab | JSON `No schedule found` error | Verify the Date cell, displayed date, year tab, and deployment version |
 | Missing response tab | That location has blank worship content; roster still loads | Restore the tab or update `CONFIG.responseSheets` |
@@ -712,13 +712,13 @@ would produce. Service limits can change; maintainers should review Google's cur
 | Multiple submissions for one date | Nonblank fields merge; latest timestamp wins each conflict independently per location | No deletion is required; submit a correction |
 | Renamed/reordered schedule header | Field may be blank or mapped incorrectly | Restore the documented header contract and protections |
 | Renamed Form question prefix | Corresponding worship field becomes blank | Restore the question or update `FORM_RESPONSE_SCHEMA` |
-| HTTP 403 / Google access page | Public PWA cannot call the API | Redeploy as Web app, execute as deployer, access `Anyone` |
+| HTTP 403 / Google access page | Public mobile app cannot call the API | Redeploy as Web app, execute as deployer, access `Anyone` |
 | Apps Script timeout/quota exhaustion | Week shows its retryable load error | Check Apps Script executions/quotas and retry later |
 | One week fails while the other succeeds | Only the failing sub-tab shows an error | Correct that date's source data; the other week remains usable |
 
 Do not “fix” an API mapping problem by publishing the raw spreadsheet or adding Sheets
 credentials to frontend code. Restore the documented contract or update the allowlisted
-backend and PWA together.
+backend and mobile app together.
 
 ## Change-management checklist
 
@@ -732,15 +732,15 @@ forms:
 | Change the physical Google Doc layout or ceremony copy | The relevant `Printed*.gs` file, Apps Script tests, and this section when operation changes | New version of the same Apps Script project; no new web-app URL |
 | Add a physical-bulletin data field | `BulletinApi.gs` allowlist, the relevant `Printed*.gs` file, tests, and the sheet/form contract | New version of the same Apps Script project |
 | Rename a response tab | `CONFIG.responseSheets`, documentation, Apps Script tests | New version of existing Apps Script deployment |
-| Rename/add/reorder a schedule role | `COLUMN_SCHEMA`, TypeScript `BulletinLocation`, UI labels/rendering, tests, mapping table | Apps Script deployment and PWA deployment |
-| Rename/add a Form question used by the PWA | `FORM_RESPONSE_SCHEMA`, TypeScript schema/UI when applicable, tests, mapping table | Apps Script deployment and possibly PWA deployment |
-| Change JSON field names or nesting | Apps Script, `BulletinService.ts`, bulletin UI, tests, example JSON | Apps Script deployment and PWA deployment coordinated together |
-| Create a replacement web-app deployment | `BULLETIN_API_BASE_URL`, `BulletinApi.gs` comment, this README | PWA deployment |
-| Change only bulletin layout/copy | React Native screen and tests | PWA deployment only |
+| Rename/add/reorder a schedule role | `COLUMN_SCHEMA`, TypeScript `BulletinLocation`, UI labels/rendering, tests, mapping table | Apps Script deployment and mobile-app deployment |
+| Rename/add a Form question used by the mobile app | `FORM_RESPONSE_SCHEMA`, TypeScript schema/UI when applicable, tests, mapping table | Apps Script deployment and possibly mobile-app deployment |
+| Change JSON field names or nesting | Apps Script, `BulletinService.ts`, bulletin UI, tests, example JSON | Apps Script deployment and mobile-app deployment coordinated together |
+| Create a replacement web-app deployment | `BULLETIN_API_BASE_URL`, `BulletinApi.gs` comment, this README | Mobile-app deployment |
+| Change only bulletin layout/copy | React Native screen and tests | Mobile-app deployment only |
 
 For Apps Script changes, copy the reviewed `.gs` files into the bound project and edit the
 existing deployment to use a **New version**; this preserves the `/exec` URL. Creating a
-brand-new deployment changes the URL and requires a PWA update. For PWA changes, run the
+brand-new deployment changes the URL and requires a mobile-app update. For mobile-app changes, run the
 full project check before publishing.
 
 ## Production integration monitoring
@@ -777,10 +777,10 @@ to the Jest PR workflow, and can also be started manually. Each run makes one re
 concurrency cancels an older in-progress run when a newer commit supersedes it. The stable
 `2026-08-08` fixture exercises schedule data, both forms, bilingual content, blank values,
 and name privacy without depending on whether next week's form has been submitted. This
-workflow never opens the PWA page and never writes to Forms or Sheets.
+workflow never launches the mobile-app UI and never writes to Forms or Sheets.
 
 Because a pull request cannot deploy its proposed `BulletinApi.gs` safely, this live check verifies
-the PR's PWA contract against the currently deployed production Apps Script. Changes to
+the PR's mobile-app contract against the currently deployed production Apps Script. Changes to
 `BulletinApi.gs` still require the local/unit checks, review of the mapping tables, deployment as
 a new version, and a post-deployment integration run.
 
@@ -796,12 +796,12 @@ the source of truth.
    settings from `appsscript.json`.
 3. Select **Deploy → New deployment → Web app**.
 4. Set **Execute as** to the deploying account.
-5. Set **Who has access** to **Anyone**, including anonymous users. A public PWA cannot
+5. Set **Who has access** to **Anyone**, including anonymous users. A public mobile app cannot
    complete an interactive Google sign-in during a normal API request.
 6. Deploy and copy the production URL ending in `/exec`; do not use the `/dev` test URL.
 7. Verify the deployment in a signed-out/incognito browser with a real date. A successful
    response starts with `{"ok":true` and has a JSON content type. An access-request page
-   or HTTP 403 means the deployment is not ready for the PWA.
+   or HTTP 403 means the deployment is not ready for the mobile app.
 8. Add the verified base URL to `constants/ExternalLinks.ts` with a date-building helper:
 
    ```ts
@@ -822,7 +822,7 @@ The current production deployment is:
 https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec
 ```
 
-`constants/ExternalLinks.ts` is the PWA's canonical endpoint configuration. The URL is
+`constants/ExternalLinks.ts` is the mobile app's canonical endpoint configuration. The URL is
 public by design, but it exposes only the allowlisted, privacy-filtered response.
 
 Official reference: [Deploy an Apps Script web app](https://developers.google.com/apps-script/guides/web).
@@ -868,7 +868,7 @@ These values are different:
 | --- | --- | --- |
 | Apps Script project ID / Script ID | Apps Script → **Project Settings → IDs** | `APPS_SCRIPT_PROJECT_ID` |
 | Existing deployment ID | Apps Script → **Deploy → Manage deployments** | `APPS_SCRIPT_DEPLOYMENT_ID` |
-| Production `/exec` URL | The web-app deployment details | Used by the PWA, never as the deployment ID |
+| Production `/exec` URL | The web-app deployment details | Used by the mobile app, never as the deployment ID |
 
 Reuse the existing deployment ID. Updating it creates a new version while preserving the
 same production `/exec` URL. Creating a new deployment creates a different URL.
