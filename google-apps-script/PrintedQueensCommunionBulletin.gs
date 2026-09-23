@@ -231,9 +231,21 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
 
 function appendCommunionVerticalGivingPanel_(cell) {
   appendSpacer_(cell);
+  appendCommunionSectionDivider_(cell);
+  appendSpacer_(cell);
   appendGivingText_(cell);
   appendSpacer_(cell);
   appendGivingQrPlaceholders_(cell);
+}
+
+function appendCommunionSectionDivider_(cell) {
+  var rule = cell.appendHorizontalRule();
+  var ruleParent = rule.getParent();
+  if (ruleParent && ruleParent.getType() === DocumentApp.ElementType.PARAGRAPH) {
+    ruleParent.asParagraph().setLineSpacing(1);
+    ruleParent.asParagraph().setSpacingBefore(0);
+    ruleParent.asParagraph().setSpacingAfter(0);
+  }
 }
 
 function appendCommunionStudyContinuationRows_(cell, bulletin) {
@@ -255,5 +267,6 @@ function appendCommunionStudyContinuationRows_(cell, bulletin) {
       printedBilingualText_('Congregation', '會眾'),
     ],
   ]);
+  appendSpacer_(cell);
   appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
 }
