@@ -25,6 +25,8 @@ export type BulletinLocation = {
   closingPrayer?: string;
   flowerOffering?: string;
   sabbathSchool?: string;
+  technician?: string;
+  encouragement?: string;
 };
 
 export type Bulletin = {
@@ -108,6 +110,8 @@ export const isBulletinLocationEmpty = (location: BulletinLocation) =>
     location.closingPrayer,
     location.flowerOffering,
     location.sabbathSchool,
+    location.technician,
+    location.encouragement,
   ].some(hasBulletinValue);
 
 const sabbathStart = (date: string) => new Date(`${date}T00:00:00`).getTime();

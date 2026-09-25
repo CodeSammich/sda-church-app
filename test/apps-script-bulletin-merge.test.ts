@@ -61,6 +61,34 @@ describe('Apps Script bulletin response merging', () => {
     });
   });
 
+  it('maps the Brooklyn roster columns in spreadsheet order', () => {
+    const context = createContext({});
+    runInContext(
+      readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8'),
+      context,
+    );
+
+    const fields = JSON.parse(
+      runInContext(
+        `JSON.stringify(COLUMN_SCHEMA.filter(function (entry) {
+          return entry.path[0] === 'brooklyn';
+        }).map(function (entry) {
+          return { header: entry.header, path: entry.path };
+        }))`,
+        context,
+      ) as string,
+    );
+
+    expect(fields).toEqual([
+      { header: 'Brooklyn Sermon', path: ['brooklyn', 'sermon'] },
+      { header: 'Chair/Pastoral Prayer', path: ['brooklyn', 'chairPastoralPrayer'] },
+      { header: 'Offering Prayer', path: ['brooklyn', 'offeringPrayer'] },
+      { header: 'Technician', path: ['brooklyn', 'technician'] },
+      { header: 'Encouragement', path: ['brooklyn', 'encouragement'] },
+      { header: 'Sabbath School', path: ['brooklyn', 'sabbathSchool'] },
+    ]);
+  });
+
   it('merges every matching response and prefers the latest conflicting answer', () => {
     const rows = [
       [

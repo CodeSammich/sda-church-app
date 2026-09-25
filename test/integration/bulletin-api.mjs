@@ -102,6 +102,8 @@ assertLocation(payload.bulletin.brooklyn, 'bulletin.brooklyn', [
   'sermon',
   'chairPastoralPrayer',
   'offeringPrayer',
+  'technician',
+  'encouragement',
   'sabbathSchool',
 ]);
 assertNoPrivateKeys(payload);

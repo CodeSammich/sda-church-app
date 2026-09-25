@@ -12,6 +12,7 @@ app. It is not part of the mobile app bundle.
 - [Structural sheet protection](#structural-sheet-protection)
 - [Name privacy](#name-privacy)
 - [Physical Google Doc output](#physical-google-doc-output)
+- [Sabbath Encouragement source and copyright](#sabbath-encouragement-source-and-copyright)
 - [Mobile app presentation](#mobile-app-presentation)
 - [Failure behavior](#failure-behavior-and-troubleshooting)
 - [Change management](#change-management-checklist)
@@ -105,6 +106,12 @@ credentials, OAuth token, form-response email address, timestamp, or full roster
 name. Apps Script performs the join server-side and exposes only the JSON fields defined
 in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 
+### Sabbath Encouragement source and copyright
+
+The source-by-source attribution and copyright review for the Brooklyn Sabbath Encouragement
+pages is maintained in [SABBATH_ENCOURAGEMENT_COPYRIGHT.md](SABBATH_ENCOURAGEMENT_COPYRIGHT.md).
+Read that file before replacing the current translation with a verbatim English corpus.
+
 ### Request lifecycle
 
 1. The mobile app chooses a bulletin date. It first checks the device's local cache. A cached
@@ -145,6 +152,8 @@ in `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`.
 | `google-apps-script/PrintedQueensBulletin.gs` | Shared data preparation, stable Queens regular renderer, and common Google Docs helpers |
 | `google-apps-script/PrintedQueensCommunionBulletin.gs` | Communion page order and fixed foot-washing/Communion Scripture references |
 | `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn-specific cover presentation and location copy |
+| `google-apps-script/SabbathEncouragement.gs` | Rotating 52-page Brooklyn Sabbath Encouragement source, translation, and third-page renderer |
+| `google-apps-script/SABBATH_ENCOURAGEMENT_COPYRIGHT.md` | Source attribution, US copyright review, and fair-use guardrails for the 52-page encouragement source |
 | `google-apps-script/appsscript.json` | Apps Script runtime, timezone, and web-app manifest settings |
 | `constants/ExternalLinks.ts` | Production `/exec` URL and restricted staff-schedule URL |
 | `services/BulletinService.ts` | Mobile-app response types, upcoming-Sabbath calculation, fetching, device cache, persisted refresh cooldown, and empty-location detection |
@@ -214,7 +223,8 @@ Queens Sermon | Translation | Chinese Teacher | English Teacher |
 Children Teacher | Chair/Pastoral Prayer | Special Music |
 Offering Prayer | Pianist | SS Chair | SS Opening Prayer | Closing Prayer |
 Flower Offering |
-Brooklyn Sermon | Chair/Pastoral Prayer | Offering Prayer | Sabbath School
+Brooklyn Sermon | Chair/Pastoral Prayer | Offering Prayer | Technician |
+Encouragement | Sabbath School
 ```
 
 ### Yearly schedule column contract
@@ -249,6 +259,8 @@ Brooklyn.
 | `Brooklyn Sermon` | 1 | `bulletin.brooklyn.sermon` | Person-name privacy filter |
 | `Chair/Pastoral Prayer` | 2 | `bulletin.brooklyn.chairPastoralPrayer` | Person-name privacy filter |
 | `Offering Prayer` | 2 | `bulletin.brooklyn.offeringPrayer` | Person-name privacy filter |
+| `Technician` | 1 | `bulletin.brooklyn.technician` | Person-name privacy filter |
+| `Encouragement` | 1 | `bulletin.brooklyn.encouragement` | Person-name privacy filter |
 | `Sabbath School` | 1 | `bulletin.brooklyn.sabbathSchool` | Person-name privacy filter |
 
 Blank schedule cells become empty strings in JSON and `TBD` in the mobile app. Columns outside
@@ -356,6 +368,33 @@ ownership policy rather than requesting access to the NYCCSDA group.
 If a fork uses different sheet-tab names, update `CONFIG.responseSheets` in `BulletinApi.gs` and
 the local documentation together.
 
+### Sabbath Calendar input validation
+
+For the `Sabbath Calendar` tab, the bound Apps Script installs the data-validation
+rule automatically the first time the spreadsheet is opened. It reapplies the rule
+after it appends a new quarter and on later opens, covering every current row in
+columns A:X. The underlying **Custom formula is** rule is:
+
+```text
+=NOT(REGEXMATCH(TO_TEXT(A2),"[一-鿿]"))
+```
+
+Choose **Reject input** and use this help text:
+
+> Invalid input: Chinese characters are not allowed in the Sabbath Calendar. Please enter English only. To protect privacy and comply with applicable privacy regulations, the mobile app redacts last names for anonymity.
+>
+> 輸入無效：安息日行事曆不允許輸入中文，請只使用英文。為保護隱私並遵守適用的隱私法規，手機應用程式會隱去姓氏，以維持匿名。
+
+Google Sheets' help-text field is not a custom error-message field. The bound
+`BulletinScheduleMaintenance.gs` `onEdit` guard is therefore also scoped to the
+`Sabbath Calendar` tab and columns A:X: it clears Chinese characters pasted from
+the Name Dictionary and shows a prominent bilingual `Invalid input` alert. If the
+edit occurs outside an active Sheets editor, it falls back to a toast. Other tabs
+are unaffected.
+The automatic quarter-append refresh means newly added rows do not require manual
+validation-range maintenance. The open-time refresh is a safety net if rows are
+added manually or the validation metadata is overwritten.
+
 ## Name privacy
 
 Every person-valued field is transformed by the API before it leaves Apps Script:
@@ -447,9 +486,8 @@ The generated document uses landscape US Letter pages with two vertical panels p
 Queens regular bulletins use four panels—announcements/schedule, cover, church at study,
 and church at worship. That renderer remains the stable reference path. Communion page
 order and Brooklyn cover copy live in their own `.gs` files: Brooklyn regular bulletins
-use four panels—Sabbath School, worship, the meetings schedule, and the fellowship
-cover/contact block; Communion adds four ceremony panels to the selected location's
-regular layout.
+use those four panels plus a third-page Chinese/English Sabbath Encouragement spread;
+Communion adds four ceremony panels to the selected location's regular layout.
 
 The communion PDF is booklet-imposed rather than simple reading order. From the first PDF
 page to the last, the landscape faces are: `(back/announcements | cover)`,
@@ -461,10 +499,17 @@ order is cover, study, worship, foot washing, Holy Communion, Holy Communion—c
 closing, and back/announcements.
 
 The Queens template uses English and Traditional Chinese labels. The Brooklyn template
-follows the supplied two-page landscape reference: Sabbath School, worship, the rotating
-Today/Next Sabbath names table, online study times, and the fellowship contact/cover block.
-The long `TESTIMONIES OF SABBATH` reading is intentionally omitted; the `Testimonies` row
-in the rotating names table remains. Bilingual hymns and sermon titles are printed on
+follows the supplied landscape reference: Sabbath School, worship, the rotating
+Today/Next Sabbath names table, online study times, the fellowship contact/cover block,
+and a third-page `SABBATH ENCOURAGEMENT` spread. The long `TESTIMONIES OF SABBATH`
+reading is intentionally omitted; the `Encouragement` row in the rotating names table is
+populated from the Brooklyn schedule. The third page selects one of the 52 pages in
+`sabbath_encouragement.pdf` using 2026-08-22 as page 20, advances one page per Sabbath,
+and wraps after page 52. Its right half is machine-translated at render time with Apps Script
+`LanguageApp` and cached. Bible quotations detected from the Chinese source references are
+replaced with direct BSB text from the same Bible API used by the printed bulletin. The
+English half prints a disclaimer that the machine translation may not be fully accurate.
+Bilingual hymns and sermon titles are printed on
 separate Chinese/English lines in three-column service tables (item, details/hymn, and
 person), while names and other submitted Chinese content remain exactly as entered in the
 Forms/Sheets data. These service tables are borderless; the back-page meeting schedule is

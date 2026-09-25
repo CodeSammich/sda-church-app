@@ -7,6 +7,8 @@ const loadAppsScript = (context: Record<string, unknown>) => {
   runInContext(
       readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8') +
       '\n' +
+      readFileSync(join(process.cwd(), 'google-apps-script/SabbathEncouragement.gs'), 'utf8') +
+      '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/BulletinScheduleMaintenance.gs'), 'utf8') +
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensBulletin.gs'), 'utf8') +
@@ -20,6 +22,81 @@ const loadAppsScript = (context: Record<string, unknown>) => {
 };
 
 describe('printed bulletin Apps Script helpers', () => {
+  it('maps Brooklyn Sabbath encouragement pages from the supplied anchor', () => {
+    const context = loadAppsScript({});
+
+    expect(runInContext(`getSabbathEncouragementPageNumber_('2026-08-22')`, context)).toBe(20);
+    expect(runInContext(`getSabbathEncouragementPageNumber_('2026-08-29')`, context)).toBe(21);
+    expect(runInContext(`getSabbathEncouragementPageNumber_('2027-04-03')`, context)).toBe(52);
+    expect(runInContext(`getSabbathEncouragementPageNumber_('2027-04-10')`, context)).toBe(1);
+    expect(runInContext(`getSabbathEncouragementPageText_('2026-08-22')`, context)).toContain('安息日时间的起止');
+  });
+
+  it('parses Chinese Bible references and corrects the source PDF typo', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `JSON.stringify({
+          grouped: parseSabbathBibleReferences_('出 31:12-13，16-17'),
+          shorthand: parseSabbathBibleReferences_('诗 100:3; 95:6'),
+          typo: parseSabbathBibleReferences_('帖后 2:34')
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(output.grouped).toEqual([
+      { bookId: 'EXO', bookLabel: 'Exodus', chapter: 31, verseStart: 12, verseEnd: 13 },
+      { bookId: 'EXO', bookLabel: 'Exodus', chapter: 31, verseStart: 16, verseEnd: 17 },
+    ]);
+    expect(output.shorthand).toEqual([
+      { bookId: 'PSA', bookLabel: 'Psalm', chapter: 100, verseStart: 3, verseEnd: 3 },
+      { bookId: 'PSA', bookLabel: 'Psalm', chapter: 95, verseStart: 6, verseEnd: 6 },
+    ]);
+    expect(output.typo).toEqual([
+      { bookId: '2TH', bookLabel: '2 Thessalonians', chapter: 2, verseStart: 3, verseEnd: 4 },
+    ]);
+  });
+
+  it('uses direct BSB text inside the machine-translated English encouragement', () => {
+    const cache = new Map<string, string>();
+    const context = loadAppsScript({
+      CacheService: {
+        getScriptCache: () => ({
+          get: (key: string) => cache.get(key) || null,
+          put: (key: string, value: string) => cache.set(key, value),
+        }),
+      },
+      LanguageApp: {
+        translate: (text: string) => text,
+      },
+      UrlFetchApp: {
+        fetch: () => ({
+          getResponseCode: () => 200,
+          getContentText: () =>
+            JSON.stringify({
+              chapter: {
+                content: [
+                  { type: 'verse', number: 1, text: 'BSB verse one' },
+                  { type: 'verse', number: 2, text: 'BSB verse two' },
+                  { type: 'verse', number: 3, text: 'BSB verse three' },
+                ],
+              },
+            }),
+        }),
+      },
+    });
+
+    const output = runInContext(
+      `translateSabbathEncouragementParagraph_('「中文經文」(创 2:1-3)')`,
+      context,
+    ) as string;
+
+    expect(output).toContain('BSB verse one BSB verse two BSB verse three');
+    expect(output).toContain('Genesis 2:1-3, BSB');
+    expect(output).not.toContain('中文經文');
+  });
+
   it('adds only the document-generation action to the Sheets menu', () => {
     const menuItems: string[] = [];
     let menuTitle = '';
@@ -405,8 +482,13 @@ describe('printed bulletin Apps Script helpers', () => {
     );
     const givingTextStart = source.indexOf('function appendGivingText_');
     const givingQrStart = source.indexOf('function appendGivingQrPlaceholders_');
+    const givingQrItemsStart = source.indexOf('function getGivingQrItems_');
     const givingText = source.slice(givingTextStart, givingQrStart);
     const givingQr = source.slice(givingQrStart, source.indexOf('\nfunction ', givingQrStart + 10));
+    const givingQrItems = source.slice(
+      givingQrItemsStart,
+      source.indexOf('\nfunction ', givingQrItemsStart + 10),
+    );
 
     expect(givingText.replace(/\\'/g, "'")).toContain(
       "Stocks/equities: We recommend donor-advised funds; see our church's mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.",
@@ -415,7 +497,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(givingText).toContain('Nonprofit EIN: 11-3004814.');
     expect(givingText).toContain('Tithes & Offerings | 什一奉獻與自由奉獻');
     expect(givingQr).not.toContain('Stocks/equities:');
-    expect(givingQr).toContain("'Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'");
+    expect(givingQrItems).toContain("'Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'");
   });
 
   it('uses the shared dummy QR image until slot-specific Drive IDs are configured', () => {
@@ -434,6 +516,36 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving')`, context)).toBe(
       '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
     );
+  });
+
+  it('selects the renamed location-specific QR files by filename', () => {
+    const requestedNames: string[] = [];
+    const context = loadAppsScript({
+      DriveApp: {
+        getFilesByName: (name: string) => {
+          requestedNames.push(name);
+          return {
+            hasNext: () => true,
+            next: () => ({ getId: () => `id-for-${name}` }),
+          };
+        },
+      },
+    });
+
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving', 'brooklyn')`, context)).toBe(
+      'id-for-brooklyn_adventist_giving_qr_code_368x368.jpg',
+    );
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('zelle', 'queens')`, context)).toBe(
+      'id-for-queens_zelle_qr_code_368x368.jpg',
+    );
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('mobileApp', 'brooklyn')`, context)).toBe(
+      'id-for-mobile_app_qr_code_368x368.jpg',
+    );
+    expect(requestedNames).toEqual([
+      'brooklyn_adventist_giving_qr_code_368x368.jpg',
+      'queens_zelle_qr_code_368x368.jpg',
+      'mobile_app_qr_code_368x368.jpg',
+    ]);
   });
 
   it('splits printed bilingual values into horizontal English and Chinese columns', () => {
@@ -760,8 +872,11 @@ describe('printed bulletin Apps Script helpers', () => {
     const output = JSON.parse(
       runInContext(
         `var calls = [];
-         appendSharedCoverPanel_ = function(cell, bulletin, format) {
-           calls.push({ cell: cell, date: bulletin.date, format: format });
+         appendSharedCoverPanel_ = function(cell, bulletin, format, location) {
+           calls.push({ cell: cell, date: bulletin.date, format: format, location: location });
+         };
+         appendBrooklynOnlineZoomPanel_ = function(cell) {
+           calls.push({ online: cell });
          };
          renderPrintedBrooklynCoverPanel_('cover-cell', { date: '2026-09-26' }, 'regular');
          JSON.stringify(calls)`,
@@ -769,7 +884,34 @@ describe('printed bulletin Apps Script helpers', () => {
       ) as string,
     );
 
-    expect(output).toEqual([{ cell: 'cover-cell', date: '2026-09-26', format: 'regular' }]);
+    expect(output).toEqual([
+      { cell: 'cover-cell', date: '2026-09-26', format: 'regular', location: 'brooklyn' },
+      { online: 'cover-cell' },
+    ]);
+  });
+
+  it('merges adjacent Brooklyn Sabbath School rows with the same assignment', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `JSON.stringify(mergeBrooklynStudyRowsByAssignment_([
+          ['Welcome', '', 'Shuang Geng'],
+          ['Song and Bible Verse', '', 'Shuang Geng'],
+          ['Opening Hymn', '', 'Congregation'],
+          ['Prayer', '', 'Shuang Geng'],
+          ['Sabbath Message', 'Grace Upon Grace', 'Shuang Geng'],
+          ['Sabbath School', '', 'Moyan Qi']
+        ]))`,
+        context,
+      ) as string,
+    );
+
+    expect(output).toEqual([
+      ['Song and Bible Verse', '', 'Shuang Geng'],
+      ['Opening Hymn', '', 'Congregation'],
+      ['Prayer\nSabbath Message', 'Grace Upon Grace', 'Shuang Geng'],
+      ['Sabbath School', '', 'Moyan Qi'],
+    ]);
   });
 
   it('selects the church sketch for regular covers and Last Supper for communion', () => {
@@ -1127,6 +1269,8 @@ describe('printed bulletin Apps Script helpers', () => {
       'Brooklyn Sermon',
       'Chair/Pastoral Prayer',
       'Offering Prayer',
+      'Technician',
+      'Encouragement',
       'Sabbath School',
     ];
     const values = [
@@ -1151,6 +1295,8 @@ describe('printed bulletin Apps Script helpers', () => {
       'Moses Fang',
       'Daniel Zhang',
       'Grace Wu',
+      'Morgan Wu',
+      'Grace Zhang',
       'Daniel Zhang',
     ];
     const scheduleSheet = {
@@ -1181,5 +1327,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(names.public.queens.sermon).toBe('Moses F.');
     expect(names.private.queens.sermon).toBe('Moses Fang');
     expect(names.private.queens.chairPastoralPrayer).toBe('Enn Kong Liew');
+    expect(names.private.brooklyn.technician).toBe('Morgan Wu');
+    expect(names.private.brooklyn.encouragement).toBe('Grace Zhang');
   });
 });

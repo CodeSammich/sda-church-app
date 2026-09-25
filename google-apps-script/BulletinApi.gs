@@ -17,7 +17,9 @@
 var CONFIG = Object.freeze({
   scheduleSheetName: 'Sabbath Calendar',
   cacheSeconds: 120,
-  cacheVersion: 'v3',
+  // Bump when the public bulletin shape changes so cached pre-migration
+  // responses do not hide newly added roster fields.
+  cacheVersion: 'v4',
   responseSheets: Object.freeze({
     queens: ['Queens Worship Data'],
     brooklyn: ['Brooklyn Worship Data'],
@@ -64,6 +66,8 @@ var COLUMN_SCHEMA = Object.freeze([
     person: true,
   },
   { header: 'Offering Prayer', path: ['brooklyn', 'offeringPrayer'], person: true },
+  { header: 'Technician', path: ['brooklyn', 'technician'], person: true },
+  { header: 'Encouragement', path: ['brooklyn', 'encouragement'], person: true },
   { header: 'Sabbath School', path: ['brooklyn', 'sabbathSchool'], person: true },
 ]);
 
@@ -258,7 +262,17 @@ function populateOptionalBrooklynScheduleFields_(location, headers, row) {
       path: ['sabbathMessageTitle'],
     },
     { aliases: ['Brooklyn Technician', 'Technician'], path: ['technician'] },
-    { aliases: ['Brooklyn Testimonies', 'Testimonies'], path: ['testimonies'] },
+    {
+      aliases: [
+        'Brooklyn Encouragement',
+        'Encouragement',
+        // Preserve older schedule rows while the workbook transitions away
+        // from the former Testimonies heading.
+        'Brooklyn Testimonies',
+        'Testimonies',
+      ],
+      path: ['encouragement'],
+    },
     {
       aliases: ['Brooklyn Sunset Time', 'Brooklyn Sunset Times', 'Sunset Time', 'Sunset Times'],
       path: ['sunsetTime'],

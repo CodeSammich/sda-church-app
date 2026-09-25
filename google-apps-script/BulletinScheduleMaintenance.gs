@@ -26,6 +26,95 @@ var BULLETIN_SCHEDULE_MAINTENANCE_CONFIG = Object.freeze({
   previousWeekDays: 7,
 });
 
+function getSabbathCalendarEnglishValidationHelpText_() {
+  return (
+    'Invalid input: Chinese characters are not allowed in the Sabbath Calendar. ' +
+    'Please enter English only. To protect privacy and comply with applicable ' +
+    'privacy regulations, the mobile app redacts last names for anonymity.\n\n' +
+    '輸入無效：安息日行事曆不允許輸入中文，請只使用英文。為保護隱私並遵守適用的隱私法規，' +
+    '手機應用程式會隱去姓氏，以維持匿名。'
+  );
+}
+
+function getSabbathCalendarEnglishValidationToastText_() {
+  return (
+    'No Chinese characters are allowed in the Sabbath Calendar. / ' +
+    '安息日行事曆不允許輸入中文。\n' +
+    'To protect privacy and comply with applicable privacy regulations, the mobile app ' +
+    'redacts last names for anonymity. / 為保護隱私並遵守適用的隱私法規，手機應用程式會隱去姓氏，以維持匿名。'
+  );
+}
+
+/**
+ * Keeps the Sabbath Calendar's user-editable schedule cells English-only.
+ *
+ * Sheets data validation is still useful for ordinary typing, but a user can
+ * paste whole cells from the Name Dictionary and overwrite validation metadata.
+ * This simple onEdit guard is intentionally limited to the Sabbath Calendar
+ * tab and columns A:X. It clears only pasted/edited cells containing CJK Han
+ * characters and leaves all other tabs and columns untouched.
+ */
+function onEdit(e) {
+  if (!e || !e.range) {
+    return;
+  }
+
+  var range = e.range;
+  var sheet = range.getSheet();
+  if (
+    !sheet ||
+    sheet.getName() !== BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName
+  ) {
+    return;
+  }
+
+  var values = range.getDisplayValues();
+  var invalidCount = 0;
+  values.forEach(function (row, rowIndex) {
+    row.forEach(function (value, columnIndex) {
+      var rowNumber = range.getRow() + rowIndex;
+      var columnNumber = range.getColumn() + columnIndex;
+      if (rowNumber < 2 || columnNumber < 1 || columnNumber > 24) {
+        return;
+      }
+
+      // Apps Script's JavaScript regex supports these Unicode ranges. The
+      // matching Sheets data-validation formula uses literal CJK endpoints
+      // because Sheets REGEXMATCH does not support Unicode escape syntax.
+      if (/[㐀-䶿一-鿿豈-﫿]/.test(String(value || ''))) {
+        range.getCell(rowIndex + 1, columnIndex + 1).clearContent();
+        invalidCount += 1;
+      }
+    });
+  });
+
+  if (invalidCount) {
+    showSabbathCalendarEnglishValidationNotice_();
+  }
+}
+
+function showSabbathCalendarEnglishValidationNotice_() {
+  var message = getSabbathCalendarEnglishValidationHelpText_();
+  try {
+    var ui = SpreadsheetApp.getUi();
+    if (ui && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
+      ui.alert('Invalid input / 輸入無效', message, ui.ButtonSet.OK);
+      return;
+    }
+  } catch (error) {
+    // Background or non-editor executions may not have a Sheets UI. Fall back
+    // to a toast so the edit is still explained without failing the guard.
+  }
+
+  if (SpreadsheetApp.getActiveSpreadsheet) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      getSabbathCalendarEnglishValidationToastText_(),
+      'Invalid input / 輸入無效',
+      8,
+    );
+  }
+}
+
 function maintainBulletinScheduleOnOpen_() {
   return runBulletinScheduleMaintenance_();
 }
@@ -38,13 +127,42 @@ function runBulletinScheduleMaintenance_() {
 
   try {
     var sheet = getBulletinScheduleMaintenanceSheet_();
+    var validation = {
+      installed: installSabbathCalendarEnglishValidation_(sheet),
+      updatedAfterQuarterAppend: false,
+    };
     var populated = populateNextBulletinQuarterIfDue_(sheet);
+    if (populated) {
+      validation.updatedAfterQuarterAppend = updateSabbathCalendarEnglishValidation_(
+        sheet,
+      );
+    }
     var hidden = hideOldBulletinScheduleRows_(sheet);
     SpreadsheetApp.flush();
-    return { populated: populated, hidden: hidden };
+    return { populated: populated, hidden: hidden, validation: validation };
   } finally {
     lock.releaseLock();
   }
+}
+
+function installSabbathCalendarEnglishValidation_(sheet) {
+  return applySabbathCalendarEnglishValidation_(sheet);
+}
+
+function updateSabbathCalendarEnglishValidation_(sheet) {
+  return applySabbathCalendarEnglishValidation_(sheet);
+}
+
+function applySabbathCalendarEnglishValidation_(sheet) {
+  var rowCount = Math.max(1, sheet.getMaxRows() - 1);
+  var range = sheet.getRange(2, 1, rowCount, 24);
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireFormulaSatisfied('=NOT(REGEXMATCH(TO_TEXT(A2),"[一-鿿]"))')
+    .setAllowInvalid(false)
+    .setHelpText(getSabbathCalendarEnglishValidationHelpText_())
+    .build();
+  range.setDataValidation(rule);
+  return range.getA1Notation();
 }
 
 function getBulletinScheduleMaintenanceSheet_() {

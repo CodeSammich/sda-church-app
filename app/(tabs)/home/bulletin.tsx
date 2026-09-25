@@ -113,6 +113,8 @@ const LABELS = {
       closingPrayer: 'Closing Prayer',
       flowerOffering: 'Flower Offering',
       sabbathSchool: 'Sabbath School',
+      technician: 'Technician',
+      encouragement: 'Encouragement',
     },
   },
   zh: {
@@ -180,6 +182,8 @@ const LABELS = {
       closingPrayer: '閉會禱告',
       flowerOffering: '花卉奉獻',
       sabbathSchool: '安息日學',
+      technician: '技術同工',
+      encouragement: '勉勵',
     },
   },
   'zh-cn': {
@@ -247,6 +251,8 @@ const LABELS = {
       closingPrayer: '闭会祷告',
       flowerOffering: '花卉奉献',
       sabbathSchool: '安息日学',
+      technician: '技术同工',
+      encouragement: '勉励',
     },
   },
   es: {
@@ -314,6 +320,8 @@ const LABELS = {
       closingPrayer: 'Oración Final',
       flowerOffering: 'Ofrenda Floral',
       sabbathSchool: 'Escuela Sabática',
+      technician: 'Técnico',
+      encouragement: 'Ánimo',
     },
   },
 } as const;
@@ -828,6 +836,8 @@ export default function WeeklyBulletinScreen() {
       : [
           [labels.roles.chairPastoralPrayer, location.chairPastoralPrayer],
           [labels.roles.offeringPrayer, location.offeringPrayer],
+          [labels.roles.technician, location.technician],
+          [labels.roles.encouragement, location.encouragement],
           [labels.roles.sabbathSchool, location.sabbathSchool],
         ];
 
