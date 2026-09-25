@@ -1,7 +1,7 @@
 {
   "name": "sda-church-app",
   "main": "expo-router/entry",
-  "version": "0.38.0",
+  "version": "0.39.0",
   "homepage": "https://app.nyccsda.org",
   "scripts": {
     "build:web": "node scripts/ensure-build-dir.mjs && expo export --platform web --clear --output-dir build/web",
