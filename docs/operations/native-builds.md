@@ -108,8 +108,9 @@ The signed **Native Android build** workflow intentionally runs only after a com
 `main`; it does not sign release-branch or pull-request commits. The separate **Android PR
 preview** workflow is credential-free and is reserved for unsigned debug APK previews in
 ARM and Intel variants. Fork PRs do not receive Linux native checks or production signing;
-the only native artifact permitted by this policy is an unsigned debug APK preview. An
-administrator can still manually dispatch the preview from `main` for an open PR.
+the only native artifact permitted by this policy is an unsigned debug APK preview. The
+workflow runs automatically for eligible same-repository pull requests targeting
+`main`; it does not accept arbitrary manual commit or pull-request SHA inputs.
 
 For an automatic PR run, a separate protected `production` Environment job downloads only
 the APK artifact and checks out the upload helper from the trusted base commit. It does not
@@ -121,11 +122,9 @@ retain the `drive.file` scope. If a dedicated folder is later preferred, set
 
 Automatic PR runs require the credential-free preview guard; configure `production` with
 required reviewers and a `main` deployment-branch policy if Drive uploads should require a
-human approval. Manual dispatches additionally require an administrator, must come from
-`main`, and reject non-administrator repository collaborators. The build job receives no
-signing credentials, and fork PRs are skipped. The Drive upload job must remain
-separate from the build job, and the upload helper must be checked out from the trusted base
-commit rather than the PR head.
+human approval. The build job receives no signing credentials, and fork PRs are skipped.
+The Drive upload job must remain separate from the build job, and the upload helper must be
+checked out from the trusted base commit rather than the PR head.
 
 ## Credential-custody decision
 
