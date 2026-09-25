@@ -1,6 +1,7 @@
 import {
   renderVerseToPlainText,
   startsNewBiblePoetryLine,
+  toSuperscript,
 } from '@/services/BibleService';
 
 describe('Bible verse formatting', () => {
@@ -29,5 +30,10 @@ describe('Bible verse formatting', () => {
 
     expect(startsNewBiblePoetryLine(content, 1, 'BSB')).toBe(true);
     expect(startsNewBiblePoetryLine(content, 3, 'BSB')).toBe(false);
+  });
+
+  it('formats footnote callers as raised numbers', () => {
+    expect(toSuperscript(12)).toBe('¹²');
+    expect(toSuperscript('+')).toBe('⁺');
   });
 });

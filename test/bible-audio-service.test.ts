@@ -11,6 +11,7 @@ import {
   getBibleAudioSourceLabel,
   getFollowingBibleChapters,
   getOrderedBibleAudioReaders,
+  initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
   retargetHelloAoAudioUrl,
   shouldStopBibleAudioAtChapterEnd,
@@ -41,6 +42,43 @@ describe('Bible audio playback', () => {
       showSeekBackward: true,
       showSeekForward: true,
     });
+  });
+
+  it('seeds the native queue before activating lock-screen controls', () => {
+    const calls: string[] = [];
+    const player = {
+      setCurrentChapter: jest.fn(() => calls.push('current-chapter')),
+      setQueue: jest.fn(() => calls.push('queue')),
+      setActiveForLockScreen: jest.fn(() => calls.push('lock-screen')),
+    };
+    const metadata = {
+      title: 'Genesis 1',
+      artist: 'Berean Standard Bible',
+      albumTitle: 'Bible audio',
+    };
+
+    initializeBibleAudioPlayback({
+      player,
+      currentChapter: {
+        bookId: 'GEN',
+        chapter: 1,
+        translationId: 'BSB',
+        source: { uri: 'https://example.com/genesis-1.mp3' },
+        metadata,
+      },
+      queue: [
+        {
+          bookId: 'GEN',
+          chapter: 2,
+          translationId: 'BSB',
+          source: { uri: 'https://example.com/genesis-2.mp3' },
+          metadata,
+        },
+      ],
+      metadata,
+    });
+
+    expect(calls).toEqual(['current-chapter', 'queue', 'lock-screen']);
   });
 
   it('prioritizes a chosen source while preserving every fallback', () => {

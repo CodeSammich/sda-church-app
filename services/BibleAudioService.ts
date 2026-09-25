@@ -10,7 +10,7 @@ import {
   supportsAudioPowerCuv,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
-import type { BibleAudioQueueItem } from './BibleAudioPlayer.types';
+import type { BibleAudioQueueControls, BibleAudioQueueItem } from './BibleAudioPlayer.types';
 
 const BSB_AUDIO_READER_PRIORITY = ['souer', 'hays', 'david'] as const;
 
@@ -49,6 +49,46 @@ export const activateBibleAudioLockScreen = (
     showSeekBackward: true,
     showSeekForward: true,
   });
+
+type BibleAudioInitialQueuePlayer = Pick<
+  AudioPlayer & BibleAudioQueueControls,
+  'setActiveForLockScreen' | 'setCurrentChapter' | 'setQueue'
+>;
+
+/**
+ * Seeds a chapter's native queue before publishing it to lock-screen controls.
+ *
+ * Android's Expo MediaSession snapshots the playlist when lock-screen controls
+ * are activated. Keeping this order in one small helper makes the Media3
+ * transition invariant explicit and keeps it covered by a unit test.
+ */
+export const initializeBibleAudioPlayback = ({
+  player,
+  currentChapter,
+  queue,
+  metadata,
+  onQueueError,
+  onLockScreenError,
+}: {
+  player: BibleAudioInitialQueuePlayer;
+  currentChapter?: BibleAudioQueueItem;
+  queue: BibleAudioQueueItem[];
+  metadata: AudioMetadata;
+  onQueueError?: (error: unknown) => void;
+  onLockScreenError?: (error: unknown) => void;
+}) => {
+  if (currentChapter) player.setCurrentChapter?.(currentChapter);
+  try {
+    player.setQueue?.(queue);
+  } catch (error) {
+    onQueueError?.(error);
+  }
+  try {
+    activateBibleAudioLockScreen(player, metadata);
+  } catch (error) {
+    onLockScreenError?.(error);
+  }
+};
 
 /** Returns a stable provider identifier for an audio URL. */
 export const getBibleAudioSourceId = (url: string) => {

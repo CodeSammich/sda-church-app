@@ -6,7 +6,7 @@
 /*
 # 2. Re-include source and configuration directories
 !/.github
-!/apps-script
+!/google-apps-script
 !/app
 !/assets
 !/components
@@ -45,7 +45,11 @@ expo-env.d.ts
 *.tsbuildinfo
 external-dependency-report.json
 .env*
-apps-script/.clasp.json
+# Local Apps Script project/deployment identifiers and OAuth credentials.
+**/.clasp.json
+**/.clasp-deployment.json
+**/.clasprc.json
+google-apps-script/PinyinPro.gs
 .vscode/hunkwise/
 
 # Native signing credentials and build artifacts

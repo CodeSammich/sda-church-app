@@ -46,6 +46,7 @@ export const getParallelVerseTexts = (
   supportingChapter: TranslationBookChapter | null,
   supportingTranslationId: string | null,
   verseNumber: number,
+  includeFootnoteMarkers = false,
 ) => {
   const primaryVerse = indexChapterVerses(primaryChapter).get(verseNumber);
   if (!primaryVerse) return null;
@@ -55,10 +56,20 @@ export const getParallelVerseTexts = (
     : null;
 
   return {
-    primaryText: renderVerseToPlainText(primaryTranslationId, primaryVerse),
+    primaryText: renderVerseToPlainText(
+      primaryTranslationId,
+      primaryVerse,
+      includeFootnoteMarkers ? primaryChapter?.chapter.footnotes : undefined,
+    ),
     supportingText:
       supportingVerse && supportingTranslationId
-        ? renderVerseToPlainText(supportingTranslationId, supportingVerse)
+        ? renderVerseToPlainText(
+            supportingTranslationId,
+            supportingVerse,
+            includeFootnoteMarkers
+              ? supportingChapter?.chapter.footnotes
+              : undefined,
+          )
         : null,
   };
 };

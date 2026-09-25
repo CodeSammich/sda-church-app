@@ -34,8 +34,8 @@ jobs:
             exit 1
           fi
 
-          if [[ ! "$HEAD_REF" =~ ^release/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=Invalid release source::Pull requests to main must come from an organization branch named release/x.y.z. Received $HEAD_REF."
+          if [[ ! "$HEAD_REF" =~ ^release/[0-9]+\.[0-9]+\.(x|[0-9]+)$ ]]; then
+            echo "::error title=Invalid release source::Pull requests to main must come from an organization branch named release/x.y.(patch|x). Received $HEAD_REF."
             exit 1
           fi
 

@@ -2,10 +2,13 @@
 
 Web/PWA preview deployment remains automatic on pushes to `main` through the canonical
 GitHub workflow. Local `npm run deploy` builds the web output without publishing it.
-Native builds run on trusted `main`/`release/**` pushes or manual dispatches, and the
-Native iOS build additionally runs for upstream `release/**` → `main` pull requests
-after Environment approval. Android has no pull request trigger. Native builds do not
-publish to either store. Native iOS and Android are the primary release targets; the
+Signed native builds run only after a change reaches `main`; `release/**` branches are
+source/release-management branches, not signed-build targets. The Android PR preview is a
+separate credential-free path for unsigned debug APKs in ARM and Intel variants. Fork PRs do
+not receive Linux checks from this native-build documentation path; they are limited to the
+unsigned debug APK preview policy. Native iOS does not run on pull requests at all. It runs
+only from `main` after merge (or an explicitly approved manual run on `main`). Native builds
+do not publish to either store. Native iOS and Android are the primary release targets; the
 web/PWA build is retained for browser testing and previews. The same Expo source is
 used for all platforms.
 
@@ -21,21 +24,36 @@ into `$RUNNER_TEMP`, derives `ANDROID_KEYSTORE_PATH` from that temporary locatio
 and exposes the signing values only to the Gradle invocation that signs the binary.
 The path is not itself a secret, and no keystore or password is passed to Expo
 prebuild. Android builds do not need an Expo account, an Expo token, or EAS
-credential storage. Its job-level guard permits both push and manual runs only from
-trusted `main` or `release/**` refs; the manual dispatch cannot attach the
+credential storage. Its job-level guard permits signed runs only from
+trusted `main`; the manual dispatch cannot attach the
 production Environment to an arbitrary ref. If the values were initially entered
 as ordinary repository secrets, move them to the protected Environment and remove
 the repository-level copies before the first signed release run.
 
 The direct-native iOS workflow is now checked in separately as
-`.github/workflows/native-ios-build.yml`. It runs on trusted pushes to `main` and
-`release/**`, upstream `release/**` → `main` pull requests, and manual dispatch. The
-pull-request path is narrowly guarded to reject fork-head branches and unrelated PRs;
-all signing paths require the protected `production` Environment. It uses a
+`.github/workflows/native-ios-build.yml`. It runs only on trusted pushes to `main` and
+manual dispatch from `main`; it has no pull-request signing path. All signing paths require
+the protected `production` Environment. It uses a
 GitHub-hosted macOS runner with Expo prebuild and Xcode, and remains unable to complete
 until the church adds its Apple signing secrets. It does not use EAS or an Expo token.
 The repository no longer depends on an Expo account; keep any external account only if
 the church wants to preserve unrelated project history.
+
+### Local Expo template lookup
+
+`scripts/build-android-native.mjs` reuses an existing generated `android/` project
+for repeat local builds. This avoids an unnecessary npm registry metadata lookup for
+`expo-template-bare-minimum@58.0.3`, including when `--no-install` is used. A clean
+GitHub Actions checkout still runs Expo prebuild. When `app.json`, a native config
+plugin, or another native setting changes, force regeneration with either:
+
+```bash
+npm run build:android:apk:debug -- --prebuild
+EXPO_PREBUILD=true npm run build:android:apk:debug
+```
+
+The execution environment may still require network approval for a clean prebuild;
+that permission is controlled by the runner or sandbox, not by repository settings.
 
 The Play Console currently shows no uploaded app bundle, so `app.json` uses the
 initial Android `versionCode` of `1`. The Android native build script refuses
@@ -44,9 +62,9 @@ separate from the user-facing `package.json`/`app.json` version such as `0.37.0`
 Only a code maintainer changes it, as part of final release preparation immediately
 before a Google Play upload. Do not bump it for ordinary feature PRs, local builds,
 or browser previews. Increase it to `2`, `3`, and so on for later uploads; never
-reuse or lower a value already uploaded to Google Play. If an AAB is built on a
-release branch before the final merge, it must use the already chosen counter, but
-the counter should not be changed casually just to produce that artifact.
+reuse or lower a value already uploaded to Google Play. Do not build a signed AAB
+on a release branch before the final merge; build the signed artifact only after
+the release commit reaches `main`.
 
 ## Decision rationale and risk register
 
@@ -58,7 +76,7 @@ the counter should not be changed casually just to produce that artifact.
 | Do not rotate the Android key annually | Upload keys do not expire annually; keeping the same key preserves the Play update path | Maintain encrypted backups; use Play's upload-key reset process after loss or compromise |
 | Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using trusted-branch or manual macOS workflows | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
 | Build artifacts but submit manually first | Compilation and signing can be automated without granting store-publishing access to every build | Upload the AAB to Play internal testing and verify an update before adding submission automation |
-| Do not build signed binaries for fork PRs | GitHub does not pass secrets to fork pull requests, and trusted release credentials must not be exposed | Use unsigned/Linux checks for fork PRs; signed iOS builds are limited to upstream release-to-main PRs, protected branches, or approved dispatches |
+| Do not build signed binaries before `main` | Production signing material is reserved for the post-merge `main` build. | Pull-request previews remain unsigned debug APKs for ARM and Intel; fork PRs do not receive signed builds or Linux native checks |
 
 This is why the migration is not just “put the JKS in a GitHub secret.” The
 keystore must be the key Google expects, the version code must be monotonic, the
@@ -83,6 +101,31 @@ weakens the intended boundary. Therefore the four Android values must be added t
 `production`, verified with a protected run, and then removed from Repository
 secrets. `ANDROID_KEYSTORE_PATH` remains a derived runner-temporary path rather
 than a stored credential, and `EXPO_TOKEN` has no role in this architecture.
+
+### Android PR preview and Drive upload
+
+The signed **Native Android build** workflow intentionally runs only after a commit reaches
+`main`; it does not sign release-branch or pull-request commits. The separate **Android PR
+preview** workflow is credential-free and is reserved for unsigned debug APK previews in
+ARM and Intel variants. Fork PRs do not receive Linux native checks or production signing;
+the only native artifact permitted by this policy is an unsigned debug APK preview. The
+workflow runs automatically for eligible same-repository pull requests targeting `main`.
+It does not accept manual commit or pull-request SHA inputs and does not use dependency
+caching while executing PR code in the `pull_request_target` context.
+
+For an automatic PR run, a separate protected `production` Environment job downloads only
+the APK artifact and checks out the upload helper from the trusted base commit. It does not
+check out or execute PR code while the Google credential is available. The helper refreshes
+the existing `CLASPRC_JSON` OAuth token and
+uploads a private APK file to the connected user's My Drive root. The OAuth account must
+retain the `drive.file` scope. If a dedicated folder is later preferred, set
+`GOOGLE_DRIVE_FOLDER_ID` in the protected upload job and pass it to the helper.
+
+Automatic PR runs require the credential-free preview guard; configure `production` with
+required reviewers and a `main` deployment-branch policy if Drive uploads should require a
+human approval. The build job receives no signing credentials, and fork PRs are skipped.
+The Drive upload job must remain separate from the build job, and the upload helper must be
+checked out from the trusted base commit rather than the PR head.
 
 ## Credential-custody decision
 
@@ -127,15 +170,15 @@ iOS release, the implementation must:
 2. Create an explicit `xcodebuild archive` and `xcodebuild -exportArchive` path,
    with an export-options plist generated from configuration rather than secrets
    committed to source.
-3. Use a protected production Environment, required approval, and trusted branch
-   or manual-dispatch guards for jobs that can read Apple signing secrets.
+3. Use a protected production Environment, required approval, and a `main`-only
+   push or manual-dispatch guard for jobs that can read Apple signing secrets.
 4. Commit an explicit iOS `buildNumber` policy after recording the current store
    counter. Until then, changing `appVersionSource` from `remote` would risk a
    duplicate or invalid store build number.
 5. Upload the artifact to TestFlight and verify an update install on a physical
    iPhone.
 
-The workflow's fork check is an important part of this boundary and must remain.
+The workflow's `main`-only guard is an important part of this boundary and must remain.
 Secrets must be configured in the church's upstream repository/Environment; they are
 not shared automatically with the CodeSammich fork.
 
@@ -175,9 +218,10 @@ iOS minute as roughly ten Linux-equivalent minutes. The exact allowance and rate
 belong to the repository owner's GitHub plan; check [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 before relying on a quota.
 
-The automatic native workflow can run two Android jobs on a `main` push: Android AAB
-and Android APK. The iOS workflow is separate and runs on trusted `main`/`release/**`
-pushes, upstream `release/**` → `main` pull requests, or manual dispatch. A rough
+The automatic native workflow can run two signed Android jobs on a `main` push: Android
+AAB and Android APK. The iOS workflow is separate and runs only on a trusted `main`
+push or a manual dispatch from `main`; it never runs as a pull-request build. PR native
+previews are unsigned Android debug APKs for ARM and Intel, not signed release builds. A rough
 private-repository estimate for the automatic Android workflow is:
 
 ```text
@@ -185,18 +229,18 @@ Linux-equivalent minutes per run ≈ Android AAB minutes + Android APK minutes
 ```
 
 For example, a 15-minute AAB plus 10-minute APK run is about 25 Linux-equivalent
-minutes. An iOS run is counted separately for each trusted-branch push, eligible
-release-to-main pull-request revision, or manual dispatch.
+minutes. An iOS run is counted separately for each `main` push or manual dispatch.
 This is an estimate, not a measured guarantee; use completed workflow durations from
-GitHub's Actions usage view. Keep signed builds restricted to trusted branches,
-eligible release-to-main pull requests, or manual dispatch, add concurrency cancellation,
+GitHub's Actions usage view. Keep signed builds restricted to `main` pushes or
+manual dispatch from `main`, add concurrency cancellation,
 retain artifacts only as long as needed,
 and configure GitHub to stop usage at the account budget rather than silently incur
 charges.
 
 The current `Native Android build` workflow has no `pull_request` trigger, so it does not
-start a macOS build for every PR or every new commit pushed to a PR. The iOS workflow
-does run for the narrow upstream release-to-main PR path; plan approximately as follows
+start a signed build for every PR or every new commit pushed to a PR. The iOS workflow also
+has no pull-request signing path; it runs from the `main` push after merge or from a manual
+`main` dispatch. Plan approximately as follows
 for a private GitHub Free organization, assuming the rough 10× macOS billing weight:
 
 | iOS runner time | Approximate iOS builds from 2,000 Linux-equivalent minutes |
@@ -207,10 +251,9 @@ for a private GitHub Free organization, assuming the rough 10× macOS billing we
 | 45 minutes | 4 |
 
 These counts exclude Android jobs and other workflows, and every pushed revision or
-manual rerun counts as another job. For that reason, ordinary PR validation should
-normally use the existing Linux checks; the release-to-main path is the deliberate
-exception, while other signed iOS builds remain reserved for manual dispatch or a
-release branch. If the upstream repository is public, the
+manual rerun counts as another job. PR native previews are limited to unsigned ARM and
+Intel debug APKs; signed iOS builds remain reserved for the post-merge `main` path or
+manual dispatch from `main`. If the upstream repository is public, the
 standard macOS runner is currently free and unlimited, though concurrency and fair-use
 limits still apply. See [GitHub's runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 
@@ -230,19 +273,18 @@ build, not a `package.json` edit. Pinning the runner (the current workflow uses
 deliberate update when GitHub retires that image. The direct workflows keep build
 orchestration visible in this repository and avoid another credential boundary.
 
-## Expo 58 canary Android prebuild
+## Expo 58 Android prebuild
 
-This branch uses the Expo 58 canary. Until the SDK 58 template is published under
-the `sdk-58` npm tag, automatic prebuild can fail while resolving
-`expo-template-bare-minimum@sdk-58`. Generate the Android project with the exact
-canary template instead:
+This branch uses the Expo 58 preview SDK and its matching stable template package.
+Generate the Android project with the exact template version used by the build
+script:
 
 ```sh
 source ~/.nvm/nvm.sh
 nvm use 24
-npm install
+npm install --force
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.0-canary-20260902-26df09e \
+  --template expo-template-bare-minimum@58.0.3 \
   --platform android
 ```
 
@@ -252,7 +294,7 @@ from this template. Do not hand-edit `android/`; put durable changes in
 
 ```sh
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.0-canary-20260902-26df09e \
+  --template expo-template-bare-minimum@58.0.3 \
   --platform android \
   --no-install
 ```
@@ -260,8 +302,8 @@ npx expo prebuild \
 Then use `npm run build:android`, `npm run build:android:apk`, or
 `npm run build:android:apk:debug`; those scripts run the prebuild automatically.
 
-If the canary version changes, update the template version in this section to the
-matching `expo` canary before regenerating native files.
+If the Expo 58 preview version changes, update the template version in this section
+to the matching template before regenerating native files.
 
 ## Building an independent fork
 
@@ -404,7 +446,10 @@ Managed Apple Accounts through Apple Business Manager, Apple says Account
 Holder-role changes may require contacting Apple, so document the relationship
 and do not make the account dependent on one employee's personal Apple Account.
 
-1. Install dependencies with `npm ci`. Use Node 22 for parity with native CI.
+1. Install dependencies with `npm ci --force`. Expo 58 preview currently pairs a
+   React Native release candidate with peer ranges that exclude prereleases; remove
+   `--force` when the SDK publishes a stable React Native dependency graph. Use Node
+   22 for parity with native CI.
 2. Confirm `org.nyccsda.app` is the intended identifier in both stores. Configure
    the organization's Apple Developer/App Store Connect and Google Play accounts.
 3. Decide the credential source before the first store build. This project uses
@@ -456,19 +501,18 @@ workflows intentionally omit them. For a manual release, upload the finished
 `.aab`/`.ipa` through the store consoles instead.
 
 The production secret Environment should require reviewer approval, be
-available only to protected branches, approved upstream release-to-main pull
-requests, or deliberate manual dispatches, and use
+available only to protected `main` builds or deliberate manual dispatches from
+`main`, and use
 read-only repository permissions for the build job. Keep third-party Actions
 pinned and review workflow changes before approving a signing run. The current
-fork check is necessary but is not a substitute for these controls.
+main-only guard is necessary but is not a substitute for these controls.
 
 ## iOS setup: GitHub-hosted direct builds
 
-The separate `.github/workflows/native-ios-build.yml` workflow runs on trusted pushes
-to `main` and `release/**`, upstream `release/**` → `main` pull requests, or manual
-dispatch. Its job guard rejects fork-head and unrelated pull requests, it does not
-receive `EXPO_TOKEN`, and it does not upload to App Store Connect. It creates an IPA
-artifact for manual upload or TestFlight processing.
+The separate `.github/workflows/native-ios-build.yml` workflow runs only on trusted
+pushes to `main` or a manual dispatch from `main`. It has no pull-request or
+`release/**` signing path, does not receive `EXPO_TOKEN`, and does not upload to App
+Store Connect. It creates an IPA artifact for manual upload or TestFlight processing.
 
 Before running it, configure these secrets in the protected `production`
 Environment in the upstream repository:
@@ -588,7 +632,7 @@ system and a checked-in local number at the same time.
 
 In the church's **upstream** GitHub repository, open **Settings → Environments**
 and create or select `production`. Require at least one reviewer, restrict the
-deployment branch to the church's trusted `main`/`release/**` branches, and add
+deployment branch to the church's trusted `main` branch, and add
 these Environment secrets:
 
 ```text
@@ -613,7 +657,7 @@ base64 -i /path/outside/repo/nyccsda-upload.jks | tr -d '\n' | pbcopy
 
 On Linux, use `base64 -w 0 /path/outside/repo/nyccsda-upload.jks` and paste the
 output directly into GitHub. The workflow's `environment: production` setting
-and fork guard ensure that a normal fork pull request cannot read these values.
+and main-only guard ensure that a pull request cannot read these values.
 Review the workflow file before approving a protected run; anyone who can
 change a trusted workflow and access its approval can potentially use its
 secrets.
@@ -624,7 +668,7 @@ For ordinary local smoke testing, use the debug-signed APK. It does not need
 the production upload keystore or any signing secrets:
 
 ```sh
-npm ci
+npm ci --force
 npm run build:android:apk:debug -- --output /tmp/nyccsda-local-preview.apk
 ```
 
@@ -642,7 +686,7 @@ export ANDROID_KEYSTORE_PASSWORD='paste-only-in-your-terminal'
 export ANDROID_KEY_ALIAS='nyccsda-upload'
 export ANDROID_KEY_PASSWORD='paste-only-in-your-terminal'
 
-npm ci
+npm ci --force
 npm run build:android:apk -- --output /tmp/nyccsda-preview.apk
 npm run build:android -- --output /tmp/nyccsda-release.aab
 
@@ -735,7 +779,7 @@ iOS distribution is not TestFlight.
 
 Local iOS builds require macOS, Xcode with command-line tools, and CocoaPods. Local Android builds require macOS or Linux, Java 17, Android SDK/NDK
 and accepted SDK licenses; install Android Studio and the SDK tooling required by
-the Expo 58 canary dependency set. Configure `ANDROID_HOME` and the Android
+the Expo 58 preview dependency set. Configure `ANDROID_HOME` and the Android
 command-line tools on PATH.
 Direct Android and iOS compilation require network access for npm dependencies,
 the Expo template, and CocoaPods, but not Expo authentication. They are not
@@ -780,7 +824,7 @@ Keep generated `ios/` and `android/` projects out of Git and express native
 configuration through Expo config/plugins. SDK upgrades require checking
 Node/Java/Xcode/Android tooling and revalidating physical-device behavior. The app
 explicitly pins Android compile API 37, target API 36, and build tools 37.0.0 through
-`expo-build-properties`. This split is intentional: the Expo canary's native AARs
+`expo-build-properties`. This split is intentional: the Expo preview's native AARs
 require compile API 37, while Google Play currently requires new apps and updates to
 target API 36 from August 31, 2026. Android's compile SDK and target SDK are separate;
 compiling against API 37 does not opt the app into API 37 runtime behavior. The

@@ -12,11 +12,31 @@ const packageJson = JSON.parse(
 const appJson = JSON.parse(await readFile(resolve(projectRoot, 'app.json'), 'utf8'));
 const isApk = process.argv.includes('--apk');
 const isDebugSigning = process.argv.includes('--debug');
+const architecturesIndex = process.argv.indexOf('--architectures');
+const architecturePreset =
+  architecturesIndex === -1 ? undefined : process.argv[architecturesIndex + 1];
 const outputIndex = process.argv.indexOf('--output');
 const requestedOutput = outputIndex === -1 ? undefined : process.argv[outputIndex + 1];
+const forcePrebuild =
+  process.argv.includes('--prebuild') || process.env.EXPO_PREBUILD === 'true';
+
+const architecturePresets = {
+  arm: 'armeabi-v7a,arm64-v8a',
+  intel: 'x86,x86_64',
+};
 
 if (outputIndex !== -1 && !requestedOutput) {
   throw new Error('--output requires a destination file');
+}
+
+if (architecturesIndex !== -1 && !architecturePreset) {
+  throw new Error('--architectures requires arm or intel');
+}
+
+if (architecturePreset && !architecturePresets[architecturePreset]) {
+  throw new Error(
+    `Unknown architecture preset: ${architecturePreset}. Use arm or intel.`,
+  );
 }
 
 if (isDebugSigning && !isApk) {
@@ -89,20 +109,35 @@ for (const name of requiredSigningVariables) {
   delete prebuildEnvironment[name];
 }
 
-run('npx', [
-  'expo',
-  'prebuild',
-  '--template',
-  'expo-template-bare-minimum@58.0.0-canary-20260902-26df09e',
-  '--platform',
-  'android',
-  '--clean',
-  '--no-install',
-], projectRoot, prebuildEnvironment);
+// Reuse an already generated local project by default. Expo's explicit template
+// argument performs an npm registry metadata lookup even with --no-install,
+// which makes repeated local builds depend on network access. CI starts from a
+// clean checkout, so it still prebuilds normally; pass --prebuild (or set
+// EXPO_PREBUILD=true) when native config/plugin changes need regeneration.
+if (!existsSync(androidRoot) || forcePrebuild) {
+  run('npx', [
+    'expo',
+    'prebuild',
+    '--template',
+    'expo-template-bare-minimum@58.0.3',
+    '--platform',
+    'android',
+    '--clean',
+    '--no-install',
+  ], projectRoot, prebuildEnvironment);
+} else {
+  console.log(
+    'Reusing existing android/ project; pass --prebuild or set EXPO_PREBUILD=true to regenerate it.',
+  );
+}
 
-run('./gradlew', [
-  ':app:' + (isApk ? 'assembleRelease' : 'bundleRelease'),
-], androidRoot);
+const gradleArgs = [':app:' + (isApk ? 'assembleRelease' : 'bundleRelease')];
+if (architecturePreset) {
+  gradleArgs.push(
+    `-PreactNativeArchitectures=${architecturePresets[architecturePreset]}`,
+  );
+}
+run('./gradlew', gradleArgs, androidRoot);
 
 const extension = isApk ? 'apk' : 'aab';
 const sourcePath = resolve(
@@ -119,7 +154,7 @@ const outputPath = resolve(
   requestedOutput ||
     `build/app-${packageJson.version}-build-${new Date()
       .toISOString()
-      .replace(/[-:TZ.]/g, '')}.${extension}`,
+      .replace(/[-:TZ.]/g, '')}${architecturePreset ? `-${architecturePreset}` : ''}.${extension}`,
 );
 
 if (!existsSync(sourcePath)) {

@@ -138,7 +138,7 @@ export default function WorshipScreen() {
         },
         {
           title: labels.eventNames.worship,
-          time: `${labels.saturday}, 11:30 AM`,
+          time: `${labels.saturday}, 11:40 AM`,
           loc: labels.locations.f3,
           icon: 'church',
         },
@@ -171,7 +171,7 @@ export default function WorshipScreen() {
         },
         {
           title: labels.eventNames.brooklynWorship,
-          time: `${labels.saturday}, 11:30 AM - 12:30 PM`,
+          time: `${labels.saturday}, 11:40 AM - 12:30 PM`,
           loc: labels.locations.f3,
           icon: 'church',
         },

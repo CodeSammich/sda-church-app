@@ -1,15 +1,10 @@
 name: Native iOS build
 
 on:
-  # Signed iOS builds run from trusted main/release pushes, protected manual
-  # dispatches, and release/** -> main pull requests whose head branch is in
-  # this repository. There is deliberately no generic pull-request trigger
+  # Signed iOS builds run only after a commit reaches main, or from a protected
+  # manual dispatch on main. There is deliberately no pull-request trigger
   # because this job reads production signing secrets.
   push:
-    branches:
-      - main
-      - 'release/**'
-  pull_request:
     branches:
       - main
   workflow_dispatch:
@@ -28,20 +23,10 @@ jobs:
   ios_build_ipa:
     name: iOS Build IPA
     # Do not attach the production Environment to a manual run from an
-    # arbitrary branch. Only trusted main/release pushes or release/** -> main
-    # pull requests whose head branch is in this repository may reach secrets.
+    # arbitrary branch. Only the trusted main branch may reach signing secrets.
     if: >-
       github.event.repository.fork == false &&
-      (
-        github.ref == 'refs/heads/main' ||
-        startsWith(github.ref, 'refs/heads/release/') ||
-        (
-          github.event_name == 'pull_request' &&
-          github.base_ref == 'main' &&
-          startsWith(github.head_ref, 'release/') &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        )
-      )
+      github.ref == 'refs/heads/main'
     # SECURITY CONTRACT: This job can read Apple signing secrets. Never add
     # `set -x`, secret-byte logging, environment dumps, or artifacts containing
     # certificates, profiles, keychains, passwords, or tokens. Keep signing
@@ -50,30 +35,13 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     steps:
-      - name: Require a protected release branch
+      - name: Require the main branch
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" = 'pull_request' ]; then
-            test "$GITHUB_BASE_REF" = 'main' || {
-              echo 'Pull-request builds must target main.' >&2
-              exit 1
-            }
-            case "$GITHUB_HEAD_REF" in
-              release/*) ;;
-              *)
-                echo 'Pull-request builds must originate from a release/* branch.' >&2
-                exit 1
-                ;;
-            esac
-          else
-            case "$GITHUB_REF" in
-              refs/heads/main|refs/heads/release/*) ;;
-              *)
-                echo 'Run this workflow only from main or a release/* branch.' >&2
-                exit 1
-                ;;
-            esac
-          fi
+          test "$GITHUB_REF" = 'refs/heads/main' || {
+            echo 'Signed iOS builds must run from main.' >&2
+            exit 1
+          }
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -96,12 +64,12 @@ jobs:
       # Install dependencies and generate the native project before restoring
       # signing material. These steps receive no Apple secrets.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --force
 
       - name: Generate iOS project
         run: >-
           npx expo prebuild
-          --template expo-template-bare-minimum@58.0.0-canary-20260902-26df09e
+          --template expo-template-bare-minimum@58.0.3
           --platform ios --clean --no-install
 
       - name: Install CocoaPods dependencies
