@@ -6,6 +6,13 @@ export type BilingualBulletinText = {
   chinese: string;
 };
 
+export type BulletinMetadataTranslation = {
+  en: string;
+  zh: string;
+  'zh-cn': string;
+  es: string;
+};
+
 export type BulletinLocation = {
   hymnOfPraise: BilingualBulletinText;
   sermonTitle: BilingualBulletinText;
@@ -17,7 +24,8 @@ export type BulletinLocation = {
   translation?: string;
   chineseTeacher?: string;
   englishTeacher?: string;
-  childrenTeacher?: string;
+  youthTeacher?: string;
+  kidsTeacher?: string;
   specialMusic?: string;
   pianist?: string;
   ssChair?: string;
@@ -25,6 +33,10 @@ export type BulletinLocation = {
   closingPrayer?: string;
   flowerOffering?: string;
   sabbathSchool?: string;
+  chair?: string;
+  songLeader?: string;
+  sabbathMessage?: string;
+  sabbathMessageTitle?: string;
   technician?: string;
   encouragement?: string;
 };
@@ -35,6 +47,11 @@ export type Bulletin = {
   specialRemark: string;
   tithePurpose: string;
   pastorTravel: string;
+  metadataTranslations?: {
+    specialRemark: BulletinMetadataTranslation;
+    tithePurpose: BulletinMetadataTranslation;
+    pastorTravel: BulletinMetadataTranslation;
+  };
   queens: BulletinLocation;
   brooklyn: BulletinLocation;
 };
@@ -102,7 +119,8 @@ export const isBulletinLocationEmpty = (location: BulletinLocation) =>
     location.translation,
     location.chineseTeacher,
     location.englishTeacher,
-    location.childrenTeacher,
+    location.youthTeacher,
+    location.kidsTeacher,
     location.specialMusic,
     location.pianist,
     location.ssChair,
@@ -110,6 +128,10 @@ export const isBulletinLocationEmpty = (location: BulletinLocation) =>
     location.closingPrayer,
     location.flowerOffering,
     location.sabbathSchool,
+    location.chair,
+    location.songLeader,
+    location.sabbathMessage,
+    location.sabbathMessageTitle,
     location.technician,
     location.encouragement,
   ].some(hasBulletinValue);

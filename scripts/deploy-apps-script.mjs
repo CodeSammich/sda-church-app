@@ -13,6 +13,23 @@ const writeJson = (path, value) => {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 };
 
+const generatePinyinAppsScriptFile = () => {
+  const pinyinSourcePath = resolve(projectRoot, 'node_modules/pinyin-pro/dist/index.js');
+  if (!existsSync(pinyinSourcePath)) {
+    throw new Error(
+      'Missing pinyin-pro. Run npm install before deploying the Apps Script project.',
+    );
+  }
+  const pinyinSource = readFileSync(pinyinSourcePath, 'utf8').replace(
+    'setTimeout(G,0);',
+    'G();',
+  );
+  writeFileSync(
+    resolve(appsScriptRoot, 'PinyinPro.gs'),
+    `// Generated from the pinned pinyin-pro dependency for Apps Script V8.\n// Do not edit this generated file directly.\n${pinyinSource}\n`,
+  );
+};
+
 const configureFromEnvironment = () => {
   const projectId = process.env.APPS_SCRIPT_PROJECT_ID?.trim();
   const deploymentId = process.env.APPS_SCRIPT_DEPLOYMENT_ID?.trim();
@@ -65,6 +82,7 @@ const runClasp = (args) => {
 
 try {
   configureFromEnvironment();
+  generatePinyinAppsScriptFile();
   runClasp(['push', '--force']);
   if (pushOnly) {
     process.exit(0);

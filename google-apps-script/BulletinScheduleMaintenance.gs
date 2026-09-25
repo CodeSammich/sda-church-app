@@ -26,13 +26,22 @@ var BULLETIN_SCHEDULE_MAINTENANCE_CONFIG = Object.freeze({
   previousWeekDays: 7,
 });
 
+// The bulletin contract is maintained by the technology team. Keep the
+// protected header/column ranges editable by this Google Group only; ordinary
+// sheet sharing still controls who may view or edit the unprotected schedule
+// cells.
+var BULLETIN_HEADER_PROTECTION_EDITOR = 'technology@nyccsda.org';
+var BULLETIN_HEADER_PROTECTION_DESCRIPTION =
+  'Fixed bulletin header/column contract; update Apps Script and the mobile app first.';
+
 function getSabbathCalendarEnglishValidationHelpText_() {
   return (
     'Invalid input: Chinese characters are not allowed in the Sabbath Calendar. ' +
     'Please enter English only. To protect privacy and comply with applicable ' +
-    'privacy regulations, the mobile app redacts last names for anonymity.\n\n' +
+    'privacy regulations, the mobile app redacts last names for anonymity. ' +
+    'Use the Name Dictionary tab in this master spreadsheet to find the approved English name.\n\n' +
     '輸入無效：安息日行事曆不允許輸入中文，請只使用英文。為保護隱私並遵守適用的隱私法規，' +
-    '手機應用程式會隱去姓氏，以維持匿名。'
+    '手機應用程式會隱去姓氏，以維持匿名。請使用此主試算表中的「Name Dictionary」分頁查找核准的英文姓名。'
   );
 }
 
@@ -41,7 +50,9 @@ function getSabbathCalendarEnglishValidationToastText_() {
     'No Chinese characters are allowed in the Sabbath Calendar. / ' +
     '安息日行事曆不允許輸入中文。\n' +
     'To protect privacy and comply with applicable privacy regulations, the mobile app ' +
-    'redacts last names for anonymity. / 為保護隱私並遵守適用的隱私法規，手機應用程式會隱去姓氏，以維持匿名。'
+    'redacts last names for anonymity. Use the Name Dictionary tab in this master spreadsheet ' +
+    'to find the approved English name. / 為保護隱私並遵守適用的隱私法規，手機應用程式會隱去姓氏，以維持匿名。' +
+    '請使用此主試算表中的「Name Dictionary」分頁查找核准的英文姓名。'
   );
 }
 
@@ -74,7 +85,7 @@ function onEdit(e) {
     row.forEach(function (value, columnIndex) {
       var rowNumber = range.getRow() + rowIndex;
       var columnNumber = range.getColumn() + columnIndex;
-      if (rowNumber < 2 || columnNumber < 1 || columnNumber > 24) {
+      if (rowNumber < 2 || columnNumber < 1 || columnNumber > 25) {
         return;
       }
 
@@ -127,6 +138,7 @@ function runBulletinScheduleMaintenance_() {
 
   try {
     var sheet = getBulletinScheduleMaintenanceSheet_();
+    ensureBulletinHeaderContractValidation_();
     var validation = {
       installed: installSabbathCalendarEnglishValidation_(sheet),
       updatedAfterQuarterAppend: false,
@@ -145,6 +157,103 @@ function runBulletinScheduleMaintenance_() {
   }
 }
 
+function ensureBulletinHeaderContractValidation_() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  assertBulletinHeaderContracts_(spreadsheet);
+  Object.keys(BULLETIN_HEADER_CONTRACTS).forEach(function (sheetName) {
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    var headers = BULLETIN_HEADER_CONTRACTS[sheetName];
+    headers.forEach(function (header, index) {
+      var rule = SpreadsheetApp.newDataValidation()
+        .requireValueInList([header], false)
+        .setAllowInvalid(false)
+        .setHelpText(BULLETIN_HEADER_CONTRACT_HELP_TEXT)
+        .build();
+      sheet.getRange(1, index + 1).setDataValidation(rule);
+    });
+    try {
+      ensureBulletinHeaderContractProtection_(sheet, headers.length);
+    } catch (error) {
+      // A simple onOpen trigger may run as an ordinary editor who cannot
+      // rewrite a protected range. Keep validation and the rest of maintenance
+      // working; the live contract protections are already group-restricted.
+      if (typeof Logger !== 'undefined') {
+        Logger.log(
+          'Could not normalize header protection for ' + sheetName + ': ' + error,
+        );
+      }
+    }
+    if (sheetName === BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName) {
+      try {
+        ensureBulletinScheduleFixedColumnProtection_(sheet);
+      } catch (error) {
+        if (typeof Logger !== 'undefined') {
+          Logger.log('Could not normalize date/quarter protection: ' + error);
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Keeps the managed contract ranges locked without locking ordinary schedule
+ * or intake data. This intentionally overwrites the editor list so a former
+ * individual editor cannot retain access after the group-only policy lands.
+ */
+function ensureBulletinHeaderContractProtection_(sheet, headerCount) {
+  var headerRange = sheet.getRange('1:1');
+  var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.RANGE);
+  var matching = protections.filter(function (protection) {
+    var range = protection.getRange();
+    return (
+      range.getRow() === 1 &&
+      range.getColumn() === 1 &&
+      range.getNumRows() === 1 &&
+      range.getNumColumns() >= headerCount
+    );
+  });
+
+  var protection = matching.length ? matching[0] : headerRange.protect();
+  protection.setDescription(
+    BULLETIN_HEADER_PROTECTION_DESCRIPTION + ' Sheet: ' + sheet.getName(),
+  );
+  protection.setWarningOnly(false);
+  protection.setDomainEdit(false);
+  protection.setEditors([BULLETIN_HEADER_PROTECTION_EDITOR]);
+
+  // Remove duplicate contract protections left by older manual setup so the
+  // effective editor list cannot diverge between overlapping locks.
+  matching.slice(1).forEach(function (duplicate) {
+    duplicate.remove();
+  });
+
+  return protection;
+}
+
+function ensureBulletinScheduleFixedColumnProtection_(sheet) {
+  var fixedColumnRange = sheet.getRange('A:B');
+  var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.RANGE);
+  var matching = protections.filter(function (protection) {
+    var range = protection.getRange();
+    return (
+      range.getColumn() === 1 &&
+      range.getRow() === 1 &&
+      range.getNumColumns() === 2 &&
+      range.getNumRows() >= sheet.getMaxRows()
+    );
+  });
+
+  var protection = matching.length ? matching[0] : fixedColumnRange.protect();
+  protection.setDescription('Fixed date and quarter columns; technology team only.');
+  protection.setWarningOnly(false);
+  protection.setDomainEdit(false);
+  protection.setEditors([BULLETIN_HEADER_PROTECTION_EDITOR]);
+  matching.slice(1).forEach(function (duplicate) {
+    duplicate.remove();
+  });
+  return protection;
+}
+
 function installSabbathCalendarEnglishValidation_(sheet) {
   return applySabbathCalendarEnglishValidation_(sheet);
 }
@@ -155,7 +264,7 @@ function updateSabbathCalendarEnglishValidation_(sheet) {
 
 function applySabbathCalendarEnglishValidation_(sheet) {
   var rowCount = Math.max(1, sheet.getMaxRows() - 1);
-  var range = sheet.getRange(2, 1, rowCount, 24);
+  var range = sheet.getRange(2, 1, rowCount, 25);
   var rule = SpreadsheetApp.newDataValidation()
     .requireFormulaSatisfied('=NOT(REGEXMATCH(TO_TEXT(A2),"[一-鿿]"))')
     .setAllowInvalid(false)

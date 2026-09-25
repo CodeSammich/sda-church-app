@@ -36,8 +36,8 @@ Each part has one narrow responsibility:
 | Component | Responsibility | Why it fits the tenet |
 | --- | --- | --- |
 | Expo/React Native mobile app | Presents the bulletin and makes read-only HTTP requests | Native app client; no application server to operate |
-| Google Forms | Gives authorized church workers a familiar way to submit worship content | No custom administrative UI to build or host |
-| Google Sheets | Stores yearly rosters and the two form-response tables | Existing church workflow remains the source of truth |
+| Google Forms | Optional legacy fallback/archive input surface for worship content | The reviewed sheet workflow is now the normal intake path |
+| Google Sheets | Stores yearly rosters, the reviewed `Sabbath Sermon Data` tab, and legacy form-response tables | The small final-owner workflow is separated from the broadly edited schedule |
 | Google Apps Script | Joins data for the public API and, for authorized staff triggers, renders the Queens or Brooklyn printed bulletin to Docs/PDF | Runs beside the spreadsheet without a separate backend account |
 | Google Workspace for Nonprofits | Provides church-domain ownership, collaboration, Forms, Sheets, Drive, and administration | Eligible organizations can use the nonprofit Workspace offer instead of volunteer-owned consumer accounts |
 
@@ -74,9 +74,11 @@ Apps Script web app (BulletinApi.gs, executes as the deploying account)
    |
    +--> YYYY Sabbath -------- roster and schedule assignments
    |
-   +--> Queens Worship Data - all matching Queens form responses
+   +--> Sabbath Sermon Data - reviewed final-owner values, when present
    |
-   +--> Brooklyn Worship Data - all matching Brooklyn form responses
+   +--> Queens Worship Data - legacy matching Queens form responses
+   |
+   +--> Brooklyn Worship Data - legacy matching Brooklyn form responses
    |
    v
 Allowlisted, privacy-filtered JSON
@@ -90,12 +92,11 @@ Bulletin screen
 The same project has a separate staff-triggered path:
 
 ```text
-Queens or Brooklyn Google Form
+Final owner edits Sabbath Sermon Data
    |
-   v
-Matching worship-data response tab
+   +--> one row per date/location, reviewed canonical override
    |
-   | spreadsheet On form submit trigger
+   +--> optional legacy Google Forms remain available as fallback/archive
    v
 PrintedQueensBulletin.gs + PrintedQueensCommunionBulletin.gs + PrintedBrooklynBulletin.gs
   --> one location-specific Google Doc + one PDF per Sabbath date
@@ -123,13 +124,16 @@ Read that file before replacing the current translation with a verbatim English 
 4. On a cache miss, Apps Script validates the date and derives the `YYYY Sabbath` tab name. Non-Sabbath
    tabs are never queried.
 5. The matching schedule row supplies metadata and Queens/Brooklyn assignments.
-6. Each worship-data tab is independently filtered to the same date. All matching form
+6. Each legacy worship-data tab is independently filtered to the same date. All matching form
    submissions are merged field by field. Blank answers do not erase an earlier answer;
    when multiple nonblank answers conflict, the latest `Timestamp` wins.
-7. Person-valued schedule fields are reduced to `First L.`; `Choir` is retained.
-8. Only allowlisted worship content is copied from the form rows. `Email Address` and
+7. Matching rows in `Sabbath Sermon Data` are then applied as reviewed overrides. A nonblank
+   intake value takes precedence over legacy Form data, while blank intake cells preserve
+   the fallback value during migration.
+8. Person-valued schedule fields are reduced to `First L.`; `Choir` is retained.
+9. Only allowlisted worship content is copied from the form rows. `Email Address` and
    other form metadata cannot enter the response object.
-9. Apps Script caches and serializes the result as JSON. The mobile app stores the successful
+10. Apps Script caches and serializes the result as JSON. The mobile app stores the successful
    result and fetch time locally for later visits.
 
 ### Ownership and trust boundaries
@@ -184,6 +188,7 @@ The workbook is organized as follows:
 
 ```text
 Official Schedule for NYCCSDA Queens and Brooklyn
+├── Sabbath Sermon Data      reviewed one-row-per-date/location owner workflow
 ├── Queens Worship Data       linked Queens Google Form responses
 ├── Brooklyn Worship Data     linked Brooklyn Google Form responses
 ├── Name Dictionary            English/Chinese name pairs for physical printing
@@ -215,13 +220,26 @@ The operation is idempotent: it compares dates before appending, so repeated ope
 not create duplicate rows. The only visible **Printed Bulletin** menu action remains
 the Google Doc/PDF workflow; schedule maintenance is intentionally background-only.
 
+### Bulletin contract protections
+
+The first-row headers on `Sabbath Calendar` and `Sabbath Sermon Data` are protected
+as fixed interfaces for Apps Script and the mobile app. The `Date` and `Quarter`
+columns on `Sabbath Calendar` are also protected because the schedule-maintenance
+script owns those structural values. These protected ranges are automatically
+normalized on open so their editor list contains only the
+`technology@nyccsda.org` Google Group, with domain editing disabled. Ordinary
+unprotected schedule cells retain their normal sheet-sharing permissions.
+
+If a header or managed column needs to change, update the Apps Script and mobile-app
+contracts first, then have the technology team make the protected-range edit.
+
 The schedule header row must use this order (the repeated headers are intentional):
 
 ```text
 Date | Quarter | Special Remark | Tithe Purpose | Pastor Travel | Announcements | Sunset Time |
 Queens Sermon | Translation | Chinese Teacher | English Teacher |
-Children Teacher | Chair/Pastoral Prayer | Special Music |
-Offering Prayer | Pianist | SS Chair | SS Opening Prayer | Closing Prayer |
+Youth Teacher | Kids Teacher | Chair/Pastoral Prayer | Special Music |
+Offering Prayer | Pianist | SS Chair | SS Opening Prayer | SS Closing Prayer |
 Flower Offering |
 Brooklyn Sermon | Chair/Pastoral Prayer | Offering Prayer | Technician |
 Encouragement | Sabbath School
@@ -247,14 +265,15 @@ Brooklyn.
 | `Translation` | 1 | `bulletin.queens.translation` | Person-name privacy filter |
 | `Chinese Teacher` | 1 | `bulletin.queens.chineseTeacher` | Person-name privacy filter |
 | `English Teacher` | 1 | `bulletin.queens.englishTeacher` | Person-name privacy filter |
-| `Children Teacher` | 1 | `bulletin.queens.childrenTeacher` | Person-name privacy filter |
+| `Youth Teacher` | 1 | `bulletin.queens.youthTeacher` | Person-name privacy filter |
+| `Kids Teacher` | 1 | `bulletin.queens.kidsTeacher` | Person-name privacy filter |
 | `Chair/Pastoral Prayer` | 1 | `bulletin.queens.chairPastoralPrayer` | Person-name privacy filter |
 | `Special Music` | 1 | `bulletin.queens.specialMusic` | Person-name privacy filter; exact `Choir` is preserved |
 | `Offering Prayer` | 1 | `bulletin.queens.offeringPrayer` | Person-name privacy filter |
 | `Pianist` | 1 | `bulletin.queens.pianist` | Person-name privacy filter |
 | `SS Chair` | 1 | `bulletin.queens.ssChair` | Person-name privacy filter |
 | `SS Opening Prayer` | 1 | `bulletin.queens.ssOpeningPrayer` | Person-name privacy filter |
-| `Closing Prayer` | 1 | `bulletin.queens.closingPrayer` | Person-name privacy filter |
+| `SS Closing Prayer` | 1 | `bulletin.queens.closingPrayer` | Person-name privacy filter |
 | `Flower Offering` | 1 | `bulletin.queens.flowerOffering` | Person-name privacy filter |
 | `Brooklyn Sermon` | 1 | `bulletin.brooklyn.sermon` | Person-name privacy filter |
 | `Chair/Pastoral Prayer` | 2 | `bulletin.brooklyn.chairPastoralPrayer` | Person-name privacy filter |
@@ -266,7 +285,50 @@ Brooklyn.
 Blank schedule cells become empty strings in JSON and `TBD` in the mobile app. Columns outside
 this allowlist are not copied to the response.
 
-### Google Forms and response-tab contract
+The public response also includes `metadataTranslations` for `specialRemark`, `tithePurpose`,
+and `pastorTravel`. Each value contains `en`, `zh`, `zh-cn`, and `es` keys. These are
+English-only schedule metadata translations produced by Apps Script `LanguageApp`, with the
+original English fields retained for compatibility. The mobile app shows both the translated
+and original English values for Tithe Purpose and Pastor Travel when they differ. Bible text and
+Bible references are never sent through `LanguageApp`.
+
+### Sabbath Sermon Data and Google Forms contract
+
+`Sabbath Sermon Data` is the reviewed workflow for the pastor/admin/final owners. It is a normal
+Google Sheet tab, not a Form response destination. Keep one row per Sabbath date and location.
+Use `Queens` or `Brooklyn` in the `Location` column. The current columns are:
+
+| Column | Purpose |
+| --- | --- |
+| `Date` | Sabbath date in `YYYY-MM-DD` format |
+| `Location` | `Queens` or `Brooklyn` |
+| `English Hymn of Praise` / `Chinese Hymn of Praise` | Worship hymn values |
+| `English Sermon Title` / `Chinese Sermon Title` | Sermon title values |
+| `English Hymn of Response` / `Chinese Hymn of Response` | Response hymn values |
+| `Bible Verses` | Worship Bible reference supplied by the owner |
+
+The API applies nonblank `Sabbath Sermon Data` values after the optional legacy Form merge. This
+means a final owner can correct a legacy answer in the canonical sheet. The normal workflow is
+to edit `Sabbath Sermon Data` directly; no Google Form is required. Do not write directly into
+`Queens Worship Data` or `Brooklyn Worship Data` unless preserving historical fallback data.
+If either legacy response tab or its Form is absent, the API simply skips that fallback and
+continues using `Sabbath Calendar` plus `Sabbath Sermon Data`.
+
+### Fixed spreadsheet header contracts
+
+The first row of `Sabbath Calendar` and `Sabbath Sermon Data` is a versioned interface shared by
+the spreadsheet, Apps Script, and mobile app. Those header cells are protected and receive strict
+data validation with this message:
+
+> Fixed bulletin column. Before adding, removing, renaming, or reordering columns, update Apps
+> Script and the mobile app first. / 固定週刊欄位。新增、刪除、重新命名或重新排序欄位前，請先更新 Apps Script 和手機應用程式。
+
+Do not add a new column or change an existing header in either sheet until the corresponding
+Apps Script schema, tests, and mobile-app model/rendering have been updated and deployed.
+The API fails closed and the sheet's `onOpen` guard shows a bilingual alert if the contract no
+longer matches.
+
+### Legacy Google Forms and response-tab contract
 
 Queens and Brooklyn use separate Google Forms because each congregation submits its own
 worship content. The forms use the same questions and write to their corresponding tabs:
@@ -373,7 +435,7 @@ the local documentation together.
 For the `Sabbath Calendar` tab, the bound Apps Script installs the data-validation
 rule automatically the first time the spreadsheet is opened. It reapplies the rule
 after it appends a new quarter and on later opens, covering every current row in
-columns A:X. The underlying **Custom formula is** rule is:
+columns A:Y. The underlying **Custom formula is** rule is:
 
 ```text
 =NOT(REGEXMATCH(TO_TEXT(A2),"[一-鿿]"))
@@ -387,7 +449,7 @@ Choose **Reject input** and use this help text:
 
 Google Sheets' help-text field is not a custom error-message field. The bound
 `BulletinScheduleMaintenance.gs` `onEdit` guard is therefore also scoped to the
-`Sabbath Calendar` tab and columns A:X: it clears Chinese characters pasted from
+`Sabbath Calendar` tab and columns A:Y: it clears Chinese characters pasted from
 the Name Dictionary and shows a prominent bilingual `Invalid input` alert. If the
 edit occurs outside an active Sheets editor, it falls back to a toast. Other tabs
 are unaffected.
@@ -445,9 +507,9 @@ enter the public JSON API.
 After saving both files in the bound Apps Script project, reload the spreadsheet and use
 **Printed Bulletin → Create Google Doc + PDF…**. The bilingual dialog provides buttons for
 Queens/Brooklyn and regular/communion format selection, defaulting to Regular. The dialog
-first links to the Queens/Brooklyn digital-bulletin intake Forms so an administrator can fill
-one in on behalf of a speaker if the current week is missing. It then preloads the matching
-Form verse when available. An administrator can edit that verse for the printed bulletin only.
+links directly to the reviewed `Sabbath Sermon Data` sheet so an administrator can add or edit
+the row for the selected location. It then preloads the matching `Bible Verses` value when
+available. An administrator can edit that verse for the printed bulletin only.
 Choose the optional Bible book and chapter from dropdowns, then type a verse or range such as
 `11` or `11-15`. Choose BSB or KJV for English. Chinese text is fixed to
 CUV（和合本, Traditional Chinese） for now. The
@@ -529,9 +591,16 @@ the account running the trigger; they do not need to be public. If an image is u
 the generated cover uses a text fallback and the rest of the layout is unchanged.
 
 Physical person names are enriched from the `Name Dictionary` sheet when it exists. The
-header row is `English Name | Chinese Name`, and data begins on row 2. A matched name
-prints the Chinese line followed by the English line; if either side is missing or
-unmatched, only the source name is printed.
+header row is `English Name | Chinese Name | Pinyin Name`, and data begins on row 2. The
+third column is optional and may contain one or more comma-, semicolon-, pipe-, or
+line-separated pinyin aliases. A given-name-first pinyin entry can therefore resolve to
+the canonical English name and matching Chinese name from the same dictionary row.
+Chinese names remain surname-first in the dictionary; pinyin aliases are only alternate
+input forms. A matched name prints the Chinese line followed by the canonical English
+line; if either side is missing or unmatched, only the source name is printed. This
+alias lookup is used only by the private physical generator and is never added to the
+public API response: the digital bulletin always uses English names with the existing
+last-name privacy redaction.
 This lookup is used only by the private physical generator and is never added to the
 public API response.
 
@@ -1128,7 +1197,8 @@ emails, and response timestamps are intentionally absent.
       "translation": "John D.",
       "chineseTeacher": "Mei L.",
       "englishTeacher": "Alex W.",
-      "childrenTeacher": "Sam T.",
+      "youthTeacher": "Jordan T.",
+      "kidsTeacher": "Sam T.",
       "chairPastoralPrayer": "Chris C.",
       "specialMusic": "Choir",
       "offeringPrayer": "Pat B.",

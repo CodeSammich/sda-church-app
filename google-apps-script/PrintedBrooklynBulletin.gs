@@ -22,7 +22,12 @@ function appendBrooklynOnlineZoomPanel_(cell) {
 
   appendBrooklynOnlineText_(
     cell,
-    'Online Zoom / 線上 Zoom: 254 187 9535 | Password / 密碼: 760641',
+    'Online Zoom / 線上 Zoom — Mandarin only / 僅限普通話',
+    8,
+  );
+  appendBrooklynOnlineText_(
+    cell,
+    '254 187 9535 | Password / 密碼: 760641',
     8,
   );
   appendBrooklynOnlineSlotTable_(cell, [

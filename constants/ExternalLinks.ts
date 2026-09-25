@@ -775,7 +775,3 @@ export const openEmail = (email: string) =>
     'Error',
     'Email is not configured on this device or emulator.',
   );
-
-// These are Google Forms locked by a password, so even though they're public links, they are safe to include
-export const QUEENS_SERMON_SPEAKER_FORM_URL = 'https://forms.gle/FV7S53eQ1jwt9R7p7';
-export const BROOKLYN_SERMON_SPEAKER_FORM_URL = 'https://forms.gle/wCsMmMeS8EqMKmJY8';

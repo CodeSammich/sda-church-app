@@ -23,8 +23,8 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   zelleQrImageProperty: 'ZELLE_QR_IMAGE_FILE_ID',
   mobileAppQrImageProperty: 'MOBILE_APP_QR_IMAGE_FILE_ID',
   legacyBrooklynCoverImageProperty: 'BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID',
-  queensIntakeFormUrl: 'https://forms.gle/FV7S53eQ1jwt9R7p7',
-  brooklynIntakeFormUrl: 'https://forms.gle/wCsMmMeS8EqMKmJY8',
+  bulletinIntakeSheetUrl:
+    'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit#gid=1768045043',
   printedAnnouncementsPropertyPrefix: 'PRINTED_ANNOUNCEMENTS_',
   printedBibleVersePropertyPrefix: 'PRINTED_BIBLE_VERSE_',
   printedAnnouncementsMaxEntries: 12,
@@ -279,6 +279,15 @@ var PRINTED_BIBLE_CHAPTER_COUNTS = Object.freeze({
 var PRINTED_OFFERING_TRANSLATION_CACHE = {};
 
 function onOpen() {
+  var headerContractError = null;
+  try {
+    ensureBulletinHeaderContractValidation_();
+  } catch (error) {
+    headerContractError = error;
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Bulletin header contract check failed: ' + error);
+    }
+  }
   try {
     maintainBulletinScheduleOnOpen_();
   } catch (error) {
@@ -286,51 +295,32 @@ function onOpen() {
       Logger.log('Automatic schedule maintenance skipped: ' + error);
     }
   }
-  SpreadsheetApp.getUi()
+  var ui = SpreadsheetApp.getUi();
+  ui
     .createMenu('Printed Bulletin')
     .addItem('Create Google Doc + PDF…', 'createPrintedBulletinFromPrompt')
     .addToUi();
+  if (headerContractError && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
+    ui.alert(
+      'Bulletin columns require an update / 週刊欄位需要更新',
+      headerContractError.message || String(headerContractError),
+      ui.ButtonSet.OK,
+    );
+  }
 }
 
 /**
- * Adds the optional verse prompt to both linked response forms once.
- * The response schema already accepts this question; this helper makes the
- * form-side setup available for both locations without exposing a setup menu.
+ * Legacy compatibility entry point. Bible references now belong in the
+ * `Bible Verses` column of `Sabbath Sermon Data`; no Form question setup is
+ * required. Keeping this function avoids breaking an old manual shortcut.
  */
 function addBibleVerseQuestions() {
   requirePrintedBulletinAdmin_();
-
-  var title = getPrintedBulletinBibleVerseQuestionTitle_();
-  var sheetNames = ['Queens Worship Data', 'Brooklyn Worship Data'];
-  var results = [];
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-
-  sheetNames.forEach(function (sheetName) {
-    var sheet = spreadsheet.getSheetByName(sheetName);
-    if (!sheet) {
-      throw new Error('Could not find the ' + sheetName + ' response sheet');
-    }
-    var formUrl = sheet.getFormUrl();
-    if (!formUrl) {
-      throw new Error(sheetName + ' is not linked to a Google Form');
-    }
-
-    var form = FormApp.openByUrl(formUrl);
-    var exists = form.getItems().some(function (item) {
-      return item.getTitle && item.getTitle() === title;
-    });
-    if (!exists) {
-      form
-        .addTextItem()
-        .setTitle(title)
-        .setHelpText(
-          'Enter a reference such as John 12:24 or Jeremiah 29:11-15. Use a hyphen (-) for a verse range; Jeremiah:29:11-15 also works.\n請輸入經文，例如 John 12:24 或 Jeremiah 29:11-15。節數範圍請使用連字號（-）；Jeremiah:29:11-15 也可以。',
-        );
-    }
-    results.push(sheetName + (exists ? ': already present' : ': added'));
-  });
-
-  SpreadsheetApp.getUi().alert('Bible verse question setup complete:\n' + results.join('\n'));
+  SpreadsheetApp.getUi().alert(
+    'No Form setup is required. Enter the reference in Sabbath Sermon Data → Bible Verses.\n' +
+      '不需要設定表單。請在「Sabbath Sermon Data」→「Bible Verses」欄輸入經文。',
+  );
+  return 'Sabbath Sermon Data: no Form setup required';
 }
 
 // Keep the old editor entry point working for anyone who used it previously.
@@ -445,14 +435,11 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '</style></head><body>' +
     '<div id="formView">' +
     '<h2 class="section-heading">1. Update the digital bulletin / 第一步：更新數位週刊</h2>' +
-    '<div class="admin-reminder"><strong>Instructions / 使用說明：</strong> Check the current week in the app or the matching Worship Data sheet. If the speaker has not submitted, complete the appropriate intake form on their behalf before continuing to the printed bulletin. If the Form asks for a passcode, ask the IT staff.' +
-    '<br>請先查看本應用程式或相應的 Worship Data 工作表中的本週資料。如果講員尚未提交，請先代為填寫相應的資料表，再繼續建立實體週刊。如果資料表要求密碼，請向 IT 同工詢問。</div>' +
+    '<div class="admin-reminder"><strong>Instructions / 使用說明：</strong> Check the current week in the app, then add or update one row per location in Sabbath Sermon Data. Nonblank values there feed both the digital and printed bulletins; no separate intake Form is required.' +
+    '<br>請先查看本應用程式，然後在「Sabbath Sermon Data」中為每個地點新增或更新一行資料。該表格的非空欄位會同時提供手機版和印刷版週刊使用；不需要另外填寫表單。</div>' +
     '<div class="form-links"><a class="form-button" href="' +
-    escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.queensIntakeFormUrl) +
-    '">↗ Queens Worship Data form / 皇后區崇拜資料表</a>' +
-    '<a class="form-button" href="' +
-    escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.brooklynIntakeFormUrl) +
-    '">↗ Brooklyn Worship Data form / 布碌崙崇拜資料表</a></div></div>' +
+    escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.bulletinIntakeSheetUrl) +
+    '">↗ Open Sabbath Sermon Data / 開啟安息日講道資料</a></div></div>' +
     '<h2 class="section-heading" style="margin-top:20px;">2. Create the printed bulletin / 第二步：建立實體週刊</h2>' +
     '<form id="bulletinForm">' +
     '<label for="date">Sabbath date <span class="required-mark" aria-hidden="true">*</span><br>安息日日期</label>' +
@@ -485,7 +472,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<option value="">Choose a book first — 請先選擇書卷</option></select></div>' +
     '<div><label for="verses">Verse(s) <span class="required-mark" aria-hidden="true">*</span><br>節</label><input id="verses" type="text" placeholder="11 or 11-15" inputmode="text" required></div>' +
     '</div>' +
-    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in the Worship Data form, it will appear here automatically. Check or edit it before creating.<br>選擇書卷和章，然後輸入一節或一段經文，例如 11 或 11-15。如果講員已在 Worship Data 資料表提交聖經經文，系統會自動填入。建立前請確認或修改。</div>' +
+    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in Sabbath Sermon Data, it will appear here automatically. Check or edit it before creating.<br>選擇書卷和章，然後輸入一節或一段經文，例如 11 或 11-15。如果講員已在「Sabbath Sermon Data」提交聖經經文，系統會自動填入。建立前請確認或修改。</div>' +
     '<label>Printed announcements / 印刷週刊消息</label>' +
     '<div class="help">Optional. Add one entry per card. These entries are printed only; they are not shown in the mobile bulletin.<br>可選。每張卡片輸入一則消息。這些消息只會印在週刊上，不會顯示在手機版週刊。</div>' +
     '<div id="announcementList"></div>' +
@@ -728,11 +715,13 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   var date = toIsoDate_(requestedDate);
   var location = normalizePrintedBulletinLocation_(requestedLocation);
   var formVerse = '';
+  var reviewedIntakeVerse = '';
   var bulletin = null;
   if (date) {
     try {
       bulletin = buildBulletin_(date);
       formVerse = bulletin[location] ? String(bulletin[location].bibleVerses || '') : '';
+      reviewedIntakeVerse = getReviewedBulletinIntakeBibleVerse_(date, location);
     } catch (error) {
       Logger.log('Could not load form data for the printed bulletin prompt: ' + error);
     }
@@ -753,12 +742,34 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
       });
     }
   }
+  // The reviewed Sabbath Sermon Data row is the source of truth for this
+  // prompt. A prior printed-bulletin memory is only a fallback when that
+  // managed intake cell is blank, so an old manual selection cannot mask a
+  // newly reviewed Bible reference.
+  var preferredVerse = reviewedIntakeVerse || (override.found ? override.reference : formVerse);
   return {
     announcements: announcements,
     formVerse: formVerse,
-    verse: override.found ? override.reference : formVerse,
-    hasVerseOverride: override.found,
+    verse: preferredVerse,
+    hasVerseOverride: override.found && !reviewedIntakeVerse,
   };
+}
+
+function getReviewedBulletinIntakeBibleVerse_(requestedDate, location) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var intakeRows = getBulletinIntakeRows_(spreadsheet, requestedDate, location);
+  if (!intakeRows) {
+    return '';
+  }
+
+  var reference = '';
+  intakeRows.rows.forEach(function (row) {
+    var value = valueForAliases_(intakeRows.headers, row, ['Bible Verses']);
+    if (!isBlank_(value)) {
+      reference = displayValue_(value);
+    }
+  });
+  return reference;
 }
 
 function savePrintedBulletinAnnouncements_(requestedDate, entries) {
@@ -1472,7 +1483,10 @@ function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, fo
       function (leftCell, rightCell, qrCells) {
         appendBrooklynGivingFooter_(leftCell, rightCell, qrCells);
       },
-      { qrColumns: true },
+      // Keep three physical QR positions so the future Mobile App asset stays
+      // in slot 1, ACH/card remains in slot 2, and Brooklyn's unused slot 3
+      // stays empty because Brooklyn has no Zelle QR code.
+      { qrColumns: true, qrCount: 3 },
     );
     appendBrooklynEncouragementPage_(body, bulletin);
   } else {
@@ -1522,14 +1536,20 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
     [
       printedBilingualText_('Song and Bible Verse', '詩歌頌讚與存心節'),
       '',
-      printBrooklynPerson_(location.songLeader, location.chairPastoralPrayer),
+      // This combined item is led by the Sabbath School chairman. Keep the
+      // printed assignment consistent even when an older sheet still has a
+      // separate Song Leader value.
+      printBrooklynPerson_(location.chair, location.chairPastoralPrayer),
     ],
     [printedBilingualText_('Opening Hymn', '開會唱詩'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Prayer', '祈禱'), '', printValue_(location.chairPastoralPrayer)],
     [
-      printedBilingualText_('Sabbath Message', '安息日勉言'),
+      printedBilingualText_('Sabbath Encouragement', '安息日勉勵'),
       printValue_(location.sabbathMessageTitle),
-      printBrooklynPerson_(location.sabbathMessage, location.chairPastoralPrayer),
+      printBrooklynPerson_(
+        location.encouragement,
+        location.sabbathMessage || location.chairPastoralPrayer,
+      ),
     ],
     [printedBilingualText_('Sabbath School', '安息日學課'), physicalTbdText_(), printValue_(location.sabbathSchool)],
     [printedBilingualText_('Closing Hymn', '合班唱詩'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
@@ -1556,7 +1576,11 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
     [printedBilingualText_('Doxology', '讚美'), printedBilingualText_('AH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Invocation', '獻禱'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Bible Readings', '讀經'), formatBibleReferenceForPrint_(location), printedBilingualText_('Congregation', '會眾')],
+    [
+      printedBilingualText_('Bible Readings', '讀經'),
+      formatBibleReferenceForPrint_(location, bulletin.physicalBibleTranslations),
+      printedBilingualText_('Congregation', '會眾'),
+    ],
     [printedBilingualText_('Pastoral Prayer', '牧養禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一與奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
     [printedBilingualText_('Special Music', '特別音樂'), '', printValue_(location.specialMusic)],
@@ -2189,6 +2213,8 @@ function buildPhysicalNameDictionary_() {
   var dictionary = {
     englishToChinese: {},
     chineseToEnglish: {},
+    pinyinToChinese: {},
+    pinyinToEnglish: {},
   };
   if (!sheet) {
     Logger.log('Name Dictionary sheet not found; printing source names only.');
@@ -2199,6 +2225,16 @@ function buildPhysicalNameDictionary_() {
   table.rows.forEach(function (row) {
     var english = displayValue_(row[0]).trim();
     var chinese = displayValue_(row[1]).trim();
+    // Optional column C stores a given-name-first pinyin alias for the same
+    // person. The alias is only used by the private printed renderer; it is
+    // never exposed through the public API or used for digital name display.
+    var pinyinAliases = displayValue_(row[2])
+      .split(/[,;|\n]+/)
+      .map(function (alias) {
+        return alias.trim();
+      })
+      .filter(Boolean);
+    pinyinAliases = pinyinAliases.concat(getPhysicalPinyinAliases_(chinese));
     var englishKey = normalizePhysicalNameKey_(english);
     var chineseKey = normalizePhysicalNameKey_(chinese);
     if (englishKey && chinese && !dictionary.englishToChinese[englishKey]) {
@@ -2207,8 +2243,62 @@ function buildPhysicalNameDictionary_() {
     if (chineseKey && english && !dictionary.chineseToEnglish[chineseKey]) {
       dictionary.chineseToEnglish[chineseKey] = english;
     }
+    pinyinAliases.forEach(function (alias) {
+      var pinyinKey = normalizePhysicalPinyinKey_(alias);
+      if (pinyinKey && english && chinese) {
+        if (!dictionary.pinyinToChinese[pinyinKey]) {
+          dictionary.pinyinToChinese[pinyinKey] = chinese;
+        }
+        if (!dictionary.pinyinToEnglish[pinyinKey]) {
+          dictionary.pinyinToEnglish[pinyinKey] = english;
+        }
+      }
+    });
   });
   return dictionary;
+}
+
+/**
+ * Derives common surname-first and given-name-first pinyin forms from a
+ * Chinese dictionary value. This is private print-only enrichment. The public
+ * API never calls this function and never receives Chinese names or aliases.
+ */
+function getPhysicalPinyinAliases_(chinese) {
+  if (typeof pinyinPro === 'undefined' || !pinyinPro || !pinyinPro.pinyin) {
+    return [];
+  }
+  var compactChinese = String(chinese || '').replace(/[^\u3400-\u9fff\uf900-\ufaff]/g, '');
+  if (!compactChinese) {
+    return [];
+  }
+  try {
+    var syllables = pinyinPro.pinyin(compactChinese, {
+      type: 'array',
+      toneType: 'none',
+      separator: ' ',
+    });
+    if (!Array.isArray(syllables) || syllables.length < 2) {
+      return [];
+    }
+    var surname = String(syllables[0] || '').trim();
+    var givenSyllables = syllables.slice(1).map(function (syllable) {
+      return String(syllable || '').trim();
+    }).filter(Boolean);
+    if (!surname || !givenSyllables.length) {
+      return [];
+    }
+    var givenCompact = givenSyllables.join('');
+    var givenSpaced = givenSyllables.join(' ');
+    return [
+      surname + ' ' + givenCompact,
+      surname + ' ' + givenSpaced,
+      givenCompact + ' ' + surname,
+      givenSpaced + ' ' + surname,
+    ];
+  } catch (error) {
+    Logger.log('Pinyin name enrichment failed; using explicit aliases only: ' + error);
+    return [];
+  }
 }
 
 function preparePrintedBulletinForPrint_(bulletin, nameDictionary) {
@@ -2217,7 +2307,8 @@ function preparePrintedBulletinForPrint_(bulletin, nameDictionary) {
     'translation',
     'chineseTeacher',
     'englishTeacher',
-    'childrenTeacher',
+    'youthTeacher',
+    'kidsTeacher',
     'chairPastoralPrayer',
     'specialMusic',
     'offeringPrayer',
@@ -2252,7 +2343,12 @@ function formatPhysicalPersonValue_(value, nameDictionary) {
     return '';
   }
 
-  var dictionary = nameDictionary || { englishToChinese: {}, chineseToEnglish: {} };
+  var dictionary = nameDictionary || {
+    englishToChinese: {},
+    chineseToEnglish: {},
+    pinyinToChinese: {},
+    pinyinToEnglish: {},
+  };
   return text
     .split(/(\s*(?:\/|&|\+|\n|\band\b)\s*)/i)
     .map(function (part, index) {
@@ -2284,6 +2380,13 @@ function formatPhysicalSinglePerson_(value, dictionary) {
     return text + '\n' + english;
   }
 
+  var pinyinKey = normalizePhysicalPinyinKey_(text);
+  var pinyinChinese = dictionary.pinyinToChinese && dictionary.pinyinToChinese[pinyinKey];
+  var pinyinEnglish = dictionary.pinyinToEnglish && dictionary.pinyinToEnglish[pinyinKey];
+  if (pinyinChinese && pinyinEnglish) {
+    return pinyinChinese + '\n' + pinyinEnglish;
+  }
+
   // Google Docs can collapse a truly blank line in a table cell. Use a small,
   // explicit physical-only marker so the two language rows stay aligned. The
   // public digital API never uses this formatter.
@@ -2295,6 +2398,10 @@ function normalizePhysicalNameKey_(value) {
     .trim()
     .replace(/\s+/g, ' ')
     .toLowerCase();
+}
+
+function normalizePhysicalPinyinKey_(value) {
+  return normalizePhysicalNameKey_(value).replace(/ü/g, 'u');
 }
 
 function movePrintedBulletinToConfiguredFolder_(documentId, location) {
@@ -2390,15 +2497,22 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
       ruleParent.asParagraph().setSpacingAfter(0);
     }
     var qrColumns = footerOptions && footerOptions.qrColumns;
+    var qrCount = qrColumns ? Math.max(1, footerOptions.qrCount || 3) : 0;
+    var qrColumnIndexes = Array(qrCount).fill(0).map(function (_, index) {
+      return index + 2;
+    });
     var footerTable = body.appendTable(
-      qrColumns ? [['', '', '', '', '']] : [['', '', '']],
+      qrColumns ? [Array(qrCount + 2).fill('')] : [['', '', '']],
     );
     footerTable.setBorderWidth(0);
     footerTable.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
     footerTable.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
     if (qrColumns) {
-      [2, 3, 4].forEach(function (columnIndex) {
-        footerTable.setColumnWidth(columnIndex, 120);
+      qrColumnIndexes.forEach(function (columnIndex) {
+        footerTable.setColumnWidth(
+          columnIndex,
+          Math.floor((PRINTED_BULLETIN_CONFIG.bookletHalfWidth - 8) / qrCount),
+        );
       });
     } else {
       footerTable.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
@@ -2407,7 +2521,7 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
     var footerGutterCell = footerTable.getCell(0, 1);
     var footerRightCell = qrColumns ? null : footerTable.getCell(0, 2);
     var footerQrCells = qrColumns
-      ? [2, 3, 4].map(function (columnIndex) {
+      ? qrColumnIndexes.map(function (columnIndex) {
           return footerTable.getCell(0, columnIndex);
         })
       : [];
@@ -2680,9 +2794,8 @@ function getFirstPrintedAnnouncementSentenceLength_(text) {
 
 function appendGivingFooter_(leftCell, rightCell, location) {
   appendGivingText_(leftCell);
-  // The regular Queens spread now includes the Flower Offering row. Keep its
-  // bottom giving block together on the same page instead of allowing the QR
-  // captions to spill onto a new page.
+  // Keep the bottom giving block together on the same page instead of
+  // allowing the QR captions to spill onto a new page.
   appendGivingQrPlaceholders_(rightCell, {
     compact: true,
     location: location || 'queens',
@@ -2756,7 +2869,7 @@ function appendGivingQrPlaceholders_(cell, options) {
   if (leadingParagraph) {
     leadingParagraph.removeFromParent();
   }
-  getGivingQrItems_().forEach(function (item, index) {
+  getGivingQrItems_(location).forEach(function (item, index) {
     var width = 120;
     table.setColumnWidth(index, width);
     var tableCell = table.getCell(0, index);
@@ -2781,7 +2894,7 @@ function appendGivingQrPlaceholderCells_(cells, options) {
   var imageMaxWidth = compact ? 50 : 58;
   var cellPadding = compact ? 0 : 3;
   var labelFontSize = compact ? 7.5 : 8;
-  getGivingQrItems_().forEach(function (item, index) {
+  getGivingQrItems_(options.location || 'queens').forEach(function (item, index) {
     var tableCell = cells[index];
     if (!tableCell) {
       return;
@@ -2803,6 +2916,11 @@ function appendGivingQrPlaceholderCells_(cells, options) {
 
 function appendGivingQrPlaceholderCell_(tableCell, item, options) {
   options = options || {};
+  if (item && item.reserved) {
+    // Keep the reserved slot's dimensions stable while its QR asset is WIP.
+    tableCell.clear();
+    return;
+  }
   var fileId = getPrintedBulletinQrImageFileId_(item.kind, options.location || 'queens');
   if (fileId) {
     try {
@@ -2826,18 +2944,40 @@ function appendGivingQrPlaceholderCell_(tableCell, item, options) {
   appendCompactCenteredText_(tableCell, item.label, options.labelFontSize, true);
 }
 
-function getGivingQrItems_() {
-  return [
-    { label: printedBilingualText_('Download Mobile App', '下載手機應用程式'), kind: 'mobileApp' },
-    {
-      label: printedBilingualText_('Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'),
-      kind: 'zelle',
-    },
+function getGivingQrItems_(location) {
+  var items = [
+    { label: getPrintedMobileAppQrLabel_(), kind: 'mobileApp' },
     {
       label: printedBilingualText_('ACH or card', 'ACH／信用卡'),
       kind: 'adventistGiving',
     },
+    {
+      label: printedBilingualText_('Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'),
+      kind: 'zelle',
+    },
   ];
+  if (String(location || '').trim().toLowerCase() === 'brooklyn') {
+    // Zelle does not exist for Brooklyn. Keep the mobile-app slot reserved
+    // without printing a placeholder label or QR image until the new asset is
+    // ready, so the three-slot giving layout does not shift again.
+    return [
+      { label: items[0].label, kind: 'mobileApp', reserved: true },
+      items[1],
+      { kind: 'unused', reserved: true },
+    ];
+  }
+  // Queens keeps the Mobile App and Zelle slots reserved while those QR
+  // assets are temporarily unavailable. Leave the definitions above intact
+  // so restoring either code later only requires removing its reserved flag.
+  return [
+    { label: items[0].label, kind: 'mobileApp', reserved: true },
+    items[1],
+    { kind: 'zelle', reserved: true },
+  ];
+}
+
+function getPrintedMobileAppQrLabel_() {
+  return printedBilingualText_('Download Mobile App', '下載 APP');
 }
 
 function appendGivingHeadingText_(cell, text, size, bold, reuseLeadingParagraph) {
@@ -3005,7 +3145,6 @@ function appendStudyPanel_(cell, bulletin) {
     [printedBilingualText_('Lesson / Study', '課程／學習'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Closing Hymn', '結會詩歌'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Closing Prayer', '結會禱告'), '', printValue_(location.closingPrayer)],
-    [printedBilingualText_('Flower Offering', '花卉奉獻'), '', printValue_(location.flowerOffering)],
   ];
   appendProgramTable_(cell, studyRows);
   appendBibleReadingPanel_(cell, location, true, bulletin.physicalBibleTranslations);
@@ -3023,7 +3162,11 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
     [printedBilingualText_('Doxology', '頌讚'), printedBilingualText_('SDAH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Invocation', '宣召'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Bible Reading', '讀經'), formatBibleReferenceForPrint_(location), printedBilingualText_('Congregation', '會眾')],
+    [
+      printedBilingualText_('Bible Reading', '讀經'),
+      formatBibleReferenceForPrint_(location, bulletin.physicalBibleTranslations),
+      printedBilingualText_('Congregation', '會眾'),
+    ],
     [printedBilingualText_('Pastoral Prayer', '牧者禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
     [printedBilingualText_('Special Music', '特別音樂'), '', printValue_(location.specialMusic)],
@@ -3476,8 +3619,9 @@ function physicalTbdText_(traditionalChinese) {
 
 function formatHymnForPrint_(hymn) {
   hymn = hymn || {};
-  var english = String(hymn.english || '').trim();
-  var chinese = String(hymn.chinese || '').trim();
+  var resolved = resolvePrintedHymnText_(hymn.english, hymn.chinese);
+  var english = resolved.english;
+  var chinese = resolved.chinese;
   if (isPhysicalTbd_(english) || isPhysicalTbd_(chinese)) {
     return physicalTbdText_();
   }
@@ -3487,9 +3631,17 @@ function formatHymnForPrint_(hymn) {
   return english || chinese || physicalTbdText_();
 }
 
-function formatBibleReferenceForPrint_(location) {
+function formatBibleReferenceForPrint_(location, bibleTranslations) {
   var reference = String((location && location.bibleVerses) || '').trim();
-  return !reference || isPhysicalTbd_(reference) ? physicalTbdText_() : reference;
+  if (!reference || isPhysicalTbd_(reference)) {
+    return physicalTbdText_();
+  }
+
+  // The schedule has one scripture-reference field, but the printed table
+  // has separate Chinese and English lines. Resolve the book name for each
+  // line instead of copying the English reference into both language slots.
+  var labels = formatPhysicalBibleReferenceLabels_(location, bibleTranslations);
+  return printedBilingualText_(labels.english, labels.chinese);
 }
 
 function formatSermonForPrint_(location) {

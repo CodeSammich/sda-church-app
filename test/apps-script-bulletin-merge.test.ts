@@ -18,6 +18,26 @@ const createSheet = (rows: string[][]) => ({
   }),
 });
 
+const INTAKE_HEADERS = [
+  'Date',
+  'Location',
+  'English Hymn of Praise',
+  'Chinese Hymn of Praise',
+  'English Sermon Title',
+  'Chinese Sermon Title',
+  'English Hymn of Response',
+  'Chinese Hymn of Response',
+  'Bible Verses',
+];
+
+const createIntakeSheet = (rows: string[][]) => ({
+  getName: () => 'Sabbath Sermon Data',
+  getDataRange: () => ({
+    getValues: () => [INTAKE_HEADERS, ...rows],
+    getDisplayValues: () => [INTAKE_HEADERS, ...rows],
+  }),
+});
+
 describe('Apps Script bulletin response merging', () => {
   it('maps the Sabbath School opening prayer under its explicit API field', () => {
     const context = createContext({});
@@ -37,6 +57,58 @@ describe('Apps Script bulletin response merging', () => {
       header: 'SS Opening Prayer',
       path: ['queens', 'ssOpeningPrayer'],
       person: true,
+    });
+  });
+
+  it('maps the Queens youth teacher beside the children teacher', () => {
+    const context = createContext({});
+    runInContext(
+      readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8'),
+      context,
+    );
+
+    const field = JSON.parse(
+      runInContext(
+        "JSON.stringify(COLUMN_SCHEMA.find(function (entry) { return entry.header === 'Youth Teacher'; }))",
+        context,
+      ) as string,
+    );
+
+    expect(field).toEqual({
+      header: 'Youth Teacher',
+      path: ['queens', 'youthTeacher'],
+      person: true,
+    });
+  });
+
+  it('returns all supported metadata translations with English fallback', () => {
+    const context = createContext({
+      LanguageApp: {
+        translate: (value: string, _source: string, target: string) =>
+          `${target}:${value}`,
+      },
+    });
+    runInContext(
+      readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8'),
+      context,
+    );
+
+    const output = JSON.parse(
+      runInContext(
+        `JSON.stringify(buildBulletinMetadataTranslations_({
+          specialRemark: 'Communion Sabbath',
+          tithePurpose: 'Local Conference Advance',
+          pastorTravel: 'Pastor travel',
+        }))`,
+        context,
+      ) as string,
+    );
+
+    expect(output.tithePurpose).toEqual({
+      en: 'Local Conference Advance',
+      zh: 'zh-TW:Local Conference Advance',
+      'zh-cn': 'zh-CN:Local Conference Advance',
+      es: 'es:Local Conference Advance',
     });
   });
 
@@ -149,5 +221,71 @@ describe('Apps Script bulletin response merging', () => {
       chinese: '跨越全地',
     });
     expect(location.sermonTitle.english).toBe('Latest sermon title');
+  });
+
+  it('lets reviewed Sabbath Sermon Data values override legacy Form responses', () => {
+    const formRows = [
+      [
+        '2026-08-03T10:00:00Z',
+        '2026-08-08',
+        'Form hymn',
+        '',
+        'Form sermon',
+      ],
+    ];
+    const intakeRows = [
+      [
+        '2026-08-08',
+        'Queens',
+        'Reviewed hymn',
+        '審核後讚美詩',
+        'Reviewed sermon',
+        '審核後講題',
+        '',
+        '',
+        'John 3:16',
+      ],
+    ];
+    const spreadsheet = {
+      getSheetByName: (name: string) =>
+        name === 'Queens Worship Data'
+          ? createSheet(formRows)
+          : name === 'Sabbath Sermon Data'
+            ? createIntakeSheet(intakeRows)
+            : null,
+    };
+    const context = createContext({ testSpreadsheet: spreadsheet });
+    runInContext(
+      readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8'),
+      context,
+    );
+
+    const location = JSON.parse(
+      runInContext(
+        `JSON.stringify((function () {
+          var location = createLocation_();
+          populateFormResponses_(
+            location,
+            getResponseRows_(testSpreadsheet, ['Queens Worship Data'], '2026-08-08')
+          );
+          populateBulletinIntake_(
+            location,
+            getBulletinIntakeRows_(testSpreadsheet, '2026-08-08', 'queens')
+          );
+          return location;
+        })())`,
+        context,
+      ) as string,
+    );
+
+    expect(location.hymnOfPraise).toEqual({
+      english: 'Reviewed hymn',
+      chinese: '審核後讚美詩',
+    });
+    expect(location.sermonTitle).toEqual({
+      english: 'Reviewed sermon',
+      chinese: '審核後講題',
+    });
+    expect(location.bibleVerses).toBe('John 3:16');
   });
 });

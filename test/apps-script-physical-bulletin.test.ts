@@ -13,6 +13,8 @@ const loadAppsScript = (context: Record<string, unknown>) => {
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensBulletin.gs'), 'utf8') +
       '\n' +
+      readFileSync(join(process.cwd(), 'google-apps-script/PrintedHymnLookup.gs'), 'utf8') +
+      '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensCommunionBulletin.gs'), 'utf8') +
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedBrooklynBulletin.gs'), 'utf8'),
@@ -146,6 +148,63 @@ describe('printed bulletin Apps Script helpers', () => {
     });
   });
 
+  it('restricts managed header and date/quarter protections to the technology group', () => {
+    const calls: string[] = [];
+    const headerProtection = {
+      getRange: () => ({
+        getRow: () => 1,
+        getColumn: () => 1,
+        getNumRows: () => 1,
+        getNumColumns: () => 25,
+      }),
+      setDescription: (value: string) => calls.push(`description:${value}`),
+      setWarningOnly: (value: boolean) => calls.push(`warning:${value}`),
+      setDomainEdit: (value: boolean) => calls.push(`domain:${value}`),
+      setEditors: (value: string[]) => calls.push(`editors:${value.join(',')}`),
+      remove: () => calls.push('remove'),
+    };
+    const columnProtection = {
+      getRange: () => ({
+        getRow: () => 1,
+        getColumn: () => 1,
+        getNumRows: () => 53,
+        getNumColumns: () => 2,
+      }),
+      setDescription: (value: string) => calls.push(`description:${value}`),
+      setWarningOnly: (value: boolean) => calls.push(`warning:${value}`),
+      setDomainEdit: (value: boolean) => calls.push(`domain:${value}`),
+      setEditors: (value: string[]) => calls.push(`editors:${value.join(',')}`),
+      remove: () => calls.push('remove'),
+    };
+    const sheet = {
+      getRange: (notation: string) => ({
+        protect: () => {
+          calls.push(`protect:${notation}`);
+          return notation === 'A:B' ? columnProtection : headerProtection;
+        },
+      }),
+      getProtections: () => [headerProtection, columnProtection],
+      getMaxRows: () => 53,
+      getName: () => 'Sabbath Calendar',
+    };
+    const context = loadAppsScript({
+      SpreadsheetApp: { ProtectionType: { RANGE: 'RANGE' } },
+    });
+
+    (context as { testSheet: unknown }).testSheet = sheet;
+    runInContext(
+      `ensureBulletinHeaderContractProtection_(testSheet, 25); ensureBulletinScheduleFixedColumnProtection_(testSheet);`,
+      context,
+    );
+
+    expect(calls.filter((call) => call.startsWith('editors:'))).toEqual([
+      'editors:technology@nyccsda.org',
+      'editors:technology@nyccsda.org',
+    ]);
+    expect(calls.filter((call) => call === 'domain:false')).toHaveLength(2);
+    expect(calls.filter((call) => call === 'warning:false')).toHaveLength(2);
+  });
+
   it('does not advance past an already complete next quarter', () => {
     const context = loadAppsScript({});
     const values = JSON.parse(
@@ -237,7 +296,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(title).toBe('What verse should appear at the bottom of Church at Study?');
   });
 
-  it('preloads a Brooklyn Form verse for the selected Sabbath date', () => {
+  it('preloads the reviewed Sabbath Sermon Data verse ahead of legacy data and memory', () => {
     const makeSheet = (name: string, rows: string[][]) => ({
       getName: () => name,
       getDataRange: () => ({
@@ -245,7 +304,26 @@ describe('printed bulletin Apps Script helpers', () => {
         getDisplayValues: () => rows,
       }),
     });
-    const scheduleSheet = makeSheet('Sabbath Calendar', [['Date'], ['2026-09-05']]);
+    const scheduleHeaders = [
+      'Date', 'Quarter', 'Special Remark', 'Tithe Purpose', 'Pastor Travel',
+      'Queens Sermon', 'Translation', 'Chinese Teacher', 'English Teacher',
+      'Youth Teacher', 'Kids Teacher', 'Chair/Pastoral Prayer', 'Special Music',
+      'Offering Prayer', 'Pianist', 'SS Chair', 'SS Opening Prayer',
+      'SS Closing Prayer', 'Flower Offering', 'Brooklyn Sermon',
+      'Chair/Pastoral Prayer', 'Offering Prayer', 'Technician',
+      'Encouragement', 'Sabbath School',
+    ];
+    const scheduleSheet = makeSheet('Sabbath Calendar', [
+      scheduleHeaders,
+      ['2026-09-05', ...Array(24).fill('')],
+    ]);
+    const intakeSheet = makeSheet('Sabbath Sermon Data', [[
+      'Date', 'Location', 'English Hymn of Praise', 'Chinese Hymn of Praise',
+      'English Sermon Title', 'Chinese Sermon Title', 'English Hymn of Response',
+      'Chinese Hymn of Response', 'Bible Verses',
+    ], [
+      '2026-09-05', 'brooklyn', '', '', '', '', '', '', 'Luke 7:36-39',
+    ]]);
     const brooklynSheet = makeSheet('Brooklyn Worship Data', [
       ['Timestamp', 'What date is this Sabbath?', 'What Bible verse will you use?'],
       ['2026-09-01', '2026-09-05', 'John 12:24'],
@@ -258,11 +336,13 @@ describe('printed bulletin Apps Script helpers', () => {
               ? scheduleSheet
               : name === 'Brooklyn Worship Data'
                 ? brooklynSheet
+                : name === 'Sabbath Sermon Data'
+                  ? intakeSheet
                 : null,
         }),
       },
       PropertiesService: {
-        getScriptProperties: () => ({ getProperty: () => null }),
+        getScriptProperties: () => ({ getProperty: () => 'John 12:24' }),
       },
       Logger: { log: () => undefined },
     });
@@ -274,8 +354,9 @@ describe('printed bulletin Apps Script helpers', () => {
       ) as string,
     );
 
-    expect(output.formVerse).toBe('John 12:24');
-    expect(output.verse).toBe('John 12:24');
+    expect(output.formVerse).toBe('Luke 7:36-39');
+    expect(output.verse).toBe('Luke 7:36-39');
+    expect(output.hasVerseOverride).toBe(false);
   });
 
   it('builds a readable result dialog with separate document and PDF links', () => {
@@ -339,7 +420,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('CUV — 和合本（Traditional Chinese）');
     expect(html).not.toContain('cmn_cu1');
     expect(html).toContain('11 or 11-15');
-    expect(html).toContain('If the speaker submitted a Bible verse in the Worship Data form');
+    expect(html).toContain('If the speaker submitted a Bible verse in Sabbath Sermon Data');
     expect(html).toContain('getPrintedBulletinPromptWarning');
     expect(html).toContain('Add announcement / 新增消息');
     expect(html).toContain('getPrintedBulletinPromptData');
@@ -350,12 +431,12 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).not.toContain('Admin reminder / 管理員提醒');
     expect(html).toContain('1. Update the digital bulletin / 第一步：更新數位週刊');
     expect(html).toContain('2. Create the printed bulletin / 第二步：建立實體週刊');
-    expect(html).toContain('If the Form asks for a passcode, ask the IT staff');
-    expect(html).toContain('如果資料表要求密碼，請向 IT 同工詢問');
-    expect(html).toContain('↗ Queens Worship Data form / 皇后區崇拜資料表');
-    expect(html).toContain('↗ Brooklyn Worship Data form / 布碌崙崇拜資料表');
-    expect(html).toContain('https://forms.gle/FV7S53eQ1jwt9R7p7');
-    expect(html).toContain('https://forms.gle/wCsMmMeS8EqMKmJY8');
+    expect(html).toContain('add or update one row per location in Sabbath Sermon Data');
+    expect(html).toContain('請先查看本應用程式，然後在「Sabbath Sermon Data」中');
+    expect(html).toContain('↗ Open Sabbath Sermon Data / 開啟安息日講道資料');
+    expect(html).toContain('https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit#gid=1768045043');
+    expect(html).not.toContain('forms.gle');
+    expect(html).not.toContain('Worship Data form');
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
     expect(html).toContain('white-space:normal');
     expect(html).toContain('id="book" required');
@@ -498,6 +579,25 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(givingText).toContain('Tithes & Offerings | 什一奉獻與自由奉獻');
     expect(givingQr).not.toContain('Stocks/equities:');
     expect(givingQrItems).toContain("'Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'");
+
+    const context = loadAppsScript({});
+    expect(JSON.parse(runInContext(
+      `JSON.stringify(getGivingQrItems_('brooklyn').map(function (item) { return item.kind; }))`,
+      context,
+    ) as string)).toEqual(['mobileApp', 'adventistGiving', 'unused']);
+    expect(runInContext(`getGivingQrItems_('brooklyn')[0].reserved`, context)).toBe(true);
+    expect(JSON.parse(runInContext(
+      `JSON.stringify(getGivingQrItems_('queens').map(function (item) { return item.kind; }))`,
+      context,
+    ) as string)).toEqual(['mobileApp', 'adventistGiving', 'zelle']);
+    expect(runInContext(`getGivingQrItems_('queens')[0].reserved`, context)).toBe(true);
+    expect(runInContext(`getGivingQrItems_('queens')[2].reserved`, context)).toBe(true);
+    expect(runInContext(`getGivingQrItems_('queens')[0].label`, context)).toBe(
+      '下載 APP\nDownload Mobile App',
+    );
+    expect(runInContext(`getGivingQrItems_('brooklyn')[0].label`, context)).toBe(
+      '下載 APP\nDownload Mobile App',
+    );
   });
 
   it('uses the shared dummy QR image until slot-specific Drive IDs are configured', () => {
@@ -968,11 +1068,21 @@ describe('printed bulletin Apps Script helpers', () => {
         `JSON.stringify({
           english: formatPhysicalPersonValue_('Lingli Wang', {
             englishToChinese: { 'lingli wang': '王玲俐' },
-            chineseToEnglish: { '王玲俐': 'Lingli Wang' }
+            chineseToEnglish: { '王玲俐': 'Lingli Wang' },
+            pinyinToChinese: {},
+            pinyinToEnglish: {}
           }),
           chinese: formatPhysicalPersonValue_('王玲俐', {
             englishToChinese: { 'lingli wang': '王玲俐' },
-            chineseToEnglish: { '王玲俐': 'Lingli Wang' }
+            chineseToEnglish: { '王玲俐': 'Lingli Wang' },
+            pinyinToChinese: {},
+            pinyinToEnglish: {}
+          }),
+          pinyin: formatPhysicalPersonValue_('givenname familyname', {
+            englishToChinese: {},
+            chineseToEnglish: {},
+            pinyinToChinese: { 'givenname familyname': '中文姓名' },
+            pinyinToEnglish: { 'givenname familyname': 'Official Person' }
           }),
           unmatchedEnglish: formatPhysicalPersonValue_('Unknown Person', {
             englishToChinese: {}, chineseToEnglish: {}
@@ -990,25 +1100,28 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(output.english).toBe('王玲俐\nLingli Wang');
     expect(output.chinese).toBe('王玲俐\nLingli Wang');
+    expect(output.pinyin).toBe('中文姓名\nOfficial Person');
     expect(output.unmatchedEnglish).toBe('—\nUnknown Person');
     expect(output.unmatchedChinese).toBe('未知姓名\n—');
     expect(output.tbd).toBe('尚未安排\nTBD');
   });
 
-  it('reads the Name Dictionary from columns A and B', () => {
+  it('reads English, Chinese, and optional pinyin aliases from the Name Dictionary', () => {
     const dictionarySheet = {
       getDataRange: () => ({
         getValues: () => [
-          ['English Name', 'Chinese Name'],
-          ['Lingli Wang', '王玲俐'],
-          ['English Only', ''],
-          ['', '只有中文'],
+          ['English Name', 'Chinese Name', 'Pinyin Name'],
+          ['Lingli Wang', '王玲俐', 'Lingli Wang'],
+          ['English Only', '', ''],
+          ['', '只有中文', ''],
+          ['Official Person', '中文姓名', 'givenname familyname'],
         ],
         getDisplayValues: () => [
-          ['English Name', 'Chinese Name'],
-          ['Lingli Wang', '王玲俐'],
-          ['English Only', ''],
-          ['', '只有中文'],
+          ['English Name', 'Chinese Name', 'Pinyin Name'],
+          ['Lingli Wang', '王玲俐', 'Lingli Wang'],
+          ['English Only', '', ''],
+          ['', '只有中文', ''],
+          ['Official Person', '中文姓名', 'givenname familyname'],
         ],
       }),
     };
@@ -1016,6 +1129,9 @@ describe('printed bulletin Apps Script helpers', () => {
       getSheetByName: (name: string) => (name === 'Name Dictionary' ? dictionarySheet : null),
     };
     const context = loadAppsScript({
+      pinyinPro: {
+        pinyin: (value: string) => (value === '中文姓名' ? ['zhong', 'wen'] : []),
+      },
       SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
       Logger: { log: () => undefined },
     });
@@ -1025,6 +1141,10 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(dictionary.englishToChinese['lingli wang']).toBe('王玲俐');
     expect(dictionary.chineseToEnglish['王玲俐']).toBe('Lingli Wang');
+    expect(dictionary.pinyinToChinese['givenname familyname']).toBe('中文姓名');
+    expect(dictionary.pinyinToEnglish['givenname familyname']).toBe('Official Person');
+    expect(dictionary.pinyinToChinese['wen zhong']).toBe('中文姓名');
+    expect(dictionary.pinyinToEnglish['wen zhong']).toBe('Official Person');
     expect(dictionary.englishToChinese['english only']).toBeUndefined();
     expect(dictionary.chineseToEnglish['只有中文']).toBeUndefined();
   });
@@ -1045,6 +1165,24 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.label).toBe('讚美詩\nHymn of Praise');
     expect(output.hymn).toBe('100 - 祢的信實廣大\n100 - Great Is Thy Faithfulness');
     expect(output.date).toBe('August 22, 2026\n2026年8月22日');
+  });
+
+  it('fills only a missing hymn side from the reviewed bidirectional lookup', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `JSON.stringify({
+          englishOnly: formatHymnForPrint_({ english: 'AH 348 The Church Has One Foundation', chinese: '' }),
+          chineseOnly: formatHymnForPrint_({ english: '', chinese: '第413首 教會根基' }),
+          both: formatHymnForPrint_({ english: 'AH 348 The Church Has One Foundation', chinese: '第413首 教會根基' }),
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(output.englishOnly).toBe('第413首\nAH 348 The Church Has One Foundation');
+    expect(output.chineseOnly).toBe('第413首 教會根基\nAH 348');
+    expect(output.both).toBe('第413首 教會根基\nAH 348 The Church Has One Foundation');
   });
 
   it('uses the app status labels for physical TBD content', () => {
@@ -1073,6 +1211,7 @@ describe('printed bulletin Apps Script helpers', () => {
           standard: parsePhysicalBibleReferences_('1 Corinthians 11:23–26'),
           colon: parsePhysicalBibleReferences_('Jeremiah:29:11-15'),
           labels: formatPhysicalBibleReferenceLabels_({ bibleVerses: 'Jeremiah:29:11-15' }),
+          worshipReference: formatBibleReferenceForPrint_({ bibleVerses: 'John 3:14-17' }),
           warning: getPhysicalBibleReferenceWarning_('Jeremiah:29:11-19'),
           fiveVerseWarning: getPhysicalBibleReferenceWarning_('Jeremiah:29:11-15'),
           shortWarning: getPhysicalBibleReferenceWarning_('John 12:24')
@@ -1091,6 +1230,7 @@ describe('printed bulletin Apps Script helpers', () => {
       english: 'Jeremiah 29:11–15 (BSB)',
       chinese: '耶利米書 29:11–15（和合本）',
     });
+    expect(output.worshipReference).toBe('約翰福音 3:14–17（和合本）\nJohn 3:14–17 (BSB)');
     expect(output.warning).toContain('approximately 9 verses');
     expect(output.fiveVerseWarning).toBe('');
     expect(output.shortWarning).toBe('');
@@ -1257,14 +1397,15 @@ describe('printed bulletin Apps Script helpers', () => {
       'Translation',
       'Chinese Teacher',
       'English Teacher',
-      'Children Teacher',
+      'Youth Teacher',
+      'Kids Teacher',
       'Chair/Pastoral Prayer',
       'Special Music',
       'Offering Prayer',
       'Pianist',
       'SS Chair',
       'SS Opening Prayer',
-      'Closing Prayer',
+      'SS Closing Prayer',
       'Flower Offering',
       'Brooklyn Sermon',
       'Chair/Pastoral Prayer',
@@ -1283,6 +1424,7 @@ describe('printed bulletin Apps Script helpers', () => {
       'Samuel Zhang',
       'Jane Gao',
       'Lily Chee',
+      '',
       'Xiu Yang',
       'Enn Kong Liew',
       'Church Choir',
@@ -1306,9 +1448,40 @@ describe('printed bulletin Apps Script helpers', () => {
         getDisplayValues: () => [headers, values],
       }),
     };
+    const intakeSheet = {
+      getName: () => 'Sabbath Sermon Data',
+      getDataRange: () => ({
+        getValues: () => [[
+          'Date',
+          'Location',
+          'English Hymn of Praise',
+          'Chinese Hymn of Praise',
+          'English Sermon Title',
+          'Chinese Sermon Title',
+          'English Hymn of Response',
+          'Chinese Hymn of Response',
+          'Bible Verses',
+        ]],
+        getDisplayValues: () => [[
+          'Date',
+          'Location',
+          'English Hymn of Praise',
+          'Chinese Hymn of Praise',
+          'English Sermon Title',
+          'Chinese Sermon Title',
+          'English Hymn of Response',
+          'Chinese Hymn of Response',
+          'Bible Verses',
+        ]],
+      }),
+    };
     const spreadsheet = {
       getSheetByName: (name: string) =>
-        name === 'Sabbath Calendar' ? scheduleSheet : null,
+        name === 'Sabbath Calendar'
+          ? scheduleSheet
+          : name === 'Sabbath Sermon Data'
+            ? intakeSheet
+            : null,
     };
     const context = loadAppsScript({
       SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
