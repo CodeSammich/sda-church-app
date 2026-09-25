@@ -5,17 +5,6 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened, ready_for_review]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: Open pull request number to build
-        required: true
-        type: number
-      upload_to_drive:
-        description: Upload the debug ARM APK to the protected Google Drive job
-        required: true
-        default: true
-        type: boolean
 
 permissions:
   contents: read
@@ -25,7 +14,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: android-pr-preview-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+  group: android-pr-preview-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -36,17 +25,8 @@ jobs:
     # base commit's upload helper.
     if: >-
       github.event.repository.fork == false &&
-      (
-        (
-          github.event_name == 'pull_request_target' &&
-          github.event.pull_request.base.ref == 'main' &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        ) ||
-        (
-          github.event_name == 'workflow_dispatch' &&
-          github.ref == 'refs/heads/main'
-        )
-      )
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     name: Resolve PR head
     runs-on: ubuntu-24.04
     outputs:
@@ -55,70 +35,31 @@ jobs:
       head_sha: ${{ steps.pr.outputs.head_sha }}
       trusted_sha: ${{ steps.pr.outputs.trusted_sha }}
     steps:
-      - name: Require an administrator manual dispatch
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
-        run: |
-          set -euo pipefail
-          permission="$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$TRIGGERING_ACTOR/permission" --jq '.permission')"
-          test "$permission" = admin || {
-            echo 'Only repository administrators may run the Android PR preview.' >&2
-            exit 1
-          }
-
       - name: Resolve open pull request head
         id: pr
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
-          EVENT_BASE_REF: ${{ github.event.pull_request.base.ref || '' }}
-          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
-          EVENT_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || '' }}
-          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           case "$PR_NUMBER" in
             ''|*[!0-9]*) echo 'pr_number must be a positive integer.' >&2; exit 1 ;;
           esac
 
-          if [[ "$EVENT_NAME" == 'pull_request_target' ]]; then
-            test "$EVENT_BASE_REF" = main || {
-              echo 'The pull request must target main.' >&2
-              exit 1
-            }
-            test "$EVENT_HEAD_REPOSITORY" = "$GITHUB_REPOSITORY" || {
-              echo 'Fork pull requests are not eligible for this build.' >&2
-              exit 1
-            }
-            head_repository="$EVENT_HEAD_REPOSITORY"
-            head_sha="$EVENT_HEAD_SHA"
-            trusted_sha="$EVENT_BASE_SHA"
-          else
-            pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
-            test "$(jq -r '.state' <<<"$pr_json")" = open || {
-              echo 'The selected pull request is not open.' >&2
-              exit 1
-            }
-            test "$(jq -r '.merged_at' <<<"$pr_json")" = null || {
-              echo 'The selected pull request is already merged.' >&2
-              exit 1
-            }
-            test "$(jq -r '.base.ref' <<<"$pr_json")" = main || {
-              echo 'The selected pull request must target main.' >&2
-              exit 1
-            }
-
-            head_repository="$(jq -r '.head.repo.full_name // empty' <<<"$pr_json")"
-            head_sha="$(jq -r '.head.sha // empty' <<<"$pr_json")"
-            test "$head_repository" = "$GITHUB_REPOSITORY" || {
-              echo 'Fork pull requests are not eligible for this build.' >&2
-              exit 1
-            }
-            trusted_sha="$GITHUB_SHA"
-          fi
+          test "$BASE_REF" = main || {
+            echo 'The pull request must target main.' >&2
+            exit 1
+          }
+          test "$HEAD_REPOSITORY" = "$GITHUB_REPOSITORY" || {
+            echo 'Fork pull requests are not eligible for this build.' >&2
+            exit 1
+          }
+          head_repository="$HEAD_REPOSITORY"
+          head_sha="$HEAD_SHA"
+          trusted_sha="$BASE_SHA"
 
           test -n "$head_repository" && test -n "$head_sha" || {
             echo 'The pull request has no readable head repository or commit.' >&2
@@ -195,14 +136,7 @@ jobs:
 
   upload:
     needs: [resolve-pr, build]
-    # PR-triggered builds upload automatically after the artifact succeeds;
-    # manual dispatches retain the explicit upload toggle.
-    if: >-
-      needs.build.result == 'success' &&
-      (
-        github.event_name == 'pull_request_target' ||
-        inputs.upload_to_drive == true
-      )
+    if: needs.build.result == 'success'
     name: Upload APK to Google Drive
     environment: production
     runs-on: ubuntu-24.04
