@@ -2700,8 +2700,8 @@ function appendGivingText_(cell, options) {
   appendCompactCenteredText_(
     cell,
     printedBilingualText_(
-      'Cash offerings: for a tax-deductible receipt, use a church envelope and write your name in English.',
-      '現金奉獻：如需可扣稅收據，請使用教會奉獻信封並以英文寫上姓名。',
+      'Cash offerings: for a tax-deductible receipt, write your English name on the church envelope as Last, First or First Last. Please print clearly (no cursive or calligraphy) so the treasurer can read it.',
+      '現金奉獻：如需可扣稅收據，請在教會奉獻信封上以英文清楚寫上「姓，名」或「名姓」。為方便司庫辨認，請用正楷，不要使用草書或行書。',
     ),
     8.5,
     false,
