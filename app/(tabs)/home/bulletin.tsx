@@ -1,12 +1,8 @@
-import { GridMenuCard } from '@/components/GridMenuCard';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
 import {
   CHURCH_BUILDING_IMAGE_URL,
-  BROOKLYN_SERMON_SPEAKER_FORM_URL,
-  QUEENS_SERMON_SPEAKER_FORM_URL,
   openInMaps,
-  openURL,
   openQuarterlySchedule,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -29,6 +25,7 @@ import {
 import {
   Bulletin,
   BulletinLocation,
+  BulletinMetadataTranslation,
   fetchBulletin,
   getCachedBulletin,
   getNextBulletinRolloverAt,
@@ -60,6 +57,8 @@ const LABELS = {
     notAvailable: 'TBD',
     nameWithheld: 'Name withheld',
     choir: 'Choir',
+    sabbathSchoolProgram: 'Sabbath School',
+    schedule: 'Schedule',
     worshipProgram: 'Worship Program',
     serviceRoster: 'Service Roster',
     queens: 'Queens',
@@ -71,13 +70,6 @@ const LABELS = {
     readNow: 'Read now',
     openHymn: 'Open hymn',
     openHymnInHymnal: 'Open {hymn} in the hymnal',
-    planning: 'Planning',
-    quarterlySchedule: 'Speaker Schedule',
-    churchStaffOnly: 'Church staff only',
-    sermonSpeaker: 'Sermon Speaker & Admin',
-    submitBulletinInfo: 'Submit Bulletin Info',
-    sermonSpeakerPasscode:
-      'Use the Queens or Brooklyn form below. If the speaker has not submitted this week, an administrator should complete it on their behalf after checking the current bulletin in this app or the corresponding Worship Data sheet. Ask the IT staff for the passcode if you do not know it.',
     metadata: {
       quarter: 'Quarter',
       specialRemark: 'Special Remark',
@@ -104,14 +96,24 @@ const LABELS = {
       translation: 'Translation',
       chineseTeacher: 'Chinese Teacher',
       englishTeacher: 'English Teacher',
-      childrenTeacher: 'Children Teacher',
+      youthTeacher: 'Youth Teacher',
+      kidsTeacher: 'Kids Teacher',
       chairPastoralPrayer: 'Chair / Pastoral Prayer',
       specialMusic: 'Special Music',
       offeringPrayer: 'Offering Prayer',
       pianist: 'Pianist',
-      ssChair: 'Sabbath School Chair',
-      closingPrayer: 'Closing Prayer',
+      ssChair: 'Chair',
+      ssOpeningPrayer: 'Opening Prayer',
+      ssClosingPrayer: 'Closing Prayer',
+      flowerOffering: 'Flower Offering',
       sabbathSchool: 'Sabbath School',
+      welcome: 'Welcome',
+      songAndBibleVerse: 'Song and Bible Verse',
+      openingHymn: 'Opening Hymn',
+      prayer: 'Prayer',
+      sabbathEncouragement: 'Sabbath Encouragement',
+      technician: 'Technician',
+      encouragement: 'Encouragement',
     },
   },
   zh: {
@@ -126,6 +128,8 @@ const LABELS = {
     notAvailable: '尚未確定',
     nameWithheld: '姓名保留',
     choir: '詩班',
+    sabbathSchoolProgram: '安息日學',
+    schedule: '時間表',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     queens: '皇后區',
@@ -137,13 +141,6 @@ const LABELS = {
     readNow: '立即閱讀',
     openHymn: '開啟詩歌',
     openHymnInHymnal: '在詩歌本中開啟{hymn}',
-    planning: '事工規劃',
-    quarterlySchedule: '講員排班',
-    churchStaffOnly: '僅限教會同工',
-    sermonSpeaker: '講員與管理',
-    submitBulletinInfo: '提交週報資料',
-    sermonSpeakerPasscode:
-      '請使用下方的皇后區或布魯克林表單。如果講員本週尚未提交，管理員應先查看本應用程式中的週報或相應的 Worship Data 工作表，再代為填寫。如不知道密碼，請向 IT 同工詢問。',
     metadata: {
       quarter: '季度',
       specialRemark: '特別事項',
@@ -170,14 +167,24 @@ const LABELS = {
       translation: '翻譯',
       chineseTeacher: '中文教師',
       englishTeacher: '英文教師',
-      childrenTeacher: '兒童教師',
+      youthTeacher: '青年教師',
+      kidsTeacher: '兒童教師',
       chairPastoralPrayer: '主席／牧禱',
       specialMusic: '特別音樂',
       offeringPrayer: '奉獻禱告',
       pianist: '司琴',
-      ssChair: '安息日學主席',
-      closingPrayer: '閉會禱告',
+      ssChair: '主席',
+      ssOpeningPrayer: '開會禱告',
+      ssClosingPrayer: '結會禱告',
+      flowerOffering: '花卉奉獻',
       sabbathSchool: '安息日學',
+      welcome: '歡迎',
+      songAndBibleVerse: '詩歌頌讚與存心節',
+      openingHymn: '開會唱詩',
+      prayer: '祈禱',
+      sabbathEncouragement: '安息日勉勵',
+      technician: '技術同工',
+      encouragement: '勉勵',
     },
   },
   'zh-cn': {
@@ -192,6 +199,8 @@ const LABELS = {
     notAvailable: '尚未确定',
     nameWithheld: '姓名保留',
     choir: '诗班',
+    sabbathSchoolProgram: '安息日学',
+    schedule: '时间表',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     queens: '皇后区',
@@ -203,13 +212,6 @@ const LABELS = {
     readNow: '立即阅读',
     openHymn: '打开诗歌',
     openHymnInHymnal: '在诗歌本中打开{hymn}',
-    planning: '事工规划',
-    quarterlySchedule: '讲员排班',
-    churchStaffOnly: '仅限教会同工',
-    sermonSpeaker: '讲员与管理',
-    submitBulletinInfo: '提交周报信息',
-    sermonSpeakerPasscode:
-      '请使用下方的皇后区或布鲁克林表单。如果讲员本周尚未提交，管理员应先查看本应用中的周报或相应的 Worship Data 工作表，再代为填写。如不知道密码，请向 IT 同工询问。',
     metadata: {
       quarter: '季度',
       specialRemark: '特别事项',
@@ -236,14 +238,24 @@ const LABELS = {
       translation: '翻译',
       chineseTeacher: '中文教师',
       englishTeacher: '英文教师',
-      childrenTeacher: '儿童教师',
+      youthTeacher: '青年教师',
+      kidsTeacher: '儿童教师',
       chairPastoralPrayer: '主席／牧祷',
       specialMusic: '特别音乐',
       offeringPrayer: '奉献祷告',
       pianist: '司琴',
-      ssChair: '安息日学主席',
-      closingPrayer: '闭会祷告',
+      ssChair: '主席',
+      ssOpeningPrayer: '开会祷告',
+      ssClosingPrayer: '结会祷告',
+      flowerOffering: '花卉奉献',
       sabbathSchool: '安息日学',
+      welcome: '欢迎',
+      songAndBibleVerse: '诗歌颂赞与存心节',
+      openingHymn: '开会唱诗',
+      prayer: '祷告',
+      sabbathEncouragement: '安息日勉励',
+      technician: '技术同工',
+      encouragement: '勉励',
     },
   },
   es: {
@@ -258,6 +270,8 @@ const LABELS = {
     notAvailable: 'Por determinar',
     nameWithheld: 'Nombre reservado',
     choir: 'Coro',
+    sabbathSchoolProgram: 'Escuela Sabática',
+    schedule: 'Horario',
     worshipProgram: 'Programa de Adoración',
     serviceRoster: 'Asignaciones de Servicio',
     queens: 'Queens',
@@ -269,13 +283,6 @@ const LABELS = {
     readNow: 'Leer ahora',
     openHymn: 'Abrir himno',
     openHymnInHymnal: 'Abrir {hymn} en el himnario',
-    planning: 'Planificación',
-    quarterlySchedule: 'Horario de oradores',
-    churchStaffOnly: 'Solo personal de la iglesia',
-    sermonSpeaker: 'Orador y administración',
-    submitBulletinInfo: 'Enviar información del boletín',
-    sermonSpeakerPasscode:
-      'Use el formulario de Queens o Brooklyn a continuación. Si el orador no lo ha enviado esta semana, un administrador debe completarlo en su nombre después de revisar el boletín actual en esta aplicación o la hoja de Worship Data correspondiente. Pida la contraseña al personal de TI si es necesario.',
     metadata: {
       quarter: 'Trimestre',
       specialRemark: 'Observación Especial',
@@ -302,14 +309,24 @@ const LABELS = {
       translation: 'Traducción',
       chineseTeacher: 'Maestro de Chino',
       englishTeacher: 'Maestro de Inglés',
-      childrenTeacher: 'Maestro de Niños',
+      youthTeacher: 'Maestro de Jóvenes',
+      kidsTeacher: 'Maestro de Niños',
       chairPastoralPrayer: 'Dirección / Oración Pastoral',
       specialMusic: 'Música Especial',
       offeringPrayer: 'Oración de Ofrenda',
       pianist: 'Pianista',
-      ssChair: 'Dirección de Escuela Sabática',
-      closingPrayer: 'Oración Final',
+      ssChair: 'Dirección',
+      ssOpeningPrayer: 'Oración Inicial',
+      ssClosingPrayer: 'Oración Final',
+      flowerOffering: 'Ofrenda Floral',
       sabbathSchool: 'Escuela Sabática',
+      welcome: 'Bienvenida',
+      songAndBibleVerse: 'Canto y versículo bíblico',
+      openingHymn: 'Himno de apertura',
+      prayer: 'Oración',
+      sabbathEncouragement: 'Ánimo sabático',
+      technician: 'Técnico',
+      encouragement: 'Ánimo',
     },
   },
 } as const;
@@ -398,6 +415,20 @@ const getProgramAssignment = (
     : labels.notAssigned,
 });
 
+const getLocalizedMetadataValue = (
+  original: string,
+  translations: BulletinMetadataTranslation | undefined,
+  language: string,
+  includeOriginalEnglish: boolean,
+) => {
+  const translated =
+    translations?.[language as keyof BulletinMetadataTranslation] || original;
+  if (!includeOriginalEnglish || !translated || translated.trim() === original.trim()) {
+    return translated;
+  }
+  return `${translated}\n${original}`;
+};
+
 const getCompactQuarterLabel = (quarter: string | undefined) => {
   if (!hasBulletinValue(quarter)) return '';
   const quarterNumber = quarter?.match(/[1-4]/)?.[0];
@@ -417,7 +448,6 @@ export default function WeeklyBulletinScreen() {
     weekDates.map((date) => ({ date, loading: false })),
   );
   const [selectedWeek, setSelectedWeek] = useState('0');
-  const [selectedPanel, setSelectedPanel] = useState<'week' | 'speaker'>('week');
   const [selectedLocation, setSelectedLocation] = useState<BulletinLocationTab>('queens');
   const loadingWeeksRef = useRef(new Set<string>());
   const refreshAvailableAtRef = useRef<[number, number]>([0, 0]);
@@ -773,6 +803,13 @@ export default function WeeklyBulletinScreen() {
             emptyText={labels.notAssigned}
           />
         )}
+        {isQueens && (
+          <DataRow
+            label={labels.roles.flowerOffering}
+            value={getRosterValue(location.flowerOffering, labels)}
+            emptyText={labels.notAssigned}
+          />
+        )}
         <DataRow
           label={labels.program.sermon}
           value={getRosterValue(location.sermon, labels)}
@@ -809,19 +846,66 @@ export default function WeeklyBulletinScreen() {
     );
   };
 
+  const renderSabbathSchool = (location: BulletinLocation, isQueens: boolean) => {
+    const rows: Array<{
+      label: string;
+      value?: string;
+      assignment?: DataRowProps['assignment'];
+    }> = isQueens
+      ? [
+          { label: labels.roles.ssChair, value: location.ssChair },
+          { label: labels.roles.ssOpeningPrayer, value: location.ssOpeningPrayer },
+          { label: labels.roles.chineseTeacher, value: location.chineseTeacher },
+          { label: labels.roles.englishTeacher, value: location.englishTeacher },
+          { label: labels.roles.youthTeacher, value: location.youthTeacher },
+          { label: labels.roles.kidsTeacher, value: location.kidsTeacher },
+          { label: labels.roles.ssClosingPrayer, value: location.closingPrayer },
+        ]
+      : [
+          { label: labels.roles.prayer, value: location.chairPastoralPrayer },
+          {
+            label: labels.roles.sabbathEncouragement,
+            value: location.encouragement,
+          },
+          { label: labels.roles.sabbathSchool, value: location.sabbathSchool },
+        ];
+
+    return (
+      <View style={styles.cardSection}>
+        <View style={[styles.sectionHeading, { borderLeftColor: theme.colors.primary }]}>
+          <Text
+            variant="titleMedium"
+            style={{ color: theme.colors.primary, fontWeight: '700' }}
+          >
+            {labels.sabbathSchoolProgram}
+          </Text>
+        </View>
+        <Divider style={styles.sectionHeadingDivider} />
+        {rows.map(({ label, value, assignment }, index) => (
+          <DataRow
+            key={label}
+            label={label}
+            value={getRosterValue(value, labels)}
+            emptyText={labels.notAssigned}
+            last={index === rows.length - 1}
+            assignment={assignment}
+          />
+        ))}
+      </View>
+    );
+  };
+
   const renderRoster = (location: BulletinLocation, isQueens: boolean) => {
     const rows: Array<[string, string | undefined]> = isQueens
       ? [
           [labels.roles.translation, location.translation],
-          [labels.roles.chineseTeacher, location.chineseTeacher],
-          [labels.roles.englishTeacher, location.englishTeacher],
-          [labels.roles.childrenTeacher, location.childrenTeacher],
           [labels.roles.pianist, location.pianist],
-          [labels.roles.ssChair, location.ssChair],
         ]
       : [
           [labels.roles.chairPastoralPrayer, location.chairPastoralPrayer],
           [labels.roles.offeringPrayer, location.offeringPrayer],
+          [labels.roles.technician, location.technician],
+          [labels.roles.encouragement, location.encouragement],
           [labels.roles.sabbathSchool, location.sabbathSchool],
         ];
 
@@ -911,6 +995,7 @@ export default function WeeklyBulletinScreen() {
           </View>
         )}
 
+        {renderSabbathSchool(location, isQueens)}
         {renderProgram(location, isQueens, tithePurpose)}
         {renderRoster(location, isQueens)}
       </Card.Content>
@@ -919,10 +1004,30 @@ export default function WeeklyBulletinScreen() {
 
   const renderBulletin = (bulletin: Bulletin) => {
     const metadataRows: Array<[string, string]> = hasBulletinValue(bulletin.pastorTravel)
-      ? [[labels.metadata.pastorTravel, bulletin.pastorTravel]]
+      ? [[
+          labels.metadata.pastorTravel,
+          getLocalizedMetadataValue(
+            bulletin.pastorTravel,
+            bulletin.metadataTranslations?.pastorTravel,
+            language,
+            true,
+          ),
+        ]]
       : [];
     const isQueens = selectedLocation === 'queens';
     const location = isQueens ? bulletin.queens : bulletin.brooklyn;
+    const localizedSpecialRemark = getLocalizedMetadataValue(
+      bulletin.specialRemark,
+      bulletin.metadataTranslations?.specialRemark,
+      language,
+      false,
+    );
+    const localizedTithePurpose = getLocalizedMetadataValue(
+      bulletin.tithePurpose,
+      bulletin.metadataTranslations?.tithePurpose,
+      language,
+      true,
+    );
 
     return (
       <>
@@ -967,8 +1072,8 @@ export default function WeeklyBulletinScreen() {
         {renderLocation(
           location,
           isQueens,
-          bulletin.specialRemark,
-          bulletin.tithePurpose,
+          localizedSpecialRemark,
+          localizedTithePurpose,
         )}
       </>
     );
@@ -1011,40 +1116,39 @@ export default function WeeklyBulletinScreen() {
         <View style={styles.weekTabsContainer}>
           <Button
             accessibilityRole="tab"
-            accessibilityState={{ selected: selectedPanel === 'week' && selectedWeek === '0' }}
-            mode={selectedPanel === 'week' && selectedWeek === '0' ? 'contained' : 'outlined'}
+            accessibilityState={{ selected: selectedWeek === '0' }}
+            mode={selectedWeek === '0' ? 'contained' : 'outlined'}
             icon="calendar-today"
-            onPress={() => { setSelectedPanel('week'); selectWeek(0); }}
+            onPress={() => selectWeek(0)}
             style={styles.weekTab}
           >
             {labels.thisWeek}
           </Button>
           <Button
             accessibilityRole="tab"
-            accessibilityState={{ selected: selectedPanel === 'week' && selectedWeek === '1' }}
-            mode={selectedPanel === 'week' && selectedWeek === '1' ? 'contained' : 'outlined'}
+            accessibilityState={{ selected: selectedWeek === '1' }}
+            mode={selectedWeek === '1' ? 'contained' : 'outlined'}
             icon="calendar-arrow-right"
-            onPress={() => { setSelectedPanel('week'); selectWeek(1); }}
+            onPress={() => selectWeek(1)}
             style={styles.weekTab}
           >
             {labels.nextWeek}
           </Button>
         </View>
 
-        <View style={styles.sermonTabContainer}>
+        <View style={styles.scheduleButtonRow}>
           <Button
-            accessibilityRole="tab"
-            accessibilityState={{ selected: selectedPanel === 'speaker' }}
-            mode={selectedPanel === 'speaker' ? 'contained' : 'outlined'}
-            icon="microphone"
-            onPress={() => setSelectedPanel('speaker')}
-            style={styles.sermonTab}
+            accessibilityLabel={labels.schedule}
+            icon="file-table-outline"
+            mode="outlined"
+            onPress={openQuarterlySchedule}
+            style={styles.scheduleButton}
           >
-            {labels.sermonSpeaker}
+            {labels.schedule}
           </Button>
         </View>
 
-        {selectedPanel === 'week' && weeks[Number(selectedWeek)] &&
+        {weeks[Number(selectedWeek)] &&
           (() => {
             const index = Number(selectedWeek);
             const week = weeks[index];
@@ -1136,54 +1240,6 @@ export default function WeeklyBulletinScreen() {
             );
           })()}
 
-        {selectedPanel === 'speaker' && <View style={[DocumentStyles.section, styles.planningSection]}>
-          <Text
-            variant="titleLarge"
-            style={[DocumentStyles.sectionTitle, { color: theme.colors.primary }]}
-          >
-            {labels.planning}
-          </Text>
-          <Card
-            mode="outlined"
-            style={[styles.card, { backgroundColor: theme.colors.bulletinSurface }]}
-          >
-            <Card.Content>
-              <Text variant="titleMedium" style={[styles.sermonSpeakerTitle, { color: theme.colors.onSurface }]}>
-                {labels.submitBulletinInfo}
-              </Text>
-              <Text variant="bodyMedium" style={[styles.sermonSpeakerHint, { color: theme.colors.onSurfaceVariant }]}>
-                {labels.sermonSpeakerPasscode}
-              </Text>
-              <View style={styles.sermonSpeakerActions}>
-                <Button
-                  mode="contained"
-                  icon="file-document-edit-outline"
-                  onPress={() => void openURL(QUEENS_SERMON_SPEAKER_FORM_URL)}
-                  style={styles.sermonSpeakerButton}
-                >
-                  {labels.queens}
-                </Button>
-                <Button
-                  mode="contained"
-                  icon="file-document-edit-outline"
-                  onPress={() => void openURL(BROOKLYN_SERMON_SPEAKER_FORM_URL)}
-                  style={styles.sermonSpeakerButton}
-                >
-                  {labels.brooklyn}
-                </Button>
-              </View>
-            </Card.Content>
-          </Card>
-          <GridMenuCard
-            title={labels.quarterlySchedule}
-            subtitle={labels.churchStaffOnly}
-            icon="file-table-outline"
-            color={theme.colors.bulletinSurface}
-            iconColor={theme.colors.primary}
-            onPress={openQuarterlySchedule}
-            style={styles.scheduleCard}
-          />
-        </View>}
       </ScrollView>
     </>
   );
@@ -1207,34 +1263,14 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  sermonTabContainer: {
-    paddingHorizontal: 16,
+  scheduleButtonRow: {
+    alignItems: 'center',
     marginBottom: 20,
+    paddingHorizontal: 16,
   },
-  sermonTab: {
-    width: '100%',
-  },
-  sermonSpeakerTitle: {
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  sermonSpeakerHint: {
-    marginBottom: 12,
-  },
-  sermonSpeakerActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sermonSpeakerButton: {
-    flexGrow: 1,
-    minWidth: 120,
-  },
-  scheduleCard: {
-    width: '100%',
-  },
-  planningSection: {
-    marginTop: 0,
+  scheduleButton: {
+    alignSelf: 'center',
+    minWidth: 160,
   },
   weekHeader: {
     alignItems: 'center',
@@ -1292,6 +1328,11 @@ const styles = StyleSheet.create({
   sectionHeadingDivider: {
     marginTop: 10,
     marginBottom: 2,
+  },
+  sabbathSchoolBreak: {
+    fontStyle: 'italic',
+    marginTop: 10,
+    textAlign: 'center',
   },
   remarkBanner: {
     borderRadius: 12,

@@ -47,7 +47,7 @@ export const getSunsetApiUrl = (lat: number, lng: number, date: string) =>
  * returns privacy-filtered JSON.
  *
  * Architecture, deployment, privacy, and verification documentation:
- * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/google-apps-script/README.md
+ * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/docs/operations/bulletin-automation.md
  */
 export const BULLETIN_API_BASE_URL =
   'https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec';
@@ -775,7 +775,3 @@ export const openEmail = (email: string) =>
     'Error',
     'Email is not configured on this device or emulator.',
   );
-
-// These are Google Forms locked by a password, so even though they're public links, they are safe to include
-export const QUEENS_SERMON_SPEAKER_FORM_URL = 'https://forms.gle/FV7S53eQ1jwt9R7p7';
-export const BROOKLYN_SERMON_SPEAKER_FORM_URL = 'https://forms.gle/wCsMmMeS8EqMKmJY8';

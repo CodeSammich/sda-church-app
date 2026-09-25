@@ -101,19 +101,6 @@ const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
 const NATIVE_AUDIO_STATUS_UPDATE_INTERVAL_MS = 1_000;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
-const SUPERSCRIPT_CHARACTERS: Record<string, string> = {
-  '0': '⁰',
-  '1': '¹',
-  '2': '²',
-  '3': '³',
-  '4': '⁴',
-  '5': '⁵',
-  '6': '⁶',
-  '7': '⁷',
-  '8': '⁸',
-  '9': '⁹',
-  '+': '⁺',
-};
 type SleepTimerSetting = BibleAudioSleepTimerSetting;
 
 const BIBLE_TRANS_KEY = BibleService.BIBLE_TRANSLATION_STORAGE_KEY;
@@ -127,6 +114,7 @@ const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
 const BIBLE_DUAL_LANGUAGE_KEY = 'user-bible-dual-language';
 const BIBLE_SUPPORTING_TRANSLATION_KEY = 'user-bible-supporting-translation';
+const SUPERSCRIPT_MARKER_PATTERN = /([⁰¹²³⁴⁵⁶⁷⁸⁹⁺]+)/g;
 
 const getAudioReaderLabel = (reader: string) =>
   reader
@@ -2523,9 +2511,7 @@ export default function BibleScreen() {
           key={`footnote-marker-${themeRenderKey}-${footnoteCaller}`}
           style={{ color: theme.colors.primary }}
         >
-          {Array.from(footnoteCaller, (character) =>
-            SUPERSCRIPT_CHARACTERS[character] || character,
-          ).join('')}
+          {BibleService.toSuperscript(footnoteCaller)}
         </Text>
       ) : null;
 
@@ -2680,10 +2666,11 @@ export default function BibleScreen() {
         ? getParallelVerseTexts(
             chapterData,
             supportedTranslation.id,
-            supportingChapterData,
-            supportingTranslation?.id || null,
-            selectedVerseNum,
-          )
+          supportingChapterData,
+          supportingTranslation?.id || null,
+          selectedVerseNum,
+          true,
+        )
         : null,
     [
       chapterData,
@@ -2705,6 +2692,17 @@ export default function BibleScreen() {
     !!selectedVerseTexts?.supportingText &&
     !!supportingTranslation &&
     isChineseBibleTranslation(supportingTranslation.id);
+
+  const renderPopupVerseText = (text: string) =>
+    text.split(SUPERSCRIPT_MARKER_PATTERN).map((part, index) =>
+      /^[⁰¹²³⁴⁵⁶⁷⁸⁹⁺]+$/.test(part) ? (
+        <Text key={`popup-footnote-marker-${index}`} style={{ color: theme.colors.primary }}>
+          {part}
+        </Text>
+      ) : (
+        part
+      ),
+    );
 
   const renderStructuralText = (
     content: BibleService.ChapterHeading | BibleService.ChapterHebrewSubtitle,
@@ -4277,10 +4275,11 @@ export default function BibleScreen() {
                         text={selectedPrimaryVerseText}
                         textColor={theme.colors.onSurface}
                         textScale={textScale}
+                        footnoteColor={theme.colors.primary}
                       />
                     ) : (
                       <Text style={[ReaderStyles.detailText, { fontWeight: '500' }]}>
-                        {selectedPrimaryVerseText}
+                        {renderPopupVerseText(selectedPrimaryVerseText)}
                       </Text>
                     )}
                     {supportingTranslation && selectedVerseTexts?.supportingText && (
@@ -4307,6 +4306,7 @@ export default function BibleScreen() {
                             text={selectedVerseTexts.supportingText}
                             textColor={theme.colors.onSurfaceVariant}
                             textScale={textScale}
+                            footnoteColor={theme.colors.primary}
                             variant="supporting"
                           />
                         ) : (
@@ -4316,7 +4316,7 @@ export default function BibleScreen() {
                               { color: theme.colors.onSurfaceVariant },
                             ]}
                           >
-                            {selectedVerseTexts.supportingText}
+                            {renderPopupVerseText(selectedVerseTexts.supportingText)}
                           </Text>
                         )}
                       </View>
@@ -4434,11 +4434,13 @@ export default function BibleScreen() {
                                 variant="labelSmall"
                                 style={{ color: theme.colors.primary, marginBottom: 4 }}
                               >
-                                {labels.footnote} (
-                                  {chapterData.chapter.footnotes.findIndex(
-                                    (footnote) => footnote.noteId === f.noteId,
-                                  ) + 1}
-                                )
+                                {labels.footnote}{' '}
+                                {BibleService.toSuperscript(
+                                  BibleService.getChapterFootnoteNumber(
+                                    chapterData.chapter.footnotes,
+                                    f.noteId,
+                                  ),
+                                )}
                               </Text>
                               <Text style={ReaderStyles.detailText}>{f.text}</Text>
                             </View>

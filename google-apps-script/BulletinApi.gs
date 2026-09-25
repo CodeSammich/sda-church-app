@@ -1,5 +1,5 @@
 /**
- * Bulletin API for the SDA Church PWA.
+ * Bulletin API for the SDA Church mobile app.
  * Canonical source:
  * https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/blob/main/google-apps-script/BulletinApi.gs
  *
@@ -16,14 +16,12 @@
 
 var CONFIG = Object.freeze({
   scheduleSheetName: 'Sabbath Calendar',
+  intakeSheetName: 'Sabbath Sermon Data',
   cacheSeconds: 120,
-  cacheVersion: 'v2',
-  responseSheets: Object.freeze({
-    queens: ['Queens Worship Data'],
-    brooklyn: ['Brooklyn Worship Data'],
-  }),
+  // Bump when the public bulletin shape or source contract changes so cached
+  // pre-migration responses do not hide newly added roster fields.
+  cacheVersion: 'v7',
   dateHeaders: ['Date', 'Service Date', 'Sabbath Date', 'What date is this Sabbath?'],
-  timestampHeaders: ['Timestamp', 'Submitted At'],
 });
 
 // The order is intentional: it disambiguates the duplicated Queens/Brooklyn
@@ -40,7 +38,8 @@ var COLUMN_SCHEMA = Object.freeze([
   { header: 'Translation', path: ['queens', 'translation'], person: true },
   { header: 'Chinese Teacher', path: ['queens', 'chineseTeacher'], person: true },
   { header: 'English Teacher', path: ['queens', 'englishTeacher'], person: true },
-  { header: 'Children Teacher', path: ['queens', 'childrenTeacher'], person: true },
+  { header: 'Youth Teacher', path: ['queens', 'youthTeacher'], person: true },
+  { header: 'Kids Teacher', path: ['queens', 'kidsTeacher'], person: true },
   {
     header: 'Chair/Pastoral Prayer',
     path: ['queens', 'chairPastoralPrayer'],
@@ -55,7 +54,10 @@ var COLUMN_SCHEMA = Object.freeze([
     path: ['queens', 'ssOpeningPrayer'],
     person: true,
   },
-  { header: 'Closing Prayer', path: ['queens', 'closingPrayer'], person: true },
+  // Keep `closingPrayer` in the public object for backwards compatibility;
+  // the spreadsheet header makes its Sabbath School role explicit.
+  { header: 'SS Closing Prayer', path: ['queens', 'closingPrayer'], person: true },
+  { header: 'Flower Offering', path: ['queens', 'flowerOffering'], person: true },
   { header: 'Brooklyn Sermon', path: ['brooklyn', 'sermon'], person: true },
   {
     header: 'Chair/Pastoral Prayer',
@@ -63,6 +65,8 @@ var COLUMN_SCHEMA = Object.freeze([
     person: true,
   },
   { header: 'Offering Prayer', path: ['brooklyn', 'offeringPrayer'], person: true },
+  { header: 'Technician', path: ['brooklyn', 'technician'], person: true },
+  { header: 'Encouragement', path: ['brooklyn', 'encouragement'], person: true },
   { header: 'Sabbath School', path: ['brooklyn', 'sabbathSchool'], person: true },
 ]);
 
@@ -79,62 +83,102 @@ var SAFE_SINGLE_VALUES = Object.freeze([
 
 var PRIVATE_NAME_PLACEHOLDER = 'Name withheld';
 
-var FORM_RESPONSE_SCHEMA = Object.freeze([
-  {
-    headers: ['What is the English name and number for the Hymn of Praise this week?'],
-    path: ['hymnOfPraise', 'english'],
-  },
-  {
-    headers: ['What is the Chinese name and number for the Hymn of Praise this week?'],
-    path: ['hymnOfPraise', 'chinese'],
-  },
-  {
-    headers: ['What is the sermon title in English?'],
-    path: ['sermonTitle', 'english'],
-  },
-  {
-    headers: ['What is the sermon title in Chinese?'],
-    path: ['sermonTitle', 'chinese'],
-  },
-  {
-    headers: ['What is the Hymn of Response in English?'],
-    path: ['hymnOfResponse', 'english'],
-  },
-  {
-    headers: ['What is the Hymn of Response in Chinese?'],
-    path: ['hymnOfResponse', 'chinese'],
-  },
-  {
-    headers: [
-      'What are the Bible verses for this week?',
-      'What is the Bible verse for this week?',
-      'Bible Verse',
-      'Bible Verses',
-      'Bible passage',
-      'Scripture reference',
-      'What scripture is being used?',
-      'What is the scripture for this week?',
-      'What verse should appear at the bottom of Church at Study?',
-      'What is the Church at Study Bible verse?',
-      '聖經經文',
-      '本週聖經經文',
-    ],
-    path: ['bibleVerses'],
-  },
-  // Announcements remain available to the printed/admin workflow. The mobile
-  // digital bulletin intentionally does not render them: their content and
-  // formatting are fluid, and they are already delivered in person and on the
-  // livestream. A future digital announcement must be an explicitly curated,
-  // short summary rather than an automatic mirror of this field.
-  {
-    headers: [
-      'Announcements',
-      'Announcement',
-      'What announcements should appear in the bulletin?',
-    ],
-    path: ['announcements'],
-  },
+// Sabbath Sermon Data is the reviewed, staff-managed source for sermon content.
+// These headers are intentionally concise so final owners can correct a week's
+// content directly without an append-only response workflow.
+var BULLETIN_INTAKE_SCHEMA = Object.freeze([
+  { headers: ['English Hymn of Praise'], path: ['hymnOfPraise', 'english'] },
+  { headers: ['Chinese Hymn of Praise'], path: ['hymnOfPraise', 'chinese'] },
+  { headers: ['English Sermon Title'], path: ['sermonTitle', 'english'] },
+  { headers: ['Chinese Sermon Title'], path: ['sermonTitle', 'chinese'] },
+  { headers: ['English Hymn of Response'], path: ['hymnOfResponse', 'english'] },
+  { headers: ['Chinese Hymn of Response'], path: ['hymnOfResponse', 'chinese'] },
+  { headers: ['Bible Verses'], path: ['bibleVerses'] },
 ]);
+
+// These first-row headers are a versioned interface between the spreadsheet,
+// Apps Script, and the mobile app. If a header is added, removed, renamed, or
+// reordered, update all three consumers before changing the sheet.
+var BULLETIN_HEADER_CONTRACTS = Object.freeze({
+  'Sabbath Calendar': Object.freeze([
+    'Date',
+    'Quarter',
+    'Special Remark',
+    'Tithe Purpose',
+    'Pastor Travel',
+    'Queens Sermon',
+    'Translation',
+    'Chinese Teacher',
+    'English Teacher',
+    'Youth Teacher',
+    'Kids Teacher',
+    'Chair/Pastoral Prayer',
+    'Special Music',
+    'Offering Prayer',
+    'Pianist',
+    'SS Chair',
+    'SS Opening Prayer',
+    'SS Closing Prayer',
+    'Flower Offering',
+    'Brooklyn Sermon',
+    'Chair/Pastoral Prayer',
+    'Offering Prayer',
+    'Technician',
+    'Encouragement',
+    'Sabbath School',
+  ]),
+  'Sabbath Sermon Data': Object.freeze([
+    'Date',
+    'Location',
+    'English Hymn of Praise',
+    'Chinese Hymn of Praise',
+    'English Sermon Title',
+    'Chinese Sermon Title',
+    'English Hymn of Response',
+    'Chinese Hymn of Response',
+    'Bible Verses',
+  ]),
+});
+
+var BULLETIN_HEADER_CONTRACT_HELP_TEXT =
+  'Fixed bulletin column. Before adding, removing, renaming, or reordering columns, update Apps Script and the mobile app first. / 固定週刊欄位。新增、刪除、重新命名或重新排序欄位前，請先更新 Apps Script 和手機應用程式。';
+
+function getBulletinHeaderContractIssues_(spreadsheet) {
+  var issues = [];
+  Object.keys(BULLETIN_HEADER_CONTRACTS).forEach(function (sheetName) {
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      issues.push('Missing required sheet: ' + sheetName);
+      return;
+    }
+
+    var expected = BULLETIN_HEADER_CONTRACTS[sheetName];
+    var actual = readTable_(sheet).headers;
+    var width = Math.max(expected.length, actual.length);
+    for (var index = 0; index < width; index += 1) {
+      var expectedHeader = expected[index] || '';
+      var actualHeader = actual[index] || '';
+      if (normalizeHeader_(actualHeader) !== normalizeHeader_(expectedHeader)) {
+        issues.push(
+          sheetName + '! column ' + (index + 1) + ' must be "' + expectedHeader +
+            '" (found "' + actualHeader + '")',
+        );
+      }
+    }
+  });
+  return issues;
+}
+
+function assertBulletinHeaderContracts_(spreadsheet) {
+  var issues = getBulletinHeaderContractIssues_(spreadsheet);
+  if (issues.length) {
+    throw new Error(
+      'Bulletin column contract violation. Update Apps Script and the mobile app before editing these headers. / ' +
+        '週刊欄位契約違規。編輯這些欄位標題前，請先更新 Apps Script 和手機應用程式。\n' +
+        issues.join('\n'),
+    );
+  }
+}
 
 function doGet(event) {
   try {
@@ -166,6 +210,7 @@ function getBulletin_(requestedDate) {
 
 function buildBulletin_(requestedDate, options) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  assertBulletinHeaderContracts_(spreadsheet);
   var scheduleSheetName = getScheduleSheetName_(requestedDate);
   var scheduleSheet = spreadsheet.getSheetByName(scheduleSheetName);
 
@@ -219,45 +264,130 @@ function buildBulletin_(requestedDate, options) {
     setPath_(bulletin, field.path, value);
   });
 
-  // These optional Brooklyn fields are used by the staff-only physical
-  // renderer. They are intentionally not added to the public API object.
-  if (options && options.includeFullNames) {
-    populateOptionalBrooklynScheduleFields_(
-      bulletin.brooklyn,
-      scheduleTable.headers,
-      scheduleRow,
-    );
-  }
-
-  populateFormResponses_(
-    bulletin.queens,
-    getResponseRows_(spreadsheet, CONFIG.responseSheets.queens, requestedDate),
-  );
-  populateFormResponses_(
+  // The public bulletin data follows the same field/order contract as the
+  // printed Brooklyn bulletin. The mobile UI intentionally renders only the
+  // useful subset: redundant fields and fields that are usually TBD remain
+  // available for print/admin compatibility but are omitted from the mobile
+  // presentation so they do not become dead UI. Person names are always
+  // privacy-redacted in the public app to reduce the risk of exposing more
+  // personal information than necessary; only the authorized physical-print
+  // workflow may request full names.
+  populateOptionalBrooklynScheduleFields_(
     bulletin.brooklyn,
-    getResponseRows_(spreadsheet, CONFIG.responseSheets.brooklyn, requestedDate),
+    scheduleTable.headers,
+    scheduleRow,
+    Boolean(options && options.includeFullNames),
   );
+
+  // Sabbath Sermon Data is the sole reviewed content source for both locations.
+  // Nonblank values are applied after the schedule join so a final owner can
+  // correct sermon material without changing the roster sheet.
+  populateBulletinIntake_(
+    bulletin.queens,
+    getBulletinIntakeRows_(spreadsheet, requestedDate, 'queens'),
+  );
+  populateBulletinIntake_(
+    bulletin.brooklyn,
+    getBulletinIntakeRows_(spreadsheet, requestedDate, 'brooklyn'),
+  );
+
+  // The public app may localize these three English-only schedule metadata
+  // fields. Bible text and Bible references must never pass through
+  // LanguageApp; they are handled by the exact HelloAO Bible API paths.
+  if (!(options && options.includeFullNames)) {
+    bulletin.metadataTranslations = buildBulletinMetadataTranslations_(bulletin);
+  }
 
   return bulletin;
 }
 
-function populateOptionalBrooklynScheduleFields_(location, headers, row) {
+var BULLETIN_METADATA_TRANSLATION_TARGETS = Object.freeze({
+  zh: 'zh-TW',
+  'zh-cn': 'zh-CN',
+  es: 'es',
+});
+
+function buildBulletinMetadataTranslations_(bulletin) {
+  return {
+    specialRemark: translateBulletinMetadataValue_(bulletin.specialRemark),
+    tithePurpose: translateBulletinMetadataValue_(bulletin.tithePurpose),
+    pastorTravel: translateBulletinMetadataValue_(bulletin.pastorTravel),
+  };
+}
+
+function translateBulletinMetadataValue_(value) {
+  var source = displayValue_(value);
+  var translations = {
+    en: source,
+    zh: source,
+    'zh-cn': source,
+    es: source,
+  };
+
+  if (isBlank_(source) || typeof LanguageApp === 'undefined' || !LanguageApp.translate) {
+    return translations;
+  }
+
+  Object.keys(BULLETIN_METADATA_TRANSLATION_TARGETS).forEach(function (language) {
+    try {
+      var translated = displayValue_(
+        LanguageApp.translate(
+          source,
+          'en',
+          BULLETIN_METADATA_TRANSLATION_TARGETS[language],
+        ),
+      );
+      if (!isBlank_(translated)) {
+        translations[language] = translated;
+      }
+    } catch (error) {
+      // A translation quota/service failure must not hide the original English
+      // metadata from the bulletin.
+      Logger.log('Bulletin metadata translation failed for ' + language + ': ' + error);
+    }
+  });
+
+  return translations;
+}
+
+function populateOptionalBrooklynScheduleFields_(location, headers, row, includeFullNames) {
   [
     {
       aliases: ['Brooklyn Chair', 'Brooklyn Chairman', 'Chair', 'Chairman'],
       path: ['chair'],
+      person: true,
     },
-    { aliases: ['Brooklyn Song Leader', 'Song Leader'], path: ['songLeader'] },
+    {
+      aliases: ['Brooklyn Song Leader', 'Song Leader'],
+      path: ['songLeader'],
+      person: true,
+    },
     {
       aliases: ['Brooklyn Sabbath Message', 'Sabbath Message'],
       path: ['sabbathMessage'],
+      person: true,
     },
     {
       aliases: ['Brooklyn Sabbath Message Title', 'Sabbath Message Title'],
       path: ['sabbathMessageTitle'],
     },
-    { aliases: ['Brooklyn Technician', 'Technician'], path: ['technician'] },
-    { aliases: ['Brooklyn Testimonies', 'Testimonies'], path: ['testimonies'] },
+    {
+      aliases: ['Brooklyn Technician', 'Technician'],
+      path: ['technician'],
+      person: true,
+    },
+    {
+      aliases: [
+        'Brooklyn Encouragement',
+        'Encouragement',
+        // Preserve older schedule rows while the workbook transitions away
+        // from the former Testimonies heading.
+        'Brooklyn Testimonies',
+        'Testimonies',
+      ],
+      path: ['encouragement'],
+      person: true,
+    },
     {
       aliases: ['Brooklyn Sunset Time', 'Brooklyn Sunset Times', 'Sunset Time', 'Sunset Times'],
       path: ['sunsetTime'],
@@ -267,7 +397,11 @@ function populateOptionalBrooklynScheduleFields_(location, headers, row) {
     if (isBlank_(value)) {
       return;
     }
-    setPath_(location, field.path, displayValue_(value));
+    setPath_(
+      location,
+      field.path,
+      field.person && !includeFullNames ? redactNameValue_(value) : displayValue_(value),
+    );
   });
 }
 
@@ -285,19 +419,17 @@ function createLocation_() {
   };
 }
 
-function populateFormResponses_(location, responseRows) {
-  if (!responseRows) {
+function populateBulletinIntake_(location, intakeRows) {
+  if (!intakeRows) {
     return;
   }
 
-  // Rows are oldest-to-newest. Each nonblank answer is applied so submissions
-  // can contribute different fields, while the latest answer wins a conflict.
-  responseRows.rows.forEach(function (row) {
-    FORM_RESPONSE_SCHEMA.forEach(function (field) {
-      var value =
-        field.path.length === 1 && field.path[0] === 'bibleVerses'
-          ? valueForBibleVerse_(responseRows.headers, row, field.headers)
-          : valueForAliases_(responseRows.headers, row, field.headers);
+  // The sheet is intended to have one row per date/location. Supporting
+  // multiple matching rows makes the migration safer and gives the latest
+  // nonblank owner entry precedence if a duplicate is ever created.
+  intakeRows.rows.forEach(function (row) {
+    BULLETIN_INTAKE_SCHEMA.forEach(function (field) {
+      var value = valueForAliases_(intakeRows.headers, row, field.headers);
       if (!isBlank_(value)) {
         setPath_(location, field.path, displayValue_(value));
       }
@@ -305,24 +437,21 @@ function populateFormResponses_(location, responseRows) {
   });
 }
 
-function getResponseRows_(spreadsheet, sheetNames, requestedDate) {
-  var sheet = findFirstSheet_(spreadsheet, sheetNames);
+function getBulletinIntakeRows_(spreadsheet, requestedDate, location) {
+  var sheet = spreadsheet.getSheetByName(CONFIG.intakeSheetName);
   if (!sheet) {
     return null;
   }
 
   var table = readTable_(sheet);
-  var dateColumn = findFirstHeaderIndex_(table.headers, CONFIG.dateHeaders);
-  if (dateColumn === -1) {
+  var dateColumn = findFirstHeaderIndex_(table.headers, ['Date']);
+  var locationColumn = findFirstHeaderIndex_(table.headers, ['Location']);
+  if (dateColumn === -1 || locationColumn === -1) {
     throw new Error(
-      'No Sabbath date column found in ' +
-        sheet.getName() +
-        '. Expected one of: ' +
-        CONFIG.dateHeaders.join(', '),
+      CONFIG.intakeSheetName + ' must contain Date and Location columns',
     );
   }
 
-  var timestampColumn = findFirstHeaderIndex_(table.headers, CONFIG.timestampHeaders);
   var matchingRows = [];
   table.rows.forEach(function (row, index) {
     if (
@@ -330,7 +459,8 @@ function getResponseRows_(spreadsheet, sheetNames, requestedDate) {
         row[dateColumn],
         table.displayRows[index][dateColumn],
         requestedDate,
-      )
+      ) &&
+      normalizeLocationKey_(row[locationColumn]) === location
     ) {
       matchingRows.push({ values: row, sourceIndex: index });
     }
@@ -340,6 +470,10 @@ function getResponseRows_(spreadsheet, sheetNames, requestedDate) {
     return null;
   }
 
+  var timestampColumn = findFirstHeaderIndex_(table.headers, [
+    'Last Updated',
+    'Timestamp',
+  ]);
   if (timestampColumn !== -1) {
     matchingRows.sort(function (left, right) {
       return (
@@ -358,14 +492,15 @@ function getResponseRows_(spreadsheet, sheetNames, requestedDate) {
   };
 }
 
-function findFirstSheet_(spreadsheet, sheetNames) {
-  for (var index = 0; index < sheetNames.length; index += 1) {
-    var sheet = spreadsheet.getSheetByName(sheetNames[index]);
-    if (sheet) {
-      return sheet;
-    }
+function normalizeLocationKey_(value) {
+  var normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'queens' || normalized === 'queen') {
+    return 'queens';
   }
-  return null;
+  if (normalized === 'brooklyn') {
+    return 'brooklyn';
+  }
+  return normalized;
 }
 
 function readTable_(sheet) {
@@ -432,30 +567,6 @@ function valueForAliases_(headers, row, aliases) {
   return index === -1 ? '' : row[index];
 }
 
-function valueForBibleVerse_(headers, row, aliases) {
-  var value = valueForAliases_(headers, row, aliases);
-  if (!isBlank_(value)) {
-    return value;
-  }
-
-  // Form titles can drift slightly between the Queens and Brooklyn forms.
-  // Keep the explicit aliases above as the contract, then recognize the
-  // narrow family of Bible-verse/scripture headers without accidentally
-  // treating a general Bible-reading question as the sermon verse.
-  for (var index = 0; index < headers.length; index += 1) {
-    var normalizedHeader = normalizeHeader_(headers[index]);
-    if (
-      /(bible\s+(verse|verses|passage)|(?:verse|verses)\s+(reference|for this week)|scripture\s+(reference|for this week)|church at study.*verse|聖經.*經文|經文.*聖經)/i.test(
-        normalizedHeader,
-      )
-    ) {
-      return row[index];
-    }
-  }
-
-  return '';
-}
-
 function findFirstHeaderIndex_(headers, candidates) {
   var normalizedCandidates = candidates.map(normalizeHeader_);
   for (var index = 0; index < headers.length; index += 1) {
@@ -466,8 +577,8 @@ function findFirstHeaderIndex_(headers, candidates) {
       candidateIndex += 1
     ) {
       var candidate = normalizedCandidates[candidateIndex];
-      // Google Form response headers include the translated question after a
-      // newline. Matching the English question prefix keeps the mapping stable.
+      // Imported spreadsheet headers may include translated text after a
+      // newline. Matching a normalized prefix keeps the mapping stable.
       if (
         normalizedHeader === candidate ||
         normalizedHeader.indexOf(candidate + ' ') === 0

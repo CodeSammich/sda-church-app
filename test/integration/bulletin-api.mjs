@@ -11,6 +11,13 @@ const assertString = (value, path) => {
   assert(typeof value === 'string', `${path} must be a string`);
 };
 
+const assertMetadataTranslations = (value, path) => {
+  assert(value && typeof value === 'object', `${path} must be an object`);
+  for (const language of ['en', 'zh', 'zh-cn', 'es']) {
+    assertString(value[language], `${path}.${language}`);
+  }
+};
+
 const assertBilingual = (value, path) => {
   assert(value && typeof value === 'object', `${path} must be an object`);
   assertString(value.english, `${path}.english`);
@@ -82,13 +89,20 @@ assert(payload.bulletin?.date === TEST_DATE, 'Bulletin date does not match the r
 for (const field of ['quarter', 'specialRemark', 'tithePurpose', 'pastorTravel']) {
   assertString(payload.bulletin[field], `bulletin.${field}`);
 }
+for (const field of ['specialRemark', 'tithePurpose', 'pastorTravel']) {
+  assertMetadataTranslations(
+    payload.bulletin.metadataTranslations[field],
+    `bulletin.metadataTranslations.${field}`,
+  );
+}
 
 assertLocation(payload.bulletin.queens, 'bulletin.queens', [
   'sermon',
   'translation',
   'chineseTeacher',
   'englishTeacher',
-  'childrenTeacher',
+  'youthTeacher',
+  'kidsTeacher',
   'chairPastoralPrayer',
   'specialMusic',
   'offeringPrayer',
@@ -96,11 +110,14 @@ assertLocation(payload.bulletin.queens, 'bulletin.queens', [
   'ssChair',
   'ssOpeningPrayer',
   'closingPrayer',
+  'flowerOffering',
 ]);
 assertLocation(payload.bulletin.brooklyn, 'bulletin.brooklyn', [
   'sermon',
   'chairPastoralPrayer',
   'offeringPrayer',
+  'technician',
+  'encouragement',
   'sabbathSchool',
 ]);
 assertNoPrivateKeys(payload);

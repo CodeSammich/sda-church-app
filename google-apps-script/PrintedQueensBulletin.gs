@@ -10,8 +10,15 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   churchName: 'New York Chinese Seventh-day Adventist Church',
   churchNameChinese: '基督復臨安息日會紐約華人教會',
   outputFolderProperty: 'PHYSICAL_BULLETIN_FOLDER_ID',
+  queensOutputFolderProperty: 'PHYSICAL_BULLETIN_QUEENS_FOLDER_ID',
+  brooklynOutputFolderProperty: 'PHYSICAL_BULLETIN_BROOKLYN_FOLDER_ID',
   adminEmailsProperty: 'PHYSICAL_BULLETIN_ADMIN_EMAILS',
   outputFolderId: '11p4-PzJNGLNfWdZBAMNIBlLxmBrgo_zZ',
+  queensOutputFolderId: '1S5Z2ls_ixCb2-ToTsU-T4ImJrf0vJ8Lu',
+  brooklynOutputFolderId: '1C1L98At-T_a9Dyq7mo-ZPCj2FkHddx3J',
+  // These IDs are only Drive location pointers, not credentials. Drive or
+  // Shared Drive permissions must keep the configured folders restricted to
+  // authorized church accounts; the IDs alone do not grant access.
   churchSketchImageProperty: 'CHURCH_SKETCH_IMAGE_FILE_ID',
   lastSupperImageProperty: 'LAST_SUPPER_IMAGE_FILE_ID',
   sdaLogoImageProperty: 'SDA_LOGO_IMAGE_FILE_ID',
@@ -19,8 +26,8 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   zelleQrImageProperty: 'ZELLE_QR_IMAGE_FILE_ID',
   mobileAppQrImageProperty: 'MOBILE_APP_QR_IMAGE_FILE_ID',
   legacyBrooklynCoverImageProperty: 'BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID',
-  queensIntakeFormUrl: 'https://forms.gle/FV7S53eQ1jwt9R7p7',
-  brooklynIntakeFormUrl: 'https://forms.gle/wCsMmMeS8EqMKmJY8',
+  bulletinIntakeSheetUrl:
+    'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit#gid=1768045043',
   printedAnnouncementsPropertyPrefix: 'PRINTED_ANNOUNCEMENTS_',
   printedBibleVersePropertyPrefix: 'PRINTED_BIBLE_VERSE_',
   printedAnnouncementsMaxEntries: 12,
@@ -34,10 +41,16 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   pageWidth: 792,
   pageHeight: 612,
   pageMargin: 28,
+  // Preserve the original 368-point content panels. The horizontal margins
+  // are narrowed only for booklet pages so the fold gutter is added without
+  // squeezing or clipping the fixed-width inner tables.
+  bookletHorizontalMargin: 14,
+  bookletHalfWidth: 368,
+  bookletFoldGutter: 28,
+  regularCoverImageMaxWidth: 490,
+  communionCoverImageMaxWidth: 340,
   studyTime: '10:00 am–11:25 am  |  上午 10:00–11:25',
-  worshipTime: '11:30 am–1:00 pm  |  上午 11:30–下午 1:00',
-  communionScripture: '1 Corinthians 11:23–26',
-  footWashingScripture: 'John 13:1–10; 12–17',
+  worshipTime: '11:40 am–1:00 pm  |  上午 11:40–下午 1:00',
   bibleApiBaseUrl: 'https://bible.helloao.org/api',
   bibleEnglishTranslation: 'BSB',
   bibleChineseTranslation: 'cmn_cuv',
@@ -46,8 +59,6 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   sunsetLatitude: 40.74546,
   sunsetLongitude: -73.88914,
   sunsetTimeZone: 'America/New_York',
-  footWashingInstruction:
-    'Please quietly proceed downstairs for foot washing: brothers to the basement, sisters to the second floor.\n請安靜地前往樓下洗腳：弟兄到地下室，姊妹到二樓。',
 });
 
 var PRINTED_BIBLE_TRANSLATION_OPTIONS = Object.freeze({
@@ -271,60 +282,34 @@ var PRINTED_BIBLE_CHAPTER_COUNTS = Object.freeze({
 var PRINTED_OFFERING_TRANSLATION_CACHE = {};
 
 function onOpen() {
-  SpreadsheetApp.getUi()
+  var headerContractError = null;
+  try {
+    ensureBulletinHeaderContractValidation_();
+  } catch (error) {
+    headerContractError = error;
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Bulletin header contract check failed: ' + error);
+    }
+  }
+  try {
+    maintainBulletinScheduleOnOpen_();
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Automatic schedule maintenance skipped: ' + error);
+    }
+  }
+  var ui = SpreadsheetApp.getUi();
+  ui
     .createMenu('Printed Bulletin')
     .addItem('Create Google Doc + PDF…', 'createPrintedBulletinFromPrompt')
     .addToUi();
-}
-
-/**
- * Adds the optional verse prompt to both linked response forms once.
- * The response schema already accepts this question; this helper makes the
- * form-side setup available for both locations without exposing a setup menu.
- */
-function addBibleVerseQuestions() {
-  requirePrintedBulletinAdmin_();
-
-  var title = getPrintedBulletinBibleVerseQuestionTitle_();
-  var sheetNames = ['Queens Worship Data', 'Brooklyn Worship Data'];
-  var results = [];
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-
-  sheetNames.forEach(function (sheetName) {
-    var sheet = spreadsheet.getSheetByName(sheetName);
-    if (!sheet) {
-      throw new Error('Could not find the ' + sheetName + ' response sheet');
-    }
-    var formUrl = sheet.getFormUrl();
-    if (!formUrl) {
-      throw new Error(sheetName + ' is not linked to a Google Form');
-    }
-
-    var form = FormApp.openByUrl(formUrl);
-    var exists = form.getItems().some(function (item) {
-      return item.getTitle && item.getTitle() === title;
-    });
-    if (!exists) {
-      form
-        .addTextItem()
-        .setTitle(title)
-        .setHelpText(
-          'Enter a reference such as John 12:24 or Jeremiah 29:11-15. Use a hyphen (-) for a verse range; Jeremiah:29:11-15 also works.\n請輸入經文，例如 John 12:24 或 Jeremiah 29:11-15。節數範圍請使用連字號（-）；Jeremiah:29:11-15 也可以。',
-        );
-    }
-    results.push(sheetName + (exists ? ': already present' : ': added'));
-  });
-
-  SpreadsheetApp.getUi().alert('Bible verse question setup complete:\n' + results.join('\n'));
-}
-
-// Keep the old editor entry point working for anyone who used it previously.
-function addQueensBibleVerseQuestion() {
-  return addBibleVerseQuestions();
-}
-
-function getPrintedBulletinBibleVerseQuestionTitle_() {
-  return 'What verse should appear at the bottom of Church at Study?';
+  if (headerContractError && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
+    ui.alert(
+      'Bulletin columns require an update / 週刊欄位需要更新',
+      headerContractError.message || String(headerContractError),
+      ui.ButtonSet.OK,
+    );
+  }
 }
 
 /**
@@ -401,6 +386,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'color:#3c4043;cursor:pointer;font-size:13px;padding:8px 13px;}' +
     '.choice.selected{background:#e8f0fe;border-color:#1a73e8;color:#174ea6;' +
     'box-shadow:inset 0 0 0 1px #1a73e8;}' +
+    '.choice:disabled{cursor:not-allowed;opacity:.48;box-shadow:none;}' +
     '.row{display:grid;grid-template-columns:1fr 150px;gap:10px;}' +
     '.announcement-entry{border:1px solid #dadce0;border-radius:8px;margin:10px 0;padding:12px;}' +
     '.announcement-header{align-items:center;display:flex;justify-content:space-between;gap:8px;}' +
@@ -429,14 +415,11 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '</style></head><body>' +
     '<div id="formView">' +
     '<h2 class="section-heading">1. Update the digital bulletin / 第一步：更新數位週刊</h2>' +
-    '<div class="admin-reminder"><strong>Instructions / 使用說明：</strong> Check the current week in the app or the matching Worship Data sheet. If the speaker has not submitted, complete the appropriate intake form on their behalf before continuing to the printed bulletin. If the Form asks for a passcode, ask the IT staff.' +
-    '<br>請先查看本應用程式或相應的 Worship Data 工作表中的本週資料。如果講員尚未提交，請先代為填寫相應的資料表，再繼續建立實體週刊。如果資料表要求密碼，請向 IT 同工詢問。</div>' +
+    '<div class="admin-reminder"><strong>Instructions / 使用說明：</strong> Check the current week in the app, then add or update one row per location in Sabbath Sermon Data. Nonblank values there feed both the digital and printed bulletins; no separate intake workflow is required.' +
+    '<br>請先查看本應用程式，然後在「Sabbath Sermon Data」中為每個地點新增或更新一行資料。該表格的非空欄位會同時提供手機版和印刷版週刊使用；不需要另外建立資料流程。</div>' +
     '<div class="form-links"><a class="form-button" href="' +
-    escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.queensIntakeFormUrl) +
-    '">↗ Queens Worship Data form / 皇后區崇拜資料表</a>' +
-    '<a class="form-button" href="' +
-    escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.brooklynIntakeFormUrl) +
-    '">↗ Brooklyn Worship Data form / 布碌崙崇拜資料表</a></div></div>' +
+    escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.bulletinIntakeSheetUrl) +
+    '">↗ Open Sabbath Sermon Data / 開啟安息日講道資料</a></div></div>' +
     '<h2 class="section-heading" style="margin-top:20px;">2. Create the printed bulletin / 第二步：建立實體週刊</h2>' +
     '<form id="bulletinForm">' +
     '<label for="date">Sabbath date <span class="required-mark" aria-hidden="true">*</span><br>安息日日期</label>' +
@@ -454,6 +437,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<button type="button" class="choice selected" data-value="regular">Regular / 普通</button>' +
     '<button type="button" class="choice" data-value="communion">Communion / 聖餐</button>' +
     '</div>' +
+    '<div class="help">Brooklyn Communion is not currently available. Choose Regular for Brooklyn.<br>目前尚未提供布碌崙聖餐禮週刊；布碌崙請選擇普通格式。</div>' +
     '<label for="englishTranslation">English Bible translation<br>英文聖經譯本</label>' +
     '<select id="englishTranslation">' +
     englishTranslationOptions +
@@ -468,7 +452,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<option value="">Choose a book first — 請先選擇書卷</option></select></div>' +
     '<div><label for="verses">Verse(s) <span class="required-mark" aria-hidden="true">*</span><br>節</label><input id="verses" type="text" placeholder="11 or 11-15" inputmode="text" required></div>' +
     '</div>' +
-    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in the Worship Data form, it will appear here automatically. Check or edit it before creating.<br>選擇書卷和章，然後輸入一節或一段經文，例如 11 或 11-15。如果講員已在 Worship Data 資料表提交聖經經文，系統會自動填入。建立前請確認或修改。</div>' +
+    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in Sabbath Sermon Data, it will appear here automatically. Check or edit it before creating.<br>選擇書卷和章，然後輸入一節或一段經文，例如 11 或 11-15。如果講員已在「Sabbath Sermon Data」提交聖經經文，系統會自動填入。建立前請確認或修改。</div>' +
     '<label>Printed announcements / 印刷週刊消息</label>' +
     '<div class="help">Optional. Add one entry per card. These entries are printed only; they are not shown in the mobile bulletin.<br>可選。每張卡片輸入一則消息。這些消息只會印在週刊上，不會顯示在手機版週刊。</div>' +
     '<div id="announcementList"></div>' +
@@ -482,14 +466,15 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'var initialRequest=' +
     requestJson +
     ';' +
-    'var locationValue="queens";var formatValue="regular";var announcementsDirty=false;var verseDirty=false;var suppressVerseDirty=false;var promptData={formVerse:""};' +
+    'var locationValue="queens";var formatValue="regular";var announcementsDirty=false;var verseDirty=false;var suppressVerseDirty=false;var promptData={scheduleVerse:""};' +
     'function selectChoice(group,value){' +
     'var buttons=document.querySelectorAll("#"+group+" .choice");' +
     'Array.prototype.forEach.call(buttons,function(button){' +
     'var selected=button.getAttribute("data-value")===value;' +
     'button.classList.toggle("selected",selected);button.setAttribute("aria-pressed",selected?"true":"false");});}' +
+    'function updateLocationFormatAvailability(){var brooklynButton=document.querySelector("#locationChoices .choice[data-value=brooklyn]");var communionButton=document.querySelector("#formatChoices .choice[data-value=communion]");var brooklynDisabled=formatValue==="communion";var communionDisabled=locationValue==="brooklyn";brooklynButton.disabled=brooklynDisabled;communionButton.disabled=communionDisabled;brooklynButton.setAttribute("aria-disabled",brooklynDisabled?"true":"false");communionButton.setAttribute("aria-disabled",communionDisabled?"true":"false");}' +
     'function escapeHtml(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\\x27/g,"&#39;");}' +
-    'function updateSubmitState(){var date=document.getElementById("date").value.trim();var book=document.getElementById("book").value;var chapter=document.getElementById("chapter").value;var verses=document.getElementById("verses").value.trim();document.getElementById("submit").disabled=!(date&&book&&chapter&&verses);}' +
+    'function updateSubmitState(){var date=document.getElementById("date").value.trim();var book=document.getElementById("book").value;var chapter=document.getElementById("chapter").value;var verses=document.getElementById("verses").value.trim();var unsupported=locationValue==="brooklyn"&&formatValue==="communion";document.getElementById("submit").disabled=Boolean(unsupported||!(date&&book&&chapter&&verses));}' +
     'function showError(message){var error=document.getElementById("error");error.textContent=message;error.hidden=false;updateSubmitState();}' +
     'function announcementMarkup(entry,index){entry=entry||{};var scope=entry.scope||"all";return "<div class=\\"announcement-entry\\"><div class=\\"announcement-header\\"><strong>Announcement "+(index+1)+" / 消息 "+(index+1)+"</strong><button type=\\"button\\" class=\\"announcement-remove\\">Remove / 移除</button></div><select class=\\"announcement-scope\\"><option value=\\"all\\""+(scope==="all"?" selected":"")+">Both locations / 兩地</option><option value=\\"queens\\""+(scope==="queens"?" selected":"")+">Queens / 皇后區</option><option value=\\"brooklyn\\""+(scope==="brooklyn"?" selected":"")+">Brooklyn / 布碌崙</option></select><label>English announcement / 英文消息</label><textarea class=\\"announcement-english\\" placeholder=\\"Optional English announcement\\">"+escapeHtml(entry.english||"")+"</textarea><label>Traditional Chinese announcement / 繁體中文消息</label><textarea class=\\"announcement-chinese\\" placeholder=\\"Optional Traditional Chinese announcement\\">"+escapeHtml(entry.chinese||"")+"</textarea></div>";}' +
     'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 消息 "+(index+1);});}' +
@@ -497,8 +482,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function renderAnnouncements(entries){var list=document.getElementById("announcementList");list.innerHTML="";if(!entries||!entries.length){entries=[{}];}entries.forEach(addAnnouncementEntry);refreshAnnouncementLabels();announcementsDirty=false;updateSubmitState();}' +
     'function updateChapterOptions(selectedChapter){var book=document.getElementById("book");var selected=book.options[book.selectedIndex];var count=Number(selected.getAttribute("data-chapters")||0);var chapter=document.getElementById("chapter");chapter.innerHTML="";if(!count){chapter.disabled=true;chapter.add(new Option("Choose a book first — 請先選擇書卷",""));updateSubmitState();return;}chapter.disabled=false;chapter.add(new Option("Choose chapter — 選擇章",""));for(var i=1;i<=count;i++){chapter.add(new Option(String(i),String(i)));}if(selectedChapter){chapter.value=String(selectedChapter);}updateSubmitState();}' +
     'function setVerseReference(reference){suppressVerseDirty=true;var value=String(reference||"").replace(/[：]/g,":").replace(/^(.+?):(\\d+):/,"$1 $2:").trim();var match=value.match(/^(.+?)\\s+(\\d+):(\\d+)(?:-(\\d+))?$/);var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses");book.value="";chapter.innerHTML="<option value=\\"\\">Choose a book first — 請先選擇書卷</option>";chapter.disabled=true;verses.value="";if(match){for(var i=0;i<book.options.length;i++){if(String(book.options[i].getAttribute("data-english")||"").toLowerCase()===match[1].toLowerCase()){book.selectedIndex=i;updateChapterOptions(match[2]);verses.value=match[3]+(match[4]?"-"+match[4]:"");break;}}}suppressVerseDirty=false;updateSubmitState();}' +
-    'function renderPromptData(data){promptData=data||{formVerse:""};renderAnnouncements(promptData.announcements||[]);setVerseReference(promptData.verse||"");verseDirty=false;updateSubmitState();}' +
-    'function loadPromptData(){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(renderPromptData).withFailureHandler(function(){renderPromptData({announcements:[],formVerse:"",verse:""});}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
+    'function renderPromptData(data){promptData=data||{scheduleVerse:""};renderAnnouncements(promptData.announcements||[]);setVerseReference(promptData.verse||"");verseDirty=false;updateSubmitState();}' +
+    'function loadPromptData(){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(renderPromptData).withFailureHandler(function(){renderPromptData({announcements:[],scheduleVerse:"",verse:""});}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
     'function collectAnnouncements(){var entries=[];Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry"),function(card){var english=card.querySelector(".announcement-english").value.trim();var chinese=card.querySelector(".announcement-chinese").value.trim();if(english||chinese){entries.push({scope:card.querySelector(".announcement-scope").value,english:english,chinese:chinese});}});return entries;}' +
     'function showLoading(){document.getElementById("bulletinForm").hidden=true;document.getElementById("statusView").hidden=false;document.getElementById("statusView").innerHTML=' +
     '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Creating printed bulletin…<br>正在建立實體週刊…</h2><p class=\'intro\'>This may take a minute while the Google Doc and PDF are prepared.<br>建立 Google 文件和 PDF 可能需要一點時間。</p></div>";focusStatusView_();}' +
@@ -513,8 +498,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'if(result&&result.requiresConfirmation){var message=result.warning+"\\n\\n"+result.warningChinese+"\\n\\nContinue anyway? / 仍要繼續嗎？";if(window.confirm(message)){request.confirmLongVerse=true;runRequest(request);}else{updateSubmitState();}return;}' +
     'showLoading();google.script.run.withSuccessHandler(showResult).withFailureHandler(function(error){showGenerationError(error);}).createPrintedBulletinFromRequest(request);' +
     '}).withFailureHandler(function(error){showError(error&&error.message?error.message:String(error));}).getPrintedBulletinPromptWarning(request.verse||"",Boolean(request.confirmLongVerse),{englishTranslation:request.englishTranslation});}' +
-    'document.getElementById("locationChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")){locationValue=event.target.getAttribute("data-value");selectChoice("locationChoices",locationValue);loadPromptData();}});' +
-    'document.getElementById("formatChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")){formatValue=event.target.getAttribute("data-value");selectChoice("formatChoices",formatValue);}});' +
+    'document.getElementById("locationChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){locationValue=event.target.getAttribute("data-value");selectChoice("locationChoices",locationValue);updateLocationFormatAvailability();loadPromptData();}});' +
+    'document.getElementById("formatChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){formatValue=event.target.getAttribute("data-value");selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();updateSubmitState();}});' +
     'document.getElementById("addAnnouncement").addEventListener("click",function(){addAnnouncementEntry({});announcementsDirty=true;});' +
     'document.getElementById("announcementList").addEventListener("input",function(){announcementsDirty=true;});' +
     'document.getElementById("announcementList").addEventListener("change",function(){announcementsDirty=true;});' +
@@ -524,7 +509,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'document.getElementById("chapter").addEventListener("change",function(){if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
     'document.getElementById("verses").addEventListener("input",function(){if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
     'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses").value.trim();if(!date||!book.value||!chapter.value||!verses){showError("Sabbath date, Bible book, chapter, and verse/range are required. / 安息日日期、聖經書卷、章和節數（或節數範圍）均為必填。");return;}if(verses&&!/^\\d+(?:-\\d+)?$/.test(verses)){showError("Verse(s) must look like 11 or 11-15. / 節數格式應為 11 或 11-15。");return;}var range=verses.split("-");if(range.length===2&&Number(range[1])<Number(range[0])){showError("The ending verse must not be smaller than the starting verse. / 結束節數不可小於開始節數。");return;}var reference=book.options[book.selectedIndex].getAttribute("data-english")+" "+chapter.value+":"+verses;var request={date:date,format:formatValue,location:locationValue,verse:reference,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}if(verseDirty){request.verseOverrideDirty=true;}runRequest(request);});' +
-    'loadPromptData();' +
+    'selectChoice("locationChoices",locationValue);selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();loadPromptData();' +
     '</script></body></html>'
   );
 }
@@ -684,6 +669,11 @@ function validatePrintedBulletinRequest_(request) {
   if (!toIsoDate_(request.date)) {
     throw new Error('Sabbath date is required. / 安息日日期為必填。');
   }
+  var location = normalizePrintedBulletinLocation_(request.location);
+  var requestedFormat = String(request.format || '').trim().toLowerCase();
+  if (requestedFormat === 'communion') {
+    validatePrintedBulletinCombination_(location, requestedFormat);
+  }
   var verse = String(request.verse || '').trim();
   if (!verse) {
     throw new Error('Bible book, chapter, and verse/range are required. / 聖經書卷、章和節數（或節數範圍）均為必填。');
@@ -695,7 +685,8 @@ function validatePrintedBulletinRequest_(request) {
 
 /**
  * Reads the printed-only announcement list for the selected Sabbath. This is
- * deliberately separate from the public bulletin payload and speaker form.
+ * deliberately separate from the public bulletin payload and the staff-managed
+ * schedule data.
  */
 function getPrintedBulletinAnnouncements(requestedDate) {
   return readPrintedBulletinAnnouncements_(requestedDate).entries;
@@ -704,14 +695,16 @@ function getPrintedBulletinAnnouncements(requestedDate) {
 function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   var date = toIsoDate_(requestedDate);
   var location = normalizePrintedBulletinLocation_(requestedLocation);
-  var formVerse = '';
+  var scheduleVerse = '';
+  var reviewedIntakeVerse = '';
   var bulletin = null;
   if (date) {
     try {
       bulletin = buildBulletin_(date);
-      formVerse = bulletin[location] ? String(bulletin[location].bibleVerses || '') : '';
+      scheduleVerse = bulletin[location] ? String(bulletin[location].bibleVerses || '') : '';
+      reviewedIntakeVerse = getReviewedBulletinIntakeBibleVerse_(date, location);
     } catch (error) {
-      Logger.log('Could not load form data for the printed bulletin prompt: ' + error);
+      Logger.log('Could not load schedule data for the printed bulletin prompt: ' + error);
     }
   }
   var override = readPrintedBibleVerseOverride_(date, location);
@@ -730,12 +723,34 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
       });
     }
   }
+  // The reviewed Sabbath Sermon Data row is the source of truth for this
+  // prompt. A prior printed-bulletin memory is only a fallback when that
+  // managed intake cell is blank, so an old manual selection cannot mask a
+  // newly reviewed Bible reference.
+  var preferredVerse = reviewedIntakeVerse || (override.found ? override.reference : scheduleVerse);
   return {
     announcements: announcements,
-    formVerse: formVerse,
-    verse: override.found ? override.reference : formVerse,
-    hasVerseOverride: override.found,
+    scheduleVerse: scheduleVerse,
+    verse: preferredVerse,
+    hasVerseOverride: override.found && !reviewedIntakeVerse,
   };
+}
+
+function getReviewedBulletinIntakeBibleVerse_(requestedDate, location) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var intakeRows = getBulletinIntakeRows_(spreadsheet, requestedDate, location);
+  if (!intakeRows) {
+    return '';
+  }
+
+  var reference = '';
+  intakeRows.rows.forEach(function (row) {
+    var value = valueForAliases_(intakeRows.headers, row, ['Bible Verses']);
+    if (!isBlank_(value)) {
+      reference = displayValue_(value);
+    }
+  });
+  return reference;
 }
 
 function savePrintedBulletinAnnouncements_(requestedDate, entries) {
@@ -999,39 +1014,6 @@ function escapePrintedBulletinHtml_(value) {
 }
 
 /**
- * Creates the one-time installable trigger used for Queens and Brooklyn form
- * submissions.
- * A trigger is not created automatically because Google requires an
- * authorized staff member to approve Docs/Drive access first.
- */
-function installPrintedBulletinTrigger() {
-  requirePrintedBulletinAdmin_();
-
-  var triggers = ScriptApp.getProjectTriggers();
-  var alreadyInstalled = triggers.some(function (trigger) {
-    return (
-      (trigger.getHandlerFunction() === 'handlePrintedBulletinFormSubmit_' ||
-        trigger.getHandlerFunction() === 'handlePhysicalBulletinFormSubmit_' ||
-        trigger.getHandlerFunction() === 'handleQueensFormSubmit_') &&
-      trigger.getEventType() === ScriptApp.EventType.ON_FORM_SUBMIT
-    );
-  });
-
-  if (!alreadyInstalled) {
-    ScriptApp.newTrigger('handlePrintedBulletinFormSubmit_')
-      .forSpreadsheet(SpreadsheetApp.getActive())
-      .onFormSubmit()
-      .create();
-  }
-
-  SpreadsheetApp.getUi().alert(
-    alreadyInstalled
-      ? 'Printed bulletin form auto-generation is already installed.'
-      : 'Printed bulletin form auto-generation is now installed for Queens and Brooklyn.',
-  );
-}
-
-/**
  * Returns true only for accounts listed in the Script Property
  * PHYSICAL_BULLETIN_ADMIN_EMAILS. The property accepts comma-, semicolon-,
  * or newline-separated Google account addresses.
@@ -1089,39 +1071,6 @@ function requirePrintedBulletinAdmin_() {
   }
 }
 
-/**
- * Install this handler as a spreadsheet "On form submit" trigger. It ignores
- * submissions from other sheets in the workbook.
- */
-function handlePrintedBulletinFormSubmit_(event) {
-  var sheet = event && event.range ? event.range.getSheet() : null;
-  var location = getPrintedBulletinLocationForSheet_(sheet);
-  if (!location) {
-    return;
-  }
-
-  var date = getSubmittedDate_(event, sheet);
-  if (!date) {
-    throw new Error(location + ' form submission did not contain a valid Sabbath date');
-  }
-
-  var result = createPrintedBulletin_(date, 'auto', location);
-  Logger.log(
-    location + ' printed bulletin ' + result.action + ': ' + result.url + ' / ' + result.pdfUrl,
-  );
-}
-
-// Keep previously installed Queens triggers working after the Brooklyn layout
-// is enabled. The installer recognizes this legacy handler name and the
-// implementation now routes both response tabs.
-function handleQueensFormSubmit_(event) {
-  return handlePrintedBulletinFormSubmit_(event);
-}
-
-function installQueensPrintedBulletinTrigger() {
-  return installPrintedBulletinTrigger();
-}
-
 // Backward-compatible entry points for previously installed triggers and
 // dialogs. The implementation and all new UI callbacks use PrintedBulletin
 // names, but existing Google Apps Script triggers may still reference these
@@ -1132,51 +1081,6 @@ function createPhysicalBulletinFromPrompt() {
 
 function createPhysicalBulletinFromRequest(request) {
   return createPrintedBulletinFromRequest(request);
-}
-
-function handlePhysicalBulletinFormSubmit_(event) {
-  return handlePrintedBulletinFormSubmit_(event);
-}
-
-function installPhysicalBulletinTrigger() {
-  return installPrintedBulletinTrigger();
-}
-
-function installQueensPhysicalBulletinTrigger() {
-  return installQueensPrintedBulletinTrigger();
-}
-
-function getPrintedBulletinLocationForSheet_(sheet) {
-  if (!sheet) {
-    return '';
-  }
-  if (CONFIG.responseSheets.queens.indexOf(sheet.getName()) !== -1) {
-    return 'queens';
-  }
-  if (CONFIG.responseSheets.brooklyn.indexOf(sheet.getName()) !== -1) {
-    return 'brooklyn';
-  }
-  return '';
-}
-
-function getSubmittedDate_(event, sheet) {
-  var table = readTable_(sheet);
-  var dateColumn = findFirstHeaderIndex_(table.headers, CONFIG.dateHeaders);
-  var values = event && event.values ? event.values : [];
-  if (dateColumn !== -1 && values[dateColumn]) {
-    return toIsoDate_(values[dateColumn]);
-  }
-
-  var namedValues = (event && event.namedValues) || {};
-  var keys = Object.keys(namedValues);
-  for (var index = 0; index < keys.length; index += 1) {
-    var key = keys[index];
-    if (findFirstHeaderIndex_([key], CONFIG.dateHeaders) !== -1) {
-      var answer = namedValues[key];
-      return toIsoDate_(Array.isArray(answer) ? answer[0] : answer);
-    }
-  }
-  return '';
 }
 
 /**
@@ -1237,6 +1141,7 @@ function createPrintedBulletinUnlocked_(
   bulletin.physicalBibleTranslations = bibleTranslations;
   hydratePhysicalBibleVerses_(bulletin, bibleTranslations);
   var format = resolvePrintedBulletinFormat_(requestedFormat, bulletin);
+  validatePrintedBulletinCombination_(location, format);
   var nextBulletin = tryBuildPrivateBulletin_(getNextSabbathDate_(date), nameDictionary);
   hydratePhysicalSunsetTimes_(bulletin, nextBulletin);
   var title = getPrintedBulletinTitle_(location, date, format);
@@ -1261,11 +1166,16 @@ function createPrintedBulletinUnlocked_(
   var action = 'created';
 
   if (existingDocumentId) {
-    try {
-      document = DocumentApp.openById(existingDocumentId);
+    var existingDocument = tryOpenExistingPrintedBulletinDocument_(
+      existingDocumentId,
+      properties,
+      documentPropertyKey,
+      legacyDocumentPropertyKey,
+      location,
+    );
+    if (existingDocument) {
+      document = existingDocument.document;
       action = 'updated';
-    } catch (error) {
-      properties.deleteProperty(documentPropertyKey);
     }
   }
 
@@ -1276,7 +1186,7 @@ function createPrintedBulletinUnlocked_(
   renderPrintedBulletinDocument_(document, bulletin, nextBulletin, format, location);
   document.saveAndClose();
 
-  movePrintedBulletinToConfiguredFolder_(document.getId());
+  movePrintedBulletinToConfiguredFolder_(document.getId(), location);
   properties.setProperty(documentPropertyKey, document.getId());
   if (location === 'queens' && legacyDocumentPropertyKey !== documentPropertyKey) {
     properties.deleteProperty(legacyDocumentPropertyKey);
@@ -1292,6 +1202,7 @@ function createPrintedBulletinUnlocked_(
     document.getId(),
     title,
     pdfPropertyKey,
+    location,
   );
 
   return {
@@ -1306,6 +1217,34 @@ function createPrintedBulletinUnlocked_(
   };
 }
 
+function tryOpenExistingPrintedBulletinDocument_(
+  documentId,
+  properties,
+  documentPropertyKey,
+  legacyDocumentPropertyKey,
+  location,
+) {
+  try {
+    var file = DriveApp.getFileById(documentId);
+    if (file.isTrashed()) {
+      throw new Error('Saved bulletin document is in the Drive trash.');
+    }
+    return {
+      document: DocumentApp.openById(documentId),
+      action: 'updated',
+    };
+  } catch (error) {
+    // A manually trashed document can still be opened by ID in some Apps Script
+    // contexts. Treat it as missing so the next run creates a fresh document in
+    // the configured location folder instead of updating the trashed copy.
+    properties.deleteProperty(documentPropertyKey);
+    if (location === 'queens' && legacyDocumentPropertyKey !== documentPropertyKey) {
+      properties.deleteProperty(legacyDocumentPropertyKey);
+    }
+    return null;
+  }
+}
+
 function normalizePrintedBulletinLocation_(requestedLocation) {
   var location = String(requestedLocation || 'queens').trim().toLowerCase();
   if (location === 'queens' || location === 'brooklyn') {
@@ -1315,15 +1254,10 @@ function normalizePrintedBulletinLocation_(requestedLocation) {
 }
 
 function getPrintedBulletinTitle_(location, date, format) {
-  var churchName =
-    location === 'brooklyn'
-      ? 'New York Chinese SDA Church — Brooklyn Fellowship'
-      : PRINTED_BULLETIN_CONFIG.churchName;
   return (
-    churchName +
-    ' — ' +
-    formatDateForPrint_(date) +
-    (format === 'communion' ? ' — Communion' : '')
+    date +
+    ' Bulletin - ' +
+    (format === 'communion' ? 'Holy Communion' : 'Regular Worship')
   );
 }
 
@@ -1338,64 +1272,29 @@ function renderPrintedBulletinDocument_(document, bulletin, nextBulletin, format
   body.setPageWidth(PRINTED_BULLETIN_CONFIG.pageWidth);
   body.setPageHeight(PRINTED_BULLETIN_CONFIG.pageHeight);
   body.setMarginTop(PRINTED_BULLETIN_CONFIG.pageMargin);
-  body.setMarginBottom(PRINTED_BULLETIN_CONFIG.pageMargin);
-  body.setMarginLeft(PRINTED_BULLETIN_CONFIG.pageMargin);
-  body.setMarginRight(PRINTED_BULLETIN_CONFIG.pageMargin);
+  // Regular bulletins place a footer immediately before the imposed page
+  // break. A slightly smaller bottom margin leaves room for the break
+  // paragraph itself and prevents an otherwise blank intervening page.
+  body.setMarginBottom(
+    format === 'regular'
+      ? PRINTED_BULLETIN_CONFIG.pageMargin - 10
+      : PRINTED_BULLETIN_CONFIG.pageMargin,
+  );
+  body.setMarginLeft(PRINTED_BULLETIN_CONFIG.bookletHorizontalMargin);
+  body.setMarginRight(PRINTED_BULLETIN_CONFIG.bookletHorizontalMargin);
 
   if (location === 'brooklyn') {
     renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, format);
     return;
   }
 
-  if (format !== 'communion') {
-    renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulletin, format);
+  if (format === 'communion') {
+    renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin);
     return;
   }
 
-  {
-    appendBookletPage_(
-      body,
-      function (cell) {
-        appendAnnouncementsPanel_(cell, bulletin, nextBulletin);
-      },
-      function (cell) {
-        appendCoverPanel_(cell, bulletin, format);
-      },
-      true,
-    );
-    appendBookletPage_(
-      body,
-      function (cell) {
-        appendStudyPanel_(cell, bulletin);
-      },
-      function (cell) {
-        appendCommunionClosingPanel_(cell, bulletin);
-      },
-      false,
-      appendGivingFooter_,
-    );
-    appendBookletPage_(
-      body,
-      function (cell) {
-        appendCommunionReadingPanel_(cell, bulletin);
-      },
-      function (cell) {
-        appendWorshipPanel_(cell, bulletin, false);
-      },
-      false,
-    );
-
-    appendBookletPage_(
-      body,
-      function (cell) {
-        appendFootWashingPanel_(cell, bulletin);
-      },
-      function (cell) {
-        appendCommunionPanel_(cell, bulletin);
-      },
-      false,
-    );
-  }
+  // Keep the Queens regular renderer as the stable reference layout.
+  renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulletin, format);
 }
 
 function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulletin, format) {
@@ -1406,11 +1305,13 @@ function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulleti
     function (cell) {
       appendStudyPanel_(cell, bulletin);
     },
-      function (cell) {
-        appendWorshipPanel_(cell, bulletin, true);
-      },
-      true,
-    appendGivingFooter_,
+    function (cell) {
+      appendWorshipPanel_(cell, bulletin, true);
+    },
+    true,
+    function (leftCell, rightCell) {
+      appendGivingFooter_(leftCell, rightCell, 'queens');
+    },
   );
   appendBookletPage_(
     body,
@@ -1425,9 +1326,9 @@ function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulleti
 }
 
 function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, format) {
-  // The supplied Brooklyn reference is a two-page, landscape, two-column
-  // bulletin: Sabbath School and worship first, then the rotating schedule
-  // table and the fellowship cover/contact block.
+  // The supplied Brooklyn reference is a landscape, two-column bulletin:
+  // Sabbath School and worship, the rotating schedule table and fellowship
+  // cover/contact block, then the bilingual rotating encouragement spread.
   appendBookletPage_(
     body,
     function (cell) {
@@ -1449,8 +1350,15 @@ function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, fo
         appendBrooklynWorshipPanel_(cell, bulletin, true);
       },
       false,
-      appendGivingFooter_,
+      function (leftCell, rightCell, qrCells) {
+        appendBrooklynGivingFooter_(leftCell, rightCell, qrCells);
+      },
+      // Keep three physical QR positions so the future Mobile App asset stays
+      // in slot 1, ACH/card remains in slot 2, and Brooklyn's unused slot 3
+      // stays empty because Brooklyn has no Zelle QR code.
+      { qrColumns: true, qrCount: 3 },
     );
+    appendBrooklynEncouragementPage_(body, bulletin);
   } else {
     appendBookletPage_(
       body,
@@ -1461,12 +1369,11 @@ function renderBrooklynPrintedBulletinDocument_(body, bulletin, nextBulletin, fo
         appendBrooklynClosingPanel_(cell, bulletin);
       },
       false,
-      appendGivingFooter_,
     );
     appendBookletPage_(
       body,
       function (cell) {
-        appendBrooklynCommunionReadingPanel_(cell);
+        appendBrooklynCommunionActionsPanel_(cell, bulletin);
       },
       function (cell) {
         appendBrooklynWorshipPanel_(cell, bulletin, false);
@@ -1491,31 +1398,36 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('BROOKLYN CHINESE SABBATH SCHOOL', '布魯克林華人團契 安息日學'),
-    printedBilingualText_('Sabbath School', '安息日學'),
   );
   appendCenteredText_(cell, '10:00 am–11:25 am', 9, false);
 
-  appendBrooklynProgramTable_(cell, [
+  appendBrooklynProgramTable_(cell, mergeBrooklynStudyRowsByAssignment_([
     [printedBilingualText_('Welcome', '歡迎'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
     [
       printedBilingualText_('Song and Bible Verse', '詩歌頌讚與存心節'),
       '',
-      printBrooklynPerson_(location.songLeader, location.chairPastoralPrayer),
+      // This combined item is led by the Sabbath School chairman. Keep the
+      // printed assignment consistent even when an older sheet still has a
+      // separate Song Leader value.
+      printBrooklynPerson_(location.chair, location.chairPastoralPrayer),
     ],
     [printedBilingualText_('Opening Hymn', '開會唱詩'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Prayer', '祈禱'), '', printValue_(location.chairPastoralPrayer)],
     [
-      printedBilingualText_('Sabbath Message', '安息日勉言'),
+      printedBilingualText_('Sabbath Encouragement', '安息日勉勵'),
       printValue_(location.sabbathMessageTitle),
-      printBrooklynPerson_(location.sabbathMessage, location.chairPastoralPrayer),
+      printBrooklynPerson_(
+        location.encouragement,
+        location.sabbathMessage || location.chairPastoralPrayer,
+      ),
     ],
     [printedBilingualText_('Sabbath School', '安息日學課'), physicalTbdText_(), printValue_(location.sabbathSchool)],
     [printedBilingualText_('Closing Hymn', '合班唱詩'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Closing Prayer', '合班禱告'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-  ]);
+  ]));
 
-  appendSectionHeading_(cell, printedBilingualText_('Five Minutes Break', '休息五分鐘'));
-  appendBibleReadingPanel_(cell, location, true, bulletin.physicalBibleTranslations);
+  appendHalfSpacer_(cell);
+  appendCompactItalicCenteredText_(cell, '† Five Minutes Break | 休息五分鐘 †', 8.5);
 }
 
 function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
@@ -1523,35 +1435,49 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('BROOKLYN CHINESE SABBATH WORSHIP', '布魯克林華人團契 聖日崇拜'),
-    printedBilingualText_('Sabbath Worship', '安息日崇拜'),
   );
   appendCenteredText_(cell, '11:30 am–1:00 pm', 9, false);
+  appendHalfSpacer_(cell);
+  appendCompactItalicCenteredText_(cell, '† Silent Prayer | 請默禱 †', 8.5);
+  appendHalfSpacer_(cell);
 
-  var worshipRows = [
+  var worshipRowsBeforeSermon = [
     [printedBilingualText_('Chairman', '主席'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
     [printedBilingualText_('Doxology', '讚美'), printedBilingualText_('AH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Invocation', '獻禱'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Bible Readings', '讀經'), formatBibleReferenceForPrint_(location), printedBilingualText_('Congregation', '會眾')],
+    [
+      printedBilingualText_('Bible Readings', '讀經'),
+      formatBibleReferenceForPrint_(location, bulletin.physicalBibleTranslations),
+      printedBilingualText_('Congregation', '會眾'),
+    ],
     [printedBilingualText_('Pastoral Prayer', '牧養禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一與奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
     [printedBilingualText_('Special Music', '特別音樂'), '', printValue_(location.specialMusic)],
-    [printedBilingualText_('Sermon', '講道'), formatSermonTitleForPrint_(location), printValue_(location.sermon)],
+  ];
+  var worshipRowsAfterSermon = [
     [printedBilingualText_('Hymn of Response', '回應詩'), formatHymnForPrint_(location.hymnOfResponse), printedBilingualText_('Congregation', '會眾')],
   ];
+  var sermonRow = [
+    printedBilingualText_('Sermon', '講道'),
+    formatSermonTitleForPrint_(location),
+    printValue_(location.sermon),
+  ];
   if (includeClosingRows) {
-    worshipRows.push([
+    worshipRowsAfterSermon.push([
       printedBilingualText_('Benediction', '散會禱告'),
       '',
       printValue_(location.sermon),
     ]);
-    worshipRows.push([
+    worshipRowsAfterSermon.push([
       printedBilingualText_('Postlude', '後奏曲'),
       printedBilingualText_('SDAH 690 — Dismiss Us, Lord', '第504首 散會頌'),
       printedBilingualText_('Congregation', '會眾'),
     ]);
   }
-  appendBrooklynProgramTable_(cell, worshipRows);
+  appendBrooklynProgramTable_(cell, worshipRowsBeforeSermon);
+  appendSermonRow_(cell, sermonRow);
+  appendBrooklynProgramTable_(cell, worshipRowsAfterSermon);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
   }
@@ -1567,30 +1493,27 @@ function appendBrooklynMeetingsPanel_(cell, bulletin, nextBulletin) {
   );
   appendHorizontalScheduleTable_(cell, current, next, [
     [printedBilingualText_('Chair', '主席'), function (value) { return printBrooklynPerson_(value.chair, value.chairPastoralPrayer); }],
-    [printedBilingualText_('Technician', '技術設備'), function (value) { return printValue_(value.technician); }],
-    [printedBilingualText_('Testimonies', '安息日勉言'), function (value) { return printBrooklynPerson_(value.testimonies, value.sabbathMessage); }],
-    [printedBilingualText_('Sabbath School', '安息日學'), function (value) { return printValue_(value.sabbathSchool); }],
+    [printedBilingualText_('Technician', '技術同工'), function (value) { return printValue_(value.technician); }],
+    [printedBilingualText_('Encouragement', '勉勵'), function (value) { return printBrooklynPerson_(value.encouragement, value.sabbathMessage); }],
     [printedBilingualText_('Offering Prayer', '奉獻禱告'), function (value) { return printValue_(value.offeringPrayer); }],
+    [printedBilingualText_('Sabbath School', '安息日學'), function (value) { return printValue_(value.sabbathSchool); }],
     [printedBilingualText_('Sermon', '崇拜證道'), function (value) { return printValue_(value.sermon); }],
     [printedBilingualText_('Sunset Times', '日落時間'), function (value) { return printValue_(value.sunsetTime); }],
   ]);
 
-  appendSectionHeading_(cell, printedBilingualText_('Online Study', '週間網絡學習'));
-  appendBrooklynProgramTable_(cell, [
-    [printedBilingualText_('Tuesday', '週二早'), '8:00–9:00 AM', 'Sabbath School lesson study'],
-    [printedBilingualText_('Wednesday', '週三早'), '8:00–9:00 AM', 'The Desire of Ages study'],
-    [printedBilingualText_('Wednesday', '週三晚'), '8:00–9:00 PM', 'Bible study: 1 Corinthians'],
-  ]);
-  appendBodyText_(cell, 'Zoom meeting: 254 187 9535    Password: 760641');
 }
 
 function appendBrooklynCoverPanel_(cell, bulletin, format) {
-  appendSharedCoverPanel_(cell, bulletin, format);
+  renderPrintedBrooklynCoverPanel_(cell, bulletin, format);
 }
 
-function appendSharedCoverPanel_(cell, bulletin, format) {
-  // US Letter landscape leaves 368 points for each folded cover panel after
-  // the 28-point page margins.
+function appendSharedCoverPanel_(cell, bulletin, format, location) {
+  // Keep the cover's 368-point inner layout stable while the booklet page
+  // gutter is handled by appendBookletPage_.
+  var primaryAddress =
+    normalizePrintedBulletinLocation_(location) === 'brooklyn'
+      ? '5318 4th Avenue, Brooklyn, NY 11220'
+      : '7606 41st Ave, Elmhurst, NY 11373';
   cell.setPaddingLeft(0);
   cell.setPaddingRight(0);
   appendPrintedBulletinLogo_(cell);
@@ -1601,7 +1524,7 @@ function appendSharedCoverPanel_(cell, bulletin, format) {
       PRINTED_BULLETIN_CONFIG.churchNameChinese,
     ),
   );
-  appendCenteredText_(cell, '7606 41st Ave, Elmhurst, NY 11373', 8.5, true);
+  appendCenteredText_(cell, primaryAddress, 8.5, true);
   appendCenteredText_(cell, formatSharedCoverDate_(bulletin.date), 9, true);
   appendPrintedBulletinCoverImage_(cell, format);
   appendSharedCoverContactColumns_(cell);
@@ -1614,16 +1537,16 @@ function appendSharedCoverContactColumns_(cell) {
   table.setColumnWidth(1, 184);
   [
     [
-      { text: '安息日聚會 | 每週六上午 10:30', bold: true },
-      { text: 'Elmhurst Service | Saturdays 10:30 AM', bold: true },
-      { text: '7606 41st Avenue', italic: true },
-      { text: 'Elmhurst, NY 11373', italic: true },
+      { text: 'Elmhurst Service | 安息日聚會', bold: true },
+      { text: 'Saturdays 10:30 AM | 每週六上午 10:30', bold: true },
+      { text: '7606 41st Avenue', italic: true, bold: false },
+      { text: 'Elmhurst, NY 11373', italic: true, bold: false },
     ],
     [
-      { text: '布魯克林安息日聚會 | 每週六上午 10:30', bold: true },
-      { text: 'Brooklyn Service | Saturdays 10:30 AM', bold: true },
-      { text: '5318 4th Avenue,', italic: true },
-      { text: 'Brooklyn, NY 11220', italic: true },
+      { text: 'Brooklyn Service | 布魯克林安息日聚會', bold: true },
+      { text: 'Saturdays 10:30 AM | 每週六上午 10:30', bold: true },
+      { text: '5318 4th Avenue,', italic: true, bold: false },
+      { text: 'Brooklyn, NY 11220', italic: true, bold: false },
     ],
   ].forEach(function (lines, index) {
     var tableCell = table.getCell(0, index);
@@ -1635,10 +1558,10 @@ function appendSharedCoverContactColumns_(cell) {
 
   appendSpacer_(cell);
   appendSharedCoverContactLines_(cell, [
-    { text: '法拉盛團契聚會 | 每週四晚 7:30 (6:30 晚餐)', bold: true },
-    { text: 'Flushing Fellowship | Thursday 7:30 PM (6:30 PM Dinner)', bold: true },
-    { text: '143-11 Willets Point Boulevard', italic: true },
-    { text: 'Whitestone, NY 11357', italic: true },
+    { text: 'Flushing Fellowship | 法拉盛團契聚會', bold: true },
+    { text: 'Thursday 7:30 PM (6:30 PM Dinner) | 每週四晚 7:30 (6:30 晚餐)', bold: true },
+    { text: '143-11 Willets Point Boulevard', italic: true, bold: false },
+    { text: 'Whitestone, NY 11357', italic: true, bold: false },
   ], DocumentApp.HorizontalAlignment.CENTER);
 }
 
@@ -1651,7 +1574,10 @@ function appendSharedCoverContactLines_(cell, lines, alignment) {
     paragraph.setSpacingBefore(0);
     paragraph.setSpacingAfter(0);
     var rendered = paragraph.editAsText();
-    styleText_(rendered, line.italic ? 7.5 : 8, line.bold !== false);
+    var isBold = line.bold !== false;
+    styleText_(rendered, line.italic ? 7.5 : 8, isBold, {
+      preserveCjkFont: isBold,
+    });
     rendered.setItalic(Boolean(line.italic));
   });
 }
@@ -1674,11 +1600,13 @@ function appendPrintedBulletinCoverImage_(cell, format) {
     var image = cell.appendImage(DriveApp.getFileById(fileId).getBlob());
     var width = image.getWidth();
     var height = image.getHeight();
-    // Each cover is one half of the landscape booklet page. Keep the sketch
-    // nearly full-width so it becomes a full-width image after folding.
     // InlineImage#setWidth uses CSS pixels, while the Letter layout above is
-    // measured in points. 490 px is approximately 368 points at 96 dpi.
-    var maxWidth = 490;
+    // measured in points. Communion uses a smaller square image so its title,
+    // contacts, and cover content stay on the cover face.
+    var maxWidth =
+      format === 'communion'
+        ? PRINTED_BULLETIN_CONFIG.communionCoverImageMaxWidth
+        : PRINTED_BULLETIN_CONFIG.regularCoverImageMaxWidth;
     if (width > maxWidth) {
       image.setWidth(maxWidth);
       image.setHeight(Math.round((height * maxWidth) / width));
@@ -1744,24 +1672,23 @@ function appendBrooklynContactBlock_(cell) {
 
 function appendBrooklynCommunionPanel_(cell, bulletin) {
   var location = bulletin.brooklyn;
-  appendPanelHeading_(cell, printedBilingualText_('HOLY COMMUNION', '聖餐禮'), '1 Corinthians 11:23–26');
+  appendBrooklynProgramTable_(cell, [
+    [printedBilingualText_('Foot Washing', '洗腳禮'), '', getPrintedCommunionWholeCongregation_()],
+  ]);
+  appendBodyText_(cell, getPrintedCommunionFootWashingInstruction_());
+  appendPanelHeading_(
+    cell,
+    printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
+  );
   appendBrooklynProgramTable_(cell, [
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Bible Reading', '讀經'), '1 Corinthians 11:23–26', printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Blessing the Bread', '祝福餅'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-    [printedBilingualText_('Breaking the Bread', '擘餅'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-    [printedBilingualText_('Blessing the Cup', '祝福杯'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-    [printedBilingualText_('Share the Cup', '分杯'), physicalTbdText_(), physicalTbdText_('尚未安排')],
-  ], bulletin, nextBulletin);
+    [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
+  ]);
+  appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
 }
 
-function appendBrooklynCommunionReadingPanel_(cell) {
-  appendPanelHeading_(cell, printedBilingualText_('COMMUNION READINGS', '聖餐經文'), '1 Corinthians 11:23–26');
-  appendBrooklynProgramTable_(cell, [
-    [printedBilingualText_('The Bread', '餅'), '1 Corinthians 11:24', printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('The Cup', '杯'), '1 Corinthians 11:25', printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('The Proclamation', '宣告'), '1 Corinthians 11:26', printedBilingualText_('Congregation', '會眾')],
-  ]);
+function appendBrooklynCommunionActionsPanel_(cell, bulletin) {
+  appendCommunionActionsPanel_(cell, bulletin, 'brooklyn');
 }
 
 function appendBrooklynClosingPanel_(cell, bulletin) {
@@ -1790,6 +1717,14 @@ function resolvePrintedBulletinFormat_(requestedFormat, bulletin) {
     return format;
   }
   throw new Error('Format must be regular or communion');
+}
+
+function validatePrintedBulletinCombination_(location, format) {
+  if (location === 'brooklyn' && format === 'communion') {
+    throw new Error(
+      'Brooklyn Communion bulletins are not available yet. Choose Regular for Brooklyn. / 目前尚未提供布碌崙聖餐禮週刊；布碌崙請選擇普通格式。',
+    );
+  }
 }
 
 function getNextSabbathDate_(requestedDate) {
@@ -1874,6 +1809,7 @@ function hydratePhysicalBibleVerses_(bulletin, bibleTranslations) {
       location.bibleVerseText = null;
     }
   });
+  hydratePrintedCommunionPassages_(bulletin, translations);
   return bulletin;
 }
 
@@ -1933,7 +1869,11 @@ function getPhysicalSunsetTime_(date) {
   }
 }
 
-function resolvePhysicalBiblePassage_(reference, bibleTranslations) {
+function resolvePhysicalBiblePassage_(reference, bibleTranslations, includeVerseLines) {
+  // Bible text must always come from the configured HelloAO Bible API below.
+  // Do not replace this with LanguageApp, an LLM, or any other machine
+  // translation: the printed bulletin must reproduce the selected Bible
+  // translation exactly, in both languages.
   var references = parsePhysicalBibleReferences_(reference);
   if (!references.length) {
     return null;
@@ -1957,11 +1897,16 @@ function resolvePhysicalBiblePassage_(reference, bibleTranslations) {
     );
   });
 
-  return {
+  var result = {
     english: englishParts.join(' '),
     chinese: chineseParts.join(' '),
     references: references,
   };
+  if (includeVerseLines) {
+    result.englishVerses = englishParts;
+    result.chineseVerses = chineseParts;
+  }
+  return result;
 }
 
 function parsePhysicalBibleReferences_(value) {
@@ -2074,6 +2019,9 @@ function normalizePhysicalBibleBookName_(value) {
 }
 
 function fetchPhysicalBibleChapter_(translation, passage) {
+  // This is the single authoritative Bible-text fetch path for printed
+  // bulletins and Sabbath Encouragement. The endpoint is HelloAO; callers must
+  // never machine-translate Bible text after it is returned.
   var cacheKey =
     'physical-bible:' + translation + ':' + passage.bookId + ':' + passage.chapter;
   var cache = CacheService.getScriptCache();
@@ -2135,6 +2083,8 @@ function buildPhysicalNameDictionary_() {
   var dictionary = {
     englishToChinese: {},
     chineseToEnglish: {},
+    pinyinToChinese: {},
+    pinyinToEnglish: {},
   };
   if (!sheet) {
     Logger.log('Name Dictionary sheet not found; printing source names only.');
@@ -2145,6 +2095,10 @@ function buildPhysicalNameDictionary_() {
   table.rows.forEach(function (row) {
     var english = displayValue_(row[0]).trim();
     var chinese = displayValue_(row[1]).trim();
+    // Pinyin aliases are derived from the Chinese Name value. The dictionary
+    // intentionally has no stored third pinyin field, so the printed renderer
+    // supports alternate pinyin input without duplicating personal data.
+    var pinyinAliases = getPhysicalPinyinAliases_(chinese);
     var englishKey = normalizePhysicalNameKey_(english);
     var chineseKey = normalizePhysicalNameKey_(chinese);
     if (englishKey && chinese && !dictionary.englishToChinese[englishKey]) {
@@ -2153,8 +2107,62 @@ function buildPhysicalNameDictionary_() {
     if (chineseKey && english && !dictionary.chineseToEnglish[chineseKey]) {
       dictionary.chineseToEnglish[chineseKey] = english;
     }
+    pinyinAliases.forEach(function (alias) {
+      var pinyinKey = normalizePhysicalPinyinKey_(alias);
+      if (pinyinKey && english && chinese) {
+        if (!dictionary.pinyinToChinese[pinyinKey]) {
+          dictionary.pinyinToChinese[pinyinKey] = chinese;
+        }
+        if (!dictionary.pinyinToEnglish[pinyinKey]) {
+          dictionary.pinyinToEnglish[pinyinKey] = english;
+        }
+      }
+    });
   });
   return dictionary;
+}
+
+/**
+ * Derives common surname-first and given-name-first pinyin forms from a
+ * Chinese dictionary value. This is private print-only enrichment. The public
+ * API never calls this function and never receives Chinese names or aliases.
+ */
+function getPhysicalPinyinAliases_(chinese) {
+  if (typeof pinyinPro === 'undefined' || !pinyinPro || !pinyinPro.pinyin) {
+    return [];
+  }
+  var compactChinese = String(chinese || '').replace(/[^\u3400-\u9fff\uf900-\ufaff]/g, '');
+  if (!compactChinese) {
+    return [];
+  }
+  try {
+    var syllables = pinyinPro.pinyin(compactChinese, {
+      type: 'array',
+      toneType: 'none',
+      separator: ' ',
+    });
+    if (!Array.isArray(syllables) || syllables.length < 2) {
+      return [];
+    }
+    var surname = String(syllables[0] || '').trim();
+    var givenSyllables = syllables.slice(1).map(function (syllable) {
+      return String(syllable || '').trim();
+    }).filter(Boolean);
+    if (!surname || !givenSyllables.length) {
+      return [];
+    }
+    var givenCompact = givenSyllables.join('');
+    var givenSpaced = givenSyllables.join(' ');
+    return [
+      surname + ' ' + givenCompact,
+      surname + ' ' + givenSpaced,
+      givenCompact + ' ' + surname,
+      givenSpaced + ' ' + surname,
+    ];
+  } catch (error) {
+    Logger.log('Pinyin name enrichment failed; continuing without derived aliases: ' + error);
+    return [];
+  }
 }
 
 function preparePrintedBulletinForPrint_(bulletin, nameDictionary) {
@@ -2163,7 +2171,8 @@ function preparePrintedBulletinForPrint_(bulletin, nameDictionary) {
     'translation',
     'chineseTeacher',
     'englishTeacher',
-    'childrenTeacher',
+    'youthTeacher',
+    'kidsTeacher',
     'chairPastoralPrayer',
     'specialMusic',
     'offeringPrayer',
@@ -2171,12 +2180,13 @@ function preparePrintedBulletinForPrint_(bulletin, nameDictionary) {
     'ssChair',
     'ssOpeningPrayer',
     'closingPrayer',
+    'flowerOffering',
     'sabbathSchool',
     'chair',
     'songLeader',
     'sabbathMessage',
     'technician',
-    'testimonies',
+    'encouragement',
   ];
   ['queens', 'brooklyn'].forEach(function (locationKey) {
     var location = bulletin[locationKey];
@@ -2197,7 +2207,12 @@ function formatPhysicalPersonValue_(value, nameDictionary) {
     return '';
   }
 
-  var dictionary = nameDictionary || { englishToChinese: {}, chineseToEnglish: {} };
+  var dictionary = nameDictionary || {
+    englishToChinese: {},
+    chineseToEnglish: {},
+    pinyinToChinese: {},
+    pinyinToEnglish: {},
+  };
   return text
     .split(/(\s*(?:\/|&|\+|\n|\band\b)\s*)/i)
     .map(function (part, index) {
@@ -2229,6 +2244,13 @@ function formatPhysicalSinglePerson_(value, dictionary) {
     return text + '\n' + english;
   }
 
+  var pinyinKey = normalizePhysicalPinyinKey_(text);
+  var pinyinChinese = dictionary.pinyinToChinese && dictionary.pinyinToChinese[pinyinKey];
+  var pinyinEnglish = dictionary.pinyinToEnglish && dictionary.pinyinToEnglish[pinyinKey];
+  if (pinyinChinese && pinyinEnglish) {
+    return pinyinChinese + '\n' + pinyinEnglish;
+  }
+
   // Google Docs can collapse a truly blank line in a table cell. Use a small,
   // explicit physical-only marker so the two language rows stay aligned. The
   // public digital API never uses this formatter.
@@ -2242,15 +2264,36 @@ function normalizePhysicalNameKey_(value) {
     .toLowerCase();
 }
 
-function movePrintedBulletinToConfiguredFolder_(documentId) {
-  var folderId = getPrintedBulletinOutputFolderId_();
+function normalizePhysicalPinyinKey_(value) {
+  return normalizePhysicalNameKey_(value).replace(/ü/g, 'u');
+}
+
+function movePrintedBulletinToConfiguredFolder_(documentId, location) {
+  var folderId = getPrintedBulletinOutputFolderId_(location);
   if (!folderId) {
     return;
   }
   DriveApp.getFileById(documentId).moveTo(DriveApp.getFolderById(folderId));
 }
 
-function getPrintedBulletinOutputFolderId_() {
+function getPrintedBulletinOutputFolderId_(location) {
+  var normalizedLocation = normalizePrintedBulletinLocation_(location);
+  var locationProperty =
+    normalizedLocation === 'brooklyn'
+      ? PRINTED_BULLETIN_CONFIG.brooklynOutputFolderProperty
+      : PRINTED_BULLETIN_CONFIG.queensOutputFolderProperty;
+  var locationFolderId =
+    PropertiesService.getScriptProperties().getProperty(locationProperty);
+  if (locationFolderId) {
+    return locationFolderId;
+  }
+  var configuredFolderId =
+    normalizedLocation === 'brooklyn'
+      ? PRINTED_BULLETIN_CONFIG.brooklynOutputFolderId
+      : PRINTED_BULLETIN_CONFIG.queensOutputFolderId;
+  if (configuredFolderId) {
+    return configuredFolderId;
+  }
   return (
     PropertiesService.getScriptProperties().getProperty(
       PRINTED_BULLETIN_CONFIG.outputFolderProperty,
@@ -2258,13 +2301,13 @@ function getPrintedBulletinOutputFolderId_() {
   );
 }
 
-function createOrReplacePrintedBulletinPdf_(documentId, title, propertyKey) {
+function createOrReplacePrintedBulletinPdf_(documentId, title, propertyKey, location) {
   var properties = PropertiesService.getScriptProperties();
   var previousPdfId = properties.getProperty(propertyKey);
   var pdfBlob = DocumentApp.openById(documentId)
     .getAs(MimeType.PDF)
     .setName(title + '.pdf');
-  var folderId = getPrintedBulletinOutputFolderId_();
+  var folderId = getPrintedBulletinOutputFolderId_(location);
   var folder = folderId
     ? DriveApp.getFolderById(folderId)
     : DriveApp.getRootFolder();
@@ -2286,20 +2329,25 @@ function createOrReplacePrintedBulletinPdf_(documentId, title, propertyKey) {
   };
 }
 
-function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, footerRenderer) {
+function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, footerRenderer, footerOptions) {
   if (!isFirstPage) {
     body.appendPageBreak();
   }
 
-  var table = body.appendTable([['', '']]);
+  var table = body.appendTable([['', '', '']]);
   table.setBorderWidth(0);
-  table.setColumnWidth(0, 368);
-  table.setColumnWidth(1, 368);
+  table.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+  table.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
+  table.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
   var leftCell = table.getCell(0, 0);
-  var rightCell = table.getCell(0, 1);
+  var gutterCell = table.getCell(0, 1);
+  var rightCell = table.getCell(0, 2);
   leftCell.clear();
+  gutterCell.clear();
   rightCell.clear();
   leftCell.setPaddingBottom(0);
+  gutterCell.setPaddingLeft(0);
+  gutterCell.setPaddingRight(0);
   rightCell.setPaddingBottom(0);
   leftRenderer(leftCell);
   rightRenderer(rightCell);
@@ -2312,26 +2360,59 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
       ruleParent.asParagraph().setSpacingBefore(0);
       ruleParent.asParagraph().setSpacingAfter(0);
     }
-    var footerTable = body.appendTable([['', '']]);
+    var qrColumns = footerOptions && footerOptions.qrColumns;
+    var qrCount = qrColumns ? Math.max(1, footerOptions.qrCount || 3) : 0;
+    var qrColumnIndexes = Array(qrCount).fill(0).map(function (_, index) {
+      return index + 2;
+    });
+    var footerTable = body.appendTable(
+      qrColumns ? [Array(qrCount + 2).fill('')] : [['', '', '']],
+    );
     footerTable.setBorderWidth(0);
-    footerTable.setColumnWidth(0, 368);
-    footerTable.setColumnWidth(1, 368);
+    footerTable.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+    footerTable.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
+    if (qrColumns) {
+      qrColumnIndexes.forEach(function (columnIndex) {
+        footerTable.setColumnWidth(
+          columnIndex,
+          Math.floor((PRINTED_BULLETIN_CONFIG.bookletHalfWidth - 8) / qrCount),
+        );
+      });
+    } else {
+      footerTable.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+    }
     var footerLeftCell = footerTable.getCell(0, 0);
-    var footerRightCell = footerTable.getCell(0, 1);
-    footerLeftCell.clear();
-    footerRightCell.clear();
-    footerLeftCell.setPaddingTop(3);
-    footerLeftCell.setPaddingBottom(0);
-    footerRightCell.setPaddingTop(0);
-    footerRightCell.setPaddingBottom(0);
+    var footerGutterCell = footerTable.getCell(0, 1);
+    var footerRightCell = qrColumns ? null : footerTable.getCell(0, 2);
+    var footerQrCells = qrColumns
+      ? qrColumnIndexes.map(function (columnIndex) {
+          return footerTable.getCell(0, columnIndex);
+        })
+      : [];
+    [footerLeftCell, footerGutterCell].concat(footerRightCell ? [footerRightCell] : footerQrCells)
+      .forEach(function (footerCell) {
+        footerCell.clear();
+        footerCell.setPaddingTop(0);
+        footerCell.setPaddingBottom(0);
+        footerCell.setPaddingLeft(0);
+        footerCell.setPaddingRight(0);
+      });
     footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    footerRightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    footerRenderer(footerLeftCell, footerRightCell);
+    if (footerRightCell) {
+      footerRightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+    }
+    footerQrCells.forEach(function (footerCell) {
+      footerCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+    });
+    footerRenderer(footerLeftCell, footerRightCell, footerQrCells);
   }
 }
 
 function appendCoverPanel_(cell, bulletin, format) {
   appendSharedCoverPanel_(cell, bulletin, format);
+  // Keep Queens regular and communion covers consistent with Brooklyn: the
+  // Zoom schedule belongs below the shared cover artwork/contact block.
+  appendBrooklynOnlineZoomPanel_(cell);
 }
 
 function appendPrintedBulletinLogo_(cell) {
@@ -2373,7 +2454,7 @@ function appendCoverMeetingSchedule_(cell) {
   appendSpacer_(cell);
   [
     ['安息日學（週六）', 'Sabbath School (Sat): 10:00 am - 11:25 am'],
-    ['聖日崇拜（週六）', 'Divine Worship (Sat): 11:30 am - 01:00 pm'],
+    ['聖日崇拜（週六）', 'Divine Worship (Sat): 11:40 am - 01:00 pm'],
     ['青年團契（週六）', 'Youth Fellowship (Sat): 02:00 pm - 03:30 pm'],
     ['法拉盛團契（週四）', 'Flushing Fellowship (Thurs): 07:00 pm - 09:00 pm'],
   ].forEach(function (line) {
@@ -2462,7 +2543,7 @@ function appendPrintedAnnouncementTableCell_(cell, value, fontSize) {
   styleText_(rendered, fontSize, false);
   var firstSentenceLength = getFirstPrintedAnnouncementSentenceLength_(text);
   if (firstSentenceLength > 0) {
-    rendered.setBold(0, firstSentenceLength - 1, true);
+    setPrintedLatinBold_(rendered, 0, firstSentenceLength - 1);
   }
 }
 
@@ -2560,7 +2641,7 @@ function appendPrintedAnnouncement_(cell, entry) {
     styleText_(rendered, 9, false);
     var firstSentenceLength = getFirstPrintedAnnouncementSentenceLength_(text);
     if (firstSentenceLength > 0) {
-      rendered.setBold(0, firstSentenceLength - 1, true);
+      setPrintedLatinBold_(rendered, 0, firstSentenceLength - 1);
     }
   });
   appendSpacer_(cell);
@@ -2575,17 +2656,45 @@ function getFirstPrintedAnnouncementSentenceLength_(text) {
   return match ? match[0].length : value.length;
 }
 
-function appendGivingFooter_(leftCell, rightCell) {
+function appendGivingFooter_(leftCell, rightCell, location) {
   appendGivingText_(leftCell);
-  appendGivingQrPlaceholders_(rightCell);
+  // Keep the bottom giving block together on the same page instead of
+  // allowing the QR captions to spill onto a new page.
+  appendGivingQrPlaceholders_(rightCell, {
+    compact: true,
+    location: location || 'queens',
+  });
 }
 
-function appendGivingText_(cell) {
-  appendCompactCenteredText_(
+function appendBrooklynGivingFooter_(leftCell, rightCell, qrCells) {
+  leftCell.setPaddingTop(0);
+  leftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+  appendGivingText_(leftCell, { reuseLeadingParagraph: true });
+  if (qrCells && qrCells.length) {
+    appendGivingQrPlaceholderCells_(qrCells, {
+      compact: true,
+      location: 'brooklyn',
+      reuseLeadingParagraph: true,
+    });
+    return;
+  }
+  rightCell.setPaddingTop(0);
+  rightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+  appendGivingQrPlaceholders_(rightCell, {
+    compact: true,
+    location: 'brooklyn',
+    reuseLeadingParagraph: true,
+  });
+}
+
+function appendGivingText_(cell, options) {
+  options = options || {};
+  appendGivingHeadingText_(
     cell,
     'Tithes & Offerings | 什一奉獻與自由奉獻',
     10.5,
     true,
+    options.reuseLeadingParagraph,
   );
   appendHalfSpacer_(cell);
   appendCompactCenteredText_(
@@ -2597,56 +2706,188 @@ function appendGivingText_(cell) {
     8.5,
     false,
   );
-  appendHalfSpacer_(cell);
   appendCompactCenteredText_(
     cell,
     'Stocks/equities: We recommend donor-advised funds; see our church\'s mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
-    7.5,
+    8.5,
     false,
   );
 }
 
-function appendGivingQrPlaceholders_(cell) {
+function appendGivingQrPlaceholders_(cell, options) {
+  options = options || {};
+  var compact = Boolean(options.compact);
+  var location = options.location || 'queens';
+  var imageMaxWidth = compact ? 50 : 58;
+  var cellPadding = compact ? 0 : 3;
+  var labelFontSize = compact ? 7.5 : 8;
+  var reuseLeadingParagraph = Boolean(options.reuseLeadingParagraph);
+  // The outer footer cell starts with an empty paragraph after clear(). Keep a
+  // reference and remove it only after inserting the QR table; removing it
+  // first can cause Docs to recreate a new blank paragraph before the table.
+  var leadingParagraph = reuseLeadingParagraph
+    ? getLeadingEmptyParagraph_(cell)
+    : null;
   var table = cell.appendTable([['', '', '']]);
   table.setBorderWidth(0);
-  [
-    { label: printedBilingualText_('Download Mobile App', '下載手機應用程式'), kind: 'mobileApp' },
-    {
-      label: printedBilingualText_('Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'),
-      kind: 'zelle',
-    },
-    {
-      label: printedBilingualText_('ACH or card', 'ACH／信用卡'),
-      kind: 'adventistGiving',
-    },
-  ].forEach(function (item, index) {
+  if (leadingParagraph) {
+    leadingParagraph.removeFromParent();
+  }
+  getGivingQrItems_(location).forEach(function (item, index) {
     var width = 120;
     table.setColumnWidth(index, width);
     var tableCell = table.getCell(0, index);
     tableCell.clear();
-    tableCell.setPaddingTop(3);
-    tableCell.setPaddingBottom(3);
-    var fileId = getPrintedBulletinQrImageFileId_(item.kind);
-    if (fileId) {
-      try {
-        var image = tableCell.appendImage(DriveApp.getFileById(fileId).getBlob());
-        var imageWidth = image.getWidth();
-        var imageHeight = image.getHeight();
-        var maxWidth = 58;
-        if (imageWidth > maxWidth) {
-          image.setWidth(maxWidth);
-          image.setHeight(Math.round((imageHeight * maxWidth) / imageWidth));
-        }
-        centerPrintedBulletinImage_(image);
-      } catch (error) {
-        Logger.log(item.label + ' QR image could not be loaded: ' + error);
-      }
-    }
-    appendCompactCenteredText_(tableCell, item.label, 8, true);
+    tableCell.setPaddingTop(cellPadding);
+    tableCell.setPaddingBottom(cellPadding);
+    tableCell.setPaddingLeft(0);
+    tableCell.setPaddingRight(0);
+    tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+    appendGivingQrPlaceholderCell_(tableCell, item, {
+      imageMaxWidth: imageMaxWidth,
+      labelFontSize: labelFontSize,
+      location: location,
+      reuseLeadingParagraph: reuseLeadingParagraph,
+    });
   });
 }
 
-function getPrintedBulletinQrImageFileId_(kind) {
+function appendGivingQrPlaceholderCells_(cells, options) {
+  options = options || {};
+  var compact = Boolean(options.compact);
+  var imageMaxWidth = compact ? 50 : 58;
+  var cellPadding = compact ? 0 : 3;
+  var labelFontSize = compact ? 7.5 : 8;
+  getGivingQrItems_(options.location || 'queens').forEach(function (item, index) {
+    var tableCell = cells[index];
+    if (!tableCell) {
+      return;
+    }
+    tableCell.clear();
+    tableCell.setPaddingTop(cellPadding);
+    tableCell.setPaddingBottom(cellPadding);
+    tableCell.setPaddingLeft(0);
+    tableCell.setPaddingRight(0);
+    tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+    appendGivingQrPlaceholderCell_(tableCell, item, {
+      imageMaxWidth: imageMaxWidth,
+      labelFontSize: labelFontSize,
+      location: options.location || 'queens',
+      reuseLeadingParagraph: Boolean(options.reuseLeadingParagraph),
+    });
+  });
+}
+
+function appendGivingQrPlaceholderCell_(tableCell, item, options) {
+  options = options || {};
+  if (item && item.reserved) {
+    // Keep the reserved slot's dimensions stable while its QR asset is WIP.
+    tableCell.clear();
+    return;
+  }
+  var fileId = getPrintedBulletinQrImageFileId_(item.kind, options.location || 'queens');
+  if (fileId) {
+    try {
+      var imageParagraph = options.reuseLeadingParagraph
+        ? getLeadingEmptyParagraph_(tableCell)
+        : null;
+      var image = imageParagraph
+        ? imageParagraph.appendInlineImage(DriveApp.getFileById(fileId).getBlob())
+        : tableCell.appendImage(DriveApp.getFileById(fileId).getBlob());
+      var imageWidth = image.getWidth();
+      var imageHeight = image.getHeight();
+      if (imageWidth > options.imageMaxWidth) {
+        image.setWidth(options.imageMaxWidth);
+        image.setHeight(Math.round((imageHeight * options.imageMaxWidth) / imageWidth));
+      }
+      centerPrintedBulletinImage_(image);
+    } catch (error) {
+      Logger.log(item.label + ' QR image could not be loaded: ' + error);
+    }
+  }
+  appendCompactCenteredText_(tableCell, item.label, options.labelFontSize, true);
+}
+
+function getGivingQrItems_(location) {
+  var items = [
+    { label: getPrintedMobileAppQrLabel_(), kind: 'mobileApp' },
+    {
+      label: printedBilingualText_('ACH or card', 'ACH／信用卡'),
+      kind: 'adventistGiving',
+    },
+    {
+      label: printedBilingualText_('Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'),
+      kind: 'zelle',
+    },
+  ];
+  if (String(location || '').trim().toLowerCase() === 'brooklyn') {
+    // Zelle does not exist for Brooklyn. Keep the mobile-app slot reserved
+    // without printing a placeholder label or QR image until the new asset is
+    // ready, so the three-slot giving layout does not shift again.
+    return [
+      { label: items[0].label, kind: 'mobileApp', reserved: true },
+      items[1],
+      { kind: 'unused', reserved: true },
+    ];
+  }
+  // Queens keeps the Mobile App and Zelle slots reserved while those QR
+  // assets are temporarily unavailable. Leave the definitions above intact
+  // so restoring either code later only requires removing its reserved flag.
+  return [
+    { label: items[0].label, kind: 'mobileApp', reserved: true },
+    items[1],
+    { kind: 'zelle', reserved: true },
+  ];
+}
+
+function getPrintedMobileAppQrLabel_() {
+  return printedBilingualText_('Download Mobile App', '下載 APP');
+}
+
+function appendGivingHeadingText_(cell, text, size, bold, reuseLeadingParagraph) {
+  if (!reuseLeadingParagraph) {
+    appendCompactCenteredText_(cell, text, size, bold);
+    return;
+  }
+
+  var paragraph = getLeadingEmptyParagraph_(cell);
+  if (!paragraph) {
+    appendCompactCenteredText_(cell, text, size, bold);
+    return;
+  }
+  paragraph.setText(String(text || ''));
+  paragraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  paragraph.setLineSpacing(1);
+  paragraph.setSpacingBefore(0);
+  paragraph.setSpacingAfter(0);
+  styleText_(paragraph.editAsText(), size, bold);
+}
+
+function getLeadingEmptyParagraph_(cell) {
+  if (!cell || !cell.getNumChildren()) {
+    return null;
+  }
+  var first = cell.getChild(0);
+  if (first.getType() !== DocumentApp.ElementType.PARAGRAPH) {
+    return null;
+  }
+  var paragraph = first.asParagraph();
+  return paragraph.getText() === '' ? paragraph : null;
+}
+
+function getPrintedBulletinQrImageFileId_(kind, location) {
+  var fileName = getPrintedBulletinQrImageFileName_(kind, location);
+  if (fileName && typeof DriveApp !== 'undefined' && DriveApp.getFilesByName) {
+    try {
+      var files = DriveApp.getFilesByName(fileName);
+      if (files.hasNext()) {
+        return files.next().getId();
+      }
+    } catch (error) {
+      Logger.log('QR image lookup failed for ' + fileName + ': ' + error);
+    }
+  }
+
   var propertyName =
     kind === 'adventistGiving'
       ? PRINTED_BULLETIN_CONFIG.adventistGivingQrImageProperty
@@ -2659,6 +2900,20 @@ function getPrintedBulletinQrImageFileId_(kind) {
     ? PropertiesService.getScriptProperties().getProperty(propertyName) || ''
     : '';
   return configuredFileId || PRINTED_BULLETIN_CONFIG.qrPlaceholderImageFileId;
+}
+
+function getPrintedBulletinQrImageFileName_(kind, location) {
+  var normalizedLocation = location === 'brooklyn' ? 'brooklyn' : 'queens';
+  if (kind === 'mobileApp') {
+    return 'mobile_app_qr_code_368x368.jpg';
+  }
+  if (kind === 'adventistGiving') {
+    return normalizedLocation + '_adventist_giving_qr_code_368x368.jpg';
+  }
+  if (kind === 'zelle') {
+    return normalizedLocation + '_zelle_qr_code_368x368.jpg';
+  }
+  return '';
 }
 
 function appendScheduleTable_(cell, bulletin, nextBulletin) {
@@ -2674,6 +2929,7 @@ function appendScheduleTable_(cell, bulletin, nextBulletin) {
     [printedBilingualText_('DS Sermon', '崇拜證道'), function (location) { return location.sermon; }],
     [printedBilingualText_('DS Interpreter', '崇拜翻譯'), function (location) { return location.translation; }],
     [printedBilingualText_('Special Music', '特別音樂'), function (location) { return location.specialMusic; }],
+    [printedBilingualText_('Flower Offering', '花卉奉獻'), function (location) { return location.flowerOffering; }],
     [printedBilingualText_('Offerings', '奉獻事項'), function (location, data) { return formatPhysicalOfferingValue_(data.tithePurpose); }],
     [printedBilingualText_('Sunset Times', '日落時間'), function (location, data) { return data.sunsetTime; }],
   ], bulletin, nextBulletin);
@@ -2765,31 +3021,43 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
     printedBilingualText_('THE CHURCH AT WORSHIP', '崇拜聚會'),
   );
   appendCenteredText_(cell, PRINTED_BULLETIN_CONFIG.worshipTime, 9, false);
-  var worshipRows = [
+  var worshipRowsBeforeSermon = [
     [printedBilingualText_('Chairman', '主席'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Doxology', '頌讚'), printedBilingualText_('SDAH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Invocation', '宣召'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Bible Reading', '讀經'), formatBibleReferenceForPrint_(location), printedBilingualText_('Congregation', '會眾')],
+    [
+      printedBilingualText_('Bible Reading', '讀經'),
+      formatBibleReferenceForPrint_(location, bulletin.physicalBibleTranslations),
+      printedBilingualText_('Congregation', '會眾'),
+    ],
     [printedBilingualText_('Pastoral Prayer', '牧者禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
     [printedBilingualText_('Special Music', '特別音樂'), '', printValue_(location.specialMusic)],
-    [printedBilingualText_('Sermon', '講道'), formatSermonTitleForPrint_(location), printValue_(location.sermon)],
+  ];
+  var worshipRowsAfterSermon = [
     [printedBilingualText_('Hymn of Response', '回應詩'), formatHymnForPrint_(location.hymnOfResponse), printedBilingualText_('Congregation', '會眾')],
   ];
+  var sermonRow = [
+    printedBilingualText_('Sermon', '講道'),
+    formatSermonTitleForPrint_(location),
+    printValue_(location.sermon),
+  ];
   if (includeClosingRows) {
-    worshipRows.push([
+    worshipRowsAfterSermon.push([
       printedBilingualText_('Benediction', '祝禱'),
       '',
       printValue_(location.sermon),
     ]);
-    worshipRows.push([
+    worshipRowsAfterSermon.push([
       printedBilingualText_('Postlude', '後奏'),
       printedBilingualText_('SDAH 690 — Dismiss Us, Lord', '第504首 散會頌'),
       printedBilingualText_('Congregation', '會眾'),
     ]);
   }
-  appendProgramTable_(cell, worshipRows);
+  appendProgramTable_(cell, worshipRowsBeforeSermon);
+  appendSermonRow_(cell, sermonRow);
+  appendProgramTable_(cell, worshipRowsAfterSermon);
   if (includeClosingRows) {
     appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
   }
@@ -2799,16 +3067,17 @@ function appendFootWashingPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('FOOT WASHING', '洗腳禮'),
-    PRINTED_BULLETIN_CONFIG.footWashingScripture,
   );
   appendProgramTable_(cell, [
-    [printedBilingualText_('Bible Reading', '讀經'), PRINTED_BULLETIN_CONFIG.footWashingScripture, printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Foot Washing', '洗腳禮'), printedBilingualText_('All Congregations', '全體會眾'), ''],
+    [printedBilingualText_('Bible Readings', '讀經'), getPrintedCommunionFootWashingScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
-  appendBodyText_(cell, PRINTED_BULLETIN_CONFIG.footWashingInstruction);
-  appendSilentPrayerHeading_(cell, 'Prayer of Silence', '靜默禱告');
-  appendBodyText_(cell, printedBilingualText_('Congregation', '會眾'));
-  appendBodyText_(cell, printedBilingualText_('The service continues with the Holy Communion section.', '接著進行聖餐禮。'));
+  appendPrintedCommunionPassageBox_(cell, bulletin, 'footWashing');
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Foot Washing', '洗腳禮'), '', getPrintedCommunionWholeCongregation_()],
+  ]);
+  appendSpacer_(cell);
+  appendSpacer_(cell);
+  appendCompactItalicCenteredText_(cell, getPrintedCommunionFootWashingInstruction_(), 8.5);
 }
 
 function appendCommunionPanel_(cell, bulletin) {
@@ -2816,46 +3085,41 @@ function appendCommunionPanel_(cell, bulletin) {
   appendPanelHeading_(
     cell,
     printedBilingualText_('HOLY COMMUNION', '聖餐禮'),
-    PRINTED_BULLETIN_CONFIG.communionScripture,
   );
   appendProgramTable_(cell, [
     [printedBilingualText_('Hymn of Praise', '讚美詩'), formatHymnForPrint_(location.hymnOfPraise), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Bible Reading', '讀經'), PRINTED_BULLETIN_CONFIG.communionScripture, printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Blessing the Bread', '祝福餅'), '', printValue_(location.chairPastoralPrayer)],
-    [printedBilingualText_('Breaking the Bread', '擘餅'), '', printValue_(location.sermon)],
-    [printedBilingualText_('Blessing the Cup', '祝福杯'), '', printValue_(location.chairPastoralPrayer)],
-    [printedBilingualText_('Share the Cup', '分杯'), '', printValue_(location.sermon)],
+    [printedBilingualText_('Bible Reading', '讀經'), getPrintedCommunionServiceScripture_(), printedBilingualText_('Congregation', '會眾')],
   ]);
-  appendBodyText_(cell, printedBilingualText_('Prayer of silence follows each communion action.', '每項聖餐禮儀後進行靜默禱告。'));
+  appendPrintedCommunionPassageBox_(cell, bulletin, 'communion');
+  appendCommunionOpeningActionsPanel_(cell, bulletin);
+  appendCommunionContinuationActionsPanel_(cell, bulletin);
+  appendCommunionClosingRows_(cell, bulletin);
 }
 
-function appendCommunionReadingPanel_(cell, bulletin) {
-  appendPanelHeading_(
-    cell,
-    printedBilingualText_('COMMUNION READINGS', '聖餐經文'),
-    PRINTED_BULLETIN_CONFIG.communionScripture,
-  );
-  appendDataTable_(cell, [
-    [printedBilingualText_('The Bread', '餅'), '1 Corinthians 11:24'],
-    [printedBilingualText_('The Cup', '杯'), '1 Corinthians 11:25'],
-    [printedBilingualText_('The Proclamation', '宣告'), '1 Corinthians 11:26'],
-    [printedBilingualText_('Reader', '讀經者'), printedBilingualText_('Congregation', '會眾')],
+function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', getPrintedCommunionPastor_()],
+    [printedBilingualText_('Breaking the Bread', '分餅'), '', getPrintedCommunionPastor_()],
   ]);
-  appendBodyText_(cell, printedBilingualText_('See the Scripture references above.', '請參閱以上經文。'));
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
+  ]);
 }
 
-function appendCommunionClosingPanel_(cell, bulletin) {
-  var location = bulletin.queens;
-  appendPanelHeading_(
-    cell,
-    printedBilingualText_('CLOSING', '結束'),
-    printedBilingualText_(
-      PRINTED_BULLETIN_CONFIG.churchName,
-      PRINTED_BULLETIN_CONFIG.churchNameChinese,
-    ),
-  );
-  appendQueensClosingRows_(cell, bulletin);
-  appendCenteredText_(cell, printedBilingualText_('Thank you for worshiping with us.', '感謝您與我們一同崇拜。'), 10, false);
+function appendCommunionContinuationActionsPanel_(cell, bulletin, locationKey) {
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', getPrintedCommunionPastor_()],
+    [printedBilingualText_('Share the Cup', '分杯'), '', getPrintedCommunionPastor_()],
+  ]);
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
+  ]);
+}
+
+function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
+  appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey);
+  appendCommunionContinuationActionsPanel_(cell, bulletin, locationKey);
+  appendCommunionClosingRows_(cell, bulletin, locationKey);
 }
 
 function appendPanelHeading_(cell, title, subtitle) {
@@ -2953,7 +3217,9 @@ function appendInfoTable_(cell, rows) {
   );
 }
 
-function appendProgramTable_(cell, rows) {
+function appendProgramTable_(cell, rows, options) {
+  options = options || {};
+  var columnWidths = options.columnWidths || [105, 160, 95];
   var table = cell.appendTable(
     rows.map(function (row) {
       return row.map(function (value) {
@@ -2962,9 +3228,9 @@ function appendProgramTable_(cell, rows) {
     }),
   );
   table.setBorderWidth(0);
-  table.setColumnWidth(0, 105);
-  table.setColumnWidth(1, 160);
-  table.setColumnWidth(2, 95);
+  columnWidths.forEach(function (width, columnIndex) {
+    table.setColumnWidth(columnIndex, width);
+  });
   rows.forEach(function (row, rowIndex) {
     var tableRow = table.getRow(rowIndex);
     for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {
@@ -2983,6 +3249,33 @@ function appendProgramTable_(cell, rows) {
       );
     }
   });
+}
+
+function appendSermonRow_(cell, row) {
+  var table = cell.appendTable([
+    row.map(function (value) {
+      return String(value === null || typeof value === 'undefined' ? '' : value);
+    }),
+  ]);
+  table.setBorderWidth(0);
+  table.setColumnWidth(0, 105);
+  table.setColumnWidth(1, 160);
+  table.setColumnWidth(2, 95);
+  for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {
+    var tableCell = table.getCell(0, columnIndex);
+    tableCell.setPaddingTop(0.5);
+    tableCell.setPaddingBottom(0.5);
+    styleTableCell_(
+      tableCell,
+      9,
+      false,
+      columnIndex === 0
+        ? DocumentApp.HorizontalAlignment.LEFT
+        : columnIndex === 1
+          ? DocumentApp.HorizontalAlignment.CENTER
+          : DocumentApp.HorizontalAlignment.RIGHT,
+    );
+  }
 }
 
 function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslations) {
@@ -3020,7 +3313,7 @@ function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslat
         var headerParagraph = row.getCell(columnIndex).getChild(0).asParagraph();
         var headerText = headerParagraph.editAsText();
         if (headerText.getText().length > 0) {
-          headerText.setBold(0, headerText.getText().length - 1, true);
+          setPrintedLatinBold_(headerText, 0, headerText.getText().length - 1);
         }
       }
       row.getCell(columnIndex).setPaddingTop(0);
@@ -3120,10 +3413,68 @@ function styleTableCell_(tableCell, size, bold, alignment) {
   }
 }
 
-function styleText_(text, size, bold) {
-  text.setFontFamily('Times New Roman');
+function styleText_(text, size, bold, options) {
+  options = options || {};
+  var value = text.getText();
   text.setFontSize(size);
   text.setBold(Boolean(bold));
+  // Regular bulletin text must not inherit italics from a preceding prayer,
+  // disclaimer, or other intentionally italicized paragraph. Dedicated
+  // italic helpers opt back in after this shared reset.
+  text.setItalic(false);
+
+  if (options.preserveCjkFont) {
+    setPrintedLatinFontFamily_(text, value);
+  } else {
+    text.setFontFamily('Times New Roman');
+  }
+  if (bold) {
+    setPrintedCjkBold_(text, value, false);
+  }
+}
+
+function isPrintedCjkCharacter_(character) {
+  return /[\u3400-\u9fff\uf900-\ufaff]/.test(character);
+}
+
+function setPrintedLatinFontFamily_(text, value) {
+  var latinStart = 0;
+  for (var index = 0; index < value.length; index += 1) {
+    if (!isPrintedCjkCharacter_(value.charAt(index))) {
+      continue;
+    }
+    if (latinStart < index) {
+      text.setFontFamily(latinStart, index - 1, 'Times New Roman');
+    }
+    latinStart = index + 1;
+  }
+  if (latinStart < value.length) {
+    text.setFontFamily(latinStart, value.length - 1, 'Times New Roman');
+  }
+}
+
+function setPrintedCjkBold_(text, value, bold) {
+  var cjkStart = -1;
+  for (var index = 0; index < value.length; index += 1) {
+    if (isPrintedCjkCharacter_(value.charAt(index))) {
+      if (cjkStart < 0) {
+        cjkStart = index;
+      }
+      continue;
+    }
+    if (cjkStart >= 0) {
+      text.setBold(cjkStart, index - 1, Boolean(bold));
+      cjkStart = -1;
+    }
+  }
+  if (cjkStart >= 0) {
+    text.setBold(cjkStart, value.length - 1, Boolean(bold));
+  }
+}
+
+function setPrintedLatinBold_(text, start, end) {
+  text.setBold(start, end, true);
+  setPrintedCjkBold_(text, text.getText(), false);
 }
 
 function physicalTbdText_(traditionalChinese) {
@@ -3132,8 +3483,9 @@ function physicalTbdText_(traditionalChinese) {
 
 function formatHymnForPrint_(hymn) {
   hymn = hymn || {};
-  var english = String(hymn.english || '').trim();
-  var chinese = String(hymn.chinese || '').trim();
+  var resolved = resolvePrintedHymnText_(hymn.english, hymn.chinese);
+  var english = resolved.english;
+  var chinese = resolved.chinese;
   if (isPhysicalTbd_(english) || isPhysicalTbd_(chinese)) {
     return physicalTbdText_();
   }
@@ -3143,9 +3495,17 @@ function formatHymnForPrint_(hymn) {
   return english || chinese || physicalTbdText_();
 }
 
-function formatBibleReferenceForPrint_(location) {
+function formatBibleReferenceForPrint_(location, bibleTranslations) {
   var reference = String((location && location.bibleVerses) || '').trim();
-  return !reference || isPhysicalTbd_(reference) ? physicalTbdText_() : reference;
+  if (!reference || isPhysicalTbd_(reference)) {
+    return physicalTbdText_();
+  }
+
+  // The schedule has one scripture-reference field, but the printed table
+  // has separate Chinese and English lines. Resolve the book name for each
+  // line instead of copying the English reference into both language slots.
+  var labels = formatPhysicalBibleReferenceLabels_(location, bibleTranslations);
+  return printedBilingualText_(labels.english, labels.chinese);
 }
 
 function formatSermonForPrint_(location) {
