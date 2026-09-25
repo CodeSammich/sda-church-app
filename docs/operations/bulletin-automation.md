@@ -10,6 +10,11 @@ short source-directory pointer; this document is the consolidated API,
 deployment, testing, and operator reference. It records the behavior that
 operators must preserve when editing the workbook or changing a bulletin layout.
 
+This runbook describes the current native mobile-app workflow. The web/PWA
+preview remains useful for browser checks, but it is not the production bulletin
+client. The centered `Schedule` button in the mobile bulletin opens the staff
+master spreadsheet; it is intentionally not a link to either retired Google Form.
+
 ## System boundaries
 
 ```text
@@ -95,11 +100,11 @@ by hand, and do not add the generated file to a manual source patch.
 
 ### 2. `Sabbath Calendar`
 
-This is the broadly shared schedule and roster sheet. Row 1 must use this exact
-order:
+This is the broadly shared schedule and roster sheet. The current protected
+contract uses this exact order:
 
 ```text
-Date | Quarter | Special Remark | Tithe Purpose | Pastor Travel | Announcements | Sunset Time |
+Date | Quarter | Special Remark | Tithe Purpose | Pastor Travel |
 Queens Sermon | Translation | Chinese Teacher | English Teacher | Youth Teacher | Kids Teacher |
 Chair/Pastoral Prayer | Special Music | Offering Prayer | Pianist | SS Chair |
 SS Opening Prayer | SS Closing Prayer | Flower Offering |
@@ -119,6 +124,10 @@ Important structural columns:
   does not belong in the Queens Church at Study printed section.
 - `Technician`, `Encouragement`, and `Sabbath School` are Brooklyn fields.
   Printed Brooklyn uses `Encouragement`, not the older `Testimonies` wording.
+- `Announcements` and `Sunset Time` remain recognized legacy/API response aliases
+  in the source, but they are not current protected `Sabbath Calendar` contract
+  columns. Adding either back to the sheet requires a coordinated contract,
+  test, and app/renderer change.
 
 The first-row contract is protected for the technology group
 `technology@nyccsda.org`. Columns A:B are also protected for that group across
@@ -222,6 +231,12 @@ For a requested date, the API builds data in this order:
 3. Nonblank values from the matching `Sabbath Sermon Data` row override legacy
    Form values.
 
+`Sabbath Sermon Data` is the active intake workflow. The legacy Forms and their
+response tabs are optional fallback/archive sources retained for compatibility;
+the API skips them safely when a tab is absent. After all historical values have
+been migrated and verified in `Sabbath Sermon Data`, the old Forms may be removed,
+but the normal workflow should not recreate or depend on them.
+
 Legacy Form rules:
 
 - matching is by date and location;
@@ -321,8 +336,8 @@ preview surface, not the canonical release channel.
   verse, opening hymn, closing hymn, closing prayer, and Five Minutes Break rows
   are omitted.
 - Brooklyn uses the label `Sabbath Encouragement`, not `Sabbath Message`.
-- The staff planning card links to the master spreadsheet, not to the retired
-  Queens/Brooklyn Form links.
+- The centered `Schedule` pill on its own row below the week selector links to the
+  master spreadsheet, not to the retired Queens/Brooklyn Form links.
 - Every blank content field displays `TBD`; a populated field suppresses the
   cautious joint-service fallback note for Brooklyn.
 

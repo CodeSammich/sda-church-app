@@ -17,6 +17,8 @@ const architecturePreset =
   architecturesIndex === -1 ? undefined : process.argv[architecturesIndex + 1];
 const outputIndex = process.argv.indexOf('--output');
 const requestedOutput = outputIndex === -1 ? undefined : process.argv[outputIndex + 1];
+const forcePrebuild =
+  process.argv.includes('--prebuild') || process.env.EXPO_PREBUILD === 'true';
 
 const architecturePresets = {
   arm: 'armeabi-v7a,arm64-v8a',
@@ -107,16 +109,27 @@ for (const name of requiredSigningVariables) {
   delete prebuildEnvironment[name];
 }
 
-run('npx', [
-  'expo',
-  'prebuild',
-  '--template',
-  'expo-template-bare-minimum@58.0.3',
-  '--platform',
-  'android',
-  '--clean',
-  '--no-install',
-], projectRoot, prebuildEnvironment);
+// Reuse an already generated local project by default. Expo's explicit template
+// argument performs an npm registry metadata lookup even with --no-install,
+// which makes repeated local builds depend on network access. CI starts from a
+// clean checkout, so it still prebuilds normally; pass --prebuild (or set
+// EXPO_PREBUILD=true) when native config/plugin changes need regeneration.
+if (!existsSync(androidRoot) || forcePrebuild) {
+  run('npx', [
+    'expo',
+    'prebuild',
+    '--template',
+    'expo-template-bare-minimum@58.0.3',
+    '--platform',
+    'android',
+    '--clean',
+    '--no-install',
+  ], projectRoot, prebuildEnvironment);
+} else {
+  console.log(
+    'Reusing existing android/ project; pass --prebuild or set EXPO_PREBUILD=true to regenerate it.',
+  );
+}
 
 const gradleArgs = [':app:' + (isApk ? 'assembleRelease' : 'bundleRelease')];
 if (architecturePreset) {

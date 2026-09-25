@@ -1,4 +1,3 @@
-import { GridMenuCard } from '@/components/GridMenuCard';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
 import {
@@ -59,8 +58,7 @@ const LABELS = {
     nameWithheld: 'Name withheld',
     choir: 'Choir',
     sabbathSchoolProgram: 'Sabbath School',
-    masterSpreadsheet: 'Master Spreadsheet',
-    masterSpreadsheetHint: 'Admin and planning access',
+    schedule: 'Schedule',
     worshipProgram: 'Worship Program',
     serviceRoster: 'Service Roster',
     queens: 'Queens',
@@ -131,8 +129,7 @@ const LABELS = {
     nameWithheld: '姓名保留',
     choir: '詩班',
     sabbathSchoolProgram: '安息日學',
-    masterSpreadsheet: '主表格',
-    masterSpreadsheetHint: '管理與規劃使用',
+    schedule: '時間表',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     queens: '皇后區',
@@ -203,8 +200,7 @@ const LABELS = {
     nameWithheld: '姓名保留',
     choir: '诗班',
     sabbathSchoolProgram: '安息日学',
-    masterSpreadsheet: '主表格',
-    masterSpreadsheetHint: '管理与规划使用',
+    schedule: '时间表',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     queens: '皇后区',
@@ -275,8 +271,7 @@ const LABELS = {
     nameWithheld: 'Nombre reservado',
     choir: 'Coro',
     sabbathSchoolProgram: 'Escuela Sabática',
-    masterSpreadsheet: 'Hoja de cálculo principal',
-    masterSpreadsheetHint: 'Acceso administrativo y de planificación',
+    schedule: 'Horario',
     worshipProgram: 'Programa de Adoración',
     serviceRoster: 'Asignaciones de Servicio',
     queens: 'Queens',
@@ -1141,6 +1136,18 @@ export default function WeeklyBulletinScreen() {
           </Button>
         </View>
 
+        <View style={styles.scheduleButtonRow}>
+          <Button
+            accessibilityLabel={labels.schedule}
+            icon="file-table-outline"
+            mode="outlined"
+            onPress={openQuarterlySchedule}
+            style={styles.scheduleButton}
+          >
+            {labels.schedule}
+          </Button>
+        </View>
+
         {weeks[Number(selectedWeek)] &&
           (() => {
             const index = Number(selectedWeek);
@@ -1229,15 +1236,6 @@ export default function WeeklyBulletinScreen() {
                 )}
 
                 {week.bulletin && renderBulletin(week.bulletin)}
-                <GridMenuCard
-                  title={labels.masterSpreadsheet}
-                  subtitle={labels.masterSpreadsheetHint}
-                  icon="file-table-outline"
-                  color={theme.colors.bulletinSurface}
-                  iconColor={theme.colors.primary}
-                  onPress={openQuarterlySchedule}
-                  style={styles.scheduleCard}
-                />
               </View>
             );
           })()}
@@ -1264,6 +1262,15 @@ const styles = StyleSheet.create({
   weekTab: {
     flex: 1,
     minWidth: 0,
+  },
+  scheduleButtonRow: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  scheduleButton: {
+    alignSelf: 'center',
+    minWidth: 160,
   },
   weekHeader: {
     alignItems: 'center',
@@ -1338,10 +1345,6 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 20,
     padding: 14,
-  },
-  scheduleCard: {
-    marginBottom: 16,
-    width: '100%',
   },
   dataRow: {
     paddingVertical: 10,

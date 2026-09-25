@@ -4,8 +4,13 @@ Web/PWA preview deployment remains automatic on pushes to `main` through the can
 GitHub workflow. Local `npm run deploy` builds the web output without publishing it.
 Native builds run on trusted `main`/`release/**` pushes or manual dispatches. The Android
 PR preview additionally runs for same-repository pull requests targeting `main`; fork PRs
-are skipped. The Native iOS build additionally runs for upstream `release/**` → `main` pull
-requests after Environment approval. Native builds do not publish to either store. Native iOS and Android are the primary release targets; the
+are skipped so main-bound work goes through trusted in-repository release-branch workflows
+for signed native artifacts, instead of giving untrusted fork code access to the
+preview/upload path. Same-repository PRs may still use the credential-free Android
+preview. The Native iOS
+build also runs before merge for same-repository `release/**` → `main` pull requests after
+Environment approval, and runs again after merge when the `main` push trigger fires. It does
+not run for ordinary feature PRs or fork PRs. Native builds do not publish to either store. Native iOS and Android are the primary release targets; the
 web/PWA build is retained for browser testing and previews. The same Expo source is
 used for all platforms.
 
@@ -29,13 +34,29 @@ the repository-level copies before the first signed release run.
 
 The direct-native iOS workflow is now checked in separately as
 `.github/workflows/native-ios-build.yml`. It runs on trusted pushes to `main` and
-`release/**`, upstream `release/**` → `main` pull requests, and manual dispatch. The
-pull-request path is narrowly guarded to reject fork-head branches and unrelated PRs;
+`release/**`, same-repository `release/**` → `main` pull requests, and manual dispatch.
+The pull-request path is narrowly guarded to reject fork-head branches and unrelated PRs;
 all signing paths require the protected `production` Environment. It uses a
 GitHub-hosted macOS runner with Expo prebuild and Xcode, and remains unable to complete
 until the church adds its Apple signing secrets. It does not use EAS or an Expo token.
 The repository no longer depends on an Expo account; keep any external account only if
 the church wants to preserve unrelated project history.
+
+### Local Expo template lookup
+
+`scripts/build-android-native.mjs` reuses an existing generated `android/` project
+for repeat local builds. This avoids an unnecessary npm registry metadata lookup for
+`expo-template-bare-minimum@58.0.3`, including when `--no-install` is used. A clean
+GitHub Actions checkout still runs Expo prebuild. When `app.json`, a native config
+plugin, or another native setting changes, force regeneration with either:
+
+```bash
+npm run build:android:apk:debug -- --prebuild
+EXPO_PREBUILD=true npm run build:android:apk:debug
+```
+
+The execution environment may still require network approval for a clean prebuild;
+that permission is controlled by the runner or sandbox, not by repository settings.
 
 The Play Console currently shows no uploaded app bundle, so `app.json` uses the
 initial Android `versionCode` of `1`. The Android native build script refuses
@@ -58,7 +79,7 @@ the counter should not be changed casually just to produce that artifact.
 | Do not rotate the Android key annually | Upload keys do not expire annually; keeping the same key preserves the Play update path | Maintain encrypted backups; use Play's upload-key reset process after loss or compromise |
 | Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using trusted-branch or manual macOS workflows | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
 | Build artifacts but submit manually first | Compilation and signing can be automated without granting store-publishing access to every build | Upload the AAB to Play internal testing and verify an update before adding submission automation |
-| Do not build signed binaries for fork PRs | GitHub does not pass secrets to fork pull requests, and trusted release credentials must not be exposed | Use unsigned/Linux checks for fork PRs; signed iOS builds are limited to upstream release-to-main PRs, protected branches, or approved dispatches |
+| Do not build signed binaries for fork PRs | GitHub does not pass secrets to fork pull requests, and trusted release credentials must not be exposed. This also keeps main-bound changes on the same-repository `release/**` path that has the required review gate. | Use unsigned/Linux checks for fork PRs; signed iOS builds are limited to upstream release-to-main PRs, protected branches, or approved dispatches |
 
 This is why the migration is not just “put the JKS in a GitHub secret.” The
 keystore must be the key Google expects, the version code must be monotonic, the
@@ -91,7 +112,9 @@ requests. The separate **Android PR preview** workflow runs automatically throug
 `pull_request_target` for same-repository pull requests targeting `main` (opened, reopened,
 ready-for-review, or synchronized). It resolves the PR's exact head commit, and a
 credential-free job builds an ARM debug APK from that commit. The result is retained as a
-GitHub artifact for 14 days. Fork PRs are deliberately skipped. An administrator can still
+GitHub artifact for 14 days. Fork PRs are deliberately skipped: signed artifacts for
+main-bound commits must use the trusted upstream `release/**` workflow, while preventing
+untrusted fork code from reaching credential-bearing or upload-adjacent paths. An administrator can still
 manually dispatch the workflow from `main` with an open same-repository PR number.
 
 For an automatic PR run, a separate protected `production` Environment job downloads only
@@ -203,7 +226,7 @@ before relying on a quota.
 
 The automatic native workflow can run two Android jobs on a `main` push: Android AAB
 and Android APK. The iOS workflow is separate and runs on trusted `main`/`release/**`
-pushes, upstream `release/**` → `main` pull requests, or manual dispatch. A rough
+pushes, same-repository `release/**` → `main` pull requests, or manual dispatch. A rough
 private-repository estimate for the automatic Android workflow is:
 
 ```text
@@ -222,7 +245,8 @@ charges.
 
 The current `Native Android build` workflow has no `pull_request` trigger, so it does not
 start a macOS build for every PR or every new commit pushed to a PR. The iOS workflow
-does run for the narrow upstream release-to-main PR path; plan approximately as follows
+does run for the narrow upstream release-to-main PR path before merge, and runs again from
+the `main` push after merge; plan approximately as follows
 for a private GitHub Free organization, assuming the rough 10× macOS billing weight:
 
 | iOS runner time | Approximate iOS builds from 2,000 Linux-equivalent minutes |
