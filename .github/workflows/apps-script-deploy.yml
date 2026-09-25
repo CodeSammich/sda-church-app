@@ -1,0 +1,54 @@
+name: Deploy Bulletin Apps Script
+
+on:
+  workflow_dispatch:
+    inputs:
+      description:
+        description: Apps Script deployment description
+        required: false
+        default: Manual bulletin backend update
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bulletin-apps-script-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # This job can update the live web-app deployment. Keep it manual and put
+    # it behind a protected production Environment.
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out selected ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Install clasp
+        run: npm install --global @google/clasp
+
+      - name: Configure Apps Script project and credentials
+        env:
+          APPS_SCRIPT_PROJECT_ID: ${{ secrets.APPS_SCRIPT_PROJECT_ID }}
+          APPS_SCRIPT_DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          DEPLOYMENT_DESCRIPTION: ${{ inputs.description }}
+        run: |
+          set -euo pipefail
+          test -n "$APPS_SCRIPT_PROJECT_ID" || { echo 'Missing APPS_SCRIPT_PROJECT_ID.' >&2; exit 1; }
+          test -n "$APPS_SCRIPT_DEPLOYMENT_ID" || { echo 'Missing APPS_SCRIPT_DEPLOYMENT_ID.' >&2; exit 1; }
+          test -n "$CLASPRC_JSON" || { echo 'Missing CLASPRC_JSON.' >&2; exit 1; }
+
+          node -e 'const fs=require("node:fs"); JSON.parse(process.env.CLASPRC_JSON); fs.writeFileSync("google-apps-script/.clasp.json", JSON.stringify({scriptId:process.env.APPS_SCRIPT_PROJECT_ID,rootDir:"."})+"\n"); fs.writeFileSync("google-apps-script/.clasp-deployment.json", JSON.stringify({deploymentId:process.env.APPS_SCRIPT_DEPLOYMENT_ID,description:process.env.DEPLOYMENT_DESCRIPTION||"Bulletin Apps Script update"})+"\n"); fs.writeFileSync(process.env.HOME+"/.clasprc.json", process.env.CLASPRC_JSON);'
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Push and redeploy existing web app
+        run: npm run apps-script:deploy

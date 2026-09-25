@@ -3,8 +3,11 @@
 ## Release & Versioning
 
 This project uses **Semantic Versioning** (npm SemVer Guide). For release pull requests,
-the version in the PR title is the source of truth. Release CI synchronizes that version
-to `package.json`, `package-lock.json`, `app.json`, and `public/sw.js` after merge.
+the major and minor release line in the PR title is the source of truth. Titles may use
+either a concrete patch (`Release/0.38.4: ...`) or an `x` patch wildcard
+(`Release/0.38.x: ...`). With the wildcard form, Release CI takes the concrete patch
+from the checked-in `package.json`. It synchronizes that concrete version to
+`package.json`, `package-lock.json`, `app.json`, and `public/sw.js` after merge.
 
 ### Two-stage release process
 
@@ -18,10 +21,10 @@ directly against `main`.
   to perform this release step.
 
 Release branch creation is currently a manual, code-maintainer action. No workflow creates
-`release/x.y.z` automatically. This is intentional: starting a release chooses the version
+`release/x.y.(patch|x)` automatically. This is intentional: starting a release chooses the version
 and production scope and should remain an explicit decision.
 
-1. A maintainer creates `release/x.y.z` from the primary repository's `main` branch. If
+1. A maintainer creates `release/x.y.(patch|x)` from the primary repository's `main` branch. If
    the release branch does not exist, ask a maintainer to create it.
 2. Create the feature branch from that release branch, then push it to your fork:
 
@@ -32,11 +35,12 @@ and production scope and should remain an explicit decision.
    ```
 
 3. Open the feature PR from the fork's feature branch into the primary repository's
-   matching `release/x.y.z` branch. Start its title with the matching version in the form
-   `Release/x.y.z: Brief description`, complete the PR template, and wait for all checks
-   and reviews.
+   matching `release/x.y.(patch|x)` branch. Start its title with the release line in the
+   form `Release/x.y.<patch-or-x>: Brief description`, complete the PR template, and wait
+   for all checks and reviews. The branch and title must share the same major and minor;
+   their patch values may differ.
 4. After all planned feature PRs are merged, a code maintainer opens the release PR from
-   `release/x.y.z` into `main`. Only maintainers perform this second stage; contributors
+   `release/x.y.(patch|x)` into `main`. Only maintainers perform this second stage; contributors
    should not retarget their feature PRs to `main`.
 5. The merge to `main` triggers version synchronization, tagging, and web/PWA preview
    deployment. It does not publish a native iOS or Android release.
@@ -60,9 +64,10 @@ Do not create release branches automatically from dates, issue activity, or feat
 
 Every feature and release PR must follow `.github/pull_request_template.md`:
 
-- Start the PR title with the exact release version, for example
-  `Release/0.26.0: Add bulletin navigation`. When the destination branch is named
-  `release/x.y.z`, the title version must match it.
+- Start the PR title with a release line, for example
+  `Release/0.26.0: Add bulletin navigation` or `Release/0.26.x: Add bulletin navigation`.
+  When the destination branch is named `release/x.y.(patch|x)`, the title must use the
+  same major and minor; the patch may be concrete or `x`.
 - Describe the user-visible and technical changes under **Description**.
 - Put issue references under **Related issues**, one per line, using a supported closing
   keyword such as `Closes #133`.
@@ -70,11 +75,11 @@ Every feature and release PR must follow `.github/pull_request_template.md`:
   after it has actually been tested on the version named by the template.
 
 GitHub closes linked issues only when the closing reference reaches the default branch.
-Therefore, `Closes #133` in a feature PR to `release/x.y.z` links the work but does not
+Therefore, `Closes #133` in a feature PR to `release/x.y.(patch|x)` links the work but does not
 close the issue when that feature PR merges. Release automation adds the `pending release`
 label to show that the fix is merged and awaiting the production release. The maintainer
 must copy all closing references from the included feature PRs into the final
-`release/x.y.z` → `main` PR.
+`release/x.y.(patch|x)` → `main` PR.
 This is the code maintainer's responsibility, not the fork contributor's. Merging that
 final PR into `main` closes the issues. Do not rely on a reviewer to repair the merge
 commit message at the last moment.
@@ -103,11 +108,12 @@ main (stable)
 #### `release/*` Branches
 
 - **Source**: Created from `main` for each release
-- **Naming convention**: `release/*` (e.g., `release/0.8.2` or `release/v1-beta`)
+- **Naming convention**: `release/<major>.<minor>.<patch-or-x>` (e.g., `release/0.8.2` or `release/0.8.x`)
 - **Purpose**: Prepare the release and validate the version bump
 - **PR validation**:
-  - Requires a `Release/x.y.z` PR title and compares it with a `release/x.y.z`
-    destination branch or primary-repository source branch when applicable.
+  - Requires a `Release/x.y.<patch-or-x>` PR title. It compares the major and minor
+    release line with a `release/x.y.<patch-or-x>` destination branch or
+    primary-repository source branch when applicable; patch values may differ.
   - After title validation succeeds for a PR whose source is a release branch in the
     primary repository, automatically synchronizes `package.json`, `package-lock.json`,
     `app.json`, and `public/sw.js` on that branch. Fork workflows never perform the sync.
@@ -121,7 +127,7 @@ main (stable)
 
 ### Pull Request Workflow
 
-1. Branch from the active `release/x.y.z` branch.
+1. Branch from the active `release/x.y.<patch-or-x>` branch.
 2. Make and verify the changes, then commit them clearly.
 3. Push to the fork and open a PR into the matching primary-repository release branch.
 4. Follow the PR template, including Related issues and the testing checklist.
@@ -135,8 +141,10 @@ main (stable)
 
 #### `Release - PR Version Sync` (`.github/workflows/release-validation.yml`)
 
-- **Validate PR title**: Requires `Release/x.y.z` and ensures it matches an applicable
-  `release/x.y.z` destination branch or primary-repository source branch.
+- **Validate PR title**: Requires `Release/x.y.<patch-or-x>` and ensures its major and
+  minor match an applicable `release/x.y.<patch-or-x>` destination branch or
+  primary-repository source branch. An `x` patch uses the concrete patch in
+  `package.json`.
 - **Auto-Sync before merge**: After the required title validation succeeds, uses the
   validated version to synchronize `package.json`, `package-lock.json`, `app.json`, and
   `public/sw.js` on a release PR's source branch in the primary repository. It does not
@@ -145,7 +153,7 @@ main (stable)
 #### `Issues - Pending Release Label` (`.github/workflows/pending-release-label.yml`)
 
 - Adds `pending release` to issues referenced with `Closes #<issue>` when a PR merges
-  into a `release/x.y.z` branch, including PRs submitted from forks.
+  into a `release/x.y.<patch-or-x>` branch, including PRs submitted from forks.
 - Removes the label when the issue closes after the final release reaches `main`.
 
 #### `Deploy Web Preview and Tag` (`.github/workflows/deploy.yml`)

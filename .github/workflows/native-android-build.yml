@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - 'release/**'
   workflow_dispatch:
     inputs:
       android:
@@ -25,10 +24,10 @@ env:
 jobs:
   build:
     # Do not attach the production Environment to a manual run from an
-    # arbitrary branch. Only trusted release refs may reach signing secrets.
+    # arbitrary branch. Only the trusted main branch may reach signing secrets.
     if: >-
       github.event.repository.fork == false &&
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+      github.ref == 'refs/heads/main'
     # SECURITY CONTRACT: This job can read production signing secrets. Never add
     # `set -x`, secret-byte logging (`echo`/`printf`/`cat` to the terminal),
     # debug dumps, or an artifact/upload step that includes secret files. Keep
@@ -53,22 +52,22 @@ jobs:
             profile: preview
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main'
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main'
         with:
           node-version: 22
           cache: npm
       - name: Install dependencies
-        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
-        run: npm ci
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main'
+        run: npm ci --force
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
-        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main') && matrix.target.platform == 'android'
         with:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
-        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main') && matrix.target.platform == 'android'
         with:
           # License acceptance is performed in the next step so this action
           # cannot block on an interactive prompt on the hosted runner.
@@ -76,7 +75,7 @@ jobs:
           log-accepted-android-sdk-licenses: false
           packages: ''
       - name: Accept Android SDK licenses noninteractively
-        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main') && matrix.target.platform == 'android'
         run: |
           # SECURITY: SDK license text is not a secret, but keep it out of the
           # log. This step must remain noninteractive on GitHub-hosted runners.
@@ -87,7 +86,7 @@ jobs:
           set -o pipefail
           test "$license_status" -eq 0
       - name: Install Android SDK tools
-        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && matrix.target.platform == 'android'
+        if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main') && matrix.target.platform == 'android'
         run: |
           # Android 37 uses the versioned 37.0 platform package name.
           set -euo pipefail
@@ -102,7 +101,7 @@ jobs:
           }
 
       - name: Restore Android upload keystore
-        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
@@ -116,7 +115,7 @@ jobs:
           chmod 600 "$RUNNER_TEMP/nyccsda-upload.keystore"
           test -s "$RUNNER_TEMP/nyccsda-upload.keystore"
       - name: Compile signed binary on GitHub runner
-        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main'
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nyccsda-upload.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}

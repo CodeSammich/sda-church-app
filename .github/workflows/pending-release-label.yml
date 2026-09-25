@@ -29,8 +29,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! "$BASE_REF" =~ ^release/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "PR #$PR_NUMBER did not merge into a release/x.y.z branch; no issues will be labeled."
+          if [[ ! "$BASE_REF" =~ ^release/[0-9]+\.[0-9]+\.(x|[0-9]+)$ ]]; then
+            echo "PR #$PR_NUMBER did not merge into a release/x.y.(patch|x) branch; no issues will be labeled."
             exit 0
           fi
 

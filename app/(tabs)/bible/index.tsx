@@ -9,6 +9,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Animated,
   FlatList,
   GestureResponderEvent,
@@ -44,7 +45,6 @@ import {
   useBibleAudioPlayerStatus,
 } from '@/services/BibleAudioPlayer';
 import {
-  activateBibleAudioLockScreen,
   buildBibleAudioQueue,
   shouldStopBibleAudioAtChapterEnd,
   type BibleAudioSleepTimerSetting,
@@ -53,6 +53,7 @@ import {
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getOrderedBibleAudioReaders,
+  initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
 import type { BibleAudioStatus } from '@/services/BibleAudioPlayer.types';
@@ -95,9 +96,11 @@ const AUDIO_SOURCE_LOAD_TIMEOUT_MS = 45_000;
 // immediate next chapter, but native preload downloads an entire file on
 // Android, which is too memory-heavy for long Bible chapters.
 const NATIVE_AUDIO_FORWARD_BUFFER_SECONDS = 30;
+// The status subscription re-renders the whole Bible reader. Keep this low
+// frequency so native text drawing cannot compete with playback on phones.
+const NATIVE_AUDIO_STATUS_UPDATE_INTERVAL_MS = 1_000;
 const NATIVE_AUDIO_AUTOPLAY_RETRY_MS = 2_000;
 const NATIVE_AUDIO_RECOVERY_MS = 5_000;
-
 type SleepTimerSetting = BibleAudioSleepTimerSetting;
 
 const BIBLE_TRANS_KEY = BibleService.BIBLE_TRANSLATION_STORAGE_KEY;
@@ -111,7 +114,7 @@ const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
 const BIBLE_DUAL_LANGUAGE_KEY = 'user-bible-dual-language';
 const BIBLE_SUPPORTING_TRANSLATION_KEY = 'user-bible-supporting-translation';
-const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const;
+const SUPERSCRIPT_MARKER_PATTERN = /([⁰¹²³⁴⁵⁶⁷⁸⁹⁺]+)/g;
 
 const getAudioReaderLabel = (reader: string) =>
   reader
@@ -206,7 +209,6 @@ const uiLabels = {
     audioUnavailable: 'Audio unavailable for this chapter',
     back10: 'Back 10 seconds',
     forward30: 'Forward 30 seconds',
-    playbackSpeed: 'Playback speed',
     sleepTimer: 'Sleep timer',
     timerOff: 'Off',
     minutes: '{n} minutes',
@@ -284,7 +286,6 @@ const uiLabels = {
     audioUnavailable: '此章節沒有有聲版本',
     back10: '後退 10 秒',
     forward30: '前進 30 秒',
-    playbackSpeed: '播放速度',
     sleepTimer: '睡眠定時器',
     timerOff: '關閉',
     minutes: '{n} 分鐘',
@@ -362,7 +363,6 @@ const uiLabels = {
     audioUnavailable: '此章节没有有声版本',
     back10: '后退 10 秒',
     forward30: '前进 30 秒',
-    playbackSpeed: '播放速度',
     sleepTimer: '睡眠定时器',
     timerOff: '关闭',
     minutes: '{n} 分钟',
@@ -445,7 +445,6 @@ const uiLabels = {
     audioUnavailable: 'Audio no disponible para este capítulo',
     back10: 'Retroceder 10 segundos',
     forward30: 'Avanzar 30 segundos',
-    playbackSpeed: 'Velocidad de reproducción',
     sleepTimer: 'Temporizador',
     timerOff: 'Desactivado',
     minutes: '{n} minutos',
@@ -911,7 +910,6 @@ export default function BibleScreen() {
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [audioPositionMillis, setAudioPositionMillis] = useState(0);
   const [audioDurationMillis, setAudioDurationMillis] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState(1);
   const [sleepTimerSetting, setSleepTimerSetting] = useState<SleepTimerSetting>(null);
   const [sleepTimerVisible, setSleepTimerVisible] = useState(false);
   const [audioSettingsVisible, setAudioSettingsVisible] = useState(false);
@@ -921,7 +919,7 @@ export default function BibleScreen() {
   const scrubGestureRef = useRef(new BibleAudioScrubGesture());
   const [scrubPositionMillis, setScrubPositionMillis] = useState<number | null>(null);
   const audioPlayer = useBibleAudioPlayer(null, {
-    updateInterval: 250,
+    updateInterval: NATIVE_AUDIO_STATUS_UPDATE_INTERVAL_MS,
     // Expo 58 keeps the iOS audio session and Android permanent audio focus
     // active through player pauses, finishes, and seek/buffer transitions.
     // We still call
@@ -936,6 +934,7 @@ export default function BibleScreen() {
   // rebuffer is not mistaken for a new source load.
   const audioSourceReadyRef = useRef(false);
   const audioLoadAttemptRef = useRef(0);
+  const audioSourceLoadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingNativeAutoplayRef = useRef(false);
   const lastNativeAutoplayAttemptRef = useRef(0);
   const nativePlaybackIntentRef = useRef(false);
@@ -1216,6 +1215,12 @@ export default function BibleScreen() {
     }
 
     if (audioStatus.didJustFinish) {
+      // Android's AudioPlaylist advances ExoPlayer to the next media item
+      // itself. Navigating from this callback races that native transition and
+      // can make the route cleanup pause/reconfigure the playlist mid-change.
+      // The active-track sync effect below updates the reader after native
+      // advancement; the playlist also replenishes its rolling queue there.
+      if (Platform.OS === 'android') return;
       setIsPlaying(false);
       const finishedChapter = (currentPlayerStatus as BibleAudioStatus).activeChapter;
       const finishedBook = books.find((candidate) =>
@@ -1234,10 +1239,14 @@ export default function BibleScreen() {
         releaseNativeAudioFocus();
         return;
       }
-      if (!isLastChapter) {
+      const hasFollowingChapter = finishedChapter
+        ? !!finishedBook && (finishedChapter.chapter < finishedBook.numberOfChapters ||
+          books.indexOf(finishedBook) < books.length - 1)
+        : !isLastChapter;
+      if (hasFollowingChapter) {
         // Signal that the next chapter should start playing automatically
         setShouldAutoPlay(true);
-        navigateToChapter('next');
+        navigateToChapter('next', finishedChapter?.bookId, finishedChapter?.chapter);
       } else {
         nativePlaybackIntentRef.current = false;
         pendingNativeAutoplayRef.current = false;
@@ -1247,8 +1256,8 @@ export default function BibleScreen() {
     }
   }, [audioStatus, isLastChapter]);
 
-  // A queued audio transition can happen while React is throttled in the
-  // background. Once the PWA is visible, catch the reader up to the chapter
+  // A queued audio transition can happen while React is suspended in the
+  // background. Catch the reader up to the chapter
   // already chosen by the audio engine and fetch its text normally.
   useEffect(() => {
     const activeChapter = audioStatus.activeChapter;
@@ -1271,6 +1280,34 @@ export default function BibleScreen() {
       const activeBook = books.find((candidate) => candidate.id === activeChapter.bookId);
       if (!activeBook) return;
 
+      const crossedSleepTimerBoundary =
+        sleepTimerSettingRef.current === 'chapter' ||
+        (sleepTimerSettingRef.current === 'book' &&
+          !!book &&
+          activeBook.id !== book.id);
+      if (crossedSleepTimerBoundary) {
+        // Android keeps its native queue append-only for transition safety.
+        // Pause at the boundary instead of removing the next media item.
+        try {
+          audioPlayer.pause();
+        } catch (error) {
+          console.warn('Bible audio sleep-timer pause failed', error);
+        }
+        setShouldAutoPlay(false);
+        nativePlaybackIntentRef.current = false;
+        pendingNativeAutoplayRef.current = false;
+        clearNativeAutoplayRetryTimeout();
+        clearNativeRecoveryTimeout();
+        clearSleepTimer();
+        releaseNativeAudioFocus();
+      }
+
+      if (Platform.OS === 'android') {
+        loadedAudioUrlRef.current = audioStatus.activeSourceUrl || loadedAudioUrlRef.current;
+        pendingNativeAutoplayRef.current = false;
+        clearNativeAutoplayRetryTimeout();
+        seekController.cancel();
+      }
       lastSyncedAudioChapterRef.current = activeKey;
       preserveAudioOnNextRouteChangeRef.current = true;
       setBook(activeBook);
@@ -1310,6 +1347,7 @@ export default function BibleScreen() {
     }
 
     const attempt = ++audioLoadAttemptRef.current;
+    if (audioSourceLoadTimeoutRef.current) clearTimeout(audioSourceLoadTimeoutRef.current);
     clearNativeRecoveryTimeout();
 
     try {
@@ -1328,22 +1366,45 @@ export default function BibleScreen() {
         uri: audioUrl,
         name: audioTitle,
       });
-      audioPlayer.setPlaybackRate(playbackRate, 'high');
-      activateBibleAudioLockScreen(audioPlayer, {
+      const metadata = {
         title: audioTitle,
         artist: selectedAudioReader
           ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
           : supportedTranslation.name,
         albumTitle: labels.audioPlayer,
+      };
+      const currentChapter = book
+        ? {
+            bookId: book.id,
+            chapter: chapterNum,
+            translationId: supportedTranslation.id,
+            source: { uri: audioUrl, name: audioTitle },
+            metadata,
+          }
+        : undefined;
+      // Seed the native playlist once, then publish it to lock-screen controls.
+      // Android's MediaSession must observe the complete initial playlist before
+      // ExoPlayer advances to its first queued chapter.
+      initializeBibleAudioPlayback({
+        player: audioPlayer,
+        currentChapter,
+        queue: buildUpcomingAudioQueue(),
+        metadata,
+        onQueueError: (error) => {
+          // The current source is already loaded; keep playing if a future-track
+          // descriptor is rejected by the native bridge.
+          console.warn('Bible audio queue seed failed; continuing current track.', error);
+        },
+        onLockScreenError: (error) => {
+          // Lock-screen controls are optional. A canary bridge cast failure must
+          // not prevent the recording itself from starting.
+          console.warn('Bible audio lock-screen activation failed; continuing playback.', error);
+        },
       });
-      // Queueing is on demand: descriptors are created only after Play, and
-      // the web player assigns a URL only to the immediate next chapter.
-      if (Platform.OS === 'web') {
-        audioPlayer.setQueue?.(buildUpcomingAudioQueue());
-      }
       if (resumePositionMillis > 0) {
         await audioPlayer.seekTo(resumePositionMillis / 1000);
       }
+      if (attempt !== audioLoadAttemptRef.current) return;
       audioPlayer.play();
       scheduleNativeAutoplayRetry();
 
@@ -1351,13 +1412,15 @@ export default function BibleScreen() {
       // mirror after 45 seconds if this source has never started, has no
       // duration, and has made no progress. Once playback begins, this timer
       // can never replace the active source.
-      setTimeout(() => {
+      audioSourceLoadTimeoutRef.current = setTimeout(() => {
+        audioSourceLoadTimeoutRef.current = null;
+        if (attempt !== audioLoadAttemptRef.current) return;
         const currentPlayerStatus = audioPlayer.currentStatus;
         const sourceHasStarted =
           currentPlayerStatus.playing ||
           currentPlayerStatus.currentTime > 0 ||
           (currentPlayerStatus.isLoaded && currentPlayerStatus.duration > 0);
-        if (attempt !== audioLoadAttemptRef.current || sourceHasStarted) return;
+        if (sourceHasStarted) return;
 
         if (sourceIndex + 1 < audioUrls.length) {
           console.warn('Bible audio initial load timed out; trying the next configured source.');
@@ -1386,8 +1449,10 @@ export default function BibleScreen() {
 
   const startAudio = async () => {
     if (selectedAudioUrlsRef.current.length === 0) return;
+    const attempt = audioLoadAttemptRef.current;
     try {
       await reactivateNativeAudioFocus();
+      if (attempt !== audioLoadAttemptRef.current) return;
       const loadedAudioUrl = loadedAudioUrlRef.current;
       if (
         !loadedAudioUrl ||
@@ -1482,6 +1547,10 @@ export default function BibleScreen() {
       clearNativeRecoveryTimeout();
       clearNativeAutoplayRetryTimeout();
       audioLoadAttemptRef.current += 1;
+      if (audioSourceLoadTimeoutRef.current) {
+        clearTimeout(audioSourceLoadTimeoutRef.current);
+        audioSourceLoadTimeoutRef.current = null;
+      }
       nativePlaybackIntentRef.current = false;
       pendingNativeAutoplayRef.current = false;
       safePauseAudio();
@@ -1507,21 +1576,31 @@ export default function BibleScreen() {
     chapterAutoplayRetryCountRef.current = 0;
     clearNativeRecoveryTimeout();
     audioLoadAttemptRef.current += 1;
+    if (audioSourceLoadTimeoutRef.current) {
+      clearTimeout(audioSourceLoadTimeoutRef.current);
+      audioSourceLoadTimeoutRef.current = null;
+    }
     nativePlaybackIntentRef.current = false;
     pendingNativeAutoplayRef.current = false;
     clearNativeAutoplayRetryTimeout();
     safePauseAudio();
     releaseNativeAudioFocus();
     if (Platform.OS === 'web') {
-      // expo-audio's native player manages lock-screen controls through its
-      // native lifecycle. The explicit cleanup method belongs to the web
-      // Media Session adapter; calling it on the native module makes older
-      // binaries reject the player argument at runtime.
-      audioPlayer.clearLockScreenControls();
-      // The native AudioPlayer accepts only a real source in replace(). The
-      // browser adapter supports null as its reset operation, so keep that
-      // fallback isolated to the PWA path.
+      // The browser adapter needs an explicit reset. Android's playlist is
+      // replaced lazily by the next Play action; clearing it during a native
+      // track transition is unsafe.
+      try {
+        audioPlayer.clearLockScreenControls();
+      } catch (error) {
+        console.warn('Bible audio lock-screen cleanup failed', error);
+      }
       audioPlayer.replace(null);
+    } else if (Platform.OS === 'android') {
+      try {
+        audioPlayer.clearLockScreenControls();
+      } catch (error) {
+        console.warn('Bible audio lock-screen cleanup failed', error);
+      }
     }
     loadedAudioUrlRef.current = null;
     audioSourceReadyRef.current = false;
@@ -1582,15 +1661,6 @@ export default function BibleScreen() {
 
   const skipAudio = (offsetMillis: number) => {
     void seekAudio(getCurrentAudioPositionMillis() + offsetMillis);
-  };
-
-  const selectPlaybackRate = async (nextRate: number) => {
-    setPlaybackRate(nextRate);
-    try {
-      audioPlayer.setPlaybackRate(nextRate, 'high');
-    } catch (e) {
-      console.error('Audio playback speed error:', e);
-    }
   };
 
   useEffect(() => {
@@ -1705,18 +1775,19 @@ export default function BibleScreen() {
     if (
       !loadedAudioUrlRef.current ||
       !activeChapter ||
-      !chapterData ||
-      chapterData.translation.id !== activeChapter.translationId ||
-      chapterData.book.id !== activeChapter.bookId ||
-      chapterData.chapter.number !== activeChapter.chapter
+      activeChapter.translationId !== supportedTranslation.id
     ) {
       return;
     }
 
-    if (Platform.OS === 'web') {
-      audioPlayer.setQueue?.(buildUpcomingAudioQueue());
+    if (Platform.OS === 'web' || Platform.OS === 'android') {
+      try {
+        audioPlayer.setQueue?.(buildUpcomingAudioQueue());
+      } catch (error) {
+        console.warn('Bible audio queue replenishment failed; keeping current queue.', error);
+      }
     }
-  }, [chapterData, audioStatus.activeChapter]);
+  }, [audioStatus.activeChapter, supportedTranslation.id]);
 
   useEffect(() => {
     if (modalType) {
@@ -1873,14 +1944,12 @@ export default function BibleScreen() {
     };
   }, [supportingTranslation?.id, book?.id, chapterNum, chapterReloadToken]);
 
-  // Android can suspend an in-flight media or scripture request while the PWA
-  // is locked. Retry the selected chapter and an unready audio element as soon
-  // as the document is usable again, without requiring prev/next navigation.
+  // Retry missing scripture when the native app or browser becomes active.
+  // Recover text independently of playback: unlocking must not override a
+  // pause caused by the user or another audio app.
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-
     const recoverInterruptedLoads = () => {
-      if (document.visibilityState === 'hidden') return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       const chapterMatchesSelection =
         chapterData?.translation.id === supportedTranslation.id &&
         chapterData?.book.id === book?.id &&
@@ -1889,11 +1958,18 @@ export default function BibleScreen() {
       if (loading || !chapterMatchesSelection) {
         setChapterReloadToken((current) => current + 1);
       }
-      if (isAudioLoading && !audioStatus.playing) {
+      if (Platform.OS === 'web' && isAudioLoading && !audioStatus.playing) {
         audioPlayer.play();
       }
     };
 
+    if (Platform.OS !== 'web') {
+      const subscription = AppState.addEventListener('change', (state) => {
+        if (state === 'active') recoverInterruptedLoads();
+      });
+      return () => subscription.remove();
+    }
+    if (typeof document === 'undefined') return;
     document.addEventListener('visibilitychange', recoverInterruptedLoads);
     window.addEventListener('online', recoverInterruptedLoads);
     return () => {
@@ -2216,6 +2292,29 @@ export default function BibleScreen() {
   // exactly that route cleanup is skipped.
   useEffect(() => {
     return () => {
+      // A native playlist transition can update its active track before React
+      // commits the matching book/chapter route. In that case the route being
+      // cleaned up is stale, and unloading it would pause or clear the native
+      // playlist while ExoPlayer is changing media items. Manual navigation
+      // still sees the old active track here and unloads normally.
+      let activeChapter: BibleAudioStatus['activeChapter'];
+      try {
+        activeChapter = (audioPlayer.currentStatus as BibleAudioStatus).activeChapter;
+      } catch (error) {
+        // A native shared object can be released while React is cleaning up a
+        // stale route. Cleanup must remain best-effort and never turn that
+        // bridge race into a fatal render error.
+        console.warn('Bible audio status unavailable during route cleanup', error);
+      }
+      if (
+        Platform.OS === 'android' &&
+        activeChapter &&
+        activeChapter.translationId === supportedTranslation.id &&
+        (activeChapter.bookId !== book?.id || activeChapter.chapter !== chapterNum)
+      ) {
+        preserveAudioOnNextRouteChangeRef.current = false;
+        return;
+      }
       if (preserveAudioOnNextRouteChangeRef.current) {
         preserveAudioOnNextRouteChangeRef.current = false;
         return;
@@ -2290,7 +2389,7 @@ export default function BibleScreen() {
     item: any,
     i: number,
     contentArray: any[],
-    allowUnderline = true,
+    allowFootnoteMarker = true,
     isBold = false,
     translationId = supportedTranslation.id,
     selahStyle: any = ReaderStyles.selahMarker,
@@ -2377,13 +2476,25 @@ export default function BibleScreen() {
       contentText = ' ' + contentText;
     }
 
-    // Peek ahead for footnote markers to apply underlining to the current word
-    let isFootnoted = false;
-    if (allowUnderline) {
+    // Peek ahead for a footnote marker to place after the current word.
+    let footnoteCaller: string | null = null;
+    if (allowFootnoteMarker) {
       for (let j = i + 1; j < contentArray.length; j++) {
         const next = contentArray[j];
         if (typeof next === 'object' && 'noteId' in next) {
-          isFootnoted = true;
+          const footnoteSource =
+            translationId === supportedTranslation.id
+              ? chapterData
+              : supportingChapterData;
+          const footnotes = footnoteSource?.chapter.footnotes ?? [];
+          const footnoteIndex = footnotes.findIndex(
+            (footnote) => footnote.noteId === next.noteId,
+          );
+          // Use chapter-local numbering instead of source callers such as "+".
+          // Footnotes are stored in reading order, so this resets at 1 per chapter.
+          footnoteCaller = String(
+            (footnoteIndex >= 0 ? footnoteIndex : next.noteId) + 1,
+          );
           break;
         }
         if (typeof next === 'string' && next.trim().length > 0) break;
@@ -2394,27 +2505,34 @@ export default function BibleScreen() {
     const renderText = (text: string, style?: any) => {
       const { leading, core, trailingPunct, trailingSpace } =
         BibleService.segmentText(text);
+      const themeRenderKey = `${i}-${theme.colors.primary}`;
+      const footnoteMarker = footnoteCaller ? (
+        <Text
+          key={`footnote-marker-${themeRenderKey}-${footnoteCaller}`}
+          style={{ color: theme.colors.primary }}
+        >
+          {BibleService.toSuperscript(footnoteCaller)}
+        </Text>
+      ) : null;
 
       // 1. Handle Liturgical Markers (Selah/Higgaion)
       if (isSelah) {
         // Wrap Selah in a View to ensure it behaves as a block-level element
         // allowing `textAlign: 'right'` to work consistently across platforms.
         return (
-          <View key={i} style={{ width: '100%' }}>
-            <Text style={selahStyle}>
+          <View
+            key={themeRenderKey}
+            style={{ width: '100%', alignItems: 'flex-end' }}
+          >
+            <Text style={[selahStyle, { textAlign: 'right' }]}>
               <Text
                 style={[
                   style,
-                  isFootnoted
-                    ? {
-                        textDecorationLine: 'underline',
-                        textDecorationColor: theme.colors.readerColors.footnoteIndicator,
-                      }
-                    : undefined,
                   isBold && { fontWeight: 'bold' },
                 ]}
               >
                 {core}
+                {footnoteMarker}
               </Text>
               {trailingPunct}
             </Text>
@@ -2422,27 +2540,23 @@ export default function BibleScreen() {
         );
       }
 
-      if (!isFootnoted || !core) {
+      if (!footnoteCaller || !core) {
         return (
-          <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
+          <Text key={themeRenderKey} style={[style, isBold && { fontWeight: 'bold' }]}>
             {text}
           </Text>
         );
       }
 
       return (
-        <Text key={i} style={[style, isBold && { fontWeight: 'bold' }]}>
+        <Text key={themeRenderKey} style={[style, isBold && { fontWeight: 'bold' }]}>
           {leading}
           <Text
-            style={[
-              {
-                textDecorationLine: 'underline',
-                textDecorationColor: theme.colors.readerColors.footnoteIndicator,
-              },
-              isBold && { fontWeight: 'bold' },
-            ]}
+            key={`footnote-${themeRenderKey}`}
+            style={isBold ? { fontWeight: 'bold' } : undefined}
           >
             {core}
+            {footnoteMarker}
           </Text>
           <Text style={[style, isBold && { fontWeight: 'bold' }]}>{trailingPunct}</Text>
           {trailingSpace}
@@ -2475,8 +2589,7 @@ export default function BibleScreen() {
       return <Text key={i}>{'\n'}</Text>;
     }
 
-    // Footnote Markers: Now that we have underlines, we skip rendering the literal
-    // superscript caller (e.g., * or a) to maintain a cleaner reading experience.
+    // Footnote markers are metadata; their full text is shown in the verse detail modal.
     if ('noteId' in item) return null;
 
     return null;
@@ -2553,10 +2666,11 @@ export default function BibleScreen() {
         ? getParallelVerseTexts(
             chapterData,
             supportedTranslation.id,
-            supportingChapterData,
-            supportingTranslation?.id || null,
-            selectedVerseNum,
-          )
+          supportingChapterData,
+          supportingTranslation?.id || null,
+          selectedVerseNum,
+          true,
+        )
         : null,
     [
       chapterData,
@@ -2578,6 +2692,17 @@ export default function BibleScreen() {
     !!selectedVerseTexts?.supportingText &&
     !!supportingTranslation &&
     isChineseBibleTranslation(supportingTranslation.id);
+
+  const renderPopupVerseText = (text: string) =>
+    text.split(SUPERSCRIPT_MARKER_PATTERN).map((part, index) =>
+      /^[⁰¹²³⁴⁵⁶⁷⁸⁹⁺]+$/.test(part) ? (
+        <Text key={`popup-footnote-marker-${index}`} style={{ color: theme.colors.primary }}>
+          {part}
+        </Text>
+      ) : (
+        part
+      ),
+    );
 
   const renderStructuralText = (
     content: BibleService.ChapterHeading | BibleService.ChapterHebrewSubtitle,
@@ -3397,8 +3522,8 @@ export default function BibleScreen() {
                 <TouchableOpacity
                   onPress={() => setAudioSettingsVisible(true)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${labels.audioSettings}: ${playbackRate}×`}
-                  accessibilityHint={`${labels.narrator}, ${labels.playbackSpeed}, ${labels.audioSource}`}
+                  accessibilityLabel={labels.audioSettings}
+                  accessibilityHint={`${labels.narrator}, ${labels.audioSource}`}
                   style={[
                     ReaderStyles.audioSideControl,
                     dockLayout.stackControls && {
@@ -3412,26 +3537,19 @@ export default function BibleScreen() {
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      ReaderStyles.audioControlText,
-                      { color: theme.colors.onSurface },
-                    ]}
-                  >
-                    {playbackRate}×
-                  </Text>
                   <AppIcon
                     pointerEvents="none"
-                    name="tune-variant"
-                    size={13}
+                    name="account-voice"
+                    size={24}
                     textScale={bibleUiTextScale}
-                    color={theme.colors.onSurfaceVariant}
+                    color={theme.colors.onSurface}
                   />
                 </TouchableOpacity>
 
                 <View style={ReaderStyles.audioTransportControls}>
                   <IconButton
                     icon="rewind-10"
+                    iconColor={theme.colors.onSurface}
                     size={scaleTypographyMetric(26, bibleUiTextScale)}
                     onPress={() => skipAudio(-10000)}
                     disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
@@ -3451,6 +3569,7 @@ export default function BibleScreen() {
                   />
                   <IconButton
                     icon="fast-forward-30"
+                    iconColor={theme.colors.onSurface}
                     size={scaleTypographyMetric(26, bibleUiTextScale)}
                     onPress={() => skipAudio(30000)}
                     disabled={!loadedAudioUrlRef.current || !audioDurationMillis}
@@ -3638,63 +3757,6 @@ export default function BibleScreen() {
                   { color: theme.colors.onSurface },
                 ]}
               >
-                {labels.playbackSpeed}: {playbackRate}×
-              </Text>
-              <View style={styles.audioSettingsRateRow}>
-                {PLAYBACK_RATES.map((rate) => {
-                  const isSelected = rate === playbackRate;
-                  return (
-                    <TouchableOpacity
-                      key={rate}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${labels.playbackSpeed}: ${rate}×`}
-                      accessibilityState={{ selected: isSelected }}
-                      onPress={() => selectPlaybackRate(rate)}
-                      style={[
-                        styles.audioSettingsRate,
-                        {
-                          backgroundColor: isSelected
-                            ? theme.colors.primaryContainer
-                            : theme.colors.surfaceVariant,
-                          borderColor: isSelected
-                            ? theme.colors.primary
-                            : theme.colors.outlineVariant,
-                          borderWidth: isSelected ? 2 : 1,
-                        },
-                      ]}
-                    >
-                      {isSelected && (
-                        <AppIcon
-                          pointerEvents="none"
-                          name="check-circle"
-                          size={16}
-                          textScale={bibleUiTextScale}
-                          color={theme.colors.onPrimaryContainer}
-                        />
-                      )}
-                      <Text
-                        style={{
-                          color: isSelected
-                            ? theme.colors.onPrimaryContainer
-                            : theme.colors.onSurfaceVariant,
-                          fontWeight: isSelected ? '700' : '600',
-                        }}
-                      >
-                        {rate}×
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <Divider style={styles.audioSettingsDivider} />
-              <Text
-                variant="titleMedium"
-                style={[
-                  styles.audioSettingsSectionTitle,
-                  { color: theme.colors.onSurface },
-                ]}
-              >
                 {labels.narrator}
               </Text>
               {audioReaderEntries.map(([reader]) => {
@@ -3714,7 +3776,7 @@ export default function BibleScreen() {
                       name="account-voice"
                       size={24}
                       textScale={bibleUiTextScale}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.onSurface}
                     />
                     <Text
                       style={[
@@ -3768,7 +3830,7 @@ export default function BibleScreen() {
                           name="server-network"
                           size={24}
                           textScale={bibleUiTextScale}
-                          color={theme.colors.onSurfaceVariant}
+                          color={theme.colors.onSurface}
                         />
                         <Text
                           style={[
@@ -3817,7 +3879,7 @@ export default function BibleScreen() {
                       name="battery-lock-open"
                       size={24}
                       textScale={bibleUiTextScale}
-                      color={theme.colors.onSurfaceVariant}
+                      color={theme.colors.onSurface}
                     />
                     <Text
                       style={[styles.pressRowText, { color: theme.colors.onSurface }]}
@@ -3948,7 +4010,7 @@ export default function BibleScreen() {
                     }
                     size={24}
                     textScale={bibleUiTextScale}
-                    color={theme.colors.onSurfaceVariant}
+                    color={theme.colors.onSurface}
                   />
                   <Text
                     style={[
@@ -4213,10 +4275,11 @@ export default function BibleScreen() {
                         text={selectedPrimaryVerseText}
                         textColor={theme.colors.onSurface}
                         textScale={textScale}
+                        footnoteColor={theme.colors.primary}
                       />
                     ) : (
                       <Text style={[ReaderStyles.detailText, { fontWeight: '500' }]}>
-                        {selectedPrimaryVerseText}
+                        {renderPopupVerseText(selectedPrimaryVerseText)}
                       </Text>
                     )}
                     {supportingTranslation && selectedVerseTexts?.supportingText && (
@@ -4243,6 +4306,7 @@ export default function BibleScreen() {
                             text={selectedVerseTexts.supportingText}
                             textColor={theme.colors.onSurfaceVariant}
                             textScale={textScale}
+                            footnoteColor={theme.colors.primary}
                             variant="supporting"
                           />
                         ) : (
@@ -4252,7 +4316,7 @@ export default function BibleScreen() {
                               { color: theme.colors.onSurfaceVariant },
                             ]}
                           >
-                            {selectedVerseTexts.supportingText}
+                            {renderPopupVerseText(selectedVerseTexts.supportingText)}
                           </Text>
                         )}
                       </View>
@@ -4370,7 +4434,13 @@ export default function BibleScreen() {
                                 variant="labelSmall"
                                 style={{ color: theme.colors.primary, marginBottom: 4 }}
                               >
-                                {labels.footnote} ({f.caller})
+                                {labels.footnote}{' '}
+                                {BibleService.toSuperscript(
+                                  BibleService.getChapterFootnoteNumber(
+                                    chapterData.chapter.footnotes,
+                                    f.noteId,
+                                  ),
+                                )}
                               </Text>
                               <Text style={ReaderStyles.detailText}>{f.text}</Text>
                             </View>
@@ -4967,23 +5037,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       paddingTop: 16,
       paddingBottom: 6,
       fontWeight: '700',
-    },
-    audioSettingsRateRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-    },
-    audioSettingsRate: {
-      minWidth: 52,
-      minHeight: 44,
-      borderRadius: 22,
-      flexDirection: 'row',
-      gap: 5,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 12,
     },
     audioSettingsDivider: {
       marginTop: 8,

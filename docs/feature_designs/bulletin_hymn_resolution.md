@@ -11,20 +11,20 @@ All bulletin hymn fields must use
 `resolveBulletinHymnPresentation()` from `services/BulletinHymnalService.ts`. It returns
 one object containing both the visible `displayText` and the optional reader
 `destination`. Keeping those values together prevents the title and button from resolving
-different form answers.
+different intake answers.
 
 ## Display and routing rules
 
 Chinese UI means either `zh` or `zh-cn`. The English hymnal is preferred for every other
 UI language currently supported by the bulletin.
 
-| Submitted form data | Result |
+| Submitted bulletin data | Result |
 | --- | --- |
 | Both language fields have values | Resolve the field matching the selected UI language. |
 | Only the selected-language field has a value | Show its canonical number and title and open that hymnal. |
 | Only the other-language field has a mapped equivalent | Show and open the equivalent in the selected UI language. Mapping works in both directions. |
 | Only the other-language field has no mapped equivalent | Keep its canonical source number and title and open the source hymnal. |
-| Content was placed in the wrong form field | Use title and writing-system evidence to detect its actual catalog, then apply the same mapping rules. |
+| Content was placed in the wrong language field | Use title and writing-system evidence to detect its actual catalog, then apply the same mapping rules. |
 | A correct number has a mistyped title | Treat the number as primary and repair the title from the catalog. |
 | Only a title was entered | Fuzzy-match both active catalogs; reject weak matches. |
 | Text cannot be recognized | Display the submitted text unchanged and do not invent a hymn-number link. |
@@ -36,7 +36,7 @@ entries must never be guessed from similar titles.
 
 ## Adding another bulletin hymn field
 
-1. Expose the form value as `{ english: string; chinese: string }`, represented by
+1. Expose the intake value as `{ english: string; chinese: string }`, represented by
    `BulletinHymnText`.
 2. Call `resolveBulletinHymnPresentation(fieldValue, language)` once during bulletin
    rendering.

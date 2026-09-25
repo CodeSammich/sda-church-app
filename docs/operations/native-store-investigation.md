@@ -18,7 +18,7 @@ reported result does not specify which runtime/device was tested.
 
 This is already an Expo/React Native application, not a browser-only React app:
 
-- `package.json` uses an Expo 58 canary, React Native 0.87, Expo Router, and expo-audio.
+- `package.json` uses the Expo 58 preview SDK, React Native 0.88 RC, Expo Router, and expo-audio.
 - `app.json` already identifies both native apps as `org.nyccsda.app` and enables
   expo-audio background playback, with recording permissions disabled.
 - `services/BibleAudioService.ts` configures background playback and publishes
@@ -34,7 +34,7 @@ to a type with optional queue methods; that does not implement a native queue.
 The Bible screen advances chapters through a React effect on `didJustFinish`
 and implements timed sleep with JavaScript `setTimeout`. These are specific
 risks to verify under suspension, not evidence of a demonstrated native failure.
-The canary dependency versions and generated native project should be checked
+The preview dependency versions and generated native project should be checked
 before attempting a native build.
 
 ## Expo versus Capacitor

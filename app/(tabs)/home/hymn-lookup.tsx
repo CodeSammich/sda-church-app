@@ -111,17 +111,24 @@ export default function HymnLookupScreen() {
   }, []);
 
   const headerSearchItems = useMemo(
-    () =>
-      lookupItems.map((item) => ({
+    () => {
+      const preferredHymnalId =
+        language === 'zh' || language === 'zh-cn'
+          ? 'chinese-hymnal-505'
+          : 'sdah-1985-en';
+
+      return lookupItems.map((item) => ({
         icon: 'music-note',
         key: getItemKey(item),
         onPress: () => selectHymn(item),
+        searchPriority: item.hymnalId === preferredHymnalId ? 1 : 0,
         searchNumber: item.hymnNumber.toString(),
         searchText: item.keywords.join(' '),
         subtitle: item.hymnalLabel,
         title: item.title,
-      })),
-    [lookupItems, selectHymn],
+      }));
+    },
+    [language, lookupItems, selectHymn],
   );
 
   const direction: HymnLookupDirection | undefined = selectedItem
