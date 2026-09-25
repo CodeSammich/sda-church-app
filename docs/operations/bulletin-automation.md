@@ -58,7 +58,7 @@ and the church's Google Workspace for Nonprofits terms during annual maintenance
 | `google-apps-script/PrintedQueensCommunionBulletin.gs` | Queens Communion page order and fixed Communion/Foot Washing readings |
 | `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn cover, Zoom, Sabbath School, worship, and location-specific printed layout |
 | `google-apps-script/PrintedHymnLookup.gs` | Reviewed bidirectional English/Chinese hymn-number lookup for physical printing |
-| `google-apps-script/SabbathEncouragement.gs` | 52-page Brooklyn encouragement rotation, machine translation, direct Bible replacement |
+| `google-apps-script/SabbathEncouragement.gs` | 52-page Brooklyn encouragement rotation containing Ellen White quotations plus Bible/editorial/other source material, machine translation, and direct Bible replacement |
 | `services/BulletinService.ts` | App response types, date selection, local cache, refresh cooldown, and empty-location behavior |
 | `app/(tabs)/home/bulletin.tsx` | Digital bulletin sections, labels, privacy-safe names, translations, and staff link |
 | `test/apps-script-physical-bulletin.test.ts` | Physical layout, contract, privacy, lookup, QR, and maintenance regression tests |
@@ -316,10 +316,12 @@ original English values when they differ. This translation path must not be used
 for Bible text, Bible references, names, hymns, or sermon titles.
 
 The Brooklyn Sabbath Encouragement English side is a separate, explicit machine
-translation exception. It is labeled with a disclaimer because it may not be
-fully accurate. Bible quotations inside it are replaced with direct BSB text from
-the approved Bible API. Do not silently expand machine translation to Scripture,
-names, or worship content.
+translation exception. The source quotes Ellen G. White but is not exclusively her
+writing; Bible quotations, editorial headings, and other source material must be
+identified separately. The English side is labeled with a disclaimer because it
+may not be fully accurate. Bible quotations inside it are replaced with direct BSB
+text from the approved Bible API. Do not silently expand machine translation to
+Scripture, names, or worship content.
 
 ## Digital mobile bulletin behavior
 
@@ -462,7 +464,8 @@ The English translation may be selected in the print dialog; Chinese is currentl
 CUV/和合本. Multiple parsed references are joined deliberately, but very long
 passages can trigger a preflight warning or affect pagination.
 
-Sabbath Encouragement is a separate exception: its Chinese source is machine
+Sabbath Encouragement is a separate exception: its Chinese source quotes Ellen
+White but also contains Bible, editorial, and other material; it is machine
 translated for the English side, carries a disclaimer, and has Bible quotations
 replaced with direct BSB text. Review
 [`sabbath-encouragement-copyright.md`](sabbath-encouragement-copyright.md)

@@ -328,9 +328,14 @@ function buildBulletin_(requestedDate, options) {
     setPath_(bulletin, field.path, value);
   });
 
-  // The digital bulletin uses the same Sabbath School order as the printed
-  // Brooklyn bulletin. People are always redacted for the public app; the
-  // physical renderer may request the full names for its staff-only workflow.
+  // The public bulletin data follows the same field/order contract as the
+  // printed Brooklyn bulletin. The mobile UI intentionally renders only the
+  // useful subset: redundant fields and fields that are usually TBD remain
+  // available for print/admin compatibility but are omitted from the mobile
+  // presentation so they do not become dead UI. Person names are always
+  // privacy-redacted in the public app to reduce the risk of exposing more
+  // personal information than necessary; only the authorized physical-print
+  // workflow may request full names.
   populateOptionalBrooklynScheduleFields_(
     bulletin.brooklyn,
     scheduleTable.headers,

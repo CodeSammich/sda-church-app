@@ -2,11 +2,13 @@
 
 ## Attribution and permitted ministry use
 
-The Sabbath Encouragement pages are attributed to **Ellen G. White** and should retain the
-original work title, volume or edition, and page citation wherever a quotation is printed.
-The Chinese source snapshot is `sabbath_encouragement.pdf`, stored in the church's Google
-Drive and mapped in `SabbathEncouragement.gs` so that page 20 corresponds to the Sabbath of
-2026-08-22.
+The Sabbath Encouragement pages quote **Ellen G. White**, but they are not exclusively
+Ellen White material. They may also contain Bible quotations, editorial headings, devotional
+material, and other attributed or unattributed source text. Preserve the original work title,
+volume or edition, and page citation wherever an Ellen White quotation is printed, and do not
+attribute the entire page to her. The Chinese source snapshot is `sabbath_encouragement.pdf`,
+stored in the church's Google Drive and mapped in `SabbathEncouragement.gs` so that page 20
+corresponds to the Sabbath of 2026-08-22.
 
 This material is included solely for the **non-commercial ministry use of New York Chinese
 Seventh-day Adventist Church** in its printed bulletins and companion mobile app. It is not

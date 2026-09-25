@@ -148,22 +148,20 @@ preview deployment stays automatic: a push to `main` runs the existing GitHub Pa
 workflow. Locally, `npm run deploy` builds the web output into `dist/` without publishing
 it. Web preview publishing is restricted to the canonical GitHub workflow.
 
-Signed Android release binaries do not run automatically for pull requests. A trusted push to
-`main` or `release/**` runs the Android targets; you can also open **Native Android build**
-and choose **Run workflow** for an Android AAB or APK. For an installable preview of a
-same-repository PR targeting `main`, **Android PR preview** runs automatically before
-approval; fork PRs are skipped. It builds an ARM debug APK without production signing
-secrets, retains it as a GitHub artifact, and uploads it to personal Google Drive through
-the protected `production` Environment using the existing `CLASPRC_JSON` secret. It
-compiles directly with
-Expo prebuild and Gradle on GitHub's Linux runner; the Android upload keystore is
-restored only from protected GitHub Environment secrets. The iOS workflow additionally
-runs for an upstream `release/**` to `main` pull request after protected Environment
-approval, so the release PR can validate its signed IPA.
+Signed Android release binaries do not run automatically for pull requests or release
+branches. Only a trusted push to `main` runs the signed Android targets; you can also open
+**Native Android build** and choose **Run workflow** from `main` for an Android AAB or APK.
+For an installable preview, **Android PR preview** is a separate unsigned debug-APK path
+with ARM and Intel variants; it does not use production signing secrets. Fork PRs do not
+receive Linux native checks or signed builds. The preview artifact may be retained on GitHub
+and uploaded to personal Google Drive through the protected `production` Environment using
+the existing `CLASPRC_JSON` secret. It compiles directly with Expo prebuild and Gradle on
+GitHub's Linux runner; the Android upload keystore is restored only from protected GitHub
+Environment secrets. The iOS workflow runs only after a commit reaches `main` (or through
+an approved manual dispatch from `main`), never as a pull-request signing build.
 
-The separate **Native iOS build** workflow runs on trusted pushes to `main` and
-`release/**`, upstream `release/**` to `main` pull requests, and manual dispatch. It
-runs Expo prebuild and Xcode on a
+The separate **Native iOS build** workflow runs only on trusted pushes to `main` and
+manual dispatch from `main`. It runs Expo prebuild and Xcode on a
 macOS runner, restores Apple signing material from protected GitHub Environment
 secrets, and produces an IPA artifact for App Store Connect or TestFlight. It does not
 use EAS or an Expo token. Native builds never publish to a store automatically, so
@@ -186,8 +184,9 @@ npm run build:android:apk:debug       # standalone local APK; uses Gradle's debu
 ```
 
 The iOS store build is provided by the protected **Native iOS build** GitHub Actions
-workflow on trusted `main`/`release/**` pushes, upstream `release/**` to `main` pull
-requests, or manual dispatch because iOS signing requires a macOS/Xcode environment.
+workflow only after a commit reaches trusted `main`, or through a manual dispatch from
+`main`, because iOS signing requires a macOS/Xcode environment. It never signs pull
+requests or `release/**` branch commits.
 The repository has no EAS build or submission
 commands.
 Android direct builds require an explicit `expo.android.versionCode` in `app.json`;
