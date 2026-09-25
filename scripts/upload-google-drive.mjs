@@ -7,8 +7,13 @@ const MIME_TYPES = {
   '.jpg': 'image/jpeg',
   '.png': 'image/png',
 };
-const DRIVE_UPLOAD_URL =
-  'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink';
+// supportsAllDrives is required for any file or folder in a shared drive;
+// without it Google Drive answers 404 even when the account has access.
+const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
+const DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files';
+const DRIVE_UPLOAD_QUERY =
+  'uploadType=multipart&supportsAllDrives=true&fields=id,name,size,webViewLink';
+const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
 const requestJson = async (url, options = {}) => {
   const response = await fetch(url, options);
@@ -72,7 +77,25 @@ const getAccessToken = async (credentials) => {
   if (!response?.access_token) {
     throw new Error('Google OAuth did not return an access token.');
   }
-  return response.access_token;
+  return { accessToken: response.access_token, scopes: (response.scope || '').split(' ') };
+};
+
+// Drive query strings quote values with single quotes and escape with backslashes.
+export const escapeDriveQueryValue = (value) =>
+  value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+export const findFilesByName = async ({ accessToken, fileName, folderId }) => {
+  const params = new URLSearchParams({
+    q: `name = '${escapeDriveQueryValue(fileName)}' and '${escapeDriveQueryValue(folderId)}' in parents and trashed = false`,
+    fields: 'files(id,name,modifiedTime)',
+    orderBy: 'modifiedTime desc',
+    supportsAllDrives: 'true',
+    includeItemsFromAllDrives: 'true',
+  });
+  const response = await requestJson(`${DRIVE_FILES_URL}?${params}`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  return response?.files || [];
 };
 
 export const getMimeTypeForFileName = (fileName) =>
@@ -88,15 +111,20 @@ export const buildDriveMetadata = (
   ...(folderId ? { parents: [folderId] } : {}),
 });
 
+// Creates the file, or replaces the contents of existingFileId in place so the
+// file keeps its name, ID, and sharing link. Drive rejects parents on update.
 export const uploadFileToGoogleDrive = async ({
   accessToken,
   fileBytes,
   fileName,
   folderId,
+  existingFileId = '',
   mimeType = getMimeTypeForFileName(fileName),
 }) => {
   const boundary = `sda-church-app-${Date.now().toString(36)}`;
-  const metadata = JSON.stringify(buildDriveMetadata(fileName, folderId, mimeType));
+  const metadata = JSON.stringify(
+    buildDriveMetadata(fileName, existingFileId ? '' : folderId, mimeType),
+  );
   const prefix = Buffer.from(
     `--${boundary}\r\n` +
       'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
@@ -106,8 +134,12 @@ export const uploadFileToGoogleDrive = async ({
   );
   const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
 
-  return requestJson(DRIVE_UPLOAD_URL, {
-    method: 'POST',
+  const url = existingFileId
+    ? `${DRIVE_UPLOAD_URL}/${encodeURIComponent(existingFileId)}?${DRIVE_UPLOAD_QUERY}`
+    : `${DRIVE_UPLOAD_URL}?${DRIVE_UPLOAD_QUERY}`;
+
+  return requestJson(url, {
+    method: existingFileId ? 'PATCH' : 'POST',
     headers: {
       authorization: `Bearer ${accessToken}`,
       'content-type': `multipart/related; boundary=${boundary}`,
@@ -129,19 +161,41 @@ const main = async () => {
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '';
   const mimeType = getMimeTypeForFileName(fileName);
   const credentials = parseClaspCredentials(process.env.CLASPRC_JSON);
-  const accessToken = await getAccessToken(credentials);
+  const { accessToken, scopes } = await getAccessToken(credentials);
+  const driveScopes = scopes.filter((scope) => scope.includes('/auth/drive'));
+  console.log(`Google Drive scopes: ${driveScopes.join(' ') || '<none>'}`);
+  if (driveScopes.length === 1 && driveScopes[0] === DRIVE_FILE_SCOPE) {
+    console.warn(
+      'This login only has drive.file access: it can only see files and folders it created itself. ' +
+        'Folders or same-named files made by hand will be reported as not found.',
+    );
+  }
+
+  const existingFiles = folderId
+    ? await findFilesByName({ accessToken, fileName, folderId })
+    : [];
+  if (existingFiles.length > 1) {
+    console.warn(
+      `Found ${existingFiles.length} files named ${fileName}; replacing the most recently modified one.`,
+    );
+  }
+  const existingFileId = existingFiles[0]?.id || '';
+
   const result = await uploadFileToGoogleDrive({
     accessToken,
     fileBytes: await readFile(filePath),
     fileName,
     folderId,
+    existingFileId,
     mimeType,
   });
   const url =
     result.webViewLink ||
     `https://drive.google.com/file/d/${result.id}/view?usp=drivesdk`;
 
-  console.log(`Uploaded ${result.name} (${result.size || fileStats.size} bytes): ${url}`);
+  console.log(
+    `${existingFileId ? 'Replaced' : 'Uploaded'} ${result.name} (${result.size || fileStats.size} bytes): ${url}`,
+  );
 };
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
