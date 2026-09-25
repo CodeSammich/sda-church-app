@@ -6,17 +6,20 @@ import QRCode from 'qrcode';
 import sharp from 'sharp';
 
 const DEFAULT_URL = 'https://adventistgiving.org/donate/AN48CO';
-const DEFAULT_OUTPUT = 'build/qr/queens_adventist_giving_qr_code_368x368.jpg';
 const QR_WIDTH = 368;
 const QR_MARGIN = 4;
 
 const getOption = (name, fallback) => {
-  const index = process.argv.indexOf(name);
+  const index = process.argv.lastIndexOf(name);
   return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 };
 
 const url = getOption('--url', DEFAULT_URL);
-const output = resolve(process.cwd(), getOption('--output', DEFAULT_OUTPUT));
+const outputOption = getOption('--output');
+if (!outputOption) {
+  throw new Error('An output path is required. Use --output with a .jpg or .jpeg filename.');
+}
+const output = resolve(process.cwd(), outputOption);
 
 let parsedUrl;
 try {
