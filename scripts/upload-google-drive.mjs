@@ -2,10 +2,36 @@ import { readFile, stat } from 'node:fs/promises';
 import { basename, extname, resolve } from 'node:path';
 
 const MIME_TYPES = {
+  '.aab': 'application/octet-stream',
   '.apk': 'application/vnd.android.package-archive',
-  '.jpeg': 'image/jpeg',
+  '.ipa': 'application/octet-stream',
   '.jpg': 'image/jpeg',
-  '.png': 'image/png',
+};
+
+// Uploads replace same-named files in shared folders, so only app binaries
+// and these exact QR code images may be written. Anything else is refused
+// before any credentials are used.
+const ALLOWED_BINARY_EXTENSIONS = new Set(['.aab', '.apk', '.ipa']);
+const ALLOWED_QR_CODE_FILE_NAMES = new Set([
+  'brooklyn_adventist_giving_qr_code_368x368.jpg',
+  'brooklyn_zelle_qr_code_368x368.jpg',
+  'mobile_app_qr_368x368.jpg',
+  'queens_adventist_giving_qr_code_368x368.jpg',
+  'queens_zelle_qr_code_368x368.jpg',
+]);
+
+export const isUploadAllowed = (fileName) =>
+  basename(fileName) === fileName &&
+  (ALLOWED_BINARY_EXTENSIONS.has(extname(fileName).toLowerCase()) ||
+    ALLOWED_QR_CODE_FILE_NAMES.has(fileName));
+
+export const assertUploadAllowed = (fileName) => {
+  if (!isUploadAllowed(fileName)) {
+    throw new Error(
+      `Refusing to upload ${fileName}: only .aab, .apk, and .ipa files or these QR codes are allowed: ` +
+        [...ALLOWED_QR_CODE_FILE_NAMES].join(', '),
+    );
+  }
 };
 // supportsAllDrives is required for any file or folder in a shared drive;
 // without it Google Drive answers 404 even when the account has access.
@@ -121,6 +147,7 @@ export const uploadFileToGoogleDrive = async ({
   existingFileId = '',
   mimeType = getMimeTypeForFileName(fileName),
 }) => {
+  assertUploadAllowed(fileName);
   const boundary = `sda-church-app-${Date.now().toString(36)}`;
   const metadata = JSON.stringify(
     buildDriveMetadata(fileName, existingFileId ? '' : folderId, mimeType),
@@ -158,6 +185,7 @@ const main = async () => {
   if (!fileStats.isFile()) throw new Error(`Not a file: ${filePath}`);
 
   const fileName = process.env.GOOGLE_DRIVE_FILE_NAME || basename(filePath);
+  assertUploadAllowed(fileName);
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '';
   const mimeType = getMimeTypeForFileName(fileName);
   const credentials = parseClaspCredentials(process.env.CLASPRC_JSON);
