@@ -1312,6 +1312,7 @@ function renderQueensRegularPrintedBulletinDocument_(body, bulletin, nextBulleti
     function (leftCell, rightCell) {
       appendGivingFooter_(leftCell, rightCell, 'queens');
     },
+    { ruleSpacingBefore: 4 },
   );
   appendBookletPage_(
     body,
@@ -2334,7 +2335,15 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
     body.appendPageBreak();
   }
 
-  var table = body.appendTable([['', '', '']]);
+  appendBookletContentTable_(body, leftRenderer, rightRenderer);
+
+  if (footerRenderer) {
+    appendBookletFooter_(body, footerRenderer, footerOptions);
+  }
+}
+
+function appendBookletContentTable_(container, leftRenderer, rightRenderer) {
+  var table = container.appendTable([['', '', '']]);
   table.setBorderWidth(0);
   table.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
   table.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
@@ -2351,61 +2360,65 @@ function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, foot
   rightCell.setPaddingBottom(0);
   leftRenderer(leftCell);
   rightRenderer(rightCell);
+}
 
-  if (footerRenderer) {
-    var rule = body.appendHorizontalRule();
-    var ruleParent = rule.getParent();
-    if (ruleParent && ruleParent.getType() === DocumentApp.ElementType.PARAGRAPH) {
-      ruleParent.asParagraph().setLineSpacing(1);
-      ruleParent.asParagraph().setSpacingBefore(0);
-      ruleParent.asParagraph().setSpacingAfter(0);
-    }
-    var qrColumns = footerOptions && footerOptions.qrColumns;
-    var qrCount = qrColumns ? Math.max(1, footerOptions.qrCount || 3) : 0;
-    var qrColumnIndexes = Array(qrCount).fill(0).map(function (_, index) {
-      return index + 2;
-    });
-    var footerTable = body.appendTable(
-      qrColumns ? [Array(qrCount + 2).fill('')] : [['', '', '']],
+function appendBookletFooter_(container, footerRenderer, footerOptions) {
+  var rule = container.appendHorizontalRule();
+  var ruleParent = rule.getParent();
+  if (ruleParent && ruleParent.getType() === DocumentApp.ElementType.PARAGRAPH) {
+    ruleParent.asParagraph().setLineSpacing(1);
+    ruleParent.asParagraph().setSpacingBefore(
+      footerOptions && footerOptions.ruleSpacingBefore
+        ? footerOptions.ruleSpacingBefore
+        : 0,
     );
-    footerTable.setBorderWidth(0);
-    footerTable.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
-    footerTable.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
-    if (qrColumns) {
-      qrColumnIndexes.forEach(function (columnIndex) {
-        footerTable.setColumnWidth(
-          columnIndex,
-          Math.floor((PRINTED_BULLETIN_CONFIG.bookletHalfWidth - 8) / qrCount),
-        );
-      });
-    } else {
-      footerTable.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
-    }
-    var footerLeftCell = footerTable.getCell(0, 0);
-    var footerGutterCell = footerTable.getCell(0, 1);
-    var footerRightCell = qrColumns ? null : footerTable.getCell(0, 2);
-    var footerQrCells = qrColumns
-      ? qrColumnIndexes.map(function (columnIndex) {
-          return footerTable.getCell(0, columnIndex);
-        })
-      : [];
-    [footerLeftCell, footerGutterCell].concat(footerRightCell ? [footerRightCell] : footerQrCells)
-      .forEach(function (footerCell) {
-        footerCell.clear();
-        footerCell.setPaddingTop(0);
-        footerCell.setPaddingBottom(0);
-        footerCell.setPaddingLeft(0);
-        footerCell.setPaddingRight(0);
-      });
-    footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    if (footerRightCell) {
-      footerRightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    }
-    footerQrCells.forEach(function (footerCell) {
-      footerCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-    });
-    footerRenderer(footerLeftCell, footerRightCell, footerQrCells);
+    ruleParent.asParagraph().setSpacingAfter(0);
   }
+  var qrColumns = footerOptions && footerOptions.qrColumns;
+  var qrCount = qrColumns ? Math.max(1, footerOptions.qrCount || 3) : 0;
+  var qrColumnIndexes = Array(qrCount).fill(0).map(function (_, index) {
+    return index + 2;
+  });
+  var footerTable = container.appendTable(
+    qrColumns ? [Array(qrCount + 2).fill('')] : [['', '', '']],
+  );
+  footerTable.setBorderWidth(0);
+  footerTable.setColumnWidth(0, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+  footerTable.setColumnWidth(1, PRINTED_BULLETIN_CONFIG.bookletFoldGutter);
+  if (qrColumns) {
+    qrColumnIndexes.forEach(function (columnIndex) {
+      footerTable.setColumnWidth(
+        columnIndex,
+        Math.floor((PRINTED_BULLETIN_CONFIG.bookletHalfWidth - 8) / qrCount),
+      );
+    });
+  } else {
+    footerTable.setColumnWidth(2, PRINTED_BULLETIN_CONFIG.bookletHalfWidth);
+  }
+  var footerLeftCell = footerTable.getCell(0, 0);
+  var footerGutterCell = footerTable.getCell(0, 1);
+  var footerRightCell = qrColumns ? null : footerTable.getCell(0, 2);
+  var footerQrCells = qrColumns
+    ? qrColumnIndexes.map(function (columnIndex) {
+        return footerTable.getCell(0, columnIndex);
+      })
+    : [];
+  [footerLeftCell, footerGutterCell].concat(footerRightCell ? [footerRightCell] : footerQrCells)
+    .forEach(function (footerCell) {
+      footerCell.clear();
+      footerCell.setPaddingTop(0);
+      footerCell.setPaddingBottom(0);
+      footerCell.setPaddingLeft(0);
+      footerCell.setPaddingRight(0);
+    });
+  footerLeftCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+  if (footerRightCell) {
+    footerRightCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+  }
+  footerQrCells.forEach(function (footerCell) {
+    footerCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+  });
+  footerRenderer(footerLeftCell, footerRightCell, footerQrCells);
 }
 
 function appendCoverPanel_(cell, bulletin, format) {
@@ -2701,16 +2714,18 @@ function appendGivingText_(cell, options) {
     cell,
     printedBilingualText_(
       'Cash offerings: for a tax-deductible receipt, write your English name on the church envelope as Last, First or First Last. Please print clearly (no cursive or calligraphy) so the treasurer can read it.',
-      '現金奉獻：如需可扣稅收據，請在教會奉獻信封上以英文清楚寫上「姓，名」或「名姓」。為方便司庫辨認，請用正楷，不要使用草書或行書。',
+      '現金奉獻：如需可扣稅收據，請在教會奉獻信封上以英文或拼音清楚寫上「姓，名」或「名姓」。為方便司庫辨認，請用正楷，不要使用草書或行書。',
     ),
-    8.5,
+    8,
     false,
+    0.9,
   );
   appendCompactCenteredText_(
     cell,
     'Stocks/equities: We recommend donor-advised funds; see our church\'s mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
-    8.5,
+    8,
     false,
+    0.9,
   );
 }
 
@@ -3157,13 +3172,13 @@ function appendCenteredText_(cell, text, size, bold) {
     });
 }
 
-function appendCompactCenteredText_(cell, text, size, bold) {
+function appendCompactCenteredText_(cell, text, size, bold, lineSpacing) {
   String(text || '')
     .split(/\r?\n/)
     .forEach(function (line) {
       var paragraph = cell.appendParagraph(line);
       paragraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-      paragraph.setLineSpacing(1);
+      paragraph.setLineSpacing(lineSpacing || 1);
       paragraph.setSpacingBefore(0);
       paragraph.setSpacingAfter(0);
       styleText_(paragraph.editAsText(), size, bold);
