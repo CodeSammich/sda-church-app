@@ -1,17 +1,17 @@
-name: Generate physical bulletin QR code
+name: Generate physical bulletin QR codes
 
 on:
   workflow_dispatch:
     inputs:
-      url:
-        description: HTTPS URL to encode
+      queens_url:
+        description: HTTPS AdventistGiving URL for the Queens bulletin
         required: true
         default: https://adventistgiving.org/donate/AN48CO
         type: string
-      filename:
-        description: Output PNG filename
+      brooklyn_url:
+        description: HTTPS AdventistGiving URL for the Brooklyn bulletin
         required: true
-        default: adventistgiving.png
+        default: https://adventistgiving.org/donate/AN48CO
         type: string
 
 permissions:
@@ -26,31 +26,71 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84efbd3f7d6820020 # v4
         with:
           node-version: 20
 
       - name: Install QR generator
         run: npm ci --legacy-peer-deps
 
-      - name: Generate PNG
+      - name: Generate Queens JPG
         env:
-          QR_URL: ${{ inputs.url }}
-          QR_FILENAME: ${{ inputs.filename }}
+          QR_URL: ${{ inputs.queens_url }}
         run: |
           set -euo pipefail
-          case "$QR_FILENAME" in
-            *.png) ;;
-            *) echo 'Filename must end in .png.' >&2; exit 1 ;;
-          esac
-          case "$QR_FILENAME" in
-            */*|*\\*) echo 'Filename must not contain a directory separator.' >&2; exit 1 ;;
-          esac
-          node scripts/generate-qr.mjs --url "$QR_URL" --output "build/qr/$QR_FILENAME"
+          node scripts/generate-qr.mjs \
+            --url "$QR_URL" \
+            --output build/qr/queens_adventist_giving_qr_code_368x368.jpg
 
-      - name: Upload PNG artifact
+      - name: Generate Brooklyn JPG
+        env:
+          QR_URL: ${{ inputs.brooklyn_url }}
+        run: |
+          set -euo pipefail
+          node scripts/generate-qr.mjs \
+            --url "$QR_URL" \
+            --output build/qr/brooklyn_adventist_giving_qr_code_368x368.jpg
+
+      - name: Upload JPG artifacts
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
-          name: physical-bulletin-qr
-          path: build/qr/*.png
+          name: adventistgiving-qr-codes
+          path: build/qr/*_adventist_giving_qr_code_368x368.jpg
           if-no-files-found: error
+
+  upload-to-drive:
+    needs: generate
+    if: needs.generate.result == 'success'
+    name: Upload QR codes to Google Drive
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download JPG artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: adventistgiving-qr-codes
+          path: ${{ runner.temp }}/adventistgiving-qr-codes
+
+      # The upload helper comes from the trusted default branch rather than
+      # the selected workflow ref because this job receives Google credentials.
+      - name: Check out trusted upload helper
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          path: trusted-source
+          persist-credentials: false
+
+      - name: Upload QR codes to Drive folder
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          GOOGLE_DRIVE_FOLDER_ID: 11esgvM1uhY5e94A_eL2ITI0iKNLIFEEr
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON" || {
+            echo 'Missing protected production Environment secret CLASPRC_JSON.' >&2
+            exit 1
+          }
+          for file in "$RUNNER_TEMP"/adventistgiving-qr-codes/*.jpg; do
+            node trusted-source/scripts/upload-google-drive.mjs "$file"
+          done

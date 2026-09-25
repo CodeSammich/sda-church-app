@@ -1,7 +1,12 @@
 import { readFile, stat } from 'node:fs/promises';
-import { basename, resolve } from 'node:path';
+import { basename, extname, resolve } from 'node:path';
 
-const APK_MIME_TYPE = 'application/vnd.android.package-archive';
+const MIME_TYPES = {
+  '.apk': 'application/vnd.android.package-archive',
+  '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg',
+  '.png': 'image/png',
+};
 const DRIVE_UPLOAD_URL =
   'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,webViewLink';
 
@@ -70,9 +75,16 @@ const getAccessToken = async (credentials) => {
   return response.access_token;
 };
 
-export const buildDriveMetadata = (fileName, folderId = '') => ({
+export const getMimeTypeForFileName = (fileName) =>
+  MIME_TYPES[extname(fileName).toLowerCase()] || 'application/octet-stream';
+
+export const buildDriveMetadata = (
+  fileName,
+  folderId = '',
+  mimeType = getMimeTypeForFileName(fileName),
+) => ({
   name: fileName,
-  mimeType: APK_MIME_TYPE,
+  mimeType,
   ...(folderId ? { parents: [folderId] } : {}),
 });
 
@@ -81,15 +93,16 @@ export const uploadFileToGoogleDrive = async ({
   fileBytes,
   fileName,
   folderId,
+  mimeType = getMimeTypeForFileName(fileName),
 }) => {
   const boundary = `sda-church-app-${Date.now().toString(36)}`;
-  const metadata = JSON.stringify(buildDriveMetadata(fileName, folderId));
+  const metadata = JSON.stringify(buildDriveMetadata(fileName, folderId, mimeType));
   const prefix = Buffer.from(
     `--${boundary}\r\n` +
       'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
       `${metadata}\r\n` +
       `--${boundary}\r\n` +
-      `Content-Type: ${APK_MIME_TYPE}\r\n\r\n`,
+      `Content-Type: ${mimeType}\r\n\r\n`,
   );
   const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
 
@@ -114,6 +127,7 @@ const main = async () => {
 
   const fileName = process.env.GOOGLE_DRIVE_FILE_NAME || basename(filePath);
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '';
+  const mimeType = getMimeTypeForFileName(fileName);
   const credentials = parseClaspCredentials(process.env.CLASPRC_JSON);
   const accessToken = await getAccessToken(credentials);
   const result = await uploadFileToGoogleDrive({
@@ -121,6 +135,7 @@ const main = async () => {
     fileBytes: await readFile(filePath),
     fileName,
     folderId,
+    mimeType,
   });
   const url =
     result.webViewLink ||
