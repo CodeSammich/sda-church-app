@@ -10,7 +10,7 @@
     "download:cuv-audio": "node scripts/download-cuv-audio.mjs",
     "extract:cuv-adventist-manifest": "node scripts/extract-cuv-adventist-audio-manifest.mjs",
     "sync-version": "node public/sync-version.js",
-    "generate:qr": "node scripts/generate-qr.mjs --url https://adventistgiving.org/donate/AN48CO --output build/qr/adventistgiving.png",
+    "generate:qr": "node scripts/generate-qr.mjs --url https://adventistgiving.org/donate/AN48CO --output build/qr/queens_adventist_giving_qr_code_368x368.jpg",
     "test": "jest --runInBand",
     "test:integration:bulletin": "node test/integration/bulletin-api.mjs",
     "test:integration:external": "node test/integration/external-dependencies.mjs",
@@ -47,7 +47,6 @@
     "expo-status-bar": "~58.0.0",
     "expo-system-ui": "~58.0.1",
     "expo-web-browser": "~58.0.0",
-    "jpeg-js": "0.4.4",
     "opencc-js": "^1.4.1",
     "pinyin-pro": "^3.29.3",
     "react": "^19.2.3",
@@ -74,6 +73,7 @@
     "jest-expo": "~58.0.2",
     "qrcode": "^1.5.4",
     "react-test-renderer": "^19.2.3",
+    "sharp": "0.35.0",
     "typescript": "~6.0.3"
   },
   "jest": {

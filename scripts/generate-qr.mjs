@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import QRCode from 'qrcode';
-import jpeg from 'jpeg-js';
+import sharp from 'sharp';
 
 const DEFAULT_URL = 'https://adventistgiving.org/donate/AN48CO';
 const DEFAULT_OUTPUT = 'build/qr/queens_adventist_giving_qr_code_368x368.jpg';
@@ -62,11 +62,15 @@ for (let row = 0; row < QR_WIDTH; row += 1) {
   }
 }
 
-const encoded = jpeg.encode(
-  { data: pixels, width: QR_WIDTH, height: QR_WIDTH },
-  100,
-);
-await writeFile(output, encoded.data);
+await sharp(pixels, {
+  raw: {
+    width: QR_WIDTH,
+    height: QR_WIDTH,
+    channels: 4,
+  },
+})
+  .jpeg({ quality: 100, chromaSubsampling: '4:4:4' })
+  .toFile(output);
 
 console.log(`Generated QR code: ${output}`);
 console.log(`Encoded URL: ${url}`);
