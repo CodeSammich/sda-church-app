@@ -6,33 +6,40 @@ const MIME_TYPES = {
   '.apk': 'application/vnd.android.package-archive',
   '.ipa': 'application/octet-stream',
   '.jpg': 'image/jpeg',
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
 };
 
 // Uploads replace same-named files in shared folders, so only app binaries
-// and these exact QR code images may be written. Anything else is refused
+// and these exact bulletin assets may be written. Anything else is refused
 // before any credentials are used.
 const ALLOWED_BINARY_EXTENSIONS = new Set(['.aab', '.apk', '.ipa']);
-const ALLOWED_QR_CODE_FILE_NAMES = new Set([
+const ALLOWED_BULLETIN_FILE_NAMES = new Set([
   'brooklyn_adventist_giving_qr_code_368x368.jpg',
   'brooklyn_zelle_qr_code_368x368.jpg',
+  'churchsketch.png',
+  'lastsupper.png',
   'mobile_app_qr_368x368.jpg',
   'queens_adventist_giving_qr_code_368x368.jpg',
   'queens_zelle_qr_code_368x368.jpg',
+  'sabbath_encouragement.pdf',
+  'sda_logo_full_color_48x48',
 ]);
 
 export const isUploadAllowed = (fileName) =>
   basename(fileName) === fileName &&
   (ALLOWED_BINARY_EXTENSIONS.has(extname(fileName).toLowerCase()) ||
-    ALLOWED_QR_CODE_FILE_NAMES.has(fileName));
+    ALLOWED_BULLETIN_FILE_NAMES.has(fileName));
 
 export const assertUploadAllowed = (fileName) => {
   if (!isUploadAllowed(fileName)) {
     throw new Error(
-      `Refusing to upload ${fileName}: only .aab, .apk, and .ipa files or these QR codes are allowed: ` +
-        [...ALLOWED_QR_CODE_FILE_NAMES].join(', '),
+      `Refusing to upload ${fileName}: only .aab, .apk, and .ipa files or these bulletin assets are allowed: ` +
+        [...ALLOWED_BULLETIN_FILE_NAMES].join(', '),
     );
   }
 };
+
 // supportsAllDrives is required for any file or folder in a shared drive;
 // without it Google Drive answers 404 even when the account has access.
 const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
@@ -124,8 +131,21 @@ export const findFilesByName = async ({ accessToken, fileName, folderId }) => {
   return response?.files || [];
 };
 
-export const getMimeTypeForFileName = (fileName) =>
-  MIME_TYPES[extname(fileName).toLowerCase()] || 'application/octet-stream';
+// Names without a known extension (such as sda_logo_full_color_48x48) are
+// typed from their contents so Docs can still insert them as images.
+const sniffMimeType = (fileBytes) => {
+  if (!fileBytes) return '';
+  const head = fileBytes.subarray(0, 4);
+  if (head[0] === 0x89 && head.toString('latin1', 1, 4) === 'PNG') return 'image/png';
+  if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return 'image/jpeg';
+  if (head.toString('latin1') === '%PDF') return 'application/pdf';
+  return '';
+};
+
+export const getMimeTypeForFileName = (fileName, fileBytes) =>
+  MIME_TYPES[extname(fileName).toLowerCase()] ||
+  sniffMimeType(fileBytes) ||
+  'application/octet-stream';
 
 export const buildDriveMetadata = (
   fileName,
@@ -145,7 +165,7 @@ export const uploadFileToGoogleDrive = async ({
   fileName,
   folderId,
   existingFileId = '',
-  mimeType = getMimeTypeForFileName(fileName),
+  mimeType = getMimeTypeForFileName(fileName, fileBytes),
 }) => {
   assertUploadAllowed(fileName);
   const boundary = `sda-church-app-${Date.now().toString(36)}`;
@@ -187,7 +207,8 @@ const main = async () => {
   const fileName = process.env.GOOGLE_DRIVE_FILE_NAME || basename(filePath);
   assertUploadAllowed(fileName);
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '';
-  const mimeType = getMimeTypeForFileName(fileName);
+  const fileBytes = await readFile(filePath);
+  const mimeType = getMimeTypeForFileName(fileName, fileBytes);
   const credentials = parseClaspCredentials(process.env.CLASPRC_JSON);
   const { accessToken, scopes } = await getAccessToken(credentials);
   const driveScopes = scopes.filter((scope) => scope.includes('/auth/drive'));
@@ -211,7 +232,7 @@ const main = async () => {
 
   const result = await uploadFileToGoogleDrive({
     accessToken,
-    fileBytes: await readFile(filePath),
+    fileBytes,
     fileName,
     folderId,
     existingFileId,
