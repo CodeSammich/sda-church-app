@@ -1,6 +1,10 @@
 name: Android PR preview
 
 on:
+  pull_request_target:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -21,21 +25,38 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: android-pr-preview-${{ inputs.pr_number }}
+  group: android-pr-preview-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   resolve-pr:
-    # The workflow must be dispatched from trusted main. The build then checks
-    # out the PR head without giving that code any credential-bearing job.
-    if: github.event.repository.fork == false && github.ref == 'refs/heads/main'
+    # pull_request_target runs the workflow from the trusted base repository.
+    # Only same-repository PR heads are eligible. The build checks out the PR
+    # head without credentials; the Drive upload checks out only the trusted
+    # base commit's upload helper.
+    if: >-
+      github.event.repository.fork == false &&
+      (
+        (
+          github.event_name == 'pull_request_target' &&
+          github.event.pull_request.base.ref == 'main' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        ) ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref == 'refs/heads/main'
+        )
+      )
     name: Resolve PR head
     runs-on: ubuntu-24.04
     outputs:
+      pr_number: ${{ steps.pr.outputs.pr_number }}
       head_repository: ${{ steps.pr.outputs.head_repository }}
       head_sha: ${{ steps.pr.outputs.head_sha }}
+      trusted_sha: ${{ steps.pr.outputs.trusted_sha }}
     steps:
-      - name: Require an administrator dispatch
+      - name: Require an administrator manual dispatch
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
@@ -50,33 +71,68 @@ jobs:
       - name: Resolve open pull request head
         id: pr
         env:
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          EVENT_BASE_REF: ${{ github.event.pull_request.base.ref || '' }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          EVENT_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || '' }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
         run: |
           set -euo pipefail
           case "$PR_NUMBER" in
             ''|*[!0-9]*) echo 'pr_number must be a positive integer.' >&2; exit 1 ;;
           esac
 
-          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
-          test "$(jq -r '.state' <<<"$pr_json")" = open || {
-            echo 'The selected pull request is not open.' >&2
-            exit 1
-          }
-          test "$(jq -r '.merged_at' <<<"$pr_json")" = null || {
-            echo 'The selected pull request is already merged.' >&2
-            exit 1
-          }
+          if [[ "$EVENT_NAME" == 'pull_request_target' ]]; then
+            test "$EVENT_BASE_REF" = main || {
+              echo 'The pull request must target main.' >&2
+              exit 1
+            }
+            test "$EVENT_HEAD_REPOSITORY" = "$GITHUB_REPOSITORY" || {
+              echo 'Fork pull requests are not eligible for this build.' >&2
+              exit 1
+            }
+            head_repository="$EVENT_HEAD_REPOSITORY"
+            head_sha="$EVENT_HEAD_SHA"
+            trusted_sha="$EVENT_BASE_SHA"
+          else
+            pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+            test "$(jq -r '.state' <<<"$pr_json")" = open || {
+              echo 'The selected pull request is not open.' >&2
+              exit 1
+            }
+            test "$(jq -r '.merged_at' <<<"$pr_json")" = null || {
+              echo 'The selected pull request is already merged.' >&2
+              exit 1
+            }
+            test "$(jq -r '.base.ref' <<<"$pr_json")" = main || {
+              echo 'The selected pull request must target main.' >&2
+              exit 1
+            }
 
-          head_repository="$(jq -r '.head.repo.full_name // empty' <<<"$pr_json")"
-          head_sha="$(jq -r '.head.sha // empty' <<<"$pr_json")"
+            head_repository="$(jq -r '.head.repo.full_name // empty' <<<"$pr_json")"
+            head_sha="$(jq -r '.head.sha // empty' <<<"$pr_json")"
+            test "$head_repository" = "$GITHUB_REPOSITORY" || {
+              echo 'Fork pull requests are not eligible for this build.' >&2
+              exit 1
+            }
+            trusted_sha="$GITHUB_SHA"
+          fi
+
           test -n "$head_repository" && test -n "$head_sha" || {
             echo 'The pull request has no readable head repository or commit.' >&2
             exit 1
           }
+          test -n "$trusted_sha" || {
+            echo 'The trusted base commit could not be resolved.' >&2
+            exit 1
+          }
 
+          printf 'pr_number=%s\n' "$PR_NUMBER" >> "$GITHUB_OUTPUT"
           printf 'head_repository=%s\n' "$head_repository" >> "$GITHUB_OUTPUT"
           printf 'head_sha=%s\n' "$head_sha" >> "$GITHUB_OUTPUT"
+          printf 'trusted_sha=%s\n' "$trusted_sha" >> "$GITHUB_OUTPUT"
 
   build:
     needs: resolve-pr
@@ -133,31 +189,38 @@ jobs:
       - name: Upload APK as a workflow artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: android-pr-preview-${{ inputs.pr_number }}-${{ github.run_id }}
+          name: android-pr-preview-${{ needs.resolve-pr.outputs.pr_number }}-${{ github.run_id }}
           path: ${{ runner.temp }}/app.apk
           if-no-files-found: error
           retention-days: 14
 
   upload:
     needs: [resolve-pr, build]
-    if: needs.build.result == 'success' && inputs.upload_to_drive == true
+    # PR-triggered builds upload automatically after the artifact succeeds;
+    # manual dispatches retain the explicit upload toggle.
+    if: >-
+      needs.build.result == 'success' &&
+      (
+        github.event_name == 'pull_request_target' ||
+        inputs.upload_to_drive == true
+      )
     name: Upload APK to Google Drive
     environment: production
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       # This job receives only the APK artifact. It does not check out or run
-      # PR code. The upload helper is checked out from the trusted workflow SHA.
+      # PR code. The upload helper is checked out from the trusted base commit.
       - name: Download APK artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: android-pr-preview-${{ inputs.pr_number }}-${{ github.run_id }}
+          name: android-pr-preview-${{ needs.resolve-pr.outputs.pr_number }}-${{ github.run_id }}
           path: ${{ runner.temp }}/android-pr-preview
 
       - name: Check out trusted upload helper
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.resolve-pr.outputs.trusted_sha }}
           path: trusted-source
           persist-credentials: false
 
@@ -165,7 +228,7 @@ jobs:
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
           GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
-          GOOGLE_DRIVE_FILE_NAME: sda-church-app-pr-${{ inputs.pr_number }}-${{ github.run_id }}-arm-debug.apk
+          GOOGLE_DRIVE_FILE_NAME: sda-church-app-pr-${{ needs.resolve-pr.outputs.pr_number }}-${{ github.run_id }}-arm-debug.apk
         run: |
           set -euo pipefail
           test -n "$CLASPRC_JSON" || {
