@@ -286,17 +286,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(message).toContain('PHYSICAL_BULLETIN_ADMIN_EMAILS');
   });
 
-  it('uses the configured Church at Study verse question title', () => {
-    const context = loadAppsScript({});
-    const title = runInContext(
-      `getPrintedBulletinBibleVerseQuestionTitle_()`,
-      context,
-    );
-
-    expect(title).toBe('What verse should appear at the bottom of Church at Study?');
-  });
-
-  it('preloads the reviewed Sabbath Sermon Data verse ahead of legacy data and memory', () => {
+  it('preloads the reviewed Sabbath Sermon Data verse ahead of print memory', () => {
     const makeSheet = (name: string, rows: string[][]) => ({
       getName: () => name,
       getDataRange: () => ({
@@ -324,20 +314,14 @@ describe('printed bulletin Apps Script helpers', () => {
     ], [
       '2026-09-05', 'brooklyn', '', '', '', '', '', '', 'Luke 7:36-39',
     ]]);
-    const brooklynSheet = makeSheet('Brooklyn Worship Data', [
-      ['Timestamp', 'What date is this Sabbath?', 'What Bible verse will you use?'],
-      ['2026-09-01', '2026-09-05', 'John 12:24'],
-    ]);
     const context = loadAppsScript({
       SpreadsheetApp: {
         getActiveSpreadsheet: () => ({
           getSheetByName: (name: string) =>
             name === 'Sabbath Calendar'
               ? scheduleSheet
-              : name === 'Brooklyn Worship Data'
-                ? brooklynSheet
-                : name === 'Sabbath Sermon Data'
-                  ? intakeSheet
+              : name === 'Sabbath Sermon Data'
+                ? intakeSheet
                 : null,
         }),
       },
@@ -354,7 +338,7 @@ describe('printed bulletin Apps Script helpers', () => {
       ) as string,
     );
 
-    expect(output.formVerse).toBe('Luke 7:36-39');
+    expect(output.scheduleVerse).toBe('Luke 7:36-39');
     expect(output.verse).toBe('Luke 7:36-39');
     expect(output.hasVerseOverride).toBe(false);
   });
@@ -424,8 +408,6 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('getPrintedBulletinPromptWarning');
     expect(html).toContain('Add announcement / 新增消息');
     expect(html).toContain('getPrintedBulletinPromptData');
-    expect(html).not.toContain('Use Form response / 使用表單回覆');
-    expect(html).not.toContain('useFormVerse');
     expect(html).toContain('Instructions / 使用說明');
     expect(html).toContain('Check the current week in the app');
     expect(html).not.toContain('Admin reminder / 管理員提醒');
@@ -686,7 +668,7 @@ describe('printed bulletin Apps Script helpers', () => {
     });
   });
 
-  it('stores printed Bible verse overrides separately from Form data', () => {
+  it('stores printed Bible verse overrides separately from reviewed intake data', () => {
     const properties: Record<string, string> = {};
     const context = loadAppsScript({
       PropertiesService: {
@@ -925,22 +907,6 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(format).toBe('regular');
   });
 
-  it('routes response tabs to separate printed bulletin locations', () => {
-    const context = loadAppsScript({});
-    const locations = JSON.parse(
-      runInContext(
-        `JSON.stringify([
-          getPrintedBulletinLocationForSheet_({ getName: () => 'Queens Worship Data' }),
-          getPrintedBulletinLocationForSheet_({ getName: () => 'Brooklyn Worship Data' }),
-          getPrintedBulletinLocationForSheet_({ getName: () => '2026 Sabbath' })
-        ])`,
-        context,
-      ) as string,
-    );
-
-    expect(locations).toEqual(['queens', 'brooklyn', '']);
-  });
-
   it('uses location-specific output keys, folders, and short format titles', () => {
     const context = loadAppsScript({
       PropertiesService: {
@@ -1106,22 +1072,22 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.tbd).toBe('尚未安排\nTBD');
   });
 
-  it('reads English, Chinese, and optional pinyin aliases from the Name Dictionary', () => {
+  it('derives pinyin aliases from the Chinese Name column', () => {
     const dictionarySheet = {
       getDataRange: () => ({
         getValues: () => [
-          ['English Name', 'Chinese Name', 'Pinyin Name'],
-          ['Lingli Wang', '王玲俐', 'Lingli Wang'],
-          ['English Only', '', ''],
-          ['', '只有中文', ''],
-          ['Official Person', '中文姓名', 'givenname familyname'],
+          ['English Name', 'Chinese Name'],
+          ['Lingli Wang', '王玲俐'],
+          ['English Only', ''],
+          ['', '只有中文'],
+          ['Official Person', '中文姓名'],
         ],
         getDisplayValues: () => [
-          ['English Name', 'Chinese Name', 'Pinyin Name'],
-          ['Lingli Wang', '王玲俐', 'Lingli Wang'],
-          ['English Only', '', ''],
-          ['', '只有中文', ''],
-          ['Official Person', '中文姓名', 'givenname familyname'],
+          ['English Name', 'Chinese Name'],
+          ['Lingli Wang', '王玲俐'],
+          ['English Only', ''],
+          ['', '只有中文'],
+          ['Official Person', '中文姓名'],
         ],
       }),
     };
@@ -1141,8 +1107,6 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(dictionary.englishToChinese['lingli wang']).toBe('王玲俐');
     expect(dictionary.chineseToEnglish['王玲俐']).toBe('Lingli Wang');
-    expect(dictionary.pinyinToChinese['givenname familyname']).toBe('中文姓名');
-    expect(dictionary.pinyinToEnglish['givenname familyname']).toBe('Official Person');
     expect(dictionary.pinyinToChinese['wen zhong']).toBe('中文姓名');
     expect(dictionary.pinyinToEnglish['wen zhong']).toBe('Official Person');
     expect(dictionary.englishToChinese['english only']).toBeUndefined();
@@ -1368,22 +1332,6 @@ describe('printed bulletin Apps Script helpers', () => {
     );
 
     expect(nextDate).toBe('2027-01-02');
-  });
-
-  it('extracts the Sabbath date from a spreadsheet form-submit event', () => {
-    const context = loadAppsScript({});
-    const sheet = {
-      getDataRange: () => ({
-        getValues: () => [['Timestamp', 'What date is this Sabbath?']],
-        getDisplayValues: () => [['Timestamp', 'What date is this Sabbath?']],
-      }),
-    };
-    const date = runInContext(
-      `getSubmittedDate_({ values: ['9/14/2026 10:00:00', '8/22/2026'] }, testSheet)`,
-      Object.assign(context, { testSheet: sheet }),
-    );
-
-    expect(date).toBe('2026-08-22');
   });
 
   it('keeps full names for the private document builder but not the public API builder', () => {

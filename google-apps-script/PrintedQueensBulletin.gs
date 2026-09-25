@@ -16,6 +16,9 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   outputFolderId: '11p4-PzJNGLNfWdZBAMNIBlLxmBrgo_zZ',
   queensOutputFolderId: '1S5Z2ls_ixCb2-ToTsU-T4ImJrf0vJ8Lu',
   brooklynOutputFolderId: '1C1L98At-T_a9Dyq7mo-ZPCj2FkHddx3J',
+  // These IDs are only Drive location pointers, not credentials. Drive or
+  // Shared Drive permissions must keep the configured folders restricted to
+  // authorized church accounts; the IDs alone do not grant access.
   churchSketchImageProperty: 'CHURCH_SKETCH_IMAGE_FILE_ID',
   lastSupperImageProperty: 'LAST_SUPPER_IMAGE_FILE_ID',
   sdaLogoImageProperty: 'SDA_LOGO_IMAGE_FILE_ID',
@@ -310,29 +313,6 @@ function onOpen() {
 }
 
 /**
- * Legacy compatibility entry point. Bible references now belong in the
- * `Bible Verses` column of `Sabbath Sermon Data`; no Form question setup is
- * required. Keeping this function avoids breaking an old manual shortcut.
- */
-function addBibleVerseQuestions() {
-  requirePrintedBulletinAdmin_();
-  SpreadsheetApp.getUi().alert(
-    'No Form setup is required. Enter the reference in Sabbath Sermon Data → Bible Verses.\n' +
-      '不需要設定表單。請在「Sabbath Sermon Data」→「Bible Verses」欄輸入經文。',
-  );
-  return 'Sabbath Sermon Data: no Form setup required';
-}
-
-// Keep the old editor entry point working for anyone who used it previously.
-function addQueensBibleVerseQuestion() {
-  return addBibleVerseQuestions();
-}
-
-function getPrintedBulletinBibleVerseQuestionTitle_() {
-  return 'What verse should appear at the bottom of Church at Study?';
-}
-
-/**
  * Opens a staff-only prompt. Run this from the bound spreadsheet, or use the
  * Printed Bulletin menu after reloading the spreadsheet.
  */
@@ -435,8 +415,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '</style></head><body>' +
     '<div id="formView">' +
     '<h2 class="section-heading">1. Update the digital bulletin / 第一步：更新數位週刊</h2>' +
-    '<div class="admin-reminder"><strong>Instructions / 使用說明：</strong> Check the current week in the app, then add or update one row per location in Sabbath Sermon Data. Nonblank values there feed both the digital and printed bulletins; no separate intake Form is required.' +
-    '<br>請先查看本應用程式，然後在「Sabbath Sermon Data」中為每個地點新增或更新一行資料。該表格的非空欄位會同時提供手機版和印刷版週刊使用；不需要另外填寫表單。</div>' +
+    '<div class="admin-reminder"><strong>Instructions / 使用說明：</strong> Check the current week in the app, then add or update one row per location in Sabbath Sermon Data. Nonblank values there feed both the digital and printed bulletins; no separate intake workflow is required.' +
+    '<br>請先查看本應用程式，然後在「Sabbath Sermon Data」中為每個地點新增或更新一行資料。該表格的非空欄位會同時提供手機版和印刷版週刊使用；不需要另外建立資料流程。</div>' +
     '<div class="form-links"><a class="form-button" href="' +
     escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.bulletinIntakeSheetUrl) +
     '">↗ Open Sabbath Sermon Data / 開啟安息日講道資料</a></div></div>' +
@@ -486,7 +466,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'var initialRequest=' +
     requestJson +
     ';' +
-    'var locationValue="queens";var formatValue="regular";var announcementsDirty=false;var verseDirty=false;var suppressVerseDirty=false;var promptData={formVerse:""};' +
+    'var locationValue="queens";var formatValue="regular";var announcementsDirty=false;var verseDirty=false;var suppressVerseDirty=false;var promptData={scheduleVerse:""};' +
     'function selectChoice(group,value){' +
     'var buttons=document.querySelectorAll("#"+group+" .choice");' +
     'Array.prototype.forEach.call(buttons,function(button){' +
@@ -502,8 +482,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function renderAnnouncements(entries){var list=document.getElementById("announcementList");list.innerHTML="";if(!entries||!entries.length){entries=[{}];}entries.forEach(addAnnouncementEntry);refreshAnnouncementLabels();announcementsDirty=false;updateSubmitState();}' +
     'function updateChapterOptions(selectedChapter){var book=document.getElementById("book");var selected=book.options[book.selectedIndex];var count=Number(selected.getAttribute("data-chapters")||0);var chapter=document.getElementById("chapter");chapter.innerHTML="";if(!count){chapter.disabled=true;chapter.add(new Option("Choose a book first — 請先選擇書卷",""));updateSubmitState();return;}chapter.disabled=false;chapter.add(new Option("Choose chapter — 選擇章",""));for(var i=1;i<=count;i++){chapter.add(new Option(String(i),String(i)));}if(selectedChapter){chapter.value=String(selectedChapter);}updateSubmitState();}' +
     'function setVerseReference(reference){suppressVerseDirty=true;var value=String(reference||"").replace(/[：]/g,":").replace(/^(.+?):(\\d+):/,"$1 $2:").trim();var match=value.match(/^(.+?)\\s+(\\d+):(\\d+)(?:-(\\d+))?$/);var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses");book.value="";chapter.innerHTML="<option value=\\"\\">Choose a book first — 請先選擇書卷</option>";chapter.disabled=true;verses.value="";if(match){for(var i=0;i<book.options.length;i++){if(String(book.options[i].getAttribute("data-english")||"").toLowerCase()===match[1].toLowerCase()){book.selectedIndex=i;updateChapterOptions(match[2]);verses.value=match[3]+(match[4]?"-"+match[4]:"");break;}}}suppressVerseDirty=false;updateSubmitState();}' +
-    'function renderPromptData(data){promptData=data||{formVerse:""};renderAnnouncements(promptData.announcements||[]);setVerseReference(promptData.verse||"");verseDirty=false;updateSubmitState();}' +
-    'function loadPromptData(){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(renderPromptData).withFailureHandler(function(){renderPromptData({announcements:[],formVerse:"",verse:""});}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
+    'function renderPromptData(data){promptData=data||{scheduleVerse:""};renderAnnouncements(promptData.announcements||[]);setVerseReference(promptData.verse||"");verseDirty=false;updateSubmitState();}' +
+    'function loadPromptData(){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(renderPromptData).withFailureHandler(function(){renderPromptData({announcements:[],scheduleVerse:"",verse:""});}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
     'function collectAnnouncements(){var entries=[];Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry"),function(card){var english=card.querySelector(".announcement-english").value.trim();var chinese=card.querySelector(".announcement-chinese").value.trim();if(english||chinese){entries.push({scope:card.querySelector(".announcement-scope").value,english:english,chinese:chinese});}});return entries;}' +
     'function showLoading(){document.getElementById("bulletinForm").hidden=true;document.getElementById("statusView").hidden=false;document.getElementById("statusView").innerHTML=' +
     '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Creating printed bulletin…<br>正在建立實體週刊…</h2><p class=\'intro\'>This may take a minute while the Google Doc and PDF are prepared.<br>建立 Google 文件和 PDF 可能需要一點時間。</p></div>";focusStatusView_();}' +
@@ -705,7 +685,8 @@ function validatePrintedBulletinRequest_(request) {
 
 /**
  * Reads the printed-only announcement list for the selected Sabbath. This is
- * deliberately separate from the public bulletin payload and speaker form.
+ * deliberately separate from the public bulletin payload and the staff-managed
+ * schedule data.
  */
 function getPrintedBulletinAnnouncements(requestedDate) {
   return readPrintedBulletinAnnouncements_(requestedDate).entries;
@@ -714,16 +695,16 @@ function getPrintedBulletinAnnouncements(requestedDate) {
 function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   var date = toIsoDate_(requestedDate);
   var location = normalizePrintedBulletinLocation_(requestedLocation);
-  var formVerse = '';
+  var scheduleVerse = '';
   var reviewedIntakeVerse = '';
   var bulletin = null;
   if (date) {
     try {
       bulletin = buildBulletin_(date);
-      formVerse = bulletin[location] ? String(bulletin[location].bibleVerses || '') : '';
+      scheduleVerse = bulletin[location] ? String(bulletin[location].bibleVerses || '') : '';
       reviewedIntakeVerse = getReviewedBulletinIntakeBibleVerse_(date, location);
     } catch (error) {
-      Logger.log('Could not load form data for the printed bulletin prompt: ' + error);
+      Logger.log('Could not load schedule data for the printed bulletin prompt: ' + error);
     }
   }
   var override = readPrintedBibleVerseOverride_(date, location);
@@ -746,10 +727,10 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   // prompt. A prior printed-bulletin memory is only a fallback when that
   // managed intake cell is blank, so an old manual selection cannot mask a
   // newly reviewed Bible reference.
-  var preferredVerse = reviewedIntakeVerse || (override.found ? override.reference : formVerse);
+  var preferredVerse = reviewedIntakeVerse || (override.found ? override.reference : scheduleVerse);
   return {
     announcements: announcements,
-    formVerse: formVerse,
+    scheduleVerse: scheduleVerse,
     verse: preferredVerse,
     hasVerseOverride: override.found && !reviewedIntakeVerse,
   };
@@ -1033,39 +1014,6 @@ function escapePrintedBulletinHtml_(value) {
 }
 
 /**
- * Creates the one-time installable trigger used for Queens and Brooklyn form
- * submissions.
- * A trigger is not created automatically because Google requires an
- * authorized staff member to approve Docs/Drive access first.
- */
-function installPrintedBulletinTrigger() {
-  requirePrintedBulletinAdmin_();
-
-  var triggers = ScriptApp.getProjectTriggers();
-  var alreadyInstalled = triggers.some(function (trigger) {
-    return (
-      (trigger.getHandlerFunction() === 'handlePrintedBulletinFormSubmit_' ||
-        trigger.getHandlerFunction() === 'handlePhysicalBulletinFormSubmit_' ||
-        trigger.getHandlerFunction() === 'handleQueensFormSubmit_') &&
-      trigger.getEventType() === ScriptApp.EventType.ON_FORM_SUBMIT
-    );
-  });
-
-  if (!alreadyInstalled) {
-    ScriptApp.newTrigger('handlePrintedBulletinFormSubmit_')
-      .forSpreadsheet(SpreadsheetApp.getActive())
-      .onFormSubmit()
-      .create();
-  }
-
-  SpreadsheetApp.getUi().alert(
-    alreadyInstalled
-      ? 'Printed bulletin form auto-generation is already installed.'
-      : 'Printed bulletin form auto-generation is now installed for Queens and Brooklyn.',
-  );
-}
-
-/**
  * Returns true only for accounts listed in the Script Property
  * PHYSICAL_BULLETIN_ADMIN_EMAILS. The property accepts comma-, semicolon-,
  * or newline-separated Google account addresses.
@@ -1123,39 +1071,6 @@ function requirePrintedBulletinAdmin_() {
   }
 }
 
-/**
- * Install this handler as a spreadsheet "On form submit" trigger. It ignores
- * submissions from other sheets in the workbook.
- */
-function handlePrintedBulletinFormSubmit_(event) {
-  var sheet = event && event.range ? event.range.getSheet() : null;
-  var location = getPrintedBulletinLocationForSheet_(sheet);
-  if (!location) {
-    return;
-  }
-
-  var date = getSubmittedDate_(event, sheet);
-  if (!date) {
-    throw new Error(location + ' form submission did not contain a valid Sabbath date');
-  }
-
-  var result = createPrintedBulletin_(date, 'auto', location);
-  Logger.log(
-    location + ' printed bulletin ' + result.action + ': ' + result.url + ' / ' + result.pdfUrl,
-  );
-}
-
-// Keep previously installed Queens triggers working after the Brooklyn layout
-// is enabled. The installer recognizes this legacy handler name and the
-// implementation now routes both response tabs.
-function handleQueensFormSubmit_(event) {
-  return handlePrintedBulletinFormSubmit_(event);
-}
-
-function installQueensPrintedBulletinTrigger() {
-  return installPrintedBulletinTrigger();
-}
-
 // Backward-compatible entry points for previously installed triggers and
 // dialogs. The implementation and all new UI callbacks use PrintedBulletin
 // names, but existing Google Apps Script triggers may still reference these
@@ -1166,51 +1081,6 @@ function createPhysicalBulletinFromPrompt() {
 
 function createPhysicalBulletinFromRequest(request) {
   return createPrintedBulletinFromRequest(request);
-}
-
-function handlePhysicalBulletinFormSubmit_(event) {
-  return handlePrintedBulletinFormSubmit_(event);
-}
-
-function installPhysicalBulletinTrigger() {
-  return installPrintedBulletinTrigger();
-}
-
-function installQueensPhysicalBulletinTrigger() {
-  return installQueensPrintedBulletinTrigger();
-}
-
-function getPrintedBulletinLocationForSheet_(sheet) {
-  if (!sheet) {
-    return '';
-  }
-  if (CONFIG.responseSheets.queens.indexOf(sheet.getName()) !== -1) {
-    return 'queens';
-  }
-  if (CONFIG.responseSheets.brooklyn.indexOf(sheet.getName()) !== -1) {
-    return 'brooklyn';
-  }
-  return '';
-}
-
-function getSubmittedDate_(event, sheet) {
-  var table = readTable_(sheet);
-  var dateColumn = findFirstHeaderIndex_(table.headers, CONFIG.dateHeaders);
-  var values = event && event.values ? event.values : [];
-  if (dateColumn !== -1 && values[dateColumn]) {
-    return toIsoDate_(values[dateColumn]);
-  }
-
-  var namedValues = (event && event.namedValues) || {};
-  var keys = Object.keys(namedValues);
-  for (var index = 0; index < keys.length; index += 1) {
-    var key = keys[index];
-    if (findFirstHeaderIndex_([key], CONFIG.dateHeaders) !== -1) {
-      var answer = namedValues[key];
-      return toIsoDate_(Array.isArray(answer) ? answer[0] : answer);
-    }
-  }
-  return '';
 }
 
 /**
@@ -2225,16 +2095,10 @@ function buildPhysicalNameDictionary_() {
   table.rows.forEach(function (row) {
     var english = displayValue_(row[0]).trim();
     var chinese = displayValue_(row[1]).trim();
-    // Optional column C stores a given-name-first pinyin alias for the same
-    // person. The alias is only used by the private printed renderer; it is
-    // never exposed through the public API or used for digital name display.
-    var pinyinAliases = displayValue_(row[2])
-      .split(/[,;|\n]+/)
-      .map(function (alias) {
-        return alias.trim();
-      })
-      .filter(Boolean);
-    pinyinAliases = pinyinAliases.concat(getPhysicalPinyinAliases_(chinese));
+    // Pinyin aliases are derived from the Chinese Name value. The dictionary
+    // intentionally has no stored third pinyin field, so the printed renderer
+    // supports alternate pinyin input without duplicating personal data.
+    var pinyinAliases = getPhysicalPinyinAliases_(chinese);
     var englishKey = normalizePhysicalNameKey_(english);
     var chineseKey = normalizePhysicalNameKey_(chinese);
     if (englishKey && chinese && !dictionary.englishToChinese[englishKey]) {
@@ -2296,7 +2160,7 @@ function getPhysicalPinyinAliases_(chinese) {
       givenSpaced + ' ' + surname,
     ];
   } catch (error) {
-    Logger.log('Pinyin name enrichment failed; using explicit aliases only: ' + error);
+    Logger.log('Pinyin name enrichment failed; continuing without derived aliases: ' + error);
     return [];
   }
 }

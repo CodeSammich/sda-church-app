@@ -13,7 +13,7 @@ operators must preserve when editing the workbook or changing a bulletin layout.
 This runbook describes the current native mobile-app workflow. The web/PWA
 preview remains useful for browser checks, but it is not the production bulletin
 client. The centered `Schedule` button in the mobile bulletin opens the staff
-master spreadsheet; it is intentionally not a link to either retired Google Form.
+master spreadsheet; it is intentionally not an intake endpoint.
 
 ## System boundaries
 
@@ -21,9 +21,7 @@ master spreadsheet; it is intentionally not a link to either retired Google Form
 Master spreadsheet
 ├── Sabbath Calendar       roster, service assignments, metadata
 ├── Sabbath Sermon Data    reviewed final-owner bulletin content
-├── Name Dictionary        private physical-print name resolution
-├── Queens Worship Data    optional legacy Form fallback/archive
-└── Brooklyn Worship Data  optional legacy Form fallback/archive
+└── Name Dictionary        private physical-print name resolution
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
@@ -37,16 +35,19 @@ content in the spreadsheet, not through the mobile app.
 
 ### Why this architecture
 
-Google Sheets, Forms, Docs, Drive, and Apps Script are already part of the
+Google Sheets, Docs, Drive, and Apps Script are already part of the
 church's managed Google Workspace. Apps Script keeps Google authorization and
 the date-specific join out of the app, while the mobile app receives only a
-small allowlisted response. No spreadsheet ID, OAuth token, Form email address,
+small allowlisted response. No spreadsheet ID, OAuth token, submitter email address,
 or full response table is shipped in the app bundle.
 
-This is a low-cost operational architecture, not a promise that every Google,
-Workspace, domain, storage, or quota cost will always be zero. Review current
-[Apps Script quotas](https://developers.google.com/apps-script/guides/services/quotas)
-and the church's Google Workspace for Nonprofits terms during annual maintenance.
+Google Workspace for Nonprofits currently includes Apps Script at no additional
+charge under the nonprofit offering; see Google's [nonprofit product
+listing](https://www.google.com/nonprofits/offerings/workspace/) for the current
+terms. This is still not a promise that every domain, storage, API, or quota
+cost will always be zero. Review current [Apps Script
+quotas](https://developers.google.com/apps-script/guides/services/quotas) and
+the church's Workspace terms during annual maintenance.
 
 ### Source map
 
@@ -62,7 +63,7 @@ and the church's Google Workspace for Nonprofits terms during annual maintenance
 | `services/BulletinService.ts` | App response types, date selection, local cache, refresh cooldown, and empty-location behavior |
 | `app/(tabs)/home/bulletin.tsx` | Digital bulletin sections, labels, privacy-safe names, translations, and staff link |
 | `test/apps-script-physical-bulletin.test.ts` | Physical layout, contract, privacy, lookup, QR, and maintenance regression tests |
-| `test/apps-script-bulletin-merge.test.ts` | Intake precedence and legacy-response merge tests |
+| `test/apps-script-bulletin-merge.test.ts` | Intake mapping and precedence regression tests |
 | `test/integration/bulletin-api.mjs` | Opt-in read-only production API contract check |
 
 ## The three mandatory sheets
@@ -77,7 +78,7 @@ mobile app first.
 Row 1 must be:
 
 ```text
-English Name | Chinese Name | Pinyin Name
+English Name | Chinese Name
 ```
 
 Data begins on row 2.
@@ -85,18 +86,18 @@ Data begins on row 2.
 - `English Name` is the canonical English name used for physical printing.
 - `Chinese Name` is the traditional-Chinese display name. The dictionary normally
   stores Chinese names surname-first.
-- `Pinyin Name` is optional. It may contain one or more aliases separated by a
-  comma, semicolon, pipe, or newline. The aliases are alternate input forms,
-  usually given-name-first pinyin.
-- The pinyin column is used only by the private printed renderer. It is never
-  returned by the public API and is never used to display Chinese names in the
-  digital bulletin.
+- The private printed renderer derives surname-first and given-name-first pinyin
+  aliases from `Chinese Name` with the generated `pinyin-pro` runtime. Pinyin is
+  never stored as a third column, returned by the public API, or used to display
+  Chinese names in the digital bulletin.
 - If the sheet is missing, a name is printed exactly as supplied. If a lookup
   is incomplete or unmatched, the source value is preserved rather than guessed.
 
 The pinyin implementation is generated from the pinned `pinyin-pro` dependency
 when Apps Script is deployed. `PinyinPro.gs` is generated output: do not edit it
-by hand, and do not add the generated file to a manual source patch.
+by hand, and do not add the generated file to a manual source patch. If pinyin
+conversion fails, the source value remains unchanged and the renderer does not
+guess.
 
 ### 2. `Sabbath Calendar`
 
@@ -136,9 +137,8 @@ normal sharing permissions.
 
 ### 3. `Sabbath Sermon Data`
 
-This is the reviewed, final-owner intake sheet. It is deliberately a normal
-sheet rather than a Google Form response destination. Keep one row per Sabbath
-and location. Row 1 must be:
+This is the reviewed, final-owner intake sheet. Keep one row per Sabbath and
+location. Row 1 must be:
 
 ```text
 Date | Location | English Hymn of Praise | Chinese Hymn of Praise |
@@ -160,8 +160,8 @@ Rules:
 - Nonblank cells in this sheet feed both digital and printed bulletins. A blank
   cell permits the documented fallback behavior.
 
-The printed-bulletin dialog links directly to this sheet. No separate intake
-Form is required for the normal workflow.
+The printed-bulletin dialog links directly to this sheet. This is the only
+normal bulletin-content intake workflow.
 
 ## Header protection and validation automation
 
@@ -226,26 +226,10 @@ for a future quarter, the script does not delete or rewrite them.
 For a requested date, the API builds data in this order:
 
 1. `Sabbath Calendar` supplies the canonical date, quarter, metadata, and roster.
-2. Matching legacy Queens/Brooklyn Form-response rows are merged field by field,
-   when those response tabs still exist.
-3. Nonblank values from the matching `Sabbath Sermon Data` row override legacy
-   Form values.
-
-`Sabbath Sermon Data` is the active intake workflow. The legacy Forms and their
-response tabs are optional fallback/archive sources retained for compatibility;
-the API skips them safely when a tab is absent. After all historical values have
-been migrated and verified in `Sabbath Sermon Data`, the old Forms may be removed,
-but the normal workflow should not recreate or depend on them.
-
-Legacy Form rules:
-
-- matching is by date and location;
-- among multiple nonblank answers, the newest timestamp wins for each field;
-- a blank later response does not erase an earlier nonblank value;
-- an absent Form or response tab is skipped without preventing the rest of the
-  bulletin from loading; and
-- unrelated Form questions are never exposed until deliberately added to the
-  allowlist and the app contract.
+2. Nonblank values from matching `Sabbath Sermon Data` rows are applied by
+   location. If duplicate rows exist, the latest `Last Updated`/`Timestamp`
+   row wins for each nonblank field; a blank later cell does not erase an older
+   nonblank value.
 
 The printed prompt has one additional fallback for its manual, print-only verse
 selection. The reviewed `Sabbath Sermon Data → Bible Verses` value takes priority;
@@ -257,35 +241,13 @@ bilingual printed placeholder. Missing roster rows are different: a missing
 `YYYY Sabbath` sheet or missing date row is an API error because there is no
 canonical schedule record.
 
-### Legacy Form question contract
-
-Legacy response tabs are optional fallback/archive sources. If they remain in
-the workbook, their English question prefixes must remain stable because Apps
-Script normalizes whitespace and matches those prefixes:
-
-| English question prefix | JSON destination |
-| --- | --- |
-| `What is the English name and number for the Hymn of Praise this week?` | `location.hymnOfPraise.english` |
-| `What is the Chinese name and number for the Hymn of Praise this week?` | `location.hymnOfPraise.chinese` |
-| `What is the sermon title in English?` | `location.sermonTitle.english` |
-| `What is the sermon title in Chinese?` | `location.sermonTitle.chinese` |
-| `What is the Hymn of Response in English?` | `location.hymnOfResponse.english` |
-| `What is the Hymn of Response in Chinese?` | `location.hymnOfResponse.chinese` |
-| `What are the Bible verses for this week?` or the legacy Church at Study verse question | `location.bibleVerses` |
-| `Announcements` or the legacy announcement question | printed announcements only |
-
-`Timestamp`, `Email Address`, and the submitted date are used for matching or
-merging and are never returned. Adding a new question does nothing until it is
-added deliberately to `FORM_RESPONSE_SCHEMA`, the Apps Script tests, the public
-TypeScript model, and the UI.
-
 ### Public response boundary
 
-The response is shaped by the explicit `COLUMN_SCHEMA` and `FORM_RESPONSE_SCHEMA`
-allowlists. The app may receive schedule metadata, bilingual worship content,
+The response is shaped by the explicit `COLUMN_SCHEMA` and the reviewed intake
+mapping. The app may receive schedule metadata, bilingual worship content,
 redacted roster roles, `metadataTranslations`, and the Brooklyn-specific fields
 `technician`, `encouragement`, and `sabbathSchool`. It does not receive arbitrary
-columns, full names, pinyin, email addresses, timestamps, or private Form data.
+columns, full names, pinyin, email addresses, or timestamps.
 
 The production web app is configured to execute as the deploying account and be
 accessible anonymously. This is required for an installed app that cannot stop
@@ -299,7 +261,7 @@ be treated as public.
 
 - Person fields are reduced to a first name and last initial where possible.
 - `Choir` is preserved as a role value.
-- Email addresses, timestamps, Form metadata, pinyin aliases, and full last names
+- Email addresses, timestamps, pinyin aliases, and full last names
   are never returned.
 - The digital bulletin always uses English/redacted names. It must never use a
   Chinese dictionary name or a pinyin alias.
@@ -339,7 +301,7 @@ preview surface, not the canonical release channel.
   are omitted.
 - Brooklyn uses the label `Sabbath Encouragement`, not `Sabbath Message`.
 - The centered `Schedule` pill on its own row below the week selector links to the
-  master spreadsheet, not to the retired Queens/Brooklyn Form links.
+  master spreadsheet, not to a separate intake link.
 - Every blank content field displays `TBD`; a populated field suppresses the
   cautious joint-service fallback note for Brooklyn.
 
@@ -525,6 +487,11 @@ The deployment helper:
   `DEPLOYMENT_DESCRIPTION`; and
 - can write `CLASPRC_JSON` to the WSL clasp credential file for CI-style authentication.
 
+The current workflow is manual: use the printed-bulletin dialog after the reviewed
+sheet rows are ready. Remove any obsolete spreadsheet installable triggers left by
+the former append-only workflow; the current source does not install an automatic
+content-submission trigger.
+
 Run `clasp login --no-localhost` when WSL cannot receive the localhost OAuth
 callback. Never commit `.clasprc.json`, `.clasp.json`, deployment IDs, or refresh
 tokens.
@@ -563,7 +530,7 @@ changes the URL and requires a coordinated mobile-app update.
 
 | Symptom | Likely cause | Corrective action |
 | --- | --- | --- |
-| App shows `TBD` for worship content | No matching intake/form value | Add or correct the row in `Sabbath Sermon Data`; allow up to 120 seconds for API cache expiry |
+| App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Sabbath Sermon Data`; allow up to 120 seconds for API cache expiry |
 | New intake verse is ignored by print prompt | Old print memory or override | Check that `Sabbath Sermon Data → Bible Verses` is nonblank; it has priority over old memory |
 | API returns schedule-not-found | Missing `YYYY Sabbath` tab or row | Restore the exact tab name and a matching Date row |
 | A field moved to the wrong location | Header renamed/reordered or repeated header occurrence changed | Restore the exact header contract and deploy matching code |

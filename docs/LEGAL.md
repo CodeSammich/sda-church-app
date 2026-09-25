@@ -185,22 +185,23 @@ sources and the implementation restrictions are recorded in
 This application values privacy and uses data minimization. The app does not require a
 user account for ordinary use, does not include advertising or analytics, and does not
 provide public user profiles, chat, or user-generated posting. Authorized church
-contributors may submit bulletin information through linked Google Forms outside the app.
+schedule managers maintain bulletin information in a restricted staff-managed Google
+Sheet outside the app.
 Church administrative systems and service providers still process limited information
 needed to operate the app, as described below.
 
 ### 2. Worship Schedule Information (Google Workspace)
 
 Authorized church schedule managers enter participant names and worship assignments into
-a restricted, church-managed Google Sheet. Authorized form submitters provide weekly
-worship-program details through Google Forms; the restricted response Sheet may record a
-submitter's email address.
+a restricted, church-managed Google Sheet. Final owners maintain weekly worship-program
+details in the `Sabbath Sermon Data` tab; the source Sheet may record account activity
+permitted by the church's Workspace settings.
 
-A Google Apps Script web app reads the requested Sabbath schedule and form response and
+A Google Apps Script web app reads the requested Sabbath schedule and reviewed sermon data and
 returns only an allowlisted bulletin response. Before the response becomes public, the
 script shortens Latin-script full names to a first name and last initial. A single-word
 Latin-script name may appear as entered, while unsupported non-Latin names are replaced
-with a privacy placeholder. Full names, form submitter email addresses, and other
+with a privacy placeholder. Full names, account metadata, and other
 non-allowlisted spreadsheet fields are not included in the public API response. The
 shortened names may still identify people within the church community and are therefore
 treated as personal information rather than anonymous data.

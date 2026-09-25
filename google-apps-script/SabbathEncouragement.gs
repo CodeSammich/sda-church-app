@@ -258,7 +258,8 @@ function parseSabbathBibleReferences_(referenceGroup) {
         return;
       }
       currentChapter = chapter;
-      // The source PDF has a typographical “帖后 2:34”; it means 2 Thessalonians 2:3–4.
+      // The source PDF has a confirmed typo, “帖后 2:34”: 2 Thessalonians
+      // chapter 2 has no verse 34, so the intended reference is 2:3–4.
       if (currentBook.id === '2TH' && chapter === 2 && verseStart === 34) {
         verseStart = 3;
         verseEnd = 4;

@@ -18,15 +18,10 @@ var CONFIG = Object.freeze({
   scheduleSheetName: 'Sabbath Calendar',
   intakeSheetName: 'Sabbath Sermon Data',
   cacheSeconds: 120,
-  // Bump when the public bulletin shape changes so cached pre-migration
-  // responses do not hide newly added roster fields.
-  cacheVersion: 'v6',
-  responseSheets: Object.freeze({
-    queens: ['Queens Worship Data'],
-    brooklyn: ['Brooklyn Worship Data'],
-  }),
+  // Bump when the public bulletin shape or source contract changes so cached
+  // pre-migration responses do not hide newly added roster fields.
+  cacheVersion: 'v7',
   dateHeaders: ['Date', 'Service Date', 'Sabbath Date', 'What date is this Sabbath?'],
-  timestampHeaders: ['Timestamp', 'Submitted At'],
 });
 
 // The order is intentional: it disambiguates the duplicated Queens/Brooklyn
@@ -88,68 +83,9 @@ var SAFE_SINGLE_VALUES = Object.freeze([
 
 var PRIVATE_NAME_PLACEHOLDER = 'Name withheld';
 
-var FORM_RESPONSE_SCHEMA = Object.freeze([
-  {
-    headers: ['What is the English name and number for the Hymn of Praise this week?'],
-    path: ['hymnOfPraise', 'english'],
-  },
-  {
-    headers: ['What is the Chinese name and number for the Hymn of Praise this week?'],
-    path: ['hymnOfPraise', 'chinese'],
-  },
-  {
-    headers: ['What is the sermon title in English?'],
-    path: ['sermonTitle', 'english'],
-  },
-  {
-    headers: ['What is the sermon title in Chinese?'],
-    path: ['sermonTitle', 'chinese'],
-  },
-  {
-    headers: ['What is the Hymn of Response in English?'],
-    path: ['hymnOfResponse', 'english'],
-  },
-  {
-    headers: ['What is the Hymn of Response in Chinese?'],
-    path: ['hymnOfResponse', 'chinese'],
-  },
-  {
-    headers: [
-      'What are the Bible verses for this week?',
-      'What is the Bible verse for this week?',
-      'Bible Verse',
-      'Bible Verses',
-      'Bible passage',
-      'Scripture reference',
-      'What scripture is being used?',
-      'What is the scripture for this week?',
-      'What verse should appear at the bottom of Church at Study?',
-      'What is the Church at Study Bible verse?',
-      '聖經經文',
-      '本週聖經經文',
-    ],
-    path: ['bibleVerses'],
-  },
-  // Announcements remain available to the printed/admin workflow. The mobile
-  // digital bulletin intentionally does not render them: their content and
-  // formatting are fluid, and they are already delivered in person and on the
-  // livestream. A future digital announcement must be an explicitly curated,
-  // short summary rather than an automatic mirror of this field.
-  {
-    headers: [
-      'Announcements',
-      'Announcement',
-      'What announcements should appear in the bulletin?',
-    ],
-    path: ['announcements'],
-  },
-]);
-
-// Sabbath Sermon Data is the reviewed, staff-managed layer above the legacy Form
-// response tabs. Keep the Forms as a fallback/archive, but let a final owner
-// correct a week's content without creating another append-only response row.
-// These headers intentionally describe the new sheet rather than mirroring
-// long Form question text.
+// Sabbath Sermon Data is the reviewed, staff-managed source for sermon content.
+// These headers are intentionally concise so final owners can correct a week's
+// content directly without an append-only response workflow.
 var BULLETIN_INTAKE_SCHEMA = Object.freeze([
   { headers: ['English Hymn of Praise'], path: ['hymnOfPraise', 'english'] },
   { headers: ['Chinese Hymn of Praise'], path: ['hymnOfPraise', 'chinese'] },
@@ -343,17 +279,9 @@ function buildBulletin_(requestedDate, options) {
     Boolean(options && options.includeFullNames),
   );
 
-  populateFormResponses_(
-    bulletin.queens,
-    getResponseRows_(spreadsheet, CONFIG.responseSheets.queens, requestedDate),
-  );
-  populateFormResponses_(
-    bulletin.brooklyn,
-    getResponseRows_(spreadsheet, CONFIG.responseSheets.brooklyn, requestedDate),
-  );
-
-  // Reviewed intake values are applied after legacy Form responses so they
-  // take precedence when a final owner has corrected or completed a row.
+  // Sabbath Sermon Data is the sole reviewed content source for both locations.
+  // Nonblank values are applied after the schedule join so a final owner can
+  // correct sermon material without changing the roster sheet.
   populateBulletinIntake_(
     bulletin.queens,
     getBulletinIntakeRows_(spreadsheet, requestedDate, 'queens'),
@@ -491,26 +419,6 @@ function createLocation_() {
   };
 }
 
-function populateFormResponses_(location, responseRows) {
-  if (!responseRows) {
-    return;
-  }
-
-  // Rows are oldest-to-newest. Each nonblank answer is applied so submissions
-  // can contribute different fields, while the latest answer wins a conflict.
-  responseRows.rows.forEach(function (row) {
-    FORM_RESPONSE_SCHEMA.forEach(function (field) {
-      var value =
-        field.path.length === 1 && field.path[0] === 'bibleVerses'
-          ? valueForBibleVerse_(responseRows.headers, row, field.headers)
-          : valueForAliases_(responseRows.headers, row, field.headers);
-      if (!isBlank_(value)) {
-        setPath_(location, field.path, displayValue_(value));
-      }
-    });
-  });
-}
-
 function populateBulletinIntake_(location, intakeRows) {
   if (!intakeRows) {
     return;
@@ -595,69 +503,6 @@ function normalizeLocationKey_(value) {
   return normalized;
 }
 
-function getResponseRows_(spreadsheet, sheetNames, requestedDate) {
-  var sheet = findFirstSheet_(spreadsheet, sheetNames);
-  if (!sheet) {
-    return null;
-  }
-
-  var table = readTable_(sheet);
-  var dateColumn = findFirstHeaderIndex_(table.headers, CONFIG.dateHeaders);
-  if (dateColumn === -1) {
-    throw new Error(
-      'No Sabbath date column found in ' +
-        sheet.getName() +
-        '. Expected one of: ' +
-        CONFIG.dateHeaders.join(', '),
-    );
-  }
-
-  var timestampColumn = findFirstHeaderIndex_(table.headers, CONFIG.timestampHeaders);
-  var matchingRows = [];
-  table.rows.forEach(function (row, index) {
-    if (
-      dateMatches_(
-        row[dateColumn],
-        table.displayRows[index][dateColumn],
-        requestedDate,
-      )
-    ) {
-      matchingRows.push({ values: row, sourceIndex: index });
-    }
-  });
-
-  if (!matchingRows.length) {
-    return null;
-  }
-
-  if (timestampColumn !== -1) {
-    matchingRows.sort(function (left, right) {
-      return (
-        toTimestamp_(left.values[timestampColumn]) -
-          toTimestamp_(right.values[timestampColumn]) ||
-        left.sourceIndex - right.sourceIndex
-      );
-    });
-  }
-
-  return {
-    headers: table.headers,
-    rows: matchingRows.map(function (row) {
-      return row.values;
-    }),
-  };
-}
-
-function findFirstSheet_(spreadsheet, sheetNames) {
-  for (var index = 0; index < sheetNames.length; index += 1) {
-    var sheet = spreadsheet.getSheetByName(sheetNames[index]);
-    if (sheet) {
-      return sheet;
-    }
-  }
-  return null;
-}
-
 function readTable_(sheet) {
   var range = sheet.getDataRange();
   var values = range.getValues();
@@ -722,30 +567,6 @@ function valueForAliases_(headers, row, aliases) {
   return index === -1 ? '' : row[index];
 }
 
-function valueForBibleVerse_(headers, row, aliases) {
-  var value = valueForAliases_(headers, row, aliases);
-  if (!isBlank_(value)) {
-    return value;
-  }
-
-  // Form titles can drift slightly between the Queens and Brooklyn forms.
-  // Keep the explicit aliases above as the contract, then recognize the
-  // narrow family of Bible-verse/scripture headers without accidentally
-  // treating a general Bible-reading question as the sermon verse.
-  for (var index = 0; index < headers.length; index += 1) {
-    var normalizedHeader = normalizeHeader_(headers[index]);
-    if (
-      /(bible\s+(verse|verses|passage)|(?:verse|verses)\s+(reference|for this week)|scripture\s+(reference|for this week)|church at study.*verse|聖經.*經文|經文.*聖經)/i.test(
-        normalizedHeader,
-      )
-    ) {
-      return row[index];
-    }
-  }
-
-  return '';
-}
-
 function findFirstHeaderIndex_(headers, candidates) {
   var normalizedCandidates = candidates.map(normalizeHeader_);
   for (var index = 0; index < headers.length; index += 1) {
@@ -756,8 +577,8 @@ function findFirstHeaderIndex_(headers, candidates) {
       candidateIndex += 1
     ) {
       var candidate = normalizedCandidates[candidateIndex];
-      // Google Form response headers include the translated question after a
-      // newline. Matching the English question prefix keeps the mapping stable.
+      // Imported spreadsheet headers may include translated text after a
+      // newline. Matching a normalized prefix keeps the mapping stable.
       if (
         normalizedHeader === candidate ||
         normalizedHeader.indexOf(candidate + ' ') === 0

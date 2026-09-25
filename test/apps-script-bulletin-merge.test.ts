@@ -2,22 +2,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext, runInContext } from 'node:vm';
 
-const FORM_HEADERS = [
-  'Timestamp',
-  'What date is this Sabbath?',
-  'What is the English name and number for the Hymn of Praise this week?',
-  'What is the Chinese name and number for the Hymn of Praise this week?',
-  'What is the sermon title in English?',
-];
-
-const createSheet = (rows: string[][]) => ({
-  getName: () => 'Queens Worship Data',
-  getDataRange: () => ({
-    getValues: () => [FORM_HEADERS, ...rows],
-    getDisplayValues: () => [FORM_HEADERS, ...rows],
-  }),
-});
-
 const INTAKE_HEADERS = [
   'Date',
   'Location',
@@ -161,78 +145,7 @@ describe('Apps Script bulletin response merging', () => {
     ]);
   });
 
-  it('merges every matching response and prefers the latest conflicting answer', () => {
-    const rows = [
-      [
-        '2026-08-03T10:00:00Z',
-        '2026-08-08',
-        'Latest praise hymn',
-        '',
-        'Latest sermon title',
-      ],
-      [
-        '2026-08-01T10:00:00Z',
-        '2026-08-08',
-        'Original praise hymn',
-        '',
-        'Original sermon title',
-      ],
-      [
-        '2026-08-04T10:00:00Z',
-        '2026-08-15',
-        'Wrong Sabbath hymn',
-        'Wrong Sabbath Chinese hymn',
-        'Wrong Sabbath sermon',
-      ],
-      [
-        '2026-08-02T10:00:00Z',
-        '2026-08-08',
-        '',
-        '跨越全地',
-        '',
-      ],
-    ];
-    const spreadsheet = {
-      getSheetByName: (name: string) =>
-        name === 'Queens Worship Data' ? createSheet(rows) : null,
-    };
-    const context = createContext({ testSpreadsheet: spreadsheet });
-    runInContext(
-      readFileSync(join(process.cwd(), 'google-apps-script/BulletinApi.gs'), 'utf8'),
-      context,
-    );
-
-    const location = JSON.parse(
-      runInContext(
-        `JSON.stringify((function () {
-          var location = createLocation_();
-          populateFormResponses_(
-            location,
-            getResponseRows_(testSpreadsheet, ['Queens Worship Data'], '2026-08-08')
-          );
-          return location;
-        })())`,
-        context,
-      ) as string,
-    );
-
-    expect(location.hymnOfPraise).toEqual({
-      english: 'Latest praise hymn',
-      chinese: '跨越全地',
-    });
-    expect(location.sermonTitle.english).toBe('Latest sermon title');
-  });
-
-  it('lets reviewed Sabbath Sermon Data values override legacy Form responses', () => {
-    const formRows = [
-      [
-        '2026-08-03T10:00:00Z',
-        '2026-08-08',
-        'Form hymn',
-        '',
-        'Form sermon',
-      ],
-    ];
+  it('uses the reviewed Sabbath Sermon Data row for bulletin content', () => {
     const intakeRows = [
       [
         '2026-08-08',
@@ -248,11 +161,9 @@ describe('Apps Script bulletin response merging', () => {
     ];
     const spreadsheet = {
       getSheetByName: (name: string) =>
-        name === 'Queens Worship Data'
-          ? createSheet(formRows)
-          : name === 'Sabbath Sermon Data'
-            ? createIntakeSheet(intakeRows)
-            : null,
+        name === 'Sabbath Sermon Data'
+          ? createIntakeSheet(intakeRows)
+          : null,
     };
     const context = createContext({ testSpreadsheet: spreadsheet });
     runInContext(
@@ -264,10 +175,6 @@ describe('Apps Script bulletin response merging', () => {
       runInContext(
         `JSON.stringify((function () {
           var location = createLocation_();
-          populateFormResponses_(
-            location,
-            getResponseRows_(testSpreadsheet, ['Queens Worship Data'], '2026-08-08')
-          );
           populateBulletinIntake_(
             location,
             getBulletinIntakeRows_(testSpreadsheet, '2026-08-08', 'queens')
