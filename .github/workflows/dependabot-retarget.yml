@@ -1,0 +1,100 @@
+name: Dependabot - Retarget to Release Branch
+
+# Dependabot always opens pull requests against main, and security updates
+# ignore dependabot.yml's target-branch. main only accepts release/x.y.(patch|x)
+# branches, so this workflow moves each Dependabot pull request onto the newest
+# release branch, gives it a Release/x.y.z title, and asks Dependabot to rebase.
+#
+# Edits made with GITHUB_TOKEN do not start other workflows, so the edits and
+# the rebase comment use DEPENDABOT_RETARGET_TOKEN: a fine-grained token from a
+# maintainer with write access (Pull requests: read and write). Dependabot's
+# rebase pushes a new commit, and all release-branch checks run on it.
+#
+# pull_request_target never checks out pull request code here; the job only
+# calls the GitHub API.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-retarget-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  retarget:
+    if: >-
+      github.event.repository.fork == false &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.pull_request.user.login == 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retarget Dependabot pull requests
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_RETARGET_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error title=Missing secret::Add a DEPENDABOT_RETARGET_TOKEN repository secret (Actions and Dependabot secrets). See docs/CONTRIBUTING.md."
+            exit 1
+          fi
+
+          # Newest release/x.y.(patch|x) branch; an x patch sorts above numbered patches.
+          release_branch="$(
+            gh api "repos/$GH_REPO/git/matching-refs/heads/release/" --paginate --jq '.[].ref' \
+              | sed 's|^refs/heads/||' \
+              | grep -E '^release/[0-9]+\.[0-9]+\.([0-9]+|x)$' \
+              | awk -F'[/.]' '{ patch = ($4 == "x") ? 999999 : $4; printf "%d %d %d %s\n", $2, $3, patch, $0 }' \
+              | sort -k1,1n -k2,2n -k3,3n \
+              | tail -n1 \
+              | cut -d' ' -f4
+          )"
+
+          process_pr() {
+            local number="$1" base author state title prefix
+            IFS=$'\t' read -r base author state title < <(
+              gh api "repos/$GH_REPO/pulls/$number" --jq '[.base.ref, .user.login, .state, .title] | @tsv'
+            )
+
+            if [[ "$author" != "dependabot[bot]" || "$state" != "open" ]]; then
+              return 0
+            fi
+
+            if [[ "$base" == "main" ]]; then
+              if [[ -z "$release_branch" ]]; then
+                echo "::warning::#$number: no release/x.y.(patch|x) branch exists yet; leaving it on main."
+                return 0
+              fi
+              prefix="Release/${release_branch#release/}"
+              [[ "$title" =~ ^Release/ ]] || title="$prefix: $title"
+              gh api -X PATCH "repos/$GH_REPO/pulls/$number" -f base="$release_branch" -f title="$title" >/dev/null
+              gh api "repos/$GH_REPO/issues/$number/comments" \
+                -f body="@dependabot rebase
+
+          Retargeted from \`main\` to \`$release_branch\` by the Dependabot retarget workflow." >/dev/null
+              echo "#$number: retargeted to $release_branch and requested a rebase."
+              return 0
+            fi
+
+            # Dependabot may rewrite the title when it updates the branch; restore the prefix.
+            if [[ "$base" =~ ^release/[0-9]+\.[0-9]+\.([0-9]+|x)$ && ! "$title" =~ ^Release/ ]]; then
+              gh api -X PATCH "repos/$GH_REPO/pulls/$number" -f title="Release/${base#release/}: $title" >/dev/null
+              echo "#$number: restored the Release/${base#release/} title prefix."
+            fi
+          }
+
+          if [[ -n "$EVENT_PR" ]]; then
+            process_pr "$EVENT_PR"
+          else
+            for number in $(gh api "repos/$GH_REPO/pulls?state=open&per_page=100" --paginate \
+                --jq '.[] | select(.user.login == "dependabot[bot]") | .number'); do
+              process_pr "$number"
+            done
+          fi

@@ -156,6 +156,25 @@ main (stable)
   into a `release/x.y.<patch-or-x>` branch, including PRs submitted from forks.
 - Removes the label when the issue closes after the final release reaches `main`.
 
+#### `Dependabot - Retarget to Release Branch` (`.github/workflows/dependabot-retarget.yml`)
+
+- Dependabot always opens pull requests against `main`, and security updates ignore
+  `target-branch` in `dependabot.yml`. This workflow moves each Dependabot pull request to
+  the newest `release/x.y.<patch-or-x>` branch, prefixes its title with that release line,
+  and comments `@dependabot rebase` so every release-branch check runs on a fresh commit.
+  If Dependabot later rewrites the title, the workflow restores the prefix.
+- If no release branch exists, the pull request stays on `main` and fails the main gates
+  until a maintainer creates a release branch and runs the workflow manually
+  (**Actions → Dependabot - Retarget to Release Branch → Run workflow**), which processes
+  every open Dependabot pull request.
+- Requires the `DEPENDABOT_RETARGET_TOKEN` secret. Edits made with the built-in
+  `GITHUB_TOKEN` do not start other workflows, and Dependabot only follows commands from
+  users with write access. Use a fine-grained personal access token from a maintainer:
+  resource owner `New-York-Chinese-Seventh-day-Adventist`, repository access limited to
+  `sda-church-app`, and **Pull requests: Read and write** permission. Store it as a
+  repository secret under both **Actions** and **Dependabot** secrets, and replace it
+  before it expires.
+
 #### `Deploy Web Preview and Tag` (`.github/workflows/deploy.yml`)
 
 - **Final Validation**: Ensures the merged version is unique.
