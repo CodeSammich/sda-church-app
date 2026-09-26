@@ -9,13 +9,15 @@ const MIME_TYPES = {
 };
 
 // Uploads replace same-named files in shared folders, so only app binaries
-// and the QR codes that a workflow generates may be written. Anything else is
-// refused before any credentials are used. Add a name here only when a
-// workflow starts uploading it.
+// and these exact bulletin QR codes may be written. Anything else is refused
+// before any credentials are used.
 const ALLOWED_BINARY_EXTENSIONS = new Set(['.aab', '.apk', '.ipa']);
 const ALLOWED_BULLETIN_FILE_NAMES = new Set([
   'brooklyn_adventist_giving_qr_code_368x368.jpg',
+  'brooklyn_zelle_qr_code_368x368.jpg',
+  'mobile_app_qr_368x368.jpg',
   'queens_adventist_giving_qr_code_368x368.jpg',
+  'queens_zelle_qr_code_368x368.jpg',
 ]);
 
 export const isUploadAllowed = (fileName) =>
