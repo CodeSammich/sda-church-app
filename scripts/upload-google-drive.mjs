@@ -15,7 +15,7 @@ const ALLOWED_BINARY_EXTENSIONS = new Set(['.aab', '.apk', '.ipa']);
 const ALLOWED_BULLETIN_FILE_NAMES = new Set([
   'brooklyn_adventist_giving_qr_code_368x368.jpg',
   'brooklyn_zelle_qr_code_368x368.jpg',
-  'mobile_app_qr_368x368.jpg',
+  'mobile_app_qr_code_368x368.jpg',
   'queens_adventist_giving_qr_code_368x368.jpg',
   'queens_zelle_qr_code_368x368.jpg',
 ]);
