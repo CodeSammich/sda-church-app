@@ -93,8 +93,11 @@ bulletin uses.
    - `Google Drive scopes: …`. The login currently has `drive.file` (change only
      files it created) and `drive.metadata.readonly` (see all files). If the upload
      fails with `403 … has not granted the app … write access to the file`, the file
-     was uploaded by hand. Move that file to the Drive trash and run the workflow
-     again. The workflow then creates the file and can replace it on later runs. See
+     was uploaded by hand. Rename that file in Drive (for example, add
+     `_manual_backup` before `.jpg`) and run the workflow again. The workflow then
+     creates the file and can replace it on later runs. Rename rather than trash:
+     the bulletin script picks the first file with a matching name anywhere in Drive
+     and doesn't skip trashed files. See
      [Credentials](#credentials-that-need-attention).
    - `Replaced …` or `Uploaded …` for `queens_adventist_giving_qr_code_368x368.jpg`
      and `brooklyn_adventist_giving_qr_code_368x368.jpg`. **Replaced** keeps the
@@ -219,7 +222,7 @@ closes the issue when the service recovers. See
 
 | Credential | Where | When to act |
 | --- | --- | --- |
-| `CLASPRC_JSON` (Google login for Apps Script and Drive uploads) | `production` Environment secret | When clasp authorization fails; see the Workspace session note in [Deployment and verification](bulletin-automation.md#deployment-and-verification). The login has `drive.file` and `drive.metadata.readonly`: it can see every file but can change only files it created. Replacing a hand-made file fails with `403 appNotAuthorizedToFile`; trash the hand-made copy and let the workflow create it. Keep this narrow access rather than granting full `drive` access, because this account can reach every shared drive. |
+| `CLASPRC_JSON` (Google login for Apps Script and Drive uploads) | `production` Environment secret | When clasp authorization fails; see the Workspace session note in [Deployment and verification](bulletin-automation.md#deployment-and-verification). The login has `drive.file` and `drive.metadata.readonly`: it can see every file but can change only files it created. Replacing a hand-made file fails with `403 appNotAuthorizedToFile`; rename the hand-made copy and let the workflow create it. Keep this narrow access rather than granting full `drive` access, because this account can reach every shared drive. |
 | Apple distribution certificate and provisioning profile | `production` Environment secrets | Profiles expire after 12 months. See [iOS setup](native-builds.md#ios-setup-github-hosted-direct-builds). |
 | Android upload keystore | `production` Environment secrets | Only when Google Play requires a rotation. See [Android rotation and recovery policy](native-builds.md#android-rotation-and-recovery-policy). |
 
