@@ -44,10 +44,17 @@ those directly from third-party API providers.
 
 ```mermaid
 flowchart LR
-  app[App<br/>iOS · Android · web] -- HTTPS, byte ranges --> cdn[assets.adventistconnect.org<br/>Cloudflare CDN]
-  cdn -- cache miss only --> wasabi[(Wasabi object storage<br/>us-east-2, N. Virginia)]
-  app -. load error .-> ap[Audio Power] -. load error .-> ia[Internet Archive]
+  app[App<br/>iOS · Android · web] -- HTTPS, byte ranges --> cdn
+  subgraph primary["① Primary: church's copy on Adventist Connect (NAD)"]
+    cdn[assets.adventistconnect.org<br/>NAD's Cloudflare CDN] -- cache miss only --> wasabi[(Wasabi object storage<br/>us-east-2, N. Virginia)]
+  end
+  primary -. "if it fails" .-> ap["② Audio Power"]
+  ap -. "if it also fails" .-> ia["③ Internet Archive"]
 ```
+
+The app tries the sources in order and uses only one at a time; the fallbacks
+are not a separate path. See [How the app fetches audio](#how-the-app-fetches-audio)
+for when it moves on.
 
 Headers observed on 2026-09-25:
 

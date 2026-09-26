@@ -67,7 +67,7 @@ flowchart LR
   end
 
   subgraph Media["Adventist Connect media library"]
-    wp@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/wordpress-icon.svg", label: "assets.adventistconnect.org<br/>Cloudflare CDN", pos: "b", w: 44, h: 44, constraint: "on" }
+    wp@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/wordpress-icon.svg", label: "assets.adventistconnect.org<br/>NAD's Cloudflare CDN", pos: "b", w: 44, h: 44, constraint: "on" }
     wasabi@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/wasabi.svg", label: "Wasabi storage<br/>us-east-2", pos: "b", w: 44, h: 44, constraint: "on" }
   end
 
