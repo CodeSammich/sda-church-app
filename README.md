@@ -23,6 +23,8 @@ licensing decisions and third-party source review live in [docs/LEGAL.md](docs/L
 ### Project documentation
 
 - [Technical Setup & Testing](docs/README.md)
+- [Admin Runbook](docs/operations/admin-runbook.md): step-by-step manual workflows and
+  admin web tasks
 - [Build Instructions](docs/operations/native-builds.md)
 - [Bulletin Automation Operations](docs/operations/bulletin-automation.md)
   - [Sabbath Encouragement attribution and copyright](docs/operations/sabbath-encouragement-copyright.md)
