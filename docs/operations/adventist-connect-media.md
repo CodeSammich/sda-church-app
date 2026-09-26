@@ -197,3 +197,5 @@ and serving media from R2 is covered by Cloudflare's terms. Check R2's current
 free-tier limits before moving. Moving means uploading `downloads/cuv-audio/`,
 regenerating the manifest for the new URLs, and keeping Adventist Connect as a
 fallback.
+This is being investigated in
+[#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261).
