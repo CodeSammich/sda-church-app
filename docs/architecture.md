@@ -35,6 +35,8 @@ shows a pre-rendered SVG instead. To change the diagram, edit the `.mmd` file, r
 Mermaid CLI and embeds the logos from pinned jsDelivr URLs for the CC0-licensed
 [SVG Logos](https://github.com/gilbarbara/logos) and
 [Simple Icons](https://simpleicons.org/) sets, so the SVG needs nothing external.
+The SVG records a fingerprint of the source it was rendered from, and a unit test
+fails in CI if the `.mmd` file changes without the SVG being re-rendered.
 The daily dependency checks and the account links between the stores and the domain
 are described below rather than drawn, to keep the diagram readable.
 

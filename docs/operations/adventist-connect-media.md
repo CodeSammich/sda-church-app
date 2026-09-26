@@ -84,8 +84,9 @@ church-website platform.
   On iOS and Android, the Bible screen switches only if a source still hasn't
   started after 45 seconds (`AUDIO_SOURCE_LOAD_TIMEOUT_MS` in
   [`app/(tabs)/bible/index.tsx`](../../app/(tabs)/bible/index.tsx)), so a failed
-  primary means a long wait before audio starts. Listeners can also choose a
-  source themselves in the audio settings.
+  primary means a long wait before audio starts. Shortening this is tracked in
+  [#262](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/262).
+  Listeners can also choose a source themselves in the audio settings.
 - An Adventist Connect outage therefore shifts load to Audio Power rather than
   stopping playback.
 - The player streams with byte-range requests; it does not download chapters for
