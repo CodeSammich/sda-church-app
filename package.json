@@ -7,6 +7,7 @@
     "build:web": "node scripts/ensure-build-dir.mjs && expo export --platform web --clear --output-dir build/web",
     "check": "npm run typecheck && npm test && npm run check:text-scale && npm run build:web",
     "check:text-scale": "node scripts/check-text-scale-coverage.mjs",
+    "docs:diagram": "node scripts/render-architecture-diagram.mjs",
     "download:cuv-audio": "node scripts/download-cuv-audio.mjs",
     "extract:cuv-adventist-manifest": "node scripts/extract-cuv-adventist-audio-manifest.mjs",
     "sync-version": "node public/sync-version.js",

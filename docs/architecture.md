@@ -25,89 +25,17 @@ Super Administrators can share.
 Solid arrows are runtime data flow; dotted arrows are deployment, publishing, or
 account dependencies.
 
-```mermaid
-flowchart LR
-  subgraph People
-    members["👥 Congregation"]
-    staff["✏️ Church staff"]
-    admins["🛡️ IT administrators"]
-  end
+![Architecture diagram: people, clients, Cloudflare, Google Workspace, GitHub, the app stores, the Adventist Connect media library, and public content providers, with arrows showing data flow and deployments](diagrams/architecture.svg)
 
-  subgraph Clients
-    ios@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple.svg", label: "iOS app", pos: "b", w: 40, h: 48, constraint: "on" }
-    android@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/android-icon.svg", label: "Android app", pos: "b", w: 48, h: 48, constraint: "on" }
-    pwa@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/pwa.svg", label: "Web / PWA preview", pos: "b", w: 64, h: 24, constraint: "on" }
-  end
-
-  subgraph Cloudflare
-    dns@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/cloudflare-icon.svg", label: "Registrar + DNS<br/>nyccsda.org", pos: "b", w: 64, h: 30, constraint: "on" }
-    workers@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/cloudflare-workers-icon.svg", label: "Workers<br/>API keys · WIP", pos: "b", w: 48, h: 44, constraint: "on" }
-  end
-
-  subgraph Google["Google Workspace for Nonprofits"]
-    group@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-gmail.svg", label: "Google Group<br/>technology@nyccsda.org", pos: "b", w: 48, h: 36, constraint: "on" }
-    roster@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googlesheets.svg", label: "Scheduling roster<br/>Shared Drive", pos: "b", w: 40, h: 48, constraint: "on" }
-    api@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Apps Script<br/>BulletinApi.gs", pos: "b", w: 48, h: 48, constraint: "on" }
-    printed@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Apps Script<br/>Printed*.gs", pos: "b", w: 48, h: 48, constraint: "on" }
-    drive@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-drive.svg", label: "Google Drive<br/>bulletin PDFs, QR codes,<br/>media backups", pos: "b", w: 48, h: 42, constraint: "on" }
-  end
-
-  subgraph GitHub
-    repo@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "sda-church-app repo", pos: "b", w: 48, h: 48, constraint: "on" }
-    actions@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-actions.svg", label: "GitHub Actions<br/>tests · builds · deploys · monitor", pos: "b", w: 48, h: 48, constraint: "on" }
-    secrets["🔑 production Environment<br/>signing + Google credentials"]
-    pages@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "GitHub Pages", pos: "b", w: 40, h: 40, constraint: "on" }
-  end
-
-  subgraph Stores["App stores"]
-    abm@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple.svg", label: "Apple Business Manager", pos: "b", w: 34, h: 40, constraint: "on" }
-    appstore@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple-app-store.svg", label: "App Store Connect", pos: "b", w: 44, h: 44, constraint: "on" }
-    play@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-play-icon.svg", label: "Google Play Console", pos: "b", w: 40, h: 44, constraint: "on" }
-    gsc@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-search-console.svg", label: "Google Search Console", pos: "b", w: 44, h: 44, constraint: "on" }
-  end
-
-  subgraph Media["Adventist Connect media library"]
-    wp@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/wordpress-icon.svg", label: "assets.adventistconnect.org<br/>NAD's Cloudflare CDN", pos: "b", w: 44, h: 44, constraint: "on" }
-    wasabi@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/wasabi.svg", label: "Wasabi storage<br/>us-east-2", pos: "b", w: 44, h: 44, constraint: "on" }
-  end
-
-  content["🌐 Public content providers<br/>Bible text + audio, hymnals,<br/>Sabbath School, sunset times"]
-
-  members --> Clients
-  staff --> roster
-  roster --> api & printed
-  api -- privacy-filtered JSON --> Clients
-  printed --> drive
-  Clients -- images + Bible audio --> wp
-  wp -- cache miss --> wasabi
-  Clients --> content
-
-  repo --> actions
-  secrets -.-> actions
-  actions -. clasp deploy .-> api
-  actions -. QR codes .-> drive
-  actions -. web build .-> pages
-  pages -.-> pwa
-  actions -. signed builds .-> Stores
-
-  admins -.-> group
-  group -.-> repo
-  dns -.-> Google
-  abm -.-> appstore
-  workers -.-> Clients
-
-  classDef logo fill:#ffffff,stroke:#d0d7de
-  class ios,android,pwa,dns,workers,group,roster,api,printed,drive,repo,actions,pages,abm,appstore,play,gsc,wp,wasabi logo
-```
-
-GitHub renders this diagram directly from the Mermaid source above. The logos are
-linked from jsDelivr, pinned to fixed versions of the CC0-licensed
+The diagram's source is [`diagrams/architecture.mmd`](diagrams/architecture.mmd).
+GitHub's built-in Mermaid can't load logo images from outside links, so the page
+shows a pre-rendered SVG instead. To change the diagram, edit the `.mmd` file, run
+`npm run docs:diagram`, and commit both files. The script renders the source with
+Mermaid CLI and embeds the logos from pinned jsDelivr URLs for the CC0-licensed
 [SVG Logos](https://github.com/gilbarbara/logos) and
-[Simple Icons](https://simpleicons.org/) sets, and are not stored in this repository.
-They sit on white tiles so the black marks stay visible in dark mode. To change the
-diagram, edit the text; there is no image to regenerate. The daily dependency checks
-and the account links between the stores and the domain are described below rather
-than drawn, to keep the diagram readable.
+[Simple Icons](https://simpleicons.org/) sets, so the SVG needs nothing external.
+The daily dependency checks and the account links between the stores and the domain
+are described below rather than drawn, to keep the diagram readable.
 
 ## Foundational systems
 

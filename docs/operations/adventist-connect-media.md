@@ -190,12 +190,12 @@ Watch for:
   install counts.
 
 If Adventist Connect stops being suitable, the design doc allows any public HTTPS
-host that serves MP3 with byte-range support. The best fit for the church's
-free-services rule is **Cloudflare R2 on the church's own Cloudflare account**. The
-audio (under 1 GB) fits within R2's free storage tier, R2 doesn't charge for egress,
-and serving media from R2 is covered by Cloudflare's terms. Check R2's current
-free-tier limits before moving. Moving means uploading `downloads/cuv-audio/`,
-regenerating the manifest for the new URLs, and keeping Adventist Connect as a
-fallback.
-This is being investigated in
+host that serves MP3 with byte-range support. Any replacement must make a bill
+impossible, not just unlikely. This is a hard constraint under the "Sustainable"
+tenet in [Project Tenets](../project-tenets.md). For that reason, Cloudflare R2 was
+considered and rejected: its free tier bills automatically once exceeded, Cloudflare
+has no hard spending cap, and the church's Cloudflare account already has a card on
+file for the domain. The reasoning is recorded in
 [#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261).
+Whatever the host, moving means uploading `downloads/cuv-audio/`, regenerating the
+manifest for the new URLs, and keeping Adventist Connect as a fallback.
