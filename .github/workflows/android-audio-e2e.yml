@@ -1,0 +1,242 @@
+name: Android audio e2e
+
+# Bible audio failover on a real Android player, which Jest can't reach: a
+# failed ExoPlayer is replaced, the lock-screen foreground service survives the
+# switch, and audio recovers with the screen off. The scenarios are in
+# scripts/e2e/android-bible-audio.sh; the failover logic's own tests are in
+# test/bible-audio-source-controller.test.ts.
+#
+# It plays real recordings from the church's hosts, so a host outage can fail
+# it too. The failure details artifact says which host was playing.
+on:
+  schedule:
+    - cron: "41 3 * * *"
+      timezone: "America/New_York"
+  workflow_dispatch: {}
+  # Pull requests that change Bible audio, and every release PR into main.
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+    paths:
+      - 'app/(tabs)/bible/**'
+      - 'services/BibleAudio*'
+      - 'scripts/e2e/**'
+      - '.github/workflows/android-audio-e2e.yml'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: android-audio-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Bible audio on an Android emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --force
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+          packages: ''
+
+      - name: Accept Android SDK licenses
+        run: |
+          set -euo pipefail
+          license_status=0
+          set +o pipefail
+          yes | sdkmanager --licenses >/dev/null 2>&1 || license_status=$?
+          set -o pipefail
+          test "$license_status" -eq 0
+
+      - name: Install Android SDK tools and the emulator
+        run: |
+          set -euo pipefail
+          # The runner's preinstalled command-line tools are too old for the
+          # Android 16 system image, so avdmanager comes from the latest ones.
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006" \
+            "cmdline-tools;latest" "emulator" "system-images;android-36;google_apis;x86_64"
+
+      - name: Enable hardware acceleration for the emulator
+        run: |
+          set -euo pipefail
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # A local DNS server answers "no such domain" for the church's audio
+      # host, so the primary source fails as it would in an outage, without
+      # changing the app. Every other name resolves normally.
+      - name: Make the church's audio host unreachable
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends dnsmasq-base >/dev/null
+          dns_ip="$(hostname -I | awk '{print $1}')"
+          sudo dnsmasq --listen-address="$dns_ip" --bind-interfaces --no-hosts \
+            --resolv-file=/run/systemd/resolve/resolv.conf \
+            --local=/adventistconnect.org/ \
+            --log-queries --log-facility="$RUNNER_TEMP/dnsmasq.log" \
+            --pid-file="$RUNNER_TEMP/dnsmasq.pid"
+          sudo chmod a+r "$RUNNER_TEMP/dnsmasq.log"
+          echo "E2E_DNS_IP=$dns_ip" >> "$GITHUB_ENV"
+
+      # Booted before the build, so a broken emulator fails in minutes rather
+      # than after the build.
+      - name: Start the emulator
+        run: |
+          set -euo pipefail
+          # The runner already has cmdline-tools "latest", so sdkmanager puts
+          # the newer copy in latest-2 or similar. Use the newest avdmanager,
+          # and one AVD folder for it and the emulator.
+          avdmanager_bin="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/avdmanager | sort -V | tail -1)"
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
+          echo "Using $avdmanager_bin"
+          echo no | "$avdmanager_bin" create avd --force -n e2e \
+            -k "system-images;android-36;google_apis;x86_64" -d pixel_6
+          nohup "$ANDROID_HOME/emulator/emulator" -avd e2e -no-window -no-snapshot \
+            -no-boot-anim -gpu swiftshader_indirect -dns-server "$E2E_DNS_IP" \
+            > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          booted() {
+            timeout 300 adb wait-for-device &&
+            timeout 600 bash -c \
+              'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 5; done'
+          }
+          if ! booted; then
+            echo 'The emulator did not boot. Its log:' >&2
+            tail -n 80 "$RUNNER_TEMP/emulator.log" >&2
+            exit 1
+          fi
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+
+      - name: Build the debug APK for the emulator
+        run: npm run build:android:apk:debug:intel -- --output "$RUNNER_TEMP/app.apk"
+
+      - name: Check that only the church's host is blocked
+        run: |
+          set -euo pipefail
+          blocked="$(adb shell ping -c 1 -W 2 assets.adventistconnect.org 2>&1 | tr -d '\r' || true)"
+          allowed="$(adb shell ping -c 1 -W 2 archive.org 2>&1 | tr -d '\r' || true)"
+          echo "assets.adventistconnect.org: $blocked"
+          echo "archive.org: $allowed"
+          grep -i 'unknown host' <<< "$blocked" >/dev/null || {
+            echo 'The church audio host still resolves; the host block is not working.' >&2
+            exit 1
+          }
+          grep -i 'unknown host' <<< "$allowed" >/dev/null && {
+            echo 'archive.org does not resolve; the emulator has no working DNS.' >&2
+            exit 1
+          }
+          true
+
+      - name: Run the Bible audio scenarios
+        env:
+          E2E_OUTPUT: ${{ runner.temp }}/e2e-output
+          E2E_PRIMARY_BLOCKED: '1'
+        run: |
+          set -euo pipefail
+          adb install -r "$RUNNER_TEMP/app.apk"
+          scripts/e2e/android-bible-audio.sh
+
+      - name: Collect emulator and DNS logs
+        if: failure() || cancelled()
+        run: |
+          mkdir -p "$RUNNER_TEMP/e2e-output"
+          cp "$RUNNER_TEMP/emulator.log" "$RUNNER_TEMP/dnsmasq.log" "$RUNNER_TEMP/e2e-output/" 2>/dev/null || true
+          # adb waits forever for a device, so bound it.
+          timeout 60 adb logcat -d -v time > "$RUNNER_TEMP/e2e-output/logcat.txt" 2>/dev/null || true
+
+      # Screenshots and logs only: this job reads no secrets or tokens.
+      - name: Upload failure details
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: android-audio-e2e-${{ github.run_id }}
+          path: ${{ runner.temp }}/e2e-output
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Only the nightly run opens an alert issue; pull requests show their own
+  # failures. The issue handling is shared with the other monitors.
+  alert:
+    needs: e2e
+    if: >-
+      always() &&
+      github.event_name == 'schedule' &&
+      github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Open or update the alert issue
+        if: needs.e2e.result == 'failure'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const result = await alerts.openOrUpdateAlert({
+              github,
+              context,
+              core,
+              title: '[monitor] Nightly Bible audio emulator test failed',
+              body: [
+                'The nightly Bible audio test on an Android emulator failed.',
+                '',
+                `Run: ${alerts.getRunUrl(context)}`,
+                '',
+                'The run log shows which scenario failed. Its screenshot, app log and media session are in the `android-audio-e2e-*` artifact.',
+                `The test plays real recordings, so check the [external dependency monitor](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/external-dependency-monitor.yml) before assuming an app regression.`,
+              ].join('\n'),
+              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
+            });
+            core.info(`Alert issue ${result.action}: #${result.number}`);
+
+      - name: Close the alert issue after recovery
+        if: needs.e2e.result == 'success'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const result = await alerts.closeAlert({
+              github,
+              context,
+              title: '[monitor] Nightly Bible audio emulator test failed',
+              body: `Recovered in ${alerts.getRunUrl(context)}.`,
+            });
+            core.info(`Alert issue: ${result.action}`);

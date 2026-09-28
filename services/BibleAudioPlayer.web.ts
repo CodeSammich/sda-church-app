@@ -5,6 +5,7 @@ import type { AudioMetadata, AudioSource } from 'expo-audio';
 import type {
   BibleAudioQueueItem,
   BibleAudioQueueSource,
+  BibleAudioSourceError,
   BibleAudioStatus,
 } from './BibleAudioPlayer.types';
 
@@ -659,3 +660,9 @@ export const useBibleAudioPlayerStatus = (player: BibleAudioPlayerWeb) => {
 
   return status;
 };
+
+// The web player switches to the next host itself on a media error.
+export const useBibleAudioSourceErrors = (
+  _player: BibleAudioPlayerWeb,
+  _onError: (event: BibleAudioSourceError) => void,
+) => {};

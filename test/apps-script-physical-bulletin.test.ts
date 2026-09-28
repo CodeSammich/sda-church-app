@@ -11,11 +11,15 @@ const loadAppsScript = (context: Record<string, unknown>) => {
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/BulletinScheduleMaintenance.gs'), 'utf8') +
       '\n' +
-      readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensBulletin.gs'), 'utf8') +
+      readFileSync(join(process.cwd(), 'google-apps-script/ScheduleAssignmentChecks.gs'), 'utf8') +
+      '\n' +
+      readFileSync(join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'), 'utf8') +
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedHymnLookup.gs'), 'utf8') +
       '\n' +
-      readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensCommunionBulletin.gs'), 'utf8') +
+      readFileSync(join(process.cwd(), 'google-apps-script/PrintedCommunionBulletin.gs'), 'utf8') +
+      '\n' +
+      readFileSync(join(process.cwd(), 'google-apps-script/PrintedQueensBulletin.gs'), 'utf8') +
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedBrooklynBulletin.gs'), 'utf8'),
     vmContext,
@@ -540,7 +544,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
   it('keeps the DAF note with the left-side giving content', () => {
     const source = readFileSync(
-      join(process.cwd(), 'google-apps-script/PrintedQueensBulletin.gs'),
+      join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'),
       'utf8',
     );
     const givingTextStart = source.indexOf('function appendGivingText_');
@@ -775,6 +779,151 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
   });
 
+  it.each([
+    ['Queens', 'appendWorshipPanel_'],
+    ['Brooklyn', 'appendBrooklynWorshipPanel_'],
+  ])('leaves room under the %s silent prayer for the giving footer divider', (_name, panel) => {
+    const renderWorshipEnding = (includeClosingRows: boolean) => {
+      const calls: string[] = [];
+      const context = loadAppsScript({});
+      const record = (name: string) => () => {
+        calls.push(name);
+      };
+      Object.assign(context, {
+        appendPanelHeading_: record('heading'),
+        appendCenteredText_: record('text'),
+        appendHalfSpacer_: record('half spacer'),
+        appendCompactItalicCenteredText_: record('italic text'),
+        appendProgramTable_: record('table'),
+        appendBrooklynProgramTable_: record('table'),
+        appendSermonRow_: record('sermon'),
+        appendSilentPrayerHeading_: record('silent prayer'),
+        appendSpacer_: record('spacer'),
+        printValue_: () => '',
+        printBrooklynPerson_: () => '',
+        formatHymnForPrint_: () => '',
+        formatBibleReferenceForPrint_: () => '',
+        formatPhysicalOfferingValue_: () => '',
+        formatSermonTitleForPrint_: () => '',
+      });
+      runInContext(
+        `${panel}({}, { queens: {}, brooklyn: {} }, ${includeClosingRows})`,
+        context,
+      );
+      return calls.slice(calls.lastIndexOf('table'));
+    };
+
+    expect(renderWorshipEnding(true)).toEqual(['table', 'silent prayer', 'spacer', 'spacer']);
+    // Communion worship panels have no closing rows and keep their layout.
+    expect(renderWorshipEnding(false)).toEqual(['table']);
+  });
+
+  it('keeps the giving text in from the sheet edge without padding the QR cells', () => {
+    const makeCell = () => {
+      const cell = {
+        padding: {} as Record<string, number>,
+        clear: () => undefined,
+        setVerticalAlignment: () => undefined,
+        setPaddingTop: (value: number) => (cell.padding.top = value),
+        setPaddingBottom: (value: number) => (cell.padding.bottom = value),
+        setPaddingLeft: (value: number) => (cell.padding.left = value),
+        setPaddingRight: (value: number) => (cell.padding.right = value),
+      };
+      return cell;
+    };
+    const cells = Array.from({ length: 5 }, makeCell);
+    const container = {
+      appendHorizontalRule: () => ({ getParent: () => null }),
+      appendTable: () => ({
+        setBorderWidth: () => undefined,
+        setColumnWidth: () => undefined,
+        getCell: (_row: number, column: number) => cells[column],
+      }),
+    };
+    const context = loadAppsScript({
+      DocumentApp: { VerticalAlignment: { TOP: 'TOP' }, ElementType: { PARAGRAPH: 'PARAGRAPH' } },
+    });
+
+    runInContext(
+      `appendBookletFooter_(testContainer, function () {}, { qrColumns: true, qrCount: 3 })`,
+      Object.assign(context, { testContainer: container }),
+    );
+
+    const [left, gutter, ...qr] = cells;
+    expect(left.padding).toEqual({ top: 0, bottom: 0, left: 6, right: 6 });
+    for (const cell of [gutter, ...qr]) {
+      expect(cell.padding).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+    }
+  });
+
+  it('gives the Queens and Brooklyn giving dividers the same top spacing', () => {
+    const footerOptions: Record<string, unknown> = {};
+    const context = loadAppsScript({});
+    Object.assign(context, {
+      appendBookletPage_: (
+        _body: unknown,
+        _left: unknown,
+        _right: unknown,
+        _isFirstPage: boolean,
+        footerRenderer?: unknown,
+        options?: { ruleSpacingBefore?: number },
+      ) => {
+        if (footerRenderer) footerOptions[context.currentLocation as string] = options;
+      },
+      appendBrooklynEncouragementPage_: () => undefined,
+    });
+
+    Object.assign(context, { currentLocation: 'queens' });
+    runInContext(`renderQueensRegularPrintedBulletinDocument_({}, {}, {}, 'regular')`, context);
+    Object.assign(context, { currentLocation: 'brooklyn' });
+    runInContext(`renderBrooklynPrintedBulletinDocument_({}, {}, {}, 'regular')`, context);
+
+    expect(footerOptions).toEqual({
+      queens: { ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 },
+      brooklyn: { ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 },
+    });
+  });
+
+  it('puts each Queens QR code in its own footer column and reuses leading paragraphs', () => {
+    const calls: Array<[string, unknown, unknown]> = [];
+    const footerOptions: unknown[] = [];
+    const context = loadAppsScript({});
+    Object.assign(context, {
+      appendBookletPage_: (
+        _body: unknown,
+        _left: unknown,
+        _right: unknown,
+        _isFirstPage: boolean,
+        footerRenderer?: (left: unknown, right: unknown, qrCells: unknown) => void,
+        options?: unknown,
+      ) => {
+        if (!footerRenderer) return;
+        footerOptions.push(options);
+        footerRenderer('left cell', null, ['qr 1', 'qr 2', 'qr 3']);
+      },
+      appendGivingText_: (cell: unknown, options: unknown) => calls.push(['text', cell, options]),
+      appendGivingQrPlaceholderCells_: (cells: unknown, options: unknown) =>
+        calls.push(['qr', cells, options]),
+    });
+
+    runInContext(
+      `renderQueensRegularPrintedBulletinDocument_({}, {}, {}, 'regular')`,
+      context,
+    );
+
+    // A table nested in the right footer cell keeps a blank line above it,
+    // which pushed the QR captions onto a new page.
+    expect(footerOptions).toEqual([{ ruleSpacingBefore: 4, qrColumns: true, qrCount: 3 }]);
+    expect(calls).toEqual([
+      ['text', 'left cell', { reuseLeadingParagraph: true }],
+      [
+        'qr',
+        ['qr 1', 'qr 2', 'qr 3'],
+        { compact: true, location: 'queens', reuseLeadingParagraph: true },
+      ],
+    ]);
+  });
+
   it('routes Queens regular, Communion, and Brooklyn output through separate renderers', () => {
     const calls: string[] = [];
     const body = {
@@ -809,6 +958,78 @@ describe('printed bulletin Apps Script helpers', () => {
     );
 
     expect(calls).toEqual(['queens-regular', 'communion', 'brooklyn']);
+  });
+
+  describe('page breaks between booklet spreads', () => {
+    const documentApp = {
+      ElementType: { PARAGRAPH: 'PARAGRAPH', TABLE: 'TABLE' },
+      Attribute: {
+        FONT_SIZE: 'FONT_SIZE',
+        LINE_SPACING: 'LINE_SPACING',
+        SPACING_BEFORE: 'SPACING_BEFORE',
+        SPACING_AFTER: 'SPACING_AFTER',
+      },
+    };
+    const compactAttributes = {
+      FONT_SIZE: 1,
+      LINE_SPACING: 1,
+      SPACING_BEFORE: 0,
+      SPACING_AFTER: 0,
+    };
+    const makeParagraph = (text: string, calls: string[], name: string) => {
+      const paragraph = {
+        getType: () => 'PARAGRAPH',
+        getText: () => text,
+        asParagraph: () => paragraph,
+        attributes: undefined as unknown,
+        appendPageBreak: () => {
+          calls.push(`break in ${name}`);
+          return { getParent: () => paragraph };
+        },
+        setAttributes: (attributes: unknown) => {
+          paragraph.attributes = attributes;
+        },
+      };
+      return paragraph;
+    };
+
+    it('puts the break in the empty paragraph after the last table and shrinks it', () => {
+      const calls: string[] = [];
+      const trailing = makeParagraph('', calls, 'trailing paragraph');
+      const body = {
+        getNumChildren: () => 2,
+        getChild: (index: number) =>
+          index === 1 ? trailing : { getType: () => 'TABLE' },
+        appendPageBreak: () => {
+          throw new Error('A trailing empty paragraph must be reused.');
+        },
+      };
+      const context = loadAppsScript({ DocumentApp: documentApp });
+
+      runInContext('appendCompactPageBreak_(testBody)', Object.assign(context, { testBody: body }));
+
+      expect(calls).toEqual(['break in trailing paragraph']);
+      expect(trailing.attributes).toEqual(compactAttributes);
+    });
+
+    it('appends a compact break paragraph when the body ends with text', () => {
+      const calls: string[] = [];
+      const appended = makeParagraph('', calls, 'appended paragraph');
+      const body = {
+        getNumChildren: () => 1,
+        getChild: () => makeParagraph('Closing text', calls, 'text'),
+        appendPageBreak: () => {
+          calls.push('appended break');
+          return { getParent: () => appended };
+        },
+      };
+      const context = loadAppsScript({ DocumentApp: documentApp });
+
+      runInContext('appendCompactPageBreak_(testBody)', Object.assign(context, { testBody: body }));
+
+      expect(calls).toEqual(['appended break']);
+      expect(appended.attributes).toEqual(compactAttributes);
+    });
   });
 
   it('preserves full-width booklet panels beside the explicit fold gutter', () => {
@@ -1293,7 +1514,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(translated).toBe('本地教會\nLocal Church');
   });
 
-  it('gets sunset times from the same Sunrise-Sunset API endpoint used by the app', () => {
+  it('gets sunset times from the Sunrise-Sunset API', () => {
     const urls: string[] = [];
     const context = loadAppsScript({
       UrlFetchApp: {

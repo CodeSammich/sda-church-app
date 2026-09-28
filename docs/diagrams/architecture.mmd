@@ -1,0 +1,65 @@
+flowchart TB
+  subgraph People
+    members["👥 Congregation"]
+    staff["✏️ Church staff"]
+    admins["🛡️ IT administrators"]
+  end
+
+  subgraph GetApp["Getting the app"]
+    site@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "Download page<br/>app.nyccsda.org/download", pos: "b", w: 36, h: 36, constraint: "on" }
+    play@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-play-icon.svg", label: "Google Play", pos: "b", w: 40, h: 44, constraint: "on" }
+    appstore@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple-app-store.svg", label: "Apple App Store", pos: "b", w: 44, h: 44, constraint: "on" }
+  end
+
+  subgraph Apps["Mobile apps"]
+    ios@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple.svg", label: "iOS app", pos: "b", w: 40, h: 48, constraint: "on" }
+    android@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/android-icon.svg", label: "Android app", pos: "b", w: 48, h: 48, constraint: "on" }
+  end
+
+  subgraph Bulletin["Bulletin · Google Workspace for Nonprofits"]
+    roster@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googlesheets.svg", label: "Scheduling roster<br/>Google Sheet · Shared Drive", pos: "b", w: 40, h: 48, constraint: "on" }
+    api@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Digital bulletin<br/>BulletinApi.gs<br/>privacy-filtered JSON", pos: "b", w: 48, h: 48, constraint: "on" }
+    printed@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Printed bulletin<br/>Printed*.gs<br/>menu: Create Google Doc + PDF", pos: "b", w: 48, h: 48, constraint: "on" }
+    assets@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-drive.svg", label: "Bulletin files in Drive<br/>cover images, logo, QR codes,<br/>Sabbath Encouragement PDF", pos: "b", w: 48, h: 42, constraint: "on" }
+    pdf@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googledocs.svg", label: "Weekly Google Doc + PDF<br/>Queens · Queens Communion · Brooklyn", pos: "b", w: 36, h: 48, constraint: "on" }
+  end
+  paper["🖨️ Printed and handed out<br/>at each congregation"]
+
+  subgraph Dev["Development · GitHub organization"]
+    forks["Forks<br/>feature branches"]
+    release["release/x.y.z branch<br/>created from main after each release"]
+    main@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "main<br/>New-York-Chinese-Seventh-day-Adventist/sda-church-app", pos: "b", w: 40, h: 40, constraint: "on" }
+    actions@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-actions.svg", label: "GitHub Actions", pos: "b", w: 44, h: 44, constraint: "on" }
+    binaries["📦 Signed AAB (Android)<br/>and IPA (iOS)"]
+    qr["QR code workflow<br/>run by hand"]
+  end
+
+  deps["🌐 Media and third-party services<br/>church media on Adventist Connect,<br/>Bible text and audio, Sabbath School,<br/>hymnals, library, worship media, giving<br/>(see App dependencies)"]
+
+  members -. scans QR code .-> site
+  site -. Android link .-> play
+  site -. iPhone link .-> appstore
+  play --> android
+  appstore --> ios
+
+  staff --> roster
+  roster --> api
+  roster --> printed
+  assets --> printed
+  printed --> pdf
+  pdf --> paper
+  api -- digital bulletin --> Apps
+  Apps --> deps
+
+  admins -- own the organization, develop on --> forks
+  forks -- feature PRs --> release
+  release -- release PR --> main
+  main --> actions
+  actions --> binaries
+  binaries -. admin uploads AAB in Play Console .-> play
+  binaries -. admin uploads IPA in App Store Connect .-> appstore
+  admins -. if Drive QR files are compromised .-> qr
+  qr -. regenerates .-> assets
+
+  classDef logo fill:#ffffff,stroke:#d0d7de
+  class site,play,appstore,ios,android,roster,api,printed,assets,pdf,main,actions logo

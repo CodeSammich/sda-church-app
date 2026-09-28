@@ -43,3 +43,14 @@ export type BibleAudioStatus = Pick<
   reasonForWaitingToPlay?: string;
   timeControlStatus?: string;
 };
+
+/** A playback error, delivered once, as the player reports it. */
+export interface BibleAudioSourceError {
+  error: unknown;
+  /** Playback position when the source failed, in seconds. */
+  currentTime: number;
+  /** The recording that failed, when the adapter knows it. */
+  sourceUrl?: string;
+  /** Android: the queued chapter that failed, with its alternate hosts. */
+  chapter?: BibleAudioQueueItem;
+}

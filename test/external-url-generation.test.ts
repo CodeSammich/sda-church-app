@@ -329,8 +329,8 @@ describe('generated external dependency URLs', () => {
       expect(chapter).toHaveLength(3);
       expect(chapter.map((value) => new URL(value).hostname)).toEqual([
         'assets.adventistconnect.org',
-        'theaudiopower.com',
         'archive.org',
+        'theaudiopower.com',
       ]);
       expect(chapter.join(' ')).not.toMatch(/placeholder|undefined|null/i);
     }

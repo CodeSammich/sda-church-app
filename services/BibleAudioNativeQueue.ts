@@ -1,5 +1,9 @@
 import type { AudioPlayer, AudioPlaylist, AudioPlaylistStatus, AudioSource } from 'expo-audio';
-import type { BibleAudioQueueItem, BibleAudioStatus } from './BibleAudioPlayer.types';
+import type {
+  BibleAudioQueueItem,
+  BibleAudioSourceError,
+  BibleAudioStatus,
+} from './BibleAudioPlayer.types';
 
 const idleStatus = (): BibleAudioStatus => ({
   currentTime: 0, duration: 0, playing: false, isLoaded: false,
@@ -27,6 +31,25 @@ const isReleasedError = (cause: unknown) =>
     nativeErrorText(cause),
   );
 
+const destroyPlaylist = (playlist: AudioPlaylist) => {
+  try {
+    // destroy unregisters it from Expo Audio; release frees the shared object.
+    playlist.destroy();
+  } catch (cause) {
+    if (!isReleasedError(cause)) {
+      console.warn('Bible audio playlist cleanup failed', cause);
+    }
+  } finally {
+    try {
+      playlist.release();
+    } catch (cause) {
+      if (!isReleasedError(cause)) {
+        console.warn('Bible audio playlist release failed', cause);
+      }
+    }
+  }
+};
+
 /** Owns the native lifetime; stale reader callbacks never reach a released object. */
 export class BibleAudioNativeQueue {
   private playlist: AudioPlaylist | null = null;
@@ -34,6 +57,12 @@ export class BibleAudioNativeQueue {
   private tracks: Array<BibleAudioQueueItem | undefined> = [];
   private snapshot = idleStatus();
   private listeners = new Set<() => void>();
+  private sourceErrorListeners = new Set<(event: BibleAudioSourceError) => void>();
+  // Failed playlists replaced by a fresh one. The newest may still own the
+  // lock-screen session and its foreground service until the fresh playlist
+  // takes over, and destroying the owner would stop that service. They are
+  // destroyed once the fresh playlist is playing, or when the reader closes.
+  private retiredPlaylists: AudioPlaylist[] = [];
 
   constructor(private readonly createPlaylist: () => AudioPlaylist) {}
 
@@ -54,6 +83,22 @@ export class BibleAudioNativeQueue {
           // must not take down playback or the reader during a track change.
           console.warn('Bible audio lock-screen metadata update failed', error);
         }
+      }
+      if (status.playing && !status.isBuffering && this.retiredPlaylists.length) {
+        // A playing playlist has taken over the lock screen by now.
+        this.destroyRetiredPlaylists();
+      }
+      const { error } = status as AudioPlaylistStatus & { error?: unknown };
+      if (error) {
+        // expo-audio puts the error in this one event only; the next status
+        // clears it. Deliver it now rather than through React state.
+        const event = {
+          error,
+          currentTime: status.currentTime,
+          sourceUrl: this.status(status).activeSourceUrl,
+          chapter: track,
+        };
+        this.sourceErrorListeners.forEach(listener => listener(event));
       }
     });
     const initialStatus = this.callNative('currentStatus', currentPlaylist => currentPlaylist.currentStatus);
@@ -76,22 +121,8 @@ export class BibleAudioNativeQueue {
     this.tracks = [];
     this.lastMetadataTrack = undefined;
     this.snapshot = idleStatus();
-    try {
-      // destroy unregisters it from Expo Audio; release frees the shared object.
-      playlist.destroy();
-    } catch (cause) {
-      if (!isReleasedError(cause)) {
-        console.warn('Bible audio playlist cleanup failed', cause);
-      }
-    } finally {
-      try {
-        playlist.release();
-      } catch (cause) {
-        if (!isReleasedError(cause)) {
-          console.warn('Bible audio playlist release failed', cause);
-        }
-      }
-    }
+    this.destroyRetiredPlaylists();
+    destroyPlaylist(playlist);
   }
 
   getStatus = () => this.snapshot;
@@ -99,6 +130,44 @@ export class BibleAudioNativeQueue {
     this.listeners.add(listener);
     return () => { this.listeners.delete(listener); };
   };
+  addSourceErrorListener(listener: (event: BibleAudioSourceError) => void) {
+    this.sourceErrorListeners.add(listener);
+    return { remove: () => { this.sourceErrorListeners.delete(listener); } };
+  }
+
+  private destroyRetiredPlaylists() {
+    const retired = this.retiredPlaylists;
+    this.retiredPlaylists = [];
+    retired.forEach(destroyPlaylist);
+  }
+
+  // ExoPlayer stops in its idle state after a playback error, and expo-audio
+  // only calls prepare() when it creates a playlist, so a source added to it
+  // never loads. A healthy playlist is never idle: an empty one has ended.
+  // Reading the state directly also covers an error whose event is still
+  // queued for JavaScript.
+  private hasFailed() {
+    const status = this.callNative('currentStatus', playlist => playlist.currentStatus);
+    return !!status && !status.isLoaded && !status.isBuffering;
+  }
+
+  private retirePlaylist() {
+    const playlist = this.playlist;
+    if (!playlist) return;
+    this.playlist = null;
+    try {
+      this.subscription?.remove();
+    } catch {
+      // The emitter may already have been released with the playlist.
+    }
+    this.subscription = undefined;
+    // One of the two newest failed playlists may still own the lock screen.
+    // An older one handed it over while two newer playlists loaded and failed.
+    this.retiredPlaylists.push(playlist);
+    while (this.retiredPlaylists.length > 2) {
+      destroyPlaylist(this.retiredPlaylists.shift()!);
+    }
+  }
 
   private publish(status: BibleAudioStatus) {
     this.snapshot = status;
@@ -149,6 +218,13 @@ export class BibleAudioNativeQueue {
   }
 
   replace(source: AudioSource | null) {
+    if (this.playlist && this.hasFailed()) {
+      // Only a failed player is recreated; a healthy one keeps its native
+      // object, lock-screen session, and buffered state. The failed one is
+      // retired, not destroyed, so the foreground service keeps running.
+      this.retirePlaylist();
+      this.mount();
+    }
     this.callNative('replace', playlist => {
       this.tracks = [];
       this.lastMetadataTrack = undefined;
@@ -207,6 +283,8 @@ export class BibleAudioNativeQueue {
     this.callNative('setActiveForLockScreen', playlist => playlist.setActiveForLockScreen(...args));
   }
   clearLockScreenControls() {
+    // A retired playlist can still own the lock-screen session.
+    this.destroyRetiredPlaylists();
     this.callNative('clearLockScreenControls', playlist => playlist.clearLockScreenControls());
   }
 

@@ -59,11 +59,12 @@ function getSabbathCalendarEnglishValidationToastText_() {
 /**
  * Keeps the Sabbath Calendar's user-editable schedule cells English-only.
  *
- * Sheets data validation is still useful for ordinary typing, but a user can
- * paste whole cells from the Name Dictionary and overwrite validation metadata.
- * This simple onEdit guard is intentionally limited to the Sabbath Calendar
- * tab and columns A:X. It clears only pasted/edited cells containing CJK Han
- * characters and leaves all other tabs and columns untouched.
+ * This simple onEdit guard handles both typed and pasted Chinese: the
+ * validation rule allows invalid input so typing reaches it, and pasting whole
+ * cells from the Name Dictionary can overwrite validation metadata anyway. It
+ * is intentionally limited to the Sabbath Calendar tab and columns A:Y. It
+ * clears only pasted/edited cells containing CJK Han characters and leaves all
+ * other tabs and columns untouched.
  */
 function onEdit(e) {
   if (!e || !e.range) {
@@ -72,6 +73,15 @@ function onEdit(e) {
 
   var range = e.range;
   var sheet = range.getSheet();
+  if (
+    sheet &&
+    sheet.getName() === SCHEDULE_ASSIGNMENT_CHECK_CONFIG.nameDictionarySheetName
+  ) {
+    // Dictionary edits can merge or split pinyin aliases, which changes
+    // which roster cells count as the same person.
+    refreshScheduleRosterChecksSafely_();
+    return;
+  }
   if (
     !sheet ||
     sheet.getName() !== BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName
@@ -101,6 +111,25 @@ function onEdit(e) {
 
   if (invalidCount) {
     showSabbathCalendarEnglishValidationNotice_();
+  }
+
+  var lookup = null;
+  try {
+    lookup = loadScheduleNameLookup_();
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Name Dictionary lookup skipped: ' + error);
+    }
+  }
+  refreshScheduleRosterChecksSafely_(sheet, lookup);
+
+  // The installable trigger shows the interactive dialog instead; showing
+  // this alert as well would stack two warnings for one edit.
+  if (!invalidCount && !isScheduleNameCheckTriggerInstalled_()) {
+    var unknown = findUnknownScheduleNames_(range, lookup);
+    if (unknown.length) {
+      showUnknownScheduleNamesNotice_(unknown);
+    }
   }
 }
 
@@ -150,8 +179,15 @@ function runBulletinScheduleMaintenance_() {
       );
     }
     var hidden = hideOldBulletinScheduleRows_(sheet);
+    // Runs after quarter rows are appended so the scan covers every row.
+    var conflicts = refreshScheduleRosterChecksSafely_(sheet);
     SpreadsheetApp.flush();
-    return { populated: populated, hidden: hidden, validation: validation };
+    return {
+      populated: populated,
+      hidden: hidden,
+      conflicts: conflicts,
+      validation: validation,
+    };
   } finally {
     lock.releaseLock();
   }
@@ -262,13 +298,20 @@ function updateSabbathCalendarEnglishValidation_(sheet) {
   return applySabbathCalendarEnglishValidation_(sheet);
 }
 
+/**
+ * Marks Chinese characters in the Sabbath Calendar as invalid without help
+ * text. Sheets shows a rule's help text on every selected cell and there is no
+ * way to limit it to rejections, so the rule stays silent: the onEdit guard
+ * clears Chinese input and shows the bilingual explanation instead. Allowing
+ * invalid input lets typed Chinese reach that guard; the rule's red warning
+ * corner remains as a backstop if the guard ever fails to run.
+ */
 function applySabbathCalendarEnglishValidation_(sheet) {
   var rowCount = Math.max(1, sheet.getMaxRows() - 1);
   var range = sheet.getRange(2, 1, rowCount, 25);
   var rule = SpreadsheetApp.newDataValidation()
     .requireFormulaSatisfied('=NOT(REGEXMATCH(TO_TEXT(A2),"[一-鿿]"))')
-    .setAllowInvalid(false)
-    .setHelpText(getSabbathCalendarEnglishValidationHelpText_())
+    .setAllowInvalid(true)
     .build();
   range.setDataValidation(rule);
   return range.getA1Notation();

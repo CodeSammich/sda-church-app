@@ -1,0 +1,90 @@
+name: Store Toolchain Monitor
+
+# Google Play and App Store Connect raise their minimum Android target API and
+# Xcode/iOS SDK requirements about once a year. This reads the official
+# requirement pages weekly and opens an alert issue when the app falls behind,
+# a new requirement starts within 120 days, or a page can no longer be read.
+
+on:
+  schedule:
+    # Mondays, away from the top of the hour, when scheduled Actions are busiest.
+    - cron: "23 16 * * 1"
+      timezone: "America/New_York"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: store-toolchain-monitor
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  check-store-toolchain:
+    # Forks commonly disable Issues, while this monitor opens and updates an
+    # alert issue. Keep scheduled/manual monitoring scoped to the canonical repo.
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Check store toolchain requirements
+        id: toolchain-check
+        continue-on-error: true
+        run: node scripts/check-store-toolchain.cjs --report store-toolchain-report.json
+
+      # The issue handling lives in scripts/monitor-alert-issue.cjs and the
+      # alert text in scripts/check-store-toolchain.cjs, both unit tested.
+      - name: Open or update the alert issue
+        if: steps.toolchain-check.outcome == 'failure'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          # Comma-separated GitHub usernames. Assigning the alert sends them a
+          # notification even when they don't watch the repository.
+          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const { buildStoreToolchainAlert } = require(`${process.env.GITHUB_WORKSPACE}/scripts/check-store-toolchain.cjs`);
+            const report = alerts.readReport('store-toolchain-report.json', core);
+            const alert = buildStoreToolchainAlert(report, alerts.getRunUrl(context));
+            const result = await alerts.openOrUpdateAlert({
+              github,
+              context,
+              core,
+              ...alert,
+              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
+            });
+            core.info(`Alert issue ${result.action}: #${result.number}`);
+
+      - name: Close the alert issue after recovery
+        if: steps.toolchain-check.outcome == 'success'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const { ALERT_TITLE } = require(`${process.env.GITHUB_WORKSPACE}/scripts/check-store-toolchain.cjs`);
+            const result = await alerts.closeAlert({
+              github,
+              context,
+              title: ALERT_TITLE,
+              body: `Requirements met again in ${alerts.getRunUrl(context)}.`,
+            });
+            core.info(`Alert issue: ${result.action}`);
+
+      - name: Mark the workflow unhealthy
+        if: steps.toolchain-check.outcome == 'failure'
+        run: |
+          echo "The store toolchain check needs attention. See the job summary and alert issue."
+          exit 1

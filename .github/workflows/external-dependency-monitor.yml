@@ -48,90 +48,56 @@ jobs:
           path: external-dependency-report.json
           retention-days: 30
 
+      # The issue handling lives in scripts/monitor-alert-issue.cjs, shared
+      # with the Store Toolchain Monitor and unit tested.
       - name: Open or update the alert issue
         if: steps.dependency-check.outcome == 'failure'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          # Comma-separated GitHub usernames. Assigning the alert sends them a
+          # notification even when they don't watch the repository.
+          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
         with:
           script: |
-            const fs = require('node:fs');
-            const title = '[monitor] External dependency health check failed';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            let failureDetails = '- The monitor exited before producing a readable report.';
-            try {
-              const report = JSON.parse(fs.readFileSync('external-dependency-report.json', 'utf8'));
-              const failed = report.checks.filter((check) => check.status === 'failed');
-              if (failed.length) {
-                failureDetails = failed
-                  .map((check) => `- **${check.provider}: ${check.name}** — ${check.error}`)
-                  .join('\n');
-              }
-            } catch (error) {
-              core.warning(`Could not read the dependency report: ${error.message}`);
-            }
-            const body = [
-              `@${context.actor}`,
-              '',
-              'The scheduled external dependency monitor failed.',
-              '',
-              '### Failed checks',
-              '',
-              failureDetails,
-              '',
-              `Run: ${runUrl}`,
-              '',
-              'The complete machine-readable report is attached as the `external-dependency-report` artifact.',
-            ].join('\n');
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              per_page: 100,
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const report = alerts.readReport('external-dependency-report.json', core);
+            const failed = report ? report.checks.filter((check) => check.status === 'failed') : [];
+            const failureDetails = failed.length
+              ? failed.map((check) => `- **${check.provider}: ${check.name}** — ${check.error}`).join('\n')
+              : '- The monitor exited before producing a readable report.';
+            const result = await alerts.openOrUpdateAlert({
+              github,
+              context,
+              core,
+              title: '[monitor] External dependency health check failed',
+              body: [
+                'The scheduled external dependency monitor failed.',
+                '',
+                '### Failed checks',
+                '',
+                failureDetails,
+                '',
+                `Run: ${alerts.getRunUrl(context)}`,
+                '',
+                'The complete machine-readable report is attached as the `external-dependency-report` artifact.',
+              ].join('\n'),
+              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
             });
-            const existing = issues.find((issue) => issue.title === title);
-            if (existing) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.number,
-                body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body,
-              });
-            }
+            core.info(`Alert issue ${result.action}: #${result.number}`);
 
       - name: Close the alert issue after recovery
         if: steps.dependency-check.outcome == 'success'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
-            const title = '[monitor] External dependency health check failed';
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              per_page: 100,
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const result = await alerts.closeAlert({
+              github,
+              context,
+              title: '[monitor] External dependency health check failed',
+              body: `Recovered in ${alerts.getRunUrl(context)}.`,
             });
-            const existing = issues.find((issue) => issue.title === title);
-            if (existing) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.number,
-                body: `Recovered in ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}.`,
-              });
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.number,
-                state: 'closed',
-                state_reason: 'completed',
-              });
-            }
+            core.info(`Alert issue: ${result.action}`);
 
       - name: Mark the workflow unhealthy
         if: steps.dependency-check.outcome == 'failure'

@@ -34,14 +34,6 @@ export const CHURCH_LATITUDE = 40.74546;
 export const CHURCH_LONGITUDE = -73.88914;
 
 /**
- * Sunset API Endpoint
- * Centralizing this here follows Tenet 5 (Simplicity) by providing a
- * single source for external API endpoints.
- */
-export const getSunsetApiUrl = (lat: number, lng: number, date: string) =>
-  `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${date}&formatted=0`;
-
-/**
  * Production bulletin API. The public PWA sends only a Sabbath date; Apps
  * Script joins the yearly schedule with Queens/Brooklyn worship responses and
  * returns privacy-filtered JSON.

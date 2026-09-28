@@ -1,11 +1,11 @@
 import { AppIcon } from '@/components/AppIcon';
+import { LibraryCoverImage } from '@/components/LibraryCoverImage';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
-  Image,
   ImageSourcePropType,
   Platform,
   StyleSheet,
@@ -49,16 +49,8 @@ export function LibraryBookCard({
 }: LibraryBookCardProps) {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
-  const [remoteCoverIndex, setRemoteCoverIndex] = useState(0);
   const styles = useMemo(() => createStyles(textScale), [textScale]);
   const accessibilityLabel = `${title}. ${author}`;
-  const remoteCoverKey = coverUrls?.join('\n') || '';
-  const remoteCoverUrl = coverUrls?.[remoteCoverIndex];
-  const displayedCoverSource = remoteCoverUrl
-    ? { uri: remoteCoverUrl }
-    : coverSource;
-
-  useEffect(() => setRemoteCoverIndex(0), [remoteCoverKey]);
 
   return (
     <TouchableOpacity
@@ -85,21 +77,7 @@ export function LibraryBookCard({
           { backgroundColor: theme.colors.surfaceVariant },
         ]}
       >
-        {displayedCoverSource ? (
-          <Image
-            accessible={false}
-            onError={remoteCoverUrl
-              ? () => setRemoteCoverIndex((index) => index + 1)
-              : undefined}
-            resizeMode="cover"
-            source={displayedCoverSource}
-            style={styles.cover}
-          />
-        ) : (
-          <View style={styles.placeholderCover}>
-            <AppIcon name="book-open-page-variant" size={44} color={theme.colors.primary} />
-          </View>
-        )}
+        <LibraryCoverImage coverSource={coverSource} coverUrls={coverUrls} />
       </View>
 
       <View
@@ -156,15 +134,6 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
       flexShrink: 0,
       height: 168,
       width: 112,
-    },
-    cover: {
-      height: '100%',
-      width: '100%',
-    },
-    placeholderCover: {
-      alignItems: 'center',
-      flex: 1,
-      justifyContent: 'center',
     },
     details: {
       padding: 12,

@@ -2,7 +2,7 @@
   "expo": {
     "name": "New York Chinese SDA Church",
     "slug": "sda-church-app",
-    "version": "0.38.1",
+    "version": "0.39.0",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
@@ -49,7 +49,8 @@
       "blockedPermissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.SYSTEM_ALERT_WINDOW"
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.ACCESS_WIFI_STATE"
       ]
     },
     "autolinking": {

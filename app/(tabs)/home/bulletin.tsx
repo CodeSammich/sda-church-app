@@ -533,12 +533,16 @@ export default function WeeklyBulletinScreen() {
           );
         }
       } catch (error) {
+        // Keep showing the last stored copy, even an outdated one, rather than
+        // only an error when the bulletin API is busy or unreachable.
+        const stale = await getCachedBulletin(date, Date.now(), { allowStale: true });
         if (!signal?.aborted) {
           setWeeks((current) =>
             current.map((week, weekIndex) =>
               weekIndex === index && week.date === date
                 ? {
                     ...week,
+                    bulletin: week.bulletin ?? stale,
                     error: error instanceof Error ? error.message : LABELS.en.loadError,
                     loading: false,
                   }

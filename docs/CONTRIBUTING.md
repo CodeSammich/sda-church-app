@@ -36,8 +36,8 @@ and production scope and should remain an explicit decision.
 
 3. Open the feature PR from the fork's feature branch into the primary repository's
    matching `release/x.y.(patch|x)` branch. Start its title with the release line in the
-   form `Release/x.y.<patch-or-x>: Brief description`, complete the PR template, and wait
-   for all checks and reviews. The branch and title must share the same major and minor;
+   form `Release/x.y.<patch-or-x>: Brief description`, include a `Closes #…` line in the
+   description, and wait for all checks and reviews. The branch and title must share the same major and minor;
    their patch values may differ.
 4. After all planned feature PRs are merged, a code maintainer opens the release PR from
    `release/x.y.(patch|x)` into `main`. Only maintainers perform this second stage; contributors
@@ -62,17 +62,30 @@ Do not create release branches automatically from dates, issue activity, or feat
 
 ### Pull request format and issue closing
 
-Every feature and release PR must follow `.github/pull_request_template.md`:
+There is no PR template. Write the description however suits the change, but every
+feature and release PR must:
 
 - Start the PR title with a release line, for example
   `Release/0.26.0: Add bulletin navigation` or `Release/0.26.x: Add bulletin navigation`.
   When the destination branch is named `release/x.y.(patch|x)`, the title must use the
   same major and minor; the patch may be concrete or `x`.
-- Describe the user-visible and technical changes under **Description**.
-- Put issue references under **Related issues**, one per line, using a supported closing
-  keyword such as `Closes #133`.
-- Complete the automated and applicable Android/iOS testing items. Only check a platform
-  after it has actually been tested on the version named by the template.
+- Describe the user-visible and technical changes.
+- Include one line per resolved issue in the description, using a closing keyword such as
+  `Closes #133` (`Fixes` and `Resolves` also work). For an issue the PR only advances or
+  touches, use `Part of #133`, `Related to #133`, or `Refs #133`; those issues stay open
+  and do not get the `pending release` label. The `PR Linked Issue` check fails without one. When a PR truly has
+  no issue, a maintainer can apply the `no linked issue` label.
+- Say what was tested, with the command and result. Only claim an Android or iOS build
+  that was actually run.
+- Include no secrets, private keys, certificates, passwords, `.env` files, or generated
+  signing artifacts. Workflow changes must not print secrets, dump environments, or
+  upload secret-bearing files.
+
+AI coding agents read these rules from [`AGENTS.md`](../AGENTS.md), which `CLAUDE.md` and
+`GEMINI.md` import. Keep them in sync with this section.
+
+The checks a pull request must pass, and the other branch rules, are listed under
+[Branch rules](operations/admin-runbook.md#branch-rules) in the admin runbook.
 
 GitHub closes linked issues only when the closing reference reaches the default branch.
 Therefore, `Closes #133` in a feature PR to `release/x.y.(patch|x)` links the work but does not
@@ -130,7 +143,7 @@ main (stable)
 1. Branch from the active `release/x.y.<patch-or-x>` branch.
 2. Make and verify the changes, then commit them clearly.
 3. Push to the fork and open a PR into the matching primary-repository release branch.
-4. Follow the PR template, including Related issues and the testing checklist.
+4. Include a `Closes #…` line and what was tested in the PR description.
 5. Merge the feature PR after checks and review pass; its issues remain open at this stage.
 6. A code maintainer aggregates the feature PRs and their closing references in the final
    release PR to `main`.
@@ -150,9 +163,18 @@ main (stable)
   `public/sw.js` on a release PR's source branch in the primary repository. It does not
   run for fork source branches.
 
+#### `PR Linked Issue` (`.github/workflows/pr-linked-issue.yml`)
+
+- Fails a PR into `main` or a release branch whose description has no `Closes #…`
+  (or `Fixes`/`Resolves`) line and no `Part of #…`, `Related to #…`, or `Refs #…`
+  line. The error says exactly what to add.
+- Reruns when the description is edited, so fixing the description clears it without a
+  new commit.
+- Skips Dependabot PRs and PRs labeled `no linked issue`.
+
 #### `Issues - Pending Release Label` (`.github/workflows/pending-release-label.yml`)
 
-- Adds `pending release` to issues referenced with `Closes #<issue>` when a PR merges
+- Adds `pending release` to issues referenced with `Closes #<issue>` (or `Fixes`/`Resolves`) when a PR merges
   into a `release/x.y.<patch-or-x>` branch, including PRs submitted from forks.
 - Removes the label when the issue closes after the final release reaches `main`.
 

@@ -1,11 +1,54 @@
 /**
- * Communion-only printed bulletin layout.
+ * Communion service content shared by the Queens and Brooklyn Communion bulletins.
  *
- * Queens regular bulletins intentionally stay in PrintedQueensBulletin.gs. This file
- * owns the ceremony page order and the fixed Scripture references so a
- * Communion bulletin cannot accidentally inherit or overwrite the regular
- * Queens schedule layout.
+ * This file owns the fixed Scripture references, the response hymn, and the
+ * foot washing and Holy Communion panels, so a Communion bulletin cannot
+ * accidentally inherit or overwrite a location's regular schedule layout. Each
+ * location's Communion page order lives in its own file.
  */
+
+function appendFootWashingPanel_(cell, bulletin) {
+  appendPanelHeading_(
+    cell,
+    printedBilingualText_('FOOT WASHING', '洗腳禮'),
+  );
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Bible Readings', '讀經'), getPrintedCommunionFootWashingScripture_(), printedBilingualText_('Congregation', '會眾')],
+  ]);
+  appendPrintedCommunionPassageBox_(cell, bulletin, 'footWashing');
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Foot Washing', '洗腳禮'), '', getPrintedCommunionWholeCongregation_()],
+  ]);
+  appendSpacer_(cell);
+  appendSpacer_(cell);
+  appendCompactItalicCenteredText_(cell, getPrintedCommunionFootWashingInstruction_(), 8.5);
+}
+
+function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', getPrintedCommunionPastor_()],
+    [printedBilingualText_('Breaking the Bread', '分餅'), '', getPrintedCommunionPastor_()],
+  ]);
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
+  ]);
+}
+
+function appendCommunionContinuationActionsPanel_(cell, bulletin, locationKey) {
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', getPrintedCommunionPastor_()],
+    [printedBilingualText_('Share the Cup', '分杯'), '', getPrintedCommunionPastor_()],
+  ]);
+  appendProgramTable_(cell, [
+    [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
+  ]);
+}
+
+function appendCommunionActionsPanel_(cell, bulletin, locationKey) {
+  appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey);
+  appendCommunionContinuationActionsPanel_(cell, bulletin, locationKey);
+  appendCommunionClosingRows_(cell, bulletin, locationKey);
+}
 
 var PRINTED_COMMUNION_LAYOUT = Object.freeze({
   serviceScripture: '1 Corinthians 11:23–26',
@@ -199,68 +242,6 @@ function getPrintedCommunionReadingRows_() {
       printedBilingualText_('Congregation', '會眾'),
     ];
   });
-}
-
-function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
-  // Keep this imposed order in sync with the Communion reference PDF:
-  // back/announcements | cover, study | blank, worship + giving |
-  // foot washing | the complete Holy Communion service.
-  appendBookletPage_(
-    body,
-    function (cell) {
-      appendAnnouncementsPanel_(cell, bulletin, nextBulletin);
-    },
-    function (cell) {
-      appendCoverPanel_(cell, bulletin, 'communion');
-    },
-    true,
-  );
-  appendBookletPage_(
-    body,
-    function (cell) {
-      appendStudyPanel_(cell, bulletin);
-    },
-    function (cell) {},
-    false,
-  );
-  appendBookletPage_(
-    body,
-    function (cell) {},
-    function (cell) {
-      appendWorshipPanel_(cell, bulletin, false);
-      appendCommunionVerticalGivingPanel_(cell);
-    },
-    false,
-  );
-  appendBookletPage_(
-    body,
-    function (cell) {
-      appendFootWashingPanel_(cell, bulletin);
-    },
-    function (cell) {
-      appendCommunionPanel_(cell, bulletin);
-    },
-    false,
-  );
-}
-
-function appendCommunionVerticalGivingPanel_(cell) {
-  appendSpacer_(cell);
-  appendCommunionSectionDivider_(cell);
-  appendSpacer_(cell);
-  appendGivingText_(cell);
-  appendSpacer_(cell);
-  appendGivingQrPlaceholders_(cell);
-}
-
-function appendCommunionSectionDivider_(cell) {
-  var rule = cell.appendHorizontalRule();
-  var ruleParent = rule.getParent();
-  if (ruleParent && ruleParent.getType() === DocumentApp.ElementType.PARAGRAPH) {
-    ruleParent.asParagraph().setLineSpacing(1);
-    ruleParent.asParagraph().setSpacingBefore(0);
-    ruleParent.asParagraph().setSpacingAfter(0);
-  }
 }
 
 function appendCommunionClosingRows_(cell, bulletin, locationKey) {

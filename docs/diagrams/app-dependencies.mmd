@@ -1,0 +1,57 @@
+flowchart TB
+  apps["📱 iOS and Android apps"]
+
+  subgraph Runtime["Loaded inside the app"]
+    direction LR
+    subgraph Media["Church media and Bible audio"]
+      direction TB
+      wp@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/wordpress-icon.svg", label: "1. Adventist Connect media library (NAD)<br/>assets.adventistconnect.org · NAD's Cloudflare CDN<br/>church photos, hymnal charts, Bible audio", pos: "b", w: 36, h: 36, constraint: "on" }
+      wasabi@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/wasabi.svg", label: "Wasabi storage<br/>us-east-2", pos: "b", w: 36, h: 36, constraint: "on" }
+      backup@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-drive.svg", label: "Backup copy<br/>church Google Drive", pos: "b", w: 40, h: 36, constraint: "on" }
+      ia@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/internetarchive.svg", label: "2. Internet Archive<br/>archive.org", pos: "b", w: 32, h: 32, constraint: "on" }
+      ap["3. Audio Power<br/>theaudiopower.com"]
+      wp -- cache miss --> wasabi
+      backup -. restore from if Adventist Connect<br/>or Wasabi is lost .-> wp
+      wp -. Bible audio: if 1 fails .-> ia
+      ia -. if 2 also fails .-> ap
+    end
+    subgraph Bible["Bible text"]
+      direction TB
+      helloao["HelloAO<br/>bible.helloao.org<br/>Bible text, translations"]
+      fetchbible["fetch(bible)<br/>v1.fetch.bible<br/>original-language texts"]
+    end
+    subgraph OtherApis["Other APIs"]
+      direction TB
+      bulletinapi@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Bulletin API<br/>church's Apps Script", pos: "b", w: 32, h: 32, constraint: "on" }
+      adventechApi["Adventech Sabbath School API<br/>sabbath-school.adventech.io<br/>children's lesson catalog"]
+      cum["Chinese Union Mission library<br/>api.sdabible.org · cms.sdabible.site<br/>Chinese EGW cover thumbnails"]
+      egwCovers["EGW Writings<br/>a.egwwritings.org<br/>book covers"]
+    end
+  end
+
+  subgraph Links["Opened in the browser"]
+    direction LR
+    subgraph Worship["Worship media"]
+      direction TB
+      youtube@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/youtube-icon.svg", label: "YouTube<br/>livestream, sermons", pos: "b", w: 40, h: 28, constraint: "on" }
+      spotify@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/spotify-icon.svg", label: "Spotify<br/>audio archive", pos: "b", w: 32, h: 32, constraint: "on" }
+      zoom@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/zoom-icon.svg", label: "Zoom<br/>online class", pos: "b", w: 32, h: 32, constraint: "on" }
+    end
+    subgraph Study["Hymns, study, reading"]
+      direction TB
+      hymns["Hymns<br/>m.zgaxr.com: Chinese 505 · 506 · 707<br/>hymnsforworship.org: English SDAH"]
+      ss["Sabbath School readers<br/>sabbath-school.adventech.io (adults)<br/>aliveinjesus.info (children)"]
+      reading["Library reading<br/>text.egwwritings.org<br/>gutenberg.org"]
+    end
+    subgraph More["Giving and more"]
+      direction TB
+      giving["Giving<br/>adventistgiving.org"]
+      other["Other links<br/>506 hymnal app store pages<br/>GNYC · Atlantic Union · adventist.org"]
+    end
+  end
+
+  apps --> Runtime
+  apps -. opens .-> Links
+
+  classDef logo fill:#ffffff,stroke:#d0d7de
+  class wp,wasabi,backup,ia,bulletinapi,youtube,spotify,zoom logo

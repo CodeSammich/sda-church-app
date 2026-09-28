@@ -1,0 +1,70 @@
+name: PR Linked Issue
+
+# Every feature and release PR must name its issue: "Closes #N" when it
+# finishes the issue (the pending-release label and the issue closing on the
+# merge to main both read that line), or "Part of #N" / "Related to #N" when
+# it only advances or touches one. AI agents tend to write their own PR
+# descriptions, so this check fails with the exact fix instead of relying on a
+# template. It reruns when the description is edited, so no new commit is
+# needed to clear it.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, labeled, unlabeled]
+    branches:
+      - main
+      - 'release/**'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NO_ISSUE_LABEL: no linked issue
+
+permissions: {}
+
+jobs:
+  require-linked-issue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require a closing issue reference
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          node -e '
+            const author = process.env.PR_AUTHOR || "";
+            const body = process.env.PR_BODY || "";
+            const labels = JSON.parse(process.env.PR_LABELS || "[]");
+            const noIssueLabel = process.env.NO_ISSUE_LABEL;
+
+            if (author === "dependabot[bot]") {
+              console.log("Dependabot pull requests do not need a linked issue.");
+              process.exit(0);
+            }
+            if (labels.includes(noIssueLabel)) {
+              console.log(`A maintainer applied "${noIssueLabel}"; no linked issue is required.`);
+              process.exit(0);
+            }
+
+            // The same keywords GitHub uses to close issues, plus wording for
+            // work that advances or relates to an issue without closing it.
+            // Only closing keywords get the pending-release label.
+            const closing = [...body.matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?\s+#([1-9][0-9]*)\b/gi)];
+            const related = [...body.matchAll(/\b(?:part of|relate[sd]?(?: to)?|refs?):?\s+#([1-9][0-9]*)\b/gi)];
+            if (closing.length || related.length) {
+              const refs = [...closing, ...related].map((match) => "#" + match[1]);
+              console.log("Linked issues: " + [...new Set(refs)].join(", "));
+              process.exit(0);
+            }
+
+            console.log(
+              "::error title=Missing linked issue::The PR description has no issue reference. " +
+                "Add a line such as \"Closes #123\" to the PR description (not the title or a commit). " +
+                "If the PR advances or relates to an issue without finishing it, use \"Part of #123\" or \"Related to #123\" so the issue stays open. " +
+                "This check reruns automatically when the description is edited. " +
+                `If there is truly no issue, a maintainer can apply the "${noIssueLabel}" label.`,
+            );
+            process.exit(1);
+          '

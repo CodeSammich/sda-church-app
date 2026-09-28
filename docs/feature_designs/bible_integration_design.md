@@ -42,8 +42,10 @@ simplified-Chinese filenames are shared by both CUV text variants.
 
 Each recording is represented as one narrator with three ordered hosting sources rather
 than three narrator choices: the generated Adventist Connect manifest supplies the
-primary church-controlled copy, Audio Power's host is the second tier, and the complete
-[Internet Archive collection](https://archive.org/download/CUV_201911) is the third. A
+primary church-controlled copy, the complete
+[Internet Archive collection](https://archive.org/download/CUV_201911) is the second
+tier, and Audio Power's host is the third, so that an outage of the church copy doesn't
+move every listener onto the ministry's small server. A
 source that cannot load within the player timeout is skipped without asking the listener
 to select a different host. The manifest generator extracts only public asset URLs from
 the WordPress upload HAR; authentication data and other HAR contents must not be checked

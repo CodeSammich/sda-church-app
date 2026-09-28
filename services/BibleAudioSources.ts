@@ -88,12 +88,15 @@ export const getAudioPowerCuvChapterLinks = (
   const churchHostedUrl = CUV_ADVENTIST_AUDIO_URLS[canonicalFilename];
 
   // These are mirrors of one recording, not separate narrator choices. These
-  // fallback URLs are valid only for the Audio Power narrator.
+  // fallback URLs are valid only for the Audio Power narrator. The Internet
+  // Archive comes before Audio Power's own server: if the church copy fails,
+  // every listener moves to the next mirror at once, and a small ministry's
+  // single server shouldn't absorb that load.
   return {
     [AUDIO_POWER_CUV_READER]: [
       ...(churchHostedUrl ? [churchHostedUrl] : []),
-      `${AUDIO_POWER_CUV_RECORDINGS_BASE}/${sourceFilename}`,
       `${ARCHIVE_ORG_CUV_RECORDINGS_BASE}/${canonicalFilename}`,
+      `${AUDIO_POWER_CUV_RECORDINGS_BASE}/${sourceFilename}`,
     ],
   };
 };

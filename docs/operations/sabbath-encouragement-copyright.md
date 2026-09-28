@@ -8,7 +8,29 @@ material, and other attributed or unattributed source text. Preserve the origina
 volume or edition, and page citation wherever an Ellen White quotation is printed, and do not
 attribute the entire page to her. The Chinese source snapshot is `sabbath_encouragement.pdf`,
 stored in the church's Google Drive and mapped in `SabbathEncouragement.gs` so that page 20
-corresponds to the Sabbath of 2026-08-22.
+corresponds to the Sabbath of 2026-08-22. A backup copy is kept in
+[`public/library/`](../../public/library/sabbath_encouragement.pdf), where the app's library also
+offers it to readers. Its author metadata was removed before it was added to this public
+repository.
+
+**Provenance.** The Chinese compilation was edited by churches in China and has been passed
+freely from church to church there. The pastor reports that those churches checked it for copyright
+and treat it as free to share
+([#248](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/248#issuecomment-5852167793)). This is secondhand information: it comes through
+the pastor, not from the compilers directly.
+
+That covers the compilation itself: its selection, arrangement, and headings. The Ellen G. White
+quotations in it are Chinese translations of her books, and the rights to those translations may
+belong to their publishers rather than to the compilers. The church's use of those excerpts is
+non-commercial ministry use, weighed under the fair use factors below. If a rights holder objects,
+remove `public/library/sabbath_encouragement.pdf` and its library entry.
+
+**What this means for an English translation.** A direct English translation would add only the
+translation itself. Its quotations would come from Ellen G. White's original English and from the
+Bible, and the compilation it follows is shared without restriction by the churches that made it.
+So an English translation made by this church should carry no outside rights. This is one more data
+point for the English translation tracked in #248, not a legal opinion. The cautions below about
+posthumous Ellen White compilations still apply to any quotation taken from one.
 
 This material is included solely for the **non-commercial ministry use of New York Chinese
 Seventh-day Adventist Church** in its printed bulletins and companion mobile app. It is not

@@ -224,3 +224,151 @@ it('creates a fresh playlist after an effect cleanup/setup replay', () => {
   queue.unmount();
   expect(second.native.release).toHaveBeenCalledTimes(1);
 });
+
+function recordingPlaylist() {
+  let listener: ((status: AudioPlaylistStatus) => void) | undefined;
+  const sources: AudioSource[] = [];
+  // A new ExoPlayer playlist is prepared and empty, so it has ended.
+  const status = {
+    currentIndex: 0, playing: false, currentTime: 0, duration: 0,
+    isLoaded: true, isBuffering: false, didJustFinish: false,
+  } as AudioPlaylistStatus;
+  const native = {
+    addListener: jest.fn((_event: string, callback: typeof listener) => {
+      listener = callback;
+      return { remove: jest.fn() };
+    }),
+    destroy: jest.fn(), release: jest.fn(),
+    get currentIndex() { return status.currentIndex; },
+    get trackCount() { return sources.length; },
+    get currentStatus() { return { ...status }; },
+    clear: jest.fn(() => { sources.length = 0; }),
+    add: jest.fn((source: AudioSource) => {
+      sources.push(source);
+      // A healthy player starts buffering a new source; a failed one stays idle.
+      if (status.isLoaded) Object.assign(status, { isLoaded: false, isBuffering: true });
+    }),
+    play: jest.fn(), pause: jest.fn(), updateLockScreenMetadata: jest.fn(),
+  };
+  return {
+    playlist: native as unknown as AudioPlaylist,
+    native,
+    sources,
+    status,
+    // ExoPlayer is idle after an error; expo-audio reports it in one event.
+    fail() {
+      Object.assign(status, { isLoaded: false, isBuffering: false, playing: false });
+    },
+    emit: (next: Partial<AudioPlaylistStatus> & { error?: unknown } = {}) =>
+      listener?.({ ...status, ...next } as AudioPlaylistStatus),
+  };
+}
+
+function failoverQueue(count = 2) {
+  const playlists = Array.from({ length: count }, recordingPlaylist);
+  const factory = jest.fn();
+  playlists.forEach(({ playlist }) => factory.mockReturnValueOnce(playlist));
+  const queue = new BibleAudioNativeQueue(factory);
+  queue.mount();
+  return { queue, factory, playlists };
+}
+
+it('keeps a healthy playlist when the source changes', () => {
+  const { queue, factory, playlists: [first] } = failoverQueue();
+  queue.replace(chapter(1).source);
+  queue.replace(chapter(2).source);
+  expect(factory).toHaveBeenCalledTimes(1);
+  expect(first.sources).toEqual([chapter(2).source]);
+});
+
+it('starts a fresh playlist after a playback error, even before the error event arrives', () => {
+  const { queue, factory, playlists: [first, second] } = failoverQueue();
+  queue.replace(chapter(1).source);
+  first.fail();
+
+  queue.replace({ uri: 'https://mirror.example.com/1.mp3' });
+
+  expect(factory).toHaveBeenCalledTimes(2);
+  expect(second.sources).toEqual([{ uri: 'https://mirror.example.com/1.mp3' }]);
+  // The late error belongs to the retired playlist and is ignored.
+  const onError = jest.fn();
+  queue.addSourceErrorListener(onError);
+  first.emit({ error: { message: 'Source error', code: 2004 } });
+  expect(onError).not.toHaveBeenCalled();
+});
+
+it('keeps the failed playlist until the fresh one plays, so the lock-screen service survives', () => {
+  const { queue, playlists: [first, second] } = failoverQueue();
+  queue.replace(chapter(1).source);
+  first.fail();
+  queue.replace({ uri: 'https://mirror.example.com/1.mp3' });
+
+  // Destroying the owner of the lock-screen session would stop its
+  // foreground service before the fresh playlist takes over.
+  expect(first.native.destroy).not.toHaveBeenCalled();
+  second.emit({ playing: true, isBuffering: true });
+  expect(first.native.destroy).not.toHaveBeenCalled();
+
+  second.emit({ playing: true, isBuffering: false, isLoaded: true, duration: 300 });
+  expect(first.native.destroy).toHaveBeenCalledTimes(1);
+  expect(first.native.release).toHaveBeenCalledTimes(1);
+  expect(second.native.destroy).not.toHaveBeenCalled();
+});
+
+it('keeps at most the two newest failed playlists', () => {
+  const { queue, playlists } = failoverQueue(4);
+  queue.replace(chapter(1).source);
+  for (const [index, current] of playlists.slice(0, 3).entries()) {
+    current.fail();
+    queue.replace({ uri: `https://mirror${index}.example.com/1.mp3` });
+  }
+  expect(playlists[0].native.destroy).toHaveBeenCalledTimes(1);
+  expect(playlists[1].native.destroy).not.toHaveBeenCalled();
+  expect(playlists[2].native.destroy).not.toHaveBeenCalled();
+});
+
+it('destroys retired playlists when the reader closes or clears lock-screen controls', () => {
+  const closing = failoverQueue();
+  closing.queue.replace(chapter(1).source);
+  closing.playlists[0].fail();
+  closing.queue.replace(chapter(2).source);
+  closing.queue.unmount();
+  expect(closing.playlists[0].native.destroy).toHaveBeenCalledTimes(1);
+  expect(closing.playlists[1].native.destroy).toHaveBeenCalledTimes(1);
+
+  const clearing = failoverQueue();
+  clearing.queue.replace(chapter(1).source);
+  clearing.playlists[0].fail();
+  clearing.queue.replace(chapter(2).source);
+  Object.assign(clearing.playlists[1].native, { clearLockScreenControls: jest.fn() });
+  clearing.queue.clearLockScreenControls();
+  expect(clearing.playlists[0].native.destroy).toHaveBeenCalledTimes(1);
+  expect(clearing.playlists[1].native.destroy).not.toHaveBeenCalled();
+});
+
+it('delivers each playback error once, with the failed source and chapter', () => {
+  const { queue, playlists: [first] } = failoverQueue();
+  const onError = jest.fn();
+  const subscription = queue.addSourceErrorListener(onError);
+  queue.replace(chapter(1).source);
+  queue.setCurrentChapter(chapter(1));
+  queue.setQueue([chapter(2)]);
+
+  // Android moved on to the queued chapter, and its host failed.
+  first.status.currentIndex = 1;
+  first.fail();
+  first.emit({ error: { message: 'Source error', code: 2004 }, currentTime: 0 });
+  // The next status no longer carries the error.
+  first.emit();
+
+  expect(onError).toHaveBeenCalledTimes(1);
+  expect(onError).toHaveBeenCalledWith({
+    error: { message: 'Source error', code: 2004 },
+    currentTime: 0,
+    sourceUrl: 'https://example.com/2.mp3',
+    chapter: chapter(2),
+  });
+  subscription.remove();
+  first.emit({ error: { message: 'Source error', code: 2004 } });
+  expect(onError).toHaveBeenCalledTimes(1);
+});

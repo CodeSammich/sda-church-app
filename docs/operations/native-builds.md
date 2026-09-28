@@ -34,8 +34,10 @@ The direct-native iOS workflow is now checked in separately as
 `.github/workflows/native-ios-build.yml`. It runs only on trusted pushes to `main` and
 manual dispatch from `main`; it has no pull-request signing path. All signing paths require
 the protected `production` Environment. It uses a
-GitHub-hosted macOS runner with Expo prebuild and Xcode, and remains unable to complete
-until the church adds its Apple signing secrets. It does not use EAS or an Expo token.
+GitHub-hosted macOS runner with Expo prebuild and Xcode. The church added its Apple
+signing secrets to the `production` Environment in September 2026; how they were
+created is in [App Store and Google Play setup](app-store-setup.md). It does not use
+EAS or an Expo token.
 The repository no longer depends on an Expo account; keep any external account only if
 the church wants to preserve unrelated project history.
 
@@ -139,8 +141,8 @@ The intended credential boundary for the church-owned project is GitHub Actions:
 | --- | --- | --- |
 | Android upload keystore | Church / Google Play account | Protected `production` Environment secret |
 | Google Play service-account key | Church / Google Play account | Separate protected `production` Environment secret, not currently configured |
-| Apple distribution certificate (`.p12`) | Church Apple Developer account | Protected `production` Environment secret, pending Apple enrollment |
-| Apple App Store provisioning profile | Church Apple Developer account | Protected `production` Environment secret, pending Apple enrollment |
+| Apple distribution certificate (`.p12`) | Church Apple Developer account | Protected `production` Environment secret |
+| Apple App Store provisioning profile | Church Apple Developer account | Protected `production` Environment secret |
 | App Store Connect API key (`.p8`) | Church App Store Connect account | Separate protected `production` Environment secret, not currently configured |
 
 The Android keystore above is the **upload key**, not Google's Play app-signing key.
@@ -221,7 +223,9 @@ before relying on a quota.
 The automatic native workflow can run two signed Android jobs on a `main` push: Android
 AAB and Android APK. The iOS workflow is separate and runs only on a trusted `main`
 push or a manual dispatch from `main`; it never runs as a pull-request build. PR native
-previews are unsigned Android debug APKs for ARM and Intel, not signed release builds. A rough
+previews are unsigned Android debug APKs for ARM and Intel, not signed release builds.
+The unsigned **iOS PR preview** adds two macOS jobs, Apple Silicon and Intel, to
+each release PR into `main`; see [iOS PR preview](#ios-pr-preview-unsigned-simulator-builds). A rough
 private-repository estimate for the automatic Android workflow is:
 
 ```text
@@ -268,9 +272,12 @@ The direct native approaches have similar platform-tool maintenance:
 | Workflow | Keep signing/upload steps, cleanup traps, permissions, and action versions current |
 
 Updating Xcode is usually a workflow YAML/runner-image change plus a validation
-build, not a `package.json` edit. Pinning the runner (the current workflow uses
-`macos-15` and explicitly selects Xcode) avoids surprise upgrades, but requires a
-deliberate update when GitHub retires that image. The direct workflows keep build
+build, not a `package.json` edit. Pinning the runner (the current workflows use
+`macos-26` and explicitly select Xcode 26.6) avoids surprise upgrades, but requires a
+deliberate update when GitHub retires that image. Expo SDK 58 needs Xcode 26.6 or
+later: with Xcode 26.2, its `ExpoModulesJSI` framework fails to compile. The iOS PR
+preview uses the same Xcode as the signed build, so a toolchain problem shows up on a
+release PR before a signed build. The direct workflows keep build
 orchestration visible in this repository and avoid another credential boundary.
 
 ## Expo 58 Android prebuild
@@ -515,7 +522,9 @@ pushes to `main` or a manual dispatch from `main`. It has no pull-request or
 Store Connect. It creates an IPA artifact for manual upload or TestFlight processing.
 
 Before running it, configure these secrets in the protected `production`
-Environment in the upstream repository:
+Environment in the upstream repository. Creating the certificate and profile in the
+Apple Developer portal, encoding them on Windows, and renewing them each year are
+covered in [App Store and Google Play setup](app-store-setup.md#apple-app-store):
 
 ```text
 IOS_DISTRIBUTION_CERTIFICATE_BASE64
@@ -790,12 +799,65 @@ or APK. Select **Native iOS build → Run workflow** for an iOS IPA; its build n
 comes from `expo.ios.buildNumber` in the selected branch's `app.json`. These workflows
 become available in the Actions UI after they reach the default branch. Android compiles
 directly with Gradle on Ubuntu 24.04 / Java 17; iOS compiles directly with Xcode
-on macOS 15 / Xcode 26.2. Download the signed binaries from the run's Artifacts
+on macOS 26 / Xcode 26.6. Download the signed binaries from the run's Artifacts
 section (14-day retention). Neither recommended workflow requires Expo
 authentication.
 GitHub compilation uses GitHub runner minutes/storage.
 No selection performs no builds. Native failures do not block the web/PWA preview
 deployment.
+
+### iOS PR preview (unsigned Simulator builds)
+
+The iOS counterpart of the Android PR preview. A Simulator build runs the app on a
+simulated iPhone on a Mac. It needs no Apple
+signing, certificate, developer account, or iPhone, but it can't be installed on a
+real iPhone; use the signed **Native iOS build** and TestFlight for that. Only GitHub
+Actions and a local Mac are used; no other build service.
+
+**On a Mac.** Install Xcode 26.6 or later and CocoaPods, then:
+
+```sh
+npm install --force
+npm run build:ios:simulator                          # Release build, JavaScript bundled in
+npm run build:ios:simulator -- --debug               # Debug build that loads JavaScript from Metro
+npm run build:ios:simulator -- --device "iPhone 17"  # Choose the simulated iPhone
+npm run build:ios:simulator -- --prebuild            # Regenerate ios/ after native config changes
+```
+
+`scripts/build-ios-simulator.mjs` generates the ignored `ios/` project with the same
+Expo template as the other native builds (a test keeps the versions in step). It then
+runs `expo run:ios`, which installs CocoaPods, builds, installs the app on the
+Simulator, and opens it. Xcode builds for the Mac's own processor, so the same command
+works on Intel and Apple Silicon Macs. On Windows or Linux, the command explains that it
+needs a Mac.
+
+**In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
+every pull request into `main` (a release PR) without signing. It runs on an Apple
+Silicon runner (`macos-26`, arm64) and an Intel runner (`macos-26-intel`, x86_64), with
+the same Xcode as the signed iOS build. Each job installs the app on a simulated iPhone
+and fails if it isn't still running 45 seconds after launch. Each also uploads the app
+and a screenshot of its first screen (14-day retention), named like the Android
+preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
+
+- `sda-church-app-pr-<number>-<run>-arm64-simulator.zip` and `…-x86_64-simulator.zip`:
+  the app;
+- `sda-church-app-pr-<number>-<run>-<arch>-first-screen.png`: the screenshot.
+
+A pull request into a `release/*` branch runs the builds only when it changes the
+workflow or `scripts/build-ios-simulator.mjs`. The workflow reads no secrets, so it is
+safe on pull requests. Once it is on `main`, it can also be started by hand from the
+Actions tab.
+
+**Install a downloaded build on a Mac.** From the run's Artifacts section, download the
+artifact ending in `-x86_64` for an Intel Mac or `-arm64` for Apple Silicon, and unzip
+the download and then the `.zip` inside it to get the `.app`. Open the Simulator
+(Xcode > Open Developer Tool > Simulator) and drag the `.app` onto the simulated
+iPhone, or run:
+
+```sh
+xcrun simctl install booted /path/to/the.app
+xcrun simctl launch booted org.nyccsda.app
+```
 
 ## Upload separately
 

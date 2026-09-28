@@ -23,11 +23,11 @@ describe('Audio Power CUV chapter links', () => {
     );
   });
 
-  it('orders Adventist Connect, Audio Power, then Archive.org', () => {
+  it('orders Adventist Connect, Archive.org, then Audio Power', () => {
     expect(audioUrls(getAudioPowerCuvChapterLinks('GEN', 1))).toEqual([
       'https://assets.adventistconnect.org/newyork2/2026/08/12215730/CUV_B01C001.mp3',
-      'https://theaudiopower.com/CUV/Recordings/%E5%88%9B%E4%B8%96%E8%AE%B0%201.mp3',
       'https://archive.org/download/CUV_201911/CUV_B01C001.mp3',
+      'https://theaudiopower.com/CUV/Recordings/%E5%88%9B%E4%B8%96%E8%AE%B0%201.mp3',
     ]);
   });
 

@@ -9,7 +9,6 @@ import {
   CHURCH_BUILDING_IMAGE_URL,
   CHURCH_LATITUDE,
   CHURCH_LONGITUDE,
-  getSunsetApiUrl,
   openSabbathStream,
 } from '@/constants/ExternalLinks';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
@@ -17,6 +16,7 @@ import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
+import { getSunTimes } from '@/services/SunTimesService';
 import { createNavigationStyles } from '@/styles/NavigationStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -184,36 +184,19 @@ export default function HomeScreen() {
   // }, []);
 
   useEffect(() => {
-    const fetchSunsets = async () => {
-      const lat = useGps && userCoords ? userCoords.lat : CHURCH_LATITUDE;
-      const lng = useGps && userCoords ? userCoords.lng : CHURCH_LONGITUDE;
+    const lat = useGps && userCoords ? userCoords.lat : CHURCH_LATITUDE;
+    const lng = useGps && userCoords ? userCoords.lng : CHURCH_LONGITUDE;
 
-      const getDayDate = (d: number) => {
-        const t = new Date();
-        // Normalize to Noon local time to ensure the date is stable across UTC/Local
-        // conversions before we apply our longitude-based shift.
-        t.setDate(t.getDate() + (d - t.getDay()));
-        t.setHours(12, 0, 0, 0);
-        return t.toISOString().split('T')[0];
-      };
-
-      try {
-        const [fRes, sRes] = await Promise.all([
-          fetch(getSunsetApiUrl(lat, lng, getDayDate(5))),
-          fetch(getSunsetApiUrl(lat, lng, getDayDate(6))),
-        ]);
-        const fData = await fRes.json();
-        const sData = await sRes.json();
-
-        setSunsets({
-          fri: fData.results?.sunset ? new Date(fData.results.sunset) : null,
-          sat: sData.results?.sunset ? new Date(sData.results.sunset) : null,
-        });
-      } catch (e) {
-        console.warn('Failed to fetch sunset times:', e);
-      }
+    const getDay = (d: number) => {
+      const t = new Date();
+      t.setDate(t.getDate() + (d - t.getDay()));
+      return t;
     };
-    fetchSunsets();
+
+    setSunsets({
+      fri: getSunTimes(lat, lng, getDay(5))?.sunset ?? null,
+      sat: getSunTimes(lat, lng, getDay(6))?.sunset ?? null,
+    });
   }, [useGps, userCoords, new Date().toDateString()]);
 
   const formatDisplayDate = (date: Date) => {

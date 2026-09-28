@@ -105,7 +105,8 @@ export default function PrivacyPolicyScreen() {
       >
         Google Apps Script temporarily caches privacy-filtered bulletin responses to
         reduce Sheet reads. The app may store settings, saved verse references, cached
-        Bible selections, and the same filtered bulletin data in device-local storage.
+        Bible selections, library cover links, and the same filtered bulletin data in
+        device-local storage.
         This data is not synced to a church account. On the web, users can remove it by
         clearing this site&apos;s browser data. On iOS or Android, users can remove it by
         uninstalling the app or clearing its storage using the operating system&apos;s app
@@ -122,11 +123,11 @@ export default function PrivacyPolicyScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        This app requests Bible text, Bible-audio metadata or files, sunset times, cover
-        images, and privacy-filtered bulletin data from external services over HTTPS.
-        GitHub Pages, Cloudflare, Google Workspace/Apps Script, HelloAO, fetch(bible),
-        Audio Power, Adventist Connect, the Chinese Union Mission services, and the
-        sunrise-sunset service may process ordinary connection metadata such as an IP
+        This app requests Bible text, Bible-audio metadata or files, cover images, and
+        privacy-filtered bulletin data from external services over HTTPS. GitHub Pages,
+        Cloudflare, Google Workspace/Apps Script, HelloAO, fetch(bible), Adventist
+        Connect, the Internet Archive, Audio Power, and the Chinese Union Mission
+        services may process ordinary connection metadata such as an IP
         address, user agent, request path, and request time for delivery, security, or
         service operations. The app does not receive or store those providers&apos; server
         logs. Each provider handles information under its own applicable terms and

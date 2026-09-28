@@ -144,9 +144,15 @@ export const isBulletinCacheFresh = (
   now = Date.now(),
 ) => now < sabbathStart(date) || fetchedAt >= sabbathStart(date);
 
+/**
+ * Returns the stored bulletin for a date while it is fresh. With allowStale,
+ * it also returns an outdated copy, which the bulletin screen shows when a
+ * request fails (for example when the Apps Script API is busy or offline).
+ */
 export const getCachedBulletin = async (
   date: string,
   now = Date.now(),
+  { allowStale = false } = {},
 ): Promise<Bulletin | undefined> => {
   try {
     const stored = await AsyncStorage.getItem(`${BULLETIN_CACHE_PREFIX}${date}`);
@@ -157,7 +163,7 @@ export const getCachedBulletin = async (
       !cached?.bulletin ||
       cached.bulletin.date !== date ||
       !Number.isFinite(cached.fetchedAt) ||
-      !isBulletinCacheFresh(date, cached.fetchedAt, now)
+      (!allowStale && !isBulletinCacheFresh(date, cached.fetchedAt, now))
     ) {
       return undefined;
     }

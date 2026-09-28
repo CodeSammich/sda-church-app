@@ -18,7 +18,10 @@ layers instead:
 This means the 1,189-file CUV collections receive one sampled media request per
 host per daily run, not 1,189 requests. Project Gutenberg receives one sampled
 public-domain book request, and EGW Writings receives one sampled book request
-for each supported edition language. Fixed app destinations and small API
+for each supported edition language. The Internet Archive receives one metadata
+request per linked library scan, which checks that the scan is still openly
+downloadable and dated before 1928 (see [Internet Archive sources](../LEGAL.md#internet-archive-sources)).
+Fixed app destinations and small API
 contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media
 remain strict.

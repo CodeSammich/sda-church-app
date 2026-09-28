@@ -1,3 +1,4 @@
+import { OPEN_SOURCE_NOTICES } from '@/constants/OpenSourceNotices';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
@@ -90,9 +91,11 @@ export default function LegalScreen() {
         variant="bodyMedium"
         style={[styles.bodyText, { color: theme.colors.onSurface }]}
       >
-        Library reading sources: Ellen G. White editions are hosted externally on
-        EGW Writings. Adventist pioneer and Christian classic works are public domain
-        in the U.S. and hosted externally on Project Gutenberg.
+        Library reading sources: Ellen G. White editions and Uriah Smith&apos;s 1897
+        Daniel and the Revelation are hosted externally on EGW Writings. The other
+        Adventist pioneer and Christian classic works are public domain in the U.S. and
+        hosted externally on Project Gutenberg or the Internet Archive. The church hosts
+        its own copy of Sabbath Encouragement (安息日勉言).
       </Text>
 
       <Text
@@ -115,6 +118,29 @@ export default function LegalScreen() {
         performance licensing requirements; linking does not constitute legal
         authorization for public performance or reuse.
       </Text>
+
+      <Text
+        variant="titleMedium"
+        style={[styles.sectionHeader, { color: theme.colors.onBackground }]}
+      >
+        4. Open-Source Software
+      </Text>
+      <Text
+        variant="bodyMedium"
+        style={[styles.bodyText, { color: theme.colors.onSurface }]}
+      >
+        This application includes the following open-source software, whose licenses
+        require these notices.
+      </Text>
+      {OPEN_SOURCE_NOTICES.map((notice) => (
+        <Text
+          key={notice.name}
+          variant="bodySmall"
+          style={[styles.notice, { color: theme.colors.onSurfaceVariant }]}
+        >
+          {`${notice.name} (${notice.url})\n${notice.usage}\n\n${notice.license}`}
+        </Text>
+      ))}
     </ScrollView>
   );
 }
@@ -124,4 +150,5 @@ const styles = StyleSheet.create({
   lastUpdated: { marginBottom: 20 },
   sectionHeader: { fontWeight: 'bold', marginTop: 15, marginBottom: 5 },
   bodyText: {},
+  notice: { marginTop: 10 },
 });

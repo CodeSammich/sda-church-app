@@ -1,6 +1,9 @@
 import {
+  Bulletin,
   BulletinLocation,
+  cacheBulletin,
   fetchBulletin,
+  getCachedBulletin,
   getNextBulletinRolloverAt,
   getUpcomingSabbathDates,
   hasBulletinValue,
@@ -58,6 +61,22 @@ describe('bulletin service', () => {
     expect(isBulletinCacheFresh('2026-08-08', friday, friday)).toBe(true);
     expect(isBulletinCacheFresh('2026-08-08', friday, sabbathMorning)).toBe(false);
     expect(isBulletinCacheFresh('2026-08-08', sabbathMorning, sabbathMorning)).toBe(true);
+  });
+
+  it('returns an outdated cached bulletin only when asked for a fallback', async () => {
+    const bulletin = {
+      date: '2026-08-08',
+      queens: emptyLocation(),
+      brooklyn: emptyLocation(),
+    } as Bulletin;
+    const friday = new Date(2026, 7, 7, 20).getTime();
+    const sabbathMorning = new Date(2026, 7, 8, 8).getTime();
+    await cacheBulletin(bulletin, friday);
+
+    expect(await getCachedBulletin('2026-08-08', sabbathMorning)).toBeUndefined();
+    expect(
+      await getCachedBulletin('2026-08-08', sabbathMorning, { allowStale: true }),
+    ).toEqual(bulletin);
   });
 
   it('recognizes a location where every field is blank or TBD', () => {

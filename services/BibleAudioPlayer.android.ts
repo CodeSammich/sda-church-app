@@ -1,7 +1,7 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createAudioPlaylist, type AudioPlayer, type useAudioPlayer } from 'expo-audio';
 import { BibleAudioNativeQueue } from './BibleAudioNativeQueue';
-import type { BibleAudioQueueControls } from './BibleAudioPlayer.types';
+import type { BibleAudioQueueControls, BibleAudioSourceError } from './BibleAudioPlayer.types';
 
 export const useBibleAudioPlayer = (...args: Parameters<typeof useAudioPlayer>) => {
   const [player] = useState(() => new BibleAudioNativeQueue(
@@ -19,4 +19,17 @@ export const useBibleAudioPlayer = (...args: Parameters<typeof useAudioPlayer>) 
 export const useBibleAudioPlayerStatus = (player: AudioPlayer & BibleAudioQueueControls) => {
   const queue = player as unknown as BibleAudioNativeQueue;
   return useSyncExternalStore(queue.subscribe, queue.getStatus, queue.getStatus);
+};
+
+export const useBibleAudioSourceErrors = (
+  player: AudioPlayer & BibleAudioQueueControls,
+  onError: (event: BibleAudioSourceError) => void,
+) => {
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+  useEffect(() => {
+    const queue = player as unknown as BibleAudioNativeQueue;
+    const subscription = queue.addSourceErrorListener((event) => onErrorRef.current(event));
+    return () => subscription.remove();
+  }, [player]);
 };

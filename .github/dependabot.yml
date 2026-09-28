@@ -10,3 +10,4 @@ updates:
     schedule:
       interval: "weekly"        # Checks for new framework versions once a week
     open-pull-requests-limit: 3 # Prevents getting flooded with too many open PRs at once
+    labels: ["dependencies"]    # Skip the default "javascript" language label

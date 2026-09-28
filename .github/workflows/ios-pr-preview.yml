@@ -1,0 +1,194 @@
+name: iOS PR preview
+
+# The iOS counterpart of android-pr-preview.yml: unsigned iOS Simulator builds
+# of a release before it merges into main, for an Apple Silicon Mac and an
+# Intel Mac. A Simulator build needs no Apple signing,
+# so this workflow reads no secrets and can safely run on pull requests.
+# Download the app from the run's artifacts to test it in the Simulator on a
+# Mac; docs/operations/native-builds.md explains how.
+on:
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: ios-pr-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scope:
+    # Release PRs into main always build. A PR into a release branch builds
+    # only when it changes this workflow or the local Simulator script, so
+    # those changes are proven before they land, without a Mac build on every
+    # feature PR.
+    name: Decide whether to build the iOS preview
+    runs-on: ubuntu-24.04
+    outputs:
+      build: ${{ steps.scope.outputs.build }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the pull request's target and files
+        id: scope
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != 'pull_request' ] || [ "$BASE_REF" = 'main' ]; then
+            echo 'build=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Capture first: with pipefail, grep -q exiting early can fail the pipe.
+          CHANGED_FILES="$(git diff --name-only "origin/$BASE_REF...HEAD")"
+          if grep -qxE '\.github/workflows/ios-pr-preview\.yml|scripts/build-ios-simulator\.mjs' \
+            <<<"$CHANGED_FILES"; then
+            echo 'build=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'build=false' >> "$GITHUB_OUTPUT"
+          fi
+
+  simulator:
+    needs: scope
+    if: needs.scope.outputs.build == 'true'
+    # The "Main protection" ruleset requires these job names; rename both together.
+    name: Build iOS Simulator app (${{ matrix.mac }} Mac)
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The Simulator runs apps built for the Mac's own processor, so each
+          # kind of Mac gets its own build, checked on a runner of that kind.
+          - mac: Apple Silicon
+            runner: macos-26
+            arch: arm64
+          - mac: Intel
+            runner: macos-26-intel
+            arch: x86_64
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Select and verify Xcode tools
+        run: |
+          set -euo pipefail
+          # Keep this in step with native-ios-build.yml.
+          XCODE_DEVELOPER_DIR='/Applications/Xcode_26.6.app/Contents/Developer'
+          test -d "$XCODE_DEVELOPER_DIR" || {
+            echo "Expected Xcode at $XCODE_DEVELOPER_DIR; update this workflow when the runner image changes." >&2
+            exit 1
+          }
+          sudo xcode-select -s "$XCODE_DEVELOPER_DIR"
+          xcodebuild -version
+          pod --version
+          uname -m
+
+      - name: Install dependencies
+        run: npm ci --force
+
+      - name: Generate iOS project
+        run: >-
+          npx expo prebuild
+          --template expo-template-bare-minimum@58.0.3
+          --platform ios --clean --no-install
+
+      - name: Install CocoaPods dependencies
+        run: pod install --project-directory=ios
+
+      - name: Build for the Simulator without signing
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          test -n "$WORKSPACE" || {
+            echo 'Expo prebuild did not create an Xcode workspace.' >&2
+            exit 1
+          }
+          SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/ios-simulator" \
+            ARCHS="$ARCH" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Launch on a simulated iPhone
+        env:
+          ARCH: ${{ matrix.arch }}
+          # Named like the Android preview's sda-church-app-pr-<number>-<run>-arm-debug.apk.
+          PREVIEW_NAME: sda-church-app-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || 'manual' }}-${{ github.run_id }}-${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          APP_PATH="$(find "$RUNNER_TEMP/ios-simulator/Build/Products/Release-iphonesimulator" \
+            -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$APP_PATH" || {
+            echo 'The build did not produce a Simulator app.' >&2
+            exit 1
+          }
+          EXECUTABLE="$(plutil -extract CFBundleExecutable raw "$APP_PATH/Info.plist")"
+          lipo -archs "$APP_PATH/$EXECUTABLE"
+          BUNDLE_ID="$(node -p "require('./app.json').expo.ios.bundleIdentifier")"
+
+          # Use an iPhone from the newest installed iOS runtime.
+          DEVICE_ID="$(xcrun simctl list devices available --json | node -e '
+            const { devices } = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            const version = (runtime) => runtime.split("iOS-")[1].split("-").map(Number);
+            const runtimes = Object.keys(devices)
+              .filter((runtime) => runtime.includes("SimRuntime.iOS-"))
+              .sort((a, b) => version(b)[0] - version(a)[0] || (version(b)[1] || 0) - (version(a)[1] || 0));
+            for (const runtime of runtimes) {
+              const phone = devices[runtime].find((device) => device.isAvailable && device.name.startsWith("iPhone"));
+              if (phone) {
+                console.log(phone.udid);
+                process.exit(0);
+              }
+            }
+            process.exit(1);
+          ')"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl install "$DEVICE_ID" "$APP_PATH"
+          xcrun simctl launch "$DEVICE_ID" "$BUNDLE_ID"
+
+          # Give the bundled JavaScript time to load and draw the first screen.
+          sleep 45
+          ARTIFACT_DIR="$RUNNER_TEMP/ios-pr-preview"
+          mkdir -p "$ARTIFACT_DIR"
+          xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACT_DIR/$PREVIEW_NAME-first-screen.png"
+          (cd "$(dirname "$APP_PATH")" &&
+            ditto -c -k --keepParent "$(basename "$APP_PATH")" "$ARTIFACT_DIR/$PREVIEW_NAME-simulator.zip")
+          RUNNING_SERVICES="$(xcrun simctl spawn "$DEVICE_ID" launchctl list)"
+          grep -q "UIKitApplication:$BUNDLE_ID" <<<"$RUNNING_SERVICES" || {
+            echo 'The app is not running 45 seconds after launch; it probably crashed on start.' >&2
+            exit 1
+          }
+
+      - name: Upload the Simulator app and screenshot
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ios-pr-preview-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/ios-pr-preview/
+          if-no-files-found: warn
+          retention-days: 14

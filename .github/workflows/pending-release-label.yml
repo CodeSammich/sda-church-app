@@ -36,7 +36,9 @@ jobs:
 
           ISSUE_NUMBERS=$(node -e '
             const body = process.env.PR_BODY || "";
-            const matches = [...body.matchAll(/\bcloses\s+#([1-9][0-9]*)\b/gi)];
+            // Match every keyword GitHub itself uses to close issues, the same
+            // set the PR Linked Issue check accepts.
+            const matches = [...body.matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?\s+#([1-9][0-9]*)\b/gi)];
             process.stdout.write([...new Set(matches.map((match) => match[1]))].join("\n"));
           ')
 

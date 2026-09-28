@@ -78,7 +78,10 @@ jobs:
   build:
     needs: resolve-pr
     if: needs.resolve-pr.result == 'success'
-    name: Build ARM debug APK
+    # The "Main protection" ruleset requires this job name. This workflow runs
+    # from main's copy (pull_request_target), so update the ruleset only after a
+    # rename reaches main.
+    name: Build Android debug APK (ARM)
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:

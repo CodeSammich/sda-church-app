@@ -1,0 +1,49 @@
+flowchart TB
+  admins["🛡️ IT administrators"]
+
+  subgraph GitHub
+    repo@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "sda-church-app repo", pos: "b", w: 48, h: 48, constraint: "on" }
+    actions@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-actions.svg", label: "GitHub Actions<br/>tests · builds · deploys · monitor", pos: "b", w: 48, h: 48, constraint: "on" }
+    subgraph Secrets["GitHub Secrets · production environment"]
+      androidKeys["🔑 Android signing<br/>upload keystore made by the church,<br/>certificate registered in Play Console"]
+      appleKeys["🔑 Apple signing<br/>certificate + profile,<br/>renewed every 12 months"]
+      claspKeys["🔑 Google account login<br/>uploads Apps Script code and Drive files<br/>(CLASPRC_JSON, used by clasp)"]
+    end
+    pages@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "GitHub Pages · app.nyccsda.org<br/>privacy policy, download page<br/>PWA build: unsupported dev preview", pos: "b", w: 40, h: 40, constraint: "on" }
+  end
+
+  subgraph Stores["App stores"]
+    play@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-play-icon.svg", label: "Google Play<br/>managed in Play Console", pos: "b", w: 40, h: 44, constraint: "on" }
+    appstore@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple-app-store.svg", label: "Apple App Store<br/>managed in App Store Connect", pos: "b", w: 44, h: 44, constraint: "on" }
+    abm@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/apple.svg", label: "Apple Business Manager<br/>nonprofit organization", pos: "b", w: 34, h: 40, constraint: "on" }
+  end
+
+  subgraph Google["Google Workspace for Nonprofits"]
+    group@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-gmail.svg", label: "Google Group<br/>technology@nyccsda.org", pos: "b", w: 48, h: 36, constraint: "on" }
+    script@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Bulletin Apps Script project", pos: "b", w: 44, h: 44, constraint: "on" }
+    drive@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-drive.svg", label: "Google Drive<br/>QR codes, preview APKs", pos: "b", w: 48, h: 42, constraint: "on" }
+  end
+
+  subgraph Domain
+    dns@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/cloudflare-icon.svg", label: "nyccsda.org<br/>Cloudflare registrar + DNS", pos: "b", w: 64, h: 30, constraint: "on" }
+    gsc@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-search-console.svg", label: "Google Search Console<br/>nyccsda.org Domain property", pos: "b", w: 44, h: 44, constraint: "on" }
+  end
+
+  admins -- sign in with church accounts --> group
+  repo --> actions
+  androidKeys --> actions
+  appleKeys --> actions
+  claspKeys --> actions
+  actions -- signed AAB --> play
+  actions -- signed IPA --> appstore
+  actions -- uploads bulletin code --> script
+  actions -- QR codes, preview APKs --> drive
+  actions -- web build --> pages
+  abm -.-> appstore
+  dns -.-> pages
+  dns -.-> Google
+  dns -. DNS TXT record proves ownership .-> gsc
+  gsc -. website verification for the organization account .-> play
+
+  classDef logo fill:#ffffff,stroke:#d0d7de
+  class repo,actions,pages,play,appstore,abm,group,script,drive,dns,gsc logo

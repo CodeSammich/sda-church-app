@@ -33,7 +33,7 @@ const allLabels = {
     zoomSub:
       'Interactive Bible study and fellowship',
     library: 'Library',
-    librarySub: 'Books by pioneers, for families, and by topic',
+    librarySub: 'Christian classics, children\'s books, and Adventist writings',
   },
   zh: {
     title: '探索',
@@ -46,7 +46,7 @@ const allLabels = {
     zoomClass: 'Zoom 課程',
     zoomSub: '互動式研經與團契。',
     library: '圖書館',
-    librarySub: '先驅、家庭與主題書籍',
+    librarySub: '基督教經典、兒童讀物與復臨著作',
   },
   'zh-cn': {
     title: '探索',
@@ -59,7 +59,7 @@ const allLabels = {
     zoomClass: 'Zoom 课程',
     zoomSub: '互动式研经与团契。',
     library: '图书馆',
-    librarySub: '先驱、家庭与主题书籍',
+    librarySub: '基督教经典、儿童读物与复临著作',
   },
   es: {
     title: 'Explorar',
@@ -73,7 +73,7 @@ const allLabels = {
     zoomSub:
       'Estudio bíblico interactivo y compañerismo.',
     library: 'Biblioteca',
-    librarySub: 'Libros de pioneros, familia y temas',
+    librarySub: 'Clásicos cristianos, libros infantiles y escritos adventistas',
   },
 };
 
