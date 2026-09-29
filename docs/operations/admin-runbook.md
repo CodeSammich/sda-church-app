@@ -261,9 +261,11 @@ version (`0.40.0` becomes `40000`); see [Version numbers](version-numbers.md).
 | --- | --- | --- |
 | Android AAB and APK from a merge to `main` | **Releases → vx.y.z**, attached to the GitHub Release | Permanently |
 | Android AAB or APK from a manual run | The run's **Artifacts** (`native-android-…`) | 14 days |
-| iOS IPA | The **Native iOS build** run's **Artifacts** (`native-ios-…`) | 14 days |
+| iOS IPA | The **Native iOS build** run's **Artifacts** (`native-ios-…`) | 90 days |
 
-Download the IPA within 14 days. It isn't attached to the GitHub Release.
+The IPA isn't attached to the GitHub Release: an App Store build installs only through
+TestFlight or the App Store, and App Store Connect keeps every uploaded build. The
+90-day copy is for uploading by hand if **Upload to TestFlight** fails.
 
 ### Uploading to the stores
 
