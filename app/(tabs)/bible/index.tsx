@@ -7,7 +7,14 @@ import { setIsAudioActiveAsync } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { addNetworkStateListener } from 'expo-network';
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+} from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -564,7 +571,7 @@ export default function BibleScreen() {
     }[translation.lang];
     return `${translation.name} (${translationLanguageLabel})`;
   };
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
 
@@ -4617,7 +4624,7 @@ export default function BibleScreen() {
                         </Text>
                         <Divider />
                       </View>
-                    ) : null
+                    ) : undefined
                   }
                   ListFooterComponent={
                     lastActiveType === 'translation' ? (
@@ -4678,7 +4685,7 @@ export default function BibleScreen() {
                           />
                         </View>
                       </View>
-                    ) : null
+                    ) : undefined
                   }
                   renderItem={({ item }) => {
                     const itemLabel =
