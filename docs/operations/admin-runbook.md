@@ -444,8 +444,8 @@ To renew, follow the
 
 ## Bible audio emulator test
 
-**Workflow:** **Android audio e2e**. It runs every night and on every release pull
-request into `main`, and it can be run manually. **It's a required check on `main`**,
+**Workflow:** **Android audio e2e**. It runs on every release pull request into
+`main`, and it can be run manually. **It's a required check on `main`**,
 so a release can't merge until it passes. Feature pull requests into a release branch
 don't run it; to test an audio change before the release, run it manually on your
 branch.
@@ -470,11 +470,13 @@ Bible chapters to check what only a real player shows:
 The failover logic itself is tested on every pull request by
 `test/bible-audio-source-controller.test.ts`.
 
-When the nightly run fails, it opens or updates the issue **[monitor] Nightly Bible
-audio emulator test failed**, assigned to the users in `MONITOR_ALERT_ASSIGNEES`,
-and closes it on the next passing run. To investigate:
+It has no nightly run. The app code it tests only changes through a release pull
+request, and the [external dependency monitor](#external-dependency-monitor-alerts)
+already checks every audio host daily, which is what could break between releases.
 
-1. Open the run from the issue. The log shows which scenario failed and why.
+When it fails on a release pull request:
+
+1. Open the run. The log shows which scenario failed and why.
 2. Download the `android-audio-e2e-*` artifact. For each failed scenario it has a
    screenshot, the app's log, and the media session, whose title names the host
    that was playing, plus the emulator and DNS logs.

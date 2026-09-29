@@ -286,11 +286,12 @@ describe('Android audio e2e', () => {
     expect(workflow).toMatch(/^permissions:\n  contents: read\n/m);
   });
 
-  it('gives issue access only to the nightly alert job', () => {
-    expect(workflow.match(/issues: write/g)).toHaveLength(1);
-    const alertJob = workflow.slice(workflow.indexOf('\n  alert:\n'));
-    expect(alertJob).toContain('issues: write');
-    expect(alertJob).toContain("github.event_name == 'schedule'");
+  it('runs only on release PRs and by hand, with no nightly run or alert', () => {
+    // Host outages are the External Dependency Monitor's job, daily; the app
+    // code this test checks only changes through a release PR.
+    expect(workflow).not.toContain('schedule:');
+    expect(workflow).not.toContain('issues: write');
+    expect(workflow).not.toContain('\n  alert:\n');
   });
 
   it('keeps the job name the Main protection ruleset requires', () => {
