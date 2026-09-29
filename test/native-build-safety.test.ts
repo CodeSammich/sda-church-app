@@ -204,9 +204,10 @@ describe('Apple signing reminders', () => {
 
 describe('pull_request_target', () => {
   it('is used only by the three workflows the Actions event policy allows', () => {
-    // GitHub blocks pull_request_target in public repositories from November 2,
-    // 2026, unless a policy allows the workflow; the admin runbook lists these
-    // three. Adding one means updating the policy, the runbook, and this list.
+    // The repository's Actions event policy allows every event, so this test is
+    // the safeguard against a "pwn request": a new pull_request_target workflow
+    // must be reviewed (it must never run pull request code while it can read
+    // secrets or write) and added here and to the admin runbook.
     const { readdirSync } = require('node:fs');
     const users = readdirSync(resolve(process.cwd(), '.github/workflows'))
       .filter((file: string) => /^\s+pull_request_target:/m.test(readRepoFile(`.github/workflows/${file}`)))

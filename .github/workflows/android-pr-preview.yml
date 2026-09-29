@@ -4,9 +4,10 @@ name: Android PR preview
 # environment, which only main may use. It builds only release/* branches of
 # this repository, never fork code, and uploads with the trusted base commit's
 # helper.
-# pull_request_target must stay allowed for this file in the repository's
-# Actions event policy (Settings → Actions → Policies); GitHub blocks the
-# trigger in public repositories without one from November 2, 2026. See
+# pull_request_target must stay allowed in the repository's Actions event
+# policy (Settings → Actions → Policies); GitHub blocks the trigger in public
+# repositories without one from November 2, 2026. A test keeps the list of
+# workflows that use it reviewed. See
 # docs/operations/admin-runbook.md#actions-event-policy-for-pull_request_target.
 on:
   pull_request_target:
