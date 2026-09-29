@@ -80,6 +80,13 @@ import {
   getBibleVersePinyin,
   isChineseBibleTranslation,
 } from '@/services/BiblePinyinService';
+import {
+  getTopVisibleVerse,
+  getTranslationSwitchPosition,
+  isNewReaderLink,
+  isSameChapter,
+  type BibleReaderPosition,
+} from '@/services/BibleReaderPosition';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -539,6 +546,12 @@ export default function BibleScreen() {
         paramReferenceRequest || ''
       }`
     : null;
+  const readerLinkSignature =
+    paramBookId || paramChapter
+      ? `${paramTransId || ''}:${paramBookId || ''}:${paramChapter || ''}:${
+          paramReferenceRequest || ''
+        }`
+      : null;
   const scriptureParamSignature =
     paramBookId && paramChapter
       ? `${paramTransId || ''}:${paramBookId}:${paramChapter}:${paramVerseStart || ''}:${
@@ -567,6 +580,7 @@ export default function BibleScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
+  const readerScrollY = useRef(0);
 
   // Selection state
   const [supportedTranslation, setSupportedTranslation] = useState(() => {
@@ -599,6 +613,8 @@ export default function BibleScreen() {
   const handledLanguageSelectionRevision = useRef(languageSelectionRevision);
   const handledTranslationParamSignature = useRef<string | null>(null);
   const handledScriptureParamSignature = useRef<string | null>(null);
+  const handledReaderLinkSignature = useRef<string | null>(null);
+  const pendingTranslationSwitchPosition = useRef<BibleReaderPosition | null>(null);
   const pendingScriptureRange = useRef<{ start: number; end: number } | null>(null);
 
   // Data state
@@ -844,9 +860,19 @@ export default function BibleScreen() {
       }
     }
 
+    // A link opens its book and chapter once. The books reload after every
+    // translation switch, and applying the link again then would undo the
+    // reader's own navigation since the link was opened.
+    if (!readerLinkSignature) {
+      handledReaderLinkSignature.current = null;
+      return;
+    }
+    if (!isNewReaderLink(readerLinkSignature, handledReaderLinkSignature.current)) return;
+    handledReaderLinkSignature.current = readerLinkSignature;
+
     if (paramBookId) {
       // If the book is already in our current 'books' list, we can set it immediately.
-      // Otherwise, we set initialBookId so the fetchBooks effect picks it up.
+      // While the list is still loading, initialBookId lets the fetchBooks effect pick it up.
       const matchingBook = books.find(
         (b: BibleService.TranslationBook) => b.id === paramBookId,
       );
@@ -854,7 +880,7 @@ export default function BibleScreen() {
         if (matchingBook.id !== book?.id) {
           setBook(matchingBook);
         }
-      } else {
+      } else if (books.length === 0) {
         initialBookId.current = paramBookId;
       }
     }
@@ -1271,10 +1297,14 @@ export default function BibleScreen() {
   // already chosen by the audio engine and fetch its text normally.
   useEffect(() => {
     const activeChapter = audioStatus.activeChapter;
-    if (!activeChapter || activeChapter.translationId !== supportedTranslation.id) {
+    if (!activeChapter) {
       lastSyncedAudioChapterRef.current = null;
       return;
     }
+    // A paused Android playlist keeps reporting the chapter it last played.
+    // Remember it across a translation switch; forgetting it would send the
+    // reader back to that chapter on switching back.
+    if (activeChapter.translationId !== supportedTranslation.id) return;
 
     const syncVisibleChapter = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
@@ -2080,10 +2110,18 @@ export default function BibleScreen() {
     }
   };
 
+  // An explicit jump replaces any scroll still waiting for a link or a
+  // translation switch, so neither can pull the reader back later.
+  const forgetPendingScrolls = () => {
+    pendingScriptureRange.current = null;
+    pendingTranslationSwitchPosition.current = null;
+  };
+
   const openSavedVerse = (savedGroup: SavedVerseGroup) => {
     const matchingBook = books.find((item) => item.id === savedGroup.bookId);
     if (!matchingBook) return;
 
+    forgetPendingScrolls();
     const isCurrentChapter =
       book?.id === savedGroup.bookId && chapterNum === savedGroup.chapter;
     pendingSavedVerseScroll.current = isCurrentChapter ? null : savedGroup.verseStart;
@@ -2171,6 +2209,7 @@ export default function BibleScreen() {
     sourceChapter = chapterNum,
   ) => {
     if (!sourceBookId || books.length === 0) return;
+    forgetPendingScrolls();
     const currentBookIdx = books.findIndex(
       (candidate: BibleService.TranslationBook) => candidate.id === sourceBookId,
     );
@@ -2218,8 +2257,9 @@ export default function BibleScreen() {
 
   /** Hides the surrounding app chrome while keeping Bible controls visible. */
   const handleScroll = (event: any) => {
-    if (isSelectionActive) return;
     const currentOffset = event.nativeEvent.contentOffset.y;
+    readerScrollY.current = Math.max(0, currentOffset);
+    if (isSelectionActive) return;
     if (currentOffset < 0) return;
 
     if (Math.abs(currentOffset - lastScrollY.current) > 15) {
@@ -2299,6 +2339,35 @@ export default function BibleScreen() {
     return () => clearTimeout(timeout);
   }, [chapterData]);
 
+  // Returns to the verse the reader showed before a translation switch. The
+  // chapter can load twice while the new translation's books arrive, and the
+  // dual-language text makes each verse taller when it loads, so the position
+  // is kept, and restored again, until the reader scrolls by hand or leaves
+  // the chapter.
+  useEffect(() => {
+    const position = pendingTranslationSwitchPosition.current;
+    if (!chapterData || !position) return;
+    const loaded = { bookId: chapterData.book.id, chapter: chapterData.chapter.number };
+    if (!isSameChapter(position, loaded)) {
+      pendingTranslationSwitchPosition.current = null;
+      return;
+    }
+    if (chapterData.translation.id !== position.translationId) return;
+    const timeout = setTimeout(() => {
+      const verseY = versePositions.current[position.verse];
+      if (verseY !== undefined) {
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET),
+          animated: false,
+        });
+      }
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [chapterData, supportingChapterData]);
+
+  // Scrolls to a link's verse, such as the verse of the day. The dual-language
+  // text can load after the chapter and make every verse taller, so the verse
+  // stays the target, and is scrolled to again, until the reader moves on.
   useEffect(() => {
     const range = pendingScriptureRange.current;
     if (
@@ -2330,12 +2399,12 @@ export default function BibleScreen() {
             : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
         scrollRef.current?.scrollTo({ y: scrollY, animated: true });
       }
-      pendingScriptureRange.current = null;
     }, 250);
 
     return () => clearTimeout(timeout);
   }, [
     chapterData,
+    supportingChapterData,
     scriptureParamSignature,
     paramBookId,
     paramChapter,
@@ -3115,6 +3184,7 @@ export default function BibleScreen() {
     }));
 
   const handleBibleVerseSearchPress = (verseNumber: number) => {
+    forgetPendingScrolls();
     const verseY = versePositions.current[verseNumber];
     if (verseY !== undefined) {
       scrollRef.current?.scrollTo({ y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET), animated: true });
@@ -3353,6 +3423,7 @@ export default function BibleScreen() {
         alwaysBounceVertical={true}
         scrollEventThrottle={32}
         onScroll={handleScroll}
+        onScrollBeginDrag={forgetPendingScrolls}
         contentContainerStyle={[
           ReaderStyles.scrollContent,
           {
@@ -4718,11 +4789,25 @@ export default function BibleScreen() {
                             setShouldAutoPlay(true);
                           }
                           if (lastActiveType === 'translation') {
+                            pendingScriptureRange.current = null;
                             const translation =
                               item as (typeof BibleService.SUPPORTED_TRANSLATIONS)[number];
                             if (translationSelectionRole === 'primary') {
                               handledTranslationParamSignature.current =
                                 translationParamSignature;
+                              if (book && translation.id !== supportedTranslation.id) {
+                                pendingTranslationSwitchPosition.current =
+                                  getTranslationSwitchPosition(
+                                    translation.id,
+                                    { bookId: book.id, chapter: chapterNum },
+                                    getTopVisibleVerse(
+                                      versePositions.current,
+                                      readerScrollY.current + VERSE_SCROLL_TOP_OFFSET,
+                                    ),
+                                    pendingTranslationSwitchPosition.current,
+                                    !!chapterData && !loading,
+                                  );
+                              }
                               if (
                                 translation.id === selectedSupportingTranslation.id &&
                                 translation.id !== supportedTranslation.id
@@ -4738,11 +4823,14 @@ export default function BibleScreen() {
                               setSelectedSupportingTranslation(translation);
                             }
                           } else if (lastActiveType === 'book') {
+                            forgetPendingScrolls();
                             setBook(item as any);
                             setChapterNum(1);
                           } else if (lastActiveType === 'chapter') {
+                            forgetPendingScrolls();
                             setChapterNum(item as any);
                           } else if (lastActiveType === 'verse') {
+                            forgetPendingScrolls();
                             const verseNumber = item as number;
                             setTimeout(() => {
                               const verseY = versePositions.current[verseNumber];
