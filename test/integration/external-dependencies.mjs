@@ -477,6 +477,25 @@ for (const [name, url, binary = false, allowed = []] of navigationLinks) {
   await record(name, 'App navigation', () => probe(url, { binary, allowed: [...allowed, 429] }));
 }
 
+// The store listings and printed QR codes point at these pages, so they must
+// keep working through the church's own domain. See
+// docs/operations/admin-runbook.md#the-app-website-appnyccsdaorg.
+const websitePages = [
+  ['privacy policy page', 'https://app.nyccsda.org/privacy-policy.html', 'Privacy Policy'],
+  ['app support page', 'https://app.nyccsda.org/support.html', 'App Support'],
+  ['app download page', 'https://app.nyccsda.org/download', 'play.google.com/store/apps/details?id=org.nyccsda.app'],
+];
+
+for (const [name, url, expectedText] of websitePages) {
+  await record(name, 'App website', async () => {
+    const { response, text } = await getTextPage(url, {
+      expectedHosts: ['app.nyccsda.org', 'new-york-chinese-seventh-day-adventist.github.io'],
+    });
+    if (!text.includes(expectedText)) throw new Error(`${url} no longer contains "${expectedText}"`);
+    return describeResponse(response);
+  });
+}
+
 await record('public bulletin JSON contract', 'Bulletin API', async () => {
   const date = process.env.BULLETIN_TEST_DATE || '2026-08-08';
   const data = await getJson(`https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec?date=${date}`);
