@@ -1117,7 +1117,7 @@ as a patch release; see [Version numbers](version-numbers.md).
 ### Uploading by hand
 
 If an upload job can't run, download the `.ipa` from the **Native iOS build** run's
-artifacts (kept 14 days) and upload it with Apple's Transporter app, or download the
+artifacts (kept 90 days) and upload it with Apple's Transporter app, or download the
 `.aab` from the release's GitHub Release and upload it in Play Console → **Test and
 release → Internal testing → Create new release**. Upload the AAB, not the APK.
 

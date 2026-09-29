@@ -278,7 +278,9 @@ jobs:
           name: native-ios-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/nyccsda-ios-export/*.ipa
           if-no-files-found: error
-          retention-days: 14
+          # GitHub's maximum. The IPA isn't attached to the GitHub Release, so
+          # this copy is the one to upload by hand if Upload to TestFlight fails.
+          retention-days: 90
 
       - name: Remove exported IPA from runner
         if: always()
