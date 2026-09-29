@@ -15,8 +15,7 @@ import {
   LIBRARY_SHELVES,
 } from '@/features/library/LibraryShelves';
 import { useLibraryShelfBooks } from '@/features/library/useLibraryShelfBooks';
-import { useIsFocused } from '@react-navigation/native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useIsFocused } from 'expo-router';
 import { useCallback, useContext, useMemo, useState } from 'react';
 import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
