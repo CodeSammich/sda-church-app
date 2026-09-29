@@ -195,10 +195,32 @@ describe('Apple signing reminders', () => {
     expect(monitor).toContain('vars.APPLE_SIGNING_ALERT_ASSIGNEES || vars.MONITOR_ALERT_ASSIGNEES');
     const workflow = readRepoFile('.github/workflows/native-ios-build.yml');
     const start = workflow.indexOf('\n  signing_dates:\n');
+    const job = workflow.slice(start, workflow.indexOf('\n  release_ipa:\n'));
+    expect(start).toBeGreaterThan(-1);
+    expect(job).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
+    expect(job).toContain('node scripts/check-apple-signing-expiry.cjs --profile');
+  });
+});
+
+describe('GitHub Release', () => {
+  it('attaches the IPA from its own job, keeping the signing job read-only', () => {
+    const workflow = readRepoFile('.github/workflows/native-ios-build.yml');
+    const signing = workflow.slice(workflow.indexOf('\n  ios_build_ipa:\n'), workflow.indexOf('\n  signing_dates:\n'));
+    expect(signing).not.toContain('contents: write');
+    const start = workflow.indexOf('\n  release_ipa:\n');
     const job = workflow.slice(start, workflow.indexOf('\n  testflight_upload:\n'));
     expect(start).toBeGreaterThan(-1);
-    expect(job).not.toMatch(/secrets\.|environment:/);
-    expect(job).toContain('node scripts/check-apple-signing-expiry.cjs --profile');
+    expect(job).toContain('contents: write');
+    expect(job).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
+    expect(job).toContain("github.event_name == 'push'");
+    expect(job).toContain('scripts/publish-github-release.sh');
+  });
+
+  it('adds the Android binaries with the same script, so either workflow can finish first', () => {
+    const workflow = readRepoFile('.github/workflows/native-android-build.yml');
+    expect(workflow).toContain('scripts/publish-github-release.sh "$RELEASE_TAG" release-assets/*');
+    // The old step failed whenever the release already existed.
+    expect(workflow).not.toContain('Bump package.json version before building another release');
   });
 });
 
