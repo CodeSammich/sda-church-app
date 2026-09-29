@@ -2110,10 +2110,18 @@ export default function BibleScreen() {
     }
   };
 
+  // An explicit jump replaces any scroll still waiting for a link or a
+  // translation switch, so neither can pull the reader back later.
+  const forgetPendingScrolls = () => {
+    pendingScriptureRange.current = null;
+    pendingTranslationSwitchPosition.current = null;
+  };
+
   const openSavedVerse = (savedGroup: SavedVerseGroup) => {
     const matchingBook = books.find((item) => item.id === savedGroup.bookId);
     if (!matchingBook) return;
 
+    forgetPendingScrolls();
     const isCurrentChapter =
       book?.id === savedGroup.bookId && chapterNum === savedGroup.chapter;
     pendingSavedVerseScroll.current = isCurrentChapter ? null : savedGroup.verseStart;
@@ -2201,6 +2209,7 @@ export default function BibleScreen() {
     sourceChapter = chapterNum,
   ) => {
     if (!sourceBookId || books.length === 0) return;
+    forgetPendingScrolls();
     const currentBookIdx = books.findIndex(
       (candidate: BibleService.TranslationBook) => candidate.id === sourceBookId,
     );
@@ -2356,6 +2365,9 @@ export default function BibleScreen() {
     return () => clearTimeout(timeout);
   }, [chapterData, supportingChapterData]);
 
+  // Scrolls to a link's verse, such as the verse of the day. The dual-language
+  // text can load after the chapter and make every verse taller, so the verse
+  // stays the target, and is scrolled to again, until the reader moves on.
   useEffect(() => {
     const range = pendingScriptureRange.current;
     if (
@@ -2387,12 +2399,12 @@ export default function BibleScreen() {
             : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
         scrollRef.current?.scrollTo({ y: scrollY, animated: true });
       }
-      pendingScriptureRange.current = null;
     }, 250);
 
     return () => clearTimeout(timeout);
   }, [
     chapterData,
+    supportingChapterData,
     scriptureParamSignature,
     paramBookId,
     paramChapter,
@@ -3172,6 +3184,7 @@ export default function BibleScreen() {
     }));
 
   const handleBibleVerseSearchPress = (verseNumber: number) => {
+    forgetPendingScrolls();
     const verseY = versePositions.current[verseNumber];
     if (verseY !== undefined) {
       scrollRef.current?.scrollTo({ y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET), animated: true });
@@ -3410,9 +3423,7 @@ export default function BibleScreen() {
         alwaysBounceVertical={true}
         scrollEventThrottle={32}
         onScroll={handleScroll}
-        onScrollBeginDrag={() => {
-          pendingTranslationSwitchPosition.current = null;
-        }}
+        onScrollBeginDrag={forgetPendingScrolls}
         contentContainerStyle={[
           ReaderStyles.scrollContent,
           {
@@ -4778,6 +4789,7 @@ export default function BibleScreen() {
                             setShouldAutoPlay(true);
                           }
                           if (lastActiveType === 'translation') {
+                            pendingScriptureRange.current = null;
                             const translation =
                               item as (typeof BibleService.SUPPORTED_TRANSLATIONS)[number];
                             if (translationSelectionRole === 'primary') {
@@ -4811,11 +4823,14 @@ export default function BibleScreen() {
                               setSelectedSupportingTranslation(translation);
                             }
                           } else if (lastActiveType === 'book') {
+                            forgetPendingScrolls();
                             setBook(item as any);
                             setChapterNum(1);
                           } else if (lastActiveType === 'chapter') {
+                            forgetPendingScrolls();
                             setChapterNum(item as any);
                           } else if (lastActiveType === 'verse') {
+                            forgetPendingScrolls();
                             const verseNumber = item as number;
                             setTimeout(() => {
                               const verseY = versePositions.current[verseNumber];
