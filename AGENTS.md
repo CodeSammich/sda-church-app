@@ -32,6 +32,11 @@ Code, Codex, Gemini, and others). The full contributor guide is
 - This is a public repository. Keep personal names, personal email addresses,
   account IDs, and descriptions of unfixed security gaps out of code, commits,
   PRs, and issues.
+- Use made-up names in tests, fixtures, examples, and docs. Never copy names or
+  other details from real rosters, spreadsheets, bulletins, or screenshots.
+- Strip hidden metadata (author names, account IDs, GPS locations) from images
+  before committing them: `node scripts/strip-image-metadata.cjs <file>`.
+  `test/image-metadata.test.ts` fails if a committed image still has any.
 - Never set Android `versionCode` or iOS `buildNumber` in `app.json`. Both are
   computed from the version; see
   [Version numbers](docs/operations/version-numbers.md).
