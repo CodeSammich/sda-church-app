@@ -26,6 +26,7 @@ does and what still needs a person.
 - [Apple signing reminders](#apple-signing-reminders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
+- [Actions event policy for `pull_request_target`](#actions-event-policy-for-pull_request_target)
 
 ## Who can do what
 
@@ -259,11 +260,14 @@ version (`0.40.0` becomes `40000`); see [Version numbers](version-numbers.md).
 
 | Binary | Where to find it | Kept for |
 | --- | --- | --- |
-| Android AAB and APK from a merge to `main` | **Releases → vx.y.z**, attached to the GitHub Release | Permanently |
+| Android AAB and APK, and iOS IPA, from a merge to `main` | **Releases → vx.y.z**, attached to the GitHub Release | Permanently |
 | Android AAB or APK from a manual run | The run's **Artifacts** (`native-android-…`) | 14 days |
-| iOS IPA | The **Native iOS build** run's **Artifacts** (`native-ios-…`) | 14 days |
+| iOS IPA from a manual run | The **Native iOS build** run's **Artifacts** (`native-ios-…`) | 90 days |
 
-Download the IPA within 14 days. It isn't attached to the GitHub Release.
+Either native workflow can finish first; whichever does creates the release, and the
+other adds its files. Neither replaces a file the release already has. The IPA installs
+only through TestFlight or the App Store; it's kept there as an archive, for example to
+upload by hand with Transporter if **Upload to TestFlight** fails.
 
 ### Uploading to the stores
 
@@ -440,8 +444,8 @@ To renew, follow the
 
 ## Bible audio emulator test
 
-**Workflow:** **Android audio e2e**. It runs every night and on every release pull
-request into `main`, and it can be run manually. **It's a required check on `main`**,
+**Workflow:** **Android audio e2e**. It runs on every release pull request into
+`main`, and it can be run manually. **It's a required check on `main`**,
 so a release can't merge until it passes. Feature pull requests into a release branch
 don't run it; to test an audio change before the release, run it manually on your
 branch.
@@ -466,11 +470,13 @@ Bible chapters to check what only a real player shows:
 The failover logic itself is tested on every pull request by
 `test/bible-audio-source-controller.test.ts`.
 
-When the nightly run fails, it opens or updates the issue **[monitor] Nightly Bible
-audio emulator test failed**, assigned to the users in `MONITOR_ALERT_ASSIGNEES`,
-and closes it on the next passing run. To investigate:
+It has no nightly run. The app code it tests only changes through a release pull
+request, and the [external dependency monitor](#external-dependency-monitor-alerts)
+already checks every audio host daily, which is what could break between releases.
 
-1. Open the run from the issue. The log shows which scenario failed and why.
+When it fails on a release pull request:
+
+1. Open the run. The log shows which scenario failed and why.
 2. Download the `android-audio-e2e-*` artifact. For each failed scenario it has a
    screenshot, the app's log, and the media session, whose title names the host
    that was playing, plus the emulator and DNS logs.
@@ -503,3 +509,78 @@ read.
 | Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |
 
 Never paste credentials into issues, pull requests, or workflow logs.
+
+## Actions event policy for `pull_request_target`
+
+From **November 2, 2026**, GitHub blocks the `pull_request_target` trigger in public
+repositories unless an Actions event policy allows it
+([announcement](https://github.blog/changelog/2026-09-17-workflow-execution-protections-in-github-actions-generally-available/)).
+Three workflows use it, and two of them are required checks on `main`, so **without
+the policy, no release can merge into `main`**:
+
+| Workflow | Why it uses `pull_request_target` | Required on `main` |
+| --- | --- | --- |
+| `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
+| `.github/workflows/android-pr-preview.yml` | The Drive upload needs the `production` environment, which only `main` may use. It builds only this repository's `release/*` branches, never fork code. | Yes: `Build Android debug APK (ARM)` |
+| `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
+
+None of them runs code from a fork with secrets or a write token, which is what makes
+`pull_request_target` dangerous (a "pwn request").
+
+**The church's choice: one policy that allows every event for every workflow.** It
+works the way GitHub did before November 2, and nobody has to update it when a
+workflow changes. The policy only decides which triggers may start a workflow; what
+keeps pull request code away from secrets and write access is the workflows
+themselves, and tests enforce that:
+
+- `pull_request_target` always runs the workflow as it is on `main`, never the pull
+  request's copy, so an outsider can't add or change one. Only a reviewed release PR
+  can.
+- The gate and the label workflow never check out code. The Android preview builds
+  only this repository's `release/*` branches, which only people with write access
+  can push, and never a fork's code. Its build job has no secrets, no saved
+  credentials, and a read-only token; the upload job, which has the Drive secret,
+  runs only `main`'s upload script on the finished APK.
+- Pull request text, such as a title, body, or branch name, reaches a script only
+  through an environment variable, never pasted into the script, so it can't inject
+  commands.
+- Only the label workflow can write, and only to issues.
+- `test/native-build-safety.test.ts` fails if any of the above changes, if a workflow
+  turns off `actions/checkout`'s protection against fork code
+  (`allow-unsafe-pr-checkout`), or if any other workflow starts using
+  `pull_request_target`, so a new one gets reviewed before it can merge. Before adding
+  one to that list, check that it never runs pull request code while it can read
+  secrets or write to the repository.
+- CodeQL scans the workflows for these mistakes too (**Security → Code scanning**).
+
+GitHub adds its own limits: a `pull_request_target` run can read `main`'s cache but
+not write to it, so it can't poison the cache the signing builds use. Elsewhere:
+
+- `pull_request` workflows for a fork's pull request get no secrets and a read-only
+  token, and none runs until a maintainer approves it (**Settings → Actions → General
+  → Require approval for all external contributors**). That approval doesn't cover
+  `pull_request_target`, which is why these three never run fork code.
+- The default workflow token is read-only, and workflows can't approve pull requests.
+- The store upload secrets are in the `store-upload` environment, which only `main`
+  can use.
+
+Keep those settings and the tests.
+
+To set up the policy:
+
+1. **Settings → Actions → Policies → New policy.**
+2. **Name** it `Allow all workflow events`.
+3. **Enforcement status:** **Active**. (**Evaluate**, a dry run, is only available on
+   GitHub Enterprise Cloud.)
+4. **Target** all workflows in the repository.
+5. **Event rules:** tick every event in the list. There's no "all events" option, and
+   an event rule is an allowlist: an unticked event stops every workflow that uses it.
+6. After the next release PR, open **Policy insights**, under the policies page, and
+   check that nothing was blocked.
+
+New workflows need no change to the policy. Only if GitHub adds a new kind of event,
+and a workflow uses it, does that event need ticking here.
+
+If `ensure_pr_to_main_from_release_branch` or `Build Android debug APK (ARM)` ever stops
+reporting on a release PR, check this policy first.
+

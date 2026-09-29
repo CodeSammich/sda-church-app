@@ -221,18 +221,11 @@ jobs:
           pattern: native-*
           path: release-assets
           merge-multiple: true
-      - name: Create GitHub release with binaries
+      # Native iOS build adds the IPA to the same release; either may finish
+      # first. The script creates the release if needed and never overwrites a
+      # published file.
+      - name: Add the binaries to the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: v${{ steps.version.outputs.version }}
-        run: |
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "A GitHub release already exists for $RELEASE_TAG. Bump package.json version before building another release."
-            exit 1
-          fi
-          gh release create "$RELEASE_TAG" release-assets/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "Release $RELEASE_TAG" \
-            --notes "Signed native binaries built from commit $GITHUB_SHA." \
-            --latest
+        run: scripts/publish-github-release.sh "$RELEASE_TAG" release-assets/*

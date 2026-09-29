@@ -8,10 +8,11 @@ name: Android audio e2e
 #
 # It plays real recordings from the church's hosts, so a host outage can fail
 # it too. The failure details artifact says which host was playing.
+#
+# It runs on the release PR, where it's required, and by hand; it has no
+# nightly run. The daily External Dependency Monitor already checks every audio
+# host, which is what could change between releases.
 on:
-  schedule:
-    - cron: "41 3 * * *"
-      timezone: "America/New_York"
   workflow_dispatch: {}
   # Only the release PR into main, which requires it. Feature PRs into a release
   # branch skip this 20-minute run; start it by hand on a branch to test an
@@ -182,60 +183,3 @@ jobs:
           path: ${{ runner.temp }}/e2e-output
           if-no-files-found: ignore
           retention-days: 14
-
-  # Only the nightly run opens an alert issue; pull requests show their own
-  # failures. The issue handling is shared with the other monitors.
-  alert:
-    needs: e2e
-    if: >-
-      always() &&
-      github.event_name == 'schedule' &&
-      github.event.repository.fork == false
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      issues: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-
-      - name: Open or update the alert issue
-        if: needs.e2e.result == 'failure'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
-        env:
-          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
-        with:
-          script: |
-            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
-            const result = await alerts.openOrUpdateAlert({
-              github,
-              context,
-              core,
-              title: '[monitor] Nightly Bible audio emulator test failed',
-              body: [
-                'The nightly Bible audio test on an Android emulator failed.',
-                '',
-                `Run: ${alerts.getRunUrl(context)}`,
-                '',
-                'The run log shows which scenario failed. Its screenshot, app log and media session are in the `android-audio-e2e-*` artifact.',
-                `The test plays real recordings, so check the [external dependency monitor](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/external-dependency-monitor.yml) before assuming an app regression.`,
-              ].join('\n'),
-              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
-            });
-            core.info(`Alert issue ${result.action}: #${result.number}`);
-
-      - name: Close the alert issue after recovery
-        if: needs.e2e.result == 'success'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
-        with:
-          script: |
-            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
-            const result = await alerts.closeAlert({
-              github,
-              context,
-              title: '[monitor] Nightly Bible audio emulator test failed',
-              body: `Recovered in ${alerts.getRunUrl(context)}.`,
-            });
-            core.info(`Alert issue: ${result.action}`);

@@ -195,10 +195,124 @@ describe('Apple signing reminders', () => {
     expect(monitor).toContain('vars.APPLE_SIGNING_ALERT_ASSIGNEES || vars.MONITOR_ALERT_ASSIGNEES');
     const workflow = readRepoFile('.github/workflows/native-ios-build.yml');
     const start = workflow.indexOf('\n  signing_dates:\n');
+    const job = workflow.slice(start, workflow.indexOf('\n  release_ipa:\n'));
+    expect(start).toBeGreaterThan(-1);
+    expect(job).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
+    expect(job).toContain('node scripts/check-apple-signing-expiry.cjs --profile');
+  });
+});
+
+describe('pull_request_target', () => {
+  it('is used only by the three workflows the Actions event policy allows', () => {
+    // The repository's Actions event policy allows every event, so this test is
+    // the safeguard against a "pwn request": a new pull_request_target workflow
+    // must be reviewed (it must never run pull request code while it can read
+    // secrets or write) and added here and to the admin runbook.
+    const { readdirSync } = require('node:fs');
+    // Any mention outside a comment counts, so `on: [push, pull_request_target]`
+    // is caught too.
+    const withoutComments = (text: string) => text.replace(/(^|\s)#.*$/gm, '');
+    const users = readdirSync(resolve(process.cwd(), '.github/workflows'))
+      .filter((file: string) => withoutComments(readRepoFile(`.github/workflows/${file}`)).includes('pull_request_target'))
+      .sort();
+    expect(users).toEqual([
+      'android-pr-preview.yml',
+      'main-release-source-gate.yml',
+      'pending-release-label.yml',
+    ]);
+    const runbook = readRepoFile('docs/operations/admin-runbook.md');
+    for (const file of users) {
+      expect(runbook).toContain(`.github/workflows/${file}`);
+      expect(readRepoFile(`.github/workflows/${file}`)).toContain('Settings → Actions → Policies');
+    }
+  });
+
+  it('never checks out pull request code in the gate or the label workflow', () => {
+    for (const file of ['main-release-source-gate.yml', 'pending-release-label.yml']) {
+      expect(readRepoFile(`.github/workflows/${file}`)).not.toContain('actions/checkout');
+    }
+  });
+
+  it('builds only release branches of this repository in the Android preview, never a fork', () => {
+    const workflow = readRepoFile('.github/workflows/android-pr-preview.yml');
+    expect(workflow).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+    expect(workflow).toContain('test "$HEAD_REPOSITORY" = "$GITHUB_REPOSITORY"');
+  });
+
+  it('keeps pull request code away from secrets in the Android preview', () => {
+    const workflow = readRepoFile('.github/workflows/android-pr-preview.yml');
+    const build = workflow.slice(workflow.indexOf('\n  build:\n'), workflow.indexOf('\n  upload:\n'));
+    const upload = workflow.slice(workflow.indexOf('\n  upload:\n'));
+    // The build job runs the pull request's code, so it gets no secrets, no
+    // environment, and no saved credentials.
+    expect(build).toContain('ref: ${{ needs.resolve-pr.outputs.head_sha }}');
+    expect(build).toContain('persist-credentials: false');
+    expect(build).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
+    // The upload job has the Drive secret, so it runs only main's upload
+    // script on the finished APK.
+    expect(upload).toContain('environment: production');
+    expect(upload.match(/actions\/checkout@/g)).toHaveLength(1);
+    expect(upload).toContain('ref: ${{ needs.resolve-pr.outputs.trusted_sha }}');
+    expect(upload).not.toMatch(/head_sha|\bnpm |\bnpx /);
+  });
+
+  it('passes pull request text to scripts only through environment variables', () => {
+    // A title, body, or branch name pasted into a script as ${{ … }} becomes
+    // part of the script, so a pull request could inject commands.
+    for (const file of ['android-pr-preview.yml', 'main-release-source-gate.yml', 'pending-release-label.yml']) {
+      const lines = readRepoFile(`.github/workflows/${file}`).split('\n');
+      lines.forEach((line, index) => {
+        const key = /^(\s*(?:-\s+)?)(?:run|script):(.*)$/.exec(line);
+        if (!key) return;
+        const script = [key[2]];
+        for (const next of lines.slice(index + 1)) {
+          if (next.trim() && next.search(/\S/) <= key[1].length) break;
+          script.push(next);
+        }
+        expect(`${file}: ${script.join('\n')}`).not.toContain('${{');
+      });
+    }
+  });
+
+  it('grants write access only to label issues, and no secret but the workflow token to the gate or labels', () => {
+    const writes = (file: string) => (readRepoFile(`.github/workflows/${file}`).match(/^\s+[a-z-]+:\s*write\b/gm) ?? [])
+      .map((line) => line.trim());
+    expect(writes('android-pr-preview.yml')).toEqual([]);
+    expect(writes('main-release-source-gate.yml')).toEqual([]);
+    expect(writes('pending-release-label.yml')).toEqual(['issues: write']);
+    for (const file of ['main-release-source-gate.yml', 'pending-release-label.yml']) {
+      const secrets = [...readRepoFile(`.github/workflows/${file}`).matchAll(/\$\{\{\s*secrets\.(\w+)/g)];
+      expect(secrets.map((match) => match[1]).filter((name) => name !== 'GITHUB_TOKEN')).toEqual([]);
+    }
+  });
+
+  it("never turns off checkout's protection against fork code", () => {
+    const { readdirSync } = require('node:fs');
+    for (const file of readdirSync(resolve(process.cwd(), '.github/workflows'))) {
+      expect(readRepoFile(`.github/workflows/${file}`)).not.toContain('allow-unsafe-pr-checkout');
+    }
+  });
+});
+
+describe('GitHub Release', () => {
+  it('attaches the IPA from its own job, keeping the signing job read-only', () => {
+    const workflow = readRepoFile('.github/workflows/native-ios-build.yml');
+    const signing = workflow.slice(workflow.indexOf('\n  ios_build_ipa:\n'), workflow.indexOf('\n  signing_dates:\n'));
+    expect(signing).not.toContain('contents: write');
+    const start = workflow.indexOf('\n  release_ipa:\n');
     const job = workflow.slice(start, workflow.indexOf('\n  testflight_upload:\n'));
     expect(start).toBeGreaterThan(-1);
-    expect(job).not.toMatch(/secrets\.|environment:/);
-    expect(job).toContain('node scripts/check-apple-signing-expiry.cjs --profile');
+    expect(job).toContain('contents: write');
+    expect(job).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
+    expect(job).toContain("github.event_name == 'push'");
+    expect(job).toContain('scripts/publish-github-release.sh');
+  });
+
+  it('adds the Android binaries with the same script, so either workflow can finish first', () => {
+    const workflow = readRepoFile('.github/workflows/native-android-build.yml');
+    expect(workflow).toContain('scripts/publish-github-release.sh "$RELEASE_TAG" release-assets/*');
+    // The old step failed whenever the release already existed.
+    expect(workflow).not.toContain('Bump package.json version before building another release');
   });
 });
 
@@ -236,11 +350,12 @@ describe('Android audio e2e', () => {
     expect(workflow).toMatch(/^permissions:\n  contents: read\n/m);
   });
 
-  it('gives issue access only to the nightly alert job', () => {
-    expect(workflow.match(/issues: write/g)).toHaveLength(1);
-    const alertJob = workflow.slice(workflow.indexOf('\n  alert:\n'));
-    expect(alertJob).toContain('issues: write');
-    expect(alertJob).toContain("github.event_name == 'schedule'");
+  it('runs only on release PRs and by hand, with no nightly run or alert', () => {
+    // Host outages are the External Dependency Monitor's job, daily; the app
+    // code this test checks only changes through a release PR.
+    expect(workflow).not.toContain('schedule:');
+    expect(workflow).not.toContain('issues: write');
+    expect(workflow).not.toContain('\n  alert:\n');
   });
 
   it('keeps the job name the Main protection ruleset requires', () => {
