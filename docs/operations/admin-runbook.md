@@ -520,41 +520,48 @@ the policy, no release can merge into `main`**:
 
 | Workflow | Why it uses `pull_request_target` | Required on `main` |
 | --- | --- | --- |
-| `main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
-| `android-pr-preview.yml` | The Drive upload needs the `production` environment, which only `main` may use. It builds only this repository's `release/*` branches, never fork code. | Yes: `Build Android debug APK (ARM)` |
-| `pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
+| `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
+| `.github/workflows/android-pr-preview.yml` | The Drive upload needs the `production` environment, which only `main` may use. It builds only this repository's `release/*` branches, never fork code. | Yes: `Build Android debug APK (ARM)` |
+| `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
 
 None of them runs code from a fork with secrets or a write token, which is what makes
 `pull_request_target` dangerous (a "pwn request").
 
-**The church's choice: allow every event for every workflow.** That keeps
-`pull_request_target` working as it did before, without updating the policy whenever
-a workflow changes. The safeguard is `test/native-build-safety.test.ts` instead: it
-fails if any workflow other than these three starts using `pull_request_target`, so a
-new one gets reviewed before it can merge. Before adding a workflow to that list, check
-that it never runs pull request code while it can read secrets or write to the
-repository. Keep the test even though the policy allows everything.
+**The church's choice: one policy that allows every event for every workflow.** It
+works the way GitHub did before November 2, and nobody has to update it when a
+workflow changes. That's safe here because other protections, not this policy, keep
+outside code away from secrets and write access:
 
-To set it up:
+- `pull_request_target` always runs the workflow as it is on `main`, never the pull
+  request's copy, so an outsider can't add or change one. Only a reviewed release PR
+  can.
+- `test/native-build-safety.test.ts` fails if any workflow other than these three
+  starts using `pull_request_target`, so a new one can't merge unnoticed. Before adding
+  one to that list, check that it never runs pull request code while it can read
+  secrets or write to the repository.
+- Workflows that run for a fork's pull request get no secrets and a read-only token,
+  and none runs until a maintainer approves it (**Settings → Actions → General →
+  Require approval for all external contributors**).
+- The default workflow token is read-only, and workflows can't approve pull requests.
+- The store upload secrets are in the `store-upload` environment, which only `main`
+  can use.
+
+Keep those settings and the test.
+
+To set up the policy:
 
 1. **Settings → Actions → Policies → New policy.**
-2. **Name** it, for example `Allow all workflow events`.
+2. **Name** it `Allow all workflow events`.
 3. **Enforcement status:** **Active**. (**Evaluate**, a dry run, is only available on
    GitHub Enterprise Cloud.)
 4. **Target** all workflows in the repository.
-5. **Event rules:** allow **all events**, if the form offers that option.
+5. **Event rules:** tick every event in the list. There's no "all events" option, and
+   an event rule is an allowlist: an unticked event stops every workflow that uses it.
 6. After the next release PR, open **Policy insights**, under the policies page, and
    check that nothing was blocked.
 
-An event rule is an allowlist: for the workflows a policy targets, any event it doesn't
-list is blocked. So if the form can't allow all events, don't list events for the whole
-repository, because any new trigger added later would be blocked until someone updated
-the policy. Instead, target only the three workflow files above
-(`.github/workflows/main-release-source-gate.yml`,
-`.github/workflows/android-pr-preview.yml`, and
-`.github/workflows/pending-release-label.yml`) and allow `pull_request_target` and
-`issues`, which the pending-release label workflow also uses. That leaves every other
-workflow untouched.
+New workflows need no change to the policy. Only if GitHub adds a new kind of event,
+and a workflow uses it, does that event need ticking here.
 
 If `ensure_pr_to_main_from_release_branch` or `Build Android debug APK (ARM)` ever stops
 reporting on a release PR, check this policy first.
