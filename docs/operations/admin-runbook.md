@@ -529,24 +529,42 @@ None of them runs code from a fork with secrets or a write token, which is what 
 
 **The church's choice: one policy that allows every event for every workflow.** It
 works the way GitHub did before November 2, and nobody has to update it when a
-workflow changes. That's safe here because other protections, not this policy, keep
-outside code away from secrets and write access:
+workflow changes. The policy only decides which triggers may start a workflow; what
+keeps pull request code away from secrets and write access is the workflows
+themselves, and tests enforce that:
 
 - `pull_request_target` always runs the workflow as it is on `main`, never the pull
   request's copy, so an outsider can't add or change one. Only a reviewed release PR
   can.
-- `test/native-build-safety.test.ts` fails if any workflow other than these three
-  starts using `pull_request_target`, so a new one can't merge unnoticed. Before adding
+- The gate and the label workflow never check out code. The Android preview builds
+  only this repository's `release/*` branches, which only people with write access
+  can push, and never a fork's code. Its build job has no secrets, no saved
+  credentials, and a read-only token; the upload job, which has the Drive secret,
+  runs only `main`'s upload script on the finished APK.
+- Pull request text, such as a title, body, or branch name, reaches a script only
+  through an environment variable, never pasted into the script, so it can't inject
+  commands.
+- Only the label workflow can write, and only to issues.
+- `test/native-build-safety.test.ts` fails if any of the above changes, if a workflow
+  turns off `actions/checkout`'s protection against fork code
+  (`allow-unsafe-pr-checkout`), or if any other workflow starts using
+  `pull_request_target`, so a new one gets reviewed before it can merge. Before adding
   one to that list, check that it never runs pull request code while it can read
   secrets or write to the repository.
-- Workflows that run for a fork's pull request get no secrets and a read-only token,
-  and none runs until a maintainer approves it (**Settings → Actions → General →
-  Require approval for all external contributors**).
+- CodeQL scans the workflows for these mistakes too (**Security → Code scanning**).
+
+GitHub adds its own limits: a `pull_request_target` run can read `main`'s cache but
+not write to it, so it can't poison the cache the signing builds use. Elsewhere:
+
+- `pull_request` workflows for a fork's pull request get no secrets and a read-only
+  token, and none runs until a maintainer approves it (**Settings → Actions → General
+  → Require approval for all external contributors**). That approval doesn't cover
+  `pull_request_target`, which is why these three never run fork code.
 - The default workflow token is read-only, and workflows can't approve pull requests.
 - The store upload secrets are in the `store-upload` environment, which only `main`
   can use.
 
-Keep those settings and the test.
+Keep those settings and the tests.
 
 To set up the policy:
 
