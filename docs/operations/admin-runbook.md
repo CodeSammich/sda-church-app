@@ -536,10 +536,18 @@ To allow exactly these three:
    `.github/workflows/android-pr-preview.yml`, and
    `.github/workflows/pending-release-label.yml`.
 4. **Event rules:** allow `pull_request_target`, and `issues`, which the
-   pending-release label workflow also uses.
-5. Start with **Evaluate**, then open **Policy insights**, which is under the policies
-   page. After the next release PR, it should show no would-be-blocked runs of these
-   three. Then switch the policy to **Active**.
+   pending-release label workflow also uses. An event rule is an allowlist: for the
+   workflows a policy targets, any event it doesn't list is blocked.
+5. **Enforcement status:** **Active**. (**Evaluate**, a dry run, is only available on
+   GitHub Enterprise Cloud.) Because the policy targets only these three files, it can't
+   block any other workflow.
+6. After the next release PR, open **Policy insights**, under the policies page, and
+   check that none of the three was blocked.
+
+If the policy can't target individual workflow files, target the whole repository
+instead and allow every event the workflows use: `push`, `pull_request`,
+`pull_request_target`, `workflow_dispatch`, `schedule`, and `issues`. Then check
+**Policy insights** after the next few runs.
 
 If `ensure_pr_to_main_from_release_branch` or `Build Android debug APK (ARM)` ever stops
 reporting on a release PR, check this policy first.
