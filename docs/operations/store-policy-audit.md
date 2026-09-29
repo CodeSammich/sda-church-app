@@ -229,6 +229,9 @@ $25 registration fee; nonprofit status is not a substitute for identity verifica
 
 ## Submission metadata and reviewer notes
 
+The finished listing text and reviewer notes are in
+[Store listings](store-listing.md).
+
 Use a unique, accurate title and describe the app as a church community utility with:
 
 - native Bible reading, translation, pinyin, verse saving, sharing, and audio;
