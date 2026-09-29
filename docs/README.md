@@ -155,4 +155,5 @@ The PWA is retained as a secondary engineering and preview surface:
 
 Native iOS and Android binaries remain the supported primary release targets. Native
 signing, device testing, store review, and store submission are documented in the
-[native build guide](operations/native-builds.md).
+[native build guide](operations/native-builds.md). How the version and the store build
+numbers relate is explained in [Version numbers](operations/version-numbers.md).

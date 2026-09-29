@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 const androidBuildScript = resolve(
   process.cwd(),
@@ -67,6 +68,163 @@ describe('Android PR preview', () => {
     expect(readRepoFile('.github/workflows/android-pr-preview.yml'))
       .toContain('name: Build Android debug APK (ARM)');
   });
+
+  it('builds only release PRs, not Dependabot PRs into main', () => {
+    expect(readRepoFile('.github/workflows/android-pr-preview.yml'))
+      .toContain("startsWith(github.event.pull_request.head.ref, 'release/')");
+  });
+});
+
+// The slow checks run once per release, on the release PR into main, where
+// the Main protection ruleset requires them. Feature PRs into a release branch
+// get only the quick checks, and PRs into main from any other branch, such as
+// Dependabot's, skip them without taking a runner.
+describe.each([
+  ['android-audio-e2e.yml', 'e2e'],
+  ['bulletin-integration.yml', 'verify-bulletin-api'],
+  ['ios-pr-preview.yml', 'simulator'],
+])('%s runs only on release PRs into main', (file, job) => {
+  const workflow = readRepoFile(`.github/workflows/${file}`);
+
+  it('triggers on pull requests into main only, with no path filter', () => {
+    // A path filter would skip the release PR, and a required check that
+    // never reports blocks the merge.
+    const trigger = workflow.slice(workflow.indexOf('\non:'), workflow.indexOf('\npermissions:'));
+    expect(trigger).toMatch(/\n  pull_request:\n    branches:\n      - main\n(?! {6}-)/);
+    expect(trigger).not.toContain('paths:');
+  });
+
+  it('skips PRs whose head is not a release branch in this repository', () => {
+    const jobStart = workflow.indexOf(`\n  ${job}:\n`);
+    expect(jobStart).toBeGreaterThan(-1);
+    const condition = workflow.slice(jobStart, workflow.indexOf('\n    runs-on:', jobStart));
+    expect(condition).toContain("startsWith(github.head_ref, 'release/')");
+    expect(condition).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+    expect(condition).toContain("github.event_name != 'pull_request'");
+  });
+});
+
+describe('Native Android build', () => {
+  it('reads the release version for the GitHub Release', () => {
+    // A quoting mistake here once failed every release after the binaries built.
+    const workflow = readRepoFile('.github/workflows/native-android-build.yml');
+    const command = workflow.match(/- name: Read release version\n\s+id: version\n\s+run: (.+)\n/)?.[1];
+    expect(command).toBeDefined();
+    const output = resolve(mkdtempSync(join(tmpdir(), 'release-version-')), 'output');
+    const result = spawnSync('bash', ['-c', command as string], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_OUTPUT: output },
+    });
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(readFileSync(output, 'utf8')).toBe(
+      `version=${JSON.parse(readRepoFile('package.json')).version}\n`,
+    );
+  });
+});
+
+// Store uploads run in their own jobs and environment, apart from the signing
+// secrets, and run no npm packages, so a compromised dependency in the build
+// job can't reach the store credentials.
+describe.each([
+  [
+    'native-ios-build.yml',
+    'testflight_upload',
+    ['APP_STORE_CONNECT_API_KEY_ID', 'APP_STORE_CONNECT_API_ISSUER_ID', 'APP_STORE_CONNECT_API_PRIVATE_KEY'],
+  ],
+  ['native-android-build.yml', 'play_upload', ['GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER', 'GOOGLE_PLAY_SERVICE_ACCOUNT']],
+])('%s store upload', (file, job, secrets) => {
+  const workflow = readRepoFile(`.github/workflows/${file}`);
+  const start = workflow.indexOf(`\n  ${job}:\n`);
+  const length = workflow.slice(start + 1).search(/\n {2}[a-z_-]+:\n/);
+  const uploadJob = workflow.slice(start, length === -1 ? undefined : start + 1 + length);
+  const otherJobs = workflow.replace(uploadJob, '');
+
+  it('runs in the store-upload environment, only for main in this repository', () => {
+    expect(start).toBeGreaterThan(-1);
+    expect(uploadJob).toContain('environment: store-upload');
+    expect(uploadJob).toContain("github.ref == 'refs/heads/main'");
+    expect(uploadJob).toContain('github.event.repository.fork == false');
+  });
+
+  it('keeps the store credentials out of every other job, and the signing secrets out of it', () => {
+    for (const secret of secrets) {
+      expect(uploadJob).toContain(`secrets.${secret}`);
+      expect(otherJobs).not.toContain(secret);
+    }
+    expect(uploadJob).not.toMatch(/secrets\.(IOS|ANDROID)_/);
+  });
+
+  it('runs no npm packages and never traces the shell', () => {
+    expect(uploadJob).not.toMatch(/npm (ci|install)|npx |cache:/);
+    expect(uploadJob).not.toMatch(/^\s+set -[a-z]*x/m);
+  });
+
+  it('skips with a notice until the secrets are set', () => {
+    expect(uploadJob).toContain('::notice title=');
+  });
+});
+
+describe('Google Play upload', () => {
+  it('lets only the upload job ask GitHub for an identity token', () => {
+    // The keyless sign-in's token is accepted only for the store-upload
+    // environment, but no other job should be able to request one at all.
+    const workflow = readRepoFile('.github/workflows/native-android-build.yml');
+    expect(workflow.match(/id-token: write/g)).toHaveLength(1);
+    const playJob = workflow.slice(workflow.indexOf('\n  play_upload:\n'), workflow.indexOf('\n  release:\n'));
+    expect(playJob).toContain('id-token: write');
+  });
+
+  it("reads the release notes from git, never by pasting the commit message into the shell", () => {
+    // `${{ github.event.head_commit.message }}` inside `run:` would let a
+    // commit message run commands.
+    const workflow = readRepoFile('.github/workflows/native-android-build.yml');
+    expect(workflow).toContain('RELEASE_COMMIT_SUBJECT="$(git log -1 --format=%s)"');
+    expect(workflow).not.toContain('head_commit');
+  });
+});
+
+describe('Apple signing reminders', () => {
+  it('reads no secrets in the monitor or in the per-build date check', () => {
+    // The dates aren't secret; neither job needs Apple credentials.
+    const monitor = readRepoFile('.github/workflows/apple-signing-monitor.yml');
+    expect(monitor).not.toMatch(/secrets\./);
+    expect(monitor).not.toContain('environment:');
+    // Every repository admin gets the Apple reminder by email.
+    expect(monitor).toContain('vars.APPLE_SIGNING_ALERT_ASSIGNEES || vars.MONITOR_ALERT_ASSIGNEES');
+    const workflow = readRepoFile('.github/workflows/native-ios-build.yml');
+    const start = workflow.indexOf('\n  signing_dates:\n');
+    const job = workflow.slice(start, workflow.indexOf('\n  testflight_upload:\n'));
+    expect(start).toBeGreaterThan(-1);
+    expect(job).not.toMatch(/secrets\.|environment:/);
+    expect(job).toContain('node scripts/check-apple-signing-expiry.cjs --profile');
+  });
+});
+
+describe('TestFlight upload', () => {
+  const workflow = readRepoFile('.github/workflows/native-ios-build.yml');
+
+  it('removes the App Store Connect key however the upload ends', () => {
+    expect(workflow).toContain(`trap 'rm -f "$KEY_PATH"' EXIT`);
+    expect(workflow).toMatch(
+      /- name: Remove the IPA and API key\n\s+if: always\(\)\n\s+run: rm -rf [^\n]*\.appstoreconnect\/private_keys/,
+    );
+  });
+});
+
+describe('Store build numbers in CI', () => {
+  it('computes the iOS build number from the version', () => {
+    expect(readRepoFile('.github/workflows/native-ios-build.yml')).toContain(
+      'node scripts/store-build-number.cjs "$APP_VERSION"',
+    );
+  });
+
+  it('requires each release PR to raise the version, and with it the build number', () => {
+    const workflow = readRepoFile('.github/workflows/pr-check.yml');
+    expect(workflow).toContain('node scripts/store-build-number.cjs "$HEAD_VER"');
+    expect(workflow).toContain('if [ "$HEAD_BUILD" -le "$BASE_BUILD" ]; then');
+  });
 });
 
 describe('Android audio e2e', () => {
@@ -83,6 +241,10 @@ describe('Android audio e2e', () => {
     const alertJob = workflow.slice(workflow.indexOf('\n  alert:\n'));
     expect(alertJob).toContain('issues: write');
     expect(alertJob).toContain("github.event_name == 'schedule'");
+  });
+
+  it('keeps the job name the Main protection ruleset requires', () => {
+    expect(workflow).toContain('name: Bible audio on an Android emulator');
   });
 
   it('runs the scenarios with the church host blocked, as they expect', () => {

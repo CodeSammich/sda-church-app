@@ -32,5 +32,6 @@ Code, Codex, Gemini, and others). The full contributor guide is
 - This is a public repository. Keep personal names, personal email addresses,
   account IDs, and descriptions of unfixed security gaps out of code, commits,
   PRs, and issues.
-- Leave Android `versionCode` unchanged; a maintainer bumps it right before a
-  Google Play upload.
+- Never set Android `versionCode` or iOS `buildNumber` in `app.json`. Both are
+  computed from the version; see
+  [Version numbers](docs/operations/version-numbers.md).

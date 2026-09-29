@@ -1,0 +1,30 @@
+sequenceDiagram
+  autonumber
+  box rgb(246,248,250) GitHub · church repository
+    participant Job as Upload job<br/>store-upload environment, main
+    participant OIDC as GitHub identity tokens
+  end
+  box rgb(240,250,243) Google Cloud · sda-church-app-play · free, no billing account
+    participant STS as Security Token Service API
+    participant Pool as Workload identity pool "github"<br/>provider "sda-church-app"
+    participant Creds as IAM Service Account<br/>Credentials API
+  end
+  box rgb(240,246,255) Google Play
+    participant Play as Google Play Android<br/>Developer API
+    participant Track as Internal testing track
+  end
+
+  Job->>OIDC: Ask for an identity token<br/>(the job has id-token: write)
+  OIDC-->>Job: Signed token: repository ID,<br/>environment, and branch
+  Job->>STS: Trade it, for the provider in<br/>GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER
+  STS->>Pool: Does the token pass<br/>the provider's condition?
+  Note over Pool: Only this repository's ID,<br/>the store-upload environment, and main
+  Pool-->>STS: Yes
+  STS-->>Job: Federated token
+  Job->>Creds: Act as GOOGLE_PLAY_SERVICE_ACCOUNT<br/>(play-upload)
+  Note over Creds: Allowed because the pool is a<br/>Workload Identity User on play-upload
+  Creds-->>Job: play-upload token: Google Play only,<br/>expires within an hour
+  Job->>Play: Upload the AAB, set the release<br/>name and "What's new", commit
+  Note over Play: Play Console lets play-upload<br/>only release to testing tracks
+  Play->>Track: Roll the release<br/>out to testers
+  Note over Job,Track: No key is stored anywhere: every token expires within an hour.<br/>An admin promotes the release to production after testing.

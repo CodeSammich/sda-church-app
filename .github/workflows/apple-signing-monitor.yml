@@ -1,0 +1,92 @@
+name: Apple Signing Monitor
+
+# The Apple Distribution certificate, the App Store provisioning profile, and
+# the Apple Developer membership expire every year. This reads their dates
+# from .github/apple-signing-expiry.json weekly and opens an alert issue, with
+# the renewal steps, from 60 days before any of them expires. It uses no Apple
+# credentials: the dates aren't secret, and the issue shows nothing but dates.
+
+on:
+  schedule:
+    # Mondays, away from the top of the hour, when scheduled Actions are busiest.
+    - cron: "37 16 * * 1"
+      timezone: "America/New_York"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: apple-signing-monitor
+  cancel-in-progress: false
+
+jobs:
+  check-apple-signing:
+    # Forks commonly disable Issues, while this monitor opens and updates an
+    # alert issue. Keep scheduled/manual monitoring scoped to the canonical repo.
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+
+      - name: Check Apple signing dates
+        id: expiry-check
+        continue-on-error: true
+        run: node scripts/check-apple-signing-expiry.cjs --report apple-signing-report.json
+
+      # The issue handling lives in scripts/monitor-alert-issue.cjs and the
+      # alert text in scripts/check-apple-signing-expiry.cjs, both unit tested.
+      - name: Open or update the alert issue
+        if: steps.expiry-check.outcome == 'failure'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          # Comma-separated GitHub usernames. Assigning the alert emails them
+          # even when they don't watch the repository. Apple renewals go to the
+          # maintainers in APPLE_SIGNING_ALERT_ASSIGNEES; without it, they go to
+          # the usual monitor assignees.
+          ALERT_ASSIGNEES: ${{ vars.APPLE_SIGNING_ALERT_ASSIGNEES || vars.MONITOR_ALERT_ASSIGNEES }}
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const { buildAppleSigningAlert } = require(`${process.env.GITHUB_WORKSPACE}/scripts/check-apple-signing-expiry.cjs`);
+            const report = alerts.readReport('apple-signing-report.json', core);
+            const alert = buildAppleSigningAlert(report, alerts.getRunUrl(context));
+            const result = await alerts.openOrUpdateAlert({
+              github,
+              context,
+              core,
+              ...alert,
+              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
+            });
+            core.info(`Alert issue ${result.action}: #${result.number}`);
+
+      - name: Close the alert issue after renewal
+        if: steps.expiry-check.outcome == 'success'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const { ALERT_TITLE } = require(`${process.env.GITHUB_WORKSPACE}/scripts/check-apple-signing-expiry.cjs`);
+            const result = await alerts.closeAlert({
+              github,
+              context,
+              title: ALERT_TITLE,
+              body: `Every Apple signing date is more than 60 days away again, as of ${alerts.getRunUrl(context)}.`,
+            });
+            core.info(`Alert issue: ${result.action}`);
+
+      - name: Mark the workflow unhealthy
+        if: steps.expiry-check.outcome == 'failure'
+        run: |
+          echo "Apple signing needs renewal. See the job summary and alert issue."
+          exit 1

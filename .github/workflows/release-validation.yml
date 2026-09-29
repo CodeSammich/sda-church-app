@@ -4,11 +4,6 @@ on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
 
-env:
-  # Opt into Node.js 24 for all JavaScript actions to resolve deprecation warnings
-  # for actions/checkout@v4 and actions/setup-node@v4.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 concurrency:
   group: release-version-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -22,7 +17,7 @@ jobs:
     outputs:
       version: ${{ steps.release-version.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
@@ -54,14 +49,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "lts/*"
 

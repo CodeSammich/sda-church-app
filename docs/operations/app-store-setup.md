@@ -135,42 +135,79 @@ macOS, see the commands in
 The workflow checks that the profile belongs to `IOS_TEAM_ID` and to
 `org.nyccsda.app` before importing anything, and deletes every signing file when
 it finishes. It runs only for commits on `main`, or a manual run from `main`, so
-the first signed build happens when a release reaches `main`. It produces an IPA
-artifact; uploading it to App Store Connect is a separate manual step (see
-[Uploading to the stores](admin-runbook.md#uploading-to-the-stores)). Each upload
-needs a higher `expo.ios.buildNumber` in `app.json`.
+the first signed build happens when a release reaches `main`. A separate job then
+uploads the IPA to TestFlight, once the App Store Connect API key is set up; see
+[Automatic store uploads](native-builds.md#automatic-store-uploads). The build number
+is computed from the version; see [Version numbers](version-numbers.md).
 
 ### Yearly Apple renewals
 
-Three things expire every year. Put each date in the church calendar with a
-reminder about a month ahead.
+Three things expire every year. **GitHub reminds you.** Every Monday, the **Apple
+Signing Monitor** reads their dates from `.github/apple-signing-expiry.json`. From 60
+days before any of them expires, it opens the issue **[monitor] Apple signing needs
+renewal**, with the steps below. The issue is assigned to the maintainers listed in
+the `APPLE_SIGNING_ALERT_ASSIGNEES` Actions variable, so each gets an email.
+It comments every week until the renewal is recorded, which emails them again, then
+closes itself. The first reminder for the current dates arrives around July 26, 2027,
+two months before the membership renews on September 20, 2027.
 
-1. **Developer Program membership and the fee waiver.** Because the church is a
-   recognized nonprofit, Apple waives the $99 annual fee. The waiver isn't
-   permanent: when the membership comes up for renewal, the **Account Holder**
-   must confirm that the church is still eligible. Renewal opens 30 days before
-   the expiration date. To stay eligible, the church must remain a recognized
-   nonprofit (in the U.S., by the IRS), and the app must stay free, with no paid apps, in-app
-   purchases, or sales of digital goods. If the membership lapses, the app is
-   removed from the App Store (copies already installed keep working) and no
-   updates can be uploaded until it's renewed. See Apple's
+The monitor reads no Apple credentials, and the public issue shows only dates, which
+give no access to anything.
+
+| What | When it expires | Who renews it |
+| --- | --- | --- |
+| **Apple Developer Program membership** and its fee waiver | The date on the account's **Membership details** page | The Account Holder |
+| **Apple Distribution certificate** | One year after it's created | An administrator with a Mac |
+| **App Store provisioning profile** | With the certificate it was made from | An administrator |
+
+When the certificate or profile expires, the app already on the App Store keeps
+working, but new builds can't be signed or uploaded. When the membership lapses,
+the app is removed from the App Store (copies already installed keep working) and no
+updates can be uploaded until it's renewed.
+
+#### Renewal checklist
+
+1. **Renew the membership** (Account Holder). Renewal opens 30 days before it
+   expires. Because the church is a recognized nonprofit, Apple waives the $99
+   annual fee, but the Account Holder must confirm at each renewal that the church
+   is still eligible: it must remain a recognized nonprofit (in the U.S., by the
+   IRS), and the app must stay free, with no paid apps, in-app purchases, or sales
+   of digital goods. See Apple's
    [fee waiver requirements](https://developer.apple.com/help/account/membership/fee-waivers/)
    and [program renewal](https://developer.apple.com/help/account/membership/renewal/).
-2. **The Apple Distribution certificate** is valid for one year. When it expires,
-   the app already on the App Store keeps working, but new builds can't be
-   uploaded. Before it expires, create a replacement: a new certificate request,
-   certificate, and `.p12`, as above.
-3. **The provisioning profile** depends on the certificate. Generate a new
-   App Store profile with the new certificate.
+2. **Create a new certificate** on a Mac, as in
+   [Create an Apple Distribution certificate](#create-an-apple-distribution-certificate):
+   a new certificate signing request, a new **Apple Distribution** certificate, and a
+   `.p12` exported with a new strong password. Apple allows more than one at a time,
+   so the old certificate keeps working until you revoke it in step 7.
+3. **Create a new provisioning profile** with the new certificate, as in
+   [Create the App Store provisioning profile](#create-the-app-store-provisioning-profile).
+4. **Update GitHub.** In the `production` environment, replace
+   `IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`, and
+   `IOS_PROVISIONING_PROFILE_BASE64`, encoding the files as in
+   [Add the signing values to GitHub Actions](#add-the-signing-values-to-github-actions).
+   `IOS_TEAM_ID` doesn't change.
+5. **Test the signing.** Run **Actions → Native iOS build → Run workflow** from
+   `main`. The build should succeed. Its **Check the recorded Apple signing dates** job
+   then prints the new certificate and profile dates to record, because they no longer
+   match the file. Its TestFlight upload reports that the build is already there,
+   which is expected for a rebuild of the same release.
+6. **Record the new dates** in `.github/apple-signing-expiry.json`, in a pull request
+   into the current release branch: the values printed in step 5 for
+   `distributionCertificate` and `provisioningProfile`, and, if it was renewed, the new
+   membership date from **Membership details** for `developerMembership`. The dates
+   are ISO dates, such as `2028-09-27T00:00:00Z`; the time of day doesn't matter.
+7. **Revoke the old certificate** in **Certificates, Identifiers & Profiles →
+   Certificates**, once the new one has signed a build. A revoked certificate doesn't
+   affect the app already on the App Store, but builds signed with it that were
+   uploaded and not yet submitted may be marked invalid.
+8. **Store the new files** where the IT administrators keep signing files, replacing
+   last year's: the `.p12`, the `.mobileprovision`, and the `.p12` password, kept apart
+   from the file.
 
-After replacing the certificate and profile, update
-`IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`
-and `IOS_PROVISIONING_PROFILE_BASE64` in the `production` Environment.
-`IOS_TEAM_ID` doesn't change. Then run **Actions → Native iOS build → Run
-workflow** from `main` to confirm that signing still works. Once the new
-certificate works, revoke the old one in the Apple Developer portal. A revoked
-certificate doesn't affect the app already on the App Store, but builds signed
-with it that are uploaded and not yet submitted may be marked invalid.
+Once every date is more than 60 days away, the reminder issue closes on the next
+Monday run. To close it sooner, run **Actions → Apple Signing Monitor → Run
+workflow**.
 
 ## Google Play
 
@@ -271,21 +308,47 @@ changed afterwards.
 
 - Use **Google-managed Play App Signing**: Google keeps the key that signs what
   users install, and the church's CI signs uploads with an **upload key**. The
-  upload key, the four `production` Environment secrets, and the `versionCode`
-  rules are in
-  [Android setup](native-builds.md#android-setup-github-hosted-direct-builds).
+  upload key and the four `production` Environment secrets are in
+  [Android setup](native-builds.md#android-setup-github-hosted-direct-builds). The
+  `versionCode` is computed from the version; see
+  [Version numbers](version-numbers.md).
 - Back up the upload keystore and its passwords in the church's password
   manager, with a separate encrypted offline copy. Never commit them or record
   them here.
-- After a release reaches `main`, approve the **Native Android build** in the
-  `production` environment, download its AAB, and upload it to the **Internal
-  testing** track first.
+- Make the **first** upload by hand. Google requires this before it accepts uploads
+  through its API; the church did it with 0.39.0:
+  1. After a release reaches `main`, approve the **Native Android build** in the
+     `production` environment, and download its AAB from the release's GitHub Release
+     or from the run's `native-android-production-…` artifact.
+  2. Play Console → **Test and release → Testing → Internal testing → Create new
+     release**, and upload the `.aab`.
+  3. **Release name:** use the version and build number, such as `0.39.0 (1)`. The
+     automatic uploads use the same format.
+  4. **Release notes:** keep Play's language tags, such as `<en-US>` and `</en-US>`,
+     and write the text between them. Testers see it as "What's new".
+  5. **Next.** A warning that the release "will not be available to any users because
+     you haven't specified any testers" is expected; testers are added next. Click
+     **Save and publish**.
+  6. On the **Testers** tab, add testers as described under
+     [Testing and release tracks](#testing-and-release-tracks).
+- Every later release uploads to internal testing automatically. The upload signs
+  in, without a key, as the `play-upload` service account in the church's Google
+  Cloud project, `sda-church-app-play`, which Play Console lets release to testing
+  tracks. That project is free and has **no billing account; never add one**. See
+  [Google Cloud: free only](../architecture.md#google-cloud-free-only) and
+  [Automatic store uploads](native-builds.md#automatic-store-uploads).
 
 ### Testing and release tracks
 
-- **Internal testing:** add testers by email, or by a Google Group of church
-  testers, and share the opt-in link. Install the build from Google Play on a
-  real phone, and confirm that a later build installs over it as an update.
+- **Internal testing:** on the track's **Testers** tab, **Create email list**, add up
+  to 100 testers, and tick the list. Use each tester's **Google account email: the one
+  signed into the Play Store on their phone** (the Play Store app shows it under the
+  profile picture). A personal Gmail is usually right; a church `nyccsda.org` account
+  works only if it's the one in their Play Store. Add yourself too. Once the release
+  is published, the tab shows an **opt-in link**: each tester opens it signed in with
+  that account, taps **Become a tester**, and installs from the Play Store, which can
+  take a few minutes. Install on a real phone, and confirm that a later build installs
+  over it as an update.
 - **Production:** promote a tested release from its track, or create a
   production release with the same AAB. New releases go through Google's
   review before they reach users. As an organization account, the church

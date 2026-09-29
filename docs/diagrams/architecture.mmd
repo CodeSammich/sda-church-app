@@ -34,6 +34,8 @@ flowchart TB
     qr["QR code workflow<br/>run by hand"]
   end
 
+  gcloud@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-cloud.svg", label: "Google Cloud · sda-church-app-play<br/>signs in as play-upload, without a key<br/>free: no billing account, never add one", pos: "b", w: 48, h: 39, constraint: "on" }
+
   deps["🌐 Media and third-party services<br/>church media on Adventist Connect,<br/>Bible text and audio, Sabbath School,<br/>hymnals, library, worship media, giving<br/>(see App dependencies)"]
 
   members -. scans QR code .-> site
@@ -56,10 +58,12 @@ flowchart TB
   release -- release PR --> main
   main --> actions
   actions --> binaries
-  binaries -. admin uploads AAB in Play Console .-> play
-  binaries -. admin uploads IPA in App Store Connect .-> appstore
+  binaries -- "AAB, uploaded automatically<br/>with a keyless sign-in" --> gcloud
+  gcloud -- "lands in internal testing;<br/>an admin publishes it after testing" --> play
+  admins -. "Owners; never add billing" .-> gcloud
+  binaries -- "IPA, uploaded automatically<br/>to TestFlight; an admin<br/>submits it after testing" --> appstore
   admins -. if Drive QR files are compromised .-> qr
   qr -. regenerates .-> assets
 
   classDef logo fill:#ffffff,stroke:#d0d7de
-  class site,play,appstore,ios,android,roster,api,printed,assets,pdf,main,actions logo
+  class site,play,appstore,ios,android,roster,api,printed,assets,pdf,main,actions,gcloud logo

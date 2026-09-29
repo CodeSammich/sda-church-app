@@ -43,6 +43,7 @@ whole system is the domain.
 | [GitHub Actions](#github-actions) | Tests, builds, deploys | Free (public repo) | Fair use, concurrency | Queued jobs | None |
 | [GitHub Pages](#github-pages) | `app.nyccsda.org` | Free | 1 GB site, 100 GB/month soft | `429` or a GitHub email | None |
 | [Google Workspace](#google-workspace-and-drive) | Roster, Drive, Apps Script | Free (nonprofit) | 100 TB pooled storage | Quota errors | None |
+| [Google Cloud](#google-cloud-play-upload-service-account) | Service account for automatic Google Play uploads | Free; **never link a billing account** | Play Developer API: 3,000 queries per minute | Uploads fail with an error | None: about ten requests per release |
 | [Cloudflare](#cloudflare) | Domain and DNS | **~$10/year** (domain only) | n/a | n/a | None |
 | [App stores](#app-stores) | Distribution | Free (Apple nonprofit waiver; Play $25 paid once) | n/a | n/a | None |
 
@@ -251,6 +252,43 @@ organization. It holds the roster, the bulletin files, the media backup copy, an
 preview APKs the Android PR workflow uploads. Those APKs accumulate over time, so
 clear old ones out occasionally; this is housekeeping, not a cost risk. Exceeding an
 API quota returns an error.
+
+### Google Cloud (Play upload service account)
+
+The [automatic Google Play upload](native-builds.md#automatic-store-uploads) signs in as
+a service account in a Google Cloud project the church owns (`sda-church-app-play`).
+**It costs nothing, and it can't start costing anything while the project has no
+billing account.** That protection doesn't depend on Google's prices.
+
+- **Nothing can be billed without a billing account.** In Google Cloud, a Cloud
+  Billing account "defines who pays for a given set of Google Cloud resources"
+  ([Cloud Billing concepts](https://docs.cloud.google.com/billing/docs/concepts)); it's
+  where a payment method lives. The church's project isn't linked to one, so there's
+  no one to charge.
+- **Everything the project uses is free today.** The service account and the keyless
+  sign-in (Workload Identity Federation, with Google's token exchange) are part of
+  Identity and Access Management: "All use of Identity and Access Management API is
+  free of charge" ([IAM pricing](https://cloud.google.com/iam/pricing)). The Google
+  Play Developer API isn't a paid Google Cloud product: Google's
+  [setup guide](https://developers.google.com/android-publisher/getting_started) and
+  [quota page](https://developers.google.com/android-publisher/quotas) name no charge,
+  only a limit of 3,000 queries per minute. One upload makes about ten requests,
+  counting the sign-in.
+- **If Google ever changed that,** the upload would fail with an error rather than
+  bill anyone, because there's no billing account to bill. Uploads would go back to
+  being made by hand in Play Console until the church decides what to do.
+
+The rules that keep it free:
+
+- **Never link a billing account to this project**, and never start a Google Cloud
+  free trial: the trial asks for a card and creates a billing account. This is also a
+  [governance rule](../architecture.md#google-cloud-free-only).
+- **If any screen asks for billing to continue, stop.** Nothing in this setup needs
+  it, so being asked means something changed.
+- **Once a year**, with the [upkeep calendar](../architecture.md#upkeep-calendar), open
+  the project's **Billing** page and confirm it has no billing account.
+
+Checked 2026-09-28.
 
 ### Cloudflare
 

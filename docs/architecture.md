@@ -17,6 +17,7 @@ Super Administrators can share.
 - [Files not in this repository](#files-not-in-this-repository)
 - [Church media](#church-media)
 - [App stores](#app-stores)
+- [Google Cloud: free only](#google-cloud-free-only)
 - [Website: app.nyccsda.org](#website-appnyccsdaorg)
 - [Third-party APIs and websites](#third-party-apis-and-websites)
 - [Upkeep calendar](#upkeep-calendar)
@@ -32,14 +33,14 @@ links.
 Who does what: the congregation gets and uses the app, staff produce the digital and
 printed bulletins, and IT administrators develop, release, and maintain it.
 
-![Overview diagram: the congregation scans a QR code to reach the download page and installs the app from Google Play or the Apple App Store; staff edit the scheduling roster, which feeds the digital bulletin in the apps and the printed Queens, Queens Communion, and Brooklyn bulletins; IT administrators own the GitHub organization, develop on forks, merge feature PRs into a release branch and release PRs into main, then upload the signed AAB and IPA to the stores and rerun the QR code workflow when needed; the apps rely on media and third-party services shown in the app dependencies diagram](diagrams/architecture.svg)
+![Overview diagram: the congregation scans a QR code to reach the download page and installs the app from Google Play or the Apple App Store; staff edit the scheduling roster, which feeds the digital bulletin in the apps and the printed Queens, Queens Communion, and Brooklyn bulletins; IT administrators own the GitHub organization, develop on forks, merge feature PRs into a release branch and release PRs into main; GitHub Actions uploads the signed AAB to Google Play internal testing through a keyless sign-in in the church's Google Cloud project, which the administrators own and which has no billing account and must never get one, and uploads the IPA to TestFlight; an administrator releases each one after testing; administrators rerun the QR code workflow when needed; the apps rely on media and third-party services shown in the app dependencies diagram](diagrams/architecture.svg)
 
 ### Build, deploy, and accounts
 
 How code reaches the stores, the bulletin backend, and the website, which secrets
 each step uses, and how the domain ties the accounts together.
 
-![Build and deploy diagram: GitHub Actions uses the Android, Apple, and Apps Script secrets from the production environment to publish to Google Play and the Apple App Store, deploy the bulletin Apps Script, upload QR codes and preview APKs to Google Drive, and build the GitHub Pages site; Cloudflare DNS for nyccsda.org points at GitHub Pages and Google Workspace and holds the TXT record that verifies the domain in Google Search Console, which Google Play uses to verify the organization's website](diagrams/operations.svg)
+![Build and deploy diagram: GitHub Actions uses the Android, Apple, and Apps Script secrets from the production environment and the store upload settings from the store-upload environment to upload builds to Google Play internal testing and TestFlight, signing in to Google Play without a key through a Google Cloud project that has no billing account, deploy the bulletin Apps Script, upload QR codes and preview APKs to Google Drive, and build the GitHub Pages site; Cloudflare DNS for nyccsda.org points at GitHub Pages and Google Workspace and holds the TXT record that verifies the domain in Google Search Console, which Google Play uses to verify the organization's website](diagrams/operations.svg)
 
 ### App dependencies
 
@@ -51,6 +52,16 @@ See [Third-party APIs and websites](#third-party-apis-and-websites) for the full
 table.
 
 ![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Bible audio falling back to the Internet Archive and then Audio Power; Bible text from HelloAO and fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links](diagrams/app-dependencies.svg)
+
+### Google Play upload sign-in
+
+Each service the automatic Google Play upload passes through, in order. It signs in
+without a key: GitHub vouches for the job, Google's Security Token Service checks that
+against the church's workload identity pool, and the IAM Service Account Credentials
+API returns a short-lived token for the `play-upload` service account. Setup is in
+[Setting up the Google Play service account](operations/native-builds.md#setting-up-the-google-play-service-account).
+
+![Google Play upload sign-in diagram: 1, the upload job, which runs only in the store-upload environment on main, asks GitHub for an identity token; 2, GitHub returns a signed token naming the repository ID, environment, and branch; 3, the job sends it to Google's Security Token Service API for the provider named in GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER; 4, the Security Token Service checks it against the provider sda-church-app in the workload identity pool github, which accepts only this repository's ID, the store-upload environment, and main; 5, the pool accepts it; 6, the Security Token Service returns a federated token; 7, the job asks the IAM Service Account Credentials API to act as the play-upload service account, which is allowed because the pool is a Workload Identity User on it; 8, it returns a play-upload token limited to Google Play that expires within an hour; 9, the job uploads the AAB to the Google Play Android Developer API, sets the release name and What's new, and commits, which Play Console allows because play-upload may release to testing tracks; 10, Play rolls the release out to the internal testing track. The Google Cloud services are in the project sda-church-app-play, which is free and has no billing account. No key is stored anywhere, and an admin promotes the release to production after testing](diagrams/play-upload.svg)
 
 ### Editing the diagrams
 
@@ -127,7 +138,9 @@ and may not be possible, so protect them above everything else.
   repository.
 - **GitHub Actions** runs everything automated:
   - unit and integration tests on pull requests;
-  - native iOS and Android builds after each merge to `main`;
+  - native iOS and Android builds after each merge to `main`, uploaded automatically
+    to TestFlight and Google Play internal testing for testers (Google Play through a
+    keyless sign-in in the church's [Google Cloud project](#google-cloud-free-only));
   - Android preview APKs for pull requests into `main`;
   - the [website](#website-appnyccsdaorg) deploy to GitHub Pages;
   - bulletin Apps Script deploys, using [`clasp`](https://github.com/google/clasp),
@@ -136,11 +149,14 @@ and may not be possible, so protect them above everything else.
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by.
-- Publishing to the stores through [fastlane](https://fastlane.tools/) is planned
-  but not yet in place.
-- **Credentials live in GitHub Secrets**, in this repository's `production`
-  environment. Each job that uses them waits for a `release-approvers` member to
-  approve it. There are three separate groups:
+- Releasing to the public stays manual: after testing, an administrator submits
+  the iOS build for review in App Store Connect and promotes the Android release in
+  Play Console. See
+  [Automatic store uploads](operations/native-builds.md#automatic-store-uploads).
+- **Credentials live in GitHub Secrets**, in two environments of this repository.
+  The `production` environment holds the signing and Google account credentials.
+  Each job that uses them waits for a `release-approvers` member to approve it.
+  There are three separate groups:
   - **Android signing:** the upload keystore and its passwords
     (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
     `ANDROID_KEY_PASSWORD`). With Play App Signing, Google keeps the real
@@ -159,6 +175,14 @@ and may not be possible, so protect them above everything else.
     Apps Script code and also the QR codes and preview APKs to Google Drive. The
     Apps Script project and deployment IDs (`APPS_SCRIPT_PROJECT_ID`,
     `APPS_SCRIPT_DEPLOYMENT_ID`) say which script to update.
+- The **`store-upload`** environment holds the **store upload settings**, used only
+  by the jobs that upload approved builds to testers: an App Store Connect API key
+  (`APP_STORE_CONNECT_API_KEY_ID`, `APP_STORE_CONNECT_API_ISSUER_ID`,
+  `APP_STORE_CONNECT_API_PRIVATE_KEY`), and which Google Play service account in the
+  [Google Cloud project](#google-cloud-free-only) to sign in as without a key
+  (`GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER`, `GOOGLE_PLAY_SERVICE_ACCOUNT`). Those jobs never see the signing keys and
+  run no npm packages, and they start without a second approval once the builds
+  are approved.
 
 The [Admin Runbook](operations/admin-runbook.md) covers approving production runs
 and rotating the credentials these workflows use.
@@ -239,6 +263,10 @@ These are generated per organization and can't be copied from anyone else.
 - **Google account login** (`CLASPRC_JSON`, created with Google's `clasp` tool),
   which uploads the bulletin Apps Script code and Drive files, plus the Apps Script
   project and deployment IDs.
+- **Store upload settings**, in the separate `store-upload` environment: the App
+  Store Connect API key (`.p8`), and which
+  [Google Play service account](#google-cloud-free-only) to sign in as, without a
+  key. They upload approved builds to TestFlight and Google Play internal testing.
 
 Where each secret goes and how to rotate it is covered in
 [Native Builds](operations/native-builds.md) and the
@@ -291,8 +319,8 @@ submitted for review before they appear on the App Store.
 - The **Apple Developer** account that publishes the app is registered to
   **`technology@nyccsda.org`**, the shared Google Group address, not to a person.
   The other active administrators are added to the team with their own individual
-  `nyccsda.org` church accounts. Builds are uploaded and releases submitted in App
-  Store Connect.
+  `nyccsda.org` church accounts. Builds are uploaded to TestFlight automatically,
+  and releases are submitted in App Store Connect.
 - Nonprofit status must be **resubmitted every year**. Apple sends a reminder about
   30 days ahead; the earlier answers are remembered, so it is mostly a matter of
   confirming and resubmitting. No payment method is on file, so a lapse means the
@@ -314,6 +342,45 @@ submitted for review before they appear on the App Store.
   requested from Play Console.
 - Nothing needs renewing beyond keeping the app updated to meet Play's target API
   level requirements.
+
+## Google Cloud: free only
+
+- To upload each release's AAB to Google Play automatically, the church created a
+  Google Cloud project, `sda-church-app-play`, with a church `nyccsda.org` account.
+  It exists only to hold the **Google Play service account** that GitHub Actions
+  signs in as to upload to internal testing. It signs in **without a key**: GitHub
+  vouches for the upload job, and Google returns a token that expires within an hour
+  (Workload Identity Federation). The organization blocks key files, and there are
+  none to store or leak.
+- **Every setup step** (the project, APIs, service account, workload identity pool,
+  OIDC provider and condition, IAM grant, Play Console access, GitHub secrets, and a
+  final checklist) is in
+  [Setting up the Google Play service account](operations/native-builds.md#setting-up-the-google-play-service-account).
+- It was created for free and uses only free services. It also has **no billing
+  account**, so there is no way for Google to charge the church.
+  [Service limits and costs](operations/service-limits-and-costs.md#google-cloud-play-upload-service-account)
+  records why, with Google's own statements.
+- **Every IT administrator is an Owner** of the project, under **IAM & Admin → IAM**,
+  so it doesn't depend on one account. When an administrator joins or leaves, update
+  that list too.
+
+| What | Name | Notes |
+| --- | --- | --- |
+| Project | `sda-church-app-play` | No billing account |
+| Service account | `play-upload` | In Play Console with only **Release apps to testing tracks**; it has no keys |
+| Workload identity pool and provider | `github`, `sda-church-app` | Accept only this repository, by its numeric ID, in the `store-upload` environment on `main` |
+| GitHub secrets | `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER`, `GOOGLE_PLAY_SERVICE_ACCOUNT` | In the `store-upload` environment; neither is a key |
+
+There's nothing to renew. The [Google Play upload sign-in](#google-play-upload-sign-in)
+diagram shows each service an upload passes through. If an upload fails, the job
+names the step, and
+[Reading the result](operations/native-builds.md#reading-the-result) says what to check.
+
+> [!CAUTION]
+> **Never add a credit card or billing account to Google Cloud**, and never start its
+> free trial, which asks for a card. The church will never need Google Cloud's paid
+> services and shouldn't use them: the risk of a surprise bill is too high. If a
+> screen asks for billing to continue, stop and ask the other administrators.
 
 ## Website: app.nyccsda.org
 
@@ -383,17 +450,20 @@ Costs, published limits, and load for each one are in
 
 | When | What | If missed |
 | --- | --- | --- |
-| Yearly | Resubmit Apple nonprofit status | App removed from the App Store |
-| Yearly | Renew Apple signing certificates and update GitHub secrets | iOS builds fail; app can't be updated |
+| Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Developer membership and resubmit nonprofit status | App removed from the App Store |
+| Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Distribution certificate and provisioning profile, update GitHub secrets, and record the new dates; see the [renewal checklist](operations/app-store-setup.md#renewal-checklist) | iOS builds fail; app can't be updated |
 | Yearly | Check the Cloudflare payment method hasn't expired and the domain's paid-through date | Domain renewal fails |
-| Yearly | Review administrator access and recovery details on every system | An account can't be recovered |
+| Yearly | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
+| Yearly, and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
 
 ## Governance principles
 
 - **Apply for nonprofit status** wherever a provider offers it, using the church's
   own EIN and D-U-N-S number rather than the conference's.
-- **Free services only**, apart from small necessities such as the domain.
+- **Free services only**, apart from small necessities such as the domain. **Never
+  add a payment method to a service that bills by usage**, such as
+  [Google Cloud](#google-cloud-free-only): a surprise bill is too great a risk.
 - **Two-factor authentication for every user, everywhere**, including on the
   personal accounts that sit at the root of account recovery. Don't allow SMS or
   phone-call codes, which SIM swapping and number porting can intercept. Use an

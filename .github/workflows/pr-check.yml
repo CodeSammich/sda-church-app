@@ -6,9 +6,6 @@ on:
     branches:
       - main
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 permissions:
   contents: read
 
@@ -16,7 +13,7 @@ jobs:
   enforce-version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -46,6 +43,16 @@ jobs:
 
             echo "Validation Passed: allowing recovery of untagged version $HEAD_VER."
             exit 0
+          fi
+
+          # The store build numbers are computed from the version, and Google Play
+          # accepts only higher ones, so a release must raise it; see
+          # docs/operations/version-numbers.md.
+          BASE_BUILD="$(node scripts/store-build-number.cjs "$BASE_VER")"
+          HEAD_BUILD="$(node scripts/store-build-number.cjs "$HEAD_VER")"
+          if [ "$HEAD_BUILD" -le "$BASE_BUILD" ]; then
+            echo "::error::Validation Failed: Version $HEAD_VER must be higher than main's $BASE_VER. The store build number ($HEAD_BUILD) comes from it and has to go up."
+            exit 1
           fi
 
           echo "Validation Passed."

@@ -20,9 +20,6 @@ concurrency:
   group: store-toolchain-monitor
   cancel-in-progress: false
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   check-store-toolchain:
     # Forks commonly disable Issues, while this monitor opens and updates an
@@ -32,10 +29,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out the default branch
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 20
 
@@ -48,7 +45,7 @@ jobs:
       # alert text in scripts/check-store-toolchain.cjs, both unit tested.
       - name: Open or update the alert issue
         if: steps.toolchain-check.outcome == 'failure'
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           # Comma-separated GitHub usernames. Assigning the alert sends them a
           # notification even when they don't watch the repository.
@@ -70,7 +67,7 @@ jobs:
 
       - name: Close the alert issue after recovery
         if: steps.toolchain-check.outcome == 'success'
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
             const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);

@@ -1,8 +1,11 @@
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+const { storeBuildNumber } = createRequire(import.meta.url)('./store-build-number.cjs');
 
 const projectRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const androidRoot = resolve(projectRoot, 'android');
@@ -48,11 +51,16 @@ if (!androidConfig.package) {
   throw new Error('app.json must define expo.android.package before building Android');
 }
 
-if (!Number.isInteger(androidConfig.versionCode) || androidConfig.versionCode < 1) {
+// app.config.js computes the versionCode from the version; see
+// docs/operations/version-numbers.md. It overrides a hand-set one, which would
+// only mislead whoever set it.
+if ('versionCode' in androidConfig) {
   throw new Error(
-    'Set an explicit positive expo.android.versionCode in app.json before building a store binary. It must be higher than the last Google Play versionCode.',
+    'Remove expo.android.versionCode from app.json. It is computed from the version; see docs/operations/version-numbers.md.',
   );
 }
+const versionCode = storeBuildNumber(appJson.expo.version);
+console.log(`Building version ${appJson.expo.version} with versionCode ${versionCode}.`);
 
 const requiredSigningVariables = [
   'ANDROID_KEYSTORE_PATH',

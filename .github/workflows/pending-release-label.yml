@@ -7,7 +7,6 @@ on:
     types: [closed]
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   PENDING_RELEASE_LABEL: pending release
 
 permissions:

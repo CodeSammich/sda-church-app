@@ -9,8 +9,13 @@ flowchart TB
       appleKeys["🔑 Apple signing<br/>certificate + profile,<br/>renewed every 12 months"]
       claspKeys["🔑 Google account login<br/>uploads Apps Script code and Drive files<br/>(CLASPRC_JSON, used by clasp)"]
     end
+    subgraph UploadSecrets["GitHub Secrets · store-upload environment"]
+      storeKeys["🔑 Store upload settings<br/>App Store Connect API key,<br/>Google Play keyless sign-in"]
+    end
     pages@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "GitHub Pages · app.nyccsda.org<br/>privacy policy, download page<br/>PWA build: unsupported dev preview", pos: "b", w: 40, h: 40, constraint: "on" }
   end
+
+  gcloud@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-cloud.svg", label: "Google Cloud · sda-church-app-play<br/>keyless sign-in for Play uploads<br/>free: no billing account, never add one", pos: "b", w: 48, h: 39, constraint: "on" }
 
   subgraph Stores["App stores"]
     play@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-play-icon.svg", label: "Google Play<br/>managed in Play Console", pos: "b", w: 40, h: 44, constraint: "on" }
@@ -34,8 +39,11 @@ flowchart TB
   androidKeys --> actions
   appleKeys --> actions
   claspKeys --> actions
-  actions -- signed AAB --> play
-  actions -- signed IPA --> appstore
+  storeKeys --> actions
+  actions -. signs in without a key .-> gcloud
+  gcloud -. as the play-upload service account .-> play
+  actions -- "automatic upload: signed AAB<br/>to internal testing" --> play
+  actions -- "automatic upload: signed IPA<br/>to TestFlight" --> appstore
   actions -- uploads bulletin code --> script
   actions -- QR codes, preview APKs --> drive
   actions -- web build --> pages
@@ -46,4 +54,4 @@ flowchart TB
   gsc -. website verification for the organization account .-> play
 
   classDef logo fill:#ffffff,stroke:#d0d7de
-  class repo,actions,pages,play,appstore,abm,group,script,drive,dns,gsc logo
+  class repo,actions,pages,gcloud,play,appstore,abm,group,script,drive,dns,gsc logo

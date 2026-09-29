@@ -23,6 +23,7 @@ does and what still needs a person.
 - [Dependabot pull requests](#dependabot-pull-requests)
 - [External dependency monitor alerts](#external-dependency-monitor-alerts)
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
+- [Apple signing reminders](#apple-signing-reminders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
 
@@ -49,6 +50,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | --- | --- |
 | A pull request to review | Watch the repository with **Watch → Custom → Pull requests** (and **Issues** for new issues). With **No additional events**, that emails each new PR or issue but not its comments or pushes. |
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
+| An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. Both monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
 
 The monitors can't read `release-approvers` membership or reliably @mention the
@@ -56,6 +58,11 @@ team: they run with the built-in Actions token, which has no organization
 permissions. That's why alerts use `MONITOR_ALERT_ASSIGNEES` instead. When the team's
 members change, update the variable to match. An assignee must have access to the
 repository, directly or through a team.
+
+To also send these emails to `technology@nyccsda.org`, one admin adds that address
+to their GitHub account (**Settings → Emails**; the group forwards the verification
+email) and, under **Settings → Notifications → Custom routing**, sends this
+organization's notifications to it. An address can belong to only one GitHub account.
 
 With that in place, a maintainer can keep email for **Watching** and **Participating,
 @mentions and custom**, and choose **No additional events** under **Customize email
@@ -85,7 +92,7 @@ Review rules for both pull-request rulesets:
 | Check | Comes from | Required on |
 | --- | --- | --- |
 | `Jest unit tests` | `pr-tests.yml` | `main` and `release/*` |
-| `verify-bulletin-api` | `bulletin-integration.yml` | `main` and `release/*` |
+| `verify-bulletin-api` | `bulletin-integration.yml` | `main` |
 | `validate-pr` | `release-validation.yml` | `main` and `release/*` |
 | `require-linked-issue` | `pr-linked-issue.yml` | `main` and `release/*` |
 | `enforce-version` | `pr-check.yml` | `main` |
@@ -93,9 +100,16 @@ Review rules for both pull-request rulesets:
 | `ensure_pr_to_main_from_release_branch` | `main-release-source-gate.yml` | `main` |
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
+| `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
 | `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel Mac)` | `ios-pr-preview.yml` | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
+
+The slow checks (`verify-bulletin-api`, the Android and iOS builds, and the Bible audio
+test) run once per release, on the release pull request into `main`. Feature pull
+requests into a release branch run only the quick checks. Any other pull request into
+`main`, such as Dependabot's, skips the slow checks, because the source gate stops it
+from merging there anyway.
 
 ### Changing a required check
 
@@ -123,6 +137,11 @@ Any job that needs credentials pauses with the status **Waiting**.
 3. Check what triggered the run and from which branch before approving. Reject a run
    you didn't expect.
 
+The jobs that upload to TestFlight and Google Play internal testing use the separate
+`store-upload` environment, which needs no approval, so they run as soon as the builds
+you approved finish. Why it's separate is in
+[How the credentials are kept apart](native-builds.md#how-the-credentials-are-kept-apart).
+
 ## Shipping a release to `main`
 
 The full process is in [Contributing](../CONTRIBUTING.md#two-stage-release-process).
@@ -133,19 +152,22 @@ The admin-only steps are:
 2. **Merge feature pull requests** into that branch. Their titles must start with
    `Release/x.y.z:` or `Release/x.y.x:`.
 3. **Open the release pull request** from `release/x.y.z` into `main`, titled
-   `Release/x.y.z: …`. Copy the `Closes #…` lines from the included feature pull
+   `Release/x.y.z: …`. Write the part after the colon for testers: it becomes the
+   "What's new" text in Google Play internal testing. Copy the `Closes #…` lines from the included feature pull
    requests into its description. Use `Part of #…` or `Related to #…` for issues
    that should stay open. The **PR Linked Issue** check fails if the description has neither.
 4. **Merge it.** The version files must already say `x.y.z`
-   (`npm run sync-version -- --version x.y.z` in the release branch).
+   (`npm run sync-version -- --version x.y.z` in the release branch), and it must be
+   higher than `main`'s version. The store build numbers are computed from it; see
+   [Version numbers](version-numbers.md).
 
 What runs after the merge to `main`:
 
 | Workflow | Automatic? | What you do |
 | --- | --- | --- |
 | Deploy Web Preview and Tag | Yes | Nothing. It tags `vx.y.z` and publishes the web app. |
-| Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
-| Native iOS build | Waits for `production` approval | Approve it to build the signed IPA. |
+| Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK, upload the AAB to Google Play internal testing, and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
+| Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 
 Workflows that run from `main`'s copy (Android PR preview, and the upload step of the
 QR workflow) keep their old behavior until the release that changes them is merged.
@@ -230,11 +252,8 @@ Background, signing setup, and recovery are in [Build Instructions](native-build
   tick **AAB** (Google Play) and/or **APK** (direct install). Actions → **Native iOS
   build** → **Run workflow** on `main`. Both refuse to sign from any other branch.
 
-Before a store upload, raise the build numbers in a release pull request:
-
-- Android: the Play version code. See
-  [Set the Play version code explicitly](native-builds.md#3-set-the-play-version-code-explicitly).
-- iOS: `expo.ios.buildNumber` in `app.json`.
+There are no build numbers to raise. Both stores' build numbers are computed from the
+version (`0.40.0` becomes `40000`); see [Version numbers](version-numbers.md).
 
 ### Downloading
 
@@ -248,16 +267,21 @@ Download the IPA within 14 days. It isn't attached to the GitHub Release.
 
 ### Uploading to the stores
 
-Uploads are manual; nothing publishes to a store automatically.
+After you approve the signed builds, they upload for testing on their own: the IPA to
+TestFlight and the AAB to Google Play internal testing. Nothing reaches the public
+until you release it:
 
-- **Google Play:** Play Console → the app → **Test and release** → choose a track →
-  **Create new release** → upload the `.aab`. Use the AAB, not the APK.
-- **Apple:** upload the `.ipa` to App Store Connect (for example with Apple's
-  Transporter app). It appears under **TestFlight** after processing. Add testers
-  there, and submit for review from the app's **Distribution** page.
+1. **Test** the build on real devices, from TestFlight and from the Play Store's
+   internal testing link.
+2. **Apple:** on the app's **Distribution** page in App Store Connect, set the version
+   to the release's version, select the build, and **Add for Review**.
+3. **Google Play:** Play Console → **Test and release → Internal testing** → promote
+   the release to production. Promoting copies the testers' "What's new" text, so
+   rewrite it for the public first.
 
-Store listings, review, and the production release are finished in each console. See
-[Upload separately](native-builds.md#upload-separately).
+The upload jobs, their `store-upload` secrets, what each result means, and how to
+upload by hand are in
+[Automatic store uploads](native-builds.md#automatic-store-uploads).
 
 ### Store toolchain requirements
 
@@ -278,8 +302,8 @@ store announces a change, check that:
 
 ## Android PR preview APKs
 
-**Workflow:** **Android PR preview**, which runs automatically on same-repository pull
-requests into `main`.
+**Workflow:** **Android PR preview**, which runs automatically on release pull requests
+into `main` (from a `release/*` branch in this repository).
 
 It builds an unsigned debug APK. After you approve `production`, it uploads the APK
 to Google Drive as `sda-church-app-pr-<number>-<run>-arm-debug.apk`, and the run
@@ -288,8 +312,8 @@ summary links to it. Fork pull requests are skipped. See
 
 ## iOS PR preview builds
 
-**Workflow:** **iOS PR preview**, which runs automatically on pull requests into
-`main`.
+**Workflow:** **iOS PR preview**, which runs automatically on release pull requests
+into `main`, and can be run manually on any branch.
 
 It builds the app without signing for an Apple Silicon Mac and an Intel Mac, launches it
 on a simulated iPhone, and uploads the app and a screenshot of its first screen. It
@@ -299,15 +323,24 @@ iPhone. See [iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-
 
 ## Dependabot pull requests
 
-Dependabot opens pull requests against `main`, and they fail the `main` checks by
-design: **Main Release Source Gate**, **PR Version Check**, and **Release - PR Version
-Sync**. Don't merge them into `main`. For each one:
+Dependabot opens one pull request a week for all minor and patch updates, and a
+separate one for each major update (`.github/dependabot.yml`). It opens them against
+`main`, and they fail the `main` checks by design: **Main Release Source Gate**, **PR
+Version Check**, and **Release - PR Version Sync**. Don't merge them into `main`. For
+each one:
 
 1. Select **Edit** next to the title and change the base branch to the current
    `release/x.y.z`.
 2. Add `Release/x.y.z: ` to the start of the title.
 3. Comment `@dependabot rebase` so the branch is rebuilt on the release branch and the
    checks run again.
+
+Or copy the `package.json` and `package-lock.json` changes from several of them into
+one pull request into the release branch, and close the Dependabot pull requests with a
+link to it.
+
+While a Dependabot pull request still targets `main`, it runs only the quick checks.
+The slow builds and tests run on the release pull request that includes the update.
 
 When Dependabot reports `security_update_not_possible`, there's no fix Dependabot can
 apply yet, usually because another package pins the old version. Recheck after that
@@ -358,11 +391,63 @@ Apple recommends a newer Xcode than the build uses; that note alone does not ope
 issue. What to update and test is under
 [Store toolchain requirements](#store-toolchain-requirements).
 
+## Apple signing reminders
+
+**Workflow:** **Apple Signing Monitor**, which runs every Monday and can be run
+manually.
+
+It reads the expiry dates of the Apple Distribution certificate, the App Store
+provisioning profile, and the Apple Developer membership from
+`.github/apple-signing-expiry.json`. It opens or updates the issue **[monitor] Apple
+signing needs renewal** when:
+
+- a date is 60 days away or less;
+- a date has passed; or
+- a date isn't recorded.
+
+The issue includes the renewal steps. It's assigned to the usernames in the
+`APPLE_SIGNING_ALERT_ASSIGNEES` Actions variable (comma-separated), or to
+`MONITOR_ALERT_ASSIGNEES` if that variable is empty. When the maintainers who handle
+Apple renewals change, update the variable under **Settings → Secrets and variables →
+Actions → Variables**. The issue
+comments weekly until the dates are updated and closes itself on the first run after
+every date is more than 60 days away. It reads no Apple credentials, and it shows only
+dates, which are safe in a public issue.
+
+The issue shows GitHub usernames, not people's names. GitHub can only notify GitHub
+accounts, not an email address such as `technology@nyccsda.org`, and the monitor's
+built-in Actions token can't mention the `release-approvers` team. A shared GitHub
+account for the group isn't an option either: GitHub's terms allow each login to be
+used by one person only. So:
+
+- **When a maintainer joins or leaves,** update `APPLE_SIGNING_ALERT_ASSIGNEES` and
+  `MONITOR_ALERT_ASSIGNEES` right away. If any listed user has lost access to the
+  repository, GitHub rejects the whole assignment: the issue is still opened, but
+  unassigned, and it @mentions the run's actor instead, which for a scheduled run is
+  whoever last changed the workflow's schedule.
+- **Apple also emails renewal notices** to the Account Holder, the
+  `technology@nyccsda.org` group, so the group hears about renewals even if the
+  variables are out of date.
+- To also send the GitHub emails to the group, see
+  [Getting notified only when action is needed](#getting-notified-only-when-action-is-needed).
+
+Each signed iOS build also runs **Check the recorded Apple signing dates**, which
+compares the file with the provisioning profile inside the IPA it just built and warns
+when they differ, for example after a renewal that didn't update the file.
+
+To renew, follow the
+[renewal checklist](app-store-setup.md#renewal-checklist).
+
 ## Bible audio emulator test
 
-**Workflow:** **Android audio e2e**. It runs every night, on pull requests that
-change Bible audio, and on release pull requests into `main`, and it can be run
-manually. It isn't a required check.
+**Workflow:** **Android audio e2e**. It runs every night and on every release pull
+request into `main`, and it can be run manually. **It's a required check on `main`**,
+so a release can't merge until it passes. Feature pull requests into a release branch
+don't run it; to test an audio change before the release, run it manually on your
+branch.
+
+It takes about 20 minutes, and runs alongside the iOS Simulator builds, which
+take longer.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:
@@ -393,6 +478,9 @@ and closes it on the next passing run. To investigate:
    [external dependency monitor](#external-dependency-monitor-alerts) first. A host
    outage fails it too, and isn't an app bug. A one-off emulator hiccup clears on a
    rerun.
+4. If it blocks a release PR because of a host outage, rerun it once the host is
+   back. If the release can't wait, an admin can bypass this one check when merging,
+   after confirming that the failure is the outage and not the app.
 
 **To run it on your own emulator**, install a debug APK
 (`npm run build:android:apk:debug:intel`) and run
@@ -411,5 +499,7 @@ read.
 | `CLASPRC_JSON` (Google login for Apps Script and Drive uploads) | `production` Environment secret | When clasp authorization fails; see the Workspace session note in [Deployment and verification](bulletin-automation.md#deployment-and-verification). The login has `drive.file` and `drive.metadata.readonly`: it can see every file but can change only files it created. Replacing a hand-made file fails with `403 appNotAuthorizedToFile`; rename the hand-made copy and let the workflow create it. Keep this narrow access rather than granting full `drive` access, because this account can reach every shared drive. |
 | Apple distribution certificate and provisioning profile | `production` Environment secrets | Both expire every year, and the Apple fee waiver is reconfirmed at each membership renewal. See [Yearly Apple renewals](app-store-setup.md#yearly-apple-renewals). |
 | Android upload keystore | `production` Environment secrets | Only when Google Play requires a rotation. See [Android rotation and recovery policy](native-builds.md#android-rotation-and-recovery-policy). |
+| App Store Connect API key (`APP_STORE_CONNECT_API_*`) | `store-upload` Environment secrets | It doesn't expire. If it leaks, revoke it under **Users and Access → Integrations** in App Store Connect, create a new one with the **Developer** role, and replace the three secrets. |
+| Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |
 
 Never paste credentials into issues, pull requests, or workflow logs.

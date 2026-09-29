@@ -7,60 +7,29 @@ name: iOS PR preview
 # Download the app from the run's artifacts to test it in the Simulator on a
 # Mac; docs/operations/native-builds.md explains how.
 on:
+  # Only the release PR into main. Feature PRs into a release branch skip the
+  # Mac builds; start it by hand on a branch to test a change to this workflow
+  # or scripts/build-ios-simulator.mjs early.
   pull_request:
     branches:
       - main
-      - 'release/**'
   workflow_dispatch:
 
 permissions:
   contents: read
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
   group: ios-pr-preview-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  scope:
-    # Release PRs into main always build. A PR into a release branch builds
-    # only when it changes this workflow or the local Simulator script, so
-    # those changes are proven before they land, without a Mac build on every
-    # feature PR.
-    name: Decide whether to build the iOS preview
-    runs-on: ubuntu-24.04
-    outputs:
-      build: ${{ steps.scope.outputs.build }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-
-      - name: Check the pull request's target and files
-        id: scope
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT_NAME" != 'pull_request' ] || [ "$BASE_REF" = 'main' ]; then
-            echo 'build=true' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # Capture first: with pipefail, grep -q exiting early can fail the pipe.
-          CHANGED_FILES="$(git diff --name-only "origin/$BASE_REF...HEAD")"
-          if grep -qxE '\.github/workflows/ios-pr-preview\.yml|scripts/build-ios-simulator\.mjs' \
-            <<<"$CHANGED_FILES"; then
-            echo 'build=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'build=false' >> "$GITHUB_OUTPUT"
-          fi
-
   simulator:
-    needs: scope
-    if: needs.scope.outputs.build == 'true'
+    # A release PR is a release/* branch in this repository. Other PRs into
+    # main, such as Dependabot's, can't merge there, so they skip it.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (startsWith(github.head_ref, 'release/') &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     # The "Main protection" ruleset requires these job names; rename both together.
     name: Build iOS Simulator app (${{ matrix.mac }} Mac)
     runs-on: ${{ matrix.runner }}
@@ -78,8 +47,8 @@ jobs:
             runner: macos-26-intel
             arch: x86_64
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
@@ -186,7 +155,7 @@ jobs:
 
       - name: Upload the Simulator app and screenshot
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ios-pr-preview-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-${{ matrix.arch }}
           path: ${{ runner.temp }}/ios-pr-preview/

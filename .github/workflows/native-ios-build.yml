@@ -12,9 +12,6 @@ on:
 permissions:
   contents: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 concurrency:
   group: native-ios-production
   cancel-in-progress: false
@@ -43,8 +40,8 @@ jobs:
             exit 1
           }
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
@@ -75,18 +72,19 @@ jobs:
       - name: Install CocoaPods dependencies
         run: pod install --project-directory=ios
 
-      - name: Read iOS build number
+      - name: Compute iOS build number
         id: ios-version
         run: |
+          # The build number is computed from the version (0.40.0 → 40000), the
+          # same way app.config.js does; see docs/operations/version-numbers.md.
           set -euo pipefail
-          IOS_BUILD_NUMBER="$(node -p "require('./app.json').expo.ios.buildNumber || ''")"
-          case "$IOS_BUILD_NUMBER" in
-            ''|*[!0-9]*) echo 'Set expo.ios.buildNumber in app.json to a positive integer.' >&2; exit 1 ;;
-          esac
-          test "$IOS_BUILD_NUMBER" -ge 1 || {
-            echo 'expo.ios.buildNumber must be at least 1.' >&2
+          if node -e 'process.exit("buildNumber" in (require("./app.json").expo.ios || {}) ? 0 : 1)'; then
+            echo 'Remove expo.ios.buildNumber from app.json. It is computed from the version; see docs/operations/version-numbers.md.' >&2
             exit 1
-          }
+          fi
+          APP_VERSION="$(node -p 'require("./app.json").expo.version')"
+          IOS_BUILD_NUMBER="$(node scripts/store-build-number.cjs "$APP_VERSION")"
+          echo "Building version $APP_VERSION with build number $IOS_BUILD_NUMBER."
           printf 'ios_build_number=%s\n' "$IOS_BUILD_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Restore Apple signing material
@@ -180,16 +178,15 @@ jobs:
 
       - name: Archive and export IPA
         env:
-          # Pushes and manual runs deliberately share the same checked-in
-          # maintainer-controlled source of truth.
+          # Pushes and manual runs both compute it from the version in app.json.
           IOS_BUILD_NUMBER: ${{ steps.ios-version.outputs.ios_build_number }}
         run: |
           set -euo pipefail
           case "$IOS_BUILD_NUMBER" in
-            ''|*[!0-9]*) echo 'expo.ios.buildNumber must be a positive integer.' >&2; exit 1 ;;
+            ''|*[!0-9]*) echo 'The iOS build number must be a positive integer.' >&2; exit 1 ;;
           esac
           test "$IOS_BUILD_NUMBER" -ge 1 || {
-            echo 'expo.ios.buildNumber must be at least 1.' >&2
+            echo 'The iOS build number must be at least 1.' >&2
             exit 1
           }
 
@@ -275,7 +272,7 @@ jobs:
           rm -rf "$RUNNER_TEMP/nyccsda.xcarchive"
 
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: success()
         with:
           name: native-ios-${{ github.run_id }}-${{ github.run_attempt }}
@@ -286,3 +283,107 @@ jobs:
       - name: Remove exported IPA from runner
         if: always()
         run: rm -rf "$RUNNER_TEMP/nyccsda-ios-export"
+
+  signing_dates:
+    name: Check the recorded Apple signing dates
+    needs: ios_build_ipa
+    # Compares .github/apple-signing-expiry.json, which the Apple Signing
+    # Monitor reads, with the provisioning profile inside the IPA just built,
+    # and warns if they differ, such as after a renewal that forgot the file.
+    # It reads no secrets: the profile inside the IPA holds only public dates
+    # and certificates, no key.
+    if: >-
+      github.event.repository.fork == false &&
+      github.ref == 'refs/heads/main' &&
+      needs.ios_build_ipa.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+      - name: Download IPA
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: native-ios-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/nyccsda-ipa
+      - name: Compare the recorded dates with the build
+        run: |
+          set -euo pipefail
+          IPA="$(find "$RUNNER_TEMP/nyccsda-ipa" -name '*.ipa' -print -quit)"
+          test -n "$IPA" || { echo 'The IPA artifact has no .ipa file.' >&2; exit 1; }
+          unzip -p "$IPA" 'Payload/*.app/embedded.mobileprovision' > "$RUNNER_TEMP/embedded.mobileprovision"
+          node scripts/check-apple-signing-expiry.cjs --profile "$RUNNER_TEMP/embedded.mobileprovision"
+
+  testflight_upload:
+    name: Upload to TestFlight
+    needs: ios_build_ipa
+    # The App Store Connect key lives in its own store-upload environment, apart
+    # from the signing secrets, and this job runs no npm packages. It skips
+    # until the key's secrets are set. See
+    # docs/operations/native-builds.md#automatic-store-uploads.
+    if: >-
+      github.event.repository.fork == false &&
+      github.ref == 'refs/heads/main' &&
+      needs.ios_build_ipa.result == 'success'
+    # SECURITY CONTRACT: This job can read the App Store Connect API key. Never
+    # add `set -x`, secret logging, environment dumps, or artifact uploads.
+    environment: store-upload
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Download IPA
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: native-ios-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/nyccsda-ipa
+
+      - name: Upload to App Store Connect
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_STORE_CONNECT_API_KEY_ID" ] || [ -z "$APP_STORE_CONNECT_API_ISSUER_ID" ] || [ -z "$APP_STORE_CONNECT_API_PRIVATE_KEY" ]; then
+            echo '::notice title=TestFlight upload skipped::Add the three APP_STORE_CONNECT_API_* secrets to the store-upload environment to upload automatically.'
+            exit 0
+          fi
+          case "$APP_STORE_CONNECT_API_KEY_ID" in
+            *[!A-Za-z0-9]*) echo 'APP_STORE_CONNECT_API_KEY_ID must be only letters and digits.' >&2; exit 1 ;;
+          esac
+          IPA="$(find "$RUNNER_TEMP/nyccsda-ipa" -name '*.ipa' -print -quit)"
+          test -n "$IPA" || { echo 'The IPA artifact has no .ipa file.' >&2; exit 1; }
+
+          # SECURITY: altool finds the key by file name in this folder. The file
+          # is removed when the step ends, however it ends.
+          KEY_DIR="$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$KEY_DIR/AuthKey_$APP_STORE_CONNECT_API_KEY_ID.p8"
+          trap 'rm -f "$KEY_PATH"' EXIT
+          mkdir -p "$KEY_DIR"
+          (umask 077 && printf '%s\n' "$APP_STORE_CONNECT_API_PRIVATE_KEY" > "$KEY_PATH")
+
+          LOG="$RUNNER_TEMP/altool.log"
+          status=0
+          xcrun altool --upload-app --type ios --file "$IPA" \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" 2>&1 | tee "$LOG" || status=$?
+
+          # altool has reported some errors with a zero exit code, so check its
+          # output too.
+          if [ "$status" -eq 0 ] && ! grep -qE '\*\*\* Error|ERROR ITMS-' "$LOG"; then
+            echo 'Uploaded to App Store Connect. The build appears in TestFlight once Apple finishes processing it.' >> "$GITHUB_STEP_SUMMARY"
+          elif grep -q 'ITMS-90189' "$LOG"; then
+            # ITMS-90189: this build number is already uploaded, as on a rerun.
+            echo '::warning title=Already on TestFlight::App Store Connect already has this build number, so there was nothing new to upload.'
+          else
+            echo '::error title=TestFlight upload failed::altool could not upload the IPA; see its output above.'
+            exit 1
+          fi
+
+      - name: Remove the IPA and API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/nyccsda-ipa" "$HOME/.appstoreconnect/private_keys"
