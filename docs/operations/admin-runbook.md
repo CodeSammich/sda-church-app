@@ -26,6 +26,7 @@ does and what still needs a person.
 - [Apple signing reminders](#apple-signing-reminders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
+- [Actions event policy for `pull_request_target`](#actions-event-policy-for-pull_request_target)
 
 ## Who can do what
 
@@ -506,3 +507,38 @@ read.
 | Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |
 
 Never paste credentials into issues, pull requests, or workflow logs.
+
+## Actions event policy for `pull_request_target`
+
+From **November 2, 2026**, GitHub blocks the `pull_request_target` trigger in public
+repositories unless an Actions event policy allows it
+([announcement](https://github.blog/changelog/2026-09-17-workflow-execution-protections-in-github-actions-generally-available/)).
+Three workflows use it, and two of them are required checks on `main`, so **without
+the policy, no release can merge into `main`**:
+
+| Workflow | Why it uses `pull_request_target` | Required on `main` |
+| --- | --- | --- |
+| `main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
+| `android-pr-preview.yml` | The Drive upload needs the `production` environment, which only `main` may use. It builds only this repository's `release/*` branches, never fork code. | Yes: `Build Android debug APK (ARM)` |
+| `pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
+
+None of them runs code from a fork with secrets or a write token, which is what makes
+`pull_request_target` dangerous. `test/native-build-safety.test.ts` fails if another
+workflow starts using the trigger, so the policy and this table stay in step.
+
+To allow exactly these three:
+
+1. **Settings → Actions → Policies → New policy.**
+2. **Name** it, for example `Allow pull_request_target for trusted workflows`.
+3. **Target** the three workflow files by path: `.github/workflows/main-release-source-gate.yml`,
+   `.github/workflows/android-pr-preview.yml`, and
+   `.github/workflows/pending-release-label.yml`.
+4. **Event rules:** allow `pull_request_target`, and `issues`, which the
+   pending-release label workflow also uses.
+5. Start with **Evaluate**, then open **Policy insights**, which is under the policies
+   page. After the next release PR, it should show no would-be-blocked runs of these
+   three. Then switch the policy to **Active**.
+
+If `ensure_pr_to_main_from_release_branch` or `Build Android debug APK (ARM)` ever stops
+reporting on a release PR, check this policy first.
+

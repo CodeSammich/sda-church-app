@@ -202,6 +202,34 @@ describe('Apple signing reminders', () => {
   });
 });
 
+describe('pull_request_target', () => {
+  it('is used only by the three workflows the Actions event policy allows', () => {
+    // GitHub blocks pull_request_target in public repositories from November 2,
+    // 2026, unless a policy allows the workflow; the admin runbook lists these
+    // three. Adding one means updating the policy, the runbook, and this list.
+    const { readdirSync } = require('node:fs');
+    const users = readdirSync(resolve(process.cwd(), '.github/workflows'))
+      .filter((file: string) => /^\s+pull_request_target:/m.test(readRepoFile(`.github/workflows/${file}`)))
+      .sort();
+    expect(users).toEqual([
+      'android-pr-preview.yml',
+      'main-release-source-gate.yml',
+      'pending-release-label.yml',
+    ]);
+    const runbook = readRepoFile('docs/operations/admin-runbook.md');
+    for (const file of users) {
+      expect(runbook).toContain(`.github/workflows/${file}`);
+      expect(readRepoFile(`.github/workflows/${file}`)).toContain('Settings → Actions → Policies');
+    }
+  });
+
+  it('never checks out pull request code in the gate or the label workflow', () => {
+    for (const file of ['main-release-source-gate.yml', 'pending-release-label.yml']) {
+      expect(readRepoFile(`.github/workflows/${file}`)).not.toContain('actions/checkout');
+    }
+  });
+});
+
 describe('GitHub Release', () => {
   it('attaches the IPA from its own job, keeping the signing job read-only', () => {
     const workflow = readRepoFile('.github/workflows/native-ios-build.yml');

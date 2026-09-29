@@ -1,5 +1,11 @@
 name: Main Release Source Gate
 
+# Uses pull_request_target so the check runs from main's copy of this file: a
+# pull request can't edit the gate to pass. It checks out no code.
+# pull_request_target must stay allowed for this file in the repository's
+# Actions event policy (Settings → Actions → Policies); GitHub blocks the
+# trigger in public repositories without one from November 2, 2026. See
+# docs/operations/admin-runbook.md#actions-event-policy-for-pull_request_target.
 on:
   pull_request_target:
     branches:
