@@ -81,6 +81,8 @@ removes that job entirely.
   `npm run sync-version -- --version x.y.z` in the release branch, as always.
 - **Fixing something after a release:** make a patch release. `0.40.1` becomes
   `40001`.
+- **Apple rejected an uploaded build:** its build number still counts as used, so the
+  fix needs a new version, such as a patch release.
 - **Rerunning a build of the same release:** it gets the same build number, and the
   stores refuse a duplicate. The upload jobs report that the build is already there,
   and succeed.

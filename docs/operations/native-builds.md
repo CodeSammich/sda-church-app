@@ -1095,6 +1095,25 @@ Everything below should be true before the first automatic upload:
 | "The caller does not have permission" from Google Play | The service account isn't in Play Console yet, or the permission hasn't reached the API | Check step 13, and rerun after a day |
 | Failed | The log has the store's message, often a revoked key or a missing permission | Fix the cause and rerun the job, or upload by hand |
 
+### When Apple rejects a build after uploading
+
+A successful **Upload to TestFlight** job means Apple received the build, not that it
+passed. Apple then processes it, usually within 30 minutes. If processing finds a
+problem, the build never appears in TestFlight, and Apple emails the Account Holder,
+`technology@nyccsda.org`, with the subject "The uploaded build … has one or more
+issues" and an `ITMS-` code for each problem.
+
+- **ITMS-90683, missing purpose string:** some code in the app references a protected
+  API, such as the photo library, even if the app never calls it. Usually it's a
+  library. Find it by searching the dependencies' native code, for example
+  `grep -rlE "PHPhotoLibrary|UIImagePickerController" node_modules/<package>/ios`.
+  If the app doesn't use the library, remove it. If it does, add the key the email
+  names to `expo.ios.infoPlist` in `app.json`, with a sentence that honestly says why.
+  (0.40.0 hit this with `react-native-share`, which the app didn't use.)
+
+A rejected build still uses up its build number, so the fix ships as a new version, such
+as a patch release; see [Version numbers](version-numbers.md).
+
 ### Uploading by hand
 
 If an upload job can't run, download the `.ipa` from the **Native iOS build** run's
