@@ -1,9 +1,9 @@
-import { GlobalHeader } from '@/components/GlobalHeader';
+import { getStackScreenOptions } from '@/components/StackScreenOptions';
 import { Stack } from 'expo-router';
 
 export default function ExploreStackLayout() {
   return (
-    <Stack screenOptions={{ header: (props) => <GlobalHeader {...props} /> }}>
+    <Stack screenOptions={getStackScreenOptions('explore')}>
       <Stack.Screen name="index" />
       <Stack.Screen name="library" />
       <Stack.Screen name="library/[collection]" />

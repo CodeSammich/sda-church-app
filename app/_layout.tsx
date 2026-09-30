@@ -981,7 +981,9 @@ function RootLayoutNav({
       Platform.OS === 'android' &&
       (hasHeaderBackButton(segments, globalParams.backTo) ||
         pathname === '/bible' ||
-        pathname === '/explore');
+        pathname === '/explore' ||
+        // Sabbath School shows a back arrow even without a return route.
+        pathname === '/sabbath-school');
     if (!shouldHandleAndroidBack) {
       return;
     }

@@ -1,9 +1,9 @@
-import { GlobalHeader } from '@/components/GlobalHeader';
+import { getStackScreenOptions } from '@/components/StackScreenOptions';
 import { Stack } from 'expo-router';
 
 export default function HomeStackLayout() {
   return (
-    <Stack screenOptions={{ header: (props) => <GlobalHeader {...props} /> }}>
+    <Stack screenOptions={getStackScreenOptions('home')}>
       <Stack.Screen name="about-sda" />
       <Stack.Screen name="about-my-church" />
       <Stack.Screen name="team" />

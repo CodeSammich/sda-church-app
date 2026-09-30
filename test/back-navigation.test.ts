@@ -4,6 +4,7 @@ import {
   getBackTarget,
   getHeaderBackButtonColors,
   hasHeaderBackButton,
+  isSwipeBackToParent,
   SABBATH_SCHOOL_BACK_TARGET,
 } from '@/constants/BackNavigation';
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
@@ -45,6 +46,13 @@ describe('global header back navigation', () => {
     expect(
       getBackTarget('/bible', '/home/english-hymnal?backTo=%2Fhome%2Fbulletin&hymnNum=12'),
     ).toBe('/home/english-hymnal?backTo=%2Fhome%2Fbulletin&hymnNum=12');
+  });
+
+  it('follows only return routes inside the app', () => {
+    expect(getBackTarget('/bible', 'https://example.com/')).toBe('/');
+    expect(getBackTarget('/home/english-hymnal', '//example.com')).toBe('/home/hymnal-selection');
+    expect(getBackTarget('/home/english-hymnal', '/\\example.com')).toBe('/home/hymnal-selection');
+    expect(getBackTarget('/you/legal', 'javascript:alert(1)')).toBe('/you');
   });
 
   it('returns the Home entry to Sabbath School to Home', () => {
@@ -112,5 +120,53 @@ describe('global header back navigation', () => {
     // The Bible opened from another tab goes back to its caller by replacing.
     expect(getBackAction('/bible', '/home/english-hymnal?hymnNum=12')).toBe('replace');
     expect(getBackAction('/you/legal', '/explore/library')).toBe('replace');
+  });
+
+  it('replaces on the web, where dismissTo would move through browser history', () => {
+    expect(getBackAction('/home/about-sda', '/home/discover', 'web')).toBe('replace');
+    expect(getBackAction('/home/about-sda', '/home/discover', 'ios')).toBe('dismissTo');
+  });
+
+  it("allows iOS's swipe-back only when the page beneath is the back target", () => {
+    const route = (name: string, params?: object) => ({ key: `${name}-key`, name, params });
+    // About Denomination opened from New Member & Visitor.
+    expect(
+      isSwipeBackToParent('home', [route('discover'), route('about-sda')], 'about-sda-key'),
+    ).toBe(true);
+    // Give left behind from an earlier visit, then Bulletin opened from Home.
+    expect(isSwipeBackToParent('home', [route('give'), route('bulletin')], 'bulletin-key')).toBe(false);
+    // A hymnal opened from the Bulletin goes back to the Bulletin.
+    expect(
+      isSwipeBackToParent(
+        'home',
+        [route('bulletin'), route('english-hymnal', { backTo: '/home/bulletin', hymnNum: '12' })],
+        'english-hymnal-key',
+      ),
+    ).toBe(true);
+    // A search result in another hymnal goes back to the hymnal list, not the hymnal beneath.
+    expect(
+      isSwipeBackToParent(
+        'home',
+        [route('english-hymnal'), route('chinese-506-hymnal', { backTo: '/home/hymnal-selection' })],
+        'chinese-506-hymnal-key',
+      ),
+    ).toBe(false);
+    // Explore's own pages, including a shelf.
+    expect(
+      isSwipeBackToParent(
+        'explore',
+        [route('index'), route('library'), route('library/[collection]', { collection: 'egw' })],
+        'library/[collection]-key',
+      ),
+    ).toBe(true);
+    expect(
+      isSwipeBackToParent(
+        'explore',
+        [route('index'), route('library/[collection]', { collection: 'egw' })],
+        'library/[collection]-key',
+      ),
+    ).toBe(false);
+    // The first page in a stack has nothing beneath it to swipe to.
+    expect(isSwipeBackToParent('you', [route('index')], 'index-key')).toBe(true);
   });
 });

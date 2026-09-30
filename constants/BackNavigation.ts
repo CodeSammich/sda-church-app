@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import type { AppTheme } from './Themes';
 
 export const SABBATH_SCHOOL_BACK_TARGET = '/';
@@ -18,6 +19,11 @@ export const hasHeaderBackButton = (
 const normalizeBackPath = (pathname: string) =>
   pathname.replace(/^\/\(tabs\)/, '').replace(/\/index\/?$/, '/') || '/';
 
+// A return route is a path inside the app, such as `/home/bulletin`. Anything
+// else, such as a full web address, is ignored in favor of the page's parent.
+const isAppPath = (value: string | undefined): value is string =>
+  typeof value === 'string' && /^\/(?![/\\])/.test(value);
+
 /**
  * Where every back action goes: the header's back arrow, Android's back
  * gesture, and the browser's back button in the web app. Navigate there with
@@ -34,7 +40,7 @@ export const getBackTarget = (
   backTo?: string | string[],
 ) => {
   const explicitTarget = Array.isArray(backTo) ? backTo[0] : backTo;
-  if (explicitTarget) return explicitTarget;
+  if (isAppPath(explicitTarget)) return explicitTarget;
 
   const route = normalizeBackPath(pathname);
 
@@ -92,8 +98,44 @@ const stackOf = (path: string) =>
  * rather than adding a second copy of it the way `replace` would. Across
  * stacks, such as a Home page back to Home itself or the Bible back to the
  * Bulletin, `dismissTo` has nothing to pop to and does nothing, so `replace`.
+ *
+ * On the web, `dismissTo` moves through browser history with `history.go()`,
+ * which the Android web app's back guard in app/_layout.tsx would take for a
+ * second back press. `replace` rewrites the current history entry instead.
  */
-export const getBackAction = (pathname: string, target: string) => {
+export const getBackAction = (
+  pathname: string,
+  target: string,
+  platform: string = Platform.OS,
+) => {
+  if (platform === 'web') return 'replace';
   const stack = stackOf(pathname);
   return stack !== '' && stack === stackOf(target) ? 'dismissTo' : 'replace';
+};
+
+type StackRoute = { key: string; name: string; params?: object };
+
+/**
+ * Whether iOS's swipe-back reaches the same page as the back arrow. The swipe
+ * pops to the page beneath, which can be one the reader left earlier: going
+ * back to another stack, or leaving for another tab, keeps a stack's pages.
+ * Stack layouts allow the swipe only when the page beneath is this page's
+ * back target; otherwise the arrow is the way back.
+ */
+export const isSwipeBackToParent = (
+  stack: string,
+  routes: readonly StackRoute[],
+  routeKey: string | undefined,
+) => {
+  const index = routeKey ? routes.findIndex((route) => route.key === routeKey) : -1;
+  if (index < 1) return true;
+
+  const pathOf = (route: StackRoute) => {
+    const params = (route.params ?? {}) as Record<string, unknown>;
+    const name = route.name.replace(/\[(\w+)\]/g, (_, key: string) => String(params[key] ?? ''));
+    return name === 'index' ? `/${stack}` : `/${stack}/${name}`;
+  };
+  const route = routes[index];
+  const backTo = (route.params as { backTo?: string | string[] } | undefined)?.backTo;
+  return getBackTarget(pathOf(route), backTo).split('?')[0] === pathOf(routes[index - 1]);
 };
