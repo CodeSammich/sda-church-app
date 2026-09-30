@@ -24,19 +24,14 @@ const CHECKLIST = [
         'the-cloudflare-account-and-domain',
       ],
       [
-        'Cloudflare: the billing page lists only the domain registration, and the bank\'s charge alerts show nothing else in the past year. Every Worker is still on Workers Free.',
+        'Cloudflare: the billing page lists only the domain registration, nothing else in the account is on a paid plan, and the bank\'s charge alerts show nothing else in the past year.',
         'docs/operations/admin-runbook.md',
-        'why-a-free-worker-cant-bill',
+        'the-cloudflare-account-and-domain',
       ],
       [
-        'Cloudflare: re-read the Workers limits and pricing pages linked here. A Worker over the free limit must still fail with Error 1027, not bill.',
+        'Cloudflare: re-read the pages linked here. The Free plan still covers DNS, the `app.nyccsda.org` redirect, its HTTPS certificate, and attack protection at no charge.',
         'docs/operations/admin-runbook.md',
-        'why-a-free-worker-cant-bill',
-      ],
-      [
-        'Cloudflare: each Worker that holds an API key, starting with the Bible Brain Worker, is still needed and its key still works. Delete any Worker for a service the app no longer uses.',
-        'docs/operations/admin-runbook.md',
-        'workers-that-hold-api-keys',
+        'why-only-the-domain-costs-money',
       ],
       [
         'Google Cloud: the Play upload project (`sda-church-app-play`) still has no billing account.',
@@ -62,6 +57,11 @@ const CHECKLIST = [
         'On every system, the administrators are current, each is a super administrator, and each uses two-factor login that isn\'t by text message, with their own backup codes.',
         'docs/architecture.md',
         'governance-principles',
+      ],
+      [
+        'Faith Comes By Hearing: the Bible Brain API key is still in the IT Admin shared drive, and still needed; nothing uses it yet (#241).',
+        'docs/operations/admin-runbook.md',
+        'credentials-that-need-attention',
       ],
       [
         '`technology@nyccsda.org` has the current administrators, and the `APPLE_SIGNING_ALERT_ASSIGNEES` and `MONITOR_ALERT_ASSIGNEES` Actions variables name current maintainers.',

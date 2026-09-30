@@ -329,9 +329,11 @@ lapses, the privacy policy, support, and download pages above go down with it.
 - **Add nothing else that can cost money:** no Workers Paid, R2, or other paid or
   pay-as-you-go product
   ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
-  Free plans have no overage charges: going over a limit makes requests fail. The
-  [Workers that hold API keys](#workers-that-hold-api-keys) run in this account on
-  Workers Free; if Cloudflare ever offers to upgrade one, decline.
+  Free plans have no overage charges: going over a limit makes requests fail. Nothing
+  but the domain and its DNS runs in this account today. A Cloudflare Worker to hold an
+  API key was designed and put on hold
+  ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241));
+  if one is ever added, it must stay on Workers Free.
 
 **Keep the account recoverable:**
 
@@ -349,59 +351,37 @@ lapses, the privacy policy, support, and download pages above go down with it.
 - Each administrator logs in, which proves the backups work. Remove anyone who has left.
 - The account's billing page lists only the domain registration.
 - The card on file hasn't expired, and auto-renew is on.
-- Cloudflare's free plan still works the way the next section describes.
+- The Free plan still covers everything in the next section.
 
-### Workers that hold API keys
+### Why only the domain costs money
 
-Some services only answer an app that has an API key, and a key inside the app isn't
-secret: anyone can pull it out of the compiled app. So the church keeps each key in a
-small Cloudflare Worker that calls the service for the app
-([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)).
-The first is the **Bible Brain Worker**, for Faith Comes By Hearing's Bible Brain API,
-whose first use is Cantonese Bible audio; other FCBH recordings and other services that
-need a key can follow. Each new one follows the same rules:
+The card pays for one thing: registering `nyccsda.org`. Cloudflare Registrar charges
+only what the registry and ICANN charge it, with no markup
+([Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)). That's about
+$10 a year for a `.org`, or about $100 paid once for ten years. Everything else the church
+uses runs on Cloudflare's Free plan, which has no usage charges:
 
-- **Workers Free only,** in this account; see the next section for why that can't bill.
-- **As narrow as possible:** only the requests the app needs, only for the IDs the
-  church allows, with a per-caller rate limit, so it can't be used as an open relay.
-  Most API licenses forbid that, as FCBH's does.
-- **The key only as a Worker secret,** never in the app, the repository, a response,
-  or a log.
-- **Nothing cached or stored** unless the service's license allows it.
-- **A fallback in the app,** so the feature still works, or quietly disappears, if the
-  service or the Worker stops.
-- **Deployed from a computer with `wrangler`,** not through Cloudflare's GitHub
-  integration, which would build other branches with the key available.
-- **Documented** like the Bible Brain Worker's guide,
-  `docs/operations/bible-brain-audio.md`: what it allows, its limits, how to deploy
-  it, and how to turn it off.
+- **DNS** for `nyccsda.org`, including the records for the church's Google Workspace
+  email and for Google Search Console;
+- **the `app.nyccsda.org` redirect** to the app website on GitHub Pages;
+- **the HTTPS certificate** for that address, which Cloudflare issues and renews for
+  free ([Universal SSL](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/));
+- **protection from denial-of-service attacks,** unmetered on every plan
+  ([DDoS protection](https://developers.cloudflare.com/ddos-protection/)).
 
-### Why a free Worker can't bill
+**Why Cloudflare gives this away:** free users are worth more to Cloudflare than they
+cost. Cloudflare says they:
+- expose its network to attacks it learns from;
+- try new features first;
+- make internet providers more willing to exchange traffic with it for free;
+- use capacity that would otherwise sit idle between business peaks.
 
-These Workers share the account that has the card. That's safe because the free plan
-has no usage charges at all:
+In 2024 it restated that "our free plan is here to stay"
+([Reaffirming our commitment to free](https://blog.cloudflare.com/cloudflares-commitment-to-free/)).
 
-- **At the limit, it stops instead of charging.** Workers Free allows 100,000 requests a
-  day, resetting at midnight UTC. Past that, Cloudflare answers with Error 1027 until
-  the reset ([Workers limits](https://developers.cloudflare.com/workers/platform/limits/#daily-requests)).
-  What the Workers serve, such as Cantonese audio, stops for the rest of the day;
-  nothing is billed.
-- **Charges only exist on Workers Paid,** a subscription of at least $5 a month that
-  someone has to choose; usage beyond its allowance is billed only there
-  ([Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/)).
-  Nothing in the Worker's code or settings can switch the plan.
-- **Why Cloudflare gives this away:** free users are worth more to Cloudflare than
-  their bandwidth costs. Cloudflare says they expose its network to attacks it
-  learns from, try new features first, make internet providers more willing to
-  exchange traffic with it for free, and use capacity that would otherwise sit idle
-  between business peaks. In 2024 it restated that "our free plan is here to stay"
-  ([Reaffirming our commitment to free](https://blog.cloudflare.com/cloudflares-commitment-to-free/)).
-
-That's a company's promise, not a contract, so the yearly checkup re-reads those
-pages. If Cloudflare ever starts charging for free Workers, delete the Workers, or
-move them to an account with no card on file, before the change takes effect. The
-features they serve then stop, and each one's fallback takes over: for Cantonese
-audio, the Mandarin narration.
+That's a company's promise, not a contract, so the yearly checkup re-reads these pages.
+If the Free plan ever stops covering something the church uses, decide before the
+change takes effect whether to pay for it or move it elsewhere.
 
 ## Yearly checkup
 
@@ -410,9 +390,10 @@ issue titled **Yearly checkup, *year***, assigned to the usernames in
 `MONITOR_ALERT_ASSIGNEES`. It holds one checklist of everything these docs say to
 check once a year, each item linked to the doc that explains it:
 
-- the Cloudflare card, billing, and free plan;
+- the Cloudflare card, domain renewal, and billing;
 - the Google Cloud project's lack of a billing account;
 - administrator access and two-factor login on every system;
+- the Faith Comes By Hearing key, kept in the IT Admin shared drive;
 - the Apple dates and Google Play's contact details and declarations;
 - the Workspace nonprofit terms;
 - the scheduled workflows.
@@ -737,6 +718,7 @@ read.
 | Android upload keystore | `production` Environment secrets | Only when Google Play requires a rotation. See [Android rotation and recovery policy](native-builds.md#android-rotation-and-recovery-policy). |
 | App Store Connect API key (`APP_STORE_CONNECT_API_*`) | `store-upload` Environment secrets | It doesn't expire. If it leaks, revoke it under **Users and Access → Integrations** in App Store Connect, create a new one with the **Developer** role, and replace the three secrets. |
 | Card on the Cloudflare account | Cloudflare account billing | Before it expires, since the domain renews automatically. See [The Cloudflare account and domain](#the-cloudflare-account-and-domain). |
+| Faith Comes By Hearing Bible Brain API key | The church's IT Admin shared drive, which only certain administrators can open | Not used yet ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). Never put it in the app, the repository, an issue, a pull request, or a chat. If it may have leaked, ask FCBH for a new one and replace the stored copy. |
 | Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |
 
 Never paste credentials into issues, pull requests, or workflow logs.
