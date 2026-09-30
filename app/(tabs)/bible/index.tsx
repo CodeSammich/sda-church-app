@@ -132,6 +132,8 @@ const BIBLE_CHAPTER_KEY = 'user-bible-chapter';
 // Keep jumped-to verses below the translation/menu controls instead of
 // positioning them flush against the top edge of the reader.
 const VERSE_SCROLL_TOP_OFFSET = 96;
+// How many times, 250 ms apart, to look for a linked verse's position: 5 s.
+const VERSE_LAYOUT_ATTEMPTS = 20;
 const BIBLE_AUDIO_READERS_KEY = 'user-bible-audio-readers';
 const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
@@ -2411,16 +2413,24 @@ export default function BibleScreen() {
       return;
     }
 
-    const timeout = setTimeout(() => {
+    // A verse far into a long chapter, such as Psalm 119:100 in large text,
+    // can take more than one try to be laid out, so keep checking for a while.
+    let attempts = 0;
+    let timeout: ReturnType<typeof setTimeout>;
+    const scrollToVerse = () => {
       const verseY = versePositions.current[targetVerse.number];
-      if (verseY !== undefined) {
-        const scrollY =
-          paramBackTo === '/home/bulletin'
-            ? getBulletinVerseScrollOffset(verseY, viewportHeight)
-            : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
-        scrollRef.current?.scrollTo({ y: scrollY, animated: true });
+      if (verseY === undefined) {
+        attempts += 1;
+        if (attempts < VERSE_LAYOUT_ATTEMPTS) timeout = setTimeout(scrollToVerse, 250);
+        return;
       }
-    }, 250);
+      const scrollY =
+        paramBackTo === '/home/bulletin'
+          ? getBulletinVerseScrollOffset(verseY, viewportHeight)
+          : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
+      scrollRef.current?.scrollTo({ y: scrollY, animated: true });
+    };
+    timeout = setTimeout(scrollToVerse, 250);
 
     return () => clearTimeout(timeout);
   }, [
