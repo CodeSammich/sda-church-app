@@ -7,7 +7,7 @@
 # 2. Re-include source and configuration directories
 !/.github
 !/google-apps-script
-!/apps-script-bible-audio
+!/cloudflare-workers
 !/app
 !/assets
 !/components

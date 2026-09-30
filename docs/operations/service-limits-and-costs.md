@@ -46,7 +46,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [Google Workspace](#google-workspace-and-drive) | Roster, Drive, Apps Script | Free (nonprofit) | 100 TB pooled storage | Quota errors | None |
 | [Google Cloud](#google-cloud-play-upload-service-account) | Service account for automatic Google Play uploads | Free; **never link a billing account** | Play Developer API: 3,000 queries per minute | Uploads fail with an error | None: about ten requests per release |
 | [Cloudflare](#cloudflare) | Domain and DNS | **~$10/year** (domain only) | n/a | n/a | None |
-| [Bible Brain Apps Script](#bible-brain-apps-script-cantonese-audio) | Cantonese audio (built, **off**) | Free (Workspace for Nonprofits) | 100,000 URL Fetch calls a day per account | Lookups fail until the quota resets; Mandarin audio unaffected | Low: about 24 calls per Play; audio comes from FCBH |
+| [Bible Brain Worker](#bible-brain-worker-cantonese-audio) | Cantonese audio (built, **off**) | Free: Workers **Free** plan only | 100,000 requests a day | Error 1027 until midnight UTC; Mandarin audio unaffected | Low: one request per chapter started; audio comes from FCBH |
 | [App stores](#app-stores) | Distribution | Free (Apple nonprofit waiver; Play $25 paid once) | n/a | n/a | None |
 
 ## Load model
@@ -307,17 +307,17 @@ DNS itself is free. How to keep the card and the account safe, including a cappe
 virtual card and backup administrators, is in the
 [admin runbook](admin-runbook.md#the-cloudflare-account-and-domain).
 
-### Bible Brain Apps Script (Cantonese audio)
+### Bible Brain Worker (Cantonese audio)
 
-A standalone Apps Script web app that holds Faith Comes By Hearing's API key and
-looks up FCBH's links for Cantonese chapters (#241). It's built but off; see
-[Cantonese Bible audio](bible-brain-audio.md#cost-and-limits) for the limits and setup.
+A Cloudflare Worker that holds Faith Comes By Hearing's API key and redirects the app
+to FCBH's audio for Cantonese chapters (#241). It's built but off; see
+[Cantonese Bible audio](bible-brain-audio.md#cost) for the cost analysis and setup.
 
-It runs under Google Workspace for Nonprofits, which has no payment method, so it
-can't be billed. Each chapter looked up is one URL Fetch call against the deploying
-account's 100,000 a day; a Play looks up the chapter and up to 23 after it. It
-carries no audio traffic: players stream from FCBH's servers. Deploy it from a
-different account than the bulletin's script, so they don't share quotas.
+It's allowed on the account with a card on file only because the **Workers Free**
+plan can't bill: past 100,000 requests a day, requests fail with Error 1027 until
+midnight UTC. Never move it, or the account, to Workers Paid. The Worker uses about
+1 ms of CPU per request against Free's 10 ms, and carries no audio traffic: players
+stream from FCBH's servers.
 
 ### App stores
 

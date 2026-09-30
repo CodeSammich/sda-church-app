@@ -32,7 +32,7 @@ licensing decisions and third-party source review live in [docs/LEGAL.md](docs/L
 - [Adventist Connect Media Hosting](docs/operations/adventist-connect-media.md): Bible audio
   and image hosting, with a scaling analysis
 - [Cantonese Bible audio](docs/operations/bible-brain-audio.md): Faith Comes By Hearing's
-  Cantonese narration through the church's Bible Brain Apps Script; built, and off until set up
+  Cantonese narration through the church's Bible Brain Worker; built, and off until set up
 - [Service Limits and Costs](docs/operations/service-limits-and-costs.md): cost, published
   limits, and load for every external service
   - [Sabbath Encouragement attribution and copyright](docs/operations/sabbath-encouragement-copyright.md)

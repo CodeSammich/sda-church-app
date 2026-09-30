@@ -1,6 +1,5 @@
 import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest';
 import { BIBLE_BRAIN_AUDIO } from '@/constants/ExternalLinks';
-import { getBibleBrainChapterAddress } from './BibleBrainAudio';
 
 /** Maps narrator names to one source URL or an ordered list of fallback URLs. */
 export interface TranslationBookChapterAudioLinks {
@@ -112,10 +111,10 @@ type BibleBrainAudioConfig = typeof BIBLE_BRAIN_AUDIO;
 const OLD_TESTAMENT_BOOK_COUNT = 39;
 
 /**
- * The church script's stable address for a Cantonese chapter, or null when the
- * feature is off or that testament has no Cantonese recording. It identifies the
- * chapter everywhere a recording's URL does; before playing, the app swaps it
- * for FCBH's link (see BibleBrainAudio.ts, #241).
+ * The church Worker's stable address for a Cantonese chapter, or null when the
+ * feature is off or that testament has no Cantonese recording. The Worker
+ * redirects to a fresh FCBH link when the player asks for it, so the address can
+ * be queued ahead of time like any other recording (#241).
  */
 export const getCantoneseCuvChapterUrl = (
   bookId: string,
@@ -125,7 +124,7 @@ export const getCantoneseCuvChapterUrl = (
   const id = bookId.toUpperCase();
   const book = AUDIO_POWER_CUV_BOOK_BY_ID.get(id);
   if (
-    !config.scriptUrl ||
+    !config.baseUrl ||
     !book ||
     !Number.isInteger(chapter) ||
     chapter < 1 ||
@@ -138,7 +137,8 @@ export const getCantoneseCuvChapterUrl = (
       ? config.cantoneseFilesets.oldTestament
       : config.cantoneseFilesets.newTestament;
   if (!fileset) return null;
-  return getBibleBrainChapterAddress(fileset, id, chapter, config);
+  const base = config.baseUrl.replace(/\/+$/, '');
+  return `${base}/v1/audio/${encodeURIComponent(fileset)}/${id}/${chapter}`;
 };
 
 /**
@@ -155,4 +155,17 @@ export const getCuvChapterAudioLinks = (
   const links = getAudioPowerCuvChapterLinks(bookId, chapter);
   const cantonese = getCantoneseCuvChapterUrl(bookId, chapter, config);
   return cantonese ? { ...links, [CANTONESE_CUV_READER]: [cantonese] } : links;
+};
+
+/** Whether a URL is the church's Bible Brain Worker. */
+export const isBibleBrainAudioUrl = (
+  url: string,
+  config: BibleBrainAudioConfig = BIBLE_BRAIN_AUDIO,
+) => {
+  if (!config.baseUrl) return false;
+  try {
+    return new URL(url).host === new URL(config.baseUrl).host;
+  } catch {
+    return false;
+  }
 };

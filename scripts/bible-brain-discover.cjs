@@ -2,10 +2,8 @@
 /**
  * Lists Bible Brain's Bibles and audio filesets for a language, and checks
  * whether each audio fileset has a New Testament and an Old Testament chapter,
- * so the script's ALLOWED_FILESETS and the app's configuration use confirmed
- * IDs (#241). It also says how long FCBH's audio links last, which decides how
- * many chapters the app can queue. It only reads from Bible Brain, and never
- * prints the key or a link.
+ * so the Worker's ALLOWED_FILESETS and the app's configuration use confirmed
+ * IDs (#241). It only reads from Bible Brain, and never prints the key.
  *
  *   node scripts/bible-brain-discover.cjs                    Cantonese (yue)
  *   node scripts/bible-brain-discover.cjs --language cmn     Mandarin
@@ -46,26 +44,13 @@ const filesetsOf = (bible) =>
 
 const isAudio = (fileset) => String(fileset.type || '').startsWith('audio');
 
-/** How long a signed link lasts, from its CloudFront or S3 expiry, in words. */
-const lifetimeOf = (link) => {
-  const params = new URL(link).searchParams;
-  let expiresAt = Number(params.get('Expires')) * 1000;
-  const signedAt = params.get('X-Amz-Date')?.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
-  if (!expiresAt && signedAt && Number(params.get('X-Amz-Expires')) > 0) {
-    const [year, month, day, hour, minute, second] = signedAt.slice(1).map(Number);
-    expiresAt = Date.UTC(year, month - 1, day, hour, minute, second) + Number(params.get('X-Amz-Expires')) * 1000;
-  }
-  if (!expiresAt) return 'no expiry in the link (the app assumes 30 minutes)';
-  return `the link lasts ${Math.round((expiresAt - Date.now()) / 60_000)} minutes`;
-};
-
 const chapterCheck = async (key, filesetId, book, chapter) => {
   const { status, body } = await get(key, `bibles/filesets/${filesetId}/${book}/${chapter}`);
   const file = (body?.data || []).find((item) => String(item.book_id).toUpperCase() === book);
   if (!file?.path) return `${book} ${chapter}: none (HTTP ${status})`;
   const host = new URL(file.path).host;
   const duration = file.duration ? `${Math.round(file.duration)} s` : 'unknown length';
-  return `${book} ${chapter}: yes, ${duration}, from ${host}; ${lifetimeOf(file.path)}`;
+  return `${book} ${chapter}: yes, ${duration}, from ${host}`;
 };
 
 const main = async () => {
@@ -100,8 +85,8 @@ const main = async () => {
     console.log('');
   }
 
-  console.log('Audio filesets found. Put the ones the app uses in the script\'s ALLOWED_FILESETS property:');
-  console.log(audioIds.join(','));
+  console.log('Audio filesets found. Put the ones the app uses in the Worker\'s wrangler.toml:');
+  console.log(`ALLOWED_FILESETS = "${audioIds.join(',')}"`);
 };
 
 main();
