@@ -308,8 +308,11 @@ The checked-in mappings and their regeneration scripts are:
 ### 506 hymn recordings on YouTube
 
 The 506 hymnal's YouTube button opens that hymn's recording from a
-[public YouTube playlist of the 506 hymnal](https://www.youtube.com/playlist?list=PLZpA9AftZl_JIt-MCXSfP364-qR3ddrd3)
-that the church recommended. Hymns without a recording yet, and the 505 and 707
+[public YouTube playlist of the 506 hymnal](https://www.youtube.com/playlist?list=PLZpA9AftZl_JIt-MCXSfP364-qR3ddrd3),
+which the church recommended. It is published by CHTV 希望電視台 (Chinese Hope TV,
+[chinesehope.tv](https://chinesehope.tv/)), the Chinese-language Hope Channel of the
+Seventh-day Adventist Church's Northern Asia-Pacific Division, and the recordings carry
+its watermark. Hymns without a recording yet, and the 505 and 707
 hymnals, search YouTube instead. The same limits apply as for zgaxr:
 
 1. the repository stores only the playlist ID and one video ID per hymn number; it does

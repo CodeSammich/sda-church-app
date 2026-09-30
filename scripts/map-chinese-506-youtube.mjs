@@ -23,29 +23,21 @@ import OpenCC from 'opencc-js/t2cn';
 const MAPPING = resolve('features/hymnal/Chinese506YouTube.json');
 const HYMNAL = resolve('features/hymnal/Chinese506Hymnal.json');
 
-// Same hymn and number, different wording. Some are typos in the video titles
-// and some in the hymnal's source directory.
+// Same hymn and number, different wording, some from typos in the video titles.
+// Typos in the hymnal's own titles are corrected in scrape-chinese-506-hymnal.mjs.
 const REVIEWED_TITLES = {
   7: '萬有之王',
   49: '主愛越久越寶',
-  59: '昨日 今日 直到永遠',
   88: '榮耀天君',
-  89: '到各山嶺去傳揚',
   119: '耶穌必快來',
   124: '未日回天家',
-  129: '我們回天家',
   151: '遵守十誡',
-  159: '我聽主聲歡迎',
   168: '當轉眼仰望耶穌 1',
-  203: '寶血大權能',
   213: '黃金之邦',
   274: '主的什一',
   299: '更加愛祢',
   308: '倚靠主臂膀',
   313: '華冠代替塵灰',
-  319: '主永不離你',
-  337: '禱告良辰',
-  344: '得福良辰',
   427: '求主導我',
   443: '感恩信徒一齊來',
 };

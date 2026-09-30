@@ -422,7 +422,7 @@ checks nearly all of them daily.
 | Hymns | zgaxr | `m.zgaxr.com` | Chinese 505, 506, and 707 hymnal sheet music | Link |
 | Hymns | Hymns for Worship | `hymnsforworship.org` | English SDA Hymnal (1985) sheet music | Link |
 | Hymns | Chinese Union Mission | App Store, Google Play | 506 hymnal app store pages | Link |
-| Hymns | YouTube | `youtube.com` | 506 hymnal recordings from a public playlist | Link |
+| Hymns | YouTube | `youtube.com` | 506 hymnal recordings from Chinese Hope TV's playlist | Link |
 | Printed bulletin | Sunrise-Sunset API | `api.sunrise-sunset.org` | Sunset times on the printed Queens bulletin (Apps Script only; the app calculates its own) | Apps Script |
 | Media | YouTube | `youtube.com` | Livestream and sermon archive | Link |
 | Media | Spotify | `open.spotify.com` | Sermon and class audio archive | Link |
