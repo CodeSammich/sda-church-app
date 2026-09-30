@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import {
+  getBackAction,
   getBackTarget,
   getHeaderBackButtonColors,
   hasHeaderBackButton,
@@ -92,10 +93,24 @@ describe('global header back navigation', () => {
     const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
     const layout = readFileSync('app/_layout.tsx', 'utf8');
     const handler = header.slice(header.indexOf('const handleBackPress'), header.indexOf('const expandBibleSearch'));
-    expect(handler).toContain('router.dismissTo(getBackTarget(pathname, globalParams.backTo)');
+    expect(handler).toContain('getBackTarget(pathname, globalParams.backTo)');
+    expect(handler).toContain('router[getBackAction(pathname, target)](target');
     expect(handler).not.toMatch(/router\.back\(|canGoBack/);
     expect(layout).toContain('const backTarget = getBackTarget(pathname, globalParams.backTo);');
-    expect(layout).toContain('router.dismissTo(gestureBackTarget');
-    expect(layout).toContain('router.dismissTo(androidBackTarget');
+    expect(layout).toContain('router[getBackAction(pathname, gestureBackTarget)](gestureBackTarget');
+    expect(layout).toContain('router[getBackAction(pathname, androidBackTarget)](androidBackTarget');
+  });
+
+  it('pops back within a stack and replaces across stacks', () => {
+    // Within the Home stack: pop to the parent instead of adding a copy.
+    expect(getBackAction('/home/about-sda', '/home/discover')).toBe('dismissTo');
+    expect(getBackAction('/home/english-hymnal', '/home/hymnal-selection')).toBe('dismissTo');
+    expect(getBackAction('/explore/library', '/explore')).toBe('dismissTo');
+    // Home itself is a tab of its own, so a Home page goes back to it by replacing.
+    expect(getBackAction('/home/give', '/')).toBe('replace');
+    expect(getBackAction('/(tabs)/home/bulletin', '/')).toBe('replace');
+    // The Bible opened from another tab goes back to its caller by replacing.
+    expect(getBackAction('/bible', '/home/english-hymnal?hymnNum=12')).toBe('replace');
+    expect(getBackAction('/you/legal', '/explore/library')).toBe('replace');
   });
 });

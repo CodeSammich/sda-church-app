@@ -1,4 +1,5 @@
 import {
+  getBackAction,
   getBackTarget,
   getHeaderBackButtonColors,
   hasHeaderBackButton,
@@ -364,7 +365,8 @@ export const GlobalHeader = (props: any) => {
   const handleBackPress = () => {
     // Goes where Android's back gesture and the web app's back button go: the
     // screen's backTo, or else its parent. See getBackTarget.
-    router.dismissTo(getBackTarget(pathname, globalParams.backTo) as any);
+    const target = getBackTarget(pathname, globalParams.backTo);
+    router[getBackAction(pathname, target)](target as any);
   };
 
   const expandBibleSearch = () => {

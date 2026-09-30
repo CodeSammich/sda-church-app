@@ -10,6 +10,7 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import {
+  getBackAction,
   getBackTarget,
   hasHeaderBackButton,
 } from '@/constants/BackNavigation';
@@ -956,7 +957,7 @@ function RootLayoutNav({
       // The guard keeps the browser on the same URL. Stop Expo Router from also
       // processing this pop and perform the same app navigation as the header arrow.
       event.stopImmediatePropagation();
-      router.dismissTo(gestureBackTarget as any);
+      router[getBackAction(pathname, gestureBackTarget)](gestureBackTarget as any);
 
       // Navigating to Home while already there does not cause a route render, so
       // ensure the guard is restored even when the target route stays unchanged.
@@ -986,7 +987,7 @@ function RootLayoutNav({
     }
 
     const handleAndroidBack = () => {
-      router.dismissTo(androidBackTarget as any);
+      router[getBackAction(pathname, androidBackTarget)](androidBackTarget as any);
       return true;
     };
 

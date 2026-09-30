@@ -21,8 +21,7 @@ const normalizeBackPath = (pathname: string) =>
 /**
  * Where every back action goes: the header's back arrow, Android's back
  * gesture, and the browser's back button in the web app. Navigate there with
- * `router.dismissTo`, which pops back to the screen when it's already beneath
- * this one and replaces this screen otherwise.
+ * the router method getBackAction names.
  *
  * Back is route-driven, not stack-driven. Most screens have one parent;
  * screens with several entry points carry an explicit `backTo` value (for
@@ -82,4 +81,19 @@ export const getBackTarget = (
   if (route === '/bible') return '/';
 
   return '/';
+};
+
+const stackOf = (path: string) =>
+  normalizeBackPath(path.split('?')[0]).split('/').filter(Boolean)[0] ?? '';
+
+/**
+ * How to go back to `target` from `pathname`. Within one stack, such as two
+ * Home pages, `dismissTo` pops back to the target when it's beneath this page,
+ * rather than adding a second copy of it the way `replace` would. Across
+ * stacks, such as a Home page back to Home itself or the Bible back to the
+ * Bulletin, `dismissTo` has nothing to pop to and does nothing, so `replace`.
+ */
+export const getBackAction = (pathname: string, target: string) => {
+  const stack = stackOf(pathname);
+  return stack !== '' && stack === stackOf(target) ? 'dismissTo' : 'replace';
 };
