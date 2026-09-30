@@ -11,13 +11,15 @@ import {
   useAppTheme,
 } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import packageJson from '@/package.json';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext, useState } from 'react';
-import { ImageBackground, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { List, Text, TouchableRipple } from 'react-native-paper';
 
 const allLabels = {
@@ -94,17 +96,21 @@ export default function YouScreen() {
   const [showLanguage, setShowLanguage] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
   const headerHeight = useGlobalHeaderHeight();
+  const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title }} />
+      <Stack.Screen options={{ title: labels.title, heroUnderStatusBar } as any} />
       <ScrollView
         style={NavigationStyles.container}
         contentContainerStyle={styles.content}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <ImageBackground
+          onLayout={onHeroLayout}
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
           style={[
             NavigationStyles.heroHeader,

@@ -6,12 +6,12 @@ import { AppIcon } from '@/components/AppIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo } from 'react';
 import {
-  ImageBackground,
   ImageSourcePropType,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Text } from 'react-native-paper';
 
 type VerseHeroProps = {

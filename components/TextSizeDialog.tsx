@@ -11,7 +11,7 @@ import {
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { createElement, useContext, useEffect, useState } from 'react';
 import {
   type GestureResponderEvent,
@@ -213,6 +213,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   const { language } = useContext(LanguageContext);
   const { setTextScale, textScale } = useTextSize();
   const theme = useAppTheme();
+  const popupMaxHeight = usePopupMaxHeight(0.9);
   const labels = labelsByLanguage[language] ?? labelsByLanguage.en;
   const [draftScale, setDraftScale] = useState<TextScale>(textScale);
   const [isApplying, setIsApplying] = useState(false);
@@ -310,6 +311,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
         dismissableBackButton={!isApplying}
         style={[
           styles.dialog,
+          { maxHeight: popupMaxHeight },
           getPopupSurfaceStyle(theme),
         ]}
       >
@@ -514,7 +516,6 @@ const styles = StyleSheet.create({
   },
   dialog: {
     alignSelf: 'center',
-    maxHeight: '90%',
     maxWidth: 560,
     width: '90%',
   },
