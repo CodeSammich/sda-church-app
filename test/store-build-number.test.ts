@@ -24,7 +24,7 @@ describe('store build number', () => {
     // Google Play refuses a versionCode lower than an earlier upload.
     const versions = ['0.0.1', '0.9.9', '0.39.0', '0.40.0', '0.40.1', '0.40.999', '0.41.0',
       '0.999.999', '1.0.0', '1.0.1', '1.1.0', '2.0.0'];
-    const buildNumbers = versions.map(storeBuildNumber);
+    const buildNumbers: number[] = versions.map(storeBuildNumber);
     expect(buildNumbers).toEqual([...buildNumbers].sort((a, b) => a - b));
     expect(new Set(buildNumbers).size).toBe(versions.length);
   });
