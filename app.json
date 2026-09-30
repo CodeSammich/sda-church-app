@@ -27,11 +27,6 @@
         "usesNonExemptEncryption": false
       }
     },
-    "androidStatusBar": {
-      "backgroundColor": "#FAF4EF",
-      "barStyle": "dark-content",
-      "translucent": false
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./public/icon-1024x1024.png",
