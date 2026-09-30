@@ -58,6 +58,12 @@ export const getBulletinApiUrl = (date: string) =>
  * notice, only after the Worker is deployed and checked; the steps are in
  * docs/operations/bible-brain-audio.md. A testament with no fileset has no
  * Cantonese audio, and the Mandarin narration stays available for every chapter.
+ *
+ * TODO: The same Worker can bring FCBH audio in more heart languages of the
+ * church's neighbors, such as Haitian Creole, Russian, Ukrainian, Bengali,
+ * Arabic, and Japanese, paired with matching text from HelloAO (#343). Show a
+ * narrator that covers only one testament as such, and say which narrator plays
+ * instead in the other, for Cantonese first.
  */
 export const BIBLE_BRAIN_AUDIO = {
   baseUrl: '',

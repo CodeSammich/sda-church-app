@@ -110,6 +110,11 @@ may throttle heavy use.
   remove it from [What not to claim](store-listing.md#what-not-to-claim).
 - [ ] **Monitoring.** Add a `/v1/health` check and one sampled chapter redirect to
   `test/integration/external-dependencies.mjs`.
+- [ ] **Old Testament listeners.** If FCBH has only the New Testament in Cantonese,
+  don't let the narrator switch silently. Name it as New Testament only, and on an Old
+  Testament chapter say that the Mandarin narration is playing instead. Today the app
+  quietly plays Mandarin there and returns to Cantonese in the New Testament. The same
+  display will serve other languages' partial recordings (#343).
 - [ ] **Devices.** On a real iPhone and Android phone: pick the Cantonese narrator on
   a New Testament chapter, play across a chapter boundary, lock the screen, and check
   the notice under the chapter. On an Old Testament chapter, the Cantonese narrator
