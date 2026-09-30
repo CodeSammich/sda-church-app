@@ -1,6 +1,6 @@
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Dialog, Portal, RadioButton, Text } from 'react-native-paper';
@@ -49,6 +49,7 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
   const { language, setLanguage } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
+  const popupMaxHeight = usePopupMaxHeight(0.9);
 
   return (
     <Portal>
@@ -57,6 +58,7 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
         onDismiss={onDismiss}
         style={[
           styles.dialog,
+          { maxHeight: popupMaxHeight },
           getPopupSurfaceStyle(theme),
         ]}
       >
@@ -181,7 +183,6 @@ const styles = StyleSheet.create({
   },
   dialog: {
     alignSelf: 'center',
-    maxHeight: '90%',
     maxWidth: 560,
     width: '90%',
   },

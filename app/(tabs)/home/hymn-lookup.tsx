@@ -15,6 +15,7 @@ import {
   getHymnalSearchItems,
   type HymnalSearchItem,
 } from '@/features/hymnal/HymnalSearch';
+import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useContext, useMemo, useState } from 'react';
@@ -85,6 +86,7 @@ export default function HymnLookupScreen() {
   const styles = useMemo(() => createStyles(textScale), [textScale]);
   const { language } = useContext(LanguageContext);
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
+  const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
   const { backTo, sourceHymnalId, sourceNumber } = useLocalSearchParams<{
     backTo?: string;
     sourceHymnalId?: string;
@@ -188,6 +190,7 @@ export default function HymnLookupScreen() {
         options={{
           title: labels.title,
           backTo,
+          heroUnderStatusBar,
           headerSearch: {
             items: headerSearchItems,
             placeholder: labels.search,
@@ -198,10 +201,13 @@ export default function HymnLookupScreen() {
         style={NavigationStyles.container}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <TitleHero
           imageSource={{ uri: CHURCH_BUILDING_IMAGE_URL }}
           title={labels.title}
+          onLayout={onHeroLayout}
         />
         <View style={styles.body}>
           <SourceNoticePanel

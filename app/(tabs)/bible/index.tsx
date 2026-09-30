@@ -105,7 +105,8 @@ import {
   storeSavedVerses,
 } from '@/services/SavedVersesService';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
-import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
 import {
   createReaderStyles,
   getBibleDockLayout,
@@ -584,6 +585,9 @@ export default function BibleScreen() {
     }[translation.lang];
     return `${translation.name} (${translationLanguageLabel})`;
   };
+  const popupMaxHeight = usePopupMaxHeight(0.8);
+  const audioSettingsMaxHeight = usePopupMaxHeight(0.82);
+  const verseDetailMaxHeight = usePopupMaxHeight(0.94);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
@@ -628,6 +632,16 @@ export default function BibleScreen() {
   const [books, setBooks] = useState<BibleService.TranslationBook[]>([]);
   const [chapterData, setChapterData] =
     useState<BibleService.TranslationBookChapter | null>(null);
+  // Wide enough for the chapter's longest verse number (three digits in
+  // Psalm 119), counting the system text size, which iOS applies to the digits
+  // on top of the app's. A fixed width wrapped "14" onto two lines there.
+  const verseNumberColumnWidth = useMemo(() => {
+    const longestVerse = (chapterData?.chapter.content ?? []).reduce(
+      (longest, item) => (item.type === 'verse' ? Math.max(longest, item.number) : longest),
+      1,
+    );
+    return getVerseNumberColumnWidth(longestVerse, textScale, osFontScale);
+  }, [chapterData, osFontScale, textScale]);
   const [supportingChapterData, setSupportingChapterData] =
     useState<BibleService.TranslationBookChapter | null>(null);
   const supportingChapterLoadAttemptRef = useRef(0);
@@ -3066,10 +3080,12 @@ export default function BibleScreen() {
               <View
                 style={[
                   ReaderStyles.verseNumberColumn,
+                  { width: verseNumberColumnWidth },
                   showRubyPinyin && ReaderStyles.pinyinVerseNumberColumn,
                 ]}
               >
                 <Text
+                  numberOfLines={1}
                   style={[
                     ReaderStyles.verseNumber,
                     {
@@ -3225,6 +3241,7 @@ export default function BibleScreen() {
   // dock controls may still stack at large text sizes, but these three compact
   // selectors remain a single horizontal navigation row.
   const stackChapterControls = false;
+  const chipPaddingHorizontal = textScale >= 1.75 ? 8 : 10;
 
   const renderPreviousChapterButton = () =>
     !isFirstChapter ? (
@@ -3268,8 +3285,16 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            flexGrow: 50,
-            flexBasis: 0,
+            // When the three chips don't fit, only the book name shortens. The
+            // chapter number and the Verse label keep their width, up to a share
+            // of the row that leaves the book chip room even at the largest
+            // text sizes, so the row never runs over the chapter arrows.
+            // Narrower side padding than other pills leaves room for "Psalms",
+            // "119", and "Verse" on most iPhones.
+            paddingHorizontal: chipPaddingHorizontal,
+            flexBasis: 'auto',
+            flexGrow: 1,
+            flexShrink: 1,
           },
         ]}
         onPress={() => setModalType('book')}
@@ -3302,8 +3327,11 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            flexGrow: 35,
-            flexBasis: 0,
+            paddingHorizontal: chipPaddingHorizontal,
+            flexBasis: 'auto',
+            flexGrow: 0,
+            flexShrink: 0,
+            maxWidth: '30%',
           },
         ]}
         onPress={() => setModalType('chapter')}
@@ -3331,8 +3359,11 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            flexGrow: 15,
-            flexBasis: 0,
+            paddingHorizontal: chipPaddingHorizontal,
+            flexBasis: 'auto',
+            flexGrow: 0,
+            flexShrink: 0,
+            maxWidth: '40%',
           },
         ]}
         onPress={() => setModalType('verse')}
@@ -3460,6 +3491,16 @@ export default function BibleScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* The header hides while reading; this keeps scrolled text from running
+          under the status bar's clock and icons. */}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.statusBarBackdrop,
+          { backgroundColor: theme.colors.background, height: insets.top },
+        ]}
+      />
 
       {/* Control Dock: Sticky Bottom Navigation & Action Bar */}
       <Animated.View
@@ -3778,7 +3819,7 @@ export default function BibleScreen() {
           onDismiss={() => setAudioSettingsVisible(false)}
           contentContainerStyle={[
             ReaderStyles.audioSettingsContent,
-            { marginBottom: bottomDockInset + 12 },
+            { marginBottom: bottomDockInset + 12, maxHeight: audioSettingsMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
         >
@@ -3946,7 +3987,11 @@ export default function BibleScreen() {
         <Modal
           visible={backgroundAudioGuidanceVisible}
           onDismiss={() => setBackgroundAudioGuidanceVisible(false)}
-          contentContainerStyle={[ReaderStyles.modalContent, getPopupSurfaceStyle(theme)]}
+          contentContainerStyle={[
+            ReaderStyles.modalContent,
+            { maxHeight: popupMaxHeight },
+            getPopupSurfaceStyle(theme),
+          ]}
         >
           <View style={ReaderStyles.modalInner}>
             <Text
@@ -4010,7 +4055,11 @@ export default function BibleScreen() {
         <Modal
           visible={sleepTimerVisible}
           onDismiss={() => setSleepTimerVisible(false)}
-          contentContainerStyle={[ReaderStyles.modalContent, getPopupSurfaceStyle(theme)]}
+          contentContainerStyle={[
+            ReaderStyles.modalContent,
+            { maxHeight: popupMaxHeight },
+            getPopupSurfaceStyle(theme),
+          ]}
         >
           <View style={ReaderStyles.modalInner}>
             <Text
@@ -4086,7 +4135,11 @@ export default function BibleScreen() {
           onDismiss={closeModal}
           contentContainerStyle={[
             ReaderStyles.modalContent,
-            lastActiveType === 'verse-detail' && styles.verseDetailModalContent,
+            { maxHeight: popupMaxHeight },
+            lastActiveType === 'verse-detail' && [
+              styles.verseDetailModalContent,
+              { maxHeight: verseDetailMaxHeight },
+            ],
             getPopupSurfaceStyle(theme),
           ]}
         >
@@ -4894,7 +4947,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       flexGrow: 1,
     },
     verseDetailModalContent: {
-      maxHeight: '94%',
       marginTop: 8,
       marginBottom: 8,
     },
@@ -4969,6 +5021,12 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       justifyContent: 'center',
       gap: 6,
       width: '100%',
+    },
+    statusBarBackdrop: {
+      left: 0,
+      position: 'absolute',
+      right: 0,
+      top: 0,
     },
     stackedPill: {
       width: '100%',

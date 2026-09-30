@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 interface WrappingButtonProps {
+  accessibilityHint?: string;
   accessibilityLabel?: string;
   accessibilityRole?: AccessibilityRole;
   accessibilityState?: AccessibilityState;
@@ -34,6 +35,7 @@ interface WrappingButtonProps {
 }
 
 export const WrappingButton = ({
+  accessibilityHint,
   accessibilityLabel,
   accessibilityRole = 'button',
   accessibilityState,
@@ -82,6 +84,7 @@ export const WrappingButton = ({
 
   return (
     <Pressable
+      accessibilityHint={accessibilityHint}
       accessibilityLabel={spokenLabel}
       accessibilityRole={accessibilityRole}
       accessibilityState={{ ...accessibilityState, disabled: isDisabled }}

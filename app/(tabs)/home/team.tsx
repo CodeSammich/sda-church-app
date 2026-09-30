@@ -17,7 +17,8 @@ import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
-import { ImageBackground, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Card, Divider, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

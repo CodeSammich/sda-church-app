@@ -23,12 +23,12 @@ import {
 } from '@/services/VerseOfTheDay';
 import { getSunTimes } from '@/services/SunTimesService';
 import { createNavigationStyles } from '@/styles/NavigationStyles';
+import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import {
-  ImageBackground,
   Platform,
   ScrollView,
   Share,
@@ -36,6 +36,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Card, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -43,6 +44,10 @@ export default function HomeScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
+  // Home re-renders every second for the countdown. A new options object each
+  // time would update the tab navigator, and every tab's header, as often.
+  const screenOptions = useMemo(() => ({ heroUnderStatusBar }), [heroUnderStatusBar]);
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
   const effectiveTextScale = Math.max(1, fontScale * textScale);
@@ -397,11 +402,15 @@ export default function HomeScreen() {
 
   return (
     <>
+      <Stack.Screen options={screenOptions as any} />
       <ScrollView
         style={navigationStyles.container}
         contentContainerStyle={{ paddingTop: 0 }}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <ImageBackground
+          onLayout={onHeroLayout}
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
           style={[
             styles.hero,

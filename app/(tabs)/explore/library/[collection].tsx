@@ -14,6 +14,7 @@ import {
   LIBRARY_SHELF_TITLES,
 } from '@/features/library/LibraryShelves';
 import { useLibraryShelfBooks } from '@/features/library/useLibraryShelfBooks';
+import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import {
@@ -42,6 +43,7 @@ export default function LibraryScreen() {
   );
   const shelfTitle = LIBRARY_SHELF_TITLES[shelf][language];
   const books = getShelfBooks(shelf, q);
+  const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
 
   return (
     <>
@@ -49,15 +51,19 @@ export default function LibraryScreen() {
         options={{
           backTo: '/explore/library',
           title: shelfTitle,
+          heroUnderStatusBar,
         } as any}
       />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <TitleHero
           imageSource={{ uri: CHURCH_BUILDING_IMAGE_URL }}
           title={shelfTitle}
+          onLayout={onHeroLayout}
         />
         <View style={styles.content}>
           <View style={[styles.bookGrid, useListLayout && styles.bookList]}>
