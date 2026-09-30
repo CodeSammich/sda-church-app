@@ -1,6 +1,5 @@
 import { AppIcon } from '@/components/AppIcon';
 import { ExternalBrandIcon } from '@/components/ExternalBrandIcon';
-import { SourceNoticePanel } from '@/components/SourceNoticePanel';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import { FlatList, ImageBackground, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -34,45 +33,29 @@ import { LinearGradient } from 'expo-linear-gradient';
 const uiLabels = {
   en: {
     title: 'SDA Hymnal — 1985 Edition',
-    sourceTitle: 'Hymnal source',
     search: 'Search by number, title, or scripture...',
     externalLink: 'View on HymnsForWorship.org',
-    attribution:
-      'Tap a hymn card to open its lyrics and sheet music externally on HymnsForWorship.org.',
-    rotation:
-      'For a larger, easier-to-read score, rotate your device to landscape. Auto-rotate must be enabled.',
     watchYouTube: 'YouTube',
     readScripture: 'Bible',
   },
   zh: {
     title: '英文 SDA 詩歌本 — 1985 年版',
-    sourceTitle: '詩歌來源',
     search: '按編號、標題或經文搜尋...',
     externalLink: '在 HymnsForWorship.org 查看',
-    attribution: '點擊詩歌卡片即可在 HymnsForWorship.org 查看歌詞與琴譜。',
-    rotation: '將裝置旋轉至橫向可放大琴譜，方便閱讀。請先開啟自動旋轉。',
     watchYouTube: 'YouTube',
     readScripture: '查閱聖經',
   },
   'zh-cn': {
     title: '英文 SDA 诗歌本 — 1985 年版',
-    sourceTitle: '诗歌来源',
     search: '按编号、标题或经文搜索...',
     externalLink: '在 HymnsForWorship.org 查看',
-    attribution: '点击诗歌卡片即可在 HymnsForWorship.org 查看歌词与琴谱。',
-    rotation: '将设备旋转至横向可放大乐谱，方便阅读。请先开启自动旋转。',
     watchYouTube: 'YouTube',
     readScripture: '查阅圣经',
   },
   es: {
     title: 'Himnario ASD — Edición 1985',
-    sourceTitle: 'Fuente del himnario',
     search: 'Buscar por número, título o referencia...',
     externalLink: 'Ver en HymnsForWorship.org',
-    attribution:
-      'Toca una tarjeta de himno para abrir sus letras y partituras externamente en HymnsForWorship.org.',
-    rotation:
-      'Para ampliar y leer mejor la partitura, gira el dispositivo horizontalmente. La rotación automática debe estar activada.',
     watchYouTube: 'YouTube',
     readScripture: 'Biblia',
   },
@@ -259,18 +242,6 @@ export default function HymnalScreen() {
           </Text>
         </ImageBackground>
 
-        {/* Body */}
-        <View style={DocumentStyles.section}>
-          <SourceNoticePanel
-            items={[
-              { icon: 'music-clef-treble', text: labels.attribution },
-              { icon: 'phone-rotate-landscape', text: labels.rotation },
-            ]}
-            style={styles.sourcePanel}
-            title={labels.sourceTitle}
-          />
-        </View>
-
         <FlatList
           data={displayHymns}
           keyExtractor={(item) => item.number.toString()}
@@ -364,8 +335,5 @@ const createStyles = (
     paddingBottom: 0,
     paddingTop: 0,
     fontSize: scaleTypographyMetric(16, textScale),
-  },
-  sourcePanel: {
-    marginTop: 10,
   },
 });
