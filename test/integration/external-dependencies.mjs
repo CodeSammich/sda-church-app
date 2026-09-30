@@ -314,6 +314,29 @@ await record('daily public-domain book sample', 'Project Gutenberg', () => {
   );
 });
 
+// Spanish readers see a book's Spanish edition when it has one. Those open on
+// EGW Writings or in the publisher's own free copy.
+const spanishEditionUrls = [...libraryCatalogSource.matchAll(
+  /spanish:\s*\{[^}]*?sourceUrl:\s*'(https:\/\/[^']+)'/g,
+)].map(([, url]) => url);
+
+await record('Spanish editions open', 'Library', async () => {
+  if (spanishEditionUrls.length !== 3) {
+    throw new Error(`found ${spanishEditionUrls.length} Spanish edition links, expected 3`);
+  }
+  for (const url of spanishEditionUrls) {
+    if (new URL(url).hostname === 'text.egwwritings.org') {
+      await getTextPage(url, { expectedHosts: ['text.egwwritings.org'] });
+    } else {
+      await probe(url, {
+        binary: true,
+        expectedHosts: ['www.chapellibrary.org', 'chapellibrary.org'],
+      });
+    }
+  }
+  return `${spanishEditionUrls.length} Spanish editions`;
+});
+
 // An Internet Archive item can later be moved into a lending collection or
 // restricted, which usually means someone found it is still under copyright.
 // Recheck each linked scan so the library stops pointing at it.
