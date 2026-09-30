@@ -151,8 +151,9 @@ covering:
 
 **Photos of people, confirmed September 2026:** everyone who can be recognized in the
 app's photos gave written consent by message: the two people on Meet Our Team, and the
-leader at the front of each fellowship photo on the Fellowship page. The messages are
-kept in the church's records, not in this repository. Other people in the fellowship
+leader at the front of each fellowship photo on the Fellowship page. Screenshots of
+the messages are in the church's **IT Admin** shared drive in Google Drive, open only
+to IT administrators, not in this repository. Other people in the fellowship
 photos appear mostly from behind or in profile. Get written consent before adding a
 photo of anyone else, and keep people out of store screenshots.
 
