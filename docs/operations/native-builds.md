@@ -46,7 +46,7 @@ the church wants to preserve unrelated project history.
 
 `scripts/build-android-native.mjs` reuses an existing generated `android/` project
 for repeat local builds. This avoids an unnecessary npm registry metadata lookup for
-`expo-template-bare-minimum@58.0.3`, including when `--no-install` is used. A clean
+`expo-template-bare-minimum@58.0.9`, including when `--no-install` is used. A clean
 GitHub Actions checkout still runs Expo prebuild. When `app.json`, a native config
 plugin, or another native setting changes, force regeneration with either:
 
@@ -287,7 +287,7 @@ source ~/.nvm/nvm.sh
 nvm use 24
 npm install --force
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.3 \
+  --template expo-template-bare-minimum@58.0.9 \
   --platform android
 ```
 
@@ -297,7 +297,7 @@ from this template. Do not hand-edit `android/`; put durable changes in
 
 ```sh
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.3 \
+  --template expo-template-bare-minimum@58.0.9 \
   --platform android \
   --no-install
 ```

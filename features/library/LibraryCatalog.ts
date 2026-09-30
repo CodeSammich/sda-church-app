@@ -23,11 +23,19 @@ export type LibraryItem = Readonly<{
   // original. Required for Internet Archive scans, whose own edition must be
   // public domain too; see "Internet Archive sources" in docs/LEGAL.md.
   editionYear?: number;
-  simplifiedChinese?: Readonly<{
-    author: string;
-    description: string;
-    title: string;
-  }>;
+  // Chinese text for a Chinese book, shown in the matching app language. Other
+  // languages show the English text above, so titles stay in one language.
+  traditionalChinese?: LibraryItemText;
+  simplifiedChinese?: LibraryItemText;
+  // A Chinese book with no English translation yet: only Chinese readers see
+  // it in the Library, on its shelf, in the featured books, and in search.
+  onlyForChineseReaders?: boolean;
+}>;
+
+type LibraryItemText = Readonly<{
+  author: string;
+  description: string;
+  title: string;
 }>;
 
 const publicDomainWorks: readonly LibraryItem[] = [
@@ -187,18 +195,25 @@ const churchDocuments: readonly LibraryItem[] = [
     // Sabbath Encouragement page from (SABBATH_ENCOURAGEMENT_SOURCE_FILE_ID in
     // google-apps-script/SabbathEncouragement.gs). Keep the Drive file name.
     id: 'sabbath-encouragement',
-    title: 'Sabbath Encouragement (安息日勉言)',
-    author: 'Bible and Ellen G. White quotations',
+    title: 'Sabbath Encouragement',
+    author: 'Various',
     collection: 'adventist-pioneers',
     description:
       'Fifty-two readings of Bible verses and Ellen G. White quotations on the Sabbath, compiled by churches in China. The Brooklyn bulletin prints one each week.',
     language: 'zh',
+    onlyForChineseReaders: true,
     rights: 'church-hosted',
     sourceName: 'New York Chinese SDA Church',
     sourceUrl: 'https://app.nyccsda.org/library/sabbath_encouragement.pdf',
+    traditionalChinese: {
+      title: '安息日勉言',
+      author: '多位作者',
+      description:
+        '五十二篇關於安息日的聖經經文與懷愛倫著作摘錄，由中國教會編輯。布魯克林週報每週刊登一篇。',
+    },
     simplifiedChinese: {
       title: '安息日勉言',
-      author: '圣经与怀爱伦著作摘录',
+      author: '多位作者',
       description:
         '五十二篇关于安息日的圣经经文与怀爱伦著作摘录，由中国教会编辑。布鲁克林周报每周刊登一篇。',
     },
@@ -234,22 +249,25 @@ export const getLibraryItemShelf = (item: LibraryItem): LibraryShelf =>
 export const getLibraryItemsForLanguage = (language: SupportedLanguage) => {
   const preferredLanguage = language === 'zh' || language === 'zh-cn' ? 'zh' : 'en';
   const rank = (item: LibraryItem) => (item.language === preferredLanguage ? 0 : 1);
+  const forThisReader = (items: readonly LibraryItem[]) =>
+    items
+      .filter((item) => preferredLanguage === 'zh' || !item.onlyForChineseReaders)
+      .sort((a, b) => rank(a) - rank(b));
 
   return {
-    publicDomainWorks: [...publicDomainWorks].sort((a, b) => rank(a) - rank(b)),
-    officialCollections: [...officialCollections].sort((a, b) => rank(a) - rank(b)),
-    churchDocuments: [...churchDocuments].sort((a, b) => rank(a) - rank(b)),
+    publicDomainWorks: forThisReader(publicDomainWorks),
+    officialCollections: forThisReader(officialCollections),
+    churchDocuments: forThisReader(churchDocuments),
   };
 };
 
 export const getLibraryItemDisplayText = (
   item: LibraryItem,
   language: SupportedLanguage,
-) =>
-  language === 'zh-cn' && item.simplifiedChinese
-    ? item.simplifiedChinese
-    : {
-        author: item.author,
-        description: item.description,
-        title: item.title,
-      };
+): LibraryItemText =>
+  (language === 'zh' && item.traditionalChinese) ||
+  (language === 'zh-cn' && item.simplifiedChinese) || {
+    author: item.author,
+    description: item.description,
+    title: item.title,
+  };
