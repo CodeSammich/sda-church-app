@@ -245,9 +245,11 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 
 ## Categories, URLs, and contact
 
-- **Category:** App Store primary **Reference**, secondary **Lifestyle**. Google Play
-  **Books & Reference**. Most of the app is the Bible, and Bible apps usually list under
-  these.
+- **Category:** Google Play **Lifestyle**, with the tags Religious text, Lifestyle, and
+  Books & reference. App Store primary **Lifestyle**, secondary **Reference**. Church
+  apps usually list under Lifestyle, and the Religious text tag and Reference category
+  cover the Bible. Why, and which tags to avoid, is in
+  [Google Play Console answers](play-console-answers.md#category-and-tags).
 - **Privacy policy URL:** `https://app.nyccsda.org/privacy-policy.html`
 - **Support URL** (App Store, required): `https://app.nyccsda.org/support.html`. It's
   live once 0.42.0 reaches `main` and the web preview deploys.
@@ -281,6 +283,8 @@ The app collects no personal data, shows no ads, and uses no analytics.
 
 The [store policy audit](store-policy-audit.md) has the details; confirm its
 [release blockers](store-policy-audit.md#required-confirmations-before-submission) first.
+The answers given in Play Console, question by question, are in
+[Google Play Console answers](play-console-answers.md).
 
 - **App Privacy** (App Store) and **Data safety** (Google Play): the likely answer is that
   no data is collected or shared. The app has no accounts, analytics, or ads, and keeps
@@ -302,7 +306,8 @@ Store screenshots aren't kept in this repository; upload them straight to each s
 - **Google Play:** 2 to 8 phone screenshots. The long side can be at most twice the short
   side, so capture at 1080 × 1920: on an emulator, run `adb shell wm size 1080x1920`, and
   turn on Android's demo mode for a clean status bar. Play also needs a 1024 × 500 feature
-  graphic and the 512 × 512 icon (`public/icon-512x512.png`).
+  graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
+  and the 512 × 512 icon (`public/icon-512x512.png`).
 - **App Store:** iPhone 6.9-inch screenshots, and iPad 13-inch screenshots because the app
   supports iPad (`supportsTablet`). App Store Connect lists the exact pixel sizes. These
   need the iOS Simulator on a Mac, or real devices.

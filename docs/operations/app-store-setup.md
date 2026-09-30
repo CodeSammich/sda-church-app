@@ -296,7 +296,9 @@ the account can't be stranded. Remove access when someone leaves the role.
    (`https://app.nyccsda.org/privacy-policy.html`), app access (no login is
    needed), ads (none), content rating, target audience, and Data safety. Use the
    answers in [store-policy-audit.md](store-policy-audit.md) so they match the
-   app as submitted.
+   app as submitted. The answers the church gave, including the advertising ID and
+   foreground service declarations, are in
+   [Google Play Console answers](play-console-answers.md).
 4. Under **Store listing**, add the short and full descriptions, the 512 × 512
    icon (`public/icon-512x512.png`), the 1024 × 500 feature graphic, and phone
    screenshots. The text, in English and Chinese, is in
