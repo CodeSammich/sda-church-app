@@ -1,7 +1,7 @@
 import { AppIcon } from '@/components/AppIcon';
 import { ExternalBrandIcon } from '@/components/ExternalBrandIcon';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
-import { openYouTubeSearch } from '@/constants/ExternalLinks';
+import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
@@ -39,6 +39,8 @@ interface ChineseHymnalReaderProps {
   coverImage: ImageSourcePropType;
   getHymns: () => ChineseHymnalEntry[];
   openHymn: (hymnNumber: number | string) => void;
+  /** The hymn's own recording. Without one, YouTube searches for the hymn. */
+  getYouTubeUrl?: (hymnNumber: number | string) => string | undefined;
   titles?: Record<'en' | 'zh' | 'zh-cn' | 'es', string>;
 }
 
@@ -66,6 +68,7 @@ export function ChineseHymnalReader({
   coverImage,
   getHymns,
   openHymn,
+  getYouTubeUrl,
   titles,
 }: ChineseHymnalReaderProps) {
   const theme = useAppTheme();
@@ -141,11 +144,14 @@ export function ChineseHymnalReader({
 
         <View style={styles.bottomSection}>
           <TouchableRipple
-            onPress={() =>
-              openYouTubeSearch(
-                `${edition}版赞美诗 ${item.number} ${item.title}`,
-              )
-            }
+            onPress={() => {
+              const youtubeUrl = getYouTubeUrl?.(item.number);
+              if (youtubeUrl) {
+                openURL(youtubeUrl, 'Error', 'Could not open the YouTube video.');
+              } else {
+                openYouTubeSearch(`${edition}版赞美诗 ${item.number} ${item.title}`);
+              }
+            }}
             style={styles.flexButton}
           >
             <View style={styles.buttonContent}>

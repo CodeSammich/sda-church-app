@@ -1,3 +1,7 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import {
   CHINESE_506_DIRECTORY_URL,
   getChinese506HymnUrl,
@@ -20,6 +24,41 @@ describe('Chinese 506 hymnal directory', () => {
       title: '阿门',
       pageId: 3709,
     });
+  });
+
+  it('corrects typos in the source directory\'s titles', () => {
+    const titles = Object.fromEntries(hymns.map(({ number, title }) => [number, title]));
+    expect(titles).toMatchObject({
+      59: '昨日，今日，直到永远',
+      89: '到各山岭去传扬',
+      129: '我们回天家',
+      159: '我听主声欢迎',
+      203: '宝血大权能',
+      319: '主永不离你',
+      337: '祷告良辰',
+      344: '得福良辰',
+    });
+  });
+
+  it('keeps the corrections when the directory is scraped again', () => {
+    const links = hymns
+      .map(({ number, title, pageId }) => {
+        const sourceTitle = number === 129 ? '我们会天家' : title;
+        return `<a href="/index.php?m=content&amp;c=index&amp;a=show&amp;catid=90&amp;id=${pageId}">${number}、${sourceTitle}</a>`;
+      })
+      .join('\n');
+    const dir = mkdtempSync(join(tmpdir(), 'hymnal-506-'));
+    writeFileSync(join(dir, 'directory.html'), links);
+    execFileSync(process.execPath, [
+      resolve('scripts/scrape-chinese-506-hymnal.mjs'),
+      '--input',
+      join(dir, 'directory.html'),
+      '--output',
+      join(dir, 'hymnal.json'),
+    ]);
+    const scraped = JSON.parse(readFileSync(join(dir, 'hymnal.json'), 'utf8'));
+    expect(scraped['129']).toEqual({ title: '我们回天家', pageId: hymns[128].pageId });
+    expect(Object.keys(scraped)).toHaveLength(506);
   });
 
   it('maps hymn numbers to the source page IDs and falls back safely', () => {

@@ -4,9 +4,13 @@
  * This module stores factual metadata and external landing-page IDs only. The
  * sheet music remains on m.zgaxr.com and is always opened in the user's browser.
  * Regenerate the mapping with scripts/scrape-chinese-506-hymnal.mjs.
+ *
+ * Recordings come from a YouTube playlist of the 506 hymnal that is still being
+ * uploaded. Regenerate their mapping with scripts/map-chinese-506-youtube.mjs.
  */
 
 import hymnalData from './Chinese506Hymnal.json';
+import youtubeData from './Chinese506YouTube.json';
 import { openURL } from '@/constants/ExternalLinks';
 
 export const CHINESE_506_DIRECTORY_URL =
@@ -48,3 +52,11 @@ export const openChinese506Hymn = (hymnNumber?: number) =>
     'Error',
     'Could not open the Chinese hymnal link.',
   );
+
+const CHINESE_506_YOUTUBE_VIDEOS = youtubeData.videos as Record<string, string>;
+
+/** The hymn's recording in the 506 playlist, if it has been uploaded yet. */
+export const getChinese506YouTubeUrl = (hymnNumber: number) => {
+  const videoId = CHINESE_506_YOUTUBE_VIDEOS[hymnNumber.toString()];
+  return videoId ? `https://www.youtube.com/watch?v=${videoId}` : undefined;
+};
