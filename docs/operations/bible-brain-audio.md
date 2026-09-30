@@ -54,6 +54,14 @@ requirement for a fallback: FCBH can end the church's access at any time.
 The Worker must stay on Cloudflare's **Workers Free** plan. On Free, going over a
 limit makes requests fail; nothing is ever billed. The church's Cloudflare account
 has a card on file for the domain, so never move this Worker to Workers Paid (#261).
+The church chose to run it in that account rather than a separate one: the card is
+guarded as [The Cloudflare account and domain](admin-runbook.md#the-cloudflare-account-and-domain)
+describes, with a capped card, an alert on every charge, and a yearly check that
+billing lists only the domain.
+
+Google Apps Script was also considered, since it can never bill. It can't redirect,
+though, so the app would have to fetch and hold FCBH's expiring links ahead of time,
+and it can't rate-limit callers or hide the key from the project's editors (#241).
 
 | Workers Free limit | This Worker's use |
 | --- | --- |
@@ -117,6 +125,14 @@ Then set `ALLOWED_FILESETS` in `wrangler.toml` to the filesets the app uses, and
 npx wrangler@4 deploy
 ```
 
+Commit the `ALLOWED_FILESETS` change in a pull request, so the repository matches
+what's deployed.
+
+**Deploy from a computer, not through Cloudflare's GitHub integration** (Workers
+Builds). The Worker rarely changes, and that integration would give a Cloudflare app
+access to the church's GitHub organization and, by default, build other branches as
+preview versions that can use the Worker's key.
+
 - If the Cloudflare login has more than one account, set `CLOUDFLARE_ACCOUNT_ID` in
   the shell for the command. Don't write the account ID into `wrangler.toml`: the
   repository is public.
@@ -138,9 +154,11 @@ unset BIBLE_BRAIN_KEY
 ```
 
 It lists Bible Brain's Cantonese (`yue`) Bibles and their filesets. For each audio
-fileset, it checks Matthew 1 and Genesis 1, prints the copyright notice, and ends with
-an `ALLOWED_FILESETS` line to copy. `--language cmn` does the same for Mandarin. It
-only reads from Bible Brain, and never prints the key.
+fileset, it checks Matthew 1 and Genesis 1, says how long FCBH's links last, prints
+the copyright notice, and ends with an `ALLOWED_FILESETS` line to copy. The Worker
+gets a fresh link each time a chapter starts, so a link only has to outlast its
+chapter. `--language cmn` does the same for Mandarin. It only reads from Bible Brain,
+and never prints the key or a link.
 
 ## Checking it works
 

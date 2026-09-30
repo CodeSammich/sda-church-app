@@ -3,7 +3,9 @@
  * Lists Bible Brain's Bibles and audio filesets for a language, and checks
  * whether each audio fileset has a New Testament and an Old Testament chapter,
  * so the Worker's ALLOWED_FILESETS and the app's configuration use confirmed
- * IDs (#241). It only reads from Bible Brain, and never prints the key.
+ * IDs (#241). It also says how long FCBH's links last; the Worker gets a fresh
+ * one each time a chapter starts, so a link only has to outlast its chapter. It
+ * only reads from Bible Brain, and never prints the key or a link.
  *
  *   node scripts/bible-brain-discover.cjs                    Cantonese (yue)
  *   node scripts/bible-brain-discover.cjs --language cmn     Mandarin
@@ -44,13 +46,26 @@ const filesetsOf = (bible) =>
 
 const isAudio = (fileset) => String(fileset.type || '').startsWith('audio');
 
+/** How long a signed link lasts, from its CloudFront or S3 expiry, in words. */
+const lifetimeOf = (link) => {
+  const params = new URL(link).searchParams;
+  let expiresAt = Number(params.get('Expires')) * 1000;
+  const signedAt = params.get('X-Amz-Date')?.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
+  if (!expiresAt && signedAt && Number(params.get('X-Amz-Expires')) > 0) {
+    const [year, month, day, hour, minute, second] = signedAt.slice(1).map(Number);
+    expiresAt = Date.UTC(year, month - 1, day, hour, minute, second) + Number(params.get('X-Amz-Expires')) * 1000;
+  }
+  if (!expiresAt) return 'no expiry in the link';
+  return `the link lasts ${Math.round((expiresAt - Date.now()) / 60_000)} minutes`;
+};
+
 const chapterCheck = async (key, filesetId, book, chapter) => {
   const { status, body } = await get(key, `bibles/filesets/${filesetId}/${book}/${chapter}`);
   const file = (body?.data || []).find((item) => String(item.book_id).toUpperCase() === book);
   if (!file?.path) return `${book} ${chapter}: none (HTTP ${status})`;
   const host = new URL(file.path).host;
   const duration = file.duration ? `${Math.round(file.duration)} s` : 'unknown length';
-  return `${book} ${chapter}: yes, ${duration}, from ${host}`;
+  return `${book} ${chapter}: yes, ${duration}, from ${host}; ${lifetimeOf(file.path)}`;
 };
 
 const main = async () => {
