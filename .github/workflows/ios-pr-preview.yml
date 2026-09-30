@@ -228,11 +228,11 @@ jobs:
           else
             checks="⚠️ **The automatic checks failed or didn't finish.** Start with [the run]($run_url) to see why."
           fi
-          # The 👍 reply works once screenshot-approval.yml is on main, since
+          # The 👍 and "screenshots LGTM" replies work once screenshot-approval.yml is on main, since
           # GitHub runs comment-triggered workflows from main.
           approve="add the **screenshots reviewed** label."
           if gh api "repos/$REPO/contents/.github/workflows/screenshot-approval.yml?ref=main" --silent 2>/dev/null; then
-            approve="add the **screenshots reviewed** label, or reply to this pull request with just 👍."
+            approve="add the **screenshots reviewed** label, or reply to this pull request with just 👍 or **screenshots LGTM**."
           fi
 
           body=$(cat <<BODY

@@ -6,10 +6,11 @@ name: Screenshot review
 # problems, such as a cut-off label or a verse number split across two lines,
 # need a person. When the PR opens or gets a new push, this posts a notice that
 # the screenshots are on the way, since they take about 50 minutes. The iOS PR
-# preview then replaces it with the screenshots and what to look for. After checking them, a reviewer adds the
-# "screenshots reviewed" label, or replies 👍 and screenshot-approval.yml adds
-# it. A new push removes it, so every version of the release gets its own
-# review. docs/operations/native-builds.md explains how.
+# preview then replaces it with the screenshots and what to look for. After
+# checking them, a reviewer adds the "screenshots reviewed" label, or replies
+# 👍 or "screenshots LGTM" and screenshot-approval.yml adds it. A new push
+# removes it, so every version of the release gets its own review.
+# docs/operations/native-builds.md explains how.
 on:
   pull_request:
     branches:

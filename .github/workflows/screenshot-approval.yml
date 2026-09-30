@@ -1,8 +1,9 @@
 name: Screenshot approval
 
-# Lets a reviewer approve a release's screenshots by replying 👍 on the release
-# PR into main, as well as by adding the "screenshots reviewed" label (#331).
-# GitHub starts no workflow for an emoji reaction, so it's a reply.
+# Lets a reviewer approve a release's screenshots by replying 👍 or
+# "screenshots LGTM" on the release PR into main, as well as by adding the
+# "screenshots reviewed" label (#331). GitHub starts no workflow for an emoji
+# reaction, so it's a reply. Not "SS LGTM": here SS means Sabbath School.
 #
 # Comment-triggered workflows run from main's copy of this file, so a pull
 # request can't change it. Only someone with write access counts, and only
@@ -21,8 +22,10 @@ jobs:
     if: >-
       github.event.issue.pull_request &&
       github.event.issue.state == 'open' &&
-      (contains(github.event.comment.body, '👍') || contains(github.event.comment.body, ':+1:'))
-    name: Approve screenshots with 👍
+      (contains(github.event.comment.body, '👍') ||
+        contains(github.event.comment.body, ':+1:') ||
+        contains(github.event.comment.body, 'screenshots lgtm'))
+    name: Approve screenshots with 👍 or "screenshots LGTM"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -31,7 +34,7 @@ jobs:
       pull-requests: write
       actions: write
     steps:
-      - name: Add the label for a 👍 from a maintainer
+      - name: Add the label for an approval from a maintainer
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -40,11 +43,13 @@ jobs:
           BODY: ${{ github.event.comment.body }}
         run: |
           set -euo pipefail
-          # Just a thumbs up, in any skin tone: not a longer comment that mentions one.
-          reply=$(printf '%s' "$BODY" | tr -d '[:space:]')
+          # Just a thumbs up, in any skin tone, or just "screenshots LGTM" in any
+          # case, with an optional "!" or "." at the end: not a longer comment
+          # that happens to include one.
+          reply=$(printf '%s' "$BODY" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]' | sed 's/[.!]*$//')
           case "$reply" in
-            '👍'|'👍🏻'|'👍🏼'|'👍🏽'|'👍🏾'|'👍🏿'|':+1:') ;;
-            *) echo 'Not a 👍 reply; nothing to do.'; exit 0 ;;
+            '👍'|'👍🏻'|'👍🏼'|'👍🏽'|'👍🏾'|'👍🏿'|':+1:'|'screenshotslgtm') ;;
+            *) echo 'Not an approval reply; nothing to do.'; exit 0 ;;
           esac
 
           pr=$(gh api "repos/$REPO/pulls/$PR" \
@@ -66,7 +71,7 @@ jobs:
             --jq '.[] | select(.user.login == "github-actions[bot]") | .body | split("\n")[0]')
           if ! grep -qxF "<!-- key-screens-review sha=$sha -->" <<<"$comments"; then
             gh api "repos/$REPO/issues/$PR/comments" \
-              -f body="@$AUTHOR The screenshots for the latest commit (\`${sha:0:7}\`) aren't posted yet, so that 👍 didn't approve anything. Reply 👍 again after the review comment for that commit appears." >/dev/null
+              -f body="@$AUTHOR The screenshots for the latest commit (\`${sha:0:7}\`) aren't posted yet, so that reply didn't approve anything. Reply again after the review comment for that commit appears." >/dev/null
             exit 0
           fi
 

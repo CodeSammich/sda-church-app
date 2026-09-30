@@ -915,9 +915,10 @@ new push, and it replaces the out-of-date screenshots from before the push, so n
 wonders for 50 minutes why the check is red. After looking through `screens/ios/`, approve in either of two ways:
 
 - add the **screenshots reviewed** label; or
-- reply to the pull request with just 👍. `screenshot-approval.yml` then adds the label
-  and re-runs the check, if the person has write access and that commit's screenshots
-  are posted. GitHub starts no workflow for an emoji reaction, so it has to be a reply.
+- reply to the pull request with just 👍 or **screenshots LGTM**. `screenshot-approval.yml`
+  then adds the label and re-runs the check, if the person has write access and that
+  commit's screenshots are posted. GitHub starts no workflow for an emoji reaction, so it
+  has to be a reply. It isn't "SS LGTM", because SS means Sabbath School here.
   Comment-triggered workflows run from `main`'s copy, so the reply works once this
   workflow is on `main`; until then, the comment offers only the label.
 
