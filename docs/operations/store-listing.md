@@ -308,9 +308,16 @@ Store screenshots aren't kept in this repository; upload them straight to each s
   turn on Android's demo mode for a clean status bar. Play also needs a 1024 × 500 feature
   graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
   and the 512 × 512 icon (`public/icon-512x512.png`).
-- **App Store:** iPhone 6.9-inch screenshots, and iPad 13-inch screenshots because the app
-  supports iPad (`supportsTablet`). App Store Connect lists the exact pixel sizes. These
-  need the iOS Simulator on a Mac, or real devices.
+- **App Store:** iPhone 6.9-inch screenshots only. The app is iPhone-only
+  (`supportsTablet: false` in `app.json`), so App Store Connect asks for no iPad
+  screenshots once the version uses a build made with that setting; iPads still install
+  it and run it in iPhone mode. Screenshots from a real iPhone work. A Plus or Pro Max
+  already takes the 6.9-inch size (1290 × 2796 or 1320 × 2868); a smaller iPhone's
+  screenshots need resizing to 1290 × 2796, which crops only a few pixels. The first three
+  screenshots also show on the install sheet, so lead with the strongest.
+- **Adding iPad later:** a later version can add iPad support, with iPad screenshots.
+  Apple doesn't let an update remove a device family once released, so test on an iPad
+  before turning it on.
 - **Leave out:** the bulletin, which shows members' names; Meet Our Team, which has staff
   photos; the hymnal covers, which belong to other publishers; and personal phone numbers
   or email addresses. The verse of the day is random, so capture it on a day when it reads
