@@ -254,8 +254,9 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 - **Support URL** (App Store, required): `https://app.nyccsda.org/support.html`. It's
   live once 0.42.0 reaches `main` and the web preview deploys.
 - **Marketing URL** (App Store, optional): leave blank.
-- **Contact email** (Google Play, shown publicly): the church's contact address from
-  the privacy policy, not a personal address.
+- **Contact email** (Google Play, shown publicly): `technology@nyccsda.org`, the same
+  address as the privacy policy and the support page. Use a church role address, never
+  a personal one.
 - **Copyright** (App Store): the year and the church's legal name, exactly as in the
   developer account, such as `2026 <legal name>`.
 
