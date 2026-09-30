@@ -1,0 +1,167 @@
+{
+  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic checks for a screen; appStore lists, per App Store language, the shots to upload, in order. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. See docs/operations/native-builds.md.",
+  "ios": {
+    "device": "iPhone 17 Pro Max"
+  },
+  "variants": {
+    "default": {},
+    "dark": { "theme": "dark" },
+    "large": { "textScale": 1.5 },
+    "xl": { "textScale": 2 },
+    "ios-large-text": { "iosTextSize": "accessibility-large" },
+    "zh": { "language": "zh" },
+    "zh-cn": { "language": "zh-cn" },
+    "es": { "language": "es" }
+  },
+  "screens": [
+    {
+      "name": "home",
+      "path": "",
+      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es"],
+      "changesDaily": true
+    },
+    {
+      "name": "bible",
+      "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default", "dark", "large"]
+    },
+    {
+      "name": "bible-dual",
+      "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
+      "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
+      "variants": ["default", "dark", "large", "xl", "ios-large-text"]
+    },
+    {
+      "name": "bible-dual-back",
+      "$comment": "Opened from Home, so the header also has a back arrow and stacks sooner.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=BSB&backTo=%2F",
+      "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
+      "variants": ["default", "large", "xl"]
+    },
+    {
+      "name": "bible-cuv",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
+      "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
+      "variants": ["zh"]
+    },
+    {
+      "name": "bible-cuvs",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cu1",
+      "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
+      "variants": ["zh-cn"]
+    },
+    {
+      "name": "bible-pinyin",
+      "path": "bible?bookId=JHN&chapter=3&translationId=cmn_cuv",
+      "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": true },
+      "variants": ["default", "zh", "large"]
+    },
+    {
+      "name": "bible-scrolled",
+      "$comment": "Opens at John 3:14, so earlier verses sit under the status bar; checks it stays clear.",
+      "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=14&verseEnd=16",
+      "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": true },
+      "variants": ["default", "large", "dark"],
+      "checks": ["statusBarClear"]
+    },
+    {
+      "name": "bible-long-chapter",
+      "$comment": "Psalm 119 from verse 100, for three-digit verse numbers at large text sizes.",
+      "path": "bible?bookId=PSA&chapter=119&translationId=BSB&verseStart=100&verseEnd=100",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default", "xl", "ios-large-text"],
+      "checks": ["statusBarClear"]
+    },
+    {
+      "name": "bible-spanish",
+      "path": "bible?bookId=JHN&chapter=3&translationId=spa_r09",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["es"]
+    },
+    {
+      "name": "explore",
+      "path": "explore",
+      "variants": ["default", "dark", "zh", "es"]
+    },
+    {
+      "name": "library",
+      "path": "explore/library",
+      "variants": ["default", "dark", "zh", "zh-cn", "es"]
+    },
+    {
+      "name": "library-egw",
+      "path": "explore/library/egw",
+      "variants": ["default", "zh"]
+    },
+    {
+      "name": "library-classics",
+      "path": "explore/library/christian-classics",
+      "variants": ["default"]
+    },
+    {
+      "name": "sabbath-school",
+      "path": "sabbath-school",
+      "variants": ["default", "zh", "es"]
+    },
+    {
+      "name": "hymnal-selection",
+      "path": "home/hymnal-selection",
+      "variants": ["default", "zh"]
+    },
+    {
+      "name": "hymnal",
+      "path": "home/english-hymnal",
+      "variants": ["default", "large"]
+    },
+    {
+      "name": "hymnal-chinese",
+      "path": "home/chinese-505-hymnal",
+      "variants": ["zh"]
+    },
+    {
+      "name": "hymn-lookup",
+      "path": "home/hymn-lookup",
+      "variants": ["default"]
+    },
+    {
+      "name": "discover",
+      "path": "home/discover",
+      "variants": ["default", "zh"]
+    },
+    {
+      "name": "about-sda",
+      "path": "home/about-sda",
+      "variants": ["default", "es"]
+    },
+    {
+      "name": "about-my-church",
+      "path": "home/about-my-church",
+      "variants": ["default", "zh"]
+    },
+    {
+      "name": "give",
+      "path": "home/give",
+      "variants": ["default", "zh", "es"]
+    },
+    {
+      "name": "you",
+      "path": "you",
+      "variants": ["default", "dark", "large", "zh"]
+    },
+    {
+      "name": "privacy",
+      "path": "you/privacy",
+      "variants": ["default"]
+    },
+    {
+      "name": "legal",
+      "path": "you/legal",
+      "variants": ["default"]
+    }
+  ],
+  "appStore": {
+    "en-US": ["bible-dual-default", "bible-pinyin-default", "home-default", "explore-default", "library-default", "bible-dual-dark"],
+    "zh-Hant": ["bible-cuv-zh", "bible-pinyin-zh", "home-zh", "explore-zh", "library-zh"]
+  }
+}

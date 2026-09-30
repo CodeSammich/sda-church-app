@@ -82,6 +82,10 @@ jobs:
       - name: Build for the Simulator without signing
         env:
           ARCH: ${{ matrix.arch }}
+          # Lets the key-screen capture open each screen from a saved setting
+          # (services/ScreenshotRoute.ts). Expo writes it into this build only;
+          # the store builds in native-ios-build.yml never set it.
+          EXPO_PUBLIC_KEY_SCREENS: '1'
         run: |
           set -euo pipefail
           WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
@@ -119,22 +123,9 @@ jobs:
           lipo -archs "$APP_PATH/$EXECUTABLE"
           BUNDLE_ID="$(node -p "require('./app.json').expo.ios.bundleIdentifier")"
 
-          # Use an iPhone from the newest installed iOS runtime.
-          DEVICE_ID="$(xcrun simctl list devices available --json | node -e '
-            const { devices } = JSON.parse(require("fs").readFileSync(0, "utf8"));
-            const version = (runtime) => runtime.split("iOS-")[1].split("-").map(Number);
-            const runtimes = Object.keys(devices)
-              .filter((runtime) => runtime.includes("SimRuntime.iOS-"))
-              .sort((a, b) => version(b)[0] - version(a)[0] || (version(b)[1] || 0) - (version(a)[1] || 0));
-            for (const runtime of runtimes) {
-              const phone = devices[runtime].find((device) => device.isAvailable && device.name.startsWith("iPhone"));
-              if (phone) {
-                console.log(phone.udid);
-                process.exit(0);
-              }
-            }
-            process.exit(1);
-          ')"
+          # The iPhone test/screens/screens.json names, on the newest installed iOS
+          # runtime, so this check and the key screens below share one Simulator.
+          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
           xcrun simctl boot "$DEVICE_ID"
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" "$APP_PATH"
@@ -153,7 +144,18 @@ jobs:
             exit 1
           }
 
-      - name: Upload the Simulator app and screenshot
+      - name: Capture the key screens
+        # Screenshots of the screens in test/screens/screens.json, named
+        # ios/<screen>-<variant>.png, for checking layouts before release (#331).
+        # One set is enough: both builds run the same JavaScript. 66 shots take
+        # about 22 minutes, so a second set on the Intel build would only make the
+        # release PR wait longer. Actions minutes are free for this public
+        # repository, so this is about time, not cost.
+        if: matrix.arch == 'arm64'
+        timeout-minutes: 35
+        run: node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
+
+      - name: Upload the Simulator app and screenshots
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -161,3 +163,84 @@ jobs:
           path: ${{ runner.temp }}/ios-pr-preview/
           if-no-files-found: warn
           retention-days: 14
+
+  review-comment:
+    # Tells the release PR's reviewer where this commit's screenshots are and
+    # how to approve them, for the "Screenshots reviewed" check (#331). Each run
+    # replaces the previous comment, so the one on the PR is always current.
+    needs: simulator
+    if: >-
+      !cancelled() &&
+      github.event_name == 'pull_request' &&
+      startsWith(github.head_ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Post the screenshot review comment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # To find this run's artifact, and whether 👍 approval is on main yet.
+      actions: read
+      contents: read
+      # Only to replace the review comment. The job never checks out or runs
+      # the pull request's code.
+      pull-requests: write
+    steps:
+      - name: Post the review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+          CHECKS: ${{ needs.simulator.result }}
+        run: |
+          set -euo pipefail
+          run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
+          artifact=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" \
+            --jq '[.artifacts[] | select(.name | endswith("-arm64"))][0] // empty | "\(.id) \(.size_in_bytes)"')
+          if [ -n "$artifact" ]; then
+            read -r artifact_id artifact_bytes <<<"$artifact"
+            download="[the screenshots]($run_url/artifacts/$artifact_id) (a zip of about $((artifact_bytes / 1000000)) MB)"
+          else
+            download="the screenshots from [the run]($run_url), which uploaded none; it says why"
+          fi
+          if [ "$CHECKS" = success ]; then
+            checks="✅ The automatic checks passed: the app opened every screen, and none is blank or has text behind the status bar."
+          else
+            checks="⚠️ **The automatic checks failed or didn't finish.** Start with [the run]($run_url) to see why."
+          fi
+          # The 👍 reply works once screenshot-approval.yml is on main, since
+          # GitHub runs comment-triggered workflows from main.
+          approve="add the **screenshots reviewed** label."
+          if gh api "repos/$REPO/contents/.github/workflows/screenshot-approval.yml?ref=main" --silent 2>/dev/null; then
+            approve="add the **screenshots reviewed** label, or reply to this pull request with just 👍."
+          fi
+
+          body=$(cat <<BODY
+          <!-- key-screens-review sha=$SHA -->
+          ### 📸 Screenshots to review
+
+          The iPhone screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
+
+          $checks
+
+          1. **Download** $download and open \`screens/ios/\`. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), and \`zh\`, \`zh-cn\`, and \`es\`.
+          2. **Look for** what a person would notice:
+             - text cut off, overlapping, or behind the clock, battery, or Dynamic Island;
+             - a verse number split from its verse, or a button label cut short;
+             - the wrong language, a blank or half-drawn screen, or a popup covering the page;
+             - dark mode or large text that's hard to read.
+
+             The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
+          3. **Approve:** $approve
+
+          A new push clears the approval, and this comment is replaced when its screenshots are ready. The App Store copies are in \`screens/app-store/\`.
+          BODY
+          )
+
+          # Replace earlier review comments, so the newest screenshots are the only ones offered.
+          gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- key-screens-review"))) | .id' |
+            while read -r old; do gh api -X DELETE "repos/$REPO/issues/comments/$old" >/dev/null; done
+          gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
+          echo "Posted the review comment for $SHA."

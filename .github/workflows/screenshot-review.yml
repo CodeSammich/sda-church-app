@@ -1,0 +1,59 @@
+name: Screenshot review
+
+# A person looks at a release's screenshots before it merges into main (#331).
+# The iOS PR preview captures the key screens in test/screens/screens.json and
+# fails on a crash, a blank screen, or text under the status bar. Other layout
+# problems, such as a cut-off label or a verse number split across two lines,
+# need a person. The iOS PR preview posts a comment on the PR with the
+# screenshots and what to look for. After checking them, a reviewer adds the
+# "screenshots reviewed" label, or replies 👍 and screenshot-approval.yml adds
+# it. A new push removes it, so every version of the release gets its own
+# review. docs/operations/native-builds.md explains how.
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    # Only the release PR into main; others can't merge there anyway.
+    if: >-
+      startsWith(github.head_ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Screenshots reviewed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Only to read the labels and remove the label after a new push. The job
+      # never checks out or runs the pull request's code.
+      pull-requests: write
+    steps:
+      - name: Require a review of this version's screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          ACTION: ${{ github.event.action }}
+          # A 👍 reply re-runs this check; a re-run keeps its first event, so
+          # the labels come from the API rather than the event.
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          labels=$(gh api "repos/$REPO/issues/$PR/labels" --jq '.[].name')
+          reviewed=false
+          if grep -qx 'screenshots reviewed' <<<"$labels"; then reviewed=true; fi
+          if [ "$ACTION" = synchronize ] && [ "$RUN_ATTEMPT" = 1 ] && [ "$reviewed" = true ]; then
+            gh api -X DELETE "repos/$REPO/issues/$PR/labels/screenshots%20reviewed" >/dev/null
+            echo "::error::New commits need a new review. The iOS PR preview will post this commit's screenshots in a comment on the PR; check them, then approve again."
+            exit 1
+          fi
+          if [ "$reviewed" != true ]; then
+            echo "::error::Check this commit's screenshots, which the iOS PR preview posts in a comment on the PR, then add the \"screenshots reviewed\" label or reply 👍."
+            exit 1
+          fi
+          echo 'A reviewer checked the screenshots for this commit.'

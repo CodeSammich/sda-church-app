@@ -104,6 +104,7 @@ Review rules for both pull-request rulesets:
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
 | `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel Mac)` | `ios-pr-preview.yml` | `main` |
+| `Screenshots reviewed` | `screenshot-review.yml`: passes once someone checks the screenshots the iOS preview posts in a comment, then adds the **screenshots reviewed** label or replies 👍 (`screenshot-approval.yml`); see [iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds) | `main` (add it to **Main protection** once the workflow is on `main`) |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
 

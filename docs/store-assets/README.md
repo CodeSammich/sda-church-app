@@ -20,7 +20,9 @@ what screenshots may show are in [Store listings](../operations/store-listing.md
 
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. Play
 screenshots are 1080 × 1920, captured on the Android emulator with Android's demo mode
-for a clean status bar. App Store screenshots will go in `app-store/`.
+for a clean status bar. App Store screenshots will go in `app-store/`. The iOS PR
+preview's key screens are already the App Store's 6.9-inch iPhone size, with a clean
+status bar; see [iOS PR preview](../operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 
 The repository is public. Before adding a screenshot, check it shows no members'
 names, photos of people, phone numbers, or email addresses, and run

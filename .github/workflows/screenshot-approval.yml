@@ -1,0 +1,80 @@
+name: Screenshot approval
+
+# Lets a reviewer approve a release's screenshots by replying 👍 on the release
+# PR into main, as well as by adding the "screenshots reviewed" label (#331).
+# GitHub starts no workflow for an emoji reaction, so it's a reply.
+#
+# Comment-triggered workflows run from main's copy of this file, so a pull
+# request can't change it. Only someone with write access counts, and only
+# once the iOS PR preview has posted the screenshots for the PR's latest
+# commit. This adds the label and re-runs the "Screenshots reviewed" check,
+# since a label added with this workflow's token starts no workflow itself.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  approve:
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      (contains(github.event.comment.body, '👍') || contains(github.event.comment.body, ':+1:'))
+    name: Approve screenshots with 👍
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # To add the label and re-run the check. The job never checks out code.
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Add the label for a 👍 from a maintainer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+          AUTHOR: ${{ github.event.comment.user.login }}
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          # Just a thumbs up, in any skin tone: not a longer comment that mentions one.
+          reply=$(printf '%s' "$BODY" | tr -d '[:space:]')
+          case "$reply" in
+            '👍'|'👍🏻'|'👍🏼'|'👍🏽'|'👍🏾'|'👍🏿'|':+1:') ;;
+            *) echo 'Not a 👍 reply; nothing to do.'; exit 0 ;;
+          esac
+
+          pr=$(gh api "repos/$REPO/pulls/$PR" \
+            --jq '"\(.base.ref) \(.head.ref) \(.head.repo.full_name) \(.head.sha)"')
+          read -r base head head_repo sha <<<"$pr"
+          if [ "$base" != main ] || [ "${head#release/}" = "$head" ] || [ "$head_repo" != "$REPO" ]; then
+            echo 'Not a release PR into main; nothing to do.'
+            exit 0
+          fi
+
+          permission=$(gh api "repos/$REPO/collaborators/$AUTHOR/permission" --jq '.permission' 2>/dev/null || echo none)
+          case "$permission" in
+            admin|maintain|write) ;;
+            *) echo "::notice::$AUTHOR can't approve screenshots: that needs write access."; exit 0 ;;
+          esac
+
+          # The screenshots for the latest commit must be posted before a 👍 can approve them.
+          comments=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | .body | split("\n")[0]')
+          if ! grep -qxF "<!-- key-screens-review sha=$sha -->" <<<"$comments"; then
+            gh api "repos/$REPO/issues/$PR/comments" \
+              -f body="@$AUTHOR The screenshots for the latest commit (\`${sha:0:7}\`) aren't posted yet, so that 👍 didn't approve anything. Reply 👍 again after the review comment for that commit appears." >/dev/null
+            exit 0
+          fi
+
+          gh api "repos/$REPO/issues/$PR/labels" -f 'labels[]=screenshots reviewed' >/dev/null
+          run=$(gh api "repos/$REPO/actions/workflows/screenshot-review.yml/runs?head_sha=$sha&per_page=1" \
+            --jq '.workflow_runs[0].id // empty')
+          if [ -n "$run" ]; then
+            gh api -X POST "repos/$REPO/actions/runs/$run/rerun" >/dev/null ||
+              echo '::warning::Could not re-run the Screenshots reviewed check; re-run it from the pull request.'
+          fi
+          echo "$AUTHOR approved the screenshots for $sha."
