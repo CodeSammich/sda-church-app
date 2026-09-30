@@ -168,9 +168,11 @@ to change course if WordProject objects. It asked:
 - whether a higher-quality version exists;
 - how WordProject would like the recordings credited.
 
-Record the reply in #353 and here. Keep a PDF of each terms page, as read on that
-date, and a copy of the notice in the church's IT Admin shared drive, with the other
-rights records, in case the pages change.
+Record the reply in #353 and here. Copies of the pages quoted above, as retrieved on
+September 30, 2026, are in
+[rights-records/wordproject-2026-09-30](rights-records/wordproject-2026-09-30/README.md),
+in case the pages change. Keep a copy of the notice in the church's IT Admin shared
+drive, with the other rights records.
 
 **Hosting and privacy.** The church's copies go in its Adventist Connect media
 library, like the Mandarin CUV recordings (see
