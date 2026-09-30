@@ -34,10 +34,10 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 - **App Encryption Documentation:** none needed. `app.json` sets
   `usesNonExemptEncryption: false`, because the app uses only the system's standard
   encryption.
-- **Digital Services Act:** the EU asks whether the account is a trader. A church giving
-  away a free app is most likely a non-trader, which publishes no contact details; a
-  trader's address, phone, and email appear on EU App Store pages. The church decides.
-  Until it's answered, the app isn't offered in the EU.
+- **Digital Services Act:** non-trader. The EU asks whether the account acts as a
+  business. A church giving away a free app with no sales isn't one, so no contact
+  details appear on EU App Store pages; a trader's address, phone, and email would.
+  This is an account-wide answer, not per app.
 - **Not used:** Vietnam Game License, Regulated Medical Devices, App Store Server
   Notifications, and the app-specific shared secret. They're for games, medical apps,
   and in-app purchases.
@@ -97,5 +97,5 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 | Ads, chat, user posts, a web browser, or medical or health content | Age Rating |
 | iPad support | iPad screenshots. Test first: Apple doesn't let an update remove iPad support. |
 | A new language, such as Japanese | A new localization, published with that release |
-| In-app purchases or donations | Pricing, and the audit's [item 1](store-policy-audit.md#1-nonprofit-identity-and-donation-flow--release-blocker) |
+| In-app purchases, subscriptions, or a paid app | Pricing, the Digital Services Act answer (selling may make the church a trader), and the audit's [item 1](store-policy-audit.md#1-nonprofit-identity-and-donation-flow--release-blocker) |
 | A mainland China release | An ICP filing and a religious-information license, through a Chinese partner |
