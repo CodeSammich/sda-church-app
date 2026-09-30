@@ -18,6 +18,7 @@ does and what still needs a person.
 - [Bulletin QR codes](#bulletin-qr-codes)
 - [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script)
 - [The app website (`app.nyccsda.org`)](#the-app-website-appnyccsdaorg)
+- [The Cloudflare account and domain](#the-cloudflare-account-and-domain)
 - [Native app binaries](#native-app-binaries)
 - [Android PR preview APKs](#android-pr-preview-apks)
 - [iOS PR preview builds](#ios-pr-preview-builds)
@@ -306,6 +307,43 @@ Apple doesn't follow redirects for the file that enables it. That means setting
 `app.nyccsda.org` as the GitHub Pages custom domain, pointing a Cloudflare CNAME at
 `new-york-chinese-seventh-day-adventist.github.io` in place of the redirect rule, and
 changing the web build's base path from `/sda-church-app` to `/`.
+
+## The Cloudflare account and domain
+
+`nyccsda.org` is registered through Cloudflare Registrar, and Cloudflare also runs its
+DNS and the `app.nyccsda.org` redirect. The renewal, about $10 a year, is the app's only
+recurring cost, so the account keeps a card on file. If a renewal fails and the domain
+lapses, the privacy policy, support, and download pages above go down with it.
+
+**Make the card safe to leave on file:**
+
+- **Use a credit card, not a debit card,** so a wrong or unauthorized charge can be
+  disputed with the bank before any church money leaves the account.
+- **Better still, use a virtual card number** locked to Cloudflare with a yearly limit a
+  little above the renewal, such as $15. Anything larger is declined.
+- **Turn on the bank's alert for every charge,** so anything other than the yearly
+  renewal is noticed right away.
+- **Keep the card current and auto-renew on.** Don't remove the card: the domain
+  depends on it.
+- **Add nothing else that can cost money:** no Workers Paid, R2, or other paid or
+  pay-as-you-go product
+  ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
+  Free plans have no overage charges: going over a limit makes requests fail.
+
+**Keep the account recoverable:**
+
+- **Keep at least two super administrators,** so losing one login doesn't lock the
+  church out.
+- **Every administrator uses two-factor login** and keeps their own backup codes
+  somewhere they'd still have if their phone died.
+- **Use a church address for the account's email,** not a personal one, so renewal
+  notices and Cloudflare's policy emails reach whoever runs technology next.
+
+**Once a year:**
+
+- Each administrator logs in, which proves the backups work. Remove anyone who has left.
+- The account's billing page lists only the domain registration.
+- The card on file hasn't expired, and auto-renew is on.
 
 ## Native app binaries
 
@@ -616,6 +654,7 @@ read.
 | Apple distribution certificate and provisioning profile | `production` Environment secrets | Both expire every year, and the Apple fee waiver is reconfirmed at each membership renewal. See [Yearly Apple renewals](app-store-setup.md#yearly-apple-renewals). |
 | Android upload keystore | `production` Environment secrets | Only when Google Play requires a rotation. See [Android rotation and recovery policy](native-builds.md#android-rotation-and-recovery-policy). |
 | App Store Connect API key (`APP_STORE_CONNECT_API_*`) | `store-upload` Environment secrets | It doesn't expire. If it leaks, revoke it under **Users and Access → Integrations** in App Store Connect, create a new one with the **Developer** role, and replace the three secrets. |
+| Card on the Cloudflare account | Cloudflare account billing | Before it expires, since the domain renews automatically. See [The Cloudflare account and domain](#the-cloudflare-account-and-domain). |
 | Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |
 
 Never paste credentials into issues, pull requests, or workflow logs.

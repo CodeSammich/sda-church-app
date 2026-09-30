@@ -301,7 +301,9 @@ The domain is the **only recurring cost**: about $10 a year, paid through Cloudf
 Registrar, which can register up to 10 years at a time. The account has a card on
 file for that, which is exactly why no usage-billed Cloudflare product may be added
 to it ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
-DNS itself is free.
+DNS itself is free. How to keep the card and the account safe, including a capped
+virtual card and backup administrators, is in the
+[admin runbook](admin-runbook.md#the-cloudflare-account-and-domain).
 
 ### App stores
 
