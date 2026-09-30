@@ -26,6 +26,14 @@ contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media
 remain strict.
 
+It checks that each children's Sabbath School age group will open this week's
+English lesson: Adventech lists this quarter's Junior, Teen, and Youth issues, and
+has weekly PDFs for this quarter's Alive in Jesus Beginner, Kindergarten, and
+Primary books. A failure means the app is opening that age group's Alive in Jesus
+website instead, usually because a new quarter isn't published yet or the catalog
+changed. The six age-group websites are checked too, since they're the fallback.
+See `features/sabbath-school/ChildrenLessons.ts`.
+
 It also checks the church's own website: the privacy policy, support, and download
 pages at `app.nyccsda.org`, which the store listings and QR codes depend on. Each must
 load through the custom domain and still contain its expected text. See
