@@ -17,6 +17,7 @@ does and what still needs a person.
 - [Shipping a release to `main`](#shipping-a-release-to-main)
 - [Bulletin QR codes](#bulletin-qr-codes)
 - [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script)
+- [The app website (`app.nyccsda.org`)](#the-app-website-appnyccsdaorg)
 - [Native app binaries](#native-app-binaries)
 - [Android PR preview APKs](#android-pr-preview-apks)
 - [iOS PR preview builds](#ios-pr-preview-builds)
@@ -166,7 +167,7 @@ What runs after the merge to `main`:
 
 | Workflow | Automatic? | What you do |
 | --- | --- | --- |
-| Deploy Web Preview and Tag | Yes | Nothing. It tags `vx.y.z` and publishes the web app. |
+| Deploy Website and Tag | Yes | Nothing. It tags `vx.y.z` and publishes [the app website](#the-app-website-appnyccsdaorg). |
 | Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK, upload the AAB to Google Play internal testing, and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 
@@ -240,6 +241,56 @@ codes are tracked in #237.
 
 The workflow updates the existing web app deployment, so the URL the mobile app uses
 doesn't change. Never create a new deployment just to publish code.
+
+## The app website (`app.nyccsda.org`)
+
+**Treat the website as production.** The App Store and Google Play listings link to its
+privacy policy and support pages, and printed QR codes point at its download page. If
+one of them breaks, a store can reject an update or delist the app, and printed QR codes
+stop working.
+
+| Address | File in the repository | Used by |
+| --- | --- | --- |
+| `https://app.nyccsda.org/privacy-policy.html` | `public/privacy-policy.html` | Both store listings |
+| `https://app.nyccsda.org/support.html` | `public/support.html` | The App Store's Support URL |
+| `https://app.nyccsda.org/download` | `public/download.html` | QR codes and download links (#237) |
+| `https://app.nyccsda.org/library/sabbath_encouragement.pdf` | `public/library/sabbath_encouragement.pdf` | The app's Library |
+| `https://app.nyccsda.org/` | The browser build of the app | Testing and demos; not an officially supported product |
+
+**How it's published:** every merge to `main` runs **Deploy Website and Tag**, which
+builds the website and pushes it to the `gh-pages` branch. GitHub Pages serves it at
+`https://new-york-chinese-seventh-day-adventist.github.io/sda-church-app/`. The
+**Deletion Protection** ruleset keeps `gh-pages` from being deleted. Files in `public/`
+are copied as they are.
+
+**How the address works:** a Cloudflare redirect rule sends `app.nyccsda.org` to that
+GitHub Pages address with a permanent (301) redirect, keeping the path and any query.
+So `app.nyccsda.org/download?stay` becomes `…/sda-church-app/download?stay`. Both stores
+accept a redirect. Two similar addresses are not the app website:
+
+- `nyccsda.org` is the church's main website, which forwards to adventistchurch.org, so
+  `nyccsda.org/sda-church-app/…` and `nyccsda.org/privacy-policy.html` don't work.
+- `www.nyccsda.org` currently returns 403. It should forward like `nyccsda.org` does.
+
+**Rules:**
+
+- **Keep these pages as static HTML in `public/`,** not as app screens. App screens, such
+  as `/you/privacy`, are blank until JavaScript runs, and the stores' checkers may not
+  run it.
+- **Never rename or remove them.** The store listings and printed QR codes point at
+  them. Add new pages beside them instead.
+- **Keep them independent of the browser build of the app,** so changing or retiring it
+  can't break them.
+- **Watch the daily External Dependency Monitor.** It checks the privacy, support, and
+  download pages through `app.nyccsda.org` and opens an alert issue if one fails; see
+  [External dependency monitor alerts](#external-dependency-monitor-alerts).
+
+**Later:** opening the app straight from a link, with Android App Links and iOS Universal
+Links, needs `app.nyccsda.org` to serve the site itself instead of redirecting, because
+Apple doesn't follow redirects for the file that enables it. That means setting
+`app.nyccsda.org` as the GitHub Pages custom domain, pointing a Cloudflare CNAME at
+`new-york-chinese-seventh-day-adventist.github.io` in place of the redirect rule, and
+changing the web build's base path from `/sda-church-app` to `/`.
 
 ## Native app binaries
 
