@@ -385,7 +385,9 @@ The answers given in Play Console, question by question, are in
 
 ## Screenshots
 
-Store screenshots aren't kept in this repository; upload them straight to each store.
+Copies of the uploaded screenshots and the feature graphic are in
+[`docs/store-assets/`](../store-assets/README.md). Replace them there whenever the stores
+get new ones.
 
 - **Google Play:** 2 to 8 phone screenshots. The long side can be at most twice the short
   side, so capture at 1080 × 1920: on an emulator, run `adb shell wm size 1080x1920`, and

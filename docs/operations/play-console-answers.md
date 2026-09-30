@@ -151,10 +151,15 @@ News & magazines, Events (which means ticket sales), and Music & audio.
 - **Feature graphic:** 1024 × 500. It shows the logo, the church's name in English and
   Chinese, "Bilingual Bible · Audio · Weekly bulletin · Hymns", and the pinyin and
   audio screenshots in phone frames on the brand blue (`#00405C`).
-- **Phone screenshots:** eight in English, captured as
+- **Phone screenshots:** eight in English and four in Traditional Chinese, captured as
   [Store listings](store-listing.md#screenshots) describes.
+- **AI-generated declaration:** Play Console asks, for each image, whether AI generated
+  or edited it. The feature graphic: yes, because an AI assistant laid it out, though no
+  image generator made any of its pixels. The icon and screenshots: no; they're the
+  official logo and real captures of the app.
 
-The feature graphic and screenshots aren't kept in this repository.
+Copies of the feature graphic and screenshots are in
+[`docs/store-assets/`](../store-assets/README.md).
 
 ## When to revisit
 
