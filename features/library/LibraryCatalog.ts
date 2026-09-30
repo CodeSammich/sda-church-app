@@ -23,11 +23,16 @@ export type LibraryItem = Readonly<{
   // original. Required for Internet Archive scans, whose own edition must be
   // public domain too; see "Internet Archive sources" in docs/LEGAL.md.
   editionYear?: number;
-  simplifiedChinese?: Readonly<{
-    author: string;
-    description: string;
-    title: string;
-  }>;
+  // Chinese text for a Chinese book, shown in the matching app language. Other
+  // languages show the English text above, so titles stay in one language.
+  traditionalChinese?: LibraryItemText;
+  simplifiedChinese?: LibraryItemText;
+}>;
+
+type LibraryItemText = Readonly<{
+  author: string;
+  description: string;
+  title: string;
 }>;
 
 const publicDomainWorks: readonly LibraryItem[] = [
@@ -187,7 +192,7 @@ const churchDocuments: readonly LibraryItem[] = [
     // Sabbath Encouragement page from (SABBATH_ENCOURAGEMENT_SOURCE_FILE_ID in
     // google-apps-script/SabbathEncouragement.gs). Keep the Drive file name.
     id: 'sabbath-encouragement',
-    title: 'Sabbath Encouragement (安息日勉言)',
+    title: 'Sabbath Encouragement',
     author: 'Bible and Ellen G. White quotations',
     collection: 'adventist-pioneers',
     description:
@@ -196,6 +201,12 @@ const churchDocuments: readonly LibraryItem[] = [
     rights: 'church-hosted',
     sourceName: 'New York Chinese SDA Church',
     sourceUrl: 'https://app.nyccsda.org/library/sabbath_encouragement.pdf',
+    traditionalChinese: {
+      title: '安息日勉言',
+      author: '聖經與懷愛倫著作摘錄',
+      description:
+        '五十二篇關於安息日的聖經經文與懷愛倫著作摘錄，由中國教會編輯。布魯克林週報每週刊登一篇。',
+    },
     simplifiedChinese: {
       title: '安息日勉言',
       author: '圣经与怀爱伦著作摘录',
@@ -245,11 +256,10 @@ export const getLibraryItemsForLanguage = (language: SupportedLanguage) => {
 export const getLibraryItemDisplayText = (
   item: LibraryItem,
   language: SupportedLanguage,
-) =>
-  language === 'zh-cn' && item.simplifiedChinese
-    ? item.simplifiedChinese
-    : {
-        author: item.author,
-        description: item.description,
-        title: item.title,
-      };
+): LibraryItemText =>
+  (language === 'zh' && item.traditionalChinese) ||
+  (language === 'zh-cn' && item.simplifiedChinese) || {
+    author: item.author,
+    description: item.description,
+    title: item.title,
+  };
