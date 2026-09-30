@@ -2397,9 +2397,32 @@ export default function BibleScreen() {
     return () => clearTimeout(timeout);
   }, [chapterData, supportingChapterData]);
 
+  /**
+   * Where to scroll to show a link's verse at `verseY`, or null when no link is
+   * waiting for that verse in the chapter on screen.
+   */
+  const getLinkedVerseScrollY = (verseNumber: number, verseY: number) => {
+    const range = pendingScriptureRange.current;
+    if (
+      !range ||
+      range.start !== verseNumber ||
+      !chapterData ||
+      chapterData.book.id !== paramBookId ||
+      chapterData.chapter.number !== Number(paramChapter) ||
+      chapterData.translation.id !== paramTransId
+    ) {
+      return null;
+    }
+    return paramBackTo === '/home/bulletin'
+      ? getBulletinVerseScrollOffset(verseY, viewportHeight)
+      : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
+  };
+
   // Scrolls to a link's verse, such as the verse of the day. The dual-language
   // text can load after the chapter and make every verse taller, so the verse
   // stays the target, and is scrolled to again, until the reader moves on.
+  // Pinyin, made on the device afterwards, moves it again; the verse's own
+  // onLayout follows that (#358).
   useEffect(() => {
     const range = pendingScriptureRange.current;
     if (
@@ -2433,11 +2456,8 @@ export default function BibleScreen() {
         if (attempts < VERSE_LAYOUT_ATTEMPTS) timeout = setTimeout(scrollToVerse, 250);
         return;
       }
-      const scrollY =
-        paramBackTo === '/home/bulletin'
-          ? getBulletinVerseScrollOffset(verseY, viewportHeight)
-          : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
-      scrollRef.current?.scrollTo({ y: scrollY, animated: true });
+      const scrollY = getLinkedVerseScrollY(targetVerse.number, verseY);
+      if (scrollY !== null) scrollRef.current?.scrollTo({ y: scrollY, animated: true });
     };
     timeout = setTimeout(scrollToVerse, 250);
 
@@ -3092,7 +3112,16 @@ export default function BibleScreen() {
               },
             ]}
             onLayout={(e) => {
-              versePositions.current[content.number] = e.nativeEvent.layout.y;
+              const verseY = e.nativeEvent.layout.y;
+              const previousY = versePositions.current[content.number];
+              versePositions.current[content.number] = verseY;
+              // A linked verse moves when the text above it grows, such as
+              // pinyin made on the device after the chapter loads. Follow it
+              // until the reader drags the page (#358).
+              if (previousY !== undefined && previousY !== verseY) {
+                const scrollY = getLinkedVerseScrollY(content.number, verseY);
+                if (scrollY !== null) scrollRef.current?.scrollTo({ y: scrollY, animated: false });
+              }
             }}
           >
             <View style={ReaderStyles.verseRow}>
