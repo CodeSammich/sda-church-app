@@ -26,6 +26,11 @@ contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media
 remain strict.
 
+It also checks the church's own website: the privacy policy, support, and download
+pages at `app.nyccsda.org`, which the store listings and QR codes depend on. Each must
+load through the custom domain and still contain its expected text. See
+[The app website](admin-runbook.md#the-app-website-appnyccsdaorg).
+
 Run it locally with:
 
 ```sh

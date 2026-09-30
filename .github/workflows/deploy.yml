@@ -1,4 +1,7 @@
-name: Deploy Web Preview and Tag
+name: Deploy Website and Tag
+
+# Publishes the website at https://app.nyccsda.org, which the store listings
+# and QR codes depend on: see docs/operations/admin-runbook.md#the-app-website-appnyccsdaorg.
 
 on:
   push:
