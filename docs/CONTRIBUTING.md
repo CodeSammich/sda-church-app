@@ -178,12 +178,14 @@ main (stable)
   into a `release/x.y.<patch-or-x>` branch, including PRs submitted from forks.
 - Removes the label when the issue closes after the final release reaches `main`.
 
-#### `Deploy Web Preview and Tag` (`.github/workflows/deploy.yml`)
+#### `Deploy Website and Tag` (`.github/workflows/deploy.yml`)
 
 - **Final Validation**: Ensures the merged version is unique.
 - **Automated Tagging**: Creates a new Git tag (e.g., `v0.8.2`) matching the `package.json` version.
-- **Web/PWA Preview**: Publishes the browser build to GitHub Pages for testing and demos;
-  native binaries still require their separate, signed workflows and store review.
+- **Website**: Publishes `https://app.nyccsda.org`, a production deployment: the store
+  listings link to its privacy policy and support pages, and QR codes point at its
+  download page. The browser build of the app is published with it, for testing and
+  demos. See [The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
 
 ### Example feature workflow
 
