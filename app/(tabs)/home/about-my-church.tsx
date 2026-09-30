@@ -138,10 +138,10 @@ export default function AboutChurchHistoryScreen() {
     },
     es: {
       title: 'Historia',
-      churchName: 'Iglesia Adventista\ndel Séptimo Día\nde Nueva York',
+      churchName: 'Iglesia Adventista\ndel Séptimo Día\nChina de Nueva York',
       history: 'Historia',
       historySubtext:
-        'La Iglesia Adventista del Séptimo Día de Nueva York comenzó como una humilde reunión en 1973. Hoy, somos una comunidad bilingüe vibrante dedicada a apoyar a nuestros vecinos.',
+        'La Iglesia Adventista del Séptimo Día China de Nueva York comenzó como una humilde reunión en 1973. Hoy, somos una comunidad bilingüe vibrante dedicada a apoyar a nuestros vecinos.',
       milestoneItems: [
         { year: '1973', event: 'Primera reunión' },
         { year: '1987', event: 'Organizada' },

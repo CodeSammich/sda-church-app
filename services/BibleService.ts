@@ -108,7 +108,7 @@ const OLD_TESTAMENT_BOOK_IDS = new Set([
   'OBA',
   'JON',
   'MIC',
-  'NAH',
+  'NAM',
   'HAB',
   'ZEP',
   'HAG',
@@ -260,7 +260,7 @@ const BOOK_NAME_TO_ID: Record<string, string> = {
   Obadiah: 'OBA',
   Jonah: 'JON',
   Micah: 'MIC',
-  Nahum: 'NAH',
+  Nahum: 'NAM',
   Habakkuk: 'HAB',
   Zephaniah: 'ZEP',
   Haggai: 'HAG',
@@ -330,7 +330,7 @@ export const BIBLE_BOOK_NAMES: Record<string, Record<SupportedLanguage, string>>
   OBA: { en: 'Obadiah', zh: '俄巴底亞書', 'zh-cn': '俄巴底亚书', es: 'Abdías' },
   JON: { en: 'Jonah', zh: '約拿書', 'zh-cn': '约拿书', es: 'Jonás' },
   MIC: { en: 'Micah', zh: '彌迦書', 'zh-cn': '弥迦书', es: 'Miqueas' },
-  NAH: { en: 'Nahum', zh: '那鴻書', 'zh-cn': '那鸿书', es: 'Nahúm' },
+  NAM: { en: 'Nahum', zh: '那鴻書', 'zh-cn': '那鸿书', es: 'Nahúm' },
   HAB: { en: 'Habakkuk', zh: '哈巴谷書', 'zh-cn': '哈巴谷书', es: 'Habacuc' },
   ZEP: { en: 'Zephaniah', zh: '西番雅書', 'zh-cn': '西番雅书', es: 'Sofonías' },
   HAG: { en: 'Haggai', zh: '哈該書', 'zh-cn': '哈该书', es: 'Hageo' },
@@ -715,19 +715,6 @@ export async function fetchAvailableTranslations() {
     console.error('Failed to load available translations', e);
     throw e;
   }
-}
-
-/**
- * Returns a random book and a random chapter number within that book's bounds.
- * Useful for implementing "Random Verse" features.
- *
- * @param books - The list of available books.
- */
-export function selectRandomChapter(books: TranslationBook[]) {
-  if (!books || books.length === 0) return null;
-  const book = books[Math.floor(Math.random() * books.length)];
-  const chapter = Math.floor(Math.random() * book.numberOfChapters) + 1;
-  return { book, chapter };
 }
 
 /**
