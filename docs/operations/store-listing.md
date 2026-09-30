@@ -51,10 +51,10 @@ App Store: English (U.S.). Google Play: English (United States), `en-US`.
 New York Chinese SDA Church
 ```
 
-**Subtitle** (App Store, up to 30)
+**Subtitle** (App Store, up to 30). The bulletin is left out on purpose.
 
 ```text
-Bible, bulletin & church life
+Bible & church life
 ```
 
 **Short description** (Google Play, up to 80)
