@@ -41,7 +41,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { AppState, ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, ScrollView, StyleSheet, View } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { ActivityIndicator, Card, Divider, IconButton, Text } from 'react-native-paper';
 
 const LABELS = {

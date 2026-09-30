@@ -13,6 +13,7 @@ import { UIStateContext } from '@/constants/UIStateContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import {
   getGlobalHeaderHeightForScale,
+  isHeroUnderStatusBar,
   shouldStackBibleControls,
 } from '@/hooks/useGlobalHeaderHeight';
 import {
@@ -267,6 +268,28 @@ export const GlobalHeader = (props: any) => {
     inputRange: [0, 1],
     outputRange: [-6, 0],
   });
+
+  // Text scrolled under the status bar runs into the clock, so a strip of the
+  // page's background covers it. A hero image may sit there by design
+  // (docs/UI_UX.md, Edge-to-Edge Immersive UI), so pages that track their hero
+  // hide the strip while it's in view.
+  const heroUnderStatusBar = isHeroUnderStatusBar({
+    heroUnderStatusBar: props.options?.heroUnderStatusBar,
+    showTitleChip: props.options?.showTitleChip,
+    isHymnalPage,
+    hymnalSearchCollapsed,
+  });
+  const statusBarBackdropAnim = useRef(
+    new Animated.Value(heroUnderStatusBar ? 0 : 1),
+  ).current;
+
+  useEffect(() => {
+    Animated.timing(statusBarBackdropAnim, {
+      toValue: heroUnderStatusBar ? 0 : 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [heroUnderStatusBar, statusBarBackdropAnim]);
 
   const searchLabels =
     READER_SEARCH_LABELS[language as keyof typeof READER_SEARCH_LABELS] ||
@@ -582,6 +605,17 @@ export const GlobalHeader = (props: any) => {
         },
       ]}
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.statusBarBackdrop,
+          {
+            height: insets.top,
+            backgroundColor: theme.colors.background,
+            opacity: statusBarBackdropAnim,
+          },
+        ]}
+      />
       <Appbar.Header
         ref={headerRef}
         statusBarHeight={0}
@@ -872,6 +906,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
+  },
+  statusBarBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   circleBackButton: {
     justifyContent: 'center',

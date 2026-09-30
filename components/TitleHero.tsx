@@ -5,12 +5,12 @@ import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo } from 'react';
 import {
-  ImageBackground,
   type ImageSourcePropType,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Text } from 'react-native-paper';
 
 type TitleHeroProps = {

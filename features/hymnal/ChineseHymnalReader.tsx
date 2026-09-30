@@ -20,12 +20,12 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import {
   FlatList,
-  ImageBackground,
   ImageSourcePropType,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

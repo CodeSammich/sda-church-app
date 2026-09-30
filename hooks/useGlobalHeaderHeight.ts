@@ -67,6 +67,27 @@ export const shouldStackBibleControls = ({
       rowWidth);
 
 /**
+ * Whether a page's hero image is under the status bar, where the header leaves
+ * it uncovered. A page can say so with `heroUnderStatusBar`. Otherwise, a page
+ * that shows its title chip once the hero scrolls away, or a hymnal that
+ * collapses its search then, has its hero in view until that happens. Any
+ * other page has only its background or scrolled content there.
+ */
+export const isHeroUnderStatusBar = ({
+  heroUnderStatusBar,
+  showTitleChip,
+  isHymnalPage,
+  hymnalSearchCollapsed,
+}: {
+  heroUnderStatusBar?: boolean;
+  showTitleChip?: boolean;
+  isHymnalPage: boolean;
+  hymnalSearchCollapsed: boolean;
+}) =>
+  heroUnderStatusBar ??
+  (showTitleChip !== undefined ? !showTitleChip : isHymnalPage && !hymnalSearchCollapsed);
+
+/**
  * The header's height, including the top safe area. The Bible reader passes
  * `bibleReader` to use its own text scale and the header's measured decision
  * on stacking its controls.

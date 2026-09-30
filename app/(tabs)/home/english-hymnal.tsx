@@ -2,7 +2,8 @@ import { AppIcon } from '@/components/AppIcon';
 import { ExternalBrandIcon } from '@/components/ExternalBrandIcon';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
-import { FlatList, ImageBackground, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

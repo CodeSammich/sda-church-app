@@ -13,11 +13,13 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { APP_ICONOGRAPHY } from '@/constants/Iconography';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
-import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Text } from 'react-native-paper';
 
 const allLabels = {
@@ -84,15 +86,19 @@ export default function ExploreScreen() {
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   const headerHeight = useGlobalHeaderHeight();
+  const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
 
   return (
     <>
-      <Stack.Screen options={{ title: labels.title }} />
+      <Stack.Screen options={{ title: labels.title, heroUnderStatusBar } as any} />
       <ScrollView
         style={NavigationStyles.container}
         contentContainerStyle={styles.content}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <ImageBackground
+          onLayout={onHeroLayout}
           source={{ uri: CHURCH_BUILDING_IMAGE_URL }}
           style={[
             NavigationStyles.heroHeader,
