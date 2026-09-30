@@ -305,6 +305,26 @@ The checked-in mappings and their regeneration scripts are:
 - [`features/hymnal/Chinese707Hymnal.ts`](../features/hymnal/Chinese707Hymnal.ts) and
   [`scripts/scrape-chinese-707-hymnals.mjs`](../scripts/scrape-chinese-707-hymnals.mjs).
 
+### 506 hymn recordings on YouTube
+
+The 506 hymnal's YouTube button opens that hymn's recording from a
+[public YouTube playlist of the 506 hymnal](https://www.youtube.com/playlist?list=PLZpA9AftZl_JIt-MCXSfP364-qR3ddrd3)
+that the church recommended. Hymns without a recording yet, and the 505 and 707
+hymnals, search YouTube instead. The same limits apply as for zgaxr:
+
+1. the repository stores only the playlist ID and one video ID per hymn number; it does
+   not copy, download, or embed the recordings;
+2. a video maps to a hymn only when its number and title match the hymnal, or a person
+   has compared a differing title with the hymn;
+3. the video opens in the YouTube app or browser, under YouTube's terms and the
+   uploader's rights; and
+4. the External Dependency Monitor checks a mapped video each day and fails when it is
+   no longer public.
+
+The mapping is [`features/hymnal/Chinese506YouTube.json`](../features/hymnal/Chinese506YouTube.json),
+regenerated with [`scripts/map-chinese-506-youtube.mjs`](../scripts/map-chinese-506-youtube.mjs)
+through the YouTube Data API.
+
 ---
 
 ## Branding & Trademarks
