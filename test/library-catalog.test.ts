@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  getLibraryItemDisplayText,
   getLibraryItemShelf,
   getLibraryItemsForLanguage,
   LIBRARY_CATALOG,
@@ -117,5 +118,32 @@ describe('library catalog', () => {
     expect(catalog.publicDomainWorks).toHaveLength(
       LIBRARY_CATALOG.publicDomainWorks.length,
     );
+  });
+
+  it('lists Sabbath Encouragement only for Chinese readers until it has an English translation', () => {
+    const lists = (language: 'en' | 'es' | 'zh' | 'zh-cn') =>
+      getLibraryItemsForLanguage(language).churchDocuments.map(({ id }) => id);
+    expect(lists('zh')).toContain('sabbath-encouragement');
+    expect(lists('zh-cn')).toContain('sabbath-encouragement');
+    expect(lists('en')).not.toContain('sabbath-encouragement');
+    expect(lists('es')).not.toContain('sabbath-encouragement');
+  });
+
+  it('shows each title in one language: Chinese for Chinese readers, English otherwise', () => {
+    const [sabbathEncouragement] = LIBRARY_CATALOG.churchDocuments;
+    const title = (language: 'en' | 'es' | 'zh' | 'zh-cn') =>
+      getLibraryItemDisplayText(sabbathEncouragement, language).title;
+    expect(title('en')).toBe('Sabbath Encouragement');
+    expect(title('es')).toBe('Sabbath Encouragement');
+    expect(title('zh')).toBe('安息日勉言');
+    expect(title('zh-cn')).toBe('安息日勉言');
+    // A compilation of Bible verses and Ellen G. White quotations.
+    expect(sabbathEncouragement.author).toBe('Various');
+
+    // The English text, which every non-Chinese language shows, has no Chinese in it.
+    const chinese = /[\u3400-\u9fff]/;
+    for (const item of Object.values(LIBRARY_CATALOG).flat()) {
+      expect(`${item.id}: ${item.title} ${item.author}`).not.toMatch(chinese);
+    }
   });
 });
