@@ -684,8 +684,10 @@ To set up the policy:
 4. **Target** all workflows in the repository.
 5. **Event rules:** tick every event in the list. There's no "all events" option, and
    an event rule is an allowlist: an unticked event stops every workflow that uses it.
-6. After the next release PR, open **Policy insights**, under the policies page, and
-   check that nothing was blocked.
+6. On the next release PR, check that every expected check reports. A blocked event
+   shows up as a check that never starts. (**Policy insights**, which lists blocked
+   runs, needs a paid GitHub plan.) The 0.42.0 release PR (#329) reported all of
+   them.
 
 New workflows need no change to the policy. Only if GitHub adds a new kind of event,
 and a workflow uses it, does that event need ticking here.
