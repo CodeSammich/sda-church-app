@@ -157,6 +157,23 @@ to IT administrators, not in this repository. Other people in the fellowship
 photos appear mostly from behind or in profile. Get written consent before adding a
 photo of anyone else, and keep people out of store screenshots.
 
+**The other rights, reviewed September 2026.** None of these blocks the first release;
+the logo confirmation is a follow-up.
+
+- **Chinese Union Version audio:** Audio Power's written approval (issue #134) is on
+  file. Keep a copy with the photo consents in the IT Admin shared drive.
+- **Adventist name and logo:** used as an organized member congregation, which the
+  church's identity guidelines provide for, but there's no written confirmation yet.
+  Ask the conference's communication department to confirm the church may use them in
+  its app, and file the reply. App Review can ask for proof that an app is authorized
+  to use a well-known organization's name and logo.
+- **Hymn and book sites:** links to public pages need no permission, and hymn titles and
+  numbers are facts. Two things go further. The app bundles six hymnal cover images
+  (`assets/images/hymnals/`) to identify the books, and the Library shows cover
+  thumbnails loaded from EGW Writings, which the Ellen G. White Estate runs. Both are
+  low risk; if a publisher objects, replace its covers with text tiles or the app's own
+  art.
+
 Apple’s [Intellectual Property guideline](https://developer.apple.com/app-store/review/guidelines/)
 requires that app content be created by the developer or licensed for use. Google’s
 content policies similarly apply to content displayed by the app and content reached
