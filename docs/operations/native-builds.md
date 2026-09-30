@@ -909,7 +909,10 @@ pass or fail them, and a test makes sure of it.
 split across two lines, need a person. When the iOS preview finishes on the release
 pull request into `main`, it posts a comment there with a link to that commit's
 screenshots, what to look for, and how to approve; each run replaces the previous
-comment. After looking through `screens/ios/`, approve in either of two ways:
+comment. Until then, a notice from the **Screenshots reviewed** check says the
+screenshots are on the way. It's posted as soon as the pull request opens or gets a
+new push, and it replaces the out-of-date screenshots from before the push, so nobody
+wonders for 50 minutes why the check is red. After looking through `screens/ios/`, approve in either of two ways:
 
 - add the **screenshots reviewed** label; or
 - reply to the pull request with just 👍. `screenshot-approval.yml` then adds the label
