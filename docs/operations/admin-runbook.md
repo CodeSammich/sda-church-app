@@ -328,7 +328,11 @@ lapses, the privacy policy, support, and download pages above go down with it.
 - **Add nothing else that can cost money:** no Workers Paid, R2, or other paid or
   pay-as-you-go product
   ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
-  Free plans have no overage charges: going over a limit makes requests fail.
+  Free plans have no overage charges: going over a limit makes requests fail. The
+  Cantonese audio Worker
+  ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241))
+  runs in this account on Workers Free; if Cloudflare ever offers to upgrade it,
+  decline.
 
 **Keep the account recoverable:**
 
