@@ -1,21 +1,25 @@
 name: Generate physical bulletin QR codes
 
+# The printed bulletin picks these QR images up from Google Drive by file name.
+# Their destinations are in scripts/bulletin-qr-codes.json, so changing one is a
+# reviewed pull request, and merging it to main regenerates the images here. The
+# upload waits for approval of the production environment, so nothing reaches
+# Drive unattended; a run nobody approves just expires.
 on:
-  workflow_dispatch:
-    inputs:
-      queens_url:
-        description: HTTPS AdventistGiving URL for the Queens bulletin
-        required: true
-        default: https://adventistgiving.org/donate/AN48CO
-        type: string
-      brooklyn_url:
-        description: HTTPS AdventistGiving URL for the Brooklyn bulletin
-        required: true
-        default: https://adventistgiving.org/donate/AN48CO
-        type: string
+  push:
+    branches: [main]
+    paths:
+      - scripts/bulletin-qr-codes.json
+      - scripts/generate-qr.mjs
+      - .github/workflows/generate-physical-bulletin-qr.yml
+  workflow_dispatch: {}
 
 permissions:
   contents: read
+
+concurrency:
+  group: generate-physical-bulletin-qr
+  cancel-in-progress: false
 
 jobs:
   generate:
@@ -33,29 +37,21 @@ jobs:
       - name: Install QR generator
         run: npm ci --legacy-peer-deps
 
-      - name: Generate Queens JPG
-        env:
-          QR_URL: ${{ inputs.queens_url }}
+      - name: Generate JPGs
         run: |
           set -euo pipefail
-          node scripts/generate-qr.mjs \
-            --url "$QR_URL" \
-            --output build/qr/queens_adventist_giving_qr_code_368x368.jpg
-
-      - name: Generate Brooklyn JPG
-        env:
-          QR_URL: ${{ inputs.brooklyn_url }}
-        run: |
-          set -euo pipefail
-          node scripts/generate-qr.mjs \
-            --url "$QR_URL" \
-            --output build/qr/brooklyn_adventist_giving_qr_code_368x368.jpg
+          node -e '
+            const codes = require("./scripts/bulletin-qr-codes.json");
+            for (const [file, url] of Object.entries(codes)) console.log(`${file}\t${url}`);
+          ' | while IFS=$'\t' read -r file url; do
+            node scripts/generate-qr.mjs --url "$url" --output "build/qr/$file"
+          done
 
       - name: Upload JPG artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: adventistgiving-qr-codes
-          path: build/qr/*_adventist_giving_qr_code_368x368.jpg
+          name: bulletin-qr-codes
+          path: build/qr/*_qr_code_368x368.jpg
           if-no-files-found: error
 
   upload-to-drive:
@@ -69,8 +65,8 @@ jobs:
       - name: Download JPG artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: adventistgiving-qr-codes
-          path: ${{ runner.temp }}/adventistgiving-qr-codes
+          name: bulletin-qr-codes
+          path: ${{ runner.temp }}/bulletin-qr-codes
 
       # The upload helper comes from the trusted default branch rather than
       # the selected workflow ref because this job receives Google credentials.
@@ -91,6 +87,6 @@ jobs:
             echo 'Missing protected production Environment secret CLASPRC_JSON.' >&2
             exit 1
           }
-          for file in "$RUNNER_TEMP"/adventistgiving-qr-codes/*.jpg; do
+          for file in "$RUNNER_TEMP"/bulletin-qr-codes/*.jpg; do
             node trusted-source/scripts/upload-google-drive.mjs "$file"
           done

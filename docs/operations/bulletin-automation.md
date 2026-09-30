@@ -551,6 +551,12 @@ The code and slot dimensions remain in place so the assets can be restored witho
 reflowing the bulletin. Current asset filename conventions end in
 `_368x368.jpg`; the mobile-app caption is `Download Mobile App | 下載 APP`.
 
+The QR workflow generates `mobile_app_qr_code_368x368.jpg`, pointing at
+`https://app.nyccsda.org/download`, and uploads it to Drive with the giving codes
+([Admin Runbook](admin-runbook.md#bulletin-qr-codes)). To print it, remove the
+Mobile App slot's `reserved` flag in `getGivingQrItems_` once the app is public in
+both stores, then deploy the Apps Script.
+
 ## Deployment and verification
 
 The repository is the canonical source. Local WSL deployment uses the existing

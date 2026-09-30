@@ -179,17 +179,32 @@ expected.
 ## Bulletin QR codes
 
 **Workflow:** Actions → **Generate physical bulletin QR codes**
-(`.github/workflows/generate-physical-bulletin-qr.yml`). Manual only.
+(`.github/workflows/generate-physical-bulletin-qr.yml`).
 
-Run it only when a giving URL changes. It overwrites the QR images the printed
-bulletin uses.
+The QR codes and where they point are listed in
+[`scripts/bulletin-qr-codes.json`](../../scripts/bulletin-qr-codes.json):
 
-1. Select **Run workflow** and choose **`main`** under *Use workflow from*. The upload
-   step always runs the upload script from `main`, so running from a release branch
-   only tests image generation.
-2. Enter the Queens and Brooklyn AdventistGiving URLs. They must be `https://`.
-3. Approve the `production` deployment when the upload job starts.
-4. Open the **Upload QR codes to Google Drive** log and check:
+| File | Destination |
+| --- | --- |
+| `queens_adventist_giving_qr_code_368x368.jpg` | Queens AdventistGiving page |
+| `brooklyn_adventist_giving_qr_code_368x368.jpg` | Brooklyn AdventistGiving page |
+| `mobile_app_qr_code_368x368.jpg` | `https://app.nyccsda.org/download`, which sends phones to their app store |
+
+The app code uses the church's own `app.nyccsda.org` address, never the GitHub Pages
+address it redirects to, so printed codes keep working if the website moves.
+
+**To change a destination,** edit that file in a pull request. The workflow runs by
+itself when a change to the file, to `scripts/generate-qr.mjs`, or to the workflow
+reaches `main`, so a changed URL can't be forgotten. It also runs from **Run
+workflow** at any time. Either way it overwrites the QR images the printed bulletin
+uses, and nothing reaches Drive until someone approves:
+
+1. For a manual run, select **Run workflow** and choose **`main`** under *Use
+   workflow from*. The upload step always runs the upload script from `main`, so
+   running from a release branch only tests image generation.
+2. Approve the `production` deployment when the upload job starts. Leaving it
+   unapproved is safe: the run expires without changing Drive.
+3. Open the **Upload QR codes to Google Drive** log and check:
    - `Google Drive scopes: …`. The login currently has `drive.file` (change only
      files it created) and `drive.metadata.readonly` (see all files). If the upload
      fails with `403 … has not granted the app … write access to the file`, the file
@@ -199,13 +214,11 @@ bulletin uses.
      the bulletin script picks the first file with a matching name anywhere in Drive
      and doesn't skip trashed files. See
      [Credentials](#credentials-that-need-attention).
-   - `Replaced …` or `Uploaded …` for `queens_adventist_giving_qr_code_368x368.jpg`
-     and `brooklyn_adventist_giving_qr_code_368x368.jpg`. **Replaced** keeps the
+   - `Replaced …` or `Uploaded …` for each file in the table. **Replaced** keeps the
      existing Drive file, its ID, and its sharing link.
-5. The next printed bulletin you generate picks the images up from Drive by name.
+4. The next printed bulletin you generate picks the images up from Drive by name.
 
-The images are also saved as the run's **adventistgiving-qr-codes** artifact for 90
-days.
+The images are also saved as the run's **bulletin-qr-codes** artifact for 90 days.
 
 **What the upload script may write.** `scripts/upload-google-drive.mjs` only uploads
 `.apk`, `.aab`, and `.ipa` files and these QR codes:
@@ -221,8 +234,9 @@ Sabbath Encouragement PDF can't be overwritten. To upload a new file, add its ex
 name to the allowlist in a reviewed pull request.
 
 Which QR slots print is controlled in the bulletin script; see
-[Giving QR slots](bulletin-automation.md#giving-qr-slots). The Zelle and mobile app
-codes are tracked in #237.
+[Giving QR slots](bulletin-automation.md#giving-qr-slots). The mobile app code is
+generated, but its slot stays reserved until the app is public in both stores. The
+Zelle codes are still made by hand. Both are tracked in #237.
 
 ## Deploying the bulletin Apps Script
 
