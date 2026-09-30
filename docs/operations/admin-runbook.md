@@ -442,6 +442,23 @@ When Dependabot reports `security_update_not_possible`, there's no fix Dependabo
 apply yet, usually because another package pins the old version. Recheck after that
 package updates.
 
+### Bundled copy of decode-uri-component
+
+Expo Router's `query-string` 7 uses `decode-uri-component` 0.2.2, which slows to a
+crawl on malformed percent-encoding in a URL
+([GHSA-vcc3-ghjq-m6fr](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr)). The fix,
+0.5.0, ships only as an ES module, which `query-string` 7 can't load. So
+[`vendor/decode-uri-component`](../../vendor/decode-uri-component) holds 0.5.0
+converted to CommonJS, unchanged otherwise and under its MIT license. `package.json`
+installs it as a dependency, and its `overrides` entry
+(`"decode-uri-component": "$decode-uri-component"`) makes every package use it.
+`test/decode-uri-component.test.ts` checks that `query-string` loads it and that the
+lockfile holds no other copy.
+
+Remove the folder, the dependency, and the override once Expo Router depends on a
+`query-string` that uses `decode-uri-component` 0.5.0 or later (`query-string` 8 and
+up). Check with `npm view expo-router@next dependencies.query-string`.
+
 ## External dependency monitor alerts
 
 **Workflow:** **External Dependency Monitor**, which runs daily and can be run
