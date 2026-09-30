@@ -239,6 +239,23 @@ describe('Screenshot review', () => {
   it('keeps the job name the ruleset will require', () => {
     expect(workflow).toContain('name: Screenshots reviewed');
   });
+
+  it('says the screenshots are on the way after each push, and clears out-of-date ones', () => {
+    const notice = workflow.slice(workflow.indexOf('- name: Say the screenshots are on the way'));
+    expect(notice).toContain('case "$ACTION" in opened|reopened|synchronize|ready_for_review) ;; *) exit 0 ;; esac');
+    expect(notice).toContain('[ "$RUN_ATTEMPT" = 1 ] || exit 0');
+    expect(notice).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
+    expect(notice).toContain('about 50 minutes');
+  });
+
+  it('marks the notice differently, so a 👍 can\u2019t approve screenshots that aren\u2019t posted', () => {
+    const approval = repoFile('.github/workflows/screenshot-approval.yml');
+    expect(workflow).toContain('<!-- key-screens-review pending sha=$SHA -->');
+    // The approval matches the screenshots' own marker line exactly.
+    expect(approval).toContain('grep -qxF "<!-- key-screens-review sha=$sha -->"');
+    // The iOS preview replaces every comment with either marker.
+    expect(repoFile('.github/workflows/ios-pr-preview.yml')).toContain('startswith("<!-- key-screens-review")');
+  });
 });
 
 describe('Screenshot review comment and 👍 approval', () => {
@@ -278,7 +295,8 @@ describe('Screenshot review comment and 👍 approval', () => {
     expect(text).not.toMatch(/actions\/checkout|secrets\./);
     expect(text).not.toMatch(/pull_request_target/);
     // Pull request and comment text reach the script only through environment variables.
-    for (const script of text.split('run: |').slice(1)) {
+    // Each script runs from `run: |` to the next step.
+    for (const script of text.split('run: |').slice(1).map((rest) => rest.split(/\n\s*- (?:name|uses):/)[0])) {
       expect(script).not.toMatch(/\$\{\{/);
     }
   });
