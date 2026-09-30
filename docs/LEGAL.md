@@ -187,7 +187,7 @@ library, like the Mandarin CUV recordings (see
 repository doesn't bundle them. The app contacts no new service, so the privacy
 policy doesn't change.
 
-### “Free to access” does not mean “public domain”
+### “Free to access” doesn't necessarily mean “public domain”
 
 fetch(bible) provides an open CDN with no API key, usage fee, request quota, or
 provider-imposed caching limit. That permission applies to access to the
@@ -195,6 +195,8 @@ fetch(bible) service; it does **not** erase or replace the license of each work
 distributed through the service. fetch(bible explicitly states that consumers
 must follow the terms of each individual Bible resource. See its
 [official access and licensing explanation](https://fetch.bible/access/#no-limits-from-us).
+Some of those works are in the public domain, such as the CUV and Reina-Valera 1909
+texts above. Others, such as the critical editions below, carry their own licenses.
 
 The app currently requests these open critical editions:
 
