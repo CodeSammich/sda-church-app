@@ -1,4 +1,5 @@
 import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest';
+import { BIBLE_BRAIN_AUDIO } from '@/constants/ExternalLinks';
 
 /** Maps narrator names to one source URL or an ordered list of fallback URLs. */
 export interface TranslationBookChapterAudioLinks {
@@ -99,4 +100,72 @@ export const getAudioPowerCuvChapterLinks = (
       `${AUDIO_POWER_CUV_RECORDINGS_BASE}/${sourceFilename}`,
     ],
   };
+};
+
+/** The Cantonese narrator's name, shown in the narrator list and on the lock screen. */
+export const CANTONESE_CUV_READER = '粵語 (Faith Comes By Hearing)';
+
+type BibleBrainAudioConfig = typeof BIBLE_BRAIN_AUDIO;
+
+// The Old Testament is the first 39 books of the catalog above.
+const OLD_TESTAMENT_BOOK_COUNT = 39;
+
+/**
+ * The church Worker's stable address for a Cantonese chapter, or null when the
+ * feature is off or that testament has no Cantonese recording. The Worker
+ * redirects to a fresh FCBH link when the player asks for it, so the address can
+ * be queued ahead of time like any other recording (#241).
+ */
+export const getCantoneseCuvChapterUrl = (
+  bookId: string,
+  chapter: number,
+  config: BibleBrainAudioConfig = BIBLE_BRAIN_AUDIO,
+): string | null => {
+  const id = bookId.toUpperCase();
+  const book = AUDIO_POWER_CUV_BOOK_BY_ID.get(id);
+  if (
+    !config.baseUrl ||
+    !book ||
+    !Number.isInteger(chapter) ||
+    chapter < 1 ||
+    chapter > book.chapterCount
+  ) {
+    return null;
+  }
+  const fileset =
+    book.bookNumber <= OLD_TESTAMENT_BOOK_COUNT
+      ? config.cantoneseFilesets.oldTestament
+      : config.cantoneseFilesets.newTestament;
+  if (!fileset) return null;
+  const base = config.baseUrl.replace(/\/+$/, '');
+  return `${base}/v1/audio/${encodeURIComponent(fileset)}/${id}/${chapter}`;
+};
+
+/**
+ * Every narrator for a CUV chapter, in the order the narrator list shows them:
+ * the Mandarin Audio Power recording, then Cantonese where FCBH has recorded
+ * the chapter. The Mandarin narration covers every chapter, so it remains the
+ * fallback if FCBH ends the church's access, as its license allows.
+ */
+export const getCuvChapterAudioLinks = (
+  bookId: string,
+  chapter: number,
+  config: BibleBrainAudioConfig = BIBLE_BRAIN_AUDIO,
+): TranslationBookChapterAudioLinks => {
+  const links = getAudioPowerCuvChapterLinks(bookId, chapter);
+  const cantonese = getCantoneseCuvChapterUrl(bookId, chapter, config);
+  return cantonese ? { ...links, [CANTONESE_CUV_READER]: [cantonese] } : links;
+};
+
+/** Whether a URL is the church's Bible Brain Worker. */
+export const isBibleBrainAudioUrl = (
+  url: string,
+  config: BibleBrainAudioConfig = BIBLE_BRAIN_AUDIO,
+) => {
+  if (!config.baseUrl) return false;
+  try {
+    return new URL(url).host === new URL(config.baseUrl).host;
+  } catch {
+    return false;
+  }
 };

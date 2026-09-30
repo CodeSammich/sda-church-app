@@ -46,6 +46,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [Google Workspace](#google-workspace-and-drive) | Roster, Drive, Apps Script | Free (nonprofit) | 100 TB pooled storage | Quota errors | None |
 | [Google Cloud](#google-cloud-play-upload-service-account) | Service account for automatic Google Play uploads | Free; **never link a billing account** | Play Developer API: 3,000 queries per minute | Uploads fail with an error | None: about ten requests per release |
 | [Cloudflare](#cloudflare) | Domain and DNS | **~$10/year** (domain only) | n/a | n/a | None |
+| [Bible Brain Worker](#bible-brain-worker-cantonese-audio) | Cantonese audio (built, **off**) | Free: Workers **Free** plan only | 100,000 requests a day | Error 1027 until midnight UTC; Mandarin audio unaffected | Low: one request per chapter started; audio comes from FCBH |
 | [App stores](#app-stores) | Distribution | Free (Apple nonprofit waiver; Play $25 paid once) | n/a | n/a | None |
 
 ## Load model
@@ -305,6 +306,18 @@ to it ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-chur
 DNS itself is free. How to keep the card and the account safe, including a capped
 virtual card and backup administrators, is in the
 [admin runbook](admin-runbook.md#the-cloudflare-account-and-domain).
+
+### Bible Brain Worker (Cantonese audio)
+
+A Cloudflare Worker that holds Faith Comes By Hearing's API key and redirects the app
+to FCBH's audio for Cantonese chapters (#241). It's built but off; see
+[Cantonese Bible audio](bible-brain-audio.md#cost) for the cost analysis and setup.
+
+It's allowed on the account with a card on file only because the **Workers Free**
+plan can't bill: past 100,000 requests a day, requests fail with Error 1027 until
+midnight UTC. Never move it, or the account, to Workers Paid. The Worker uses about
+1 ms of CPU per request against Free's 10 ms, and carries no audio traffic: players
+stream from FCBH's servers.
 
 ### App stores
 

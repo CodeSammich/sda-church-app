@@ -6,7 +6,8 @@ import {
 
 import type { TranslationBook } from './BibleService';
 import {
-  getAudioPowerCuvChapterLinks,
+  getCuvChapterAudioLinks,
+  isBibleBrainAudioUrl,
   supportsAudioPowerCuv,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
@@ -102,6 +103,7 @@ export const getBibleAudioSourceId = (url: string) => {
 /** Returns the user-facing provider name shown in audio controls. */
 export const getBibleAudioSourceLabel = (url: string) => {
   const host = getBibleAudioSourceId(url);
+  if (isBibleBrainAudioUrl(url)) return 'Faith Comes By Hearing';
   if (host === 'assets.adventistconnect.org') return 'NYCCSDA.org';
   if (host === 'theaudiopower.com' || host === 'theaudiopower.org') {
     return 'Audio Power';
@@ -240,6 +242,11 @@ interface BibleAudioQueueOptions {
   translationLabel: string;
 }
 
+const takeWhileRecorded = <T,>(items: T[], isRecorded: (item: T) => boolean) => {
+  const end = items.findIndex((item) => !isRecorded(item));
+  return end === -1 ? items : items.slice(0, end);
+};
+
 /** Builds future track descriptors without fetching chapter text or audio. */
 export const buildBibleAudioQueue = ({
   albumTitle,
@@ -257,18 +264,25 @@ export const buildBibleAudioQueue = ({
   translationId,
   translationLabel,
 }: BibleAudioQueueOptions): BibleAudioQueueItem[] =>
-  getFollowingBibleChapters(
-    books,
-    currentBookId,
-    currentChapter,
-    sleepTimer === 'chapter' ? 0 : limit,
+  // A narrator who hasn't recorded the next chapter, such as a New
+  // Testament-only one, ends the queue there rather than skipping ahead.
+  takeWhileRecorded(
+    getFollowingBibleChapters(
+      books,
+      currentBookId,
+      currentChapter,
+      sleepTimer === 'chapter' ? 0 : limit,
+    ).filter(({ book }) => sleepTimer !== 'book' || book.id === currentBookId),
+    ({ book, chapter }) =>
+      !supportsAudioPowerCuv(translationId) ||
+      !selectedReader ||
+      !!getCuvChapterAudioLinks(book.id, chapter)[selectedReader],
   )
-  .filter(({ book }) => sleepTimer !== 'book' || book.id === currentBookId)
   .flatMap(({ book, chapter }) => {
     let queuedUrls: string[] = [];
 
     if (supportsAudioPowerCuv(translationId)) {
-      const links = getAudioPowerCuvChapterLinks(book.id, chapter);
+      const links = getCuvChapterAudioLinks(book.id, chapter);
       const source = selectedReader
         ? links[selectedReader]
         : Object.values(links)[0];

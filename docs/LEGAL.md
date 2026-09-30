@@ -76,11 +76,12 @@ requested. Still open:
 ### Bible Brain API license (Faith Comes By Hearing): planned, not in use
 
 > [!NOTE]
-> **Work in progress.** The app does **not** use Bible Brain or any Faith Comes By
-> Hearing content today. The church has applied for API access and is waiting for a
-> reply. This section records the license terms ahead of time so the integration
-> ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241))
-> is designed to follow them.
+> **Built, but off.** The app doesn't play any Faith Comes By Hearing content yet.
+> FCBH issued the church an API key on September 30, 2026. The Worker proxy and the
+> app's Cantonese narration follow the terms below and ship turned off, until the
+> checklist in [Cantonese Bible audio](operations/bible-brain-audio.md#before-turning-it-on)
+> is done, including FCBH's answer on whether a private proxy is acceptable
+> ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)).
 
 Using FCBH audio through its Bible Brain API (the Digital Bible Platform, DBP) would
 mean agreeing to the [API License Agreement](https://www.faithcomesbyhearing.com/bible-brain/license)
@@ -97,10 +98,10 @@ would affect this project, quoted from the agreement (not legal advice):
 | Copying by users | "Your Application shall not allow End Users to reproduce, copy, or replicate any DBP Content", apart from `/download` content. | No share-audio-file or export features for FCBH content. |
 | Termination | FCBH "may immediately terminate or suspend this Agreement … at any time and for any reason". | FCBH audio must never be the only source for a feature; keep a fallback, as the CUV audio has. |
 
-The planned Cloudflare Worker proxy for the key is tracked in
-[#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241).
-It must follow the proxy and caching terms above, and it must stay on Cloudflare's
-Workers Free plan, which returns errors at its limits instead of billing.
+The Cloudflare Worker that holds the key is in `cloudflare-workers/bible-brain-audio/`,
+and [Cantonese Bible audio](operations/bible-brain-audio.md) explains how it follows
+the proxy and caching terms above. It must stay on Cloudflare's Workers Free plan,
+which returns errors at its limits instead of billing.
 
 Before the app uses or hosts any of these, get written confirmation from the
 recording's rights holder and record it in #134 and in this section. Adding Spanish

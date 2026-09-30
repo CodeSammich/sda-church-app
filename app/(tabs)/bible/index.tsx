@@ -65,6 +65,8 @@ import {
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
+import { CANTONESE_CUV_READER } from '@/services/BibleAudioSources';
+import { BIBLE_BRAIN_AUDIO } from '@/constants/ExternalLinks';
 import type {
   BibleAudioChapterIdentity,
   BibleAudioStatus,
@@ -3496,6 +3498,15 @@ export default function BibleScreen() {
                 }}
               >
                 {chapterData.translation.attribution}
+              </Text>
+            )}
+            {/* FCBH's license requires its notice wherever its recording plays (#241). */}
+            {selectedAudioReader === CANTONESE_CUV_READER && !loading && (
+              <Text
+                variant="labelSmall"
+                style={{ textAlign: 'center', marginBottom: 20, opacity: 0.5 }}
+              >
+                {BIBLE_BRAIN_AUDIO.cantoneseNotice || 'Faith Comes By Hearing'}
               </Text>
             )}
           </>

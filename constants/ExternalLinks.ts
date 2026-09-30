@@ -50,6 +50,26 @@ export const getBulletinApiUrl = (date: string) =>
   `${BULLETIN_API_BASE_URL}?date=${encodeURIComponent(date)}`;
 
 /**
+ * Cantonese Bible audio from Faith Comes By Hearing's Bible Brain, through the
+ * church's own Cloudflare Worker, which keeps the API key out of the app (#241).
+ * The Worker redirects each chapter to a short-lived link on FCBH's servers.
+ *
+ * Off while `baseUrl` is empty. Fill it in, with the fileset IDs and FCBH's
+ * notice, only after the Worker is deployed and checked; the steps are in
+ * docs/operations/bible-brain-audio.md. A testament with no fileset has no
+ * Cantonese audio, and the Mandarin narration stays available for every chapter.
+ */
+export const BIBLE_BRAIN_AUDIO = {
+  baseUrl: '',
+  cantoneseFilesets: {
+    oldTestament: '',
+    newTestament: '',
+  },
+  /** FCBH's copyright notice for the recording, shown while it's the narrator. */
+  cantoneseNotice: '',
+};
+
+/**
  * Staff-only source schedule. Google Drive enforces access for signed-in
  * nyccsda.org accounts; the public PWA does not proxy or embed its contents.
  */
