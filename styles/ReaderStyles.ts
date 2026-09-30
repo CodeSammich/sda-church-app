@@ -127,6 +127,24 @@ export const getBibleDockLayout = (
 /**
  * Shared styles for the Bible Reader and other immersive reading components.
  */
+/**
+ * The verse-number column's width: wide enough for `longestVerse` (at least
+ * two digits) at the app's text size times the system's, which iOS applies to
+ * the digits on top of the app's. Never narrower than the original fixed width.
+ */
+export const getVerseNumberColumnWidth = (
+  longestVerse: number,
+  textScale: TextScale,
+  systemFontScale: number,
+) => {
+  const digits = Math.max(2, String(Math.max(1, Math.floor(longestVerse))).length);
+  const digitWidth = scaleTypographyMetric(14, textScale) * systemFontScale * 0.66;
+  return Math.max(
+    scaleTypographyMetric(29, textScale),
+    Math.ceil(digits * digitWidth + scaleTypographyMetric(6, textScale) + 2),
+  );
+};
+
 export const createReaderStyles = (textScale: TextScale) => {
   const uiTextScale = getBibleReaderUiTextScale(textScale);
   const enlargedReadingLayout = textScale >= 1.75;

@@ -235,4 +235,15 @@ describe('Bible reader text scaling', () => {
       marginTop: 'auto',
     });
   });
+
+  it('widens the verse-number column for larger system text and three-digit verses', () => {
+    const { getVerseNumberColumnWidth } = require('@/styles/ReaderStyles');
+    const base = getVerseNumberColumnWidth(16, 1.25, 1);
+    // Larger iOS system text: "14" needs more room than the fixed width gave.
+    expect(getVerseNumberColumnWidth(16, 1.25, 1.35)).toBeGreaterThan(base);
+    // Psalm 119 has 176 verses.
+    expect(getVerseNumberColumnWidth(176, 1.25, 1)).toBeGreaterThan(base);
+    // Never narrower than the original fixed width at the default system size.
+    expect(base).toBeGreaterThanOrEqual(36);
+  });
 });
