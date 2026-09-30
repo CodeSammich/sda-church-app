@@ -1,6 +1,5 @@
 import {
   BIBLE_WORKER_IMAGE_URL,
-  CHILDREN_MINISTRY_WORKER_IMAGE_URL,
   PASTOR_IMAGE_URL,
 } from './ExternalLinks';
 

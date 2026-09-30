@@ -342,15 +342,42 @@ until you release it:
 
 1. **Test** the build on real devices, from TestFlight and from the Play Store's
    internal testing link.
-2. **Apple:** on the app's **Distribution** page in App Store Connect, set the version
-   to the release's version, select the build, and **Add for Review**.
-3. **Google Play:** Play Console → **Test and release → Internal testing** → promote
+2. **Check the store pages still fit the release:**
+   - If it changes what the app does, such as analytics, notifications, a form, or
+     location, update the declarations first. Each store's answers doc has a **When to
+     revisit** table: [App Store](app-store-connect-answers.md#when-to-revisit) and
+     [Google Play](play-console-answers.md#when-to-revisit).
+   - If it changes how the app looks, retake the screenshots, and replace the copies in
+     [`docs/store-assets/`](../store-assets/README.md).
+   - If it adds or removes a feature, update the descriptions in
+     [Store listings](store-listing.md) first, then paste them into each store.
+3. **Apple:** in App Store Connect, select **+** next to **iOS App** and add the new
+   version, such as `0.43.0`. It must match the build's version. The previous version's
+   description, keywords, screenshots, URLs, and reviewer notes carry over. Write
+   **What's New in This Version** for each language, select the build, and **Add for
+   Review**. After approval, release it: the version is set to release manually.
+4. **Google Play:** Play Console → **Test and release → Internal testing** → promote
    the release to production. Promoting copies the testers' "What's new" text, so
-   rewrite it for the public first.
+   rewrite it for the public first, in each language.
+5. **Each January:** update the App Store **Copyright** year on the new version.
 
 The upload jobs, their `store-upload` secrets, what each result means, and how to
 upload by hand are in
 [Automatic store uploads](native-builds.md#automatic-store-uploads).
+
+### Store listings and declarations
+
+What each store shows, and every answer given in its consoles, is kept in the
+repository. Change the doc first, then the store, so the two never drift apart.
+
+| What | Where |
+| --- | --- |
+| Name, subtitle, descriptions, keywords, and reviewer notes, in English, Chinese, and Spanish | [Store listings](store-listing.md) |
+| Screenshots and the feature graphic | [`docs/store-assets/`](../store-assets/README.md) |
+| App Store answers: age rating, privacy, availability, and version page | [App Store Connect answers](app-store-connect-answers.md) |
+| Google Play answers: content rating, audience, Data safety, and foreground service | [Google Play Console answers](play-console-answers.md) |
+| Why the answers are what they are, and the release blockers | [Store policy audit](store-policy-audit.md) |
+| One-time account and app setup | [App Store and Google Play setup](app-store-setup.md) |
 
 ### Store toolchain requirements
 
