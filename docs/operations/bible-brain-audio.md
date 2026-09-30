@@ -114,7 +114,7 @@ may throttle heavy use.
   don't let the narrator switch silently. Name it as New Testament only, and on an Old
   Testament chapter say that the Mandarin narration is playing instead. Today the app
   quietly plays Mandarin there and returns to Cantonese in the New Testament. The same
-  display will serve other languages' partial recordings (#343).
+  display will serve other languages' partial recordings (#241).
 - [ ] **Devices.** On a real iPhone and Android phone: pick the Cantonese narrator on
   a New Testament chapter, play across a chapter boundary, lock the screen, and check
   the notice under the chapter. On an Old Testament chapter, the Cantonese narrator

@@ -61,7 +61,7 @@ export const getBulletinApiUrl = (date: string) =>
  *
  * TODO: The same Worker can bring FCBH audio in more heart languages of the
  * church's neighbors, such as Haitian Creole, Russian, Ukrainian, Bengali,
- * Arabic, and Japanese, paired with matching text from HelloAO (#343). Show a
+ * Arabic, and Japanese, paired with matching text from HelloAO (#241). Show a
  * narrator that covers only one testament as such, and say which narrator plays
  * instead in the other, for Cantonese first.
  */
