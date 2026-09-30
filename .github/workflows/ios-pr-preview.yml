@@ -232,7 +232,7 @@ jobs:
           # GitHub runs comment-triggered workflows from main.
           approve="add the **screenshots reviewed** label."
           if gh api "repos/$REPO/contents/.github/workflows/screenshot-approval.yml?ref=main" --silent 2>/dev/null; then
-            approve="add the **screenshots reviewed** label, or reply to this pull request with just 👍 or **screenshots LGTM**."
+            approve="add the **screenshots reviewed** label, or reply to this pull request with just 👍 (type \`:+1:\`) or **screenshots LGTM**."
           fi
 
           body=$(cat <<BODY

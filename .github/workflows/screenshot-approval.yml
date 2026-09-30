@@ -24,6 +24,7 @@ jobs:
       github.event.issue.state == 'open' &&
       (contains(github.event.comment.body, '👍') ||
         contains(github.event.comment.body, ':+1:') ||
+        contains(github.event.comment.body, ':thumbsup:') ||
         contains(github.event.comment.body, 'screenshots lgtm'))
     name: Approve screenshots with 👍 or "screenshots LGTM"
     runs-on: ubuntu-latest
@@ -43,12 +44,13 @@ jobs:
           BODY: ${{ github.event.comment.body }}
         run: |
           set -euo pipefail
-          # Just a thumbs up, in any skin tone, or just "screenshots LGTM" in any
+          # Just a thumbs up, in any skin tone or as GitHub's :+1: or :thumbsup:
+          # shortcode, or just "screenshots LGTM" in any
           # case, with an optional "!" or "." at the end: not a longer comment
           # that happens to include one.
           reply=$(printf '%s' "$BODY" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]' | sed 's/[.!]*$//')
           case "$reply" in
-            '👍'|'👍🏻'|'👍🏼'|'👍🏽'|'👍🏾'|'👍🏿'|':+1:'|'screenshotslgtm') ;;
+            '👍'|'👍🏻'|'👍🏼'|'👍🏽'|'👍🏾'|'👍🏿'|':+1:'|':thumbsup:'|'screenshotslgtm') ;;
             *) echo 'Not an approval reply; nothing to do.'; exit 0 ;;
           esac
 

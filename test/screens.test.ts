@@ -278,7 +278,7 @@ describe('Screenshot review comment and 👍 approval', () => {
 
   it('counts only a bare 👍 from someone with write access, once this commit’s screenshots are posted', () => {
     expect(approval).toMatch(/issue_comment:\n\s+types: \[created\]/);
-    expect(approval).toContain("'👍'|'👍🏻'|'👍🏼'|'👍🏽'|'👍🏾'|'👍🏿'|':+1:'|'screenshotslgtm'");
+    expect(approval).toContain("'👍'|'👍🏻'|'👍🏼'|'👍🏽'|'👍🏾'|'👍🏿'|':+1:'|':thumbsup:'|'screenshotslgtm'");
     // Not "SS LGTM": SS means Sabbath School in this project.
     expect(approval).not.toMatch(/'sslgtm'/);
     expect(approval).toContain('collaborators/$AUTHOR/permission');
