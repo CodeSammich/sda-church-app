@@ -16,6 +16,11 @@ import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
+import {
+  balanceQuotationMarks,
+  getVerseOfTheDay,
+  getVerseOfTheDayDateKey,
+} from '@/services/VerseOfTheDay';
 import { getSunTimes } from '@/services/SunTimesService';
 import { createNavigationStyles } from '@/styles/NavigationStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -131,7 +136,7 @@ export default function HomeScreen() {
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
-  const [randomVerse, setRandomVerse] = useState<{
+  const [verseOfTheDay, setVerseOfTheDay] = useState<{
     text: string;
     reference: string;
     bookId: string;
@@ -150,7 +155,6 @@ export default function HomeScreen() {
     sat: null,
   });
 
-  const VOTD_CONFIG_KEY = 'votd_selection_config';
   const VOTD_CACHE_KEY = `votd_cache_${language}`;
 
   // Sabbath Countdown Logic
@@ -282,114 +286,86 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [useGps, sunsets]); // Re-run timer logic if GPS permission or sunset data changes
 
-  const loadRandomVerse = async () => {
+  const loadVerseOfTheDay = async (isCurrent: () => boolean) => {
     try {
-      // Load a new random verse each day at 6 AM local time.
-      // Before 6 AM, show the previous day's verse to maintain consistency with
-      // the "Verse of the Day" concept.
+      // Every language shows the same curated verse, which changes at 6 AM.
       const now = new Date();
-      const effectiveDate = new Date(now);
-      if (now.getHours() < 6) effectiveDate.setDate(now.getDate() - 1);
-      const currentDateKey = `${effectiveDate.getFullYear()}-${effectiveDate.getMonth() + 1}-${effectiveDate.getDate()}`;
-
+      const dateKey = getVerseOfTheDayDateKey(now);
+      const selection = getVerseOfTheDay(now);
       const transId =
         BibleService.DEFAULT_TRANSLATION_MAP[language as SupportedLanguage] || 'BSB';
 
-      // 1. Check if we have coordinates (selection) already cached for today.
-      // We only use the cache for the "Selection" to ensure we pick the same verse,
-      // but we ALWAYS re-render the text from the chapter content to ensure
-      // any fixes to the BibleService renderer are applied immediately.
+      // Show today's verse from the cache straight away, even offline, then
+      // refresh its text from the chapter.
       const cached = await AsyncStorage.getItem(VOTD_CACHE_KEY);
-      let selection: { bookId: string; chapter: number; verse: number } | null = null;
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed.dateKey === currentDateKey) {
-          selection = {
-            bookId: parsed.bookId,
-            chapter: parsed.chapter,
-            verse: parsed.verse,
-          };
+        if (
+          isCurrent() &&
+          parsed.dateKey === dateKey &&
+          parsed.bookId === selection.bookId &&
+          parsed.chapter === selection.chapter &&
+          parsed.verse === selection.verse &&
+          typeof parsed.text === 'string'
+        ) {
+          setVerseOfTheDay(parsed);
         }
       }
 
-      // 3. If no master selection exists for today, generate one
-      if (!selection) {
-        const bsbBooks = await BibleService.fetchBooks('BSB');
-        const rand = BibleService.selectRandomChapter(bsbBooks);
-        if (rand) {
-          const bsbChapter = await BibleService.fetchChapter(
-            'BSB',
-            rand.book.id,
-            rand.chapter,
-          );
-          const vNum = Math.floor(Math.random() * bsbChapter.numberOfVerses) + 1;
-          selection = { bookId: rand.book.id, chapter: rand.chapter, verse: vNum };
-          await AsyncStorage.setItem(
-            VOTD_CONFIG_KEY,
-            JSON.stringify({ ...selection, dateKey: currentDateKey }),
-          );
-        }
-      }
+      const books = await BibleService.fetchBooks(transId);
+      const book = books.find((b: BibleService.TranslationBook) => b.id === selection.bookId);
+      if (!book) return;
+      const chapterData = await BibleService.fetchChapter(transId, book.id, selection.chapter);
+      const verseContent = chapterData.chapter.content.find(
+        (c) => c.type === 'verse' && c.number === selection.verse,
+      ) as BibleService.ChapterVerse | undefined;
+      if (!verseContent || !isCurrent()) return;
 
-      if (selection) {
-        // 4. Load the text for the current language using the shared selection
-        const books = await BibleService.fetchBooks(transId);
-        const book =
-          books.find((b: BibleService.TranslationBook) => b.id === selection?.bookId) ||
-          books[0];
-        const chapterData = await BibleService.fetchChapter(
-          transId,
-          book.id,
-          selection.chapter,
-        );
-
-        const verseContent = chapterData.chapter.content.find(
-          (c) => c.type === 'verse' && c.number === selection?.verse,
-        ) as BibleService.ChapterVerse;
-
-        if (verseContent) {
-          const text = BibleService.renderVerseToPlainText(transId, verseContent);
-          const newVOTD = {
-            // The Bible text can contain dialogue punctuation of its own. Keep
-            // it verbatim instead of adding decorative outer quotation marks.
-            text,
-            reference: `${book.name} ${selection.chapter}:${selection.verse}`,
-            bookId: book.id,
-            chapter: selection.chapter,
-            verse: selection.verse,
-            dateKey: currentDateKey,
-          };
-          setRandomVerse(newVOTD);
-          await AsyncStorage.setItem(VOTD_CACHE_KEY, JSON.stringify(newVOTD));
-        }
-      }
+      const verse = {
+        // The Bible text keeps its own punctuation. Only quotation marks that
+        // open or close in a neighboring verse are balanced.
+        text: balanceQuotationMarks(BibleService.renderVerseToPlainText(transId, verseContent)),
+        reference: `${book.name} ${selection.chapter}:${selection.verse}`,
+        bookId: book.id,
+        chapter: selection.chapter,
+        verse: selection.verse,
+        dateKey,
+      };
+      setVerseOfTheDay(verse);
+      await AsyncStorage.setItem(VOTD_CACHE_KEY, JSON.stringify(verse));
     } catch (e) {
-      console.warn('Failed to load random verse:', e);
+      console.warn('Failed to load the verse of the day:', e);
     }
   };
 
   useEffect(() => {
-    loadRandomVerse();
+    // A request still loading for the previous language must not replace
+    // the new language's verse.
+    let current = true;
+    loadVerseOfTheDay(() => current);
+    return () => {
+      current = false;
+    };
   }, [language]);
 
   const handleShare = async () => {
-    if (!randomVerse) return;
+    if (!verseOfTheDay) return;
     const transId =
       BibleService.DEFAULT_TRANSLATION_MAP[language as SupportedLanguage] || 'BSB';
     const translation =
       BibleService.SUPPORTED_TRANSLATIONS.find((t) => t.id === transId)?.name || transId;
-    const message = `${randomVerse.text}\n\n— ${randomVerse.reference} (${translation})`;
+    const message = `${verseOfTheDay.text}\n\n— ${verseOfTheDay.reference} (${translation})`;
 
     try {
       if (typeof navigator !== 'undefined' && (navigator as any).share) {
         await (navigator as any).share({
-          title: randomVerse.reference,
+          title: verseOfTheDay.reference,
           text: message,
         });
       } else {
         await Share.share({
           message,
-          title: randomVerse.reference,
+          title: verseOfTheDay.reference,
         });
       }
     } catch (e) {
@@ -400,16 +376,16 @@ export default function HomeScreen() {
   };
 
   const navigateToVerse = () => {
-    if (!randomVerse) return;
+    if (!verseOfTheDay) return;
     router.push({
       pathname: '/bible',
       params: {
         ...BibleService.getScriptureReaderParams(
           {
-            bookId: randomVerse.bookId,
-            chapter: randomVerse.chapter,
-            verseStart: randomVerse.verse,
-            verseEnd: randomVerse.verse,
+            bookId: verseOfTheDay.bookId,
+            chapter: verseOfTheDay.chapter,
+            verseStart: verseOfTheDay.verse,
+            verseEnd: verseOfTheDay.verse,
           },
           language as SupportedLanguage,
         ),
@@ -456,14 +432,14 @@ export default function HomeScreen() {
               marginTop: 4,
             }}
           >
-            {randomVerse
-              ? `${randomVerse.text}\n— ${randomVerse.reference}`
+            {verseOfTheDay
+              ? `${verseOfTheDay.text}\n— ${verseOfTheDay.reference}`
               : labels.subtitle}
           </Text>
           <View style={styles.heroActions}>
             <WrappingActionButton
               borderColor="#FFFFFF"
-              disabled={!randomVerse}
+              disabled={!verseOfTheDay}
               icon="share-variant"
               label={(labels as any).shareVerse}
               onPress={handleShare}
@@ -473,7 +449,7 @@ export default function HomeScreen() {
             <WrappingActionButton
               backgroundColor={theme.colors.primary}
               borderColor={theme.colors.primary}
-              disabled={!randomVerse}
+              disabled={!verseOfTheDay}
               icon="book-open-variant"
               label={(labels as any).readVerse}
               onPress={navigateToVerse}
