@@ -1,6 +1,6 @@
 import {
+  getBackTarget,
   getHeaderBackButtonColors,
-  getHeaderBackTarget,
   hasHeaderBackButton,
 } from '@/constants/BackNavigation';
 import {
@@ -20,7 +20,7 @@ import {
 } from '@/features/hymnal/HymnalSearch';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
-import { router, useSegments } from 'expo-router';
+import { router, useGlobalSearchParams, usePathname, useSegments } from 'expo-router';
 import {
   createContext,
   useContext,
@@ -122,6 +122,8 @@ type BibleTranslationChipItem = Readonly<{
 export const GlobalHeader = (props: any) => {
   const { language } = useContext(LanguageContext);
   const segments = useSegments();
+  const pathname = usePathname();
+  const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
   // Expo typed routes expose segments as a tuple union. Widen it for generic
   // route membership checks while preserving the runtime values.
   const routeSegments: readonly string[] = segments;
@@ -330,7 +332,10 @@ export const GlobalHeader = (props: any) => {
     // so the nested home stack has a concrete destination to mount.
     const navigation = getHymnalSearchNavigation(item.route, q);
     if (navigation.pathname === activeHymnalRoute) {
-      router.setParams(navigation.params);
+      // Keep where this hymnal was opened from, such as the Bulletin or Hymn
+      // lookup, rather than the search route's default of the hymnal list.
+      const { backTo: _searchBackTo, ...params } = navigation.params;
+      router.setParams(params);
     } else {
       router.push(navigation as any);
     }
@@ -349,14 +354,9 @@ export const GlobalHeader = (props: any) => {
   };
 
   const handleBackPress = () => {
-    // Preserve the native stack so Android's edge-swipe and the header back
-    // button resolve to the same previous screen. Explicit backTo remains a
-    // safe fallback when this screen was opened without stack history.
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace(getHeaderBackTarget(routeSegments, backTo) as any);
+    // Goes where Android's back gesture and the web app's back button go: the
+    // screen's backTo, or else its parent. See getBackTarget.
+    router.dismissTo(getBackTarget(pathname, globalParams.backTo) as any);
   };
 
   const expandBibleSearch = () => {

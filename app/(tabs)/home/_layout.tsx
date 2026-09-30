@@ -8,12 +8,10 @@ export default function HomeStackLayout() {
       <Stack.Screen name="about-my-church" />
       <Stack.Screen name="team" />
       <Stack.Screen name="bulletin" />
-      <Stack.Screen name="contact" />
       <Stack.Screen name="discover" />
       <Stack.Screen name="give" />
       <Stack.Screen name="worship" />
       <Stack.Screen name="fellowship" />
-      <Stack.Screen name="roster" />
       <Stack.Screen name="hymnal-selection" />
       <Stack.Screen name="hymn-lookup" />
       <Stack.Screen name="english-hymnal" />

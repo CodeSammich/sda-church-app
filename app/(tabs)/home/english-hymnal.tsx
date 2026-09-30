@@ -103,6 +103,17 @@ export default function HymnalScreen() {
     );
   }, [allHymns, highlight, hymnNum]);
 
+  // Coming back from the Bible reopens this hymnal as it was: the same hymn,
+  // and the same place to go back to, such as the Bulletin or Hymn lookup.
+  const hymnalHref =
+    '/home/english-hymnal' +
+    (backTo || hymnNum
+      ? `?${new URLSearchParams({
+          ...(backTo ? { backTo } : {}),
+          ...(hymnNum ? { hymnNum } : {}),
+        }).toString()}`
+      : '');
+
   const renderHymnItem = ({ item }: { item: HydratedHymn }) => {
     return (
       <View
@@ -180,7 +191,7 @@ export default function HymnalScreen() {
                     pathname: '/bible',
                     params: {
                       translationId: 'BSB',
-                      backTo: '/home/english-hymnal',
+                      backTo: hymnalHref,
                       ...(scripture
                         ? {
                             bookId: scripture.bookId,

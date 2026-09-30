@@ -10,8 +10,7 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import {
-  getAndroidBackTarget,
-  getHeaderBackTarget,
+  getBackTarget,
   hasHeaderBackButton,
 } from '@/constants/BackNavigation';
 import {
@@ -902,10 +901,13 @@ function RootLayoutNav({
   const pathname = usePathname();
   const segments = useSegments();
   const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
+  // The header arrow, Android's back gesture, and the browser's back button
+  // all go to the same place; see getBackTarget.
+  const backTarget = getBackTarget(pathname, globalParams.backTo);
   const gestureBackTarget = hasHeaderBackButton(segments, globalParams.backTo)
-    ? getHeaderBackTarget(segments, globalParams.backTo)
+    ? backTarget
     : '/';
-  const androidBackTarget = getAndroidBackTarget(pathname, globalParams.backTo);
+  const androidBackTarget = backTarget;
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
 
   useEffect(() => {
@@ -954,7 +956,7 @@ function RootLayoutNav({
       // The guard keeps the browser on the same URL. Stop Expo Router from also
       // processing this pop and perform the same app navigation as the header arrow.
       event.stopImmediatePropagation();
-      router.replace(gestureBackTarget as any);
+      router.dismissTo(gestureBackTarget as any);
 
       // Navigating to Home while already there does not cause a route render, so
       // ensure the guard is restored even when the target route stays unchanged.
@@ -984,7 +986,7 @@ function RootLayoutNav({
     }
 
     const handleAndroidBack = () => {
-      router.replace(androidBackTarget as any);
+      router.dismissTo(androidBackTarget as any);
       return true;
     };
 

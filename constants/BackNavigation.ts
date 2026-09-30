@@ -15,33 +15,22 @@ export const hasHeaderBackButton = (
   return Boolean(explicitTarget) || segments.length > 2;
 };
 
-export const getHeaderBackTarget = (
-  segments: readonly string[],
-  backTo?: string | string[],
-) => {
-  const explicitTarget = Array.isArray(backTo) ? backTo[0] : backTo;
-
-  if (explicitTarget) return explicitTarget;
-  if (segments.includes('you')) return '/you';
-  if (segments.includes('explore')) return '/explore';
-  if (segments.includes('bible')) return '/bible';
-
-  return '/';
-};
-
 const normalizeBackPath = (pathname: string) =>
   pathname.replace(/^\/\(tabs\)/, '').replace(/\/index\/?$/, '/') || '/';
 
 /**
- * Returns the previous in-app destination for Android's system back gesture.
+ * Where every back action goes: the header's back arrow, Android's back
+ * gesture, and the browser's back button in the web app. Navigate there with
+ * `router.dismissTo`, which pops back to the screen when it's already beneath
+ * this one and replaces this screen otherwise.
  *
- * Native back is intentionally route-driven instead of stack-driven. Most
- * screens have one canonical parent; screens with multiple entry points carry
- * an explicit `backTo` value (for example Bible opened from Discover or the
- * Bulletin). This keeps a stale native stack from sending the user somewhere
- * unrelated while preserving those intentional exceptions.
+ * Back is route-driven, not stack-driven. Most screens have one parent;
+ * screens with several entry points carry an explicit `backTo` value (for
+ * example the Bible opened from Discover or the Bulletin). Popping the native
+ * stack instead could land on a page the reader left earlier, because leaving
+ * a stack for another tab keeps its pages.
  */
-export const getAndroidBackTarget = (
+export const getBackTarget = (
   pathname: string,
   backTo?: string | string[],
 ) => {
@@ -69,6 +58,7 @@ export const getAndroidBackTarget = (
   ) {
     return '/home/hymnal-selection';
   }
+  if (route === '/home/worship') return '/home/fellowship';
   if (
     route === '/home/about-sda' ||
     route === '/home/about-my-church' ||
