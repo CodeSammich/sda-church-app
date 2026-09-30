@@ -36,6 +36,7 @@
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.4.1",
+    "decode-uri-component": "file:./vendor/decode-uri-component",
     "expo": "~58.0.0",
     "expo-asset": "~58.0.9",
     "expo-audio": "~58.0.3",
@@ -101,6 +102,7 @@
     ]
   },
   "overrides": {
+    "decode-uri-component": "$decode-uri-component",
     "postcss": "^8.5.1",
     "xcode": {
       "uuid": "^11.1.1"
