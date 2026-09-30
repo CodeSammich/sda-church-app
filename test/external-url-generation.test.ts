@@ -1,5 +1,6 @@
 import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest';
 import {
+  getBibleRequestEmailUrl,
   getBabiesSabbathSchoolUrl,
   getCurrentSabbathSchoolUrl,
 } from '@/constants/ExternalLinks';
@@ -49,6 +50,16 @@ const assertHttpsUrls = (values: string[], expectedHost: string) => {
     expect(value).not.toMatch(/placeholder|undefined|null/i);
   }
 };
+
+describe('Bible translation requests', () => {
+  it('emails the technology team with an English subject and a prompt in the reader\'s language', () => {
+    const url = getBibleRequestEmailUrl('您希望 App 加入哪個聖經譯本或語言？\n\n');
+    expect(url.startsWith('mailto:technology@nyccsda.org?subject=Bible%20translation%20request&body=')).toBe(true);
+    const params = new URLSearchParams(url.slice(url.indexOf('?') + 1));
+    expect(params.get('subject')).toBe('Bible translation request');
+    expect(params.get('body')).toBe('您希望 App 加入哪個聖經譯本或語言？\n\n');
+  });
+});
 
 describe('generated external dependency URLs', () => {
   it('opens Babies resources in the selected app language', () => {

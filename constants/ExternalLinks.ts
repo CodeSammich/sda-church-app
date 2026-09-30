@@ -326,3 +326,22 @@ export const openEmail = (email: string) =>
     'Error',
     'Email is not configured on this device or emulator.',
   );
+
+/** The app's public support address, also on the support page and store listings. */
+export const TECHNOLOGY_EMAIL = 'technology@nyccsda.org';
+
+/**
+ * An email asking for another Bible translation or language (#344). The subject
+ * is always English, so requests are easy to find and count for #241; the
+ * prompt in the body is in the reader's language.
+ */
+export const getBibleRequestEmailUrl = (prompt: string) =>
+  `mailto:${TECHNOLOGY_EMAIL}?subject=${encodeURIComponent('Bible translation request')}` +
+  `&body=${encodeURIComponent(prompt)}`;
+
+export const openBibleRequestEmail = (prompt: string) =>
+  openURL(
+    getBibleRequestEmailUrl(prompt),
+    'Error',
+    'Email is not configured on this device or emulator.',
+  );

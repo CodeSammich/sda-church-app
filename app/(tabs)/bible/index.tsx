@@ -94,6 +94,7 @@ import {
   isSameChapter,
   type BibleReaderPosition,
 } from '@/services/BibleReaderPosition';
+import { openBibleRequestEmail, TECHNOLOGY_EMAIL } from '@/constants/ExternalLinks';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -246,6 +247,8 @@ const uiLabels = {
     pinyin: 'Pinyin',
     showPinyin: 'Show pinyin above Chinese',
     pinyinHelp: 'Generated on this device for Chinese learning translations.',
+    requestTranslation: 'Want another Bible translation or language? Email',
+    requestTranslationPrompt: 'Which Bible translation or language would you like in the app?\n\n',
     dualLanguage: 'Dual-language reading',
     dualLanguageHelp: 'Show a supporting translation beneath each verse.',
     primaryTranslation: 'Primary',
@@ -323,6 +326,8 @@ const uiLabels = {
     pinyin: '拼音',
     showPinyin: '在中文上方顯示拼音',
     pinyinHelp: '在此裝置上為中文學習譯本自動產生。',
+    requestTranslation: '想要其他聖經譯本或語言？請寫信至',
+    requestTranslationPrompt: '您希望 App 加入哪個聖經譯本或語言？\n\n',
     dualLanguage: '雙語閱讀',
     dualLanguageHelp: '在每節經文下方顯示輔助譯本。',
     primaryTranslation: '主要譯本',
@@ -400,6 +405,8 @@ const uiLabels = {
     pinyin: '拼音',
     showPinyin: '在中文上方显示拼音',
     pinyinHelp: '在此设备上为中文学习译本自动生成。',
+    requestTranslation: '想要其他圣经译本或语言？请写信至',
+    requestTranslationPrompt: '您希望 App 加入哪个圣经译本或语言？\n\n',
     dualLanguage: '双语阅读',
     dualLanguageHelp: '在每节经文下方显示辅助译本。',
     primaryTranslation: '主要译本',
@@ -482,6 +489,8 @@ const uiLabels = {
     pinyin: 'Pinyin',
     showPinyin: 'Mostrar pinyin sobre el chino',
     pinyinHelp: 'Generado en este dispositivo para traducciones de aprendizaje en chino.',
+    requestTranslation: '¿Quiere otra traducción o idioma de la Biblia? Escriba a',
+    requestTranslationPrompt: '¿Qué traducción o idioma de la Biblia le gustaría en la app?\n\n',
     dualLanguage: 'Lectura bilingüe',
     dualLanguageHelp: 'Muestra una traducción de apoyo debajo de cada versículo.',
     primaryTranslation: 'Principal',
@@ -4818,6 +4827,23 @@ export default function BibleScreen() {
                             accessibilityLabel={labels.showPinyin}
                           />
                         </View>
+                        <Divider />
+                        {/* Requests set which languages come next (#241, #344). */}
+                        <TouchableOpacity
+                          accessibilityRole="link"
+                          onPress={() => openBibleRequestEmail(labels.requestTranslationPrompt)}
+                          style={styles.pinyinPreferenceRow}
+                        >
+                          <Text
+                            style={[
+                              styles.pinyinPreferenceHelp,
+                              { color: theme.colors.onSurfaceVariant },
+                            ]}
+                          >
+                            {labels.requestTranslation}{' '}
+                            <Text style={{ color: theme.colors.primary }}>{TECHNOLOGY_EMAIL}</Text>
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     ) : undefined
                   }
