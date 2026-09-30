@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
-import QRCode from 'qrcode';
+
+// qrcode ships no type definitions, so type the one function this test uses.
+const QRCode: {
+  toString: (text: string, options: Record<string, unknown>) => Promise<string>;
+} = require('qrcode');
 
 // public/download.html is the permanent address for QR codes and download
 // links (https://app.nyccsda.org/download). These tests run its redirect
