@@ -332,10 +332,12 @@ lapses, the privacy policy, support, and download pages above go down with it.
 
 **Keep the account recoverable:**
 
-- **Keep at least two super administrators,** so losing one login doesn't lock the
-  church out.
-- **Every administrator uses two-factor login** and keeps their own backup codes
-  somewhere they'd still have if their phone died.
+- **Every administrator is a super administrator,** as on every system, so losing one
+  login doesn't lock the church out. The card limit above keeps that safe: even a
+  stolen login can't run up charges.
+- **Every administrator uses two-factor login** with an authenticator app, passkey, or
+  security key, not text messages, and keeps their own backup codes somewhere they'd
+  still have if their phone died.
 - **Use a church address for the account's email,** not a personal one, so renewal
   notices and Cloudflare's policy emails reach whoever runs technology next.
 

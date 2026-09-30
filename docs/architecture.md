@@ -20,6 +20,7 @@ Super Administrators can share.
 - [Google Cloud: free only](#google-cloud-free-only)
 - [Website: app.nyccsda.org](#website-appnyccsdaorg)
 - [Third-party APIs and websites](#third-party-apis-and-websites)
+- [Payment methods](#payment-methods)
 - [Upkeep calendar](#upkeep-calendar)
 - [Governance principles](#governance-principles)
 
@@ -446,6 +447,23 @@ Costs, published limits, and load for each one are in
 > until the church has its own copy. The dependency monitor would show the failure,
 > but there is no fallback. Keeping a copy, subject to a copyright review, is
 > tracked in [#260](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/260).
+
+## Payment methods
+
+**Cloudflare is the only service with a card on file**, and only to renew the domain.
+Nothing else in this architecture has a payment method, so nothing else can charge
+the church. Keep it that way: when a new service asks for a card, choose another
+service.
+
+| Service | Payment method | Why |
+| --- | --- | --- |
+| Cloudflare | **A card** | Renews `nyccsda.org`, about $10 a year. See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
+| Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
+| Google Play | None | The one-time $25 registration is paid; nothing recurs. |
+| Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |
+| Google Workspace | None | Workspace for Nonprofits: email, Drive, and Apps Script. |
+| GitHub | None | Free for public repositories, Actions included. |
+| Every API and website in [Third-party APIs and websites](#third-party-apis-and-websites) | None | Free, with no account or with a free key. |
 
 ## Upkeep calendar
 

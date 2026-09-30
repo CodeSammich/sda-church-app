@@ -26,7 +26,8 @@ provider changes its terms.
 
 "At the limit" says what happens if the app exceeds the provider's limit. **No
 service in this table can bill the church for usage.** The only recurring cost in the
-whole system is the domain.
+whole system is the domain, and Cloudflare, which renews it, is the only service with
+a card on file (see [Payment methods](../architecture.md#payment-methods)).
 
 | Service | Used for | Cost | Published limit | At the limit | Load concern |
 | --- | --- | --- | --- | --- | --- |
