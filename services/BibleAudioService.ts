@@ -6,7 +6,7 @@ import {
 
 import type { TranslationBook } from './BibleService';
 import {
-  getAudioPowerCuvChapterLinks,
+  getCuvChapterAudioLinks,
   supportsAudioPowerCuv,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
@@ -268,7 +268,7 @@ export const buildBibleAudioQueue = ({
     let queuedUrls: string[] = [];
 
     if (supportsAudioPowerCuv(translationId)) {
-      const links = getAudioPowerCuvChapterLinks(book.id, chapter);
+      const links = getCuvChapterAudioLinks(book.id, chapter);
       const source = selectedReader
         ? links[selectedReader]
         : Object.values(links)[0];

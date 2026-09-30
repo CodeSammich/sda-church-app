@@ -65,6 +65,10 @@ import {
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
+import {
+  CANTONESE_CUV_READER,
+  WORDPROJECT_CANTONESE_AUDIO_URL,
+} from '@/services/BibleAudioSources';
 import type {
   BibleAudioChapterIdentity,
   BibleAudioStatus,
@@ -94,7 +98,11 @@ import {
   isSameChapter,
   type BibleReaderPosition,
 } from '@/services/BibleReaderPosition';
-import { openBibleRequestEmail, TECHNOLOGY_EMAIL } from '@/constants/ExternalLinks';
+import {
+  openBibleRequestEmail,
+  openInSystemBrowser,
+  TECHNOLOGY_EMAIL,
+} from '@/constants/ExternalLinks';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -216,6 +224,7 @@ const uiLabels = {
     audioPlayer: 'Bible audio',
     audio: 'Audio',
     narrator: 'Narrator',
+    cantoneseAudioCredit: 'Cantonese audio: WordProject (wordproject.org)',
     chooseNarrator: 'Choose narrator',
     audioSettings: 'Audio settings',
     audioSource: 'Preferred source',
@@ -297,6 +306,7 @@ const uiLabels = {
     audioPlayer: '聖經有聲書',
     audio: '有聲書',
     narrator: '朗讀者',
+    cantoneseAudioCredit: '粵語錄音：WordProject (wordproject.org)',
     chooseNarrator: '選擇朗讀者',
     audioSettings: '有聲書設定',
     audioSource: '優先音源',
@@ -376,6 +386,7 @@ const uiLabels = {
     audioPlayer: '圣经有声书',
     audio: '有声书',
     narrator: '朗读者',
+    cantoneseAudioCredit: '粤语录音：WordProject (wordproject.org)',
     chooseNarrator: '选择朗读者',
     audioSettings: '有声书设置',
     audioSource: '优先音源',
@@ -458,6 +469,7 @@ const uiLabels = {
     audioPlayer: 'Audio de la Biblia',
     audio: 'Audio',
     narrator: 'Narrador',
+    cantoneseAudioCredit: 'Audio en cantonés: WordProject (wordproject.org)',
     chooseNarrator: 'Elegir narrador',
     audioSettings: 'Ajustes de audio',
     audioSource: 'Fuente preferida',
@@ -3534,6 +3546,23 @@ export default function BibleScreen() {
                 }}
               >
                 {chapterData.translation.attribution}
+              </Text>
+            )}
+            {/* WordProject asks for a link to its site and app (docs/LEGAL.md). */}
+            {selectedAudioReader === CANTONESE_CUV_READER && !loading && (
+              <Text
+                variant="labelSmall"
+                accessibilityRole="link"
+                onPress={() => openInSystemBrowser(WORDPROJECT_CANTONESE_AUDIO_URL)}
+                style={{
+                  textAlign: 'center',
+                  marginTop: chapterData?.translation.attribution ? 0 : 24,
+                  marginBottom: 20,
+                  opacity: 0.5,
+                  textDecorationLine: 'underline',
+                }}
+              >
+                {labels.cantoneseAudioCredit}
               </Text>
             )}
           </>
