@@ -7,6 +7,7 @@ const {
   planCaptures,
   buildManifest,
   planAppStore,
+  writeAppStoreCopy,
   manifestPath,
   statusBarClear,
   looksBlank,
@@ -211,6 +212,29 @@ describe('status bar check', () => {
 
   it('ignores text that starts below the status bar', async () => {
     expect(await statusBarClear(await screenshot('below', { island: true, textAt: 190 }))).toBe(true);
+  });
+});
+
+describe('App Store copies', () => {
+  it('have no alpha channel, which App Store Connect rejects, and otherwise match', async () => {
+    const sharp = require('sharp');
+    const { mkdtempSync } = require('node:fs');
+    const { tmpdir } = require('node:os');
+    const { join } = require('node:path');
+    const dir = mkdtempSync(join(tmpdir(), 'app-store-'));
+    const source = join(dir, 'shot.png');
+    const copy = join(dir, 'copy.png');
+    // Like a Simulator screenshot: RGBA, every pixel opaque.
+    await sharp({ create: { width: 40, height: 80, channels: 4, background: { r: 200, g: 120, b: 40, alpha: 1 } } })
+      .png()
+      .toFile(source);
+    expect((await sharp(source).metadata()).hasAlpha).toBe(true);
+
+    await writeAppStoreCopy(source, copy);
+    const meta = await sharp(copy).metadata();
+    expect(meta).toMatchObject({ width: 40, height: 80, channels: 3, hasAlpha: false });
+    const { data } = await sharp(copy).raw().toBuffer({ resolveWithObject: true });
+    expect([...data.subarray(0, 3)]).toEqual([200, 120, 40]);
   });
 });
 
