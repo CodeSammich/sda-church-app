@@ -95,7 +95,7 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 | --- | --- |
 | Analytics, crash reporting, ads, accounts, forms, or push notifications | App Privacy, and Google Play's matching answers |
 | Ads, chat, user posts, a web browser, or medical or health content | Age Rating |
-| iPad support | iPad screenshots. Test first: Apple doesn't let an update remove iPad support. |
+| iPad support (#324) | iPad screenshots. Test first: Apple doesn't let an update remove iPad support. |
 | A new language, such as Japanese | A new localization, published with that release |
 | In-app purchases, subscriptions, or a paid app | Pricing, the Digital Services Act answer (selling may make the church a trader), and the audit's [item 1](store-policy-audit.md#1-nonprofit-identity-and-donation-flow--release-blocker) |
 | A mainland China release | An ICP filing and a religious-information license, through a Chinese partner |

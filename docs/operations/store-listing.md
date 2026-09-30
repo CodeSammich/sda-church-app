@@ -404,7 +404,8 @@ get new ones.
   already takes the 6.9-inch size (1290 × 2796 or 1320 × 2868); a smaller iPhone's
   screenshots need resizing to 1290 × 2796, which crops only a few pixels. The first three
   screenshots also show on the install sheet, so lead with the strongest.
-- **Adding iPad later:** a later version can add iPad support, with iPad screenshots.
+- **Adding iPad later:** a later version can add iPad support, with iPad screenshots;
+  see #324.
   Apple doesn't let an update remove a device family once released, so test on an iPad
   before turning it on.
 - **Leave out:** the bulletin, which shows members' names; Meet Our Team, which has staff
