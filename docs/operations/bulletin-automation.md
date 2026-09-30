@@ -553,9 +553,9 @@ reflowing the bulletin. Current asset filename conventions end in
 
 The QR workflow generates `mobile_app_qr_code_368x368.jpg`, pointing at
 `https://app.nyccsda.org/download`, and uploads it to Drive with the giving codes
-([Admin Runbook](admin-runbook.md#bulletin-qr-codes)). To print it, remove the
-Mobile App slot's `reserved` flag in `getGivingQrItems_` once the app is public in
-both stores, then deploy the Apps Script.
+([Admin Runbook](admin-runbook.md#bulletin-qr-codes)). The slot stays reserved
+until the app is public in both stores; #323 covers turning it on without changing
+the Apps Script after launch.
 
 ## Deployment and verification
 

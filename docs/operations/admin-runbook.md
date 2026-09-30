@@ -235,8 +235,8 @@ name to the allowlist in a reviewed pull request.
 
 Which QR slots print is controlled in the bulletin script; see
 [Giving QR slots](bulletin-automation.md#giving-qr-slots). The mobile app code is
-generated, but its slot stays reserved until the app is public in both stores. The
-Zelle codes are still made by hand. Both are tracked in #237.
+generated, but its slot stays reserved until the app is public in both stores (#323).
+The Zelle codes are still made by hand. Both are tracked in #237.
 
 ## Deploying the bulletin Apps Script
 
