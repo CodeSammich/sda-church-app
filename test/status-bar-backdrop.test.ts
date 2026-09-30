@@ -29,7 +29,7 @@ describe('status bar backdrop', () => {
     expect(isHeroUnderStatusBar({ ...page, hasHero: true })).toBe(true);
     const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
     expect(header).toContain(
-      'hasHero: isHeroHeaderRoute || HERO_UNDER_STATUS_BAR_ROUTES.has(props.route?.name)',
+      '!isBiblePage &&\n      (isHeroHeaderRoute || HERO_UNDER_STATUS_BAR_ROUTES.has(props.route?.name))',
     );
   });
 

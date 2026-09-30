@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { hasAndroidWebBackGuard } from './InstalledWebApp';
 import type { AppTheme } from './Themes';
 
 export const SABBATH_SCHOOL_BACK_TARGET = '/';
@@ -99,16 +99,17 @@ const stackOf = (path: string) =>
  * stacks, such as a Home page back to Home itself or the Bible back to the
  * Bulletin, `dismissTo` has nothing to pop to and does nothing, so `replace`.
  *
- * On the web, `dismissTo` moves through browser history with `history.go()`,
- * which the Android web app's back guard in app/_layout.tsx would take for a
- * second back press. `replace` rewrites the current history entry instead.
+ * In the installed web app on Android, `dismissTo` moves through browser
+ * history with `history.go()`, which the back guard in app/_layout.tsx would
+ * take for a second back press, so it replaces there. Elsewhere on the web,
+ * `dismissTo` keeps the browser's own Back button in step.
  */
 export const getBackAction = (
   pathname: string,
   target: string,
-  platform: string = Platform.OS,
+  historyGuarded: boolean = hasAndroidWebBackGuard(),
 ) => {
-  if (platform === 'web') return 'replace';
+  if (historyGuarded) return 'replace';
   const stack = stackOf(pathname);
   return stack !== '' && stack === stackOf(target) ? 'dismissTo' : 'replace';
 };

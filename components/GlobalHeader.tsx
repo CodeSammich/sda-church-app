@@ -60,7 +60,8 @@ const HERO_HEADER_ROUTES = new Set([
 ]);
 
 // Other routes whose page opens with a hero image under the status bar. The
-// `index` routes are Home, Explore, and You.
+// `index` routes are Home, Explore, and You; the Bible's is too, so the check
+// leaves the Bible out.
 const HERO_UNDER_STATUS_BAR_ROUTES = new Set([
   'index',
   'library',
@@ -290,7 +291,9 @@ export const GlobalHeader = (props: any) => {
     showTitleChip: props.options?.showTitleChip,
     isHymnalPage,
     hymnalSearchCollapsed,
-    hasHero: isHeroHeaderRoute || HERO_UNDER_STATUS_BAR_ROUTES.has(props.route?.name),
+    hasHero:
+      !isBiblePage &&
+      (isHeroHeaderRoute || HERO_UNDER_STATUS_BAR_ROUTES.has(props.route?.name)),
   });
   const statusBarBackdropAnim = useRef(
     new Animated.Value(heroUnderStatusBar ? 0 : 1),

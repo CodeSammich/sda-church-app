@@ -24,6 +24,7 @@ import {
   LanguageContext,
   SupportedLanguage,
 } from '@/constants/LanguageContext';
+import { hasAndroidWebBackGuard, isInstalledPwa } from '@/constants/InstalledWebApp';
 import { getBottomTabContentHeight } from '@/constants/Layout';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
@@ -102,22 +103,6 @@ type BeforeInstallPromptEvent = Event & {
   }>;
 };
 
-const isInstalledPwa = () => {
-  if (
-    Platform.OS !== 'web' ||
-    typeof window === 'undefined' ||
-    typeof navigator === 'undefined'
-  ) {
-    return false;
-  }
-
-  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches ||
-    navigatorWithStandalone.standalone === true
-  );
-};
 
 const isBibleReaderPath = (pathname: string) =>
   /\/(?:\(tabs\)\/)?bible(?:\/index)?\/?$/.test(pathname);
@@ -928,13 +913,7 @@ function RootLayoutNav({
   }, [pathname]);
 
   useEffect(() => {
-    if (
-      Platform.OS !== 'web' ||
-      typeof window === 'undefined' ||
-      typeof navigator === 'undefined' ||
-      !/Android/i.test(navigator.userAgent) ||
-      !isInstalledPwa()
-    ) {
+    if (!hasAndroidWebBackGuard()) {
       return;
     }
 
@@ -957,7 +936,7 @@ function RootLayoutNav({
       // The guard keeps the browser on the same URL. Stop Expo Router from also
       // processing this pop and perform the same app navigation as the header arrow.
       event.stopImmediatePropagation();
-      router[getBackAction(pathname, gestureBackTarget)](gestureBackTarget as any);
+      router[getBackAction(pathname, gestureBackTarget, true)](gestureBackTarget as any);
 
       // Navigating to Home while already there does not cause a route render, so
       // ensure the guard is restored even when the target route stays unchanged.

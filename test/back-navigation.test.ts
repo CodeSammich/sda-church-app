@@ -105,7 +105,7 @@ describe('global header back navigation', () => {
     expect(handler).toContain('router[getBackAction(pathname, target)](target');
     expect(handler).not.toMatch(/router\.back\(|canGoBack/);
     expect(layout).toContain('const backTarget = getBackTarget(pathname, globalParams.backTo);');
-    expect(layout).toContain('router[getBackAction(pathname, gestureBackTarget)](gestureBackTarget');
+    expect(layout).toContain('router[getBackAction(pathname, gestureBackTarget, true)](gestureBackTarget');
     expect(layout).toContain('router[getBackAction(pathname, androidBackTarget)](androidBackTarget');
   });
 
@@ -122,9 +122,30 @@ describe('global header back navigation', () => {
     expect(getBackAction('/you/legal', '/explore/library')).toBe('replace');
   });
 
-  it('replaces on the web, where dismissTo would move through browser history', () => {
-    expect(getBackAction('/home/about-sda', '/home/discover', 'web')).toBe('replace');
-    expect(getBackAction('/home/about-sda', '/home/discover', 'ios')).toBe('dismissTo');
+  it("replaces under the Android web app's back guard, which history.go() would trip", () => {
+    expect(getBackAction('/home/about-sda', '/home/discover', true)).toBe('replace');
+    expect(getBackAction('/home/about-sda', '/home/discover', false)).toBe('dismissTo');
+    const layout = readFileSync('app/_layout.tsx', 'utf8');
+    expect(layout).toContain('router[getBackAction(pathname, gestureBackTarget, true)](gestureBackTarget');
+  });
+
+  it("gives every page in the Home, Explore, and You stacks its own options", () => {
+    // The swipe rule reads the stack when options are computed, which lags one
+    // render behind a push; a page setting its options re-renders the stack
+    // with the new page included.
+    const { readdirSync } = require('node:fs') as typeof import('node:fs');
+    const pages = ['home', 'explore', 'explore/library', 'you'].flatMap((dir) =>
+      readdirSync(`app/(tabs)/${dir}`)
+        .filter((file: string) => file.endsWith('.tsx') && file !== '_layout.tsx')
+        .map((file: string) => `app/(tabs)/${dir}/${file}`),
+    );
+    expect(pages.length).toBeGreaterThan(20);
+    for (const page of pages) {
+      expect([page, readFileSync(page, 'utf8')]).toEqual([
+        page,
+        expect.stringMatching(/<Stack\.Screen|<ChineseHymnalReader/),
+      ]);
+    }
   });
 
   it("allows iOS's swipe-back only when the page beneath is the back target", () => {
