@@ -149,6 +149,13 @@ covering:
 - any permission required from HymnsForWorship.org, zgaxr.com, EGW Writings, or the
   relevant publishers for the app’s current metadata, thumbnails, and navigation.
 
+**Photos of people, confirmed September 2026:** everyone who can be recognized in the
+app's photos gave written consent by message: the two people on Meet Our Team, and the
+leader at the front of each fellowship photo on the Fellowship page. The messages are
+kept in the church's records, not in this repository. Other people in the fellowship
+photos appear mostly from behind or in profile. Get written consent before adding a
+photo of anyone else, and keep people out of store screenshots.
+
 Apple’s [Intellectual Property guideline](https://developer.apple.com/app-store/review/guidelines/)
 requires that app content be created by the developer or licensed for use. Google’s
 content policies similarly apply to content displayed by the app and content reached
