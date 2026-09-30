@@ -19,6 +19,7 @@ does and what still needs a person.
 - [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script)
 - [The app website (`app.nyccsda.org`)](#the-app-website-appnyccsdaorg)
 - [The Cloudflare account and domain](#the-cloudflare-account-and-domain)
+- [Yearly checkup](#yearly-checkup)
 - [Native app binaries](#native-app-binaries)
 - [Android PR preview APKs](#android-pr-preview-apks)
 - [iOS PR preview builds](#ios-pr-preview-builds)
@@ -345,11 +346,61 @@ lapses, the privacy policy, support, and download pages above go down with it.
 - **Use a church address for the account's email,** not a personal one, so renewal
   notices and Cloudflare's policy emails reach whoever runs technology next.
 
-**Once a year:**
+**Once a year**, with the [yearly checkup](#yearly-checkup) issue:
 
 - Each administrator logs in, which proves the backups work. Remove anyone who has left.
 - The account's billing page lists only the domain registration.
 - The card on file hasn't expired, and auto-renew is on.
+- Cloudflare's free plan still works the way the next section describes.
+
+### Why a free Worker can't bill
+
+The Cantonese audio Worker shares the account that has the card. That's safe because
+the free plan has no usage charges at all:
+
+- **At the limit, it stops instead of charging.** Workers Free allows 100,000 requests a
+  day, resetting at midnight UTC. Past that, Cloudflare answers with Error 1027 until
+  the reset ([Workers limits](https://developers.cloudflare.com/workers/platform/limits/#daily-requests)).
+  Cantonese audio stops for the rest of the day; nothing is billed.
+- **Charges only exist on Workers Paid,** a subscription of at least $5 a month that
+  someone has to choose; usage beyond its allowance is billed only there
+  ([Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/)).
+  Nothing in the Worker's code or settings can switch the plan.
+- **Why Cloudflare gives this away:** free users are worth more to Cloudflare than
+  their bandwidth costs. Cloudflare says they expose its network to attacks it
+  learns from, try new features first, make internet providers more willing to
+  exchange traffic with it for free, and use capacity that would otherwise sit idle
+  between business peaks. In 2024 it restated that "our free plan is here to stay"
+  ([Reaffirming our commitment to free](https://blog.cloudflare.com/cloudflares-commitment-to-free/)).
+
+That's a company's promise, not a contract, so the yearly checkup re-reads those
+pages. If Cloudflare ever starts charging for free Workers, delete the Worker, or move
+it to an account with no card on file, before the change takes effect. The Cantonese
+narrator then stops working, and the Mandarin narration carries on.
+
+## Yearly checkup
+
+On the first Monday of each January, **Yearly Checkup** (`yearly-checkup.yml`) opens an
+issue titled **Yearly checkup, *year***, assigned to the usernames in
+`MONITOR_ALERT_ASSIGNEES`. It holds one checklist of everything these docs say to
+check once a year, each item linked to the doc that explains it:
+
+- the Cloudflare card, billing, and free plan;
+- the Google Cloud project's lack of a billing account;
+- administrator access and two-factor login on every system;
+- the Apple dates and Google Play's contact details and declarations;
+- the Workspace nonprofit terms;
+- the scheduled workflows.
+
+Work through it, note anything that changed in a comment, and close it. It runs every
+Monday in January, but only the first opens an issue; the others find it and stop.
+Start it by hand from the Actions tab to open one early.
+
+The Apple renewals have their own reminder, 60 days before each date; see
+[Apple signing reminders](#apple-signing-reminders). To add a yearly task, add it to
+`scripts/yearly-checkup.cjs` and to the
+[upkeep calendar](../architecture.md#upkeep-calendar);
+`test/yearly-checkup.test.ts` checks that every link in the checklist still works.
 
 ## Native app binaries
 

@@ -1,0 +1,53 @@
+name: Yearly Checkup
+
+# Opens one issue each January with everything the docs say to check once a
+# year: the Cloudflare card and billing, the Google Cloud project, administrator
+# access, the stores, and the scheduled workflows (#342). The checklist is in
+# scripts/yearly-checkup.cjs. The Apple renewals keep their own reminder, the
+# Apple Signing Monitor. It uses no credentials beyond opening an issue.
+
+on:
+  schedule:
+    # Every Monday in January, away from the top of the hour. The first Monday
+    # opens the year's issue; the others find it and do nothing.
+    - cron: "41 10 * 1 1"
+      timezone: "America/New_York"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: yearly-checkup
+  cancel-in-progress: false
+
+jobs:
+  open-checkup:
+    # Forks commonly disable Issues. Keep it to the canonical repository.
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Open this year's checkup issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          # Comma-separated GitHub usernames; assigning the issue emails them.
+          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const checkup = require(`${process.env.GITHUB_WORKSPACE}/scripts/yearly-checkup.cjs`);
+            const year = Number(new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'America/New_York' }).format(new Date()));
+            const result = await checkup.openYearlyCheckup({
+              github,
+              context,
+              year,
+              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
+            });
+            core.info(`Yearly checkup issue ${result.action}: #${result.number}`);
