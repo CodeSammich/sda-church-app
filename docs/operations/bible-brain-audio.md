@@ -52,8 +52,14 @@ requirement for a fallback: FCBH can end the church's access at any time.
 ## Cost
 
 The Worker must stay on Cloudflare's **Workers Free** plan. On Free, going over a
-limit makes requests fail; nothing is ever billed. The church's Cloudflare account
-has a card on file for the domain, so never move this Worker to Workers Paid (#261).
+limit makes requests fail with Error 1027 until midnight UTC; nothing is ever billed
+([Workers limits](https://developers.cloudflare.com/workers/platform/limits/#daily-requests)).
+Charges exist only on Workers Paid, a subscription someone has to choose
+([Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/)). The
+church's Cloudflare account has a card on file for the domain, so never move this
+Worker to Workers Paid (#261). [Why a free Worker can't bill](admin-runbook.md#why-a-free-worker-cant-bill)
+explains this in full, including why Cloudflare keeps a free plan, and the
+[yearly checkup](admin-runbook.md#yearly-checkup) re-checks it every January.
 The church chose to run it in that account rather than a separate one: the card is
 guarded as [The Cloudflare account and domain](admin-runbook.md#the-cloudflare-account-and-domain)
 describes, with a capped card, an alert on every charge, and a yearly check that
