@@ -425,7 +425,7 @@ The native app uses audio playback, including background playback. It does not r
 device location, camera, microphone, contacts, photos, or notifications. Because the app does not create
 user accounts or maintain a personal server profile, there is no account to delete. A
 user may request correction or removal of church-managed bulletin information by
-contacting `pastor@nyccsda.org`. The church will handle requests according to applicable
+contacting `technology@nyccsda.org`. The church will handle requests according to applicable
 law and its administrative retention practices.
 
 ### 7. Privacy Frameworks and Questions

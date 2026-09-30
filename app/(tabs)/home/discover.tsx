@@ -10,11 +10,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext } from 'react';
 import {
-  ImageBackground,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Text } from 'react-native-paper';
 
 export default function DiscoverScreen() {

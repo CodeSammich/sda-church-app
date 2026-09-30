@@ -17,7 +17,7 @@ import {
   useAppTheme,
   type ThemeMode,
 } from '@/constants/Themes';
-import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { AppIcon } from '@/components/AppIcon';
 import { useContext, useRef, useState } from 'react';
 import {
@@ -266,6 +266,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const { setThemeMode, themeMode } = useContext(ThemeContext);
   const { setTextScale, textScale } = useTextSize();
   const theme = useAppTheme();
+  const popupMaxHeight = usePopupMaxHeight(0.9);
   const { width: viewportWidth } = useWindowDimensions();
   const [isSavingTextScale, setIsSavingTextScale] = useState(false);
   const [failedTextScale, setFailedTextScale] = useState<TextScale | null>(null);
@@ -305,6 +306,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
         dismissable={false}
         contentContainerStyle={[
           styles.modal,
+          { maxHeight: popupMaxHeight },
           getPopupSurfaceStyle(theme),
         ]}
       >
@@ -440,7 +442,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderRadius: 16,
     marginVertical: 20,
-    maxHeight: '90%',
     maxWidth: 500,
     width: '90%',
   },

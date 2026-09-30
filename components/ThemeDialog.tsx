@@ -8,7 +8,7 @@ import {
   useAppTheme,
   type ThemeMode,
 } from '@/constants/Themes';
-import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Dialog, Portal, RadioButton, Text } from 'react-native-paper';
@@ -91,6 +91,7 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
   const { themeMode, setThemeMode } = useContext(ThemeContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
+  const popupMaxHeight = usePopupMaxHeight(0.9);
   const optionLanguage = language in copy ? language : 'en';
 
   return (
@@ -98,7 +99,7 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
       <Dialog
         visible={visible}
         onDismiss={onDismiss}
-        style={[styles.dialog, getPopupSurfaceStyle(theme)]}
+        style={[styles.dialog, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
       >
         <Dialog.Title>{labels.title}</Dialog.Title>
         <Dialog.ScrollArea style={styles.scrollArea}>
@@ -208,7 +209,6 @@ const styles = StyleSheet.create({
   },
   dialog: {
     alignSelf: 'center',
-    maxHeight: '90%',
     maxWidth: 560,
     width: '90%',
   },

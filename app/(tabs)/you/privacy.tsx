@@ -61,7 +61,7 @@ export default function PrivacyPolicyScreen() {
         restricted staff-managed Google Sheet outside the app. Church administrative systems and service
         providers still process limited
         information needed to operate the app, as described below. For privacy questions
-        or requests, please contact pastor@nyccsda.org.
+        or requests, please contact technology@nyccsda.org.
       </Text>
 
       <Text
@@ -173,7 +173,7 @@ export default function PrivacyPolicyScreen() {
         request device location, camera, microphone, contacts, photos, or notifications. Because the app
         does not create user accounts or maintain a personal server profile, there is no
         account to delete. A user may request correction or removal of church-managed
-        bulletin information by contacting pastor@nyccsda.org. The church will handle
+        bulletin information by contacting technology@nyccsda.org. The church will handle
         requests according to applicable law and its administrative retention practices.
       </Text>
 
