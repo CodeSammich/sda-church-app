@@ -124,7 +124,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Subtitle** (App Store, up to 30)
 
 ```text
-雙語聖經、週報與教會生活
+雙語聖經與教會生活
 ```
 
 **Short description** (Google Play, up to 80)
@@ -194,7 +194,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Subtitle** (App Store, up to 30)
 
 ```text
-双语圣经、周报与教会生活
+双语圣经与教会生活
 ```
 
 **Short description** (Google Play, up to 80)
@@ -269,7 +269,7 @@ Iglesia Adventista China NY
 **Subtitle** (App Store, up to 30)
 
 ```text
-Biblia, boletín y comunidad
+Biblia y vida de iglesia
 ```
 
 **Short description** (Google Play, up to 80)
