@@ -41,6 +41,10 @@ playback fallbacks; the repository does not bundle the recordings. Audio Power's
 Phil, explicitly approved the church app's use, download, and self-hosting of these recordings in
 [issue #134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608).
 
+Cantonese audio for the same editions comes from WordProject, played only from the
+church's copies on Adventist Connect; see
+[WordProject Cantonese audio](#wordproject-cantonese-audio).
+
 ### Audio Power permission scope
 
 The permission covers **only Audio Power's own Chinese Union Version narration**. That
@@ -111,19 +115,15 @@ and KJV audio, and the other routes to it, is tracked in
 [#142](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/142). Audio Power can
 be reached at info@theaudiopower.com, the contact address on its website.
 
-### WordProject Cantonese audio: planned, not in use
-
-> [!NOTE]
-> **Planned.** The app doesn't play this recording yet. Adding it is tracked in
-> [#353](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/353).
-> This section records the terms the church relies on, so the work follows them.
+### WordProject Cantonese audio
 
 [WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), a
 registered name of the International Biblical Association (a nonprofit registered in
 Macau), publishes a Cantonese audio Bible (廣東話) with every chapter of all 66 books.
 Its [audio list](https://www.wordproject.org/bibles/audio/) labels it "Cantonese -
-CUV". The church plans to offer it as a Cantonese narrator for the Chinese Union
-Version.
+CUV". The app offers it as the Cantonese narrator, 粵語 (WordProject), for both
+Chinese Union Version editions
+([#353](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/353)).
 
 **The basis is WordProject's published terms.** Audio Power's recordings are used on
 the strength of its owner's email, because Audio Power's site says nothing about apps.
@@ -137,10 +137,10 @@ Cantonese book pages, as read on September 30, 2026 (not legal advice):
 | --- | --- | --- |
 | Use in apps | "You are ONLY allowed to use the audio files for non-profit evangelization (without in APP ads or for-sale APPs)." | Allowed while the app stays free and without ads, which it must anyway (see the [App stores](architecture.md#app-stores) rule). |
 | Nonprofit only | "All available audio is copyrighted and its use is allowed for NON-PROFIT only - (evangelization/education)." | The church is a nonprofit, and the app sells nothing. |
-| Downloading | Each book page: "右鍵單擊本頁末尾的“Zip_”，然後“鏈接另存為”以下載整本書。" ("Right-click 'Zip_' at the end of this page, then 'Save link as', to download the whole book.") | The church downloads each book once, from these zips. |
+| Downloading | Each book page: "右鍵單擊本頁末尾的“Zip_”，然後“鏈接另存為”以下載整本書。" ("Right-click 'Zip_' at the end of this page, then 'Save link as', to download the whole book.") | The church downloaded each book once, from these zips. |
 | WordProject's servers | "If you wish to link to our audio, you are obliged to tell us and get our approval." and "DO NOT make a Bible web site or APP and link the whole audio Bible (or Bibles) to our servers." | The app plays only the church's copies. It must never link to WordProject's servers, even as a fallback, without WordProject's written approval. |
 | Changing the audio | "you are allowed to adapt the data (text format only!) for your purposes but NOT the audio files." | Host the files exactly as downloaded: no re-encoding, trimming, joining, volume changes, or tag edits. Only the file names change, so that each chapter's name is unique. |
-| Credit | Not specified. The Copyrights page asks sites to "place a link to our website and our audio APP". | Credit WordProject by name, with links to its website and app. |
+| Credit | Not specified. The Copyrights page asks sites to "place a link to our website and our audio APP". | The narrator is named 粵語 (WordProject). While it's selected, each chapter shows a credit that links to WordProject's Cantonese page, which offers its app. |
 
 **Who owns the recordings is unknown.** WordProject warns that a breach "may result
 in prosecution by respective owners", so some of what it publishes belongs to others.
@@ -181,7 +181,7 @@ September 30, 2026, are in
 in case the pages change. Keep a copy of the notice in the church's IT Admin shared
 drive, with the other rights records.
 
-**Hosting and privacy.** The church's copies go in its Adventist Connect media
+**Hosting and privacy.** The church's copies are in its Adventist Connect media
 library, like the Mandarin CUV recordings (see
 [Adventist Connect media hosting](operations/adventist-connect-media.md)). The
 repository doesn't bundle them. The app contacts no new service, so the privacy

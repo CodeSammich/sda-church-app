@@ -12,7 +12,7 @@ flowchart TB
       ap["3. Audio Power<br/>theaudiopower.com"]
       wp -- cache miss --> wasabi
       backup -. restore from if Adventist Connect<br/>or Wasabi is lost .-> wp
-      wp -. Bible audio: if 1 fails .-> ia
+      wp -. Mandarin Bible audio: if 1 fails .-> ia
       ia -. if 2 also fails .-> ap
     end
     subgraph Bible["Bible text"]

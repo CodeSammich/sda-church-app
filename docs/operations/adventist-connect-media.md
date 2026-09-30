@@ -1,7 +1,8 @@
 # Adventist Connect media hosting
 
-The app loads the church's own pictures and its primary copy of the Chinese Union
-Version (CUV) Bible audio from the church's media library on Adventist Connect, the
+The app loads the church's own pictures, its primary copy of the Mandarin Chinese
+Union Version (CUV) Bible audio, and its only copy of the Cantonese CUV Bible audio
+from the church's media library on Adventist Connect, the
 North American Division's managed WordPress platform. This page records what is
 hosted there, how the request path works, and how much load the setup can be relied
 on to carry.
@@ -23,7 +24,8 @@ are uploaded through its WordPress media library.
 
 | Content | Referenced from | Files | Size |
 | --- | --- | --- | --- |
-| CUV Bible audio, one MP3 per chapter | [`constants/CuvAdventistAudioManifest.ts`](../../constants/CuvAdventistAudioManifest.ts) | 1,189 | 939 MB total; median 0.73 MB, largest 3.7 MB |
+| Mandarin CUV Bible audio, one MP3 per chapter | [`constants/CuvAdventistAudioManifest.ts`](../../constants/CuvAdventistAudioManifest.ts) | 1,189 | 939 MB total; median 0.73 MB, largest 3.7 MB |
+| Cantonese CUV Bible audio, one MP3 per chapter | [`constants/CantoneseAdventistAudioManifest.ts`](../../constants/CantoneseAdventistAudioManifest.ts) | 1,189 | 792 MB total; median 0.58 MB, largest 3.4 MB |
 | Church, staff, and fellowship photos | [`constants/ExternalLinks.ts`](../../constants/ExternalLinks.ts) | 6 | 3.2 MB total, 2.3 MB of it one PNG |
 | Hymnal number lookup charts | [`features/hymnal/HymnalNumberMappings.json`](../../features/hymnal/HymnalNumberMappings.json) | 2 | 1.1 MB total |
 
@@ -32,8 +34,15 @@ The audio files are 24 kbps mono MP3 (MPEG-2 Layer III, 22.05 kHz), about
 hours. Audio is where almost all the bytes go; the images are small and fetched far
 less often.
 
+The Cantonese files are mostly 16 kbps mono MP3 (11 kHz), about **7.2 MB per hour**;
+1 and 2 Samuel and 1 Kings are 32 to 40 kbps. The whole Bible is about 100 hours.
+
 The recordings come from Audio Power, whose owner approved downloading and
 self-hosting them ([permission record](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)).
+The Cantonese recordings come from WordProject, under its published terms (see
+[WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio)). They're uploaded exactly
+as downloaded, only renamed. WordProject's terms don't allow playing them from its
+servers, so this library is their only source in the app.
 The church also keeps a copy in Google Drive. Where the license allows it, the
 church aims to keep at least two copies of media it depends on, on services it
 controls (this library and Google Drive). This is best effort, not a complete
@@ -80,7 +89,8 @@ church-website platform.
   chapter's Adventist Connect URL in the checked-in manifest and returns it first,
   followed by the Internet Archive and Audio Power copies of the same recording.
   The Internet Archive comes second so that an outage here doesn't move every
-  listener onto Audio Power's single small server.
+  listener onto Audio Power's single small server. The Cantonese narrator has
+  only its Adventist Connect URL.
 - If a source fails, the app moves on to the next one without asking the
   listener ([`BibleAudioFailover.ts`](../../services/BibleAudioFailover.ts)):
   - **A source that fails outright** (an HTTP error such as `404` or `403`, a web
@@ -116,19 +126,23 @@ church-website platform.
     above.
 
   Listeners can also choose a source themselves in the audio settings.
-- An Adventist Connect outage therefore shifts load to the Internet Archive rather
-  than stopping playback. Audio Power is reached only if that fails too.
+- An Adventist Connect outage therefore shifts Mandarin load to the Internet Archive
+  rather than stopping playback. Audio Power is reached only if that fails too.
+  Cantonese audio stops until the library recovers, and listeners can switch to
+  the Mandarin narrator.
 - The player streams with byte-range requests; it does not download chapters for
   offline use.
 - The web player preloads only the next chapter. On native, the app queues up to 24
   upcoming chapter descriptors but does not fetch their audio itself.
 - The [external dependency monitor](external-dependency-monitor.md) checks that
-  the manifest has all 1,189 entries and requests one sampled file a day.
+  each manifest has all 1,189 entries and requests one sampled file from each a day.
 
 The design reasons for the three-tier setup are in
 [Bible integration design](../feature_designs/bible_integration_design.md).
 
 ## Updating the audio manifest
+
+For the Mandarin recording:
 
 1. Download the source recordings with `npm run download:cuv-audio`. Files land in
    the git-ignored `downloads/cuv-audio/` with stable names such as
@@ -138,6 +152,22 @@ The design reasons for the three-tier setup are in
 3. Run `npm run extract:cuv-adventist-manifest` on the HAR to regenerate
    `constants/CuvAdventistAudioManifest.ts`. The script copies only public asset
    URLs; never commit the HAR, which contains session cookies.
+
+For the Cantonese recording:
+
+1. Download each book's zip from
+   [WordProject's Cantonese page](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm)
+   (the "Zip_" link at the end of each book page). Rename each chapter to
+   `CANTONESE_B<book>C<chapter>.mp3`, such as `CANTONESE_B43C003.mp3` for John 3,
+   without changing the file. Leave out Revelation's `22_bad.mp3`, an old copy that
+   WordProject replaced.
+2. Upload them through the media library as usual. The site copies each upload to
+   its storage bucket by itself, so its "Copy to Bucket" and copy-to-server actions
+   aren't needed. Check that a file's URL starts with
+   `https://assets.adventistconnect.org/newyork2/`.
+3. Run `npm run extract:cantonese-adventist-manifest` to regenerate
+   `constants/CantoneseAdventistAudioManifest.ts`. It reads the site's public media
+   list, so no HAR is needed, and it refuses to write an incomplete manifest.
 
 WordPress puts an upload timestamp in each URL, so re-uploading a file changes its
 URL and the manifest must be regenerated.
@@ -171,11 +201,12 @@ accounts that regularly exceed that. It publishes no per-bucket request-rate lim
 Because Cloudflare caches for a year, Wasabi sees roughly one fetch per file per
 Cloudflare data center, plus refetches after files are evicted. Congregants are
 mostly served from a few New York-area data centers, so a full cache fill costs about
-0.94 GB per data center, and most chapters are rarely played. Origin egress should
+1.7 GB per data center (0.94 GB Mandarin, 0.79 GB Cantonese), and most chapters are
+rarely played. Origin egress should
 stay in the **single-digit gigabytes per month no matter how many people listen**.
 
 The ratio applies to Adventist Connect's whole account, which holds media for many
-church sites. The church's roughly 1 GB is a very small part of it. **Wasabi is not
+church sites. The church's roughly 1.7 GB is a very small part of it. **Wasabi is not
 the constraint.**
 
 ### Cloudflare (Adventist Connect's CDN)
@@ -208,8 +239,10 @@ not capacity:
 - The church can't see traffic figures, so a problem would first show up as failed
   requests, not as a warning.
 
-The Internet Archive and Audio Power fallbacks cover all of these for listeners, with
-the load going to the Internet Archive first.
+For Mandarin listeners, the Internet Archive and Audio Power fallbacks cover all of
+these, with the load going to the Internet Archive first. Cantonese has no fallback,
+so an outage stops it until the library recovers, and the Google Drive copy is how it
+would be restored.
 
 ## Warning signs and fallback plan
 
@@ -232,5 +265,6 @@ considered and rejected: its free tier bills automatically once exceeded, Cloudf
 has no hard spending cap, and the church's Cloudflare account already has a card on
 file for the domain. The reasoning is recorded in
 [#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261).
-Whatever the host, moving means uploading `downloads/cuv-audio/`, regenerating the
-manifest for the new URLs, and keeping Adventist Connect as a fallback.
+Whatever the host, moving means uploading `downloads/cuv-audio/` and the Cantonese
+files, regenerating the manifests for the new URLs, and keeping Adventist Connect as a
+fallback.

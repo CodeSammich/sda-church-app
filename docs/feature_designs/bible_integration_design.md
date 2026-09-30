@@ -40,6 +40,21 @@ record is maintained in
 Audio Power credits the recordings to 基督徒团契 (Christian Fellowship), and its
 simplified-Chinese filenames are shared by both CUV text variants.
 
+Both CUV variants also offer a Cantonese narrator, `粵語 (WordProject)`, listed after
+the Mandarin one so that Mandarin stays the default. The recording comes from
+[WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), whose
+published terms allow it in free apps without ads but forbid linking whole Bibles to
+its servers. So the church downloaded it once from WordProject's book zips, renamed
+the files to canonical names such as `CANTONESE_B43C003.mp3` without changing the
+audio, and hosts them on Adventist Connect. Unlike the Mandarin narrator, this one has
+a single source: there is no fallback host, and none may be added without WordProject's
+written approval. The terms and what they require are in
+[WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio). The generated
+`constants/CantoneseAdventistAudioManifest.ts` maps each canonical name to the church's
+URL; `npm run extract:cantonese-adventist-manifest` rebuilds it from the church site's
+public media list. While the Cantonese narrator is selected, the chapter shows a
+credit that links to WordProject's Cantonese page, which also offers its app.
+
 Each recording is represented as one narrator with three ordered hosting sources rather
 than three narrator choices: the generated Adventist Connect manifest supplies the
 primary church-controlled copy, the complete
