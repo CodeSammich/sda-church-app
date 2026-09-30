@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const {
@@ -215,86 +215,65 @@ describe('status bar check', () => {
 });
 
 describe('Screenshot review', () => {
-  const workflow = repoFile('.github/workflows/screenshot-review.yml');
-
-  it('runs only for the release PR into main', () => {
-    expect(workflow).toMatch(/pull_request:\n\s+branches:\n\s+- main/);
-    expect(workflow).toContain("startsWith(github.head_ref, 'release/')");
-    expect(workflow).toContain('github.event.pull_request.head.repo.full_name == github.repository');
-  });
-
-  it('passes only with the label, and clears it on a new push', () => {
-    // From the API, not the event: a 👍 re-runs the check, and a re-run keeps its first event.
-    expect(workflow).toContain('gh api "repos/$REPO/issues/$PR/labels"');
-    expect(workflow).toContain("grep -qx 'screenshots reviewed'");
-    expect(workflow).toMatch(/"\$ACTION" = synchronize/);
-    expect(workflow).toContain('labels/screenshots%20reviewed');
-  });
-
-  it('doesn’t clear the label again when a 👍 re-runs a push’s check', () => {
-    expect(workflow).toContain('RUN_ATTEMPT: ${{ github.run_attempt }}');
-    expect(workflow).toContain('[ "$ACTION" = synchronize ] && [ "$RUN_ATTEMPT" = 1 ]');
-  });
-
-  it('keeps the job name the ruleset will require', () => {
-    expect(workflow).toContain('name: Screenshots reviewed');
-  });
-
-  it('says the screenshots are on the way after each push, and clears out-of-date ones', () => {
-    const notice = workflow.slice(workflow.indexOf('- name: Say the screenshots are on the way'));
-    expect(notice).toContain('case "$ACTION" in opened|reopened|synchronize|ready_for_review) ;; *) exit 0 ;; esac');
-    expect(notice).toContain('[ "$RUN_ATTEMPT" = 1 ] || exit 0');
-    expect(notice).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
-    expect(notice).toContain('about 50 minutes');
-  });
-
-  it('marks the notice differently, so a 👍 can\u2019t approve screenshots that aren\u2019t posted', () => {
-    const approval = repoFile('.github/workflows/screenshot-approval.yml');
-    expect(workflow).toContain('<!-- key-screens-review pending sha=$SHA -->');
-    // The approval matches the screenshots' own marker line exactly.
-    expect(approval).toContain('grep -qxF "<!-- key-screens-review sha=$sha -->"');
-    // The iOS preview replaces every comment with either marker.
-    expect(repoFile('.github/workflows/ios-pr-preview.yml')).toContain('startswith("<!-- key-screens-review")');
-  });
-});
-
-describe('Screenshot review comment and 👍 approval', () => {
-  const workflow = repoFile('.github/workflows/screenshot-review.yml');
   const preview = repoFile('.github/workflows/ios-pr-preview.yml');
-  // The review-comment job, up to the next job.
-  const start = preview.indexOf('\n  review-comment:');
-  const next = preview.slice(start + 1).search(/\n {2}[a-z-]+:\n/);
-  const commentJob = next === -1 ? preview.slice(start) : preview.slice(start, start + 1 + next);
-  const approval = repoFile('.github/workflows/screenshot-approval.yml');
+  /** One job of the iOS preview, up to the next job. */
+  const job = (id: string) => {
+    const start = preview.indexOf(`\n  ${id}:\n`);
+    const next = preview.slice(start + 1).search(/\n {2}[a-z-]+:\n/);
+    return next === -1 ? preview.slice(start) : preview.slice(start, start + 1 + next);
+  };
+  const announce = job('announce');
+  const commentJob = job('review-comment');
+  const approvalJob = job('screenshots-reviewed');
+  const releaseOnly = [
+    "startsWith(github.head_ref, 'release/')",
+    'github.event.pull_request.head.repo.full_name == github.repository',
+  ];
 
-  it('posts the comment only on the release PR into main, after the builds', () => {
+  it('waits for an approver in the screenshot-review environment, after the screenshots are posted', () => {
+    // The "Main protection" ruleset requires this name.
+    expect(approvalJob).toContain('name: Screenshots reviewed');
+    expect(approvalJob).toContain('environment: screenshot-review');
+    expect(approvalJob).toContain('needs: review-comment');
+    for (const condition of releaseOnly) expect(approvalJob).toContain(condition);
+  });
+
+  it('fails rather than passing unreviewed if the environment has no required reviewers', () => {
+    expect(approvalJob).toContain('gh api "repos/$REPO/environments/screenshot-review"');
+    expect(approvalJob).toContain('select(.type == "required_reviewers")');
+    expect(approvalJob).toContain('if [ "$reviewers" -lt 1 ]; then');
+  });
+
+  it('has no label or comment approvals left', () => {
+    expect(existsSync(resolve(__dirname, '..', '.github/workflows/screenshot-review.yml'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '..', '.github/workflows/screenshot-approval.yml'))).toBe(false);
+    expect(preview).not.toContain('screenshots reviewed** label');
+  });
+
+  it('posts the screenshots, and how to approve them, after the builds', () => {
     expect(commentJob).toContain('needs: simulator');
-    expect(commentJob).toContain("startsWith(github.head_ref, 'release/')");
-    expect(commentJob).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+    for (const condition of releaseOnly) expect(commentJob).toContain(condition);
     expect(commentJob).toContain('<!-- key-screens-review sha=$SHA -->');
+    expect(commentJob).toContain('**Review deployments**');
     // It replaces its own earlier comments only.
     expect(commentJob).toContain('select(.user.login == "github-actions[bot]"');
   });
 
-  it('counts only a bare 👍 from someone with write access, once this commit’s screenshots are posted', () => {
-    expect(approval).toMatch(/issue_comment:\n\s+types: \[created\]/);
-    expect(approval).toContain("'👍'|'👍🏻'|'👍🏼'|'👍🏽'|'👍🏾'|'👍🏿'|':+1:'");
-    expect(approval).toContain('collaborators/$AUTHOR/permission');
-    expect(approval).toMatch(/admin\|maintain\|write\) ;;/);
-    expect(approval).toContain('"<!-- key-screens-review sha=$sha -->"');
-    expect(approval).toContain('[ "$base" != main ]');
-    expect(approval).toContain('labels[]=screenshots reviewed');
-    expect(approval).toContain('actions/workflows/screenshot-review.yml/runs?head_sha=$sha');
+  it('says the screenshots are on the way after each push, and clears out-of-date ones', () => {
+    for (const condition of releaseOnly) expect(announce).toContain(condition);
+    expect(announce).toContain('github.run_attempt == 1');
+    expect(announce).toContain('<!-- key-screens-review pending sha=$SHA -->');
+    expect(announce).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
+    expect(announce).toContain('about 50 minutes');
   });
 
   it.each([
-    ['the review check', workflow],
-    ['the review comment job', commentJob],
-    ['the 👍 approval', approval],
+    ['the notice', announce],
+    ['the review comment', commentJob],
+    ['the approval', approvalJob],
   ])('%s never runs pull request code or reads a secret', (_name, text) => {
     expect(text).not.toMatch(/actions\/checkout|secrets\./);
-    expect(text).not.toMatch(/pull_request_target/);
-    // Pull request and comment text reach the script only through environment variables.
+    // Pull request text reaches the script only through environment variables.
     // Each script runs from `run: |` to the next step.
     for (const script of text.split('run: |').slice(1).map((rest) => rest.split(/\n\s*- (?:name|uses):/)[0])) {
       expect(script).not.toMatch(/\$\{\{/);

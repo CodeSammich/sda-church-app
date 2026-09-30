@@ -906,23 +906,25 @@ checks look only for particular labels in particular places, so text like that c
 pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label or a verse number
-split across two lines, need a person. When the iOS preview finishes on the release
-pull request into `main`, it posts a comment there with a link to that commit's
-screenshots, what to look for, and how to approve; each run replaces the previous
-comment. Until then, a notice from the **Screenshots reviewed** check says the
-screenshots are on the way. It's posted as soon as the pull request opens or gets a
-new push, and it replaces the out-of-date screenshots from before the push, so nobody
-wonders for 50 minutes why the check is red. After looking through `screens/ios/`, approve in either of two ways:
+split across two lines, need a person, so the iOS preview asks for one on the release
+pull request into `main`:
 
-- add the **screenshots reviewed** label; or
-- reply to the pull request with just 👍. `screenshot-approval.yml` then adds the label
-  and re-runs the check, if the person has write access and that commit's screenshots
-  are posted. GitHub starts no workflow for an emoji reaction, so it has to be a reply.
-  Comment-triggered workflows run from `main`'s copy, so the reply works once this
-  workflow is on `main`; until then, the comment offers only the label.
+1. As soon as the pull request opens or gets a new push, it posts a notice that the
+   screenshots are on the way. They take about 50 minutes. The notice also removes
+   the screenshots from before the push, which are out of date.
+2. When they're ready, it replaces the notice with a comment linking that commit's
+   screenshots, what to look for, and how to approve.
+3. Its last job, **Screenshots reviewed**, uses the `screenshot-review` environment,
+   whose required reviewers are the **release-approvers** team. So the check waits,
+   pending rather than failing, until one of them opens the run, selects **Review
+   deployments**, ticks **screenshot-review**, and approves. GitHub notifies the
+   approvers.
 
-The **Screenshots reviewed** check (`screenshot-review.yml`) fails until the label is
-there, and a new push removes it, so each version of the release gets its own review.
+A new push starts a new run, which needs its own approval, so each version of the
+release gets its own review. If the environment were ever missing or had no required
+reviewers, GitHub would run the job without waiting, so the job checks that the
+environment requires approval, and fails if it doesn't.
+[Approving the screenshots](admin-runbook.md#approving-the-screenshots) has the setup.
 
 **App Store screenshots.** The images are 1320 × 2868, the App Store's 6.9-inch iPhone
 size. The shots listed under `appStore` in the screen list are also copied, numbered in

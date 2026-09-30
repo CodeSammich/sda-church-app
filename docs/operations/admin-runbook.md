@@ -106,7 +106,7 @@ Review rules for both pull-request rulesets:
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
 | `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel Mac)` | `ios-pr-preview.yml` | `main` |
-| `Screenshots reviewed` | `screenshot-review.yml`: passes once someone checks the screenshots the iOS preview posts in a comment, then adds the **screenshots reviewed** label or replies 👍 (`screenshot-approval.yml`); see [iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds) | `main` (add it to **Main protection** once the workflow is on `main`) |
+| `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
 
@@ -146,6 +146,31 @@ The jobs that upload to TestFlight and Google Play internal testing use the sepa
 `store-upload` environment, which needs no approval, so they run as soon as the builds
 you approved finish. Why it's separate is in
 [How the credentials are kept apart](native-builds.md#how-the-credentials-are-kept-apart).
+
+### Approving the screenshots
+
+The release pull request's **Screenshots reviewed** check waits the same way, in the
+`screenshot-review` environment. When the iOS preview's comment shows the screenshots:
+
+1. Download them from the comment and look through `screens/ios/` for what the
+   comment lists.
+2. Open the run from the comment, select **Review deployments**, tick
+   **screenshot-review**, and approve. Reject it if something looks wrong, and say what
+   in a comment.
+
+A new push needs a new approval.
+
+**One-time setup** (done once by an admin, under **Settings → Environments → New
+environment**):
+
+- **Name:** `screenshot-review`.
+- **Required reviewers:** the **release-approvers** team, the same as `production`.
+- **Deployment branches and tags:** no restriction. GitHub checks a pull request's run
+  against its merge ref (`refs/pull/…/merge`), not `release/*`, and the environment
+  holds no secrets; the job itself runs only on release pull requests into `main`.
+
+If the environment is missing or has no required reviewers, the check fails and says
+so, rather than passing unreviewed.
 
 ## Shipping a release to `main`
 
