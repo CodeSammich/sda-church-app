@@ -1,7 +1,8 @@
 # Store listings
 
 The text to copy into App Store Connect and Google Play Console, in English, Traditional
-Chinese, and Simplified Chinese. Every sentence describes what the app does today. When
+Chinese, Simplified Chinese, and Spanish: the app's four languages. Every sentence
+describes what the app does today. When
 a feature changes, update this page too, and check [What not to claim](#what-not-to-claim)
 before adding anything. Each field below fits its store's limit.
 
@@ -11,6 +12,7 @@ before adding anything. Each field below fits its store's limit.
 - [English](#english)
 - [Traditional Chinese](#traditional-chinese)
 - [Simplified Chinese](#simplified-chinese)
+- [Spanish](#spanish)
 - [Categories, URLs, and contact](#categories-urls-and-contact)
 - [Reviewer notes](#reviewer-notes)
 - [Declarations](#declarations)
@@ -241,6 +243,81 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 • 无需账号、无广告、不追踪。
 
 诗歌歌词与乐谱、图书馆书籍、课程与视频，均在出版方网站打开。
+```
+
+## Spanish
+
+App Store: Spanish (Mexico), the Spanish that the U.S. App Store shows; Spanish (Spain),
+used only by Spain's App Store, can take the same text. Google Play: Spanish
+(United States), `es-US`, and Spanish (Latin America), `es-419`. The app's Spanish name,
+*Iglesia Adventista del Séptimo Día China de Nueva York*, is too long for the 30-character
+name field, so the listing uses a shorter form. The keywords leave out words already in
+the name, which the App Store searches anyway.
+
+**Name** (both stores, up to 30 characters)
+
+```text
+Iglesia Adventista China NY
+```
+
+**Subtitle** (App Store, up to 30)
+
+```text
+Biblia, boletín y comunidad
+```
+
+**Short description** (Google Play, up to 80)
+
+```text
+Biblia bilingüe con pinyin y audio, más el boletín semanal y la vida de iglesia.
+```
+
+**Promotional text** (App Store, up to 170; can change without a new version)
+
+```text
+Lee la Biblia en inglés, chino o español, lado a lado, con pinyin y audio. Consulta el boletín, los himnos y la lección de Escuela Sabática de esta semana.
+```
+
+**Keywords** (App Store, up to 100, commas without spaces)
+
+```text
+biblia,himnario,himnos,sábado,escuela sabática,boletín,audio,reina valera,pinyin,mandarín,sermón
+```
+
+**Description** (both stores, up to 4,000)
+
+```text
+La aplicación oficial de la Iglesia Adventista del Séptimo Día China de Nueva York. Lee la Biblia en los idiomas que habla nuestra familia de la iglesia, sigue el boletín de cada semana y mantente en contacto con la vida de la iglesia en Queens y Brooklyn.
+
+LA BIBLIA EN TUS IDIOMAS
+• Cinco traducciones: la Berean Standard Bible (BSB), la versión King James (KJV), la Versión Unión China en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
+• La lectura bilingüe muestra una segunda traducción debajo de cada versículo, para leer en chino y en inglés lado a lado.
+• Pinyin con marcas de tono sobre el texto chino, para quienes aprenden el idioma y para leer en voz alta.
+• Biblia en audio en mandarín (CUV y CUVS) y en inglés (BSB), con reproducción en segundo plano, controles en la pantalla de bloqueo y temporizador de apagado.
+• Guarda y comparte versículos, y toca un versículo para ver sus notas y el texto original en hebreo o griego.
+• Un versículo del día para comenzar cada día.
+
+VIDA DE IGLESIA
+• El boletín semanal de Queens y Brooklyn: orden del culto, Escuela Sabática, himnos y lecturas bíblicas, de esta semana y de la próxima. Las lecturas se abren directamente en la Biblia.
+• Una cuenta regresiva hasta el comienzo del sábado, a la puesta del sol en Nueva York.
+• Mira la transmisión en vivo y los sermones anteriores en YouTube, escucha el archivo de audio y únete al estudio bíblico por Zoom.
+• La lección de Escuela Sabática de esta semana, además de lecciones infantiles por edad.
+• Horarios de culto, ubicaciones con indicaciones, la historia de la iglesia, nuestros ministerios y nuestro equipo pastoral.
+• Para nuevos miembros y visitantes: lo que creen los adventistas del séptimo día y cómo unirse a la iglesia.
+
+HIMNOS Y LECTURA
+• Explora y busca en seis himnarios: el himnario adventista en inglés (Seventh-day Adventist Hymnal, 1985) y cinco himnarios chinos (505, 506 y tres ediciones de Hymns of Praise 707). Encuentra los números equivalentes entre el himnario en inglés y el himnario chino 505.
+• Una biblioteca de clásicos cristianos, libros infantiles, escritos de Elena G. de White y obras de los pioneros adventistas, que se abren desde sus fuentes en línea.
+
+DIEZMOS Y OFRENDAS
+• Consulta las formas de dar, incluida la página de ofrendas en línea de la iglesia en AdventistGiving, que se abre en tu navegador.
+
+PARA TODOS
+• Inglés, chino tradicional, chino simplificado y español.
+• Texto del 100 % al 200 %, temas claro y oscuro, y compatibilidad con lectores de pantalla.
+• Sin cuenta, sin anuncios y sin rastreo.
+
+Las letras y partituras de los himnos, los libros de la biblioteca, las lecciones y los videos se abren en los sitios web de sus editores.
 ```
 
 ## Categories, URLs, and contact
