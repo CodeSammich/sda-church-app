@@ -59,6 +59,16 @@ const HERO_HEADER_ROUTES = new Set([
   'team',
 ]);
 
+// Other routes whose page opens with a hero image under the status bar. The
+// `index` routes are Home, Explore, and You.
+const HERO_UNDER_STATUS_BAR_ROUTES = new Set([
+  'index',
+  'library',
+  'library/[collection]',
+  'hymn-lookup',
+  'sabbath-school',
+]);
+
 const READER_SEARCH_LABELS = {
   en: {
     searchBiblePlaceholder: 'Search this chapter...',
@@ -240,9 +250,11 @@ export const GlobalHeader = (props: any) => {
       iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
       iconButtonSize: compactControlHeight,
     });
+  // Every tab's header stays mounted and sees the Bible's route while it's
+  // open, so only the header showing the Bible's controls reports them.
   useEffect(() => {
-    if (isBiblePage) setBibleControlsStacked(stackBibleControls);
-  }, [isBiblePage, setBibleControlsStacked, stackBibleControls]);
+    if (isBiblePage && bibleTranslation) setBibleControlsStacked(stackBibleControls);
+  }, [bibleTranslation, isBiblePage, setBibleControlsStacked, stackBibleControls]);
   const isHeroHeaderRoute = HERO_HEADER_ROUTES.has(props.route?.name);
   const showTitleChip = props.options?.showTitleChip ?? !isHeroHeaderRoute;
   const appBarHeight = getGlobalHeaderHeightForScale(
@@ -278,6 +290,7 @@ export const GlobalHeader = (props: any) => {
     showTitleChip: props.options?.showTitleChip,
     isHymnalPage,
     hymnalSearchCollapsed,
+    hasHero: isHeroHeaderRoute || HERO_UNDER_STATUS_BAR_ROUTES.has(props.route?.name),
   });
   const statusBarBackdropAnim = useRef(
     new Animated.Value(heroUnderStatusBar ? 0 : 1),
@@ -704,6 +717,7 @@ export const GlobalHeader = (props: any) => {
               >
                 {bibleTranslation && (
                   <View
+                    aria-hidden
                     accessibilityElementsHidden
                     importantForAccessibility="no-hide-descendants"
                     onLayout={(event) =>
@@ -737,84 +751,93 @@ export const GlobalHeader = (props: any) => {
                     {translationChipContent}
                   </Pressable>
                 )}
-                {!isBibleSearchExpanded && onBibleVerseHelpPress && (
-                  <Pressable
-                    onPress={onBibleVerseHelpPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={bibleVerseHelpLabel}
-                    style={({ pressed }) => [
-                      styles.collapsedSearchButton,
-                      { height: compactControlHeight, width: compactControlHeight },
-                      {
-                        backgroundColor: theme.colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
-                    ]}
-                  >
-                    <AppIcon
-                      name="gesture-tap-hold"
-                      size={23}
-                      textScale={headerTextScale}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                  </Pressable>
-                )}
-                {!isBibleSearchExpanded && onBibleSavedVersesPress && (
-                  <Pressable
-                    onPress={onBibleSavedVersesPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      bibleSavedVerseCount > 0
-                        ? `${bibleSavedVersesLabel}: ${bibleSavedVerseCount}`
-                        : bibleSavedVersesLabel
-                    }
-                    style={({ pressed }) => [
-                      styles.collapsedSearchButton,
-                      { height: compactControlHeight, width: compactControlHeight },
-                      {
-                        backgroundColor: theme.colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
-                    ]}
-                  >
-                    <AppIcon
-                      name={bibleSavedVerseCount > 0 ? 'bookmark' : 'bookmark-outline'}
-                      size={23}
-                      textScale={headerTextScale}
-                      color={
+                {/* The icon buttons stay together: beside the translation button,
+                    or on their own row beneath it when the header stacks. */}
+                <View
+                  style={[
+                    styles.bibleIconRow,
+                    stackBibleControls && styles.stackedBibleIconRow,
+                  ]}
+                >
+                  {!isBibleSearchExpanded && onBibleVerseHelpPress && (
+                    <Pressable
+                      onPress={onBibleVerseHelpPress}
+                      accessibilityRole="button"
+                      accessibilityLabel={bibleVerseHelpLabel}
+                      style={({ pressed }) => [
+                        styles.collapsedSearchButton,
+                        { height: compactControlHeight, width: compactControlHeight },
+                        {
+                          backgroundColor: theme.colors.surface,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      <AppIcon
+                        name="gesture-tap-hold"
+                        size={23}
+                        textScale={headerTextScale}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    </Pressable>
+                  )}
+                  {!isBibleSearchExpanded && onBibleSavedVersesPress && (
+                    <Pressable
+                      onPress={onBibleSavedVersesPress}
+                      accessibilityRole="button"
+                      accessibilityLabel={
                         bibleSavedVerseCount > 0
-                          ? theme.colors.primary
-                          : theme.colors.onSurfaceVariant
+                          ? `${bibleSavedVersesLabel}: ${bibleSavedVerseCount}`
+                          : bibleSavedVersesLabel
                       }
-                    />
-                  </Pressable>
-                )}
-                {isBibleSearchExpanded ? (
-                  <Animated.View style={{ width: bibleSearchWidth }}>
-                    {renderSearchbar(true)}
-                  </Animated.View>
-                ) : (
-                  <Pressable
-                    onPress={expandBibleSearch}
-                    accessibilityRole="button"
-                    accessibilityLabel={searchLabels.searchBiblePlaceholder}
-                    style={({ pressed }) => [
-                      styles.collapsedSearchButton,
-                      { height: compactControlHeight, width: compactControlHeight },
-                      {
-                        backgroundColor: theme.colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
-                    ]}
-                  >
-                    <AppIcon
-                      name="magnify"
-                      size={24}
-                      textScale={headerTextScale}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                  </Pressable>
-                )}
+                      style={({ pressed }) => [
+                        styles.collapsedSearchButton,
+                        { height: compactControlHeight, width: compactControlHeight },
+                        {
+                          backgroundColor: theme.colors.surface,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      <AppIcon
+                        name={bibleSavedVerseCount > 0 ? 'bookmark' : 'bookmark-outline'}
+                        size={23}
+                        textScale={headerTextScale}
+                        color={
+                          bibleSavedVerseCount > 0
+                            ? theme.colors.primary
+                            : theme.colors.onSurfaceVariant
+                        }
+                      />
+                    </Pressable>
+                  )}
+                  {isBibleSearchExpanded ? (
+                    <Animated.View style={{ width: bibleSearchWidth }}>
+                      {renderSearchbar(true)}
+                    </Animated.View>
+                  ) : (
+                    <Pressable
+                      onPress={expandBibleSearch}
+                      accessibilityRole="button"
+                      accessibilityLabel={searchLabels.searchBiblePlaceholder}
+                      style={({ pressed }) => [
+                        styles.collapsedSearchButton,
+                        { height: compactControlHeight, width: compactControlHeight },
+                        {
+                          backgroundColor: theme.colors.surface,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      <AppIcon
+                        name="magnify"
+                        size={24}
+                        textScale={headerTextScale}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    </Pressable>
+                  )}
+                </View>
               </View>
             ) : hymnalSearchCollapsed ? (
               <Pressable
@@ -956,10 +979,23 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     gap: 8,
   },
+  // Two rows: the translation button across the top, the icon buttons beneath.
+  // Explicit rows rather than wrapping: the header stacks only after it
+  // measures, and a percentage flex basis set then isn't applied until
+  // something else lays the row out again.
   stackedBibleSearchContainer: {
-    flexWrap: 'wrap',
-    alignContent: 'center',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    justifyContent: 'center',
     paddingVertical: 6,
+  },
+  bibleIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stackedBibleIconRow: {
+    alignSelf: 'flex-end',
   },
   translationChip: {
     minWidth: 68,
@@ -1013,7 +1049,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   stackedTranslationChip: {
-    flexBasis: '100%',
+    alignSelf: 'stretch',
     maxWidth: '100%',
   },
   collapsedSearchButton: {

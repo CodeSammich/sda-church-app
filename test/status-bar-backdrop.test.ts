@@ -18,10 +18,19 @@ const scroll = (y: number) =>
   ({ nativeEvent: { contentOffset: { x: 0, y } } }) as NativeSyntheticEvent<NativeScrollEvent>;
 
 describe('status bar backdrop', () => {
-  const page = { isHymnalPage: false, hymnalSearchCollapsed: false };
+  const page = { isHymnalPage: false, hymnalSearchCollapsed: false, hasHero: false };
 
   it('covers the status bar on pages without a hero there', () => {
     expect(isHeroUnderStatusBar(page)).toBe(false);
+  });
+
+  it("leaves a hero page's hero uncovered before its options arrive", () => {
+    // The first draw has no page options yet; the route decides.
+    expect(isHeroUnderStatusBar({ ...page, hasHero: true })).toBe(true);
+    const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
+    expect(header).toContain(
+      'hasHero: isHeroHeaderRoute || HERO_UNDER_STATUS_BAR_ROUTES.has(props.route?.name)',
+    );
   });
 
   it('leaves a hero uncovered until it scrolls away', () => {
@@ -29,8 +38,8 @@ describe('status bar backdrop', () => {
     expect(isHeroUnderStatusBar({ ...page, showTitleChip: false })).toBe(true);
     expect(isHeroUnderStatusBar({ ...page, showTitleChip: true })).toBe(false);
     // Hymnals, which collapse their search then.
-    expect(isHeroUnderStatusBar({ isHymnalPage: true, hymnalSearchCollapsed: false })).toBe(true);
-    expect(isHeroUnderStatusBar({ isHymnalPage: true, hymnalSearchCollapsed: true })).toBe(false);
+    expect(isHeroUnderStatusBar({ ...page, isHymnalPage: true, hymnalSearchCollapsed: false })).toBe(true);
+    expect(isHeroUnderStatusBar({ ...page, isHymnalPage: true, hymnalSearchCollapsed: true })).toBe(false);
     // A page that says so itself.
     expect(isHeroUnderStatusBar({ ...page, heroUnderStatusBar: true, showTitleChip: true })).toBe(true);
     expect(isHeroUnderStatusBar({ ...page, heroUnderStatusBar: false })).toBe(false);
@@ -60,6 +69,8 @@ describe('status bar backdrop', () => {
       'app/(tabs)/index.tsx',
       'app/(tabs)/explore/index.tsx',
       'app/(tabs)/explore/library.tsx',
+      'app/(tabs)/explore/library/[collection].tsx',
+      'app/(tabs)/home/hymn-lookup.tsx',
       'app/(tabs)/you/index.tsx',
     ]) {
       const source = readFileSync(screen, 'utf8');
@@ -67,5 +78,12 @@ describe('status bar backdrop', () => {
       expect(source).toMatch(/heroUnderStatusBar(: isCarouselBehindStatusBar)?[,\s}]/);
       expect(source).toContain('onScroll={onScroll}');
     }
+  });
+
+  it("keeps Home's options stable between its countdown's re-renders", () => {
+    // A new object every second would update the tab navigator every second.
+    const home = readFileSync('app/(tabs)/index.tsx', 'utf8');
+    expect(home).toContain('useMemo(() => ({ heroUnderStatusBar }), [heroUnderStatusBar])');
+    expect(home).toContain('<Stack.Screen options={screenOptions as any} />');
   });
 });

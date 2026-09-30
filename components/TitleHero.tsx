@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo } from 'react';
 import {
   type ImageSourcePropType,
+  type LayoutChangeEvent,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -16,10 +17,11 @@ import { Text } from 'react-native-paper';
 type TitleHeroProps = {
   imageSource: ImageSourcePropType;
   title: string;
+  onLayout?: (event: LayoutChangeEvent) => void;
 };
 
 /** A compact page hero for routes that need visual identity without a verse panel. */
-export function TitleHero({ imageSource, title }: TitleHeroProps) {
+export function TitleHero({ imageSource, title, onLayout }: TitleHeroProps) {
   const theme = useAppTheme();
   const headerHeight = useGlobalHeaderHeight();
   const { textScale } = useTextSize();
@@ -30,7 +32,10 @@ export function TitleHero({ imageSource, title }: TitleHeroProps) {
   );
 
   return (
-    <View style={[styles.shadow, { shadowColor: theme.dark ? '#000000' : '#243B53' }]}>
+    <View
+      onLayout={onLayout}
+      style={[styles.shadow, { shadowColor: theme.dark ? '#000000' : '#243B53' }]}
+    >
       <View style={styles.frame}>
         <ImageBackground
           source={imageSource}

@@ -70,22 +70,32 @@ export const shouldStackBibleControls = ({
  * Whether a page's hero image is under the status bar, where the header leaves
  * it uncovered. A page can say so with `heroUnderStatusBar`. Otherwise, a page
  * that shows its title chip once the hero scrolls away, or a hymnal that
- * collapses its search then, has its hero in view until that happens. Any
- * other page has only its background or scrolled content there.
+ * collapses its search then, has its hero in view until that happens.
+ *
+ * A page's options reach the header a moment after it first draws, so until
+ * then `hasHero`, from the route, decides; otherwise the strip would flash
+ * over every hero as its page opens. A page without a hero has only its
+ * background or scrolled content under the status bar.
  */
 export const isHeroUnderStatusBar = ({
   heroUnderStatusBar,
   showTitleChip,
   isHymnalPage,
   hymnalSearchCollapsed,
+  hasHero,
 }: {
   heroUnderStatusBar?: boolean;
   showTitleChip?: boolean;
   isHymnalPage: boolean;
   hymnalSearchCollapsed: boolean;
+  hasHero: boolean;
 }) =>
   heroUnderStatusBar ??
-  (showTitleChip !== undefined ? !showTitleChip : isHymnalPage && !hymnalSearchCollapsed);
+  (showTitleChip !== undefined
+    ? !showTitleChip
+    : isHymnalPage
+      ? !hymnalSearchCollapsed
+      : hasHero);
 
 /**
  * The header's height, including the top safe area. The Bible reader passes

@@ -45,6 +45,9 @@ export default function HomeScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
+  // Home re-renders every second for the countdown. A new options object each
+  // time would update the tab navigator, and every tab's header, as often.
+  const screenOptions = useMemo(() => ({ heroUnderStatusBar }), [heroUnderStatusBar]);
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
   const effectiveTextScale = Math.max(1, fontScale * textScale);
@@ -399,7 +402,7 @@ export default function HomeScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ heroUnderStatusBar } as any} />
+      <Stack.Screen options={screenOptions as any} />
       <ScrollView
         style={navigationStyles.container}
         contentContainerStyle={{ paddingTop: 0 }}

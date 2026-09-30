@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { shouldStackBibleControls } from '@/hooks/useGlobalHeaderHeight';
 
 // The Bible header's translation button shares a row with the icon buttons
@@ -24,5 +25,12 @@ describe("the Bible header's controls", () => {
   it('start on one row until both widths are measured', () => {
     expect(shouldStackBibleControls({ ...phone, translationButtonWidth: 0 })).toBe(false);
     expect(shouldStackBibleControls({ ...phone, rowWidth: 0, translationButtonWidth: 500 })).toBe(false);
+  });
+
+  it('are reported only by the header that shows them', () => {
+    // Every tab's header stays mounted and sees the Bible's route while it's
+    // open; one without the controls must not overwrite the Bible header's report.
+    const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
+    expect(header).toContain('if (isBiblePage && bibleTranslation) setBibleControlsStacked(stackBibleControls);');
   });
 });

@@ -3241,6 +3241,7 @@ export default function BibleScreen() {
   // dock controls may still stack at large text sizes, but these three compact
   // selectors remain a single horizontal navigation row.
   const stackChapterControls = false;
+  const chipPaddingHorizontal = textScale >= 1.75 ? 8 : 10;
 
   const renderPreviousChapterButton = () =>
     !isFirstChapter ? (
@@ -3284,8 +3285,16 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            flexGrow: 50,
-            flexBasis: 0,
+            // When the three chips don't fit, only the book name shortens. The
+            // chapter number and the Verse label keep their width, up to a share
+            // of the row that leaves the book chip room even at the largest
+            // text sizes, so the row never runs over the chapter arrows.
+            // Narrower side padding than other pills leaves room for "Psalms",
+            // "119", and "Verse" on most iPhones.
+            paddingHorizontal: chipPaddingHorizontal,
+            flexBasis: 'auto',
+            flexGrow: 1,
+            flexShrink: 1,
           },
         ]}
         onPress={() => setModalType('book')}
@@ -3318,8 +3327,11 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            flexGrow: 35,
-            flexBasis: 0,
+            paddingHorizontal: chipPaddingHorizontal,
+            flexBasis: 'auto',
+            flexGrow: 0,
+            flexShrink: 0,
+            maxWidth: '30%',
           },
         ]}
         onPress={() => setModalType('chapter')}
@@ -3347,10 +3359,11 @@ export default function BibleScreen() {
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
-            // Sized to its label, so "Verse" and "Versículo" aren't cut off.
+            paddingHorizontal: chipPaddingHorizontal,
             flexBasis: 'auto',
             flexGrow: 0,
             flexShrink: 0,
+            maxWidth: '40%',
           },
         ]}
         onPress={() => setModalType('verse')}

@@ -19,13 +19,12 @@ describe('ImageBackground', () => {
     const image = screen.UNSAFE_getByType(Image);
     expect(image.props.source).toEqual({ uri: 'hero.jpg' });
     expect(image.props.resizeMode).toBe('cover');
-    expect(StyleSheet.flatten(image.props.style)).toEqual({
-      position: 'absolute',
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-    });
+    const imageStyle = StyleSheet.flatten(image.props.style);
+    expect(imageStyle).toMatchObject({ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 });
+    // Image puts a bundled image's file size ahead of this style; clearing
+    // width and height lets the edges size it instead.
+    expect(imageStyle).toHaveProperty('width', undefined);
+    expect(imageStyle).toHaveProperty('height', undefined);
     // The view takes the style and layout callback, so the image is clipped to
     // its corners and a page can measure the whole hero.
     expect(image.parent?.props.style).toBe(style);
