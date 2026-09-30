@@ -354,21 +354,24 @@ No sign-in is required; every feature works without an account.
 
 This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server, and reads Bible text and audio from public Bible services.
 
+Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
+
 The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the browser. The app takes no payments, and giving unlocks nothing in the app.
 
 Hymn lyrics and sheet music, library books, Sabbath School lessons, and videos open on their publishers' websites.
 
 The app plays Bible audio in the background, which is why it uses the audio background mode on iOS and a media playback service on Android.
 
-The app collects no personal data, shows no ads, and uses no analytics.
+The app collects no personal data, shows no ads, and uses no analytics. Its source code is public: https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app
 ```
 
 ## Declarations
 
 The [store policy audit](store-policy-audit.md) has the details; confirm its
 [release blockers](store-policy-audit.md#required-confirmations-before-submission) first.
-The answers given in Play Console, question by question, are in
-[Google Play Console answers](play-console-answers.md).
+The answers given, question by question, are in
+[Google Play Console answers](play-console-answers.md) and
+[App Store Connect answers](app-store-connect-answers.md).
 
 - **App Privacy** (App Store) and **Data safety** (Google Play): the likely answer is that
   no data is collected or shared. The app has no accounts, analytics, or ads, and keeps

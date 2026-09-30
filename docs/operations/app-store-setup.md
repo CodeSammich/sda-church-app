@@ -40,7 +40,9 @@ For who owns each account, see
 - When creating the App Store Connect app record, use a unique internal **SKU**.
   Users never see it.
 - The listing text, reviewer notes, and screenshot guidance are in
-  [Store listings](store-listing.md).
+  [Store listings](store-listing.md). The answers for App Information, App Privacy,
+  Pricing and Availability, and the version page are in
+  [App Store Connect answers](app-store-connect-answers.md).
 - Select **iOS/iPadOS**, unless the church also plans a separate Mac app.
 - Enable capabilities and services on the App ID only when the app actually uses
   them. Turning on an option in the portal adds nothing by itself: Siri support,
