@@ -27,6 +27,9 @@ export type LibraryItem = Readonly<{
   // languages show the English text above, so titles stay in one language.
   traditionalChinese?: LibraryItemText;
   simplifiedChinese?: LibraryItemText;
+  // A Chinese book with no English translation yet: only Chinese readers see
+  // it in the Library, on its shelf, in the featured books, and in search.
+  onlyForChineseReaders?: boolean;
 }>;
 
 type LibraryItemText = Readonly<{
@@ -198,6 +201,7 @@ const churchDocuments: readonly LibraryItem[] = [
     description:
       'Fifty-two readings of Bible verses and Ellen G. White quotations on the Sabbath, compiled by churches in China. The Brooklyn bulletin prints one each week.',
     language: 'zh',
+    onlyForChineseReaders: true,
     rights: 'church-hosted',
     sourceName: 'New York Chinese SDA Church',
     sourceUrl: 'https://app.nyccsda.org/library/sabbath_encouragement.pdf',
@@ -245,11 +249,15 @@ export const getLibraryItemShelf = (item: LibraryItem): LibraryShelf =>
 export const getLibraryItemsForLanguage = (language: SupportedLanguage) => {
   const preferredLanguage = language === 'zh' || language === 'zh-cn' ? 'zh' : 'en';
   const rank = (item: LibraryItem) => (item.language === preferredLanguage ? 0 : 1);
+  const forThisReader = (items: readonly LibraryItem[]) =>
+    items
+      .filter((item) => preferredLanguage === 'zh' || !item.onlyForChineseReaders)
+      .sort((a, b) => rank(a) - rank(b));
 
   return {
-    publicDomainWorks: [...publicDomainWorks].sort((a, b) => rank(a) - rank(b)),
-    officialCollections: [...officialCollections].sort((a, b) => rank(a) - rank(b)),
-    churchDocuments: [...churchDocuments].sort((a, b) => rank(a) - rank(b)),
+    publicDomainWorks: forThisReader(publicDomainWorks),
+    officialCollections: forThisReader(officialCollections),
+    churchDocuments: forThisReader(churchDocuments),
   };
 };
 

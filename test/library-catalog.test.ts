@@ -120,6 +120,15 @@ describe('library catalog', () => {
     );
   });
 
+  it('lists Sabbath Encouragement only for Chinese readers until it has an English translation', () => {
+    const lists = (language: 'en' | 'es' | 'zh' | 'zh-cn') =>
+      getLibraryItemsForLanguage(language).churchDocuments.map(({ id }) => id);
+    expect(lists('zh')).toContain('sabbath-encouragement');
+    expect(lists('zh-cn')).toContain('sabbath-encouragement');
+    expect(lists('en')).not.toContain('sabbath-encouragement');
+    expect(lists('es')).not.toContain('sabbath-encouragement');
+  });
+
   it('shows each title in one language: Chinese for Chinese readers, English otherwise', () => {
     const [sabbathEncouragement] = LIBRARY_CATALOG.churchDocuments;
     const title = (language: 'en' | 'es' | 'zh' | 'zh-cn') =>
