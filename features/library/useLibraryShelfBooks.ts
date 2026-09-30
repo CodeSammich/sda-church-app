@@ -12,10 +12,11 @@ import { EGW_BOOKS, getEgwCoverUrlsForLanguage } from './EgwBookCatalog';
 import {
   getLibraryItemDisplayText,
   getLibraryItemShelf,
+  getLibraryItemSource,
   getLibraryItemsForLanguage,
   type LibraryItem,
 } from './LibraryCatalog';
-import { BOOK_COVERS, EGW_COVERS } from './LibraryCovers';
+import { BOOK_COVERS, EGW_COVERS, SPANISH_BOOK_COVERS } from './LibraryCovers';
 import {
   EGW_BOOK_IDS_BY_SHELF,
   LIBRARY_SHELVES,
@@ -154,20 +155,23 @@ export function useLibraryShelfBooks(
       .filter((item) => getLibraryItemShelf(item) === shelf && matchesQuery(item))
       .map((item) => {
         const text = getLibraryItemDisplayText(item, language);
+        const source = getLibraryItemSource(item, language);
         return {
           key: item.id,
           title: text.title,
           author: text.author,
           accessibilityHint:
-            item.rights === 'official-external'
+            source.rights === 'official-external'
               ? labels.opensOfficial
-              : item.rights === 'church-hosted'
+              : source.rights === 'church-hosted' || source.rights === 'permission-to-copy'
                 ? labels.opensPdf
-                : item.sourceName === 'Internet Archive'
+                : source.sourceName === 'Internet Archive'
                   ? labels.opensInternetArchive
                   : labels.opensGutenberg,
-          coverSource: BOOK_COVERS[item.id],
-          onPress: () => openURL(item.sourceUrl, labels.title, labels.openError),
+          coverSource:
+            (language === 'es' && item.spanish && SPANISH_BOOK_COVERS[item.id]) ||
+            BOOK_COVERS[item.id],
+          onPress: () => openURL(source.sourceUrl, labels.title, labels.openError),
         };
       });
     return orderShelfBooks(shelf, [...egwBooks, ...otherBooks]);

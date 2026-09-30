@@ -94,8 +94,11 @@ export default function LegalScreen() {
         Library reading sources: Ellen G. White editions and Uriah Smith&apos;s 1897
         Daniel and the Revelation are hosted externally on EGW Writings. The other
         Adventist pioneer and Christian classic works are public domain in the U.S. and
-        hosted externally on Project Gutenberg or the Internet Archive. The church hosts
-        its own copy of Sabbath Encouragement (安息日勉言).
+        hosted externally on Project Gutenberg or the Internet Archive. In Spanish, three
+        books open in Spanish editions: Cristo Nuestro Salvador and Historia del Sábado on
+        EGW Writings, and Chapel Library&apos;s abridged El progreso del peregrino, which
+        Chapel Library allows anyone to copy. The church hosts its own copy of Sabbath
+        Encouragement (安息日勉言).
       </Text>
 
       <Text

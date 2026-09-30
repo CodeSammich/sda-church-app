@@ -12,7 +12,9 @@ Usage (Python 3 with Pillow):
 
 To add a book, add an entry to SPECS (its id matches the catalog entry in
 features/library/LibraryCatalog.ts) and register the PNG in BOOK_COVERS in
-features/library/LibraryCovers.ts.
+features/library/LibraryCovers.ts. A Spanish edition's cover takes the book's id
+with `-es` and goes in SPANISH_BOOK_COVERS. The CJK font argument is only read
+for covers with a Chinese title; pass any placeholder when drawing others.
 """
 import math
 import os
@@ -444,6 +446,13 @@ SPECS = [
      'author': 'Richard Sibbes', 'color': (43, 58, 69), 'emblem': 'reed'},
     {'id': 'sabbath-encouragement', 'title': 'Sabbath Encouragement', 'cjk_title': '安息日勉言',
      'author': 'Bible and Ellen G. White', 'color': (35, 38, 74), 'emblem': 'sunset'},
+    # Spanish editions, in the colors and emblems of their English covers.
+    {'id': 'bunyan-pilgrims-progress-es', 'title': 'El progreso del peregrino para todos',
+     'author': 'Juan Bunyan', 'color': (78, 30, 46), 'emblem': 'city'},
+    {'id': 'story-of-jesus-es', 'title': 'Cristo Nuestro Salvador',
+     'author': 'Elena G. de White', 'color': (30, 56, 100), 'emblem': 'shepherd'},
+    {'id': 'andrews-history-sabbath-es', 'title': 'Historia del Sábado',
+     'author': 'J. N. Andrews', 'color': (58, 46, 72), 'emblem': 'hourglass'},
 ]
 
 if __name__ == '__main__':
