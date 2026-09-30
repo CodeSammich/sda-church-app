@@ -21,7 +21,7 @@
       "lang": "en"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "org.nyccsda.app",
       "config": {
         "usesNonExemptEncryption": false
