@@ -16,6 +16,21 @@ It should not be submitted until the release owner completes the confirmation it
 below, especially the donation recipient, public privacy URL, and content-rights
 records.
 
+## Status, September 29, 2026
+
+Both store listings are set up for the first release, 0.42.0. Of the confirmations
+below, only the donation recipient is still open.
+
+| Item | Status |
+| --- | --- |
+| [1. Nonprofit identity and donation flow](#1-nonprofit-identity-and-donation-flow--release-blocker) | **Open.** Someone who handles the church's finances confirms the recipient and the AdventistGiving page. |
+| [2. Privacy URL and declarations](#2-privacy-url-and-declarations--release-blocker) | Done. The privacy policy is live, and every answer is recorded in [App Store Connect answers](app-store-connect-answers.md) and [Google Play Console answers](play-console-answers.md). |
+| [3. Rights](#3-content-image-audio-and-trademark-rights--release-blocker) | Done for this release: photo consents and the Bible audio approval are on file. Follow-up: written confirmation for the Adventist name and logo. |
+| [4. Children and age](#4-children-and-age-declarations) | Done. A general church app for 13 and over, not a kids app; rated Everyone and 4+. |
+| [5. Permissions](#5-permissions-and-native-behavior) | Declared: no advertising ID, and media playback for Bible audio. After the first production upload, check Play Console's permission list for the bundle shows no storage, overlay, or Wi-Fi state permissions. |
+
+The final gate's last step, testing the signed builds on physical devices, is under way.
+
 ## Google Play create-app declarations
 
 The Play Console create-app flow asks the organization to acknowledge the [Developer
@@ -149,6 +164,32 @@ covering:
 - any permission required from HymnsForWorship.org, zgaxr.com, EGW Writings, or the
   relevant publishers for the app’s current metadata, thumbnails, and navigation.
 
+**Photos of people, confirmed September 2026:** everyone who can be recognized in the
+app's photos gave written consent by message: the two people on Meet Our Team, and the
+leader at the front of each fellowship photo on the Fellowship page. Screenshots of
+the messages are in the church's **IT Admin** shared drive in Google Drive, open only
+to IT administrators, not in this repository. Other people in the fellowship
+photos appear mostly from behind or in profile. Get written consent before adding a
+photo of anyone else, and keep people out of store screenshots.
+
+**The other rights, reviewed September 2026.** None of these blocks the first release;
+the logo confirmation is a follow-up.
+
+- **Chinese Union Version audio:** Audio Power's written approval (issue #134) is on
+  file. Keep a copy with the photo consents in the IT Admin shared drive.
+- **Adventist name and logo:** used as an organized member congregation, which the
+  church's identity guidelines provide for (see [Branding & Trademark Policy](../LEGAL_BRANDING.md)),
+  but there's no written confirmation yet.
+  Ask the conference's communication department to confirm the church may use them in
+  its app, and file the reply. App Review can ask for proof that an app is authorized
+  to use a well-known organization's name and logo.
+- **Hymn and book sites:** links to public pages need no permission, and hymn titles and
+  numbers are facts. Two things go further. The app bundles six hymnal cover images
+  (`assets/images/hymnals/`) to identify the books, and the Library shows cover
+  thumbnails loaded from EGW Writings, which the Ellen G. White Estate runs. Both are
+  low risk; if a publisher objects, replace its covers with text tiles or the app's own
+  art.
+
 Apple’s [Intellectual Property guideline](https://developer.apple.com/app-store/review/guidelines/)
 requires that app content be created by the developer or licensed for use. Google’s
 content policies similarly apply to content displayed by the app and content reached
@@ -228,6 +269,9 @@ store listing. Google’s current published enrollment terms include a one-time 
 $25 registration fee; nonprofit status is not a substitute for identity verification.
 
 ## Submission metadata and reviewer notes
+
+The finished listing text and reviewer notes are in
+[Store listings](store-listing.md).
 
 Use a unique, accurate title and describe the app as a church community utility with:
 

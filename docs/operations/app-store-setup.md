@@ -39,6 +39,10 @@ For who owns each account, see
   Connect.
 - When creating the App Store Connect app record, use a unique internal **SKU**.
   Users never see it.
+- The listing text, reviewer notes, and screenshot guidance are in
+  [Store listings](store-listing.md). The answers for App Information, App Privacy,
+  Pricing and Availability, and the version page are in
+  [App Store Connect answers](app-store-connect-answers.md).
 - Select **iOS/iPadOS**, unless the church also plans a separate Mac app.
 - Enable capabilities and services on the App ID only when the app actually uses
   them. Turning on an option in the portal adds nothing by itself: Siri support,
@@ -294,12 +298,13 @@ the account can't be stranded. Remove access when someone leaves the role.
    (`https://app.nyccsda.org/privacy-policy.html`), app access (no login is
    needed), ads (none), content rating, target audience, and Data safety. Use the
    answers in [store-policy-audit.md](store-policy-audit.md) so they match the
-   app as submitted.
+   app as submitted. The answers the church gave, including the advertising ID and
+   foreground service declarations, are in
+   [Google Play Console answers](play-console-answers.md).
 4. Under **Store listing**, add the short and full descriptions, the 512 × 512
-   icon, the 1024 × 500 feature graphic, and phone screenshots. Describe the app
-   as the store policy audit's
-   [submission notes](store-policy-audit.md#submission-metadata-and-reviewer-notes)
-   do.
+   icon (`public/icon-512x512.png`), the 1024 × 500 feature graphic, and phone
+   screenshots. The text, in English and Chinese, is in
+   [Store listings](store-listing.md).
 
 The package name, `org.nyccsda.app`, is fixed by the first upload and can't be
 changed afterwards.
