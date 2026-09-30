@@ -453,12 +453,13 @@ Costs, published limits, and load for each one are in
 **Cloudflare is the only service with a card on file**, and only to renew the domain.
 Nothing else in this architecture has a payment method, so nothing else can charge
 the church. Keep it that way: when a new service asks for a card, choose another
-service. Anything else in the Cloudflare account, such as the Cantonese audio Worker
+service. Anything else in the Cloudflare account, such as the
+[Workers that hold API keys](operations/admin-runbook.md#workers-that-hold-api-keys)
 (#241), must stay on a free plan that fails at its limits instead of billing.
 
 | Service | Payment method | Why |
 | --- | --- | --- |
-| Cloudflare | **A card** | Renews `nyccsda.org`, about $10 a year. The Cantonese audio Worker runs in the same account on Workers Free, which can't bill. See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
+| Cloudflare | **A card** | Renews `nyccsda.org`, about $10 a year. The Workers that hold API keys, starting with Faith Comes By Hearing's Bible Brain, run in the same account on Workers Free, which can't bill. See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
 | Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
 | Google Play | None | The one-time $25 registration is paid; nothing recurs. |
 | Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |

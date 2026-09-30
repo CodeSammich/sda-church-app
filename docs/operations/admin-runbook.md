@@ -330,10 +330,8 @@ lapses, the privacy policy, support, and download pages above go down with it.
   pay-as-you-go product
   ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
   Free plans have no overage charges: going over a limit makes requests fail. The
-  Cantonese audio Worker
-  ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241))
-  runs in this account on Workers Free; if Cloudflare ever offers to upgrade it,
-  decline.
+  [Workers that hold API keys](#workers-that-hold-api-keys) run in this account on
+  Workers Free; if Cloudflare ever offers to upgrade one, decline.
 
 **Keep the account recoverable:**
 
@@ -353,15 +351,41 @@ lapses, the privacy policy, support, and download pages above go down with it.
 - The card on file hasn't expired, and auto-renew is on.
 - Cloudflare's free plan still works the way the next section describes.
 
+### Workers that hold API keys
+
+Some services only answer an app that has an API key, and a key inside the app isn't
+secret: anyone can pull it out of the compiled app. So the church keeps each key in a
+small Cloudflare Worker that calls the service for the app
+([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)).
+The first is the **Bible Brain Worker**, for Faith Comes By Hearing's Bible Brain API,
+whose first use is Cantonese Bible audio; other FCBH recordings and other services that
+need a key can follow. Each new one follows the same rules:
+
+- **Workers Free only,** in this account; see the next section for why that can't bill.
+- **As narrow as possible:** only the requests the app needs, only for the IDs the
+  church allows, with a per-caller rate limit, so it can't be used as an open relay.
+  Most API licenses forbid that, as FCBH's does.
+- **The key only as a Worker secret,** never in the app, the repository, a response,
+  or a log.
+- **Nothing cached or stored** unless the service's license allows it.
+- **A fallback in the app,** so the feature still works, or quietly disappears, if the
+  service or the Worker stops.
+- **Deployed from a computer with `wrangler`,** not through Cloudflare's GitHub
+  integration, which would build other branches with the key available.
+- **Documented** like the Bible Brain Worker's guide,
+  `docs/operations/bible-brain-audio.md`: what it allows, its limits, how to deploy
+  it, and how to turn it off.
+
 ### Why a free Worker can't bill
 
-The Cantonese audio Worker shares the account that has the card. That's safe because
-the free plan has no usage charges at all:
+These Workers share the account that has the card. That's safe because the free plan
+has no usage charges at all:
 
 - **At the limit, it stops instead of charging.** Workers Free allows 100,000 requests a
   day, resetting at midnight UTC. Past that, Cloudflare answers with Error 1027 until
   the reset ([Workers limits](https://developers.cloudflare.com/workers/platform/limits/#daily-requests)).
-  Cantonese audio stops for the rest of the day; nothing is billed.
+  What the Workers serve, such as Cantonese audio, stops for the rest of the day;
+  nothing is billed.
 - **Charges only exist on Workers Paid,** a subscription of at least $5 a month that
   someone has to choose; usage beyond its allowance is billed only there
   ([Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/)).
@@ -374,9 +398,10 @@ the free plan has no usage charges at all:
   ([Reaffirming our commitment to free](https://blog.cloudflare.com/cloudflares-commitment-to-free/)).
 
 That's a company's promise, not a contract, so the yearly checkup re-reads those
-pages. If Cloudflare ever starts charging for free Workers, delete the Worker, or move
-it to an account with no card on file, before the change takes effect. The Cantonese
-narrator then stops working, and the Mandarin narration carries on.
+pages. If Cloudflare ever starts charging for free Workers, delete the Workers, or
+move them to an account with no card on file, before the change takes effect. The
+features they serve then stop, and each one's fallback takes over: for Cantonese
+audio, the Mandarin narration.
 
 ## Yearly checkup
 

@@ -34,6 +34,11 @@ const CHECKLIST = [
         'why-a-free-worker-cant-bill',
       ],
       [
+        'Cloudflare: each Worker that holds an API key, starting with the Bible Brain Worker, is still needed and its key still works. Delete any Worker for a service the app no longer uses.',
+        'docs/operations/admin-runbook.md',
+        'workers-that-hold-api-keys',
+      ],
+      [
         'Google Cloud: the Play upload project (`sda-church-app-play`) still has no billing account.',
         'docs/operations/service-limits-and-costs.md',
         'google-cloud-play-upload-service-account',
