@@ -77,8 +77,8 @@ requested. Still open:
 
 > [!NOTE]
 > **Built, but off.** The app doesn't play any Faith Comes By Hearing content yet.
-> FCBH issued the church an API key on September 30, 2026. The Worker proxy and the
-> app's Cantonese narration follow the terms below and ship turned off, until the
+> FCBH issued the church an API key on September 30, 2026. The Apps Script that holds
+> it and the app's Cantonese narration follow the terms below and ship turned off, until the
 > checklist in [Cantonese Bible audio](operations/bible-brain-audio.md#before-turning-it-on)
 > is done, including FCBH's answer on whether a private proxy is acceptable
 > ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)).
@@ -98,10 +98,12 @@ would affect this project, quoted from the agreement (not legal advice):
 | Copying by users | "Your Application shall not allow End Users to reproduce, copy, or replicate any DBP Content", apart from `/download` content. | No share-audio-file or export features for FCBH content. |
 | Termination | FCBH "may immediately terminate or suspend this Agreement … at any time and for any reason". | FCBH audio must never be the only source for a feature; keep a fallback, as the CUV audio has. |
 
-The Cloudflare Worker that holds the key is in `cloudflare-workers/bible-brain-audio/`,
-and [Cantonese Bible audio](operations/bible-brain-audio.md) explains how it follows
-the proxy and caching terms above. It must stay on Cloudflare's Workers Free plan,
-which returns errors at its limits instead of billing.
+The Apps Script web app that holds the key is in `apps-script-bible-audio/`, and
+[Cantonese Bible audio](operations/bible-brain-audio.md) explains how it follows the
+proxy and caching terms above. It runs under Google Workspace for Nonprofits, which
+has no payment method, so it can't be billed. The app keeps each chapter's signed
+link in memory until that chapter plays, never longer than the link lasts; whether
+that counts as caching is among the questions put to FCBH.
 
 Before the app uses or hosts any of these, get written confirmation from the
 recording's rights holder and record it in #134 and in this section. Adding Spanish

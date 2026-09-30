@@ -7,10 +7,10 @@ import {
 import type { TranslationBook } from './BibleService';
 import {
   getCuvChapterAudioLinks,
-  isBibleBrainAudioUrl,
   supportsAudioPowerCuv,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
+import { isBibleBrainAudioUrl, withBibleBrainLinks } from './BibleBrainAudio';
 import type { BibleAudioQueueControls, BibleAudioQueueItem } from './BibleAudioPlayer.types';
 
 const BSB_AUDIO_READER_PRIORITY = ['souer', 'hays', 'david'] as const;
@@ -240,6 +240,8 @@ interface BibleAudioQueueOptions {
   selectedReader?: string;
   translationId: string;
   translationLabel: string;
+  /** For tests: the time the queue is built. */
+  now?: number;
 }
 
 const takeWhileRecorded = <T,>(items: T[], isRecorded: (item: T) => boolean) => {
@@ -247,8 +249,8 @@ const takeWhileRecorded = <T,>(items: T[], isRecorded: (item: T) => boolean) => 
   return end === -1 ? items : items.slice(0, end);
 };
 
-/** Builds future track descriptors without fetching chapter text or audio. */
-export const buildBibleAudioQueue = ({
+/** The queue's chapters, with each recording's configured addresses. */
+const buildQueueItems = ({
   albumTitle,
   artist,
   books,
@@ -320,3 +322,36 @@ export const buildBibleAudioQueue = ({
       },
     ];
   });
+
+// The selected narrator's address for the chapter playing before the queue.
+const getCurrentReaderUrl = ({
+  currentBookId,
+  currentChapter,
+  selectedReader,
+  translationId,
+}: BibleAudioQueueOptions) => {
+  if (!selectedReader || !supportsAudioPowerCuv(translationId)) return undefined;
+  const source = getCuvChapterAudioLinks(currentBookId, currentChapter)[selectedReader];
+  return Array.isArray(source) ? source[0] : source;
+};
+
+/**
+ * Builds future track descriptors without fetching chapter text or audio.
+ * Cantonese chapters play from links looked up beforehand with
+ * lookUpBibleBrainAudio, so the queue ends at the first one without a link that
+ * will still work when it's reached (#241).
+ */
+export const buildBibleAudioQueue = (options: BibleAudioQueueOptions): BibleAudioQueueItem[] =>
+  withBibleBrainLinks(buildQueueItems(options), getCurrentReaderUrl(options), options.now);
+
+/**
+ * The Cantonese script addresses to look up before playing: the chapter about
+ * to play and the ones the queue would hold after it.
+ */
+export const getBibleBrainAddressesToLookUp = (options: BibleAudioQueueOptions) =>
+  [
+    getCurrentReaderUrl(options),
+    ...buildQueueItems(options).map(({ source }) =>
+      source && typeof source === 'object' ? source.uri : undefined,
+    ),
+  ].filter((url): url is string => !!url && isBibleBrainAudioUrl(url));

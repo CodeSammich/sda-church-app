@@ -55,6 +55,7 @@ import {
 } from '@/services/BibleAudioPlayer';
 import {
   buildBibleAudioQueue,
+  getBibleBrainAddressesToLookUp,
   shouldStopBibleAudioAtChapterEnd,
   type BibleAudioSleepTimerSetting,
   configureBibleAudioPlayback,
@@ -66,6 +67,12 @@ import {
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
 import { CANTONESE_CUV_READER } from '@/services/BibleAudioSources';
+import {
+  forgetBibleBrainLink,
+  getPlayableBibleBrainUrl,
+  isBibleBrainAudioUrl,
+  lookUpBibleBrainAudio,
+} from '@/services/BibleBrainAudio';
 import { BIBLE_BRAIN_AUDIO } from '@/constants/ExternalLinks';
 import type {
   BibleAudioChapterIdentity,
@@ -1141,10 +1148,10 @@ export default function BibleScreen() {
 
   // `fromChapter` is the chapter being loaded, which can differ from both the
   // reader and the native player's current track during a failover.
-  const buildUpcomingAudioQueue = (fromChapter?: BibleAudioChapterIdentity) => {
+  const getUpcomingAudioQueueOptions = (fromChapter?: BibleAudioChapterIdentity) => {
     const activeChapter =
       fromChapter ?? (audioPlayer.currentStatus as BibleAudioStatus).activeChapter;
-    return buildBibleAudioQueue({
+    return {
       albumTitle: labels.audioPlayer,
       artist: selectedAudioReader
         ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
@@ -1158,8 +1165,16 @@ export default function BibleScreen() {
       selectedReader: selectedAudioReader,
       translationId: supportedTranslation.id,
       translationLabel: supportedTranslation.name,
-    });
+    };
   };
+  const buildUpcomingAudioQueue = (fromChapter?: BibleAudioChapterIdentity) =>
+    buildBibleAudioQueue(getUpcomingAudioQueueOptions(fromChapter));
+  // Cantonese chapters play from FCBH links that the church's script looks up;
+  // get them for the chapter and the ones queued after it before playing (#241).
+  const usesBibleBrainAudio = () =>
+    selectedAudioUrlsRef.current.some((url) => isBibleBrainAudioUrl(url));
+  const lookUpUpcomingBibleBrainAudio = (fromChapter?: BibleAudioChapterIdentity) =>
+    lookUpBibleBrainAudio(getBibleBrainAddressesToLookUp(getUpcomingAudioQueueOptions(fromChapter)));
 
   const clearChapterAutoplayRetry = () => {
     if (chapterAutoplayRetryTimeoutRef.current) {
@@ -1401,16 +1416,19 @@ export default function BibleScreen() {
       chapter: book
         ? { bookId: book.id, chapter: chapterNum, translationId: supportedTranslation.id }
         : undefined,
-      sources: selectedAudioUrlsRef.current.map((uri) => {
+      // A Cantonese chapter without a looked-up link has nothing to play yet.
+      sources: selectedAudioUrlsRef.current.flatMap((address) => {
+        const uri = isBibleBrainAudioUrl(address) ? getPlayableBibleBrainUrl(address) : address;
+        if (!uri) return [];
         const title = getBibleAudioMediaTitle(
           `${book?.name || labels.bible} ${chapterNum}`,
           supportedTranslation.name,
           uri,
         );
-        return {
+        return [{
           source: { uri, name: title },
           metadata: { title, artist, albumTitle: labels.audioPlayer },
-        };
+        }];
       }),
     };
   };
@@ -1484,6 +1502,8 @@ export default function BibleScreen() {
   // A native player reports each playback error once, as it happens. The web
   // player switches hosts itself.
   useBibleAudioSourceErrors(audioPlayer, (event) => {
+    // A Cantonese link that failed may have expired; look it up again next time.
+    forgetBibleBrainLink(event.sourceUrl);
     if (Platform.OS !== 'web') audioSources.handleError(event);
   });
 
@@ -1493,6 +1513,11 @@ export default function BibleScreen() {
     try {
       await reactivateNativeAudioFocus();
       if (attempt !== audioSources.attempt) return;
+      if (usesBibleBrainAudio()) {
+        setIsAudioLoading(true);
+        await lookUpUpcomingBibleBrainAudio(getReaderAudioTarget().chapter);
+        if (attempt !== audioSources.attempt) return;
+      }
       await audioSources.start();
     } catch (e) {
       setIsAudioLoading(false);
@@ -1799,11 +1824,16 @@ export default function BibleScreen() {
     }
 
     if (Platform.OS === 'web' || Platform.OS === 'android') {
-      try {
-        audioPlayer.setQueue?.(buildUpcomingAudioQueue());
-      } catch (error) {
-        console.warn('Bible audio queue replenishment failed; keeping current queue.', error);
-      }
+      const replenish = () => {
+        try {
+          audioPlayer.setQueue?.(buildUpcomingAudioQueue());
+        } catch (error) {
+          console.warn('Bible audio queue replenishment failed; keeping current queue.', error);
+        }
+      };
+      // Look up links for the Cantonese chapters now in reach first.
+      if (usesBibleBrainAudio()) void lookUpUpcomingBibleBrainAudio().then(replenish);
+      else replenish();
     }
   }, [audioStatus.activeChapter, supportedTranslation.id]);
 
