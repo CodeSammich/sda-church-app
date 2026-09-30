@@ -21,7 +21,7 @@
  * macOS with Xcode.
  */
 const { execFileSync, spawnSync } = require('node:child_process');
-const { appendFileSync, copyFileSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { appendFileSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
 const { dirname, join, resolve } = require('node:path');
 
 const projectRoot = resolve(__dirname, '..');
@@ -99,6 +99,16 @@ const buildManifest = (settings, route = '') => ({
   ),
   ...(route ? { [ROUTE_KEY]: route } : {}),
 });
+
+/**
+ * Writes an App Store copy of a screenshot without its alpha channel: the
+ * Simulator's PNGs have one, and App Store Connect rejects screenshots with
+ * transparency. Every pixel is opaque already, so the image looks the same.
+ */
+const writeAppStoreCopy = async (source, destination) => {
+  const sharp = require('sharp');
+  await sharp(source).removeAlpha().png().toFile(destination);
+};
 
 /** The App Store copies: app-store/<language>/<NN>-<shot>.png, in upload order. */
 const planAppStore = (config) =>
@@ -251,7 +261,7 @@ const capture = async (outDir) => {
     }
     const file = join(outDir, copy.file);
     mkdirSync(dirname(file), { recursive: true });
-    copyFileSync(join(outDir, `ios/${copy.name}.png`), file);
+    await writeAppStoreCopy(join(outDir, `ios/${copy.name}.png`), file);
   }
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
@@ -293,6 +303,7 @@ module.exports = {
   planCaptures,
   buildManifest,
   planAppStore,
+  writeAppStoreCopy,
   manifestPath,
   statusBarClear,
 };

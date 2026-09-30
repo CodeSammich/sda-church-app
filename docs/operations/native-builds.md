@@ -928,7 +928,8 @@ environment requires approval, and fails if it doesn't.
 
 **App Store screenshots.** The images are 1320 × 2868, the App Store's 6.9-inch iPhone
 size. The shots listed under `appStore` in the screen list are also copied, numbered in
-upload order, to `screens/app-store/<language>/`, ready to upload; see
+upload order, to `screens/app-store/<language>/`, without the transparency the
+Simulator's PNGs have, which App Store Connect rejects. They're ready to upload; see
 [Store assets](../store-assets/README.md). The Home screen's verse of the day and
 countdown change daily, which its `changesDaily` entry marks for when these images are
 compared with known-good copies.
