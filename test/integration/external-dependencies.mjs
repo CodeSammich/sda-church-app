@@ -234,6 +234,18 @@ for (const [name, catId, path] of hymnCatalogs) {
   });
 }
 
+// oEmbed answers only for public videos, so a removed or private recording fails.
+await record('daily 506 hymn recording sample', 'YouTube', async () => {
+  const { videos } = await readJson('features/hymnal/Chinese506YouTube.json');
+  const [number, videoId] = dailySample(Object.entries(videos), 506);
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const video = await getJson(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watchUrl)}`);
+  if (Number(String(video.title).match(/^\s*(\d+)/)?.[1]) !== Number(number)) {
+    throw new Error(`${watchUrl} for hymn ${number} is now titled "${video.title}"`);
+  }
+  return `hymn ${number}: ${video.title}`;
+});
+
 await record('directory publishes the expected English hymnal links', 'Hymns for Worship', async () => {
   const url = 'https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/';
   const { response, text: html } = await getTextPage(url, {
@@ -300,6 +312,29 @@ await record('daily public-domain book sample', 'Project Gutenberg', () => {
   return probe(sample.url, { allowed: [429] }).then(
     (detail) => `${detail}: ebook ${sample.ebookId}`,
   );
+});
+
+// Spanish readers see a book's Spanish edition when it has one. Those open on
+// EGW Writings or in the publisher's own free copy.
+const spanishEditionUrls = [...libraryCatalogSource.matchAll(
+  /spanish:\s*\{[^}]*?sourceUrl:\s*'(https:\/\/[^']+)'/g,
+)].map(([, url]) => url);
+
+await record('Spanish editions open', 'Library', async () => {
+  if (spanishEditionUrls.length !== 3) {
+    throw new Error(`found ${spanishEditionUrls.length} Spanish edition links, expected 3`);
+  }
+  for (const url of spanishEditionUrls) {
+    if (new URL(url).hostname === 'text.egwwritings.org') {
+      await getTextPage(url, { expectedHosts: ['text.egwwritings.org'] });
+    } else {
+      await probe(url, {
+        binary: true,
+        expectedHosts: ['www.chapellibrary.org', 'chapellibrary.org'],
+      });
+    }
+  }
+  return `${spanishEditionUrls.length} Spanish editions`;
 });
 
 // An Internet Archive item can later be moved into a lending collection or
@@ -451,7 +486,6 @@ const navigationLinks = [
   ['church building image', 'https://assets.adventistconnect.org/newyork2/2026/07/13221703/church_building.jpg', true],
   ['pastor image', 'https://assets.adventistconnect.org/newyork2/2026/07/13221020/moses_fang-1536x1024.jpg', true],
   ['Bible worker image', 'https://assets.adventistconnect.org/newyork2/2026/07/13221317/sarah_fang-1536x1024.jpg', true],
-  ['children ministry image', 'https://assets.adventistconnect.org/newyork2/2026/07/13221357/geng_shuang-1536x1024.jpg', true],
   ['Flushing fellowship image', 'https://assets.adventistconnect.org/newyork2/2026/07/01230029/flushing_fellowship_3.jpg', true],
   ['Elmhurst Sabbath image', 'https://assets.adventistconnect.org/newyork2/2026/07/19124827/elmhurst_sabbath.png', true],
   ['English-to-Chinese hymnal lookup image', 'https://assets.adventistconnect.org/newyork2/2026/08/09144957/SDAH_1985_to_Chinese_505_Hymnal_Lookup-scaled.jpg', true],
@@ -475,6 +509,25 @@ const navigationLinks = [
 
 for (const [name, url, binary = false, allowed = []] of navigationLinks) {
   await record(name, 'App navigation', () => probe(url, { binary, allowed: [...allowed, 429] }));
+}
+
+// The store listings and printed QR codes point at these pages, so they must
+// keep working through the church's own domain. See
+// docs/operations/admin-runbook.md#the-app-website-appnyccsdaorg.
+const websitePages = [
+  ['privacy policy page', 'https://app.nyccsda.org/privacy-policy.html', 'Privacy Policy'],
+  ['app support page', 'https://app.nyccsda.org/support.html', 'App Support'],
+  ['app download page', 'https://app.nyccsda.org/download', 'play.google.com/store/apps/details?id=org.nyccsda.app'],
+];
+
+for (const [name, url, expectedText] of websitePages) {
+  await record(name, 'App website', async () => {
+    const { response, text } = await getTextPage(url, {
+      expectedHosts: ['app.nyccsda.org', 'new-york-chinese-seventh-day-adventist.github.io'],
+    });
+    if (!text.includes(expectedText)) throw new Error(`${url} no longer contains "${expectedText}"`);
+    return describeResponse(response);
+  });
 }
 
 await record('public bulletin JSON contract', 'Bulletin API', async () => {

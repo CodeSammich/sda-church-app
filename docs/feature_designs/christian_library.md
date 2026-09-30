@@ -32,6 +32,16 @@ The Library page shows each shelf as a row of covers that scrolls sideways, in t
 | John Bunyan, *The Pilgrim's Progress* (1678) | Project Gutenberg record | Explicitly marked public domain in the U.S.; broadly accepted Protestant classic |
 | Ellen G. White writings | Official EGW Writings website | Copyright and edition rights remain with the official service |
 
+Three books have a Spanish edition, which Spanish readers see and open instead, with a Spanish version of its cover (`spanish` in `features/library/LibraryCatalog.ts`):
+
+| Book | Spanish edition | Source |
+| --- | --- | --- |
+| *The Story of Jesus* | *Cristo Nuestro Salvador* | EGW Writings, the official Spanish edition |
+| J. N. Andrews, *History of the Sabbath* | *Historia del Sábado* | EGW Writings, the Adventist Pioneer Library's 2020 translation of the 1873 edition |
+| *The Pilgrim's Progress* | *El progreso del peregrino para todos (condensado)* | Chapel Library's free PDF, an abridged edition it allows anyone to copy |
+
+Their rights bases are in [Library Sources and Licensing](../LEGAL.md#library-sources-and-licensing).
+
 ### EGW Writings editions
 
 The EGW collection is organized by work, not by the website's current catalog language. Each curated work stores a separate official book ID and first readable paragraph for English, Chinese, and Spanish. The reader's app language is shown first in the edition dialog, but all three editions remain visible. Edition buttons deep-link directly into the selected translation.

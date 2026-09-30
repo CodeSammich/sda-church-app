@@ -17,6 +17,7 @@ does and what still needs a person.
 - [Shipping a release to `main`](#shipping-a-release-to-main)
 - [Bulletin QR codes](#bulletin-qr-codes)
 - [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script)
+- [The app website (`app.nyccsda.org`)](#the-app-website-appnyccsdaorg)
 - [Native app binaries](#native-app-binaries)
 - [Android PR preview APKs](#android-pr-preview-apks)
 - [iOS PR preview builds](#ios-pr-preview-builds)
@@ -166,7 +167,7 @@ What runs after the merge to `main`:
 
 | Workflow | Automatic? | What you do |
 | --- | --- | --- |
-| Deploy Web Preview and Tag | Yes | Nothing. It tags `vx.y.z` and publishes the web app. |
+| Deploy Website and Tag | Yes | Nothing. It tags `vx.y.z` and publishes [the app website](#the-app-website-appnyccsdaorg). |
 | Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK, upload the AAB to Google Play internal testing, and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 
@@ -178,17 +179,32 @@ expected.
 ## Bulletin QR codes
 
 **Workflow:** Actions → **Generate physical bulletin QR codes**
-(`.github/workflows/generate-physical-bulletin-qr.yml`). Manual only.
+(`.github/workflows/generate-physical-bulletin-qr.yml`).
 
-Run it only when a giving URL changes. It overwrites the QR images the printed
-bulletin uses.
+The QR codes and where they point are listed in
+[`scripts/bulletin-qr-codes.json`](../../scripts/bulletin-qr-codes.json):
 
-1. Select **Run workflow** and choose **`main`** under *Use workflow from*. The upload
-   step always runs the upload script from `main`, so running from a release branch
-   only tests image generation.
-2. Enter the Queens and Brooklyn AdventistGiving URLs. They must be `https://`.
-3. Approve the `production` deployment when the upload job starts.
-4. Open the **Upload QR codes to Google Drive** log and check:
+| File | Destination |
+| --- | --- |
+| `queens_adventist_giving_qr_code_368x368.jpg` | Queens AdventistGiving page |
+| `brooklyn_adventist_giving_qr_code_368x368.jpg` | Brooklyn AdventistGiving page |
+| `mobile_app_qr_code_368x368.jpg` | `https://app.nyccsda.org/download`, which sends phones to their app store |
+
+The app code uses the church's own `app.nyccsda.org` address, never the GitHub Pages
+address it redirects to, so printed codes keep working if the website moves.
+
+**To change a destination,** edit that file in a pull request. The workflow runs by
+itself when a change to the file, to `scripts/generate-qr.mjs`, or to the workflow
+reaches `main`, so a changed URL can't be forgotten. It also runs from **Run
+workflow** at any time. Either way it overwrites the QR images the printed bulletin
+uses, and nothing reaches Drive until someone approves:
+
+1. For a manual run, select **Run workflow** and choose **`main`** under *Use
+   workflow from*. The upload step always runs the upload script from `main`, so
+   running from a release branch only tests image generation.
+2. Approve the `production` deployment when the upload job starts. Leaving it
+   unapproved is safe: the run expires without changing Drive.
+3. Open the **Upload QR codes to Google Drive** log and check:
    - `Google Drive scopes: …`. The login currently has `drive.file` (change only
      files it created) and `drive.metadata.readonly` (see all files). If the upload
      fails with `403 … has not granted the app … write access to the file`, the file
@@ -198,13 +214,11 @@ bulletin uses.
      the bulletin script picks the first file with a matching name anywhere in Drive
      and doesn't skip trashed files. See
      [Credentials](#credentials-that-need-attention).
-   - `Replaced …` or `Uploaded …` for `queens_adventist_giving_qr_code_368x368.jpg`
-     and `brooklyn_adventist_giving_qr_code_368x368.jpg`. **Replaced** keeps the
+   - `Replaced …` or `Uploaded …` for each file in the table. **Replaced** keeps the
      existing Drive file, its ID, and its sharing link.
-5. The next printed bulletin you generate picks the images up from Drive by name.
+4. The next printed bulletin you generate picks the images up from Drive by name.
 
-The images are also saved as the run's **adventistgiving-qr-codes** artifact for 90
-days.
+The images are also saved as the run's **bulletin-qr-codes** artifact for 90 days.
 
 **What the upload script may write.** `scripts/upload-google-drive.mjs` only uploads
 `.apk`, `.aab`, and `.ipa` files and these QR codes:
@@ -220,8 +234,9 @@ Sabbath Encouragement PDF can't be overwritten. To upload a new file, add its ex
 name to the allowlist in a reviewed pull request.
 
 Which QR slots print is controlled in the bulletin script; see
-[Giving QR slots](bulletin-automation.md#giving-qr-slots). The Zelle and mobile app
-codes are tracked in #237.
+[Giving QR slots](bulletin-automation.md#giving-qr-slots). The mobile app code is
+generated, but its slot stays reserved until the app is public in both stores (#323).
+The Zelle codes are still made by hand. Both are tracked in #237.
 
 ## Deploying the bulletin Apps Script
 
@@ -240,6 +255,56 @@ codes are tracked in #237.
 
 The workflow updates the existing web app deployment, so the URL the mobile app uses
 doesn't change. Never create a new deployment just to publish code.
+
+## The app website (`app.nyccsda.org`)
+
+**Treat the website as production.** The App Store and Google Play listings link to its
+privacy policy and support pages, and printed QR codes point at its download page. If
+one of them breaks, a store can reject an update or delist the app, and printed QR codes
+stop working.
+
+| Address | File in the repository | Used by |
+| --- | --- | --- |
+| `https://app.nyccsda.org/privacy-policy.html` | `public/privacy-policy.html` | Both store listings |
+| `https://app.nyccsda.org/support.html` | `public/support.html` | The App Store's Support URL |
+| `https://app.nyccsda.org/download` | `public/download.html` | QR codes and download links (#237) |
+| `https://app.nyccsda.org/library/sabbath_encouragement.pdf` | `public/library/sabbath_encouragement.pdf` | The app's Library |
+| `https://app.nyccsda.org/` | The browser build of the app | Testing and demos; not an officially supported product |
+
+**How it's published:** every merge to `main` runs **Deploy Website and Tag**, which
+builds the website and pushes it to the `gh-pages` branch. GitHub Pages serves it at
+`https://new-york-chinese-seventh-day-adventist.github.io/sda-church-app/`. The
+**Deletion Protection** ruleset keeps `gh-pages` from being deleted. Files in `public/`
+are copied as they are.
+
+**How the address works:** a Cloudflare redirect rule sends `app.nyccsda.org` to that
+GitHub Pages address with a permanent (301) redirect, keeping the path and any query.
+So `app.nyccsda.org/download?stay` becomes `…/sda-church-app/download?stay`. Both stores
+accept a redirect. Two similar addresses are not the app website:
+
+- `nyccsda.org` is the church's main website, which forwards to adventistchurch.org, so
+  `nyccsda.org/sda-church-app/…` and `nyccsda.org/privacy-policy.html` don't work.
+- `www.nyccsda.org` currently returns 403. It should forward like `nyccsda.org` does.
+
+**Rules:**
+
+- **Keep these pages as static HTML in `public/`,** not as app screens. App screens, such
+  as `/you/privacy`, are blank until JavaScript runs, and the stores' checkers may not
+  run it.
+- **Never rename or remove them.** The store listings and printed QR codes point at
+  them. Add new pages beside them instead.
+- **Keep them independent of the browser build of the app,** so changing or retiring it
+  can't break them.
+- **Watch the daily External Dependency Monitor.** It checks the privacy, support, and
+  download pages through `app.nyccsda.org` and opens an alert issue if one fails; see
+  [External dependency monitor alerts](#external-dependency-monitor-alerts).
+
+**Later:** opening the app straight from a link, with Android App Links and iOS Universal
+Links, needs `app.nyccsda.org` to serve the site itself instead of redirecting, because
+Apple doesn't follow redirects for the file that enables it. That means setting
+`app.nyccsda.org` as the GitHub Pages custom domain, pointing a Cloudflare CNAME at
+`new-york-chinese-seventh-day-adventist.github.io` in place of the redirect rule, and
+changing the web build's base path from `/sda-church-app` to `/`.
 
 ## Native app binaries
 
@@ -277,15 +342,42 @@ until you release it:
 
 1. **Test** the build on real devices, from TestFlight and from the Play Store's
    internal testing link.
-2. **Apple:** on the app's **Distribution** page in App Store Connect, set the version
-   to the release's version, select the build, and **Add for Review**.
-3. **Google Play:** Play Console → **Test and release → Internal testing** → promote
+2. **Check the store pages still fit the release:**
+   - If it changes what the app does, such as analytics, notifications, a form, or
+     location, update the declarations first. Each store's answers doc has a **When to
+     revisit** table: [App Store](app-store-connect-answers.md#when-to-revisit) and
+     [Google Play](play-console-answers.md#when-to-revisit).
+   - If it changes how the app looks, retake the screenshots, and replace the copies in
+     [`docs/store-assets/`](../store-assets/README.md).
+   - If it adds or removes a feature, update the descriptions in
+     [Store listings](store-listing.md) first, then paste them into each store.
+3. **Apple:** in App Store Connect, select **+** next to **iOS App** and add the new
+   version, such as `0.43.0`. It must match the build's version. The previous version's
+   description, keywords, screenshots, URLs, and reviewer notes carry over. Write
+   **What's New in This Version** for each language, select the build, and **Add for
+   Review**. After approval, release it: the version is set to release manually.
+4. **Google Play:** Play Console → **Test and release → Internal testing** → promote
    the release to production. Promoting copies the testers' "What's new" text, so
-   rewrite it for the public first.
+   rewrite it for the public first, in each language.
+5. **Each January:** update the App Store **Copyright** year on the new version.
 
 The upload jobs, their `store-upload` secrets, what each result means, and how to
 upload by hand are in
 [Automatic store uploads](native-builds.md#automatic-store-uploads).
+
+### Store listings and declarations
+
+What each store shows, and every answer given in its consoles, is kept in the
+repository. Change the doc first, then the store, so the two never drift apart.
+
+| What | Where |
+| --- | --- |
+| Name, subtitle, descriptions, keywords, and reviewer notes, in English, Chinese, and Spanish | [Store listings](store-listing.md) |
+| Screenshots and the feature graphic | [`docs/store-assets/`](../store-assets/README.md) |
+| App Store answers: age rating, privacy, availability, and version page | [App Store Connect answers](app-store-connect-answers.md) |
+| Google Play answers: content rating, audience, Data safety, and foreground service | [Google Play Console answers](play-console-answers.md) |
+| Why the answers are what they are, and the release blockers | [Store policy audit](store-policy-audit.md) |
+| One-time account and app setup | [App Store and Google Play setup](app-store-setup.md) |
 
 ### Store toolchain requirements
 
@@ -349,6 +441,23 @@ The slow builds and tests run on the release pull request that includes the upda
 When Dependabot reports `security_update_not_possible`, there's no fix Dependabot can
 apply yet, usually because another package pins the old version. Recheck after that
 package updates.
+
+### Bundled copy of decode-uri-component
+
+Expo Router's `query-string` 7 uses `decode-uri-component` 0.2.2, which slows to a
+crawl on malformed percent-encoding in a URL
+([GHSA-vcc3-ghjq-m6fr](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr)). The fix,
+0.5.0, ships only as an ES module, which `query-string` 7 can't load. So
+[`vendor/decode-uri-component`](../../vendor/decode-uri-component) holds 0.5.0
+converted to CommonJS, unchanged otherwise and under its MIT license. `package.json`
+installs it as a dependency, and its `overrides` entry
+(`"decode-uri-component": "$decode-uri-component"`) makes every package use it.
+`test/decode-uri-component.test.ts` checks that `query-string` loads it and that the
+lockfile holds no other copy.
+
+Remove the folder, the dependency, and the override once Expo Router depends on a
+`query-string` that uses `decode-uri-component` 0.5.0 or later (`query-string` 8 and
+up). Check with `npm view expo-router@next dependencies.query-string`.
 
 ## External dependency monitor alerts
 

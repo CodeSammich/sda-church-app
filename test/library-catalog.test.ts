@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  getLibraryItemDisplayText,
   getLibraryItemShelf,
+  getLibraryItemSource,
   getLibraryItemsForLanguage,
   LIBRARY_CATALOG,
 } from '@/features/library/LibraryCatalog';
@@ -117,5 +119,79 @@ describe('library catalog', () => {
     expect(catalog.publicDomainWorks).toHaveLength(
       LIBRARY_CATALOG.publicDomainWorks.length,
     );
+  });
+
+  it('lists Sabbath Encouragement only for Chinese readers until it has an English translation', () => {
+    const lists = (language: 'en' | 'es' | 'zh' | 'zh-cn') =>
+      getLibraryItemsForLanguage(language).churchDocuments.map(({ id }) => id);
+    expect(lists('zh')).toContain('sabbath-encouragement');
+    expect(lists('zh-cn')).toContain('sabbath-encouragement');
+    expect(lists('en')).not.toContain('sabbath-encouragement');
+    expect(lists('es')).not.toContain('sabbath-encouragement');
+  });
+
+  it('opens the Spanish edition of a book for Spanish readers', () => {
+    const books = Object.values(LIBRARY_CATALOG).flat();
+    const withSpanish = books.filter((item) => item.spanish);
+    expect(Object.fromEntries(withSpanish.map((item) => [item.id, item.spanish?.sourceUrl]))).toEqual({
+      'andrews-history-sabbath': 'https://text.egwwritings.org/read/14404.2',
+      'bunyan-pilgrims-progress': 'https://www.chapellibrary.org/pdf/books/ppfes.pdf',
+      'story-of-jesus': 'https://text.egwwritings.org/read/1747.3',
+    });
+
+    const pilgrim = books.find((item) => item.id === 'bunyan-pilgrims-progress')!;
+    expect(getLibraryItemDisplayText(pilgrim, 'es').title).toBe(
+      'El progreso del peregrino para todos (condensado)',
+    );
+    expect(getLibraryItemSource(pilgrim, 'es')).toEqual({
+      rights: 'permission-to-copy',
+      sourceName: 'Chapel Library',
+      sourceUrl: 'https://www.chapellibrary.org/pdf/books/ppfes.pdf',
+    });
+    // Other languages keep the English edition.
+    for (const language of ['en', 'zh', 'zh-cn'] as const) {
+      expect(getLibraryItemSource(pilgrim, language).sourceUrl).toBe('https://www.gutenberg.org/ebooks/131');
+      expect(getLibraryItemDisplayText(pilgrim, language).title).toBe("The Pilgrim's Progress");
+    }
+
+    for (const item of withSpanish) {
+      const spanish = item.spanish!;
+      // EGW Writings editions open in its reader; the rest in the publisher's own copy.
+      if (spanish.rights === 'official-external') {
+        expect(spanish.sourceUrl).toMatch(/^https:\/\/text\.egwwritings\.org\/read\/\d+\.\d+$/);
+      } else {
+        expect(spanish.rights).toBe('permission-to-copy');
+      }
+      expect(existsSync(join(process.cwd(), 'assets/images/library', `${item.id}-es.png`))).toBe(true);
+    }
+  });
+
+  it('lists books with a Spanish edition first for Spanish readers', () => {
+    const [first] = getLibraryItemsForLanguage('es').officialCollections;
+    expect(first.id).toBe('story-of-jesus');
+    const works = getLibraryItemsForLanguage('es').publicDomainWorks.map(({ id }) => id);
+    expect(works.slice(0, 2).sort()).toEqual(['andrews-history-sabbath', 'bunyan-pilgrims-progress']);
+  });
+
+  it('shows each title in one language: Chinese, Spanish, or English', () => {
+    const [sabbathEncouragement] = LIBRARY_CATALOG.churchDocuments;
+    const title = (language: 'en' | 'es' | 'zh' | 'zh-cn') =>
+      getLibraryItemDisplayText(sabbathEncouragement, language).title;
+    expect(title('en')).toBe('Sabbath Encouragement');
+    // No Spanish edition, so Spanish shows the English text.
+    expect(title('es')).toBe('Sabbath Encouragement');
+    expect(title('zh')).toBe('安息日勉言');
+    expect(title('zh-cn')).toBe('安息日勉言');
+    // A compilation of Bible verses and Ellen G. White quotations.
+    expect(sabbathEncouragement.author).toBe('Various');
+
+    // The English text, which every non-Chinese language shows, has no Chinese in it.
+    const chinese = /[\u3400-\u9fff]/;
+    for (const item of Object.values(LIBRARY_CATALOG).flat()) {
+      expect(`${item.id}: ${item.title} ${item.author}`).not.toMatch(chinese);
+      if (item.spanish) {
+        expect(`${item.id}: ${item.spanish.title} ${item.spanish.author}`).not.toMatch(chinese);
+      }
+    }
   });
 });

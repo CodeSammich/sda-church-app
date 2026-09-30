@@ -18,12 +18,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext } from 'react';
 import {
-  ImageBackground,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -138,10 +138,10 @@ export default function AboutChurchHistoryScreen() {
     },
     es: {
       title: 'Historia',
-      churchName: 'Iglesia Adventista\ndel Séptimo Día\nde Nueva York',
+      churchName: 'Iglesia Adventista\ndel Séptimo Día\nChina de Nueva York',
       history: 'Historia',
       historySubtext:
-        'La Iglesia Adventista del Séptimo Día de Nueva York comenzó como una humilde reunión en 1973. Hoy, somos una comunidad bilingüe vibrante dedicada a apoyar a nuestros vecinos.',
+        'La Iglesia Adventista del Séptimo Día China de Nueva York comenzó como una humilde reunión en 1973. Hoy, somos una comunidad bilingüe vibrante dedicada a apoyar a nuestros vecinos.',
       milestoneItems: [
         { year: '1973', event: 'Primera reunión' },
         { year: '1987', event: 'Organizada' },

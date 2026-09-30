@@ -16,6 +16,14 @@ export const BOOK_COVERS: Readonly<Record<string, ImageSourcePropType>> = {
   'sabbath-encouragement': require('../../assets/images/library/sabbath-encouragement.png'),
 };
 
+// Covers for Spanish editions, keyed by the book's catalog id, shown when the
+// app is in Spanish. The same generator draws them in Spanish.
+export const SPANISH_BOOK_COVERS: Readonly<Record<string, ImageSourcePropType>> = {
+  'andrews-history-sabbath': require('../../assets/images/library/andrews-history-sabbath-es.png'),
+  'bunyan-pilgrims-progress': require('../../assets/images/library/bunyan-pilgrims-progress-es.png'),
+  'story-of-jesus': require('../../assets/images/library/story-of-jesus-es.png'),
+};
+
 // Bundled covers for Ellen G. White's books, shown when the official covers
 // from EGW Writings (getEgwCoverUrlsForLanguage) can't load.
 export const EGW_COVERS: Readonly<Record<string, ImageSourcePropType>> = {

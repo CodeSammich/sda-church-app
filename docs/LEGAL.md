@@ -154,7 +154,8 @@ licenses for the biblical text. Font sources and exact terms are documented in
 ## Library Sources and Licensing
 
 The Library is a curated catalog, not a web search. It links to each book's source;
-the app doesn't bundle book text. The only document the church hosts is the Sabbath
+the app doesn't bundle book text. Where a book has a listed Spanish edition, Spanish
+readers see and open that edition instead; each has its own row below. The only document the church hosts is the Sabbath
 Encouragement PDF, served with the web app. The content policy, catalog, and
 research queue are in [Christian Library](feature_designs/christian_library.md). A
 work may be copied into the app only when the exact edition, including any
@@ -164,10 +165,12 @@ is linked, not copied.
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
-| **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book's official English, Chinese, or Spanish edition, and small cover thumbnails from `a.egwwritings.org` | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
+| **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book's official English, Chinese, or Spanish edition, and small cover thumbnails from `a.egwwritings.org`. *The Story of Jesus* opens in English, or for Spanish readers as the official Spanish edition, *Cristo Nuestro Salvador* (`text.egwwritings.org/read/1747.3`), whose chapters match it one for one | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
 | **Chinese Union Mission** (`api.sdabible.org`, `cms.sdabible.site`) | Cover thumbnails for the Chinese EGW editions only, loaded from its public catalog. The books themselves open on EGW Writings. | Same limited navigational use as the EGW covers. Image URLs are checked against the Mission's storage host. |
 | **Adventist pioneer books on EGW Writings** | A link to Uriah Smith, *Daniel and the Revelation*, 1897 edition (`text.egwwritings.org/read/12861.1`) | Published in 1897, so public domain in the U.S. The app only links to it. Later revisions, such as the 1944 *The Prophecies of Daniel and the Revelation*, are still copyrighted and must not be substituted. |
+| **Adventist Pioneer Library translation on EGW Writings** | For Spanish readers, J. N. Andrews, *Historia del Sábado* (`text.egwwritings.org/read/14404.2`), in place of the English *History of the Sabbath* | A 2020 Spanish translation of the 1873 edition by Rolando Itin, © Adventist Pioneer Library, published on EGW Writings; its credits page names the 1873 original. The translation is copyrighted, so the app only links to it. |
 | **Project Gutenberg** (`gutenberg.org`) | Links to six works: Joseph Bates, *The Seventh Day Sabbath, a Perpetual Sign* (1847); J. N. Andrews, *History of the Sabbath and First Day of the Week* (1873); Uriah Smith, *The State of the Dead and the Destiny of the Wicked* (1873); John Bunyan, *The Pilgrim's Progress* (1678); Andrew Murray, *Humility* (1895); John Foxe, *Fox's Book of Martyrs* (an abridged 19th-century American edition) | Each record is explicitly marked public domain in the U.S. |
+| **Chapel Library** (`chapellibrary.org`) | For Spanish readers, *El progreso del peregrino para todos (condensado)*, Chapel Library's abridged Spanish edition of John Bunyan's *The Pilgrim's Progress*, as its own free PDF (`chapellibrary.org/pdf/books/ppfes.pdf`) | © 2015 Chapel Library. Its notice grants express permission to reproduce it by any means, as long as no more than a nominal cost is charged and the notice and the rest of its page are kept. The app only links to Chapel Library's own copy, which carries the notice. The PDF calls itself "cuidadosamente abreviada" (carefully abridged), so its title says *condensado*. Checked 2026-09-30. |
 | **Internet Archive** (`archive.org`) | Links to two scans: Richard Sibbes, *The Bruised Reed* (1630), in the 1838 London edition by Pickering, which also contains *A Fountain Sealed* and *A Description of Christ* (`archive.org/details/bwb_C0-AVW-616`); and Andrew Murray, *Abide in Christ* (1882), in the 1895 Revell edition (Chicago, New York, Toronto), microfilmed from the National Library of Canada's copy (`archive.org/details/cihm_11323`) | Checked 2026-09-27 under [Internet Archive sources](#internet-archive-sources). The scanned title pages read 1838 and 1895. The only later material is the 1838 editor's preface and Revell's 1895 list of Murray's books. Both scans are openly downloadable rather than lend-only. The archive.org record `abideinchristtho0000murr` is a 2013 reprint catalogued as 1880 and must not be used. |
 | **The church's own copy** (`app.nyccsda.org/library/`) | *Sabbath Encouragement* (安息日勉言), the Chinese PDF the Brooklyn bulletin also uses, from `public/library/` | A compilation of Bible verses and Ellen G. White quotations, edited and shared freely by churches in China, who treat it as free of copyright. That comes secondhand, through the pastor ([#248](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/248#issuecomment-5852167793)); see [Sabbath Encouragement](operations/sabbath-encouragement-copyright.md). |
 
@@ -179,7 +182,8 @@ The covers of the other library books are the app's own designs too. *The Pilgri
 Progress* and *The Story of Jesus* use illustrations generated for the app. The rest
 are typographic covers in the style of old cloth bindings, drawn from scratch by
 [`scripts/generate-library-covers.py`](../scripts/generate-library-covers.py) with fonts
-under the SIL Open Font License; none reproduces a publisher's cover.
+under the SIL Open Font License; none reproduces a publisher's cover. The Spanish
+editions get Spanish versions of the same covers.
 
 ### Internet Archive sources
 
@@ -305,6 +309,29 @@ The checked-in mappings and their regeneration scripts are:
 - [`features/hymnal/Chinese707Hymnal.ts`](../features/hymnal/Chinese707Hymnal.ts) and
   [`scripts/scrape-chinese-707-hymnals.mjs`](../scripts/scrape-chinese-707-hymnals.mjs).
 
+### 506 hymn recordings on YouTube
+
+The 506 hymnal's YouTube button opens that hymn's recording from a
+[public YouTube playlist of the 506 hymnal](https://www.youtube.com/playlist?list=PLZpA9AftZl_JIt-MCXSfP364-qR3ddrd3),
+which the church recommended. It is published by CHTV 希望電視台 (Chinese Hope TV,
+[chinesehope.tv](https://chinesehope.tv/)), the Chinese-language Hope Channel of the
+Seventh-day Adventist Church's Northern Asia-Pacific Division, and the recordings carry
+its watermark. Hymns without a recording yet, and the 505 and 707
+hymnals, search YouTube instead. The same limits apply as for zgaxr:
+
+1. the repository stores only the playlist ID and one video ID per hymn number; it does
+   not copy, download, or embed the recordings;
+2. a video maps to a hymn only when its number and title match the hymnal, or a person
+   has compared a differing title with the hymn;
+3. the video opens in the YouTube app or browser, under YouTube's terms and the
+   uploader's rights; and
+4. the External Dependency Monitor checks a mapped video each day and fails when it is
+   no longer public.
+
+The mapping is [`features/hymnal/Chinese506YouTube.json`](../features/hymnal/Chinese506YouTube.json),
+regenerated with [`scripts/map-chinese-506-youtube.mjs`](../scripts/map-chinese-506-youtube.mjs)
+through the YouTube Data API.
+
 ---
 
 ## Branding & Trademarks
@@ -402,7 +429,7 @@ The native app uses audio playback, including background playback. It does not r
 device location, camera, microphone, contacts, photos, or notifications. Because the app does not create
 user accounts or maintain a personal server profile, there is no account to delete. A
 user may request correction or removal of church-managed bulletin information by
-contacting `pastor@nyccsda.org`. The church will handle requests according to applicable
+contacting `technology@nyccsda.org`. The church will handle requests according to applicable
 law and its administrative retention practices.
 
 ### 7. Privacy Frameworks and Questions

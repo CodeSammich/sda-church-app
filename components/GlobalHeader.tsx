@@ -1,6 +1,7 @@
 import {
+  getBackAction,
+  getBackTarget,
   getHeaderBackButtonColors,
-  getHeaderBackTarget,
   hasHeaderBackButton,
 } from '@/constants/BackNavigation';
 import {
@@ -8,8 +9,13 @@ import {
   scaleTypographyMetric,
 } from '@/constants/AppPreferences';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { UIStateContext } from '@/constants/UIStateContext';
 import { useTextSize } from '@/constants/TextSizeContext';
-import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
+import {
+  getGlobalHeaderHeightForScale,
+  isHeroUnderStatusBar,
+  shouldStackBibleControls,
+} from '@/hooks/useGlobalHeaderHeight';
 import {
   filterHeaderSearchItems,
   getHymnalSearchNavigation,
@@ -20,15 +26,15 @@ import {
 } from '@/features/hymnal/HymnalSearch';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
-import { router, useSegments } from 'expo-router';
+import { router, useGlobalSearchParams, usePathname, useSegments } from 'expo-router';
 import {
-  createContext,
   useContext,
   useDeferredValue,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type ComponentRef,
 } from 'react';
 import {
   Animated,
@@ -51,6 +57,17 @@ const HERO_HEADER_ROUTES = new Set([
   'give',
   'hymnal-selection',
   'team',
+]);
+
+// Other routes whose page opens with a hero image under the status bar. The
+// `index` routes are Home, Explore, and You; the Bible's is too, so the check
+// leaves the Bible out.
+const HERO_UNDER_STATUS_BAR_ROUTES = new Set([
+  'index',
+  'library',
+  'library/[collection]',
+  'hymn-lookup',
+  'sabbath-school',
 ]);
 
 const READER_SEARCH_LABELS = {
@@ -76,16 +93,7 @@ const READER_SEARCH_LABELS = {
   },
 } as const;
 
-/**
- * Context to drive global UI visibility (Reader Mode).
- */
-export const UIStateContext = createContext<{
-  menuAnim: Animated.Value;
-  setMenuVisible: (visible: boolean) => void;
-}>({
-  menuAnim: new Animated.Value(1),
-  setMenuVisible: () => {},
-});
+export { UIStateContext };
 
 type BibleVerseSearchResult = {
   icon: 'format-quote-close';
@@ -121,6 +129,8 @@ type BibleTranslationChipItem = Readonly<{
 export const GlobalHeader = (props: any) => {
   const { language } = useContext(LanguageContext);
   const segments = useSegments();
+  const pathname = usePathname();
+  const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
   // Expo typed routes expose segments as a tuple union. Widen it for generic
   // route membership checks while preserving the runtime values.
   const routeSegments: readonly string[] = segments;
@@ -142,7 +152,7 @@ export const GlobalHeader = (props: any) => {
   const [isBibleSearchExpanded, setIsBibleSearchExpanded] = useState(false);
   const searchExpansion = useRef(new Animated.Value(0)).current;
   const searchRef = useRef<any>(null);
-  const headerRef = useRef<View>(null);
+  const headerRef = useRef<ComponentRef<typeof View>>(null);
   const insets = useSafeAreaInsets();
   const { fontScale, width: windowWidth } = useWindowDimensions();
   const [measuredHeaderContentHeight, setMeasuredHeaderContentHeight] = useState(0);
@@ -155,12 +165,8 @@ export const GlobalHeader = (props: any) => {
     compactControlHeight,
     Math.ceil(40 * effectiveTextScale + 12),
   );
-  const stackBibleControls =
-    isBiblePage &&
-    Boolean(bibleTranslation) &&
-    effectiveTextScale >= 1.5;
 
-  const { menuAnim } = useContext(UIStateContext);
+  const { menuAnim, setBibleControlsStacked } = useContext(UIStateContext);
   const [headerHeight, setHeaderHeight] = useState(0);
 
   // Animate the header off the top of the screen
@@ -230,6 +236,26 @@ export const GlobalHeader = (props: any) => {
   const onBibleVerseSearchPress = props.options?.onBibleVerseSearchPress as
     | ((verseNumber: number) => void)
     | undefined;
+  // The translation button shares a row with the icon buttons whenever they
+  // fit, measured from the button's natural width; it only takes its own row
+  // when they can't. A fixed text-size threshold used to stack them even when
+  // they fit, as on an iPhone with larger system text.
+  const [bibleRowWidth, setBibleRowWidth] = useState(0);
+  const [translationButtonWidth, setTranslationButtonWidth] = useState(0);
+  const stackBibleControls =
+    isBiblePage &&
+    Boolean(bibleTranslation) &&
+    shouldStackBibleControls({
+      rowWidth: bibleRowWidth,
+      translationButtonWidth,
+      iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
+      iconButtonSize: compactControlHeight,
+    });
+  // Every tab's header stays mounted and sees the Bible's route while it's
+  // open, so only the header showing the Bible's controls reports them.
+  useEffect(() => {
+    if (isBiblePage && bibleTranslation) setBibleControlsStacked(stackBibleControls);
+  }, [bibleTranslation, isBiblePage, setBibleControlsStacked, stackBibleControls]);
   const isHeroHeaderRoute = HERO_HEADER_ROUTES.has(props.route?.name);
   const showTitleChip = props.options?.showTitleChip ?? !isHeroHeaderRoute;
   const appBarHeight = getGlobalHeaderHeightForScale(
@@ -255,6 +281,31 @@ export const GlobalHeader = (props: any) => {
     inputRange: [0, 1],
     outputRange: [-6, 0],
   });
+
+  // Text scrolled under the status bar runs into the clock, so a strip of the
+  // page's background covers it. A hero image may sit there by design
+  // (docs/UI_UX.md, Edge-to-Edge Immersive UI), so pages that track their hero
+  // hide the strip while it's in view.
+  const heroUnderStatusBar = isHeroUnderStatusBar({
+    heroUnderStatusBar: props.options?.heroUnderStatusBar,
+    showTitleChip: props.options?.showTitleChip,
+    isHymnalPage,
+    hymnalSearchCollapsed,
+    hasHero:
+      !isBiblePage &&
+      (isHeroHeaderRoute || HERO_UNDER_STATUS_BAR_ROUTES.has(props.route?.name)),
+  });
+  const statusBarBackdropAnim = useRef(
+    new Animated.Value(heroUnderStatusBar ? 0 : 1),
+  ).current;
+
+  useEffect(() => {
+    Animated.timing(statusBarBackdropAnim, {
+      toValue: heroUnderStatusBar ? 0 : 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [heroUnderStatusBar, statusBarBackdropAnim]);
 
   const searchLabels =
     READER_SEARCH_LABELS[language as keyof typeof READER_SEARCH_LABELS] ||
@@ -329,7 +380,10 @@ export const GlobalHeader = (props: any) => {
     // so the nested home stack has a concrete destination to mount.
     const navigation = getHymnalSearchNavigation(item.route, q);
     if (navigation.pathname === activeHymnalRoute) {
-      router.setParams(navigation.params);
+      // Keep where this hymnal was opened from, such as the Bulletin or Hymn
+      // lookup, rather than the search route's default of the hymnal list.
+      const { backTo: _searchBackTo, ...params } = navigation.params;
+      router.setParams(params);
     } else {
       router.push(navigation as any);
     }
@@ -348,14 +402,10 @@ export const GlobalHeader = (props: any) => {
   };
 
   const handleBackPress = () => {
-    // Preserve the native stack so Android's edge-swipe and the header back
-    // button resolve to the same previous screen. Explicit backTo remains a
-    // safe fallback when this screen was opened without stack history.
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace(getHeaderBackTarget(routeSegments, backTo) as any);
+    // Goes where Android's back gesture and the web app's back button go: the
+    // screen's backTo, or else its parent. See getBackTarget.
+    const target = getBackTarget(pathname, globalParams.backTo);
+    router[getBackAction(pathname, target)](target as any);
   };
 
   const expandBibleSearch = () => {
@@ -474,122 +524,8 @@ export const GlobalHeader = (props: any) => {
     />
   );
 
-  return (
-    <Animated.View
-      style={[
-        styles.headerWrapper,
-        {
-          backgroundColor: 'transparent',
-          paddingTop: insets.top,
-          opacity: menuAnim,
-          transform: [{ translateY: headerTranslateY }],
-        },
-      ]}
-    >
-      <Appbar.Header
-        ref={headerRef}
-        statusBarHeight={0}
-        style={{ backgroundColor: 'transparent', elevation: 0, height: appBarHeight }}
-        onLayout={(e) => {
-          const { height } = e.nativeEvent.layout;
-          setHeaderHeight(height + insets.top);
-        }}
-      >
-        {isSubPage && (
-          <Pressable
-            onPress={handleBackPress}
-            style={({ pressed }) => [
-              styles.circleBackButton,
-              {
-                width: compactControlHeight,
-                height: compactControlHeight,
-                borderRadius: compactControlHeight / 2,
-              },
-              {
-                ...getHeaderBackButtonColors(theme),
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <AppIcon
-              name="chevron-left"
-              size={26}
-              textScale={headerTextScale}
-              color={theme.colors.primary}
-            />
-          </Pressable>
-        )}
-        {!isBiblePage && !isHeaderSearchPage ? (
-          <View style={{ flex: 1, justifyContent: 'center' }}>
-            {isSubPage && title && (
-              <Animated.View
-                pointerEvents={showTitleChip ? 'auto' : 'none'}
-                onLayout={(event) => {
-                  const nextHeight = Math.ceil(event.nativeEvent.layout.height);
-                  setMeasuredHeaderContentHeight((currentHeight) =>
-                    currentHeight === nextHeight ? currentHeight : nextHeight,
-                  );
-                }}
-                style={[
-                  styles.floatingTitleChip,
-                  {
-                    minHeight: compactControlHeight,
-                    maxWidth: windowWidth - 86,
-                    paddingHorizontal: effectiveTextScale >= 1.75 ? 8 : 16,
-                  },
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.outline,
-                    opacity: titleChipAnim,
-                    transform: [{ translateY: titleChipTranslateY }],
-                  },
-                ]}
-              >
-                <Text
-                  variant="titleMedium"
-                  style={{
-                    color: theme.colors.onSurface,
-                    fontSize: scaleTypographyMetric(16, textScale),
-                    fontWeight: 'bold',
-                    lineHeight: scaleTypographyMetric(20, textScale),
-                    textAlign: 'center',
-                  }}
-                >
-                  {title}
-                </Text>
-              </Animated.View>
-            )}
-          </View>
-        ) : (
-          <View style={{ flex: 1 }}>
-            {isBiblePage ? (
-              <View
-                style={[
-                  styles.bibleSearchContainer,
-                  stackBibleControls && styles.stackedBibleSearchContainer,
-                ]}
-              >
-                {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
-                  <Pressable
-                    onPress={onBibleTranslationPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Translation: ${bibleTranslationAccessibilityLabel}`}
-                    style={({ pressed }) => [
-                      styles.translationChip,
-                      {
-                        minHeight: stackBibleControls
-                          ? wrappedControlHeight
-                          : compactControlHeight,
-                      },
-                      stackBibleControls && styles.stackedTranslationChip,
-                      {
-                        backgroundColor: theme.colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
-                    ]}
-                  >
+  const translationChipContent = (
+    <>
                     <AppIcon
                       name="translate"
                       size={18}
@@ -670,86 +606,241 @@ export const GlobalHeader = (props: any) => {
                       textScale={headerTextScale}
                       color={theme.colors.primary}
                     />
-                  </Pressable>
-                )}
-                {!isBibleSearchExpanded && onBibleVerseHelpPress && (
-                  <Pressable
-                    onPress={onBibleVerseHelpPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={bibleVerseHelpLabel}
-                    style={({ pressed }) => [
-                      styles.collapsedSearchButton,
-                      { height: compactControlHeight, width: compactControlHeight },
-                      {
-                        backgroundColor: theme.colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
-                    ]}
-                  >
-                    <AppIcon
-                      name="gesture-tap-hold"
-                      size={23}
-                      textScale={headerTextScale}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                  </Pressable>
-                )}
-                {!isBibleSearchExpanded && onBibleSavedVersesPress && (
-                  <Pressable
-                    onPress={onBibleSavedVersesPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      bibleSavedVerseCount > 0
-                        ? `${bibleSavedVersesLabel}: ${bibleSavedVerseCount}`
-                        : bibleSavedVersesLabel
+    </>
+  );
+
+  return (
+    <Animated.View
+      style={[
+        styles.headerWrapper,
+        {
+          backgroundColor: 'transparent',
+          paddingTop: insets.top,
+          opacity: menuAnim,
+          transform: [{ translateY: headerTranslateY }],
+        },
+      ]}
+    >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.statusBarBackdrop,
+          {
+            height: insets.top,
+            backgroundColor: theme.colors.background,
+            opacity: statusBarBackdropAnim,
+          },
+        ]}
+      />
+      <Appbar.Header
+        ref={headerRef}
+        statusBarHeight={0}
+        style={{ backgroundColor: 'transparent', elevation: 0, height: appBarHeight }}
+        onLayout={(e) => {
+          const { height } = e.nativeEvent.layout;
+          setHeaderHeight(height + insets.top);
+        }}
+      >
+        {isSubPage && (
+          <Pressable
+            onPress={handleBackPress}
+            style={({ pressed }) => [
+              styles.circleBackButton,
+              {
+                width: compactControlHeight,
+                height: compactControlHeight,
+                borderRadius: compactControlHeight / 2,
+              },
+              {
+                ...getHeaderBackButtonColors(theme),
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <AppIcon
+              name="chevron-left"
+              size={26}
+              textScale={headerTextScale}
+              color={theme.colors.primary}
+            />
+          </Pressable>
+        )}
+        {!isBiblePage && !isHeaderSearchPage ? (
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            {isSubPage && title && (
+              <Animated.View
+                pointerEvents={showTitleChip ? 'auto' : 'none'}
+                onLayout={(event) => {
+                  const nextHeight = Math.ceil(event.nativeEvent.layout.height);
+                  setMeasuredHeaderContentHeight((currentHeight) =>
+                    currentHeight === nextHeight ? currentHeight : nextHeight,
+                  );
+                }}
+                style={[
+                  styles.floatingTitleChip,
+                  {
+                    minHeight: compactControlHeight,
+                    maxWidth: windowWidth - 86,
+                    paddingHorizontal: effectiveTextScale >= 1.75 ? 8 : 16,
+                  },
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outline,
+                    opacity: titleChipAnim,
+                    transform: [{ translateY: titleChipTranslateY }],
+                  },
+                ]}
+              >
+                <Text
+                  variant="titleMedium"
+                  style={{
+                    color: theme.colors.onSurface,
+                    fontSize: scaleTypographyMetric(16, textScale),
+                    fontWeight: 'bold',
+                    lineHeight: scaleTypographyMetric(20, textScale),
+                    textAlign: 'center',
+                  }}
+                >
+                  {title}
+                </Text>
+              </Animated.View>
+            )}
+          </View>
+        ) : (
+          <View style={{ flex: 1 }}>
+            {isBiblePage ? (
+              <View
+                onLayout={(event) => setBibleRowWidth(event.nativeEvent.layout.width)}
+                style={[
+                  styles.bibleSearchContainer,
+                  stackBibleControls && styles.stackedBibleSearchContainer,
+                ]}
+              >
+                {bibleTranslation && (
+                  <View
+                    aria-hidden
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    onLayout={(event) =>
+                      setTranslationButtonWidth(Math.ceil(event.nativeEvent.layout.width))
                     }
-                    style={({ pressed }) => [
-                      styles.collapsedSearchButton,
-                      { height: compactControlHeight, width: compactControlHeight },
-                      {
-                        backgroundColor: theme.colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
-                    ]}
+                    pointerEvents="none"
+                    style={styles.translationChipMeasure}
                   >
-                    <AppIcon
-                      name={bibleSavedVerseCount > 0 ? 'bookmark' : 'bookmark-outline'}
-                      size={23}
-                      textScale={headerTextScale}
-                      color={
-                        bibleSavedVerseCount > 0
-                          ? theme.colors.primary
-                          : theme.colors.onSurfaceVariant
-                      }
-                    />
-                  </Pressable>
+                    {translationChipContent}
+                  </View>
                 )}
-                {isBibleSearchExpanded ? (
-                  <Animated.View style={{ width: bibleSearchWidth }}>
-                    {renderSearchbar(true)}
-                  </Animated.View>
-                ) : (
+                {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
                   <Pressable
-                    onPress={expandBibleSearch}
+                    onPress={onBibleTranslationPress}
                     accessibilityRole="button"
-                    accessibilityLabel={searchLabels.searchBiblePlaceholder}
+                    accessibilityLabel={`Translation: ${bibleTranslationAccessibilityLabel}`}
                     style={({ pressed }) => [
-                      styles.collapsedSearchButton,
-                      { height: compactControlHeight, width: compactControlHeight },
+                      styles.translationChip,
+                      {
+                        minHeight: stackBibleControls
+                          ? wrappedControlHeight
+                          : compactControlHeight,
+                      },
+                      stackBibleControls && styles.stackedTranslationChip,
                       {
                         backgroundColor: theme.colors.surface,
                         opacity: pressed ? 0.75 : 1,
                       },
                     ]}
                   >
-                    <AppIcon
-                      name="magnify"
-                      size={24}
-                      textScale={headerTextScale}
-                      color={theme.colors.onSurfaceVariant}
-                    />
+                    {translationChipContent}
                   </Pressable>
                 )}
+                {/* The icon buttons stay together: beside the translation button,
+                    or on their own row beneath it when the header stacks. */}
+                <View
+                  style={[
+                    styles.bibleIconRow,
+                    stackBibleControls && styles.stackedBibleIconRow,
+                  ]}
+                >
+                  {!isBibleSearchExpanded && onBibleVerseHelpPress && (
+                    <Pressable
+                      onPress={onBibleVerseHelpPress}
+                      accessibilityRole="button"
+                      accessibilityLabel={bibleVerseHelpLabel}
+                      style={({ pressed }) => [
+                        styles.collapsedSearchButton,
+                        { height: compactControlHeight, width: compactControlHeight },
+                        {
+                          backgroundColor: theme.colors.surface,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      <AppIcon
+                        name="gesture-tap-hold"
+                        size={23}
+                        textScale={headerTextScale}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    </Pressable>
+                  )}
+                  {!isBibleSearchExpanded && onBibleSavedVersesPress && (
+                    <Pressable
+                      onPress={onBibleSavedVersesPress}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        bibleSavedVerseCount > 0
+                          ? `${bibleSavedVersesLabel}: ${bibleSavedVerseCount}`
+                          : bibleSavedVersesLabel
+                      }
+                      style={({ pressed }) => [
+                        styles.collapsedSearchButton,
+                        { height: compactControlHeight, width: compactControlHeight },
+                        {
+                          backgroundColor: theme.colors.surface,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      <AppIcon
+                        name={bibleSavedVerseCount > 0 ? 'bookmark' : 'bookmark-outline'}
+                        size={23}
+                        textScale={headerTextScale}
+                        color={
+                          bibleSavedVerseCount > 0
+                            ? theme.colors.primary
+                            : theme.colors.onSurfaceVariant
+                        }
+                      />
+                    </Pressable>
+                  )}
+                  {isBibleSearchExpanded ? (
+                    <Animated.View style={{ width: bibleSearchWidth }}>
+                      {renderSearchbar(true)}
+                    </Animated.View>
+                  ) : (
+                    <Pressable
+                      onPress={expandBibleSearch}
+                      accessibilityRole="button"
+                      accessibilityLabel={searchLabels.searchBiblePlaceholder}
+                      style={({ pressed }) => [
+                        styles.collapsedSearchButton,
+                        { height: compactControlHeight, width: compactControlHeight },
+                        {
+                          backgroundColor: theme.colors.surface,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      <AppIcon
+                        name="magnify"
+                        size={24}
+                        textScale={headerTextScale}
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    </Pressable>
+                  )}
+                </View>
               </View>
             ) : hymnalSearchCollapsed ? (
               <Pressable
@@ -842,6 +933,12 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1000,
   },
+  statusBarBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
   circleBackButton: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -885,10 +982,23 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     gap: 8,
   },
+  // Two rows: the translation button across the top, the icon buttons beneath.
+  // Explicit rows rather than wrapping: the header stacks only after it
+  // measures, and a percentage flex basis set then isn't applied until
+  // something else lays the row out again.
   stackedBibleSearchContainer: {
-    flexWrap: 'wrap',
-    alignContent: 'center',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    justifyContent: 'center',
     paddingVertical: 6,
+  },
+  bibleIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stackedBibleIconRow: {
+    alignSelf: 'flex-end',
   },
   translationChip: {
     minWidth: 68,
@@ -906,6 +1016,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
+  },
+  // An invisible copy of the translation chip at its natural width, with the
+  // chip's padding and gap, to decide whether it fits beside the icon buttons.
+  translationChipMeasure: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 3,
+    left: 0,
+    opacity: 0,
+    paddingHorizontal: 12,
+    position: 'absolute',
+    top: 0,
   },
   translationChipItem: {
     alignItems: 'center',
@@ -930,7 +1052,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   stackedTranslationChip: {
-    flexBasis: '100%',
+    alignSelf: 'stretch',
     maxWidth: '100%',
   },
   collapsedSearchButton: {

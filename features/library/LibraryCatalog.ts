@@ -1,7 +1,13 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import type { LibraryShelf } from './LibraryShelves';
 
-export type LibraryRights = 'public-domain-us' | 'official-external' | 'church-hosted';
+export type LibraryRights =
+  | 'public-domain-us'
+  | 'official-external'
+  | 'church-hosted'
+  // The publisher offers the edition free and its own notice allows copying
+  // it; the app still only links to the publisher's copy.
+  | 'permission-to-copy';
 export type LibraryCollection =
   | 'adventist-pioneers'
   | 'christian-classics'
@@ -23,12 +29,32 @@ export type LibraryItem = Readonly<{
   // original. Required for Internet Archive scans, whose own edition must be
   // public domain too; see "Internet Archive sources" in docs/LEGAL.md.
   editionYear?: number;
-  simplifiedChinese?: Readonly<{
-    author: string;
-    description: string;
-    title: string;
-  }>;
+  // Chinese text for a Chinese book, shown in the matching app language. Other
+  // languages show the English text above, so titles stay in one language.
+  traditionalChinese?: LibraryItemText;
+  simplifiedChinese?: LibraryItemText;
+  // A Chinese book with no English translation yet: only Chinese readers see
+  // it in the Library, on its shelf, in the featured books, and in search.
+  onlyForChineseReaders?: boolean;
+  // A Spanish edition, which Spanish readers see and open instead. It has its
+  // own source and rights basis; see "Library Sources and Licensing" in
+  // docs/LEGAL.md.
+  spanish?: LibraryItemEdition;
 }>;
+
+type LibraryItemText = Readonly<{
+  author: string;
+  description: string;
+  title: string;
+}>;
+
+type LibraryItemSource = Readonly<{
+  rights: LibraryRights;
+  sourceName: string;
+  sourceUrl: string;
+}>;
+
+type LibraryItemEdition = LibraryItemText & LibraryItemSource;
 
 const publicDomainWorks: readonly LibraryItem[] = [
   {
@@ -56,6 +82,17 @@ const publicDomainWorks: readonly LibraryItem[] = [
     sourceName: 'Project Gutenberg',
     sourceUrl: 'https://www.gutenberg.org/ebooks/68714',
     publicationYear: 1873,
+    // Adventist Pioneer Library's 2020 translation of the 1873 edition, by
+    // Rolando Itin, on EGW Writings. Its credits page names the 1873 original.
+    spanish: {
+      title: 'Historia del Sábado',
+      author: 'J. N. Andrews',
+      description:
+        'La edición de 1873 de un estudio pionero adventista sobre el sábado en las Escrituras y en la historia, traducida al español.',
+      rights: 'official-external',
+      sourceName: 'EGW Writings',
+      sourceUrl: 'https://text.egwwritings.org/read/14404.2',
+    },
   },
   {
     id: 'smith-state-dead-destiny-wicked',
@@ -82,6 +119,18 @@ const publicDomainWorks: readonly LibraryItem[] = [
     sourceName: 'Project Gutenberg',
     sourceUrl: 'https://www.gutenberg.org/ebooks/131',
     publicationYear: 1678,
+    // Chapel Library's own free PDF, which it calls "cuidadosamente abreviada"
+    // (carefully abridged). Its © 2015 notice expressly allows copying it at
+    // no more than a nominal cost, with the notice kept.
+    spanish: {
+      title: 'El progreso del peregrino para todos (condensado)',
+      author: 'Juan Bunyan',
+      description:
+        'Una edición abreviada de la clásica alegoría protestante sobre la perseverancia, la fe y el camino cristiano.',
+      rights: 'permission-to-copy',
+      sourceName: 'Chapel Library',
+      sourceUrl: 'https://www.chapellibrary.org/pdf/books/ppfes.pdf',
+    },
   },
   {
     id: 'murray-humility',
@@ -161,6 +210,16 @@ const officialCollections: readonly LibraryItem[] = [
     rights: 'official-external',
     sourceName: 'EGW Writings',
     sourceUrl: 'https://text.egwwritings.org/read/144.1',
+    // The official Spanish edition, whose chapters match The Story of Jesus
+    // one for one; both descend from the 1896 Christ Our Saviour.
+    spanish: {
+      title: 'Cristo Nuestro Salvador',
+      author: 'Elena G. de White',
+      description: 'Un relato breve y apto para niños de la vida y el ministerio de Jesús.',
+      rights: 'official-external',
+      sourceName: 'EGW Writings',
+      sourceUrl: 'https://text.egwwritings.org/read/1747.3',
+    },
   },
   {
     // Not on Project Gutenberg. EGW Writings hosts the public-domain 1897
@@ -187,18 +246,25 @@ const churchDocuments: readonly LibraryItem[] = [
     // Sabbath Encouragement page from (SABBATH_ENCOURAGEMENT_SOURCE_FILE_ID in
     // google-apps-script/SabbathEncouragement.gs). Keep the Drive file name.
     id: 'sabbath-encouragement',
-    title: 'Sabbath Encouragement (安息日勉言)',
-    author: 'Bible and Ellen G. White quotations',
+    title: 'Sabbath Encouragement',
+    author: 'Various',
     collection: 'adventist-pioneers',
     description:
       'Fifty-two readings of Bible verses and Ellen G. White quotations on the Sabbath, compiled by churches in China. The Brooklyn bulletin prints one each week.',
     language: 'zh',
+    onlyForChineseReaders: true,
     rights: 'church-hosted',
     sourceName: 'New York Chinese SDA Church',
     sourceUrl: 'https://app.nyccsda.org/library/sabbath_encouragement.pdf',
+    traditionalChinese: {
+      title: '安息日勉言',
+      author: '多位作者',
+      description:
+        '五十二篇關於安息日的聖經經文與懷愛倫著作摘錄，由中國教會編輯。布魯克林週報每週刊登一篇。',
+    },
     simplifiedChinese: {
       title: '安息日勉言',
-      author: '圣经与怀爱伦著作摘录',
+      author: '多位作者',
       description:
         '五十二篇关于安息日的圣经经文与怀爱伦著作摘录，由中国教会编辑。布鲁克林周报每周刊登一篇。',
     },
@@ -233,23 +299,39 @@ export const getLibraryItemShelf = (item: LibraryItem): LibraryShelf =>
 
 export const getLibraryItemsForLanguage = (language: SupportedLanguage) => {
   const preferredLanguage = language === 'zh' || language === 'zh-cn' ? 'zh' : 'en';
-  const rank = (item: LibraryItem) => (item.language === preferredLanguage ? 0 : 1);
+  // Books in the reader's language come first: Chinese books for Chinese
+  // readers, and books with a Spanish edition for Spanish readers.
+  const rank = (item: LibraryItem) =>
+    (language === 'es' ? Boolean(item.spanish) : item.language === preferredLanguage) ? 0 : 1;
+  const forThisReader = (items: readonly LibraryItem[]) =>
+    items
+      .filter((item) => preferredLanguage === 'zh' || !item.onlyForChineseReaders)
+      .sort((a, b) => rank(a) - rank(b));
 
   return {
-    publicDomainWorks: [...publicDomainWorks].sort((a, b) => rank(a) - rank(b)),
-    officialCollections: [...officialCollections].sort((a, b) => rank(a) - rank(b)),
-    churchDocuments: [...churchDocuments].sort((a, b) => rank(a) - rank(b)),
+    publicDomainWorks: forThisReader(publicDomainWorks),
+    officialCollections: forThisReader(officialCollections),
+    churchDocuments: forThisReader(churchDocuments),
   };
 };
 
 export const getLibraryItemDisplayText = (
   item: LibraryItem,
   language: SupportedLanguage,
-) =>
-  language === 'zh-cn' && item.simplifiedChinese
-    ? item.simplifiedChinese
-    : {
-        author: item.author,
-        description: item.description,
-        title: item.title,
-      };
+): LibraryItemText =>
+  (language === 'zh' && item.traditionalChinese) ||
+  (language === 'zh-cn' && item.simplifiedChinese) ||
+  (language === 'es' && item.spanish) || {
+    author: item.author,
+    description: item.description,
+    title: item.title,
+  };
+
+/** Where the book opens for this reader, and on what rights basis. */
+export const getLibraryItemSource = (
+  item: LibraryItem,
+  language: SupportedLanguage,
+): LibraryItemSource => {
+  const { rights, sourceName, sourceUrl } = (language === 'es' && item.spanish) || item;
+  return { rights, sourceName, sourceUrl };
+};

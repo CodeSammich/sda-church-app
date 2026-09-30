@@ -15,9 +15,10 @@ import {
   LIBRARY_SHELVES,
 } from '@/features/library/LibraryShelves';
 import { useLibraryShelfBooks } from '@/features/library/useLibraryShelfBooks';
-import { router, Stack } from 'expo-router';
+import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
+import { router, Stack, useIsFocused } from 'expo-router';
 import { useCallback, useContext, useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
 const copy = {
   en: {
@@ -49,6 +50,15 @@ export default function LibraryHubScreen() {
   const { language } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
   const navigationStyles = useNavigationStyles();
+  const isFocused = useIsFocused();
+  // The featured carousel is dark in both themes, so the status bar uses light
+  // icons while it's behind them, and the theme's icons once it scrolls away.
+  // Tab screens stay mounted, so this applies only while the page is showing.
+  const {
+    heroUnderStatusBar: isCarouselBehindStatusBar,
+    onHeroLayout: onCarouselLayout,
+    onScroll,
+  } = useHeroUnderStatusBar();
   const catalog = getLibraryItemsForLanguage(language);
   const { egwDialog, getBooks, getShelfBooks } = useLibraryShelfBooks(language, { loadEgwCovers: true });
   const open = useCallback((collection: string, q?: string) =>
@@ -93,22 +103,28 @@ export default function LibraryHubScreen() {
       <Stack.Screen
         options={{
           title: labels.title,
+          heroUnderStatusBar: isCarouselBehindStatusBar,
           headerSearch: {
             items: searchItems,
             placeholder: searchLabels[language],
           },
         } as any}
       />
+      {isFocused && isCarouselBehindStatusBar && <StatusBar barStyle="light-content" />}
       <ScrollView
         style={navigationStyles.container}
         contentContainerStyle={styles.scrollContent}
+        scrollEventThrottle={32}
+        onScroll={onScroll}
       >
-        <LibraryFeaturedCarousel
-          books={getBooks(FEATURED_LIBRARY_BOOKS)}
-          featuredLabel={labels.featured}
-          pageLabel={labels.featuredPage}
-          readLabel={labels.read}
-        />
+        <View onLayout={onCarouselLayout}>
+          <LibraryFeaturedCarousel
+            books={getBooks(FEATURED_LIBRARY_BOOKS)}
+            featuredLabel={labels.featured}
+            pageLabel={labels.featuredPage}
+            readLabel={labels.read}
+          />
+        </View>
         {/* Each shelf is a row of covers that scrolls sideways, in the order
             LIBRARY_SHELVES gives. */}
         <View>

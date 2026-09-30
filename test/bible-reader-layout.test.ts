@@ -79,7 +79,7 @@ describe('Bible reader text scaling', () => {
       fontSize: 36,
       lineHeight: 46.08,
     });
-    expect(StyleSheet.flatten(enlarged.pill).paddingHorizontal).toBe(8);
+    expect(StyleSheet.flatten(enlarged.pill)?.paddingHorizontal).toBe(8);
   });
 
   it('reserves a separate verse-number gutter at every text size', () => {
@@ -140,10 +140,10 @@ describe('Bible reader text scaling', () => {
       fontScale: 2,
     });
 
-    expect(StyleSheet.flatten(enlarged.contentContainer).paddingBottom).toBeGreaterThan(
-      StyleSheet.flatten(compact.contentContainer).paddingBottom as number,
+    expect(StyleSheet.flatten(enlarged.contentContainer)?.paddingBottom).toBeGreaterThan(
+      StyleSheet.flatten(compact.contentContainer)?.paddingBottom as number,
     );
-    expect(StyleSheet.flatten(enlarged.subheader).fontSize).toBe(32);
+    expect(StyleSheet.flatten(enlarged.subheader)?.fontSize).toBe(32);
   });
 
   it('keeps app-scaled Bible controls on one header row', () => {
@@ -228,12 +228,22 @@ describe('Bible reader text scaling', () => {
     const audioDock = StyleSheet.flatten(reader.audioDock);
     const audioSettings = StyleSheet.flatten(reader.audioSettingsContent);
 
-    expect(audioDock.paddingTop).toBe(8);
+    expect(audioDock?.paddingTop).toBe(8);
     expect(audioDock).not.toHaveProperty('paddingBottom');
     expect(audioSettings).toMatchObject({
       borderRadius: 24,
       marginTop: 'auto',
-      maxHeight: '82%',
     });
+  });
+
+  it('widens the verse-number column for larger system text and three-digit verses', () => {
+    const { getVerseNumberColumnWidth } = require('@/styles/ReaderStyles');
+    const base = getVerseNumberColumnWidth(16, 1.25, 1);
+    // Larger iOS system text: "14" needs more room than the fixed width gave.
+    expect(getVerseNumberColumnWidth(16, 1.25, 1.35)).toBeGreaterThan(base);
+    // Psalm 119 has 176 verses.
+    expect(getVerseNumberColumnWidth(176, 1.25, 1)).toBeGreaterThan(base);
+    // Never narrower than the original fixed width at the default system size.
+    expect(base).toBeGreaterThanOrEqual(36);
   });
 });

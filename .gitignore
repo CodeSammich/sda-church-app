@@ -20,6 +20,7 @@
 !/services
 !/styles
 !/test
+!/vendor
 
 # 3. Re-include root configuration files
 !/*.json

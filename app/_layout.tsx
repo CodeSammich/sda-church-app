@@ -10,8 +10,8 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import {
-  getAndroidBackTarget,
-  getHeaderBackTarget,
+  getBackAction,
+  getBackTarget,
   hasHeaderBackButton,
 } from '@/constants/BackNavigation';
 import {
@@ -24,6 +24,7 @@ import {
   LanguageContext,
   SupportedLanguage,
 } from '@/constants/LanguageContext';
+import { hasAndroidWebBackGuard, isInstalledPwa } from '@/constants/InstalledWebApp';
 import { getBottomTabContentHeight } from '@/constants/Layout';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
@@ -102,22 +103,6 @@ type BeforeInstallPromptEvent = Event & {
   }>;
 };
 
-const isInstalledPwa = () => {
-  if (
-    Platform.OS !== 'web' ||
-    typeof window === 'undefined' ||
-    typeof navigator === 'undefined'
-  ) {
-    return false;
-  }
-
-  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches ||
-    navigatorWithStandalone.standalone === true
-  );
-};
 
 const isBibleReaderPath = (pathname: string) =>
   /\/(?:\(tabs\)\/)?bible(?:\/index)?\/?$/.test(pathname);
@@ -902,10 +887,13 @@ function RootLayoutNav({
   const pathname = usePathname();
   const segments = useSegments();
   const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
+  // The header arrow, Android's back gesture, and the browser's back button
+  // all go to the same place; see getBackTarget.
+  const backTarget = getBackTarget(pathname, globalParams.backTo);
   const gestureBackTarget = hasHeaderBackButton(segments, globalParams.backTo)
-    ? getHeaderBackTarget(segments, globalParams.backTo)
+    ? backTarget
     : '/';
-  const androidBackTarget = getAndroidBackTarget(pathname, globalParams.backTo);
+  const androidBackTarget = backTarget;
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
 
   useEffect(() => {
@@ -925,13 +913,7 @@ function RootLayoutNav({
   }, [pathname]);
 
   useEffect(() => {
-    if (
-      Platform.OS !== 'web' ||
-      typeof window === 'undefined' ||
-      typeof navigator === 'undefined' ||
-      !/Android/i.test(navigator.userAgent) ||
-      !isInstalledPwa()
-    ) {
+    if (!hasAndroidWebBackGuard()) {
       return;
     }
 
@@ -954,7 +936,7 @@ function RootLayoutNav({
       // The guard keeps the browser on the same URL. Stop Expo Router from also
       // processing this pop and perform the same app navigation as the header arrow.
       event.stopImmediatePropagation();
-      router.replace(gestureBackTarget as any);
+      router[getBackAction(pathname, gestureBackTarget, true)](gestureBackTarget as any);
 
       // Navigating to Home while already there does not cause a route render, so
       // ensure the guard is restored even when the target route stays unchanged.
@@ -978,13 +960,15 @@ function RootLayoutNav({
       Platform.OS === 'android' &&
       (hasHeaderBackButton(segments, globalParams.backTo) ||
         pathname === '/bible' ||
-        pathname === '/explore');
+        pathname === '/explore' ||
+        // Sabbath School shows a back arrow even without a return route.
+        pathname === '/sabbath-school');
     if (!shouldHandleAndroidBack) {
       return;
     }
 
     const handleAndroidBack = () => {
-      router.replace(androidBackTarget as any);
+      router[getBackAction(pathname, androidBackTarget)](androidBackTarget as any);
       return true;
     };
 

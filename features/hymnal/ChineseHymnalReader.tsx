@@ -1,8 +1,7 @@
 import { AppIcon } from '@/components/AppIcon';
 import { ExternalBrandIcon } from '@/components/ExternalBrandIcon';
-import { SourceNoticePanel } from '@/components/SourceNoticePanel';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
-import { openYouTubeSearch } from '@/constants/ExternalLinks';
+import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
@@ -21,12 +20,12 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import {
   FlatList,
-  ImageBackground,
   ImageSourcePropType,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ImageBackground } from '@/components/ImageBackground';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,32 +39,26 @@ interface ChineseHymnalReaderProps {
   coverImage: ImageSourcePropType;
   getHymns: () => ChineseHymnalEntry[];
   openHymn: (hymnNumber: number | string) => void;
+  /** The hymn's own recording. Without one, YouTube searches for the hymn. */
+  getYouTubeUrl?: (hymnNumber: number | string) => string | undefined;
   titles?: Record<'en' | 'zh' | 'zh-cn' | 'es', string>;
 }
 
 const getUiLabels = (edition: number) => ({
   en: {
     title: `Chinese Hymnal — ${edition} Edition`,
-    sourceTitle: 'Hymnal source',
-    attribution: `Tap a hymn to open its sheet music externally on the ${edition} hymnal directory at zgaxr.com.`,
     watchYouTube: 'YouTube',
   },
   zh: {
     title: `中文讚美詩 — ${edition} 版`,
-    sourceTitle: '詩歌來源',
-    attribution: `點擊詩歌即可在 zgaxr.com 的${edition}版詩歌目錄查看琴譜。`,
     watchYouTube: 'YouTube',
   },
   'zh-cn': {
     title: `中文赞美诗 — ${edition} 版`,
-    sourceTitle: '诗歌来源',
-    attribution: `点击诗歌即可在 zgaxr.com 的${edition}版诗歌目录查看琴谱。`,
     watchYouTube: 'YouTube',
   },
   es: {
     title: `Himnario Chino — Edición ${edition}`,
-    sourceTitle: 'Fuente del himnario',
-    attribution: `Toca un himno para abrir su partitura en el directorio externo de la edición ${edition} en zgaxr.com.`,
     watchYouTube: 'YouTube',
   },
 });
@@ -75,6 +68,7 @@ export function ChineseHymnalReader({
   coverImage,
   getHymns,
   openHymn,
+  getYouTubeUrl,
   titles,
 }: ChineseHymnalReaderProps) {
   const theme = useAppTheme();
@@ -150,11 +144,14 @@ export function ChineseHymnalReader({
 
         <View style={styles.bottomSection}>
           <TouchableRipple
-            onPress={() =>
-              openYouTubeSearch(
-                `${edition}版赞美诗 ${item.number} ${item.title}`,
-              )
-            }
+            onPress={() => {
+              const youtubeUrl = getYouTubeUrl?.(item.number);
+              if (youtubeUrl) {
+                openURL(youtubeUrl, 'Error', 'Could not open the YouTube video.');
+              } else {
+                openYouTubeSearch(`${edition}版赞美诗 ${item.number} ${item.title}`);
+              }
+            }}
             style={styles.flexButton}
           >
             <View style={styles.buttonContent}>
@@ -211,15 +208,6 @@ export function ChineseHymnalReader({
               </Text>
             </ImageBackground>
 
-            <View style={DocumentStyles.section}>
-              <SourceNoticePanel
-                items={[
-                  { icon: 'music-clef-treble', text: labels.attribution },
-                ]}
-                style={styles.sourcePanel}
-                title={labels.sourceTitle}
-              />
-            </View>
           </>
         }
         contentContainerStyle={{ paddingBottom: insets.bottom + 50 }}
@@ -288,8 +276,5 @@ const createStyles = (
       fontSize: scaleTypographyMetric(15, textScale),
       lineHeight: scaleTypographyMetric(21, textScale),
       flexShrink: 1,
-    },
-    sourcePanel: {
-      marginTop: 10,
     },
   });
