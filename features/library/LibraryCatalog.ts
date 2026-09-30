@@ -193,7 +193,7 @@ const churchDocuments: readonly LibraryItem[] = [
     // google-apps-script/SabbathEncouragement.gs). Keep the Drive file name.
     id: 'sabbath-encouragement',
     title: 'Sabbath Encouragement',
-    author: 'Bible and Ellen G. White quotations',
+    author: 'Various',
     collection: 'adventist-pioneers',
     description:
       'Fifty-two readings of Bible verses and Ellen G. White quotations on the Sabbath, compiled by churches in China. The Brooklyn bulletin prints one each week.',
@@ -203,13 +203,13 @@ const churchDocuments: readonly LibraryItem[] = [
     sourceUrl: 'https://app.nyccsda.org/library/sabbath_encouragement.pdf',
     traditionalChinese: {
       title: '安息日勉言',
-      author: '聖經與懷愛倫著作摘錄',
+      author: '多位作者',
       description:
         '五十二篇關於安息日的聖經經文與懷愛倫著作摘錄，由中國教會編輯。布魯克林週報每週刊登一篇。',
     },
     simplifiedChinese: {
       title: '安息日勉言',
-      author: '圣经与怀爱伦著作摘录',
+      author: '多位作者',
       description:
         '五十二篇关于安息日的圣经经文与怀爱伦著作摘录，由中国教会编辑。布鲁克林周报每周刊登一篇。',
     },

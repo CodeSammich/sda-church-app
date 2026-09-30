@@ -128,6 +128,8 @@ describe('library catalog', () => {
     expect(title('es')).toBe('Sabbath Encouragement');
     expect(title('zh')).toBe('安息日勉言');
     expect(title('zh-cn')).toBe('安息日勉言');
+    // A compilation of Bible verses and Ellen G. White quotations.
+    expect(sabbathEncouragement.author).toBe('Various');
 
     // The English text, which every non-Chinese language shows, has no Chinese in it.
     const chinese = /[\u3400-\u9fff]/;
