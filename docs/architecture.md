@@ -20,6 +20,7 @@ Super Administrators can share.
 - [Google Cloud: free only](#google-cloud-free-only)
 - [Website: app.nyccsda.org](#website-appnyccsdaorg)
 - [Third-party APIs and websites](#third-party-apis-and-websites)
+- [Payment methods](#payment-methods)
 - [Upkeep calendar](#upkeep-calendar)
 - [Governance principles](#governance-principles)
 
@@ -447,15 +448,35 @@ Costs, published limits, and load for each one are in
 > but there is no fallback. Keeping a copy, subject to a copyright review, is
 > tracked in [#260](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/260).
 
+## Payment methods
+
+**Cloudflare is the only service with a card on file**, and only to renew the domain.
+Nothing else in this architecture has a payment method, so nothing else can charge
+the church. Keep it that way: when a new service asks for a card, choose another
+service. Anything else in the Cloudflare account, such as the
+[Workers that hold API keys](operations/admin-runbook.md#workers-that-hold-api-keys)
+(#241), must stay on a free plan that fails at its limits instead of billing.
+
+| Service | Payment method | Why |
+| --- | --- | --- |
+| Cloudflare | **A card** | Renews `nyccsda.org`, about $10 a year. The Workers that hold API keys, starting with Faith Comes By Hearing's Bible Brain, run in the same account on Workers Free, which can't bill. See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
+| Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
+| Google Play | None | The one-time $25 registration is paid; nothing recurs. |
+| Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |
+| Google Workspace | None | Workspace for Nonprofits: email, Drive, and Apps Script. |
+| GitHub | None | Free for public repositories, Actions included. |
+| Every API and website in [Third-party APIs and websites](#third-party-apis-and-websites) | None | Free, with no account or with a free key. |
+
 ## Upkeep calendar
 
 | When | What | If missed |
 | --- | --- | --- |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Developer membership and resubmit nonprofit status | App removed from the App Store |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Distribution certificate and provisioning profile, update GitHub secrets, and record the new dates; see the [renewal checklist](operations/app-store-setup.md#renewal-checklist) | iOS builds fail; app can't be updated |
-| Yearly | Check the Cloudflare payment method hasn't expired and the domain's paid-through date | Domain renewal fails |
-| Yearly | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
-| Yearly, and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
+| First Monday of January (GitHub opens the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue) | Work through the checklist, which covers the yearly rows below and more | A card expires, a bill starts, or an account can't be recovered, unnoticed |
+| Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, that billing lists only the domain, and that free Workers still can't bill | Domain renewal fails, or a charge appears |
+| Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
+| Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
 
 ## Governance principles
