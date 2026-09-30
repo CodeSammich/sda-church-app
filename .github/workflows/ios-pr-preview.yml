@@ -14,6 +14,13 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      screens_from_run:
+        description: >-
+          Only check the key screens of an earlier run of this workflow (its run
+          ID), without building. For tuning scripts/check-screens.cjs.
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -26,8 +33,10 @@ jobs:
   simulator:
     # A release PR is a release/* branch in this repository. Other PRs into
     # main, such as Dependabot's, can't merge there, so they skip it.
+    # Started by hand, it builds unless it was asked only to re-check an
+    # earlier run's screenshots.
     if: >-
-      github.event_name != 'pull_request' ||
+      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (startsWith(github.head_ref, 'release/') &&
         github.event.pull_request.head.repo.full_name == github.repository)
     # The "Main protection" ruleset requires these job names; rename both together.
@@ -155,6 +164,16 @@ jobs:
         timeout-minutes: 35
         run: node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
 
+      - name: Check the text on the key screens
+        # Reads each screenshot's text with Apple's Vision framework and checks
+        # what every screen must show: tab labels in the right language, the
+        # verse button's whole label, verse numbers starting their lines, and no
+        # system prompt or setup dialog. Saves ocr.json and checks.json beside
+        # the screenshots. Runs even if a capture failed, to report on the rest.
+        if: matrix.arch == 'arm64' && !cancelled()
+        timeout-minutes: 10
+        run: node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
+
       - name: Upload the Simulator app and screenshots
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -205,7 +224,7 @@ jobs:
             download="the screenshots from [the run]($run_url), which uploaded none; it says why"
           fi
           if [ "$CHECKS" = success ]; then
-            checks="✅ The automatic checks passed: the app opened every screen, and none is blank or has text behind the status bar."
+            checks="✅ The automatic checks passed: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
           else
             checks="⚠️ **The automatic checks failed or didn't finish.** Start with [the run]($run_url) to see why."
           fi
@@ -244,3 +263,52 @@ jobs:
             while read -r old; do gh api -X DELETE "repos/$REPO/issues/comments/$old" >/dev/null; done
           gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
           echo "Posted the review comment for $SHA."
+
+  earlier-screens:
+    # Re-checks an earlier run's screenshots in a few minutes, instead of a
+    # 40-minute build, while tuning the text checks.
+    if: github.event_name == 'workflow_dispatch' && inputs.screens_from_run != ''
+    name: Check the key screens of an earlier run
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # To download the earlier run's screenshots.
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # For sharp, which crops strips for a closer look.
+      - name: Install dependencies
+        run: npm ci --force
+
+      - name: Download that run's screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.screens_from_run }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo 'screens_from_run must be a run ID.' >&2; exit 1; }
+          gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-pr-preview-*-arm64' --dir "$RUNNER_TEMP/earlier"
+          SCREENS="$(find "$RUNNER_TEMP/earlier" -type d -name screens -print -quit)"
+          test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
+          echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
+
+      - name: Check the text on the key screens
+        run: node scripts/check-screens.cjs --dir "$SCREENS"
+
+      - name: Upload the text that was read
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: key-screen-checks-${{ inputs.screens_from_run }}
+          path: |
+            ${{ env.SCREENS }}/ocr.json
+            ${{ env.SCREENS }}/checks.json
+          if-no-files-found: warn
+          retention-days: 14

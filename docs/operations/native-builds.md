@@ -875,6 +875,36 @@ under the status bar, and the Bible header with two translations and a back arro
 running after launch, if it didn't open the saved screen, if a screenshot is blank, or
 if a screen marked `statusBarClear` shows anything behind the status bar.
 
+**Text checks.** `scripts/check-screens.cjs` then reads each screenshot's text with
+Apple's Vision framework (`scripts/ocr-screens.swift`, built into macOS) and checks what
+every screen must show:
+
+- the tab labels, in the shot's language, in the tab bar;
+- on Bible screens, the verse button's whole label in the chapter controls, so a
+  cut-off "V" fails;
+- a screen's `mustShowLines`, regular expressions some line must start with, so a verse
+  number split across two lines fails;
+- no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
+  ("undefined", "NaN").
+
+Each label counts only where it belongs, so "Read Verse" on Home isn't the verse button.
+A missing label gets a second read of its strip, enlarged and with its contrast
+stretched. One-character labels, such as 您 and 節, aren't required: Vision often misses
+a lone Chinese character, and it can't be cut short anyway. A screen without the tab bar,
+such as the Bible while reading, sets `"tabs": false`. What Vision read is saved as
+`ocr.json` beside the screenshots, and the results as `checks.json`.
+
+The first real runs showed what this catches. Every screen covered by iOS's "Open in"
+prompt failed, and so did one screenshot the app hadn't drawn yet, which the blank check
+then missed. To try a rule change without a 40-minute build, start the workflow by hand
+with **screens_from_run** set to an earlier run's ID: it downloads that run's screenshots
+and only checks them. The tests use text Vision read from real screenshots
+(`test/screens/ocr-samples.json`), unedited. It includes Vision's mistakes on text
+that's fine on screen, such as "ANDKPW MUKKA" for the "ANDREW MURRAY" printed small on
+the *Humility* cover image, and "eternal life4." for a verse with footnote 4. The
+checks look only for particular labels in particular places, so text like that can't
+pass or fail them, and a test makes sure of it.
+
 **Human review.** Other layout problems, such as a cut-off label or a verse number
 split across two lines, need a person. When the iOS preview finishes on the release
 pull request into `main`, it posts a comment there with a link to that commit's
