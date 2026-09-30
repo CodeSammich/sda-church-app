@@ -36,7 +36,7 @@ whole system is the domain.
 | [HelloAO](#helloao) | Bible text, English BSB audio | Free | "No usage limits" | n/a | Low: CDN |
 | [fetch(bible)](#fetchbible) | Original-language, CUV, RV1909 text | Free | "No limits from us" | n/a | Low: CDN |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
-| [Adventech](#adventech-sabbath-school) | Children's Sabbath School catalog | Free | None published | Unknown | Low: CDN |
+| [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
 | [EGW Writings covers](#egw-writings-covers) | Library thumbnails | Free | None published | Unknown | Low: Cloudflare |
 | [Sunrise-Sunset](#sunrise-sunset) | Sunset times on the printed Queens bulletin | Free, **attribution required** | "Reasonable" volume; `429` + `Retry-After` | Throttled | None: one request per printed bulletin; the app no longer calls it |
@@ -70,7 +70,7 @@ Per-use costs, *measured*:
 | fetch(bible) book | ~30 KB (CUV John) | One request per book, kept in memory for the session |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
-| Adventech quarterly index | ~124 KB | CDN-cached |
+| Adventech quarterly index | ~124 KB | CDN-cached; only when a children's age group is tapped |
 
 The conclusion: **text APIs are negligible at every scenario, and audio is the only
 real load.** Adventist Connect carries it, and the fallback chain decides who carries
@@ -193,9 +193,14 @@ Translation (`LanguageApp`) only runs on a cache miss, so its quota isn't a conc
 
 ### Adventech Sabbath School
 
-`sabbath-school.adventech.io`. The app downloads the quarterly index (about 124 KB)
-when the children's Sabbath School screen opens, from S3 and CloudFront with a warm
-cache (*measured*). Free, no key, no published limits.
+`sabbath-school.adventech.io`. Opening the Sabbath School screen downloads nothing.
+When someone taps a children's age group, the app finds this week's lesson and opens
+its PDF: for Junior, Teen, and Youth, the quarterly index (about 124 KB) and two small
+lesson files; for Beginner, Kindergarten, and Primary, two Alive in Jesus files (about
+15 KB each). It tries the app's language first, then English, and opens the age
+group's Alive in Jesus website if it finds no lesson within 12 seconds. All of it comes
+from S3 and CloudFront with a warm cache (*measured*). Free, no key, no published
+limits.
 
 ### Chinese Union Mission library
 

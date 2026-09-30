@@ -2,24 +2,21 @@ import { MenuCard } from '@/components/MenuCard';
 import { VerseHero } from '@/components/VerseHero';
 import {
   CHURCH_BUILDING_IMAGE_URL,
-  getChildrenSabbathSchoolLanguage,
-  getCurrentChildrenSabbathSchoolOptions,
   openChildrenSabbathSchool,
   openBabiesSabbathSchool,
   openCurrentChildrenSabbathSchool,
   openCurrentSabbathSchool,
   openSabbathSchool,
-  type ChildrenSabbathSchoolCurriculum,
-  type ChildrenSabbathSchoolOption,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { SABBATH_SCHOOL_BACK_TARGET } from '@/constants/BackNavigation';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
+import type { ChildrenSabbathSchoolCurriculum } from '@/features/sabbath-school/ChildrenLessons';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { Stack } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, List, Text } from 'react-native-paper';
 
@@ -32,9 +29,9 @@ const copy = {
     beginner: 'Beginner (ages 1–3)', kindergarten: 'Kindergarten (ages 4–6)',
     primary: 'Primary (ages 7–9)', junior: 'Junior (ages 10–12)',
     teen: 'Teen (ages 13–14)', youth: 'Youth (ages 15–18)',
-    studentGuide: 'Student PDF', teacher: 'Teacher',
-    teacherGuide: 'Teacher PDF', english: 'English', chinese: 'Chinese', spanish: 'Spanish',
-    checking: 'Checking availability…', unavailable: 'Not available in this language',
+    studentGuide: 'This week’s student lesson', teacher: 'Teacher',
+    teacherGuide: 'This week’s teacher guide',
+    childrenNote: 'Opens this week’s lesson PDF, or the Alive in Jesus website when the lesson isn’t out yet.',
     studentsTab: 'Students', teachersTab: 'Teachers', moreResources: 'More resources',
     allChildren: "Children's Catalog", allChildrenSub: 'Browse Alive in Jesus age-level resources',
   },
@@ -46,9 +43,8 @@ const copy = {
     beginner: '幼兒級（1–3 歲）', kindergarten: '幼稚級（4–6 歲）',
     primary: '初小級（7–9 歲）', junior: '少年級（10–12 歲）',
     teen: '青少年級（13–14 歲）', youth: '青年級（15–18 歲）',
-    studentGuide: '學生 PDF', teacher: '教師版', teacherGuide: '教師 PDF',
-    english: '英文', chinese: '中文', spanish: '西班牙文',
-    checking: '正在檢查是否有課程…', unavailable: '此語言暫無課程',
+    studentGuide: '本週學生課程', teacher: '教師版', teacherGuide: '本週教師指引',
+    childrenNote: '開啟本週課程 PDF。沒有中文版時開啟英文版；課程尚未發佈時開啟 Alive in Jesus 網站。',
     studentsTab: '學生', teachersTab: '教師', moreResources: '更多資源',
     allChildren: '兒童課程目錄', allChildrenSub: '瀏覽 Alive in Jesus 各年齡課程',
   },
@@ -60,9 +56,8 @@ const copy = {
     beginner: '幼儿组（1–3 岁）', kindergarten: '幼稚组（4–6 岁）',
     primary: '小学组（7–9 岁）', junior: '少年组（10–12 岁）',
     teen: '青少年组（13–14 岁）', youth: '青年组（15–18 岁）',
-    studentGuide: '学生 PDF', teacher: '教师版', teacherGuide: '教师 PDF',
-    english: '英文', chinese: '中文', spanish: '西班牙文',
-    checking: '正在检查是否有课程…', unavailable: '此语言暂无课程',
+    studentGuide: '本周学生课程', teacher: '教师版', teacherGuide: '本周教师指引',
+    childrenNote: '打开本周课程 PDF。没有中文版时打开英文版；课程尚未发布时打开 Alive in Jesus 网站。',
     studentsTab: '学生', teachersTab: '教师', moreResources: '更多资源',
     allChildren: '儿童课程目录', allChildrenSub: '浏览 Alive in Jesus 各年龄课程',
   },
@@ -74,9 +69,9 @@ const copy = {
     beginner: 'Principiantes (1–3 años)', kindergarten: 'Jardín de infantes (4–6 años)',
     primary: 'Primarios (7–9 años)', junior: 'Menores (10–12 años)',
     teen: 'Adolescentes (13–14 años)', youth: 'Jóvenes (15–18 años)',
-    studentGuide: 'PDF del alumno', teacher: 'Maestro',
-    teacherGuide: 'PDF del maestro', english: 'inglés', chinese: 'chino', spanish: 'español',
-    checking: 'Comprobando disponibilidad…', unavailable: 'No disponible en este idioma',
+    studentGuide: 'Lección del alumno de esta semana', teacher: 'Maestro',
+    teacherGuide: 'Guía del maestro de esta semana',
+    childrenNote: 'Abre en inglés la lección de esta semana en PDF, o el sitio de Alive in Jesus si aún no se ha publicado.',
     studentsTab: 'Alumnos', teachersTab: 'Maestros', moreResources: 'Más recursos',
     allChildren: 'Catálogo infantil', allChildrenSub: 'Explora los recursos de Alive in Jesus por edad',
   },
@@ -90,68 +85,22 @@ export default function SabbathSchoolScreen() {
   const documentStyles = useDocumentStyles();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
   const [childrenTab, setChildrenTab] = useState<'students' | 'teachers'>('students');
-  const [childrenOptions, setChildrenOptions] = useState<
-    Record<ChildrenSabbathSchoolCurriculum, ChildrenSabbathSchoolOption> | null
-  >(null);
   const showingStudents = childrenTab === 'students';
-  const showChildrenTabs = language === 'en' || Object.values(childrenOptions || {})
-    .some((option) => option.available);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setChildrenOptions(null);
-    getCurrentChildrenSabbathSchoolOptions(
-      language,
-      new Date(),
-      fetch,
-      controller.signal,
-    )
-      .then(setChildrenOptions)
-      .catch((error) => {
-        if (error instanceof Error && error.name === 'AbortError') return;
-        console.warn('Could not load children Sabbath School availability:', error);
-        setChildrenOptions({} as Record<
-          ChildrenSabbathSchoolCurriculum,
-          ChildrenSabbathSchoolOption
-        >);
-      });
-    return () => controller.abort();
-  }, [language]);
-
-  const guideDescription = (
-    curriculum: ChildrenSabbathSchoolCurriculum,
-    guide: 'student' | 'teacher',
-  ) => {
-    const base = guide === 'student' ? labels.studentGuide : labels.teacherGuide;
-    if (!childrenOptions) return `${base} · ${labels.checking}`;
-    if (!childrenOptions[curriculum]?.available) return `${base} · ${labels.unavailable}`;
-    const guideLanguage = getChildrenSabbathSchoolLanguage(curriculum, language);
-    return `${base} · ${
-      guideLanguage === 'zh'
-        ? labels.chinese
-        : guideLanguage === 'es'
-          ? labels.spanish
-          : labels.english
-    }`;
-  };
+  // Every age group shows every week; tapping one finds this week's lesson
+  // (see features/sabbath-school/ChildrenLessons.ts).
   const renderChildrenLesson = (
     curriculum: ChildrenSabbathSchoolCurriculum,
     title: string,
     guide: 'student' | 'teacher',
-  ) => {
-    const option = childrenOptions?.[curriculum];
-    const available = option?.available === true;
-    if (language !== 'en' && !available) return null;
-    return (
-      <MenuCard
-        description={guideDescription(curriculum, guide)}
-        disabled={!available}
-        icon={guide === 'student' ? 'book-open-page-variant' : 'human-male-board'}
-        onPress={() => openCurrentChildrenSabbathSchool(curriculum, language)}
-        title={language === 'en' ? title : option?.categoryName || title}
-      />
-    );
-  };
+  ) => (
+    <MenuCard
+      description={guide === 'student' ? labels.studentGuide : labels.teacherGuide}
+      icon={guide === 'student' ? 'book-open-page-variant' : 'human-male-board'}
+      onPress={() => openCurrentChildrenSabbathSchool(curriculum, language)}
+      title={title}
+    />
+  );
 
   return (
     <>
@@ -209,49 +158,51 @@ export default function SabbathSchoolScreen() {
           >
             {labels.children}
           </Text>
-          {showChildrenTabs ? (
+          <View style={styles.childrenTabsContainer}>
+            <Button
+              accessibilityRole="tab"
+              accessibilityState={{ selected: showingStudents }}
+              mode={showingStudents ? 'contained' : 'outlined'}
+              onPress={() => setChildrenTab('students')}
+              style={styles.childrenTab}
+            >
+              {labels.studentsTab}
+            </Button>
+            <Button
+              accessibilityRole="tab"
+              accessibilityState={{ selected: !showingStudents }}
+              mode={!showingStudents ? 'contained' : 'outlined'}
+              onPress={() => setChildrenTab('teachers')}
+              style={styles.childrenTab}
+            >
+              {labels.teachersTab}
+            </Button>
+          </View>
+          <Text
+            variant="bodySmall"
+            style={[styles.childrenNote, { color: theme.colors.onSurfaceVariant }]}
+          >
+            {labels.childrenNote}
+          </Text>
+          {showingStudents ? (
             <>
-              <View style={styles.childrenTabsContainer}>
-                <Button
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: showingStudents }}
-                  mode={showingStudents ? 'contained' : 'outlined'}
-                  onPress={() => setChildrenTab('students')}
-                  style={styles.childrenTab}
-                >
-                  {labels.studentsTab}
-                </Button>
-                <Button
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: !showingStudents }}
-                  mode={!showingStudents ? 'contained' : 'outlined'}
-                  onPress={() => setChildrenTab('teachers')}
-                  style={styles.childrenTab}
-                >
-                  {labels.teachersTab}
-                </Button>
-              </View>
-              {showingStudents ? (
-                <>
-                  {renderChildrenLesson('beginner-student', labels.beginner, 'student')}
-                  {renderChildrenLesson('kindergarten-student', labels.kindergarten, 'student')}
-                  {renderChildrenLesson('primary-student', labels.primary, 'student')}
-                  {renderChildrenLesson('junior', labels.junior, 'student')}
-                  {renderChildrenLesson('teen', labels.teen, 'student')}
-                  {renderChildrenLesson('youth', labels.youth, 'student')}
-                </>
-              ) : (
-                <>
-                  {renderChildrenLesson('beginner-teacher', labels.beginner, 'teacher')}
-                  {renderChildrenLesson('kindergarten-teacher', labels.kindergarten, 'teacher')}
-                  {renderChildrenLesson('primary-teacher', labels.primary, 'teacher')}
-                  {renderChildrenLesson('junior-teacher', labels.junior, 'teacher')}
-                  {renderChildrenLesson('teen-teacher', labels.teen, 'teacher')}
-                  {renderChildrenLesson('youth-teacher', labels.youth, 'teacher')}
-                </>
-              )}
+              {renderChildrenLesson('beginner-student', labels.beginner, 'student')}
+              {renderChildrenLesson('kindergarten-student', labels.kindergarten, 'student')}
+              {renderChildrenLesson('primary-student', labels.primary, 'student')}
+              {renderChildrenLesson('junior', labels.junior, 'student')}
+              {renderChildrenLesson('teen', labels.teen, 'student')}
+              {renderChildrenLesson('youth', labels.youth, 'student')}
             </>
-          ) : null}
+          ) : (
+            <>
+              {renderChildrenLesson('beginner-teacher', labels.beginner, 'teacher')}
+              {renderChildrenLesson('kindergarten-teacher', labels.kindergarten, 'teacher')}
+              {renderChildrenLesson('primary-teacher', labels.primary, 'teacher')}
+              {renderChildrenLesson('junior-teacher', labels.junior, 'teacher')}
+              {renderChildrenLesson('teen-teacher', labels.teen, 'teacher')}
+              {renderChildrenLesson('youth-teacher', labels.youth, 'teacher')}
+            </>
+          )}
           <MenuCard title={labels.babies} description={labels.babiesSub} icon="baby-face-outline" onPress={() => openBabiesSabbathSchool(language)} />
           <MenuCard title={labels.allChildren} description={labels.allChildrenSub} icon="account-child" onPress={openChildrenSabbathSchool} />
         </List.Section>
@@ -264,6 +215,7 @@ export default function SabbathSchoolScreen() {
 const styles = StyleSheet.create({
   childrenTabsContainer: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   childrenTab: { flex: 1 },
+  childrenNote: { marginBottom: 12 },
   content: { paddingBottom: 24, paddingHorizontal: 20 },
   scrollContent: { paddingBottom: 24 },
 });

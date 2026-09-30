@@ -511,6 +511,49 @@ for (const [name, url, binary = false, allowed = []] of navigationLinks) {
   await record(name, 'App navigation', () => probe(url, { binary, allowed: [...allowed, 429] }));
 }
 
+// Children's Sabbath School (#336): each age group opens this week's lesson PDF,
+// falling back to English and then to its Alive in Jesus website. These checks
+// fail when the English lessons for this quarter can't be found, which means
+// the app is showing the website instead. The quarter follows
+// features/sabbath-school/ChildrenLessons.ts.
+const childrenQuarter = (weekStartsOn) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const starts = [today.getFullYear() - 1, today.getFullYear(), today.getFullYear() + 1]
+    .flatMap((year) => [1, 2, 3, 4].map((quarter) => {
+      const start = new Date(year, (quarter - 1) * 3, 1);
+      start.setDate(start.getDate() - (weekStartsOn === 'sunday' ? start.getDay() : (start.getDay() + 1) % 7));
+      return { quarter, start, year };
+    }))
+    .filter(({ start }) => start <= today);
+  const { quarter, year } = starts[starts.length - 1];
+  return `${year}-${String(quarter).padStart(2, '0')}`;
+};
+
+for (const level of ['beginner', 'kindergarten', 'primary', 'junior', 'teen', 'youth']) {
+  await record(`Alive in Jesus ${level} website`, 'Children Sabbath School', () =>
+    probe(`https://${level}.aliveinjesus.info/`));
+}
+
+for (const book of ['bg', 'bg-tg', 'kd', 'kd-tg', 'pr', 'pr-tg']) {
+  const id = `${childrenQuarter('sunday')}-${book}`;
+  await record(`Alive in Jesus ${id} PDFs`, 'Children Sabbath School', async () => {
+    const pdfs = await getJson(`https://sabbath-school.adventech.io/api/v3/en/aij/${id}/pdf.json`);
+    const weeks = pdfs.filter(({ target }) => new RegExp(`^en/aij/${id}/\\d+$`).test(target || ''));
+    if (!weeks.length) throw new Error(`en/aij/${id} has no weekly PDFs`);
+    return `${weeks.length} weekly PDFs`;
+  });
+}
+
+await record('English children\'s quarterlies this quarter', 'Children Sabbath School', async () => {
+  const catalog = await getJson('https://sabbath-school.adventech.io/api/v2/en/quarterlies/index.json');
+  const ids = new Set(catalog.map(({ id }) => id));
+  const expected = ['pp', 'rt', 'cc'].map((suffix) => `${childrenQuarter('saturday')}-${suffix}`);
+  const missing = expected.filter((id) => !ids.has(id));
+  if (missing.length) throw new Error(`the catalog doesn't list ${missing.join(', ')}`);
+  return expected.join(', ');
+});
+
 // The store listings and printed QR codes point at these pages, so they must
 // keep working through the church's own domain. See
 // docs/operations/admin-runbook.md#the-app-website-appnyccsdaorg.

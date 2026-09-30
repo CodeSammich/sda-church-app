@@ -414,8 +414,8 @@ checks nearly all of them daily.
 | Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |
 | Bible audio | Audio Power | `theaudiopower.com` | CUV audio, third source | In app |
 | Bulletin | Church Apps Script | `script.google.com` | Digital bulletin JSON | In app |
-| Sabbath School | Adventech | `sabbath-school.adventech.io` | Children's lesson catalog and PDFs (API); adult lessons (reader) | In app and link |
-| Sabbath School | Alive in Jesus | `aliveinjesus.info` | Children's Sabbath School | Link |
+| Sabbath School | Adventech | `sabbath-school.adventech.io` | Children's lesson catalogs and PDFs (API); adult lessons (reader) | In app and link |
+| Sabbath School | Alive in Jesus | `aliveinjesus.info` | Children's age-group websites, opened when this week's lesson isn't found; Babies resources | Link |
 | Library | Chinese Union Mission | `api.sdabible.org`, `cms.sdabible.site` | Cover thumbnails for the Chinese Ellen G. White editions (the books open on EGW Writings) | In app |
 | Library | EGW Writings | `a.egwwritings.org`, `text.egwwritings.org` | Book covers (in app); reading (link) | In app and link |
 | Library | Project Gutenberg | `gutenberg.org` | Public-domain Christian classics | Link |
