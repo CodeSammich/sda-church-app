@@ -351,6 +351,37 @@ lapses, the privacy policy, support, and download pages above go down with it.
 - Each administrator logs in, which proves the backups work. Remove anyone who has left.
 - The account's billing page lists only the domain registration.
 - The card on file hasn't expired, and auto-renew is on.
+- The Free plan still covers everything in the next section.
+
+### Why only the domain costs money
+
+The card pays for one thing: registering `nyccsda.org`. Cloudflare Registrar charges
+only what the registry and ICANN charge it, with no markup
+([Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)). That's about
+$10 a year for a `.org`, or about $100 paid once for ten years. Everything else the church
+uses runs on Cloudflare's Free plan, which has no usage charges:
+
+- **DNS** for `nyccsda.org`, including the records for the church's Google Workspace
+  email and for Google Search Console;
+- **the `app.nyccsda.org` redirect** to the app website on GitHub Pages;
+- **the HTTPS certificate** for that address, which Cloudflare issues and renews for
+  free ([Universal SSL](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/));
+- **protection from denial-of-service attacks,** unmetered on every plan
+  ([DDoS protection](https://developers.cloudflare.com/ddos-protection/)).
+
+**Why Cloudflare gives this away:** free users are worth more to Cloudflare than they
+cost. Cloudflare says they:
+- expose its network to attacks it learns from;
+- try new features first;
+- make internet providers more willing to exchange traffic with it for free;
+- use capacity that would otherwise sit idle between business peaks.
+
+In 2024 it restated that "our free plan is here to stay"
+([Reaffirming our commitment to free](https://blog.cloudflare.com/cloudflares-commitment-to-free/)).
+
+That's a company's promise, not a contract, so the yearly checkup re-reads these pages.
+If the Free plan ever stops covering something the church uses, decide before the
+change takes effect whether to pay for it or move it elsewhere.
 
 ## Yearly checkup
 

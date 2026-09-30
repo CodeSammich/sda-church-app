@@ -67,6 +67,7 @@ describe('yearly checkup checklist', () => {
       'card on file hasn\'t expired',
       'billing page lists only the domain',
       'nothing else in the account is on a paid plan',
+      'The Free plan still covers DNS',
       'Bible Brain API key',
       'sda-church-app-play',
       'only one with a card',

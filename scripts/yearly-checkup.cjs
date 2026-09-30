@@ -29,6 +29,11 @@ const CHECKLIST = [
         'the-cloudflare-account-and-domain',
       ],
       [
+        'Cloudflare: re-read the pages linked here. The Free plan still covers DNS, the `app.nyccsda.org` redirect, its HTTPS certificate, and attack protection at no charge.',
+        'docs/operations/admin-runbook.md',
+        'why-only-the-domain-costs-money',
+      ],
+      [
         'Google Cloud: the Play upload project (`sda-church-app-play`) still has no billing account.',
         'docs/operations/service-limits-and-costs.md',
         'google-cloud-play-upload-service-account',
