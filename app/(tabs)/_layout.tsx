@@ -121,6 +121,7 @@ export default function TabLayout() {
 
   // Reader Mode state shared with child screens
   const menuAnim = useRef(new Animated.Value(1)).current;
+  const [bibleControlsStacked, setBibleControlsStacked] = useState(false);
   const isMenuVisible = useRef(true);
 
   const setMenuVisible = (visible: boolean) => {
@@ -188,7 +189,9 @@ export default function TabLayout() {
 
   return (
     <BottomTabHeightContext.Provider value={tabBarHeight}>
-      <UIStateContext.Provider value={{ menuAnim, setMenuVisible }}>
+      <UIStateContext.Provider
+        value={{ menuAnim, setMenuVisible, bibleControlsStacked, setBibleControlsStacked }}
+      >
         <Tabs
         screenListeners={{
           tabPress: () => {

@@ -8,8 +8,12 @@ import {
   scaleTypographyMetric,
 } from '@/constants/AppPreferences';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { UIStateContext } from '@/constants/UIStateContext';
 import { useTextSize } from '@/constants/TextSizeContext';
-import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
+import {
+  getGlobalHeaderHeightForScale,
+  shouldStackBibleControls,
+} from '@/hooks/useGlobalHeaderHeight';
 import {
   filterHeaderSearchItems,
   getHymnalSearchNavigation,
@@ -22,7 +26,6 @@ import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
 import { router, useGlobalSearchParams, usePathname, useSegments } from 'expo-router';
 import {
-  createContext,
   useContext,
   useDeferredValue,
   useEffect,
@@ -77,16 +80,7 @@ const READER_SEARCH_LABELS = {
   },
 } as const;
 
-/**
- * Context to drive global UI visibility (Reader Mode).
- */
-export const UIStateContext = createContext<{
-  menuAnim: Animated.Value;
-  setMenuVisible: (visible: boolean) => void;
-}>({
-  menuAnim: new Animated.Value(1),
-  setMenuVisible: () => {},
-});
+export { UIStateContext };
 
 type BibleVerseSearchResult = {
   icon: 'format-quote-close';
@@ -158,12 +152,8 @@ export const GlobalHeader = (props: any) => {
     compactControlHeight,
     Math.ceil(40 * effectiveTextScale + 12),
   );
-  const stackBibleControls =
-    isBiblePage &&
-    Boolean(bibleTranslation) &&
-    effectiveTextScale >= 1.5;
 
-  const { menuAnim } = useContext(UIStateContext);
+  const { menuAnim, setBibleControlsStacked } = useContext(UIStateContext);
   const [headerHeight, setHeaderHeight] = useState(0);
 
   // Animate the header off the top of the screen
@@ -233,6 +223,24 @@ export const GlobalHeader = (props: any) => {
   const onBibleVerseSearchPress = props.options?.onBibleVerseSearchPress as
     | ((verseNumber: number) => void)
     | undefined;
+  // The translation button shares a row with the icon buttons whenever they
+  // fit, measured from the button's natural width; it only takes its own row
+  // when they can't. A fixed text-size threshold used to stack them even when
+  // they fit, as on an iPhone with larger system text.
+  const [bibleRowWidth, setBibleRowWidth] = useState(0);
+  const [translationButtonWidth, setTranslationButtonWidth] = useState(0);
+  const stackBibleControls =
+    isBiblePage &&
+    Boolean(bibleTranslation) &&
+    shouldStackBibleControls({
+      rowWidth: bibleRowWidth,
+      translationButtonWidth,
+      iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
+      iconButtonSize: compactControlHeight,
+    });
+  useEffect(() => {
+    if (isBiblePage) setBibleControlsStacked(stackBibleControls);
+  }, [isBiblePage, setBibleControlsStacked, stackBibleControls]);
   const isHeroHeaderRoute = HERO_HEADER_ROUTES.has(props.route?.name);
   const showTitleChip = props.options?.showTitleChip ?? !isHeroHeaderRoute;
   const appBarHeight = getGlobalHeaderHeightForScale(
@@ -475,6 +483,91 @@ export const GlobalHeader = (props: any) => {
     />
   );
 
+  const translationChipContent = (
+    <>
+                    <AppIcon
+                      name="translate"
+                      size={18}
+                      textScale={headerTextScale}
+                      color={theme.colors.primary}
+                    />
+                    {bibleTranslationItems?.length ? (
+                      <View style={styles.translationChipItems}>
+                        {bibleTranslationItems.map((item, index) => (
+                          <View
+                            key={`${item.badge}-${item.label}-${index}`}
+                            style={styles.translationChipItem}
+                          >
+                            {index > 0 && (
+                              <Text
+                                style={{
+                                  color: theme.colors.onSurfaceVariant,
+                                  fontSize: scaleTypographyMetric(13, headerTextScale),
+                                  fontWeight: '700',
+                                  lineHeight: scaleTypographyMetric(18, headerTextScale),
+                                }}
+                              >
+                                +
+                              </Text>
+                            )}
+                            <View
+                              style={[
+                                styles.translationLanguageBadge,
+                                {
+                                  backgroundColor: theme.colors.primaryContainer,
+                                  borderColor: theme.colors.outlineVariant,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={{
+                                  color: theme.colors.onPrimaryContainer,
+                                  fontSize: scaleTypographyMetric(11, headerTextScale),
+                                  fontWeight: '800',
+                                  lineHeight: scaleTypographyMetric(15, headerTextScale),
+                                }}
+                              >
+                                {item.badge}
+                              </Text>
+                            </View>
+                            <Text
+                              numberOfLines={1}
+                              style={{
+                                color: theme.colors.onSurface,
+                                flexShrink: 1,
+                                fontSize: scaleTypographyMetric(14, headerTextScale),
+                                fontWeight: '700',
+                                lineHeight: scaleTypographyMetric(19, headerTextScale),
+                              }}
+                            >
+                              {item.label}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text
+                        style={{
+                          color: theme.colors.onSurface,
+                          fontSize: scaleTypographyMetric(14, headerTextScale),
+                          fontWeight: '700',
+                          lineHeight: scaleTypographyMetric(19, headerTextScale),
+                          textAlign: 'center',
+                          flexShrink: 1,
+                        }}
+                      >
+                        {bibleTranslation}
+                      </Text>
+                    )}
+                    <AppIcon
+                      name="chevron-down"
+                      size={17}
+                      textScale={headerTextScale}
+                      color={theme.colors.primary}
+                    />
+    </>
+  );
+
   return (
     <Animated.View
       style={[
@@ -567,11 +660,25 @@ export const GlobalHeader = (props: any) => {
           <View style={{ flex: 1 }}>
             {isBiblePage ? (
               <View
+                onLayout={(event) => setBibleRowWidth(event.nativeEvent.layout.width)}
                 style={[
                   styles.bibleSearchContainer,
                   stackBibleControls && styles.stackedBibleSearchContainer,
                 ]}
               >
+                {bibleTranslation && (
+                  <View
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    onLayout={(event) =>
+                      setTranslationButtonWidth(Math.ceil(event.nativeEvent.layout.width))
+                    }
+                    pointerEvents="none"
+                    style={styles.translationChipMeasure}
+                  >
+                    {translationChipContent}
+                  </View>
+                )}
                 {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
                   <Pressable
                     onPress={onBibleTranslationPress}
@@ -591,86 +698,7 @@ export const GlobalHeader = (props: any) => {
                       },
                     ]}
                   >
-                    <AppIcon
-                      name="translate"
-                      size={18}
-                      textScale={headerTextScale}
-                      color={theme.colors.primary}
-                    />
-                    {bibleTranslationItems?.length ? (
-                      <View style={styles.translationChipItems}>
-                        {bibleTranslationItems.map((item, index) => (
-                          <View
-                            key={`${item.badge}-${item.label}-${index}`}
-                            style={styles.translationChipItem}
-                          >
-                            {index > 0 && (
-                              <Text
-                                style={{
-                                  color: theme.colors.onSurfaceVariant,
-                                  fontSize: scaleTypographyMetric(13, headerTextScale),
-                                  fontWeight: '700',
-                                  lineHeight: scaleTypographyMetric(18, headerTextScale),
-                                }}
-                              >
-                                +
-                              </Text>
-                            )}
-                            <View
-                              style={[
-                                styles.translationLanguageBadge,
-                                {
-                                  backgroundColor: theme.colors.primaryContainer,
-                                  borderColor: theme.colors.outlineVariant,
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={{
-                                  color: theme.colors.onPrimaryContainer,
-                                  fontSize: scaleTypographyMetric(11, headerTextScale),
-                                  fontWeight: '800',
-                                  lineHeight: scaleTypographyMetric(15, headerTextScale),
-                                }}
-                              >
-                                {item.badge}
-                              </Text>
-                            </View>
-                            <Text
-                              numberOfLines={1}
-                              style={{
-                                color: theme.colors.onSurface,
-                                flexShrink: 1,
-                                fontSize: scaleTypographyMetric(14, headerTextScale),
-                                fontWeight: '700',
-                                lineHeight: scaleTypographyMetric(19, headerTextScale),
-                              }}
-                            >
-                              {item.label}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <Text
-                        style={{
-                          color: theme.colors.onSurface,
-                          fontSize: scaleTypographyMetric(14, headerTextScale),
-                          fontWeight: '700',
-                          lineHeight: scaleTypographyMetric(19, headerTextScale),
-                          textAlign: 'center',
-                          flexShrink: 1,
-                        }}
-                      >
-                        {bibleTranslation}
-                      </Text>
-                    )}
-                    <AppIcon
-                      name="chevron-down"
-                      size={17}
-                      textScale={headerTextScale}
-                      color={theme.colors.primary}
-                    />
+                    {translationChipContent}
                   </Pressable>
                 )}
                 {!isBibleSearchExpanded && onBibleVerseHelpPress && (
@@ -907,6 +935,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
+  },
+  // An invisible copy of the translation chip at its natural width, with the
+  // chip's padding and gap, to decide whether it fits beside the icon buttons.
+  translationChipMeasure: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 3,
+    left: 0,
+    opacity: 0,
+    paddingHorizontal: 12,
+    position: 'absolute',
+    top: 0,
   },
   translationChipItem: {
     alignItems: 'center',
