@@ -29,6 +29,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentRef,
 } from 'react';
 import {
   Animated,
@@ -142,7 +143,7 @@ export const GlobalHeader = (props: any) => {
   const [isBibleSearchExpanded, setIsBibleSearchExpanded] = useState(false);
   const searchExpansion = useRef(new Animated.Value(0)).current;
   const searchRef = useRef<any>(null);
-  const headerRef = useRef<View>(null);
+  const headerRef = useRef<ComponentRef<typeof View>>(null);
   const insets = useSafeAreaInsets();
   const { fontScale, width: windowWidth } = useWindowDimensions();
   const [measuredHeaderContentHeight, setMeasuredHeaderContentHeight] = useState(0);
