@@ -105,7 +105,7 @@ import {
   storeSavedVerses,
 } from '@/services/SavedVersesService';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
-import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import {
   createReaderStyles,
   getBibleDockLayout,
@@ -584,6 +584,9 @@ export default function BibleScreen() {
     }[translation.lang];
     return `${translation.name} (${translationLanguageLabel})`;
   };
+  const popupMaxHeight = usePopupMaxHeight(0.8);
+  const audioSettingsMaxHeight = usePopupMaxHeight(0.82);
+  const verseDetailMaxHeight = usePopupMaxHeight(0.94);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
@@ -3778,7 +3781,7 @@ export default function BibleScreen() {
           onDismiss={() => setAudioSettingsVisible(false)}
           contentContainerStyle={[
             ReaderStyles.audioSettingsContent,
-            { marginBottom: bottomDockInset + 12 },
+            { marginBottom: bottomDockInset + 12, maxHeight: audioSettingsMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
         >
@@ -3946,7 +3949,11 @@ export default function BibleScreen() {
         <Modal
           visible={backgroundAudioGuidanceVisible}
           onDismiss={() => setBackgroundAudioGuidanceVisible(false)}
-          contentContainerStyle={[ReaderStyles.modalContent, getPopupSurfaceStyle(theme)]}
+          contentContainerStyle={[
+            ReaderStyles.modalContent,
+            { maxHeight: popupMaxHeight },
+            getPopupSurfaceStyle(theme),
+          ]}
         >
           <View style={ReaderStyles.modalInner}>
             <Text
@@ -4010,7 +4017,11 @@ export default function BibleScreen() {
         <Modal
           visible={sleepTimerVisible}
           onDismiss={() => setSleepTimerVisible(false)}
-          contentContainerStyle={[ReaderStyles.modalContent, getPopupSurfaceStyle(theme)]}
+          contentContainerStyle={[
+            ReaderStyles.modalContent,
+            { maxHeight: popupMaxHeight },
+            getPopupSurfaceStyle(theme),
+          ]}
         >
           <View style={ReaderStyles.modalInner}>
             <Text
@@ -4086,7 +4097,11 @@ export default function BibleScreen() {
           onDismiss={closeModal}
           contentContainerStyle={[
             ReaderStyles.modalContent,
-            lastActiveType === 'verse-detail' && styles.verseDetailModalContent,
+            { maxHeight: popupMaxHeight },
+            lastActiveType === 'verse-detail' && [
+              styles.verseDetailModalContent,
+              { maxHeight: verseDetailMaxHeight },
+            ],
             getPopupSurfaceStyle(theme),
           ]}
         >
@@ -4894,7 +4909,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       flexGrow: 1,
     },
     verseDetailModalContent: {
-      maxHeight: '94%',
       marginTop: 8,
       marginBottom: 8,
     },

@@ -233,7 +233,6 @@ describe('Bible reader text scaling', () => {
     expect(audioSettings).toMatchObject({
       borderRadius: 24,
       marginTop: 'auto',
-      maxHeight: '82%',
     });
   });
 });

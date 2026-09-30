@@ -470,12 +470,12 @@ export const createReaderStyles = (textScale: TextScale) => {
     fontSize: scaleTypographyMetric(15, textScale),
     lineHeight: scaleTypographyMetric(22, textScale),
   },
-  modalContent: { margin: 20, borderRadius: 12, maxHeight: '80%', overflow: 'hidden' },
+  // Give these a height limit with usePopupMaxHeight, not a percentage.
+  modalContent: { margin: 20, borderRadius: 12, overflow: 'hidden' },
   audioSettingsContent: {
     marginHorizontal: 12,
     marginTop: 'auto',
     borderRadius: 24,
-    maxHeight: '82%',
     overflow: 'hidden',
   },
   modalInner: { paddingVertical: 16, flexShrink: 1 },
