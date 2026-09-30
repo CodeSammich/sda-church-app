@@ -234,6 +234,18 @@ for (const [name, catId, path] of hymnCatalogs) {
   });
 }
 
+// oEmbed answers only for public videos, so a removed or private recording fails.
+await record('daily 506 hymn recording sample', 'YouTube', async () => {
+  const { videos } = await readJson('features/hymnal/Chinese506YouTube.json');
+  const [number, videoId] = dailySample(Object.entries(videos), 506);
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const video = await getJson(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watchUrl)}`);
+  if (Number(String(video.title).match(/^\s*(\d+)/)?.[1]) !== Number(number)) {
+    throw new Error(`${watchUrl} for hymn ${number} is now titled "${video.title}"`);
+  }
+  return `hymn ${number}: ${video.title}`;
+});
+
 await record('directory publishes the expected English hymnal links', 'Hymns for Worship', async () => {
   const url = 'https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/';
   const { response, text: html } = await getTextPage(url, {

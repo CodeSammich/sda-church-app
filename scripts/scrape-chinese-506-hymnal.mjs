@@ -39,11 +39,39 @@ const decodeHtml = (value) =>
 const linkPattern =
   /<a\s+href="\/index\.php\?m=content(?:&amp;|&)c=index(?:&amp;|&)a=show(?:&amp;|&)catid=90(?:&amp;|&)id=(\d+)"[^>]*>(\d+)[、.]([^<]+)<\/a>/g;
 
-const entries = [...html.matchAll(linkPattern)].map((match) => ({
-  number: Number.parseInt(match[2], 10),
-  title: decodeHtml(match[3]),
-  pageId: Number.parseInt(match[1], 10),
-}));
+// Typos in the source directory's titles, found by comparing them with the
+// hymn titles in the 506 YouTube recordings (scripts/map-chinese-506-youtube.mjs).
+// Each maps the source's title to the corrected one.
+const TITLE_CORRECTIONS = {
+  59: ['昨日，今日，真到永远', '昨日，今日，直到永远'],
+  89: ['到各山领去传扬', '到各山岭去传扬'],
+  129: ['我们会天家', '我们回天家'],
+  159: ['我听主生欢迎', '我听主声欢迎'],
+  203: ['宝血大全能', '宝血大权能'],
+  319: ['主用不离你', '主永不离你'],
+  337: ['祷告良晨', '祷告良辰'],
+  344: ['德福良辰', '得福良辰'],
+};
+
+const correctTitle = (number, title) => {
+  const correction = TITLE_CORRECTIONS[number];
+  if (!correction || title === correction[1]) return title;
+  if (title !== correction[0]) {
+    throw new Error(
+      `Hymn ${number} is now titled "${title}" at the source. Check it and update TITLE_CORRECTIONS.`,
+    );
+  }
+  return correction[1];
+};
+
+const entries = [...html.matchAll(linkPattern)].map((match) => {
+  const number = Number.parseInt(match[2], 10);
+  return {
+    number,
+    title: correctTitle(number, decodeHtml(match[3])),
+    pageId: Number.parseInt(match[1], 10),
+  };
+});
 
 if (entries.length !== 506) {
   throw new Error(`Expected 506 hymn links, found ${entries.length}.`);
