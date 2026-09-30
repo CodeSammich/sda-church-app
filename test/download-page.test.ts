@@ -11,7 +11,12 @@ const QRCode: {
 // links (https://app.nyccsda.org/download). These tests run its redirect
 // script with the devices issue #237 lists.
 const page = readFileSync(resolve(process.cwd(), 'public/download.html'), 'utf8');
-const redirectScript = page.match(/<script>([\s\S]*?)<\/script>/)![1];
+// The page's first script is the redirect. A plain string search finds it: the
+// page is our own file, so there's no untrusted markup to allow for.
+const scriptStart = page.indexOf('<script>');
+const scriptEnd = page.indexOf('</script>', scriptStart);
+if (scriptStart < 0 || scriptEnd < 0) throw new Error('public/download.html has no redirect script');
+const redirectScript = page.slice(scriptStart + '<script>'.length, scriptEnd);
 
 const APP_STORE = 'https://apps.apple.com/app/id6816789535';
 const GOOGLE_PLAY = 'https://play.google.com/store/apps/details?id=org.nyccsda.app';
