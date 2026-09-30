@@ -153,6 +153,13 @@ The files suggest several sources:
 - Most files are 16 kbps, but 1 and 2 Samuel and 1 Kings are 32 to 40 kbps, and two
   chapters of 2 Samuel carry a "www.NextUp.com" tag.
 
+WordProject's Copyrights page explains its stance. It publishes the Bible "in good
+faith claiming the right of fair use for non-profit and educational purposes and public
+benefit", and it accepts narrations from people who "narrate the Bible in your own
+language and place it in the public domain". So WordProject means its recordings to be
+shared freely for non-profit use, but it doesn't claim a license from each recording's
+owner.
+
 The church relies on WordProject's terms as the publisher. If a rights holder objects,
 remove the recording, or the books concerned, promptly and record why here.
 
