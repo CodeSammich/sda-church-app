@@ -66,7 +66,8 @@ describe('yearly checkup checklist', () => {
     for (const text of [
       'card on file hasn\'t expired',
       'billing page lists only the domain',
-      'Error 1027',
+      'nothing else in the account is on a paid plan',
+      'Bible Brain API key',
       'sda-church-app-play',
       'only one with a card',
       'two-factor login',
@@ -78,7 +79,9 @@ describe('yearly checkup checklist', () => {
     ]) {
       expect(body).toContain(text);
     }
-    expect(body).toContain('https://github.com/church/app/blob/main/docs/operations/admin-runbook.md#why-a-free-worker-cant-bill');
+    expect(body).toContain('https://github.com/church/app/blob/main/docs/operations/admin-runbook.md#the-cloudflare-account-and-domain');
+    // Nothing runs on Cloudflare but the domain, so the checklist doesn't ask about Workers.
+    expect(body).not.toMatch(/Worker/);
     // Every item is a box to tick.
     expect(body.match(/^- \[ \] /gm)!.length).toBe(
       CHECKLIST.reduce((count: number, [, items]: [string, unknown[]]) => count + items.length, 0),

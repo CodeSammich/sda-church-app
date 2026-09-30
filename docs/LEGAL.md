@@ -71,16 +71,19 @@ requested. Still open:
 - Redistributing FCBH audio through this public repository would need FCBH's
   separate approval. FCBH noted that an audio recording can carry its own copyright
   even when the Bible text is public domain.
-- The church's application for FCBH API access is pending.
+- The church's application for FCBH API access was approved on September 30, 2026
+  (see below).
 
 ### Bible Brain API license (Faith Comes By Hearing): planned, not in use
 
 > [!NOTE]
-> **Work in progress.** The app does **not** use Bible Brain or any Faith Comes By
-> Hearing content today. The church has applied for API access and is waiting for a
-> reply. This section records the license terms ahead of time so the integration
-> ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241))
-> is designed to follow them.
+> **Not in use.** The app does **not** use Bible Brain or any Faith Comes By Hearing
+> content today. FCBH issued the church an API key on September 30, 2026. It's kept in
+> the church's IT Admin shared drive, which only certain administrators can open, and
+> nothing uses it yet. This section records the license terms, so any use of the key
+> follows them. Plans for Bible audio and text in more languages, including a Cloudflare
+> Worker designed to keep the key out of the app (on hold), are tracked in
+> [#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241).
 
 Using FCBH audio through its Bible Brain API (the Digital Bible Platform, DBP) would
 mean agreeing to the [API License Agreement](https://www.faithcomesbyhearing.com/bible-brain/license)
@@ -97,10 +100,10 @@ would affect this project, quoted from the agreement (not legal advice):
 | Copying by users | "Your Application shall not allow End Users to reproduce, copy, or replicate any DBP Content", apart from `/download` content. | No share-audio-file or export features for FCBH content. |
 | Termination | FCBH "may immediately terminate or suspend this Agreement … at any time and for any reason". | FCBH audio must never be the only source for a feature; keep a fallback, as the CUV audio has. |
 
-The planned Cloudflare Worker proxy for the key is tracked in
-[#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241).
-It must follow the proxy and caching terms above, and it must stay on Cloudflare's
-Workers Free plan, which returns errors at its limits instead of billing.
+Any service that holds the key for the app must follow the proxy and caching terms
+above, and must never be able to bill the church.
+[#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)
+records the design built for that and why it's on hold.
 
 Before the app uses or hosts any of these, get written confirmation from the
 recording's rights holder and record it in #134 and in this section. Adding Spanish
