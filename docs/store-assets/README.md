@@ -13,6 +13,10 @@ what screenshots may show are in [Store listings](../operations/store-listing.md
   upload order.
 - `google-play/phone/zh-TW/`: the four for the Traditional Chinese listings, `zh-TW`
   and `zh-HK`. Simplified Chinese and Spanish show the English ones.
+- `app-store/en-US/`: the six iPhone screenshots for the English (U.S.) App Store
+  listing, in upload order, at the 6.9-inch size (1320 × 2868).
+- `app-store/zh-Hant/`: the five for Chinese (Traditional). Spanish shows the English
+  ones.
 - `google-play/foreground-service-demo.mp4`: the original of the unlisted YouTube video
   that Play Console's foreground service declaration links to. If the YouTube video is
   ever deleted, upload this file again and update the link; see
@@ -20,9 +24,18 @@ what screenshots may show are in [Store listings](../operations/store-listing.md
 
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. Play
 screenshots are 1080 × 1920, captured on the Android emulator with Android's demo mode
-for a clean status bar. App Store screenshots will go in `app-store/`. The iOS PR
-preview's key screens are already the App Store's 6.9-inch iPhone size, with a clean
-status bar; see [iOS PR preview](../operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+for a clean status bar. The App Store screenshots come from the iOS PR preview's key
+screens, which are the App Store's 6.9-inch iPhone size with a clean status bar; see
+[iOS PR preview](../operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+The ones here are from the 0.43.0 release PR.
+
+**No transparency.** Both stores reject screenshots with an alpha channel: Google Play
+takes JPEG or 24-bit PNG, and App Store Connect refuses images with transparency. The
+Simulator and the Android emulator both save PNGs with one, so every screenshot here has
+had it removed. Every pixel was opaque already, so nothing changed visibly. The iOS
+preview's App Store copies come without it. For a new screenshot, remove it with
+`sharp` (`removeAlpha()`), then check with `sharp(file).metadata()` that `hasAlpha` is
+false.
 
 The repository is public. Before adding a screenshot, check it shows no members'
 names, photos of people, phone numbers, or email addresses, and run
