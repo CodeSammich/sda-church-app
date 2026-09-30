@@ -130,7 +130,10 @@ moving progress bar and the media controls show the playback. To record it again
    and `true` afterwards.
 4. Unlock and return to the app; the audio is still playing.
 
-Upload it to YouTube as unlisted, and replace the link here and in Play Console.
+The original file is [`docs/store-assets/google-play/foreground-service-demo.mp4`](../store-assets/google-play/foreground-service-demo.mp4).
+If the YouTube video is deleted or made private, Google can't verify the declaration,
+so upload that file again as unlisted, and replace the link here and in Play Console.
+After recording a new one, replace the file too.
 
 ## Category and tags
 
