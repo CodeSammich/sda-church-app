@@ -35,6 +35,12 @@ In App Store Connect, add each language under **App Information → Localizable
 Information**. In Play Console, use **Main store listing → Manage translations**.
 English (United States) is the primary language in both.
 
+App Store Connect copies the English name into a new language as a placeholder; replace
+it with that language's name. If saving a language reports that "the app name you entered
+is already being used", reload the page before trying another name. Once a language
+saves, the page doesn't refresh, so the next **Save** tries to create the language again
+and trips over the app's own name. After a reload the name is usually already there.
+
 ## English
 
 App Store: English (U.S.). Google Play: English (United States), `en-US`.
