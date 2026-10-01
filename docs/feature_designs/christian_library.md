@@ -44,6 +44,14 @@ Three books have a Spanish edition, which Spanish readers see and open instead, 
 | J. N. Andrews, *History of the Sabbath* | *Historia del Sábado* | EGW Writings, the Adventist Pioneer Library's 2020 translation of the 1873 edition |
 | *The Pilgrim's Progress* | *El progreso del peregrino para todos (condensado)* | Chapel Library's free PDF, an abridged edition it allows anyone to copy |
 
+One book has a Chinese edition, which Chinese readers see and open instead, titled in Traditional or Simplified characters to match the app language and with a Chinese cover (`chineseEdition` in `features/library/LibraryCatalog.ts`). One edition serves both scripts, even when it is printed in traditional characters only:
+
+| Book | Chinese edition | Source |
+| --- | --- | --- |
+| *The Pilgrim's Progress* | 天路歷程 (天路历程), the 1869 Mandarin (官話) edition of William C. Burns's translation of Part 1 | HathiTrust's public-domain scan |
+
+No other non–Ellen White book had a Chinese or Spanish edition that is public domain or offered free when checked on 2026-10-01, so those books show in English to Chinese and Spanish readers.
+
 Their rights bases are in [Library Sources and Licensing](../LEGAL.md#library-sources-and-licensing).
 
 ### EGW Writings editions

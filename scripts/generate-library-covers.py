@@ -13,7 +13,8 @@ Usage (Python 3 with Pillow):
 To add a book, add an entry to SPECS (its id matches the catalog entry in
 features/library/LibraryCatalog.ts) and register the PNG in BOOK_COVERS in
 features/library/LibraryCovers.ts. A Spanish edition's cover takes the book's id
-with `-es` and goes in SPANISH_BOOK_COVERS. The CJK font argument is only read
+with `-es` and goes in SPANISH_BOOK_COVERS; a Chinese edition's takes `-zh` and
+goes in CHINESE_BOOK_COVERS. The CJK font argument is only read
 for covers with a Chinese title; pass any placeholder when drawing others.
 """
 import math
@@ -461,6 +462,9 @@ SPECS = [
      'author': 'Elena G. de White', 'color': (30, 56, 100), 'emblem': 'shepherd'},
     {'id': 'andrews-history-sabbath-es', 'title': 'Historia del Sábado',
      'author': 'J. N. Andrews', 'color': (58, 46, 72), 'emblem': 'hourglass'},
+    # Chinese editions, likewise, with the Chinese title above the English one.
+    {'id': 'bunyan-pilgrims-progress-zh', 'title': "The Pilgrim's Progress", 'cjk_title': '天路歷程',
+     'author': 'John Bunyan', 'color': (78, 30, 46), 'emblem': 'city'},
 ]
 
 if __name__ == '__main__':

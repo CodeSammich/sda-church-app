@@ -22,6 +22,9 @@ public-domain book request, and EGW Writings receives one sampled book request
 for each supported edition language. The Internet Archive receives one metadata
 request per linked library scan, which checks that the scan is still openly
 downloadable and dated before 1928 (see [Internet Archive sources](../LEGAL.md#internet-archive-sources)).
+HathiTrust receives one catalog request per Chinese library edition, which checks
+that the volume is still public domain and in full view; its page viewer turns
+away scripts, so the monitor reads the catalog record instead.
 Fixed app destinations and small API
 contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media

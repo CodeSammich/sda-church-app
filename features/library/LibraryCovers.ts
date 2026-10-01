@@ -28,6 +28,13 @@ export const SPANISH_BOOK_COVERS: Readonly<Record<string, ImageSourcePropType>> 
   'story-of-jesus': require('../../assets/images/library/story-of-jesus-es.png'),
 };
 
+// Covers for Chinese editions, keyed by the book's catalog id, shown to
+// Chinese readers when the book has a `chineseEdition`. One cover serves both
+// scripts.
+export const CHINESE_BOOK_COVERS: Readonly<Record<string, ImageSourcePropType>> = {
+  'bunyan-pilgrims-progress': require('../../assets/images/library/bunyan-pilgrims-progress-zh.png'),
+};
+
 // Bundled covers for Ellen G. White's books, shown when the official covers
 // from EGW Writings (getEgwCoverUrlsForLanguage) can't load.
 export const EGW_COVERS: Readonly<Record<string, ImageSourcePropType>> = {
