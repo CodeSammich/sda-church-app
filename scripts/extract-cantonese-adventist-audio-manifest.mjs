@@ -43,14 +43,22 @@ const outputPath = path.join(
   'CantoneseAdventistAudioManifest.ts',
 );
 
+const startedAt = Date.now();
+
 const fetchPage = async (page) => {
   const url = new URL(MEDIA_API);
   url.searchParams.set('media_type', 'audio');
   url.searchParams.set('per_page', '100');
   url.searchParams.set('page', String(page));
   url.searchParams.set('_fields', 'source_url');
+  // The site caches API responses, which can still list deleted files or miss
+  // new uploads; a unique query string asks for a fresh list.
+  url.searchParams.set('fresh', String(startedAt));
   const response = await fetch(url, {
-    headers: { 'user-agent': 'NYCCSDA-app-manifest/1.0' },
+    headers: {
+      'cache-control': 'no-cache',
+      'user-agent': 'NYCCSDA-app-manifest/1.0',
+    },
   });
   if (!response.ok) {
     throw new Error(`${url}: HTTP ${response.status}`);
