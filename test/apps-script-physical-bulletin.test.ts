@@ -586,16 +586,72 @@ describe('printed bulletin Apps Script helpers', () => {
     );
   });
 
-  it('uses the shared dummy QR image until slot-specific Drive IDs are configured', () => {
+  it('prints the mobile app QR code only when SHOW_MOBILE_APP_QR is true', () => {
+    const withSwitch = (value: string | null) =>
+      loadAppsScript({
+        PropertiesService: {
+          getScriptProperties: () => ({
+            getProperty: (name: string) => (name === 'SHOW_MOBILE_APP_QR' ? value : null),
+          }),
+        },
+      });
+    const reserved = (context: ReturnType<typeof loadAppsScript>, location: string) =>
+      JSON.parse(
+        runInContext(
+          `JSON.stringify(getGivingQrItems_('${location}').map(function (item) { return Boolean(item.reserved); }))`,
+          context,
+        ) as string,
+      );
+
+    for (const value of ['true', ' TRUE ']) {
+      const context = withSwitch(value);
+      // Zelle stays reserved until the treasury confirms the address (#384).
+      expect(reserved(context, 'queens')).toEqual([false, false, true]);
+      expect(reserved(context, 'brooklyn')).toEqual([false, false, true]);
+    }
+    for (const value of [null, '', 'false', 'yes']) {
+      const context = withSwitch(value);
+      expect(reserved(context, 'queens')).toEqual([true, false, true]);
+      expect(reserved(context, 'brooklyn')).toEqual([true, false, true]);
+    }
+  });
+
+  it('leaves the mobile app slot blank, with no placeholder, when its code is missing', () => {
+    const context = loadAppsScript({
+      Logger: { log: () => undefined },
+      PropertiesService: {
+        getScriptProperties: () => ({ getProperty: () => '' }),
+      },
+    });
+    const calls: string[] = [];
+    context.tableCell = new Proxy(
+      {},
+      {
+        get: (_target, name) => () => {
+          calls.push(String(name));
+        },
+      },
+    );
+
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('mobileApp')`, context)).toBe('');
+    runInContext(
+      `appendGivingQrPlaceholderCell_(tableCell, getGivingQrItems_('queens')[0], {})`,
+      context,
+    );
+    runInContext(
+      `appendGivingQrPlaceholderCell_(tableCell, { label: getPrintedMobileAppQrLabel_(), kind: 'mobileApp' }, {})`,
+      context,
+    );
+    expect(calls).toEqual(['clear', 'clear']);
+  });
+
+  it('uses the shared dummy QR image for giving slots until their Drive IDs are configured', () => {
     const context = loadAppsScript({
       PropertiesService: {
         getScriptProperties: () => ({ getProperty: () => '' }),
       },
     });
 
-    expect(runInContext(`getPrintedBulletinQrImageFileId_('mobileApp')`, context)).toBe(
-      '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
-    );
     expect(runInContext(`getPrintedBulletinQrImageFileId_('zelle')`, context)).toBe(
       '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
     );
@@ -612,7 +668,7 @@ describe('printed bulletin Apps Script helpers', () => {
           requestedNames.push(name);
           return {
             hasNext: () => true,
-            next: () => ({ getId: () => `id-for-${name}` }),
+            next: () => ({ getId: () => `id-for-${name}`, isTrashed: () => false }),
           };
         },
       },
@@ -632,6 +688,40 @@ describe('printed bulletin Apps Script helpers', () => {
       'queens_zelle_qr_code_368x368.jpg',
       'mobile_app_qr_code_368x368.jpg',
     ]);
+  });
+
+  it('skips QR files in the Drive trash', () => {
+    const filesNamed: Record<string, { id: string; trashed: boolean }[]> = {
+      'mobile_app_qr_code_368x368.jpg': [
+        { id: 'old-trashed-code', trashed: true },
+        { id: 'current-code', trashed: false },
+      ],
+      'queens_adventist_giving_qr_code_368x368.jpg': [{ id: 'trashed-only', trashed: true }],
+    };
+    const context = loadAppsScript({
+      DriveApp: {
+        getFilesByName: (name: string) => {
+          const files = [...(filesNamed[name] ?? [])];
+          return {
+            hasNext: () => files.length > 0,
+            next: () => {
+              const file = files.shift()!;
+              return { getId: () => file.id, isTrashed: () => file.trashed };
+            },
+          };
+        },
+      },
+      PropertiesService: {
+        getScriptProperties: () => ({ getProperty: () => '' }),
+      },
+    });
+
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('mobileApp', 'queens')`, context)).toBe(
+      'current-code',
+    );
+    expect(
+      runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving', 'queens')`, context),
+    ).toBe('12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq');
   });
 
   it('splits printed bilingual values into horizontal English and Chinese columns', () => {
