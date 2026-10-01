@@ -105,6 +105,7 @@ describe('saved settings', () => {
     const sources = [
       'app/_layout.tsx',
       'app/(tabs)/bible/index.tsx',
+      'services/BibleService.ts',
       'constants/Themes.ts',
       'constants/AppPreferences.ts',
     ]

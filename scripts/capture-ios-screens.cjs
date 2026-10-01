@@ -37,6 +37,8 @@ const SETTING_KEYS = {
   dualLanguage: 'user-bible-dual-language',
   supportingTranslation: 'user-bible-supporting-translation',
   pinyin: 'user-bible-show-pinyin',
+  // The Bible translation open when the app last closed.
+  translation: 'user-bible-translation',
   // The narrator chosen for each translation, as { cuv: '<narrator>' }.
   audioReaders: 'user-bible-audio-readers',
 };
