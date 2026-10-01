@@ -49,32 +49,45 @@ export const getGlobalHeaderHeightForScale = (
   );
 };
 
+export type BibleControlsLayout = Readonly<{
+  stack: boolean;
+  hideTranslationIcon: boolean;
+}>;
+
 /**
- * Whether the Bible reader's translation button needs a header row of its own.
- * It shares a row with the icon buttons, cutting its translation names short
- * with "…" when the row is tight, and stacks only when even its shortest form,
- * each name cut to its first letter, can't fit (#376). Measured widths are 0
- * until laid out, so the controls start on one row.
+ * How the Bible reader's header fits its controls (#376). The translation
+ * button shares a row with the icon buttons, cutting its translation names short
+ * with "…" when the row is tight. Only if even its shortest form, each name cut
+ * to its first letter, can't fit does it drop its 文A icon, and only if it still
+ * can't fit does it take a row of its own, with the icon. Measured widths are 0
+ * until laid out, so the controls start on one row with the icon.
  */
-export const shouldStackBibleControls = ({
+export const getBibleControlsLayout = ({
   rowWidth,
-  translationButtonMinWidth,
+  shortestButtonWidth,
+  shortestButtonWidthWithoutIcon,
   iconButtonCount,
   iconButtonSize,
   gap = 8,
   trailingPadding = 12,
 }: {
   rowWidth: number;
-  translationButtonMinWidth: number;
+  shortestButtonWidth: number;
+  shortestButtonWidthWithoutIcon: number;
   iconButtonCount: number;
   iconButtonSize: number;
   gap?: number;
   trailingPadding?: number;
-}) =>
-  rowWidth > 0 &&
-  translationButtonMinWidth > 0 &&
-  translationButtonMinWidth + iconButtonCount * (iconButtonSize + gap) + trailingPadding >
-    rowWidth;
+}): BibleControlsLayout => {
+  const oneRow = { stack: false, hideTranslationIcon: false };
+  if (rowWidth <= 0 || shortestButtonWidth <= 0) return oneRow;
+  const room = rowWidth - iconButtonCount * (iconButtonSize + gap) - trailingPadding;
+  if (shortestButtonWidth <= room) return oneRow;
+  if (shortestButtonWidthWithoutIcon > 0 && shortestButtonWidthWithoutIcon <= room) {
+    return { stack: false, hideTranslationIcon: true };
+  }
+  return { stack: true, hideTranslationIcon: false };
+};
 
 /** A translation name cut to its first letter, the shortest the header shows it. */
 export const shortestTranslationLabel = (label: string) =>

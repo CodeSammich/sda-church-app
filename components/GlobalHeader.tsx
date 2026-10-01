@@ -15,9 +15,9 @@ import {
   getGlobalHeaderHeightForScale,
   getHeaderFontScale,
   HEADER_MAX_FONT_SCALE,
+  getBibleControlsLayout,
   isHeroUnderStatusBar,
   shortestTranslationLabel,
-  shouldStackBibleControls,
 } from '@/hooks/useGlobalHeaderHeight';
 import {
   filterHeaderSearchItems,
@@ -242,21 +242,25 @@ export const GlobalHeader = (props: any) => {
     | ((verseNumber: number) => void)
     | undefined;
   // The translation button shares a row with the icon buttons, cutting its
-  // translation names short with "…" when the row is tight. It takes its own
-  // row only when even its shortest form, measured with each name cut to its
-  // first letter, can't fit (#376). Stacking whenever the full names didn't fit
-  // left a wide, mostly empty button and a back arrow between the rows.
+  // translation names short with "…" when the row is tight. If even its
+  // shortest form, measured with each name cut to its first letter, can't fit,
+  // it drops its 文A icon, and only then takes a row of its own (#376).
+  // Stacking whenever the full names didn't fit left a wide, mostly empty
+  // button and a back arrow between the rows.
   const [bibleRowWidth, setBibleRowWidth] = useState(0);
-  const [translationButtonMinWidth, setTranslationButtonMinWidth] = useState(0);
-  const stackBibleControls =
-    isBiblePage &&
-    Boolean(bibleTranslation) &&
-    shouldStackBibleControls({
-      rowWidth: bibleRowWidth,
-      translationButtonMinWidth,
-      iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
-      iconButtonSize: compactControlHeight,
-    });
+  const [shortestButtonWidth, setShortestButtonWidth] = useState(0);
+  const [shortestButtonWidthWithoutIcon, setShortestButtonWidthWithoutIcon] = useState(0);
+  const bibleControlsLayout =
+    isBiblePage && bibleTranslation
+      ? getBibleControlsLayout({
+          rowWidth: bibleRowWidth,
+          shortestButtonWidth,
+          shortestButtonWidthWithoutIcon,
+          iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
+          iconButtonSize: compactControlHeight,
+        })
+      : { stack: false, hideTranslationIcon: false };
+  const stackBibleControls = bibleControlsLayout.stack;
   // Every tab's header stays mounted and sees the Bible's route while it's
   // open, so only the header showing the Bible's controls reports them.
   useEffect(() => {
@@ -532,15 +536,17 @@ export const GlobalHeader = (props: any) => {
   );
 
   // `shortest` draws each translation name cut to its first letter, for
-  // measuring the narrowest the button gets before the header stacks.
-  const renderTranslationChipContent = (shortest = false) => (
+  // measuring the narrowest the button gets, with or without its icon.
+  const renderTranslationChipContent = (shortest = false, withIcon = true) => (
     <>
-                    <AppIcon
-                      name="translate"
-                      size={18}
-                      textScale={headerTextScale}
-                      color={theme.colors.primary}
-                    />
+                    {withIcon && (
+                      <AppIcon
+                        name="translate"
+                        size={18}
+                        textScale={headerTextScale}
+                        color={theme.colors.primary}
+                      />
+                    )}
                     {bibleTranslationItems?.length ? (
                       <View style={styles.translationChipItems}>
                         {bibleTranslationItems.map((item, index) => (
@@ -739,12 +745,26 @@ export const GlobalHeader = (props: any) => {
                     accessibilityElementsHidden
                     importantForAccessibility="no-hide-descendants"
                     onLayout={(event) =>
-                      setTranslationButtonMinWidth(Math.ceil(event.nativeEvent.layout.width))
+                      setShortestButtonWidth(Math.ceil(event.nativeEvent.layout.width))
                     }
                     pointerEvents="none"
                     style={styles.translationChipMeasure}
                   >
                     {renderTranslationChipContent(true)}
+                  </View>
+                )}
+                {bibleTranslation && (
+                  <View
+                    aria-hidden
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    onLayout={(event) =>
+                      setShortestButtonWidthWithoutIcon(Math.ceil(event.nativeEvent.layout.width))
+                    }
+                    pointerEvents="none"
+                    style={styles.translationChipMeasure}
+                  >
+                    {renderTranslationChipContent(true, false)}
                   </View>
                 )}
                 {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
@@ -766,7 +786,7 @@ export const GlobalHeader = (props: any) => {
                       },
                     ]}
                   >
-                    {renderTranslationChipContent()}
+                    {renderTranslationChipContent(false, !bibleControlsLayout.hideTranslationIcon)}
                   </Pressable>
                 )}
                 {/* The icon buttons stay together: beside the translation button,
