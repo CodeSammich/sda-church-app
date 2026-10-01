@@ -5,12 +5,15 @@ starts from what's live instead of from scratch. The listing text and the rules 
 what screenshots may show are in [Store listings](../operations/store-listing.md#screenshots).
 
 - `google-play/feature-graphic.png`: the 1024 × 500 feature graphic. It shows the app
-  icon, the church's name in English and Traditional Chinese, and the `02` and `03`
-  English screenshots in phone frames on the brand blue (`#00405C`). An AI assistant laid
+  icon, the church's name in English and Traditional Chinese, and two English Bible
+  screenshots in phone frames on the brand blue (`#00405C`): one with pinyin, which is no
+  longer a store screenshot (it's in this folder's git history as `02-bible-pinyin.png`),
+  and `02-bible-audio.png`. An AI assistant laid
   it out, so declare it as AI-generated in Play Console; see
   [Store listing assets](../operations/play-console-answers.md#store-listing-assets).
-- `google-play/phone/en-US/`: the eight phone screenshots for the English listing, in
-  upload order.
+- `google-play/phone/en-US/`: the six phone screenshots for the English listing, in
+  upload order: Home, the Bible with audio playing, the audio-language choice with
+  粵語 (Cantonese) selected, the Bible in the dark theme, Explore, and the Library.
 - `google-play/phone/zh-TW/`: the four for the Traditional Chinese listings, `zh-TW`
   and `zh-HK`. Simplified Chinese and Spanish show the English ones.
 - `app-store/en-US/`: the six iPhone screenshots for the English (U.S.) App Store
