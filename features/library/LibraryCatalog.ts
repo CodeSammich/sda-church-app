@@ -29,10 +29,16 @@ export type LibraryItem = Readonly<{
   // original. Required for Internet Archive scans, whose own edition must be
   // public domain too; see "Internet Archive sources" in docs/LEGAL.md.
   editionYear?: number;
-  // Chinese text for a Chinese book, shown in the matching app language. Other
-  // languages show the English text above, so titles stay in one language.
+  // Chinese text for a Chinese book or a book's Chinese edition, shown in the
+  // matching app language. Other languages show the English text above, so
+  // titles stay in one language.
   traditionalChinese?: LibraryItemText;
   simplifiedChinese?: LibraryItemText;
+  // A Chinese edition, which Chinese readers open instead, titled with the
+  // text above. One edition serves both scripts, even if it is printed in
+  // traditional characters only. See "Library Sources and Licensing" in
+  // docs/LEGAL.md.
+  chineseEdition?: LibraryItemSource;
   // A Chinese book with no English translation yet: only Chinese readers see
   // it in the Library, on its shelf, in the featured books, and in search.
   onlyForChineseReaders?: boolean;
@@ -119,6 +125,28 @@ const publicDomainWorks: readonly LibraryItem[] = [
     sourceName: 'Project Gutenberg',
     sourceUrl: 'https://www.gutenberg.org/ebooks/131',
     publicationYear: 1678,
+    // The 1869 Mandarin (官話) edition of William C. Burns's translation of
+    // Part 1, from the American Presbyterian Mission Press (美華書館) in
+    // Shanghai, printed in traditional characters, so Simplified readers get
+    // it too. HathiTrust marks the scan public domain. Not Burns's 1853
+    // classical (文理) version, which few readers today can follow.
+    traditionalChinese: {
+      title: '天路歷程',
+      author: '約翰·班揚',
+      description:
+        '經典的新教寓言，講述信心、堅忍與基督徒的天路旅程。這是1869年的官話譯本，以繁體字印行。',
+    },
+    simplifiedChinese: {
+      title: '天路历程',
+      author: '约翰·班扬',
+      description:
+        '经典的新教寓言，讲述信心、坚忍与基督徒的天路旅程。这是1869年的官话译本，以繁体字印行。',
+    },
+    chineseEdition: {
+      rights: 'public-domain-us',
+      sourceName: 'HathiTrust',
+      sourceUrl: 'https://babel.hathitrust.org/cgi/pt?id=uc1.b3399258',
+    },
     // Chapel Library's own free PDF, which it calls "cuidadosamente abreviada"
     // (carefully abridged). Its © 2015 notice expressly allows copying it at
     // no more than a nominal cost, with the notice kept.
@@ -196,6 +224,74 @@ const publicDomainWorks: readonly LibraryItem[] = [
     sourceUrl: 'https://archive.org/details/bwb_C0-AVW-616',
     publicationYear: 1630,
     editionYear: 1838,
+  },
+  {
+    // The 1905 Philadelphia edition (H. W. B. Conrad), a Library of Congress
+    // copyright-deposit copy. Its title page reads "Story of the Bible Told for
+    // Young and Old" and carries the 1904 copyright; archive.org catalogs it as
+    // "Mother's story of the Bible". The 1932 and later revisions are lend-only
+    // and still copyrighted, so don't substitute them. Checked against the
+    // rules in docs/LEGAL.md.
+    id: 'hurlbut-story-of-the-bible',
+    title: 'Story of the Bible Told for Young and Old',
+    author: 'Jesse Lyman Hurlbut',
+    collection: 'children',
+    description:
+      'The whole Bible as 168 stories in order, from Creation to Revelation, for children and families to read together.',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Internet Archive',
+    sourceUrl: 'https://archive.org/details/mothersstoryofbi00hurl',
+    publicationYear: 1904,
+    editionYear: 1905,
+  },
+  {
+    id: 'hurlbut-life-of-christ',
+    title: "Hurlbut's Life of Christ for Young and Old",
+    author: 'Jesse Lyman Hurlbut',
+    collection: 'children',
+    description:
+      'The life of Jesus from the four Gospels, written for children of about ten.',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Project Gutenberg',
+    sourceUrl: 'https://www.gutenberg.org/ebooks/40460',
+    publicationYear: 1915,
+  },
+  {
+    // The 1903 first edition: the title page reads London, Morgan & Scott,
+    // and China Inland Mission, MCMIII (archive.org's "Philadelphia" is
+    // wrong). Cornell's scan states no known U.S. copyright restrictions. Not
+    // the later abridged editions. Checked against the rules in docs/LEGAL.md.
+    id: 'taylor-pastor-hsi',
+    title: "Pastor Hsi: One of China's Christians",
+    author: 'Mrs. Howard Taylor',
+    collection: 'youth',
+    description:
+      'The life of Hsi Shengmo, a Confucian scholar in North China who was freed from opium and became a pastor.',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Internet Archive',
+    sourceUrl: 'https://archive.org/details/cu31924023085875',
+    publicationYear: 1903,
+    editionYear: 1903,
+  },
+  {
+    // The 1911 London edition (Morgan & Scott, MCMXI on the title page).
+    // Don't use hudsontaylorin00tayl: it is catalogued as 1911 London but is
+    // the 1912 New York printing. Checked against the rules in docs/LEGAL.md.
+    id: 'taylor-hudson-taylor-early-years',
+    title: 'Hudson Taylor in Early Years: The Growth of a Soul',
+    author: 'Dr. and Mrs. Howard Taylor',
+    collection: 'youth',
+    description:
+      'How Hudson Taylor answered a call to China as a young man and went on to found the China Inland Mission.',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Internet Archive',
+    sourceUrl: 'https://archive.org/details/hudsontaylorinea00unse_0',
+    publicationYear: 1911,
+    editionYear: 1911,
   },
 ];
 
@@ -299,10 +395,14 @@ export const getLibraryItemShelf = (item: LibraryItem): LibraryShelf =>
 
 export const getLibraryItemsForLanguage = (language: SupportedLanguage) => {
   const preferredLanguage = language === 'zh' || language === 'zh-cn' ? 'zh' : 'en';
-  // Books in the reader's language come first: Chinese books for Chinese
-  // readers, and books with a Spanish edition for Spanish readers.
+  // Books in the reader's language come first: Chinese books and editions for
+  // Chinese readers, and books with a Spanish edition for Spanish readers.
   const rank = (item: LibraryItem) =>
-    (language === 'es' ? Boolean(item.spanish) : item.language === preferredLanguage) ? 0 : 1;
+    (language === 'es'
+      ? Boolean(item.spanish)
+      : item.language === preferredLanguage || (preferredLanguage === 'zh' && Boolean(item.chineseEdition)))
+      ? 0
+      : 1;
   const forThisReader = (items: readonly LibraryItem[]) =>
     items
       .filter((item) => preferredLanguage === 'zh' || !item.onlyForChineseReaders)
@@ -332,6 +432,9 @@ export const getLibraryItemSource = (
   item: LibraryItem,
   language: SupportedLanguage,
 ): LibraryItemSource => {
-  const { rights, sourceName, sourceUrl } = (language === 'es' && item.spanish) || item;
+  const { rights, sourceName, sourceUrl } =
+    (language === 'es' && item.spanish) ||
+    ((language === 'zh' || language === 'zh-cn') && item.chineseEdition) ||
+    item;
   return { rights, sourceName, sourceUrl };
 };

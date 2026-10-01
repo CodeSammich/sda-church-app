@@ -16,8 +16,9 @@ import {
   getLibraryItemsForLanguage,
   type LibraryItem,
 } from './LibraryCatalog';
-import { BOOK_COVERS, EGW_COVERS, SPANISH_BOOK_COVERS } from './LibraryCovers';
+import { BOOK_COVERS, CHINESE_BOOK_COVERS, EGW_COVERS, SPANISH_BOOK_COVERS } from './LibraryCovers';
 import {
+  CATALOG_ITEM_IDS_BY_SHELF,
   EGW_BOOK_IDS_BY_SHELF,
   LIBRARY_SHELVES,
   orderShelfBooks,
@@ -36,6 +37,7 @@ const LIBRARY_BOOK_LABELS = {
     opensGutenberg: 'Opens externally on Project Gutenberg',
     opensPdf: 'Opens the PDF',
     opensInternetArchive: 'Opens externally on the Internet Archive',
+    opensWebsite: "Opens externally on the book's source website",
     openError: 'Could not open this library source.',
   },
   zh: {
@@ -49,6 +51,7 @@ const LIBRARY_BOOK_LABELS = {
     opensGutenberg: '在 Project Gutenberg 外部網站開啟',
     opensPdf: '開啟 PDF 文件',
     opensInternetArchive: '在 Internet Archive 外部網站開啟',
+    opensWebsite: '在此書的來源網站外部開啟',
     openError: '無法開啟此圖書來源。',
   },
   'zh-cn': {
@@ -62,6 +65,7 @@ const LIBRARY_BOOK_LABELS = {
     opensGutenberg: '在 Project Gutenberg 外部网站打开',
     opensPdf: '打开 PDF 文件',
     opensInternetArchive: '在 Internet Archive 外部网站打开',
+    opensWebsite: '在此书的来源网站外部打开',
     openError: '无法打开此图书来源。',
   },
   es: {
@@ -75,6 +79,7 @@ const LIBRARY_BOOK_LABELS = {
     opensGutenberg: 'Se abre externamente en Project Gutenberg',
     opensPdf: 'Abre el PDF',
     opensInternetArchive: 'Se abre externamente en Internet Archive',
+    opensWebsite: 'Se abre externamente en el sitio de origen del libro',
     openError: 'No se pudo abrir esta fuente de la biblioteca.',
   },
 };
@@ -87,6 +92,8 @@ export type LibraryShelfBook = Readonly<{
   accessibilityHint: string;
   coverSource?: ImageSourcePropType;
   coverUrls?: readonly string[];
+  // Orders shared shelves; see orderShelfBooks.
+  byEllenWhite: boolean;
   onPress: () => void;
 }>;
 
@@ -145,6 +152,7 @@ export function useLibraryShelfBooks(
         accessibilityHint: labels.chooseBook,
         coverSource: EGW_COVERS[work.id],
         coverUrls: getEgwCoverUrlsForLanguage(work, language, chineseCoverUrls[work.id]),
+        byEllenWhite: true,
         onPress: () => setSelectedEgwBookId(work.id),
       }));
     const otherBooks = [
@@ -152,7 +160,12 @@ export function useLibraryShelfBooks(
       ...catalog.officialCollections,
       ...catalog.churchDocuments,
     ]
-      .filter((item) => getLibraryItemShelf(item) === shelf && matchesQuery(item))
+      .filter(
+        (item) =>
+          (getLibraryItemShelf(item) === shelf ||
+            !!CATALOG_ITEM_IDS_BY_SHELF[shelf]?.includes(item.id)) &&
+          matchesQuery(item),
+      )
       .map((item) => {
         const text = getLibraryItemDisplayText(item, language);
         const source = getLibraryItemSource(item, language);
@@ -161,16 +174,22 @@ export function useLibraryShelfBooks(
           title: text.title,
           author: text.author,
           accessibilityHint:
-            source.rights === 'official-external'
+            source.sourceName === 'EGW Writings'
               ? labels.opensOfficial
               : source.rights === 'church-hosted' || source.rights === 'permission-to-copy'
                 ? labels.opensPdf
                 : source.sourceName === 'Internet Archive'
                   ? labels.opensInternetArchive
-                  : labels.opensGutenberg,
+                  : source.sourceName === 'Project Gutenberg'
+                    ? labels.opensGutenberg
+                    : labels.opensWebsite,
           coverSource:
             (language === 'es' && item.spanish && SPANISH_BOOK_COVERS[item.id]) ||
+            ((language === 'zh' || language === 'zh-cn') &&
+              item.chineseEdition &&
+              CHINESE_BOOK_COVERS[item.id]) ||
             BOOK_COVERS[item.id],
+          byEllenWhite: item.author === 'Ellen G. White',
           onPress: () => openURL(source.sourceUrl, labels.title, labels.openError),
         };
       });

@@ -395,19 +395,24 @@ const archiveBooks = [...libraryCatalogSource.matchAll(
   /sourceUrl:\s*'(https:\/\/archive\.org\/details\/([A-Za-z0-9._-]+))'/g,
 )].map(([, url, identifier]) => ({ url, identifier }));
 
-// Every public-domain entry links to Gutenberg or the Internet Archive, so a
+// Every public-domain book links to Gutenberg or the Internet Archive, so a
 // count mismatch means a link pattern stopped matching the catalog's format.
-const publicDomainEntryCount = [
-  ...libraryCatalogSource.matchAll(/rights:\s*'public-domain-us'/g),
-].length;
+// Only books count, at the catalog's top level: an edition in another
+// language, nested inside its book, is checked with the other editions.
+const topLevelCount = (pattern) =>
+  [...libraryCatalogSource.matchAll(new RegExp(`^ {4}${pattern}`, 'gm'))].length;
+const publicDomainEntryCount = topLevelCount(String.raw`rights:\s*'public-domain-us'`);
+const publicDomainBookLinkCount = topLevelCount(
+  String.raw`sourceUrl:\s*'https:\/\/(?:(?:www\.)?gutenberg\.org\/ebooks\/\d+|archive\.org\/details\/[A-Za-z0-9._-]+)'`,
+);
 
 await record('catalog has one unique link per public-domain book', 'Project Gutenberg', async () => {
   if (
     !gutenbergBooks.length ||
-    gutenbergBooks.length + archiveBooks.length !== publicDomainEntryCount
+    publicDomainBookLinkCount !== publicDomainEntryCount
   ) {
     throw new Error(
-      `found ${gutenbergBooks.length} Project Gutenberg and ${archiveBooks.length} Internet Archive links for ${publicDomainEntryCount} public-domain books`,
+      `found ${publicDomainBookLinkCount} Project Gutenberg and Internet Archive links for ${publicDomainEntryCount} public-domain books`,
     );
   }
   if (new Set(gutenbergBooks.map(({ url }) => url)).size !== gutenbergBooks.length) {
@@ -444,6 +449,34 @@ await record('Spanish editions open', 'Library', async () => {
     }
   }
   return `${spanishEditionUrls.length} Spanish editions`;
+});
+
+// Chinese readers see a book's Chinese edition when it has one: so far a
+// public-domain scan in HathiTrust's page viewer. The viewer turns away
+// scripts, so check HathiTrust's catalog record that the volume is still
+// public domain and in full view.
+const chineseEditionUrls = [...libraryCatalogSource.matchAll(
+  /chineseEdition:\s*\{[^}]*?sourceUrl:\s*'(https:\/\/[^']+)'/g,
+)].map(([, url]) => url);
+
+await record('Chinese editions stay public domain', 'HathiTrust', async () => {
+  if (chineseEditionUrls.length !== 1) {
+    throw new Error(`found ${chineseEditionUrls.length} Chinese edition links, expected 1`);
+  }
+  for (const url of chineseEditionUrls) {
+    const { hostname, searchParams } = new URL(url);
+    const htid = searchParams.get('id');
+    if (hostname !== 'babel.hathitrust.org' || !htid) {
+      throw new Error(`${url} is not a HathiTrust volume`);
+    }
+    const catalogRecord = await getJson(`https://catalog.hathitrust.org/api/volumes/brief/htid/${htid}.json`);
+    const item = catalogRecord?.items?.find((entry) => entry.htid === htid);
+    if (!item) throw new Error(`${htid} is missing from HathiTrust's catalog`);
+    if (item.rightsCode !== 'pd' || item.usRightsString !== 'Full view') {
+      throw new Error(`${htid} is now ${item.rightsCode} (${item.usRightsString})`);
+    }
+  }
+  return `${chineseEditionUrls.length} public-domain Chinese edition(s) in full view`;
 });
 
 // An Internet Archive item can later be moved into a lending collection or

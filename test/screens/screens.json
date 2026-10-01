@@ -165,9 +165,29 @@
       "variants": ["default", "zh"]
     },
     {
-      "name": "library-classics",
-      "path": "explore/library/christian-classics",
-      "variants": ["default"]
+      "name": "library-children",
+      "$comment": "Books by other writers lead the Children shelf, and Ellen G. White's books for adults stay on her own shelf (#391).",
+      "path": "explore/library/children",
+      "variants": ["default", "zh", "zh-cn", "es"],
+      "mustShowLines": ["^Story of the Bible", "^Hurlbut.s Life of"],
+      "mustNotShowLines": [
+        "^Child Guidance", "^Messages to Young", "^Christ.s Object",
+        "兒童教育指南", "儿童教育指南", "告青年", "基督比喻",
+        "^Conducción del", "^Mensajes para los", "^Palabras de Vida"
+      ]
+    },
+    {
+      "name": "library-youth",
+      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391).",
+      "path": "explore/library/youth",
+      "variants": ["default", "zh", "zh-cn", "es"],
+      "mustShowLines": ["^Pastor Hsi"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^The Pilgrim.s Progress"] },
+        "zh": { "mustShowLines": ["天路歷程"] },
+        "zh-cn": { "mustShowLines": ["天路历程"] },
+        "es": { "mustShowLines": ["^El progreso del peregrino"] }
+      }
     },
     {
       "name": "sabbath-school",

@@ -156,8 +156,8 @@ jobs:
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
-        # One set is enough: both builds run the same JavaScript. 76 shots take
-        # about 22 minutes, so a second set on the Intel build would only make the
+        # One set is enough: both builds run the same JavaScript. 83 shots take
+        # about 24 minutes, so a second set on the Intel build would only make the
         # release PR wait longer. Actions minutes are free for this public
         # repository, so this is about time, not cost.
         if: matrix.arch == 'arm64'

@@ -22,23 +22,33 @@ export const LIBRARY_SHELF_TITLES: Readonly<
 export const isLibraryShelf = (value: unknown): value is LibraryShelf =>
   LIBRARY_SHELVES.includes(value as LibraryShelf);
 
-/** Ellen G. White's books that also sit on another shelf. */
+/**
+ * Ellen G. White's books that also sit on another shelf, one other shelf at
+ * most, so her books don't fill the shelves meant for everyone (#391). Child
+ * Guidance and Christ's Object Lessons are written for adults, so they stay on
+ * her shelf only.
+ */
 export const EGW_BOOK_IDS_BY_SHELF: Readonly<Partial<Record<LibraryShelf, readonly string[]>>> = {
-  children: ['child-guidance', 'messages-to-young-people', 'christs-object-lessons'],
   youth: ['education', 'messages-to-young-people'],
+};
+
+/** Other catalog books that also sit on another shelf. */
+export const CATALOG_ITEM_IDS_BY_SHELF: Readonly<Partial<Record<LibraryShelf, readonly string[]>>> = {
+  youth: ['bunyan-pilgrims-progress'],
 };
 
 /**
  * Books featured at the top of the library page, in order. The first is a
- * general Christian classic.
+ * general Christian classic, and at most one is Ellen G. White's: Steps to
+ * Christ, her most widely read book (#391).
  * Keys are `LibraryShelfBook` keys: a catalog id, or `egw:` and a book id.
  */
 export const FEATURED_LIBRARY_BOOKS = [
   'sibbes-bruised-reed',
   'egw:steps-to-christ',
   'murray-abide-in-christ',
-  'egw:desire-of-ages',
-  'sabbath-encouragement',
+  'taylor-pastor-hsi',
+  'bunyan-pilgrims-progress',
 ] as const;
 
 /**
@@ -47,6 +57,7 @@ export const FEATURED_LIBRARY_BOOKS = [
  */
 export const LIBRARY_SHELF_LEADERS: Readonly<Partial<Record<LibraryShelf, readonly string[]>>> = {
   classics: ['sibbes-bruised-reed'],
+  youth: ['taylor-pastor-hsi'],
   // Sabbath Encouragement always comes first, then her most-read books.
   egw: [
     'sabbath-encouragement',
@@ -59,8 +70,12 @@ export const LIBRARY_SHELF_LEADERS: Readonly<Partial<Record<LibraryShelf, readon
   ],
 };
 
-/** Puts a shelf's leading books first and keeps the others in their order. */
-export const orderShelfBooks = <T extends { key: string }>(
+/**
+ * Puts a shelf's leading books first and keeps the others in their order. On
+ * every shelf but her own, Ellen G. White's books come after everyone else's,
+ * leaders included, so a shared shelf never opens with her (#391).
+ */
+export const orderShelfBooks = <T extends { key: string; byEllenWhite?: boolean }>(
   shelf: LibraryShelf,
   books: readonly T[],
 ): T[] => {
@@ -69,8 +84,9 @@ export const orderShelfBooks = <T extends { key: string }>(
     const index = leaders.indexOf(key);
     return index < 0 ? leaders.length : index;
   };
+  const group = (book: T) => (shelf !== 'egw' && book.byEllenWhite ? 1 : 0);
   return books
-    .map((book, index) => ({ book, index, rank: rank(book.key) }))
-    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map((book, index) => ({ book, index, group: group(book), rank: rank(book.key) }))
+    .sort((a, b) => a.group - b.group || a.rank - b.rank || a.index - b.index)
     .map(({ book }) => book);
 };
