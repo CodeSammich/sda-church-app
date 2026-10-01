@@ -42,7 +42,11 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { getBottomTabContentHeight } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
-import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import {
+  getHeaderFontScale,
+  HEADER_MAX_FONT_SCALE,
+  useGlobalHeaderHeight,
+} from '@/hooks/useGlobalHeaderHeight';
 import {
   ANDROID_AUDIO_GUIDANCE_INTERRUPTION_THRESHOLD,
   getAndroidAppsSettingsIntent,
@@ -549,10 +553,15 @@ export default function BibleScreen() {
     [bibleUiTextScale, textScale],
   );
   const effectiveTextScale = Math.max(1, bibleUiTextScale * osFontScale);
+  // The dock's controls follow the system text size only up to the header's
+  // cap, so "Psalms", the chapter, and "Verse" fit at the largest sizes (#376).
+  // Their text passes the same cap to React Native. The Bible text itself
+  // follows the system size in full.
+  const dockTextScale = Math.max(1, bibleUiTextScale * getHeaderFontScale(osFontScale));
   const measuredBottomTabHeight = useBottomTabHeight();
   const dockLayout = useMemo(
-    () => getBibleDockLayout(viewportWidth, effectiveTextScale),
-    [effectiveTextScale, viewportWidth],
+    () => getBibleDockLayout(viewportWidth, dockTextScale),
+    [dockTextScale, viewportWidth],
   );
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight(true);
@@ -3409,6 +3418,7 @@ export default function BibleScreen() {
         accessibilityLabel={`${labels.book}: ${book?.name || '...'}`}
       >
         <Text
+          maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
           pointerEvents="none"
           numberOfLines={1}
           ellipsizeMode="tail"
@@ -3445,7 +3455,13 @@ export default function BibleScreen() {
         accessibilityRole="button"
         accessibilityLabel={`${labels.chapter}: ${chapterNum}`}
       >
-        <Text pointerEvents="none" numberOfLines={1} ellipsizeMode="tail" style={ReaderStyles.pillText}>
+        <Text
+          maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+          pointerEvents="none"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={ReaderStyles.pillText}
+        >
           {chapterNum}
         </Text>
         <AppIcon
@@ -3477,7 +3493,13 @@ export default function BibleScreen() {
         accessibilityRole="button"
         accessibilityLabel={labels.verse}
       >
-        <Text pointerEvents="none" numberOfLines={1} ellipsizeMode="tail" style={ReaderStyles.pillText}>
+        <Text
+          maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+          pointerEvents="none"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={ReaderStyles.pillText}
+        >
           {labels.verse}
         </Text>
         <AppIcon
@@ -3675,6 +3697,7 @@ export default function BibleScreen() {
                   style={styles.selectionIconAction}
                 />
                 <Text
+                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                   accessibilityLiveRegion="polite"
                   numberOfLines={2}
                   style={[styles.selectionCount, { color: theme.colors.onBackground }]}
@@ -3753,6 +3776,7 @@ export default function BibleScreen() {
                 >
                   {selectedAudioLanguage ? (
                     <Text
+                      maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                       pointerEvents="none"
                       numberOfLines={1}
                       adjustsFontSizeToFit
@@ -3851,6 +3875,7 @@ export default function BibleScreen() {
                 ]}
               >
                 <Text
+                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                   style={[
                     ReaderStyles.audioTimeText,
                     ReaderStyles.audioElapsedTimeText,
@@ -3942,6 +3967,7 @@ export default function BibleScreen() {
                   <ActivityIndicator size={12} color={theme.colors.tertiary} />
                 ) : (
                   <Text
+                    maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                     style={[
                       ReaderStyles.audioTimeText,
                       { color: theme.colors.onSurfaceVariant },

@@ -86,9 +86,11 @@ export const getBibleDockViewportLayout = ({
 };
 
 /**
- * Computes enough space for the Bible's fixed controls without capping either
- * the app preference or the operating-system font scale. Narrow or enlarged
- * layouts stack selectors vertically so their labels can wrap in full.
+ * Computes enough space for the Bible's fixed controls at a text scale: the
+ * app's, times the system's. The Bible screen caps the system's part at the
+ * header's cap (`getHeaderFontScale`), as the controls' text does (#376).
+ * Narrow or enlarged layouts stack selectors vertically so their labels can
+ * wrap in full.
  */
 export const getBibleDockLayout = (
   viewportWidth: number,

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createDocumentStyles } from '@/styles/DocumentStyles';
 import { getBibleReaderUiTextScale } from '@/constants/AppPreferences';
 import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
@@ -122,6 +123,17 @@ describe('Bible reader text scaling', () => {
     expect(withOsText.audioDockHeight).toBeGreaterThan(
       appOnly.audioDockHeight,
     );
+  });
+
+  it("caps the system text size in the dock's controls, as the header does (#376)", () => {
+    // At the iPhone's largest text size, the dock's labels and buttons grew until
+    // "Psalms" read "Ps…" beside a full-size "Verse".
+    const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(source).toContain('bibleUiTextScale * getHeaderFontScale(osFontScale)');
+    expect(source).toContain('getBibleDockLayout(viewportWidth, dockTextScale)');
+    // The book, chapter, and Verse labels, the selection count, the audio
+    // language mark, and both audio times.
+    expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(7);
   });
 
   it('stacks reader controls when space is narrow or text is enlarged', () => {
