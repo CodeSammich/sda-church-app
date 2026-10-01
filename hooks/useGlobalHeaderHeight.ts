@@ -52,23 +52,23 @@ export const getGlobalHeaderHeightForScale = (
 export type BibleControlsLayout = Readonly<{
   stack: boolean;
   hideTranslationIcon: boolean;
-  hideLanguageBadges: boolean;
+  hideTranslationNames: boolean;
 }>;
 
 /**
  * How the Bible reader's header fits its controls (#376). The translation
  * button shares a row with the icon buttons. When the row is tight, it gives
- * things up in this order: first its 文A icon, then the length of its
- * translation names, cut short with "…", and last its language badges (EN, 繁).
- * Only if even the names alone, each cut to its first letter, can't fit does it
- * take a row of its own, with everything. Measured widths are 0 until laid out,
- * so the controls start on one row with everything.
+ * things up in this order: first its 文A icon, then its translation names, cut
+ * short with "…" down to one letter and then dropped, "…" and all, and last its
+ * language badges (EN, 繁): only if even the badges alone can't fit does it take
+ * a row of its own, with everything. Measured widths are 0 until laid out, so
+ * the controls start on one row with everything.
  */
 export const getBibleControlsLayout = ({
   rowWidth,
   fullButtonWidth,
-  shortestButtonWithBadgesWidth,
   shortestButtonWidth,
+  badgesOnlyButtonWidth,
   iconButtonCount,
   iconButtonSize,
   gap = 8,
@@ -78,25 +78,25 @@ export const getBibleControlsLayout = ({
   /** The icon, the badges, and the full names. */
   fullButtonWidth: number;
   /** No icon; the badges, and each name cut to its first letter. */
-  shortestButtonWithBadgesWidth: number;
-  /** No icon or badges; each name cut to its first letter. */
   shortestButtonWidth: number;
+  /** No icon or names; just the badges. */
+  badgesOnlyButtonWidth: number;
   iconButtonCount: number;
   iconButtonSize: number;
   gap?: number;
   trailingPadding?: number;
 }): BibleControlsLayout => {
-  const everything = { stack: false, hideTranslationIcon: false, hideLanguageBadges: false };
+  const everything = { stack: false, hideTranslationIcon: false, hideTranslationNames: false };
   if (rowWidth <= 0 || fullButtonWidth <= 0) return everything;
   const room = rowWidth - iconButtonCount * (iconButtonSize + gap) - trailingPadding;
   if (fullButtonWidth <= room) return everything;
   const fits = (width: number) => width > 0 && width <= room;
   // Without the icon, the names show in full if they fit, or as much as fits.
-  if (fits(shortestButtonWithBadgesWidth)) {
-    return { stack: false, hideTranslationIcon: true, hideLanguageBadges: false };
-  }
   if (fits(shortestButtonWidth)) {
-    return { stack: false, hideTranslationIcon: true, hideLanguageBadges: true };
+    return { stack: false, hideTranslationIcon: true, hideTranslationNames: false };
+  }
+  if (fits(badgesOnlyButtonWidth)) {
+    return { stack: false, hideTranslationIcon: true, hideTranslationNames: true };
   }
   return { ...everything, stack: true };
 };

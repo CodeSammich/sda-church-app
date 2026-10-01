@@ -7,8 +7,8 @@ import {
 } from '@/hooks/useGlobalHeaderHeight';
 
 // The Bible header's translation button shares a row with the icon buttons
-// (#376). When the row is tight it gives up its 文A icon first, then the length
-// of its names, cut short with "…", and last its language badges, and stacks
+// (#376). When the row is tight it gives up its 文A icon first, then its names,
+// cut short with "…" and then dropped, and last its language badges, and stacks
 // only as a last resort. It used to stack whenever the full button didn't fit,
 // as with a back arrow at the app's 150% and 200% text sizes, leaving a wide,
 // mostly empty button and a back arrow between the rows.
@@ -17,8 +17,8 @@ describe("the Bible header's controls", () => {
   const phone = { rowWidth: 380, iconButtonCount: 2, iconButtonSize: 56 };
   // The iPhone shot with a back arrow at 200%: the full button needs about 210
   // where about 202 is left; without the icon the full names need about 183.
-  const widths = { fullButtonWidth: 210, shortestButtonWithBadgesWidth: 160, shortestButtonWidth: 110 };
-  const everything = { stack: false, hideTranslationIcon: false, hideLanguageBadges: false };
+  const widths = { fullButtonWidth: 210, shortestButtonWidth: 160, badgesOnlyButtonWidth: 110 };
+  const everything = { stack: false, hideTranslationIcon: false, hideTranslationNames: false };
 
   it('show everything when the full button fits', () => {
     expect(getBibleControlsLayout({ ...phone, ...widths })).toEqual(everything);
@@ -28,25 +28,25 @@ describe("the Bible header's controls", () => {
     expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 342 })).toEqual({
       stack: false,
       hideTranslationIcon: true,
-      hideLanguageBadges: false,
+      hideTranslationNames: false,
     });
   });
 
-  it('give up the badges last, once the names are as short as they go', () => {
+  it('drop the names, "…" and all, once even one letter each won\'t fit, keeping the badges', () => {
     // 150 left: too little for the badges with first-letter names (160).
     expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 290 })).toEqual({
       stack: false,
       hideTranslationIcon: true,
-      hideLanguageBadges: true,
+      hideTranslationNames: true,
     });
   });
 
-  it('stack, with everything, only when even the names alone overflow', () => {
+  it('stack, with everything, only when even the badges alone overflow', () => {
     expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 240 })).toEqual({ ...everything, stack: true });
   });
 
   it('start on one row, with everything, until the widths are measured', () => {
-    expect(getBibleControlsLayout({ ...phone, fullButtonWidth: 0, shortestButtonWithBadgesWidth: 0, shortestButtonWidth: 0 })).toEqual(everything);
+    expect(getBibleControlsLayout({ ...phone, fullButtonWidth: 0, shortestButtonWidth: 0, badgesOnlyButtonWidth: 0 })).toEqual(everything);
     expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 0 })).toEqual(everything);
   });
 
@@ -58,9 +58,9 @@ describe("the Bible header's controls", () => {
     const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
     expect(header).toContain('{renderTranslationChipContent({})}');
     expect(header).toContain('{renderTranslationChipContent({ shortest: true, withIcon: false })}');
-    expect(header).toContain(
-      '{renderTranslationChipContent({ shortest: true, withIcon: false, withBadges: false })}',
-    );
+    expect(header).toContain('{renderTranslationChipContent({ withIcon: false, withNames: false })}');
+    // Without names, nothing is left to cut short, so no "…" either.
+    expect(header).toMatch(/\{withNames && \(\s*<Text/);
     expect(header).not.toMatch(/translationChip: \{[^}]*maxWidth: 240/);
   });
 
