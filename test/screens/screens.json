@@ -184,6 +184,6 @@
   ],
   "appStore": {
     "en-US": ["home-default", "bible-dual-default", "bible-pinyin-default", "explore-default", "library-default", "bible-dual-dark"],
-    "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "bible-cuvs-zh-cn", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuv-zh-dark"]
+    "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark"]
   }
 }

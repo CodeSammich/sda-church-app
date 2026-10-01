@@ -75,13 +75,19 @@ describe('App Store shots', () => {
     // Home first: the first three show on the App Store's install sheets.
     expect(copies[0]).toEqual({ name: 'home-default', file: 'app-store/en-US/01-home-default.png' });
     expect(copies.map((copy: { file: string }) => copy.file)).toContain('app-store/zh-Hant/01-home-zh.png');
-    // Chinese hears Cantonese in Traditional characters and Mandarin in Simplified,
-    // and has its own dark-mode shot, with the Chinese interface.
-    expect(copies.filter((copy: { file: string }) => copy.file.startsWith('app-store/zh-Hant/')).slice(1, 3)).toEqual([
-      { name: 'bible-cuv-cantonese-zh', file: 'app-store/zh-Hant/02-bible-cuv-cantonese-zh.png' },
-      { name: 'bible-cuvs-zh-cn', file: 'app-store/zh-Hant/03-bible-cuvs-zh-cn.png' },
+    // Chinese hears Cantonese right after Home, with pinyin still in the first three,
+    // then Mandarin in Simplified characters and its own dark-mode shot.
+    expect(copies.filter((copy: { file: string }) => copy.file.startsWith('app-store/zh-Hant/')).map(
+      (copy: { file: string }) => copy.file.replace('app-store/zh-Hant/', ''),
+    )).toEqual([
+      '01-home-zh.png',
+      '02-bible-cuv-cantonese-zh.png',
+      '03-bible-pinyin-zh.png',
+      '04-explore-zh.png',
+      '05-library-zh.png',
+      '06-bible-cuvs-zh-cn.png',
+      '07-bible-cuv-zh-dark.png',
     ]);
-    expect(copies.map((copy: { file: string }) => copy.file)).toContain('app-store/zh-Hant/07-bible-cuv-zh-dark.png');
   });
 
   it('only names shots that are captured, up to the App Store’s ten', () => {

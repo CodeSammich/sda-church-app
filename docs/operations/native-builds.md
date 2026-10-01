@@ -930,7 +930,10 @@ environment requires approval, and fails if it doesn't.
 size. The shots listed under `appStore` in the screen list are also copied, numbered in
 upload order, to `screens/app-store/<language>/`, without the transparency the
 Simulator's PNGs have, which App Store Connect rejects. They're ready to upload; see
-[Store assets](../store-assets/README.md). The Home screen's verse of the day and
+[Store assets](../store-assets/README.md). With each release, compare them with the
+stores' screenshots. Refresh the stores' when one shows something no longer true, the
+app looks noticeably different, or a new feature deserves showing; small differences,
+such as an icon, are fine. The Home screen's verse of the day and
 countdown change daily, which its `changesDaily` entry marks for when these images are
 compared with known-good copies.
 
