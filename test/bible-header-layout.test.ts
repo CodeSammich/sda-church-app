@@ -1,34 +1,58 @@
 import { readFileSync } from 'node:fs';
 import {
+  getBibleControlsLayout,
   getHeaderFontScale,
   HEADER_MAX_FONT_SCALE,
-  shouldStackBibleControls,
+  shortestTranslationLabel,
 } from '@/hooks/useGlobalHeaderHeight';
 
-// The Bible header's translation button shares a row with the icon buttons
-// whenever they fit. An iPhone with larger system text used to get a stacked
-// header even when everything fit on one row.
+// The Bible header's translation button shares a row with the icon buttons,
+// cutting its translation names short with "…" when the row is tight, then
+// dropping its 文A icon, and stacks only as a last resort (#376). It used to
+// stack whenever the full names didn't fit, as with a back arrow at the app's
+// 150% and 200% text sizes, leaving a wide, mostly empty button and a back
+// arrow between the rows.
 describe("the Bible header's controls", () => {
+  // Room for the translation button: 380 − 2 × (56 + 8) − 12 = 240.
   const phone = { rowWidth: 380, iconButtonCount: 2, iconButtonSize: 56 };
+  const oneRow = { stack: false, hideTranslationIcon: false };
 
-  it('share one row when the translation button fits beside the icon buttons', () => {
-    // 212 + 2 × (56 + 8) + 12 = 352, within 380.
-    expect(shouldStackBibleControls({ ...phone, translationButtonWidth: 212 })).toBe(false);
-  });
-
-  it('stack when they would overflow the row', () => {
-    expect(shouldStackBibleControls({ ...phone, translationButtonWidth: 240, rowWidth: 330 })).toBe(true);
-  });
-
-  it("stack rather than cut off a translation name past the button's maximum width", () => {
+  it('share one row, with the icon, when the shortest button fits', () => {
     expect(
-      shouldStackBibleControls({ ...phone, rowWidth: 1000, translationButtonWidth: 260 }),
-    ).toBe(true);
+      getBibleControlsLayout({ ...phone, shortestButtonWidth: 212, shortestButtonWidthWithoutIcon: 185 }),
+    ).toEqual(oneRow);
   });
 
-  it('start on one row until both widths are measured', () => {
-    expect(shouldStackBibleControls({ ...phone, translationButtonWidth: 0 })).toBe(false);
-    expect(shouldStackBibleControls({ ...phone, rowWidth: 0, translationButtonWidth: 500 })).toBe(false);
+  it('drop the icon only when the shortest button with it would overflow', () => {
+    // A Pixel 9a with a back arrow at 150% or 200%: about 200 left for the
+    // button, whose shortest form needs about 206 with the icon, 179 without.
+    expect(
+      getBibleControlsLayout({ ...phone, rowWidth: 332, shortestButtonWidth: 206, shortestButtonWidthWithoutIcon: 179 }),
+    ).toEqual({ stack: false, hideTranslationIcon: true });
+  });
+
+  it('stack, with the icon, only when even the shortest button without it overflows', () => {
+    expect(
+      getBibleControlsLayout({ ...phone, rowWidth: 300, shortestButtonWidth: 206, shortestButtonWidthWithoutIcon: 179 }),
+    ).toEqual({ stack: true, hideTranslationIcon: false });
+  });
+
+  it('start on one row, with the icon, until the widths are measured', () => {
+    expect(getBibleControlsLayout({ ...phone, shortestButtonWidth: 0, shortestButtonWidthWithoutIcon: 0 })).toEqual(oneRow);
+    expect(
+      getBibleControlsLayout({ ...phone, rowWidth: 0, shortestButtonWidth: 500, shortestButtonWidthWithoutIcon: 450 }),
+    ).toEqual(oneRow);
+  });
+
+  it('measure the shortest form with each name cut to its first letter', () => {
+    expect(shortestTranslationLabel('BSB')).toBe('B…');
+    expect(shortestTranslationLabel('RVR09')).toBe('R…');
+    expect(shortestTranslationLabel('和合本')).toBe('和…');
+    expect(shortestTranslationLabel('K')).toBe('K');
+    const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
+    expect(header).toContain('{renderTranslationChipContent(true)}');
+    expect(header).toContain('{renderTranslationChipContent(true, false)}');
+    expect(header).not.toMatch(/translationChip: \{[^}]*maxWidth: 240/);
   });
 
   it('are reported only by the header that shows them', () => {
