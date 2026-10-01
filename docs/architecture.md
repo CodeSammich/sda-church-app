@@ -317,8 +317,9 @@ submitted for review before they appear on the App Store.
 > domain, and the Apple fee waiver depends on that status. Don't make the app paid,
 > and don't add in-app purchases, subscriptions, ads, or anything else that earns
 > money through Apple or Google. Giving stays outside the stores: the app only opens
-> external donation links (AdventistGiving) in the browser, and shows the Zelle
-> address, which is fine.
+> external donation links (AdventistGiving) in the browser, and may show the Zelle
+> address, which is fine. The Zelle section stays hidden until the address can
+> receive gifts (`SHOW_ZELLE_GIVING` in `constants/ExternalLinks.ts`, #392).
 
 ### Apple App Store
 
