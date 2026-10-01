@@ -48,11 +48,17 @@ each step uses, and how the domain ties the accounts together.
 Every outside service the apps talk to: what they load inside the app, and what they
 only open in the browser. It also shows how church media is kept available: the
 Adventist Connect library is served from Wasabi and backed up to Google Drive, and
-if it fails, Bible audio falls back to the Internet Archive and then Audio Power.
+if it fails, the Mandarin Bible audio falls back to the Internet Archive and then
+Audio Power. The Cantonese Bible audio has no fallback, because WordProject's terms
+don't allow playing it from WordProject's servers. It also shows where the church's
+copies of the Bible audio came from: an admin downloaded the Mandarin recordings from
+Audio Power and the Cantonese recordings from WordProject, and uploaded them to the
+library (see
+[Updating the audio manifest](operations/adventist-connect-media.md#updating-the-audio-manifest)).
 See [Third-party APIs and websites](#third-party-apis-and-websites) for the full
 table.
 
-![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Bible audio falling back to the Internet Archive and then Audio Power; Bible text from HelloAO and fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links](diagrams/app-dependencies.svg)
+![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese Bible audio played only from the church's copy, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese recordings from WordProject into the library; Bible text from HelloAO and fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credit](diagrams/app-dependencies.svg)
 
 ### Google Play upload sign-in
 
@@ -291,7 +297,8 @@ on them directly; see [Third-party APIs and websites](#third-party-apis-and-webs
 
 | Media | Primary | Other copies |
 | --- | --- | --- |
-| CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app falls back to the Internet Archive, then Audio Power |
+| Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app falls back to the Internet Archive, then Audio Power |
+| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, because WordProject's terms don't allow playing from its servers |
 | Church photos and hymnal lookup charts | Adventist Connect | Google Drive backup |
 | Bulletin cover art, logo, QR codes | Google Drive | See [Files not in this repository](#files-not-in-this-repository) |
 
@@ -411,9 +418,10 @@ checks nearly all of them daily.
 | --- | --- | --- | --- | --- |
 | Bible | HelloAO | `bible.helloao.org` | Bible text and translation list | In app |
 | Bible | fetch(bible) | `v1.fetch.bible` | Original-language critical texts | In app |
-| Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copy of the CUV audio, tried first | In app |
+| Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the CUV audio: Mandarin, tried first, and Cantonese, the only source | In app |
 | Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |
 | Bible audio | Audio Power | `theaudiopower.com` | CUV audio, third source | In app |
+| Bible audio | WordProject | `wordproject.org` | Source of the Cantonese recording, credited under each chapter | Link |
 | Bulletin | Church Apps Script | `script.google.com` | Digital bulletin JSON | In app |
 | Sabbath School | Adventech | `sabbath-school.adventech.io` | Children's lesson catalogs and PDFs (API); adult lessons (reader) | In app and link |
 | Sabbath School | Alive in Jesus | `aliveinjesus.info` | Children's age-group websites, opened when this week's lesson isn't found; Babies resources | Link |

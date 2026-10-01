@@ -12,7 +12,7 @@
  */
 
 import {
-  getAudioPowerCuvChapterLinks,
+  getCuvChapterAudioLinks,
   supportsAudioPowerCuv,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
@@ -1151,7 +1151,7 @@ async function fetchChapterFromFetchBible(
   const hasAudioPowerCuv = supportsAudioPowerCuv(translationId);
   const getAudioLinks = (audioChapter: number) =>
     hasAudioPowerCuv
-      ? getAudioPowerCuvChapterLinks(book.id, audioChapter)
+      ? getCuvChapterAudioLinks(book.id, audioChapter)
       : {};
 
   return {

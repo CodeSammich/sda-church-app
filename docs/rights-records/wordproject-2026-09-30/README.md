@@ -3,7 +3,7 @@
 These are copies of WordProject's pages that the church relies on to host
 WordProject's Cantonese audio Bible for the app. What the terms say and what they
 require of the app are in
-[WordProject Cantonese audio](../../LEGAL.md#wordproject-cantonese-audio-planned-not-in-use).
+[WordProject Cantonese audio](../../LEGAL.md#wordproject-cantonese-audio).
 They're kept here because the pages can change: the Disclaimer was last changed three
 days before this copy was made.
 

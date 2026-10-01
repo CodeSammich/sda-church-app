@@ -183,6 +183,23 @@ if (adventistEntries.length > 0) {
   await record(`daily audio sample ${sample.filename}`, 'Adventist Connect', () => probe(sample.url, { binary: true }));
 }
 
+// WordProject's Cantonese recording has no fallback host (see docs/LEGAL.md),
+// so a failure here means Cantonese listeners have no audio.
+const cantoneseManifestSource = await readFile('constants/CantoneseAdventistAudioManifest.ts', 'utf8');
+const cantoneseEntries = [...cantoneseManifestSource.matchAll(/["'](CANTONESE_B\d{2}C\d{3}\.mp3)["']:\s*["'](https:\/\/[^"']+)["']/g)]
+  .map(([, filename, url]) => ({ filename, url }));
+
+await record('all 1,189 Cantonese audio assets are mapped', 'Adventist Connect', async () => {
+  if (cantoneseEntries.length !== 1189) throw new Error(`found ${cantoneseEntries.length} manifest entries`);
+  if (new Set(cantoneseEntries.map(({ url }) => url)).size !== 1189) throw new Error('duplicate asset URLs');
+  return '1,189 unique mappings';
+});
+
+if (cantoneseEntries.length > 0) {
+  const sample = dailySample(cantoneseEntries, 23);
+  await record(`daily Cantonese audio sample ${sample.filename}`, 'Adventist Connect', () => probe(sample.url, { binary: true }));
+}
+
 let audioPowerUrls = [];
 await record('published CUV catalog contains 1,189 recordings', 'Audio Power', async () => {
   const html = await getText('https://theaudiopower.org/translations/cuv/');

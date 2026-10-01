@@ -65,6 +65,12 @@ import {
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
+import {
+  CANTONESE_CUV_READER,
+  CUV_AUDIO_READERS,
+  getAudioReaderPreferenceKey,
+  WORDPROJECT_CANTONESE_AUDIO_URL,
+} from '@/services/BibleAudioSources';
 import type {
   BibleAudioChapterIdentity,
   BibleAudioStatus,
@@ -94,7 +100,11 @@ import {
   isSameChapter,
   type BibleReaderPosition,
 } from '@/services/BibleReaderPosition';
-import { openBibleRequestEmail, TECHNOLOGY_EMAIL } from '@/constants/ExternalLinks';
+import {
+  openBibleRequestEmail,
+  openInSystemBrowser,
+  TECHNOLOGY_EMAIL,
+} from '@/constants/ExternalLinks';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -216,6 +226,10 @@ const uiLabels = {
     audioPlayer: 'Bible audio',
     audio: 'Audio',
     narrator: 'Narrator',
+    audioLanguage: 'Audio language',
+    mandarin: 'Mandarin',
+    cantonese: 'Cantonese',
+    cantoneseAudioCredit: 'Cantonese audio: WordProject (wordproject.org)',
     chooseNarrator: 'Choose narrator',
     audioSettings: 'Audio settings',
     audioSource: 'Preferred source',
@@ -297,6 +311,10 @@ const uiLabels = {
     audioPlayer: '聖經有聲書',
     audio: '有聲書',
     narrator: '朗讀者',
+    audioLanguage: '朗讀語言',
+    mandarin: '國語',
+    cantonese: '粵語',
+    cantoneseAudioCredit: '粵語錄音：WordProject (wordproject.org)',
     chooseNarrator: '選擇朗讀者',
     audioSettings: '有聲書設定',
     audioSource: '優先音源',
@@ -376,6 +394,10 @@ const uiLabels = {
     audioPlayer: '圣经有声书',
     audio: '有声书',
     narrator: '朗读者',
+    audioLanguage: '朗读语言',
+    mandarin: '国语',
+    cantonese: '粤语',
+    cantoneseAudioCredit: '粤语录音：WordProject (wordproject.org)',
     chooseNarrator: '选择朗读者',
     audioSettings: '有声书设置',
     audioSource: '优先音源',
@@ -458,6 +480,10 @@ const uiLabels = {
     audioPlayer: 'Audio de la Biblia',
     audio: 'Audio',
     narrator: 'Narrador',
+    audioLanguage: 'Idioma del audio',
+    mandarin: 'Mandarín',
+    cantonese: 'Cantonés',
+    cantoneseAudioCredit: 'Audio en cantonés: WordProject (wordproject.org)',
     chooseNarrator: 'Elegir narrador',
     audioSettings: 'Ajustes de audio',
     audioSource: 'Fuente preferida',
@@ -1110,13 +1136,32 @@ export default function BibleScreen() {
     supportedTranslation.id,
     chapterAudioLinks,
   );
-  const savedAudioReader = selectedAudioReaders[supportedTranslation.id];
+  // Choices saved before CUV and CUVS shared one are still read.
+  const audioReaderPreferenceKey = getAudioReaderPreferenceKey(
+    supportedTranslation.id,
+  );
+  const savedAudioReader =
+    selectedAudioReaders[audioReaderPreferenceKey] ??
+    selectedAudioReaders[supportedTranslation.id];
   const selectedAudioReader = chapterAudioLinks?.[savedAudioReader]
     ? savedAudioReader
     : audioReaderEntries[0]?.[0];
   const selectedAudioSource = selectedAudioReader
     ? chapterAudioLinks?.[selectedAudioReader]
     : undefined;
+  // The CUV recordings differ in spoken language, so the audio bar names the
+  // selected language instead of showing a generic narrator icon.
+  const selectedAudioLanguage = selectedAudioReader
+    ? CUV_AUDIO_READERS[selectedAudioReader]
+    : undefined;
+  const getAudioLanguageMark = (reader: {
+    traditional: string;
+    simplified: string;
+  }) =>
+    supportedTranslation.id === 'cmn_cu1' ? reader.simplified : reader.traditional;
+  const offersAudioLanguages = audioReaderEntries.some(
+    ([reader]) => !!CUV_AUDIO_READERS[reader],
+  );
   const rawSelectedAudioUrls = selectedAudioSource
     ? Array.isArray(selectedAudioSource)
       ? selectedAudioSource
@@ -1645,7 +1690,7 @@ export default function BibleScreen() {
     unloadAudio();
     setSelectedAudioReaders((current) => ({
       ...current,
-      [supportedTranslation.id]: reader,
+      [audioReaderPreferenceKey]: reader,
     }));
   };
 
@@ -3536,6 +3581,23 @@ export default function BibleScreen() {
                 {chapterData.translation.attribution}
               </Text>
             )}
+            {/* WordProject asks for a link to its site and app (docs/LEGAL.md). */}
+            {selectedAudioReader === CANTONESE_CUV_READER && !loading && (
+              <Text
+                variant="labelSmall"
+                accessibilityRole="link"
+                onPress={() => openInSystemBrowser(WORDPROJECT_CANTONESE_AUDIO_URL)}
+                style={{
+                  textAlign: 'center',
+                  marginTop: chapterData?.translation.attribution ? 0 : 24,
+                  marginBottom: 20,
+                  opacity: 0.5,
+                  textDecorationLine: 'underline',
+                }}
+              >
+                {labels.cantoneseAudioCredit}
+              </Text>
+            )}
           </>
         )}
       </ScrollView>
@@ -3652,8 +3714,14 @@ export default function BibleScreen() {
                 <TouchableOpacity
                   onPress={() => setAudioSettingsVisible(true)}
                   accessibilityRole="button"
-                  accessibilityLabel={labels.audioSettings}
-                  accessibilityHint={`${labels.narrator}, ${labels.audioSource}`}
+                  accessibilityLabel={
+                    selectedAudioLanguage
+                      ? `${labels.audioSettings}, ${labels.audioLanguage}: ${labels[selectedAudioLanguage.language]}`
+                      : labels.audioSettings
+                  }
+                  accessibilityHint={`${
+                    offersAudioLanguages ? labels.audioLanguage : labels.narrator
+                  }, ${labels.audioSource}`}
                   style={[
                     ReaderStyles.audioSideControl,
                     dockLayout.stackControls && {
@@ -3667,13 +3735,27 @@ export default function BibleScreen() {
                     },
                   ]}
                 >
-                  <AppIcon
-                    pointerEvents="none"
-                    name="account-voice"
-                    size={24}
-                    textScale={bibleUiTextScale}
-                    color={theme.colors.onSurface}
-                  />
+                  {selectedAudioLanguage ? (
+                    <Text
+                      pointerEvents="none"
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      style={[
+                        styles.audioLanguageMark,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {getAudioLanguageMark(selectedAudioLanguage)}
+                    </Text>
+                  ) : (
+                    <AppIcon
+                      pointerEvents="none"
+                      name="account-voice"
+                      size={24}
+                      textScale={bibleUiTextScale}
+                      color={theme.colors.onSurface}
+                    />
+                  )}
                 </TouchableOpacity>
 
                 <View style={ReaderStyles.audioTransportControls}>
@@ -3887,16 +3969,25 @@ export default function BibleScreen() {
                   { color: theme.colors.onSurface },
                 ]}
               >
-                {labels.narrator}
+                {offersAudioLanguages ? labels.audioLanguage : labels.narrator}
               </Text>
               {audioReaderEntries.map(([reader]) => {
                 const isSelected = reader === selectedAudioReader;
-                const readerLabel = getAudioReaderLabel(reader);
+                const audioLanguage = CUV_AUDIO_READERS[reader];
+                // Chinese interfaces show the mark alone; others add the name.
+                const readerLabel = audioLanguage
+                  ? language === 'zh' || language === 'zh-cn'
+                    ? getAudioLanguageMark(audioLanguage)
+                    : `${getAudioLanguageMark(audioLanguage)} ${labels[audioLanguage.language]}`
+                  : getAudioReaderLabel(reader);
+                const readerCredit = audioLanguage?.credit;
                 return (
                   <TouchableOpacity
                     key={reader}
                     accessibilityRole="button"
-                    accessibilityLabel={readerLabel}
+                    accessibilityLabel={
+                      readerCredit ? `${readerLabel}, ${readerCredit}` : readerLabel
+                    }
                     accessibilityState={{ selected: isSelected }}
                     onPress={() => selectAudioReader(reader)}
                     style={styles.pressRow}
@@ -3908,16 +3999,28 @@ export default function BibleScreen() {
                       textScale={bibleUiTextScale}
                       color={theme.colors.onSurface}
                     />
-                    <Text
-                      style={[
-                        styles.pressRowText,
-                        isSelected
-                          ? { color: theme.colors.primary, fontWeight: '700' }
-                          : { color: theme.colors.onSurface },
-                      ]}
-                    >
-                      {readerLabel}
-                    </Text>
+                    <View style={styles.pressRowLabel}>
+                      <Text
+                        style={[
+                          styles.pressRowTitle,
+                          isSelected
+                            ? { color: theme.colors.primary, fontWeight: '700' }
+                            : { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        {readerLabel}
+                      </Text>
+                      {readerCredit && (
+                        <Text
+                          style={[
+                            styles.pressRowCaption,
+                            { color: theme.colors.onSurfaceVariant },
+                          ]}
+                        >
+                          {readerCredit}
+                        </Text>
+                      )}
+                    </View>
                     {isSelected && (
                       <AppIcon
                         pointerEvents="none"
@@ -5159,6 +5262,24 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       minWidth: 0,
       fontSize: scaleTypographyMetric(16, uiTextScale),
       lineHeight: scaleTypographyMetric(22, uiTextScale),
+    },
+    pressRowLabel: {
+      flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
+    },
+    pressRowTitle: {
+      fontSize: scaleTypographyMetric(16, uiTextScale),
+      lineHeight: scaleTypographyMetric(22, uiTextScale),
+    },
+    pressRowCaption: {
+      fontSize: scaleTypographyMetric(13, uiTextScale),
+      lineHeight: scaleTypographyMetric(18, uiTextScale),
+    },
+    audioLanguageMark: {
+      fontSize: scaleTypographyMetric(16, uiTextScale),
+      lineHeight: scaleTypographyMetric(20, uiTextScale),
+      fontWeight: '700',
     },
     pinyinPreferenceRow: {
       minHeight: 64,
