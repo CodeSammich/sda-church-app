@@ -6,6 +6,18 @@ import { useContext } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/**
+ * The most the header grows with the phone's system text size. Past the largest
+ * standard size, the accessibility sizes enlarge the page's content but not its
+ * bars, as Apple's own apps do; otherwise the Bible's translation button filled a
+ * row of its own with oversized text. The app's own text size still applies.
+ */
+export const HEADER_MAX_FONT_SCALE = 1.35;
+
+/** The system text size the header follows: the phone's, up to the cap. */
+export const getHeaderFontScale = (fontScale: number) =>
+  Math.min(Math.max(1, Number.isFinite(fontScale) ? fontScale : 1), HEADER_MAX_FONT_SCALE);
+
 export const getGlobalHeaderHeightForScale = (
   effectiveTextScale: number,
   stackBibleControls = false,
@@ -111,7 +123,8 @@ export const useGlobalHeaderHeight = (bibleReader = false) => {
   return (
     insets.top +
     getGlobalHeaderHeightForScale(
-      fontScale * (bibleReader ? getBibleReaderUiTextScale(textScale) : textScale),
+      getHeaderFontScale(fontScale) *
+        (bibleReader ? getBibleReaderUiTextScale(textScale) : textScale),
       bibleReader && bibleControlsStacked,
     )
   );
