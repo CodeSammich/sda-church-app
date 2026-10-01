@@ -43,7 +43,9 @@ Phil, explicitly approved the church app's use, download, and self-hosting of th
 
 Cantonese audio for the same editions comes from WordProject, played only from the
 church's copies on Adventist Connect; see
-[WordProject Cantonese audio](#wordproject-cantonese-audio).
+[WordProject Cantonese audio](#wordproject-cantonese-audio). So does the Reina-Valera
+1909 audio; see
+[WordProject Spanish audio](#wordproject-spanish-audio-reina-valera-1909).
 
 ### Audio Power permission scope
 
@@ -186,6 +188,76 @@ library, like the Mandarin CUV recordings (see
 [Adventist Connect media hosting](operations/adventist-connect-media.md)). The
 repository doesn't bundle them. The app contacts no new service, so the privacy
 policy doesn't change.
+
+### WordProject Spanish audio (Reina-Valera 1909)
+
+[WordProject's Spanish audio Bible](https://www.wordproject.org/bibles/audio/06_spanish/index.htm)
+reads the Reina-Valera 1909, the edition the app shows. The app offers it as the RVR09
+narrator, named WordProject
+([#142](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/142)). The terms and what they require are the same as for the
+Cantonese recording above. Its Spanish book pages also invite downloading: "Haga clic
+derecho en 'zip' en la parte inferior de la página y 'guardar enlace como' para
+descargar el libro completo." ("Right-click 'zip' at the bottom of the page and 'save
+link as' to download the whole book.") So the church downloaded the book zips once,
+hosts unmodified copies on Adventist Connect, never links to WordProject's servers, and
+credits WordProject with a link to its Spanish page.
+
+**No one claims the recording.** No file has a copyright, owner, or publisher tag,
+and WordProject's Spanish pages name no narrator or rights holder. 1,178 chapters are
+tagged album "El Antiguo/Nuevo Testamento, Antigua Version Reina-Valera de 1909",
+artist "La Biblia", year 2010.
+
+**11 chapters have incorrect tags.** They came from other sources, but each was
+checked by listening against the 1909 text in the app on October 1, 2026, and all 11
+read the Reina-Valera 1909:
+
+| Chapter | Album tag | Artist tag | Year tag |
+| --- | --- | --- | --- |
+| Judges 1–2 | Antiguo Testamento | La Biblia Sagrada | (none) |
+| Judges 3–9 | Antiguo Testamento | Biblia | (none) |
+| 2 Kings 5 | El Antiguo Testamento #1 | Spanish Bible RV1960 | 1960 |
+| Proverbs 16 | Antigo Testamiento | La Biblia | (none) |
+
+2 Kings 5 is tagged as the 1960 revision but reads the 1909 text (verse 1: "gran
+varón… salvamento"). The tags are left as they are: WordProject's terms don't allow
+changing the audio files, and the app doesn't read the tags. Details are in
+[#142](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/142).
+
+### WordProject audio in other languages: backups only
+
+The church keeps backup copies, which the app doesn't use, of WordProject's audio
+Bibles in languages people have asked for
+([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). They're in the church's Google Drive, not this repository. Before
+the app uses one, give it a section like the two above.
+
+Their rights were checked on September 30 and October 1, 2026, by reading every file's
+tags and WordProject's page for each language. A recording is kept only if no file or
+page names someone else as its owner:
+
+| Language | Issue | What the files and pages say | Kept |
+| --- | --- | --- | --- |
+| Russian | [#346](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/346) | Nearly every file's copyright tag says "free", with www.wordproject.org as its web address. Nothing names a rights holder. | Yes, all 1,189 chapters |
+| Ukrainian | [#347](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/347) | Every file credits www.blagovestnik.org, the studio that recorded it in 2005 and 2006. Its [Ukrainian audio Bible page](http://www.blagovestnik.org/ukraine/ukraine.htm) says: "Всі матеріали, підготовлені в студії, розповсюджуються без якихось обмежень і вільно доступні в інтернеті." ("All materials prepared in the studio are distributed without any restrictions and are freely available on the internet.") | Yes, all chapters; Joel has four chapters, as in Ukrainian Bibles |
+| Bengali | [#348](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/348) | Nothing names a rights holder. | Yes, 1,182 chapters; 7 are missing on WordProject too (1 Samuel 27–29, 1 Chronicles 18, 2 Chronicles 16–17, Jonah 1) |
+| Japanese | [#161](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/161) | Nothing names a rights holder. Which translation it reads hasn't been checked. | Yes, all 1,189 chapters |
+| Arabic | [#349](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/349) | The files mix sources, and two name rights holders: Joshua 6 is tagged as a Family Radio Bible study, "Copyright © 2004 Family Stations", and Colossians 4 is tagged "Arabic Bible Outreach Ministry". | No: needs another source or the owners' permission |
+| English (KJV) | [#142](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/142) | Every file sampled is tagged "© 2010 by Intellectual Reserve, Inc. All rights reserved." (Alexander Scourby's narration). | No: needs Intellectual Reserve's permission |
+
+"Nothing names a rights holder" doesn't make a recording public domain. WordProject
+says all its audio is copyrighted and that breaches "may result in prosecution by
+respective owners". It means no owner has reserved rights beyond WordProject's terms,
+which the church relies on, as for the Cantonese and Spanish recordings. If an owner
+comes forward, follow their terms. WordProject has no Haitian Creole
+([#345](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/345)) or Tibetan ([#150](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/150)) audio.
+
+Dated copies of WordProject's pages for these languages and for Spanish are in
+[rights-records/audio-sources-2026-10-01](rights-records/audio-sources-2026-10-01/README.md),
+with [a summary of every file's tags](rights-records/audio-sources-2026-10-01/tag-summaries.md)
+for each language.
+Blagovestnik's pages include a personal email address, so their copies are in the
+church's IT Admin shared drive instead. The statement above was retrieved from
+http://www.blagovestnik.org/ukraine/ukraine.htm on October 1, 2026, when the page's
+SHA-256 was `ee452da37125959f162b56ce55259091cdc61564a2653343440b15fdffc79413`.
 
 ### “Free to access” doesn't necessarily mean “public domain”
 
