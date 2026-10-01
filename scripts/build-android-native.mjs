@@ -1,11 +1,12 @@
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const { storeBuildNumber } = createRequire(import.meta.url)('./store-build-number.cjs');
+const require = createRequire(import.meta.url);
+const { storeBuildNumber } = require('./store-build-number.cjs');
 
 const projectRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const androidRoot = resolve(projectRoot, 'android');
@@ -86,6 +87,17 @@ if (!isDebugSigning) {
   }
 }
 
+// A debug-signed APK is a preview: app.config.js gives it its own app ID and
+// name, so it installs beside the store version (#378). A store build always
+// clears the variant, even if the shell set it.
+if (isDebugSigning) {
+  process.env.APP_VARIANT = 'preview';
+} else {
+  delete process.env.APP_VARIANT;
+}
+const appPackage = require('../app.config.js')({ config: appJson.expo }).android.package;
+console.log(`Android app ID: ${appPackage}.`);
+
 // Tell the config plugin which release signing mode was explicitly requested.
 // A debug-signed APK uses Gradle's generated local debug key and never uses the
 // production upload keystore or its passwords.
@@ -122,7 +134,20 @@ for (const name of requiredSigningVariables) {
 // which makes repeated local builds depend on network access. CI starts from a
 // clean checkout, so it still prebuilds normally; pass --prebuild (or set
 // EXPO_PREBUILD=true) when native config/plugin changes need regeneration.
-if (!existsSync(androidRoot) || forcePrebuild) {
+// A reused project keeps the app ID it was generated with, so switching
+// between a preview and a store build regenerates it.
+const appGradle = resolve(androidRoot, 'app', 'build.gradle');
+const generatedPackage = existsSync(appGradle)
+  ? readFileSync(appGradle, 'utf8').match(/applicationId\s+['"]([^'"]+)['"]/)?.[1]
+  : undefined;
+const packageChanged = existsSync(androidRoot) && generatedPackage !== appPackage;
+if (packageChanged) {
+  console.log(
+    `Regenerating android/: it was generated for ${generatedPackage || 'an unknown app ID'}, not ${appPackage}.`,
+  );
+}
+
+if (!existsSync(androidRoot) || forcePrebuild || packageChanged) {
   run('npx', [
     'expo',
     'prebuild',
