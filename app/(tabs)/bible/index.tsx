@@ -1905,10 +1905,15 @@ export default function BibleScreen() {
   // This effect loads the books for the selected translation and sets the current book.
   useEffect(() => {
     if (!isPersistenceLoaded) return;
+    // A link can switch the translation while the saved one's books are still
+    // loading. The new translation's books may come first, from the cache, so
+    // the old list must not replace them when it arrives (#373).
+    let cancelled = false;
 
     const loadBooksAndSetBook = async () => {
       try {
         const fetchedBooks = await BibleService.fetchBooks(supportedTranslation.id);
+        if (cancelled) return;
         setBooks(fetchedBooks);
 
         // Determine the next book based on previous selection or default to Genesis
@@ -1938,10 +1943,13 @@ export default function BibleScreen() {
           );
         });
       } catch (e) {
-        console.error('Error loading books:', e);
+        if (!cancelled) console.error('Error loading books:', e);
       }
     };
     loadBooksAndSetBook();
+    return () => {
+      cancelled = true;
+    };
   }, [supportedTranslation.id, isPersistenceLoaded]);
 
   // Load chapter content
