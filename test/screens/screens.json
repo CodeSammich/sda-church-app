@@ -178,15 +178,15 @@
     },
     {
       "name": "library-youth",
-      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391).",
+      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391). Its English and Spanish titles wrap, so only their first lines are checked.",
       "path": "explore/library/youth",
       "variants": ["default", "zh", "zh-cn", "es"],
       "mustShowLines": ["^Pastor Hsi"],
       "variantRules": {
-        "default": { "mustShowLines": ["^The Pilgrim.s Progress"] },
+        "default": { "mustShowLines": ["^The Pilgrim.s\\b"] },
         "zh": { "mustShowLines": ["天路歷程"] },
         "zh-cn": { "mustShowLines": ["天路历程"] },
-        "es": { "mustShowLines": ["^El progreso del peregrino"] }
+        "es": { "mustShowLines": ["^El progreso del\\b"] }
       }
     },
     {
