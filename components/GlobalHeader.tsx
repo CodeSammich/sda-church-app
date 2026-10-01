@@ -241,25 +241,27 @@ export const GlobalHeader = (props: any) => {
   const onBibleVerseSearchPress = props.options?.onBibleVerseSearchPress as
     | ((verseNumber: number) => void)
     | undefined;
-  // The translation button shares a row with the icon buttons, cutting its
-  // translation names short with "…" when the row is tight. If even its
-  // shortest form, measured with each name cut to its first letter, can't fit,
-  // it drops its 文A icon, and only then takes a row of its own (#376).
-  // Stacking whenever the full names didn't fit left a wide, mostly empty
-  // button and a back arrow between the rows.
+  // The translation button shares a row with the icon buttons. When the row
+  // is tight it gives up its 文A icon first, then the length of its translation
+  // names, cut short with "…", and last its language badges; it takes a row of
+  // its own only when even the names alone can't fit (#376). Stacking whenever
+  // the full button didn't fit left a wide, mostly empty button and a back arrow
+  // between the rows. Hidden copies measure each form.
   const [bibleRowWidth, setBibleRowWidth] = useState(0);
+  const [fullButtonWidth, setFullButtonWidth] = useState(0);
+  const [shortestButtonWithBadgesWidth, setShortestButtonWithBadgesWidth] = useState(0);
   const [shortestButtonWidth, setShortestButtonWidth] = useState(0);
-  const [shortestButtonWidthWithoutIcon, setShortestButtonWidthWithoutIcon] = useState(0);
   const bibleControlsLayout =
     isBiblePage && bibleTranslation
       ? getBibleControlsLayout({
           rowWidth: bibleRowWidth,
+          fullButtonWidth,
+          shortestButtonWithBadgesWidth,
           shortestButtonWidth,
-          shortestButtonWidthWithoutIcon,
           iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
           iconButtonSize: compactControlHeight,
         })
-      : { stack: false, hideTranslationIcon: false };
+      : { stack: false, hideTranslationIcon: false, hideLanguageBadges: false };
   const stackBibleControls = bibleControlsLayout.stack;
   // Every tab's header stays mounted and sees the Bible's route while it's
   // open, so only the header showing the Bible's controls reports them.
@@ -536,8 +538,12 @@ export const GlobalHeader = (props: any) => {
   );
 
   // `shortest` draws each translation name cut to its first letter, for
-  // measuring the narrowest the button gets, with or without its icon.
-  const renderTranslationChipContent = (shortest = false, withIcon = true) => (
+  // measuring the narrowest forms of the button.
+  const renderTranslationChipContent = ({
+    shortest = false,
+    withIcon = true,
+    withBadges = true,
+  } = {}) => (
     <>
                     {withIcon && (
                       <AppIcon
@@ -567,27 +573,29 @@ export const GlobalHeader = (props: any) => {
                                 +
                               </Text>
                             )}
-                            <View
-                              style={[
-                                styles.translationLanguageBadge,
-                                {
-                                  backgroundColor: theme.colors.primaryContainer,
-                                  borderColor: theme.colors.outlineVariant,
-                                },
-                              ]}
-                            >
-                              <Text
-                                maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
-                                style={{
-                                  color: theme.colors.onPrimaryContainer,
-                                  fontSize: scaleTypographyMetric(11, headerTextScale),
-                                  fontWeight: '800',
-                                  lineHeight: scaleTypographyMetric(15, headerTextScale),
-                                }}
+                            {withBadges && (
+                              <View
+                                style={[
+                                  styles.translationLanguageBadge,
+                                  {
+                                    backgroundColor: theme.colors.primaryContainer,
+                                    borderColor: theme.colors.outlineVariant,
+                                  },
+                                ]}
                               >
-                                {item.badge}
-                              </Text>
-                            </View>
+                                <Text
+                                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                                  style={{
+                                    color: theme.colors.onPrimaryContainer,
+                                    fontSize: scaleTypographyMetric(11, headerTextScale),
+                                    fontWeight: '800',
+                                    lineHeight: scaleTypographyMetric(15, headerTextScale),
+                                  }}
+                                >
+                                  {item.badge}
+                                </Text>
+                              </View>
+                            )}
                             <Text
                               maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                               numberOfLines={1}
@@ -745,12 +753,12 @@ export const GlobalHeader = (props: any) => {
                     accessibilityElementsHidden
                     importantForAccessibility="no-hide-descendants"
                     onLayout={(event) =>
-                      setShortestButtonWidth(Math.ceil(event.nativeEvent.layout.width))
+                      setFullButtonWidth(Math.ceil(event.nativeEvent.layout.width))
                     }
                     pointerEvents="none"
                     style={styles.translationChipMeasure}
                   >
-                    {renderTranslationChipContent(true)}
+                    {renderTranslationChipContent({})}
                   </View>
                 )}
                 {bibleTranslation && (
@@ -759,12 +767,26 @@ export const GlobalHeader = (props: any) => {
                     accessibilityElementsHidden
                     importantForAccessibility="no-hide-descendants"
                     onLayout={(event) =>
-                      setShortestButtonWidthWithoutIcon(Math.ceil(event.nativeEvent.layout.width))
+                      setShortestButtonWithBadgesWidth(Math.ceil(event.nativeEvent.layout.width))
                     }
                     pointerEvents="none"
                     style={styles.translationChipMeasure}
                   >
-                    {renderTranslationChipContent(true, false)}
+                    {renderTranslationChipContent({ shortest: true, withIcon: false })}
+                  </View>
+                )}
+                {bibleTranslation && (
+                  <View
+                    aria-hidden
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    onLayout={(event) =>
+                      setShortestButtonWidth(Math.ceil(event.nativeEvent.layout.width))
+                    }
+                    pointerEvents="none"
+                    style={styles.translationChipMeasure}
+                  >
+                    {renderTranslationChipContent({ shortest: true, withIcon: false, withBadges: false })}
                   </View>
                 )}
                 {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
@@ -786,7 +808,10 @@ export const GlobalHeader = (props: any) => {
                       },
                     ]}
                   >
-                    {renderTranslationChipContent(false, !bibleControlsLayout.hideTranslationIcon)}
+                    {renderTranslationChipContent({
+                      withIcon: !bibleControlsLayout.hideTranslationIcon,
+                      withBadges: !bibleControlsLayout.hideLanguageBadges,
+                    })}
                   </Pressable>
                 )}
                 {/* The icon buttons stay together: beside the translation button,
