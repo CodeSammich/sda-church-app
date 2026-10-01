@@ -1,5 +1,5 @@
 import { readFileSync, realpathSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 // Expo Router's query-string 7 decodes URL query values with
 // decode-uri-component. Versions up to 0.4.2 take exponential time on
@@ -13,8 +13,12 @@ describe('decode-uri-component', () => {
   );
 
   it("is the patched copy wherever Expo Router's query-string loads it", () => {
-    const loaded = require.resolve('decode-uri-component', { paths: [queryStringDir] });
-    expect(realpathSync(loaded)).toBe(vendored);
+    const loaded = realpathSync(require.resolve('decode-uri-component', { paths: [queryStringDir] }));
+    // Compared by location and content rather than full path: a git worktree that
+    // shares another checkout's node_modules resolves the link to that checkout's
+    // vendor folder. An unpatched copy from npm still fails both checks.
+    expect(loaded.endsWith(join('vendor', 'decode-uri-component', 'index.js'))).toBe(true);
+    expect(readFileSync(loaded, 'utf8')).toBe(readFileSync(vendored, 'utf8'));
     expect(require('../vendor/decode-uri-component/package.json').version).toBe('0.5.0');
   });
 

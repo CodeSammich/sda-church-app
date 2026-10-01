@@ -23,6 +23,7 @@ import {
 } from '@/services/VerseOfTheDay';
 import { getSunTimes } from '@/services/SunTimesService';
 import { createNavigationStyles } from '@/styles/NavigationStyles';
+import { HEADER_MAX_FONT_SCALE } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -53,6 +54,11 @@ export default function HomeScreen() {
   const effectiveTextScale = Math.max(1, fontScale * textScale);
   // Keep the home card grid at two columns at every text zoom level.
   const useStackedLayout = false;
+  // Once the app's and the phone's text sizes add up to 2× or more, the verse
+  // card's two buttons each get a full row, and the Sabbath countdown's label
+  // sits above the countdown, so words like "Compartir" and "Sabbath" are
+  // never cut off or broken mid-word (#385).
+  const stackHeroActions = effectiveTextScale >= 2;
   const styles = useMemo(
     () => createStyles(textScale, effectiveTextScale, useStackedLayout),
     [effectiveTextScale, textScale, useStackedLayout],
@@ -425,7 +431,11 @@ export default function HomeScreen() {
             colors={theme.gradients.heroOverlay}
             style={StyleSheet.absoluteFill}
           />
+          {/* A heading, so it follows the phone's text size only up to the
+              header's cap, and "Versículo de hoy" never breaks mid-word (#385).
+              The verse below follows it in full. */}
           <Text
+            maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
             variant="headlineMedium"
             style={[styles.welcomeText, { color: '#FFFFFF' }]}
           >
@@ -445,7 +455,7 @@ export default function HomeScreen() {
               ? `${verseOfTheDay.text}\n— ${verseOfTheDay.reference}`
               : labels.subtitle}
           </Text>
-          <View style={styles.heroActions}>
+          <View style={[styles.heroActions, stackHeroActions && styles.heroActionsStacked]}>
             <WrappingActionButton
               borderColor="#FFFFFF"
               disabled={!verseOfTheDay}
@@ -453,7 +463,7 @@ export default function HomeScreen() {
               label={(labels as any).shareVerse}
               onPress={handleShare}
               textColor="#FFFFFF"
-              style={styles.heroActionButton}
+              style={[styles.heroActionButton, stackHeroActions && styles.heroActionButtonStacked]}
             />
             <WrappingActionButton
               backgroundColor={theme.colors.primary}
@@ -463,7 +473,7 @@ export default function HomeScreen() {
               label={(labels as any).readVerse}
               onPress={navigateToVerse}
               textColor={theme.colors.onPrimary}
-              style={styles.heroActionButton}
+              style={[styles.heroActionButton, stackHeroActions && styles.heroActionButtonStacked]}
             />
           </View>
         </ImageBackground>
@@ -475,8 +485,8 @@ export default function HomeScreen() {
             mode="contained"
           >
             <Card.Content style={styles.timerContentSubtle}>
-              <View style={styles.timerRow}>
-                <View style={styles.labelColumn}>
+              <View style={[styles.timerRow, stackHeroActions && styles.timerRowStacked]}>
+                <View style={[styles.labelColumn, stackHeroActions && styles.labelColumnStacked]}>
                   <Text
                     variant="labelMedium"
                     style={{
@@ -500,6 +510,7 @@ export default function HomeScreen() {
                 <Text
                   style={[
                     styles.timerValueSubtle,
+                    stackHeroActions && styles.timerValueStacked,
                     { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
                   ]}
                 >
@@ -637,6 +648,13 @@ const createStyles = (
     flex: useStackedLayout ? undefined : 1,
     width: useStackedLayout ? '100%' : undefined,
   },
+  heroActionsStacked: {
+    flexDirection: 'column',
+  },
+  heroActionButtonStacked: {
+    flex: 0,
+    width: '100%',
+  },
   timerCard: {
     marginBottom: 16,
     borderRadius: 12,
@@ -654,6 +672,17 @@ const createStyles = (
   },
   labelColumn: {
     flex: 1,
+  },
+  timerRowStacked: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  labelColumnStacked: {
+    flex: 0,
+    alignSelf: 'stretch',
+  },
+  timerValueStacked: {
+    marginTop: 8,
   },
   timerValueSubtle: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',

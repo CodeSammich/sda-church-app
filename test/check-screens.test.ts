@@ -143,7 +143,7 @@ describe('screen rules', () => {
       checkShot(shot('explore-xl-ios-large-text'), [...tabs(['Home', 'Bible', 'Explor', 'You'], 0.93), line('e', 0.96)]),
     ).toEqual(['tab labels missing: Explore']);
     // An overgrown tab bar: the labels sit above the tab bar's area.
-    expect(checkShot(shot('home-es-xl-ios-large-text'), tabs(['Inicio', 'Biblia', 'Explorar', 'Tú'], 0.86))).toEqual([
+    expect(checkShot(shot('explore-es-xl-ios-large-text'), tabs(['Inicio', 'Biblia', 'Explorar', 'Tú'], 0.86))).toEqual([
       'tab labels missing: Inicio, Biblia, Explorar, Tú',
     ]);
   });
@@ -156,6 +156,17 @@ describe('screen rules', () => {
     expect(checkShot(after, [...tabs, line('Salmos v', 0.86), line('Verse v', 0.86)])).toEqual([
       '"Salmos v" matches /Salmos/, which must not show',
     ]);
+  });
+
+  it("catches the Home verse card's cut-off buttons and broken heading at 3.2× (#385)", () => {
+    const tabs = ['Inicio', 'Biblia', 'Explorar', 'Tú'].map((label) => line(label, 0.944));
+    const homeEs = shot('home-es-xl-ios-large-text');
+    expect(
+      checkShot(homeEs, [...tabs, line('Versículo de hoy', 0.1), line('Compartir', 0.7), line('Leer Versículo', 0.76)]),
+    ).toEqual([]);
+    // What the 0.43.0 run showed: the heading broken mid-word.
+    expect(checkShot(homeEs, [...tabs, line('Versícul', 0.08), line('o de hoy', 0.12), line('Compartir', 0.7), line('Leer Versículo', 0.76)]))
+      .toEqual(['no line matches /^Versículo\\b/']);
   });
 
   it('reads each shot in its language', () => {
