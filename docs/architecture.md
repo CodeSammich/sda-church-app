@@ -50,11 +50,15 @@ only open in the browser. It also shows how church media is kept available: the
 Adventist Connect library is served from Wasabi and backed up to Google Drive, and
 if it fails, the Mandarin Bible audio falls back to the Internet Archive and then
 Audio Power. The Cantonese Bible audio has no fallback, because WordProject's terms
-don't allow playing it from WordProject's servers.
+don't allow playing it from WordProject's servers. It also shows where the church's
+copies of the Bible audio came from: an admin downloaded the Mandarin recordings from
+Audio Power and the Cantonese recordings from WordProject, and uploaded them to the
+library (see
+[Updating the audio manifest](operations/adventist-connect-media.md#updating-the-audio-manifest)).
 See [Third-party APIs and websites](#third-party-apis-and-websites) for the full
 table.
 
-![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese Bible audio played only from the church's copy; Bible text from HelloAO and fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links](diagrams/app-dependencies.svg)
+![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese Bible audio played only from the church's copy, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese recordings from WordProject into the library; Bible text from HelloAO and fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credit](diagrams/app-dependencies.svg)
 
 ### Google Play upload sign-in
 
