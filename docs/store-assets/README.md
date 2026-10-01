@@ -17,7 +17,9 @@ what screenshots may show are in [Store listings](../operations/store-listing.md
   listing, in upload order, at the 6.9-inch size (1320 × 2868). Home comes first: the
   first three appear on the App Store's install sheets, and Home shows what the app is.
 - `app-store/zh-Hant/`: the ones for Chinese (Traditional), in the same order, plus a
-  dark-mode Bible with the Chinese interface. Spanish shows the English ones.
+  dark-mode Bible with the Chinese interface. Its Bible shots show both spoken
+  languages: the audio button reads 粵語 (Cantonese) on the Traditional Chinese Bible
+  and 国语 (Mandarin) on the Simplified one. Spanish shows the English ones.
 - `google-play/foreground-service-demo.mp4`: the original of the unlisted YouTube video
   that Play Console's foreground service declaration links to. If the YouTube video is
   ever deleted, upload this file again and update the link; see

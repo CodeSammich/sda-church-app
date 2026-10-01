@@ -42,15 +42,32 @@
     },
     {
       "name": "bible-cuv",
+      "$comment": "Mandarin is the default narrator, so the audio button shows 國語.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
-      "variants": ["zh", "zh-dark"]
+      "variants": ["zh", "zh-dark"],
+      "mustShowLines": ["國語"]
+    },
+    {
+      "name": "bible-cuv-cantonese",
+      "$comment": "With the Cantonese narrator chosen, the audio button shows 粵語.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
+      "settings": {
+        "dualLanguage": true,
+        "supportingTranslation": "BSB",
+        "pinyin": false,
+        "audioReaders": { "cuv": "粵語 (WordProject)" }
+      },
+      "variants": ["zh"],
+      "mustShowLines": ["粵語"]
     },
     {
       "name": "bible-cuvs",
+      "$comment": "Simplified characters, so the audio button shows 国语.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cu1",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
-      "variants": ["zh-cn"]
+      "variants": ["zh-cn"],
+      "mustShowLines": ["国语"]
     },
     {
       "name": "bible-pinyin",
@@ -167,6 +184,6 @@
   ],
   "appStore": {
     "en-US": ["home-default", "bible-dual-default", "bible-pinyin-default", "explore-default", "library-default", "bible-dual-dark"],
-    "zh-Hant": ["home-zh", "bible-cuv-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuv-zh-dark"]
+    "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "bible-cuvs-zh-cn", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuv-zh-dark"]
   }
 }

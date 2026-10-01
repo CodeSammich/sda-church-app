@@ -37,6 +37,8 @@ const SETTING_KEYS = {
   dualLanguage: 'user-bible-dual-language',
   supportingTranslation: 'user-bible-supporting-translation',
   pinyin: 'user-bible-show-pinyin',
+  // The narrator chosen for each translation, as { cuv: '<narrator>' }.
+  audioReaders: 'user-bible-audio-readers',
 };
 
 // Settings of the simulated iPhone rather than the app.
@@ -85,7 +87,7 @@ const planCaptures = (config) =>
 
 /**
  * The AsyncStorage manifest: every value is a string, keyed by its storage key,
- * plus the screen to open unless it's Home.
+ * plus the screen to open unless it's Home. An object is saved as JSON.
  */
 const buildManifest = (settings, route = '') => ({
   ...Object.fromEntries(
@@ -94,7 +96,7 @@ const buildManifest = (settings, route = '') => ({
       .map(([name, value]) => {
         const key = SETTING_KEYS[name];
         if (!key) throw new Error(`Unknown setting "${name}".`);
-        return [key, String(value)];
+        return [key, typeof value === 'object' ? JSON.stringify(value) : String(value)];
       }),
   ),
   ...(route ? { [ROUTE_KEY]: route } : {}),
