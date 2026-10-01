@@ -13,15 +13,15 @@
     "zh-cn": { "language": "zh-cn" },
     "es": { "language": "es" },
     "zh-dark": { "language": "zh", "theme": "dark" },
-    "max": { "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" },
-    "es-max": { "language": "es", "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" }
+    "xl-ios-large-text": { "textScale": 2, "iosTextSize": "accessibility-large" },
+    "es-xl-ios-large-text": { "language": "es", "textScale": 2, "iosTextSize": "accessibility-large" }
   },
   "screens": [
     {
       "name": "home",
-      "$comment": "max and es-max: the app at 200% with the iPhone's largest text, where the tab labels used to wrap (#380). The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), about 4× in all, as with Android's largest font at 200%, where the tab labels used to wrap (#380). The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
       "path": "",
-      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "max", "es-max"],
+      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text"],
       "changesDaily": true
     },
     {
@@ -124,9 +124,9 @@
     },
     {
       "name": "explore",
-      "$comment": "max and es-max check the tab labels at the largest text, as on Home (#380).",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380).",
       "path": "explore",
-      "variants": ["default", "dark", "zh", "es", "max", "es-max"]
+      "variants": ["default", "dark", "zh", "es", "xl-ios-large-text", "es-xl-ios-large-text"]
     },
     {
       "name": "library",
