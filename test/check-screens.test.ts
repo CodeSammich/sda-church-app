@@ -175,6 +175,18 @@ describe('screen rules', () => {
     ]);
   });
 
+  it("checks Psalm 9's Higgaion Selah and Selah in the BSB", () => {
+    const at16 = shot('bible-higgaion-selah-default');
+    const at20 = shot('bible-selah-default');
+    const verse = line('Verse v', 0.95);
+    expect(checkShot(at16, [line('16 The LORD is known by the justice', 0.2), line('Higgaion Selah2', 0.3), verse])).toEqual([]);
+    expect(checkShot(at16, [line('16 The LORD is known by the justice', 0.2), verse])).toEqual(['no line matches /\\bHiggaion Selah/']);
+    expect(checkShot(at20, [line('20 Lay terror upon them, O LORD;', 0.2), line('Selah', 0.3), verse])).toEqual([]);
+    // 9:16's line can't stand in for 9:20's lone Selah.
+    expect(checkShot(at20, [line('20 Lay terror upon them, O LORD;', 0.2), line('Higgaion Selah', 0.1), verse]))
+      .toEqual(['no line matches /^Selah\\b/']);
+  });
+
   it('reads each shot in its language', () => {
     const { OCR_LANGUAGES } = require('../scripts/check-screens.cjs');
     for (const each of shots) expect(OCR_LANGUAGES[each.settings.language]).toBeDefined();

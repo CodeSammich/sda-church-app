@@ -121,6 +121,24 @@
       "mustShowLines": ["^100\\b", "^101\\b", "^102\\b", "^Psalms\\b"]
     },
     {
+      "name": "bible-higgaion-selah",
+      "tabs": false,
+      "$comment": "Psalm 9:16 in the BSB ends with \"Higgaion Selah\", plain text after the verse's poetry lines in the HelloAO data, which the reader shows right-aligned under the verse.",
+      "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=16&verseEnd=16",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^16\\b", "\\bHiggaion Selah"]
+    },
+    {
+      "name": "bible-selah",
+      "tabs": false,
+      "$comment": "Psalm 9:20 in the BSB ends with \"Selah\" alone, shown on its own line. The rule needs a line starting with Selah, so 9:16's \"Higgaion Selah\" can't satisfy it.",
+      "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=20&verseEnd=20",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^20\\b", "^Selah\\b"]
+    },
+    {
       "name": "bible-spanish",
       "path": "bible?bookId=JHN&chapter=3&translationId=spa_r09",
       "settings": { "dualLanguage": false, "pinyin": false },
