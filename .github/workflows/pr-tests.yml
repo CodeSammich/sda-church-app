@@ -33,3 +33,6 @@ jobs:
 
       - name: Run unit tests
         run: npm test -- --ci
+
+      - name: Check that text follows the app's text size
+        run: npm run check:text-scale

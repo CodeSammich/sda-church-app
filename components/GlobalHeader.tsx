@@ -162,7 +162,7 @@ export const GlobalHeader = (props: any) => {
     ? getBibleReaderUiTextScale(textScale)
     : textScale;
   // The header follows the system text size only up to a cap; see
-  // HEADER_MAX_FONT_SCALE. Every text in it says the same with maxFontSizeMultiplier.
+  // HEADER_MAX_FONT_SCALE. Every text in it passes the same cap to React Native.
   const effectiveTextScale = Math.max(1, getHeaderFontScale(fontScale) * headerTextScale);
   const compactControlHeight = Math.ceil(44 + (effectiveTextScale - 1) * 24);
   const wrappedControlHeight = Math.max(

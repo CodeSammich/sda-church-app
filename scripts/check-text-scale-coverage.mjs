@@ -16,8 +16,11 @@ const prohibitedPatterns = [
     pattern: /\b(?:fontSize|lineHeight)\s*:\s*\d+(?:\.\d+)?\b/g,
   },
   {
+    // Except the header's own cap (#368). It limits only the phone's text size,
+    // so the header fits at the largest accessibility sizes. The app's own
+    // 100%-200% setting still applies in full.
     reason: 'accessibility font-size cap',
-    pattern: /\bmaxFontSizeMultiplier\b/g,
+    pattern: /\bmaxFontSizeMultiplier\b(?!=\{HEADER_MAX_FONT_SCALE\})/g,
   },
   {
     reason: 'compact Bible-reader scale cap',
