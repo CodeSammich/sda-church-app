@@ -68,6 +68,7 @@ import {
 import {
   CANTONESE_CUV_READER,
   CUV_AUDIO_READERS,
+  getAudioReaderPreferenceKey,
   WORDPROJECT_CANTONESE_AUDIO_URL,
 } from '@/services/BibleAudioSources';
 import type {
@@ -1135,7 +1136,13 @@ export default function BibleScreen() {
     supportedTranslation.id,
     chapterAudioLinks,
   );
-  const savedAudioReader = selectedAudioReaders[supportedTranslation.id];
+  // Choices saved before CUV and CUVS shared one are still read.
+  const audioReaderPreferenceKey = getAudioReaderPreferenceKey(
+    supportedTranslation.id,
+  );
+  const savedAudioReader =
+    selectedAudioReaders[audioReaderPreferenceKey] ??
+    selectedAudioReaders[supportedTranslation.id];
   const selectedAudioReader = chapterAudioLinks?.[savedAudioReader]
     ? savedAudioReader
     : audioReaderEntries[0]?.[0];
@@ -1683,7 +1690,7 @@ export default function BibleScreen() {
     unloadAudio();
     setSelectedAudioReaders((current) => ({
       ...current,
-      [supportedTranslation.id]: reader,
+      [audioReaderPreferenceKey]: reader,
     }));
   };
 

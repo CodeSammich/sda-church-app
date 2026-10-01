@@ -23,6 +23,7 @@ import {
 import {
   CANTONESE_CUV_READER,
   CUV_AUDIO_READERS,
+  getAudioReaderPreferenceKey,
   getCantoneseCuvChapterUrl,
   getCuvChapterAudioLinks,
 } from '@/services/BibleAudioSources';
@@ -85,6 +86,12 @@ describe('Cantonese CUV audio from WordProject', () => {
       simplified: '粤语',
       credit: 'WordProject',
     });
+  });
+
+  it('saves one audio language for both CUV editions', () => {
+    expect(getAudioReaderPreferenceKey('cmn_cuv')).toBe('cuv');
+    expect(getAudioReaderPreferenceKey('cmn_cu1')).toBe('cuv');
+    expect(getAudioReaderPreferenceKey('BSB')).toBe('BSB');
   });
 
   it('queues the next Cantonese chapters, across a book boundary, without fallbacks', () => {

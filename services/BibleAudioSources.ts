@@ -57,6 +57,13 @@ export const supportsAudioPowerCuv = (translationId: string) =>
   AUDIO_POWER_CUV_TRANSLATIONS.has(translationId);
 
 /**
+ * The key a listener's narrator choice is saved under. Both CUV editions share
+ * their recordings, so a chosen audio language carries between them.
+ */
+export const getAudioReaderPreferenceKey = (translationId: string) =>
+  supportsAudioPowerCuv(translationId) ? 'cuv' : translationId;
+
+/**
  * Builds the three ordered mirrors for an Audio Power CUV chapter recording.
  *
  * Audio Power's owner explicitly approved the church app's use, download, and

@@ -61,7 +61,8 @@ app presents them as languages. The audio bar's left button shows the selected o
 icon, so listeners can see that a choice exists. In audio settings, the list is titled
 "Audio language" and shows each language with its recording's credit underneath.
 `CUV_AUDIO_READERS` in `services/BibleAudioSources.ts` maps each narrator to its
-language.
+language. Both editions share the recordings, so the chosen language is saved once
+for both (`getAudioReaderPreferenceKey`): switching between CUV and CUVS keeps it.
 
 Each recording is represented as one narrator with three ordered hosting sources rather
 than three narrator choices: the generated Adventist Connect manifest supplies the
