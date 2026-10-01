@@ -45,8 +45,9 @@ function TabBarIcon(props: {
 }
 
 // One line in every language and at every text size (#380): the label follows
-// the app's and the phone's text size only up to the tab bar's caps, and
-// shrinks a little rather than wrap if it still doesn't fit.
+// the app's and the phone's text size only up to the tab bar's caps, so the
+// longest label fits its tab. Android's adjustsFontSizeToFit ignores
+// minimumFontScale and shrank the labels to dots, so it isn't used.
 function TabBarLabel(props: {
   color: string;
   label: string;
@@ -57,8 +58,6 @@ function TabBarLabel(props: {
     <Text
       maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
       numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={0.7}
       style={{
         color: props.color,
         flexShrink: 1,

@@ -55,7 +55,9 @@ describe('responsive bottom-tab height', () => {
     const tabs = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
     const label = tabs.slice(tabs.indexOf('function TabBarLabel'), tabs.indexOf('export default function TabLayout'));
     expect(label).toContain('numberOfLines={1}');
-    expect(label).toContain('adjustsFontSizeToFit');
+    // Not shrink-to-fit: Android ignores its floor and shrank the labels to dots.
+    expect(label).not.toContain('adjustsFontSizeToFit={true}');
+    expect(label).not.toMatch(/\n\s+adjustsFontSizeToFit\n/);
     expect(label).toContain('maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}');
     expect(tabs).toContain('getBottomTabContentHeight(getBottomTabTextScale(textScale, fontScale))');
     // Everything that sizes around the tab bar uses the same scale.
