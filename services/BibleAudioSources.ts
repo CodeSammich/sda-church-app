@@ -150,3 +150,36 @@ export const getCuvChapterAudioLinks = (
   const cantonese = getCantoneseCuvChapterUrl(bookId, chapter);
   return cantonese ? { ...links, [CANTONESE_CUV_READER]: [cantonese] } : links;
 };
+
+/** The spoken language of a CUV recording. */
+export type CuvAudioLanguage = 'mandarin' | 'cantonese';
+
+/**
+ * The CUV recordings differ in spoken language, not just narrator, so the app
+ * shows each one by its language: a two-character mark in the script of the
+ * text on screen, with the recording's credit underneath.
+ */
+export const CUV_AUDIO_READERS: Readonly<
+  Record<
+    string,
+    {
+      language: CuvAudioLanguage;
+      traditional: string;
+      simplified: string;
+      credit: string;
+    }
+  >
+> = {
+  [AUDIO_POWER_CUV_READER]: {
+    language: 'mandarin',
+    traditional: '國語',
+    simplified: '国语',
+    credit: AUDIO_POWER_CUV_READER,
+  },
+  [CANTONESE_CUV_READER]: {
+    language: 'cantonese',
+    traditional: '粵語',
+    simplified: '粤语',
+    credit: 'WordProject',
+  },
+};

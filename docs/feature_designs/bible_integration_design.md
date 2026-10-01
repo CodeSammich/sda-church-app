@@ -55,6 +55,14 @@ URL; `npm run extract:cantonese-adventist-manifest` rebuilds it from the church 
 public media list. While the Cantonese narrator is selected, the chapter shows a
 credit that links to WordProject's Cantonese page, which also offers its app.
 
+Because the two CUV recordings differ in spoken language, not just in narrator, the
+app presents them as languages. The audio bar's left button shows the selected one,
+國語 or 粵語 (国语 or 粤语 with the simplified text), instead of the generic narrator
+icon, so listeners can see that a choice exists. In audio settings, the list is titled
+"Audio language" and shows each language with its recording's credit underneath.
+`CUV_AUDIO_READERS` in `services/BibleAudioSources.ts` maps each narrator to its
+language.
+
 Each recording is represented as one narrator with three ordered hosting sources rather
 than three narrator choices: the generated Adventist Connect manifest supplies the
 primary church-controlled copy, the complete

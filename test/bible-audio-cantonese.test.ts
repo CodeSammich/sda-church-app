@@ -22,6 +22,7 @@ import {
 } from '@/services/BibleAudioService';
 import {
   CANTONESE_CUV_READER,
+  CUV_AUDIO_READERS,
   getCantoneseCuvChapterUrl,
   getCuvChapterAudioLinks,
 } from '@/services/BibleAudioSources';
@@ -67,6 +68,23 @@ describe('Cantonese CUV audio from WordProject', () => {
       JOHN_3,
     ]);
     expect(getBibleAudioSourceLabel(JOHN_3)).toBe('NYCCSDA.org');
+  });
+
+  it('names every CUV narrator by its spoken language, in both scripts', () => {
+    const readers = Object.keys(getCuvChapterAudioLinks('JHN', 3));
+    expect(readers.map((reader) => CUV_AUDIO_READERS[reader]?.language)).toEqual([
+      'mandarin',
+      'cantonese',
+    ]);
+    expect(CUV_AUDIO_READERS[MANDARIN_READER]).toMatchObject({
+      traditional: '國語',
+      simplified: '国语',
+    });
+    expect(CUV_AUDIO_READERS[CANTONESE_CUV_READER]).toMatchObject({
+      traditional: '粵語',
+      simplified: '粤语',
+      credit: 'WordProject',
+    });
   });
 
   it('queues the next Cantonese chapters, across a book boundary, without fallbacks', () => {
