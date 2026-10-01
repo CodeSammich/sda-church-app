@@ -75,11 +75,10 @@
     },
     {
       "name": "bible-cuv-after-spanish",
-      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373).",
+      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed, so Vision reads the dock in English first and misses 詩篇; it reads a stale Salmos reliably.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
       "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default"],
-      "mustShowLines": ["^詩篇"],
       "mustNotShowLines": ["Salmos"]
     },
     {

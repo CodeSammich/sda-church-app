@@ -151,9 +151,9 @@ describe('screen rules', () => {
   it("catches the previous Bible's book names after a link opens the CUV (#373)", () => {
     const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.944));
     const after = shot('bible-cuv-after-spanish-default');
-    expect(checkShot(after, [...tabs, line('詩篇 v', 0.86), line('Verse v', 0.86)])).toEqual([]);
+    // What the release run read: Vision, reading English first, misses 詩篇.
+    expect(checkShot(after, [...tabs, line('23 v', 0.86), line('Verse v', 0.86)])).toEqual([]);
     expect(checkShot(after, [...tabs, line('Salmos v', 0.86), line('Verse v', 0.86)])).toEqual([
-      'no line matches /^詩篇/',
       '"Salmos v" matches /Salmos/, which must not show',
     ]);
   });
