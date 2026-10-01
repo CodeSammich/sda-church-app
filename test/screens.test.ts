@@ -72,8 +72,22 @@ describe('App Store shots', () => {
   const copies = planAppStore(config);
 
   it('numbers each language’s shots in upload order', () => {
-    expect(copies[0]).toEqual({ name: 'bible-dual-default', file: 'app-store/en-US/01-bible-dual-default.png' });
-    expect(copies.map((copy: { file: string }) => copy.file)).toContain('app-store/zh-Hant/01-bible-cuv-zh.png');
+    // Home first: the first three show on the App Store's install sheets.
+    expect(copies[0]).toEqual({ name: 'home-default', file: 'app-store/en-US/01-home-default.png' });
+    expect(copies.map((copy: { file: string }) => copy.file)).toContain('app-store/zh-Hant/01-home-zh.png');
+    // Chinese hears Cantonese right after Home, with pinyin still in the first three,
+    // then Mandarin in Simplified characters and its own dark-mode shot.
+    expect(copies.filter((copy: { file: string }) => copy.file.startsWith('app-store/zh-Hant/')).map(
+      (copy: { file: string }) => copy.file.replace('app-store/zh-Hant/', ''),
+    )).toEqual([
+      '01-home-zh.png',
+      '02-bible-cuv-cantonese-zh.png',
+      '03-bible-pinyin-zh.png',
+      '04-explore-zh.png',
+      '05-library-zh.png',
+      '06-bible-cuvs-zh-cn.png',
+      '07-bible-cuv-zh-dark.png',
+    ]);
   });
 
   it('only names shots that are captured, up to the App Store’s ten', () => {
@@ -145,6 +159,14 @@ describe('saved settings', () => {
     const shot = shots.find((candidate: { name: string }) => candidate.name === 'bible-dual-ios-large-text');
     expect(shot.settings.iosTextSize).toBe('accessibility-large');
     expect(Object.values(buildManifest(shot.settings))).not.toContain('accessibility-large');
+  });
+
+  it('saves a chosen narrator the way the Bible reader reads it', () => {
+    const { CANTONESE_CUV_READER, getAudioReaderPreferenceKey } = require('../services/BibleAudioSources');
+    const shot = shots.find((candidate: { name: string }) => candidate.name === 'bible-cuv-cantonese-zh');
+    expect(JSON.parse(buildManifest(shot.settings)['user-bible-audio-readers'])).toEqual({
+      [getAudioReaderPreferenceKey('cmn_cuv')]: CANTONESE_CUV_READER,
+    });
   });
 
   it('rejects a setting it has no storage key for', () => {

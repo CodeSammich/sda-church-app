@@ -85,7 +85,7 @@ describe('closer look at a strip', () => {
     // The first pass missed 您 here; the other three labels still show Chinese.
     const lines = samples.clean['library-zh'] as Line[];
     expect(checkShot(shot('library-zh'), lines)).toEqual([]);
-    expect(checkShot(shot('bible-cuv-zh'), [line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944)])).toEqual([]);
+    expect(checkShot(shot('bible-pinyin-zh'), [line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944)])).toEqual([]);
   });
 });
 
@@ -96,6 +96,15 @@ describe('screen rules', () => {
     expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^16\\b']);
     expect(shot('bible-dual-default').mustShowLines).toBeUndefined();
     expect(shot('bible-default').tabs).toBeUndefined();
+  });
+
+  it('checks the spoken language on the CUV audio button', () => {
+    const tabs = [line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944)];
+    expect(checkShot(shot('bible-cuv-cantonese-zh'), [...tabs, line('粵語', 0.88)])).toEqual([]);
+    expect(checkShot(shot('bible-cuv-cantonese-zh'), [...tabs, line('國語', 0.88)])).toEqual(['no line matches /粵語/']);
+    // Simplified characters for the Simplified edition.
+    expect(checkShot(shot('bible-cuvs-zh-cn'), [line('首页', 0.944), line('圣经', 0.944), line('探索', 0.944), line('國語', 0.88)]))
+      .toEqual(['no line matches /国语/']);
   });
 
   it('reads each shot in its language', () => {
