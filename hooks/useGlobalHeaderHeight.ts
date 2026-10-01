@@ -1,5 +1,9 @@
 import { getGlobalHeaderContentHeight } from '@/constants/Layout';
-import { getBibleReaderUiTextScale } from '@/constants/AppPreferences';
+import {
+  getBibleReaderUiTextScale,
+  getBottomTabIconTextScale,
+  type TextScale,
+} from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { UIStateContext } from '@/constants/UIStateContext';
 import { useContext } from 'react';
@@ -15,6 +19,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export const HEADER_MAX_FONT_SCALE = 1.35;
 
 /** The system text size the header follows: the phone's, up to the cap. */
+/**
+ * The tab bar's text scale: the app's text size up to the cap its icons use,
+ * times the phone's up to the header's cap. The tab bar grows a little with
+ * larger text but never takes over the screen, and its labels stay on one line
+ * (#380). Everything that sizes around the tab bar uses this.
+ */
+export const getBottomTabTextScale = (textScale: number, fontScale: number) =>
+  Math.max(
+    1,
+    getBottomTabIconTextScale((Number.isFinite(textScale) ? textScale : 1) as TextScale) *
+      getHeaderFontScale(fontScale),
+  );
+
 export const getHeaderFontScale = (fontScale: number) =>
   Math.min(Math.max(1, Number.isFinite(fontScale) ? fontScale : 1), HEADER_MAX_FONT_SCALE);
 

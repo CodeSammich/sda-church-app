@@ -26,6 +26,7 @@ import {
 } from '@/constants/LanguageContext';
 import { hasAndroidWebBackGuard, isInstalledPwa } from '@/constants/InstalledWebApp';
 import { getBottomTabContentHeight } from '@/constants/Layout';
+import { getBottomTabTextScale } from '@/hooks/useGlobalHeaderHeight';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
   AppTheme,
@@ -1066,7 +1067,7 @@ function RootLayoutNav({
   const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
   const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
   const bottomTabHeight =
-    getBottomTabContentHeight(Math.max(1, fontScale * textScale)) +
+    getBottomTabContentHeight(getBottomTabTextScale(textScale, fontScale)) +
     bottomTabInset;
   // Paper already adds the safe-area padding to the Snackbar wrapper, so only
   // add the portion of the tab offset that it does not account for itself.

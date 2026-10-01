@@ -1,9 +1,10 @@
 import {
   DESIGN_TOKENS,
   getBottomTabContentHeight,
-  getMeasuredTextLineCount,
   getGlobalHeaderContentHeight,
 } from '@/constants/Layout';
+import { readFileSync } from 'node:fs';
+import { getBottomTabTextScale, HEADER_MAX_FONT_SCALE } from '@/hooks/useGlobalHeaderHeight';
 
 describe('responsive bottom-tab height', () => {
   it('keeps the base height at 100%', () => {
@@ -36,10 +37,31 @@ describe('responsive bottom-tab height', () => {
     },
   );
 
-  it('derives wrapped label lines from web-supported layout height', () => {
-    expect(getMeasuredTextLineCount(66, 32)).toBe(2);
-    expect(getMeasuredTextLineCount(98, 32)).toBe(3);
-    expect(getMeasuredTextLineCount(Number.NaN, 32)).toBe(1);
+  // At Android's largest font with the app at 200%, the labels were about 40pt
+  // and "Explore" wrapped onto a second line (#380).
+  it("caps the tab bar's text scale, so it never takes over the screen", () => {
+    expect(getBottomTabTextScale(1, 1)).toBe(1);
+    expect(getBottomTabTextScale(1.5, 1)).toBe(1.3); // the app's size, up to the icons' cap
+    expect(getBottomTabTextScale(1, 2)).toBe(HEADER_MAX_FONT_SCALE); // the phone's, up to the header's
+    const largest = getBottomTabTextScale(2, 2);
+    expect(largest).toBeCloseTo(1.3 * HEADER_MAX_FONT_SCALE, 5);
+    // 69pt tall at most. It used to reach 104pt, and 168pt with a wrapped line.
+    expect(getBottomTabContentHeight(largest)).toBe(69);
+    expect(getBottomTabContentHeight(2 * 2, 2)).toBe(168);
+    expect(getBottomTabTextScale(Number.NaN, Number.NaN)).toBe(1);
+  });
+
+  it('keeps every tab label on one line, capped like the header', () => {
+    const tabs = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
+    const label = tabs.slice(tabs.indexOf('function TabBarLabel'), tabs.indexOf('export default function TabLayout'));
+    expect(label).toContain('numberOfLines={1}');
+    expect(label).toContain('adjustsFontSizeToFit');
+    expect(label).toContain('maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}');
+    expect(tabs).toContain('getBottomTabContentHeight(getBottomTabTextScale(textScale, fontScale))');
+    // Everything that sizes around the tab bar uses the same scale.
+    for (const file of ['app/_layout.tsx', 'styles/NavigationStyles.ts', 'app/(tabs)/bible/index.tsx']) {
+      expect(readFileSync(file, 'utf8')).toContain('getBottomTabContentHeight(getBottomTabTextScale(textScale, ');
+    }
   });
 
   it.each([Number.NaN, Number.POSITIVE_INFINITY, 0.5])(
