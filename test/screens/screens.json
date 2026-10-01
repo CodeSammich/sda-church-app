@@ -217,8 +217,10 @@
     },
     {
       "name": "give",
+      "$comment": "Zelle stays hidden until its address is ready (#392). When shown, its heading sits just above the tab bar.",
       "path": "home/give",
-      "variants": ["default", "zh", "es"]
+      "variants": ["default", "zh", "es"],
+      "mustNotShowLines": ["Zelle", "^Electronic Transfer\\b", "^電子轉賬", "^Transferencia Electrónica"]
     },
     {
       "name": "you",

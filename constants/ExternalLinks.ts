@@ -103,6 +103,12 @@ export const openInSystemBrowser = async (
   }
 };
 
+/**
+ * Whether the Tithe & Offering page shows the church's Zelle section. Off until
+ * the address can receive gifts (#384, #392); turning it on needs a new release.
+ */
+export const SHOW_ZELLE_GIVING = false;
+
 export const openAdventistGiving = async () => {
   return openURL(
     'https://adventistgiving.org/donate/AN48CO',
