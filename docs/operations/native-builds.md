@@ -893,7 +893,10 @@ every screen must show:
 - on Bible screens, the verse button's whole label in the chapter controls, so a
   cut-off "V" fails;
 - a screen's `mustShowLines`, regular expressions some line must start with, so a verse
-  number split across two lines fails;
+  number split across two lines fails, and its `mustNotShowLines`, which no line may
+  match. `variantRules` adds either for one variant. The Bible header uses them: the
+  translation button shows its 文A icon (which Vision reads as "XA"), the EN badge, and
+  both full names, and at 150% and 200% with a back arrow it shows them without the icon;
 - no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
   ("undefined", "NaN").
 
