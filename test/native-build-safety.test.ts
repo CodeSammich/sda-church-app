@@ -49,6 +49,19 @@ describe('native Android build safety gates', () => {
     );
   });
 
+  it('builds a debug-signed APK as the preview app, and a store build never', () => {
+    // #378: the preview gets its own app ID, so it installs beside the store app.
+    const script = readFileSync(androidBuildScript, 'utf8');
+    expect(script).toContain("if (isDebugSigning) {\n  process.env.APP_VARIANT = 'preview';\n} else {\n  delete process.env.APP_VARIANT;\n}");
+    // A reused android/ project is regenerated when its app ID doesn't match.
+    expect(script).toContain('generatedPackage !== appPackage');
+    expect(script).toContain('|| forcePrebuild || packageChanged');
+    // The audio test runs against the debug-signed preview by default.
+    expect(readFileSync(resolve(process.cwd(), 'scripts/e2e/android-bible-audio.sh'), 'utf8')).toContain(
+      'PKG="${E2E_PACKAGE:-org.nyccsda.app.preview}"',
+    );
+  });
+
   it('avoids Groovy signing-variable names that shadow DSL methods', () => {
     expect(androidSigningPlugin).toContain('def signingKeyAlias');
     expect(androidSigningPlugin).toContain('def signingKeyPassword');

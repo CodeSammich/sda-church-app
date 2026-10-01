@@ -23,6 +23,12 @@ Code, Codex, Gemini, and others). The full contributor guide is
   reference reaches `main`.
 - Say what you tested, with the command and result (for example `npm test`,
   430 passing). Mention any Android or iOS build you ran.
+- If the change affects what a screen shows or how it's laid out, update the
+  iPhone key screens in `test/screens/screens.json`: the screen or variant that
+  shows it, and text checks (`mustShowLines`, `mustNotShowLines`,
+  `variantRules`) that fail if it breaks. See "Key screens" in
+  [docs/operations/native-builds.md](docs/operations/native-builds.md). The PR
+  template asks about this too.
 
 ## Safety
 

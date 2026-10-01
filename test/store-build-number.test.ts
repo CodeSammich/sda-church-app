@@ -69,6 +69,26 @@ describe('app.config.js', () => {
     expect(config.ios.bundleIdentifier).toBe(appJson.expo.ios.bundleIdentifier);
   });
 
+  it('gives a debug-signed preview its own app ID and name, so it installs beside the store app', () => {
+    const previous = process.env.APP_VARIANT;
+    try {
+      process.env.APP_VARIANT = 'preview';
+      const preview = appConfig({ config: appJson.expo });
+      expect(preview.android.package).toBe(`${appJson.expo.android.package}.preview`);
+      expect(preview.name).toBe('NYCCSDA Preview');
+      expect(preview.android.versionCode).toBe(storeBuildNumber(appJson.expo.version));
+      expect(preview.ios.bundleIdentifier).toBe(appJson.expo.ios.bundleIdentifier);
+
+      delete process.env.APP_VARIANT;
+      const store = appConfig({ config: appJson.expo });
+      expect(store.android.package).toBe(appJson.expo.android.package);
+      expect(store.name).toBe(appJson.expo.name);
+    } finally {
+      if (previous === undefined) delete process.env.APP_VARIANT;
+      else process.env.APP_VARIANT = previous;
+    }
+  });
+
   it('leaves app.json without hand-set build numbers', () => {
     expect(appJson.expo.android).not.toHaveProperty('versionCode');
     expect(appJson.expo.ios).not.toHaveProperty('buildNumber');

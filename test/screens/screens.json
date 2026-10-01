@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the shots to upload, in order. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match, mustNotShowLines ones that no line may match, variantRules more of either for one variant, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the shots to upload, in order. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -29,16 +29,24 @@
     },
     {
       "name": "bible-dual",
+      "$comment": "The header's translation button in full: the 文A icon (read as XA), the EN badge, and both names, not cut to B… or C… (#376).",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
-      "variants": ["default", "dark", "large", "xl", "ios-large-text"]
+      "variants": ["default", "dark", "large", "xl", "ios-large-text"],
+      "mustShowLines": ["^XA\\b", "\\bEN\\b", "BSB", "CUV"]
     },
     {
       "name": "bible-dual-back",
-      "$comment": "Opened from Home, so the header also has a back arrow and stacks sooner.",
+      "$comment": "Opened from Home, so the header also has a back arrow and less room. When it's tight, the translation button gives up its 文A icon first, then the length of its names, then its badges (#376). At 150% and 200% only the icon goes: the EN badge and both full names stay.",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB&backTo=%2F",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
-      "variants": ["default", "large", "xl"]
+      "variants": ["default", "large", "xl"],
+      "mustShowLines": ["\\bEN\\b", "BSB", "CUV"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^XA\\b"] },
+        "large": { "mustNotShowLines": ["\\bXA\\b"] },
+        "xl": { "mustNotShowLines": ["\\bXA\\b"] }
+      }
     },
     {
       "name": "bible-cuv",

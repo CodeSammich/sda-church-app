@@ -94,7 +94,7 @@ describe('screen rules', () => {
     // "bible-dual-default" starts with "bible-", but belongs to bible-dual.
     expect(shot('bible-scrolled-default').tabs).toBe(false);
     expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^16\\b']);
-    expect(shot('bible-dual-default').mustShowLines).toBeUndefined();
+    expect(shot('explore-default').mustShowLines).toBeUndefined();
     expect(shot('bible-default').tabs).toBeUndefined();
   });
 
@@ -105,6 +105,33 @@ describe('screen rules', () => {
     // Simplified characters for the Simplified edition.
     expect(checkShot(shot('bible-cuvs-zh-cn'), [line('首页', 0.944), line('圣经', 0.944), line('探索', 0.944), line('國語', 0.88)]))
       .toEqual(['no line matches /国语/']);
+  });
+
+  it("checks the Bible header's translation button: in full, or without its icon when tight (#376)", () => {
+    // The real text of a good shot: "XA EN", "BSB +", "* CUV v" (XA is the 文A icon).
+    const dual = samples.clean['bible-dual-default'] as Line[];
+    expect(checkShot(shot('bible-dual-default'), dual)).toEqual([]);
+    const withoutHeader = dual.filter((each) => each.box[1] > 0.12);
+    expect(checkShot(shot('bible-dual-default'), withoutHeader)).toEqual([
+      'no line matches /^XA\\b/',
+      'no line matches /\\bEN\\b/',
+      'no line matches /BSB/',
+      'no line matches /CUV/',
+    ]);
+
+    // With a back arrow at 200%: the icon gives way first, so the names stay whole.
+    const body = withoutHeader;
+    const iconFirst = [...body, line('EN BSB + * CUV v', 0.05)];
+    expect(checkShot(shot('bible-dual-back-xl'), iconFirst)).toEqual([]);
+    // What the 0.43.0 preview showed before: the icon kept, the names cut short.
+    const namesCut = [...body, line('XA EN B... +* C...', 0.05)];
+    expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual([
+      'no line matches /BSB/',
+      'no line matches /CUV/',
+      '"XA EN B... +* C..." matches /\\bXA\\b/, which must not show',
+    ]);
+    // At the default size the icon must still show.
+    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^XA\\b/']);
   });
 
   it('reads each shot in its language', () => {

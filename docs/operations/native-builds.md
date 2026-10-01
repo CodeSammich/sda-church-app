@@ -678,6 +678,16 @@ npm run build:android:apk:debug -- --output /tmp/nyccsda-local-preview.apk
 The debug APK is suitable for installing on a test device, but it must never
 be uploaded to Google Play. A truly unsigned APK is generally not installable.
 
+**The debug APK is a separate app, "NYCCSDA Preview".** It's built with the app ID
+`org.nyccsda.app.preview` instead of `org.nyccsda.app`, so it installs beside the
+Play or internal-testing version rather than conflicting with its signature, and
+keeps its own settings and saved verses (#378). `app.config.js` sets the ID and name
+when `scripts/build-android-native.mjs` builds with `--debug`; store builds never get
+them. With both installed, an `sdachurchapp://` link asks which app to open. Commands
+that name the app, such as `adb shell am start … org.nyccsda.app.preview` and the
+Android audio test (`E2E_PACKAGE`), use the preview ID. A reused `android/` project
+is regenerated whenever the ID it was generated with doesn't match.
+
 Only a maintainer on a trusted machine should create a locally signed release
 artifact. If that is necessary, set the four signing variables only in the
 current terminal session. `ANDROID_KEYSTORE_PATH` points to the real JKS file;
@@ -883,7 +893,10 @@ every screen must show:
 - on Bible screens, the verse button's whole label in the chapter controls, so a
   cut-off "V" fails;
 - a screen's `mustShowLines`, regular expressions some line must start with, so a verse
-  number split across two lines fails;
+  number split across two lines fails, and its `mustNotShowLines`, which no line may
+  match. `variantRules` adds either for one variant. The Bible header uses them: the
+  translation button shows its 文A icon (which Vision reads as "XA"), the EN badge, and
+  both full names, and at 150% and 200% with a back arrow it shows them without the icon;
 - no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
   ("undefined", "NaN").
 

@@ -11,7 +11,9 @@
  * - Bible screens show the verse button's whole label in the chapter controls,
  *   not a cut-off "V";
  * - a screen's own `mustShowLines` in test/screens/screens.json match the start
- *   of some line, which catches a verse number split across two lines.
+ *   of some line, which catches a verse number split across two lines, and its
+ *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
+ *   such as the Bible header without its 文A icon at a large text size.
  *
  * Where a label is missing, it takes a closer look at that strip of the screen,
  * enlarged and with more contrast, before reporting it.
@@ -118,16 +120,31 @@ const checkShot = (shot, lines) => {
       problems.push(`no line matches /${rule}/`);
     }
   }
+  for (const rule of shot.mustNotShowLines || []) {
+    const shown = lines.find((line) => new RegExp(rule, 'u').test(line.text.trim()));
+    if (shown) problems.push(`"${shown.text.trim()}" matches /${rule}/, which must not show`);
+  }
   return problems;
 };
 
-/** Adds each screen's rules to its shots. */
+/** Both lists of rules, or undefined when neither has any. */
+const joinRules = (screenRules, variantRules) =>
+  screenRules || variantRules ? [...(screenRules || []), ...(variantRules || [])] : undefined;
+
+/** Adds each screen's rules, and its variant's, to its shots. */
 const planChecks = (config) =>
   planCaptures(config).map((shot) => {
     const screen = config.screens.find((candidate) =>
       candidate.variants.some((variant) => `${candidate.name}-${variant}` === shot.name),
     );
-    return { ...shot, tabs: screen.tabs, mustShowLines: screen.mustShowLines };
+    const variant = shot.name.slice(screen.name.length + 1);
+    const forVariant = screen.variantRules?.[variant] || {};
+    return {
+      ...shot,
+      tabs: screen.tabs,
+      mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
+      mustNotShowLines: joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
+    };
   });
 
 /** Runs Vision on images, one call per language set: { [file]: lines }. */

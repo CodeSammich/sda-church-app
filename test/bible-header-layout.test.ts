@@ -6,42 +6,48 @@ import {
   shortestTranslationLabel,
 } from '@/hooks/useGlobalHeaderHeight';
 
-// The Bible header's translation button shares a row with the icon buttons,
-// cutting its translation names short with "…" when the row is tight, then
-// dropping its 文A icon, and stacks only as a last resort (#376). It used to
-// stack whenever the full names didn't fit, as with a back arrow at the app's
-// 150% and 200% text sizes, leaving a wide, mostly empty button and a back
-// arrow between the rows.
+// The Bible header's translation button shares a row with the icon buttons
+// (#376). When the row is tight it gives up its 文A icon first, then its names,
+// cut short with "…" and then dropped, and last its language badges, and stacks
+// only as a last resort. It used to stack whenever the full button didn't fit,
+// as with a back arrow at the app's 150% and 200% text sizes, leaving a wide,
+// mostly empty button and a back arrow between the rows.
 describe("the Bible header's controls", () => {
   // Room for the translation button: 380 − 2 × (56 + 8) − 12 = 240.
   const phone = { rowWidth: 380, iconButtonCount: 2, iconButtonSize: 56 };
-  const oneRow = { stack: false, hideTranslationIcon: false };
+  // The iPhone shot with a back arrow at 200%: the full button needs about 210
+  // where about 202 is left; without the icon the full names need about 183.
+  const widths = { fullButtonWidth: 210, shortestButtonWidth: 160, badgesOnlyButtonWidth: 110 };
+  const everything = { stack: false, hideTranslationIcon: false, hideTranslationNames: false };
 
-  it('share one row, with the icon, when the shortest button fits', () => {
-    expect(
-      getBibleControlsLayout({ ...phone, shortestButtonWidth: 212, shortestButtonWidthWithoutIcon: 185 }),
-    ).toEqual(oneRow);
+  it('show everything when the full button fits', () => {
+    expect(getBibleControlsLayout({ ...phone, ...widths })).toEqual(everything);
   });
 
-  it('drop the icon only when the shortest button with it would overflow', () => {
-    // A Pixel 9a with a back arrow at 150% or 200%: about 200 left for the
-    // button, whose shortest form needs about 206 with the icon, 179 without.
-    expect(
-      getBibleControlsLayout({ ...phone, rowWidth: 332, shortestButtonWidth: 206, shortestButtonWidthWithoutIcon: 179 }),
-    ).toEqual({ stack: false, hideTranslationIcon: true });
+  it('give up the icon first, keeping the badges and as much of the names as fits', () => {
+    expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 342 })).toEqual({
+      stack: false,
+      hideTranslationIcon: true,
+      hideTranslationNames: false,
+    });
   });
 
-  it('stack, with the icon, only when even the shortest button without it overflows', () => {
-    expect(
-      getBibleControlsLayout({ ...phone, rowWidth: 300, shortestButtonWidth: 206, shortestButtonWidthWithoutIcon: 179 }),
-    ).toEqual({ stack: true, hideTranslationIcon: false });
+  it('drop the names, "…" and all, once even one letter each won\'t fit, keeping the badges', () => {
+    // 150 left: too little for the badges with first-letter names (160).
+    expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 290 })).toEqual({
+      stack: false,
+      hideTranslationIcon: true,
+      hideTranslationNames: true,
+    });
   });
 
-  it('start on one row, with the icon, until the widths are measured', () => {
-    expect(getBibleControlsLayout({ ...phone, shortestButtonWidth: 0, shortestButtonWidthWithoutIcon: 0 })).toEqual(oneRow);
-    expect(
-      getBibleControlsLayout({ ...phone, rowWidth: 0, shortestButtonWidth: 500, shortestButtonWidthWithoutIcon: 450 }),
-    ).toEqual(oneRow);
+  it('stack, with everything, only when even the badges alone overflow', () => {
+    expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 240 })).toEqual({ ...everything, stack: true });
+  });
+
+  it('start on one row, with everything, until the widths are measured', () => {
+    expect(getBibleControlsLayout({ ...phone, fullButtonWidth: 0, shortestButtonWidth: 0, badgesOnlyButtonWidth: 0 })).toEqual(everything);
+    expect(getBibleControlsLayout({ ...phone, ...widths, rowWidth: 0 })).toEqual(everything);
   });
 
   it('measure the shortest form with each name cut to its first letter', () => {
@@ -50,8 +56,11 @@ describe("the Bible header's controls", () => {
     expect(shortestTranslationLabel('和合本')).toBe('和…');
     expect(shortestTranslationLabel('K')).toBe('K');
     const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
-    expect(header).toContain('{renderTranslationChipContent(true)}');
-    expect(header).toContain('{renderTranslationChipContent(true, false)}');
+    expect(header).toContain('{renderTranslationChipContent({})}');
+    expect(header).toContain('{renderTranslationChipContent({ shortest: true, withIcon: false })}');
+    expect(header).toContain('{renderTranslationChipContent({ withIcon: false, withNames: false })}');
+    // Without names, nothing is left to cut short, so no "…" either.
+    expect(header).toMatch(/\{withNames && \(\s*<Text/);
     expect(header).not.toMatch(/translationChip: \{[^}]*maxWidth: 240/);
   });
 
