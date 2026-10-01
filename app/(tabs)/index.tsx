@@ -54,9 +54,10 @@ export default function HomeScreen() {
   const effectiveTextScale = Math.max(1, fontScale * textScale);
   // Keep the home card grid at two columns at every text zoom level.
   const useStackedLayout = false;
-  // The verse card's two buttons each get a full row once the app's and the
-  // phone's text sizes add up to 2× or more, so a word like "Share" or
-  // "Compartir" is never cut off (#385).
+  // Once the app's and the phone's text sizes add up to 2× or more, the verse
+  // card's two buttons each get a full row, and the Sabbath countdown's label
+  // sits above the countdown, so words like "Compartir" and "Sabbath" are
+  // never cut off or broken mid-word (#385).
   const stackHeroActions = effectiveTextScale >= 2;
   const styles = useMemo(
     () => createStyles(textScale, effectiveTextScale, useStackedLayout),
@@ -484,8 +485,8 @@ export default function HomeScreen() {
             mode="contained"
           >
             <Card.Content style={styles.timerContentSubtle}>
-              <View style={styles.timerRow}>
-                <View style={styles.labelColumn}>
+              <View style={[styles.timerRow, stackHeroActions && styles.timerRowStacked]}>
+                <View style={[styles.labelColumn, stackHeroActions && styles.labelColumnStacked]}>
                   <Text
                     variant="labelMedium"
                     style={{
@@ -509,6 +510,7 @@ export default function HomeScreen() {
                 <Text
                   style={[
                     styles.timerValueSubtle,
+                    stackHeroActions && styles.timerValueStacked,
                     { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
                   ]}
                 >
@@ -670,6 +672,17 @@ const createStyles = (
   },
   labelColumn: {
     flex: 1,
+  },
+  timerRowStacked: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  labelColumnStacked: {
+    flex: 0,
+    alignSelf: 'stretch',
+  },
+  timerValueStacked: {
+    marginTop: 8,
   },
   timerValueSubtle: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
