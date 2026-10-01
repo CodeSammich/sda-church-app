@@ -126,6 +126,7 @@ import {
   getBibleDockLayout,
   getBibleDockViewportLayout,
   getBulletinVerseScrollOffset,
+  shouldShortenVerseLabel,
 } from '@/styles/ReaderStyles';
 
 const FOOTER_PADDING_GUTTER = 34;
@@ -196,6 +197,7 @@ const uiLabels = {
     chapter: 'Chapter',
     chapterItem: 'Chapter {n}',
     verse: 'Verse',
+    verseShort: 'Vs.',
     verseItem: 'Verse {n}',
     bible: 'Bible',
     footnote: 'Footnote',
@@ -284,6 +286,7 @@ const uiLabels = {
     chapter: '章節',
     chapterItem: '第 {n} 章',
     verse: '節',
+    verseShort: '節',
     verseItem: '第 {n} 節',
     bible: '聖經',
     footnote: '腳注',
@@ -368,6 +371,7 @@ const uiLabels = {
     chapter: '章节',
     chapterItem: '第 {n} 章',
     verse: '节',
+    verseShort: '节',
     verseItem: '第 {n} 节',
     bible: '圣经',
     footnote: '脚注',
@@ -452,6 +456,7 @@ const uiLabels = {
     chapter: 'Capítulo',
     chapterItem: 'Capítulo {n}',
     verse: 'Versículo',
+    verseShort: 'Vers.',
     verseItem: 'Versículo {n}',
     bible: 'Biblia',
     footnote: 'Footnote',
@@ -563,6 +568,19 @@ export default function BibleScreen() {
     () => getBibleDockLayout(viewportWidth, dockTextScale),
     [dockTextScale, viewportWidth],
   );
+  // The verse pill says "Vs." rather than "Verse" only when the book, chapter,
+  // and verse pills can't all fit at full width, so the book name is cut short
+  // last (#376). Hidden copies measure the book and verse pills in full.
+  const [dockPillsWidth, setDockPillsWidth] = useState(0);
+  const [bookPillWidth, setBookPillWidth] = useState(0);
+  const [chapterPillWidth, setChapterPillWidth] = useState(0);
+  const [versePillWidth, setVersePillWidth] = useState(0);
+  const shortVerseLabel = shouldShortenVerseLabel({
+    rowWidth: dockPillsWidth,
+    bookPillWidth,
+    chapterPillWidth,
+    versePillWidth,
+  });
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight(true);
   const fullscreenEdgeInset =
@@ -3385,13 +3403,44 @@ export default function BibleScreen() {
       <View style={ReaderStyles.buttonPlaceholder} />
     );
 
+  // A hidden, full-width copy of a dock pill, for measuring.
+  const renderPillMeasure = (label: string, onWidth: (width: number) => void) => (
+    <View
+      aria-hidden
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      pointerEvents="none"
+      onLayout={(event) => onWidth(Math.ceil(event.nativeEvent.layout.width))}
+      style={[
+        ReaderStyles.pill,
+        {
+          borderWidth: 1,
+          minHeight: dockLayout.controlHeight,
+          paddingHorizontal: chipPaddingHorizontal,
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          opacity: 0,
+        },
+      ]}
+    >
+      <Text maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE} numberOfLines={1} style={ReaderStyles.pillText}>
+        {label}
+      </Text>
+      <AppIcon name="chevron-down" size={14} scaleWithText={false} color={theme.colors.primary} />
+    </View>
+  );
+
   const renderChapterSelectors = () => (
     <View
+      onLayout={(event) => setDockPillsWidth(Math.floor(event.nativeEvent.layout.width))}
       style={[
         ReaderStyles.pillsContainer,
         stackChapterControls && styles.stackedPillsContainer,
       ]}
     >
+      {renderPillMeasure(book?.name || '...', setBookPillWidth)}
+      {renderPillMeasure(labels.verse, setVersePillWidth)}
       <TouchableOpacity
         style={[
           ReaderStyles.pill,
@@ -3451,6 +3500,7 @@ export default function BibleScreen() {
             maxWidth: '30%',
           },
         ]}
+        onLayout={(event) => setChapterPillWidth(Math.ceil(event.nativeEvent.layout.width))}
         onPress={() => setModalType('chapter')}
         accessibilityRole="button"
         accessibilityLabel={`${labels.chapter}: ${chapterNum}`}
@@ -3500,7 +3550,7 @@ export default function BibleScreen() {
           ellipsizeMode="tail"
           style={ReaderStyles.pillText}
         >
-          {labels.verse}
+          {shortVerseLabel ? labels.verseShort : labels.verse}
         </Text>
         <AppIcon
           pointerEvents="none"
