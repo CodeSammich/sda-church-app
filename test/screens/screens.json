@@ -12,13 +12,16 @@
     "zh": { "language": "zh" },
     "zh-cn": { "language": "zh-cn" },
     "es": { "language": "es" },
-    "zh-dark": { "language": "zh", "theme": "dark" }
+    "zh-dark": { "language": "zh", "theme": "dark" },
+    "max": { "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" },
+    "es-max": { "language": "es", "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" }
   },
   "screens": [
     {
       "name": "home",
+      "$comment": "max and es-max: the app at 200% with the iPhone's largest text, where the tab labels used to wrap (#380). The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar.",
       "path": "",
-      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es"],
+      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "max", "es-max"],
       "changesDaily": true
     },
     {
@@ -111,8 +114,9 @@
     },
     {
       "name": "explore",
+      "$comment": "max and es-max check the tab labels at the largest text, as on Home (#380).",
       "path": "explore",
-      "variants": ["default", "dark", "zh", "es"]
+      "variants": ["default", "dark", "zh", "es", "max", "es-max"]
     },
     {
       "name": "library",

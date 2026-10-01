@@ -134,6 +134,19 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^XA\\b/']);
   });
 
+  it('catches tab labels that wrap, or rise out of an overgrown tab bar, at the largest text (#380)', () => {
+    const tabs = (labels: string[], y: number) => labels.map((label) => line(label, y));
+    expect(checkShot(shot('explore-max'), tabs(['Home', 'Bible', 'Explore', 'You'], 0.944))).toEqual([]);
+    // "Explore" wrapped onto two lines, as on Android before #380.
+    expect(
+      checkShot(shot('explore-max'), [...tabs(['Home', 'Bible', 'Explor', 'You'], 0.93), line('e', 0.96)]),
+    ).toEqual(['tab labels missing: Explore']);
+    // An overgrown tab bar: the labels sit above the tab bar's area.
+    expect(checkShot(shot('home-es-max'), tabs(['Inicio', 'Biblia', 'Explorar', 'Tú'], 0.86))).toEqual([
+      'tab labels missing: Inicio, Biblia, Explorar, Tú',
+    ]);
+  });
+
   it('reads each shot in its language', () => {
     const { OCR_LANGUAGES } = require('../scripts/check-screens.cjs');
     for (const each of shots) expect(OCR_LANGUAGES[each.settings.language]).toBeDefined();
