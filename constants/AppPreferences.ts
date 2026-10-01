@@ -37,6 +37,28 @@ export type TextScale =
 
 export const DEFAULT_TEXT_SCALE: TextScale = 1.25;
 
+/**
+ * The most the app's text size and the phone's may add up to, since the two
+ * multiply: 3.2×, just above the iPhone's own largest text (about 3.1×). So the
+ * app never shows text larger than the phone alone can, a size apps already
+ * handle, where the app at 200% with the iPhone's largest text was about 6×.
+ */
+export const MAX_COMBINED_TEXT_SCALE = 3.2;
+
+/**
+ * The app's text size to use, given the phone's (`fontScale`): the chosen size,
+ * unless together they'd pass MAX_COMBINED_TEXT_SCALE. Then only the app's part
+ * gives way, in 5% steps and never below 100%, so someone using just one of the
+ * two settings always gets it in full.
+ */
+export const getEffectiveTextScale = (preferred: TextScale, fontScale: number): TextScale => {
+  const phone = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
+  const room = MAX_COMBINED_TEXT_SCALE / phone;
+  if (preferred <= room) return preferred;
+  const stepped = Math.floor(room / TEXT_SCALE_STEP + 1e-9) * TEXT_SCALE_STEP;
+  return Math.max(TEXT_SCALE_MIN, Math.round(stepped * 100) / 100) as TextScale;
+};
+
 export interface TypographyVariant {
   fontSize?: number;
   lineHeight?: number;
