@@ -161,12 +161,18 @@ describe('screen rules', () => {
   it("catches the Home verse card's cut-off buttons and broken heading at 3.2× (#385)", () => {
     const tabs = ['Inicio', 'Biblia', 'Explorar', 'Tú'].map((label) => line(label, 0.944));
     const homeEs = shot('home-es-xl-ios-large-text');
-    expect(
-      checkShot(homeEs, [...tabs, line('Versículo de hoy', 0.1), line('Compartir', 0.7), line('Leer Versículo', 0.76)]),
-    ).toEqual([]);
+    expect(checkShot(homeEs, [...tabs, line('Versículo de', 0.09), line('hoy', 0.17)])).toEqual([]);
     // What the 0.43.0 run showed: the heading broken mid-word.
-    expect(checkShot(homeEs, [...tabs, line('Versícul', 0.08), line('o de hoy', 0.12), line('Compartir', 0.7), line('Leer Versículo', 0.76)]))
+    expect(checkShot(homeEs, [...tabs, line('Versícul', 0.08), line('o de hoy', 0.12)]))
       .toEqual(['no line matches /^Versículo\\b/']);
+    // English: Vision reads each button's icon as a character before its label.
+    const homeEn = shot('home-xl-ios-large-text');
+    const enTabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.94));
+    expect(checkShot(homeEn, [...enTabs, line('‹ Share Verse', 0.69), line('a Read Verse', 0.8)])).toEqual([]);
+    expect(checkShot(homeEn, [...enTabs, line('Shar', 0.69), line('Rea', 0.7)])).toEqual([
+      'no line matches /\\bShare Verse\\b/',
+      'no line matches /\\bRead Verse\\b/',
+    ]);
   });
 
   it('reads each shot in its language', () => {

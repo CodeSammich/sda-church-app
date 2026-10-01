@@ -20,12 +20,12 @@
   "screens": [
     {
       "name": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380). Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380). Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). Vision reads each button's icon as a character (“‹ Share Verse”), so the button rules match anywhere in the line; in Spanish the longer verse pushes the buttons below the shot, so only its heading is checked. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text"],
       "variantRules": {
-        "xl-ios-large-text": { "mustShowLines": ["^Share\\b", "^Read\\b"] },
-        "es-xl-ios-large-text": { "mustShowLines": ["^Compartir\\b", "^Leer\\b", "^Versículo\\b"] }
+        "xl-ios-large-text": { "mustShowLines": ["\\bShare Verse\\b", "\\bRead Verse\\b"] },
+        "es-xl-ios-large-text": { "mustShowLines": ["^Versículo\\b"] }
       },
       "changesDaily": true
     },
