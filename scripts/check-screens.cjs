@@ -11,7 +11,9 @@
  * - Bible screens show the verse button's whole label in the chapter controls,
  *   not a cut-off "V";
  * - a screen's own `mustShowLines` in test/screens/screens.json match the start
- *   of some line, which catches a verse number split across two lines, and its
+ *   of some line, which catches a verse number split across two lines (a rule
+ *   with `minLeft` also needs the line to start that far across, for
+ *   right-aligned text), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
  *   such as the Bible header without its 文A icon at a large text size.
  *
@@ -116,8 +118,17 @@ const checkShot = (shot, lines) => {
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
   for (const rule of shot.mustShowLines || []) {
-    if (!lines.some((line) => new RegExp(rule, 'u').test(line.text.trim()))) {
-      problems.push(`no line matches /${rule}/`);
+    // A rule is a regular expression, or { line, minLeft } for a line that must
+    // also start at least minLeft of the way across, such as right-aligned text.
+    const { line: pattern, minLeft } = typeof rule === 'string' ? { line: rule } : rule;
+    const matches = lines.filter((line) => new RegExp(pattern, 'u').test(line.text.trim()));
+    if (!matches.length) {
+      problems.push(`no line matches /${pattern}/`);
+    } else if (minLeft !== undefined && !matches.some((line) => line.box[0] >= minLeft)) {
+      const farthest = Math.max(...matches.map((line) => line.box[0]));
+      problems.push(
+        `/${pattern}/ starts ${Math.round(farthest * 100)}% of the way across, not at least ${Math.round(minLeft * 100)}%`,
+      );
     }
   }
   for (const rule of shot.mustNotShowLines || []) {

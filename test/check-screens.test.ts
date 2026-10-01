@@ -161,12 +161,41 @@ describe('screen rules', () => {
   it("catches the Home verse card's cut-off buttons and broken heading at 3.2× (#385)", () => {
     const tabs = ['Inicio', 'Biblia', 'Explorar', 'Tú'].map((label) => line(label, 0.944));
     const homeEs = shot('home-es-xl-ios-large-text');
-    expect(
-      checkShot(homeEs, [...tabs, line('Versículo de hoy', 0.1), line('Compartir', 0.7), line('Leer Versículo', 0.76)]),
-    ).toEqual([]);
+    expect(checkShot(homeEs, [...tabs, line('Versículo de', 0.09), line('hoy', 0.17)])).toEqual([]);
     // What the 0.43.0 run showed: the heading broken mid-word.
-    expect(checkShot(homeEs, [...tabs, line('Versícul', 0.08), line('o de hoy', 0.12), line('Compartir', 0.7), line('Leer Versículo', 0.76)]))
+    expect(checkShot(homeEs, [...tabs, line('Versícul', 0.08), line('o de hoy', 0.12)]))
       .toEqual(['no line matches /^Versículo\\b/']);
+    // English: Vision reads each button's icon as a character before its label.
+    const homeEn = shot('home-xl-ios-large-text');
+    const enTabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.94));
+    expect(checkShot(homeEn, [...enTabs, line('‹ Share Verse', 0.69), line('a Read Verse', 0.8)])).toEqual([]);
+    expect(checkShot(homeEn, [...enTabs, line('Shar', 0.69), line('Rea', 0.7)])).toEqual([
+      'no line matches /\\bShare Verse\\b/',
+      'no line matches /\\bRead Verse\\b/',
+    ]);
+  });
+
+  it("checks Psalm 9's Higgaion Selah and Selah sit on the right, in the BSB", () => {
+    const at16 = shot('bible-higgaion-selah-default');
+    const at20 = shot('bible-selah-default');
+    const verse = line('Verse v', 0.95);
+    // A line at a given left edge, as a fraction of the screen's width.
+    const at = (text: string, y: number, left: number): Line => ({ text, box: [left, y, 0.3, 0.02] });
+    const verse16 = at('16 The LORD is known by the justice', 0.2, 0.05);
+    const verse20 = at('20 Lay terror upon them, O LORD;', 0.2, 0.05);
+    // Right-aligned, as the reader shows them at the default text size.
+    expect(checkShot(at16, [verse16, at('Higgaion Selah2', 0.3, 0.68), verse])).toEqual([]);
+    expect(checkShot(at20, [verse20, at('Selah', 0.3, 0.86), verse])).toEqual([]);
+    // Left-aligned, or missing.
+    expect(checkShot(at16, [verse16, at('Higgaion Selah2', 0.3, 0.1), verse])).toEqual([
+      '/\\bHiggaion Selah/ starts 10% of the way across, not at least 50%',
+    ]);
+    expect(checkShot(at20, [verse20, at('Selah', 0.3, 0.12), verse])).toEqual([
+      '/^Selah\\b/ starts 12% of the way across, not at least 50%',
+    ]);
+    expect(checkShot(at16, [verse16, verse])).toEqual(['no line matches /\\bHiggaion Selah/']);
+    // 9:16's line can't stand in for 9:20's lone Selah.
+    expect(checkShot(at20, [verse20, at('Higgaion Selah', 0.1, 0.68), verse])).toEqual(['no line matches /^Selah\\b/']);
   });
 
   it('reads each shot in its language', () => {
