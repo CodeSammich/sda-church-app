@@ -183,21 +183,26 @@ if (adventistEntries.length > 0) {
   await record(`daily audio sample ${sample.filename}`, 'Adventist Connect', () => probe(sample.url, { binary: true }));
 }
 
-// WordProject's Cantonese recording has no fallback host (see docs/LEGAL.md),
-// so a failure here means Cantonese listeners have no audio.
-const cantoneseManifestSource = await readFile('constants/CantoneseAdventistAudioManifest.ts', 'utf8');
-const cantoneseEntries = [...cantoneseManifestSource.matchAll(/["'](CANTONESE_B\d{2}C\d{3}\.mp3)["']:\s*["'](https:\/\/[^"']+)["']/g)]
-  .map(([, filename, url]) => ({ filename, url }));
+// WordProject's recordings have no fallback host (see docs/LEGAL.md), so a
+// failure here means their listeners have no audio.
+for (const [label, prefix, manifestPath, salt] of [
+  ['Cantonese', 'CANTONESE', 'constants/CantoneseAdventistAudioManifest.ts', 23],
+  ['Spanish RV1909', 'RV1909', 'constants/Rv1909AdventistAudioManifest.ts', 29],
+]) {
+  const source = await readFile(manifestPath, 'utf8');
+  const entries = [...source.matchAll(new RegExp(`["'](${prefix}_B\\d{2}C\\d{3}\\.mp3)["']:\\s*["'](https:\\/\\/[^"']+)["']`, 'g'))]
+    .map(([, filename, url]) => ({ filename, url }));
 
-await record('all 1,189 Cantonese audio assets are mapped', 'Adventist Connect', async () => {
-  if (cantoneseEntries.length !== 1189) throw new Error(`found ${cantoneseEntries.length} manifest entries`);
-  if (new Set(cantoneseEntries.map(({ url }) => url)).size !== 1189) throw new Error('duplicate asset URLs');
-  return '1,189 unique mappings';
-});
+  await record(`all 1,189 ${label} audio assets are mapped`, 'Adventist Connect', async () => {
+    if (entries.length !== 1189) throw new Error(`found ${entries.length} manifest entries`);
+    if (new Set(entries.map(({ url }) => url)).size !== 1189) throw new Error('duplicate asset URLs');
+    return '1,189 unique mappings';
+  });
 
-if (cantoneseEntries.length > 0) {
-  const sample = dailySample(cantoneseEntries, 23);
-  await record(`daily Cantonese audio sample ${sample.filename}`, 'Adventist Connect', () => probe(sample.url, { binary: true }));
+  if (entries.length > 0) {
+    const sample = dailySample(entries, salt);
+    await record(`daily ${label} audio sample ${sample.filename}`, 'Adventist Connect', () => probe(sample.url, { binary: true }));
+  }
 }
 
 let audioPowerUrls = [];

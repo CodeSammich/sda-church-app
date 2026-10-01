@@ -66,10 +66,9 @@ import {
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
 import {
-  CANTONESE_CUV_READER,
   CUV_AUDIO_READERS,
   getAudioReaderPreferenceKey,
-  WORDPROJECT_CANTONESE_AUDIO_URL,
+  WORDPROJECT_CREDITS,
 } from '@/services/BibleAudioSources';
 import type {
   BibleAudioChapterIdentity,
@@ -230,6 +229,7 @@ const uiLabels = {
     mandarin: 'Mandarin',
     cantonese: 'Cantonese',
     cantoneseAudioCredit: 'Cantonese audio: WordProject (wordproject.org)',
+    spanishAudioCredit: 'Spanish audio: WordProject (wordproject.org)',
     chooseNarrator: 'Choose narrator',
     audioSettings: 'Audio settings',
     audioSource: 'Preferred source',
@@ -315,6 +315,7 @@ const uiLabels = {
     mandarin: '國語',
     cantonese: '粵語',
     cantoneseAudioCredit: '粵語錄音：WordProject (wordproject.org)',
+    spanishAudioCredit: '西班牙語錄音：WordProject (wordproject.org)',
     chooseNarrator: '選擇朗讀者',
     audioSettings: '有聲書設定',
     audioSource: '優先音源',
@@ -398,6 +399,7 @@ const uiLabels = {
     mandarin: '国语',
     cantonese: '粤语',
     cantoneseAudioCredit: '粤语录音：WordProject (wordproject.org)',
+    spanishAudioCredit: '西班牙语录音：WordProject (wordproject.org)',
     chooseNarrator: '选择朗读者',
     audioSettings: '有声书设置',
     audioSource: '优先音源',
@@ -484,6 +486,7 @@ const uiLabels = {
     mandarin: 'Mandarín',
     cantonese: 'Cantonés',
     cantoneseAudioCredit: 'Audio en cantonés: WordProject (wordproject.org)',
+    spanishAudioCredit: 'Audio en español: WordProject (wordproject.org)',
     chooseNarrator: 'Elegir narrador',
     audioSettings: 'Ajustes de audio',
     audioSource: 'Fuente preferida',
@@ -1159,6 +1162,9 @@ export default function BibleScreen() {
     simplified: string;
   }) =>
     supportedTranslation.id === 'cmn_cu1' ? reader.simplified : reader.traditional;
+  const wordProjectCredit = selectedAudioReader
+    ? WORDPROJECT_CREDITS[selectedAudioReader]
+    : undefined;
   const offersAudioLanguages = audioReaderEntries.some(
     ([reader]) => !!CUV_AUDIO_READERS[reader],
   );
@@ -3582,11 +3588,11 @@ export default function BibleScreen() {
               </Text>
             )}
             {/* WordProject asks for a link to its site and app (docs/LEGAL.md). */}
-            {selectedAudioReader === CANTONESE_CUV_READER && !loading && (
+            {wordProjectCredit && !loading && (
               <Text
                 variant="labelSmall"
                 accessibilityRole="link"
-                onPress={() => openInSystemBrowser(WORDPROJECT_CANTONESE_AUDIO_URL)}
+                onPress={() => openInSystemBrowser(wordProjectCredit.url)}
                 style={{
                   textAlign: 'center',
                   marginTop: chapterData?.translation.attribution ? 0 : 24,
@@ -3595,7 +3601,9 @@ export default function BibleScreen() {
                   textDecorationLine: 'underline',
                 }}
               >
-                {labels.cantoneseAudioCredit}
+                {wordProjectCredit.language === 'cantonese'
+                  ? labels.cantoneseAudioCredit
+                  : labels.spanishAudioCredit}
               </Text>
             )}
           </>

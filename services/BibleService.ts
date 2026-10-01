@@ -12,8 +12,8 @@
  */
 
 import {
-  getCuvChapterAudioLinks,
-  supportsAudioPowerCuv,
+  getChurchHostedAudioLinks,
+  hasChurchHostedAudio,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
 
@@ -1148,11 +1148,9 @@ async function fetchChapterFromFetchBible(
     attribution: edition.attribution,
   };
   const thisChapterLink = `${FETCH_BIBLE_BASE}/${edition.resourceId}/txt/${bookId.toLowerCase()}.json`;
-  const hasAudioPowerCuv = supportsAudioPowerCuv(translationId);
+  const hasChurchAudio = hasChurchHostedAudio(translationId);
   const getAudioLinks = (audioChapter: number) =>
-    hasAudioPowerCuv
-      ? getCuvChapterAudioLinks(book.id, audioChapter)
-      : {};
+    getChurchHostedAudioLinks(translationId, book.id, audioChapter);
 
   return {
     translation,
@@ -1161,12 +1159,12 @@ async function fetchChapterFromFetchBible(
     thisChapterAudioLinks: getAudioLinks(chapterNumber),
     nextChapterApiLink: null,
     nextChapterAudioLinks:
-      hasAudioPowerCuv && chapterNumber < book.numberOfChapters
+      hasChurchAudio && chapterNumber < book.numberOfChapters
         ? getAudioLinks(chapterNumber + 1)
         : null,
     previousChapterApiLink: null,
     previousChapterAudioLinks:
-      hasAudioPowerCuv && chapterNumber > 1
+      hasChurchAudio && chapterNumber > 1
         ? getAudioLinks(chapterNumber - 1)
         : null,
     numberOfVerses,

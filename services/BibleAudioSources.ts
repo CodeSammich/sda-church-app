@@ -1,5 +1,6 @@
 import { CANTONESE_ADVENTIST_AUDIO_URLS } from '@/constants/CantoneseAdventistAudioManifest';
 import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest';
+import { RV1909_ADVENTIST_AUDIO_URLS } from '@/constants/Rv1909AdventistAudioManifest';
 
 /** Maps narrator names to one source URL or an ordered list of fallback URLs. */
 export interface TranslationBookChapterAudioLinks {
@@ -117,15 +118,18 @@ export const WORDPROJECT_CANTONESE_AUDIO_URL =
   'https://www.wordproject.org/bibles/audio/13_cantonese/index.htm';
 
 /**
- * The church's copy of WordProject's Cantonese recording of a CUV chapter, or
- * null if there isn't one.
+ * The church's copy of a chapter of a WordProject recording, or null if there
+ * isn't one. Files are named `<prefix>_B<book>C<chapter>.mp3`, such as
+ * `CANTONESE_B43C003.mp3` for John 3.
  *
  * WordProject's terms forbid apps from linking whole Bibles to its servers, so
  * there is deliberately no fallback mirror: never add `wordproaudio.net` or
  * another WordProject host here without WordProject's written approval. See
- * "WordProject Cantonese audio" in docs/LEGAL.md.
+ * the WordProject sections of docs/LEGAL.md.
  */
-export const getCantoneseCuvChapterUrl = (
+const getWordProjectChapterUrl = (
+  manifest: Readonly<Record<string, string>>,
+  prefix: string,
   bookId: string,
   chapter: number,
 ): string | null => {
@@ -138,12 +142,21 @@ export const getCantoneseCuvChapterUrl = (
   ) {
     return null;
   }
-  const filename = `CANTONESE_B${String(book.bookNumber).padStart(
+  const filename = `${prefix}_B${String(book.bookNumber).padStart(
     2,
     '0',
   )}C${String(chapter).padStart(3, '0')}.mp3`;
-  return CANTONESE_ADVENTIST_AUDIO_URLS[filename] ?? null;
+  return manifest[filename] ?? null;
 };
+
+/** The church's copy of WordProject's Cantonese recording of a CUV chapter. */
+export const getCantoneseCuvChapterUrl = (bookId: string, chapter: number) =>
+  getWordProjectChapterUrl(
+    CANTONESE_ADVENTIST_AUDIO_URLS,
+    'CANTONESE',
+    bookId,
+    chapter,
+  );
 
 /**
  * Every narrator for a CUV chapter, in the order the narrator list shows them:
@@ -189,4 +202,62 @@ export const CUV_AUDIO_READERS: Readonly<
     simplified: '粤语',
     credit: 'WordProject',
   },
+};
+
+/** The Spanish narrator's name: WordProject's Reina-Valera 1909 recording. */
+export const RV1909_READER = 'WordProject';
+
+/** WordProject's Spanish audio Bible page, which also offers its app. */
+export const WORDPROJECT_SPANISH_AUDIO_URL =
+  'https://www.wordproject.org/bibles/audio/06_spanish/index.htm';
+
+/** Whether a translation is the Reina-Valera 1909, which WordProject's Spanish recording reads. */
+export const supportsRv1909Audio = (translationId: string) =>
+  translationId === 'spa_r09';
+
+/** The church's copy of WordProject's Spanish recording of an RV1909 chapter. */
+export const getRv1909ChapterLinks = (
+  bookId: string,
+  chapter: number,
+): TranslationBookChapterAudioLinks => {
+  const url = getWordProjectChapterUrl(
+    RV1909_ADVENTIST_AUDIO_URLS,
+    'RV1909',
+    bookId,
+    chapter,
+  );
+  return url ? { [RV1909_READER]: [url] } : {};
+};
+
+/** Whether a translation plays recordings the church hosts on Adventist Connect. */
+export const hasChurchHostedAudio = (translationId: string) =>
+  supportsAudioPowerCuv(translationId) || supportsRv1909Audio(translationId);
+
+/** Every narrator for a chapter of a translation with church-hosted audio. */
+export const getChurchHostedAudioLinks = (
+  translationId: string,
+  bookId: string,
+  chapter: number,
+): TranslationBookChapterAudioLinks => {
+  if (supportsAudioPowerCuv(translationId)) {
+    return getCuvChapterAudioLinks(bookId, chapter);
+  }
+  if (supportsRv1909Audio(translationId)) {
+    return getRv1909ChapterLinks(bookId, chapter);
+  }
+  return {};
+};
+
+/**
+ * The WordProject recordings, and the page each one's credit links to.
+ * WordProject's Copyrights page asks for a link to its website and app.
+ */
+export const WORDPROJECT_CREDITS: Readonly<
+  Record<string, { language: 'cantonese' | 'spanish'; url: string }>
+> = {
+  [CANTONESE_CUV_READER]: {
+    language: 'cantonese',
+    url: WORDPROJECT_CANTONESE_AUDIO_URL,
+  },
+  [RV1909_READER]: { language: 'spanish', url: WORDPROJECT_SPANISH_AUDIO_URL },
 };
