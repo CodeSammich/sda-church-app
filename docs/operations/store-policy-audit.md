@@ -178,10 +178,12 @@ the logo confirmation is a follow-up.
 
 - **Chinese Union Version audio:** Audio Power's written approval (issue #134) is on
   file. Keep a copy with the photo consents in the IT Admin shared drive.
-- **Cantonese audio:** the app relies on WordProject's published terms, quoted in
-  [WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio), with dated
-  copies of the pages in [`docs/rights-records/`](../rights-records/). A PDF of those
-  pages and the notice sent to WordProject are in the IT Admin shared drive.
+- **Cantonese and Spanish audio:** the app relies on WordProject's published terms,
+  quoted in [WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio) and
+  [WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909),
+  with dated copies of the pages in [`docs/rights-records/`](../rights-records/). A PDF
+  of the terms pages and the notice sent to WordProject are in the IT Admin shared
+  drive.
 - **Adventist name and logo:** used as an organized member congregation, which the
   church's identity guidelines provide for (see [Branding & Trademark Policy](../LEGAL_BRANDING.md)),
   but there's no written confirmation yet.

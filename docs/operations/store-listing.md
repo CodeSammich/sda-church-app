@@ -84,7 +84,7 @@ BIBLE IN YOUR LANGUAGES
 • Five translations: the Berean Standard Bible (BSB), the King James Version (KJV), the Chinese Union Version in Traditional (CUV) and Simplified (CUVS) characters, and the Spanish Reina-Valera 1909.
 • Dual-language reading shows a second translation under every verse, so you can read Chinese and English side by side.
 • Pinyin with tone marks above Chinese text, for learners and for reading aloud.
-• Audio Bible in Mandarin and Cantonese (CUV and CUVS) and English (BSB), with background playback, lock-screen controls, and a sleep timer.
+• Audio Bible in Mandarin and Cantonese (CUV and CUVS), English (BSB), and Spanish (RV1909), with background playback, lock-screen controls, and a sleep timer.
 • Save and share verses, and tap a verse to see its notes and the original Hebrew or Greek.
 • A verse of the day to start each day.
 
@@ -154,7 +154,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 • 五種譯本：新標點和合本繁體版（CUV）與簡體版（CUVS）、Berean Standard Bible（BSB）、英王欽定本（KJV），以及西班牙文 Reina-Valera 1909。
 • 雙語閱讀：每節經文下方顯示第二種譯本，中英對照一目了然。
 • 可在中文經文上方顯示帶聲調的拼音，方便學習與朗讀。
-• 有聲聖經：國語與粵語（和合本繁體、簡體）及英文（BSB），支援背景播放、鎖定畫面控制與睡眠定時器。
+• 有聲聖經：國語與粵語（和合本繁體、簡體）、英文（BSB）及西班牙文（RV1909），支援背景播放、鎖定畫面控制與睡眠定時器。
 • 收藏與分享經文；點選經文即可查看註解，以及希伯來文或希臘文原文。
 • 每日一節經文。
 
@@ -224,7 +224,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 • 五种译本：新标点和合本繁体版（CUV）与简体版（CUVS）、Berean Standard Bible（BSB）、英王钦定本（KJV），以及西班牙文 Reina-Valera 1909。
 • 双语阅读：每节经文下方显示第二种译本，中英对照一目了然。
 • 可在中文经文上方显示带声调的拼音，方便学习与朗读。
-• 有声圣经：普通话与粤语（和合本繁体、简体）及英文（BSB），支持背景播放、锁屏控制与睡眠定时器。
+• 有声圣经：普通话与粤语（和合本繁体、简体）、英文（BSB）及西班牙文（RV1909），支持背景播放、锁屏控制与睡眠定时器。
 • 收藏与分享经文；点击经文即可查看注解，以及希伯来文或希腊文原文。
 • 每日一节经文。
 
@@ -299,7 +299,7 @@ LA BIBLIA EN TUS IDIOMAS
 • Cinco traducciones: la Berean Standard Bible (BSB), la versión King James (KJV), la Versión Unión China en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
 • La lectura bilingüe muestra una segunda traducción debajo de cada versículo, para leer en chino y en inglés lado a lado.
 • Pinyin con marcas de tono sobre el texto chino, para quienes aprenden el idioma y para leer en voz alta.
-• Biblia en audio en mandarín y cantonés (CUV y CUVS) y en inglés (BSB), con reproducción en segundo plano, controles en la pantalla de bloqueo y temporizador de apagado.
+• Biblia en audio en mandarín y cantonés (CUV y CUVS), en inglés (BSB) y en español (RV1909), con reproducción en segundo plano, controles en la pantalla de bloqueo y temporizador de apagado.
 • Guarda y comparte versículos, y toca un versículo para ver sus notas y el texto original en hebreo o griego.
 • Un versículo del día para comenzar cada día.
 
@@ -417,8 +417,8 @@ get new ones.
 
 - **Offline reading:** the Bible needs a connection; chapters load over the network.
 - **Whole-Bible search:** search covers the current chapter only.
-- **Audio for every translation:** audio is available for CUV, CUVS, and BSB, not KJV or
-  RVR 1909.
+- **Audio for every translation:** audio is available for CUV, CUVS, BSB, and RVR 1909,
+  not KJV.
 - **Hymn lyrics, sheet music, books, or lessons in the app:** they open on their
   publishers' websites.
 - **Notifications or widgets:** the app has neither.

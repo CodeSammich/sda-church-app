@@ -64,6 +64,17 @@ icon, so listeners can see that a choice exists. In audio settings, the list is 
 language. Both editions share the recordings, so the chosen language is saved once
 for both (`getAudioReaderPreferenceKey`): switching between CUV and CUVS keeps it.
 
+The Reina-Valera 1909 uses WordProject's Spanish recording the same way, as a single
+narrator named WordProject, from files named `RV1909_B43C003.mp3` and so on on
+Adventist Connect, with no fallback host. `npm run extract:rv1909-adventist-manifest`
+builds `constants/Rv1909AdventistAudioManifest.ts`; the same script
+(`scripts/extract-wordproject-audio-manifest.mjs`) builds the Cantonese manifest.
+`hasChurchHostedAudio` and `getChurchHostedAudioLinks` in `BibleAudioSources.ts` are
+the one place that decides which translations play the church's copies. While the
+Spanish narrator is selected, the chapter shows a credit linking to WordProject's
+Spanish page. The terms are in
+[WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909).
+
 Each recording is represented as one narrator with three ordered hosting sources rather
 than three narrator choices: the generated Adventist Connect manifest supplies the
 primary church-controlled copy, the complete

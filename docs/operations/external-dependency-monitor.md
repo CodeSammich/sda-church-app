@@ -15,8 +15,9 @@ layers instead:
   requests one stable pseudo-random file or page from each large collection per
   UTC day. Retries use the same sample.
 
-This means the 1,189-file CUV collections, Mandarin and Cantonese, each receive one
-sampled media request per host per daily run, not 1,189 requests. Project Gutenberg receives one sampled
+This means the 1,189-file audio collections (Mandarin and Cantonese CUV, and Spanish
+RV1909) each receive one sampled media request per host per daily run, not 1,189
+requests. Project Gutenberg receives one sampled
 public-domain book request, and EGW Writings receives one sampled book request
 for each supported edition language. The Internet Archive receives one metadata
 request per linked library scan, which checks that the scan is still openly

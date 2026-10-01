@@ -31,7 +31,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 
 | Service | Used for | Cost | Published limit | At the limit | Load concern |
 | --- | --- | --- | --- | --- | --- |
-| [Adventist Connect](#adventist-connect-media-library) | Photos, CUV Bible audio (Mandarin primary, Cantonese only source) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | **Medium**: most of the app's bytes |
+| [Adventist Connect](#adventist-connect-media-library) | Photos, Bible audio (Mandarin primary; Cantonese and Spanish only source) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | **Medium**: most of the app's bytes |
 | [Internet Archive](#internet-archive) | CUV audio, 2nd source | Free | None published | Throttling possible | Low: built for bulk downloads |
 | [Audio Power](#audio-power) | CUV audio, 3rd source | Free (permission) | None published | Unknown | Low: reached only if two sources fail |
 | [HelloAO](#helloao) | Bible text, English BSB audio | Free | "No usage limits" | n/a | Low: CDN |
@@ -66,6 +66,7 @@ Per-use costs, *measured*:
 | --- | --- | --- |
 | CUV audio, one hour | ~10.8 MB | 24 kbps mono; whole Bible 939 MB / ~87 hours |
 | Cantonese CUV audio, one hour | ~7.2 MB | Mostly 16 kbps mono; whole Bible 792 MB / ~100 hours |
+| Spanish RV1909 audio, one hour | ~11 MB | Mostly 24 kbps mono; whole Bible 861 MB / ~77 hours |
 | BSB English audio, one chapter | ~4.4 MB (John 3, Souer) | Much larger than the Chinese recordings |
 | HelloAO chapter | ~3 KB (gzip) | One request per chapter viewed |
 | HelloAO translation list | ~150 KB | Once per app session |
@@ -97,8 +98,8 @@ These choices exist to keep the app free and within every provider's limits:
   self-hosting ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)),
   so the church's copy on Adventist Connect is tried first, then the Internet
   Archive, and Audio Power's small server only serves listeners when both fail. The
-  Cantonese audio is also the church's own copy, under WordProject's terms, which
-  don't allow playing it from WordProject's servers. Audio is streamed on demand, with
+  Cantonese and Spanish audio are also the church's own copies, under WordProject's
+  terms, which don't allow playing them from WordProject's servers. Audio is streamed on demand, with
   only the next chapter preloaded on web, instead of downloading whole books.
 - **Caching at every layer of the bulletin.** The Apps Script caches each response
   for 2 minutes, the app caches each Sabbath's bulletin on the device, and manual
