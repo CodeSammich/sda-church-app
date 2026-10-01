@@ -13,6 +13,8 @@ import { UIStateContext } from '@/constants/UIStateContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import {
   getGlobalHeaderHeightForScale,
+  getHeaderFontScale,
+  HEADER_MAX_FONT_SCALE,
   isHeroUnderStatusBar,
   shouldStackBibleControls,
 } from '@/hooks/useGlobalHeaderHeight';
@@ -159,7 +161,9 @@ export const GlobalHeader = (props: any) => {
   const headerTextScale = isBiblePage
     ? getBibleReaderUiTextScale(textScale)
     : textScale;
-  const effectiveTextScale = Math.max(1, fontScale * headerTextScale);
+  // The header follows the system text size only up to a cap; see
+  // HEADER_MAX_FONT_SCALE. Every text in it says the same with maxFontSizeMultiplier.
+  const effectiveTextScale = Math.max(1, getHeaderFontScale(fontScale) * headerTextScale);
   const compactControlHeight = Math.ceil(44 + (effectiveTextScale - 1) * 24);
   const wrappedControlHeight = Math.max(
     compactControlHeight,
@@ -444,6 +448,7 @@ export const GlobalHeader = (props: any) => {
   const renderSearchbar = (isExpandableBible = false) => (
     <Searchbar
       ref={searchRef}
+      maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
       placeholder={
         isBiblePage
           ? searchLabels.searchBiblePlaceholder
@@ -541,6 +546,7 @@ export const GlobalHeader = (props: any) => {
                           >
                             {index > 0 && (
                               <Text
+                                maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                                 style={{
                                   color: theme.colors.onSurfaceVariant,
                                   fontSize: scaleTypographyMetric(13, headerTextScale),
@@ -561,6 +567,7 @@ export const GlobalHeader = (props: any) => {
                               ]}
                             >
                               <Text
+                                maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                                 style={{
                                   color: theme.colors.onPrimaryContainer,
                                   fontSize: scaleTypographyMetric(11, headerTextScale),
@@ -572,6 +579,7 @@ export const GlobalHeader = (props: any) => {
                               </Text>
                             </View>
                             <Text
+                              maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                               numberOfLines={1}
                               style={{
                                 color: theme.colors.onSurface,
@@ -588,6 +596,7 @@ export const GlobalHeader = (props: any) => {
                       </View>
                     ) : (
                       <Text
+                        maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                         style={{
                           color: theme.colors.onSurface,
                           fontSize: scaleTypographyMetric(14, headerTextScale),
@@ -694,6 +703,7 @@ export const GlobalHeader = (props: any) => {
                 ]}
               >
                 <Text
+                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                   variant="titleMedium"
                   style={{
                     color: theme.colors.onSurface,
