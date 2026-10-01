@@ -158,7 +158,8 @@ covering:
   event photos, including consent for identifiable people where appropriate;
 - permission for the Chinese Union Version audio and the exact right to stream it
   from each current host; the repository records an Audio Power approval in issue
-  #134, but that approval should be retained with the release records;
+  #134, but that approval should be retained with the release records, along with
+  the WordProject terms the Cantonese audio relies on;
 - licenses and attribution for every Bible edition, font, cover image, hymn metadata,
   and source-site link; and
 - any permission required from HymnsForWorship.org, zgaxr.com, EGW Writings, or the
@@ -177,6 +178,12 @@ the logo confirmation is a follow-up.
 
 - **Chinese Union Version audio:** Audio Power's written approval (issue #134) is on
   file. Keep a copy with the photo consents in the IT Admin shared drive.
+- **Cantonese and Spanish audio:** the app relies on WordProject's published terms,
+  quoted in [WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio) and
+  [WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909),
+  with dated copies of the pages in [`docs/rights-records/`](../rights-records/). A PDF
+  of the terms pages and the notice sent to WordProject are in the IT Admin shared
+  drive.
 - **Adventist name and logo:** used as an organized member congregation, which the
   church's identity guidelines provide for (see [Branding & Trademark Policy](../LEGAL_BRANDING.md)),
   but there's no written confirmation yet.

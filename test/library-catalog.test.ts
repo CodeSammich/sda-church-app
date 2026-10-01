@@ -148,11 +148,9 @@ describe('library catalog', () => {
       sourceName: 'Chapel Library',
       sourceUrl: 'https://www.chapellibrary.org/pdf/books/ppfes.pdf',
     });
-    // Other languages keep the English edition.
-    for (const language of ['en', 'zh', 'zh-cn'] as const) {
-      expect(getLibraryItemSource(pilgrim, language).sourceUrl).toBe('https://www.gutenberg.org/ebooks/131');
-      expect(getLibraryItemDisplayText(pilgrim, language).title).toBe("The Pilgrim's Progress");
-    }
+    // English readers keep the English edition.
+    expect(getLibraryItemSource(pilgrim, 'en').sourceUrl).toBe('https://www.gutenberg.org/ebooks/131');
+    expect(getLibraryItemDisplayText(pilgrim, 'en').title).toBe("The Pilgrim's Progress");
 
     for (const item of withSpanish) {
       const spanish = item.spanish!;
@@ -163,6 +161,35 @@ describe('library catalog', () => {
         expect(spanish.rights).toBe('permission-to-copy');
       }
       expect(existsSync(join(process.cwd(), 'assets/images/library', `${item.id}-es.png`))).toBe(true);
+    }
+  });
+
+  it('opens the Chinese edition of a book for Chinese readers, in either script', () => {
+    const books = Object.values(LIBRARY_CATALOG).flat();
+    const withChinese = books.filter((item) => item.chineseEdition);
+    expect(Object.fromEntries(withChinese.map((item) => [item.id, item.chineseEdition?.sourceUrl]))).toEqual({
+      'bunyan-pilgrims-progress': 'https://babel.hathitrust.org/cgi/pt?id=uc1.b3399258',
+    });
+
+    const pilgrim = books.find((item) => item.id === 'bunyan-pilgrims-progress')!;
+    for (const [language, title] of [['zh', '天路歷程'], ['zh-cn', '天路历程']] as const) {
+      expect(getLibraryItemDisplayText(pilgrim, language).title).toBe(title);
+      expect(getLibraryItemSource(pilgrim, language)).toEqual({
+        rights: 'public-domain-us',
+        sourceName: 'HathiTrust',
+        sourceUrl: 'https://babel.hathitrust.org/cgi/pt?id=uc1.b3399258',
+      });
+    }
+
+    for (const item of withChinese) {
+      // Titled in both scripts, with its own cover, and listed first for Chinese readers.
+      expect(item.traditionalChinese?.title).toMatch(/[\u3400-\u9fff]/);
+      expect(item.simplifiedChinese?.title).toMatch(/[\u3400-\u9fff]/);
+      expect(existsSync(join(process.cwd(), 'assets/images/library', `${item.id}-zh.png`))).toBe(true);
+      for (const language of ['zh', 'zh-cn'] as const) {
+        const works = getLibraryItemsForLanguage(language).publicDomainWorks.map(({ id }) => id);
+        expect(works.indexOf(item.id)).toBeLessThan(withChinese.length);
+      }
     }
   });
 

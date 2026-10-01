@@ -40,6 +40,41 @@ record is maintained in
 Audio Power credits the recordings to 基督徒团契 (Christian Fellowship), and its
 simplified-Chinese filenames are shared by both CUV text variants.
 
+Both CUV variants also offer a Cantonese narrator, `粵語 (WordProject)`, listed after
+the Mandarin one so that Mandarin stays the default. The recording comes from
+[WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), whose
+published terms allow it in free apps without ads but forbid linking whole Bibles to
+its servers. So the church downloaded it once from WordProject's book zips, renamed
+the files to canonical names such as `CANTONESE_B43C003.mp3` without changing the
+audio, and hosts them on Adventist Connect. Unlike the Mandarin narrator, this one has
+a single source: there is no fallback host, and none may be added without WordProject's
+written approval. The terms and what they require are in
+[WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio). The generated
+`constants/CantoneseAdventistAudioManifest.ts` maps each canonical name to the church's
+URL; `npm run extract:cantonese-adventist-manifest` rebuilds it from the church site's
+public media list. While the Cantonese narrator is selected, the chapter shows a
+credit that links to WordProject's Cantonese page, which also offers its app.
+
+Because the two CUV recordings differ in spoken language, not just in narrator, the
+app presents them as languages. The audio bar's left button shows the selected one,
+國語 or 粵語 (国语 or 粤语 with the simplified text), instead of the generic narrator
+icon, so listeners can see that a choice exists. In audio settings, the list is titled
+"Audio language" and shows each language with its recording's credit underneath.
+`CUV_AUDIO_READERS` in `services/BibleAudioSources.ts` maps each narrator to its
+language. Both editions share the recordings, so the chosen language is saved once
+for both (`getAudioReaderPreferenceKey`): switching between CUV and CUVS keeps it.
+
+The Reina-Valera 1909 uses WordProject's Spanish recording the same way, as a single
+narrator named WordProject, from files named `RV1909_B43C003.mp3` and so on on
+Adventist Connect, with no fallback host. `npm run extract:rv1909-adventist-manifest`
+builds `constants/Rv1909AdventistAudioManifest.ts`; the same script
+(`scripts/extract-wordproject-audio-manifest.mjs`) builds the Cantonese manifest.
+`hasChurchHostedAudio` and `getChurchHostedAudioLinks` in `BibleAudioSources.ts` are
+the one place that decides which translations play the church's copies. While the
+Spanish narrator is selected, the chapter shows a credit linking to WordProject's
+Spanish page. The terms are in
+[WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909).
+
 Each recording is represented as one narrator with three ordered hosting sources rather
 than three narrator choices: the generated Adventist Connect manifest supplies the
 primary church-controlled copy, the complete

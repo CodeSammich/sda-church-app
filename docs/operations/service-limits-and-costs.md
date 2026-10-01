@@ -26,17 +26,18 @@ provider changes its terms.
 
 "At the limit" says what happens if the app exceeds the provider's limit. **No
 service in this table can bill the church for usage.** The only recurring cost in the
-whole system is the domain.
+whole system is the domain, and Cloudflare, which renews it, is the only service with
+a card on file (see [Payment methods](../architecture.md#payment-methods)).
 
 | Service | Used for | Cost | Published limit | At the limit | Load concern |
 | --- | --- | --- | --- | --- | --- |
-| [Adventist Connect](#adventist-connect-media-library) | Photos, CUV Bible audio (primary) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | **Medium**: most of the app's bytes |
+| [Adventist Connect](#adventist-connect-media-library) | Photos, Bible audio (Mandarin primary; Cantonese and Spanish only source) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | **Medium**: most of the app's bytes |
 | [Internet Archive](#internet-archive) | CUV audio, 2nd source | Free | None published | Throttling possible | Low: built for bulk downloads |
 | [Audio Power](#audio-power) | CUV audio, 3rd source | Free (permission) | None published | Unknown | Low: reached only if two sources fail |
 | [HelloAO](#helloao) | Bible text, English BSB audio | Free | "No usage limits" | n/a | Low: CDN |
 | [fetch(bible)](#fetchbible) | Original-language, CUV, RV1909 text | Free | "No limits from us" | n/a | Low: CDN |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
-| [Adventech](#adventech-sabbath-school) | Children's Sabbath School catalog | Free | None published | Unknown | Low: CDN |
+| [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
 | [EGW Writings covers](#egw-writings-covers) | Library thumbnails | Free | None published | Unknown | Low: Cloudflare |
 | [Sunrise-Sunset](#sunrise-sunset) | Sunset times on the printed Queens bulletin | Free, **attribution required** | "Reasonable" volume; `429` + `Retry-After` | Throttled | None: one request per printed bulletin; the app no longer calls it |
@@ -64,13 +65,15 @@ Per-use costs, *measured*:
 | Request | Size | Notes |
 | --- | --- | --- |
 | CUV audio, one hour | ~10.8 MB | 24 kbps mono; whole Bible 939 MB / ~87 hours |
+| Cantonese CUV audio, one hour | ~7.2 MB | Mostly 16 kbps mono; whole Bible 792 MB / ~100 hours |
+| Spanish RV1909 audio, one hour | ~11 MB | Mostly 24 kbps mono; whole Bible 861 MB / ~77 hours |
 | BSB English audio, one chapter | ~4.4 MB (John 3, Souer) | Much larger than the Chinese recordings |
 | HelloAO chapter | ~3 KB (gzip) | One request per chapter viewed |
 | HelloAO translation list | ~150 KB | Once per app session |
 | fetch(bible) book | ~30 KB (CUV John) | One request per book, kept in memory for the session |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
-| Adventech quarterly index | ~124 KB | CDN-cached |
+| Adventech quarterly index | ~124 KB | CDN-cached; only when a children's age group is tapped |
 
 The conclusion: **text APIs are negligible at every scenario, and audio is the only
 real load.** Adventist Connect carries it, and the fallback chain decides who carries
@@ -94,7 +97,9 @@ These choices exist to keep the app free and within every provider's limits:
 - **The church hosts its own copy of the CUV audio.** Audio Power's owner allowed
   self-hosting ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)),
   so the church's copy on Adventist Connect is tried first, then the Internet
-  Archive, and Audio Power's small server only serves listeners when both fail. Audio is streamed on demand, with
+  Archive, and Audio Power's small server only serves listeners when both fail. The
+  Cantonese and Spanish audio are also the church's own copies, under WordProject's
+  terms, which don't allow playing them from WordProject's servers. Audio is streamed on demand, with
   only the next chapter preloaded on web, instead of downloading whole books.
 - **Caching at every layer of the bulletin.** The Apps Script caches each response
   for 2 minutes, the app caches each Sabbath's bulletin on the device, and manual
@@ -193,9 +198,14 @@ Translation (`LanguageApp`) only runs on a cache miss, so its quota isn't a conc
 
 ### Adventech Sabbath School
 
-`sabbath-school.adventech.io`. The app downloads the quarterly index (about 124 KB)
-when the children's Sabbath School screen opens, from S3 and CloudFront with a warm
-cache (*measured*). Free, no key, no published limits.
+`sabbath-school.adventech.io`. Opening the Sabbath School screen downloads nothing.
+When someone taps a children's age group, the app finds this week's lesson and opens
+its PDF: for Junior, Teen, and Youth, the quarterly index (about 124 KB) and two small
+lesson files; for Beginner, Kindergarten, and Primary, two Alive in Jesus files (about
+15 KB each). It tries the app's language first, then English, and opens the age
+group's Alive in Jesus website if it finds no lesson within 12 seconds. All of it comes
+from S3 and CloudFront with a warm cache (*measured*). Free, no key, no published
+limits.
 
 ### Chinese Union Mission library
 
@@ -296,7 +306,9 @@ The domain is the **only recurring cost**: about $10 a year, paid through Cloudf
 Registrar, which can register up to 10 years at a time. The account has a card on
 file for that, which is exactly why no usage-billed Cloudflare product may be added
 to it ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
-DNS itself is free.
+DNS itself is free. How to keep the card and the account safe, including a capped
+virtual card and backup administrators, is in the
+[admin runbook](admin-runbook.md#the-cloudflare-account-and-domain).
 
 ### App stores
 

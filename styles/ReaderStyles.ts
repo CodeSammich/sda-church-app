@@ -86,9 +86,11 @@ export const getBibleDockViewportLayout = ({
 };
 
 /**
- * Computes enough space for the Bible's fixed controls without capping either
- * the app preference or the operating-system font scale. Narrow or enlarged
- * layouts stack selectors vertically so their labels can wrap in full.
+ * Computes enough space for the Bible's fixed controls at a text scale: the
+ * app's, times the system's. The Bible screen caps the system's part at the
+ * header's cap (`getHeaderFontScale`), as the controls' text does (#376).
+ * Narrow or enlarged layouts stack selectors vertically so their labels can
+ * wrap in full.
  */
 export const getBibleDockLayout = (
   viewportWidth: number,
@@ -123,6 +125,32 @@ export const getBibleDockLayout = (
     stackControls,
   };
 };
+
+/**
+ * Whether the chapter dock's verse pill shows its short label ("Vs.") rather
+ * than its full one ("Verse"): only when the book, chapter, and verse pills
+ * can't all fit at their full widths. The verse label shortens before the book
+ * name is cut short with "…" (#376). Widths are 0 until measured, so it starts
+ * with the full label.
+ */
+export const shouldShortenVerseLabel = ({
+  rowWidth,
+  bookPillWidth,
+  chapterPillWidth,
+  versePillWidth,
+  gap = 8,
+}: {
+  rowWidth: number;
+  bookPillWidth: number;
+  chapterPillWidth: number;
+  versePillWidth: number;
+  gap?: number;
+}) =>
+  rowWidth > 0 &&
+  bookPillWidth > 0 &&
+  chapterPillWidth > 0 &&
+  versePillWidth > 0 &&
+  bookPillWidth + chapterPillWidth + versePillWidth + 2 * gap > rowWidth;
 
 /**
  * Shared styles for the Bible Reader and other immersive reading components.

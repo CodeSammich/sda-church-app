@@ -14,6 +14,13 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      screens_from_run:
+        description: >-
+          Only check the key screens of an earlier run of this workflow (its run
+          ID), without building. For tuning scripts/check-screens.cjs.
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -26,8 +33,10 @@ jobs:
   simulator:
     # A release PR is a release/* branch in this repository. Other PRs into
     # main, such as Dependabot's, can't merge there, so they skip it.
+    # Started by hand, it builds unless it was asked only to re-check an
+    # earlier run's screenshots.
     if: >-
-      github.event_name != 'pull_request' ||
+      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (startsWith(github.head_ref, 'release/') &&
         github.event.pull_request.head.repo.full_name == github.repository)
     # The "Main protection" ruleset requires these job names; rename both together.
@@ -82,6 +91,10 @@ jobs:
       - name: Build for the Simulator without signing
         env:
           ARCH: ${{ matrix.arch }}
+          # Lets the key-screen capture open each screen from a saved setting
+          # (services/ScreenshotRoute.ts). Expo writes it into this build only;
+          # the store builds in native-ios-build.yml never set it.
+          EXPO_PUBLIC_KEY_SCREENS: '1'
         run: |
           set -euo pipefail
           WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
@@ -119,22 +132,9 @@ jobs:
           lipo -archs "$APP_PATH/$EXECUTABLE"
           BUNDLE_ID="$(node -p "require('./app.json').expo.ios.bundleIdentifier")"
 
-          # Use an iPhone from the newest installed iOS runtime.
-          DEVICE_ID="$(xcrun simctl list devices available --json | node -e '
-            const { devices } = JSON.parse(require("fs").readFileSync(0, "utf8"));
-            const version = (runtime) => runtime.split("iOS-")[1].split("-").map(Number);
-            const runtimes = Object.keys(devices)
-              .filter((runtime) => runtime.includes("SimRuntime.iOS-"))
-              .sort((a, b) => version(b)[0] - version(a)[0] || (version(b)[1] || 0) - (version(a)[1] || 0));
-            for (const runtime of runtimes) {
-              const phone = devices[runtime].find((device) => device.isAvailable && device.name.startsWith("iPhone"));
-              if (phone) {
-                console.log(phone.udid);
-                process.exit(0);
-              }
-            }
-            process.exit(1);
-          ')"
+          # The iPhone test/screens/screens.json names, on the newest installed iOS
+          # runtime, so this check and the key screens below share one Simulator.
+          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
           xcrun simctl boot "$DEVICE_ID"
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" "$APP_PATH"
@@ -153,11 +153,248 @@ jobs:
             exit 1
           }
 
-      - name: Upload the Simulator app and screenshot
+      - name: Capture the key screens
+        # Screenshots of the screens in test/screens/screens.json, named
+        # ios/<screen>-<variant>.png, for checking layouts before release (#331).
+        # One set is enough: both builds run the same JavaScript. 83 shots take
+        # about 24 minutes, so a second set on the Intel build would only make the
+        # release PR wait longer. Actions minutes are free for this public
+        # repository, so this is about time, not cost.
+        if: matrix.arch == 'arm64'
+        timeout-minutes: 35
+        run: node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
+
+      - name: Check the text on the key screens
+        # Reads each screenshot's text with Apple's Vision framework and checks
+        # what every screen must show: tab labels in the right language, the
+        # verse button's whole label, verse numbers starting their lines, and no
+        # system prompt or setup dialog. Saves ocr.json and checks.json beside
+        # the screenshots. Runs even if a capture failed, to report on the rest.
+        if: matrix.arch == 'arm64' && !cancelled()
+        timeout-minutes: 10
+        run: node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
+
+      - name: Upload the Simulator app and screenshots
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ios-pr-preview-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-${{ matrix.arch }}
           path: ${{ runner.temp }}/ios-pr-preview/
+          if-no-files-found: warn
+          retention-days: 14
+
+  announce:
+    # Says the screenshots are on the way as soon as a release PR opens or gets
+    # a new push, since they take about 50 minutes, and removes the screenshots
+    # from before the push, which are out of date (#331). The review-comment
+    # job replaces the notice with the screenshots.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.run_attempt == 1 &&
+      startsWith(github.head_ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Say the screenshots are on the way
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # Only to replace the review comment. The job never checks out or runs
+      # the pull request's code.
+      pull-requests: write
+    steps:
+      - name: Post the notice
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          comments=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- key-screens-review"))) | "\(.id) \(.body | split("\n")[0])"')
+          # This commit's screenshots are already posted, as when a PR is reopened.
+          if grep -qF "<!-- key-screens-review sha=$SHA -->" <<<"$comments"; then exit 0; fi
+          # Earlier screenshots are out of date: remove them, and any earlier notice.
+          while read -r id _; do
+            [ -n "$id" ] && gh api -X DELETE "repos/$REPO/issues/comments/$id" >/dev/null
+          done <<<"$comments"
+          # Release branches are named release/x.y.z, so only the slash needs encoding.
+          progress="https://github.com/$REPO/actions/workflows/ios-pr-preview.yml?query=branch%3A${HEAD_REF//\//%2F}"
+          body=$(cat <<BODY
+          <!-- key-screens-review pending sha=$SHA -->
+          ### 📸 Screenshots on the way
+
+          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 50 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+
+          Until an approver reviews them, the **Screenshots reviewed** check waits.
+          BODY
+          )
+          gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
+
+  review-comment:
+    # Tells the release PR's reviewer where this commit's screenshots are and
+    # how to approve them, for the "Screenshots reviewed" check (#331). Each run
+    # replaces the previous comment, so the one on the PR is always current.
+    needs: simulator
+    if: >-
+      !cancelled() &&
+      github.event_name == 'pull_request' &&
+      startsWith(github.head_ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Post the screenshot review comment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # To find this run's artifact.
+      actions: read
+      contents: read
+      # Only to replace the review comment. The job never checks out or runs
+      # the pull request's code.
+      pull-requests: write
+    steps:
+      - name: Post the review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+          CHECKS: ${{ needs.simulator.result }}
+        run: |
+          set -euo pipefail
+          run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
+          artifact=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" \
+            --jq '[.artifacts[] | select(.name | endswith("-arm64"))][0] // empty | "\(.id) \(.size_in_bytes)"')
+          if [ -n "$artifact" ]; then
+            read -r artifact_id artifact_bytes <<<"$artifact"
+            download="[the screenshots]($run_url/artifacts/$artifact_id) (a zip of about $((artifact_bytes / 1000000)) MB)"
+          else
+            download="the screenshots from [the run]($run_url), which uploaded none; it says why"
+          fi
+          if [ "$CHECKS" = success ]; then
+            checks="✅ The automatic checks passed: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
+          else
+            checks="⚠️ **The automatic checks failed or didn't finish.** Start with [the run]($run_url) to see why."
+          fi
+          approve="an approver in the release-approvers team opens [this run]($run_url), clicks **Review deployments**, ticks **screenshot-review**, and approves. The **Screenshots reviewed** check then passes."
+
+          body=$(cat <<BODY
+          <!-- key-screens-review sha=$SHA -->
+          ### 📸 Screenshots to review
+
+          The iPhone screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
+
+          $checks
+
+          1. **Download** $download and open \`screens/ios/\`. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), and \`zh\`, \`zh-cn\`, and \`es\`.
+          2. **Look for** what a person would notice:
+             - text cut off, overlapping, or behind the clock, battery, or Dynamic Island;
+             - a verse number split from its verse, or a button label cut short;
+             - the wrong language, a blank or half-drawn screen, or a popup covering the page;
+             - dark mode or large text that's hard to read.
+
+             The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
+          3. **Approve:** $approve
+
+          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in \`screens/app-store/\`.
+          BODY
+          )
+
+          # Replace earlier review comments, so the newest screenshots are the only ones offered.
+          gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- key-screens-review"))) | .id' |
+            while read -r old; do gh api -X DELETE "repos/$REPO/issues/comments/$old" >/dev/null; done
+          gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
+          echo "Posted the review comment for $SHA."
+
+  screenshots-reviewed:
+    # A person looks at a release's screenshots before it merges into main
+    # (#331). The automatic checks catch a crash, a blank screen, text under
+    # the status bar, and missing labels; other layout problems need a person.
+    # This job uses the screenshot-review environment, whose required
+    # reviewers are the release-approvers team, so it waits, pending rather
+    # than failing, until one of them approves on this run. A new push starts
+    # a new run, which needs its own approval. The "Main protection" ruleset
+    # requires this job's name.
+    needs: review-comment
+    if: >-
+      !cancelled() &&
+      github.event_name == 'pull_request' &&
+      startsWith(github.head_ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Screenshots reviewed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: screenshot-review
+    permissions:
+      # To confirm the environment requires approval and to record who approved.
+      actions: read
+      deployments: read
+    steps:
+      - name: Confirm an approver reviewed the screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # GitHub creates a missing environment with no reviewers, and a job
+          # in it would pass unreviewed. Fail instead.
+          reviewers=$(gh api "repos/$REPO/environments/screenshot-review" \
+            --jq '[.protection_rules[]? | select(.type == "required_reviewers")] | length')
+          if [ "$reviewers" -lt 1 ]; then
+            echo "::error::The screenshot-review environment has no required reviewers, so nobody approved these screenshots. An admin adds the release-approvers team under Settings → Environments → screenshot-review → Required reviewers, then re-runs this job."
+            exit 1
+          fi
+          approvers=$(gh api "repos/$REPO/actions/runs/$RUN_ID/approvals" \
+            --jq '[.[] | select(any(.environments[]; .name == "screenshot-review")) | .user.login] | unique | join(", ")' || true)
+          echo "Screenshots approved by ${approvers:-an approver}." | tee -a "$GITHUB_STEP_SUMMARY"
+
+  earlier-screens:
+    # Re-checks an earlier run's screenshots in a few minutes, instead of a
+    # 40-minute build, while tuning the text checks.
+    if: github.event_name == 'workflow_dispatch' && inputs.screens_from_run != ''
+    name: Check the key screens of an earlier run
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # To download the earlier run's screenshots.
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # For sharp, which crops strips for a closer look.
+      - name: Install dependencies
+        run: npm ci --force
+
+      - name: Download that run's screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.screens_from_run }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo 'screens_from_run must be a run ID.' >&2; exit 1; }
+          gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-pr-preview-*-arm64' --dir "$RUNNER_TEMP/earlier"
+          SCREENS="$(find "$RUNNER_TEMP/earlier" -type d -name screens -print -quit)"
+          test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
+          echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
+
+      - name: Check the text on the key screens
+        run: node scripts/check-screens.cjs --dir "$SCREENS"
+
+      - name: Upload the text that was read
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: key-screen-checks-${{ inputs.screens_from_run }}
+          path: |
+            ${{ env.SCREENS }}/ocr.json
+            ${{ env.SCREENS }}/checks.json
           if-no-files-found: warn
           retention-days: 14

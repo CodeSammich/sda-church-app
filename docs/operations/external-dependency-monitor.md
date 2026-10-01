@@ -15,16 +15,28 @@ layers instead:
   requests one stable pseudo-random file or page from each large collection per
   UTC day. Retries use the same sample.
 
-This means the 1,189-file CUV collections receive one sampled media request per
-host per daily run, not 1,189 requests. Project Gutenberg receives one sampled
+This means the 1,189-file audio collections (Mandarin and Cantonese CUV, and Spanish
+RV1909) each receive one sampled media request per host per daily run, not 1,189
+requests. Project Gutenberg receives one sampled
 public-domain book request, and EGW Writings receives one sampled book request
 for each supported edition language. The Internet Archive receives one metadata
 request per linked library scan, which checks that the scan is still openly
 downloadable and dated before 1928 (see [Internet Archive sources](../LEGAL.md#internet-archive-sources)).
+HathiTrust receives one catalog request per Chinese library edition, which checks
+that the volume is still public domain and in full view; its page viewer turns
+away scripts, so the monitor reads the catalog record instead.
 Fixed app destinations and small API
 contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media
 remain strict.
+
+It checks that each children's Sabbath School age group will open this week's
+English lesson: Adventech lists this quarter's Junior, Teen, and Youth issues, and
+has weekly PDFs for this quarter's Alive in Jesus Beginner, Kindergarten, and
+Primary books. A failure means the app is opening that age group's Alive in Jesus
+website instead, usually because a new quarter isn't published yet or the catalog
+changed. The six age-group websites are checked too, since they're the fallback.
+See `features/sabbath-school/ChildrenLessons.ts`.
 
 It also checks the church's own website: the privacy policy, support, and download
 pages at `app.nyccsda.org`, which the store listings and QR codes depend on. Each must

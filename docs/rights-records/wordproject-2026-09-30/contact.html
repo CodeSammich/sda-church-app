@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<title>WordProject - Contact Page</title>
+<link rel="shortcut icon" href="../../favicon.ico?v=2" type="image/x-icon" />
+<!-- Mobile viewport optimisation -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" type="text/css" href="../../bibles/_assets/css/css.css" />
+<link rel="stylesheet" type="text/css" href="../../bibles/_assets/css/style.css" />
+<link rel="stylesheet" type="text/css" href="../../bibles/_assets/css/page-player.css" />
+<!--[if lte IE 7]>
+<link href="../../_assets/css/iehacks.css" rel="stylesheet" type="text/css" />
+<![endif]-->
+<!--[if lt IE 9]>
+<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-F4EKTRQ54P"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-F4EKTRQ54P');
+</script>
+<script type="text/javascript">
+/**
+ * pop up window
+  **/
+
+var popWin
+var ExplorerWinProblem         //To Fix Explorer problem
+
+if ((navigator.appName == "Microsoft Internet Explorer") && (parseInt(navigator.appVersion)< 5)){
+   ExplorerWinProblem = true
+}
+else{
+   ExplorerWinProblem = false
+}
+
+function showSample(thefile, winHeight, winWidth){
+
+   if (!winHeight) winHeight = 400
+   if (!winWidth)  winWidth  = 900
+
+   if (ExplorerWinProblem && popWin && popWin.location){
+     popWin.close()
+   }
+   
+   popWin = window.open(thefile,"Sample_File","height=" + winHeight + ",width=" + winWidth + ",resizable=yes,menubar=yes,scrollbars=yes");
+   if (navigator.appVersion.indexOf("(X11") != -1 || navigator.appVersion.indexOf("(Mac") != -1){
+      popWin.location = thefile
+   }
+   
+   if (!ExplorerWinProblem){
+      for(var x=0; x < 250;x++){}  //Attempt to fix Netscape problem...
+      setTimeout("popWin.focus()",500)
+      popWin.focus()
+   }
+   
+}
+</script>
+<!--email-->
+ <script>
+        function emailCurrentPage(){
+            window.location.href="mailto:?subject="+document.title+"&body="+escape(window.location.href);
+        }
+    </script>
+<!--/email-->	
+</head>
+<body>
+<a name="top" id="top"></a>
+<header class="ym-noprint">
+<div class="ym-wrapper">
+<div class="ym-wbox">
+<h1><strong>Word</strong><em>Project</em></h1>
+</div>
+</div>
+</header>
+<nav id="nav">
+<div class="ym-wrapper">
+<div class="ym-hlist">
+<ul>
+<li><a href="../../index.htm">Home</a></li>
+<li><a href="../../bibles/index.htm">Bibles</a></li>
+<li><a href="../../bibles/audio/index.htm">Audio</a></li>
+<li><a href="../../bibles/verses/index.htm">Verses</a></li>
+<li><a href="../../bibles/multi/index.htm">Multi</a></li>
+<li class="active"><a href="../../bibles/resources/index.htm">Resources</a></li>
+<li><a href="../../bibles/search/index.htm">Search</a></li>
+</ul>
+</div>
+</div>
+</nav>
+<div class="ym-wrapper ym-noprint">
+<div class="ym-wbox">
+<!--share buttons>
+<div style="margin: 10px 1px 60px 20px;" align="right">
+
+<a title="Click to share on Facebook" href="http://www.facebook.com/sharer.php?u=http://wordproject.org/contact/new/index.htm" target="_blank"><div class="facebook-hover_2 social-slide_2"></div></a>
+
+<a title="Click to share on Twitter" href="http://twitter.com/share?url=http://wordproject.org/contact/new/index.htm&text=Read this page &hashtags=wordproject" target="_blank"><div class="twitter-hover_2 social-slide_2"></div></a>
+
+<a title="Click to share on Google plus" href="https://plus.google.com/share?url=http://wordproject.org/contact/new/index.htm" target="_blank"><div class="google-hover_2 social-slide_2"></div></a>
+
+<a href="javascript:emailCurrentPage()" class="email-hover_2 social-slide_2" title="Click to share this page via email"></a>
+</div>
+<!--/share buttons-->
+<!--SizeText>
+<div style="margin: 10px 1px 20px 20px;" align="right"><a class="decreaseFont ym-button2">-</a><a class="resetFont ym-button2">Reset</a><a class="increaseFont ym-button2">+</a>
+</div>
+<!--/SizeText--> 
+<div class=" ym-grid">
+<div class="ym-g62 ym-gl breadCrumbs"> <a href="../../index.htm">Home</a> / </div>
+</div>
+</div>
+</div>
+<div id="main" class="ym-clearfix" role="main">
+<div class="ym-wrapper">
+<div class="ym-wbox">
+<div class="textOptions">
+<div class="textHeader">
+<h2 align="center">Contact</h2>
+  <p class="place">Wordproject is meant to make a difference, especially in countries where Christian bookshops are rare and access to the Bible is difficult. We apprecite your comments and questions. Make sure to read our disclaimers (links at the end of this page), as many questions are already answered there. </p>
+  <p class="place">If you find mistakes or problems in our websites, please, send the link to the page where you find the problem. Thank you for helping us improve Wordproject.</p>
+  <hr/>
+<div class="ym-grid linearize-level-2">
+<div class="ym-g66 ym-gl">
+<FORM class="ym-form ym-full" METHOD="POST" ACTION="https://api.web3forms.com/submit" >
+<input type="hidden" name="access_key" value="5c443b06-8f07-423e-8689-ff5a72e7484a">
+<INPUT TYPE="hidden" NAME="subject" VALUE="New_email_form" />
+<INPUT TYPE="hidden" NAME="env_report" VALUE="REMOTE_HOST,HTTP_USER_AGENT" />
+<INPUT TYPE="hidden" NAME="redirect" VALUE="http://www.wordproject.org/contact/new/thankyou.htm" />  
+<label>Name: </label>      
+<input name="realname" type="text" class="submit_button_contact" value=""> 
+
+<label>Email Address:</label>
+<input type="text" class="submit_button_contact" name="sender" />
+<label>Message:</label>
+<textarea name="textarea" class="ym-fbox-text" cols="77" rows="9"></textarea>
+<br />
+<input type="submit" id="contact-button" class="ym-button" name="wordproject" value="Send" />
+</form>
+</div>
+    <div class="ym-g33 ym-gr">
+     <div class="ym-gbox">
+         
+
+</div>
+</div>
+</div>
+<p> Contact email:  <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6c1b1c2c0d0e050e00050f0d42031e0b">[email&#160;protected]</a> </p>
+</div>
+</div>
+</div><!-- ym-wbox end -->
+</div><!-- ym-wrapper end -->
+</div><!-- main end -->
+<div class="ym-wrapper">
+<div class="ym-wbox">
+<div class="alignRight ym-noprint">
+  <p><a class="ym-button" href="#top"><i class="icon-circle-arrow-up icon-white"></i> Top</a></p>
+</div>
+</div>
+</div>
+<footer>
+	<div class="ym-wrapper">
+<div id="redborder" class="ym-wbox">
+<p class="alignCenter">Wordproject® is a registered name of the  
+			<a href="https://www.wordproject.org/#">International Biblical Association</a>, a non-profit organization registered in Macau, China.	</p>
+			<p class="alignCenter ym-noprint">
+			<a href="index.htm">Contact </a>|
+			<a href="disclaim.htm"> Disclaimer </a>| 
+			<a href="state.htm">Statement of Faith</a> | 
+			<a href="mstate.htm">Mission</a> | 
+			<a href="copyrights.htm">Copyrights</a></p>
+		</div>
+	</div>
+</footer>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"c819a5c307f74a31accf1a77c1c6a280","spa":2}' crossorigin="anonymous"></script>
+</body>
+
+<script type="text/javascript" src="../../bibles/assets/js/jquery-1.8.0.min.js"></script>
+<script type="text/javascript" src="../../bibles/assets/js/soundmanager2.js"></script>
+<script type="text/javascript" src="../../bibles/assets/js/page-player.js"></script>
+<script type="text/javascript" src="../../bibles/assets/js/script.js"></script>
+
+<script src="../../bibles/_assets/js/jquery.dropotron.min.js"></script>
+<script src="../../bibles/_assets/js/skel.min.js"></script>
+<script src="../../bibles/_assets/js/skel-viewport.min.js"></script>
+<script src="../../bibles/_assets/js/util.js"></script>
+<script src="../../bibles/_assets/js/main.js"></script>
+</html>

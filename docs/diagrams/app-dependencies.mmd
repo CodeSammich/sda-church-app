@@ -10,9 +10,12 @@ flowchart TB
       backup@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-drive.svg", label: "Backup copy<br/>church Google Drive", pos: "b", w: 40, h: 36, constraint: "on" }
       ia@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/internetarchive.svg", label: "2. Internet Archive<br/>archive.org", pos: "b", w: 32, h: 32, constraint: "on" }
       ap["3. Audio Power<br/>theaudiopower.com"]
+      wordproject["WordProject<br/>wordproject.org<br/>source only: never played from"]
       wp -- cache miss --> wasabi
+      ap -. "an admin copied<br/>the Mandarin recordings" .-> wp
+      wordproject -. "an admin copied the Cantonese<br/>and Spanish recordings" .-> wp
       backup -. restore from if Adventist Connect<br/>or Wasabi is lost .-> wp
-      wp -. Bible audio: if 1 fails .-> ia
+      wp -. Mandarin Bible audio: if 1 fails .-> ia
       ia -. if 2 also fails .-> ap
     end
     subgraph Bible["Bible text"]
@@ -46,7 +49,7 @@ flowchart TB
     subgraph More["Giving and more"]
       direction TB
       giving["Giving<br/>adventistgiving.org"]
-      other["Other links<br/>506 hymnal app store pages<br/>GNYC · Atlantic Union · adventist.org"]
+      other["Other links<br/>506 hymnal app store pages<br/>GNYC · Atlantic Union · adventist.org<br/>WordProject (Bible audio credits)"]
     end
   end
 

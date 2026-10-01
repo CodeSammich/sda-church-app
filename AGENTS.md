@@ -23,6 +23,15 @@ Code, Codex, Gemini, and others). The full contributor guide is
   reference reaches `main`.
 - Say what you tested, with the command and result (for example `npm test`,
   430 passing). Mention any Android or iOS build you ran.
+- If the change affects what a screen shows or how it's laid out, update the
+  key screens in `test/screens/screens.json`, for every platform that captures
+  them: the iPhone today, and Android once #372 adds its screenshots. Add the
+  screen or variant that shows the change, and text checks (`mustShowLines`,
+  `mustNotShowLines`, `variantRules`) that fail if it breaks. Don't overdo it:
+  each shot lengthens every release PR's run, so prefer a check on an existing
+  shot, and replace checks that no longer earn their place. See "Key screens"
+  in [docs/operations/native-builds.md](docs/operations/native-builds.md). The
+  PR template asks about this too.
 
 ## Safety
 

@@ -678,6 +678,16 @@ npm run build:android:apk:debug -- --output /tmp/nyccsda-local-preview.apk
 The debug APK is suitable for installing on a test device, but it must never
 be uploaded to Google Play. A truly unsigned APK is generally not installable.
 
+**The debug APK is a separate app, "NYCCSDA Preview".** It's built with the app ID
+`org.nyccsda.app.preview` instead of `org.nyccsda.app`, so it installs beside the
+Play or internal-testing version rather than conflicting with its signature, and
+keeps its own settings and saved verses (#378). `app.config.js` sets the ID and name
+when `scripts/build-android-native.mjs` builds with `--debug`; store builds never get
+them. With both installed, an `sdachurchapp://` link asks which app to open. Commands
+that name the app, such as `adb shell am start … org.nyccsda.app.preview` and the
+Android audio test (`E2E_PACKAGE`), use the preview ID. A reused `android/` project
+is regenerated whenever the ID it was generated with doesn't match.
+
 Only a maintainer on a trusted machine should create a locally signed release
 artifact. If that is necessary, set the four signing variables only in the
 current terminal session. `ANDROID_KEYSTORE_PATH` points to the real JKS file;
@@ -829,19 +839,125 @@ needs a Mac.
 **In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
 each release PR into `main` without signing. It runs on an Apple
 Silicon runner (`macos-26`, arm64) and an Intel runner (`macos-26-intel`, x86_64), with
-the same Xcode as the signed iOS build. Each job installs the app on a simulated iPhone
-and fails if it isn't still running 45 seconds after launch. Each also uploads the app
+the same Xcode as the signed iOS build. Each job installs the app on the simulated
+iPhone that `test/screens/screens.json` names (an iPhone 17 Pro Max, on the newest iOS
+runtime) and fails if it isn't still running 45 seconds after launch. Each also uploads the app
 and a screenshot of its first screen (14-day retention), named like the Android
 preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
 
 - `sda-church-app-pr-<number>-<run>-arm64-simulator.zip` and `…-x86_64-simulator.zip`:
   the app;
-- `sda-church-app-pr-<number>-<run>-<arch>-first-screen.png`: the screenshot.
+- `sda-church-app-pr-<number>-<run>-<arch>-first-screen.png`: the screenshot;
+- `screens/ios/<screen>-<variant>.png`, in the Apple Silicon artifact only: the key
+  screens, described below.
 
 Pull requests into a `release/*` branch don't run it, and neither do other pull
-requests into `main`, such as Dependabot's. To test a change to the workflow or
-`scripts/build-ios-simulator.mjs` before the release PR, start it by hand on your branch
-from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
+requests into `main`, such as Dependabot's. To test a change to the workflow,
+`scripts/build-ios-simulator.mjs`, or the key screens before the release PR, start it by
+hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
+
+**Key screens.** The Apple Silicon job also screenshots the screens listed in
+`test/screens/screens.json`, so a layout problem on iPhone shows up before release
+rather than in TestFlight (#331). `scripts/capture-ios-screens.cjs` takes each one:
+
+1. It saves the settings the app reads at startup into the app's storage: setup
+   finished, the language, theme, and text size for that shot, and the screen to
+   open. Nothing on a build runner can tap the Simulator's screen, which rules out
+   both the first-launch setup dialog and the "Open in …?" prompt iOS shows before
+   following a deep link. So the app reads the screen from its storage once at launch
+   (`services/ScreenshotRoute.ts`) and forgets it. Only this Simulator build does
+   that: its build step sets `EXPO_PUBLIC_KEY_SCREENS=1`, which Expo writes into the
+   app, and the store builds never set it, so on a real phone the app never looks for
+   a saved screen. A test checks that no other workflow sets it.
+2. It launches the app, waits for the screen to load, and saves
+   `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch, so the run
+   takes about 22 minutes.
+3. The status bar is fixed (9:41, full battery and signal), so images differ only when
+   the app does. The iOS 26 Simulator draws the Dynamic Island into its screenshots,
+   although a real iPhone's screenshots leave it out.
+
+Variants cover dark mode, 150% and 200% app text, the iPhone's own largest text sizes,
+and the Chinese and Spanish interfaces. Some screens reproduce bugs fixed before:
+Psalm 119's three-digit verse numbers at 200%, a chapter opened at verse 14 so text sits
+under the status bar, and the Bible header with two translations and a back arrow.
+
+**Automatic checks.** The run fails, and the step summary says why, if the app isn't
+running after launch, if it didn't open the saved screen, if a screenshot is blank, or
+if a screen marked `statusBarClear` shows anything behind the status bar.
+
+**Text checks.** `scripts/check-screens.cjs` then reads each screenshot's text with
+Apple's Vision framework (`scripts/ocr-screens.swift`, built into macOS) and checks what
+every screen must show:
+
+- the tab labels, in the shot's language, in the tab bar;
+- on Bible screens, the verse button's whole label in the chapter controls, so a
+  cut-off "V" fails;
+- a screen's `mustShowLines`, regular expressions some line must start with, so a verse
+  number split across two lines fails, and its `mustNotShowLines`, which no line may
+  match. A `mustShowLines` rule can also be `{ "line": …, "minLeft": 0.5 }`, for a
+  line that must start at least that far across, such as Psalm 9's right-aligned
+  "Selah". `variantRules` adds either for one variant. The Bible header uses them: the
+  translation button shows its 文A icon (which Vision reads as "XA"), the EN badge, and
+  both full names, and at 150% and 200% with a back arrow it shows them without the icon;
+- no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
+  ("undefined", "NaN").
+
+Each label counts only where it belongs, so "Read Verse" on Home isn't the verse button.
+A missing label gets a second read of its strip, enlarged and with its contrast
+stretched. One-character labels, such as 您 and 節, aren't required: Vision often misses
+a lone Chinese character, and it can't be cut short anyway. A screen without the tab bar,
+such as the Bible while reading, sets `"tabs": false`. What Vision read is saved as
+`ocr.json` beside the screenshots, and the results as `checks.json`.
+
+The first real runs showed what this catches. Every screen covered by iOS's "Open in"
+prompt failed, and so did one screenshot the app hadn't drawn yet, which the blank check
+then missed. To try a rule change without a 40-minute build, start the workflow by hand
+with **screens_from_run** set to an earlier run's ID: it downloads that run's screenshots
+and only checks them. The tests use text Vision read from real screenshots
+(`test/screens/ocr-samples.json`), unedited. It includes Vision's mistakes on text
+that's fine on screen, such as "ANDKPW MUKKA" for the "ANDREW MURRAY" printed small on
+the *Humility* cover image, and "eternal life4." for a verse with footnote 4. The
+checks look only for particular labels in particular places, so text like that can't
+pass or fail them, and a test makes sure of it.
+
+**Human review.** Other layout problems, such as a cut-off label or a verse number
+split across two lines, need a person, so the iOS preview asks for one on the release
+pull request into `main`:
+
+1. As soon as the pull request opens or gets a new push, it posts a notice that the
+   screenshots are on the way. They take about 50 minutes. The notice also removes
+   the screenshots from before the push, which are out of date.
+2. When they're ready, it replaces the notice with a comment linking that commit's
+   screenshots, what to look for, and how to approve.
+3. Its last job, **Screenshots reviewed**, uses the `screenshot-review` environment,
+   whose required reviewers are the **release-approvers** team. So the check waits,
+   pending rather than failing, until one of them opens the run, selects **Review
+   deployments**, ticks **screenshot-review**, and approves. GitHub notifies the
+   approvers.
+
+A new push starts a new run, which needs its own approval, so each version of the
+release gets its own review. If the environment were ever missing or had no required
+reviewers, GitHub would run the job without waiting, so the job checks that the
+environment requires approval, and fails if it doesn't.
+[Approving the screenshots](admin-runbook.md#approving-the-screenshots) has the setup.
+
+**App Store screenshots.** The images are 1320 × 2868, the App Store's 6.9-inch iPhone
+size. The shots listed under `appStore` in the screen list are also copied, numbered in
+upload order, to `screens/app-store/<language>/`, without the transparency the
+Simulator's PNGs have, which App Store Connect rejects. They're ready to upload; see
+[Store assets](../store-assets/README.md). With each release, compare them with the
+stores' screenshots. Refresh the stores' when one shows something no longer true, the
+app looks noticeably different, or a new feature deserves showing; small differences,
+such as an icon, are fine. The Home screen's verse of the day and
+countdown change daily, which its `changesDaily` entry marks for when these images are
+compared with known-good copies.
+
+To add a screen, add an entry to `test/screens/screens.json`: a `name`, the deep link
+`path` without the scheme, any Bible `settings`, the `variants` to take, and any
+`checks`. Leave out screens that show members' names or photos, such as the bulletin,
+the team page, and the fellowship page; `test/screens.test.ts` checks this. A new
+setting also needs its storage key in the script's `SETTING_KEYS`, and the test checks
+the app still reads that key.
 
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
 artifact ending in `-x86_64` for an Intel Mac or `-arm64` for Apple Silicon, and unzip

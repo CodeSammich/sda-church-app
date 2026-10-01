@@ -20,6 +20,7 @@ Super Administrators can share.
 - [Google Cloud: free only](#google-cloud-free-only)
 - [Website: app.nyccsda.org](#website-appnyccsdaorg)
 - [Third-party APIs and websites](#third-party-apis-and-websites)
+- [Payment methods](#payment-methods)
 - [Upkeep calendar](#upkeep-calendar)
 - [Governance principles](#governance-principles)
 
@@ -47,11 +48,17 @@ each step uses, and how the domain ties the accounts together.
 Every outside service the apps talk to: what they load inside the app, and what they
 only open in the browser. It also shows how church media is kept available: the
 Adventist Connect library is served from Wasabi and backed up to Google Drive, and
-if it fails, Bible audio falls back to the Internet Archive and then Audio Power.
+if it fails, the Mandarin Bible audio falls back to the Internet Archive and then
+Audio Power. The Cantonese and Spanish Bible audio have no fallback, because
+WordProject's terms don't allow playing them from WordProject's servers. It also shows
+where the church's copies of the Bible audio came from: an admin downloaded the
+Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from
+WordProject, and uploaded them to the library (see
+[Updating the audio manifest](operations/adventist-connect-media.md#updating-the-audio-manifest)).
 See [Third-party APIs and websites](#third-party-apis-and-websites) for the full
 table.
 
-![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Bible audio falling back to the Internet Archive and then Audio Power; Bible text from HelloAO and fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links](diagrams/app-dependencies.svg)
+![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese and Spanish Bible audio played only from the church's copies, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; Bible text from HelloAO and fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
 
 ### Google Play upload sign-in
 
@@ -290,7 +297,9 @@ on them directly; see [Third-party APIs and websites](#third-party-apis-and-webs
 
 | Media | Primary | Other copies |
 | --- | --- | --- |
-| CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app falls back to the Internet Archive, then Audio Power |
+| Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app falls back to the Internet Archive, then Audio Power |
+| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, because WordProject's terms don't allow playing from its servers |
+| Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, for the same reason |
 | Church photos and hymnal lookup charts | Adventist Connect | Google Drive backup |
 | Bulletin cover art, logo, QR codes | Google Drive | See [Files not in this repository](#files-not-in-this-repository) |
 
@@ -308,8 +317,9 @@ submitted for review before they appear on the App Store.
 > domain, and the Apple fee waiver depends on that status. Don't make the app paid,
 > and don't add in-app purchases, subscriptions, ads, or anything else that earns
 > money through Apple or Google. Giving stays outside the stores: the app only opens
-> external donation links (AdventistGiving) in the browser, and shows the Zelle
-> address, which is fine.
+> external donation links (AdventistGiving) in the browser, and may show the Zelle
+> address, which is fine. The Zelle section stays hidden until the address can
+> receive gifts (`SHOW_ZELLE_GIVING` in `constants/ExternalLinks.ts`, #392).
 
 ### Apple App Store
 
@@ -410,12 +420,13 @@ checks nearly all of them daily.
 | --- | --- | --- | --- | --- |
 | Bible | HelloAO | `bible.helloao.org` | Bible text and translation list | In app |
 | Bible | fetch(bible) | `v1.fetch.bible` | Original-language critical texts | In app |
-| Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copy of the CUV audio, tried first | In app |
+| Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin CUV, tried first, and Cantonese CUV and Spanish RV1909, their only source | In app |
 | Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |
 | Bible audio | Audio Power | `theaudiopower.com` | CUV audio, third source | In app |
+| Bible audio | WordProject | `wordproject.org` | Source of the Cantonese and Spanish recordings, credited under each chapter | Link |
 | Bulletin | Church Apps Script | `script.google.com` | Digital bulletin JSON | In app |
-| Sabbath School | Adventech | `sabbath-school.adventech.io` | Children's lesson catalog and PDFs (API); adult lessons (reader) | In app and link |
-| Sabbath School | Alive in Jesus | `aliveinjesus.info` | Children's Sabbath School | Link |
+| Sabbath School | Adventech | `sabbath-school.adventech.io` | Children's lesson catalogs and PDFs (API); adult lessons (reader) | In app and link |
+| Sabbath School | Alive in Jesus | `aliveinjesus.info` | Children's age-group websites, opened when this week's lesson isn't found; Babies resources | Link |
 | Library | Chinese Union Mission | `api.sdabible.org`, `cms.sdabible.site` | Cover thumbnails for the Chinese Ellen G. White editions (the books open on EGW Writings) | In app |
 | Library | EGW Writings | `a.egwwritings.org`, `text.egwwritings.org` | Book covers (in app); reading (link) | In app and link |
 | Library | Project Gutenberg | `gutenberg.org` | Public-domain Christian classics | Link |
@@ -447,15 +458,34 @@ Costs, published limits, and load for each one are in
 > but there is no fallback. Keeping a copy, subject to a copyright review, is
 > tracked in [#260](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/260).
 
+## Payment methods
+
+**Cloudflare is the only service with a card on file**, and only to renew the domain.
+Nothing else in this architecture has a payment method, so nothing else can charge
+the church. Keep it that way: when a new service asks for a card, choose another
+service. Nothing else in the Cloudflare account costs money, and anything added
+there must stay on a free plan that fails at its limits instead of billing.
+
+| Service | Payment method | Why |
+| --- | --- | --- |
+| Cloudflare | **A card** | Renews `nyccsda.org`, about $10 a year. DNS, the app website redirect, HTTPS, and attack protection are on the Free plan, at no charge ([why](operations/admin-runbook.md#why-only-the-domain-costs-money)). See [keeping the card safe](operations/admin-runbook.md#the-cloudflare-account-and-domain). |
+| Apple Developer | None | The $99 yearly fee is waived for nonprofits. |
+| Google Play | None | The one-time $25 registration is paid; nothing recurs. |
+| Google Cloud | None, and no billing account | See [Google Cloud: free only](#google-cloud-free-only). |
+| Google Workspace | None | Workspace for Nonprofits: email, Drive, and Apps Script. |
+| GitHub | None | Free for public repositories, Actions included. |
+| Every API and website in [Third-party APIs and websites](#third-party-apis-and-websites) | None | Free, with no account or with a free key. |
+
 ## Upkeep calendar
 
 | When | What | If missed |
 | --- | --- | --- |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Developer membership and resubmit nonprofit status | App removed from the App Store |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Distribution certificate and provisioning profile, update GitHub secrets, and record the new dates; see the [renewal checklist](operations/app-store-setup.md#renewal-checklist) | iOS builds fail; app can't be updated |
-| Yearly | Check the Cloudflare payment method hasn't expired and the domain's paid-through date | Domain renewal fails |
-| Yearly | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
-| Yearly, and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
+| First Monday of January (GitHub opens the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue) | Work through the checklist, which covers the yearly rows below and more | A card expires, a bill starts, or an account can't be recovered, unnoticed |
+| Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
+| Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
+| Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
 
 ## Governance principles

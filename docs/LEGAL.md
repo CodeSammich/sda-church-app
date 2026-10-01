@@ -41,6 +41,12 @@ playback fallbacks; the repository does not bundle the recordings. Audio Power's
 Phil, explicitly approved the church app's use, download, and self-hosting of these recordings in
 [issue #134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608).
 
+Cantonese audio for the same editions comes from WordProject, played only from the
+church's copies on Adventist Connect; see
+[WordProject Cantonese audio](#wordproject-cantonese-audio). So does the Reina-Valera
+1909 audio; see
+[WordProject Spanish audio](#wordproject-spanish-audio-reina-valera-1909).
+
 ### Audio Power permission scope
 
 The permission covers **only Audio Power's own Chinese Union Version narration**. That
@@ -71,16 +77,19 @@ requested. Still open:
 - Redistributing FCBH audio through this public repository would need FCBH's
   separate approval. FCBH noted that an audio recording can carry its own copyright
   even when the Bible text is public domain.
-- The church's application for FCBH API access is pending.
+- The church's application for FCBH API access was approved on September 30, 2026
+  (see below).
 
 ### Bible Brain API license (Faith Comes By Hearing): planned, not in use
 
 > [!NOTE]
-> **Work in progress.** The app does **not** use Bible Brain or any Faith Comes By
-> Hearing content today. The church has applied for API access and is waiting for a
-> reply. This section records the license terms ahead of time so the integration
-> ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241))
-> is designed to follow them.
+> **Not in use.** The app does **not** use Bible Brain or any Faith Comes By Hearing
+> content today. FCBH issued the church an API key on September 30, 2026. It's kept in
+> the church's IT Admin shared drive, which only certain administrators can open, and
+> nothing uses it yet. This section records the license terms, so any use of the key
+> follows them. Plans for Bible audio and text in more languages, including a Cloudflare
+> Worker designed to keep the key out of the app (on hold), are tracked in
+> [#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241).
 
 Using FCBH audio through its Bible Brain API (the Digital Bible Platform, DBP) would
 mean agreeing to the [API License Agreement](https://www.faithcomesbyhearing.com/bible-brain/license)
@@ -97,10 +106,10 @@ would affect this project, quoted from the agreement (not legal advice):
 | Copying by users | "Your Application shall not allow End Users to reproduce, copy, or replicate any DBP Content", apart from `/download` content. | No share-audio-file or export features for FCBH content. |
 | Termination | FCBH "may immediately terminate or suspend this Agreement … at any time and for any reason". | FCBH audio must never be the only source for a feature; keep a fallback, as the CUV audio has. |
 
-The planned Cloudflare Worker proxy for the key is tracked in
-[#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241).
-It must follow the proxy and caching terms above, and it must stay on Cloudflare's
-Workers Free plan, which returns errors at its limits instead of billing.
+Any service that holds the key for the app must follow the proxy and caching terms
+above, and must never be able to bill the church.
+[#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)
+records the design built for that and why it's on hold.
 
 Before the app uses or hosts any of these, get written confirmation from the
 recording's rights holder and record it in #134 and in this section. Adding Spanish
@@ -108,7 +117,149 @@ and KJV audio, and the other routes to it, is tracked in
 [#142](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/142). Audio Power can
 be reached at info@theaudiopower.com, the contact address on its website.
 
-### “Free to access” does not mean “public domain”
+### WordProject Cantonese audio
+
+[WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), a
+registered name of the International Biblical Association (a nonprofit registered in
+Macau), publishes a Cantonese audio Bible (廣東話) with every chapter of all 66 books.
+Its [audio list](https://www.wordproject.org/bibles/audio/) labels it "Cantonese -
+CUV". The app offers it as the Cantonese narrator, 粵語 (WordProject), for both
+Chinese Union Version editions
+([#353](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/353)).
+
+**The basis is WordProject's published terms.** Audio Power's recordings are used on
+the strength of its owner's email, because Audio Power's site says nothing about apps.
+WordProject's terms speak to apps directly, and its book pages invite downloading, so
+the church relies on those terms rather than a separate permission. Quoted from its
+[Disclaimer](https://www.wordproject.org/contact/new/disclaim.htm),
+[Copyrights](https://www.wordproject.org/contact/new/copyrights.htm) page, and
+Cantonese book pages, as read on September 30, 2026 (not legal advice):
+
+| Topic | WordProject says | What it means here |
+| --- | --- | --- |
+| Use in apps | "You are ONLY allowed to use the audio files for non-profit evangelization (without in APP ads or for-sale APPs)." | Allowed while the app stays free and without ads, which it must anyway (see the [App stores](architecture.md#app-stores) rule). |
+| Nonprofit only | "All available audio is copyrighted and its use is allowed for NON-PROFIT only - (evangelization/education)." | The church is a nonprofit, and the app sells nothing. |
+| Downloading | Each book page: "右鍵單擊本頁末尾的“Zip_”，然後“鏈接另存為”以下載整本書。" ("Right-click 'Zip_' at the end of this page, then 'Save link as', to download the whole book.") | The church downloaded each book once, from these zips. |
+| WordProject's servers | "If you wish to link to our audio, you are obliged to tell us and get our approval." and "DO NOT make a Bible web site or APP and link the whole audio Bible (or Bibles) to our servers." | The app plays only the church's copies. It must never link to WordProject's servers, even as a fallback, without WordProject's written approval. |
+| Changing the audio | "you are allowed to adapt the data (text format only!) for your purposes but NOT the audio files." | Host the files exactly as downloaded: no re-encoding, trimming, joining, volume changes, or tag edits. Only the file names change, so that each chapter's name is unique. |
+| Credit | Not specified. The Copyrights page asks sites to "place a link to our website and our audio APP". | The narrator is named 粵語 (WordProject). While it's selected, each chapter shows a credit that links to WordProject's Cantonese page, which offers its app. |
+
+**Who owns the recordings is unknown.** WordProject warns that a breach "may result
+in prosecution by respective owners", so some of what it publishes belongs to others.
+The files suggest several sources:
+
+- The New Testament files are tagged "Cantonese Bible", most with a comment from
+  赞美诗网 (zanmeishi.com).
+- Exodus is also tagged "Cantonese Bible". The rest of the Old Testament is tagged
+  "Cantonese Holy Bible".
+- Most files are 16 kbps, but 1 and 2 Samuel and 1 Kings are 32 to 40 kbps, and two
+  chapters of 2 Samuel carry a "www.NextUp.com" tag.
+
+WordProject's Copyrights page explains its stance. It publishes the Bible "in good
+faith claiming the right of fair use for non-profit and educational purposes and public
+benefit", and it accepts narrations from people who "narrate the Bible in your own
+language and place it in the public domain". So WordProject means its recordings to be
+shared freely for non-profit use, but it doesn't claim a license from each recording's
+owner.
+
+The church relies on WordProject's terms as the publisher. If a rights holder objects,
+remove the recording, or the books concerned, promptly and record why here.
+
+**Notice to WordProject (September 30, 2026).** The church wrote to both addresses
+WordProject publishes: wp@abiblica.org on its
+[contact page](https://www.wordproject.org/contact/new/index.htm), and
+js@wordproject.org in its Disclaimer. The notice described the plan above and offered
+to change course if WordProject objects. It asked:
+
+- who holds the rights, and whether to contact anyone else;
+- which Chinese text is read (labeled the CUV, but not yet confirmed by listening),
+  and whether one reader reads both testaments;
+- whether a higher-quality version exists;
+- how WordProject would like the recordings credited.
+
+Record the reply in #353 and here. Copies of the pages quoted above, as retrieved on
+September 30, 2026, are in
+[rights-records/wordproject-2026-09-30](rights-records/wordproject-2026-09-30/README.md),
+in case the pages change. Keep a copy of the notice in the church's IT Admin shared
+drive, with the other rights records.
+
+**Hosting and privacy.** The church's copies are in its Adventist Connect media
+library, like the Mandarin CUV recordings (see
+[Adventist Connect media hosting](operations/adventist-connect-media.md)). The
+repository doesn't bundle them. The app contacts no new service, so the privacy
+policy doesn't change.
+
+### WordProject Spanish audio (Reina-Valera 1909)
+
+[WordProject's Spanish audio Bible](https://www.wordproject.org/bibles/audio/06_spanish/index.htm)
+reads the Reina-Valera 1909, the edition the app shows. The app offers it as the RVR09
+narrator, named WordProject
+([#142](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/142)). The terms and what they require are the same as for the
+Cantonese recording above. Its Spanish book pages also invite downloading: "Haga clic
+derecho en 'zip' en la parte inferior de la página y 'guardar enlace como' para
+descargar el libro completo." ("Right-click 'zip' at the bottom of the page and 'save
+link as' to download the whole book.") So the church downloaded the book zips once,
+hosts unmodified copies on Adventist Connect, never links to WordProject's servers, and
+credits WordProject with a link to its Spanish page.
+
+**No one claims the recording.** No file has a copyright, owner, or publisher tag,
+and WordProject's Spanish pages name no narrator or rights holder. 1,178 chapters are
+tagged album "El Antiguo/Nuevo Testamento, Antigua Version Reina-Valera de 1909",
+artist "La Biblia", year 2010.
+
+**11 chapters have incorrect tags.** They came from other sources, but each was
+checked by listening against the 1909 text in the app on October 1, 2026, and all 11
+read the Reina-Valera 1909:
+
+| Chapter | Album tag | Artist tag | Year tag |
+| --- | --- | --- | --- |
+| Judges 1–2 | Antiguo Testamento | La Biblia Sagrada | (none) |
+| Judges 3–9 | Antiguo Testamento | Biblia | (none) |
+| 2 Kings 5 | El Antiguo Testamento #1 | Spanish Bible RV1960 | 1960 |
+| Proverbs 16 | Antigo Testamiento | La Biblia | (none) |
+
+2 Kings 5 is tagged as the 1960 revision but reads the 1909 text (verse 1: "gran
+varón… salvamento"). The tags are left as they are: WordProject's terms don't allow
+changing the audio files, and the app doesn't read the tags. Details are in
+[#142](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/142).
+
+### WordProject audio in other languages: backups only
+
+The church keeps backup copies, which the app doesn't use, of WordProject's audio
+Bibles in languages people have asked for
+([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). They're in the church's Google Drive, not this repository. Before
+the app uses one, give it a section like the two above.
+
+Their rights were checked on September 30 and October 1, 2026, by reading every file's
+tags and WordProject's page for each language. A recording is kept only if no file or
+page names someone else as its owner:
+
+| Language | Issue | What the files and pages say | Kept |
+| --- | --- | --- | --- |
+| Russian | [#346](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/346) | Nearly every file's copyright tag says "free", with www.wordproject.org as its web address. Nothing names a rights holder. | Yes, all 1,189 chapters |
+| Ukrainian | [#347](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/347) | Every file credits www.blagovestnik.org, the studio that recorded it in 2005 and 2006. Its [Ukrainian audio Bible page](http://www.blagovestnik.org/ukraine/ukraine.htm) says: "Всі матеріали, підготовлені в студії, розповсюджуються без якихось обмежень і вільно доступні в інтернеті." ("All materials prepared in the studio are distributed without any restrictions and are freely available on the internet.") | Yes, all chapters; Joel has four chapters, as in Ukrainian Bibles |
+| Bengali | [#348](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/348) | Nothing names a rights holder. | Yes, 1,182 chapters; 7 are missing on WordProject too (1 Samuel 27–29, 1 Chronicles 18, 2 Chronicles 16–17, Jonah 1) |
+| Japanese | [#161](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/161) | Nothing names a rights holder. Which translation it reads hasn't been checked. | Yes, all 1,189 chapters |
+| Arabic | [#349](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/349) | The files mix sources, and two name rights holders: Joshua 6 is tagged as a Family Radio Bible study, "Copyright © 2004 Family Stations", and Colossians 4 is tagged "Arabic Bible Outreach Ministry". | No: needs another source or the owners' permission |
+| English (KJV) | [#142](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/142) | Every file sampled is tagged "© 2010 by Intellectual Reserve, Inc. All rights reserved." (Alexander Scourby's narration). | No: needs Intellectual Reserve's permission |
+
+"Nothing names a rights holder" doesn't make a recording public domain. WordProject
+says all its audio is copyrighted and that breaches "may result in prosecution by
+respective owners". It means no owner has reserved rights beyond WordProject's terms,
+which the church relies on, as for the Cantonese and Spanish recordings. If an owner
+comes forward, follow their terms. WordProject has no Haitian Creole
+([#345](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/345)) or Tibetan ([#150](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/150)) audio.
+
+Dated copies of WordProject's pages for these languages and for Spanish are in
+[rights-records/audio-sources-2026-10-01](rights-records/audio-sources-2026-10-01/README.md),
+with [a summary of every file's tags](rights-records/audio-sources-2026-10-01/tag-summaries.md)
+for each language.
+Blagovestnik's pages include a personal email address, so their copies are in the
+church's IT Admin shared drive instead. The statement above was retrieved from
+http://www.blagovestnik.org/ukraine/ukraine.htm on October 1, 2026, when the page's
+SHA-256 was `ee452da37125959f162b56ce55259091cdc61564a2653343440b15fdffc79413`.
+
+### “Free to access” doesn't necessarily mean “public domain”
 
 fetch(bible) provides an open CDN with no API key, usage fee, request quota, or
 provider-imposed caching limit. That permission applies to access to the
@@ -116,6 +267,8 @@ fetch(bible) service; it does **not** erase or replace the license of each work
 distributed through the service. fetch(bible explicitly states that consumers
 must follow the terms of each individual Bible resource. See its
 [official access and licensing explanation](https://fetch.bible/access/#no-limits-from-us).
+Some of those works are in the public domain, such as the CUV and Reina-Valera 1909
+texts above. Others, such as the critical editions below, carry their own licenses.
 
 The app currently requests these open critical editions:
 
@@ -154,8 +307,8 @@ licenses for the biblical text. Font sources and exact terms are documented in
 ## Library Sources and Licensing
 
 The Library is a curated catalog, not a web search. It links to each book's source;
-the app doesn't bundle book text. Where a book has a listed Spanish edition, Spanish
-readers see and open that edition instead; each has its own row below. The only document the church hosts is the Sabbath
+the app doesn't bundle book text. Where a book has a listed Spanish or Chinese edition, Spanish
+or Chinese readers see and open that edition instead; each has its own row below. The only document the church hosts is the Sabbath
 Encouragement PDF, served with the web app. The content policy, catalog, and
 research queue are in [Christian Library](feature_designs/christian_library.md). A
 work may be copied into the app only when the exact edition, including any
@@ -169,9 +322,10 @@ is linked, not copied.
 | **Chinese Union Mission** (`api.sdabible.org`, `cms.sdabible.site`) | Cover thumbnails for the Chinese EGW editions only, loaded from its public catalog. The books themselves open on EGW Writings. | Same limited navigational use as the EGW covers. Image URLs are checked against the Mission's storage host. |
 | **Adventist pioneer books on EGW Writings** | A link to Uriah Smith, *Daniel and the Revelation*, 1897 edition (`text.egwwritings.org/read/12861.1`) | Published in 1897, so public domain in the U.S. The app only links to it. Later revisions, such as the 1944 *The Prophecies of Daniel and the Revelation*, are still copyrighted and must not be substituted. |
 | **Adventist Pioneer Library translation on EGW Writings** | For Spanish readers, J. N. Andrews, *Historia del Sábado* (`text.egwwritings.org/read/14404.2`), in place of the English *History of the Sabbath* | A 2020 Spanish translation of the 1873 edition by Rolando Itin, © Adventist Pioneer Library, published on EGW Writings; its credits page names the 1873 original. The translation is copyrighted, so the app only links to it. |
-| **Project Gutenberg** (`gutenberg.org`) | Links to six works: Joseph Bates, *The Seventh Day Sabbath, a Perpetual Sign* (1847); J. N. Andrews, *History of the Sabbath and First Day of the Week* (1873); Uriah Smith, *The State of the Dead and the Destiny of the Wicked* (1873); John Bunyan, *The Pilgrim's Progress* (1678); Andrew Murray, *Humility* (1895); John Foxe, *Fox's Book of Martyrs* (an abridged 19th-century American edition) | Each record is explicitly marked public domain in the U.S. |
+| **Project Gutenberg** (`gutenberg.org`) | Links to seven works: Joseph Bates, *The Seventh Day Sabbath, a Perpetual Sign* (1847); J. N. Andrews, *History of the Sabbath and First Day of the Week* (1873); Uriah Smith, *The State of the Dead and the Destiny of the Wicked* (1873); John Bunyan, *The Pilgrim's Progress* (1678); Andrew Murray, *Humility* (1895); John Foxe, *Fox's Book of Martyrs* (an abridged 19th-century American edition); Jesse Lyman Hurlbut, *Hurlbut's Life of Christ for Young and Old* (1915, ebook 40460) | Each record is explicitly marked public domain in the U.S. |
 | **Chapel Library** (`chapellibrary.org`) | For Spanish readers, *El progreso del peregrino para todos (condensado)*, Chapel Library's abridged Spanish edition of John Bunyan's *The Pilgrim's Progress*, as its own free PDF (`chapellibrary.org/pdf/books/ppfes.pdf`) | © 2015 Chapel Library. Its notice grants express permission to reproduce it by any means, as long as no more than a nominal cost is charged and the notice and the rest of its page are kept. The app only links to Chapel Library's own copy, which carries the notice. The PDF calls itself "cuidadosamente abreviada" (carefully abridged), so its title says *condensado*. Checked 2026-09-30. |
-| **Internet Archive** (`archive.org`) | Links to two scans: Richard Sibbes, *The Bruised Reed* (1630), in the 1838 London edition by Pickering, which also contains *A Fountain Sealed* and *A Description of Christ* (`archive.org/details/bwb_C0-AVW-616`); and Andrew Murray, *Abide in Christ* (1882), in the 1895 Revell edition (Chicago, New York, Toronto), microfilmed from the National Library of Canada's copy (`archive.org/details/cihm_11323`) | Checked 2026-09-27 under [Internet Archive sources](#internet-archive-sources). The scanned title pages read 1838 and 1895. The only later material is the 1838 editor's preface and Revell's 1895 list of Murray's books. Both scans are openly downloadable rather than lend-only. The archive.org record `abideinchristtho0000murr` is a 2013 reprint catalogued as 1880 and must not be used. |
+| **Internet Archive** (`archive.org`) | Links to five scans: Richard Sibbes, *The Bruised Reed* (1630), in the 1838 London edition by Pickering, which also contains *A Fountain Sealed* and *A Description of Christ* (`archive.org/details/bwb_C0-AVW-616`); Andrew Murray, *Abide in Christ* (1882), in the 1895 Revell edition (Chicago, New York, Toronto), microfilmed from the National Library of Canada's copy (`archive.org/details/cihm_11323`); Jesse Lyman Hurlbut, *Story of the Bible Told for Young and Old* (1904), in the 1905 Philadelphia edition by H. W. B. Conrad, a Library of Congress copyright-deposit copy (`archive.org/details/mothersstoryofbi00hurl`); Mrs. Howard Taylor, *Pastor Hsi: One of China's Christians*, the 1903 first edition (London, Morgan & Scott and the China Inland Mission), from Cornell (`archive.org/details/cu31924023085875`); and Dr. and Mrs. Howard Taylor, *Hudson Taylor in Early Years: The Growth of a Soul*, the 1911 London edition by Morgan & Scott, from Princeton (`archive.org/details/hudsontaylorinea00unse_0`) | Sibbes and Murray checked 2026-09-27, the other three 2026-10-01, under [Internet Archive sources](#internet-archive-sources). The scanned title pages read 1838, 1895, 1905 (with the 1904 copyright), 1903, and 1911. The only later material is the 1838 editor's preface and the publishers' own lists of books from the same years. All five scans are openly downloadable rather than lend-only. The Library of Congress states it is unaware of any copyright restrictions on the Hurlbut copy, and Cornell states there are no known U.S. restrictions on its *Pastor Hsi*. Don't substitute these records: `abideinchristtho0000murr` (a 2013 reprint catalogued as 1880), Hurlbut's 1932 and later revisions (lend-only and still copyrighted), the later abridged *Pastor Hsi* editions, and `hudsontaylorin00tayl` (a 1912 New York printing catalogued as 1911 London). |
+| **HathiTrust** (`babel.hathitrust.org`) | For Chinese readers (Traditional and Simplified), 天路歷程 in place of the English *The Pilgrim's Progress*: the 1869 Mandarin (官話) edition of William C. Burns's translation of Part 1, Shanghai, American Presbyterian Mission Press (美華書館), printed in traditional characters, from the University of California's copy (`babel.hathitrust.org/cgi/pt?id=uc1.b3399258`) | Checked 2026-10-01. The scanned title page reads 同治八年 / 耶穌降世一千八百六十九年 (1869), so both the original and the translation are public domain in the U.S. HathiTrust's record (catalog 006287510) shows the volume as public domain (`pd`) and in full view, and the [external dependency monitor](operations/external-dependency-monitor.md) rechecks that daily. The app only links to HathiTrust's page viewer. Burns's 1853 classical (文理) version and later Chinese translations, such as the 1936 聖遊記, were not used. |
 | **The church's own copy** (`app.nyccsda.org/library/`) | *Sabbath Encouragement* (安息日勉言), the Chinese PDF the Brooklyn bulletin also uses, from `public/library/` | A compilation of Bible verses and Ellen G. White quotations, edited and shared freely by churches in China, who treat it as free of copyright. That comes secondhand, through the pastor ([#248](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/248#issuecomment-5852167793)); see [Sabbath Encouragement](operations/sabbath-encouragement-copyright.md). |
 
 Each source falls back to the app's own original, text-free cover art if its

@@ -51,22 +51,6 @@ export const getBottomTabContentHeight = (
   );
 };
 
-export const getMeasuredTextLineCount = (
-  measuredHeight: number,
-  lineHeight: number,
-) => {
-  if (
-    !Number.isFinite(measuredHeight) ||
-    !Number.isFinite(lineHeight) ||
-    measuredHeight <= 0 ||
-    lineHeight <= 0
-  ) {
-    return 1;
-  }
-
-  return Math.max(1, Math.round(measuredHeight / lineHeight));
-};
-
 export const getGlobalHeaderContentHeight = (effectiveTextScale: number) => {
   const safeScale = Number.isFinite(effectiveTextScale)
     ? Math.max(1, effectiveTextScale)

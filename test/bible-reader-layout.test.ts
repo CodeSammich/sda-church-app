@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createDocumentStyles } from '@/styles/DocumentStyles';
 import { getBibleReaderUiTextScale } from '@/constants/AppPreferences';
 import { getGlobalHeaderHeightForScale } from '@/hooks/useGlobalHeaderHeight';
@@ -8,6 +9,7 @@ import {
   getBulletinVerseScrollOffset,
   getBibleDockLayout,
   getBibleDockViewportLayout,
+  shouldShortenVerseLabel,
 } from '@/styles/ReaderStyles';
 import { StyleSheet } from 'react-native';
 
@@ -122,6 +124,34 @@ describe('Bible reader text scaling', () => {
     expect(withOsText.audioDockHeight).toBeGreaterThan(
       appOnly.audioDockHeight,
     );
+  });
+
+  it("caps the system text size in the dock's controls, as the header does (#376)", () => {
+    // At the iPhone's largest text size, the dock's labels and buttons grew until
+    // "Psalms" read "Ps…" beside a full-size "Verse".
+    const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(source).toContain('bibleUiTextScale * getHeaderFontScale(osFontScale)');
+    expect(source).toContain('getBibleDockLayout(viewportWidth, dockTextScale)');
+    // The book, chapter, and Verse labels, the selection count, the audio
+    // language mark, both audio times, and the hidden copy that measures pills.
+    expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(8);
+  });
+
+  it('shortens the Verse label before the book name is cut short (#376)', () => {
+    // Psalms 130 + 23 64 + Verse 100 + 2 gaps of 8 = 310.
+    const pills = { bookPillWidth: 130, chapterPillWidth: 64, versePillWidth: 100 };
+    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 340 })).toBe(false);
+    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 310 })).toBe(false);
+    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 300 })).toBe(true);
+    // Unmeasured: the full label.
+    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 0 })).toBe(false);
+    expect(shouldShortenVerseLabel({ ...pills, bookPillWidth: 0, rowWidth: 100 })).toBe(false);
+    const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(source).toContain('{shortVerseLabel ? labels.verseShort : labels.verse}');
+    expect(source).toContain("verseShort: 'Vs.',");
+    expect(source).toContain("verseShort: 'Vers.',");
+    // The pill still says "Verse" to screen readers.
+    expect(source).toContain('accessibilityLabel={labels.verse}');
   });
 
   it('stacks reader controls when space is narrow or text is enlarged', () => {

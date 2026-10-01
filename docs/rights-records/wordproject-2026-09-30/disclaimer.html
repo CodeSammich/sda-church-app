@@ -1,0 +1,236 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>WordProject - Disclaimer Page</title>
+<link rel="shortcut icon" href="../../favicon.ico?v=2" type="image/x-icon" />
+<!-- Mobile viewport optimisation -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" type="text/css" href="../../bibles/_assets/css/css.css" />
+<link rel="stylesheet" type="text/css" href="../../bibles/_assets/css/_darkmode.css" />
+<link rel="stylesheet" type="text/css" href="../../bibles/_assets/css/style.css" />
+<link rel="stylesheet" type="text/css" href="../../bibles/_assets/css/page-player.css" />
+<!--[if lte IE 7]>
+<link href="../../_assets/css/iehacks.css" rel="stylesheet" type="text/css" />
+<![endif]-->
+<!--[if lt IE 9]>
+<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+<!-- google analytics -->
+<script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_setAccount', 'UA-39700598-1']);
+_gaq.push(['_trackPageview']);
+(function() {
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+<script type="text/javascript">
+/**
+ * pop up window
+  **/
+
+var popWin
+var ExplorerWinProblem         //To Fix Explorer problem
+
+if ((navigator.appName == "Microsoft Internet Explorer") && (parseInt(navigator.appVersion)< 5)){
+   ExplorerWinProblem = true
+}
+else{
+   ExplorerWinProblem = false
+}
+
+function showSample(thefile, winHeight, winWidth){
+
+   if (!winHeight) winHeight = 400
+   if (!winWidth)  winWidth  = 900
+
+   if (ExplorerWinProblem && popWin && popWin.location){
+     popWin.close()
+   }
+   
+   popWin = window.open(thefile,"Sample_File","height=" + winHeight + ",width=" + winWidth + ",resizable=yes,menubar=yes,scrollbars=yes");
+   if (navigator.appVersion.indexOf("(X11") != -1 || navigator.appVersion.indexOf("(Mac") != -1){
+      popWin.location = thefile
+   }
+   
+   if (!ExplorerWinProblem){
+      for(var x=0; x < 250;x++){}  //Attempt to fix Netscape problem...
+      setTimeout("popWin.focus()",500)
+      popWin.focus()
+   }
+   
+}
+</script>
+<!--email-->
+ <script>
+        function emailCurrentPage(){
+            window.location.href="mailto:?subject="+document.title+"&body="+escape(window.location.href);
+        }
+    </script>
+<!--/email-->	
+</head>
+<body>
+<header>
+<div id="top" class="ym-wrapper">
+<div class="ym-wbox">
+<span class="wp"><strong><a class="wplink" href="../../index.htm">Word</a></strong><a class="wplink" href="../../index.htm"><em>Project</em></a></span>
+</div>
+</div>
+</header>
+<nav id="nav">
+<div class="ym-wrapper">
+<div class="ym-hlist">
+<ul>
+<li><a href="../../index.htm">Home</a></li>
+<li><a href="../../bibles/index.htm">Bibles</a></li>
+<li><a href="../../bibles/audio/index.htm">Audio</a></li>
+<li><a href="../../bibles/verses/index.htm">Verses</a></li>
+<li><a href="../../bibles/parallel/index.htm">Multi</a></li>
+<li class="active"><a href="../../bibles/resources/index.htm">Resources</a></li>
+<li><a href="../../bibles/search/index.htm">Search</a></li>
+</ul>
+</div>
+</div>
+</nav>
+<div class="ym-wrapper ym-noprint">
+<div class="ym-wbox">
+<!--breadcrumbs-->
+<div class=" ym-grid">
+<div class="ym-g62 ym-gl breadCrumbs"> <a href="../../index.htm">Home</a> / </div>
+</div>
+<!--SizeText-->
+
+<div class="leftrightdiv">
+  <div class="playerOne">
+<div class="shareright"><a class="decreaseFont ym-button2">-</a><a class="resetFont ym-button2"><span class="f1">A</span><span class="f2">A</span><span class="f3">A</span></a><a class="increaseFont ym-button2">+</a>
+</div>
+  </div>
+  <div class="playerTwo">
+<div>
+<!--switch-->
+<button class="btn-toggle btn-toggle_black" title="Dark/Night Mode"><img src="../../bibles/_assets/img/night.gif" class="imageatt" alt="arrowright"/></button>
+  </div>
+  </div>
+  </div>
+<!--/SizeText-->
+</div>
+</div>
+</div>
+<div id="main" class="ym-clearfix" role="main">
+<div class="ym-wrapper">
+<div class="ym-wbox">
+<div class="textOptions">
+<div class="textHeader">
+<h2>Disclaimer [Updated]</h2>
+<h3>(Non-profit, interdenominational)</h3>
+</div>
+<h3>Purpose of the Website</h3>
+<p>To provide versions of the Bible in several languages. Versions:
+<a href="JavaScript:showSample('../../bibles/kj/index.htm')">King James Version;</a>
+<a href="../../bibles/po/index.htm')">João Ferreira de Almeida</a> (Portuguese);
+<a href="JavaScript:showSample('../../bibles/sp/index.htm')">Reina Valera</a> (Spanish);
+<a href="JavaScript:showSample('../../bibles/fr/index.htm')">Louis Segond</a> (French);
+<a href="JavaScript:showSample('../../bibles/gb/index.htm')">Union Version</a> (Chinese);
+<a href="JavaScript:showSample('../../bibles/it/index.htm')">Riveduta</a> (Italian), 
+<a href="JavaScript:showSample('../../bibles/in/index.htm')">Hindi</a>;
+<a href="JavaScript:showSample('../../bibles/in_tr/index.htm')"> Romanized Hindi</a>;
+<a href="JavaScript:showSample('../../bibles/ru/index.htm')">Russian, </a>
+<a href="JavaScript:showSample('../../bibles/de/index.htm')">German, </a>
+<a href="JavaScript:showSample('../../bibles/sw/index.htm')">Swahili</a>,
+<a href="JavaScript:showSample('../../bibles/am/index.htm')">Amharic</a>, and many <a href="JavaScript:showSample('../../bibles/index.htm')">more...</a></p>
+
+<h3>The Status of the Website</h3>
+<blockquote>
+<p>The Bible content of this webpage that is in the Public Domain may be used in accordance with the Licensing agreement below to protect the Author as well as Distributors.<br />
+All available audio is copyrighted and its use <font size="2" color="red">is allowed for NON-PROFIT only - (evangelization/education)</font>. The use in sold apps and apps containing ads of any kind is not allowed. <br /> 
+Breach of this condition may result in prosecution by respective owners.</p>
+</blockquote>
+<h3>Licensing Agreement:</h3>
+<ul>
+<li>The Wordproject website is a simple website. It cannot create files, or perform other functions that could conceivably damage a computer.<br />
+By using or distributing any part of the Wordproject website, you indicate that you agree to and accept the following terms, conditions and disclaimers as an express agreement between you or your organization, and Wordproject, (designated as "Author"), and any distributors of this software (designated as "Distributors"). If you do not understand these terms, conditions, and disclaimers, or do not agree to and accept them, then you may not use, view, or distribute any part or whole thereof of the Wordproject webpage.</li>
+<li>(1) The Wordproject website, formed by webpages and audio files, may contain errors or defects (herein designated as "Defects"). These Defects may contain but are not limited to the following: <br />
+(a) incomplete, inaccurate, or corrupt data; <br />
+(b) transcription or programming errors; <br />
+(c) defective or damaged recordings, <br />
+(d) data that cannot be read by your equipment, or that damages your equipment, <br />
+(e) broken links.</li>
+<li>(2) If there are Defects, you have the responsibility to contact the Author:<br />
+Wordproject - email address: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f59f86b5829a879185879a9f909681db9a8792">[email&#160;protected]</a>) - so that any Defects may be corrected.</li>
+<br />
+<p align="center" class="dimmed">Author: wordproject <br />
+Homepage: www.wordproject.org<br />
+Author Email Address: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9bf1e8dbecf4e9ffebe9f4f1fef8efb5f4e9fc">[email&#160;protected]</a></p>
+
+<h3>Disclaimer:</h3>
+<p>As to every real and alleged Defect in the Wordproject website (webpages and audio files),<br />
+<ul>
+<li>(1) the Author and any Distributor disclaims all liability to you for damages, costs and expenses, including legal fees, and</li>
+<li>(2) you have no remedies for negligence or under strict liability, or for breach of warranty or contract, including but not limited to indirect, consequential, punitive, or incidental damages, even if you give notice of the possibility of such damages. </li>
+</ul>
+<p>Wordproject webpages and audio files are provided to you "as-is". No other warranties of any kind, express or implied, are made to you as to the Wordproject webpages or  media files it may contain.<br />
+If any part of the Terms, Conditions, or the Disclaimer are not legally binding, it shall in no wise affect the validity of the other Terms, Conditions, or the Disclaimer for the Wordproject website.</p>
+<p>If you distribute any Bible texts contained in the Wordproject website, then you expressly agree to the following:</p>
+<p>(1) You will indemnify and hold the Author and other Distributors, members, officers, and agents harmless from all liability, cost and expense, including legal fees, that arise by reason of your distribution and either a Defect in the Wordproject Bible texts, or any alteration, modification or addition to the Wordproject webpages by you or for which you are responsible. This provision applies to every distribution of the Wordproject webpages (Bible text only), whether or not for profit, and whether or not under or referencing the Author's name.</p>
+<p><strong>As a Distributor, you agree to the following:</strong></p>
+<p>(1) You will only give exact copies of the Wordproject Bible texts. If you do make substantial modifications to the Bible texts offered by Wordproject for your own purposes, then you will remove any and all reference to the Author or any other Distributor or the Name of the site (Wordproject), before you distribute your new version of the data. Under this condition, you are allowed to adapt the data (text format only!) for your purposes but NOT the audio files. </p>
+<p>(2) You are not authorized to copy the whole Wordproject website, only the Biblical text contained therein. </p>
+<p>(3) You are ONLY allowed to use the audio files for non-profit evangelization (without in APP ads  or for-sale APPs). If you wish to link to our audio, you are obliged to tell us and get our approval. If your case is worthy we coud eventually provide a solution for you. Linking to our audio servers without our express permission is stealing data, therefore a crime.  <font size="2" color="red">Please, do NOT link the audio files </font> you offer in your webpages to our servers! (Wordproaudio, wordpocket, wordfree, etc.)</p>
+<p>(4) You will notify the Author of any defect in the Wordproject website. All audio files made available at wordproject and accessory sites (wordproaudio.com/org, wordpocket.com, wordplanet.net, etc) are to be used for non-profit only and may not be commercialized or sold. (that includes ads and for sale apps) </p>
+<p>(5) You will use the Wordproject webpages, with the audio files linked therein, to promote the Christian faith, and not as a parody or in any other negative manner that would harm the cause of Jesus Christ.<br />
+</p>
+<p>Wordproject</p>
+<p>Write or contact Wordproject  at: </p>
+<blockquote>
+<p>Wordproject Webpage: www.wordproject.org<br />
+<a href="/cdn-cgi/l/email-protection#6c061f2c1b031e081c1e0306090f1842031e0b"><span class="__cf_email__" data-cfemail="6d071e2d1a021f091d1f0207080e1943021f0a">[email&#160;protected]</span></a> </p>
+</blockquote>
+<p class="place">This website is sponsored by the International Biblical Association, an interdenominational multicultural ministry online since <a href="https://www.wordprolog.org/mission/history/index.htm" target="_top">1997</a>.</p> 
+<br />
+</div><!-- header end -->
+</div><!-- options end -->
+</div><!-- ym-wbox end -->
+</div><!-- ym-wrapper end -->
+</div><!-- main end -->
+<div class="ym-wrapper">
+<div class="ym-wbox">
+<div class="alignRight ym-noprint">
+<p><a title="Print this page" href="javascript:window.print()" class="ym-button">&nbsp;<img src="../../bibles/_assets/img/printer.gif" alt="printer" width="25" height="25" align="absbottom" />&nbsp;</a>
+<a class="ym-button" href="#top">&nbsp;<img src="../../bibles/_assets/img/arrow_up.png" alt="arrowup" width="25" height="25" align="absbottom" />&nbsp;</a>
+<!--next-->
+<a class="ym-button" title="Next topic" href="state.htm">&nbsp;<img src="../../bibles/_assets/img/arrow_right.png" alt="arrowright" align="absbottom" />&nbsp;</a></p>
+
+</div>
+</div>
+</div>
+<footer>
+<div class="ym-wrapper">
+<div id="redborder" class="ym-wbox">
+<p class="alignCenter">Wordproject® is a registered name of the <a href="https://www.abiblica.org" target="_top">International Biblical Association</a>, a non-profit intercultural organization.</p>
+<p class="alignCenter ym-noprint">
+<a href="index.htm">Contact </a>|
+<a href="disclaim.htm"> Disclaimer </a>| 
+<a href="state.htm">Statement of Faith</a> | 
+<a href="mstate.htm">Mission</a> | 
+<a href="copyrights.htm">Copyrights</a></p>
+</div>
+</div>
+</footer>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"c819a5c307f74a31accf1a77c1c6a280","spa":2}' crossorigin="anonymous"></script>
+</body>
+
+<script type="text/javascript" src="../../bibles/_assets/js/jquery-1.8.0.min.js"></script>
+<script type="text/javascript" src="../../bibles/_assets/js/soundmanager2.js"></script>
+<script type="text/javascript" src="../../bibles/_assets/js/page-player.js"></script>
+<script type="text/javascript" src="../../bibles/_assets/js/script.js"></script>
+
+<script src="../../bibles/_assets/js/jquery.dropotron.min.js"></script>
+<script src="../../bibles/_assets/js/skel.min.js"></script>
+<script src="../../bibles/_assets/js/skel-viewport.min.js"></script>
+<script src="../../bibles/_assets/js/util.js"></script>
+<script src="../../bibles/_assets/js/_darkmode.js"></script>
+<script src="../../bibles/_assets/js/main.js"></script>
+</html>

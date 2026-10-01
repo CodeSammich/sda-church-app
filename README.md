@@ -52,7 +52,9 @@ licensing decisions and third-party source review live in [docs/LEGAL.md](docs/L
   [Setup steps](docs/operations/native-builds.md#setting-up-the-google-play-service-account).
 - [App Store and Google Play setup](docs/operations/app-store-setup.md): store accounts,
   signing files, and the yearly Apple renewals (membership, fee waiver, certificate).
-  GitHub opens a reminder issue two months before any Apple renewal is due.
+  GitHub opens a reminder issue two months before any Apple renewal is due, and a
+  [yearly checkup](docs/operations/admin-runbook.md#yearly-checkup) issue each January
+  for everything else that's checked once a year.
 - [Store listings and declarations](docs/operations/admin-runbook.md#store-listings-and-declarations):
   where the listing text, screenshots, and every store answer are kept, and what to
   update with each release.

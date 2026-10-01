@@ -15,6 +15,8 @@
 #                         can't be resolved, which the CI workflow arranges; adds the
 #                         "primary host down" scenario
 #   E2E_ONLY              space-separated scenario names to run (default: all)
+#   E2E_PACKAGE           the app ID to test (default: org.nyccsda.app.preview, the
+#                         debug-signed preview build's; org.nyccsda.app for a store build)
 #
 # Prints PASS or FAIL for each scenario, and exits non-zero if any failed.
 set -uo pipefail
@@ -24,7 +26,7 @@ set -uo pipefail
 ADB_BIN="${ADB:-adb}"
 read -r -a ADB_EXTRA <<< "${ADB_ARGS:-}"
 OUT="${E2E_OUTPUT:-e2e-output}"
-PKG=org.nyccsda.app
+PKG="${E2E_PACKAGE:-org.nyccsda.app.preview}"
 mkdir -p "$OUT"
 failures=0
 

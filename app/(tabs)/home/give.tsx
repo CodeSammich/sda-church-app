@@ -1,6 +1,10 @@
 import { VerseHero } from '@/components/VerseHero';
 import { WrappingButton as Button } from '@/components/WrappingButton';
-import { CHURCH_BUILDING_IMAGE_URL, openAdventistGiving } from '@/constants/ExternalLinks';
+import {
+  CHURCH_BUILDING_IMAGE_URL,
+  openAdventistGiving,
+  SHOW_ZELLE_GIVING,
+} from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
@@ -209,46 +213,48 @@ export default function GiveScreen() {
           </Card>
         </View>
 
-        <View style={DocumentStyles.section}>
-          <Text
-            variant="titleLarge"
-            style={[
-              DocumentStyles.sectionTitle,
-              {
-                color: theme.colors.onSurface,
-                borderBottomColor: theme.colors.outlineVariant,
-              },
-            ]}
-          >
-            {labels.zelleSection}
-          </Text>
-          <Card style={[DocumentStyles.card, DocumentStyles.orgCard]} mode="outlined">
-            <Card.Content>
-              <Text
-                variant="labelMedium"
-                style={{ color: theme.colors.onSurfaceVariant }}
-              >
-                {labels.zelleLabel}
-              </Text>
-              <Text
-                variant="titleLarge"
-                style={[DocumentStyles.orgName, { color: theme.colors.onSurface }]}
-              >
-                {labels.zelleTitle}
-              </Text>
-              <Text
-                style={[
-                  DocumentStyles.description,
-                  DocumentStyles.orgDesc,
-                  { color: theme.colors.onSurface },
-                ]}
-                variant="bodyMedium"
-              >
-                {labels.zelleDesc}
-              </Text>
-            </Card.Content>
-          </Card>
-        </View>
+        {SHOW_ZELLE_GIVING && (
+          <View style={DocumentStyles.section}>
+            <Text
+              variant="titleLarge"
+              style={[
+                DocumentStyles.sectionTitle,
+                {
+                  color: theme.colors.onSurface,
+                  borderBottomColor: theme.colors.outlineVariant,
+                },
+              ]}
+            >
+              {labels.zelleSection}
+            </Text>
+            <Card style={[DocumentStyles.card, DocumentStyles.orgCard]} mode="outlined">
+              <Card.Content>
+                <Text
+                  variant="labelMedium"
+                  style={{ color: theme.colors.onSurfaceVariant }}
+                >
+                  {labels.zelleLabel}
+                </Text>
+                <Text
+                  variant="titleLarge"
+                  style={[DocumentStyles.orgName, { color: theme.colors.onSurface }]}
+                >
+                  {labels.zelleTitle}
+                </Text>
+                <Text
+                  style={[
+                    DocumentStyles.description,
+                    DocumentStyles.orgDesc,
+                    { color: theme.colors.onSurface },
+                  ]}
+                  variant="bodyMedium"
+                >
+                  {labels.zelleDesc}
+                </Text>
+              </Card.Content>
+            </Card>
+          </View>
+        )}
 
         <View style={DocumentStyles.section}>
           <Text

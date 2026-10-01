@@ -18,6 +18,8 @@ does and what still needs a person.
 - [Bulletin QR codes](#bulletin-qr-codes)
 - [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script)
 - [The app website (`app.nyccsda.org`)](#the-app-website-appnyccsdaorg)
+- [The Cloudflare account and domain](#the-cloudflare-account-and-domain)
+- [Yearly checkup](#yearly-checkup)
 - [Native app binaries](#native-app-binaries)
 - [Android PR preview APKs](#android-pr-preview-apks)
 - [iOS PR preview builds](#ios-pr-preview-builds)
@@ -104,6 +106,7 @@ Review rules for both pull-request rulesets:
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
 | `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel Mac)` | `ios-pr-preview.yml` | `main` |
+| `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
 
@@ -143,6 +146,31 @@ The jobs that upload to TestFlight and Google Play internal testing use the sepa
 `store-upload` environment, which needs no approval, so they run as soon as the builds
 you approved finish. Why it's separate is in
 [How the credentials are kept apart](native-builds.md#how-the-credentials-are-kept-apart).
+
+### Approving the screenshots
+
+The release pull request's **Screenshots reviewed** check waits the same way, in the
+`screenshot-review` environment. When the iOS preview's comment shows the screenshots:
+
+1. Download them from the comment and look through `screens/ios/` for what the
+   comment lists.
+2. Open the run from the comment, select **Review deployments**, tick
+   **screenshot-review**, and approve. Reject it if something looks wrong, and say what
+   in a comment.
+
+A new push needs a new approval.
+
+**One-time setup** (done once by an admin, under **Settings → Environments → New
+environment**):
+
+- **Name:** `screenshot-review`.
+- **Required reviewers:** the **release-approvers** team, the same as `production`.
+- **Deployment branches and tags:** no restriction. GitHub checks a pull request's run
+  against its merge ref (`refs/pull/…/merge`), not `release/*`, and the environment
+  holds no secrets; the job itself runs only on release pull requests into `main`.
+
+If the environment is missing or has no required reviewers, the check fails and says
+so, rather than passing unreviewed.
 
 ## Shipping a release to `main`
 
@@ -305,6 +333,105 @@ Apple doesn't follow redirects for the file that enables it. That means setting
 `app.nyccsda.org` as the GitHub Pages custom domain, pointing a Cloudflare CNAME at
 `new-york-chinese-seventh-day-adventist.github.io` in place of the redirect rule, and
 changing the web build's base path from `/sda-church-app` to `/`.
+
+## The Cloudflare account and domain
+
+`nyccsda.org` is registered through Cloudflare Registrar, and Cloudflare also runs its
+DNS and the `app.nyccsda.org` redirect. The renewal, about $10 a year, is the app's only
+recurring cost, so the account keeps a card on file. If a renewal fails and the domain
+lapses, the privacy policy, support, and download pages above go down with it.
+
+**Make the card safe to leave on file:**
+
+- **Use a credit card, not a debit card,** so a wrong or unauthorized charge can be
+  disputed with the bank before any church money leaves the account.
+- **Better still, use a virtual card number** locked to Cloudflare with a yearly limit a
+  little above the renewal, such as $15. Anything larger is declined.
+- **Turn on the bank's alert for every charge,** so anything other than the yearly
+  renewal is noticed right away.
+- **Keep the card current and auto-renew on.** Don't remove the card: the domain
+  depends on it.
+- **Add nothing else that can cost money:** no Workers Paid, R2, or other paid or
+  pay-as-you-go product
+  ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
+  Free plans have no overage charges: going over a limit makes requests fail. Nothing
+  but the domain and its DNS runs in this account today. A Cloudflare Worker to hold an
+  API key was designed and put on hold
+  ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241));
+  if one is ever added, it must stay on Workers Free.
+
+**Keep the account recoverable:**
+
+- **Every administrator is a super administrator,** as on every system, so losing one
+  login doesn't lock the church out. The card limit above keeps that safe: even a
+  stolen login can't run up charges.
+- **Every administrator uses two-factor login** with an authenticator app, passkey, or
+  security key, not text messages, and keeps their own backup codes somewhere they'd
+  still have if their phone died.
+- **Use a church address for the account's email,** not a personal one, so renewal
+  notices and Cloudflare's policy emails reach whoever runs technology next.
+
+**Once a year**, with the [yearly checkup](#yearly-checkup) issue:
+
+- Each administrator logs in, which proves the backups work. Remove anyone who has left.
+- The account's billing page lists only the domain registration.
+- The card on file hasn't expired, and auto-renew is on.
+- The Free plan still covers everything in the next section.
+
+### Why only the domain costs money
+
+The card pays for one thing: registering `nyccsda.org`. Cloudflare Registrar charges
+only what the registry and ICANN charge it, with no markup
+([Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)). That's about
+$10 a year for a `.org`, or about $100 paid once for ten years. Everything else the church
+uses runs on Cloudflare's Free plan, which has no usage charges:
+
+- **DNS** for `nyccsda.org`, including the records for the church's Google Workspace
+  email and for Google Search Console;
+- **the `app.nyccsda.org` redirect** to the app website on GitHub Pages;
+- **the HTTPS certificate** for that address, which Cloudflare issues and renews for
+  free ([Universal SSL](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/));
+- **protection from denial-of-service attacks,** unmetered on every plan
+  ([DDoS protection](https://developers.cloudflare.com/ddos-protection/)).
+
+**Why Cloudflare gives this away:** free users are worth more to Cloudflare than they
+cost. Cloudflare says they:
+- expose its network to attacks it learns from;
+- try new features first;
+- make internet providers more willing to exchange traffic with it for free;
+- use capacity that would otherwise sit idle between business peaks.
+
+In 2024 it restated that "our free plan is here to stay"
+([Reaffirming our commitment to free](https://blog.cloudflare.com/cloudflares-commitment-to-free/)).
+
+That's a company's promise, not a contract, so the yearly checkup re-reads these pages.
+If the Free plan ever stops covering something the church uses, decide before the
+change takes effect whether to pay for it or move it elsewhere.
+
+## Yearly checkup
+
+On the first Monday of each January, **Yearly Checkup** (`yearly-checkup.yml`) opens an
+issue titled **Yearly checkup, *year***, assigned to the usernames in
+`MONITOR_ALERT_ASSIGNEES`. It holds one checklist of everything these docs say to
+check once a year, each item linked to the doc that explains it:
+
+- the Cloudflare card, domain renewal, and billing;
+- the Google Cloud project's lack of a billing account;
+- administrator access and two-factor login on every system;
+- the Faith Comes By Hearing key, kept in the IT Admin shared drive;
+- the Apple dates and Google Play's contact details and declarations;
+- the Workspace nonprofit terms;
+- the scheduled workflows.
+
+Work through it, note anything that changed in a comment, and close it. It runs every
+Monday in January, but only the first opens an issue; the others find it and stop.
+Start it by hand from the Actions tab to open one early.
+
+The Apple renewals have their own reminder, 60 days before each date; see
+[Apple signing reminders](#apple-signing-reminders). To add a yearly task, add it to
+`scripts/yearly-checkup.cjs` and to the
+[upkeep calendar](../architecture.md#upkeep-calendar);
+`test/yearly-checkup.test.ts` checks that every link in the checklist still works.
 
 ## Native app binaries
 
@@ -615,6 +742,8 @@ read.
 | Apple distribution certificate and provisioning profile | `production` Environment secrets | Both expire every year, and the Apple fee waiver is reconfirmed at each membership renewal. See [Yearly Apple renewals](app-store-setup.md#yearly-apple-renewals). |
 | Android upload keystore | `production` Environment secrets | Only when Google Play requires a rotation. See [Android rotation and recovery policy](native-builds.md#android-rotation-and-recovery-policy). |
 | App Store Connect API key (`APP_STORE_CONNECT_API_*`) | `store-upload` Environment secrets | It doesn't expire. If it leaks, revoke it under **Users and Access → Integrations** in App Store Connect, create a new one with the **Developer** role, and replace the three secrets. |
+| Card on the Cloudflare account | Cloudflare account billing | Before it expires, since the domain renews automatically. See [The Cloudflare account and domain](#the-cloudflare-account-and-domain). |
+| Faith Comes By Hearing Bible Brain API key | The church's IT Admin shared drive, which only certain administrators can open | Not used yet ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)). Never put it in the app, the repository, an issue, a pull request, or a chat. If it may have leaked, ask FCBH for a new one and replace the stored copy. |
 | Google Play sign-in (`GOOGLE_PLAY_*`) | `store-upload` Environment secrets | Never: it has no key to renew. Keep the Google Cloud project free of billing, with every administrator as an Owner. See [Google Cloud: free only](../architecture.md#google-cloud-free-only). |
 
 Never paste credentials into issues, pull requests, or workflow logs.
@@ -684,8 +813,10 @@ To set up the policy:
 4. **Target** all workflows in the repository.
 5. **Event rules:** tick every event in the list. There's no "all events" option, and
    an event rule is an allowlist: an unticked event stops every workflow that uses it.
-6. After the next release PR, open **Policy insights**, under the policies page, and
-   check that nothing was blocked.
+6. On the next release PR, check that every expected check reports. A blocked event
+   shows up as a check that never starts. (**Policy insights**, which lists blocked
+   runs, needs a paid GitHub plan.) The 0.42.0 release PR (#329) reported all of
+   them.
 
 New workflows need no change to the policy. Only if GitHub adds a new kind of event,
 and a workflow uses it, does that event need ticking here.

@@ -1,0 +1,145 @@
+#!/usr/bin/env node
+
+/**
+ * Lists the church's copies of a WordProject audio Bible on Adventist Connect
+ * and writes its manifest:
+ *
+ *   node scripts/extract-wordproject-audio-manifest.mjs cantonese
+ *   node scripts/extract-wordproject-audio-manifest.mjs rv1909
+ *
+ * The church site's WordPress media list is public, so no HAR or login is
+ * needed. Upload the files first, named CANTONESE_B01C001.mp3 or
+ * RV1909_B01C001.mp3 and so on (see docs/operations/adventist-connect-media.md).
+ * The terms the church relies on are in the WordProject sections of docs/LEGAL.md.
+ */
+
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const MEDIA_API =
+  'https://newyorkchineseny.adventistchurch.org/wp-json/wp/v2/media';
+const RECORDINGS = {
+  cantonese: {
+    prefix: 'CANTONESE',
+    file: 'CantoneseAdventistAudioManifest.ts',
+    constant: 'CANTONESE_ADVENTIST_AUDIO_URLS',
+  },
+  rv1909: {
+    prefix: 'RV1909',
+    file: 'Rv1909AdventistAudioManifest.ts',
+    constant: 'RV1909_ADVENTIST_AUDIO_URLS',
+  },
+};
+const recording = RECORDINGS[process.argv[2]];
+if (!recording) {
+  console.error(
+    `Usage: node scripts/extract-wordproject-audio-manifest.mjs <${Object.keys(RECORDINGS).join('|')}>`,
+  );
+  process.exit(1);
+}
+const { prefix } = recording;
+const EXPECTED_CHAPTERS = 1189;
+const BOOK_CHAPTER_COUNTS = [
+  50, 40, 27, 36, 34, 24, 21, 4, 31, 24, 22, 25, 29, 36, 10, 13, 10, 42,
+  150, 31, 12, 8, 66, 52, 5, 48, 12, 14, 3, 9, 1, 4, 7, 3, 3, 3, 2, 14,
+  4, 28, 16, 24, 21, 28, 16, 16, 13, 6, 6, 4, 4, 5, 3, 6, 4, 3, 1, 13,
+  5, 5, 3, 5, 1, 1, 1, 22,
+];
+const expectedFilenames = new Set(
+  BOOK_CHAPTER_COUNTS.flatMap((chapterCount, bookIndex) =>
+    Array.from({ length: chapterCount }, (_, chapterIndex) =>
+      `${prefix}_B${String(bookIndex + 1).padStart(2, '0')}C${String(
+        chapterIndex + 1,
+      ).padStart(3, '0')}.mp3`,
+    ),
+  ),
+);
+const ASSET_URL_PATTERN = new RegExp(
+  `^https://assets\\.adventistconnect\\.org/newyork2/[^?#]+/(${prefix}_B\\d{2}C\\d{3}\\.mp3)$`,
+);
+// WordPress renames a second upload of the same file to <prefix>_…-1.mp3.
+const RENAMED_DUPLICATE_PATTERN = new RegExp(
+  `/${prefix}_B\\d{2}C\\d{3}-\\d+\\.mp3$`,
+);
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const outputPath = path.join(
+  repoRoot,
+  'constants',
+  recording.file,
+);
+
+const startedAt = Date.now();
+
+const fetchPage = async (page) => {
+  const url = new URL(MEDIA_API);
+  url.searchParams.set('media_type', 'audio');
+  url.searchParams.set('per_page', '100');
+  url.searchParams.set('page', String(page));
+  url.searchParams.set('_fields', 'source_url');
+  // The site caches API responses, which can still list deleted files or miss
+  // new uploads; a unique query string asks for a fresh list.
+  url.searchParams.set('fresh', String(startedAt));
+  const response = await fetch(url, {
+    headers: {
+      'cache-control': 'no-cache',
+      'user-agent': 'NYCCSDA-app-manifest/1.0',
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`${url}: HTTP ${response.status}`);
+  }
+  return {
+    items: await response.json(),
+    totalPages: Number(response.headers.get('x-wp-totalpages') || 1),
+  };
+};
+
+const manifest = new Map();
+const renamedDuplicates = [];
+let totalPages = 1;
+for (let page = 1; page <= totalPages; page += 1) {
+  const result = await fetchPage(page);
+  totalPages = result.totalPages;
+  for (const { source_url: url } of result.items) {
+    if (typeof url !== 'string') continue;
+    if (RENAMED_DUPLICATE_PATTERN.test(url)) {
+      renamedDuplicates.push(url);
+      continue;
+    }
+    const filename = ASSET_URL_PATTERN.exec(url)?.[1];
+    if (!filename) continue;
+    if (!expectedFilenames.has(filename)) {
+      throw new Error(`Not a Bible chapter: ${url}`);
+    }
+    const existing = manifest.get(filename);
+    if (existing && existing !== url) {
+      throw new Error(
+        `${filename} was uploaded twice:\n  ${existing}\n  ${url}\nDelete one in the media library, then run this again.`,
+      );
+    }
+    manifest.set(filename, url);
+  }
+}
+
+if (renamedDuplicates.length > 0) {
+  console.warn(
+    `Ignored ${renamedDuplicates.length} renamed duplicate uploads, which can be deleted from the media library:\n  ${renamedDuplicates.join('\n  ')}`,
+  );
+}
+
+const missing = [...expectedFilenames].filter((name) => !manifest.has(name));
+if (missing.length > 0) {
+  throw new Error(
+    `Expected ${EXPECTED_CHAPTERS} chapters, found ${manifest.size}. Missing ${missing.length}, starting with: ${missing.slice(0, 10).join(', ')}. Refusing to generate an incomplete manifest.`,
+  );
+}
+
+const entries = [...manifest].sort(([left], [right]) => left.localeCompare(right));
+const lines = entries.map(
+  ([filename, url]) => `  ${JSON.stringify(filename)}: ${JSON.stringify(url)},`,
+);
+const source = `// Generated by scripts/extract-wordproject-audio-manifest.mjs ${process.argv[2]}.\n// Contains public media URLs only.\n\nexport const ${recording.constant}: Readonly<Record<string, string>> = Object.freeze({\n${lines.join('\n')}\n});\n`;
+
+await writeFile(outputPath, source);
+console.log(`Wrote ${entries.length} public audio URLs to ${outputPath}`);

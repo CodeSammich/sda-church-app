@@ -1,0 +1,265 @@
+{
+  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the shots to upload, in order. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. See docs/operations/native-builds.md.",
+  "ios": {
+    "device": "iPhone 17 Pro Max"
+  },
+  "variants": {
+    "default": {},
+    "dark": { "theme": "dark" },
+    "large": { "textScale": 1.5 },
+    "xl": { "textScale": 2 },
+    "ios-large-text": { "iosTextSize": "accessibility-large" },
+    "zh": { "language": "zh" },
+    "zh-cn": { "language": "zh-cn" },
+    "es": { "language": "es" },
+    "zh-dark": { "language": "zh", "theme": "dark" },
+    "xl-ios-large-text": { "textScale": 2, "iosTextSize": "accessibility-large" },
+    "es-xl-ios-large-text": { "language": "es", "textScale": 2, "iosTextSize": "accessibility-large" },
+    "max": { "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" }
+  },
+  "screens": [
+    {
+      "name": "home",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380). Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). Vision reads each button's icon as a character (“‹ Share Verse”), so the button rules match anywhere in the line; in Spanish the longer verse pushes the buttons below the shot, so only its heading is checked. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
+      "path": "",
+      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text"],
+      "variantRules": {
+        "xl-ios-large-text": { "mustShowLines": ["\\bShare Verse\\b", "\\bRead Verse\\b"] },
+        "es-xl-ios-large-text": { "mustShowLines": ["^Versículo\\b"] }
+      },
+      "changesDaily": true
+    },
+    {
+      "name": "bible",
+      "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default", "dark", "large"],
+      "mustShowLines": ["^Psalms\\b"]
+    },
+    {
+      "name": "bible-dual",
+      "$comment": "The header's translation button in full: the 文A icon (read as XA), the EN badge, and both names, not cut to B… or C… (#376).",
+      "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
+      "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
+      "variants": ["default", "dark", "large", "xl", "ios-large-text"],
+      "mustShowLines": ["^XA\\b", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
+    },
+    {
+      "name": "bible-dual-back",
+      "$comment": "Opened from Home, so the header also has a back arrow and less room. When it's tight, the translation button gives up its 文A icon first, then the length of its names, then its badges (#376). At 150% and 200% only the icon goes: the EN badge and both full names stay.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=BSB&backTo=%2F",
+      "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
+      "variants": ["default", "large", "xl"],
+      "mustShowLines": ["\\bEN\\b", "BSB", "CUV", "^Psalms\\b"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^XA\\b"] },
+        "large": { "mustNotShowLines": ["\\bXA\\b"] },
+        "xl": { "mustNotShowLines": ["\\bXA\\b"] }
+      }
+    },
+    {
+      "name": "bible-cuv",
+      "$comment": "Mandarin is the default narrator, so the audio button shows 國語.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
+      "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
+      "variants": ["zh", "zh-dark"],
+      "mustShowLines": ["國語", "^\u8a69\u7bc7"]
+    },
+    {
+      "name": "bible-cuv-cantonese",
+      "$comment": "With the Cantonese narrator chosen, the audio button shows 粵語.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
+      "settings": {
+        "dualLanguage": true,
+        "supportingTranslation": "BSB",
+        "pinyin": false,
+        "audioReaders": { "cuv": "粵語 (WordProject)" }
+      },
+      "variants": ["zh"],
+      "mustShowLines": ["粵語", "^\u8a69\u7bc7"]
+    },
+    {
+      "name": "bible-cuv-after-spanish",
+      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373). The interface is English, as when the bug showed, so Vision reads the dock in English first and misses 詩篇; it reads a stale Salmos reliably.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
+      "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
+      "variants": ["default"],
+      "mustNotShowLines": ["Salmos"]
+    },
+    {
+      "name": "bible-cuvs",
+      "$comment": "Simplified characters, so the audio button shows 国语.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cu1",
+      "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
+      "variants": ["zh-cn"],
+      "mustShowLines": ["国语", "^\u8bd7\u7bc7"]
+    },
+    {
+      "name": "bible-pinyin",
+      "path": "bible?bookId=JHN&chapter=3&translationId=cmn_cuv",
+      "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": true },
+      "variants": ["default", "zh", "large"]
+    },
+    {
+      "name": "bible-scrolled",
+      "tabs": false,
+      "$comment": "Opens at John 3:14, so earlier verses sit under the status bar; checks it stays clear.",
+      "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=14&verseEnd=16",
+      "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": true },
+      "variants": ["default", "large", "dark"],
+      "checks": ["statusBarClear"],
+      "mustShowLines": ["^14\\b", "^15\\b", "^16\\b", "^John\\b"]
+    },
+    {
+      "name": "bible-long-chapter",
+      "tabs": false,
+      "$comment": "Psalm 119 from verse 100, for three-digit verse numbers at large text sizes.",
+      "path": "bible?bookId=PSA&chapter=119&translationId=BSB&verseStart=100&verseEnd=100",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default", "xl", "ios-large-text"],
+      "checks": ["statusBarClear"],
+      "mustShowLines": ["^100\\b", "^101\\b", "^102\\b", "^Psalms\\b"]
+    },
+    {
+      "name": "bible-higgaion-selah",
+      "tabs": false,
+      "$comment": "Psalm 9:16 in the BSB ends with \"Higgaion Selah\", plain text after the verse's poetry lines in the HelloAO data. At the default text size the reader shows it right-aligned under the verse, so it must start in the right half of the screen.",
+      "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=16&verseEnd=16",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^16\\b", { "line": "\\bHiggaion Selah", "minLeft": 0.5 }]
+    },
+    {
+      "name": "bible-selah",
+      "tabs": false,
+      "$comment": "Psalm 9:20 in the BSB ends with \"Selah\" alone, right-aligned on its own line, so it must start in the right half of the screen. The rule needs a line starting with Selah, so 9:16's \"Higgaion Selah\" can't satisfy it.",
+      "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=20&verseEnd=20",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^20\\b", { "line": "^Selah\\b", "minLeft": 0.5 }]
+    },
+    {
+      "name": "bible-spanish",
+      "path": "bible?bookId=JHN&chapter=3&translationId=spa_r09",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["es"],
+      "mustShowLines": ["^Juan\\b"]
+    },
+    {
+      "name": "explore",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380). max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\".",
+      "path": "explore",
+      "variants": ["default", "dark", "zh", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max"],
+      "variantRules": {
+        "max": { "mustShowLines": ["^Library\\b"] }
+      }
+    },
+    {
+      "name": "library",
+      "path": "explore/library",
+      "variants": ["default", "dark", "zh", "zh-cn", "es"]
+    },
+    {
+      "name": "library-egw",
+      "path": "explore/library/egw",
+      "variants": ["default", "zh"]
+    },
+    {
+      "name": "library-children",
+      "$comment": "Books by other writers lead the Children shelf, and Ellen G. White's books for adults stay on her own shelf (#391).",
+      "path": "explore/library/children",
+      "variants": ["default", "zh", "zh-cn", "es"],
+      "mustShowLines": ["^Story of the Bible", "^Hurlbut.s Life of"],
+      "mustNotShowLines": [
+        "^Child Guidance", "^Messages to Young", "^Christ.s Object",
+        "兒童教育指南", "儿童教育指南", "告青年", "基督比喻",
+        "^Conducción del", "^Mensajes para los", "^Palabras de Vida"
+      ]
+    },
+    {
+      "name": "library-youth",
+      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391). Its English and Spanish titles wrap, so only their first lines are checked.",
+      "path": "explore/library/youth",
+      "variants": ["default", "zh", "zh-cn", "es"],
+      "mustShowLines": ["^Pastor Hsi"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^The Pilgrim.s\\b"] },
+        "zh": { "mustShowLines": ["天路歷程"] },
+        "zh-cn": { "mustShowLines": ["天路历程"] },
+        "es": { "mustShowLines": ["^El progreso del\\b"] }
+      }
+    },
+    {
+      "name": "sabbath-school",
+      "$comment": "The first children's age group shows every week, in each language (#338).",
+      "path": "sabbath-school",
+      "variants": ["default", "zh", "es"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Beginner \\(ages 1-3\\)"] },
+        "zh": { "mustShowLines": ["幼兒級（1-3歲）"] },
+        "es": { "mustShowLines": ["^Principiantes \\(1-3 años\\)"] }
+      }
+    },
+    {
+      "name": "hymnal-selection",
+      "path": "home/hymnal-selection",
+      "variants": ["default", "zh"]
+    },
+    {
+      "name": "hymnal",
+      "path": "home/english-hymnal",
+      "variants": ["default", "large"]
+    },
+    {
+      "name": "hymnal-chinese",
+      "path": "home/chinese-505-hymnal",
+      "variants": ["zh"]
+    },
+    {
+      "name": "hymn-lookup",
+      "path": "home/hymn-lookup",
+      "variants": ["default"]
+    },
+    {
+      "name": "discover",
+      "path": "home/discover",
+      "variants": ["default", "zh"]
+    },
+    {
+      "name": "about-sda",
+      "path": "home/about-sda",
+      "variants": ["default", "es"]
+    },
+    {
+      "name": "about-my-church",
+      "path": "home/about-my-church",
+      "variants": ["default", "zh"]
+    },
+    {
+      "name": "give",
+      "$comment": "Zelle stays hidden until its address is ready (#392). When shown, its heading sits just above the tab bar.",
+      "path": "home/give",
+      "variants": ["default", "zh", "es"],
+      "mustNotShowLines": ["Zelle", "^Electronic Transfer\\b", "^電子轉賬", "^Transferencia Electrónica"]
+    },
+    {
+      "name": "you",
+      "path": "you",
+      "variants": ["default", "dark", "large", "zh"]
+    },
+    {
+      "name": "privacy",
+      "path": "you/privacy",
+      "variants": ["default"]
+    },
+    {
+      "name": "legal",
+      "path": "you/legal",
+      "variants": ["default"]
+    }
+  ],
+  "appStore": {
+    "en-US": ["home-default", "bible-dual-default", "bible-pinyin-default", "explore-default", "library-default", "bible-dual-dark"],
+    "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark"]
+  }
+}

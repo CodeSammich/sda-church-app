@@ -42,7 +42,12 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { getBottomTabContentHeight } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
-import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import {
+  getBottomTabTextScale,
+  getHeaderFontScale,
+  HEADER_MAX_FONT_SCALE,
+  useGlobalHeaderHeight,
+} from '@/hooks/useGlobalHeaderHeight';
 import {
   ANDROID_AUDIO_GUIDANCE_INTERRUPTION_THRESHOLD,
   getAndroidAppsSettingsIntent,
@@ -65,6 +70,11 @@ import {
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
 } from '@/services/BibleAudioService';
+import {
+  CUV_AUDIO_READERS,
+  getAudioReaderPreferenceKey,
+  WORDPROJECT_CREDITS,
+} from '@/services/BibleAudioSources';
 import type {
   BibleAudioChapterIdentity,
   BibleAudioStatus,
@@ -94,6 +104,11 @@ import {
   isSameChapter,
   type BibleReaderPosition,
 } from '@/services/BibleReaderPosition';
+import {
+  openBibleRequestEmail,
+  openInSystemBrowser,
+  TECHNOLOGY_EMAIL,
+} from '@/constants/ExternalLinks';
 import * as BibleService from '@/services/BibleService';
 import {
   getSavedVerseKey,
@@ -112,6 +127,7 @@ import {
   getBibleDockLayout,
   getBibleDockViewportLayout,
   getBulletinVerseScrollOffset,
+  shouldShortenVerseLabel,
 } from '@/styles/ReaderStyles';
 
 const FOOTER_PADDING_GUTTER = 34;
@@ -132,6 +148,8 @@ const BIBLE_CHAPTER_KEY = 'user-bible-chapter';
 // Keep jumped-to verses below the translation/menu controls instead of
 // positioning them flush against the top edge of the reader.
 const VERSE_SCROLL_TOP_OFFSET = 96;
+// How many times, 250 ms apart, to look for a linked verse's position: 5 s.
+const VERSE_LAYOUT_ATTEMPTS = 20;
 const BIBLE_AUDIO_READERS_KEY = 'user-bible-audio-readers';
 const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
@@ -180,6 +198,7 @@ const uiLabels = {
     chapter: 'Chapter',
     chapterItem: 'Chapter {n}',
     verse: 'Verse',
+    verseShort: 'Vs.',
     verseItem: 'Verse {n}',
     bible: 'Bible',
     footnote: 'Footnote',
@@ -213,6 +232,11 @@ const uiLabels = {
     audioPlayer: 'Bible audio',
     audio: 'Audio',
     narrator: 'Narrator',
+    audioLanguage: 'Audio language',
+    mandarin: 'Mandarin',
+    cantonese: 'Cantonese',
+    cantoneseAudioCredit: 'Cantonese audio: WordProject (wordproject.org)',
+    spanishAudioCredit: 'Spanish audio: WordProject (wordproject.org)',
     chooseNarrator: 'Choose narrator',
     audioSettings: 'Audio settings',
     audioSource: 'Preferred source',
@@ -244,6 +268,8 @@ const uiLabels = {
     pinyin: 'Pinyin',
     showPinyin: 'Show pinyin above Chinese',
     pinyinHelp: 'Generated on this device for Chinese learning translations.',
+    requestTranslation: 'Want another Bible translation or language? Email',
+    requestTranslationPrompt: 'Which Bible translation or language would you like in the app?\n\n',
     dualLanguage: 'Dual-language reading',
     dualLanguageHelp: 'Show a supporting translation beneath each verse.',
     primaryTranslation: 'Primary',
@@ -261,6 +287,7 @@ const uiLabels = {
     chapter: '章節',
     chapterItem: '第 {n} 章',
     verse: '節',
+    verseShort: '節',
     verseItem: '第 {n} 節',
     bible: '聖經',
     footnote: '腳注',
@@ -292,6 +319,11 @@ const uiLabels = {
     audioPlayer: '聖經有聲書',
     audio: '有聲書',
     narrator: '朗讀者',
+    audioLanguage: '朗讀語言',
+    mandarin: '國語',
+    cantonese: '粵語',
+    cantoneseAudioCredit: '粵語錄音：WordProject (wordproject.org)',
+    spanishAudioCredit: '西班牙語錄音：WordProject (wordproject.org)',
     chooseNarrator: '選擇朗讀者',
     audioSettings: '有聲書設定',
     audioSource: '優先音源',
@@ -321,6 +353,8 @@ const uiLabels = {
     pinyin: '拼音',
     showPinyin: '在中文上方顯示拼音',
     pinyinHelp: '在此裝置上為中文學習譯本自動產生。',
+    requestTranslation: '想要其他聖經譯本或語言？請寫信至',
+    requestTranslationPrompt: '您希望 App 加入哪個聖經譯本或語言？\n\n',
     dualLanguage: '雙語閱讀',
     dualLanguageHelp: '在每節經文下方顯示輔助譯本。',
     primaryTranslation: '主要譯本',
@@ -338,6 +372,7 @@ const uiLabels = {
     chapter: '章节',
     chapterItem: '第 {n} 章',
     verse: '节',
+    verseShort: '节',
     verseItem: '第 {n} 节',
     bible: '圣经',
     footnote: '脚注',
@@ -369,6 +404,11 @@ const uiLabels = {
     audioPlayer: '圣经有声书',
     audio: '有声书',
     narrator: '朗读者',
+    audioLanguage: '朗读语言',
+    mandarin: '国语',
+    cantonese: '粤语',
+    cantoneseAudioCredit: '粤语录音：WordProject (wordproject.org)',
+    spanishAudioCredit: '西班牙语录音：WordProject (wordproject.org)',
     chooseNarrator: '选择朗读者',
     audioSettings: '有声书设置',
     audioSource: '优先音源',
@@ -398,6 +438,8 @@ const uiLabels = {
     pinyin: '拼音',
     showPinyin: '在中文上方显示拼音',
     pinyinHelp: '在此设备上为中文学习译本自动生成。',
+    requestTranslation: '想要其他圣经译本或语言？请写信至',
+    requestTranslationPrompt: '您希望 App 加入哪个圣经译本或语言？\n\n',
     dualLanguage: '双语阅读',
     dualLanguageHelp: '在每节经文下方显示辅助译本。',
     primaryTranslation: '主要译本',
@@ -415,6 +457,7 @@ const uiLabels = {
     chapter: 'Capítulo',
     chapterItem: 'Capítulo {n}',
     verse: 'Versículo',
+    verseShort: 'Vers.',
     verseItem: 'Versículo {n}',
     bible: 'Biblia',
     footnote: 'Footnote',
@@ -449,6 +492,11 @@ const uiLabels = {
     audioPlayer: 'Audio de la Biblia',
     audio: 'Audio',
     narrator: 'Narrador',
+    audioLanguage: 'Idioma del audio',
+    mandarin: 'Mandarín',
+    cantonese: 'Cantonés',
+    cantoneseAudioCredit: 'Audio en cantonés: WordProject (wordproject.org)',
+    spanishAudioCredit: 'Audio en español: WordProject (wordproject.org)',
     chooseNarrator: 'Elegir narrador',
     audioSettings: 'Ajustes de audio',
     audioSource: 'Fuente preferida',
@@ -480,6 +528,8 @@ const uiLabels = {
     pinyin: 'Pinyin',
     showPinyin: 'Mostrar pinyin sobre el chino',
     pinyinHelp: 'Generado en este dispositivo para traducciones de aprendizaje en chino.',
+    requestTranslation: '¿Quiere otra traducción o idioma de la Biblia? Escriba a',
+    requestTranslationPrompt: '¿Qué traducción o idioma de la Biblia le gustaría en la app?\n\n',
     dualLanguage: 'Lectura bilingüe',
     dualLanguageHelp: 'Muestra una traducción de apoyo debajo de cada versículo.',
     primaryTranslation: 'Principal',
@@ -508,12 +558,29 @@ export default function BibleScreen() {
     () => createStyles(textScale, bibleUiTextScale),
     [bibleUiTextScale, textScale],
   );
-  const effectiveTextScale = Math.max(1, bibleUiTextScale * osFontScale);
+  // The dock's controls follow the system text size only up to the header's
+  // cap, so "Psalms", the chapter, and "Verse" fit at the largest sizes (#376).
+  // Their text passes the same cap to React Native. The Bible text itself
+  // follows the system size in full.
+  const dockTextScale = Math.max(1, bibleUiTextScale * getHeaderFontScale(osFontScale));
   const measuredBottomTabHeight = useBottomTabHeight();
   const dockLayout = useMemo(
-    () => getBibleDockLayout(viewportWidth, effectiveTextScale),
-    [effectiveTextScale, viewportWidth],
+    () => getBibleDockLayout(viewportWidth, dockTextScale),
+    [dockTextScale, viewportWidth],
   );
+  // The verse pill says "Vs." rather than "Verse" only when the book, chapter,
+  // and verse pills can't all fit at full width, so the book name is cut short
+  // last (#376). Hidden copies measure the book and verse pills in full.
+  const [dockPillsWidth, setDockPillsWidth] = useState(0);
+  const [bookPillWidth, setBookPillWidth] = useState(0);
+  const [chapterPillWidth, setChapterPillWidth] = useState(0);
+  const [versePillWidth, setVersePillWidth] = useState(0);
+  const shortVerseLabel = shouldShortenVerseLabel({
+    rowWidth: dockPillsWidth,
+    bookPillWidth,
+    chapterPillWidth,
+    versePillWidth,
+  });
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight(true);
   const fullscreenEdgeInset =
@@ -525,7 +592,7 @@ export default function BibleScreen() {
   const bottomDockInset = Math.max(insets.bottom, fullscreenEdgeInset);
   const bottomTabContentHeight =
     measuredBottomTabHeight === null
-      ? getBottomTabContentHeight(effectiveTextScale)
+      ? getBottomTabContentHeight(getBottomTabTextScale(textScale, osFontScale))
       : Math.max(0, measuredBottomTabHeight - bottomDockInset);
   const { language, languageSelectionRevision } = useContext(LanguageContext);
   const { menuAnim, setMenuVisible: setGlobalMenuVisible } = useContext(UIStateContext);
@@ -1099,13 +1166,35 @@ export default function BibleScreen() {
     supportedTranslation.id,
     chapterAudioLinks,
   );
-  const savedAudioReader = selectedAudioReaders[supportedTranslation.id];
+  // Choices saved before CUV and CUVS shared one are still read.
+  const audioReaderPreferenceKey = getAudioReaderPreferenceKey(
+    supportedTranslation.id,
+  );
+  const savedAudioReader =
+    selectedAudioReaders[audioReaderPreferenceKey] ??
+    selectedAudioReaders[supportedTranslation.id];
   const selectedAudioReader = chapterAudioLinks?.[savedAudioReader]
     ? savedAudioReader
     : audioReaderEntries[0]?.[0];
   const selectedAudioSource = selectedAudioReader
     ? chapterAudioLinks?.[selectedAudioReader]
     : undefined;
+  // The CUV recordings differ in spoken language, so the audio bar names the
+  // selected language instead of showing a generic narrator icon.
+  const selectedAudioLanguage = selectedAudioReader
+    ? CUV_AUDIO_READERS[selectedAudioReader]
+    : undefined;
+  const getAudioLanguageMark = (reader: {
+    traditional: string;
+    simplified: string;
+  }) =>
+    supportedTranslation.id === 'cmn_cu1' ? reader.simplified : reader.traditional;
+  const wordProjectCredit = selectedAudioReader
+    ? WORDPROJECT_CREDITS[selectedAudioReader]
+    : undefined;
+  const offersAudioLanguages = audioReaderEntries.some(
+    ([reader]) => !!CUV_AUDIO_READERS[reader],
+  );
   const rawSelectedAudioUrls = selectedAudioSource
     ? Array.isArray(selectedAudioSource)
       ? selectedAudioSource
@@ -1634,7 +1723,7 @@ export default function BibleScreen() {
     unloadAudio();
     setSelectedAudioReaders((current) => ({
       ...current,
-      [supportedTranslation.id]: reader,
+      [audioReaderPreferenceKey]: reader,
     }));
   };
 
@@ -1843,10 +1932,15 @@ export default function BibleScreen() {
   // This effect loads the books for the selected translation and sets the current book.
   useEffect(() => {
     if (!isPersistenceLoaded) return;
+    // A link can switch the translation while the saved one's books are still
+    // loading. The new translation's books may come first, from the cache, so
+    // the old list must not replace them when it arrives (#373).
+    let cancelled = false;
 
     const loadBooksAndSetBook = async () => {
       try {
         const fetchedBooks = await BibleService.fetchBooks(supportedTranslation.id);
+        if (cancelled) return;
         setBooks(fetchedBooks);
 
         // Determine the next book based on previous selection or default to Genesis
@@ -1876,10 +1970,13 @@ export default function BibleScreen() {
           );
         });
       } catch (e) {
-        console.error('Error loading books:', e);
+        if (!cancelled) console.error('Error loading books:', e);
       }
     };
     loadBooksAndSetBook();
+    return () => {
+      cancelled = true;
+    };
   }, [supportedTranslation.id, isPersistenceLoaded]);
 
   // Load chapter content
@@ -2386,9 +2483,32 @@ export default function BibleScreen() {
     return () => clearTimeout(timeout);
   }, [chapterData, supportingChapterData]);
 
+  /**
+   * Where to scroll to show a link's verse at `verseY`, or null when no link is
+   * waiting for that verse in the chapter on screen.
+   */
+  const getLinkedVerseScrollY = (verseNumber: number, verseY: number) => {
+    const range = pendingScriptureRange.current;
+    if (
+      !range ||
+      range.start !== verseNumber ||
+      !chapterData ||
+      chapterData.book.id !== paramBookId ||
+      chapterData.chapter.number !== Number(paramChapter) ||
+      chapterData.translation.id !== paramTransId
+    ) {
+      return null;
+    }
+    return paramBackTo === '/home/bulletin'
+      ? getBulletinVerseScrollOffset(verseY, viewportHeight)
+      : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
+  };
+
   // Scrolls to a link's verse, such as the verse of the day. The dual-language
   // text can load after the chapter and make every verse taller, so the verse
   // stays the target, and is scrolled to again, until the reader moves on.
+  // Pinyin, made on the device afterwards, moves it again; the verse's own
+  // onLayout follows that (#358).
   useEffect(() => {
     const range = pendingScriptureRange.current;
     if (
@@ -2411,16 +2531,21 @@ export default function BibleScreen() {
       return;
     }
 
-    const timeout = setTimeout(() => {
+    // A verse far into a long chapter, such as Psalm 119:100 in large text,
+    // can take more than one try to be laid out, so keep checking for a while.
+    let attempts = 0;
+    let timeout: ReturnType<typeof setTimeout>;
+    const scrollToVerse = () => {
       const verseY = versePositions.current[targetVerse.number];
-      if (verseY !== undefined) {
-        const scrollY =
-          paramBackTo === '/home/bulletin'
-            ? getBulletinVerseScrollOffset(verseY, viewportHeight)
-            : Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET);
-        scrollRef.current?.scrollTo({ y: scrollY, animated: true });
+      if (verseY === undefined) {
+        attempts += 1;
+        if (attempts < VERSE_LAYOUT_ATTEMPTS) timeout = setTimeout(scrollToVerse, 250);
+        return;
       }
-    }, 250);
+      const scrollY = getLinkedVerseScrollY(targetVerse.number, verseY);
+      if (scrollY !== null) scrollRef.current?.scrollTo({ y: scrollY, animated: true });
+    };
+    timeout = setTimeout(scrollToVerse, 250);
 
     return () => clearTimeout(timeout);
   }, [
@@ -3073,7 +3198,16 @@ export default function BibleScreen() {
               },
             ]}
             onLayout={(e) => {
-              versePositions.current[content.number] = e.nativeEvent.layout.y;
+              const verseY = e.nativeEvent.layout.y;
+              const previousY = versePositions.current[content.number];
+              versePositions.current[content.number] = verseY;
+              // A linked verse moves when the text above it grows, such as
+              // pinyin made on the device after the chapter loads. Follow it
+              // until the reader drags the page (#358).
+              if (previousY !== undefined && previousY !== verseY) {
+                const scrollY = getLinkedVerseScrollY(content.number, verseY);
+                if (scrollY !== null) scrollRef.current?.scrollTo({ y: scrollY, animated: false });
+              }
             }}
           >
             <View style={ReaderStyles.verseRow}>
@@ -3269,13 +3403,44 @@ export default function BibleScreen() {
       <View style={ReaderStyles.buttonPlaceholder} />
     );
 
+  // A hidden, full-width copy of a dock pill, for measuring.
+  const renderPillMeasure = (label: string, onWidth: (width: number) => void) => (
+    <View
+      aria-hidden
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      pointerEvents="none"
+      onLayout={(event) => onWidth(Math.ceil(event.nativeEvent.layout.width))}
+      style={[
+        ReaderStyles.pill,
+        {
+          borderWidth: 1,
+          minHeight: dockLayout.controlHeight,
+          paddingHorizontal: chipPaddingHorizontal,
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          opacity: 0,
+        },
+      ]}
+    >
+      <Text maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE} numberOfLines={1} style={ReaderStyles.pillText}>
+        {label}
+      </Text>
+      <AppIcon name="chevron-down" size={14} scaleWithText={false} color={theme.colors.primary} />
+    </View>
+  );
+
   const renderChapterSelectors = () => (
     <View
+      onLayout={(event) => setDockPillsWidth(Math.floor(event.nativeEvent.layout.width))}
       style={[
         ReaderStyles.pillsContainer,
         stackChapterControls && styles.stackedPillsContainer,
       ]}
     >
+      {renderPillMeasure(book?.name || '...', setBookPillWidth)}
+      {renderPillMeasure(labels.verse, setVersePillWidth)}
       <TouchableOpacity
         style={[
           ReaderStyles.pill,
@@ -3302,6 +3467,7 @@ export default function BibleScreen() {
         accessibilityLabel={`${labels.book}: ${book?.name || '...'}`}
       >
         <Text
+          maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
           pointerEvents="none"
           numberOfLines={1}
           ellipsizeMode="tail"
@@ -3334,11 +3500,18 @@ export default function BibleScreen() {
             maxWidth: '30%',
           },
         ]}
+        onLayout={(event) => setChapterPillWidth(Math.ceil(event.nativeEvent.layout.width))}
         onPress={() => setModalType('chapter')}
         accessibilityRole="button"
         accessibilityLabel={`${labels.chapter}: ${chapterNum}`}
       >
-        <Text pointerEvents="none" numberOfLines={1} ellipsizeMode="tail" style={ReaderStyles.pillText}>
+        <Text
+          maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+          pointerEvents="none"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={ReaderStyles.pillText}
+        >
           {chapterNum}
         </Text>
         <AppIcon
@@ -3370,8 +3543,14 @@ export default function BibleScreen() {
         accessibilityRole="button"
         accessibilityLabel={labels.verse}
       >
-        <Text pointerEvents="none" numberOfLines={1} ellipsizeMode="tail" style={ReaderStyles.pillText}>
-          {labels.verse}
+        <Text
+          maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+          pointerEvents="none"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={ReaderStyles.pillText}
+        >
+          {shortVerseLabel ? labels.verseShort : labels.verse}
         </Text>
         <AppIcon
           pointerEvents="none"
@@ -3488,6 +3667,25 @@ export default function BibleScreen() {
                 {chapterData.translation.attribution}
               </Text>
             )}
+            {/* WordProject asks for a link to its site and app (docs/LEGAL.md). */}
+            {wordProjectCredit && !loading && (
+              <Text
+                variant="labelSmall"
+                accessibilityRole="link"
+                onPress={() => openInSystemBrowser(wordProjectCredit.url)}
+                style={{
+                  textAlign: 'center',
+                  marginTop: chapterData?.translation.attribution ? 0 : 24,
+                  marginBottom: 20,
+                  opacity: 0.5,
+                  textDecorationLine: 'underline',
+                }}
+              >
+                {wordProjectCredit.language === 'cantonese'
+                  ? labels.cantoneseAudioCredit
+                  : labels.spanishAudioCredit}
+              </Text>
+            )}
           </>
         )}
       </ScrollView>
@@ -3549,6 +3747,7 @@ export default function BibleScreen() {
                   style={styles.selectionIconAction}
                 />
                 <Text
+                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                   accessibilityLiveRegion="polite"
                   numberOfLines={2}
                   style={[styles.selectionCount, { color: theme.colors.onBackground }]}
@@ -3604,8 +3803,14 @@ export default function BibleScreen() {
                 <TouchableOpacity
                   onPress={() => setAudioSettingsVisible(true)}
                   accessibilityRole="button"
-                  accessibilityLabel={labels.audioSettings}
-                  accessibilityHint={`${labels.narrator}, ${labels.audioSource}`}
+                  accessibilityLabel={
+                    selectedAudioLanguage
+                      ? `${labels.audioSettings}, ${labels.audioLanguage}: ${labels[selectedAudioLanguage.language]}`
+                      : labels.audioSettings
+                  }
+                  accessibilityHint={`${
+                    offersAudioLanguages ? labels.audioLanguage : labels.narrator
+                  }, ${labels.audioSource}`}
                   style={[
                     ReaderStyles.audioSideControl,
                     dockLayout.stackControls && {
@@ -3619,13 +3824,28 @@ export default function BibleScreen() {
                     },
                   ]}
                 >
-                  <AppIcon
-                    pointerEvents="none"
-                    name="account-voice"
-                    size={24}
-                    textScale={bibleUiTextScale}
-                    color={theme.colors.onSurface}
-                  />
+                  {selectedAudioLanguage ? (
+                    <Text
+                      maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                      pointerEvents="none"
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      style={[
+                        styles.audioLanguageMark,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      {getAudioLanguageMark(selectedAudioLanguage)}
+                    </Text>
+                  ) : (
+                    <AppIcon
+                      pointerEvents="none"
+                      name="account-voice"
+                      size={24}
+                      textScale={bibleUiTextScale}
+                      color={theme.colors.onSurface}
+                    />
+                  )}
                 </TouchableOpacity>
 
                 <View style={ReaderStyles.audioTransportControls}>
@@ -3705,6 +3925,7 @@ export default function BibleScreen() {
                 ]}
               >
                 <Text
+                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                   style={[
                     ReaderStyles.audioTimeText,
                     ReaderStyles.audioElapsedTimeText,
@@ -3796,6 +4017,7 @@ export default function BibleScreen() {
                   <ActivityIndicator size={12} color={theme.colors.tertiary} />
                 ) : (
                   <Text
+                    maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                     style={[
                       ReaderStyles.audioTimeText,
                       { color: theme.colors.onSurfaceVariant },
@@ -3839,16 +4061,25 @@ export default function BibleScreen() {
                   { color: theme.colors.onSurface },
                 ]}
               >
-                {labels.narrator}
+                {offersAudioLanguages ? labels.audioLanguage : labels.narrator}
               </Text>
               {audioReaderEntries.map(([reader]) => {
                 const isSelected = reader === selectedAudioReader;
-                const readerLabel = getAudioReaderLabel(reader);
+                const audioLanguage = CUV_AUDIO_READERS[reader];
+                // Chinese interfaces show the mark alone; others add the name.
+                const readerLabel = audioLanguage
+                  ? language === 'zh' || language === 'zh-cn'
+                    ? getAudioLanguageMark(audioLanguage)
+                    : `${getAudioLanguageMark(audioLanguage)} ${labels[audioLanguage.language]}`
+                  : getAudioReaderLabel(reader);
+                const readerCredit = audioLanguage?.credit;
                 return (
                   <TouchableOpacity
                     key={reader}
                     accessibilityRole="button"
-                    accessibilityLabel={readerLabel}
+                    accessibilityLabel={
+                      readerCredit ? `${readerLabel}, ${readerCredit}` : readerLabel
+                    }
                     accessibilityState={{ selected: isSelected }}
                     onPress={() => selectAudioReader(reader)}
                     style={styles.pressRow}
@@ -3860,16 +4091,28 @@ export default function BibleScreen() {
                       textScale={bibleUiTextScale}
                       color={theme.colors.onSurface}
                     />
-                    <Text
-                      style={[
-                        styles.pressRowText,
-                        isSelected
-                          ? { color: theme.colors.primary, fontWeight: '700' }
-                          : { color: theme.colors.onSurface },
-                      ]}
-                    >
-                      {readerLabel}
-                    </Text>
+                    <View style={styles.pressRowLabel}>
+                      <Text
+                        style={[
+                          styles.pressRowTitle,
+                          isSelected
+                            ? { color: theme.colors.primary, fontWeight: '700' }
+                            : { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        {readerLabel}
+                      </Text>
+                      {readerCredit && (
+                        <Text
+                          style={[
+                            styles.pressRowCaption,
+                            { color: theme.colors.onSurfaceVariant },
+                          ]}
+                        >
+                          {readerCredit}
+                        </Text>
+                      )}
+                    </View>
                     {isSelected && (
                       <AppIcon
                         pointerEvents="none"
@@ -4808,6 +5051,23 @@ export default function BibleScreen() {
                             accessibilityLabel={labels.showPinyin}
                           />
                         </View>
+                        <Divider />
+                        {/* Requests set which languages come next (#241, #344). */}
+                        <TouchableOpacity
+                          accessibilityRole="link"
+                          onPress={() => openBibleRequestEmail(labels.requestTranslationPrompt)}
+                          style={styles.pinyinPreferenceRow}
+                        >
+                          <Text
+                            style={[
+                              styles.pinyinPreferenceHelp,
+                              { color: theme.colors.onSurfaceVariant },
+                            ]}
+                          >
+                            {labels.requestTranslation}{' '}
+                            <Text style={{ color: theme.colors.primary }}>{TECHNOLOGY_EMAIL}</Text>
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     ) : undefined
                   }
@@ -5094,6 +5354,24 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       minWidth: 0,
       fontSize: scaleTypographyMetric(16, uiTextScale),
       lineHeight: scaleTypographyMetric(22, uiTextScale),
+    },
+    pressRowLabel: {
+      flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
+    },
+    pressRowTitle: {
+      fontSize: scaleTypographyMetric(16, uiTextScale),
+      lineHeight: scaleTypographyMetric(22, uiTextScale),
+    },
+    pressRowCaption: {
+      fontSize: scaleTypographyMetric(13, uiTextScale),
+      lineHeight: scaleTypographyMetric(18, uiTextScale),
+    },
+    audioLanguageMark: {
+      fontSize: scaleTypographyMetric(16, uiTextScale),
+      lineHeight: scaleTypographyMetric(20, uiTextScale),
+      fontWeight: '700',
     },
     pinyinPreferenceRow: {
       minHeight: 64,

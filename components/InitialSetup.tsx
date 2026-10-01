@@ -264,7 +264,9 @@ const SetupAction = ({
 export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const { language, setLanguage } = useContext(LanguageContext);
   const { setThemeMode, themeMode } = useContext(ThemeContext);
-  const { setTextScale, textScale } = useTextSize();
+  // The chosen size, which a very large phone text size can reduce when drawn.
+  const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
+  const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight(0.9);
   const { width: viewportWidth } = useWindowDimensions();
