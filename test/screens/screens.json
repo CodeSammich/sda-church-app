@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match, mustNotShowLines ones that no line may match, variantRules more of either for one variant, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the shots to upload, in order. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the shots to upload, in order. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -123,20 +123,20 @@
     {
       "name": "bible-higgaion-selah",
       "tabs": false,
-      "$comment": "Psalm 9:16 in the BSB ends with \"Higgaion Selah\", plain text after the verse's poetry lines in the HelloAO data, which the reader shows right-aligned under the verse.",
+      "$comment": "Psalm 9:16 in the BSB ends with \"Higgaion Selah\", plain text after the verse's poetry lines in the HelloAO data. At the default text size the reader shows it right-aligned under the verse, so it must start in the right half of the screen.",
       "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=16&verseEnd=16",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
-      "mustShowLines": ["^16\\b", "\\bHiggaion Selah"]
+      "mustShowLines": ["^16\\b", { "line": "\\bHiggaion Selah", "minLeft": 0.5 }]
     },
     {
       "name": "bible-selah",
       "tabs": false,
-      "$comment": "Psalm 9:20 in the BSB ends with \"Selah\" alone, shown on its own line. The rule needs a line starting with Selah, so 9:16's \"Higgaion Selah\" can't satisfy it.",
+      "$comment": "Psalm 9:20 in the BSB ends with \"Selah\" alone, right-aligned on its own line, so it must start in the right half of the screen. The rule needs a line starting with Selah, so 9:16's \"Higgaion Selah\" can't satisfy it.",
       "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=20&verseEnd=20",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
-      "mustShowLines": ["^20\\b", "^Selah\\b"]
+      "mustShowLines": ["^20\\b", { "line": "^Selah\\b", "minLeft": 0.5 }]
     },
     {
       "name": "bible-spanish",

@@ -175,16 +175,27 @@ describe('screen rules', () => {
     ]);
   });
 
-  it("checks Psalm 9's Higgaion Selah and Selah in the BSB", () => {
+  it("checks Psalm 9's Higgaion Selah and Selah sit on the right, in the BSB", () => {
     const at16 = shot('bible-higgaion-selah-default');
     const at20 = shot('bible-selah-default');
     const verse = line('Verse v', 0.95);
-    expect(checkShot(at16, [line('16 The LORD is known by the justice', 0.2), line('Higgaion Selah2', 0.3), verse])).toEqual([]);
-    expect(checkShot(at16, [line('16 The LORD is known by the justice', 0.2), verse])).toEqual(['no line matches /\\bHiggaion Selah/']);
-    expect(checkShot(at20, [line('20 Lay terror upon them, O LORD;', 0.2), line('Selah', 0.3), verse])).toEqual([]);
+    // A line at a given left edge, as a fraction of the screen's width.
+    const at = (text: string, y: number, left: number): Line => ({ text, box: [left, y, 0.3, 0.02] });
+    const verse16 = at('16 The LORD is known by the justice', 0.2, 0.05);
+    const verse20 = at('20 Lay terror upon them, O LORD;', 0.2, 0.05);
+    // Right-aligned, as the reader shows them at the default text size.
+    expect(checkShot(at16, [verse16, at('Higgaion Selah2', 0.3, 0.68), verse])).toEqual([]);
+    expect(checkShot(at20, [verse20, at('Selah', 0.3, 0.86), verse])).toEqual([]);
+    // Left-aligned, or missing.
+    expect(checkShot(at16, [verse16, at('Higgaion Selah2', 0.3, 0.1), verse])).toEqual([
+      '/\\bHiggaion Selah/ starts 10% of the way across, not at least 50%',
+    ]);
+    expect(checkShot(at20, [verse20, at('Selah', 0.3, 0.12), verse])).toEqual([
+      '/^Selah\\b/ starts 12% of the way across, not at least 50%',
+    ]);
+    expect(checkShot(at16, [verse16, verse])).toEqual(['no line matches /\\bHiggaion Selah/']);
     // 9:16's line can't stand in for 9:20's lone Selah.
-    expect(checkShot(at20, [line('20 Lay terror upon them, O LORD;', 0.2), line('Higgaion Selah', 0.1), verse]))
-      .toEqual(['no line matches /^Selah\\b/']);
+    expect(checkShot(at20, [verse20, at('Higgaion Selah', 0.1, 0.68), verse])).toEqual(['no line matches /^Selah\\b/']);
   });
 
   it('reads each shot in its language', () => {
