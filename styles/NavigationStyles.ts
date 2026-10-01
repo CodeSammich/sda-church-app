@@ -4,6 +4,7 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { getBottomTabContentHeight } from '@/constants/Layout';
+import { getBottomTabTextScale } from '@/hooks/useGlobalHeaderHeight';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useMemo } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
@@ -36,7 +37,7 @@ export const createNavigationStyles = (
   contentContainer: {
     padding: 20, // Preference: explore/index.tsx
     paddingBottom:
-      getBottomTabContentHeight(fontScale * textScale) + bottomInset + 24,
+      getBottomTabContentHeight(getBottomTabTextScale(textScale, fontScale)) + bottomInset + 24,
   },
   heroHeader: {
     // Stretch against the ScrollView content width on native Android. A

@@ -12,20 +12,24 @@
     "zh": { "language": "zh" },
     "zh-cn": { "language": "zh-cn" },
     "es": { "language": "es" },
-    "zh-dark": { "language": "zh", "theme": "dark" }
+    "zh-dark": { "language": "zh", "theme": "dark" },
+    "max": { "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" },
+    "es-max": { "language": "es", "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" }
   },
   "screens": [
     {
       "name": "home",
+      "$comment": "max and es-max: the app at 200% with the iPhone's largest text, where the tab labels used to wrap (#380). The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar.",
       "path": "",
-      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es"],
+      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "max", "es-max"],
       "changesDaily": true
     },
     {
       "name": "bible",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": false, "pinyin": false },
-      "variants": ["default", "dark", "large"]
+      "variants": ["default", "dark", "large"],
+      "mustShowLines": ["^Psalms\\b"]
     },
     {
       "name": "bible-dual",
@@ -33,7 +37,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text"],
-      "mustShowLines": ["^XA\\b", "\\bEN\\b", "BSB", "CUV"]
+      "mustShowLines": ["^XA\\b", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
     },
     {
       "name": "bible-dual-back",
@@ -41,7 +45,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB&backTo=%2F",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "large", "xl"],
-      "mustShowLines": ["\\bEN\\b", "BSB", "CUV"],
+      "mustShowLines": ["\\bEN\\b", "BSB", "CUV", "^Psalms\\b"],
       "variantRules": {
         "default": { "mustShowLines": ["^XA\\b"] },
         "large": { "mustNotShowLines": ["\\bXA\\b"] },
@@ -54,7 +58,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh", "zh-dark"],
-      "mustShowLines": ["國語"]
+      "mustShowLines": ["國語", "^\u8a69\u7bc7"]
     },
     {
       "name": "bible-cuv-cantonese",
@@ -67,7 +71,16 @@
         "audioReaders": { "cuv": "粵語 (WordProject)" }
       },
       "variants": ["zh"],
-      "mustShowLines": ["粵語"]
+      "mustShowLines": ["粵語", "^\u8a69\u7bc7"]
+    },
+    {
+      "name": "bible-cuv-after-spanish",
+      "$comment": "The Spanish Bible was open with the CUV underneath, then a link opens the CUV. Its book names must replace the Spanish ones, which once stayed until a restart (#373).",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
+      "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^詩篇"],
+      "mustNotShowLines": ["Salmos"]
     },
     {
       "name": "bible-cuvs",
@@ -75,7 +88,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cu1",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh-cn"],
-      "mustShowLines": ["国语"]
+      "mustShowLines": ["国语", "^\u8bd7\u7bc7"]
     },
     {
       "name": "bible-pinyin",
@@ -91,7 +104,7 @@
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": true },
       "variants": ["default", "large", "dark"],
       "checks": ["statusBarClear"],
-      "mustShowLines": ["^14\\b", "^15\\b", "^16\\b"]
+      "mustShowLines": ["^14\\b", "^15\\b", "^16\\b", "^John\\b"]
     },
     {
       "name": "bible-long-chapter",
@@ -101,18 +114,20 @@
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default", "xl", "ios-large-text"],
       "checks": ["statusBarClear"],
-      "mustShowLines": ["^100\\b", "^101\\b", "^102\\b"]
+      "mustShowLines": ["^100\\b", "^101\\b", "^102\\b", "^Psalms\\b"]
     },
     {
       "name": "bible-spanish",
       "path": "bible?bookId=JHN&chapter=3&translationId=spa_r09",
       "settings": { "dualLanguage": false, "pinyin": false },
-      "variants": ["es"]
+      "variants": ["es"],
+      "mustShowLines": ["^Juan\\b"]
     },
     {
       "name": "explore",
+      "$comment": "max and es-max check the tab labels at the largest text, as on Home (#380).",
       "path": "explore",
-      "variants": ["default", "dark", "zh", "es"]
+      "variants": ["default", "dark", "zh", "es", "max", "es-max"]
     },
     {
       "name": "library",
@@ -131,8 +146,14 @@
     },
     {
       "name": "sabbath-school",
+      "$comment": "The first children's age group shows every week, in each language (#338).",
       "path": "sabbath-school",
-      "variants": ["default", "zh", "es"]
+      "variants": ["default", "zh", "es"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Beginner \\(ages 1-3\\)"] },
+        "zh": { "mustShowLines": ["幼兒級（1-3歲）"] },
+        "es": { "mustShowLines": ["^Principiantes \\(1-3 años\\)"] }
+      }
     },
     {
       "name": "hymnal-selection",

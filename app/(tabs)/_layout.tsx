@@ -9,11 +9,8 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { BottomTabHeightContext } from '@/constants/BottomTabHeightContext';
-import {
-  DESIGN_TOKENS,
-  getBottomTabContentHeight,
-  getMeasuredTextLineCount,
-} from '@/constants/Layout';
+import { DESIGN_TOKENS, getBottomTabContentHeight } from '@/constants/Layout';
+import { getBottomTabTextScale, HEADER_MAX_FONT_SCALE } from '@/hooks/useGlobalHeaderHeight';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { BottomTabBar } from 'expo-router/js-tabs';
@@ -47,36 +44,25 @@ function TabBarIcon(props: {
   );
 }
 
+// One line in every language and at every text size (#380): the label follows
+// the app's and the phone's text size only up to the tab bar's caps, so the
+// longest label fits its tab. Android's adjustsFontSizeToFit ignores
+// minimumFontScale and shrank the labels to dots, so it isn't used.
 function TabBarLabel(props: {
   color: string;
-  fontScale: number;
   label: string;
-  onLineCountChange: (lineCount: number) => void;
   textScale: TextScale;
 }) {
-  const lineHeight = scaleTypographyMetric(
-    DESIGN_TOKENS.BOTTOM_TAB_LABEL_LINE_HEIGHT,
-    props.textScale,
-  );
-  const measuredLineHeight = lineHeight * Math.max(1, props.fontScale);
+  const labelScale = getBottomTabIconTextScale(props.textScale);
   return (
     <Text
-      onLayout={(event) =>
-        props.onLineCountChange(
-          getMeasuredTextLineCount(
-            event.nativeEvent.layout.height,
-            measuredLineHeight,
-          ),
-        )
-      }
+      maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+      numberOfLines={1}
       style={{
         color: props.color,
         flexShrink: 1,
-        fontSize: scaleTypographyMetric(
-          DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE,
-          props.textScale,
-        ),
-        lineHeight,
+        fontSize: scaleTypographyMetric(DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE, labelScale),
+        lineHeight: scaleTypographyMetric(DESIGN_TOKENS.BOTTOM_TAB_LABEL_LINE_HEIGHT, labelScale),
         paddingBottom: DESIGN_TOKENS.BOTTOM_TAB_LABEL_BOTTOM_PADDING,
         textAlign: 'center',
         width: '100%',
@@ -92,17 +78,7 @@ export default function TabLayout() {
   const pathname = usePathname();
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
-  const [tabLabelLineCounts, setTabLabelLineCounts] = useState<
-    Record<string, number>
-  >({});
-  const maxTabLabelLines = Math.max(
-    1,
-    ...Object.values(tabLabelLineCounts),
-  );
-  const tabContentHeight = getBottomTabContentHeight(
-    Math.max(1, fontScale * textScale),
-    maxTabLabelLines,
-  );
+  const tabContentHeight = getBottomTabContentHeight(getBottomTabTextScale(textScale, fontScale));
   const { language } = useContext(LanguageContext);
   const { onPassiveCheck } = useContext(UpdateContext);
   const insets = useSafeAreaInsets();
@@ -144,14 +120,6 @@ export default function TabLayout() {
     const nextHeight = event.nativeEvent.layout.height;
     setTabBarHeight((currentHeight) =>
       currentHeight === nextHeight ? currentHeight : nextHeight,
-    );
-  };
-
-  const reportTabLabelLines = (tabName: string, lineCount: number) => {
-    setTabLabelLineCounts((currentCounts) =>
-      currentCounts[tabName] === lineCount
-        ? currentCounts
-        : { ...currentCounts, [tabName]: lineCount },
     );
   };
 
@@ -265,11 +233,7 @@ export default function TabLayout() {
             tabBarLabel: ({ color }) => (
               <TabBarLabel
                 color={String(color)}
-                fontScale={fontScale}
                 label={labels.home}
-                onLineCountChange={(lineCount) =>
-                  reportTabLabelLines('home', lineCount)
-                }
                 textScale={textScale}
               />
             ),
@@ -305,11 +269,7 @@ export default function TabLayout() {
             tabBarLabel: ({ color }) => (
               <TabBarLabel
                 color={String(color)}
-                fontScale={fontScale}
                 label={labels.bible}
-                onLineCountChange={(lineCount) =>
-                  reportTabLabelLines('bible', lineCount)
-                }
                 textScale={textScale}
               />
             ),
@@ -340,11 +300,7 @@ export default function TabLayout() {
             tabBarLabel: ({ color }) => (
               <TabBarLabel
                 color={String(color)}
-                fontScale={fontScale}
                 label={labels.explore}
-                onLineCountChange={(lineCount) =>
-                  reportTabLabelLines('explore', lineCount)
-                }
                 textScale={textScale}
               />
             ),
@@ -384,11 +340,7 @@ export default function TabLayout() {
               tabBarLabel: ({ color }: { color: string }) => (
                 <TabBarLabel
                   color={color}
-                  fontScale={fontScale}
                   label={labels.you}
-                  onLineCountChange={(lineCount) =>
-                    reportTabLabelLines('you', lineCount)
-                  }
                   textScale={textScale}
                 />
               ),

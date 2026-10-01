@@ -93,17 +93,18 @@ describe('screen rules', () => {
   it('uses each screen’s own rules, even when names share a start', () => {
     // "bible-dual-default" starts with "bible-", but belongs to bible-dual.
     expect(shot('bible-scrolled-default').tabs).toBe(false);
-    expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^16\\b']);
+    expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^16\\b', '^John\\b']);
     expect(shot('explore-default').mustShowLines).toBeUndefined();
     expect(shot('bible-default').tabs).toBeUndefined();
   });
 
   it('checks the spoken language on the CUV audio button', () => {
-    const tabs = [line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944)];
+    // The dock's book pill reads 詩篇 too.
+    const tabs = [line('首頁', 0.944), line('聖經', 0.944), line('探索', 0.944), line('詩篇', 0.86)];
     expect(checkShot(shot('bible-cuv-cantonese-zh'), [...tabs, line('粵語', 0.88)])).toEqual([]);
     expect(checkShot(shot('bible-cuv-cantonese-zh'), [...tabs, line('國語', 0.88)])).toEqual(['no line matches /粵語/']);
     // Simplified characters for the Simplified edition.
-    expect(checkShot(shot('bible-cuvs-zh-cn'), [line('首页', 0.944), line('圣经', 0.944), line('探索', 0.944), line('國語', 0.88)]))
+    expect(checkShot(shot('bible-cuvs-zh-cn'), [line('首页', 0.944), line('圣经', 0.944), line('探索', 0.944), line('诗篇', 0.86), line('國語', 0.88)]))
       .toEqual(['no line matches /国语/']);
   });
 
@@ -132,6 +133,29 @@ describe('screen rules', () => {
     ]);
     // At the default size the icon must still show.
     expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^XA\\b/']);
+  });
+
+  it('catches tab labels that wrap, or rise out of an overgrown tab bar, at the largest text (#380)', () => {
+    const tabs = (labels: string[], y: number) => labels.map((label) => line(label, y));
+    expect(checkShot(shot('explore-max'), tabs(['Home', 'Bible', 'Explore', 'You'], 0.944))).toEqual([]);
+    // "Explore" wrapped onto two lines, as on Android before #380.
+    expect(
+      checkShot(shot('explore-max'), [...tabs(['Home', 'Bible', 'Explor', 'You'], 0.93), line('e', 0.96)]),
+    ).toEqual(['tab labels missing: Explore']);
+    // An overgrown tab bar: the labels sit above the tab bar's area.
+    expect(checkShot(shot('home-es-max'), tabs(['Inicio', 'Biblia', 'Explorar', 'Tú'], 0.86))).toEqual([
+      'tab labels missing: Inicio, Biblia, Explorar, Tú',
+    ]);
+  });
+
+  it("catches the previous Bible's book names after a link opens the CUV (#373)", () => {
+    const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.944));
+    const after = shot('bible-cuv-after-spanish-default');
+    expect(checkShot(after, [...tabs, line('詩篇 v', 0.86), line('Verse v', 0.86)])).toEqual([]);
+    expect(checkShot(after, [...tabs, line('Salmos v', 0.86), line('Verse v', 0.86)])).toEqual([
+      'no line matches /^詩篇/',
+      '"Salmos v" matches /Salmos/, which must not show',
+    ]);
   });
 
   it('reads each shot in its language', () => {

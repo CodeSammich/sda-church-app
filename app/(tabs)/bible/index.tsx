@@ -43,6 +43,7 @@ import { getBottomTabContentHeight } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
 import {
+  getBottomTabTextScale,
   getHeaderFontScale,
   HEADER_MAX_FONT_SCALE,
   useGlobalHeaderHeight,
@@ -557,7 +558,6 @@ export default function BibleScreen() {
     () => createStyles(textScale, bibleUiTextScale),
     [bibleUiTextScale, textScale],
   );
-  const effectiveTextScale = Math.max(1, bibleUiTextScale * osFontScale);
   // The dock's controls follow the system text size only up to the header's
   // cap, so "Psalms", the chapter, and "Verse" fit at the largest sizes (#376).
   // Their text passes the same cap to React Native. The Bible text itself
@@ -592,7 +592,7 @@ export default function BibleScreen() {
   const bottomDockInset = Math.max(insets.bottom, fullscreenEdgeInset);
   const bottomTabContentHeight =
     measuredBottomTabHeight === null
-      ? getBottomTabContentHeight(effectiveTextScale)
+      ? getBottomTabContentHeight(getBottomTabTextScale(textScale, osFontScale))
       : Math.max(0, measuredBottomTabHeight - bottomDockInset);
   const { language, languageSelectionRevision } = useContext(LanguageContext);
   const { menuAnim, setMenuVisible: setGlobalMenuVisible } = useContext(UIStateContext);
