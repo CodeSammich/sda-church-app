@@ -251,7 +251,9 @@ comes forward, follow their terms. WordProject has no Haitian Creole
 ([#345](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/345)) or Tibetan ([#150](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/150)) audio.
 
 Dated copies of WordProject's pages for these languages and for Spanish are in
-[rights-records/audio-sources-2026-10-01](rights-records/audio-sources-2026-10-01/README.md).
+[rights-records/audio-sources-2026-10-01](rights-records/audio-sources-2026-10-01/README.md),
+with [a summary of every file's tags](rights-records/audio-sources-2026-10-01/tag-summaries.md)
+for each language.
 Blagovestnik's pages include a personal email address, so their copies are in the
 church's IT Admin shared drive instead. The statement above was retrieved from
 http://www.blagovestnik.org/ukraine/ukraine.htm on October 1, 2026, when the page's

@@ -12,6 +12,9 @@ All six pages were retrieved between 2026-10-01 01:22:57 and 01:22:58 UTC.
 - **[printable-copy.html](printable-copy.html)** has the visible text of all six pages
   in one printable file, with each page's address, retrieval time, and fingerprint.
 - **The other files** are the pages exactly as WordProject's server sent them.
+- **[tag-summaries.md](tag-summaries.md)** summarizes what every downloaded file's tags
+  say about who made and owns each recording: the evidence that the kept recordings
+  name no rights holder, and that the Arabic and KJV recordings do.
 
 | File | Page | Server's last-modified date | SHA-256 |
 | --- | --- | --- | --- |
