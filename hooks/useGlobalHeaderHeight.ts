@@ -50,33 +50,35 @@ export const getGlobalHeaderHeightForScale = (
 };
 
 /**
- * Whether the Bible reader's translation button needs a header row of its own:
- * only when it can't sit beside the icon buttons, or would have to cut off a
- * translation name to fit its maximum width. Measured widths are 0 until laid
- * out, so the controls start on one row.
+ * Whether the Bible reader's translation button needs a header row of its own.
+ * It shares a row with the icon buttons, cutting its translation names short
+ * with "…" when the row is tight, and stacks only when even its shortest form,
+ * each name cut to its first letter, can't fit (#376). Measured widths are 0
+ * until laid out, so the controls start on one row.
  */
 export const shouldStackBibleControls = ({
   rowWidth,
-  translationButtonWidth,
+  translationButtonMinWidth,
   iconButtonCount,
   iconButtonSize,
   gap = 8,
   trailingPadding = 12,
-  translationButtonMaxWidth = 240,
 }: {
   rowWidth: number;
-  translationButtonWidth: number;
+  translationButtonMinWidth: number;
   iconButtonCount: number;
   iconButtonSize: number;
   gap?: number;
   trailingPadding?: number;
-  translationButtonMaxWidth?: number;
 }) =>
   rowWidth > 0 &&
-  translationButtonWidth > 0 &&
-  (translationButtonWidth > translationButtonMaxWidth ||
-    translationButtonWidth + iconButtonCount * (iconButtonSize + gap) + trailingPadding >
-      rowWidth);
+  translationButtonMinWidth > 0 &&
+  translationButtonMinWidth + iconButtonCount * (iconButtonSize + gap) + trailingPadding >
+    rowWidth;
+
+/** A translation name cut to its first letter, the shortest the header shows it. */
+export const shortestTranslationLabel = (label: string) =>
+  label.length > 1 ? `${Array.from(label)[0]}…` : label;
 
 /**
  * Whether a page's hero image is under the status bar, where the header leaves

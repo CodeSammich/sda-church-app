@@ -16,6 +16,7 @@ import {
   getHeaderFontScale,
   HEADER_MAX_FONT_SCALE,
   isHeroUnderStatusBar,
+  shortestTranslationLabel,
   shouldStackBibleControls,
 } from '@/hooks/useGlobalHeaderHeight';
 import {
@@ -240,18 +241,19 @@ export const GlobalHeader = (props: any) => {
   const onBibleVerseSearchPress = props.options?.onBibleVerseSearchPress as
     | ((verseNumber: number) => void)
     | undefined;
-  // The translation button shares a row with the icon buttons whenever they
-  // fit, measured from the button's natural width; it only takes its own row
-  // when they can't. A fixed text-size threshold used to stack them even when
-  // they fit, as on an iPhone with larger system text.
+  // The translation button shares a row with the icon buttons, cutting its
+  // translation names short with "…" when the row is tight. It takes its own
+  // row only when even its shortest form, measured with each name cut to its
+  // first letter, can't fit (#376). Stacking whenever the full names didn't fit
+  // left a wide, mostly empty button and a back arrow between the rows.
   const [bibleRowWidth, setBibleRowWidth] = useState(0);
-  const [translationButtonWidth, setTranslationButtonWidth] = useState(0);
+  const [translationButtonMinWidth, setTranslationButtonMinWidth] = useState(0);
   const stackBibleControls =
     isBiblePage &&
     Boolean(bibleTranslation) &&
     shouldStackBibleControls({
       rowWidth: bibleRowWidth,
-      translationButtonWidth,
+      translationButtonMinWidth,
       iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
       iconButtonSize: compactControlHeight,
     });
@@ -529,7 +531,9 @@ export const GlobalHeader = (props: any) => {
     />
   );
 
-  const translationChipContent = (
+  // `shortest` draws each translation name cut to its first letter, for
+  // measuring the narrowest the button gets before the header stacks.
+  const renderTranslationChipContent = (shortest = false) => (
     <>
                     <AppIcon
                       name="translate"
@@ -589,7 +593,7 @@ export const GlobalHeader = (props: any) => {
                                 lineHeight: scaleTypographyMetric(19, headerTextScale),
                               }}
                             >
-                              {item.label}
+                              {shortest ? shortestTranslationLabel(item.label) : item.label}
                             </Text>
                           </View>
                         ))}
@@ -597,6 +601,7 @@ export const GlobalHeader = (props: any) => {
                     ) : (
                       <Text
                         maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                        numberOfLines={1}
                         style={{
                           color: theme.colors.onSurface,
                           fontSize: scaleTypographyMetric(14, headerTextScale),
@@ -606,7 +611,7 @@ export const GlobalHeader = (props: any) => {
                           flexShrink: 1,
                         }}
                       >
-                        {bibleTranslation}
+                        {shortest && bibleTranslation ? shortestTranslationLabel(bibleTranslation) : bibleTranslation}
                       </Text>
                     )}
                     <AppIcon
@@ -734,12 +739,12 @@ export const GlobalHeader = (props: any) => {
                     accessibilityElementsHidden
                     importantForAccessibility="no-hide-descendants"
                     onLayout={(event) =>
-                      setTranslationButtonWidth(Math.ceil(event.nativeEvent.layout.width))
+                      setTranslationButtonMinWidth(Math.ceil(event.nativeEvent.layout.width))
                     }
                     pointerEvents="none"
                     style={styles.translationChipMeasure}
                   >
-                    {translationChipContent}
+                    {renderTranslationChipContent(true)}
                   </View>
                 )}
                 {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
@@ -761,7 +766,7 @@ export const GlobalHeader = (props: any) => {
                       },
                     ]}
                   >
-                    {translationChipContent}
+                    {renderTranslationChipContent()}
                   </Pressable>
                 )}
                 {/* The icon buttons stay together: beside the translation button,
@@ -992,7 +997,8 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     gap: 8,
   },
-  // Two rows: the translation button across the top, the icon buttons beneath.
+  // Two rows, only when even the shortest translation button can't share a
+  // row: the translation button on top, the icon buttons beneath.
   // Explicit rows rather than wrapping: the header stacks only after it
   // measures, and a percentage flex basis set then isn't applied until
   // something else lays the row out again.
@@ -1012,7 +1018,6 @@ const styles = StyleSheet.create({
   },
   translationChip: {
     minWidth: 68,
-    maxWidth: 240,
     flexShrink: 1,
     minHeight: 44,
     borderRadius: 22,
@@ -1061,8 +1066,10 @@ const styles = StyleSheet.create({
     minWidth: 24,
     paddingHorizontal: 4,
   },
+  // At its own width, over the icon buttons, rather than stretched across the
+  // row with its names in the middle.
   stackedTranslationChip: {
-    alignSelf: 'stretch',
+    alignSelf: 'flex-end',
     maxWidth: '100%',
   },
   collapsedSearchButton: {
