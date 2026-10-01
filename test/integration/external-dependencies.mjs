@@ -26,17 +26,36 @@ const describeError = (error) => {
   return details.join(' <- ');
 };
 
-const record = async (name, provider, run) => {
+// The alarm (an issue, from the workflow) is for failures only. A check can
+// also warn: one odd item, such as a single moved hymn page or audio file, or
+// lessons published late at the start of a quarter. Warnings show in the run's
+// summary and report without raising the alarm.
+const failedRuns = new Map();
+
+const runCheck = async (entry, run) => {
   const started = Date.now();
+  const warnings = [];
   try {
-    const detail = await run();
-    checks.push({ name, provider, status: 'passed', durationMs: Date.now() - started, detail });
-    console.log(`PASS ${provider}: ${name}`);
+    const detail = await run((message) => warnings.push(message));
+    Object.assign(entry, { status: warnings.length ? 'warned' : 'passed', durationMs: Date.now() - started, detail });
+    delete entry.error;
+    if (warnings.length) entry.warnings = warnings;
+    else delete entry.warnings;
+    if (warnings.length) console.warn(`WARN ${entry.provider}: ${entry.name} — ${warnings.join('; ')}`);
+    else console.log(`PASS ${entry.provider}: ${entry.name}`);
+    failedRuns.delete(entry);
   } catch (error) {
     const message = describeError(error);
-    checks.push({ name, provider, status: 'failed', durationMs: Date.now() - started, error: message });
-    console.error(`FAIL ${provider}: ${name} — ${message}`);
+    Object.assign(entry, { status: 'failed', durationMs: Date.now() - started, error: message });
+    console.error(`FAIL ${entry.provider}: ${entry.name} — ${message}`);
+    failedRuns.set(entry, run);
   }
+};
+
+const record = async (name, provider, run) => {
+  const entry = { name, provider };
+  checks.push(entry);
+  await runCheck(entry, run);
 };
 
 const request = async (url, options = {}) => {
@@ -121,7 +140,10 @@ const getJson = async (url) => {
   return response.json();
 };
 
-const probe = async (url, { binary = false, allowed = [], expectedHosts = [] } = {}) => {
+const probe = async (
+  url,
+  { binary = false, allowed = [], expectedHosts = [], contentTypes = /(audio|image|octet-stream)/i } = {},
+) => {
   const response = await request(url, {
     ...(binary ? { headers: { range: 'bytes=0-1023' } } : {}),
     accept429: allowed.includes(429),
@@ -130,7 +152,7 @@ const probe = async (url, { binary = false, allowed = [], expectedHosts = [] } =
   expectFinalHost(response, url, expectedHosts);
   if (binary) {
     const contentType = response.headers.get('content-type') || '';
-    if (!/(audio|image|octet-stream)/i.test(contentType)) {
+    if (!contentTypes.test(contentType)) {
       throw new Error(`${url} returned unexpected content-type ${contentType || '(missing)'}`);
     }
   }
@@ -148,6 +170,39 @@ const dailySample = (values, salt = 0) => {
   value ^= value << 5;
   return values[(value >>> 0) % values.length];
 };
+// Several distinct items for today, also stable for the day. The first is the
+// one dailySample picks.
+const dailySamples = (values, salt, count = 3) => {
+  const picked = [];
+  for (let index = 0; picked.length < Math.min(count, values.length) && index < count * 10; index += 1) {
+    const value = dailySample(values, salt + index * 7919);
+    if (!picked.includes(value)) picked.push(value);
+  }
+  return picked;
+};
+
+// Checks a few of a catalog's items, picked fresh each day. One bad item, such
+// as a single moved page or file, is a warning; the check fails only when most
+// of the samples fail, which means the provider itself is down or has changed.
+const spotCheck = async (items, salt, check, warn, { label = String, count = 3 } = {}) => {
+  const picked = dailySamples(items, salt, count);
+  if (!picked.length) throw new Error('there is nothing to sample');
+  const passed = [];
+  const failures = [];
+  for (const item of picked) {
+    try {
+      passed.push(`${label(item)}: ${await check(item)}`);
+    } catch (error) {
+      failures.push(`${label(item)}: ${describeError(error)}`);
+    }
+  }
+  if (failures.length * 2 > picked.length) {
+    throw new Error(`${failures.length} of ${picked.length} samples failed: ${failures.join('; ')}`);
+  }
+  failures.forEach(warn);
+  return `${passed.length} of ${picked.length} samples passed (${passed.join('; ')})`;
+};
+
 const normalizedIds = (html, catId) => new Set(
   [...html.matchAll(new RegExp(`catid=${catId}(?:&amp;|&)id=(\\d+)`, 'g'))].map((match) => Number(match[1])),
 );
@@ -178,10 +233,10 @@ await record('all 1,189 local audio assets are mapped', 'Adventist Connect', asy
   return '1,189 unique mappings';
 });
 
-if (adventistEntries.length > 0) {
-  const sample = dailySample(adventistEntries, 11);
-  await record(`daily audio sample ${sample.filename}`, 'Adventist Connect', () => probe(sample.url, { binary: true }));
-}
+await record('daily audio samples', 'Adventist Connect', (warn) =>
+  spotCheck(adventistEntries, 11, ({ url }) => probe(url, { binary: true }), warn, {
+    label: ({ filename }) => filename,
+  }));
 
 // WordProject's recordings have no fallback host (see docs/LEGAL.md), so a
 // failure here means their listeners have no audio.
@@ -199,10 +254,10 @@ for (const [label, prefix, manifestPath, salt] of [
     return '1,189 unique mappings';
   });
 
-  if (entries.length > 0) {
-    const sample = dailySample(entries, salt);
-    await record(`daily ${label} audio sample ${sample.filename}`, 'Adventist Connect', () => probe(sample.url, { binary: true }));
-  }
+  await record(`daily ${label} audio samples`, 'Adventist Connect', (warn) =>
+    spotCheck(entries, salt, ({ url }) => probe(url, { binary: true }), warn, {
+      label: ({ filename }) => filename,
+    }));
 }
 
 let audioPowerUrls = [];
@@ -214,9 +269,11 @@ await record('published CUV catalog contains 1,189 recordings', 'Audio Power', a
   return '1,189 unique recordings';
 });
 
-await record('daily CUV audio sample', 'Audio Power', () => {
+await record('daily CUV audio samples', 'Audio Power', (warn) => {
   if (!audioPowerUrls.length) throw new Error('catalog was unavailable, so no sample can be selected');
-  return probe(dailySample(audioPowerUrls, 23), { binary: true });
+  return spotCheck(audioPowerUrls, 23, (url) => probe(url, { binary: true }), warn, {
+    label: (url) => url.split('/').pop(),
+  });
 });
 
 await record('metadata contains every canonical CUV recording', 'Archive.org', async () => {
@@ -226,10 +283,14 @@ await record('metadata contains every canonical CUV recording', 'Archive.org', a
   return '1,189 canonical recordings';
 });
 
-await record('daily CUV audio sample', 'Archive.org', () => {
-  const sample = dailySample(adventistEntries, 37);
-  return probe(`https://archive.org/download/CUV_201911/${sample.filename}`, { binary: true });
-});
+await record('daily CUV audio samples', 'Archive.org', (warn) =>
+  spotCheck(
+    adventistEntries,
+    37,
+    ({ filename }) => probe(`https://archive.org/download/CUV_201911/${filename}`, { binary: true }),
+    warn,
+    { label: ({ filename }) => filename },
+  ));
 
 const hymnCatalogs = [
   ['Chinese 505', 59, 'features/hymnal/Chinese505Hymnal.json'],
@@ -249,23 +310,29 @@ for (const [name, catId, path] of hymnCatalogs) {
     return `${expected.size} mapped page IDs present (${actual.size} published)`;
   });
 
-  await record('daily hymn page sample', name, async () => {
+  await record('daily hymn page samples', name, async (warn) => {
     const data = await readJson(path);
-    const entry = dailySample(Object.values(data), Number(catId));
-    return probe(`https://m.zgaxr.com/index.php?m=content&c=index&a=show&catid=${catId}&id=${entry.pageId}`);
+    return spotCheck(
+      Object.values(data),
+      Number(catId),
+      ({ pageId }) => probe(`https://m.zgaxr.com/index.php?m=content&c=index&a=show&catid=${catId}&id=${pageId}`),
+      warn,
+      { label: ({ pageId }) => `page ${pageId}` },
+    );
   });
 }
 
 // oEmbed answers only for public videos, so a removed or private recording fails.
-await record('daily 506 hymn recording sample', 'YouTube', async () => {
+await record('daily 506 hymn recording samples', 'YouTube', async (warn) => {
   const { videos } = await readJson('features/hymnal/Chinese506YouTube.json');
-  const [number, videoId] = dailySample(Object.entries(videos), 506);
-  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
-  const video = await getJson(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watchUrl)}`);
-  if (Number(String(video.title).match(/^\s*(\d+)/)?.[1]) !== Number(number)) {
-    throw new Error(`${watchUrl} for hymn ${number} is now titled "${video.title}"`);
-  }
-  return `hymn ${number}: ${video.title}`;
+  return spotCheck(Object.entries(videos), 506, async ([number, videoId]) => {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const video = await getJson(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watchUrl)}`);
+    if (Number(String(video.title).match(/^\s*(\d+)/)?.[1]) !== Number(number)) {
+      throw new Error(`${watchUrl} is now titled "${video.title}"`);
+    }
+    return video.title;
+  }, warn, { label: ([number]) => `hymn ${number}` });
 });
 
 await record('directory publishes the expected English hymnal links', 'Hymns for Worship', async () => {
@@ -281,8 +348,12 @@ await record('directory publishes the expected English hymnal links', 'Hymns for
   return `${numbers.size} published hymn links; ${describeResponse(response)}`;
 });
 
-await record('daily English hymn page sample', 'Hymns for Worship', async () => {
-  const number = dailySample(Array.from({ length: 695 }, (_, index) => index + 1), 695);
+// The app links each hymn to its page's #hymn-score anchor. Not every hymn has
+// a score on the site (SDAH 509 links to sheet music elsewhere, with no
+// anchor), and its link then opens at the top of the hymn page. So the daily
+// sample needs only the hymn's heading, and SDAH 001, which has a score, shows
+// the anchor still exists.
+const getHymnPage = async (number) => {
   const paddedNumber = String(number).padStart(3, '0');
   const url = `https://hymnsforworship.org/sdah-${paddedNumber}#hymn-score`;
   const { response, text: html } = await getTextPage(url, {
@@ -292,10 +363,27 @@ await record('daily English hymn page sample', 'Hymns for Worship', async () => 
   if (!finalPath.startsWith(`/sdah-${paddedNumber}`)) {
     throw new Error(`${url} resolved to unexpected hymn path ${finalPath}`);
   }
-  if (!html.includes(`SDAH ${paddedNumber}`) || !/id=["']hymn-score["']/.test(html)) {
-    throw new Error(`${url} did not publish the expected hymn heading and score anchor`);
+  if (!html.includes(`SDAH ${paddedNumber}`)) {
+    throw new Error(`${url} did not publish the expected hymn heading`);
   }
-  return `${describeResponse(response)} with hymn heading and score anchor`;
+  return { url, response, html };
+};
+
+await record('daily English hymn page samples', 'Hymns for Worship', (warn) =>
+  spotCheck(
+    Array.from({ length: 695 }, (_, index) => index + 1),
+    695,
+    async (number) => describeResponse((await getHymnPage(number)).response),
+    warn,
+    { label: (number) => `SDAH ${number}` },
+  ));
+
+await record('hymn score anchor (SDAH 001)', 'Hymns for Worship', async () => {
+  const { url, response, html } = await getHymnPage(1);
+  if (!/id=["']hymn-score["']/.test(html)) {
+    throw new Error(`${url} no longer has the score anchor the app links to`);
+  }
+  return `${describeResponse(response)} with score anchor`;
 });
 
 const libraryCatalogSource = await readFile('features/library/LibraryCatalog.ts', 'utf8');
@@ -328,13 +416,10 @@ await record('catalog has one unique link per public-domain book', 'Project Gute
   return `${gutenbergBooks.length} unique ebook records`;
 });
 
-await record('daily public-domain book sample', 'Project Gutenberg', () => {
-  const sample = dailySample(gutenbergBooks, 131);
-  if (!sample) throw new Error('catalog has no Project Gutenberg book to sample');
-  return probe(sample.url, { allowed: [429] }).then(
-    (detail) => `${detail}: ebook ${sample.ebookId}`,
-  );
-});
+await record('daily public-domain book samples', 'Project Gutenberg', (warn) =>
+  spotCheck(gutenbergBooks, 131, ({ url }) => probe(url, { allowed: [429] }), warn, {
+    label: ({ ebookId }) => `ebook ${ebookId}`,
+  }));
 
 // Spanish readers see a book's Spanish edition when it has one. Those open on
 // EGW Writings or in the publisher's own free copy.
@@ -350,9 +435,11 @@ await record('Spanish editions open', 'Library', async () => {
     if (new URL(url).hostname === 'text.egwwritings.org') {
       await getTextPage(url, { expectedHosts: ['text.egwwritings.org'] });
     } else {
+      // Chapel Library serves its books as PDFs.
       await probe(url, {
         binary: true,
         expectedHosts: ['www.chapellibrary.org', 'chapellibrary.org'],
+        contentTypes: /(pdf|octet-stream)/i,
       });
     }
   }
@@ -394,23 +481,30 @@ const chineseLibraryCatalogUrl = chineseLibrarySource.match(
   /CHINESE_LIBRARY_CATALOG_URL\s*=\s*\n?\s*'(https:\/\/api\.sdabible\.org\/[^']+)'/,
 )?.[1];
 
-await record('current EGW cover catalog', 'Chinese Union Mission library', async () => {
+await record('current EGW cover catalog', 'Chinese Union Mission library', async (warn) => {
   if (!chineseLibraryCatalogUrl) throw new Error('cover catalog URL is missing');
   const catalog = await getJson(chineseLibraryCatalogUrl);
   const books = Array.isArray(catalog.childCategories) ? catalog.childCategories : [];
-  const curatedIds = new Set([127, 128, 55, 81, 75, 120, 34, 16, 50, 13, 23]);
+  const curatedIds = [127, 128, 55, 81, 75, 120, 34, 16, 50, 13, 23];
   const availableIds = new Set(books.map(({ book_id }) => book_id));
-  assertContainsSet(availableIds, curatedIds, 'Chinese cover catalog');
-  const sample = dailySample(
-    books.filter(({ book_id, thumbnail }) => curatedIds.has(book_id) && thumbnail),
+  // A book or two leaving the catalog shows its cover's fallback; most of them
+  // leaving means the catalog changed.
+  const missing = curatedIds.filter((id) => !availableIds.has(id));
+  if (missing.length * 2 > curatedIds.length) {
+    throw new Error(`Chinese cover catalog is missing ${missing.length} of ${curatedIds.length} curated books`);
+  }
+  if (missing.length) warn(`Chinese cover catalog is missing curated books ${missing.join(', ')}`);
+  const covers = books.filter(({ book_id, thumbnail }) => curatedIds.includes(book_id) && thumbnail);
+  return spotCheck(
+    covers,
     149,
+    ({ thumbnail }) => probe(new URL(thumbnail, 'https://cms.sdabible.site/storage/').href, {
+      binary: true,
+      expectedHosts: ['cms.sdabible.site'],
+    }),
+    warn,
+    { label: ({ book_id }) => `book ${book_id}` },
   );
-  if (!sample) throw new Error('catalog has no curated cover sample');
-  const coverUrl = new URL(sample.thumbnail, 'https://cms.sdabible.site/storage/').href;
-  return probe(coverUrl, {
-    binary: true,
-    expectedHosts: ['cms.sdabible.site'],
-  });
 });
 
 const egwCatalogSource = await readFile('features/library/EgwBookCatalog.ts', 'utf8');
@@ -441,12 +535,10 @@ await record('catalog contains eleven deep links per language', 'EGW Writings', 
 });
 
 for (const language of ['en', 'es']) {
-  await record(`daily ${language} cover sample`, 'EGW Writings', async () => {
+  await record(`daily ${language} cover samples`, 'EGW Writings', async (warn) => {
     if (!egwCoverBaseUrl) throw new Error('cover base URL is missing');
     const editions = egwEditions.filter((entry) => entry.language === language);
-    const sample = dailySample(editions, language.charCodeAt(0) + 41);
-    if (!sample) throw new Error(`${language} has no cover sample`);
-    return probe(`${egwCoverBaseUrl}${sample.bookId}?type=small`, {
+    return spotCheck(editions, language.charCodeAt(0) + 41, ({ bookId }) => probe(`${egwCoverBaseUrl}${bookId}?type=small`, {
       binary: true,
       // EGW currently redirects cover thumbnails from the public API host to
       // its media CDN. Both hosts are official EGW Writings endpoints.
@@ -457,26 +549,26 @@ for (const language of ['en', 'es']) {
         'media3.egwwritings.org',
         'media4.egwwritings.org',
       ],
-    });
+    }), warn, { label: ({ bookId }) => `book ${bookId}` });
   });
 }
 
 for (const language of ['en', 'zh', 'es']) {
-  await record(`daily ${language} text edition sample`, 'EGW Writings', async () => {
+  await record(`daily ${language} text edition samples`, 'EGW Writings', async (warn) => {
     const editions = egwEditions.filter((entry) => entry.language === language);
-    const sample = dailySample(editions, language.charCodeAt(0));
-    if (!sample) throw new Error(`${language} has no edition to sample`);
-    const { response, text: html } = await getTextPage(sample.url, {
-      expectedHosts: ['text.egwwritings.org'],
-    });
-    if (
-      !html.includes('data-booktype="egwwritings"') ||
-      !html.includes('reader-tools-fontsize-increase') ||
-      !html.includes('js-btn-set-theme')
-    ) {
-      throw new Error(`${sample.url} did not publish the expected text reader controls`);
-    }
-    return `${describeResponse(response)}: ${sample.firstParagraph} with text reader controls`;
+    return spotCheck(editions, language.charCodeAt(0), async ({ url }) => {
+      const { response, text: html } = await getTextPage(url, {
+        expectedHosts: ['text.egwwritings.org'],
+      });
+      if (
+        !html.includes('data-booktype="egwwritings"') ||
+        !html.includes('reader-tools-fontsize-increase') ||
+        !html.includes('js-btn-set-theme')
+      ) {
+        throw new Error(`${url} did not publish the expected text reader controls`);
+      }
+      return `${describeResponse(response)} with text reader controls`;
+    }, warn, { label: ({ firstParagraph }) => firstParagraph });
   });
 }
 
@@ -514,7 +606,9 @@ const navigationLinks = [
   ['Chinese-to-English hymnal lookup image', 'https://assets.adventistconnect.org/newyork2/2026/08/09144912/Chinese_505_Hymnal_to_SDAH_1985_Lookup-scaled.jpg', true],
   ['PWA install guide', 'https://youtu.be/5IwrG8BTylw?si=7FW6G4DWiJmLkz89&t=15'],
   ['staff schedule', 'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit?usp=sharing', false, [401, 403]],
-  ['Adventist Giving', 'https://adventistgiving.org/donate/AN48CO'],
+  // Its bot protection answers some networks with 403 (seen from a home
+  // connection on 2026-10-01), so 403 means "up, but blocking the monitor".
+  ['Adventist Giving', 'https://adventistgiving.org/donate/AN48CO', false, [403]],
   ['Spotify podcast', 'https://open.spotify.com/show/6Ig7RqU3A5vivl4x3FJFLV'],
   ['Zoom class', 'https://us06web.zoom.us/j/2541879535?pwd=Rmhsa0pFK3hQVTRHMzVqQ2swZlBodz09'],
   ['sermon archive', 'https://www.youtube.com/playlist?list=PLX85oBoVF4TKC4p0hJ6EK6X_2zXOB53eW'],
@@ -538,7 +632,7 @@ for (const [name, url, binary = false, allowed = []] of navigationLinks) {
 // fail when the English lessons for this quarter can't be found, which means
 // the app is showing the website instead. The quarter follows
 // features/sabbath-school/ChildrenLessons.ts.
-const childrenQuarter = (weekStartsOn) => {
+const quarterStart = (weekStartsOn) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const starts = [today.getFullYear() - 1, today.getFullYear(), today.getFullYear() + 1]
@@ -548,8 +642,27 @@ const childrenQuarter = (weekStartsOn) => {
       return { quarter, start, year };
     }))
     .filter(({ start }) => start <= today);
-  const { quarter, year } = starts[starts.length - 1];
+  return { ...starts[starts.length - 1], today };
+};
+const childrenQuarter = (weekStartsOn) => {
+  const { quarter, year } = quarterStart(weekStartsOn);
   return `${year}-${String(quarter).padStart(2, '0')}`;
+};
+
+// Adventech often publishes a quarter's lessons late, and the app falls back to
+// the English PDF and then the Alive in Jesus website meanwhile (#336). So for
+// the quarter's first two weeks, missing lessons are a warning, not a failure.
+const QUARTER_GRACE_DAYS = 14;
+const withQuarterGrace = (weekStartsOn, run) => async (warn) => {
+  try {
+    return await run(warn);
+  } catch (error) {
+    const { start, today } = quarterStart(weekStartsOn);
+    const days = Math.round((today - start) / 86_400_000);
+    if (days >= QUARTER_GRACE_DAYS) throw error;
+    warn(`${describeError(error)} (day ${days + 1} of the quarter, when lessons are often published late)`);
+    return 'not published yet';
+  }
 };
 
 for (const level of ['beginner', 'kindergarten', 'primary', 'junior', 'teen', 'youth']) {
@@ -559,22 +672,22 @@ for (const level of ['beginner', 'kindergarten', 'primary', 'junior', 'teen', 'y
 
 for (const book of ['bg', 'bg-tg', 'kd', 'kd-tg', 'pr', 'pr-tg']) {
   const id = `${childrenQuarter('sunday')}-${book}`;
-  await record(`Alive in Jesus ${id} PDFs`, 'Children Sabbath School', async () => {
+  await record(`Alive in Jesus ${id} PDFs`, 'Children Sabbath School', withQuarterGrace('sunday', async () => {
     const pdfs = await getJson(`https://sabbath-school.adventech.io/api/v3/en/aij/${id}/pdf.json`);
     const weeks = pdfs.filter(({ target }) => new RegExp(`^en/aij/${id}/\\d+$`).test(target || ''));
     if (!weeks.length) throw new Error(`en/aij/${id} has no weekly PDFs`);
     return `${weeks.length} weekly PDFs`;
-  });
+  }));
 }
 
-await record('English children\'s quarterlies this quarter', 'Children Sabbath School', async () => {
+await record('English children\'s quarterlies this quarter', 'Children Sabbath School', withQuarterGrace('saturday', async () => {
   const catalog = await getJson('https://sabbath-school.adventech.io/api/v2/en/quarterlies/index.json');
   const ids = new Set(catalog.map(({ id }) => id));
   const expected = ['pp', 'rt', 'cc'].map((suffix) => `${childrenQuarter('saturday')}-${suffix}`);
   const missing = expected.filter((id) => !ids.has(id));
   if (missing.length) throw new Error(`the catalog doesn't list ${missing.join(', ')}`);
   return expected.join(', ');
-});
+}));
 
 // The store listings and printed QR codes point at these pages, so they must
 // keep working through the church's own domain. See
@@ -611,14 +724,39 @@ await record('sunset JSON contract', 'Sunrise-Sunset API', async () => {
   return `sunset ${data.results.sunset}`;
 });
 
+// A provider can be briefly unreachable, beyond the request's own quick
+// retries. Check each failure once more, a minute later, so only failures that
+// last raise the alarm.
+const RECHECK_DELAY_MS = Number(process.env.EXTERNAL_CHECK_RECHECK_DELAY_MS ?? 60_000);
+if (failedRuns.size) {
+  console.log(`\nRechecking ${failedRuns.size} failed check${failedRuns.size === 1 ? '' : 's'} in ${RECHECK_DELAY_MS / 1000}s.`);
+  await new Promise((resolve) => setTimeout(resolve, RECHECK_DELAY_MS));
+  for (const [entry, run] of [...failedRuns]) {
+    await runCheck(entry, run);
+    entry.rechecked = true;
+  }
+}
+
 const failed = checks.filter(({ status }) => status === 'failed');
+const warned = checks.filter(({ status }) => status === 'warned');
 const report = {
   generatedAt: new Date().toISOString(),
-  summary: { total: checks.length, passed: checks.length - failed.length, failed: failed.length },
+  summary: {
+    total: checks.length,
+    passed: checks.length - failed.length - warned.length,
+    warned: warned.length,
+    failed: failed.length,
+  },
   checks,
 };
 await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
-console.log(`\n${report.summary.passed}/${report.summary.total} checks passed. Report: ${REPORT_PATH}`);
+console.log(`\n${report.summary.passed}/${report.summary.total} checks passed, ${warned.length} with warnings. Report: ${REPORT_PATH}`);
+if (warned.length) {
+  console.warn(`\n${warned.length} check${warned.length === 1 ? '' : 's'} passed with warnings (no alarm):`);
+  for (const { provider, name, warnings } of warned) {
+    console.warn(`- ${provider}: ${name} — ${warnings.join('; ')}`);
+  }
+}
 if (failed.length) {
   console.error(`\n${failed.length} external dependency check${failed.length === 1 ? '' : 's'} failed:`);
   for (const { provider, name, error } of failed) {
@@ -632,7 +770,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
   const lines = [
     '## External dependency monitor',
     '',
-    `**${report.summary.passed}/${report.summary.total} checks passed; ${report.summary.failed} failed.**`,
+    `**${report.summary.passed}/${report.summary.total} checks passed; ${report.summary.warned} warned; ${report.summary.failed} failed.**`,
   ];
   if (failed.length) {
     lines.push(
@@ -640,6 +778,16 @@ if (process.env.GITHUB_STEP_SUMMARY) {
       '| Provider | Check | Error |',
       '| --- | --- | --- |',
       ...failed.map(({ provider, name, error }) => `| ${escapeCell(provider)} | ${escapeCell(name)} | ${escapeCell(error)} |`),
+    );
+  }
+  if (warned.length) {
+    lines.push(
+      '',
+      'Warnings, which raise no alarm: one odd item, or lessons not yet published early in a quarter.',
+      '',
+      '| Provider | Check | Warning |',
+      '| --- | --- | --- |',
+      ...warned.map(({ provider, name, warnings }) => `| ${escapeCell(provider)} | ${escapeCell(name)} | ${escapeCell(warnings.join('; '))} |`),
     );
   }
   lines.push('', `Full JSON report: \`${REPORT_PATH}\``);
