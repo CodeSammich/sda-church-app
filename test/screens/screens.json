@@ -165,9 +165,19 @@
       "variants": ["default", "zh"]
     },
     {
-      "name": "library-classics",
-      "path": "explore/library/christian-classics",
-      "variants": ["default"]
+      "name": "library-children",
+      "$comment": "Books by other writers lead the Children shelf, and Ellen G. White's books for adults stay on her own shelf (#391).",
+      "path": "explore/library/children",
+      "variants": ["default", "zh"],
+      "mustShowLines": ["^Story of the Bible", "^Hurlbut.s Life of"],
+      "mustNotShowLines": ["^Child Guidance", "^Messages to Young", "^Christ.s Object", "兒童教育指南", "儿童教育指南"]
+    },
+    {
+      "name": "library-youth",
+      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books (#391).",
+      "path": "explore/library/youth",
+      "variants": ["default"],
+      "mustShowLines": ["^Pastor Hsi", "^The Pilgrim.s Progress"]
     },
     {
       "name": "sabbath-school",

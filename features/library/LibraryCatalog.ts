@@ -197,6 +197,74 @@ const publicDomainWorks: readonly LibraryItem[] = [
     publicationYear: 1630,
     editionYear: 1838,
   },
+  {
+    // The 1905 Philadelphia edition (H. W. B. Conrad), a Library of Congress
+    // copyright-deposit copy. Its title page reads "Story of the Bible Told for
+    // Young and Old" and carries the 1904 copyright; archive.org catalogs it as
+    // "Mother's story of the Bible". The 1932 and later revisions are lend-only
+    // and still copyrighted, so don't substitute them. Checked against the
+    // rules in docs/LEGAL.md.
+    id: 'hurlbut-story-of-the-bible',
+    title: 'Story of the Bible Told for Young and Old',
+    author: 'Jesse Lyman Hurlbut',
+    collection: 'children',
+    description:
+      'The whole Bible as 168 stories in order, from Creation to Revelation, for children and families to read together.',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Internet Archive',
+    sourceUrl: 'https://archive.org/details/mothersstoryofbi00hurl',
+    publicationYear: 1904,
+    editionYear: 1905,
+  },
+  {
+    id: 'hurlbut-life-of-christ',
+    title: "Hurlbut's Life of Christ for Young and Old",
+    author: 'Jesse Lyman Hurlbut',
+    collection: 'children',
+    description:
+      'The life of Jesus from the four Gospels, written for children of about ten.',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Project Gutenberg',
+    sourceUrl: 'https://www.gutenberg.org/ebooks/40460',
+    publicationYear: 1915,
+  },
+  {
+    // The 1903 first edition: the title page reads London, Morgan & Scott,
+    // and China Inland Mission, MCMIII (archive.org's "Philadelphia" is
+    // wrong). Cornell's scan states no known U.S. copyright restrictions. Not
+    // the later abridged editions. Checked against the rules in docs/LEGAL.md.
+    id: 'taylor-pastor-hsi',
+    title: "Pastor Hsi: One of China's Christians",
+    author: 'Mrs. Howard Taylor',
+    collection: 'youth',
+    description:
+      'The life of Hsi Shengmo, a Confucian scholar in North China who was freed from opium and became a pastor.',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Internet Archive',
+    sourceUrl: 'https://archive.org/details/cu31924023085875',
+    publicationYear: 1903,
+    editionYear: 1903,
+  },
+  {
+    // The 1911 London edition (Morgan & Scott, MCMXI on the title page).
+    // Don't use hudsontaylorin00tayl: it is catalogued as 1911 London but is
+    // the 1912 New York printing. Checked against the rules in docs/LEGAL.md.
+    id: 'taylor-hudson-taylor-early-years',
+    title: 'Hudson Taylor in Early Years: The Growth of a Soul',
+    author: 'Dr. and Mrs. Howard Taylor',
+    collection: 'youth',
+    description:
+      'How Hudson Taylor answered a call to China as a young man and went on to found the China Inland Mission.',
+    language: 'en',
+    rights: 'public-domain-us',
+    sourceName: 'Internet Archive',
+    sourceUrl: 'https://archive.org/details/hudsontaylorinea00unse_0',
+    publicationYear: 1911,
+    editionYear: 1911,
+  },
 ];
 
 const officialCollections: readonly LibraryItem[] = [

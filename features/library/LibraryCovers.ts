@@ -14,6 +14,10 @@ export const BOOK_COVERS: Readonly<Record<string, ImageSourcePropType>> = {
   'foxe-book-of-martyrs': require('../../assets/images/library/foxe-book-of-martyrs.png'),
   'sibbes-bruised-reed': require('../../assets/images/library/sibbes-bruised-reed.png'),
   'sabbath-encouragement': require('../../assets/images/library/sabbath-encouragement.png'),
+  'hurlbut-story-of-the-bible': require('../../assets/images/library/hurlbut-story-of-the-bible.png'),
+  'hurlbut-life-of-christ': require('../../assets/images/library/hurlbut-life-of-christ.png'),
+  'taylor-pastor-hsi': require('../../assets/images/library/taylor-pastor-hsi.png'),
+  'taylor-hudson-taylor-early-years': require('../../assets/images/library/taylor-hudson-taylor-early-years.png'),
 };
 
 // Covers for Spanish editions, keyed by the book's catalog id, shown when the

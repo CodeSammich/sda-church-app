@@ -18,6 +18,7 @@ import {
 } from './LibraryCatalog';
 import { BOOK_COVERS, EGW_COVERS, SPANISH_BOOK_COVERS } from './LibraryCovers';
 import {
+  CATALOG_ITEM_IDS_BY_SHELF,
   EGW_BOOK_IDS_BY_SHELF,
   LIBRARY_SHELVES,
   orderShelfBooks,
@@ -87,6 +88,8 @@ export type LibraryShelfBook = Readonly<{
   accessibilityHint: string;
   coverSource?: ImageSourcePropType;
   coverUrls?: readonly string[];
+  // Orders shared shelves; see orderShelfBooks.
+  byEllenWhite: boolean;
   onPress: () => void;
 }>;
 
@@ -145,6 +148,7 @@ export function useLibraryShelfBooks(
         accessibilityHint: labels.chooseBook,
         coverSource: EGW_COVERS[work.id],
         coverUrls: getEgwCoverUrlsForLanguage(work, language, chineseCoverUrls[work.id]),
+        byEllenWhite: true,
         onPress: () => setSelectedEgwBookId(work.id),
       }));
     const otherBooks = [
@@ -152,7 +156,12 @@ export function useLibraryShelfBooks(
       ...catalog.officialCollections,
       ...catalog.churchDocuments,
     ]
-      .filter((item) => getLibraryItemShelf(item) === shelf && matchesQuery(item))
+      .filter(
+        (item) =>
+          (getLibraryItemShelf(item) === shelf ||
+            !!CATALOG_ITEM_IDS_BY_SHELF[shelf]?.includes(item.id)) &&
+          matchesQuery(item),
+      )
       .map((item) => {
         const text = getLibraryItemDisplayText(item, language);
         const source = getLibraryItemSource(item, language);
@@ -171,6 +180,7 @@ export function useLibraryShelfBooks(
           coverSource:
             (language === 'es' && item.spanish && SPANISH_BOOK_COVERS[item.id]) ||
             BOOK_COVERS[item.id],
+          byEllenWhite: item.author === 'Ellen G. White',
           onPress: () => openURL(source.sourceUrl, labels.title, labels.openError),
         };
       });
