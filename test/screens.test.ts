@@ -72,8 +72,11 @@ describe('App Store shots', () => {
   const copies = planAppStore(config);
 
   it('numbers each language’s shots in upload order', () => {
-    expect(copies[0]).toEqual({ name: 'bible-dual-default', file: 'app-store/en-US/01-bible-dual-default.png' });
-    expect(copies.map((copy: { file: string }) => copy.file)).toContain('app-store/zh-Hant/01-bible-cuv-zh.png');
+    // Home first: the first three show on the App Store's install sheets.
+    expect(copies[0]).toEqual({ name: 'home-default', file: 'app-store/en-US/01-home-default.png' });
+    expect(copies.map((copy: { file: string }) => copy.file)).toContain('app-store/zh-Hant/01-home-zh.png');
+    // Chinese has its own dark-mode shot, with the Chinese interface.
+    expect(copies.map((copy: { file: string }) => copy.file)).toContain('app-store/zh-Hant/06-bible-cuv-zh-dark.png');
   });
 
   it('only names shots that are captured, up to the App Store’s ten', () => {

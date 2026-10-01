@@ -156,7 +156,7 @@ jobs:
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
-        # One set is enough: both builds run the same JavaScript. 66 shots take
+        # One set is enough: both builds run the same JavaScript. 67 shots take
         # about 22 minutes, so a second set on the Intel build would only make the
         # release PR wait longer. Actions minutes are free for this public
         # repository, so this is about time, not cost.

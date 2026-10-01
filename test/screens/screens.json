@@ -11,7 +11,8 @@
     "ios-large-text": { "iosTextSize": "accessibility-large" },
     "zh": { "language": "zh" },
     "zh-cn": { "language": "zh-cn" },
-    "es": { "language": "es" }
+    "es": { "language": "es" },
+    "zh-dark": { "language": "zh", "theme": "dark" }
   },
   "screens": [
     {
@@ -43,7 +44,7 @@
       "name": "bible-cuv",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
-      "variants": ["zh"]
+      "variants": ["zh", "zh-dark"]
     },
     {
       "name": "bible-cuvs",
@@ -165,7 +166,7 @@
     }
   ],
   "appStore": {
-    "en-US": ["bible-dual-default", "bible-pinyin-default", "home-default", "explore-default", "library-default", "bible-dual-dark"],
-    "zh-Hant": ["bible-cuv-zh", "bible-pinyin-zh", "home-zh", "explore-zh", "library-zh"]
+    "en-US": ["home-default", "bible-dual-default", "bible-pinyin-default", "explore-default", "library-default", "bible-dual-dark"],
+    "zh-Hant": ["home-zh", "bible-cuv-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuv-zh-dark"]
   }
 }
