@@ -3,6 +3,7 @@ import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import {
   DEFAULT_TEXT_SCALE,
+  getEffectiveTextScale,
   parseStoredTextScale,
   persistTextScalePreference,
   serializeTextScale,
@@ -249,6 +250,11 @@ export default function RootLayout() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_SYSTEM);
   const [sunTimes, setSunTimes] = useState<{ sunrise: Date; sunset: Date } | null>(null);
   const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
+  // The app's text size and the phone's multiply. Every screen draws with the
+  // chosen size, reduced only if the phone's is so large that together they'd
+  // pass MAX_COMBINED_TEXT_SCALE; the Text size setting shows the chosen one.
+  const { fontScale: systemFontScale } = useWindowDimensions();
+  const effectiveTextScale = getEffectiveTextScale(textScale, systemFontScale);
   const [theme, setTheme] = useState(() =>
     getAppTheme(colorScheme === THEME_DARK, false, DEFAULT_TEXT_SCALE),
   );
@@ -658,7 +664,7 @@ export default function RootLayout() {
               (preferredThemeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
               (preferredThemeMode === THEME_SUNSET && useDarkTheme),
             needsCjkSystemFont(preferredLanguage),
-            preferredTextScale,
+            getEffectiveTextScale(preferredTextScale, systemFontScale),
           ),
         );
 
@@ -699,13 +705,13 @@ export default function RootLayout() {
       (themeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
       (themeMode === THEME_SUNSET &&
         (sunTimes ? now < sunTimes.sunrise || now >= sunTimes.sunset : now.getHours() < 7 || now.getHours() >= 19));
-    setTheme(getAppTheme(isDark, needsCjkSystemFont(language), textScale));
-  }, [colorScheme, isReady, language, sunTimes, textScale, themeMode]);
+    setTheme(getAppTheme(isDark, needsCjkSystemFont(language), effectiveTextScale));
+  }, [colorScheme, effectiveTextScale, isReady, language, sunTimes, themeMode]);
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
     setLanguageSelectionRevision((revision) => revision + 1);
-    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang), textScale));
+    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang), effectiveTextScale));
     await AsyncStorage.multiSet([
       ['user-language', lang],
       [BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP[lang] || 'BSB'],
@@ -733,7 +739,7 @@ export default function RootLayout() {
           getAppTheme(
             currentTheme.dark,
             needsCjkSystemFont(language),
-            persistedScale,
+            getEffectiveTextScale(persistedScale, systemFontScale),
           ),
         );
       },
@@ -818,7 +824,11 @@ export default function RootLayout() {
         }}
       >
         <TextSizeContext.Provider
-          value={{ setTextScale: handleSetTextScale, textScale }}
+          value={{
+            setTextScale: handleSetTextScale,
+            textScale: effectiveTextScale,
+            preferredTextScale: textScale,
+          }}
         >
           <ThemeContext.Provider
             value={{

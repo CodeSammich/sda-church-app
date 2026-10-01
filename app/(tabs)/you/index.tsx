@@ -91,7 +91,9 @@ export default function YouScreen() {
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
-  const { textScale } = useTextSize();
+  // The chosen size, which a very large phone text size can reduce when drawn.
+  const { textScale: drawnTextScale, preferredTextScale } = useTextSize();
+  const textScale = preferredTextScale ?? drawnTextScale;
   const [showTextSize, setShowTextSize] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);

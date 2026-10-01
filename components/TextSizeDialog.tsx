@@ -211,7 +211,10 @@ const TextScaleStepAction = ({
 
 export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   const { language } = useContext(LanguageContext);
-  const { setTextScale, textScale } = useTextSize();
+  // The chosen size, not the one drawn, which a very large phone text size can
+  // reduce (MAX_COMBINED_TEXT_SCALE).
+  const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
+  const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight(0.9);
   const labels = labelsByLanguage[language] ?? labelsByLanguage.en;
