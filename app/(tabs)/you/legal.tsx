@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  * jurisdictions or languages, Legal Information is intentionally kept in
  * English-only. This aligns with Project Tenet 2 (Liability-Free).
  *
- * Please make sure the content syncs with README.md
+ * Please make sure the content syncs with docs/LEGAL.md
  */
 export default function LegalScreen() {
   const theme = useAppTheme();
@@ -97,8 +97,9 @@ export default function LegalScreen() {
         hosted externally on Project Gutenberg or the Internet Archive. In Spanish, three
         books open in Spanish editions: Cristo Nuestro Salvador and Historia del Sábado on
         EGW Writings, and Chapel Library&apos;s abridged El progreso del peregrino, which
-        Chapel Library allows anyone to copy. The church hosts its own copy of Sabbath
-        Encouragement (安息日勉言).
+        Chapel Library allows anyone to copy. In Chinese, The Pilgrim&apos;s Progress opens
+        in its 1869 Mandarin edition (天路歷程), a public-domain scan on HathiTrust. The
+        church hosts its own copy of Sabbath Encouragement (安息日勉言).
       </Text>
 
       <Text

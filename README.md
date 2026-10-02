@@ -88,7 +88,7 @@ app on an Android emulator or the iOS Simulator, and which checks CI runs.
 
 User-facing legal text is centralized in the app under **You → Legal Disclaimer**.
 Library reading-source notices are also collected there: which books are hosted
-externally (on EGW Writings, Project Gutenberg, or the Internet Archive), which are
+externally (on EGW Writings, Project Gutenberg, the Internet Archive, or HathiTrust), which are
 public domain in the U.S., and the church's own copy of Sabbath Encouragement. The
 repository's licensing decisions and third-party source review live in
 [docs/LEGAL.md](docs/LEGAL.md).

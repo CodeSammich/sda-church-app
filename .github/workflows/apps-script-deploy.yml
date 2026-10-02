@@ -30,7 +30,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 20
+          node-version: 22
+
+      # deploy-apps-script.mjs bundles pinyin-pro from node_modules. Install
+      # before the credentials are written, and skip install scripts, so no
+      # dependency code runs while they're on disk.
+      - name: Install dependencies
+        run: npm ci --force --ignore-scripts
 
       - name: Install clasp
         run: npm install --global @google/clasp

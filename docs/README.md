@@ -8,7 +8,8 @@ are in [Native mobile binary builds](operations/native-builds.md).
 
 - Node.js 22 (22.13 or later) or 24 (24.3 or later), with npm. Expo SDK 58 and React
   Native 0.88 require one of these (or Node 26 or later). The repository has no
-  `.nvmrc` or `engines` field; the native build and preview workflows use Node 22.
+  `.nvmrc` or `engines` field; the workflows use Node 22, except the website deploy and
+  release check, which use the current LTS.
 - For Android: macOS or Linux, the Java Development Kit (JDK) 17, and Android Studio
   with the Android SDK. `app.json` sets compile SDK and build tools 37 and target API
   36. Set `ANDROID_HOME` and put the Android command-line tools on your `PATH`.
