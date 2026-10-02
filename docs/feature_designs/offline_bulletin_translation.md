@@ -30,8 +30,10 @@ server, not on the phone. Bergamot was never added.
   program's **Tithe & Offering** row) and **Pastor Travel**, the English original follows
   on the next line when it differs. The **Special Remark** banner
   shows the translation only.
-- The app doesn't mark any of this text as machine translated, on screen or for screen
-  readers.
+- By design, these short schedule notes carry no machine-translation label. The only
+  labeled machine translation is the printed Brooklyn bulletin's English Sabbath
+  Encouragement, translated from the Chinese because there's no original English to print;
+  see [Sabbath Encouragement](../operations/sabbath-encouragement-copyright.md#what-the-printed-bulletin-does-today).
 - The printed bulletin translates the offering value on its own:
   `translatePhysicalOfferingToTraditionalChinese_` in
   `google-apps-script/PrintedBulletin.gs` prints the Traditional Chinese translation above
@@ -78,8 +80,9 @@ a human-provided translation. Church terminology and short sermon titles are unu
 context-sensitive, so the source must remain available and generated text must be labeled
 as machine translated for both visual and screen-reader users.
 
-What shipped differs: `tithePurpose`, `specialRemark`, and `pastorTravel` are translated on
-the server, sermon titles are not, and no translation is labeled. The English source stays
+What shipped is simpler: `tithePurpose`, `specialRemark`, and `pastorTravel` are translated
+on the server, sermon titles are not, and these short translations carry no label by design.
+The English source stays
 visible for the tithe purpose (on **Tithe & Offering**) and **Pastor Travel** but not under
 the **Special Remark** banner. See [Current behavior](#current-behavior).
 
@@ -226,9 +229,9 @@ It described this approach as tiny, instant, offline, consistent across the nati
 web/PWA preview, and free of API keys and recurring cost.
 
 Status today: item 1 is in place. Items 2 and 3 were not built; the server's `LanguageApp`
-translation fills the gap instead. Item 4 doesn't match the shipped app, which shows
-machine-translated text without a label, and shows the **Special Remark** translation
-without its English source. See [Current behavior](#current-behavior).
+translation fills the gap instead. Item 4 wasn't adopted for these
+short notes: the app shows their translations without a label, and shows the **Special
+Remark** translation on its own. See [Current behavior](#current-behavior).
 
 ## 8. Reconsideration Gates
 

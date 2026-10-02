@@ -1,25 +1,26 @@
 # Native mobile binary builds
 
-How the iPhone and Android apps are built, signed, checked, and sent to testers. This
-page covers:
+This page is for developers and maintainers. Church admins who approve, download, or
+ship a build start at the [admin runbook](admin-runbook.md#native-app-binaries).
 
-- the signed builds that run after a release merges into `main`, and where their
-  credentials are kept;
-- the unsigned builds and checks on each release pull request into `main`: an Android
-  debug APK, iOS Simulator builds with key-screen screenshots, and the Android audio
-  test;
-- building on your own computer, including on Windows through WSL;
-- the store accounts, their recovery, and the automatic uploads to TestFlight and
-  Google Play internal testing.
+How the iPhone and Android apps are built, signed, checked, and sent to testers: the
+signed builds that run after a release merges into `main`, and where their credentials
+are kept; the unsigned builds and checks on each release pull request into `main`;
+building on your own computer, including on Windows through WSL; and the automatic
+uploads to TestFlight and Google Play internal testing. Who owns the store accounts, and
+how to recover them, is in [App Store and Google Play setup](app-store-setup.md).
 
 Signed builds run only after a change reaches `main`, or from a manual run on `main`;
-`release/**` branches are never signed. Every merge into `main` starts **Native
-Android build** and **Native iOS build**, which wait for `production` approval. Pull
-requests get only unsigned builds that read no signing secrets: on the release pull
-request into `main`, **Android PR preview** builds a debug APK for ARM phones and **iOS
-PR preview** builds the app for the iOS Simulator on Apple Silicon and Intel Macs. Fork
-pull requests get no native builds. Signed builds upload to TestFlight and Google Play
-internal testing only; nothing is released to the public automatically (see
+`release/**` branches and pull requests are never signed. Each signing job has a guard
+that allows only `main` in the church's repository, so a manual run from another branch
+can't reach the `production` Environment and its signing secrets. That guard is part of
+the credential boundary and must stay. Every merge into `main` starts **Native Android
+build** and **Native iOS build**, which wait for `production` approval. Pull requests
+get only unsigned builds that read no signing secrets: on the release pull request into
+`main`, **Android PR preview** builds a debug APK for ARM phones and **iOS PR preview**
+builds the app for the iOS Simulator on Apple Silicon and Intel Macs. Fork pull requests
+get no native builds. Signed builds upload to TestFlight and Google Play internal testing
+only; nothing is released to the public automatically (see
 [Automatic store uploads](#automatic-store-uploads)).
 
 The same Expo source is used for all platforms. The native apps are the primary release
@@ -28,33 +29,78 @@ on every push to `main`, is kept for browser testing and previews; see
 [The app website](admin-runbook.md#the-app-website-appnyccsdaorg). A local
 `npm run deploy` builds the web output without publishing it.
 
+## Contents
+
+- [Current setup](#current-setup), including
+  [how the signed builds work](#how-the-signed-builds-work)
+- [GitHub Actions minutes and maintenance](#github-actions-minutes-and-maintenance)
+- [Expo 58 Android prebuild](#expo-58-android-prebuild)
+- [Building an independent fork](#building-an-independent-fork)
+- [Store accounts and recovery](#store-accounts-and-recovery)
+- [GitHub-hosted signing and submission credentials](#github-hosted-signing-and-submission-credentials):
+  every signing and store-upload secret
+- [iOS setup](#ios-setup-github-hosted-direct-builds) and
+  [Android setup](#android-setup-github-hosted-direct-builds)
+- [External account cleanup](#external-account-cleanup)
+- [Build commands](#build-commands)
+  - [Android PR preview and Drive upload](#android-pr-preview-and-drive-upload)
+  - [iOS PR preview](#ios-pr-preview-unsigned-simulator-builds), including the
+    [key screens](#key-screens)
+  - [Android audio test on release PRs](#android-audio-test-on-release-prs)
+- [Automatic store uploads](#automatic-store-uploads)
+- [Versions and maintenance](#versions-and-maintenance)
+- [Decision record](#decision-record): why the builds and credentials are set up this way
+- [Research basis](#research-basis)
+
 ## Current setup
 
-Android uses the zero-Expo-authentication build path. The repository contains a
-config plugin that teaches the generated Gradle project to use a keystore supplied
-through environment variables, and `npm run build:android` /
-`npm run build:android:apk` use `expo prebuild` followed by Gradle directly.
-GitHub keeps the four Android signing values in the
-protected `production` Environment. The workflow decodes only the base64 keystore
-into `$RUNNER_TEMP`, derives `ANDROID_KEYSTORE_PATH` from that temporary location,
-and exposes the signing values only to the Gradle invocation that signs the binary.
-The path is not itself a secret, and no keystore or password is passed to Expo
-prebuild. Android builds do not need an Expo account, an Expo token, or EAS
-credential storage. Its job-level guard permits signed runs only from
-trusted `main`; the manual dispatch cannot attach the
-production Environment to an arbitrary ref. Keep the values only in the protected
-Environment; if a copy is ever added as an ordinary repository secret, delete it.
+Neither platform needs an Expo account, an Expo token, or EAS credential storage.
+Android runs `expo prebuild` and then Gradle on a GitHub-hosted Linux runner
+(`npm run build:android` and `npm run build:android:apk`); a committed config plugin,
+`plugins/withAndroidLocalSigning.js`, teaches the generated Gradle project to use a
+keystore supplied through environment variables. iOS runs Expo prebuild and Xcode on a
+GitHub-hosted macOS runner, in its own workflow, `.github/workflows/native-ios-build.yml`.
+The church added its Apple signing secrets to the `production` Environment in September
+2026; how they were created is in [App Store and Google Play setup](app-store-setup.md).
+Which secrets each job reads is under
+[GitHub-hosted signing and submission credentials](#github-hosted-signing-and-submission-credentials).
 
-The direct-native iOS workflow is a separate file,
-`.github/workflows/native-ios-build.yml`. It runs only on trusted pushes to `main` and
-manual dispatch from `main`; it has no pull-request signing path. All signing paths require
-the protected `production` Environment. It uses a
-GitHub-hosted macOS runner with Expo prebuild and Xcode. The church added its Apple
-signing secrets to the `production` Environment in September 2026; how they were
-created is in [App Store and Google Play setup](app-store-setup.md). It does not use
-EAS or an Expo token.
-The repository no longer depends on an Expo account; keep any external account only if
-the church wants to preserve unrelated project history.
+### How the signed builds work
+
+1. Generate temporary `android/` and `ios/` projects with `npx expo prebuild`. No
+   keystore or password is passed to Expo prebuild.
+2. Restore signing material from `production` Environment secrets into the runner's
+   temporary directory. Android decodes `ANDROID_KEYSTORE_BASE64` into a keystore file
+   and derives `ANDROID_KEYSTORE_PATH` from its location; the path isn't a secret. iOS
+   restores the Apple distribution `.p12` and App Store provisioning profile, checks
+   that the profile matches the team and app ID, and imports the certificate into a
+   temporary keychain.
+3. Build Android with Gradle (`bundleRelease` or `assembleRelease`). The config plugin
+   changes only the generated `android/app/build.gradle`, which reads
+   `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
+   `ANDROID_KEY_PASSWORD` at Gradle runtime; only the Gradle step gets them.
+4. Archive and export iOS with Xcode's manual signing (`xcodebuild archive` and
+   `xcodebuild -exportArchive`), with an export-options plist generated on the runner
+   rather than committed. Both stores' build numbers are computed from the version; see
+   [Version numbers](version-numbers.md).
+5. Delete the signing files, and on iOS the temporary keychain, installed profile,
+   archive, and export files, in an `always()` step, whether the build passed or failed.
+   No private key is committed or included in a build artifact.
+6. In separate jobs that never see the signing files, upload the AAB to Google Play
+   internal testing and the IPA to TestFlight; see
+   [Automatic store uploads](#automatic-store-uploads). Releasing to the public stays a
+   manual step in each store's console. Before each public release, install the builds
+   on a physical iPhone and Android phone, and check that each updates over the previous
+   one.
+
+So the workflows own the Android signing configuration, the iOS keychain and export
+options, and the build numbers; this isn't a package-only setup. Keep native
+customization in `app.json` and config plugins; Expo warns that manual changes to
+generated projects can be overwritten by a later clean prebuild. See
+[Continuous Native Generation](https://docs.expo.dev/workflow/continuous-native-generation/)
+and [config plugins](https://docs.expo.dev/config-plugins/introduction/). What needs
+upkeep, such as yearly Apple renewals and runner image retirements, is under
+[GitHub Actions minutes and maintenance](#github-actions-minutes-and-maintenance).
 
 ### Local Expo template lookup
 
@@ -72,210 +118,15 @@ EXPO_PREBUILD=true npm run build:android:apk:debug
 The execution environment may still require network approval for a clean prebuild;
 that permission is controlled by the runner or sandbox, not by repository settings.
 
-The Android `versionCode` and the iOS build number are computed from the version by
-`app.config.js` (`0.40.0` becomes `40000`), so nobody sets them by hand; see
-[Version numbers](version-numbers.md). Do not build a signed AAB on a release branch
-before the final merge; build the signed artifact only after the release commit
-reaches `main`.
-
-## Decision rationale and risk register
-
-| Decision | Reason | Remaining risk / control |
-| --- | --- | --- |
-| Build Android with prebuild + Gradle | Removes Expo authentication and EAS credential custody from Android while using the public repository's free standard Linux runner | Expo template, Gradle, Java, SDK, and NDK updates still need periodic validation |
-| Keep native directories ignored | Expo Continuous Native Generation makes `app.json` and config plugins the source of truth and avoids hand-edited generated files | A clean prebuild can overwrite manual native edits; keep native behavior in config/plugins |
-| Store Android signing values in the protected GitHub Environment | Google retains the final Play app-signing key; CI needs only the upload key and four narrowly scoped values, while GitHub provides reviewer approval and branch controls | Repository-level copies weaken environment scoping; keep the four values only in `production`, require approval, restrict trusted refs, use least privilege, and review Actions |
-| Do not rotate the Android key annually | Upload keys do not expire annually; keeping the same key preserves the Play update path | Maintain encrypted backups; use Play's upload-key reset process after loss or compromise |
-| Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using trusted-branch or manual macOS workflows | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
-| Upload automatically to testing only | Testers get every release without anyone moving files by hand, while the public release stays a manual step in each console | Store credentials are in a separate `store-upload` environment and job that runs no npm packages; the first Play upload was made by hand, as Play requires |
-| Do not build signed binaries before `main` | Production signing material is reserved for the post-merge `main` build. | Pull-request previews stay unsigned: an ARM debug APK and iOS Simulator builds. Fork PRs get no native builds |
-
-This is why the migration is not just “put the JKS in a GitHub secret.” The
-keystore must be the key Google expects, the version code must be monotonic, the
-workflow must restore and delete the secret safely, and the resulting AAB must
-be tested as an update. These controls matter more than the build command itself.
-
-### Why the final credential boundary is a GitHub Environment
-
-The final design is a protected GitHub `production` Environment, not a general
-repository-secret bucket. Environment secrets are limited to jobs that name that
-Environment and are made available only after its protection rules—especially
-required-reviewer approval—have passed. Repository secrets are available to all
-workflows in the repository and are read earlier in the workflow lifecycle. See
-GitHub's [secrets reference](https://docs.github.com/en/actions/reference/security/secrets)
-and [deployment-environment guidance](https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments).
-
-The Android workflow still references the normal `${{ secrets.NAME }}` context;
-the job's `environment: production` determines which Environment-level values are
-available. If the same name exists at repository and Environment scope, the
-Environment value takes precedence, but keeping duplicates is confusing and
-weakens the intended boundary. Therefore the four Android values belong only in
-`production`, not in Repository secrets. `ANDROID_KEYSTORE_PATH` remains a derived runner-temporary path rather
-than a stored credential, and `EXPO_TOKEN` has no role in this architecture.
-
-### Android PR preview and Drive upload
-
-The signed **Native Android build** workflow intentionally runs only after a commit reaches
-`main`; it does not sign release-branch or pull-request commits. The separate **Android PR
-preview** workflow builds with no signing credentials: it makes a debug APK, signed only
-with Gradle's local debug key, for ARM phones and tablets (`npm run build:android:apk:debug:arm`). Fork PRs get no native
-builds and no production signing. The
-workflow runs automatically for release pull requests into `main`, from a `release/*`
-branch in this repository.
-It does not accept manual commit or pull-request SHA inputs and does not use dependency
-caching while executing PR code in the `pull_request_target` context.
-
-For an automatic PR run, a separate protected `production` Environment job downloads only
-the APK artifact and checks out the upload helper from the trusted base commit. It does not
-check out or execute PR code while the Google credential is available. The helper refreshes
-the existing `CLASPRC_JSON` OAuth token and
-uploads a private APK file to the connected user's My Drive root. The OAuth account must
-retain the `drive.file` scope. To upload into a folder instead, add a
-`GOOGLE_DRIVE_FOLDER_ID` secret to `production`; the upload job already passes it to the
-helper.
-
-`production` requires a reviewer, so the Drive upload waits for someone to approve it.
-The build job receives no signing credentials, and fork PRs are skipped.
-The Drive upload job must remain separate from the build job, and the upload helper must be
-checked out from the trusted base commit rather than the PR head.
-
-## Credential-custody decision
-
-The release pipeline compiles Android directly on a GitHub-hosted Linux runner
-with Gradle and iOS directly on a GitHub-hosted macOS runner with Xcode. Neither
-workflow uses EAS CLI, Expo authentication, or an EAS Cloud builder.
-
-The credential boundary for the church-owned project is GitHub Actions:
-
-| Credential | Custodian | CI location |
-| --- | --- | --- |
-| Android upload keystore | Church / Google Play account | Protected `production` Environment secret |
-| Google Play upload sign-in (service account, no key) | Church Google Cloud project / Google Play account | `store-upload` Environment: only the provider and service account names, no key |
-| Apple distribution certificate (`.p12`) | Church Apple Developer account | Protected `production` Environment secret |
-| Apple App Store provisioning profile | Church Apple Developer account | Protected `production` Environment secret |
-| App Store Connect API key (`.p8`) | Church App Store Connect account | `store-upload` Environment secret |
-
-The Android keystore above is the **upload key**, not Google's Play app-signing key.
-With Play App Signing, Google protects the final signing key and the CI pipeline only
-needs the upload key. The App Store Connect `.p8` key is for uploading builds to
-TestFlight; it is separate from the Apple distribution certificate and provisioning
-profile. Google Play needs no stored key: the upload job signs in without one (see
-[Setting up the Google Play service account](#setting-up-the-google-play-service-account)).
-
-No signing or submission credentials are stored with a build vendor. The native
-workflows restore only the files needed for that run from GitHub Environment
-secrets and remove them afterward.
-
-### How the signing jobs work
-
-Android's committed
-config plugin changes only the generated `android/app/build.gradle`; it reads
-`ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
-`ANDROID_KEY_PASSWORD` at Gradle runtime. The workflow decodes
-`ANDROID_KEYSTORE_BASE64` into the runner's temporary directory, builds an AAB or
-APK, uploads the artifact, and removes the keystore in an `always()` cleanup step.
-The private key is never committed or included in a build artifact.
-
-The iOS job archives and exports with Xcode directly. It:
-
-1. Restores the Apple distribution `.p12` and App Store provisioning profile only
-   inside the protected job, using a temporary keychain.
-2. Runs `xcodebuild archive` and `xcodebuild -exportArchive`, with an export-options
-   plist generated on the runner rather than committed to source.
-3. Runs only in the protected `production` Environment, after approval, behind a
-   `main`-only push or manual-dispatch guard.
-4. Computes the iOS build number from the version; see
-   [Version numbers](version-numbers.md).
-5. Hands the IPA to a separate job that uploads it to TestFlight; see
-   [Automatic store uploads](#automatic-store-uploads). Before each public release,
-   install the TestFlight build on a physical iPhone and check that it updates over the
-   previous one.
-
-The workflow's `main`-only guard is an important part of this boundary and must remain.
-Secrets must be configured in the church's upstream repository and its Environments;
-GitHub doesn't share them with forks, such as `<your-fork>/sda-church-app`.
-
-### Native build workflow
-
-1. Run `npx expo prebuild` to generate temporary `android/` and `ios/` projects.
-2. Restore signing material from GitHub Environment secrets.
-3. Build Android with Gradle (`bundleRelease`/`assembleRelease`).
-4. Build and export iOS with Xcode (`xcodebuild archive` and
-   `xcodebuild -exportArchive`).
-5. Delete the signing files, whether the build passed or failed.
-6. In separate jobs that never see the signing files, upload the AAB to Google Play
-   internal testing and the IPA to TestFlight.
-
-This removes the Expo account and token dependency, but it is not a package-only
-change. The workflows own Android signing configuration, an iOS temporary keychain
-and export options, and version-code/build-number injection. Releasing to the public
-remains a manual step in each store's console.
-Keep native customization in `app.json` and config plugins; Expo warns that manual
-changes to generated projects can be overwritten by a later clean prebuild. See
-[Continuous Native Generation](https://docs.expo.dev/workflow/continuous-native-generation/)
-and [config plugins](https://docs.expo.dev/config-plugins/introduction/).
-
-The one-time portion is the workflow setup, signing configuration, and initial
-upload of the GitHub secrets. Ongoing maintenance is bounded but not zero: Apple
-distribution profiles expire after 12 months, certificates may need replacement,
-and GitHub eventually retires runner images. Xcode updates are normally handled by
-changing the runner/Xcode selection in workflow YAML and running a validation build;
-they are not generally `package.json` updates. Expo/React Native SDK upgrades may
-also require dependency changes and a new prebuild validation.
-
 ## GitHub Actions minutes and maintenance
 
-For a public repository, standard GitHub-hosted runners—including standard macOS
-runners—are currently free. For a private repository, GitHub Free and GitHub Free
-for organizations currently include 2,000 standard-runner minutes per month. macOS
-has a substantially higher private-repository billing rate than Linux, so budget an
-iOS minute as roughly ten Linux-equivalent minutes. The exact allowance and rates
-belong to the repository owner's GitHub plan; check [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
-before relying on a quota.
-
-The automatic native workflow can run two signed Android jobs on a `main` push: Android
-AAB and Android APK. The iOS workflow is separate and runs only on a trusted `main`
-push or a manual dispatch from `main`; it never runs as a pull-request build. Each
-release PR into `main` also runs unsigned builds: **Android PR preview** builds one ARM
-debug APK on Linux, **Android audio e2e** builds an Intel debug APK and runs it on an
-emulator on Linux (about 20 minutes; see
-[Android audio test](#android-audio-test-on-release-prs)), and **iOS PR preview** adds two
-macOS jobs, Apple Silicon and Intel; see
-[iOS PR preview](#ios-pr-preview-unsigned-simulator-builds). A rough
-private-repository estimate for the automatic Android workflow is:
-
-```text
-Linux-equivalent minutes per run ≈ Android AAB minutes + Android APK minutes
-```
-
-For example, a 15-minute AAB plus 10-minute APK run is about 25 Linux-equivalent
-minutes. An iOS run is counted separately for each `main` push or manual dispatch.
-This is an estimate, not a measured guarantee; use completed workflow durations from
-GitHub's Actions usage view. Keep signed builds restricted to `main` pushes or
-manual dispatch from `main`, add concurrency cancellation,
-retain artifacts only as long as needed,
-and configure GitHub to stop usage at the account budget rather than silently incur
-charges.
-
-The current `Native Android build` workflow has no `pull_request` trigger, so it does not
-start a signed build for every PR or every new commit pushed to a PR. The iOS workflow also
-has no pull-request signing path; it runs from the `main` push after merge or from a manual
-`main` dispatch. Plan approximately as follows
-for a private GitHub Free organization, assuming the rough 10× macOS billing weight:
-
-| iOS runner time | Approximate iOS builds from 2,000 Linux-equivalent minutes |
-| ---: | ---: |
-| 10 minutes | 20 |
-| 20 minutes | 10 |
-| 30 minutes | 6 |
-| 45 minutes | 4 |
-
-These counts exclude Android jobs and other workflows, and every pushed revision or
-manual rerun counts as another job. Pull requests get only the unsigned builds above;
-signed iOS builds remain reserved for the post-merge `main` path or
-manual dispatch from `main`. If the upstream repository is public, the
-standard macOS runner is currently free and unlimited, though concurrency and fair-use
-limits still apply. See [GitHub's runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+Standard GitHub-hosted runners, including standard macOS runners, are currently free for
+public repositories such as this one; concurrency and fair-use limits still apply. See
+[GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+and [GitHub's runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+If the repository ever became private, its builds would draw on the plan's monthly
+minutes, with macOS minutes counted at a much higher rate than Linux ones (roughly ten
+times), so check the billing page before relying on a quota.
 
 The direct native approaches have similar platform-tool maintenance:
 
@@ -283,7 +134,7 @@ The direct native approaches have similar platform-tool maintenance:
 | --- | --- |
 | Expo/React Native | Update dependencies and rerun prebuild checks when SDK/native dependencies change |
 | GitHub runner | Review `runs-on`, Xcode, Node, Java, Android SDK, and NDK versions when images retire |
-| iOS | Renew distribution certificates/profiles and retest after Xcode updates |
+| iOS | Renew distribution certificates/profiles, retest after Xcode updates, and replace the App Store Connect API key if it's compromised or someone who had it leaves |
 | Android | Keep the upload keystore backed up; reset it through Play if compromised |
 | Workflow | Keep signing/upload steps, cleanup traps, permissions, and action versions current |
 
@@ -300,8 +151,10 @@ orchestration visible in this repository and avoid another credential boundary.
 
 The app uses Expo SDK 58 (`expo ~58.0.0`) with a React Native 0.88 release
 candidate, and the matching template package. Use Node 22, the version the native
-workflows use. Generate the Android project with the exact template version used by
-the build script:
+workflows use. The install commands keep `--force` until the app moves to a stable
+React Native release (#211); [Development setup](../README.md#prerequisites) explains
+why. Generate the Android project with the exact template version used by the build
+script:
 
 ```sh
 npm install --force
@@ -338,181 +191,29 @@ The checked-in configuration points to the church's package and bundle identifie
 and its public app assets. A third party must not use the church's signing or store
 credentials. Choose identifiers owned by the fork, create its own Apple Developer
 and Google Play accounts if it intends to distribute the apps, and create its own
-GitHub Environment secrets. The direct-native workflow architecture can be reused,
+GitHub Environment secrets; GitHub doesn't share the church's with forks, such as
+`<your-fork>/sda-church-app`. The direct-native workflow architecture can be reused,
 but signing material and account access must remain separate.
 
-## If the organization loses access to Apple, Google, or D&B
+## Store accounts and recovery
 
-Treat these accounts as organizational assets, not as one employee's personal
-accounts. Keep at least two authorized administrators, use organization-owned
-email addresses, store recovery methods securely, and record the legal entity
-name, address, EIN, D-U-N-S number, account IDs, and renewal dates.
-
-### Apple Developer
-
-The critical Apple role is called **Account Holder**. For an organization
-membership, the Account Holder must have legal authority to bind the
-organization. If the current Account Holder is still reachable, they can add
-the successor to the team and transfer the role from Apple Developer's
-[Transfer the Account Holder role](https://developer.apple.com/help/account/access/transfer-the-account-holder-role/)
-page. The successor needs an Apple Account with two-factor authentication and
-may need identity verification and to accept the transferee agreement.
-
-If the Account Holder is deceased, unreachable, or the organization cannot
-sign in, contact [Apple Developer Support](https://developer.apple.com/contact/)
-and explain that the organization has lost its Account Holder. Be prepared to
-show the successor's government ID and evidence that they are authorized to
-bind the legal entity, such as board authorization, corporate or nonprofit
-registration, an officer/director listing, and the organization's official
-contact information. Apple determines the exact documents and may request
-additional business records; do not assume an Admin can replace the Account
-Holder without Apple's help.
-
-Apple's organization enrollment and identity record must match the legal
-entity. A nonprofit should be enrolled as the nonprofit's organization, with
-the nonprofit's legal name, address, and D-U-N-S record—not as a sole
-proprietor or individual. See Apple's guidance on
-[updating organization information](https://developer.apple.com/help/account/membership/updating-your-account-information).
-
-### Google Play Console
-
-For Google Play, use an **Organization** developer account and an
-organization-type Google Payments profile. Google requires a D-U-N-S number
-for organization accounts and offers **Non-profit** as an organization type;
-do not leave the account as Personal/Individual or Sole Proprietor merely
-because that was the default selected during setup. The legal name and address
-in Google Payments must match the D&B profile.
-
-If the existing owner is available, add the successor under **Users and
-permissions** and use Google's [Transfer ownership of a Play Console
-developer account](https://support.google.com/googleplay/android-developer/answer/16909862)
-process. The current Google guidance includes a seven-day security cooling-off
-period. If the owner is no longer reachable, Google says to contact Play
-Console support through the Help section or its online form; the self-service
-transfer cannot be completed without the current owner. Be ready with the
-successor's government ID, organization relationship/authority, verified
-contact information, Google Payments access, and nonprofit/legal-entity
-documents requested by Google. See Google's [required account
-information](https://support.google.com/googleplay/android-developer/answer/13628312)
-and [identity/profile update guidance](https://support.google.com/googleplay/android-developer/answer/13634888).
-
-If recovery is impossible, create a new organization Play Console account and
-ask Google to transfer the apps. This is a recovery path, not a shortcut: the
-new account must be active and verified, and app signing, Firebase, API,
-analytics, payments, testing, and reports may need follow-up work.
-
-### D-U-N-S and Dun & Bradstreet recovery
-
-The relevant D&B product name is **D-U-N-S Profile Manager** (often shortened
-to D-U-N-S Manager), not “DNB business profile manager.” Use the official
-[D-U-N-S Profile Manager](https://www.dnb.com/en-us/smb/duns/duns-manager.html),
-[D&B company-profile manager](https://smallbusiness.dnb.com/duns-manager/company-profile),
-or [D&B sign-in](https://my.dnb.com/) entry points. D&B describes verified
-owners, directors, or officers as the people who can manage the profile.
-
-If the organization has no D-U-N-S number, request one through D&B's
-[D-U-N-S request service](https://www.dnb.com/duns-number/get-a-duns.html)
-and keep the confirmation. The practical wait we experienced was roughly
-**5–10 business days** for a new number; this is an operational estimate, not
-a guaranteed SLA. Apple and Google may also need additional time after D&B
-updates before their verification systems see the change.
-
-If the existing D&B profile is controlled by a departed contact, use Profile
-Manager's verification/recovery flow and request access as an authorized
-owner, director, or officer. Prepare the organization's exact legal name and
-address, D-U-N-S number, government-issued ID, work email/phone, and documents
-showing authority—typically formation/registration records, IRS EIN or
-tax-exempt determination documentation, nonprofit registration, and a board
-resolution or letter of authorization. D&B may request different or additional
-documents, so submit only what its support team asks for.
-
-In our experience, becoming the verified D-U-N-S profile manager took another
-roughly **5–10 business days**. The role we were looking for is best described
-as a verified owner/director/officer in D-U-N-S Profile Manager; D&B's exact
-label may vary by region and workflow.
-
-Most importantly, check the D&B legal-entity classification after recovery.
-For a nonprofit, the profile must identify the actual nonprofit legal entity,
-not Sole Proprietorship. A D-U-N-S request can default to an individual/sole-
-proprietor-style record even when the applicant selected nonprofit. Correct the
-D&B record first, using the nonprofit's legal documents, then wait for the
-change to propagate before submitting Apple or Google verification. Google
-explicitly says organization name, address, and D-U-N-S updates originate in
-D&B rather than being edited directly in Play Console.
-
-## One-time account setup
-
-The account steps below describe the store accounts and the direct-native workflows.
-Neither recommended workflow requires an Expo account; follow [Android setup](#android-setup-github-hosted-direct-builds) and
-[iOS setup](#ios-setup-github-hosted-direct-builds) for their build credentials.
-
-### Apple Developer versus Apple Business Manager
-
-Apple Business Manager is **not required** to enroll in or use the Apple
-Developer Program for App Store distribution. They are separate Apple
-services. The required service for this project is an Apple Developer Program
-organization membership; Apple requires the legal entity, D-U-N-S number,
-legal binding authority, a work email, and a public organization website
-([Apple's enrollment requirements](https://developer.apple.com/help/account/membership/program-enrollment/)).
-
-Do not assume that an Apple Business Manager login is the Apple Developer
-login. If the organization already uses Apple Business Manager, it can be
-useful for device management, Managed Apple Accounts, and distributing custom
-apps, but it does not replace Apple Developer enrollment. Apple describes the
-relationship in its [membership comparison](https://developer.apple.com/support/compare-memberships/):
-apps distributed through the App Store, Apple Business Manager, or Apple School
-Manager use the Apple Developer Program.
-
-For a small organization, the practical setup is an organization-controlled
-Apple Account with two-factor authentication used to enroll the Apple Developer
-Program organization membership. Then add at least one additional trusted
-Admin and keep recovery methods under organizational control. The enrolling
-person becomes the Apple Developer **Account Holder**, which is the role that
-renews membership and accepts legal agreements. If the organization uses
-Managed Apple Accounts through Apple Business Manager, Apple says Account
-Holder-role changes may require contacting Apple, so document the relationship
-and do not make the account dependent on one employee's personal Apple Account.
-
-1. Install dependencies with `npm ci --force`. Expo SDK 58 is stable, but the app
-   still uses a React Native 0.88 release candidate, and some peer ranges exclude
-   prereleases; remove `--force` once the app moves to a stable React Native release
-   (#211). Use Node 22 for parity with native CI.
-2. Confirm `org.nyccsda.app` is the intended identifier in both stores. Configure
-   the organization's Apple Developer/App Store Connect and Google Play accounts.
-3. Decide the credential source before the first store build. This project uses
-   GitHub-hosted Android credentials for direct Gradle builds and GitHub-hosted
-   Apple credentials for direct Xcode builds. Keep an encrypted offline backup and
-   credential recovery under church ownership.
+Who should own the Apple Developer, Google Play, and D&B accounts, how to recover each
+one if the organization loses access, and how Apple Developer differs from Apple
+Business Manager are in
+[Account ownership and recovery](app-store-setup.md#account-ownership-and-recovery).
 
 ## GitHub-hosted signing and submission credentials
 
-GitHub-hosted credentials are the configuration for the direct-native Android and
-iOS paths. Android uses environment variables in its config plugin. The direct iOS
-workflow restores an Apple `.p12` and provisioning profile into temporary files,
-imports the certificate into an ephemeral keychain, and uses Xcode's manual signing
-settings. It does not create a credentials file or send signing material to another
-build service.
+These are the secrets the signed builds and store uploads read. Who holds each
+credential, and why, is in the [credential-custody decision](#credential-custody-decision).
 
-The direct-native GitHub workflows store the keystore, `.p12`, and provisioning
-profile as encrypted Environment secrets (usually base64-encoded), recreate them
-in the runner's temporary directory, and delete them afterward. The iOS workflow
-also deletes its temporary keychain and installed provisioning profile. Base64 is
-only an encoding for binary files; the GitHub secret is the protection. Never echo
-either the encoded or decoded value.
-
-The current Android workflow needs only these four production Environment secrets:
-`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
-`ANDROID_KEY_PASSWORD`. `ANDROID_KEYSTORE_PATH` is deliberately not a stored
-secret: the workflow creates the keystore at a fresh runner-temporary path and
-passes that derived path to the build script. No workflow reads `EXPO_TOKEN`; if
-an `EXPO_TOKEN` secret is still set in the repository or an Environment, delete it.
-
-Use separate secrets rather than one large structured secret where practical:
+The signing values are Environment secrets in the protected `production` Environment of
+the church's upstream repository, not Repository secrets:
 
 ```text
-ANDROID_KEYSTORE_BASE64
+ANDROID_KEYSTORE_BASE64       # base64 of the upload keystore (.jks)
 ANDROID_KEYSTORE_PASSWORD
-ANDROID_KEY_ALIAS
+ANDROID_KEY_ALIAS              # e.g. nyccsda-upload
 ANDROID_KEY_PASSWORD
 IOS_DISTRIBUTION_CERTIFICATE_BASE64
 IOS_DISTRIBUTION_CERTIFICATE_PASSWORD
@@ -531,70 +232,49 @@ GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER
 GOOGLE_PLAY_SERVICE_ACCOUNT
 ```
 
-The two Google Play values aren't keys: the upload signs in without one.
+The two Google Play values aren't keys: the upload signs in without one. Setting up
+`store-upload` is under [Automatic store uploads](#automatic-store-uploads).
+`production` also holds the other workflows' secrets: `CLASPRC_JSON` (the Apps Script
+deploy, the QR code upload, and the Android PR preview's Drive upload),
+`APPS_SCRIPT_PROJECT_ID` and `APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy), and the
+optional `GOOGLE_DRIVE_FOLDER_ID` (the Drive upload). A third environment,
+`screenshot-review`, holds no secrets; it only holds the
+[Screenshots reviewed](#key-screens) check for approval.
 
-See [Automatic store uploads](#automatic-store-uploads).
+To set up `production`, open **Settings → Environments** in the upstream repository and
+create or select `production`. Require at least one reviewer, and restrict deployment
+branches to `main` and `release/**`. The release branches need it only so the Android PR
+preview can upload its APK to Drive; the signing jobs themselves run only on `main`.
+Then:
 
-The production secret Environment should require reviewer approval, be
-available only to protected `main` builds or deliberate manual dispatches from
-`main`, and use
-read-only repository permissions for the build job. Keep third-party Actions
-pinned and review workflow changes before approving a signing run. The current
-main-only guard is necessary but is not a substitute for these controls.
+- **Store binary files base64-encoded.** The keystore, `.p12`, and provisioning profile
+  are binary, so their secrets hold base64 text. Base64 is only an encoding; the GitHub
+  secret is the protection. Never echo the encoded or the decoded value.
+- **Don't store `ANDROID_KEYSTORE_PATH`.** The workflow writes the keystore to a fresh
+  runner-temporary path and passes that path to the build script.
+- **Delete duplicates and leftovers.** If a name exists at both scopes, the Environment
+  value wins, but a Repository-secret copy is readable by every workflow and weakens the
+  boundary. To move one, add the value to `production`, check that the protected
+  workflow uses it, then delete the repository copy. No workflow reads `EXPO_TOKEN`; if
+  one is still set anywhere, delete it.
+- **Review before approving.** The build jobs have read-only repository permissions and
+  pin their third-party Actions, but anyone who can change a trusted workflow and get it
+  approved can use its secrets. Review workflow changes before approving a signing run.
 
 ## iOS setup: GitHub-hosted direct builds
 
-The separate `.github/workflows/native-ios-build.yml` workflow runs only on trusted
-pushes to `main` or a manual dispatch from `main`. It has no pull-request or
-`release/**` signing path and does not receive `EXPO_TOKEN`. It creates an IPA
-artifact, which a separate job then uploads to TestFlight; see
-[Automatic store uploads](#automatic-store-uploads).
+**Native iOS build** (`.github/workflows/native-ios-build.yml`) needs the four `IOS_*`
+secrets above in `production`. What each one holds, how to create the certificate and
+profile and encode them on Windows or macOS, and the yearly renewal are in
+[App Store and Google Play setup](app-store-setup.md#apple-app-store).
 
-Before running it, configure these secrets in the protected `production`
-Environment in the upstream repository. Creating the certificate and profile in the
-Apple Developer portal, encoding them on Windows, and renewing them each year are
-covered in [App Store and Google Play setup](app-store-setup.md#apple-app-store):
-
-```text
-IOS_DISTRIBUTION_CERTIFICATE_BASE64
-IOS_DISTRIBUTION_CERTIFICATE_PASSWORD
-IOS_PROVISIONING_PROFILE_BASE64
-IOS_TEAM_ID
-```
-
-`IOS_DISTRIBUTION_CERTIFICATE_BASE64` is a base64 encoding of a `.p12` that
-contains the Apple Distribution certificate and its private key. The password is
-the export password for that `.p12`. `IOS_PROVISIONING_PROFILE_BASE64` is a
-base64 encoding of an App Store distribution provisioning profile for exactly
-`org.nyccsda.app`. `IOS_TEAM_ID` is the church's Apple Developer Team ID. The
-workflow validates the profile's team and application identifier before importing
-anything into the temporary keychain.
-
-On macOS, encode binary files without printing their contents to the terminal:
-
-```sh
-base64 -i /secure/location/nyccsda-distribution.p12 | tr -d '\n' | pbcopy
-# Paste into IOS_DISTRIBUTION_CERTIFICATE_BASE64 in GitHub
-
-base64 -i /secure/location/nyccsda-app-store.mobileprovision | tr -d '\n' | pbcopy
-# Paste into IOS_PROVISIONING_PROFILE_BASE64 in GitHub
-```
-
-The workflow performs all of the following on the runner: installs dependencies,
-generates the ignored iOS project with Expo prebuild, installs CocoaPods,
-creates an ephemeral keychain, imports the `.p12`, installs the provisioning
-profile, archives with Xcode, exports an App Store IPA, uploads only the IPA, and
-deletes the certificate, profile, keychain, archive, and export files in an
-`always()` cleanup step.
-
-The iOS build number is computed from the version in `app.json` (`0.40.0` becomes
-`40000`) and passed to Xcode, for pushes and manual runs alike; see
-[Version numbers](version-numbers.md). The workflow refuses to run if `app.json` sets
-`expo.ios.buildNumber` by hand.
-
-The build job has no App Store Connect API key. The separate **Upload to TestFlight**
-job, in the `store-upload` Environment, uploads the IPA; see
-[Automatic store uploads](#automatic-store-uploads).
+On the runner, the workflow installs dependencies and CocoaPods and generates the
+ignored iOS project. It checks that the profile belongs to `IOS_TEAM_ID` and to
+`org.nyccsda.app` before importing anything, refuses to run if `app.json` sets
+`expo.ios.buildNumber`, and then signs, archives, and exports an App Store IPA as in
+[How the signed builds work](#how-the-signed-builds-work). Only the IPA is uploaded as an
+artifact. The build job has no App Store Connect API key; the separate **Upload to
+TestFlight** job, in `store-upload`, uploads the IPA.
 
 ## Android setup: GitHub-hosted direct builds
 
@@ -650,45 +330,22 @@ annual rotation and should normally remain stable for the life of the app.
 
 ### 3. The Play version code
 
-The `versionCode` must increase with every Google Play upload. `app.config.js`
-computes it from the version (`0.40.0` becomes `40000`), so nobody sets it by hand,
-and the build script refuses to run if `app.json` sets one. See
-[Version numbers](version-numbers.md).
+`app.config.js` computes the `versionCode` from the version (`1.0.1` becomes
+`1000001`); see [Version numbers](version-numbers.md).
 
 ### 4. Configure the protected GitHub Environment
 
-In the church's **upstream** GitHub repository, open **Settings → Environments**
-and create or select `production`. Require at least one reviewer, and restrict
-deployment branches to `main` and `release/**`. The release branches need it only so
-the Android PR preview can upload its APK to Drive; the signing jobs themselves run
-only on `main`. Add these Environment secrets:
-
-```text
-ANDROID_KEYSTORE_BASE64       # base64 of the JKS file
-ANDROID_KEYSTORE_PASSWORD
-ANDROID_KEY_ALIAS              # e.g. nyccsda-upload
-ANDROID_KEY_PASSWORD
-```
-
-Use the Environment secret form—not **Repository secrets**—for these values.
-Environment approval is the release gate that keeps a maintainer in the loop
-before a job can use production signing material. If duplicate values currently
-exist under Repository secrets, add the values to `production`, verify the
-protected workflow uses that Environment, then delete the repository-level copies.
-
-Create the base64 value locally and paste it into the secret without printing
-the keystore or password. On macOS, for example:
+Add the four `ANDROID_*` values to `production`, set up as described under
+[GitHub-hosted signing and submission credentials](#github-hosted-signing-and-submission-credentials).
+Create the base64 value locally and paste it into the secret without printing the
+keystore or password. On macOS, for example:
 
 ```sh
 base64 -i /path/outside/repo/nyccsda-upload.jks | tr -d '\n' | pbcopy
 ```
 
-On Linux, use `base64 -w 0 /path/outside/repo/nyccsda-upload.jks` and paste the
-output directly into GitHub. The workflow's `environment: production` setting
-and main-only guard ensure that a pull request cannot read these values.
-Review the workflow file before approving a protected run; anyone who can
-change a trusted workflow and access its approval can potentially use its
-secrets.
+On Linux, use `base64 -w 0 /path/outside/repo/nyccsda-upload.jks` and paste the output
+directly into GitHub.
 
 ### 5. Build and verify before uploading
 
@@ -744,11 +401,8 @@ Verify the artifact locally before uploading:
 jarsigner -verify -verbose -certs /tmp/nyccsda-release.aab
 ```
 
-Google requires the app's **first** upload to be made by hand in Play Console; the
-church did this with 0.39.0. Every release since uploads its AAB to internal testing
-automatically; see [Automatic store uploads](#automatic-store-uploads). Install each
-one from the Play Store on a real phone, and check that it updates over the previous
-build.
+Every release uploads its AAB to internal testing automatically; see
+[Automatic store uploads](#automatic-store-uploads).
 
 ### Android rotation and recovery policy
 
@@ -768,18 +422,9 @@ from Play Console.
 
 ## External account cleanup
 
-The repository no longer contains EAS commands, EAS project metadata, or EAS
-workflow configuration. Before deleting any external Expo account, confirm that
-the church does not need its project history, exported credentials, or records.
-Account deletion is separate from this repository change and is not performed
-automatically.
-
-This credential plan does not eliminate maintenance: protect the Android upload
-keystore and keep an encrypted organizational backup; renew Apple distribution
-certificates and provisioning profiles; revoke and replace compromised tokens;
-and rotate the Google/Apple submission credentials when staff or access changes.
-Apple provisioning profiles expire after 12 months, while Google Play can reset a
-lost or compromised upload key. See [Google Play App Signing](https://support.google.com/googleplay/android-developer/answer/9842756?hl=en).
+The repository no longer uses EAS. Before deleting any external Expo account, a separate
+manual step, confirm that the church doesn't need its project history, exported
+credentials, or records.
 
 ## Build commands
 
@@ -788,7 +433,8 @@ lost or compromised upload key. See [Google Play App Signing](https://support.go
 The Android scripts generate the ignored native project with Expo prebuild when needed
 (see [Local Expo template lookup](#local-expo-template-lookup)), apply
 `plugins/withAndroidLocalSigning.js`, and invoke Gradle directly. Signed release
-commands require the four `ANDROID_*` variables; the debug commands do not:
+commands require the four `ANDROID_*` variables (see
+[Android setup](#android-setup-github-hosted-direct-builds)); the debug commands do not:
 
 ```sh
 npm run build:android:apk -- --output /absolute/path/app.apk
@@ -798,8 +444,6 @@ npm run build:android:apk:debug:arm -- --output /absolute/path/preview-arm.apk
 npm run build:android:apk:debug:intel -- --output /absolute/path/preview-intel.apk
 ```
 
-The signed commands require the four `ANDROID_*` signing environment variables; see
-[Android setup](#android-setup-github-hosted-direct-builds).
 The debug commands use Gradle's automatically generated debug key and do not require
 or touch the production upload keystore. They create a standalone APK for local device
 testing that must never be uploaded to Google Play. A truly unsigned APK is generally
@@ -863,6 +507,28 @@ On `main`, a manual Android run builds both the AAB and the APK whichever boxes 
 ticked; the AAB box only decides whether the AAB is also uploaded to Google Play
 internal testing. Native failures do not block the website deployment.
 
+### Android PR preview and Drive upload
+
+**Android PR preview** builds with no signing credentials: it makes a debug APK, signed
+only with Gradle's local debug key, for ARM phones and tablets
+(`npm run build:android:apk:debug:arm`). It runs automatically for release pull requests
+into `main`, from a `release/*` branch in this repository, and skips fork PRs. It does
+not accept manual commit or pull-request SHA inputs and does not use dependency caching
+while executing PR code in the `pull_request_target` context.
+
+For an automatic PR run, a separate protected `production` Environment job downloads only
+the APK artifact and checks out the upload helper from the trusted base commit. It does not
+check out or execute PR code while the Google credential is available. The helper refreshes
+the existing `CLASPRC_JSON` OAuth token and
+uploads a private APK file to the connected user's My Drive root. The OAuth account must
+retain the `drive.file` scope. To upload into a folder instead, add a
+`GOOGLE_DRIVE_FOLDER_ID` secret to `production`; the upload job already passes it to the
+helper.
+
+`production` requires a reviewer, so the Drive upload waits for someone to approve it.
+The Drive upload job must remain separate from the build job, and the upload helper must
+be checked out from the trusted base commit rather than the PR head.
+
 ### iOS PR preview (unsigned Simulator builds)
 
 The iOS counterpart of the Android PR preview. A Simulator build runs the app on a
@@ -908,9 +574,23 @@ requests into `main`, such as Dependabot's. To test a change to the workflow,
 `scripts/build-ios-simulator.mjs`, or the key screens before the release PR, start it by
 hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
-**Key screens.** The Apple Silicon job also screenshots the screens listed in
-`test/screens/screens.json`, so a layout problem on iPhone shows up before release
-rather than in TestFlight (#331). `scripts/capture-ios-screens.cjs` takes each one:
+**Install a downloaded build on a Mac.** From the run's Artifacts section, download the
+artifact ending in `-x86_64` for an Intel Mac or `-arm64` for Apple Silicon, and unzip
+the download and then the `.zip` inside it to get the `.app`. Open the Simulator
+(Xcode > Open Developer Tool > Simulator) and drag the `.app` onto the simulated
+iPhone, or run:
+
+```sh
+xcrun simctl install booted /path/to/the.app
+xcrun simctl launch booted org.nyccsda.app
+```
+
+#### Key screens
+
+The Apple Silicon job also screenshots the 30 screens listed in
+`test/screens/screens.json`, 82 shots in all, so a layout problem on iPhone shows up
+before release rather than in TestFlight (#331). `scripts/capture-ios-screens.cjs`
+takes each one:
 
 1. It saves the settings the app reads at startup into the app's storage: setup
    finished, the language, theme, and text size for that shot, and the screen to
@@ -922,8 +602,8 @@ rather than in TestFlight (#331). `scripts/capture-ios-screens.cjs` takes each o
    app, and the store builds never set it, so on a real phone the app never looks for
    a saved screen. A test checks that no other workflow sets it.
 2. It launches the app, waits for the screen to load, and saves
-   `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch, so the run
-   takes about 22 minutes.
+   `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch, so the 82 shots
+   take about 24 of the run's 50 minutes.
 3. The status bar is fixed (9:41, full battery and signal), so images differ only when
    the app does. The iOS 26 Simulator draws the Dynamic Island into its screenshots,
    although a real iPhone's screenshots leave it out.
@@ -963,86 +643,51 @@ such as the Bible while reading, sets `"tabs": false`. What Vision read is saved
 
 The first real runs showed what this catches. Every screen covered by iOS's "Open in"
 prompt failed, and so did one screenshot the app hadn't drawn yet, which the blank check
-then missed. To try a rule change without a 40-minute build, start the workflow by hand
-with **screens_from_run** set to an earlier run's ID: it downloads that run's screenshots
-and only checks them. The tests use text Vision read from real screenshots
+then missed. To try a rule change without waiting for a 50-minute run, start the
+workflow by hand with **screens_from_run** set to an earlier run's ID: it downloads that
+run's screenshots and only checks them. The tests use text Vision read from real screenshots
 (`test/screens/ocr-samples.json`), unedited. It includes Vision's mistakes on text
 that's fine on screen, such as "ANDKPW MUKKA" for the "ANDREW MURRAY" printed small on
 the *Humility* cover image, and "eternal life4." for a verse with footnote 4. The
 checks look only for particular labels in particular places, so text like that can't
 pass or fail them, and a test makes sure of it.
 
-**Human review.** Other layout problems, such as a cut-off label or a verse number
-split across two lines, need a person, so the iOS preview asks for one on the release
-pull request into `main`:
-
-1. As soon as the pull request opens or gets a new push, it posts a notice that the
-   screenshots are on the way. They take about 50 minutes. The notice also removes
-   the screenshots from before the push, which are out of date.
-2. When they're ready, it replaces the notice with a comment linking that commit's
-   screenshots, what to look for, and how to approve.
-3. Its last job, **Screenshots reviewed**, uses the `screenshot-review` environment,
-   whose required reviewers are the **release-approvers** team. So the check waits,
-   pending rather than failing, until one of them opens the run, selects **Review
-   deployments**, ticks **screenshot-review**, and approves. GitHub notifies the
-   approvers.
-
-A new push starts a new run, which needs its own approval, so each version of the
-release gets its own review. If the environment were ever missing or had no required
-reviewers, GitHub would run the job without waiting, so the job checks that the
-environment requires approval, and fails if it doesn't.
-[Approving the screenshots](admin-runbook.md#approving-the-screenshots) has the setup.
+**Human review.** Other layout problems, such as a cut-off label, need a person. On the
+release pull request into `main`, the iOS preview posts a notice when the pull request
+opens or gets a push (the run takes about 50 minutes) and removes the comment with the
+earlier, now out-of-date screenshots. When the run finishes, it replaces the notice with a
+comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
+in the `screenshot-review` environment until a **release-approvers** member approves.
+Each push needs a new approval, and the job fails if the environment doesn't require
+one. [Approving the screenshots](admin-runbook.md#approving-the-screenshots) has the
+steps and the setup.
 
 **App Store screenshots.** The images are 1320 × 2868, the App Store's 6.9-inch iPhone
 size. The shots listed under `appStore` in the screen list are also copied, numbered in
 upload order, to `screens/app-store/<language>/`, without the transparency the
 Simulator's PNGs have, which App Store Connect rejects. They're ready to upload; see
-[Store assets](../store-assets/README.md). With each release, compare them with the
-stores' screenshots. Refresh the stores' when one shows something no longer true, the
-app looks noticeably different, or a new feature deserves showing; small differences,
-such as an icon, are fine. The Home screen's verse of the day and
-countdown change daily, which its `changesDaily` entry marks for when these images are
-compared with known-good copies.
+[Store assets](../store-assets/README.md). When to refresh the stores' screenshots is in
+step 2 of the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the-stores).
 
 To add a screen, add an entry to `test/screens/screens.json`: a `name`, the deep link
 `path` without the scheme, any Bible `settings`, the `variants` to take, and any
 `checks`. Leave out screens that show members' names or photos, such as the bulletin,
 the team page, and the fellowship page; `test/screens.test.ts` checks this. A new
 setting also needs its storage key in the script's `SETTING_KEYS`, and the test checks
-the app still reads that key.
-
-**Install a downloaded build on a Mac.** From the run's Artifacts section, download the
-artifact ending in `-x86_64` for an Intel Mac or `-arm64` for Apple Silicon, and unzip
-the download and then the `.zip` inside it to get the `.app`. Open the Simulator
-(Xcode > Open Developer Tool > Simulator) and drag the `.app` onto the simulated
-iPhone, or run:
-
-```sh
-xcrun simctl install booted /path/to/the.app
-xcrun simctl launch booted org.nyccsda.app
-```
+the app still reads that key. A screen whose content changes every day, such as Home
+with its verse of the day and countdown, is marked `changesDaily`, for when these images
+are compared with known-good copies.
 
 ### Android audio test on release PRs
 
 **Android audio e2e** (`android-audio-e2e.yml`) checks Bible audio on a real Android
 player, which Jest can't reach. It runs on each release PR into `main`, where its job,
 **Bible audio on an Android emulator**, is a required check, and it can be started by
-hand on any branch. Like the iOS preview, it skips feature PRs into a release branch,
-other PRs into `main`, and forks. It reads no secrets.
-
-On an Ubuntu runner it builds the debug APK with `npm run build:android:apk:debug:intel`,
-boots an Android 16 (API 36) emulator, and runs `scripts/e2e/android-bible-audio.sh`.
-A local DNS server makes the church's audio host unreachable, so the first scenario
-checks that playback fails over to the next source. The others check that the next
-chapter starts with the screen off while the media foreground service stays up, that
-audio starts without an unlock when the connection returns, that a mid-chapter
-connection loss resumes where it stopped, and that pause and resume keep the place. It
-plays real recordings, so an outage at an audio host can fail it too. When it fails, the
-`android-audio-e2e-*` artifact (kept 14 days) has a screenshot and logs for each failed
-scenario.
-
-The [admin runbook](admin-runbook.md#bible-audio-emulator-test) describes each scenario,
-what to do when it fails, and how to run the script on your own emulator.
+hand on any branch. It skips other PRs and forks, and reads no secrets. On an Ubuntu
+runner it builds the debug APK with `npm run build:android:apk:debug:intel`, boots an
+Android 16 (API 36) emulator, and runs `scripts/e2e/android-bible-audio.sh`. The
+[admin runbook](admin-runbook.md#bible-audio-emulator-test) describes each scenario, what
+to do when it fails, and how to run the script on your own emulator.
 
 ## Automatic store uploads
 
@@ -1334,21 +979,72 @@ runner image, plus build tools and NDK. Revisit these pins with each Expo SDK up
 and when Google Play's target API requirement changes.
 
 Before release, run `npx expo install --check`, `npx expo-doctor`, and `npm run check`.
-Then build and test signed binaries on physical iPhone and Android devices,
-including the background-audio checks in the acceptance gate of
-[native-store-investigation.md](native-store-investigation.md); its OTA item doesn't
-apply, because OTA isn't configured. On Android, the
-[Android audio test](#android-audio-test-on-release-prs) covers failover, screen-off
-chapter changes, and connection loss on an emulator, but not a physical phone.
-Successful JavaScript
-exports alone do not prove native compilation, signing, playback or store acceptance.
-OTA updates are not configured by this setup; website deployments do not
-update installed native apps.
+Then build and test signed binaries on physical iPhone and Android devices, with the
+[device checks before release](admin-runbook.md#device-checks-before-release) in the
+admin runbook. On Android, the [Android audio test](#android-audio-test-on-release-prs)
+covers failover, screen-off chapter changes, and connection loss on an emulator, but not
+a physical phone. Successful JavaScript exports alone do not prove native compilation,
+signing, playback or store acceptance. OTA updates are not configured by this setup;
+website deployments do not update installed native apps.
 
 Local builds are manageable for a maintainer comfortable installing SDK tools.
 GitHub’s macOS runner lets you build iOS without
 owning a Mac; update the runner/Xcode selection when GitHub retires that version. Both paths still need signing/account maintenance and
 periodic store-required SDK updates.
+
+## Decision record
+
+Why the builds and their credentials are set up this way.
+
+### Decision rationale and risk register
+
+| Decision | Reason | Remaining risk / control |
+| --- | --- | --- |
+| Build Android with prebuild + Gradle | Removes Expo authentication and EAS credential custody from Android while using the public repository's free standard Linux runner | Expo template, Gradle, Java, SDK, and NDK updates still need periodic validation |
+| Keep native directories ignored | Expo Continuous Native Generation makes `app.json` and config plugins the source of truth and avoids hand-edited generated files | A clean prebuild can overwrite manual native edits; keep native behavior in config/plugins |
+| Store Android signing values in the protected GitHub Environment | Google retains the final Play app-signing key; CI needs only the upload key and four narrowly scoped values, while GitHub provides reviewer approval and branch controls | Repository-level copies weaken environment scoping; keep the four values only in `production`, require approval, restrict trusted refs, use least privilege, and review Actions |
+| Do not rotate the Android key annually | Upload keys do not expire annually; keeping the same key preserves the Play update path | Maintain encrypted backups; use Play's upload-key reset process after loss or compromise |
+| Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using trusted-branch or manual macOS workflows | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
+| Upload automatically to testing only | Testers get every release without anyone moving files by hand, while the public release stays a manual step in each console | Store credentials are in a separate `store-upload` environment and job that runs no npm packages; the first Play upload was made by hand, as Play requires |
+| Do not build signed binaries before `main` | Production signing material is reserved for the post-merge `main` build. | Pull-request previews stay unsigned: an ARM debug APK and iOS Simulator builds. Fork PRs get no native builds |
+
+This is why the migration is not just “put the JKS in a GitHub secret.” The
+keystore must be the key Google expects, the version code must be monotonic, the
+workflow must restore and delete the secret safely, and the resulting AAB must
+be tested as an update. These controls matter more than the build command itself.
+
+#### Why the final credential boundary is a GitHub Environment
+
+The final design is a protected GitHub `production` Environment, not a general
+repository-secret bucket. Environment secrets are limited to jobs that name that
+Environment and are made available only after its protection rules—especially
+required-reviewer approval—have passed. Repository secrets are available to all
+workflows in the repository and are read earlier in the workflow lifecycle. See
+GitHub's [secrets reference](https://docs.github.com/en/actions/reference/security/secrets)
+and [deployment-environment guidance](https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments).
+
+### Credential-custody decision
+
+The credential boundary for the church-owned project is GitHub Actions. No signing or
+submission credential is stored with a build vendor, and neither workflow uses EAS CLI,
+Expo authentication, or an EAS Cloud builder:
+
+| Credential | Custodian | CI location |
+| --- | --- | --- |
+| Android upload keystore | Church / Google Play account | Protected `production` Environment secret |
+| Google Play upload sign-in (service account, no key) | Church Google Cloud project / Google Play account | `store-upload` Environment: only the provider and service account names, no key |
+| Apple distribution certificate (`.p12`) | Church Apple Developer account | Protected `production` Environment secret |
+| Apple App Store provisioning profile | Church Apple Developer account | Protected `production` Environment secret |
+| App Store Connect API key (`.p8`) | Church App Store Connect account | `store-upload` Environment secret |
+
+The Android keystore above is the **upload key**, not Google's Play app-signing key.
+With Play App Signing, Google protects the final signing key and the CI pipeline only
+needs the upload key. The App Store Connect `.p8` key is for uploading builds to
+TestFlight; it is separate from the Apple distribution certificate and provisioning
+profile. Google Play needs no stored key: the upload job signs in without one (see
+[Setting up the Google Play service account](#setting-up-the-google-play-service-account)).
+The secret names for each credential are under
+[GitHub-hosted signing and submission credentials](#github-hosted-signing-and-submission-credentials).
 
 ## Research basis
 

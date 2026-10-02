@@ -2,8 +2,8 @@
 
 Copies of the images uploaded to Google Play and the App Store, so the next update
 starts from what's uploaded instead of from scratch. Each store has one set of six
-phone screenshots, which every listing language shows. The listing text and the rules
-for what screenshots may show are in
+phone screenshots, which every listing language shows. How each store's screenshots
+are captured, their sizes, and what they may show are in
 [Store listings](../operations/store-listing.md#screenshots).
 
 - `google-play/feature-graphic.png`: the 1024 × 500 feature graphic. It shows the app
@@ -27,14 +27,9 @@ for what screenshots may show are in
   ever deleted, upload this file again and update the link; see
   [Foreground service](../operations/play-console-answers.md#foreground-service).
 
-The Play app icon is `public/icon-512x512.png`, so it isn't copied here. Play
-screenshots are 1080 × 1920, captured on the Android emulator with Android's demo mode
-for a clean status bar. The App Store screenshots come from the key screens of the
-**iOS PR preview** run on a release PR, which are the App Store's 6.9-inch iPhone size
-with a clean status bar; see
-[iOS PR preview](../operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
-The ones here are from the 0.43.0 release PR's preview on September 30, 2026, before
-the audio button showed the audio language.
+The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The App Store
+screenshots here are from the 0.43.0 release PR's **iOS PR preview** run on September
+30, 2026, before the audio button showed the audio language.
 
 Each run also saves numbered App Store copies in its artifact's `screens/app-store/`,
 from the `appStore` lists in `test/screens/screens.json`. They aren't the set uploaded

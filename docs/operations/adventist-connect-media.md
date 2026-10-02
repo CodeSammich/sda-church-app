@@ -41,19 +41,11 @@ The Cantonese files are mostly 16 kbps mono MP3 (11 kHz), about **7.2 MB per hou
 Spanish files are mostly 24 kbps mono MP3 (22.05 kHz), like the Mandarin ones; a few
 chapters are 32 to 128 kbps. The whole Bible is about 77 hours.
 
-The recordings come from Audio Power, whose owner approved downloading and
-self-hosting them ([permission record](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)).
-The Cantonese recordings come from WordProject, under its published terms (see
-[WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio)). They're uploaded exactly
-as downloaded, only renamed. WordProject's terms don't allow playing them from its
-servers, so this library is their only source in the app. The Spanish RV1909
-recordings come from WordProject on the same terms (see
-[WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909)).
-The church also keeps a copy in Google Drive. Where the license allows it, the
-church aims to keep at least two copies of media it depends on, on services it
-controls (this library and Google Drive). This is best effort, not a complete
-backup. Many audio and text sources don't allow separate copies, so the app reads
-those directly from third-party API providers.
+The Mandarin recordings come from Audio Power, with its owner's permission, and the
+Cantonese and Spanish ones from WordProject, uploaded unchanged apart from the file
+name; the terms are in [Bible Sources and Licensing](../LEGAL.md#bible-sources-and-licensing).
+The church also keeps a copy of all three in Google Drive, as part of its
+[best-effort two-copy aim](../architecture.md#church-media).
 
 ## Request path
 
@@ -189,8 +181,9 @@ Limits and costs for every other service the app uses are in
 
 ### Demand
 
-The church has no listening analytics, so these are scenarios rather than
-measurements. Traffic is audio bytes delivered to listeners through Cloudflare.
+These are the listening scenarios from the
+[load model](service-limits-and-costs.md#load-model), as audio bytes delivered to
+listeners through Cloudflare.
 
 | Scenario | Listening | Per day | Per month | Peak bandwidth |
 | --- | --- | --- | --- | --- |

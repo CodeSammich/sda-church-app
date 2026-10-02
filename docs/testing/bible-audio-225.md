@@ -80,34 +80,17 @@ for buffering, audio focus, and notification metadata timing in that preview SDK
 
 **Android audio e2e** (`.github/workflows/android-audio-e2e.yml`), added in the 0.39.0
 release, runs `scripts/e2e/android-bible-audio.sh` on an Android emulator for every
-release pull request into `main`, where it's a required check. It uses the debug APK and plays real
-Chinese CUV recordings. Its scenarios:
-
-- **Primary host down:** the church's audio host can't be resolved, and Genesis 1 must
-  play from the Internet Archive, with the failover logged.
-- **Next chapter with the screen off:** Psalm 117 plays, the screen turns off, and
-  Psalm 118 must start by itself while the screen stays off and the media foreground
-  service stays up.
-- **Dead zone with the screen off:** Play is pressed offline and the screen turns off;
-  when the connection returns, playback must start without an unlock, with the
-  foreground service still up.
-- **Mid-chapter loss:** the connection drops and the player seeks past what has loaded;
-  the same source must reload and resume where it stopped.
-- **Pause and resume:** playback must continue from where it was paused.
+release pull request into `main`, where it's a required check. It uses the debug APK and
+plays real Chinese CUV recordings. Its scenarios, and what to do when it fails, are in
+the admin runbook's
+[Bible audio emulator test](../operations/admin-runbook.md#bible-audio-emulator-test).
+To run it on your own emulator, see
+[Bible audio on an Android emulator](../README.md#bible-audio-on-an-android-emulator).
 
 It checks the media session's state and title, not the screen's text, so it doesn't
-cover whether the reader's text matches the active chapter. The steps above that stay
-manual, on a physical phone:
-
-- Step 1's BSB audio, several chapter changes in a row, the notification controls, and
-  the text after unlocking. The emulator checks one chapter change, in CUV.
-- Step 2, notification Next and Previous.
-- Step 3, interruption by another audio app.
-- Step 4's text reload after a connection loss during a transition. The emulator
-  checks that audio recovers, not the text.
-- Step 5's timers and manual chapter, translation, and source changes. The emulator
-  covers seeking and automatic source failover.
-- Step 6, the 15-minute locked run.
-
-How to read a failure and run the script on your own emulator is in the
-[admin runbook](../operations/admin-runbook.md#bible-audio-emulator-test).
+cover whether the reader's text matches the active chapter. Of the steps above, it
+covers part of step 1 (one chapter change with the screen off, in CUV only), part of
+step 4 (audio, not text, recovering after a connection loss), part of step 5
+(seeking), and automatic source failover. The rest of steps 1 to 6 stays manual on a
+physical phone, and is in the admin runbook's
+[Device checks before release](../operations/admin-runbook.md#device-checks-before-release).

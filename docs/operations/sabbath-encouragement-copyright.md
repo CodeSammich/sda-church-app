@@ -31,8 +31,8 @@ Bible, and the compilation it follows is shared without restriction by the churc
 So an English translation made by this church should carry no outside rights. This is one more data
 point for the English translation tracked in #248, not a legal opinion. The cautions below about
 posthumous Ellen White compilations still apply to any quotation taken from one. That translation
-hasn't been made yet (#248 is open); until it is, the printed bulletin's English column is a machine
-translation. See [What the printed bulletin does today](#what-the-printed-bulletin-does-today).
+hasn't been made yet (#248 is open); until it is, the printed bulletin's English column is a labeled
+machine translation from the Chinese. See [What the printed bulletin does today](#what-the-printed-bulletin-does-today).
 
 This material is included solely for the **non-commercial ministry use of New York Chinese
 Seventh-day Adventist Church** in its printed bulletins and companion mobile app. It is not
@@ -97,15 +97,17 @@ passages. See the [official BSB terms](https://berean.bible/terms.htm).
 
 The Brooklyn printed bulletin prints one page of the compilation each week, side by side in
 Chinese and English (`google-apps-script/SabbathEncouragement.gs`). The script holds a text
-snapshot of all 52 pages. The table above records how each source should be treated; the
-script doesn't apply that treatment yet:
+snapshot of all 52 pages. The Chinese column is the original. The compilation has no
+original English edition, so the English column is a machine translation from the Chinese,
+labeled as one. The table above records how each source should be treated; the script
+treats every source the same way:
 
 - **Chinese column:** the page's text from the snapshot, unchanged apart from line breaks,
   including its Chinese Bible quotations and citations.
 - **English column:** each paragraph is machine translated from Chinese by Google's
   `LanguageApp`. That includes the Ellen White quotations, their citations, and the headings, so
-  her words are printed as a translation back from the Chinese, not in her original English
-  wording, and no English edition is checked. This applies to every source in the snapshot,
+  her words appear as a translation from the Chinese rather than in her original English
+  wording, which the label says. This applies to every source in the snapshot,
   including the passages it cites to 怀氏文稿 (manuscripts), 儿童指导, and 证言精选.
 - **Bible quotations in the English column:** a quotation in 「」 or “” followed by a Chinese
   reference the script recognizes, such as (创 2:1-3), is set aside before translation. It is

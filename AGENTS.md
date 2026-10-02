@@ -29,9 +29,9 @@ Code, Codex, Gemini, and others). The full contributor guide is
   screen or variant that shows the change, and text checks (`mustShowLines`,
   `mustNotShowLines`, `variantRules`) that fail if it breaks. Don't overdo it:
   each shot lengthens every release PR's run, so prefer a check on an existing
-  shot, and replace checks that no longer earn their place. See "Key screens"
-  in [docs/operations/native-builds.md](docs/operations/native-builds.md). The
-  PR template asks about this too.
+  shot, and replace checks that no longer earn their place. See
+  [Key screens](docs/operations/native-builds.md#key-screens). The PR template
+  asks about this too.
 
 ## Safety
 
