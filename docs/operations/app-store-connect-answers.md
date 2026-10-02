@@ -45,8 +45,9 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 ## App Privacy
 
 - **Privacy Policy URL:** `https://app.nyccsda.org/privacy-policy.html`, entered for
-  every language. The policy is English only on purpose, like the app's privacy screen:
-  one authoritative text can't be mistranslated into a different promise. Neither store
+  every language. It's the only copy: the app's **You → Privacy Policy** row opens
+  this page (#403). The policy is English only on purpose: one authoritative text
+  can't be mistranslated into a different promise. Neither store
   requires a translation.
 - **Data collection:** No, so the listing shows **Data Not Collected**. The reasoning is
   the same as Google Play's [Data safety](play-console-answers.md#data-safety): content

@@ -208,7 +208,8 @@ here.
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
 **Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
 **About & Support** has the **Privacy Policy** and **Legal Disclaimer** (both English
-only), followed by the app version. On web, tapping the version checks for an update.
+only), followed by the app version. **Privacy Policy** opens the website's copy in the
+in-app browser; the app keeps no copy of its own (#403). On web, tapping the version checks for an update.
 There is no giving, history, or staff contact here: **Tithe & Offering** and **Meet Our
 Team** are on Home, and the app has no history feature.
 
