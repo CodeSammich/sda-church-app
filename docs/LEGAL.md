@@ -1,6 +1,6 @@
 # Legal, Licensing, and Privacy
 
-Last reviewed: 2026-08-09
+Last legal review: 2026-08-09. Facts about the app updated: 2026-10-02.
 
 This document centralizes the project's licensing records, third-party source reviews,
 privacy disclosures, branding restrictions, and legal disclaimer. It records engineering
@@ -41,8 +41,8 @@ Chinese Union Version audio is streamed chapter by chapter from
 [Audio Power](https://theaudiopower.org/translations/cuv/#nar1), which credits the
 recordings to 基督徒团契 (Christian Fellowship). The app links directly to the
 church's copies on Adventist Connect, with Internet Archive and Audio Power copies as
-playback fallbacks; the repository does not bundle the recordings. Audio Power's owner,
-Phil, explicitly approved the church app's use, download, and self-hosting of these recordings in
+playback fallbacks; the repository does not bundle the recordings. Audio Power's owner
+explicitly approved the church app's use, download, and self-hosting of these recordings in
 [issue #134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608).
 
 Cantonese audio for the same editions comes from WordProject, played only from the

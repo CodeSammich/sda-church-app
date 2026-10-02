@@ -1,8 +1,12 @@
 # Development setup and testing
 
+Every project document is listed in the main README's
+[table of contents](../README.md#table-of-contents).
+
 How to install the app, run it in a browser, on an Android emulator, or on the iOS
 Simulator, and test it. Signing, credentials, the PR preview builds, and store uploads
-are in [Native mobile binary builds](operations/native-builds.md).
+are in [Native mobile binary builds](operations/native-builds.md); how the version sets
+the store build numbers is in [Version numbers](operations/version-numbers.md).
 
 ## Prerequisites
 
@@ -114,38 +118,55 @@ framework and checks what each screen must show. The release then waits on the
 Feature pull requests don't run it. To try a screen change earlier, start **iOS PR
 preview** by hand on your branch from the Actions tab. When a change affects what a
 screen shows, update its key screens and text checks; see
-[Contributing](CONTRIBUTING.md#pull-request-format-and-issue-closing) and **Key screens**
-in [iOS PR preview](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+[Contributing](CONTRIBUTING.md#pull-request-format-and-issue-closing) and
+[Key screens](operations/native-builds.md#key-screens).
 
 ### Bible audio on an Android emulator
 
 The **Android audio e2e** workflow, on the release pull request into `main`, builds the
 debug APK, boots an Android emulator, and plays real Bible chapters to check what only a
 real player shows: switching hosts when the church's audio host is down, moving to the
-next chapter with the screen off, and recovering after the network drops. The scenarios
-are in `scripts/e2e/android-bible-audio.sh`. It's a required check on `main`; feature
-pull requests don't run it, but you can start it by hand on your branch.
+next chapter with the screen off, and recovering after the network drops. It's a
+required check on `main`; feature pull requests don't run it, but you can start it by
+hand on your branch. What each scenario checks, and what to do when the workflow fails,
+is in [Bible audio emulator test](operations/admin-runbook.md#bible-audio-emulator-test).
 
 To run the scenarios yourself, boot an emulator, install the debug APK (see
-[On an Android emulator or phone](#on-an-android-emulator-or-phone)), and run:
+[On an Android emulator or phone](#on-an-android-emulator-or-phone)), and run
+`scripts/e2e/android-bible-audio.sh`:
 
 ```bash
 scripts/e2e/android-bible-audio.sh
 E2E_ONLY="pause-and-resume" scripts/e2e/android-bible-audio.sh   # one scenario
 ```
 
-The script's header lists its settings, such as `ADB` and `ADB_ARGS` (on WSL,
-`ADB=adb.exe ADB_ARGS=-e`). The "primary host down" scenario runs only with
-`E2E_PRIMARY_BLOCKED=1`, which needs the church's audio host blocked; the workflow
-arranges both. What to do when it fails is
-in [Bible audio emulator test](operations/admin-runbook.md#bible-audio-emulator-test).
+- It prints PASS or FAIL for each scenario and exits non-zero if any failed. For each
+  failed scenario it saves the reason, a screenshot, the app's log, and the media session in
+  `e2e-output/` (`E2E_OUTPUT` changes the folder).
+- `E2E_ONLY` takes space-separated scenario names: `next-chapter-screen-off`,
+  `dead-zone-screen-off`, `mid-chapter-offline`, `pause-and-resume`, and
+  `primary-host-down`.
+- `primary-host-down` runs only with `E2E_PRIMARY_BLOCKED=1`, and needs the church's
+  audio host, `assets.adventistconnect.org`, to be unreachable. The workflow arranges
+  both, with a local DNS server on the runner.
+- Set `ADB` if `adb` isn't on your path, and `ADB_ARGS=-e` if a phone is also connected.
+  On WSL, use `ADB=adb.exe ADB_ARGS=-e`.
+- It tests the debug build, `org.nyccsda.app.preview`, by default. To test a store
+  build instead, set `E2E_PACKAGE=org.nyccsda.app`.
+- The script clears the app's first-launch Welcome dialog, and turns off the device's
+  animations while it runs (restoring them when it exits), because the screen must be
+  still to be read.
+
+The script's header lists every setting.
 
 ## Web & PWA Testing and Preview
 
 Native iOS and Android builds are the primary distribution path. The Progressive Web App
-(PWA) remains a maintained browser testing and preview surface for UI regression checks,
-accessibility testing, demos, and fast fork previews. It is not the canonical release
-channel for the church's installed-app users.
+(PWA) remains a maintained browser testing and preview surface: fast regression checks of
+layout, accessibility, links, caching, and web-only behavior; previews for contributors,
+maintainers, and church stakeholders before a native binary is built, including fast fork
+previews; and demos that need no store install. It is not the canonical release channel
+for the church's installed-app users.
 
 The web and native targets continue to share one Expo source tree. A web preview is useful
 for testing browser-specific behavior, but passing the web build is not evidence that a
@@ -159,14 +180,10 @@ Two commands build the web app locally without publishing anything:
 - `npm run deploy` first syncs the version into the version files, then exports it into
   `dist/`, the folder the website is published from.
 
-Every merge to `main` runs **Deploy Website and Tag**, which publishes
-`https://app.nyccsda.org`. This is a production site: the store listings link to its
-privacy policy and support pages, and printed QR codes point at its download page. The
-browser build of the app is published with it, for testing and demos; it does not
-publish or update the native store apps. The publishing command,
-`npm run deploy:production`, refuses to run anywhere but GitHub Actions on `main` in the
-church's repository. See
-[The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
+Every merge to `main` runs **Deploy Website and Tag**, whose `npm run deploy:production`
+publishes the production website, `https://app.nyccsda.org`, with the browser build of
+the app (not the store apps); that command refuses to run anywhere but GitHub Actions on `main` in the church's
+repository. See [The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
 
 To publish a development preview to a fork, opt in explicitly and provide both the fork
 repository and its GitHub Pages URL. The URL must use the configured `/sda-church-app`
@@ -256,20 +273,3 @@ for installing a signed native build from TestFlight or Google Play.
 
 Note: If you encounter a black screen on launch, check the browser's Network tab for 404s
 or 400s. Any failed asset load will prevent the Expo bundle from initializing.
-
----
-
-## Why Keep a PWA Testing Surface?
-
-The PWA is retained as a secondary engineering and preview surface:
-
-1. Fast browser regression testing for layout, accessibility, links, caching, and web-only
-   behavior.
-2. Easy previews for contributors, maintainers, and church stakeholders before a native
-   binary is built.
-3. A low-friction demo and fallback surface that does not require store installation.
-
-Native iOS and Android binaries remain the supported primary release targets. Native
-signing, device testing, store review, and store submission are documented in
-[Native mobile binary builds](operations/native-builds.md). How the version and the store
-build numbers relate is explained in [Version numbers](operations/version-numbers.md).

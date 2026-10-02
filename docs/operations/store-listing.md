@@ -366,32 +366,23 @@ The app plays Bible audio in the background, which is why it uses the audio back
 The app collects no personal data, shows no ads, and uses no analytics. Its source code is public: https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app
 ```
 
+Reviewers use the live app, so keep the bulletin and the other services it loads from
+working while a version is in review.
+
 ## Declarations
 
-The [store policy audit](store-policy-audit.md) has the details; confirm its
-[release blockers](store-policy-audit.md#required-confirmations-before-submission) first.
-The answers given, question by question, are in
-[Google Play Console answers](play-console-answers.md) and
-[App Store Connect answers](app-store-connect-answers.md).
-
-- **App Privacy** (App Store) and **Data safety** (Google Play): no data collected or
-  shared. The app has no accounts, analytics, or ads, and keeps settings and saved
-  verses on the device. Recheck it as the audit's item 2 describes whenever that
-  changes.
-- **Ads:** no. **Accounts:** none, so there's no account deletion.
-- **Age rating** (App Store): 4+. **Unrestricted Web Access** is No: the app opens
-  specific pages and has no general-purpose browser.
-- **Content rating and target audience** (Google Play): rated Everyone, with a target
-  audience of 13 and over. It's a general church app, not a kids app. Choosing age
-  groups under 13 brings in Google's Families policy.
-- **Export compliance** (App Store): already answered in the build, which declares no
-  non-exempt encryption.
+Every privacy, ads, rating, and export answer, with why it's right and when to revisit
+it, is in [App Store Connect answers](app-store-connect-answers.md) and
+[Google Play Console answers](play-console-answers.md). In short: no data collected or
+shared, no ads, no accounts (so no account deletion), 4+ on the App Store, and Everyone
+with an audience of 13 and over on Google Play. Before submitting, close any release
+blocker still open in the [store policy audit](store-policy-audit.md#status-september-29-2026).
 
 ## Screenshots
 
 Copies of the uploaded screenshots and the feature graphic are in
-[`docs/store-assets/`](../store-assets/README.md). Replace them there whenever the stores
-get new ones.
+[`docs/store-assets/`](../store-assets/README.md), which also explains removing the
+transparency both stores reject. Replace them there whenever the stores get new ones.
 
 - **Google Play:** 2 to 8 phone screenshots. The long side can be at most twice the short
   side, so capture at 1080 × 1920: on an emulator, run `adb shell wm size 1080x1920`, and
@@ -401,10 +392,13 @@ get new ones.
 - **App Store:** iPhone 6.9-inch screenshots only. The app is iPhone-only
   (`supportsTablet: false` in `app.json`), so App Store Connect asks for no iPad
   screenshots once the version uses a build made with that setting; iPads still install
-  it and run it in iPhone mode. Screenshots from a real iPhone work. A Plus or Pro Max
-  already takes the 6.9-inch size (1290 × 2796 or 1320 × 2868); a smaller iPhone's
-  screenshots need resizing to 1290 × 2796, which crops only a few pixels. The first three
-  screenshots also show on the install sheet, so lead with the strongest.
+  it and run it in iPhone mode. The current set comes from the key screens of the
+  **iOS PR preview** run on a release PR, which are 1320 × 2868 with a clean status bar
+  (9:41, full battery and signal); see [Key screens](native-builds.md#key-screens).
+  Screenshots from a real iPhone work too. A Plus or Pro Max already takes the 6.9-inch
+  size (1290 × 2796 or 1320 × 2868); a smaller iPhone's screenshots need resizing to
+  1290 × 2796, which crops only a few pixels. The first three screenshots also show on
+  the install sheet, so lead with the strongest.
 - **Adding iPad later:** a later version can add iPad support, with iPad screenshots;
   see #324.
   Apple doesn't let an update remove a device family once released, so test on an iPad

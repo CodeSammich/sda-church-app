@@ -2,18 +2,38 @@
 
 This is the operator runbook for the church bulletin system: the master Google
 Spreadsheet, the bound Apps Script project, the public mobile-app API, and the
-printed Google Doc/PDF workflow.
+printed Google Doc/PDF workflow. It records the behavior to preserve when
+editing the workbook or changing a bulletin layout.
 
-The implementation source remains in
-[`google-apps-script/`](../../google-apps-script/). The directory README is now a
-short source-directory pointer; this document is the consolidated API,
-deployment, testing, and operator reference. It records the behavior that
-operators must preserve when editing the workbook or changing a bulletin layout.
+The source is in [`google-apps-script/`](../../google-apps-script/). Its
+[README](../../google-apps-script/README.md) has the clasp setup and the test
+and deploy commands; this document is the reference for everything else.
 
-This runbook describes the current native mobile-app workflow. The web/PWA
-preview remains useful for browser checks, but it is not the production bulletin
-client. The centered `Schedule` button in the mobile bulletin opens the staff
-master spreadsheet; it is intentionally not an intake endpoint.
+Where to start:
+
+- **Church staff** who plan the schedule or print bulletins: [The three
+  mandatory sheets](#the-three-mandatory-sheets) (what goes in each tab), [Header
+  protection and validation automation](#header-protection-and-validation-automation)
+  (red cells and popups), [Printed bulletin generation](#printed-bulletin-generation),
+  and the [Troubleshooting matrix](#troubleshooting-matrix).
+- **Developers**: the [System boundaries](#system-boundaries) and source map, the
+  sheet contracts, [Data precedence](#data-precedence-and-fallback-behavior) and
+  privacy rules, [Deployment and verification](#deployment-and-verification), and
+  the [Change checklist](#change-checklist).
+
+Contents:
+
+- [System boundaries](#system-boundaries)
+- [The three mandatory sheets](#the-three-mandatory-sheets)
+- [Header protection and validation automation](#header-protection-and-validation-automation)
+- [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)
+- [Privacy, auto-translation, and name behavior](#privacy-auto-translation-and-name-behavior)
+- [Digital mobile bulletin behavior](#digital-mobile-bulletin-behavior)
+- [Printed bulletin generation](#printed-bulletin-generation)
+- [Printed edge cases and content rules](#printed-edge-cases-and-content-rules), including [Giving QR slots](#giving-qr-slots)
+- [Deployment and verification](#deployment-and-verification)
+- [Troubleshooting matrix](#troubleshooting-matrix)
+- [Change checklist](#change-checklist)
 
 ## System boundaries
 
@@ -56,12 +76,14 @@ the church's Workspace terms during annual maintenance.
 | `google-apps-script/BulletinApi.gs` | Public API, sheet contracts, data joins, privacy filtering, and metadata translations |
 | `google-apps-script/BulletinScheduleMaintenance.gs` | Background `onOpen` maintenance, header protection, validation, hiding, and quarter expansion |
 | `google-apps-script/ScheduleAssignmentChecks.gs` | Same-day roster conflict highlights and Name Dictionary unknown-name warnings |
-| `google-apps-script/PrintedBulletin.gs` | Shared printed-bulletin code: Sheet menu and prompts, data preparation, Docs and PDF export, common Docs helpers, and the shared cover, giving, hymn/Bible/QR helpers |
+| `google-apps-script/PrintedBulletin.gs` | Shared printed-bulletin code: Sheet menu and prompts, data preparation, Docs and PDF export, page and table helpers, and the shared cover, giving, announcement, hymn, Bible, and QR helpers |
 | `google-apps-script/PrintedCommunionBulletin.gs` | Communion service content both locations print: fixed Communion/Foot Washing readings, response hymn, and ceremony panels |
 | `google-apps-script/PrintedQueensBulletin.gs` | Queens Regular and Queens Communion page layouts |
-| `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn cover, Zoom, Sabbath School, worship, Communion, and giving footer layouts |
+| `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn cover, Zoom, Sabbath School, worship, Communion, and giving footer layouts, and placing the Sabbath Encouragement spread |
 | `google-apps-script/PrintedHymnLookup.gs` | Reviewed bidirectional English/Chinese hymn-number lookup for physical printing |
-| `google-apps-script/SabbathEncouragement.gs` | 52-page Brooklyn encouragement rotation containing Ellen White quotations plus Bible/editorial/other source material, machine translation, and direct Bible replacement |
+| `google-apps-script/SabbathEncouragement.gs` | 52-page Brooklyn encouragement rotation containing Ellen White quotations plus Bible/editorial/other source material, machine translation, direct Bible replacement, and the bilingual printed spread |
+| `google-apps-script/appsscript.json` | Apps Script runtime and web-app manifest |
+| `google-apps-script/PinyinPro.gs` | Generated on each push or deploy from the pinned `pinyin-pro` npm dependency; ignored by Git, never edited by hand |
 | `services/BulletinService.ts` | App response types, date selection, local cache, refresh cooldown, and empty-location behavior |
 | `app/(tabs)/home/bulletin.tsx` | Digital bulletin sections, labels, privacy-safe names, translations, and staff link |
 | `test/apps-script-physical-bulletin.test.ts` | Physical layout, contract, privacy, lookup, QR, and maintenance regression tests |
@@ -356,21 +378,23 @@ be treated as public.
   pinyin alias resolves to the dictionary's canonical English/Chinese row; it
   does not create a new person or alter the digital API.
 
-The API automatically translates three schedule metadata fields
-(`Special Remark`, `Tithe Purpose`, and `Pastor Travel`) into Traditional
-Chinese, Simplified Chinese, and Spanish while retaining the original English.
-The app displays both translated and original English values when they differ.
-This translation path must not be used for Bible text, Bible references, names,
-hymns, or sermon titles.
+The API machine-translates three schedule metadata fields (`Special Remark`,
+`Tithe Purpose`, and `Pastor Travel`) from English into Traditional Chinese
+(`zh-TW`), Simplified Chinese (`zh-CN`), and Spanish (`es`), returned in
+`metadataTranslations` alongside the original English. These short notes are
+unlabeled by design. For Tithe Purpose and Pastor Travel, the app shows the
+original English on the next line when it differs from the translation; the
+Special Remark banner shows the translation only. This path must not be used
+for Bible text, Bible references, names, hymns, or sermon titles. How it works
+in detail is in
+[Offline bulletin translation](../feature_designs/offline_bulletin_translation.md#current-behavior).
 
-The Brooklyn Sabbath Encouragement English side is a separate, explicit machine
-translation exception. The source quotes Ellen G. White but is not exclusively her
-writing; Bible quotations, editorial headings, and other source material must be
-identified separately. The English side is labeled with a disclaimer because it
-may not be fully accurate. Bible quotations inside it that have a recognizable
-reference are replaced with direct BSB text from the approved Bible API. The rest,
-Ellen White quotations included, is machine translated from the Chinese. Do not
-silently expand machine translation to Scripture, names, or worship content.
+The printed Brooklyn bulletin's English Sabbath Encouragement is a labeled
+machine translation from the Chinese original (no original English exists), with
+recognized Bible quotations printed as BSB text. Read [What the printed bulletin
+does today](sabbath-encouragement-copyright.md#what-the-printed-bulletin-does-today)
+before changing that source or translation policy. Do not extend machine
+translation to Scripture, names, or worship content.
 
 ## Digital mobile bulletin behavior
 
@@ -402,20 +426,17 @@ preview surface, not the canonical release channel.
 - A cached future bulletin becomes stale when its Sabbath begins. Entry,
   foreground resume, and the Sabbath boundary recheck the date.
 
-### Bible references and translations
+### Bible references
 
-The app recognizes book names in every app language and same-chapter ranges.
-The whole entry stays visible, and its **Read now** button opens the first passage:
-for several passages it opens the first one, for a range across chapters it opens
-at the start, and a bare book name opens chapter 1. An entry it can't read, such as
-an unknown book, a backwards range, or a chapter range like `John 3-5`, falls back
-to Genesis 1:1, rather than guessing a location
-(`parseScriptureReference` in `services/BibleService.ts`).
-
-Special Remark, Tithe Purpose, and Pastor Travel return translated metadata plus
-the original English value. The app displays both when they differ and avoids
-duplicating a string when the translation is identical. Bible text is not
-translated by the metadata translation path.
+The app recognizes book names in every app language and same-chapter ranges. When it
+can read an entry, it shows that reference in the app's language and its **Read now**
+button opens it. For several passages, it shows and opens only the first one; for a
+range across chapters, it shows and opens only its first verse; and a bare book name
+opens chapter 1. An
+entry it can't read, such as an unknown book, a backwards range, or a chapter range
+like `John 3-5`, is shown as entered, and **Read now** opens Genesis 1:1 rather than
+guessing a location (`parseScriptureReference` in `services/BibleService.ts`,
+`app/(tabs)/home/bulletin.tsx`).
 
 ## Printed bulletin generation
 
@@ -516,14 +537,9 @@ configured HelloAO Bible API for Bible text. Bible text and references must neve
 be passed through `LanguageApp`, an LLM, or an improvised machine translation.
 The English translation may be selected in the print dialog; Chinese is currently
 CUV/和合本. Multiple parsed references are joined deliberately, but very long
-passages can trigger a preflight warning or affect pagination.
-
-Sabbath Encouragement is a separate exception: its Chinese source quotes Ellen
-White but also contains Bible, editorial, and other material; it is machine
-translated for the English side, carries a disclaimer, and has Bible quotations
-replaced with direct BSB text. Review
-[`sabbath-encouragement-copyright.md`](sabbath-encouragement-copyright.md)
-before changing that source or translation policy.
+passages can trigger a preflight warning or affect pagination. The Sabbath
+Encouragement's English column is the one exception; see
+[Privacy, auto-translation, and name behavior](#privacy-auto-translation-and-name-behavior).
 
 ### Brooklyn Sabbath Encouragement
 
@@ -574,7 +590,7 @@ public on both Google Play and the App Store. Since 1.0.0 it is in the script on
 released the app, don't deploy the bulletin Apps Script at all: not by the
 **Deploy Bulletin Apps Script** workflow, `npm run apps-script:deploy`, or
 `npm run apps-script:push`. Each of them changes production whatever the branch
-(see [Deployment and verification](#deployment-and-verification)). Once both
+(see the Apps Script README's [Commands](../../google-apps-script/README.md#commands)). Once both
 stores have released the app:
 
 1. Check that https://app.nyccsda.org/download sends an Android phone to Google
@@ -592,19 +608,10 @@ stores have released the app:
 The repository is the canonical source. Local WSL deployment uses the existing
 Apps Script deployment ID so the production `/exec` URL does not change. Setup
 (installing clasp, `clasp login`, and copying the `.example` config files) is in
-the [Apps Script README](../../google-apps-script/README.md#setup).
-
-```bash
-npm install
-npm test -- test/apps-script-physical-bulletin.test.ts test/apps-script-bulletin-merge.test.ts test/apps-script-schedule-assignment-checks.test.ts
-npm run apps-script:push       # upload the code, without a new web-app version
-npm run apps-script:deploy     # upload and create a new version of the existing deployment
-```
-
-There is one Apps Script project and no test copy, so both commands change
-production. `push` alone replaces the code the spreadsheet's **Printed Bulletin**
-menu and edit triggers run; `deploy` also moves the `/exec` web app to the new
-code.
+the [Apps Script README](../../google-apps-script/README.md#setup), and the test,
+push, and deploy commands, with what each one changes in production, are in its
+[Commands](../../google-apps-script/README.md#commands). Until the app is public
+in both stores, don't push or deploy; see [Giving QR slots](#giving-qr-slots).
 
 The deployment helper:
 
@@ -621,18 +628,11 @@ content-submission trigger. Keep the `onScheduleNameCheckEdit` trigger: it is th
 unknown-name dialog described under
 [Name not in the Name Dictionary](#name-not-in-the-name-dictionary-popup).
 
-Run `clasp login --no-localhost` when WSL cannot receive the localhost OAuth
-callback. Never commit `.clasprc.json`, `.clasp.json`, deployment IDs, or refresh
-tokens.
-
-GitHub Actions has a manual, protected-production Apps Script deployment workflow,
-**Deploy Bulletin Apps Script**. It requires `APPS_SCRIPT_PROJECT_ID`,
-`APPS_SCRIPT_DEPLOYMENT_ID`, and `CLASPRC_JSON`. A GitHub push or PR does not
-deploy Apps Script automatically. The workflow updates the existing deployment; it
-does not create a new public URL. It doesn't check the branch, so a run from any
-branch the `production` environment accepts replaces the live code; run it only
-from `main`
-([Admin Runbook](admin-runbook.md#deploying-the-bulletin-apps-script)).
+From GitHub, the manual **Deploy Bulletin Apps Script** workflow runs the same
+deploy with the `production` environment's `APPS_SCRIPT_PROJECT_ID`,
+`APPS_SCRIPT_DEPLOYMENT_ID`, and `CLASPRC_JSON` secrets; a push or PR never deploys. How to run and approve it, only from
+`main`, is in the Admin Runbook's
+[Deploying the bulletin Apps Script](admin-runbook.md#deploying-the-bulletin-apps-script).
 
 If clasp authorization fails repeatedly after a fixed time window, first check the
 Google Workspace session-control policy. This church account has had a 16-hour

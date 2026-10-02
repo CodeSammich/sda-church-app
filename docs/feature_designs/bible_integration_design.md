@@ -50,18 +50,15 @@ simplified-Chinese filenames are shared by both CUV text variants.
 
 Both CUV variants also offer a Cantonese narrator, `粵語 (WordProject)`, listed after
 the Mandarin one so that Mandarin stays the default. The recording comes from
-[WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), whose
-published terms allow it in free apps without ads but forbid linking whole Bibles to
-its servers. So the church downloaded it once from WordProject's book zips, renamed
-the files to canonical names such as `CANTONESE_B43C003.mp3` without changing the
-audio, and hosts them on Adventist Connect. Unlike the Mandarin narrator, this one has
-a single source: there is no fallback host, and none may be added without WordProject's
-written approval. The terms and what they require are in
-[WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio). The generated
-`constants/CantoneseAdventistAudioManifest.ts` maps each canonical name to the church's
-URL; `npm run extract:cantonese-adventist-manifest` rebuilds it from the church site's
-public media list. While the Cantonese narrator is selected, the chapter shows a
-credit that links to WordProject's Cantonese page, which also offers its app.
+[WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), and the
+church hosts it on Adventist Connect under canonical names such as
+`CANTONESE_B43C003.mp3`. Unlike the Mandarin narrator, this one has a single source,
+with no fallback host; WordProject's terms, and why they rule out playing from its
+servers, are in [WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio).
+The generated `constants/CantoneseAdventistAudioManifest.ts` maps each canonical name to
+the church's URL; `npm run extract:cantonese-adventist-manifest` rebuilds it from the
+church site's public media list. While the Cantonese narrator is selected, the chapter
+shows a credit that links to WordProject's Cantonese page, which also offers its app.
 
 Because the two CUV recordings differ in spoken language, not just in narrator, the
 app presents them as languages. The audio bar's left button shows the selected one,
@@ -72,16 +69,16 @@ icon, so listeners can see that a choice exists. In audio settings, the list is 
 language. Both editions share the recordings, so the chosen language is saved once
 for both (`getAudioReaderPreferenceKey`): switching between CUV and CUVS keeps it.
 
-The Reina-Valera 1909 uses WordProject's Spanish recording the same way, as a single
-narrator named WordProject, from files named `RV1909_B43C003.mp3` and so on on
+The Reina-Valera 1909 uses WordProject's Spanish recording the same way, under the same
+terms ([WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909)):
+a single narrator named WordProject, from files named `RV1909_B43C003.mp3` and so on on
 Adventist Connect, with no fallback host. `npm run extract:rv1909-adventist-manifest`
 builds `constants/Rv1909AdventistAudioManifest.ts`; the same script
 (`scripts/extract-wordproject-audio-manifest.mjs`) builds the Cantonese manifest.
 `hasChurchHostedAudio` and `getChurchHostedAudioLinks` in `BibleAudioSources.ts` are
 the one place that decides which translations play the church's copies. While the
 Spanish narrator is selected, the chapter shows a credit linking to WordProject's
-Spanish page. The terms are in
-[WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909).
+Spanish page.
 
 The Mandarin CUV recording is represented as one narrator with three ordered hosting
 sources rather than three narrator choices: the generated Adventist Connect manifest
@@ -113,14 +110,27 @@ and queue construction, while `BibleAudioPlayer` supplies the platform-specific 
 can load text and available audio together; it does not know provider URLs or hosting
 rules.
 
-`BibleService.parseScriptureReference` converts a single book/chapter reference and an
-optional same-chapter verse range into canonical USFM coordinates. Its localized 66-book
-table accepts and formats English, Traditional Chinese, Simplified Chinese, and Spanish
-book names. Bulletin links use those coordinates to open the current app language's
-default translation and scroll to the first requested verse without selecting it.
-Ambiguous, multi-passage, or cross-chapter strings retain their entered display text but
-their action falls back to Genesis 1:1 in that same language; blank and `TBD` fields
-remain non-actionable.
+`BibleService.parseScriptureReference` converts a bulletin's Bible entry into canonical
+USFM coordinates: a book, a chapter, and an optional verse range within that chapter.
+Its localized 66-book table accepts and formats English, Traditional Chinese, Simplified
+Chinese, and Spanish book names, and a trailing translation in parentheses, such as
+`(KJV)`, is ignored. It reads only the first passage:
+
+- An entry with several passages is cut at the first semicolon or comma (either width),
+  or line break, so `John 3:16; Romans 8:1` and `John 3:16, 18, 20` both give John 3:16.
+- A range across chapters gives only its first verse: `Psalms 15:1-16:2` gives
+  Psalms 15:1.
+- A bare book name gives chapter 1. In the one-chapter books (Obadiah, Philemon, 2 John,
+  3 John, and Jude), a bare number is a verse: `Jude 9` gives Jude 1:9.
+- An unknown book, a backwards range such as `John 3:16-10`, a chapter range such as
+  `John 3-5`, or other text it can't read gives no result, and
+  `resolveScriptureReference` falls back to Genesis 1:1.
+
+On the bulletin, an entry that parses is shown as its parsed reference in the app
+language, so only the first passage of a multi-passage entry appears; one that doesn't
+parse keeps its entered text. Its **Read now** button opens the current app language's
+default translation at that reference, or at Genesis 1:1, and scrolls to the first
+requested verse without selecting it. Blank and `TBD` fields have no button.
 
 - **No Auth:** Open access to the selected BSB, KJV, CUV, and Reina-Valera resources
   requires no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
@@ -183,43 +193,11 @@ left-to-right with Gentium. Font sources and their separate licenses are documen
 
 #### 2.2.3 Licensing Boundary: Free Service vs. Licensed Content
 
-This distinction is mandatory for maintenance and legal review:
-
-> **fetch(bible's CDN is free to access, but fetch(bible does not place every work it
-> distributes into the public domain.** Service access and content licensing are separate
-> grants of permission.
-
-[fetch(bible's official access policy](https://fetch.bible/access/#no-limits-from-us)
-states that the service itself imposes no usage limits and permits long-term caching, but
-also explicitly requires consumers to comply with the terms of each individual Bible
-resource. A future maintainer must never infer permission to redistribute a work solely
-because it appears on fetch(bible).
-
-The translated CUV and Reina-Valera resources above are public domain. Both
-original-language editions selected by the app use
-[Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/):
-
-- [Solid Rock Hebrew Bible license and required citation](https://github.com/jjmccollum/solid-rock-hb#license-and-citation)
-- [Statistical Restoration Greek New Testament license and attribution](https://github.com/Center-for-New-Testament-Restoration/SR#license)
-
-CC BY 4.0 is free and open: it permits copying, redistribution, adaptation, and commercial
-use without a fee or separate permission. It is not public domain and it is not
-condition-free. Distribution must retain appropriate creator/editor credit, provide a link
-to CC BY 4.0, indicate presentation or other changes, and must not impose additional legal
-or technological restrictions that prevent recipients from exercising the licensed rights.
-
-Consequently:
-
-1. The edition/editor attribution in the verse-detail popup must not be removed.
-2. The source links, CC BY 4.0 link, and formatting-change disclosure in the repository
-   documentation must be retained.
-3. If the app later exposes clickable attribution, both the edition source and license
-   should be linked directly.
-4. Changing either original-language fetch(bible resource ID requires reviewing and
-   documenting the new work's individual license before release.
-5. The Bible-text licenses are separate from fetch(bible's service policy, HelloAO's
-   service behavior, the application source-code license, and the OFL/MIT licenses of the
-   bundled fonts.
+fetch(bible) is free to access, but that doesn't make every work on it public domain: the
+two original-language editions are CC BY 4.0, with conditions. The required attribution,
+links, and review before changing an edition are in
+[LEGAL.md](../LEGAL.md#free-to-access-doesnt-necessarily-mean-public-domain). If the app
+later makes the attribution clickable, link both the edition source and its license.
 
 ### 2.3 Longevity
 

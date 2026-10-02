@@ -28,12 +28,13 @@
 >   holds the membership renewal date that the Apple signing monitor watches.
 > - **Expo SDK 58 is stable** (`expo ~58.0.0`). React Native 0.88 is still a release
 >   candidate (#211).
-> - **The acceptance gate's OTA item doesn't apply.** OTA updates are still
->   intentionally not configured (the app doesn't use `expo-updates`), so there is
->   nothing to deliver over the air. The other device checks still apply. On Android,
->   the [Android audio test](native-builds.md#android-audio-test-on-release-prs) now
->   covers failover, screen-off chapter changes, and connection loss on an emulator for
->   every release PR.
+> - **The acceptance gate's device checks moved to the admin runbook,** as
+>   [Device checks before release](admin-runbook.md#device-checks-before-release). Its
+>   OTA item was dropped: OTA updates are still intentionally not configured (the app
+>   doesn't use `expo-updates`). On Android, the
+>   [Android audio test](native-builds.md#android-audio-test-on-release-prs) now covers
+>   failover, screen-off chapter changes, and connection loss on an emulator for every
+>   release PR.
 >
 > Statements below that were true only at the time are marked as such.
 
@@ -191,19 +192,10 @@ does not exempt delivered JavaScript from Play policies.
 
 ## Acceptance gate before a launch decision
 
-- Test standalone builds on physical iPhone and Android hardware for at least
-  15 minutes locked and minimized, with multiple automatic chapter boundaries.
-- Verify title, artist, artwork, play/pause, seek, and metadata changes at transitions.
-- Check sleep timers, end-of-chapter stop, navigation away from the reader, and
-  returning to the correct playing chapter.
-- Test silent mode, battery saver, interruptions, Bluetooth/headphone disconnection,
-  and temporary network loss. Record OS/device/build versions and observed results.
-- Deliver a preview OTA string/style fix to an installed compatible build; verify
-  safe next-launch activation, offline startup, and recovery. Confirm an incompatible
-  runtime receives no update. Do not interrupt active playback to apply it. (This item
-  doesn't apply while OTA is not configured; see the status note above.)
-- If native chapter transitions fail, evaluate native-owned queue/timer support
-  behind the existing adapter before considering a framework migration.
+The physical-phone checks this gate listed are kept current in the admin runbook's
+[Device checks before release](admin-runbook.md#device-checks-before-release). If
+native chapter transitions failed, the gate said to evaluate native-owned queue and
+timer support behind the existing adapter before considering a framework migration.
 
 Decision: retain Expo and proceed with a TestFlight build using the owner's
 business/organization Apple Developer account. Store launch remains contingent

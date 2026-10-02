@@ -93,13 +93,10 @@ These choices exist to keep the app free and within every provider's limits:
   exhaust a quota or bill an account. Every runtime service the app calls works
   without a key, and the bulletin data goes through the church's own Apps Script
   instead of the Google Sheets API.
-- **The church hosts its own copy of the CUV audio.** Audio Power's owner allowed
-  self-hosting ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)),
-  so the church's copy on Adventist Connect is tried first, then the Internet
-  Archive, and Audio Power's small server only serves listeners when both fail. The
-  Cantonese and Spanish audio are also the church's own copies, under WordProject's
-  terms, which don't allow playing them from WordProject's servers. Audio is streamed on demand, with
-  only the next chapter preloaded on web, instead of downloading whole books.
+- **The church hosts its own copies of the Bible audio**, so outside hosts are only
+  fallbacks ([Audio Power](#audio-power)), and chapters stream on demand rather than
+  downloading whole books
+  ([how the app fetches audio](adventist-connect-media.md#how-the-app-fetches-audio)).
 - **Caching at every layer of the bulletin.** The Apps Script caches each response
   for 2 minutes, the app caches each Sabbath's bulletin on the device, and manual
   refresh has a 5-minute cooldown. Most bulletin opens never reach Apps Script.
@@ -252,9 +249,9 @@ or calculate the times itself.
 
 Free for public repositories on standard GitHub-hosted runners, including macOS, per
 [GitHub's billing policy](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
-Concurrency and fair-use limits apply; hitting them queues jobs, it doesn't bill. The
-private-repository estimates in [Native Builds](native-builds.md#github-actions-minutes-and-maintenance)
-only matter if the repository ever becomes private.
+Concurrency and fair-use limits apply; hitting them queues jobs, it doesn't bill. What changes if
+the repository ever becomes private is noted in
+[Native Builds](native-builds.md#github-actions-minutes-and-maintenance).
 
 ### GitHub Pages
 
@@ -312,24 +309,15 @@ Checked 2026-09-28.
 
 ### Cloudflare
 
-The domain is the **only recurring cost**: about $10 a year, paid through Cloudflare
-Registrar, which can register up to 10 years at a time. The account has a card on
-file for that, which is exactly why no usage-billed Cloudflare product may be added
-to it ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
-DNS and the `app.nyccsda.org` redirect are free. How to keep the card and the account
-safe, including a capped virtual card and backup administrators, is in the
-[admin runbook](admin-runbook.md#the-cloudflare-account-and-domain).
+The domain, about $10 a year, is the **only recurring cost**; DNS and the redirect are
+free, and no usage-billed product may be added to the account, which keeps a card on file
+([The Cloudflare account and domain](admin-runbook.md#the-cloudflare-account-and-domain)).
 
 ### App stores
 
-- **Apple:** the $99 annual developer fee is waived through nonprofit status, which
-  must be resubmitted yearly. No payment method is on file, so a lapse removes the
-  app; it doesn't charge the church.
-- **Google Play:** the one-time $25 registration was paid. No recurring cost.
-- Both are nonprofit organization accounts, so the app must stay free and never
-  earn money through the stores: no paid app, in-app purchases, subscriptions, or
-  ads. External donation links opened in the browser are fine. See
-  [App stores](../architecture.md#app-stores).
+Free: Apple waives its $99 yearly fee for the nonprofit and Google Play's one-time $25
+is paid. Both are nonprofit accounts, so the app must never earn money through the stores
+([App stores](../architecture.md#app-stores)).
 
 ## Link-only websites
 
