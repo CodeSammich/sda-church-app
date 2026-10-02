@@ -540,22 +540,40 @@ The code keeps three physical slots in stable order:
 3. Zelle
 ```
 
-Current temporary state:
+A reserved slot prints nothing but keeps its space, so turning a code on or off
+doesn't reflow the bulletin. The same rules apply to Queens Regular, Queens Holy
+Communion, and Brooklyn:
 
-- Queens Regular: Mobile App and Zelle are reserved/hidden; ACH/card remains active.
-- Queens Holy Communion: same shared QR behavior.
-- Brooklyn: Mobile App and Zelle are reserved/hidden; ACH/card remains active.
-- Brooklyn does not have a Zelle destination.
+- **Mobile App** prints. Unlike the giving codes, it never falls back to the
+  placeholder image: if its code isn't found, the slot stays blank.
+- **ACH/card** always prints.
+- **Zelle** stays reserved in Queens until the treasury confirms the address
+  (#384). Brooklyn has no Zelle destination, so its third slot is always empty.
 
-The code and slot dimensions remain in place so the assets can be restored without
-reflowing the bulletin. Current asset filename conventions end in
-`_368x368.jpg`; the mobile-app caption is `Download Mobile App | 下載 APP`.
+Asset file names end in `_368x368.jpg`; the mobile-app caption is
+`Download Mobile App | 下載 APP`. The script finds each code by its exact file name
+anywhere in Drive, skipping files in the trash, then by its Script Property (such as
+`MOBILE_APP_QR_IMAGE_FILE_ID`).
 
 The QR workflow generates `mobile_app_qr_code_368x368.jpg`, pointing at
 `https://app.nyccsda.org/download`, and uploads it to Drive with the giving codes
-([Admin Runbook](admin-runbook.md#bulletin-qr-codes)). The slot stays reserved
-until the app is public in both stores; #323 covers turning it on without changing
-the Apps Script after launch.
+([Admin Runbook](admin-runbook.md#bulletin-qr-codes)).
+
+**Deploying the mobile app code at launch** (#323). The code leads to the store
+pages, so the script that prints it must not reach production until the app is
+public on both Google Play and the App Store. Until then, don't deploy the bulletin
+Apps Script from `main` or `release/1.0.0`, by the **Deploy Bulletin Apps Script**
+workflow or by `npm run apps-script:push`. Once both stores have released the app:
+
+1. Check that https://app.nyccsda.org/download sends an Android phone to Google
+   Play and an iPhone to the App Store.
+2. Check that `mobile_app_qr_code_368x368.jpg` is in Drive and not in the trash. If
+   `MOBILE_APP_QR_IMAGE_FILE_ID` is set, check that it names that file, not an old
+   placeholder.
+3. Run **Deploy Bulletin Apps Script** from `main`; see
+   [Deploying the bulletin Apps Script](admin-runbook.md#deploying-the-bulletin-apps-script).
+4. Generate test bulletins for Queens (Regular and Holy Communion) and Brooklyn,
+   and scan the printed code with an Android phone and an iPhone.
 
 ## Deployment and verification
 
@@ -635,7 +653,7 @@ changes the URL and requires a coordinated mobile-app update.
 | PDF has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Restore the renderer's panel/gutter structure; never clip text to fit |
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
 | Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
-| QR slot is blank | Asset is intentionally reserved or Drive file is unavailable | Confirm current temporary QR policy and file naming before changing layout |
+| QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
 | Brooklyn Communion is unavailable | Intentional safety/layout restriction | Use Queens Holy Communion or Brooklyn Regular; do not re-enable without a dedicated layout review |
 | Apps Script deploy fails after working previously | Workspace session-control reauthorization | Verify Trusted Apps and Exempt Trusted apps policy before rotating credentials |
 | Mobile app receives a Google sign-in page/403 | Web app access or deployment settings changed | Deploy as a web app executing as the owner with anonymous access and preserve the `/exec` URL |

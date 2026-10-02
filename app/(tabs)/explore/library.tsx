@@ -1,4 +1,3 @@
-import { EgwEditionDialog } from '@/components/EgwEditionDialog';
 import { LibraryFeaturedCarousel } from '@/components/LibraryFeaturedCarousel';
 import { LibraryShelfRow } from '@/components/LibraryShelfRow';
 import { LanguageContext } from '@/constants/LanguageContext';
@@ -60,7 +59,7 @@ export default function LibraryHubScreen() {
     onScroll,
   } = useHeroUnderStatusBar();
   const catalog = getLibraryItemsForLanguage(language);
-  const { egwDialog, getBooks, getShelfBooks } = useLibraryShelfBooks(language, { loadEgwCovers: true });
+  const { getBooks, getShelfBooks } = useLibraryShelfBooks(language, { loadEgwCovers: true });
   const open = useCallback((collection: string, q?: string) =>
     router.push({
       pathname: '/explore/library/[collection]',
@@ -143,7 +142,6 @@ export default function LibraryHubScreen() {
           })}
         </View>
       </ScrollView>
-      <EgwEditionDialog {...egwDialog} />
     </>
   );
 }

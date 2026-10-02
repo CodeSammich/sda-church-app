@@ -14,6 +14,9 @@ import type { SupportedLanguage } from '@/constants/LanguageContext';
  * some quarters with the previous quarter's dates, Chinese lessons come out late
  * or not at all, there are none in Spanish, and Alive in Jesus lessons moved to
  * a newer catalog in 2026.
+ *
+ * The design, and what to do when a catalog changes, are in
+ * docs/feature_designs/sabbath_school_lessons.md.
  */
 
 export type ChildrenSabbathSchoolCurriculum =
