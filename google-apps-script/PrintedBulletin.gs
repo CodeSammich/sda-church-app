@@ -2519,24 +2519,29 @@ function appendGivingQrPlaceholderCell_(tableCell, item, options) {
     return;
   }
   var fileId = getPrintedBulletinQrImageFileId_(item.kind, options.location || 'queens');
-  if (fileId) {
-    try {
-      var imageParagraph = options.reuseLeadingParagraph
-        ? getLeadingEmptyParagraph_(tableCell)
-        : null;
-      var image = imageParagraph
-        ? imageParagraph.appendInlineImage(DriveApp.getFileById(fileId).getBlob())
-        : tableCell.appendImage(DriveApp.getFileById(fileId).getBlob());
-      var imageWidth = image.getWidth();
-      var imageHeight = image.getHeight();
-      if (imageWidth > options.imageMaxWidth) {
-        image.setWidth(options.imageMaxWidth);
-        image.setHeight(Math.round((imageHeight * options.imageMaxWidth) / imageWidth));
-      }
-      centerPrintedBulletinImage_(image);
-    } catch (error) {
-      Logger.log(item.label + ' QR image could not be loaded: ' + error);
+  if (!fileId) {
+    // Only the mobile-app slot has no placeholder image. Without its real code,
+    // print nothing rather than a caption with no code above it.
+    Logger.log(item.label + ' QR image was not found; leaving its slot blank.');
+    tableCell.clear();
+    return;
+  }
+  try {
+    var imageParagraph = options.reuseLeadingParagraph
+      ? getLeadingEmptyParagraph_(tableCell)
+      : null;
+    var image = imageParagraph
+      ? imageParagraph.appendInlineImage(DriveApp.getFileById(fileId).getBlob())
+      : tableCell.appendImage(DriveApp.getFileById(fileId).getBlob());
+    var imageWidth = image.getWidth();
+    var imageHeight = image.getHeight();
+    if (imageWidth > options.imageMaxWidth) {
+      image.setWidth(options.imageMaxWidth);
+      image.setHeight(Math.round((imageHeight * options.imageMaxWidth) / imageWidth));
     }
+    centerPrintedBulletinImage_(image);
+  } catch (error) {
+    Logger.log(item.label + ' QR image could not be loaded: ' + error);
   }
   appendCompactCenteredText_(tableCell, item.label, options.labelFontSize, true);
 }
@@ -2553,24 +2558,17 @@ function getGivingQrItems_(location) {
       kind: 'zelle',
     },
   ];
+  // A reserved slot prints nothing but keeps its space, so the three-slot
+  // giving layout doesn't shift. The mobile app code points at the store
+  // download page, so deploy this script only once both apps are public (#323).
   if (String(location || '').trim().toLowerCase() === 'brooklyn') {
-    // Zelle does not exist for Brooklyn. Keep the mobile-app slot reserved
-    // without printing a placeholder label or QR image until the new asset is
-    // ready, so the three-slot giving layout does not shift again.
-    return [
-      { label: items[0].label, kind: 'mobileApp', reserved: true },
-      items[1],
-      { kind: 'unused', reserved: true },
-    ];
+    // Zelle does not exist for Brooklyn.
+    return [items[0], items[1], { kind: 'unused', reserved: true }];
   }
-  // Queens keeps the Mobile App and Zelle slots reserved while those QR
-  // assets are temporarily unavailable. Leave the definitions above intact
-  // so restoring either code later only requires removing its reserved flag.
-  return [
-    { label: items[0].label, kind: 'mobileApp', reserved: true },
-    items[1],
-    { kind: 'zelle', reserved: true },
-  ];
+  // Queens keeps the Zelle slot reserved until the treasury confirms the
+  // address (#384). Leave its definition above intact so restoring it later
+  // only requires removing its reserved flag.
+  return [items[0], items[1], { kind: 'zelle', reserved: true }];
 }
 
 function getPrintedMobileAppQrLabel_() {
@@ -2613,8 +2611,13 @@ function getPrintedBulletinQrImageFileId_(kind, location) {
   if (fileName && typeof DriveApp !== 'undefined' && DriveApp.getFilesByName) {
     try {
       var files = DriveApp.getFilesByName(fileName);
-      if (files.hasNext()) {
-        return files.next().getId();
+      while (files.hasNext()) {
+        var file = files.next();
+        // getFilesByName also returns trashed files, so skip them, or a
+        // replaced code in the trash could still print.
+        if (!file.isTrashed()) {
+          return file.getId();
+        }
       }
     } catch (error) {
       Logger.log('QR image lookup failed for ' + fileName + ': ' + error);
@@ -2632,6 +2635,11 @@ function getPrintedBulletinQrImageFileId_(kind, location) {
   var configuredFileId = propertyName
     ? PropertiesService.getScriptProperties().getProperty(propertyName) || ''
     : '';
+  // A stand-in code under "Download Mobile App" would lead nowhere, so the
+  // mobile-app slot gets no placeholder and stays blank without its file.
+  if (kind === 'mobileApp') {
+    return configuredFileId;
+  }
   return configuredFileId || PRINTED_BULLETIN_CONFIG.qrPlaceholderImageFileId;
 }
 
