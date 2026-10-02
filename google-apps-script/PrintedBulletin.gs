@@ -31,7 +31,6 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   adventistGivingQrImageProperty: 'ADVENTIST_GIVING_QR_IMAGE_FILE_ID',
   zelleQrImageProperty: 'ZELLE_QR_IMAGE_FILE_ID',
   mobileAppQrImageProperty: 'MOBILE_APP_QR_IMAGE_FILE_ID',
-  showMobileAppQrProperty: 'SHOW_MOBILE_APP_QR',
   legacyBrooklynCoverImageProperty: 'BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID',
   bulletinIntakeSheetUrl:
     'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit#gid=1768045043',
@@ -2560,35 +2559,16 @@ function getGivingQrItems_(location) {
     },
   ];
   // A reserved slot prints nothing but keeps its space, so the three-slot
-  // giving layout doesn't shift when a code is turned on.
-  var mobileApp = {
-    label: items[0].label,
-    kind: 'mobileApp',
-    reserved: !isPrintedMobileAppQrShown_(),
-  };
+  // giving layout doesn't shift. The mobile app code points at the store
+  // download page, so deploy this script only once both apps are public (#323).
   if (String(location || '').trim().toLowerCase() === 'brooklyn') {
     // Zelle does not exist for Brooklyn.
-    return [mobileApp, items[1], { kind: 'unused', reserved: true }];
+    return [items[0], items[1], { kind: 'unused', reserved: true }];
   }
   // Queens keeps the Zelle slot reserved until the treasury confirms the
   // address (#384). Leave its definition above intact so restoring it later
   // only requires removing its reserved flag.
-  return [mobileApp, items[1], { kind: 'zelle', reserved: true }];
-}
-
-/**
- * The mobile-app QR code prints only once both apps are public in the stores.
- * Launch day sets the SHOW_MOBILE_APP_QR Script Property to true, so it needs
- * no change to the deployed script (#323).
- */
-function isPrintedMobileAppQrShown_() {
-  if (typeof PropertiesService === 'undefined') {
-    return false;
-  }
-  var value = PropertiesService.getScriptProperties().getProperty(
-    PRINTED_BULLETIN_CONFIG.showMobileAppQrProperty,
-  );
-  return String(value || '').trim().toLowerCase() === 'true';
+  return [items[0], items[1], { kind: 'zelle', reserved: true }];
 }
 
 function getPrintedMobileAppQrLabel_() {

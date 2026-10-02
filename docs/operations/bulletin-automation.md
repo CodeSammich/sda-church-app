@@ -544,10 +544,8 @@ A reserved slot prints nothing but keeps its space, so turning a code on or off
 doesn't reflow the bulletin. The same rules apply to Queens Regular, Queens Holy
 Communion, and Brooklyn:
 
-- **Mobile App** prints only when the `SHOW_MOBILE_APP_QR` Script Property is
-  `true` (case and spaces don't matter). Any other value, or no property, keeps it
-  reserved. Unlike the giving codes, it never falls back to the placeholder image:
-  if the switch is on but no code is found, the slot stays blank.
+- **Mobile App** prints. Unlike the giving codes, it never falls back to the
+  placeholder image: if its code isn't found, the slot stays blank.
 - **ACH/card** always prints.
 - **Zelle** stays reserved in Queens until the treasury confirms the address
   (#384). Brooklyn has no Zelle destination, so its third slot is always empty.
@@ -561,20 +559,21 @@ The QR workflow generates `mobile_app_qr_code_368x368.jpg`, pointing at
 `https://app.nyccsda.org/download`, and uploads it to Drive with the giving codes
 ([Admin Runbook](admin-runbook.md#bulletin-qr-codes)).
 
-**Turning on the mobile app code at launch** (#323), once the app is public on
-Google Play and the App Store. None of these steps changes the deployed script:
+**Deploying the mobile app code at launch** (#323). The code leads to the store
+pages, so the script that prints it must not reach production until the app is
+public on both Google Play and the App Store. Until then, don't deploy the bulletin
+Apps Script from `main` or `release/1.0.0`, by the **Deploy Bulletin Apps Script**
+workflow or by `npm run apps-script:push`. Once both stores have released the app:
 
 1. Check that https://app.nyccsda.org/download sends an Android phone to Google
    Play and an iPhone to the App Store.
 2. Check that `mobile_app_qr_code_368x368.jpg` is in Drive and not in the trash. If
    `MOBILE_APP_QR_IMAGE_FILE_ID` is set, check that it names that file, not an old
    placeholder.
-3. In the Apps Script editor, open **Project Settings → Script Properties** and add
-   `SHOW_MOBILE_APP_QR` with the value `true`.
+3. Run **Deploy Bulletin Apps Script** from `main`; see
+   [Deploying the bulletin Apps Script](admin-runbook.md#deploying-the-bulletin-apps-script).
 4. Generate test bulletins for Queens (Regular and Holy Communion) and Brooklyn,
    and scan the printed code with an Android phone and an iPhone.
-
-To hide the code again, set the property to `false` or delete it.
 
 ## Deployment and verification
 
@@ -654,7 +653,7 @@ changes the URL and requires a coordinated mobile-app update.
 | PDF has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Restore the renderer's panel/gutter structure; never clip text to fit |
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
 | Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
-| QR slot is blank | The slot is reserved (Mobile App with `SHOW_MOBILE_APP_QR` off, or Zelle), or the Mobile App code isn't in Drive | Check [Giving QR slots](#giving-qr-slots), the Script Properties, and the Drive file name before changing the layout |
+| QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
 | Brooklyn Communion is unavailable | Intentional safety/layout restriction | Use Queens Holy Communion or Brooklyn Regular; do not re-enable without a dedicated layout review |
 | Apps Script deploy fails after working previously | Workspace session-control reauthorization | Verify Trusted Apps and Exempt Trusted apps policy before rotating credentials |
 | Mobile app receives a Google sign-in page/403 | Web app access or deployment settings changed | Deploy as a web app executing as the owner with anonymous access and preserve the `/exec` URL |

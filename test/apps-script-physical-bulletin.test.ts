@@ -571,49 +571,24 @@ describe('printed bulletin Apps Script helpers', () => {
       `JSON.stringify(getGivingQrItems_('brooklyn').map(function (item) { return item.kind; }))`,
       context,
     ) as string)).toEqual(['mobileApp', 'adventistGiving', 'unused']);
-    expect(runInContext(`getGivingQrItems_('brooklyn')[0].reserved`, context)).toBe(true);
     expect(JSON.parse(runInContext(
       `JSON.stringify(getGivingQrItems_('queens').map(function (item) { return item.kind; }))`,
       context,
     ) as string)).toEqual(['mobileApp', 'adventistGiving', 'zelle']);
-    expect(runInContext(`getGivingQrItems_('queens')[0].reserved`, context)).toBe(true);
-    expect(runInContext(`getGivingQrItems_('queens')[2].reserved`, context)).toBe(true);
+    // The mobile app and ACH/card codes print. Zelle stays reserved until the
+    // treasury confirms the address (#384), and Brooklyn has no Zelle.
+    for (const location of ['queens', 'brooklyn']) {
+      expect(JSON.parse(runInContext(
+        `JSON.stringify(getGivingQrItems_('${location}').map(function (item) { return Boolean(item.reserved); }))`,
+        context,
+      ) as string)).toEqual([false, false, true]);
+    }
     expect(runInContext(`getGivingQrItems_('queens')[0].label`, context)).toBe(
       '下載 APP\nDownload Mobile App',
     );
     expect(runInContext(`getGivingQrItems_('brooklyn')[0].label`, context)).toBe(
       '下載 APP\nDownload Mobile App',
     );
-  });
-
-  it('prints the mobile app QR code only when SHOW_MOBILE_APP_QR is true', () => {
-    const withSwitch = (value: string | null) =>
-      loadAppsScript({
-        PropertiesService: {
-          getScriptProperties: () => ({
-            getProperty: (name: string) => (name === 'SHOW_MOBILE_APP_QR' ? value : null),
-          }),
-        },
-      });
-    const reserved = (context: ReturnType<typeof loadAppsScript>, location: string) =>
-      JSON.parse(
-        runInContext(
-          `JSON.stringify(getGivingQrItems_('${location}').map(function (item) { return Boolean(item.reserved); }))`,
-          context,
-        ) as string,
-      );
-
-    for (const value of ['true', ' TRUE ']) {
-      const context = withSwitch(value);
-      // Zelle stays reserved until the treasury confirms the address (#384).
-      expect(reserved(context, 'queens')).toEqual([false, false, true]);
-      expect(reserved(context, 'brooklyn')).toEqual([false, false, true]);
-    }
-    for (const value of [null, '', 'false', 'yes']) {
-      const context = withSwitch(value);
-      expect(reserved(context, 'queens')).toEqual([true, false, true]);
-      expect(reserved(context, 'brooklyn')).toEqual([true, false, true]);
-    }
   });
 
   it('leaves the mobile app slot blank, with no placeholder, when its code is missing', () => {
@@ -638,11 +613,7 @@ describe('printed bulletin Apps Script helpers', () => {
       `appendGivingQrPlaceholderCell_(tableCell, getGivingQrItems_('queens')[0], {})`,
       context,
     );
-    runInContext(
-      `appendGivingQrPlaceholderCell_(tableCell, { label: getPrintedMobileAppQrLabel_(), kind: 'mobileApp' }, {})`,
-      context,
-    );
-    expect(calls).toEqual(['clear', 'clear']);
+    expect(calls).toEqual(['clear']);
   });
 
   it('uses the shared dummy QR image for giving slots until their Drive IDs are configured', () => {
