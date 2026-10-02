@@ -614,8 +614,10 @@ Psalm 119's three-digit verse numbers at 200%, a chapter opened at verse 14 so t
 under the status bar, and the Bible header with two translations and a back arrow.
 
 **Automatic checks.** The run fails, and the step summary says why, if the app isn't
-running after launch, if it didn't open the saved screen, if a screenshot is blank, or
-if a screen marked `statusBarClear` shows anything behind the status bar.
+running after launch, if it didn't open the saved screen, if a screenshot is blank or
+still shows the launch splash, or if a screen marked `statusBarClear` shows anything
+behind the status bar. A blank or splash screenshot is retaken every 2 seconds, up to 10
+times, before it counts.
 
 **Text checks.** `scripts/check-screens.cjs` then reads each screenshot's text with
 Apple's Vision framework (`scripts/ocr-screens.swift`, built into macOS) and checks what
