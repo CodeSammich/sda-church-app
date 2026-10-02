@@ -1,4 +1,3 @@
-import { EgwEditionDialog } from '@/components/EgwEditionDialog';
 import { TitleHero } from '@/components/TitleHero';
 import {
   LibraryBookCard,
@@ -33,7 +32,7 @@ export default function LibraryScreen() {
   const { language } = useContext(LanguageContext);
   const { textScale } = useTextSize();
   const { fontScale, width } = useWindowDimensions();
-  const { egwDialog, getShelfBooks } = useLibraryShelfBooks(language, {
+  const { getShelfBooks } = useLibraryShelfBooks(language, {
     loadEgwCovers: shelf === 'egw' || !!EGW_BOOK_IDS_BY_SHELF[shelf],
   });
   const styles = useMemo(() => createStyles(textScale), [textScale]);
@@ -82,8 +81,6 @@ export default function LibraryScreen() {
           </View>
         </View>
       </ScrollView>
-
-      <EgwEditionDialog {...egwDialog} />
     </>
   );
 }

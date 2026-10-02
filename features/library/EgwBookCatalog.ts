@@ -210,10 +210,14 @@ export const EGW_BOOK_CATEGORIES: readonly EgwBookCategory[] = [
   'wholePerson',
 ];
 
-export const getEgwEditionsForLanguage = (
+/**
+ * The edition a book opens in: the app language's, like every other Library
+ * book. Traditional and Simplified Chinese share the one Chinese edition.
+ */
+export const getEgwEditionForLanguage = (
   work: EgwBookWork,
   language: SupportedLanguage,
-) => {
+): EgwBookEdition => {
   const preferred: EgwEditionLanguage =
     language === 'zh' || language === 'zh-cn'
       ? 'zh'
@@ -221,8 +225,10 @@ export const getEgwEditionsForLanguage = (
         ? 'es'
         : 'en';
 
-  return [...work.editions].sort((a, b) =>
-    a.language === preferred ? -1 : b.language === preferred ? 1 : 0,
+  return (
+    work.editions.find((edition) => edition.language === preferred) ??
+    work.editions.find((edition) => edition.language === 'en') ??
+    work.editions[0]
   );
 };
 

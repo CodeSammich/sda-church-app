@@ -1,6 +1,5 @@
-import { EgwEditionDialog } from '@/components/EgwEditionDialog';
+import { LanguageDialog } from '@/components/LanguageDialog';
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
-import { EGW_BOOKS } from '@/features/library/EgwBookCatalog';
 import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
 import { StyleSheet } from 'react-native';
 import { Dialog } from 'react-native-paper';
@@ -18,18 +17,10 @@ describe('popup surfaces', () => {
   );
 
   it.each([customLightTheme, customDarkTheme])(
-    'renders the EGW edition dialog on the $dark app canvas',
+    'renders the language dialog on the $dark app canvas',
     (theme) => {
       const screen = renderWithPreferences(
-        createElement(EgwEditionDialog, {
-          closeLabel: 'Close',
-          language: 'en',
-          onDismiss: jest.fn(),
-          openError: 'Could not open book.',
-          opensOfficial: 'Opens official text',
-          selectEditionLabel: 'Select an edition',
-          work: EGW_BOOKS[0],
-        }),
+        createElement(LanguageDialog, { onDismiss: jest.fn(), visible: true }),
         { theme },
       );
 
