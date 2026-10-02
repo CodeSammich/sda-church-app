@@ -427,7 +427,8 @@ redirect rule sends `app.nyccsda.org` to it, keeping the path. Its real jobs are
 three static pages in [`public/`](../public/):
 
 - **Privacy policy** at `app.nyccsda.org/privacy-policy.html`, which both app stores
-  require for the listings.
+  require for the listings. It's the only copy: the app's **Privacy Policy** row opens
+  it (#403), so a wording fix needs only a website deploy.
 - **Support page** at `app.nyccsda.org/support.html`, the App Store's Support URL.
 - **App download page** at `app.nyccsda.org/download`. The printed bulletin's mobile
   app QR code points here, and the page sends each phone to the right store link

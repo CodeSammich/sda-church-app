@@ -3,7 +3,7 @@ import { MenuCard } from '@/components/MenuCard';
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
-import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
+import { CHURCH_BUILDING_IMAGE_URL, openPrivacyPolicy } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { getTextSizeMenuCopy } from '@/constants/TextSizeCopy';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -192,12 +192,7 @@ export default function YouScreen() {
               description={labels.privacySub}
               icon="shield-account"
               iconColor={theme.colors.secondary}
-              onPress={() =>
-                router.push({
-                  pathname: '/you/privacy',
-                  params: { backTo: '/you' },
-                } as any)
-              }
+              onPress={openPrivacyPolicy}
             />
             <MenuCard
               title={labels.legal}

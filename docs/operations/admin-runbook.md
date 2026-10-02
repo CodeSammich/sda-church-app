@@ -336,7 +336,7 @@ accept a redirect. Two similar addresses are not the app website:
 **Rules:**
 
 - **Keep these pages as static HTML in `public/`,** not as app screens. App screens, such
-  as `/you/privacy`, are blank until JavaScript runs, and the stores' checkers may not
+  as `/you/legal`, are blank until JavaScript runs, and the stores' checkers may not
   run it.
 - **Never rename or remove them.** The store listings and printed QR codes point at
   them. Add new pages beside them instead.
@@ -561,7 +561,7 @@ into `main`, and can be run manually on any branch.
 
 It builds the app without signing for an Apple Silicon Mac and an Intel Mac and
 launches each on a simulated iPhone. The Apple Silicon build then captures every key
-screen in `test/screens/screens.json` (83 screenshots, about 24 minutes) and checks
+screen in `test/screens/screens.json` (82 screenshots, about 24 minutes) and checks
 their text with `scripts/check-screens.cjs`. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
@@ -646,7 +646,7 @@ attention** in three cases:
   `scripts/check-store-toolchain.cjs`.
 
 When the app is below a requirement or one starts within 120 days, the issue is
-labeled **critical / launch blocking**. An unreadable page alone does not add the
+labeled **critical**. An unreadable page alone does not add the
 label, because it usually means the page wording changed, not that uploads will be
 rejected.
 

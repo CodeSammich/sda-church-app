@@ -103,8 +103,8 @@ down rather than because of your change.
 
 ### Key screens on iPhone
 
-The **iOS PR preview** workflow, on the release pull request into `main`, takes 83
-screenshots of the 31 screens listed in `test/screens/screens.json`, in light and dark,
+The **iOS PR preview** workflow, on the release pull request into `main`, takes 82
+screenshots of the 30 screens listed in `test/screens/screens.json`, in light and dark,
 at larger text sizes, and in Chinese and Spanish. `scripts/capture-ios-screens.cjs`
 takes them, and `scripts/check-screens.cjs` reads their text with Apple's Vision
 framework and checks what each screen must show. The release then waits on the

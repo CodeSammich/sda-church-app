@@ -516,92 +516,19 @@ sources and the implementation restrictions are recorded in
 
 ## Privacy Policy
 
-The app shows this policy, in English only, under **You → Privacy Policy**
-(`app/(tabs)/you/privacy.tsx`). Both store listings link to the web copy,
+The privacy policy is kept in one place, the website:
 [`public/privacy-policy.html`](../public/privacy-policy.html), served at
-`https://app.nyccsda.org/privacy-policy.html`. The three copies are worded a little
-differently; update all three when the app's data practices change.
+<https://app.nyccsda.org/privacy-policy.html>. Both store listings link to it, and the
+app's **You → Privacy Policy** row opens it in the in-app browser (#403). It's English
+only, so one authoritative text can't be mistranslated into a different promise. Change
+the wording there, and a website deploy publishes it with no new app build.
 
-### 1. Introduction
-
-This application values privacy and uses data minimization. The app does not require a
-user account for ordinary use, does not include advertising or analytics, and does not
-provide public user profiles, chat, or user-generated posting. Authorized church
-schedule managers maintain bulletin information in a restricted staff-managed Google
-Sheet outside the app.
-Church administrative systems and service providers still process limited information
-needed to operate the app, as described below.
-
-### 2. Worship Schedule Information (Google Workspace)
-
-Authorized church schedule managers enter participant names and worship assignments into
-a restricted, church-managed Google Sheet. Final owners maintain weekly worship-program
-details in the `Sabbath Sermon Data` tab; the source Sheet may record account activity
-permitted by the church's Workspace settings.
-
-A Google Apps Script web app reads the requested Sabbath schedule and reviewed sermon data and
-returns only an allowlisted bulletin response. Before the response becomes public, the
-script shortens Latin-script full names to a first name and last initial. A single-word
-Latin-script name may appear as entered, while unsupported non-Latin names are replaced
-with a privacy placeholder. Full names, account metadata, and other
-non-allowlisted spreadsheet fields are not included in the public API response. The
-shortened names may still identify people within the church community and are therefore
-treated as personal information rather than anonymous data.
-
-This information is used to communicate worship assignments and weekly program details.
-Access to the source Sheets is controlled by the church through Google Workspace, and
-source-data retention is governed by the church's administrative practices.
-
-### 3. Temporary Caching and Device Storage
-
-Google Apps Script temporarily caches privacy-filtered bulletin responses to reduce Sheet
-reads. The app may store settings, saved verse references, cached Bible selections,
-library cover links, and the same filtered bulletin data in device-local storage. This data is not synced to a
-church account. Web users can remove the device copy by clearing this site's browser
-data; native users can uninstall the app or clear its storage using the operating
-system's app settings.
-
-### 4. Hosting and Traffic Services
-
-This app requests Bible text, Bible-audio metadata or files, cover images, and
-privacy-filtered bulletin data from external services over HTTPS. GitHub Pages,
-Cloudflare, Google Workspace/Apps Script, HelloAO, fetch(bible), Adventist Connect, the
-Internet Archive, Audio Power, and the Chinese Union Mission services may process
-ordinary connection metadata such as an IP address, user agent, request path, and request
-time for delivery, security, or service operations. The app does not receive or store
-those providers' server logs. Each provider handles information under its own applicable
-terms and privacy policies.
-
-### 5. External Links
-
-This application links to external platforms such as AdventistGiving, YouTube, Spotify,
-Zoom, HymnsForWorship.org, zgaxr.com, EGW Writings (egwwritings.org), and Sabbath School
-services. The donation button opens AdventistGiving outside the app; payment details and
-any donation receipts are handled by that service and the receiving organization, not by
-this app. Library screens request current book-cover thumbnails from EGW Writings and,
-for Chinese languages, the Chinese Union Mission's cover catalog and image service. When
-you follow these links or when those images load, you are subject to the privacy policies
-of those third-party providers. These services may collect information such as IP
-addresses as part of their standard operations. The church does not receive or store
-information those external platforms independently collect from you. When you choose to
-share a Bible verse, the selected text is passed to the operating system share sheet and
-the app you choose; this app does not receive the recipient's information.
-
-### 6. Device Permissions and Data Requests
-
-The native app uses audio playback, including background playback. It does not request
-device location, camera, microphone, contacts, photos, or notifications. Because the app does not create
-user accounts or maintain a personal server profile, there is no account to delete. A
-user may request correction or removal of church-managed bulletin information by
-contacting `technology@nyccsda.org`. The church will handle requests according to applicable
-law and its administrative retention practices.
-
-### 7. Privacy Frameworks and Questions
-
-The project's minimization measures are informed by privacy principles found in laws such
-as the CCPA and GDPR, but they do not by themselves guarantee legal compliance. Which laws
-apply depends on the deploying organization, its users, and its data practices. This
-policy should be updated whenever the app's data practices change.
+In short, the app has no accounts, advertising, or analytics, and collects no data from
+the people who use it. It keeps settings, saved verses, and cached content on the device. The bulletin
+shows shortened names from the church's restricted schedule sheet. Like any website, the
+services the app loads content from, and the sites it links to, can see ordinary
+connection details such as an IP address. The policy names those services. Update it
+whenever the app starts using a new one.
 
 ---
 

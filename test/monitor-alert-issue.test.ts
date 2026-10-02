@@ -147,7 +147,7 @@ describe('store toolchain alert text', () => {
     );
 
     expect(alert.title).toBe('[monitor] Store toolchain requirements need attention');
-    expect(alert.labels).toEqual(['critical / launch blocking']);
+    expect(alert.labels).toEqual(['critical']);
     expect(alert.body).toContain('**Deadline passed on 2026-08-31:**');
     expect(alert.body).toContain(`Run: ${runUrl}`);
   });

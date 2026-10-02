@@ -248,11 +248,6 @@
       "variants": ["default", "dark", "large", "zh"]
     },
     {
-      "name": "privacy",
-      "path": "you/privacy",
-      "variants": ["default"]
-    },
-    {
       "name": "legal",
       "path": "you/legal",
       "variants": ["default"]
