@@ -1,5 +1,20 @@
 # Google Play and App Store policy audit
 
+> **Status, October 2026.** This is a record of the September 12, 2026 review, kept for
+> its reasoning. Since its September 29 status update below, 0.43.0 and 1.0.0 have
+> followed; 1.0.0 is the first public release, and it is being submitted to both
+> stores. The live topics now have their own docs:
+>
+> - **What each console asked, and the answers given:**
+>   [App Store Connect answers](app-store-connect-answers.md) and
+>   [Google Play Console answers](play-console-answers.md).
+> - **Listing text, reviewer notes, and screenshots:** [Store listings](store-listing.md).
+> - **Store accounts, app records, signing, and yearly upkeep:**
+>   [App Store and Google Play setup](app-store-setup.md).
+> - **Checks on real phones before each release:** the runbook's
+>   [Device checks before release](admin-runbook.md#device-checks-before-release).
+> - **The privacy policy:** [LEGAL.md](../LEGAL.md#privacy-policy).
+
 Audited September 12, 2026 against the repository at version `0.36.0` and the
 current official store guidance. This is a release-readiness review, not legal
 advice or a guarantee of approval. Store reviewers evaluate the submitted binary,
@@ -18,7 +33,7 @@ records.
 
 ## Status, September 29, 2026
 
-Both store listings are set up for the first release, 0.42.0. Of the confirmations
+Both store listings are set up for the first submission, 0.42.0. Of the confirmations
 below, only the donation recipient is still open.
 
 | Item | Status |
@@ -62,8 +77,10 @@ Console administrator must accept the terms and confirm the selected key arrange
 ### US export laws
 
 The app source contains no custom cryptography, VPN, proxy, security, or encryption
-feature. It makes ordinary HTTPS requests; the only direct `node:crypto` use is a
-build-time SHA-256 helper in `scripts/download-cuv-audio.mjs`, not an app feature. The
+feature. It makes ordinary HTTPS requests; the only direct `node:crypto` uses are in
+build and maintenance scripts (SHA-256 hashes in `scripts/download-cuv-audio.mjs` and
+`scripts/render-docs-diagrams.mjs`, and certificate dates in
+`scripts/check-apple-signing-expiry.cjs`) and tests, not in the app. The
 iOS configuration also declares `usesNonExemptEncryption: false`. This evidence is
 consistent with a normal mass-market app using platform/network encryption, but it is
 not a legal export classification. The authorized organization representative should
@@ -239,59 +256,8 @@ connection comes back, through the network-state permission the app already had.
 manifest and Play Console permission report to confirm they are gone.
 
 Background audio is tied to the app’s Bible-audio feature and is an appropriate use of
-background execution. Test a signed iOS build and Android AAB on physical devices,
-including lock-screen controls, interruptions, battery saver, offline startup,
-chapter transitions, and returning from an external link.
-
-## Store account setup for a nonprofit
-
-### Apple
-
-Enroll the church as an Apple Developer Program organization, not as an individual.
-Apple’s [organization enrollment guidance](https://developer.apple.com/help/account/membership/program-enrollment/)
-requires a legal entity, D-U-N-S number, legal authority to bind the organization,
-organization-domain work email, and a public functional organization website. The
-legal entity name becomes the seller name shown in the App Store.
-
-Apple’s [fee-waiver guidance](https://developer.apple.com/help/account/membership/fee-waivers/)
-allows an eligible nonprofit to request an annual membership waiver. The organization
-must not have signed the Paid Applications Agreement to offer paid apps or IAP, and
-must not otherwise sell digital goods or services through its apps. The current app’s
-free, donation-only external flow is consistent with those eligibility conditions,
-subject to Apple’s review and the church’s continuing eligibility.
-
-If the church later wants Apple Pay donations inside the app, complete Apple’s nonprofit
-approval before enabling the button; do not treat the membership fee waiver as Apple
-Pay donation approval.
-
-### Google Play
-
-Create a Google Play **Organization** account and select **Non-profit** as the
-organization type in the verified Google Payments profile. Google’s [account-type
-guidance](https://support.google.com/googleplay/android-developer/answer/13634885)
-requires a D-U-N-S number for organization accounts. Keep the legal name, address,
-D-U-N-S record, nonprofit documentation, organization website, and account-owner
-identity consistent across Google Payments, Play Console, D&B, and the Expo/native
-store listing. Google’s current published enrollment terms include a one-time USD
-$25 registration fee; nonprofit status is not a substitute for identity verification.
-
-## Submission metadata and reviewer notes
-
-The finished listing text and reviewer notes are in
-[Store listings](store-listing.md).
-
-Use a unique, accurate title and describe the app as a church community utility with:
-
-- native Bible reading, translation, pinyin, verse saving, sharing, and audio;
-- weekly bulletin and church-location information;
-- hymn/library navigation that opens third-party source pages externally;
-- no account, no ads, no subscriptions, and no in-app digital purchases; and
-- an external AdventistGiving donation portal that does not provide digital benefits.
-
-In Apple Review Notes and Google Play App access notes, explain that no login is
-required, the donation button opens an external site, and background audio is the
-reason for the media service. Keep all remote endpoints live and provide the privacy
-URL.
+background execution. The checks to run on signed builds on physical devices are in
+the runbook's [Device checks before release](admin-runbook.md#device-checks-before-release).
 
 ## Final gate
 
@@ -304,5 +270,6 @@ Before uploading either store binary:
    declarations.
 5. Verify content/brand/photo/audio permissions and remove anything not cleared.
 6. Generate the native projects and inspect the release manifest/entitlements.
-7. Run `npm run typecheck`, `npm test`, `npm run check:text-scale`, and the web build.
-8. Test signed iOS and Android builds on physical devices before submission.
+7. Run `npm run check`.
+8. Test signed iOS and Android builds on physical devices before submission; see
+   [Device checks before release](admin-runbook.md#device-checks-before-release).

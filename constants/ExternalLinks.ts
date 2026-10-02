@@ -104,6 +104,16 @@ export const openInSystemBrowser = async (
 };
 
 /**
+ * The privacy policy is kept only on the website, which both store listings
+ * link to (#403), so a wording fix needs a website deploy, not a new app build.
+ * Keep public/privacy-policy.html at this path.
+ */
+export const PRIVACY_POLICY_URL = 'https://app.nyccsda.org/privacy-policy.html';
+
+export const openPrivacyPolicy = () =>
+  openInSystemBrowser(PRIVACY_POLICY_URL, 'Error', 'Could not open the privacy policy.');
+
+/**
  * Whether the Tithe & Offering page shows the church's Zelle section. Off until
  * the address can receive gifts (#384, #392); turning it on needs a new release.
  */

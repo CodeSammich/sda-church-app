@@ -27,6 +27,7 @@ build number = major × 1,000,000 + minor × 1,000 + patch
 | `0.40.1` | `40001` |
 | `0.41.0` | `41000` |
 | `1.0.0` | `1000000` |
+| `1.0.1` | `1000001` |
 | `1.2.3` | `1002003` |
 
 Each part of the version gets three digits, so:
@@ -58,7 +59,9 @@ Users don't see it; the stores show them the version.
 
 Every merge to `main` is a release, and every release has a new, higher version:
 **PR Version Check** fails a release PR whose version isn't higher than `main`'s. So
-one release is one version is one build number, automatically.
+one release is one version is one build number, automatically. (The one exception: a
+PR from `release/x.y.z` may keep `main`'s version `x.y.z` while no `vx.y.z` tag exists,
+so a release that was never tagged can be recovered.)
 
 A counter kept by hand needs someone to remember it in every release, in both stores,
 and a forgotten bump only shows up as a rejected upload. Computing it from the version
@@ -88,8 +91,14 @@ removes that job entirely.
   and succeed.
 - **The 0.39.0 upload made by hand:** it used `versionCode` 1, which is lower than
   `40000`, so it doesn't get in the way.
-- **Reaching 1.0.0:** it becomes `1000000`, higher than any `0.x` release. Nothing
-  special is needed.
+- **1.0.0 and after:** 1.0.0, the first public release, is `1000000`, higher than any
+  `0.x` release, and `1.0.1` is `1000001`. Nothing special was needed.
+- **A release that doesn't go to the stores,** such as a docs-only patch: its builds
+  can be rejected at the `production` approval, so nothing is uploaded. Its build
+  number is then never used, which is fine. The stores need each upload to have a new
+  number (and Google Play a higher one), not consecutive numbers; the formula already
+  skips most numbers, such as from `40001` to `41000`. The next release that is
+  uploaded gets its own, higher number.
 - **Submitting to the App Store:** the App Store version you submit must match the
   build's version, so set it to the release you're submitting, such as `0.40.0`.
 

@@ -34,18 +34,18 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [Adventist Connect](#adventist-connect-media-library) | Photos, Bible audio (Mandarin primary; Cantonese and Spanish only source) | Free (NAD platform) | None published; Cloudflare CDN terms apply to NAD's account | Unknown; no agreement | **Medium**: most of the app's bytes |
 | [Internet Archive](#internet-archive) | CUV audio, 2nd source | Free | None published | Throttling possible | Low: built for bulk downloads |
 | [Audio Power](#audio-power) | CUV audio, 3rd source | Free (permission) | None published | Unknown | Low: reached only if two sources fail |
-| [HelloAO](#helloao) | Bible text, English BSB audio | Free | "No usage limits" | n/a | Low: CDN |
+| [HelloAO](#helloao) | English Bible text, English BSB audio, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN |
 | [fetch(bible)](#fetchbible) | Original-language, CUV, RV1909 text | Free | "No limits from us" | n/a | Low: CDN |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
 | [EGW Writings covers](#egw-writings-covers) | Library thumbnails | Free | None published | Unknown | Low: Cloudflare |
-| [Sunrise-Sunset](#sunrise-sunset) | Sunset times on the printed Queens bulletin | Free, **attribution required** | "Reasonable" volume; `429` + `Retry-After` | Throttled | None: one request per printed bulletin; the app no longer calls it |
+| [Sunrise-Sunset](#sunrise-sunset) | Sunset times on the printed bulletins | Free, **attribution required** | "Reasonable" volume; `429` + `Retry-After` | Throttled | None: two requests per printed bulletin; the app no longer calls it |
 | [GitHub Actions](#github-actions) | Tests, builds, deploys | Free (public repo) | Fair use, concurrency | Queued jobs | None |
 | [GitHub Pages](#github-pages) | `app.nyccsda.org` | Free | 1 GB site, 100 GB/month soft | `429` or a GitHub email | None |
 | [Google Workspace](#google-workspace-and-drive) | Roster, Drive, Apps Script | Free (nonprofit) | 100 TB pooled storage | Quota errors | None |
-| [Google Cloud](#google-cloud-play-upload-service-account) | Service account for automatic Google Play uploads | Free; **never link a billing account** | Play Developer API: 3,000 queries per minute | Uploads fail with an error | None: about ten requests per release |
-| [Cloudflare](#cloudflare) | Domain and DNS | **~$10/year** (domain only) | n/a | n/a | None |
+| [Google Cloud](#google-cloud-play-upload-service-account) | Service account for automatic Google Play uploads | Free; **never link a billing account** | Play Developer API: 3,000 queries per minute | Uploads fail with an error | None: under ten requests per release |
+| [Cloudflare](#cloudflare) | Domain, DNS, and the `app.nyccsda.org` redirect | **~$10/year** (domain only) | n/a | n/a | None |
 | [App stores](#app-stores) | Distribution | Free (Apple nonprofit waiver; Play $25 paid once) | n/a | n/a | None |
 
 ## Load model
@@ -68,8 +68,7 @@ Per-use costs, *measured*:
 | Cantonese CUV audio, one hour | ~7.2 MB | Mostly 16 kbps mono; whole Bible 792 MB / ~100 hours |
 | Spanish RV1909 audio, one hour | ~11 MB | Mostly 24 kbps mono; whole Bible 861 MB / ~77 hours |
 | BSB English audio, one chapter | ~4.4 MB (John 3, Souer) | Much larger than the Chinese recordings |
-| HelloAO chapter | ~3 KB (gzip) | One request per chapter viewed |
-| HelloAO translation list | ~150 KB | Once per app session |
+| HelloAO chapter | ~3 KB (gzip) | One request per BSB or KJV chapter viewed |
 | fetch(bible) book | ~30 KB (CUV John) | One request per book, kept in memory for the session |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
@@ -94,29 +93,28 @@ These choices exist to keep the app free and within every provider's limits:
   exhaust a quota or bill an account. Every runtime service the app calls works
   without a key, and the bulletin data goes through the church's own Apps Script
   instead of the Google Sheets API.
-- **The church hosts its own copy of the CUV audio.** Audio Power's owner allowed
-  self-hosting ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)),
-  so the church's copy on Adventist Connect is tried first, then the Internet
-  Archive, and Audio Power's small server only serves listeners when both fail. The
-  Cantonese and Spanish audio are also the church's own copies, under WordProject's
-  terms, which don't allow playing them from WordProject's servers. Audio is streamed on demand, with
-  only the next chapter preloaded on web, instead of downloading whole books.
+- **The church hosts its own copies of the Bible audio**, so outside hosts are only
+  fallbacks ([Audio Power](#audio-power)), and chapters stream on demand rather than
+  downloading whole books
+  ([how the app fetches audio](adventist-connect-media.md#how-the-app-fetches-audio)).
 - **Caching at every layer of the bulletin.** The Apps Script caches each response
   for 2 minutes, the app caches each Sabbath's bulletin on the device, and manual
   refresh has a 5-minute cooldown. Most bulletin opens never reach Apps Script.
 - **Nothing billable.** Cloudflare R2 and paid object storage were rejected because
   usage-based billing can't be ruled out
   ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
-- **The dependency monitor samples instead of crawling.** One sampled file per large
-  collection per day, so monitoring adds almost no load
+- **The dependency monitor samples instead of crawling.** Three sampled items per
+  large collection per day, reading only the first kilobyte of each audio file, so
+  monitoring adds almost no load
   ([External dependency monitor](external-dependency-monitor.md)).
 
 ## Runtime services
 
 ### Adventist Connect media library
 
-Hosts the church's photos, hymnal lookup charts, and the primary copy of the CUV
-Bible audio, behind NAD's Cloudflare CDN with Wasabi storage. Free to the church as
+Hosts the church's photos, hymnal lookup charts, the primary copy of the Mandarin
+CUV Bible audio, and the only copies the app plays of the Cantonese CUV and Spanish
+RV1909 audio, behind NAD's Cloudflare CDN with Wasabi storage. Free to the church as
 part of NAD's church-website platform, with no agreement or published limits. The
 full hosting chain and scaling analysis are in
 [Adventist Connect media hosting](adventist-connect-media.md): at congregation scale
@@ -155,7 +153,11 @@ so reaching Audio Power takes seconds rather than minutes.
 `bible.helloao.org` (text) and `audio.bible.helloao.org` (English BSB audio). Static
 files on AWS S3 behind CloudFront with a one-day cache (*measured*). Its
 documentation says: "No usage limits, no API Keys required, and no copyright
-restrictions whatsoever." The app requests one small JSON file per chapter.
+restrictions whatsoever." The app requests one small JSON file per chapter of the
+English translations (BSB and KJV), and one book list per translation, kept in memory
+for the session; the Chinese and Spanish text comes from [fetch(bible)](#fetchbible).
+The printed bulletin's Apps Script also fetches its Bible verses here, caching each
+chapter.
 
 English audio is the one heavy HelloAO load: about 4.4 MB per chapter, streamed
 directly from HelloAO, with no church copy. That is fine at every scenario because it
@@ -200,10 +202,12 @@ Translation (`LanguageApp`) only runs on a cache miss, so its quota isn't a conc
 
 `sabbath-school.adventech.io`. Opening the Sabbath School screen downloads nothing.
 When someone taps a children's age group, the app finds this week's lesson and opens
-its PDF: for Junior, Teen, and Youth, the quarterly index (about 124 KB) and two small
-lesson files; for Beginner, Kindergarten, and Primary, two Alive in Jesus files (about
-15 KB each). It tries the app's language first, then English, and opens the age
-group's Alive in Jesus website if it finds no lesson within 12 seconds. All of it comes
+its PDF: for Junior, Teen, and Youth, and for the Chinese Beginner, Kindergarten, and
+Primary lessons, a quarterly index (about 124 KB in English) and two small lesson
+files; for the English Beginner, Kindergarten, and Primary lessons, two Alive in Jesus
+files (about 15 KB each). When the app is in Chinese it tries the Chinese lesson
+first, then English; otherwise it uses English. It opens the age group's Alive in
+Jesus website if it finds no lesson within 12 seconds. All of it comes
 from S3 and CloudFront with a warm cache (*measured*). Free, no key, no published
 limits.
 
@@ -232,10 +236,12 @@ the device with the [`suncalc`](https://github.com/mourner/suncalc) library
 minute (*measured*; the API ran 1 to 1.5 minutes later). That removed a network
 dependency and the API's attribution requirement from the app.
 
-The printed Queens bulletin's Apps Script still calls the API, once per bulletin, for
-the sunset times it prints. Its [terms](https://sunrise-sunset.org/api) ask for "a
-visible link to sunrise-sunset.org in the app or page where you show the data", so
-that script should either credit it or calculate the times itself.
+The printed bulletin's Apps Script still calls the API for the sunset times the
+Queens and Brooklyn layouts print: two requests each time staff generate a bulletin,
+one for its Sabbath and one for the next. Its
+[terms](https://sunrise-sunset.org/api) ask for "a visible link to sunrise-sunset.org
+in the app or page where you show the data", so that script should either credit it
+or calculate the times itself.
 
 ## Build, hosting, and admin services
 
@@ -243,14 +249,15 @@ that script should either credit it or calculate the times itself.
 
 Free for public repositories on standard GitHub-hosted runners, including macOS, per
 [GitHub's billing policy](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
-Concurrency and fair-use limits apply; hitting them queues jobs, it doesn't bill. The
-private-repository estimates in [Native Builds](native-builds.md#github-actions-minutes-and-maintenance)
-only matter if the repository ever becomes private.
+Concurrency and fair-use limits apply; hitting them queues jobs, it doesn't bill. What changes if
+the repository ever becomes private is noted in
+[Native Builds](native-builds.md#github-actions-minutes-and-maintenance).
 
 ### GitHub Pages
 
-Serves `app.nyccsda.org`: the privacy policy, the download page, and the unsupported
-PWA preview. [Limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits):
+Serves the app website that `app.nyccsda.org` redirects to: the privacy policy,
+support, and download pages, the Sabbath Encouragement PDF, and the unsupported PWA
+preview. [Limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits):
 1 GB per site, a soft 100 GB of bandwidth a month, and `429` responses when rate
 limited. Going over the soft limit gets an email from GitHub, not a bill. The pages
 that matter are tiny.
@@ -282,8 +289,8 @@ billing account.** That protection doesn't depend on Google's prices.
   Play Developer API isn't a paid Google Cloud product: Google's
   [setup guide](https://developers.google.com/android-publisher/getting_started) and
   [quota page](https://developers.google.com/android-publisher/quotas) name no charge,
-  only a limit of 3,000 queries per minute. One upload makes about ten requests,
-  counting the sign-in.
+  only a limit of 3,000 queries per minute. One upload makes five to seven Play
+  Developer API requests, plus three for the sign-in.
 - **If Google ever changed that,** the upload would fail with an error rather than
   bill anyone, because there's no billing account to bill. Uploads would go back to
   being made by hand in Play Console until the church decides what to do.
@@ -302,32 +309,25 @@ Checked 2026-09-28.
 
 ### Cloudflare
 
-The domain is the **only recurring cost**: about $10 a year, paid through Cloudflare
-Registrar, which can register up to 10 years at a time. The account has a card on
-file for that, which is exactly why no usage-billed Cloudflare product may be added
-to it ([#261](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/261)).
-DNS itself is free. How to keep the card and the account safe, including a capped
-virtual card and backup administrators, is in the
-[admin runbook](admin-runbook.md#the-cloudflare-account-and-domain).
+The domain, about $10 a year, is the **only recurring cost**; DNS and the redirect are
+free, and no usage-billed product may be added to the account, which keeps a card on file
+([The Cloudflare account and domain](admin-runbook.md#the-cloudflare-account-and-domain)).
 
 ### App stores
 
-- **Apple:** the $99 annual developer fee is waived through nonprofit status, which
-  must be resubmitted yearly. No payment method is on file, so a lapse removes the
-  app; it doesn't charge the church.
-- **Google Play:** the one-time $25 registration was paid. No recurring cost.
-- Both are nonprofit organization accounts, so the app must stay free and never
-  earn money through the stores: no paid app, in-app purchases, subscriptions, or
-  ads. External donation links opened in the browser are fine. See
-  [App stores](../architecture.md#app-stores).
+Free: Apple waives its $99 yearly fee for the nonprofit and Google Play's one-time $25
+is paid. Both are nonprofit accounts, so the app must never earn money through the stores
+([App stores](../architecture.md#app-stores)).
 
 ## Link-only websites
 
 These only open in the browser, so the app puts no load on them and they have no
 cost: YouTube, Spotify, Zoom, AdventistGiving, zgaxr (Chinese hymnals), Hymns for
 Worship, the Adventech and Alive in Jesus lesson readers, EGW Writings reading,
-Project Gutenberg, the Chinese Union Mission 506 hymnal store pages, and the
-conference and union sites. Their availability risks, such as zgaxr's, are covered
+Project Gutenberg, the Internet Archive and HathiTrust book scans, Chapel Library,
+WordProject (the Bible audio credits), the Chinese Union Mission 506 hymnal store
+pages, Google Maps, the staff schedule in Google Sheets, and the conference, union,
+and adventist.org sites. Their availability risks, such as zgaxr's, are covered
 in [Architecture](../architecture.md#third-party-apis-and-websites).
 
 ## Known gaps
@@ -336,7 +336,7 @@ Found while writing this page and resolved in
 [#264](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/264):
 
 - **Sunrise-Sunset attribution and caching.** Fixed by no longer calling the API from
-  the app: sunrise and sunset are calculated on the device. The printed Queens
+  the app: sunrise and sunset are calculated on the device. The printed
   bulletin's Apps Script still uses the API; see [Sunrise-Sunset](#sunrise-sunset).
 - **Chinese library catalog caching.** Fixed: the cover list is cached on the device
   and refreshed at most daily, keeping the cached copy if a refresh fails.

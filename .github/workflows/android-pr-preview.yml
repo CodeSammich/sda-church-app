@@ -1,7 +1,8 @@
 name: Android PR preview
 
 # Uses pull_request_target so the Drive upload can use the production
-# environment, which only main may use. It builds only release/* branches of
+# environment: the job runs in the base branch's context, which the
+# environment's branch rule (main and release/**) accepts. It builds only release/* branches of
 # this repository, never fork code, and uploads with the trusted base commit's
 # helper.
 # pull_request_target must stay allowed in the repository's Actions event

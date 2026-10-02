@@ -67,8 +67,9 @@ Play shows a notice that 13–15-year-olds count as children in some countries, 
 offers a neutral age screen. The app needs no screen because it complies as a whole:
 its content is rated Everyone, and it has no ads, analytics, accounts, or personal data.
 
-Keep the listing consistent with this: no "for kids" wording, and screenshots of the
-Bible, bulletin, and hymns rather than the children's library shelf.
+Keep the listing consistent with this: no "for kids" wording, and no screenshots of the
+children's shelves. The current screenshots show Home, the Bible, Explore, and the
+Library's main page; see [`docs/store-assets/`](../store-assets/README.md).
 
 ## Ads and app access
 
@@ -83,9 +84,10 @@ listing then shows "No data collected" and "No data shared with third parties."
 
 - The app has no analytics, ads, crash reporting, push notifications, or over-the-air
   update SDK. These are the usual reasons an Expo app has to answer Yes.
-- Every network request fetches content: a Bible chapter or commentary, the bulletin
-  for a date (only `?date=` is sent), or a library or lesson catalog. No search
-  terms, form input, identifiers, or location leave the phone.
+- Every network request fetches content: a Bible chapter, commentary, or audio file,
+  the bulletin for a date (only `?date=` is sent), a library or lesson catalog, or a
+  cover image. No search terms, form input, identifiers, or location leave the phone;
+  Bible, hymnal, and Library searches run on the phone.
 - Settings and saved verses stay on the phone.
 - Sharing a verse is user-initiated, which Google exempts from "shared".
 - The giving button and other external links open the phone's browser, which Google
@@ -154,8 +156,10 @@ News & magazines, Events (which means ticket sales), and Music & audio.
 - **Feature graphic:** 1024 × 500. It shows the logo, the church's name in English and
   Chinese, "Bilingual Bible · Audio · Weekly bulletin · Hymns", and the pinyin and
   audio screenshots in phone frames on the brand blue (`#00405C`).
-- **Phone screenshots:** eight in English and four in Traditional Chinese, captured as
-  [Store listings](store-listing.md#screenshots) describes.
+- **Phone screenshots:** one set of six, which every listing language shows, captured
+  as [Store listings](store-listing.md#screenshots) describes. The first submission had
+  eight in English and four in Traditional Chinese; this set replaced them on
+  September 30, 2026.
 - **AI-generated declaration:** Play Console asks, for each image, whether AI generated
   or edited it. The feature graphic: yes, because an AI assistant laid it out, though no
   image generator made any of its pixels. The icon and screenshots: no; they're the

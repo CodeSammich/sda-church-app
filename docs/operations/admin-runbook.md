@@ -39,8 +39,10 @@ does and what still needs a person.
 | `release-approvers` team | Members of the GitHub team | Approve jobs that use the `production` Environment |
 | Contributor | Anyone with a fork | Open pull requests into a `release/*` branch |
 
-The `production` Environment holds every credential: Google (`CLASPRC_JSON`), Apple
-signing, and Android signing. It only accepts runs from `main` and `release/**`, and
+The `production` Environment holds the Google login (`CLASPRC_JSON`) and the Apple and
+Android signing credentials; the store upload settings are in the separate `store-upload`
+environment (see [Approving a production deployment](#approving-a-production-deployment)).
+It only accepts runs from `main` and `release/**`, and
 each run waits for a `release-approvers` member to approve it. Admins can also bypass
 that approval. To require approval even from admins, turn off **Allow administrators
 to bypass configured protection rules** under **Settings → Environments →
@@ -174,22 +176,24 @@ so, rather than passing unreviewed.
 
 ## Shipping a release to `main`
 
-The full process is in [Contributing](../CONTRIBUTING.md#two-stage-release-process).
+The full process is in [Contributing](../CONTRIBUTING.md#releasing-code-maintainers-only).
 The admin-only steps are:
 
 1. **Create the release branch** from `main`: **Code → branch menu → View all
    branches → New branch**, named `release/x.y.z` (for example `release/0.39.0`).
 2. **Merge feature pull requests** into that branch. Their titles must start with
-   `Release/x.y.z:` or `Release/x.y.x:`.
+   `Release/x.y.z:` or `Release/x.y.x:`. One of them sets the version files to `x.y.z`
+   (`npm run sync-version -- --version x.y.z`), which must be higher than `main`'s
+   version. The store build numbers are computed from it; see
+   [Version numbers](version-numbers.md).
 3. **Open the release pull request** from `release/x.y.z` into `main`, titled
    `Release/x.y.z: …`. Write the part after the colon for testers: it becomes the
    "What's new" text in Google Play internal testing. Copy the `Closes #…` lines from the included feature pull
    requests into its description. Use `Part of #…` or `Related to #…` for issues
    that should stay open. The **PR Linked Issue** check fails if the description has neither.
-4. **Merge it.** The version files must already say `x.y.z`
-   (`npm run sync-version -- --version x.y.z` in the release branch), and it must be
-   higher than `main`'s version. The store build numbers are computed from it; see
-   [Version numbers](version-numbers.md).
+4. **Merge it** once its checks and review pass. The slowest check, **iOS PR
+   preview**, takes about 50 minutes, and **Screenshots reviewed** waits until a
+   `release-approvers` member [approves the screenshots](#approving-the-screenshots).
 
 What runs after the merge to `main`:
 
@@ -228,8 +232,9 @@ workflow** at any time. Either way it overwrites the QR images the printed bulle
 uses, and nothing reaches Drive until someone approves:
 
 1. For a manual run, select **Run workflow** and choose **`main`** under *Use
-   workflow from*. The upload step always runs the upload script from `main`, so
-   running from a release branch only tests image generation.
+   workflow from*. The upload step always runs the upload script from `main`, but
+   it uploads the images the chosen branch generated from its own copy of the
+   file. A run from a release branch can test image generation; reject its upload.
 2. Approve the `production` deployment when the upload job starts. Leaving it
    unapproved is safe: the run expires without changing Drive.
 3. Open the **Upload QR codes to Google Drive** log and check:
@@ -238,9 +243,10 @@ uses, and nothing reaches Drive until someone approves:
      fails with `403 … has not granted the app … write access to the file`, the file
      was uploaded by hand. Rename that file in Drive (for example, add
      `_manual_backup` before `.jpg`) and run the workflow again. The workflow then
-     creates the file and can replace it on later runs. Rename rather than trash:
-     the bulletin script picks the first file with a matching name anywhere in Drive
-     and doesn't skip trashed files. See
+     creates the file and can replace it on later runs. Moving the old file to the
+     trash works too: the upload workflow and the bulletin script both skip trashed
+     files. Don't leave two untrashed files with the same name anywhere in Drive,
+     because the bulletin script uses the first one it finds. See
      [Credentials](#credentials-that-need-attention).
    - `Replaced …` or `Uploaded …` for each file in the table. **Replaced** keeps the
      existing Drive file, its ID, and its sharing link.
@@ -261,22 +267,30 @@ It refuses every other name, so bulletin files such as the logo, artwork, and th
 Sabbath Encouragement PDF can't be overwritten. To upload a new file, add its exact
 name to the allowlist in a reviewed pull request.
 
-Which QR slots print is controlled in the bulletin script; see
-[Giving QR slots](bulletin-automation.md#giving-qr-slots). The mobile app code is
-generated and its slot prints, so the script with it is deployed only once the app
-is public in both stores (#323). The Zelle codes are still made by hand, and their
-slot stays reserved until #384.
+Which slots print, and why the mobile app code waits for launch (#323), is in
+[Giving QR slots](bulletin-automation.md#giving-qr-slots). The Zelle codes are made by hand.
 
 ## Deploying the bulletin Apps Script
 
 **Workflow:** Actions → **Deploy Bulletin Apps Script**
 (`.github/workflows/apps-script-deploy.yml`). Manual only.
 
-1. Merge the Apps Script change first. Run from `main` for production, or from a
-   `release/*` branch to try it out before the release.
-2. Select **Run workflow**, pick the branch, and optionally enter a description
-   (shown in the Apps Script version history).
-3. Approve the `production` deployment.
+**Every run changes production.** There is one Apps Script project and one web-app
+deployment, and there is no test copy. The workflow doesn't check the branch: it
+pushes the chosen branch's code to the project and points the live deployment at
+it. The spreadsheet's **Printed Bulletin** menu and the app's bulletin use the new
+code at once. So a run from a `release/*` branch, which the `production`
+environment also accepts, puts unreleased code live. It is not a way to try a
+change out.
+
+**Not before launch.** Don't run this workflow until the app is public in both stores;
+[Giving QR slots](bulletin-automation.md#giving-qr-slots) says why and what to check first (#323).
+
+1. Merge the Apps Script change into `main` first, and run from `main`.
+2. Select **Run workflow**, choose **`main`** under *Use workflow from*, and
+   optionally enter a description (shown in the Apps Script version history).
+3. Approve the `production` deployment. Check the branch first, and reject a run
+   from any branch other than `main`.
 4. Follow the checks in
    [Deployment and verification](bulletin-automation.md#deployment-and-verification):
    reload the spreadsheet, generate a test bulletin for each changed layout, and check
@@ -318,7 +332,7 @@ accept a redirect. Two similar addresses are not the app website:
 **Rules:**
 
 - **Keep these pages as static HTML in `public/`,** not as app screens. App screens, such
-  as `/you/privacy`, are blank until JavaScript runs, and the stores' checkers may not
+  as `/you/legal`, are blank until JavaScript runs, and the stores' checkers may not
   run it.
 - **Never rename or remove them.** The store listings and printed QR codes point at
   them. Add new pages beside them instead.
@@ -436,15 +450,16 @@ The Apple renewals have their own reminder, 60 days before each date; see
 
 ## Native app binaries
 
-Background, signing setup, and recovery are in [Build Instructions](native-builds.md).
+Background, signing setup, and recovery are in [Native mobile binary builds](native-builds.md).
 
 ### Building
 
 - **Automatic:** every merge to `main` starts **Native Android build** and **Native
   iOS build**. Approve both `production` deployments.
-- **Manual:** Actions → **Native Android build** → **Run workflow** on `main`, then
-  tick **AAB** (Google Play) and/or **APK** (direct install). Actions → **Native iOS
-  build** → **Run workflow** on `main`. Both refuse to sign from any other branch.
+- **Manual:** Actions → **Native Android build** → **Run workflow** on `main`. It
+  builds both the AAB and the APK whichever boxes you tick; ticking **AAB** also
+  uploads it to Google Play internal testing. Actions → **Native iOS build** → **Run
+  workflow** on `main`. Both refuse to sign from any other branch.
 
 There are no build numbers to raise. Both stores' build numbers are computed from the
 version (`0.40.0` becomes `40000`); see [Version numbers](version-numbers.md).
@@ -468,8 +483,9 @@ After you approve the signed builds, they upload for testing on their own: the I
 TestFlight and the AAB to Google Play internal testing. Nothing reaches the public
 until you release it:
 
-1. **Test** the build on real devices, from TestFlight and from the Play Store's
-   internal testing link.
+1. **Test** the build on an iPhone and an Android phone, installed from TestFlight and
+   from the Play Store's internal testing link; see
+   [Device checks before release](#device-checks-before-release).
 2. **Check the store pages still fit the release:**
    - If it changes what the app does, such as analytics, notifications, a form, or
      location, update the declarations first. Each store's answers doc has a **When to
@@ -492,6 +508,53 @@ until you release it:
 The upload jobs, their `store-upload` secrets, what each result means, and how to
 upload by hand are in
 [Automatic store uploads](native-builds.md#automatic-store-uploads).
+
+### Device checks before release
+
+The automatic checks don't use a real phone. **Android audio e2e** runs on an emulator
+(host failover, one chapter change with the screen off, recovery after the connection
+drops), and **iOS PR preview** checks the key screens on a simulated iPhone. So before
+releasing a build to the public, check it by hand on one iPhone and one Android phone,
+installed from TestFlight and from the Play Store's internal testing link. Copy this
+list into a comment on the release pull request, tick it for each phone, and add the
+phone's model, its OS version, the app version on the **You** tab, and anything odd.
+The locked checks matter most on the iPhone: iOS moves to the next chapter from the
+app's own code, while Android uses a native queue.
+
+- [ ] **Locked listening.** Play a chapter in English (BSB), switch to another app,
+  lock the phone near the chapter's end, and listen for at least 15 minutes while
+  chapters change on their own, with no pauses. The lock screen's title changes with
+  each chapter, and play/pause and skipping back and forward work there. Unlock: the reader shows the chapter that's playing. Then let a couple of
+  chapters change in Chinese (CUV).
+- [ ] **Next and Previous (Android).** In the notification, go back to the first
+  chapter you played, and forward from one book into the next. Pressed while paused,
+  they leave it paused.
+- [ ] **Another audio app.** Start music or a video in another app while Bible audio
+  plays, once mid-chapter and once while a chapter is still loading. Bible audio
+  pauses and stays paused after you unlock; pressing Play in the Bible stops the other
+  app.
+- [ ] **Silent mode, battery saver, and headphones.** With silent mode on, and again
+  with Low Power Mode (iPhone) or Battery Saver (Android) on, Bible audio still plays
+  and changes chapters while locked. Disconnect wired or Bluetooth headphones while it
+  plays, and note what happens.
+- [ ] **Connection loss.** Turn on airplane mode just before a chapter ends, wait a
+  minute, turn it off, and unlock. Audio resumes by itself, and the new chapter's text
+  loads without pressing Next or Previous. Try both translations.
+- [ ] **Sleep timer.** Try **End of chapter**, **5 minutes**, and **End of book**
+  (start at Psalm 149 so it stops after Psalm 150). Each stops at the right point,
+  also while locked.
+- [ ] **Changes while playing.** Change the chapter, the translation, and
+  **Preferred source** under **Audio settings**, and seek within a chapter. Leave the
+  Bible tab and come back: it returns to the chapter that's playing.
+- [ ] **Offline start.** After using the app online, close it fully, turn on airplane
+  mode, and open it. It starts, and the **Home** tab and the bulletin show what they
+  last loaded.
+- [ ] **Outside links.** Open an outside page, such as a giving page under **Tithe &
+  Offering** or a hymn's source page, then return. The app is where you left it.
+- [ ] **This release's changes.** Try each change the release pull request lists.
+
+If a check fails, don't release that build. Open an issue with the phone, OS version,
+app version, and steps; the fix ships in a new version.
 
 ### Store listings and declarations
 
@@ -529,7 +592,8 @@ store announces a change, check that:
 **Workflow:** **Android PR preview**, which runs automatically on release pull requests
 into `main` (from a `release/*` branch in this repository).
 
-It builds an unsigned debug APK. After you approve `production`, it uploads the APK
+It builds a debug APK, signed only with Gradle's local debug key, never the church's
+release key. After you approve `production`, it uploads the APK
 to Google Drive as `sda-church-app-pr-<number>-<run>-arm-debug.apk`, and the run
 summary links to it. Fork pull requests are skipped. See
 [Android PR preview and Drive upload](native-builds.md#android-pr-preview-and-drive-upload).
@@ -539,11 +603,17 @@ summary links to it. Fork pull requests are skipped. See
 **Workflow:** **iOS PR preview**, which runs automatically on release pull requests
 into `main`, and can be run manually on any branch.
 
-It builds the app without signing for an Apple Silicon Mac and an Intel Mac, launches it
-on a simulated iPhone, and uploads the app and a screenshot of its first screen. It
-needs no approval, because it reads no secrets. Download the build for your Mac from the
-run's Artifacts section to test the release on a Mac before merging; you don't need an
-iPhone. See [iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+It builds the app without signing for an Apple Silicon Mac and an Intel Mac and
+launches each on a simulated iPhone. The Apple Silicon build then captures every key
+screen in `test/screens/screens.json` (82 screenshots of 30 screens) and checks their
+text with `scripts/check-screens.cjs`. The run takes about 50 minutes in all, about 24
+of them for the screenshots. On a release pull request, a comment
+links the screenshots, and the **Screenshots reviewed** check waits until an approver
+has looked at them; see [Approving the screenshots](#approving-the-screenshots).
+The builds need no `production` approval, because they read no secrets. Download the
+build for your Mac from the run's Artifacts section (kept 14 days) to test the release
+on a Mac before merging; you don't need an iPhone. See
+[iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 
 ## Dependabot pull requests
 
@@ -621,7 +691,7 @@ attention** in three cases:
   `scripts/check-store-toolchain.cjs`.
 
 When the app is below a requirement or one starts within 120 days, the issue is
-labeled **critical / launch blocking**. An unreadable page alone does not add the
+labeled **critical**. An unreadable page alone does not add the
 label, because it usually means the page wording changed, not that uploads will be
 rejected.
 
@@ -687,8 +757,8 @@ so a release can't merge until it passes. Feature pull requests into a release b
 don't run it; to test an audio change before the release, run it manually on your
 branch.
 
-It takes about 20 minutes, and runs alongside the iOS Simulator builds, which
-take longer.
+It takes about 20 minutes, and runs alongside **iOS PR preview**, which takes about
+50 minutes.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:
@@ -725,15 +795,10 @@ When it fails on a release pull request:
    back. If the release can't wait, an admin can bypass this one check when merging,
    after confirming that the failure is the outage and not the app.
 
-**To run it on your own emulator**, install a debug APK
-(`npm run build:android:apk:debug:intel`) and run
-`scripts/e2e/android-bible-audio.sh`. Set `ADB` if `adb` isn't on your path, and
-`ADB_ARGS=-e` if a phone is also connected. `E2E_ONLY` runs chosen scenarios, for
-example `E2E_ONLY=dead-zone-screen-off`. The primary-host scenario runs only with
-`E2E_PRIMARY_BLOCKED=1`, which needs the DNS block the workflow sets up. The script
-clears the app's first-launch Welcome dialog, and turns off the device's animations
-while it runs (restoring them when it exits), because the screen must be still to be
-read.
+**To run it on your own emulator,** see
+[Bible audio on an Android emulator](../README.md#bible-audio-on-an-android-emulator).
+The script turns off the device's animations while it runs and restores them when it
+exits.
 
 ## Credentials that need attention
 

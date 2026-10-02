@@ -60,7 +60,8 @@ const BASE_SETTINGS = {
 const WAIT = 10;
 const BIBLE_WAIT = 15;
 
-// Screenshots taken again, 2 seconds apart, while the screen is still blank.
+// Screenshots taken again, 2 seconds apart, while the screen is still blank or
+// still shows the launch splash.
 const BLANK_RETRIES = 10;
 
 // Where services/ScreenshotRoute.ts looks for the screen to open.
@@ -172,6 +173,43 @@ const looksBlank = async (file) => {
   return largestSpread(await sharp(below).stats()) < 3;
 };
 
+// The launch splash's background colour, from app.json's expo-splash-screen plugin.
+const SPLASH_COLOR = (() => {
+  const plugins = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.plugins || [];
+  const splash = plugins.find((plugin) => Array.isArray(plugin) && plugin[0] === 'expo-splash-screen');
+  const hex = (splash && splash[1].backgroundColor) || '#00405C';
+  return [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16));
+})();
+
+// Bands above and below the splash's centred logo, as fractions of the height.
+// On the splash both are the plain splash colour; every app screen has content
+// or a different background there.
+const SPLASH_BANDS = [
+  [0.16, 0.38],
+  [0.62, 0.9],
+];
+
+/**
+ * Whether the screenshot still shows the launch splash. A slow first launch can
+ * leave it up past the wait, and the logo keeps it from looking blank.
+ */
+const looksLikeSplash = async (file, color = SPLASH_COLOR) => {
+  const sharp = require('sharp');
+  const { width, height } = await sharp(file).metadata();
+  for (const [from, to] of SPLASH_BANDS) {
+    const top = Math.round(height * from);
+    // sharp's stats() measures the whole input, not the crop, so crop into a new image first.
+    const band = await sharp(file)
+      .extract({ left: 0, top, width, height: Math.round(height * to) - top })
+      .png()
+      .toBuffer();
+    const { channels } = await sharp(band).stats();
+    if (largestSpread({ channels }) >= 3) return false;
+    if (channels.slice(0, 3).some((channel, i) => Math.abs(channel.mean - color[i]) > 8)) return false;
+  }
+  return true;
+};
+
 /**
  * Whether nothing shows through behind the status bar. Text scrolled up under it
  * would reach the plain strip below the clock and icons, or the gaps beside
@@ -236,10 +274,12 @@ const capture = async (outDir) => {
     // The whole rectangular screen, without the rounded corners. (The iOS 26
     // Simulator still draws the Dynamic Island.) Taken even when something went
     // wrong, so the artifact shows what was on screen. If the app hasn't drawn
-    // yet, as happens on some slow launches, it tries again for a while.
+    // yet, or still shows its splash, as happens on some slow launches, it
+    // tries again for a while.
     const screenshot = () => simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', file);
+    const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
     screenshot();
-    for (let retry = 0; retry < BLANK_RETRIES && (await looksBlank(file)); retry++) {
+    for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
       await sleep(2);
       screenshot();
     }
@@ -249,6 +289,7 @@ const capture = async (outDir) => {
     const left = JSON.parse(readFileSync(manifest, 'utf8'));
     if (shot.route && left[ROUTE_KEY]) problems.push("the app didn't open the saved screen");
     if (await looksBlank(file)) problems.push('the screen is blank');
+    else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
     for (const check of shot.checks) {
       if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
       else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
@@ -301,6 +342,7 @@ if (require.main === module) {
 
 module.exports = {
   looksBlank,
+  looksLikeSplash,
   SETTING_KEYS,
   BASE_SETTINGS,
   loadConfig,

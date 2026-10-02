@@ -21,7 +21,9 @@
  * architecture should not be described as blanket immunity from copyright liability.
  *
  * IMPLEMENTATION CONSTRAINTS (DEVELOPER DISCLOSURE):
- * - All external links MUST open in the device's native web browser (Safari/Chrome).
+ * - All external links MUST open in the system browser: openInSystemBrowser in
+ *   constants/ExternalLinks.ts, which on iOS and Android shows the system's in-app
+ *   browser sheet (SFSafariViewController or Chrome Custom Tabs).
  *   Do NOT embed sheets via internal webviews, frames, or inline scrapers.
  * - Do NOT hotlink directly to raw asset files (e.g., paths ending in .png, .jpg, or .pdf).
  *   You may only link to the official user-facing HTML landing pages. This respects the

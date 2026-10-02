@@ -12,7 +12,7 @@ flowchart TB
     subgraph UploadSecrets["GitHub Secrets · store-upload environment"]
       storeKeys["🔑 Store upload settings<br/>App Store Connect API key,<br/>Google Play keyless sign-in"]
     end
-    pages@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "GitHub Pages · app.nyccsda.org<br/>privacy policy, download page<br/>PWA build: unsupported dev preview", pos: "b", w: 40, h: 40, constraint: "on" }
+    pages@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "GitHub Pages · app.nyccsda.org<br/>privacy policy, support, and download pages<br/>PWA build: unsupported dev preview", pos: "b", w: 40, h: 40, constraint: "on" }
   end
 
   gcloud@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-cloud.svg", label: "Google Cloud · sda-church-app-play<br/>keyless sign-in for Play uploads<br/>free: no billing account, never add one", pos: "b", w: 48, h: 39, constraint: "on" }
@@ -48,7 +48,7 @@ flowchart TB
   actions -- QR codes, preview APKs --> drive
   actions -- web build --> pages
   abm -.-> appstore
-  dns -.-> pages
+  dns -. "redirects app.nyccsda.org" .-> pages
   dns -.-> Google
   dns -. DNS TXT record proves ownership .-> gsc
   gsc -. website verification for the organization account .-> play

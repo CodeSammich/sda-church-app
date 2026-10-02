@@ -2,16 +2,19 @@
 
 How the church's store accounts, app records, and signing files are set up, and
 what has to be renewed each year to keep the app published and updatable. For how
-the build workflows use these files, see [Build Instructions](native-builds.md).
+the build workflows use these files, see [Native mobile binary builds](native-builds.md).
 For who owns each account, see
-[App stores in the architecture doc](../architecture.md#app-stores).
+[App stores in the architecture doc](../architecture.md#app-stores); for how to keep
+the accounts under church control and recover them, see
+[Account ownership and recovery](#account-ownership-and-recovery).
 
 > [!WARNING]
 > **Keep account-specific values out of this repository.** That means the Apple
 > Team ID, personal or church email addresses, certificate (`.p12`) and
 > provisioning profile (`.mobileprovision`) files, keystores, and every password.
 > Use placeholders in documentation, and never commit signing files or secrets.
-> Signing values live only in the protected `production` GitHub Environment.
+> Signing values live only in the protected `production` GitHub Environment, and the
+> store upload credentials only in the `store-upload` environment.
 
 ## Contents
 
@@ -28,6 +31,10 @@ For who owns each account, see
   - [Signing and the first upload](#signing-and-the-first-upload)
   - [Testing and release tracks](#testing-and-release-tracks)
   - [Yearly Google Play upkeep](#yearly-google-play-upkeep)
+- [Account ownership and recovery](#account-ownership-and-recovery)
+  - [Apple Developer versus Apple Business Manager](#apple-developer-versus-apple-business-manager)
+  - [If the organization loses access](#if-the-organization-loses-access): Apple
+    Developer, Google Play Console, and D&B
 
 ## Apple App Store
 
@@ -131,10 +138,18 @@ Base64 text straight to the clipboard:
 # Paste into IOS_PROVISIONING_PROFILE_BASE64
 ```
 
+On macOS:
+
+```sh
+base64 -i /secure/location/nyccsda-distribution.p12 | tr -d '\n' | pbcopy
+# Paste into IOS_DISTRIBUTION_CERTIFICATE_BASE64
+
+base64 -i /secure/location/nyccsda-app-store.mobileprovision | tr -d '\n' | pbcopy
+# Paste into IOS_PROVISIONING_PROFILE_BASE64
+```
+
 Afterwards, copy something else so the certificate text doesn't stay on the
-clipboard. If Windows clipboard history (**Win + V**) is on, clear it too. For
-macOS, see the commands in
-[iOS setup](native-builds.md#ios-setup-github-hosted-direct-builds).
+clipboard. If Windows clipboard history (**Win + V**) is on, clear it too.
 
 The workflow checks that the profile belongs to `IOS_TEAM_ID` and to
 `org.nyccsda.app` before importing anything, and deletes every signing file when
@@ -176,7 +191,10 @@ updates can be uploaded until it's renewed.
    annual fee, but the Account Holder must confirm at each renewal that the church
    is still eligible: it must remain a recognized nonprofit (in the U.S., by the
    IRS), and the app must stay free, with no paid apps, in-app purchases, or sales
-   of digital goods. See Apple's
+   of digital goods. The church must not sign Apple's **Paid Applications
+   Agreement**, the agreement for offering paid apps or in-app purchases. The waiver
+   isn't approval for Apple Pay donations: if the church ever wants those in the app,
+   it completes Apple's separate nonprofit approval before turning them on. See Apple's
    [fee waiver requirements](https://developer.apple.com/help/account/membership/fee-waivers/)
    and [program renewal](https://developer.apple.com/help/account/membership/renewal/).
 2. **Create a new certificate** on a Mac, as in
@@ -231,7 +249,7 @@ closed test with 12 testers for 14 days before they can publish.
   [Google Workspace for Nonprofits](../architecture.md#google-workspace-for-nonprofits)).
   This account becomes the developer account's **owner**. Ownership can be
   transferred later; see
-  [Google Play Console recovery](native-builds.md#google-play-console).
+  [Google Play Console recovery](#google-play-console).
 - **The church's D-U-N-S number**, with the church's legal name and address
   exactly as Dun & Bradstreet has them. Use the church's own number, not the
   conference's.
@@ -296,15 +314,14 @@ the account can't be stranded. Remove access when someone leaves the role.
    [Google Play create-app declarations](store-policy-audit.md#google-play-create-app-declarations).
 3. Under **App content**, complete the privacy policy
    (`https://app.nyccsda.org/privacy-policy.html`), app access (no login is
-   needed), ads (none), content rating, target audience, and Data safety. Use the
-   answers in [store-policy-audit.md](store-policy-audit.md) so they match the
-   app as submitted. The answers the church gave, including the advertising ID and
-   foreground service declarations, are in
-   [Google Play Console answers](play-console-answers.md).
+   needed), ads (none), content rating, target audience, and Data safety, using the
+   answers in [Google Play Console answers](play-console-answers.md), including the
+   advertising ID and foreground service declarations, so they match the app as
+   submitted.
 4. Under **Store listing**, add the short and full descriptions, the 512 × 512
    icon (`public/icon-512x512.png`), the 1024 × 500 feature graphic, and phone
-   screenshots. The text, in English and Chinese, is in
-   [Store listings](store-listing.md).
+   screenshots. The text, in English, Traditional Chinese, Simplified Chinese, and
+   Spanish, is in [Store listings](store-listing.md).
 
 The package name, `org.nyccsda.app`, is fixed by the first upload and can't be
 changed afterwards.
@@ -374,3 +391,135 @@ changed afterwards.
   profile.
 - Answer Play Console's periodic policy and declaration prompts, such as Data
   safety updates, by their deadlines, or releases can be blocked.
+
+## Account ownership and recovery
+
+Treat these accounts as organizational assets, not as one employee's personal
+accounts. Keep at least two authorized administrators, use organization-owned
+email addresses, store recovery methods securely, and record the legal entity
+name, address, EIN, D-U-N-S number, account IDs, and renewal dates, outside this
+repository.
+
+### Apple Developer versus Apple Business Manager
+
+Apple Business Manager is **not required** to enroll in or use the Apple
+Developer Program for App Store distribution. They are separate Apple
+services. The required service for this project is an Apple Developer Program
+organization membership, not an individual one. Apple's
+[enrollment requirements](https://developer.apple.com/help/account/membership/program-enrollment/)
+for an organization are a legal entity, a D-U-N-S number, someone with legal
+authority to bind the organization, a work email on the organization's domain, and
+a public, working organization website. The legal entity name given at enrollment
+becomes the seller name shown on the App Store listing.
+
+Do not assume that an Apple Business Manager login is the Apple Developer
+login. If the organization already uses Apple Business Manager, it can be
+useful for device management, Managed Apple Accounts, and distributing custom
+apps, but it does not replace Apple Developer enrollment. Apple describes the
+relationship in its [membership comparison](https://developer.apple.com/support/compare-memberships/):
+apps distributed through the App Store, Apple Business Manager, or Apple School
+Manager use the Apple Developer Program.
+
+For a small organization, the practical setup is an organization-controlled
+Apple Account with two-factor authentication used to enroll the Apple Developer
+Program organization membership. Then add at least one additional trusted
+Admin and keep recovery methods under organizational control. The enrolling
+person becomes the Apple Developer **Account Holder**, which is the role that
+renews membership and accepts legal agreements. If the organization uses
+Managed Apple Accounts through Apple Business Manager, Apple says Account
+Holder-role changes may require contacting Apple, so document the relationship
+and do not make the account dependent on one employee's personal Apple Account.
+
+### If the organization loses access
+
+How to regain each account if its owner leaves or can't be reached, or the church
+can't sign in.
+
+#### Apple Developer
+
+The critical Apple role is called **Account Holder**. For an organization
+membership, the Account Holder must have legal authority to bind the
+organization. If the current Account Holder is still reachable, they can add
+the successor to the team and transfer the role from Apple Developer's
+[Transfer the Account Holder role](https://developer.apple.com/help/account/access/transfer-the-account-holder-role/)
+page. The successor needs an Apple Account with two-factor authentication and
+may need identity verification and to accept the transferee agreement.
+
+If the Account Holder is deceased, unreachable, or the organization cannot
+sign in, contact [Apple Developer Support](https://developer.apple.com/contact/)
+and explain that the organization has lost its Account Holder. Be prepared to
+show the successor's government ID and evidence that they are authorized to
+bind the legal entity, such as board authorization, corporate or nonprofit
+registration, an officer/director listing, and the organization's official
+contact information. Apple determines the exact documents and may request
+additional business records; do not assume an Admin can replace the Account
+Holder without Apple's help.
+
+Apple's organization enrollment and identity record must match the legal
+entity. A nonprofit should be enrolled as the nonprofit's organization, with
+the nonprofit's legal name, address, and D-U-N-S record—not as a sole
+proprietor or individual. See Apple's guidance on
+[updating organization information](https://developer.apple.com/help/account/membership/updating-your-account-information).
+
+#### Google Play Console
+
+The account must be a Google Play **Organization** account registered as a
+**Non-profit**, not a personal one; see
+[Create the nonprofit organization account](#create-the-nonprofit-organization-account).
+
+If the existing owner is available, add the successor under **Users and
+permissions** and use Google's [Transfer ownership of a Play Console
+developer account](https://support.google.com/googleplay/android-developer/answer/16909862)
+process. The current Google guidance includes a seven-day security cooling-off
+period. If the owner is no longer reachable, Google says to contact Play
+Console support through the Help section or its online form; the self-service
+transfer cannot be completed without the current owner. Be ready with the
+successor's government ID, organization relationship/authority, verified
+contact information, Google Payments access, and nonprofit/legal-entity
+documents requested by Google. See Google's [required account
+information](https://support.google.com/googleplay/android-developer/answer/13628312)
+and [identity/profile update guidance](https://support.google.com/googleplay/android-developer/answer/13634888).
+
+If recovery is impossible, create a new organization Play Console account and
+ask Google to transfer the apps. This is a recovery path, not a shortcut: the
+new account must be active and verified, and app signing, Firebase, API,
+analytics, payments, testing, and reports may need follow-up work.
+
+#### D-U-N-S and Dun & Bradstreet recovery
+
+The relevant D&B product name is **D-U-N-S Profile Manager** (often shortened
+to D-U-N-S Manager), not “DNB business profile manager.” Use the official
+[D-U-N-S Profile Manager](https://www.dnb.com/en-us/smb/duns/duns-manager.html),
+[D&B company-profile manager](https://smallbusiness.dnb.com/duns-manager/company-profile),
+or [D&B sign-in](https://my.dnb.com/) entry points. D&B describes verified
+owners, directors, or officers as the people who can manage the profile.
+
+If the organization has no D-U-N-S number, request one through D&B's
+[D-U-N-S request service](https://www.dnb.com/duns-number/get-a-duns.html)
+and keep the confirmation. The practical wait we experienced was roughly
+**5–10 business days** for a new number; this is an operational estimate, not
+a guaranteed SLA. Apple and Google may also need additional time after D&B
+updates before their verification systems see the change.
+
+If the existing D&B profile is controlled by a departed contact, use Profile
+Manager's verification/recovery flow and request access as an authorized
+owner, director, or officer. Prepare the organization's exact legal name and
+address, D-U-N-S number, government-issued ID, work email/phone, and documents
+showing authority—typically formation/registration records, IRS EIN or
+tax-exempt determination documentation, nonprofit registration, and a board
+resolution or letter of authorization. D&B may request different or additional
+documents, so submit only what its support team asks for.
+
+In our experience, becoming the verified D-U-N-S profile manager took another
+roughly **5–10 business days**. The role we were looking for is best described
+as a verified owner/director/officer in D-U-N-S Profile Manager; D&B's exact
+label may vary by region and workflow.
+
+Most importantly, check the D&B legal-entity classification after recovery.
+For a nonprofit, the profile must identify the actual nonprofit legal entity,
+not Sole Proprietorship. A D-U-N-S request can default to an individual/sole-
+proprietor-style record even when the applicant selected nonprofit. Correct the
+D&B record first, using the nonprofit's legal documents, then wait for the
+change to propagate before submitting Apple or Google verification. Google
+explicitly says organization name, address, and D-U-N-S updates originate in
+D&B rather than being edited directly in Play Console.

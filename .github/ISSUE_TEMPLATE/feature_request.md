@@ -1,20 +1,20 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
+about: Suggest an idea for the app
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Please check the existing issues and tag or comment as appropriate. Ex. I'm always frustrated when [...]
+**What problem would this solve?**
+What you're trying to do in the app, and what gets in the way. Please check the existing issues first, and comment there if the idea is already suggested.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**What you'd like**
+What the app should do. Say which screen or tab it belongs on, if you know.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**Other options you've considered**
+Any other ways to solve it, including apps or websites that already do it well.
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+**Anything else**
+Screenshots, sketches, or links that help explain it. Don't include anyone's personal information.

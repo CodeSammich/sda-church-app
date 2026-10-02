@@ -45,9 +45,8 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 ## App Privacy
 
 - **Privacy Policy URL:** `https://app.nyccsda.org/privacy-policy.html`, entered for
-  every language. The policy is English only on purpose, like the app's privacy screen:
-  one authoritative text can't be mistranslated into a different promise. Neither store
-  requires a translation.
+  every language; neither store requires a translated policy. Where the policy lives,
+  and why it's English only, is in [LEGAL.md](../LEGAL.md#privacy-policy).
 - **Data collection:** No, so the listing shows **Data Not Collected**. The reasoning is
   the same as Google Play's [Data safety](play-console-answers.md#data-safety): content
   hosts see a phone's IP address only to answer each request.
@@ -74,10 +73,9 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 
 - **Version:** the release's version, such as `0.42.0`. It must match the build; see
   [Version numbers](version-numbers.md).
-- **Screenshots:** iPhone 6.9-inch only; the app is iPhone-only (`supportsTablet: false`).
-  A 6.7-inch iPhone's screenshots (1290 × 2796) fit without resizing. The status bar's
-  battery can be redrawn full, as the listing's screenshot rules allow. Keep copies in
-  [`docs/store-assets/`](../store-assets/README.md) under `app-store/`.
+- **Screenshots:** iPhone 6.9-inch only. Copies are in
+  [`docs/store-assets/`](../store-assets/README.md) under `app-store/`; sizes and how
+  they're captured are in [Store listings](store-listing.md#screenshots).
 - **Promotional Text, Description, Keywords:** per language, from
   [Store listings](store-listing.md).
 - **Support URL:** `https://app.nyccsda.org/support.html`. **Marketing URL:** blank.

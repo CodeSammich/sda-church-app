@@ -30,6 +30,14 @@ provider revises its underlying resource.
 HelloAO remains the shared source of translated-edition book names and chapter counts.
 `BibleService.fetchChapter` routes chapter content according to the table above.
 
+BSB and KJV chapters come straight from HelloAO, audio links included. HelloAO's BSB
+chapters carry links to its narrator recordings, which the app plays from the hosts
+HelloAO links to (as of October 2026, three on HelloAO's audio host and one on
+`openbible.com`; see [LEGAL.md](../LEGAL.md#bible-sources-and-licensing)) and lists
+Souer first, then Hays, then David, then any others (`getOrderedBibleAudioReaders` in
+`services/BibleAudioService.ts`). HelloAO has no KJV audio, so KJV chapters show no audio
+bar.
+
 Traditional and simplified CUV chapters use the chapter-level Mandarin recordings
 published by [Audio Power](https://theaudiopower.org/translations/cuv/#nar1). The
 recordings are not bundled in the Git repository, but the church downloads and self-hosts
@@ -42,18 +50,15 @@ simplified-Chinese filenames are shared by both CUV text variants.
 
 Both CUV variants also offer a Cantonese narrator, `粵語 (WordProject)`, listed after
 the Mandarin one so that Mandarin stays the default. The recording comes from
-[WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), whose
-published terms allow it in free apps without ads but forbid linking whole Bibles to
-its servers. So the church downloaded it once from WordProject's book zips, renamed
-the files to canonical names such as `CANTONESE_B43C003.mp3` without changing the
-audio, and hosts them on Adventist Connect. Unlike the Mandarin narrator, this one has
-a single source: there is no fallback host, and none may be added without WordProject's
-written approval. The terms and what they require are in
-[WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio). The generated
-`constants/CantoneseAdventistAudioManifest.ts` maps each canonical name to the church's
-URL; `npm run extract:cantonese-adventist-manifest` rebuilds it from the church site's
-public media list. While the Cantonese narrator is selected, the chapter shows a
-credit that links to WordProject's Cantonese page, which also offers its app.
+[WordProject](https://www.wordproject.org/bibles/audio/13_cantonese/index.htm), and the
+church hosts it on Adventist Connect under canonical names such as
+`CANTONESE_B43C003.mp3`. Unlike the Mandarin narrator, this one has a single source,
+with no fallback host; WordProject's terms, and why they rule out playing from its
+servers, are in [WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio).
+The generated `constants/CantoneseAdventistAudioManifest.ts` maps each canonical name to
+the church's URL; `npm run extract:cantonese-adventist-manifest` rebuilds it from the
+church site's public media list. While the Cantonese narrator is selected, the chapter
+shows a credit that links to WordProject's Cantonese page, which also offers its app.
 
 Because the two CUV recordings differ in spoken language, not just in narrator, the
 app presents them as languages. The audio bar's left button shows the selected one,
@@ -64,20 +69,20 @@ icon, so listeners can see that a choice exists. In audio settings, the list is 
 language. Both editions share the recordings, so the chosen language is saved once
 for both (`getAudioReaderPreferenceKey`): switching between CUV and CUVS keeps it.
 
-The Reina-Valera 1909 uses WordProject's Spanish recording the same way, as a single
-narrator named WordProject, from files named `RV1909_B43C003.mp3` and so on on
+The Reina-Valera 1909 uses WordProject's Spanish recording the same way, under the same
+terms ([WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909)):
+a single narrator named WordProject, from files named `RV1909_B43C003.mp3` and so on on
 Adventist Connect, with no fallback host. `npm run extract:rv1909-adventist-manifest`
 builds `constants/Rv1909AdventistAudioManifest.ts`; the same script
 (`scripts/extract-wordproject-audio-manifest.mjs`) builds the Cantonese manifest.
 `hasChurchHostedAudio` and `getChurchHostedAudioLinks` in `BibleAudioSources.ts` are
 the one place that decides which translations play the church's copies. While the
 Spanish narrator is selected, the chapter shows a credit linking to WordProject's
-Spanish page. The terms are in
-[WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909).
+Spanish page.
 
-Each recording is represented as one narrator with three ordered hosting sources rather
-than three narrator choices: the generated Adventist Connect manifest supplies the
-primary church-controlled copy, the complete
+The Mandarin CUV recording is represented as one narrator with three ordered hosting
+sources rather than three narrator choices: the generated Adventist Connect manifest
+supplies the primary church-controlled copy, the complete
 [Internet Archive collection](https://archive.org/download/CUV_201911) is the second
 tier, and Audio Power's host is the third, so that an outage of the church copy doesn't
 move every listener onto the ministry's small server. A
@@ -105,14 +110,27 @@ and queue construction, while `BibleAudioPlayer` supplies the platform-specific 
 can load text and available audio together; it does not know provider URLs or hosting
 rules.
 
-`BibleService.parseScriptureReference` converts a single book/chapter reference and an
-optional same-chapter verse range into canonical USFM coordinates. Its localized 66-book
-table accepts and formats English, Traditional Chinese, Simplified Chinese, and Spanish
-book names. Bulletin links use those coordinates to open the current app language's
-default translation and scroll to the first requested verse without selecting it.
-Ambiguous, multi-passage, or cross-chapter strings retain their entered display text but
-their action falls back to Genesis 1:1 in that same language; blank and `TBD` fields
-remain non-actionable.
+`BibleService.parseScriptureReference` converts a bulletin's Bible entry into canonical
+USFM coordinates: a book, a chapter, and an optional verse range within that chapter.
+Its localized 66-book table accepts and formats English, Traditional Chinese, Simplified
+Chinese, and Spanish book names, and a trailing translation in parentheses, such as
+`(KJV)`, is ignored. It reads only the first passage:
+
+- An entry with several passages is cut at the first semicolon or comma (either width),
+  or line break, so `John 3:16; Romans 8:1` and `John 3:16, 18, 20` both give John 3:16.
+- A range across chapters gives only its first verse: `Psalms 15:1-16:2` gives
+  Psalms 15:1.
+- A bare book name gives chapter 1. In the one-chapter books (Obadiah, Philemon, 2 John,
+  3 John, and Jude), a bare number is a verse: `Jude 9` gives Jude 1:9.
+- An unknown book, a backwards range such as `John 3:16-10`, a chapter range such as
+  `John 3-5`, or other text it can't read gives no result, and
+  `resolveScriptureReference` falls back to Genesis 1:1.
+
+On the bulletin, an entry that parses is shown as its parsed reference in the app
+language, so only the first passage of a multi-passage entry appears; one that doesn't
+parse keeps its entered text. Its **Read now** button opens the current app language's
+default translation at that reference, or at Genesis 1:1, and scrolls to the first
+requested verse without selecting it. Blank and `TBD` fields have no button.
 
 - **No Auth:** Open access to the selected BSB, KJV, CUV, and Reina-Valera resources
   requires no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
@@ -175,43 +193,11 @@ left-to-right with Gentium. Font sources and their separate licenses are documen
 
 #### 2.2.3 Licensing Boundary: Free Service vs. Licensed Content
 
-This distinction is mandatory for maintenance and legal review:
-
-> **fetch(bible's CDN is free to access, but fetch(bible does not place every work it
-> distributes into the public domain.** Service access and content licensing are separate
-> grants of permission.
-
-[fetch(bible's official access policy](https://fetch.bible/access/#no-limits-from-us)
-states that the service itself imposes no usage limits and permits long-term caching, but
-also explicitly requires consumers to comply with the terms of each individual Bible
-resource. A future maintainer must never infer permission to redistribute a work solely
-because it appears on fetch(bible).
-
-The translated CUV and Reina-Valera resources above are public domain. Both
-original-language editions selected by the app use
-[Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/):
-
-- [Solid Rock Hebrew Bible license and required citation](https://github.com/jjmccollum/solid-rock-hb#license-and-citation)
-- [Statistical Restoration Greek New Testament license and attribution](https://github.com/Center-for-New-Testament-Restoration/SR#license)
-
-CC BY 4.0 is free and open: it permits copying, redistribution, adaptation, and commercial
-use without a fee or separate permission. It is not public domain and it is not
-condition-free. Distribution must retain appropriate creator/editor credit, provide a link
-to CC BY 4.0, indicate presentation or other changes, and must not impose additional legal
-or technological restrictions that prevent recipients from exercising the licensed rights.
-
-Consequently:
-
-1. The edition/editor attribution in the verse-detail popup must not be removed.
-2. The source links, CC BY 4.0 link, and formatting-change disclosure in the repository
-   documentation must be retained.
-3. If the app later exposes clickable attribution, both the edition source and license
-   should be linked directly.
-4. Changing either original-language fetch(bible resource ID requires reviewing and
-   documenting the new work's individual license before release.
-5. The Bible-text licenses are separate from fetch(bible's service policy, HelloAO's
-   service behavior, the application source-code license, and the OFL/MIT licenses of the
-   bundled fonts.
+fetch(bible) is free to access, but that doesn't make every work on it public domain: the
+two original-language editions are CC BY 4.0, with conditions. The required attribution,
+links, and review before changing an edition are in
+[LEGAL.md](../LEGAL.md#free-to-access-doesnt-necessarily-mean-public-domain). If the app
+later makes the attribution clickable, link both the edition source and its license.
 
 ### 2.3 Longevity
 
@@ -246,8 +232,8 @@ and maintainable regardless of external corporate changes.
 To ensure the longevity of the application and mitigate risks if the 501c3 (HelloAO Lab)
 shuts down:
 
-- **Source Fork:** The core API engine and data scripts have been forked to
-  CodeSammich/bible-api from the original repository.
+- **Source Fork:** The core API engine and data scripts have been forked from the original
+  repository to a maintainer's fork (`<your-fork>/bible-api`).
 - **Contingency Plan:** If the primary API becomes unavailable, the project can be
   redeployed as a collection of static JSON files via GitHub Pages or a self-hosted
   instance.
@@ -392,32 +378,39 @@ _Focus: Sentence structure and "natural" flow._
 KJV will be maintained for reference purposes, while modern translations like BSB will
 serve as the default.
 
-**Supported Translations:**
+**Supported Translations** (`SUPPORTED_TRANSLATIONS` in `services/BibleService.ts`):
 
 1. BSB - Modern Public Domain English
 2. KJV - English Traditional
 3. CUV (Traditional) - 1919 edition (Public Domain).
-4. CUVS (Simplicity) - Public Domain.
-5. RVR1909 (Spanish Traditional) - Public Domain.
-6. SSE (Spanish Modern) - Public Domain.
+4. CUVS (Simplified) - Public Domain.
+5. RVR09 (Reina-Valera 1909, Spanish Traditional) - Public Domain.
+
+There is no modern Spanish translation in the app.
 
 ## 4. Future Work
 
 ### 4.1 Caching and Offline Access
 
-The web/PWA preview supports service-worker caching, while explicit persistence in
-`IndexedDB` is planned for that browser target. `IndexedDB` is preferred there over
-`AsyncStorage` due to the large payload size of full Bible chapters and better performance
-with structured data queries. Native targets continue to use the platform storage path.
+The web/PWA preview's service worker (`public/sw.js`) is network-first: it caches the
+response to every GET request, including Bible chapters, and serves the cached copy when the network
+fails. Explicit persistence in `IndexedDB` is planned for that browser target. `IndexedDB`
+is preferred there over `AsyncStorage` due to the large payload size of full Bible chapters
+and better performance with structured data queries. On iOS and Android, the app caches
+chapter data only in memory while it runs, such as the whole fetch(bible) books behind
+CUV, CUVS, and RVR09; there is no saved chapter cache or Bible download
+yet (see the TODOs in `fetchCompleteTranslation` in `services/BibleService.ts`).
 
 ### 4.2 Bible Sharing Feature (done)
 
-- **Mechanism:** Standard Web Share API.
-- **Implementation:** A "Share" button on every verse or chapter header. The routing logic
-  utilizes "Smart Parsing" to handle case-insensitivity and common short-codes (e.g.,
-  `Jn 1:1` vs `John 1:1`) to ensure deep-link reliability.
-- **Payload:** Generates a deep link back to the app's web preview (e.g.,
-  `church-app.io/bible?v=john.1.1&t=cuvs`) or a plain-text snippet for WhatsApp.
+- **Mechanism:** React Native `Share.share` on iOS and Android. On web, the Web Share API
+  when the browser has it.
+- **Implementation:** **Share Verse** in the verse details sheet, and **Share** in the
+  bar that appears while verses are selected (press and hold a verse to start).
+- **Payload:** Plain text only: the verse text in quotes, then a line with the reference
+  and translation, such as `— John 3:16 (BSB)`. Several selected verses are joined, and the
+  reference lists their ranges (for example `John 3:1-4, 16`). The text has no link back to
+  the app.
 
 ### 4.3 Additional Language Support
 
@@ -427,13 +420,20 @@ Notably, Tibetan (Moravian Version Yoseb Gergan, 1948) is also public domain. Wh
 encoding was historically challenging, the HelloAO API provides TBTI (Central Tibetan) via
 their source metadata, offering a Unicode-encoded path for these scripts.
 
-### 4.4. Highlighting & Personal Saved Verses (done)
+### 4.4. Highlighting & Personal Saved Verses
 
-Like the YouVersion Bible app, users should be able to and add colored highlighting.
-Favorite verses will be saved to personal storage.
+Saved verses are done. They are stored on the device (`services/SavedVersesService.ts`,
+AsyncStorage), shaded in the reader with the theme's verse highlight color, and listed
+under **Saved Verses**, sorted by recently saved or Bible order.
+
+Colored highlighting, where users pick a color as in the YouVersion Bible app, is not
+built.
 
 ### 4.5 Custom Fonts
 
-Users should be able to select some high quality fonts for reading. Default is AdventSans
-which supports a wide variety of languages tested by the SDA international tradition of
-translating Bibles.
+Users should be able to select some high quality fonts for reading. The reader has no font
+choice today. The interface uses Plus Jakarta Sans for Latin script (`constants/Themes.ts`),
+verse text sets a Georgia / Times New Roman serif stack (`styles/ReaderStyles.ts`), and the
+original-language popup uses Ezra SIL for Hebrew and Aramaic and Gentium for Greek.
+AdventSans is not bundled; `constants/Themes.ts` notes it is for physical signage and
+branding.

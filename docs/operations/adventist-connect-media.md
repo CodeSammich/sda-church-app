@@ -28,7 +28,7 @@ are uploaded through its WordPress media library.
 | Mandarin CUV Bible audio, one MP3 per chapter | [`constants/CuvAdventistAudioManifest.ts`](../../constants/CuvAdventistAudioManifest.ts) | 1,189 | 939 MB total; median 0.73 MB, largest 3.7 MB |
 | Cantonese CUV Bible audio, one MP3 per chapter | [`constants/CantoneseAdventistAudioManifest.ts`](../../constants/CantoneseAdventistAudioManifest.ts) | 1,189 | 792 MB total; median 0.58 MB, largest 3.4 MB |
 | Spanish RV1909 Bible audio, one MP3 per chapter | [`constants/Rv1909AdventistAudioManifest.ts`](../../constants/Rv1909AdventistAudioManifest.ts) | 1,189 | 861 MB total; median 0.65 MB, largest 3.9 MB |
-| Church, staff, and fellowship photos | [`constants/ExternalLinks.ts`](../../constants/ExternalLinks.ts) | 6 | 3.2 MB total, 2.3 MB of it one PNG |
+| Church, staff, and fellowship photos | [`constants/ExternalLinks.ts`](../../constants/ExternalLinks.ts) | 5 | 3.0 MB total, 2.3 MB of it one PNG |
 | Hymnal number lookup charts | [`features/hymnal/HymnalNumberMappings.json`](../../features/hymnal/HymnalNumberMappings.json) | 2 | 1.1 MB total |
 
 The audio files are 24 kbps mono MP3 (MPEG-2 Layer III, 22.05 kHz), about
@@ -41,19 +41,11 @@ The Cantonese files are mostly 16 kbps mono MP3 (11 kHz), about **7.2 MB per hou
 Spanish files are mostly 24 kbps mono MP3 (22.05 kHz), like the Mandarin ones; a few
 chapters are 32 to 128 kbps. The whole Bible is about 77 hours.
 
-The recordings come from Audio Power, whose owner approved downloading and
-self-hosting them ([permission record](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)).
-The Cantonese recordings come from WordProject, under its published terms (see
-[WordProject Cantonese audio](../LEGAL.md#wordproject-cantonese-audio)). They're uploaded exactly
-as downloaded, only renamed. WordProject's terms don't allow playing them from its
-servers, so this library is their only source in the app. The Spanish RV1909
-recordings come from WordProject on the same terms (see
-[WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909)).
-The church also keeps a copy in Google Drive. Where the license allows it, the
-church aims to keep at least two copies of media it depends on, on services it
-controls (this library and Google Drive). This is best effort, not a complete
-backup. Many audio and text sources don't allow separate copies, so the app reads
-those directly from third-party API providers.
+The Mandarin recordings come from Audio Power, with its owner's permission, and the
+Cantonese and Spanish ones from WordProject, uploaded unchanged apart from the file
+name; the terms are in [Bible Sources and Licensing](../LEGAL.md#bible-sources-and-licensing).
+The church also keeps a copy of all three in Google Drive, as part of its
+[best-effort two-copy aim](../architecture.md#church-media).
 
 ## Request path
 
@@ -141,7 +133,8 @@ church-website platform.
 - The web player preloads only the next chapter. On native, the app queues up to 24
   upcoming chapter descriptors but does not fetch their audio itself.
 - The [external dependency monitor](external-dependency-monitor.md) checks that
-  each manifest has all 1,189 entries and requests one sampled file from each a day.
+  each manifest has all 1,189 entries and requests three sampled files from each a
+  day.
 
 The design reasons for the three-tier setup are in
 [Bible integration design](../feature_designs/bible_integration_design.md).
@@ -188,8 +181,9 @@ Limits and costs for every other service the app uses are in
 
 ### Demand
 
-The church has no listening analytics, so these are scenarios rather than
-measurements. Traffic is audio bytes delivered to listeners through Cloudflare.
+These are the listening scenarios from the
+[load model](service-limits-and-costs.md#load-model), as audio bytes delivered to
+listeners through Cloudflare.
 
 | Scenario | Listening | Per day | Per month | Peak bandwidth |
 | --- | --- | --- | --- | --- |
@@ -260,8 +254,9 @@ Watch for:
 - The dependency monitor reporting `Adventist Connect` failures, especially `403`,
   `429`, or an HTML response where an MP3 was expected.
 - Reports that audio takes several seconds to start, or that the lock screen or
-  notification shows `(Internet Archive)` or `(Audio Power)` after the chapter
-  title: the app is falling back, which suggests the primary source is failing.
+  notification title ends in `(Internet Archive)` or `(Audio Power)` instead of
+  `(NYCCSDA.org)`: the app is falling back, which suggests the primary source is
+  failing.
   The audio settings don't show this; they show the source the listener chose.
 - Listening growing towards the "wide adoption" row, for example from app store
   install counts.

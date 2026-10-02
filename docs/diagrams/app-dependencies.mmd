@@ -18,10 +18,10 @@ flowchart TB
       wp -. Mandarin Bible audio: if 1 fails .-> ia
       ia -. if 2 also fails .-> ap
     end
-    subgraph Bible["Bible text"]
+    subgraph Bible["Bible text and English audio"]
       direction TB
-      helloao["HelloAO<br/>bible.helloao.org<br/>Bible text, translations"]
-      fetchbible["fetch(bible)<br/>v1.fetch.bible<br/>original-language texts"]
+      helloao["HelloAO<br/>bible.helloao.org<br/>English Bible text and audio"]
+      fetchbible["fetch(bible)<br/>v1.fetch.bible<br/>Chinese and Spanish Bible text,<br/>original-language texts"]
     end
     subgraph OtherApis["Other APIs"]
       direction TB

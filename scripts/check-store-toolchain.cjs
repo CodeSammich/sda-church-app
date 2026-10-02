@@ -21,7 +21,7 @@ const SOURCES = Object.freeze({
 const ALERT_TITLE = '[monitor] Store toolchain requirements need attention';
 // Applied only when the app misses a store requirement, not when a page just
 // can't be read, so the label keeps meaning "uploads will be rejected".
-const CRITICAL_LABEL = 'critical / launch blocking';
+const CRITICAL_LABEL = 'critical';
 
 // Requirements taking effect within this many days count as needing action
 // now, so there is time to update and test before the store deadline.

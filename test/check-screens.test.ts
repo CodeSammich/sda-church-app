@@ -169,9 +169,10 @@ describe('screen rules', () => {
     const homeEn = shot('home-xl-ios-large-text');
     const enTabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.94));
     expect(checkShot(homeEn, [...enTabs, line('‹ Share Verse', 0.69), line('a Read Verse', 0.8)])).toEqual([]);
+    // A long daily verse, such as John 1:1, pushes Read Verse below the shot.
+    expect(checkShot(homeEn, [...enTabs, line('‹ Share Verse', 0.78)])).toEqual([]);
     expect(checkShot(homeEn, [...enTabs, line('Shar', 0.69), line('Rea', 0.7)])).toEqual([
       'no line matches /\\bShare Verse\\b/',
-      'no line matches /\\bRead Verse\\b/',
     ]);
   });
 

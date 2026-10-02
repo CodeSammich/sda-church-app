@@ -83,7 +83,6 @@ describe('global header back navigation', () => {
     ['/explore', '/'],
     ['/explore/library', '/explore'],
     ['/explore/library/egw', '/explore/library'],
-    ['/you/privacy', '/you'],
     ['/you/legal', '/you'],
     ['/bible', '/'],
   ])('sends %s back to %s when nothing else is given', (route, parent) => {

@@ -1,12 +1,50 @@
 # Native store publishing investigation — issue #139
 
+> **Status, October 2026.** This is a record of the September 2026 investigation, kept
+> for its reasoning. Its main recommendation, to keep Expo and compile iOS and Android
+> directly, is what the app does. Much of the rest has been overtaken:
+>
+> - **Uploads to testers are automatic.** The record says store submission is a
+>   separate manual step. Now, after the signed builds are approved, **Upload to
+>   TestFlight** (the `testflight_upload` job in `native-ios-build.yml`) and **Upload to
+>   Google Play internal testing** (the `play_upload` job in `native-android-build.yml`,
+>   using `scripts/upload-google-play.cjs`) send them to testers. Releasing to the
+>   public is still a manual step in each console. See
+>   [Automatic store uploads](native-builds.md#automatic-store-uploads).
+> - **Native builds and store submissions have happened.** Signed builds start after
+>   every merge into `main` and run once approved. The first submissions to both
+>   stores, version 0.42.0, were set up on September 29, 2026; see
+>   [App Store Connect answers](app-store-connect-answers.md)
+>   and [Google Play Console answers](play-console-answers.md).
+> - **Android has a native queue.** Android plays Bible chapters from an expo-audio
+>   `AudioPlaylist` (`services/BibleAudioPlayer.android.ts` and
+>   `services/BibleAudioNativeQueue.ts`), so the native player moves to the next chapter
+>   itself; see [Android chapter continuation](../testing/bible-audio-225.md). iOS still
+>   uses a single player that the Bible screen advances from its `didJustFinish`
+>   effect, and the sleep timer still uses a JavaScript `setTimeout`.
+> - **The Apple fee waiver (#168) is in place.** Apple waives the yearly fee for the
+>   church as a nonprofit; [App Store and Google Play setup](app-store-setup.md#yearly-apple-renewals)
+>   records this and the yearly reconfirmation, and `.github/apple-signing-expiry.json`
+>   holds the membership renewal date that the Apple signing monitor watches.
+> - **Expo SDK 58 is stable** (`expo ~58.0.0`). React Native 0.88 is still a release
+>   candidate (#211).
+> - **The acceptance gate's device checks moved to the admin runbook,** as
+>   [Device checks before release](admin-runbook.md#device-checks-before-release). Its
+>   OTA item was dropped: OTA updates are still intentionally not configured (the app
+>   doesn't use `expo-updates`). On Android, the
+>   [Android audio test](native-builds.md#android-audio-test-on-release-prs) now covers
+>   failover, screen-off chapter changes, and connection loss on an emulator for every
+>   release PR.
+>
+> Statements below that were true only at the time are marked as such.
+
 Investigated September 5, 2026; updated September 13, 2026. Recommendation:
 retain Expo as the source framework, use direct native iOS and Android compilation,
 and validate native development and preview builds before committing to store
 distribution. Keep the web/PWA target available for browser regression testing and
 stakeholder previews; it is not the primary distribution path.
-This document records research and source inspection; no native build, device
-test, account enrollment, or store submission was performed.
+This document records research and source inspection; at the time, no native build,
+device test, account enrollment, or store submission had been performed.
 
 Owner update: audio playback and chapter transitions now work, potentially due
 to stronger retries. iOS publishing will use an Apple Developer account associated
@@ -16,26 +54,29 @@ reported result does not specify which runtime/device was tested.
 
 ## Repository findings
 
-This is already an Expo/React Native application, not a browser-only React app:
+This is already an Expo/React Native application, not a browser-only React app. At
+the time of the investigation:
 
-- `package.json` uses the Expo 58 preview SDK, React Native 0.88 RC, Expo Router, and expo-audio.
+- `package.json` used the Expo 58 preview SDK, React Native 0.88 RC, Expo Router, and expo-audio.
 - `app.json` already identifies both native apps as `org.nyccsda.app` and enables
   expo-audio background playback, with recording permissions disabled.
 - `services/BibleAudioService.ts` configures background playback and publishes
   lock-screen controls and metadata.
-- `services/BibleAudioPlayer.ts` uses native expo-audio, while the `.web.ts`
-  implementation provides the browser player and rolling queue.
+- `services/BibleAudioPlayer.ts` used native expo-audio, while the `.web.ts`
+  implementation provided the browser player and rolling queue. (Android has since
+  moved to `BibleAudioPlayer.android.ts`; see the status note above.)
 - Native directories remain generated/ignored. Android direct builds use the
   committed local-signing config plugin and Gradle; iOS distribution uses the
   direct-native GitHub workflow with Xcode. OTA delivery is not configured.
 
-An implementation detail to monitor is queue ownership: the native adapter only casts the player
-to a type with optional queue methods; that does not implement a native queue.
-The Bible screen advances chapters through a React effect on `didJustFinish`
-and implements timed sleep with JavaScript `setTimeout`. These are specific
-risks to verify under suspension, not evidence of a demonstrated native failure.
-The preview dependency versions and generated native project should be checked
-before attempting a native build.
+An implementation detail to monitor was queue ownership: at the time, the native adapter
+only cast the player to a type with optional queue methods, which did not implement a
+native queue. The Bible screen advanced chapters through a React effect on
+`didJustFinish` and implemented timed sleep with JavaScript `setTimeout`. These were
+specific risks to verify under suspension, not evidence of a demonstrated native
+failure. The preview dependency versions and generated native project should be checked
+before attempting a native build. (Android now has a native queue; iOS still advances
+through the effect, and the timer is unchanged. See the status note above.)
 
 ## Expo versus Capacitor
 
@@ -58,7 +99,7 @@ change. Both can share one repository with platform-specific adapters.
 Expo's expo-audio documentation covers the background mode on iOS and a media-playback
 foreground service on Android. Android sustained playback also requires active
 lock-screen controls. The repository already contains these configuration and
-runtime calls; real-device verification is still required.
+runtime calls; at the time, real-device verification was still required.
 [expo-audio documentation](https://docs.expo.dev/versions/latest/sdk/audio/).
 
 ## Can development builds be tested easily?
@@ -84,7 +125,7 @@ Apple also supports limited personal on-device testing with a free Apple Account
 through Xcode; that is not TestFlight or general distribution.
 [Apple membership comparison](https://developer.apple.com/support/compare-memberships/).
 
-Current direct-native setup:
+The direct-native setup at the time of the investigation:
 
 1. Run `npx expo install --check` and `npx expo-doctor`; resolve native compatibility
    findings, including the custom Android signing plugin.
@@ -97,7 +138,8 @@ Current direct-native setup:
 
 These direct workflows do not require an Expo account, an Expo token, or a cloud build
 service. They still use Expo's source framework and prebuild tooling; Gradle and Xcode
-perform the actual native compilation. Store submission remains a separate manual step.
+perform the actual native compilation. Store submission was then a separate manual
+step; uploads to testers have since become automatic (see the status note above).
 
 ## OTA boundaries and issue corrections
 
@@ -125,6 +167,7 @@ does not exempt delivered JavaScript from Play policies.
    Apple membership is USD 99/year unless a waiver is approved. Issue #168 should
    handle eligible nonprofit enrollment and the waiver; continued eligibility
    requires annual confirmation. This can proceed alongside development testing.
+   (The waiver is now in place; see the status note above.)
    [Apple fee waiver](https://developer.apple.com/help/account/membership/fee-waivers/).
 2. Register Google Play Console (USD 25 one-time registration fee), complete
    verification, and confirm the appropriate organization account requirements.
@@ -149,18 +192,10 @@ does not exempt delivered JavaScript from Play policies.
 
 ## Acceptance gate before a launch decision
 
-- Test standalone builds on physical iPhone and Android hardware for at least
-  15 minutes locked and minimized, with multiple automatic chapter boundaries.
-- Verify title, artist, artwork, play/pause, seek, and metadata changes at transitions.
-- Check sleep timers, end-of-chapter stop, navigation away from the reader, and
-  returning to the correct playing chapter.
-- Test silent mode, battery saver, interruptions, Bluetooth/headphone disconnection,
-  and temporary network loss. Record OS/device/build versions and observed results.
-- Deliver a preview OTA string/style fix to an installed compatible build; verify
-  safe next-launch activation, offline startup, and recovery. Confirm an incompatible
-  runtime receives no update. Do not interrupt active playback to apply it.
-- If native chapter transitions fail, evaluate native-owned queue/timer support
-  behind the existing adapter before considering a framework migration.
+The physical-phone checks this gate listed are kept current in the admin runbook's
+[Device checks before release](admin-runbook.md#device-checks-before-release). If
+native chapter transitions failed, the gate said to evaluate native-owned queue and
+timer support behind the existing adapter before considering a framework migration.
 
 Decision: retain Expo and proceed with a TestFlight build using the owner's
 business/organization Apple Developer account. Store launch remains contingent

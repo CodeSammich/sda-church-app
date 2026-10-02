@@ -5,9 +5,10 @@ export const TEXT_SCALE_STEP = 0.05;
 export const TEXT_SCALE_OPTIONS = [1, 1.25, 1.5, 2] as const;
 
 /**
- * Fixed Bible-reader controls share a small mobile viewport with the reading
- * area. Keep the app's additional control scaling compact while leaving
- * scripture text and operating-system/browser scaling uncapped.
+ * Fixed Bible-reader controls and the tab bar share a small mobile viewport
+ * with the content. Keep the app's added scaling of them compact. Scripture
+ * text gets the app's full setting; the phone's own text size still counts
+ * toward MAX_COMBINED_TEXT_SCALE below.
  */
 export const BIBLE_READER_UI_TEXT_SCALE_MAX = 1.3;
 export const BOTTOM_TAB_ICON_TEXT_SCALE_MAX = 1.3;

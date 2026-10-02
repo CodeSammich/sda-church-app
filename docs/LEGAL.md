@@ -1,6 +1,6 @@
 # Legal, Licensing, and Privacy
 
-Last reviewed: 2026-08-09
+Last legal review: 2026-08-09. Facts about the app updated: 2026-10-02.
 
 This document centralizes the project's licensing records, third-party source reviews,
 privacy disclosures, branding restrictions, and legal disclaimer. It records engineering
@@ -24,7 +24,11 @@ terms, ownership, or permissions will remain unchanged.
 The Bible reader uses two separate content services with different roles:
 
 - [HelloAO](https://bible.helloao.org/) supplies the English reader text and the
-  shared translated-edition book catalog.
+  shared translated-edition book catalog. It also supplies the BSB's English audio:
+  each BSB chapter comes with HelloAO's narrator links, and the app offers each one
+  as a narrator. As of October 2026, HelloAO lists four narrators: three play from
+  HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
+  The app has no KJV audio.
 - [fetch(bible)](https://fetch.bible/) supplies the Chinese Union Version,
   Reina-Valera 1909, and the original-language critical editions shown in the
   verse-detail popup. Its normalized Chinese and Spanish resources expose the
@@ -37,8 +41,8 @@ Chinese Union Version audio is streamed chapter by chapter from
 [Audio Power](https://theaudiopower.org/translations/cuv/#nar1), which credits the
 recordings to 基督徒团契 (Christian Fellowship). The app links directly to the
 church's copies on Adventist Connect, with Internet Archive and Audio Power copies as
-playback fallbacks; the repository does not bundle the recordings. Audio Power's owner,
-Phil, explicitly approved the church app's use, download, and self-hosting of these recordings in
+playback fallbacks; the repository does not bundle the recordings. Audio Power's owner
+explicitly approved the church app's use, download, and self-hosting of these recordings in
 [issue #134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608).
 
 Cantonese audio for the same editions comes from WordProject, played only from the
@@ -318,7 +322,7 @@ is linked, not copied.
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
-| **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book's official English, Chinese, or Spanish edition, and small cover thumbnails from `a.egwwritings.org`. *The Story of Jesus* opens in English, or for Spanish readers as the official Spanish edition, *Cristo Nuestro Salvador* (`text.egwwritings.org/read/1747.3`), whose chapters match it one for one | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
+| **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book directly in the app language's official edition (English; Chinese, one edition for both scripts; or Spanish), and small cover thumbnails from `a.egwwritings.org`. *The Story of Jesus* opens in English, or for Spanish readers as the official Spanish edition, *Cristo Nuestro Salvador* (`text.egwwritings.org/read/1747.3`), whose chapters match it one for one | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
 | **Chinese Union Mission** (`api.sdabible.org`, `cms.sdabible.site`) | Cover thumbnails for the Chinese EGW editions only, loaded from its public catalog. The books themselves open on EGW Writings. | Same limited navigational use as the EGW covers. Image URLs are checked against the Mission's storage host. |
 | **Adventist pioneer books on EGW Writings** | A link to Uriah Smith, *Daniel and the Revelation*, 1897 edition (`text.egwwritings.org/read/12861.1`) | Published in 1897, so public domain in the U.S. The app only links to it. Later revisions, such as the 1944 *The Prophecies of Daniel and the Revelation*, are still copyrighted and must not be substituted. |
 | **Adventist Pioneer Library translation on EGW Writings** | For Spanish readers, J. N. Andrews, *Historia del Sábado* (`text.egwwritings.org/read/14404.2`), in place of the English *History of the Sabbath* | A 2020 Spanish translation of the 1873 edition by Rolando Itin, © Adventist Pioneer Library, published on EGW Writings; its credits page names the 1873 original. The translation is copyrighted, so the app only links to it. |
@@ -332,12 +336,12 @@ Each source falls back to the app's own original, text-free cover art if its
 thumbnail can't load. That art was generated for this app without using the official
 covers as input or reference.
 
-The covers of the other library books are the app's own designs too. *The Pilgrim's
-Progress* and *The Story of Jesus* use illustrations generated for the app. The rest
-are typographic covers in the style of old cloth bindings, drawn from scratch by
+The covers of the other library books are the app's own designs too: typographic
+covers in the style of old cloth bindings, drawn from scratch by
 [`scripts/generate-library-covers.py`](../scripts/generate-library-covers.py) with fonts
-under the SIL Open Font License; none reproduces a publisher's cover. The Spanish
-editions get Spanish versions of the same covers.
+under the SIL Open Font License. None reproduces a publisher's cover. The Spanish
+editions, and the Chinese edition of *The Pilgrim's Progress*, get their own versions
+of the same covers.
 
 ### Internet Archive sources
 
@@ -512,90 +516,27 @@ sources and the implementation restrictions are recorded in
 
 ## Privacy Policy
 
-### 1. Introduction
+The privacy policy is kept in one place, the website:
+[`public/privacy-policy.html`](../public/privacy-policy.html), served at
+<https://app.nyccsda.org/privacy-policy.html>. Both store listings link to it, and the
+app's **You → Privacy Policy** row opens it in the in-app browser (#403). It's English
+only, so one authoritative text can't be mistranslated into a different promise. Change
+the wording there, and a website deploy publishes it with no new app build.
 
-This application values privacy and uses data minimization. The app does not require a
-user account for ordinary use, does not include advertising or analytics, and does not
-provide public user profiles, chat, or user-generated posting. Authorized church
-schedule managers maintain bulletin information in a restricted staff-managed Google
-Sheet outside the app.
-Church administrative systems and service providers still process limited information
-needed to operate the app, as described below.
-
-### 2. Worship Schedule Information (Google Workspace)
-
-Authorized church schedule managers enter participant names and worship assignments into
-a restricted, church-managed Google Sheet. Final owners maintain weekly worship-program
-details in the `Sabbath Sermon Data` tab; the source Sheet may record account activity
-permitted by the church's Workspace settings.
-
-A Google Apps Script web app reads the requested Sabbath schedule and reviewed sermon data and
-returns only an allowlisted bulletin response. Before the response becomes public, the
-script shortens Latin-script full names to a first name and last initial. A single-word
-Latin-script name may appear as entered, while unsupported non-Latin names are replaced
-with a privacy placeholder. Full names, account metadata, and other
-non-allowlisted spreadsheet fields are not included in the public API response. The
-shortened names may still identify people within the church community and are therefore
-treated as personal information rather than anonymous data.
-
-This information is used to communicate worship assignments and weekly program details.
-Access to the source Sheets is controlled by the church through Google Workspace, and
-source-data retention is governed by the church's administrative practices.
-
-### 3. Temporary Caching and Device Storage
-
-Google Apps Script temporarily caches privacy-filtered bulletin responses to reduce Sheet
-reads. The app may store settings, saved verse references, cached Bible selections,
-library cover links, and the same filtered bulletin data in device-local storage. This data is not synced to a
-church account. Web users can remove the device copy by clearing this site's browser
-data; native users can uninstall the app or clear its storage using the operating
-system's app settings.
-
-### 4. Hosting and Traffic Services
-
-This app requests Bible text, Bible-audio metadata or files, cover images, and
-privacy-filtered bulletin data from external services over HTTPS. GitHub Pages,
-Cloudflare, Google Workspace/Apps Script, HelloAO, fetch(bible), Adventist Connect, the
-Internet Archive, Audio Power, and the Chinese Union Mission services may process
-ordinary connection metadata such as an IP address, user agent, request path, and request
-time for delivery, security, or service operations. The app does not receive or store
-those providers' server logs. Each provider handles information under its own applicable
-terms and privacy policies.
-
-### 5. External Links
-
-This application links to external platforms such as AdventistGiving, YouTube, Spotify,
-Zoom, HymnsForWorship.org, zgaxr.com, EGW Writings (egwwritings.org), and Sabbath School
-services. The donation button opens AdventistGiving outside the app; payment details and
-any donation receipts are handled by that service and the receiving organization, not by
-this app. Library screens request current book-cover thumbnails from EGW Writings and,
-for Chinese languages, the Chinese Union Mission's cover catalog and image service. When
-you follow these links or when those images load, you are subject to the privacy policies
-of those third-party providers. These services may collect information such as IP
-addresses as part of their standard operations. The church does not receive or store
-information those external platforms independently collect from you. When you choose to
-share a Bible verse, the selected text is passed to the operating system share sheet and
-the app you choose; this app does not receive the recipient's information.
-
-### Device Permissions and Data Requests
-
-The native app uses audio playback, including background playback. It does not request
-device location, camera, microphone, contacts, photos, or notifications. Because the app does not create
-user accounts or maintain a personal server profile, there is no account to delete. A
-user may request correction or removal of church-managed bulletin information by
-contacting `technology@nyccsda.org`. The church will handle requests according to applicable
-law and its administrative retention practices.
-
-### 7. Privacy Frameworks and Questions
-
-The project's minimization measures are informed by privacy principles found in laws such
-as the CCPA and GDPR, but they do not by themselves guarantee legal compliance. Which laws
-apply depends on the deploying organization, its users, and its data practices. This
-policy should be updated whenever the app's data practices change.
+In short, the app has no accounts, advertising, or analytics, and collects no data from
+the people who use it. It keeps settings, saved verses, and cached content on the device. The bulletin
+shows shortened names from the church's restricted schedule sheet. Like any website, the
+services the app loads content from, and the sites it links to, can see ordinary
+connection details such as an IP address. The policy names those services. Update it
+whenever the app starts using a new one.
 
 ---
 
 ## Legal Disclaimer
+
+The app shows this disclaimer, in English only, under **You → Legal Disclaimer**
+(`app/(tabs)/you/legal.tsx`). The in-app version also summarizes where Library books
+are read and how to change the text size in EGW Writings' reader.
 
 ### 1. Usage of External Resources
 

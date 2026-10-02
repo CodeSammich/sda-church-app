@@ -50,7 +50,7 @@ export const getBackTarget = (
   if (route === '/explore/sabbath-school') return '/explore';
   if (route === '/sabbath-school') return '/';
 
-  if (route === '/you/privacy' || route === '/you/legal') return '/you';
+  if (route === '/you/legal') return '/you';
 
   if (route === '/home/hymn-lookup') return '/home/hymnal-selection';
   if (

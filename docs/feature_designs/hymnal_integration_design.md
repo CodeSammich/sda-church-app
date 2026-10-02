@@ -1,6 +1,6 @@
 # English Hymnal Integration: As-Built Design and Link-Safety Record
 
-Last reviewed: 2026-08-23
+Last reviewed: 2026-10-02
 
 ## 1. Purpose and Current Decision
 
@@ -8,8 +8,9 @@ The English hymnal feature provides a searchable index of the Seventh-day Advent
 Hymnal (1985 Edition) and sends users to externally hosted sheet music. The app does not
 host, proxy, cache, or embed the scores.
 
-For a selected hymn, the app opens this form of URL in the operating system's external
-browser:
+For a selected hymn, the app opens this form of URL in the system browser. On iOS and
+Android that is the system's in-app browser view (`expo-web-browser`: Safari View Controller
+on iOS, a Custom Tab on Android). On web it is a separate browser tab.
 
 ```text
 https://hymnsforworship.org/sdah-214#hymn-score
@@ -20,6 +21,9 @@ removes most of the navigational friction that prompted consideration of raw ima
 while retaining the publisher-facing page, attribution, copyright information, and site
 context. If no hymn number is supplied, the app opens the site's 1985 hymnal directory.
 
+Not every hymn page has a score. SDAH 509 points to sheet music elsewhere and has no
+`hymn-score` anchor, so its link opens at the top of the hymn page.
+
 This is a risk-reduction decision, not a declaration that the feature is "liability-free"
 or that every externally hosted score is licensed for every possible use.
 
@@ -27,12 +31,11 @@ or that every externally hosted score is licensed for every possible use.
 
 ### 2.1 Operator and provenance
 
-[Hymns for Worship](https://hymnsforworship.org/) is an independent ministry founded by
-Irene Bennett. The site's [published biography](https://hymnsforworship.org/about-us/)
-describes her as a music educator, pianist, and organist with degrees in Piano Performance
-and Music Education, a former college instructor, and a participant in music ministry in
-the Philippines. Future documentation should not describe the operator as a college
-student or imply that the site is operated by the Seventh-day Adventist denomination.
+[Hymns for Worship](https://hymnsforworship.org/) is an independent ministry run by an
+experienced church musician and music educator, as the site's
+[About page](https://hymnsforworship.org/about-us/) describes. Future documentation
+should not describe the operator as a college student or imply that the site is operated
+by the Seventh-day Adventist denomination.
 
 ### 2.2 What the score pages show
 
@@ -117,9 +120,11 @@ rejected or limited that reasoning. It therefore does not support a nationwide,
 categorical statement that all hyperlinking or embedding is noninfringing.
 
 A normal external navigation link is more conservative than embedding because the user
-leaves the app and views the host's own resource. Nevertheless, secondary-liability,
-contract, access-control, and jurisdiction-specific questions may remain if a developer
-knowingly points users to infringing material or bypasses restrictions.
+leaves the app and views the host's own resource. (On iOS and Android the system browser
+view opens on top of the app rather than switching apps, but the system browser, not the
+app, loads and draws the host's page.) Nevertheless, secondary-liability, contract,
+access-control, and jurisdiction-specific questions may remain if a developer knowingly
+points users to infringing material or bypasses restrictions.
 
 Section 512(d) of the Digital Millennium Copyright Act contains a conditional safe harbor
 for qualifying services that use information-location tools such as hyperlinks. It has
@@ -130,8 +135,9 @@ automatic license. See the U.S. Copyright Office's
 ### 4.2 Why the fragment link was selected
 
 Representative pages for hymns 1, 214, and 689 were checked and each exposed a public
-element named `hymn-score`. A URL fragment is handled by the browser after loading the
-page; it does not request, copy, alter, or bypass access controls on the score. It gives
+element named `hymn-score`. Later checks found that not every hymn has one: SDAH 509 has
+no score on the site and no anchor. A URL fragment is handled by the browser after loading
+the page; it does not request, copy, alter, or bypass access controls on the score. It gives
 users a focused starting position while retaining the page that the site owner chose to
 publish.
 
@@ -154,9 +160,11 @@ browser. It:
 2. appends `#hymn-score` for a selected hymn; and
 3. returns the official directory when no number is supplied.
 
-`openHymnal` passes that URL to the shared external-link handler. Links must continue to
-open in the native browser. Do not replace this handoff with an iframe, WebView, remote
-`Image`, server-side proxy, service-worker cache, or downloaded local asset.
+`openHymnal` passes that URL to `openInSystemBrowser` in `constants/ExternalLinks.ts`,
+which uses `WebBrowser.openBrowserAsync` on iOS and Android and a new tab on web. Links
+must continue to open in the system browser. Do not replace this handoff with an iframe,
+WebView, remote `Image`, server-side proxy, service-worker cache, or downloaded local
+asset.
 
 ### 5.3 Reader state
 
@@ -174,8 +182,13 @@ When changing this integration:
 3. Do not download, cache, screenshot, transcode, proxy, or redistribute scores.
 4. Do not state that Hymns for Worship or this app has publisher permission unless the
    applicable written grant has been reviewed and its scope documented.
-5. Recheck representative public-domain and copyrighted hymn pages, the score anchor,
-   redirects, and the site's Terms of Use periodically.
+5. Recheck representative public-domain and copyrighted hymn pages and the site's Terms
+   of Use periodically. The daily **External Dependency Monitor**
+   (`test/integration/external-dependencies.mjs`) already checks that the 1985 directory
+   still lists at least 690 hymn links (the site's directory leaves out #262), that three
+   hymn pages sampled each day still load at their own `sdah-NNN` path with the expected
+   heading, and that SDAH 001 still has the `hymn-score` anchor. See
+   [External dependency monitor](../operations/external-dependency-monitor.md).
 6. Remove or disable a link promptly if a rights holder or the source site objects, the
    domain changes ownership, the destination begins redirecting unexpectedly, or the
    expected source page disappears.
@@ -183,7 +196,8 @@ When changing this integration:
    cosmetic refactor.
 
 The focused URL tests live in `test/english-hymnal.test.ts` and should cover both padded
-hymn links and the no-number directory fallback.
+hymn links and the no-number directory fallback. `test/external-url-generation.test.ts`
+also checks that all 695 hymn numbers produce HTTPS `hymnsforworship.org` links.
 
 ## 7. Path to a Raw-Image Experience
 

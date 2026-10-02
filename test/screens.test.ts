@@ -11,6 +11,7 @@ const {
   manifestPath,
   statusBarClear,
   looksBlank,
+  looksLikeSplash,
 } = require('../scripts/capture-ios-screens.cjs');
 
 const repoFile = (path: string) => readFileSync(resolve(__dirname, '..', path), 'utf8');
@@ -235,6 +236,45 @@ describe('status bar check', () => {
 
   it('ignores text that starts below the status bar', async () => {
     expect(await statusBarClear(await screenshot('below', { island: true, textAt: 190 }))).toBe(true);
+  });
+});
+
+describe('splash check', () => {
+  const sharp = require('sharp');
+  const { mkdtempSync } = require('node:fs');
+  const { tmpdir } = require('node:os');
+  const { join } = require('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'splash-'));
+
+  // A 1320 × 2868 screenshot: a background, a status bar, and a centred logo,
+  // plus optional bands of content.
+  const screenshot = async (name: string, background: string, contentBands: number[] = []) => {
+    const file = join(dir, `${name}.png`);
+    const box = (left: number, top: number, width: number, height: number, fill: string) => ({
+      input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${fill}"/></svg>`),
+      left,
+      top,
+    });
+    const overlays = [box(196, 60, 104, 60, '#fff'), box(560, 1320, 220, 200, '#fff')];
+    for (const top of contentBands) overlays.push(box(80, top, 1160, 60, '#222'));
+    await sharp({ create: { width: 1320, height: 2868, channels: 3, background } })
+      .composite(overlays)
+      .png()
+      .toFile(file);
+    return file;
+  };
+
+  it('recognizes the launch splash, which the logo keeps from looking blank', async () => {
+    const file = await screenshot('splash', '#00405C');
+    expect(await looksBlank(file)).toBe(false);
+    expect(await looksLikeSplash(file)).toBe(true);
+  });
+
+  it("doesn't mistake an app screen for the splash", async () => {
+    expect(await looksLikeSplash(await screenshot('light', '#f3e6df'))).toBe(false);
+    expect(await looksLikeSplash(await screenshot('dark', '#171b1c'))).toBe(false);
+    // The splash colour with content in it, such as a header in the same blue.
+    expect(await looksLikeSplash(await screenshot('content', '#00405C', [700, 2200]))).toBe(false);
   });
 });
 

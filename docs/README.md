@@ -1,56 +1,189 @@
-# Technical Setup & Testing
+# Development setup and testing
+
+Every project document is listed in the main README's
+[table of contents](../README.md#table-of-contents).
+
+How to install the app, run it in a browser, on an Android emulator, or on the iOS
+Simulator, and test it. Signing, credentials, the PR preview builds, and store uploads
+are in [Native mobile binary builds](operations/native-builds.md); how the version sets
+the store build numbers is in [Version numbers](operations/version-numbers.md).
 
 ## Prerequisites
 
-- Node.js (LTS)
-- npm
-- Java Development Kit (JDK) 17
-- For iOS: Xcode (macOS only) supporting iOS 15.0 - 26.3
-- For Android: Android Studio, the platform/target SDK required by the current Expo
-  canary (currently target API 36 plus compile/build tools 37 on CI), and ANDROID_HOME
-  environment
-  variable
+- Node.js 22 (22.13 or later) or 24 (24.3 or later), with npm. Expo SDK 58 and React
+  Native 0.88 require one of these (or Node 26 or later). The repository has no
+  `.nvmrc` or `engines` field; the workflows use Node 22, except the website deploy and
+  release check, which use the current LTS.
+- For Android: macOS or Linux, the Java Development Kit (JDK) 17, and Android Studio
+  with the Android SDK. `app.json` sets compile SDK and build tools 37 and target API
+  36. Set `ANDROID_HOME` and put the Android command-line tools on your `PATH`.
+- For iOS: a Mac with Xcode 26.6 or later and CocoaPods. Expo SDK 58 doesn't compile
+  with older Xcode versions; both iOS workflows select Xcode 26.6.
+
+Install the dependencies:
 
 ```bash
-npm install
+npm install --force
 ```
 
-Make sure to fill out information specific to your church in
-[the Constants folder](/constants/).
+`--force` is needed because React Native is a release candidate (`0.88.0-rc.3`), which
+some packages' peer-dependency ranges don't include, so a plain `npm install` stops
+with an `ERESOLVE` error. CI installs the same way, with `npm ci --force`.
+
+A fork for another church changes the church-specific details in
+[`constants/`](../constants/), such as `ChurchData.ts`, `TeamData.ts`, and
+`ExternalLinks.ts`.
+
+## Running the app
+
+### In a browser
+
+```bash
+npm run web
+```
+
+This runs `expo start --web`, which starts the Metro development server and opens the
+app in a browser. It is the quickest way to check layout and wording, but native-only
+behavior, such as Bible audio on the lock screen, needs an Android or iOS build. If the
+page stays blank, see the note under
+[Optional PWA installation for testing](#optional-pwa-installation-for-testing).
+
+### On an Android emulator or phone
+
+Create an emulator in Android Studio's **Device Manager**, or connect a phone with USB
+debugging on. Then build a standalone debug APK and install it:
+
+```bash
+npm run build:android:apk:debug:intel   # x86_64 emulator on an Intel or AMD computer
+npm run build:android:apk:debug:arm     # phone, or an emulator on an ARM computer
+adb install -r <the path the script printed>
+```
+
+The script prints where it wrote the APK, in `build/` unless you pass
+`--output /absolute/path/app.apk`. The JavaScript is bundled in, so it runs without
+Metro. It's signed with Gradle's debug key, and it installs as **NYCCSDA Preview**
+(`org.nyccsda.app.preview`) beside the store version. After changing `app.json` or a
+config plugin, add `-- --prebuild` to regenerate the `android/` project. More detail
+is in [Android direct-native commands](operations/native-builds.md#android-direct-native-commands).
+
+On WSL, run the emulator and `adb` from the Windows Android SDK: call `adb.exe`, and
+give it a Windows path to the APK (`wslpath -w <file>`).
+
+### On the iOS Simulator (Mac only)
+
+```bash
+npm run build:ios:simulator              # Release build, JavaScript bundled in
+npm run build:ios:simulator -- --debug   # Debug build that loads JavaScript from Metro
+```
+
+The script builds without signing, installs the app on the Simulator, and opens it. You
+can also download a release pull request's Simulator build from the **iOS PR preview**
+run instead of building it. Both are in
+[iOS PR preview](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+
+## Testing
+
+| Command | What it checks | Where CI runs it |
+| --- | --- | --- |
+| `npm test` | The Jest unit tests, `test/**/*.test.ts` | **PR Unit Tests**, on every pull request |
+| `npm run typecheck` | TypeScript types (`tsc --noEmit`) | Not in CI; run it yourself |
+| `npm run check:text-scale` | That no text style bypasses the app's text-size setting (`scripts/check-text-scale-coverage.mjs`) | **PR Unit Tests**, after Jest |
+| `npm run build:web` | That the web build exports, into `build/web` | Not on pull requests; the website deploy builds it again after a merge |
+| `npm run check` | All four of the above: typecheck, then tests, text size, and web build | Not in CI; run it before opening a pull request |
+| `npm run test:integration:bulletin` | The response shape of the production bulletin API | **Bulletin API Integration**, on the release pull request into `main` |
+| `npm run test:integration:external` | Every outside service the app uses: APIs, media hosts, hymn sites, and the website's pages | **External Dependency Monitor**, daily |
+
+CI doesn't typecheck or build the web app on pull requests, so `npm run check` is the
+way to catch those before review.
+
+The two integration tests call live services, so they can fail because a service is
+down rather than because of your change.
+
+- `test:integration:bulletin` calls the deployed Apps Script, not the code in your
+  branch. `BULLETIN_API_URL` and `BULLETIN_TEST_DATE` override the address and the
+  bulletin date it asks for.
+- `test:integration:external` writes `external-dependency-report.json`. See
+  [External dependency monitor](operations/external-dependency-monitor.md).
+
+### Key screens on iPhone
+
+The **iOS PR preview** workflow, on the release pull request into `main`, takes 82
+screenshots of the 30 screens listed in `test/screens/screens.json`, in light and dark,
+at larger text sizes, and in Chinese and Spanish. `scripts/capture-ios-screens.cjs`
+takes them, and `scripts/check-screens.cjs` reads their text with Apple's Vision
+framework and checks what each screen must show. The release then waits on the
+**Screenshots reviewed** check until a release approver has looked at them.
+`npm test` includes `test/screens.test.ts`, which checks the screen list itself.
+
+Feature pull requests don't run it. To try a screen change earlier, start **iOS PR
+preview** by hand on your branch from the Actions tab. When a change affects what a
+screen shows, update its key screens and text checks; see
+[Contributing](CONTRIBUTING.md#pull-request-format-and-issue-closing) and
+[Key screens](operations/native-builds.md#key-screens).
+
+### Bible audio on an Android emulator
+
+The **Android audio e2e** workflow, on the release pull request into `main`, builds the
+debug APK, boots an Android emulator, and plays real Bible chapters to check what only a
+real player shows: switching hosts when the church's audio host is down, moving to the
+next chapter with the screen off, and recovering after the network drops. It's a
+required check on `main`; feature pull requests don't run it, but you can start it by
+hand on your branch. What each scenario checks, and what to do when the workflow fails,
+is in [Bible audio emulator test](operations/admin-runbook.md#bible-audio-emulator-test).
+
+To run the scenarios yourself, boot an emulator, install the debug APK (see
+[On an Android emulator or phone](#on-an-android-emulator-or-phone)), and run
+`scripts/e2e/android-bible-audio.sh`:
+
+```bash
+scripts/e2e/android-bible-audio.sh
+E2E_ONLY="pause-and-resume" scripts/e2e/android-bible-audio.sh   # one scenario
+```
+
+- It prints PASS or FAIL for each scenario and exits non-zero if any failed. For each
+  failed scenario it saves the reason, a screenshot, the app's log, and the media session in
+  `e2e-output/` (`E2E_OUTPUT` changes the folder).
+- `E2E_ONLY` takes space-separated scenario names: `next-chapter-screen-off`,
+  `dead-zone-screen-off`, `mid-chapter-offline`, `pause-and-resume`, and
+  `primary-host-down`.
+- `primary-host-down` runs only with `E2E_PRIMARY_BLOCKED=1`, and needs the church's
+  audio host, `assets.adventistconnect.org`, to be unreachable. The workflow arranges
+  both, with a local DNS server on the runner.
+- Set `ADB` if `adb` isn't on your path, and `ADB_ARGS=-e` if a phone is also connected.
+  On WSL, use `ADB=adb.exe ADB_ARGS=-e`.
+- It tests the debug build, `org.nyccsda.app.preview`, by default. To test a store
+  build instead, set `E2E_PACKAGE=org.nyccsda.app`.
+- The script clears the app's first-launch Welcome dialog, and turns off the device's
+  animations while it runs (restoring them when it exits), because the screen must be
+  still to be read.
+
+The script's header lists every setting.
 
 ## Web & PWA Testing and Preview
 
 Native iOS and Android builds are the primary distribution path. The Progressive Web App
-(PWA) remains a maintained browser testing and preview surface for UI regression checks,
-accessibility testing, demos, and fast fork previews. It is not the canonical release
-channel for the church's installed-app users.
+(PWA) remains a maintained browser testing and preview surface: fast regression checks of
+layout, accessibility, links, caching, and web-only behavior; previews for contributors,
+maintainers, and church stakeholders before a native binary is built, including fast fork
+previews; and demos that need no store install. It is not the canonical release channel
+for the church's installed-app users.
 
 The web and native targets continue to share one Expo source tree. A web preview is useful
 for testing browser-specific behavior, but passing the web build is not evidence that a
 signed iOS or Android binary is ready for store submission.
 
-### Local Development
+### Web builds and the website
 
-To start the app in a web browser for local testing (primarily to check for Network tab
-404s that prevent PWA from loading on mobile):
+Two commands build the web app locally without publishing anything:
 
-```bash
-npx expo start --web
-```
+- `npm run build:web` exports it into `build/web`. `npm run check` uses this.
+- `npm run deploy` first syncs the version into the version files, then exports it into
+  `dist/`, the folder the website is published from.
 
-### Local Web Build and Preview Deployment
-
-The project uses GitHub Pages for hosting. Running the local deploy command builds the web
-assets into `dist/` but does not push anything:
-
-```bash
-npm run deploy
-```
-
-The canonical repository's GitHub workflow publishes the web/PWA preview when `main` is
-updated. This deployment is for browser testing, demos, and a quickly accessible fallback;
-it does not publish or update the native store applications. The protected publishing mode
-refuses to publish from a local shell or a different repository.
+Every merge to `main` runs **Deploy Website and Tag**, whose `npm run deploy:production`
+publishes the production website, `https://app.nyccsda.org`, with the browser build of
+the app (not the store apps); that command refuses to run anywhere but GitHub Actions on `main` in the church's
+repository. See [The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
 
 To publish a development preview to a fork, opt in explicitly and provide both the fork
 repository and its GitHub Pages URL. The URL must use the configured `/sda-church-app`
@@ -58,8 +191,8 @@ base path; custom domains are rejected for preview publishing:
 
 ```bash
 npm run deploy:dev -- \
-  --repo git@github.com:CodeSammich/sda-church-app.git \
-  --site-url https://codesammich.github.io/sda-church-app/
+  --repo git@github.com:<your-account>/sda-church-app.git \
+  --site-url https://<your-account>.github.io/sda-church-app/
 ```
 
 Each fork is deployed under the GitHub Pages domain belonging to that fork's owner. For a
@@ -69,21 +202,20 @@ fork that keeps the repository name `sda-church-app`, the URL is:
 https://<github-owner>.github.io/sda-church-app/
 ```
 
-For example, the `CodeSammich` fork is hosted at
-`https://codesammich.github.io/sda-church-app/`. A fork owned by another user or
-organization must use that owner's `github.io` hostname; it should not assume that the
-CodeSammich URL or the NYCCSDA custom domain belongs to it.
+A fork must use its own owner's `github.io` hostname; the church's custom domain is
+production-only.
 
-Before deploying a fork, update the `homepage` field in `package.json` to its GitHub Pages
-URL. When the fork retains the `sda-church-app` repository name, the existing
-`/sda-church-app` values in `app.json`, `public/manifest.json`, and the service-worker
-registration remain correct. If the repository is renamed, update those base-path,
-start-URL, scope, and service-worker-path values to the new repository path as well. A
-custom domain is optional and requires its own GitHub Pages and DNS configuration.
+When the fork keeps the `sda-church-app` repository name, the existing `/sda-church-app`
+values in `app.json`, `app/+html.tsx`, `public/manifest.json`, and the service-worker
+registration in `app/_layout.tsx` remain correct. If the repository is renamed, update
+those base-path, start-URL, scope, and service-worker-path values to the new repository
+path as well. A custom domain is optional and requires its own GitHub Pages and DNS
+configuration.
 
-For development builds, you may use the increment flag to automatically update the patch
-version in `package.json` and prepare a versioned local web build. Please remember to reset
-the version number when raising the final pull request.
+For development builds, you may use the increment flag to raise the patch version in
+`package.json`, `package-lock.json`, `app.json`, and `public/sw.js` and prepare a
+versioned local web build. Please remember to reset the version number when raising the
+final pull request.
 
 ```bash
 npm run deploy -- --increment
@@ -131,8 +263,9 @@ download the full JavaScript bundle merely to discover whether an update exists.
 
 ### Optional PWA installation for testing
 
-- iOS (Safari): Open the preview URL -> Tap the Share button -> Add to Home Screen.
-- Android (Chrome): Open the preview URL -> Tap the Three Dots -> Install App or Add to
+- iOS (Safari): Open `https://app.nyccsda.org` or your fork's preview URL -> Tap the
+  Share button -> Add to Home Screen.
+- Android (Chrome): Open the same URL -> Tap the Three Dots -> Install App or Add to
   Home Screen.
 
 This is a convenient way to test the browser-installed experience. It is not a substitute
@@ -140,20 +273,3 @@ for installing a signed native build from TestFlight or Google Play.
 
 Note: If you encounter a black screen on launch, check the browser's Network tab for 404s
 or 400s. Any failed asset load will prevent the Expo bundle from initializing.
-
----
-
-## Why Keep a PWA Testing Surface?
-
-The PWA is retained as a secondary engineering and preview surface:
-
-1. Fast browser regression testing for layout, accessibility, links, caching, and web-only
-   behavior.
-2. Easy previews for contributors, maintainers, and church stakeholders before a native
-   binary is built.
-3. A low-friction demo and fallback surface that does not require store installation.
-
-Native iOS and Android binaries remain the supported primary release targets. Native
-signing, device testing, store review, and store submission are documented in the
-[native build guide](operations/native-builds.md). How the version and the store build
-numbers relate is explained in [Version numbers](operations/version-numbers.md).
