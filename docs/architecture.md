@@ -425,11 +425,14 @@ checks nearly all of them daily.
 | Bible audio | Audio Power | `theaudiopower.com` | CUV audio, third source | In app |
 | Bible audio | WordProject | `wordproject.org` | Source of the Cantonese and Spanish recordings, credited under each chapter | Link |
 | Bulletin | Church Apps Script | `script.google.com` | Digital bulletin JSON | In app |
-| Sabbath School | Adventech | `sabbath-school.adventech.io` | Children's lesson catalogs and PDFs (API); adult lessons (reader) | In app and link |
+| Sabbath School | Adventech | `sabbath-school.adventech.io`, `sabbath-school-pdf.adventech.io`, `sabbath-school-resources-media.adventech.io` | Children's lesson catalogs (API), both Adventech quarterlies and Alive in Jesus books, and their lesson PDFs; adult lessons (reader) | In app and link |
 | Sabbath School | Alive in Jesus | `aliveinjesus.info` | Children's age-group websites, opened when this week's lesson isn't found; Babies resources | Link |
 | Library | Chinese Union Mission | `api.sdabible.org`, `cms.sdabible.site` | Cover thumbnails for the Chinese Ellen G. White editions (the books open on EGW Writings) | In app |
 | Library | EGW Writings | `a.egwwritings.org`, `text.egwwritings.org` | Book covers (in app); reading (link) | In app and link |
 | Library | Project Gutenberg | `gutenberg.org` | Public-domain Christian classics | Link |
+| Library | Internet Archive | `archive.org` | Scans of public-domain books, such as *The Bruised Reed* and *Pastor Hsi* | Link |
+| Library | HathiTrust | `babel.hathitrust.org` | The 1869 Chinese *Pilgrim's Progress* (天路歷程), for Chinese readers | Link |
+| Library | Chapel Library | `chapellibrary.org` | The Spanish *Pilgrim's Progress*, for Spanish readers | Link |
 | Hymns | zgaxr | `m.zgaxr.com` | Chinese 505, 506, and 707 hymnal sheet music | Link |
 | Hymns | Hymns for Worship | `hymnsforworship.org` | English SDA Hymnal (1985) sheet music | Link |
 | Hymns | Chinese Union Mission | App Store, Google Play | 506 hymnal app store pages | Link |
@@ -440,6 +443,8 @@ checks nearly all of them daily.
 | Media | Zoom | `zoom.us` | Online class | Link |
 | Giving | AdventistGiving | `adventistgiving.org` | Online giving | Link |
 | Church | GNYC, Atlantic Union, adventist.org | `gnyc.org`, `atlantic-union.org`, `adventist.org` | Conference, union, and beliefs pages | Link |
+| Church | Google Maps | `google.com/maps` | Directions to each church location | Link |
+| Church | Google Sheets | `docs.google.com` | The staff quarterly schedule, which Google opens only for signed-in `nyccsda.org` accounts | Link |
 
 Only the CUV Bible audio has copies the church controls, because its owner allowed
 self-hosting. For everything else, the feature stops working if the provider goes
