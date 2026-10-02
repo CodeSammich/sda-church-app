@@ -3,7 +3,7 @@ import {
   EGW_BOOK_CATEGORIES,
   EGW_BOOKS,
   getEgwCoverUrlsForLanguage,
-  getEgwEditionsForLanguage,
+  getEgwEditionForLanguage,
 } from '@/features/library/EgwBookCatalog';
 
 describe('EGW book catalog', () => {
@@ -34,15 +34,13 @@ describe('EGW book catalog', () => {
     }
   });
 
-  it('puts the reader’s language first while retaining every edition', () => {
-    const work = EGW_BOOKS.find(
-      (candidate) => candidate.id === 'acts-of-the-apostles',
-    );
-
-    expect(work).toBeDefined();
-    expect(getEgwEditionsForLanguage(work!, 'zh-cn')[0].language).toBe('zh');
-    expect(getEgwEditionsForLanguage(work!, 'es')[0].language).toBe('es');
-    expect(getEgwEditionsForLanguage(work!, 'en')).toHaveLength(3);
+  it('opens the edition in the app language, with one Chinese edition for both scripts', () => {
+    for (const work of EGW_BOOKS) {
+      expect(getEgwEditionForLanguage(work, 'en').language).toBe('en');
+      expect(getEgwEditionForLanguage(work, 'zh').language).toBe('zh');
+      expect(getEgwEditionForLanguage(work, 'zh-cn').language).toBe('zh');
+      expect(getEgwEditionForLanguage(work, 'es').language).toBe('es');
+    }
   });
 
   it('selects language covers with English and bundled-art fallbacks', () => {
