@@ -7,11 +7,20 @@ title, both, a misspelled title, content in the wrong language field, or only on
 two language answers. The app resolves this input locally against the configured hymn
 catalogs; it does not machine-translate hymn titles.
 
-All bulletin hymn fields must use
+All bulletin hymn fields in the app must use
 `resolveBulletinHymnPresentation()` from `services/BulletinHymnalService.ts`. It returns
 one object containing both the visible `displayText` and the optional reader
 `destination`. Keeping those values together prevents the title and button from resolving
 different intake answers.
+
+The printed bulletin doesn't use this resolver. `resolvePrintedHymnText_` in
+`google-apps-script/PrintedHymnLookup.gs` keeps both supplied values as entered and fills
+only a missing side, by hymn number, from its own copy of the two number maps. It has no
+title matching. That copy says it was generated from
+`features/hymnal/HymnalNumberMappings.json`, and on 2026-10-02 the two matched. No script
+in `scripts/` regenerates it and no test compares them, so when the JSON changes, update
+`PrintedHymnLookup.gs` to match. See
+[Bulletin automation](../operations/bulletin-automation.md#hymns).
 
 ## Display and routing rules
 
@@ -55,7 +64,8 @@ but deliberately retain their church-approved fixed wording for display.
 `features/hymnal/BulletinHymnalConfig.ts` is the final selection point, not a complete hymnal
 plugin system. Before changing one of its primary IDs, a fork must:
 
-1. Add the hymnal metadata and number mappings to `HymnalNumberMappings.json`.
+1. Add the hymnal metadata and number mappings to `HymnalNumberMappings.json`, and update
+   the printed bulletin's copy of the maps in `google-apps-script/PrintedHymnLookup.gs`.
 2. Add or import its searchable catalog in `BulletinHymnalService.ts`.
 3. Register a hymnal adapter with its catalog lookup, valid number range, and reader route.
 4. Implement the reader route if it does not already exist.

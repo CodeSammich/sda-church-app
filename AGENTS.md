@@ -22,7 +22,7 @@ Code, Codex, Gemini, and others). The full contributor guide is
   line from the feature PRs it includes. GitHub only closes issues when the
   reference reaches `main`.
 - Say what you tested, with the command and result (for example `npm test`,
-  430 passing). Mention any Android or iOS build you ran.
+  1039 passing). Mention any Android or iOS build you ran.
 - If the change affects what a screen shows or how it's laid out, update the
   key screens in `test/screens/screens.json`, for every platform that captures
   them: the iPhone today, and Android once #372 adds its screenshots. Add the

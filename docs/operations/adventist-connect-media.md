@@ -28,7 +28,7 @@ are uploaded through its WordPress media library.
 | Mandarin CUV Bible audio, one MP3 per chapter | [`constants/CuvAdventistAudioManifest.ts`](../../constants/CuvAdventistAudioManifest.ts) | 1,189 | 939 MB total; median 0.73 MB, largest 3.7 MB |
 | Cantonese CUV Bible audio, one MP3 per chapter | [`constants/CantoneseAdventistAudioManifest.ts`](../../constants/CantoneseAdventistAudioManifest.ts) | 1,189 | 792 MB total; median 0.58 MB, largest 3.4 MB |
 | Spanish RV1909 Bible audio, one MP3 per chapter | [`constants/Rv1909AdventistAudioManifest.ts`](../../constants/Rv1909AdventistAudioManifest.ts) | 1,189 | 861 MB total; median 0.65 MB, largest 3.9 MB |
-| Church, staff, and fellowship photos | [`constants/ExternalLinks.ts`](../../constants/ExternalLinks.ts) | 6 | 3.2 MB total, 2.3 MB of it one PNG |
+| Church, staff, and fellowship photos | [`constants/ExternalLinks.ts`](../../constants/ExternalLinks.ts) | 5 | 3.0 MB total, 2.3 MB of it one PNG |
 | Hymnal number lookup charts | [`features/hymnal/HymnalNumberMappings.json`](../../features/hymnal/HymnalNumberMappings.json) | 2 | 1.1 MB total |
 
 The audio files are 24 kbps mono MP3 (MPEG-2 Layer III, 22.05 kHz), about
@@ -141,7 +141,8 @@ church-website platform.
 - The web player preloads only the next chapter. On native, the app queues up to 24
   upcoming chapter descriptors but does not fetch their audio itself.
 - The [external dependency monitor](external-dependency-monitor.md) checks that
-  each manifest has all 1,189 entries and requests one sampled file from each a day.
+  each manifest has all 1,189 entries and requests three sampled files from each a
+  day.
 
 The design reasons for the three-tier setup are in
 [Bible integration design](../feature_designs/bible_integration_design.md).
@@ -260,8 +261,9 @@ Watch for:
 - The dependency monitor reporting `Adventist Connect` failures, especially `403`,
   `429`, or an HTML response where an MP3 was expected.
 - Reports that audio takes several seconds to start, or that the lock screen or
-  notification shows `(Internet Archive)` or `(Audio Power)` after the chapter
-  title: the app is falling back, which suggests the primary source is failing.
+  notification title ends in `(Internet Archive)` or `(Audio Power)` instead of
+  `(NYCCSDA.org)`: the app is falling back, which suggests the primary source is
+  failing.
   The audio settings don't show this; they show the source the listener chose.
 - Listening growing towards the "wide adoption" row, for example from app store
   install counts.

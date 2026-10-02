@@ -139,7 +139,9 @@ simple, blended colors.
   color) to provide a solid anchor for the "Digital Sanctuary."
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
-  height (Status Bar + 64px).
+  height from `useGlobalHeaderHeight()`: the status bar plus 64px at 100% text size.
+  The header grows with the app's text size and with the phone's text size up to 1.35×
+  (`hooks/useGlobalHeaderHeight.ts`).
 - **Boundary Definition:** A restrained 0.5px top boundary using the theme's subtle
   outline token is permitted for the bottom tab navigation bar and persistent audio
   controls. Do not add shadows, strong dividers, or decorative glass effects.
@@ -150,18 +152,25 @@ simple, blended colors.
 
 ### 1. Home (The "Pulse")
 
-**Purpose:** Immediate relevance, containing latest livestream, breaking news, and other
-priority announcements.
+**Purpose:** Immediate relevance: today's verse, the Sabbath countdown, and the church's
+main destinations for the week.
 
-**UI:** A scrolling dashboard of widgets
+**UI:** A scrolling dashboard (`app/(tabs)/index.tsx`): the **Today's Verse** hero with
+**Read Verse** and **Share Verse**, a Sabbath countdown card for New York, NY, and a grid
+of cards for **Watch Livestream**, **Weekly Bulletin**, **Tithe & Offering**, **Hymnal**,
+**This Week's Lesson** (Sabbath School lessons for adults and children), and **New Member
+& Visitor**. Giving, the hymnals, and the staff list (**Meet Our Team**, under New Member &
+Visitor) live here.
 
 **Tenet Alignment:**
 
 - **Tenet 5 (Simplicity):** A widget-based dashboard provides a "glanceable" interface
   where the most important information is surfaced immediately without digging through
   menus.
-- **Tenet 7 (Focused):** Featured content like the livestream keeps the spiritual
-  experience internal to the app, protecting users from external algorithm distractions.
+- **Tenet 7 (Focused):** The dashboard keeps to the church's worship life: the
+  bulletin, the verse of the day, and links to lessons, hymns, and giving. **Watch
+  Livestream** opens the church's YouTube streams page outside the app; there is no
+  embedded player.
 
 ### 2. Bible (The Reader)
 
@@ -177,10 +186,13 @@ Bible audio.
 
 ### 3. Explore (The "Spiritual" Library)
 
-**Purpose:** Deep personal growth through sermons, hymnals, and other church resources.
+**Purpose:** Deep personal growth through books, recorded sermons, and classes.
 
-**UI:** Reader-focused (Immersive text) through a bookshelf style archive, possibly
-grouped by media type
+**UI:** A short list of cards (`app/(tabs)/explore/index.tsx`): **Library**, **Sermon
+Archive** (YouTube), **Audio Archive** (Spotify), and **Zoom Class**. The Library is the
+bookshelf-style part: each shelf is a row of covers, with a search across all books (see
+[Christian Library](feature_designs/christian_library.md)). Hymnals are on Home, not
+here.
 
 **Tenet Alignment:**
 
@@ -191,19 +203,18 @@ grouped by media type
 
 ### 4. You (The Personal History "Utility" Drawer)
 
-**Purpose:** Administrative tasks, personal history, preferences, and personal actions.
-Give/Tithes, Dark Mode, Language, History (Recent Sermons), data privacy settings, etc.
+**Purpose:** Preferences and information about the app.
 
-**UI:** Similar to Resources with bookshelf style archive. An additional Settings cogwheel
-may be placed on the top right of the tab if needed, like YouTube.
+**UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
+**Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
+**About & Support** has the **Privacy Policy** and **Legal Disclaimer** (both English
+only), followed by the app version. On web, tapping the version checks for an update.
+There is no giving, history, or staff contact here: **Tithe & Offering** and **Meet Our
+Team** are on Home, and the app has no history feature.
 
 **Tenet Alignment:**
 
-- **Tenet 1 (Sustainable):** Giving features are placed here to ensure the "tower" remains
-  funded and the app remains free to maintain.
-- **Tenet 2 (Liability-Free):** Centralizes settings and staff contact to provide
-  transparent access to privacy controls and leadership.
-- **Tenet 5 (Simplicity):** Since the "History" (Recent Sermons) is stored locally on the
-  device, this pillar demonstrates that the app provides a personalized experience without
-  harvesting Personally Identifiable Information (PII). It honors the "Sanctuary" by
-  keeping the user’s study habits private.
+- **Tenet 2 (Liability-Free):** Puts the privacy policy and legal terms in one place.
+- **Tenet 5 (Simplicity):** Preferences are saved on the device, with no account or
+  sign-in, so the app is personalized without collecting Personally Identifiable
+  Information (PII).

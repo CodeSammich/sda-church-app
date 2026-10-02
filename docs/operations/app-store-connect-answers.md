@@ -75,9 +75,10 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 - **Version:** the release's version, such as `0.42.0`. It must match the build; see
   [Version numbers](version-numbers.md).
 - **Screenshots:** iPhone 6.9-inch only; the app is iPhone-only (`supportsTablet: false`).
-  A 6.7-inch iPhone's screenshots (1290 × 2796) fit without resizing. The status bar's
-  battery can be redrawn full, as the listing's screenshot rules allow. Keep copies in
-  [`docs/store-assets/`](../store-assets/README.md) under `app-store/`.
+  A 6.7-inch iPhone's screenshots (1290 × 2796) fit without resizing. The current set
+  comes from the **iOS PR preview**, whose status bar always shows 9:41 with full
+  battery and signal. Keep copies in [`docs/store-assets/`](../store-assets/README.md)
+  under `app-store/`.
 - **Promotional Text, Description, Keywords:** per language, from
   [Store listings](store-listing.md).
 - **Support URL:** `https://app.nyccsda.org/support.html`. **Marketing URL:** blank.

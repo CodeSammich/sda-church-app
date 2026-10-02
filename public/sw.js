@@ -1,8 +1,8 @@
-// This version string is automatically synced from the PR title during a release PR
-// via GitHub Actions and public/sync-version.js when creating or updating the PR.
-// This controls a pop-up notification to users when a new version of the app is available for install
-// DO NOT EDIT THIS MANUALLY, as it will be overwritten by the next PR update.
-const VERSION = '1.0.0';
+// The version string below is written by `npm run sync-version` (public/sync-version.js),
+// which sets it together with package.json and app.json. CI checks that they match.
+// It controls the web app's pop-up telling users a new version is available.
+// Don't edit it by hand.
+const VERSION = '1.0.1';
 const CACHE_NAME = `sda-church-v${VERSION}`;
 
 self.addEventListener('install', (event) => {});

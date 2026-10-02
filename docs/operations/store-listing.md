@@ -334,8 +334,9 @@ Las letras y partituras de los himnos, los libros de la biblioteca, las leccione
   cover the Bible. Why, and which tags to avoid, is in
   [Google Play Console answers](play-console-answers.md#category-and-tags).
 - **Privacy policy URL:** `https://app.nyccsda.org/privacy-policy.html`
-- **Support URL** (App Store, required): `https://app.nyccsda.org/support.html`. It's
-  live once 0.42.0 reaches `main` and the web preview deploys.
+- **Support URL** (App Store, required): `https://app.nyccsda.org/support.html`, from
+  `public/support.html`, which **Deploy Website and Tag** publishes on each merge into
+  `main`.
 - **Marketing URL** (App Store, optional): leave blank.
 - **Contact email** (Google Play, shown publicly): `technology@nyccsda.org`, the same
   address as the privacy policy and the support page. Use a church role address, never
@@ -373,16 +374,16 @@ The answers given, question by question, are in
 [Google Play Console answers](play-console-answers.md) and
 [App Store Connect answers](app-store-connect-answers.md).
 
-- **App Privacy** (App Store) and **Data safety** (Google Play): the likely answer is that
-  no data is collected or shared. The app has no accounts, analytics, or ads, and keeps
-  settings and saved verses on the device. Confirm it as the audit's item 2 describes
-  before answering.
+- **App Privacy** (App Store) and **Data safety** (Google Play): no data collected or
+  shared. The app has no accounts, analytics, or ads, and keeps settings and saved
+  verses on the device. Recheck it as the audit's item 2 describes whenever that
+  changes.
 - **Ads:** no. **Accounts:** none, so there's no account deletion.
-- **Age rating** (App Store): answer from the app's content. For **Unrestricted Web
-  Access**, the app opens specific pages and has no general-purpose browser.
-- **Content rating and target audience** (Google Play): the audit describes a general
-  church app, not a kids app. Choosing age groups under 13 brings in Google's Families
-  policy.
+- **Age rating** (App Store): 4+. **Unrestricted Web Access** is No: the app opens
+  specific pages and has no general-purpose browser.
+- **Content rating and target audience** (Google Play): rated Everyone, with a target
+  audience of 13 and over. It's a general church app, not a kids app. Choosing age
+  groups under 13 brings in Google's Families policy.
 - **Export compliance** (App Store): already answered in the build, which declares no
   non-exempt encryption.
 
@@ -410,8 +411,8 @@ get new ones.
   before turning it on.
 - **Leave out:** the bulletin, which shows members' names; Meet Our Team, which has staff
   photos; the hymnal covers, which belong to other publishers; and personal phone numbers
-  or email addresses. The verse of the day is random, so capture it on a day when it reads
-  well out of context.
+  or email addresses. The verse of the day changes each day, following a hand-picked list
+  (`services/VerseOfTheDay.ts`), so capture it on a day when it reads well out of context.
 
 ## What not to claim
 

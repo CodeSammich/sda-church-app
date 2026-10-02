@@ -1,9 +1,10 @@
 # Store assets
 
 Copies of the images uploaded to Google Play and the App Store, so the next update
-starts from what's live instead of from scratch. Each store has one set of six phone
-screenshots, which every listing language shows. The listing text and the rules for
-what screenshots may show are in [Store listings](../operations/store-listing.md#screenshots).
+starts from what's uploaded instead of from scratch. Each store has one set of six
+phone screenshots, which every listing language shows. The listing text and the rules
+for what screenshots may show are in
+[Store listings](../operations/store-listing.md#screenshots).
 
 - `google-play/feature-graphic.png`: the 1024 × 500 feature graphic. It shows the app
   icon, the church's name in English and Traditional Chinese, and two English Bible
@@ -28,13 +29,26 @@ what screenshots may show are in [Store listings](../operations/store-listing.md
 
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. Play
 screenshots are 1080 × 1920, captured on the Android emulator with Android's demo mode
-for a clean status bar. The App Store screenshots come from the iOS PR preview's key
-screens, which are the App Store's 6.9-inch iPhone size with a clean status bar; see
+for a clean status bar. The App Store screenshots come from the key screens of the
+**iOS PR preview** run on a release PR, which are the App Store's 6.9-inch iPhone size
+with a clean status bar; see
 [iOS PR preview](../operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 The ones here are from the 0.43.0 release PR's preview on September 30, 2026, before
-the audio button showed the audio language. The preview still saves a Chinese set in
-`screens/app-store/zh-Hant/` (see `appStore` in `test/screens/screens.json`), which isn't
-uploaded.
+the audio button showed the audio language.
+
+Each run also saves numbered App Store copies in its artifact's `screens/app-store/`,
+from the `appStore` lists in `test/screens/screens.json`. They aren't the set uploaded
+here:
+
+- `screens/app-store/en-US/`: Home, the Bible in English and Chinese, the Bible with
+  pinyin, Explore, the Library, and the Bible in the dark theme. The uploaded set has
+  the Chinese-interface Bible (`bible-cuv-zh`) in place of the pinyin one, and the dark
+  Bible fourth.
+- `screens/app-store/zh-Hant/`: seven shots with the Chinese interface, which aren't
+  uploaded.
+
+For a new App Store set, take the matching shots from the run's `screens/ios/` and
+number them in the uploaded order, or change `appStore` first.
 
 **No transparency.** Both stores reject screenshots with an alpha channel: Google Play
 takes JPEG or 24-bit PNG, and App Store Connect refuses images with transparency. The

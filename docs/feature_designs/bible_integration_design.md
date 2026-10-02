@@ -30,6 +30,14 @@ provider revises its underlying resource.
 HelloAO remains the shared source of translated-edition book names and chapter counts.
 `BibleService.fetchChapter` routes chapter content according to the table above.
 
+BSB and KJV chapters come straight from HelloAO, audio links included. HelloAO's BSB
+chapters carry links to its narrator recordings, which the app plays from the hosts
+HelloAO links to (as of October 2026, three on HelloAO's audio host and one on
+`openbible.com`; see [LEGAL.md](../LEGAL.md#bible-sources-and-licensing)) and lists
+Souer first, then Hays, then David, then any others (`getOrderedBibleAudioReaders` in
+`services/BibleAudioService.ts`). HelloAO has no KJV audio, so KJV chapters show no audio
+bar.
+
 Traditional and simplified CUV chapters use the chapter-level Mandarin recordings
 published by [Audio Power](https://theaudiopower.org/translations/cuv/#nar1). The
 recordings are not bundled in the Git repository, but the church downloads and self-hosts
@@ -75,9 +83,9 @@ Spanish narrator is selected, the chapter shows a credit linking to WordProject'
 Spanish page. The terms are in
 [WordProject Spanish audio](../LEGAL.md#wordproject-spanish-audio-reina-valera-1909).
 
-Each recording is represented as one narrator with three ordered hosting sources rather
-than three narrator choices: the generated Adventist Connect manifest supplies the
-primary church-controlled copy, the complete
+The Mandarin CUV recording is represented as one narrator with three ordered hosting
+sources rather than three narrator choices: the generated Adventist Connect manifest
+supplies the primary church-controlled copy, the complete
 [Internet Archive collection](https://archive.org/download/CUV_201911) is the second
 tier, and Audio Power's host is the third, so that an outage of the church copy doesn't
 move every listener onto the ministry's small server. A
@@ -246,8 +254,8 @@ and maintainable regardless of external corporate changes.
 To ensure the longevity of the application and mitigate risks if the 501c3 (HelloAO Lab)
 shuts down:
 
-- **Source Fork:** The core API engine and data scripts have been forked to
-  CodeSammich/bible-api from the original repository.
+- **Source Fork:** The core API engine and data scripts have been forked from the original
+  repository to a maintainer's fork (`<your-fork>/bible-api`).
 - **Contingency Plan:** If the primary API becomes unavailable, the project can be
   redeployed as a collection of static JSON files via GitHub Pages or a self-hosted
   instance.
@@ -392,32 +400,39 @@ _Focus: Sentence structure and "natural" flow._
 KJV will be maintained for reference purposes, while modern translations like BSB will
 serve as the default.
 
-**Supported Translations:**
+**Supported Translations** (`SUPPORTED_TRANSLATIONS` in `services/BibleService.ts`):
 
 1. BSB - Modern Public Domain English
 2. KJV - English Traditional
 3. CUV (Traditional) - 1919 edition (Public Domain).
-4. CUVS (Simplicity) - Public Domain.
-5. RVR1909 (Spanish Traditional) - Public Domain.
-6. SSE (Spanish Modern) - Public Domain.
+4. CUVS (Simplified) - Public Domain.
+5. RVR09 (Reina-Valera 1909, Spanish Traditional) - Public Domain.
+
+There is no modern Spanish translation in the app.
 
 ## 4. Future Work
 
 ### 4.1 Caching and Offline Access
 
-The web/PWA preview supports service-worker caching, while explicit persistence in
-`IndexedDB` is planned for that browser target. `IndexedDB` is preferred there over
-`AsyncStorage` due to the large payload size of full Bible chapters and better performance
-with structured data queries. Native targets continue to use the platform storage path.
+The web/PWA preview's service worker (`public/sw.js`) is network-first: it caches the
+response to every GET request, including Bible chapters, and serves the cached copy when the network
+fails. Explicit persistence in `IndexedDB` is planned for that browser target. `IndexedDB`
+is preferred there over `AsyncStorage` due to the large payload size of full Bible chapters
+and better performance with structured data queries. On iOS and Android, the app caches
+chapter data only in memory while it runs, such as the whole fetch(bible) books behind
+CUV, CUVS, and RVR09; there is no saved chapter cache or Bible download
+yet (see the TODOs in `fetchCompleteTranslation` in `services/BibleService.ts`).
 
 ### 4.2 Bible Sharing Feature (done)
 
-- **Mechanism:** Standard Web Share API.
-- **Implementation:** A "Share" button on every verse or chapter header. The routing logic
-  utilizes "Smart Parsing" to handle case-insensitivity and common short-codes (e.g.,
-  `Jn 1:1` vs `John 1:1`) to ensure deep-link reliability.
-- **Payload:** Generates a deep link back to the app's web preview (e.g.,
-  `church-app.io/bible?v=john.1.1&t=cuvs`) or a plain-text snippet for WhatsApp.
+- **Mechanism:** React Native `Share.share` on iOS and Android. On web, the Web Share API
+  when the browser has it.
+- **Implementation:** **Share Verse** in the verse details sheet, and **Share** in the
+  bar that appears while verses are selected (press and hold a verse to start).
+- **Payload:** Plain text only: the verse text in quotes, then a line with the reference
+  and translation, such as `— John 3:16 (BSB)`. Several selected verses are joined, and the
+  reference lists their ranges (for example `John 3:1-4, 16`). The text has no link back to
+  the app.
 
 ### 4.3 Additional Language Support
 
@@ -427,13 +442,20 @@ Notably, Tibetan (Moravian Version Yoseb Gergan, 1948) is also public domain. Wh
 encoding was historically challenging, the HelloAO API provides TBTI (Central Tibetan) via
 their source metadata, offering a Unicode-encoded path for these scripts.
 
-### 4.4. Highlighting & Personal Saved Verses (done)
+### 4.4. Highlighting & Personal Saved Verses
 
-Like the YouVersion Bible app, users should be able to and add colored highlighting.
-Favorite verses will be saved to personal storage.
+Saved verses are done. They are stored on the device (`services/SavedVersesService.ts`,
+AsyncStorage), shaded in the reader with the theme's verse highlight color, and listed
+under **Saved Verses**, sorted by recently saved or Bible order.
+
+Colored highlighting, where users pick a color as in the YouVersion Bible app, is not
+built.
 
 ### 4.5 Custom Fonts
 
-Users should be able to select some high quality fonts for reading. Default is AdventSans
-which supports a wide variety of languages tested by the SDA international tradition of
-translating Bibles.
+Users should be able to select some high quality fonts for reading. The reader has no font
+choice today. The interface uses Plus Jakarta Sans for Latin script (`constants/Themes.ts`),
+verse text sets a Georgia / Times New Roman serif stack (`styles/ReaderStyles.ts`), and the
+original-language popup uses Ezra SIL for Hebrew and Aramaic and Gentium for Greek.
+AdventSans is not bundled; `constants/Themes.ts` notes it is for physical signage and
+branding.

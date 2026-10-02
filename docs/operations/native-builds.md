@@ -1,25 +1,40 @@
-# Web and native builds
+# Native mobile binary builds
 
-Web/PWA preview deployment remains automatic on pushes to `main` through the canonical
-GitHub workflow. Local `npm run deploy` builds the web output without publishing it.
-Signed native builds run only after a change reaches `main`; `release/**` branches are
-source/release-management branches, not signed-build targets. The Android PR preview is a
-separate credential-free path for unsigned debug APKs in ARM and Intel variants. Fork PRs do
-not receive Linux checks from this native-build documentation path; they are limited to the
-unsigned debug APK preview policy. Native iOS does not run on pull requests at all. It runs
-only from `main` after merge (or an explicitly approved manual run on `main`). Native builds
-upload to TestFlight and Google Play internal testing only; nothing is released to the public
-automatically (see [Automatic store uploads](#automatic-store-uploads)). Native iOS and Android are the primary release targets; the
-web/PWA build is retained for browser testing and previews. The same Expo source is
-used for all platforms.
+How the iPhone and Android apps are built, signed, checked, and sent to testers. This
+page covers:
 
-## Current migration status
+- the signed builds that run after a release merges into `main`, and where their
+  credentials are kept;
+- the unsigned builds and checks on each release pull request into `main`: an Android
+  debug APK, iOS Simulator builds with key-screen screenshots, and the Android audio
+  test;
+- building on your own computer, including on Windows through WSL;
+- the store accounts, their recovery, and the automatic uploads to TestFlight and
+  Google Play internal testing.
+
+Signed builds run only after a change reaches `main`, or from a manual run on `main`;
+`release/**` branches are never signed. Every merge into `main` starts **Native
+Android build** and **Native iOS build**, which wait for `production` approval. Pull
+requests get only unsigned builds that read no signing secrets: on the release pull
+request into `main`, **Android PR preview** builds a debug APK for ARM phones and **iOS
+PR preview** builds the app for the iOS Simulator on Apple Silicon and Intel Macs. Fork
+pull requests get no native builds. Signed builds upload to TestFlight and Google Play
+internal testing only; nothing is released to the public automatically (see
+[Automatic store uploads](#automatic-store-uploads)).
+
+The same Expo source is used for all platforms. The native apps are the primary release
+targets. The web build, which **Deploy Website and Tag** publishes to `app.nyccsda.org`
+on every push to `main`, is kept for browser testing and previews; see
+[The app website](admin-runbook.md#the-app-website-appnyccsdaorg). A local
+`npm run deploy` builds the web output without publishing it.
+
+## Current setup
 
 Android uses the zero-Expo-authentication build path. The repository contains a
 config plugin that teaches the generated Gradle project to use a keystore supplied
 through environment variables, and `npm run build:android` /
 `npm run build:android:apk` use `expo prebuild` followed by Gradle directly.
-The intended GitHub configuration keeps the four Android signing values in the
+GitHub keeps the four Android signing values in the
 protected `production` Environment. The workflow decodes only the base64 keystore
 into `$RUNNER_TEMP`, derives `ANDROID_KEYSTORE_PATH` from that temporary location,
 and exposes the signing values only to the Gradle invocation that signs the binary.
@@ -27,11 +42,10 @@ The path is not itself a secret, and no keystore or password is passed to Expo
 prebuild. Android builds do not need an Expo account, an Expo token, or EAS
 credential storage. Its job-level guard permits signed runs only from
 trusted `main`; the manual dispatch cannot attach the
-production Environment to an arbitrary ref. If the values were initially entered
-as ordinary repository secrets, move them to the protected Environment and remove
-the repository-level copies before the first signed release run.
+production Environment to an arbitrary ref. Keep the values only in the protected
+Environment; if a copy is ever added as an ordinary repository secret, delete it.
 
-The direct-native iOS workflow is now checked in separately as
+The direct-native iOS workflow is a separate file,
 `.github/workflows/native-ios-build.yml`. It runs only on trusted pushes to `main` and
 manual dispatch from `main`; it has no pull-request signing path. All signing paths require
 the protected `production` Environment. It uses a
@@ -74,7 +88,7 @@ reaches `main`.
 | Do not rotate the Android key annually | Upload keys do not expire annually; keeping the same key preserves the Play update path | Maintain encrypted backups; use Play's upload-key reset process after loss or compromise |
 | Build iOS with prebuild + Xcode | Removes Expo authentication and EAS credential custody from iOS while using trusted-branch or manual macOS workflows | Apple certificate/profile renewal and Xcode/runner updates still need periodic validation |
 | Upload automatically to testing only | Testers get every release without anyone moving files by hand, while the public release stays a manual step in each console | Store credentials are in a separate `store-upload` environment and job that runs no npm packages; the first Play upload was made by hand, as Play requires |
-| Do not build signed binaries before `main` | Production signing material is reserved for the post-merge `main` build. | Pull-request previews remain unsigned debug APKs for ARM and Intel; fork PRs do not receive signed builds or Linux native checks |
+| Do not build signed binaries before `main` | Production signing material is reserved for the post-merge `main` build. | Pull-request previews stay unsigned: an ARM debug APK and iOS Simulator builds. Fork PRs get no native builds |
 
 This is why the migration is not just “put the JKS in a GitHub secret.” The
 keystore must be the key Google expects, the version code must be monotonic, the
@@ -95,18 +109,17 @@ The Android workflow still references the normal `${{ secrets.NAME }}` context;
 the job's `environment: production` determines which Environment-level values are
 available. If the same name exists at repository and Environment scope, the
 Environment value takes precedence, but keeping duplicates is confusing and
-weakens the intended boundary. Therefore the four Android values must be added to
-`production`, verified with a protected run, and then removed from Repository
-secrets. `ANDROID_KEYSTORE_PATH` remains a derived runner-temporary path rather
+weakens the intended boundary. Therefore the four Android values belong only in
+`production`, not in Repository secrets. `ANDROID_KEYSTORE_PATH` remains a derived runner-temporary path rather
 than a stored credential, and `EXPO_TOKEN` has no role in this architecture.
 
 ### Android PR preview and Drive upload
 
 The signed **Native Android build** workflow intentionally runs only after a commit reaches
 `main`; it does not sign release-branch or pull-request commits. The separate **Android PR
-preview** workflow is credential-free and is reserved for unsigned debug APK previews in
-ARM and Intel variants. Fork PRs do not receive Linux native checks or production signing;
-the only native artifact permitted by this policy is an unsigned debug APK preview. The
+preview** workflow builds with no signing credentials: it makes a debug APK, signed only
+with Gradle's local debug key, for ARM phones and tablets (`npm run build:android:apk:debug:arm`). Fork PRs get no native
+builds and no production signing. The
 workflow runs automatically for release pull requests into `main`, from a `release/*`
 branch in this repository.
 It does not accept manual commit or pull-request SHA inputs and does not use dependency
@@ -117,12 +130,12 @@ the APK artifact and checks out the upload helper from the trusted base commit. 
 check out or execute PR code while the Google credential is available. The helper refreshes
 the existing `CLASPRC_JSON` OAuth token and
 uploads a private APK file to the connected user's My Drive root. The OAuth account must
-retain the `drive.file` scope. If a dedicated folder is later preferred, set
-`GOOGLE_DRIVE_FOLDER_ID` in the protected upload job and pass it to the helper.
+retain the `drive.file` scope. To upload into a folder instead, add a
+`GOOGLE_DRIVE_FOLDER_ID` secret to `production`; the upload job already passes it to the
+helper.
 
-Automatic PR runs require the credential-free preview guard; configure `production` with
-required reviewers and a `main` deployment-branch policy if Drive uploads should require a
-human approval. The build job receives no signing credentials, and fork PRs are skipped.
+`production` requires a reviewer, so the Drive upload waits for someone to approve it.
+The build job receives no signing credentials, and fork PRs are skipped.
 The Drive upload job must remain separate from the build job, and the upload helper must be
 checked out from the trusted base commit rather than the PR head.
 
@@ -132,28 +145,30 @@ The release pipeline compiles Android directly on a GitHub-hosted Linux runner
 with Gradle and iOS directly on a GitHub-hosted macOS runner with Xcode. Neither
 workflow uses EAS CLI, Expo authentication, or an EAS Cloud builder.
 
-The intended credential boundary for the church-owned project is GitHub Actions:
+The credential boundary for the church-owned project is GitHub Actions:
 
 | Credential | Custodian | CI location |
 | --- | --- | --- |
 | Android upload keystore | Church / Google Play account | Protected `production` Environment secret |
-| Google Play service-account key | Church / Google Play account | Separate protected `production` Environment secret, not currently configured |
+| Google Play upload sign-in (service account, no key) | Church Google Cloud project / Google Play account | `store-upload` Environment: only the provider and service account names, no key |
 | Apple distribution certificate (`.p12`) | Church Apple Developer account | Protected `production` Environment secret |
 | Apple App Store provisioning profile | Church Apple Developer account | Protected `production` Environment secret |
-| App Store Connect API key (`.p8`) | Church App Store Connect account | Separate protected `production` Environment secret, not currently configured |
+| App Store Connect API key (`.p8`) | Church App Store Connect account | `store-upload` Environment secret |
 
 The Android keystore above is the **upload key**, not Google's Play app-signing key.
 With Play App Signing, Google protects the final signing key and the CI pipeline only
-needs the upload key. The App Store Connect `.p8` key is for submission automation;
-it is separate from the Apple distribution certificate and provisioning profile.
+needs the upload key. The App Store Connect `.p8` key is for uploading builds to
+TestFlight; it is separate from the Apple distribution certificate and provisioning
+profile. Google Play needs no stored key: the upload job signs in without one (see
+[Setting up the Google Play service account](#setting-up-the-google-play-service-account)).
 
 No signing or submission credentials are stored with a build vendor. The native
 workflows restore only the files needed for that run from GitHub Environment
 secrets and remove them afterward.
 
-### Current versus target configuration
+### How the signing jobs work
 
-The Android direct-native path is now active in the repository. Its committed
+Android's committed
 config plugin changes only the generated `android/app/build.gradle`; it reads
 `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
 `ANDROID_KEY_PASSWORD` at Gradle runtime. The workflow decodes
@@ -161,24 +176,24 @@ config plugin changes only the generated `android/app/build.gradle`; it reads
 APK, uploads the artifact, and removes the keystore in an `always()` cleanup step.
 The private key is never committed or included in a build artifact.
 
-The iOS GitHub job now uses direct Xcode archive/export. Before the first direct
-iOS release, the implementation must:
+The iOS job archives and exports with Xcode directly. It:
 
-1. Restore an Apple distribution `.p12` and App Store provisioning profile only
-   inside a protected GitHub job, using a temporary keychain.
-2. Create an explicit `xcodebuild archive` and `xcodebuild -exportArchive` path,
-   with an export-options plist generated from configuration rather than secrets
-   committed to source.
-3. Use a protected production Environment, required approval, and a `main`-only
-   push or manual-dispatch guard for jobs that can read Apple signing secrets.
-4. Compute the iOS build number from the version; see
+1. Restores the Apple distribution `.p12` and App Store provisioning profile only
+   inside the protected job, using a temporary keychain.
+2. Runs `xcodebuild archive` and `xcodebuild -exportArchive`, with an export-options
+   plist generated on the runner rather than committed to source.
+3. Runs only in the protected `production` Environment, after approval, behind a
+   `main`-only push or manual-dispatch guard.
+4. Computes the iOS build number from the version; see
    [Version numbers](version-numbers.md).
-5. Upload the artifact to TestFlight and verify an update install on a physical
-   iPhone; see [Automatic store uploads](#automatic-store-uploads).
+5. Hands the IPA to a separate job that uploads it to TestFlight; see
+   [Automatic store uploads](#automatic-store-uploads). Before each public release,
+   install the TestFlight build on a physical iPhone and check that it updates over the
+   previous one.
 
 The workflow's `main`-only guard is an important part of this boundary and must remain.
-Secrets must be configured in the church's upstream repository/Environment; they are
-not shared automatically with the CodeSammich fork.
+Secrets must be configured in the church's upstream repository and its Environments;
+GitHub doesn't share them with forks, such as `<your-fork>/sda-church-app`.
 
 ### Native build workflow
 
@@ -187,12 +202,14 @@ not shared automatically with the CodeSammich fork.
 3. Build Android with Gradle (`bundleRelease`/`assembleRelease`).
 4. Build and export iOS with Xcode (`xcodebuild archive` and
    `xcodebuild -exportArchive`).
-5. Delete native projects and signing files after the job.
+5. Delete the signing files, whether the build passed or failed.
+6. In separate jobs that never see the signing files, upload the AAB to Google Play
+   internal testing and the IPA to TestFlight.
 
 This removes the Expo account and token dependency, but it is not a package-only
 change. The workflows own Android signing configuration, an iOS temporary keychain
-and export options, and version-code/build-number injection. Store upload remains a
-separate manual step.
+and export options, and version-code/build-number injection. Releasing to the public
+remains a manual step in each store's console.
 Keep native customization in `app.json` and config plugins; Expo warns that manual
 changes to generated projects can be overwritten by a later clean prebuild. See
 [Continuous Native Generation](https://docs.expo.dev/workflow/continuous-native-generation/)
@@ -218,10 +235,13 @@ before relying on a quota.
 
 The automatic native workflow can run two signed Android jobs on a `main` push: Android
 AAB and Android APK. The iOS workflow is separate and runs only on a trusted `main`
-push or a manual dispatch from `main`; it never runs as a pull-request build. PR native
-previews are unsigned Android debug APKs for ARM and Intel, not signed release builds.
-The unsigned **iOS PR preview** adds two macOS jobs, Apple Silicon and Intel, to
-each release PR into `main`; see [iOS PR preview](#ios-pr-preview-unsigned-simulator-builds). A rough
+push or a manual dispatch from `main`; it never runs as a pull-request build. Each
+release PR into `main` also runs unsigned builds: **Android PR preview** builds one ARM
+debug APK on Linux, **Android audio e2e** builds an Intel debug APK and runs it on an
+emulator on Linux (about 20 minutes; see
+[Android audio test](#android-audio-test-on-release-prs)), and **iOS PR preview** adds two
+macOS jobs, Apple Silicon and Intel; see
+[iOS PR preview](#ios-pr-preview-unsigned-simulator-builds). A rough
 private-repository estimate for the automatic Android workflow is:
 
 ```text
@@ -251,8 +271,8 @@ for a private GitHub Free organization, assuming the rough 10× macOS billing we
 | 45 minutes | 4 |
 
 These counts exclude Android jobs and other workflows, and every pushed revision or
-manual rerun counts as another job. PR native previews are limited to unsigned ARM and
-Intel debug APKs; signed iOS builds remain reserved for the post-merge `main` path or
+manual rerun counts as another job. Pull requests get only the unsigned builds above;
+signed iOS builds remain reserved for the post-merge `main` path or
 manual dispatch from `main`. If the upstream repository is public, the
 standard macOS runner is currently free and unlimited, though concurrency and fair-use
 limits still apply. See [GitHub's runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
@@ -278,21 +298,23 @@ orchestration visible in this repository and avoid another credential boundary.
 
 ## Expo 58 Android prebuild
 
-This branch uses the Expo 58 preview SDK and its matching stable template package.
-Generate the Android project with the exact template version used by the build
-script:
+The app uses Expo SDK 58 (`expo ~58.0.0`) with a React Native 0.88 release
+candidate, and the matching template package. Use Node 22, the version the native
+workflows use. Generate the Android project with the exact template version used by
+the build script:
 
 ```sh
-source ~/.nvm/nvm.sh
-nvm use 24
 npm install --force
 npx expo prebuild \
   --template expo-template-bare-minimum@58.0.9 \
   --platform android
 ```
 
-The direct-native script intentionally regenerates the ignored Android project
-from this template. Do not hand-edit `android/`; put durable changes in
+The direct-native script generates the ignored Android project from this template
+when `android/` doesn't exist yet, was generated for the other app ID (preview or
+store), or when you pass `--prebuild`; otherwise it reuses the existing project (see
+[Local Expo template lookup](#local-expo-template-lookup)).
+Do not hand-edit `android/`; put durable changes in
 `app.json` or a config plugin. A manual prebuild can use:
 
 ```sh
@@ -303,10 +325,12 @@ npx expo prebuild \
 ```
 
 Then use `npm run build:android`, `npm run build:android:apk`, or
-`npm run build:android:apk:debug`; those scripts run the prebuild automatically.
+`npm run build:android:apk:debug`; those scripts prebuild on their own when there is no
+`android/` project yet.
 
-If the Expo 58 preview version changes, update the template version in this section
-to the matching template before regenerating native files.
+When the Expo SDK version changes, update the template version in this section, in
+the build scripts, and in the iOS workflows to the matching template before
+regenerating native files. A test fails if they differ.
 
 ## Building an independent fork
 
@@ -449,10 +473,10 @@ Managed Apple Accounts through Apple Business Manager, Apple says Account
 Holder-role changes may require contacting Apple, so document the relationship
 and do not make the account dependent on one employee's personal Apple Account.
 
-1. Install dependencies with `npm ci --force`. Expo 58 preview currently pairs a
-   React Native release candidate with peer ranges that exclude prereleases; remove
-   `--force` when the SDK publishes a stable React Native dependency graph. Use Node
-   22 for parity with native CI.
+1. Install dependencies with `npm ci --force`. Expo SDK 58 is stable, but the app
+   still uses a React Native 0.88 release candidate, and some peer ranges exclude
+   prereleases; remove `--force` once the app moves to a stable React Native release
+   (#211). Use Node 22 for parity with native CI.
 2. Confirm `org.nyccsda.app` is the intended identifier in both stores. Configure
    the organization's Apple Developer/App Store Connect and Google Play accounts.
 3. Decide the credential source before the first store build. This project uses
@@ -480,9 +504,8 @@ The current Android workflow needs only these four production Environment secret
 `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
 `ANDROID_KEY_PASSWORD`. `ANDROID_KEYSTORE_PATH` is deliberately not a stored
 secret: the workflow creates the keystore at a fresh runner-temporary path and
-passes that derived path to the build script. `EXPO_TOKEN` is not read by any
-recommended workflow and should be removed after the PR that removes EAS support
-has merged.
+passes that derived path to the build script. No workflow reads `EXPO_TOKEN`; if
+an `EXPO_TOKEN` secret is still set in the repository or an Environment, delete it.
 
 Use separate secrets rather than one large structured secret where practical:
 
@@ -575,9 +598,10 @@ job, in the `store-upload` Environment, uploads the IPA; see
 
 ## Android setup: GitHub-hosted direct builds
 
-Complete these steps in order. The repository changes are ready, but the first
-Android store build should not be run until the exact Play version code and
-upload-key situation are confirmed.
+The church has completed these steps; its first Play upload, 0.39.0, was made by hand
+(see [Signing and the first upload](app-store-setup.md#signing-and-the-first-upload)).
+They're kept here, in order, for replacing a lost or compromised upload key and for
+anyone setting up a fork.
 
 ### 1. Identify the key Google Play expects
 
@@ -634,9 +658,10 @@ and the build script refuses to run if `app.json` sets one. See
 ### 4. Configure the protected GitHub Environment
 
 In the church's **upstream** GitHub repository, open **Settings → Environments**
-and create or select `production`. Require at least one reviewer, restrict the
-deployment branch to the church's trusted `main` branch, and add
-these Environment secrets:
+and create or select `production`. Require at least one reviewer, and restrict
+deployment branches to `main` and `release/**`. The release branches need it only so
+the Android PR preview can upload its APK to Drive; the signing jobs themselves run
+only on `main`. Add these Environment secrets:
 
 ```text
 ANDROID_KEYSTORE_BASE64       # base64 of the JKS file
@@ -706,11 +731,12 @@ npm run build:android -- --output /tmp/nyccsda-release.aab
 unset ANDROID_KEYSTORE_PATH ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD
 ```
 
-Both paths regenerate the ignored Android project with Expo prebuild, apply the
-committed signing plugin, invoke Gradle, and copy the result to the requested
-path. The signed path refuses to build without complete signing values, or with a
-hand-set `versionCode` in `app.json`. The signed APK is useful for physical-device testing;
-the AAB is what goes to Google Play.
+Both paths generate the ignored Android project with Expo prebuild (or reuse an
+existing one; see [Local Expo template lookup](#local-expo-template-lookup)), apply
+the committed signing plugin, invoke Gradle, and copy the result to the requested
+path. The signed path refuses to build without complete signing values, and every
+build refuses a hand-set `versionCode` in `app.json`. The signed APK is useful for
+physical-device testing; the AAB is what goes to Google Play.
 
 Verify the artifact locally before uploading:
 
@@ -759,22 +785,34 @@ lost or compromised upload key. See [Google Play App Signing](https://support.go
 
 ### Android direct-native commands
 
-The Android scripts regenerate the ignored native project with Expo prebuild, apply
+The Android scripts generate the ignored native project with Expo prebuild when needed
+(see [Local Expo template lookup](#local-expo-template-lookup)), apply
 `plugins/withAndroidLocalSigning.js`, and invoke Gradle directly. Signed release
-commands require the four `ANDROID_*` variables; the local preview command does not:
+commands require the four `ANDROID_*` variables; the debug commands do not:
 
 ```sh
 npm run build:android:apk -- --output /absolute/path/app.apk
 npm run build:android -- --output /absolute/path/app.aab
 npm run build:android:apk:debug -- --output /absolute/path/local-preview.apk
+npm run build:android:apk:debug:arm -- --output /absolute/path/preview-arm.apk
+npm run build:android:apk:debug:intel -- --output /absolute/path/preview-intel.apk
 ```
 
 The signed commands require the four `ANDROID_*` signing environment variables; see
 [Android setup](#android-setup-github-hosted-direct-builds).
-The debug command uses Gradle's automatically generated debug key and does not require
-or touch the production upload keystore. It creates a standalone APK for local device
-testing and must never be uploaded to Google Play. A truly unsigned APK is generally
+The debug commands use Gradle's automatically generated debug key and do not require
+or touch the production upload keystore. They create a standalone APK for local device
+testing that must never be uploaded to Google Play. A truly unsigned APK is generally
 not installable.
+
+`build:android:apk:debug` builds for all four Android processor types, the generated
+project's default. The `:arm` and `:intel` versions pass `--architectures arm`
+(`armeabi-v7a` and `arm64-v8a`, for phones and other ARM devices) or
+`--architectures intel` (`x86` and `x86_64`, for emulators on Intel and AMD computers)
+to `scripts/build-android-native.mjs`, which builds only those, so the build is faster
+and the APK smaller. **Android PR preview** uses `:arm`; **Android audio e2e** uses
+`:intel` for its emulator. Without `--output`, the file name ends in `-arm` or
+`-intel`.
 
 The signed APK is for direct installation/testing, and the AAB is the Google Play artifact.
 
@@ -784,32 +822,46 @@ The signed APK is for direct installation/testing, and the AAB is the Google Pla
 | Android AAB (Google Play) | `npm run build:android` |
 | Android APK (direct installation) | `npm run build:android:apk` |
 | Android APK (local debug key) | `npm run build:android:apk:debug` |
+| Android APK (local debug key, ARM devices such as phones) | `npm run build:android:apk:debug:arm` |
+| Android APK (local debug key, emulators on Intel or AMD) | `npm run build:android:apk:debug:intel` |
 
 The direct Android commands output a binary on this computer; append
-`--output /absolute/path/app.aab` or `.apk` to choose its destination. The
+`--output /absolute/path/app.aab` or `.apk` to choose its destination. Without it,
+the file goes in `build/`. The
 preview APK is standalone and does not require Metro. The direct iOS workflow
 uses the App Store distribution profile and a build number computed from the version;
 internal iOS distribution is not TestFlight.
 
-Local iOS builds require macOS, Xcode with command-line tools, and CocoaPods. Local Android builds require macOS or Linux, Java 17, Android SDK/NDK
-and accepted SDK licenses; install Android Studio and the SDK tooling required by
-the Expo 58 preview dependency set. Configure `ANDROID_HOME` and the Android
+Local iOS builds require macOS, Xcode with command-line tools, and CocoaPods. Local
+Android builds require macOS or Linux, Node 22 or 24, Java 17, the Android SDK and NDK, and
+accepted SDK licenses. The workflows install `platforms;android-37.0`,
+`build-tools;37.0.0`, and `ndk;27.1.12297006`; install the same with Android Studio or
+`sdkmanager`. Configure `ANDROID_HOME` and the Android
 command-line tools on PATH.
 Direct Android and iOS compilation require network access for npm dependencies,
 the Expo template, and CocoaPods, but not Expo authentication. They are not
 offline build paths. Build one platform at a time.
 
+**On Windows, use WSL.** The Android build script runs Gradle as `./gradlew`, which
+works on macOS and Linux but not in a Windows command prompt or PowerShell. Inside WSL
+it's a Linux build: install Node 22, Java 17, and the Linux Android SDK in WSL, as
+above, and run the commands there. iOS builds, including
+`npm run build:ios:simulator`, need a Mac. To run the
+[Android audio test](#android-audio-test-on-release-prs) script from WSL against an
+emulator or phone that Windows manages, set `ADB` to Windows's `adb.exe`.
+
 In GitHub Actions, select **Native Android build → Run workflow** for an Android AAB
 or APK. Select **Native iOS build → Run workflow** for an iOS IPA; its build number
-is computed from the version. These workflows
-become available in the Actions UI after they reach the default branch. Android compiles
+is computed from the version. Both must run on `main`. Android compiles
 directly with Gradle on Ubuntu 24.04 / Java 17; iOS compiles directly with Xcode
 on macOS 26 / Xcode 26.6. Download the signed binaries from the run's Artifacts
-section (14-day retention). Neither recommended workflow requires Expo
-authentication.
+section: Android's are kept 14 days and the iOS IPA 90 days. A merge into `main`
+also attaches the AAB, APK, and IPA to that version's GitHub Release, where they stay.
+Neither workflow requires Expo authentication.
 GitHub compilation uses GitHub runner minutes/storage.
-No selection performs no builds. Native failures do not block the web/PWA preview
-deployment.
+On `main`, a manual Android run builds both the AAB and the APK whichever boxes are
+ticked; the AAB box only decides whether the AAB is also uploaded to Google Play
+internal testing. Native failures do not block the website deployment.
 
 ### iOS PR preview (unsigned Simulator builds)
 
@@ -969,6 +1021,28 @@ iPhone, or run:
 xcrun simctl install booted /path/to/the.app
 xcrun simctl launch booted org.nyccsda.app
 ```
+
+### Android audio test on release PRs
+
+**Android audio e2e** (`android-audio-e2e.yml`) checks Bible audio on a real Android
+player, which Jest can't reach. It runs on each release PR into `main`, where its job,
+**Bible audio on an Android emulator**, is a required check, and it can be started by
+hand on any branch. Like the iOS preview, it skips feature PRs into a release branch,
+other PRs into `main`, and forks. It reads no secrets.
+
+On an Ubuntu runner it builds the debug APK with `npm run build:android:apk:debug:intel`,
+boots an Android 16 (API 36) emulator, and runs `scripts/e2e/android-bible-audio.sh`.
+A local DNS server makes the church's audio host unreachable, so the first scenario
+checks that playback fails over to the next source. The others check that the next
+chapter starts with the screen off while the media foreground service stays up, that
+audio starts without an unlock when the connection returns, that a mid-chapter
+connection loss resumes where it stopped, and that pause and resume keep the place. It
+plays real recordings, so an outage at an audio host can fail it too. When it fails, the
+`android-audio-e2e-*` artifact (kept 14 days) has a screenshot and logs for each failed
+scenario.
+
+The [admin runbook](admin-runbook.md#bible-audio-emulator-test) describes each scenario,
+what to do when it fails, and how to run the script on your own emulator.
 
 ## Automatic store uploads
 
@@ -1240,28 +1314,35 @@ release → Internal testing → Create new release**. Upload the AAB, not the A
 ## Versions and maintenance
 
 `package.json` / `app.json` retain the shared user-facing release version managed by
-`npm run sync-version`. That version should be changed explicitly for each planned
-release, and release CI can synchronize it from the release PR title. Both stores'
+`npm run sync-version`. Change it explicitly for each planned release, with
+`npm run sync-version -- --version x.y.z` in the release branch. CI doesn't change it:
+**Release - PR Version Sync** only checks that the version files match the release
+PR's title, and fails if they don't. Both stores'
 build numbers are computed from it; see [Version numbers](version-numbers.md).
 
 Keep generated `ios/` and `android/` projects out of Git and express native
 configuration through Expo config/plugins. SDK upgrades require checking
 Node/Java/Xcode/Android tooling and revalidating physical-device behavior. The app
 explicitly pins Android compile API 37, target API 36, and build tools 37.0.0 through
-`expo-build-properties`. This split is intentional: the Expo preview's native AARs
-require compile API 37, while Google Play currently requires new apps and updates to
-target API 36 from August 31, 2026. Android's compile SDK and target SDK are separate;
+`expo-build-properties`. This split is intentional: Expo SDK 58 and React Native 0.88
+compile against API 37 by default, while
+Google Play has required new apps and updates to target API 36 since August 31, 2026.
+Android's compile SDK and target SDK are separate;
 compiling against API 37 does not opt the app into API 37 runtime behavior. The
-workflow installs the versioned `platforms;android-37.0` package, matching the current
-runner image, plus build tools and NDK. Revisit this preview-SDK pin when Expo ships a
-compatible stable SDK and when the Android platform requirement changes.
+workflows install the versioned `platforms;android-37.0` package, matching the current
+runner image, plus build tools and NDK. Revisit these pins with each Expo SDK upgrade
+and when Google Play's target API requirement changes.
 
 Before release, run `npx expo install --check`, `npx expo-doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices,
-including the background-audio acceptance checks in
-[native-store-investigation.md](native-store-investigation.md). Successful JavaScript
+including the background-audio checks in the acceptance gate of
+[native-store-investigation.md](native-store-investigation.md); its OTA item doesn't
+apply, because OTA isn't configured. On Android, the
+[Android audio test](#android-audio-test-on-release-prs) covers failover, screen-off
+chapter changes, and connection loss on an emulator, but not a physical phone.
+Successful JavaScript
 exports alone do not prove native compilation, signing, playback or store acceptance.
-OTA updates are not configured by this setup; web/PWA preview deployments do not
+OTA updates are not configured by this setup; website deployments do not
 update installed native apps.
 
 Local builds are manageable for a maintainer comfortable installing SDK tools.

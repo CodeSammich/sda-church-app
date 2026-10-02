@@ -1,12 +1,50 @@
 # Offline Bulletin Translation: Bergamot Feasibility Decision
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-10-02
 
-Status: **Deferred; do not implement in the production app yet**
+Status: **Bergamot (on-device translation) is deferred and not in the app.** Server-side
+machine translation of three short bulletin fields shipped in 0.38.x; see
+[Current behavior](#current-behavior).
 
 Native iOS and Android builds are the primary release targets. The web/PWA build remains
 available for browser testing, but a web-only translation implementation would not satisfy
 the app's native parity requirement.
+
+## Current Behavior
+
+Since 0.38.x (#246), the bulletin machine-translates three English schedule fields on the
+server, not on the phone. Bergamot was never added.
+
+- `buildBulletinMetadataTranslations_` in `google-apps-script/BulletinApi.gs` sends
+  `specialRemark`, `tithePurpose`, and `pastorTravel` through Apps Script's
+  `LanguageApp.translate`, from English into Traditional Chinese (`zh-TW`), Simplified
+  Chinese (`zh-CN`), and Spanish (`es`). The public response carries the results in
+  `bulletin.metadataTranslations`. The print workflow's full-name request skips this
+  step.
+- A blank field, or a language whose translation fails, keeps the English text. Failures
+  are logged and never hide the English value.
+- The server caches the bulletin response for 2 minutes, so translation only runs on a
+  cache miss.
+- The Bulletin screen (`app/(tabs)/home/bulletin.tsx`, `getLocalizedMetadataValue`) shows
+  the translation for the app language. For the tithe purpose (shown on the Queens
+  program's **Tithe & Offering** row) and **Pastor Travel**, the English original follows
+  on the next line when it differs. The **Special Remark** banner
+  shows the translation only.
+- The app doesn't mark any of this text as machine translated, on screen or for screen
+  readers.
+- The printed bulletin translates the offering value on its own:
+  `translatePhysicalOfferingToTraditionalChinese_` in
+  `google-apps-script/PrintedBulletin.gs` prints the Traditional Chinese translation above
+  the English, or a dash when translation fails.
+- Sermon titles are not machine translated. The intake sheet keeps separate
+  `English Sermon Title` and `Chinese Sermon Title` columns, and the app falls back to the
+  other one when one is missing.
+- Bible text and Bible references never go through `LanguageApp`; see
+  [Bulletin automation](../operations/bulletin-automation.md).
+
+The rest of this document is the 2026-08-09 Bergamot review. Its download measurements and
+native-parity analysis still apply. Where it sets rules for machine output, the shipped
+behavior above differs, and the differences are noted in place.
 
 ## 1. Decision Summary
 
@@ -22,25 +60,33 @@ not provide native React Native support on iOS and Android. Shipping it now woul
 make translation web-only or require a new, maintained native C++ integration and custom
 mobile builds.
 
-Do not add Bergamot to `package.json`, download its models, or automatically translate
-bulletin fields without a new implementation review and device benchmarks.
+Do not add Bergamot to `package.json` or download its models without a new implementation
+review and device benchmarks. (The 2026-08-09 text also said not to translate bulletin
+fields automatically. Server-side translation of three fields shipped later; see
+[Current behavior](#current-behavior).)
 
 ## 2. Product Need and Scope
 
-The proposed feature would fill a missing localized value for public worship content such
-as:
+The 2026-08-09 proposal would fill a missing localized value for public worship content
+such as:
 
 - `bulletin.tithePurpose` (the offering/tithe purpose text); and
 - a missing English or Chinese `location.sermonTitle` answer.
 
-Machine output must be a fallback. It must never overwrite the submitted source or a
-human-provided translation. Church terminology and short sermon titles are unusually
+It said machine output must be a fallback. It must never overwrite the submitted source or
+a human-provided translation. Church terminology and short sermon titles are unusually
 context-sensitive, so the source must remain available and generated text must be labeled
 as machine translated for both visual and screen-reader users.
 
+What shipped differs: `tithePurpose`, `specialRemark`, and `pastorTravel` are translated on
+the server, sermon titles are not, and no translation is labeled. The English source stays
+visible for the tithe purpose (on **Tithe & Offering**) and **Pastor Travel** but not under
+the **Special Remark** banner. See [Current behavior](#current-behavior).
+
 The existing form already accepts separate English and Chinese sermon titles. Human entry
-remains the preferred solution. Tithe purposes are often recurring phrases, making a small,
-church-reviewed local glossary a much cheaper and more reliable first fallback.
+remains the preferred solution. Tithe purposes are often recurring phrases, so the proposal
+named a small, church-reviewed local glossary as a cheaper and more reliable first
+fallback. No glossary exists today.
 
 ## 3. How Bergamot Works
 
@@ -101,8 +147,8 @@ would need a pinned, reproducible WASM build compatible with the chosen model re
 integrity hashes, progress/cancellation UI, storage-quota handling, and an explicit model
 cache in IndexedDB or OPFS.
 
-The existing service worker must not own the model cache. It caches every successful GET
-in a release-versioned cache and deletes old release caches during activation. A model
+The existing service worker must not own the model cache. It caches the response to every GET
+request in a release-versioned cache and deletes old release caches during activation. A model
 stored there could be downloaded again after every app release and could evict ordinary
 offline app resources. Model storage must have an independent lifecycle and a user-facing
 delete control.
@@ -165,7 +211,8 @@ Repeatedly initializing a model once per field would be wasteful.
 
 ## 7. Recommended Near-Term Design
 
-Use deterministic and human-reviewed data before local neural translation:
+The 2026-08-09 review recommended deterministic and human-reviewed data before local neural
+translation:
 
 1. Keep the bilingual sermon-title form fields and preserve the existing source-language
    fallback when one is missing.
@@ -175,8 +222,13 @@ Use deterministic and human-reviewed data before local neural translation:
    exists.
 4. Never silently present a guessed ecclesiastical translation as submitted church data.
 
-This approach is tiny, instant, offline, consistent across the native apps and web/PWA
-preview, and has no API keys or recurring cost.
+It described this approach as tiny, instant, offline, consistent across the native apps and
+web/PWA preview, and free of API keys and recurring cost.
+
+Status today: item 1 is in place. Items 2 and 3 were not built; the server's `LanguageApp`
+translation fills the gap instead. Item 4 doesn't match the shipped app, which shows
+machine-translated text without a label, and shows the **Special Remark** translation
+without its English source. See [Current behavior](#current-behavior).
 
 ## 8. Reconsideration Gates
 
@@ -192,4 +244,4 @@ Bergamot may be reconsidered when all of the following are available:
 - an acceptance budget approved before implementation (download size, disk use, peak RAM,
   cold-start latency, and failure behavior).
 
-Until those gates are met, the production decision remains **deferred**.
+Until those gates are met, the Bergamot decision remains **deferred**.
