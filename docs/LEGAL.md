@@ -24,7 +24,11 @@ terms, ownership, or permissions will remain unchanged.
 The Bible reader uses two separate content services with different roles:
 
 - [HelloAO](https://bible.helloao.org/) supplies the English reader text and the
-  shared translated-edition book catalog.
+  shared translated-edition book catalog. It also supplies the BSB's English audio:
+  each BSB chapter comes with HelloAO's narrator links, and the app offers each one
+  as a narrator. As of October 2026, HelloAO lists four narrators: three play from
+  HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
+  The app has no KJV audio.
 - [fetch(bible)](https://fetch.bible/) supplies the Chinese Union Version,
   Reina-Valera 1909, and the original-language critical editions shown in the
   verse-detail popup. Its normalized Chinese and Spanish resources expose the
@@ -318,7 +322,7 @@ is linked, not copied.
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
-| **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book's official English, Chinese, or Spanish edition, and small cover thumbnails from `a.egwwritings.org`. *The Story of Jesus* opens in English, or for Spanish readers as the official Spanish edition, *Cristo Nuestro Salvador* (`text.egwwritings.org/read/1747.3`), whose chapters match it one for one | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
+| **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book directly in the app language's official edition (English; Chinese, one edition for both scripts; or Spanish), and small cover thumbnails from `a.egwwritings.org`. *The Story of Jesus* opens in English, or for Spanish readers as the official Spanish edition, *Cristo Nuestro Salvador* (`text.egwwritings.org/read/1747.3`), whose chapters match it one for one | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
 | **Chinese Union Mission** (`api.sdabible.org`, `cms.sdabible.site`) | Cover thumbnails for the Chinese EGW editions only, loaded from its public catalog. The books themselves open on EGW Writings. | Same limited navigational use as the EGW covers. Image URLs are checked against the Mission's storage host. |
 | **Adventist pioneer books on EGW Writings** | A link to Uriah Smith, *Daniel and the Revelation*, 1897 edition (`text.egwwritings.org/read/12861.1`) | Published in 1897, so public domain in the U.S. The app only links to it. Later revisions, such as the 1944 *The Prophecies of Daniel and the Revelation*, are still copyrighted and must not be substituted. |
 | **Adventist Pioneer Library translation on EGW Writings** | For Spanish readers, J. N. Andrews, *Historia del Sábado* (`text.egwwritings.org/read/14404.2`), in place of the English *History of the Sabbath* | A 2020 Spanish translation of the 1873 edition by Rolando Itin, © Adventist Pioneer Library, published on EGW Writings; its credits page names the 1873 original. The translation is copyrighted, so the app only links to it. |
@@ -332,12 +336,12 @@ Each source falls back to the app's own original, text-free cover art if its
 thumbnail can't load. That art was generated for this app without using the official
 covers as input or reference.
 
-The covers of the other library books are the app's own designs too. *The Pilgrim's
-Progress* and *The Story of Jesus* use illustrations generated for the app. The rest
-are typographic covers in the style of old cloth bindings, drawn from scratch by
+The covers of the other library books are the app's own designs too: typographic
+covers in the style of old cloth bindings, drawn from scratch by
 [`scripts/generate-library-covers.py`](../scripts/generate-library-covers.py) with fonts
-under the SIL Open Font License; none reproduces a publisher's cover. The Spanish
-editions get Spanish versions of the same covers.
+under the SIL Open Font License. None reproduces a publisher's cover. The Spanish
+editions, and the Chinese edition of *The Pilgrim's Progress*, get their own versions
+of the same covers.
 
 ### Internet Archive sources
 
@@ -512,6 +516,12 @@ sources and the implementation restrictions are recorded in
 
 ## Privacy Policy
 
+The app shows this policy, in English only, under **You → Privacy Policy**
+(`app/(tabs)/you/privacy.tsx`). Both store listings link to the web copy,
+[`public/privacy-policy.html`](../public/privacy-policy.html), served at
+`https://app.nyccsda.org/privacy-policy.html`. The three copies are worded a little
+differently; update all three when the app's data practices change.
+
 ### 1. Introduction
 
 This application values privacy and uses data minimization. The app does not require a
@@ -577,7 +587,7 @@ information those external platforms independently collect from you. When you ch
 share a Bible verse, the selected text is passed to the operating system share sheet and
 the app you choose; this app does not receive the recipient's information.
 
-### Device Permissions and Data Requests
+### 6. Device Permissions and Data Requests
 
 The native app uses audio playback, including background playback. It does not request
 device location, camera, microphone, contacts, photos, or notifications. Because the app does not create
@@ -596,6 +606,10 @@ policy should be updated whenever the app's data practices change.
 ---
 
 ## Legal Disclaimer
+
+The app shows this disclaimer, in English only, under **You → Legal Disclaimer**
+(`app/(tabs)/you/legal.tsx`). The in-app version also summarizes where Library books
+are read and how to change the text size in EGW Writings' reader.
 
 ### 1. Usage of External Resources
 

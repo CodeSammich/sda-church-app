@@ -39,8 +39,10 @@ does and what still needs a person.
 | `release-approvers` team | Members of the GitHub team | Approve jobs that use the `production` Environment |
 | Contributor | Anyone with a fork | Open pull requests into a `release/*` branch |
 
-The `production` Environment holds every credential: Google (`CLASPRC_JSON`), Apple
-signing, and Android signing. It only accepts runs from `main` and `release/**`, and
+The `production` Environment holds the Google login (`CLASPRC_JSON`) and the Apple and
+Android signing credentials; the store upload settings are in the separate `store-upload`
+environment (see [Approving a production deployment](#approving-a-production-deployment)).
+It only accepts runs from `main` and `release/**`, and
 each run waits for a `release-approvers` member to approve it. Admins can also bypass
 that approval. To require approval even from admins, turn off **Allow administrators
 to bypass configured protection rules** under **Settings → Environments →
@@ -228,8 +230,9 @@ workflow** at any time. Either way it overwrites the QR images the printed bulle
 uses, and nothing reaches Drive until someone approves:
 
 1. For a manual run, select **Run workflow** and choose **`main`** under *Use
-   workflow from*. The upload step always runs the upload script from `main`, so
-   running from a release branch only tests image generation.
+   workflow from*. The upload step always runs the upload script from `main`, but
+   it uploads the images the chosen branch generated from its own copy of the
+   file. A run from a release branch can test image generation; reject its upload.
 2. Approve the `production` deployment when the upload job starts. Leaving it
    unapproved is safe: the run expires without changing Drive.
 3. Open the **Upload QR codes to Google Drive** log and check:
@@ -238,9 +241,10 @@ uses, and nothing reaches Drive until someone approves:
      fails with `403 … has not granted the app … write access to the file`, the file
      was uploaded by hand. Rename that file in Drive (for example, add
      `_manual_backup` before `.jpg`) and run the workflow again. The workflow then
-     creates the file and can replace it on later runs. Rename rather than trash:
-     the bulletin script picks the first file with a matching name anywhere in Drive
-     and doesn't skip trashed files. See
+     creates the file and can replace it on later runs. Moving the old file to the
+     trash works too: the upload workflow and the bulletin script both skip trashed
+     files. Don't leave two untrashed files with the same name anywhere in Drive,
+     because the bulletin script uses the first one it finds. See
      [Credentials](#credentials-that-need-attention).
    - `Replaced …` or `Uploaded …` for each file in the table. **Replaced** keeps the
      existing Drive file, its ID, and its sharing link.
@@ -263,20 +267,34 @@ name to the allowlist in a reviewed pull request.
 
 Which QR slots print is controlled in the bulletin script; see
 [Giving QR slots](bulletin-automation.md#giving-qr-slots). The mobile app code is
-generated and its slot prints, so the script with it is deployed only once the app
-is public in both stores (#323). The Zelle codes are still made by hand, and their
-slot stays reserved until #384.
+generated, and since 1.0.0 the script on `main` prints it, so that script is
+deployed only once the app is public in both stores (#323); see
+[Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script). The Zelle
+codes are still made by hand, and their slot stays reserved until #384.
 
 ## Deploying the bulletin Apps Script
 
 **Workflow:** Actions → **Deploy Bulletin Apps Script**
 (`.github/workflows/apps-script-deploy.yml`). Manual only.
 
-1. Merge the Apps Script change first. Run from `main` for production, or from a
-   `release/*` branch to try it out before the release.
-2. Select **Run workflow**, pick the branch, and optionally enter a description
-   (shown in the Apps Script version history).
-3. Approve the `production` deployment.
+**Every run changes production.** There is one Apps Script project and one web-app
+deployment, and there is no test copy. The workflow doesn't check the branch: it
+pushes the chosen branch's code to the project and points the live deployment at
+it. The spreadsheet's **Printed Bulletin** menu and the app's bulletin use the new
+code at once. So a run from a `release/*` branch, which the `production`
+environment also accepts, puts unreleased code live. It is not a way to try a
+change out.
+
+**Not before launch.** Since 1.0.0, the script on `main` prints the **Download
+Mobile App** QR code, which leads to the store pages. Don't run this workflow until
+the app is public on both Google Play and the App Store; then follow
+[Giving QR slots](bulletin-automation.md#giving-qr-slots) (#323).
+
+1. Merge the Apps Script change into `main` first, and run from `main`.
+2. Select **Run workflow**, choose **`main`** under *Use workflow from*, and
+   optionally enter a description (shown in the Apps Script version history).
+3. Approve the `production` deployment. Check the branch first, and reject a run
+   from any branch other than `main`.
 4. Follow the checks in
    [Deployment and verification](bulletin-automation.md#deployment-and-verification):
    reload the spreadsheet, generate a test bulletin for each changed layout, and check
@@ -436,15 +454,16 @@ The Apple renewals have their own reminder, 60 days before each date; see
 
 ## Native app binaries
 
-Background, signing setup, and recovery are in [Build Instructions](native-builds.md).
+Background, signing setup, and recovery are in [Native mobile binary builds](native-builds.md).
 
 ### Building
 
 - **Automatic:** every merge to `main` starts **Native Android build** and **Native
   iOS build**. Approve both `production` deployments.
-- **Manual:** Actions → **Native Android build** → **Run workflow** on `main`, then
-  tick **AAB** (Google Play) and/or **APK** (direct install). Actions → **Native iOS
-  build** → **Run workflow** on `main`. Both refuse to sign from any other branch.
+- **Manual:** Actions → **Native Android build** → **Run workflow** on `main`. It
+  builds both the AAB and the APK whichever boxes you tick; ticking **AAB** also
+  uploads it to Google Play internal testing. Actions → **Native iOS build** → **Run
+  workflow** on `main`. Both refuse to sign from any other branch.
 
 There are no build numbers to raise. Both stores' build numbers are computed from the
 version (`0.40.0` becomes `40000`); see [Version numbers](version-numbers.md).
@@ -529,7 +548,8 @@ store announces a change, check that:
 **Workflow:** **Android PR preview**, which runs automatically on release pull requests
 into `main` (from a `release/*` branch in this repository).
 
-It builds an unsigned debug APK. After you approve `production`, it uploads the APK
+It builds a debug APK, signed only with Gradle's local debug key, never the church's
+release key. After you approve `production`, it uploads the APK
 to Google Drive as `sda-church-app-pr-<number>-<run>-arm-debug.apk`, and the run
 summary links to it. Fork pull requests are skipped. See
 [Android PR preview and Drive upload](native-builds.md#android-pr-preview-and-drive-upload).
@@ -539,11 +559,16 @@ summary links to it. Fork pull requests are skipped. See
 **Workflow:** **iOS PR preview**, which runs automatically on release pull requests
 into `main`, and can be run manually on any branch.
 
-It builds the app without signing for an Apple Silicon Mac and an Intel Mac, launches it
-on a simulated iPhone, and uploads the app and a screenshot of its first screen. It
-needs no approval, because it reads no secrets. Download the build for your Mac from the
-run's Artifacts section to test the release on a Mac before merging; you don't need an
-iPhone. See [iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+It builds the app without signing for an Apple Silicon Mac and an Intel Mac and
+launches each on a simulated iPhone. The Apple Silicon build then captures every key
+screen in `test/screens/screens.json` (83 screenshots, about 24 minutes) and checks
+their text with `scripts/check-screens.cjs`. On a release pull request, a comment
+links the screenshots, and the **Screenshots reviewed** check waits until an approver
+has looked at them; see [Approving the screenshots](#approving-the-screenshots).
+The builds need no `production` approval, because they read no secrets. Download the
+build for your Mac from the run's Artifacts section (kept 14 days) to test the release
+on a Mac before merging; you don't need an iPhone. See
+[iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 
 ## Dependabot pull requests
 

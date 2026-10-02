@@ -34,14 +34,14 @@ links.
 Who does what: the congregation gets and uses the app, staff produce the digital and
 printed bulletins, and IT administrators develop, release, and maintain it.
 
-![Overview diagram: the congregation scans a QR code to reach the download page and installs the app from Google Play or the Apple App Store; staff edit the scheduling roster, which feeds the digital bulletin in the apps and the printed Queens, Queens Communion, and Brooklyn bulletins; IT administrators own the GitHub organization, develop on forks, merge feature PRs into a release branch and release PRs into main; GitHub Actions uploads the signed AAB to Google Play internal testing through a keyless sign-in in the church's Google Cloud project, which the administrators own and which has no billing account and must never get one, and uploads the IPA to TestFlight; an administrator releases each one after testing; administrators rerun the QR code workflow when needed; the apps rely on media and third-party services shown in the app dependencies diagram](diagrams/architecture.svg)
+![Overview diagram: the congregation scans a QR code to reach the download page and installs the app from Google Play or the Apple App Store; staff edit the scheduling roster, which feeds the digital bulletin in the apps and the printed Queens, Queens Communion, and Brooklyn bulletins; IT administrators own the GitHub organization, develop on forks, merge feature PRs into a release branch and release PRs into main; GitHub Actions uploads the signed AAB to Google Play internal testing through a keyless sign-in in the church's Google Cloud project, which the administrators own and which has no billing account and must never get one, and uploads the IPA to TestFlight; an administrator releases each one after testing; the QR code workflow regenerates the bulletin QR codes in Drive when a change to them merges into main, or when an administrator runs it, and an administrator approves each upload; the apps rely on media and third-party services shown in the app dependencies diagram](diagrams/architecture.svg)
 
 ### Build, deploy, and accounts
 
 How code reaches the stores, the bulletin backend, and the website, which secrets
 each step uses, and how the domain ties the accounts together.
 
-![Build and deploy diagram: GitHub Actions uses the Android, Apple, and Apps Script secrets from the production environment and the store upload settings from the store-upload environment to upload builds to Google Play internal testing and TestFlight, signing in to Google Play without a key through a Google Cloud project that has no billing account, deploy the bulletin Apps Script, upload QR codes and preview APKs to Google Drive, and build the GitHub Pages site; Cloudflare DNS for nyccsda.org points at GitHub Pages and Google Workspace and holds the TXT record that verifies the domain in Google Search Console, which Google Play uses to verify the organization's website](diagrams/operations.svg)
+![Build and deploy diagram: GitHub Actions uses the Android, Apple, and Apps Script secrets from the production environment and the store upload settings from the store-upload environment to upload builds to Google Play internal testing and TestFlight, signing in to Google Play without a key through a Google Cloud project that has no billing account, deploy the bulletin Apps Script, upload QR codes and preview APKs to Google Drive, and build the GitHub Pages site; Cloudflare, which runs DNS for nyccsda.org, redirects app.nyccsda.org to GitHub Pages, points the domain's email at Google Workspace, and holds the TXT record that verifies the domain in Google Search Console, which Google Play uses to verify the organization's website](diagrams/operations.svg)
 
 ### App dependencies
 
@@ -50,7 +50,7 @@ only open in the browser. It also shows how church media is kept available: the
 Adventist Connect library is served from Wasabi and backed up to Google Drive, and
 if it fails, the Mandarin Bible audio falls back to the Internet Archive and then
 Audio Power. The Cantonese and Spanish Bible audio have no fallback, because
-WordProject's terms don't allow playing them from WordProject's servers. It also shows
+WordProject's terms don't allow playing them from WordProject's servers without its approval. It also shows
 where the church's copies of the Bible audio came from: an admin downloaded the
 Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from
 WordProject, and uploaded them to the library (see
@@ -58,7 +58,7 @@ WordProject, and uploaded them to the library (see
 See [Third-party APIs and websites](#third-party-apis-and-websites) for the full
 table.
 
-![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese and Spanish Bible audio played only from the church's copies, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; Bible text from HelloAO and fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
+![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese and Spanish Bible audio played only from the church's copies, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; English Bible text and audio from HelloAO, and Chinese, Spanish, and original-language Bible text from fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
 
 ### Google Play upload sign-in
 
@@ -92,8 +92,9 @@ and may not be possible, so protect them above everything else.
 - **Registrar and DNS** for `nyccsda.org`. The domain costs about $10 per year and
   can be registered up to 10 years at a time. Keep an active payment method on
   file for renewal. Renewal notices go to the Super Administrators.
-- **DNS** points `app.nyccsda.org` at GitHub Pages and the domain's email at
-  Google Workspace. It also holds the DNS TXT record that proves the church owns
+- **DNS** points the domain's email at Google Workspace, and a Cloudflare redirect
+  rule sends `app.nyccsda.org` to the [app website](#website-appnyccsdaorg) on
+  GitHub Pages. It also holds the DNS TXT record that proves the church owns
   `nyccsda.org` in **Google Search Console**, where the domain is registered as a
   Domain property; Google only verifies those with a DNS record. Search Console is
   a Google tool, not an app store; the administrators have access to it through
@@ -144,18 +145,35 @@ and may not be possible, so protect them above everything else.
 - **GitHub organization** `New-York-Chinese-Seventh-day-Adventist` hosts this
   repository.
 - **GitHub Actions** runs everything automated:
-  - unit and integration tests on pull requests;
+  - unit tests on pull requests, and checks of their title, version, and linked
+    issue;
+  - extra checks on each release pull request into `main`: that it comes from a
+    `release/*` branch, a bulletin API integration test, an
+    [Android preview APK](operations/admin-runbook.md#android-pr-preview-apks)
+    uploaded to Google Drive,
+    [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-pr-preview-builds)
+    with screenshots of the key screens that an approver reviews (**Screenshots
+    reviewed**), and a
+    [Bible audio test](operations/admin-runbook.md#bible-audio-emulator-test) on an
+    Android emulator;
   - native iOS and Android builds after each merge to `main`, uploaded automatically
     to TestFlight and Google Play internal testing for testers (Google Play through a
-    keyless sign-in in the church's [Google Cloud project](#google-cloud-free-only));
-  - Android preview APKs for pull requests into `main`;
-  - the [website](#website-appnyccsdaorg) deploy to GitHub Pages;
-  - bulletin Apps Script deploys, using [`clasp`](https://github.com/google/clasp),
+    keyless sign-in in the church's [Google Cloud project](#google-cloud-free-only)),
+    and attached to that version's GitHub release;
+  - the [website](#website-appnyccsdaorg) deploy to GitHub Pages, and the version
+    tag, after each merge to `main`;
+  - bulletin Apps Script deploys, run by hand, using [`clasp`](https://github.com/google/clasp),
     Google's command-line tool for uploading Apps Script code;
-  - bulletin QR code generation into Google Drive;
+  - bulletin [QR code](operations/admin-runbook.md#bulletin-qr-codes) generation into
+    Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
-    that warns before Google Play or App Store Connect requirements pass the app by.
+    that warns before Google Play or App Store Connect requirements pass the app by;
+  - a weekly [Apple signing monitor](operations/admin-runbook.md#apple-signing-reminders)
+    that opens an issue 60 days before an Apple certificate, profile, or membership
+    expires;
+  - the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, opened
+    on the first Monday of January.
 - Releasing to the public stays manual: after testing, an administrator submits
   the iOS build for review in App Store Connect and promotes the Android release in
   Play Console. See
@@ -190,6 +208,10 @@ and may not be possible, so protect them above everything else.
   (`GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER`, `GOOGLE_PLAY_SERVICE_ACCOUNT`). Those jobs never see the signing keys and
   run no npm packages, and they start without a second approval once the builds
   are approved.
+- A third environment, **`screenshot-review`**, holds no secrets. It only makes the
+  release pull request's **Screenshots reviewed** check wait until a
+  `release-approvers` member has looked at the iPhone screenshots; see
+  [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
 
 The [Admin Runbook](operations/admin-runbook.md) covers approving production runs
 and rotating the credentials these workflows use.
@@ -202,7 +224,7 @@ Nothing else is an intake point.
 
 ### Digital bulletin (in the app)
 
-- Members open the **Bulletin** tab in the app.
+- Members open **Weekly Bulletin** on the app's **Home** tab.
 - The app loads it from **`BulletinApi.gs`**, a public Apps Script endpoint that
   returns privacy-filtered JSON with names anonymized.
 - Roster edits reach the app within a few minutes (the API caches for two minutes);
@@ -242,21 +264,23 @@ has to supply their own.
 | File | Used for | How the script finds it |
 | --- | --- | --- |
 | Master scheduling spreadsheet (`Sabbath Calendar`, `Sabbath Sermon Data`, and `Name Dictionary` tabs) | Roster, sermon data, and full names for print | Bound Apps Script project; layout in [Bulletin Automation Operations](operations/bulletin-automation.md) |
-| Church sketch image | Cover of the regular Queens and Brooklyn bulletins | Drive file ID in `PRINTED_BULLETIN_CONFIG.churchSketchImageFileId`, or the `CHURCH_SKETCH_IMAGE_FILE_ID` script property |
-| Last Supper image | Communion bulletin cover | `lastSupperImageFileId`, or `LAST_SUPPER_IMAGE_FILE_ID` |
-| SDA logo | Printed bulletin logo | `sdaLogoImageFileId`, or `SDA_LOGO_IMAGE_FILE_ID`. Restricted branding: see [Branding & Trademark Policy](LEGAL_BRANDING.md) |
+| Church sketch image | Cover of the regular Queens and Brooklyn bulletins | The `CHURCH_SKETCH_IMAGE_FILE_ID` script property (or the older `BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID`), or else the Drive file ID in `PRINTED_BULLETIN_CONFIG.churchSketchImageFileId` |
+| Last Supper image | Communion bulletin cover | `LAST_SUPPER_IMAGE_FILE_ID`, or else `lastSupperImageFileId` |
+| SDA logo | Printed bulletin logo | `SDA_LOGO_IMAGE_FILE_ID`, or else `sdaLogoImageFileId`. Restricted branding: see [Branding & Trademark Policy](LEGAL_BRANDING.md) |
 | QR placeholder image | Shown in a giving QR slot when neither the file name nor the property finds a code. The mobile app slot stays blank instead | `qrPlaceholderImageFileId` |
-| `queens_adventist_giving_qr_code_368x368.jpg`, `brooklyn_adventist_giving_qr_code_368x368.jpg`, `mobile_app_qr_code_368x368.jpg` | Giving and mobile app QR codes | Exact file name anywhere in Drive outside the trash, then the `ADVENTIST_GIVING_QR_IMAGE_FILE_ID` / `MOBILE_APP_QR_IMAGE_FILE_ID` properties. Generated by the QR workflow from `scripts/bulletin-qr-codes.json` ([Admin Runbook](operations/admin-runbook.md#bulletin-qr-codes)) |
-| `queens_zelle_qr_code_368x368.jpg`, `brooklyn_zelle_qr_code_368x368.jpg` | Zelle QR codes | Exact file name anywhere in Drive outside the trash, then the `ZELLE_QR_IMAGE_FILE_ID` property. Made by hand for now; the slot stays reserved until #384 |
-| `sabbath_encouragement.pdf` | Source of the weekly Sabbath Encouragement page in the Brooklyn bulletin | Drive file ID in `SABBATH_ENCOURAGEMENT_SOURCE_FILE_ID`. A backup copy is in [`public/library/`](../public/library/sabbath_encouragement.pdf), which the app's library also opens. Text is also snapshotted in `SabbathEncouragement.gs`; see [attribution and copyright](operations/sabbath-encouragement-copyright.md) and #248 |
-| Output folders (all, Queens, Brooklyn) | Where generated bulletin Docs and PDFs are saved | Folder IDs in `PRINTED_BULLETIN_CONFIG`, or the `PHYSICAL_BULLETIN_*_FOLDER_ID` properties |
+| `queens_adventist_giving_qr_code_368x368.jpg`, `brooklyn_adventist_giving_qr_code_368x368.jpg`, `mobile_app_qr_code_368x368.jpg` | Giving (**ACH or card**) and **Download Mobile App** QR codes on the Queens and Brooklyn bulletins. The mobile app code prints once the 1.0.0 script is deployed, which waits until the app is public in both stores (#323) | Exact file name anywhere in Drive outside the trash, then the `ADVENTIST_GIVING_QR_IMAGE_FILE_ID` / `MOBILE_APP_QR_IMAGE_FILE_ID` properties. Generated by the QR workflow from `scripts/bulletin-qr-codes.json` ([Admin Runbook](operations/admin-runbook.md#bulletin-qr-codes)) |
+| `queens_zelle_qr_code_368x368.jpg` | Zelle QR code for Queens; Brooklyn has no Zelle slot | Exact file name anywhere in Drive outside the trash, then the `ZELLE_QR_IMAGE_FILE_ID` property. Not generated by the QR workflow. Not printed yet: the Queens slot stays reserved, and blank, until #384 |
+| `sabbath_encouragement.pdf` | Source of the weekly Sabbath Encouragement page in the Brooklyn bulletin | Not read when printing: the script prints from a text snapshot in `SabbathEncouragement.gs`, and `SABBATH_ENCOURAGEMENT_SOURCE_FILE_ID` there records which Drive file it came from. A backup copy is in [`public/library/`](../public/library/sabbath_encouragement.pdf), which the app's library also opens. See [attribution and copyright](operations/sabbath-encouragement-copyright.md) and #248 |
+| Output folders (all, Queens, Brooklyn) | Where generated bulletin Docs and PDFs are saved | The `PHYSICAL_BULLETIN_QUEENS_FOLDER_ID` or `PHYSICAL_BULLETIN_BROOKLYN_FOLDER_ID` property, or else that congregation's folder ID in `PRINTED_BULLETIN_CONFIG`; the `PHYSICAL_BULLETIN_FOLDER_ID` property and the "all" folder are the last resort |
 
 The IDs and property names are in
 [`PrintedBulletin.gs`](../google-apps-script/PrintedBulletin.gs). A new
 installation should upload its own files and set the script properties rather than
-edit the IDs in code. The QR codes are matched by name across all of Drive, so keep
-exactly one file with each name. When replacing one by hand, rename the old copy
-rather than trashing it; the Admin Runbook explains why.
+edit the IDs in code. The QR codes are matched by name across all of Drive, skipping
+trashed files, so keep exactly one file outside the trash with each name. When
+replacing one by hand, rename or trash the old copy; the
+[Admin Runbook](operations/admin-runbook.md#bulletin-qr-codes) covers a code that
+was uploaded by hand.
 
 ### Credentials in GitHub secrets
 
@@ -281,7 +305,8 @@ Where each secret goes and how to rotate it is covered in
 
 ## Church media
 
-- The church's pictures and its copy of the Chinese Union Version Bible audio are
+- The church's pictures, hymnal lookup charts, and copies of the Bible audio
+  (Mandarin and Cantonese Chinese Union Version, and Spanish Reina-Valera 1909) are
   hosted in the church's media library on the North American Division's Adventist
   Connect platform (`newyorkchineseny.adventistchurch.org`, served from
   `assets.adventistconnect.org`). The files are stored on Wasabi (`us-east-2`,
@@ -298,14 +323,14 @@ on them directly; see [Third-party APIs and websites](#third-party-apis-and-webs
 | Media | Primary | Other copies |
 | --- | --- | --- |
 | Mandarin CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; the app falls back to the Internet Archive, then Audio Power |
-| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, because WordProject's terms don't allow playing from its servers |
+| Cantonese CUV Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, because WordProject's terms don't allow playing from its servers without its approval |
 | Spanish RV1909 Bible audio (1,189 MP3s) | Adventist Connect | Google Drive backup; no fallback in the app, for the same reason |
 | Church photos and hymnal lookup charts | Adventist Connect | Google Drive backup |
 | Bulletin cover art, logo, QR codes | Google Drive | See [Files not in this repository](#files-not-in-this-repository) |
 
 ## App stores
 
-Members install the app from **Google Play** and the **Apple App Store**. The
+The app is distributed through **Google Play** and the **Apple App Store**. The
 church manages its listings through each store's publisher portal: **Google Play
 Console** and Apple's **App Store Connect**. App Store Connect isn't a separate
 store. It is where builds are uploaded, the listing is edited, and releases are
@@ -351,7 +376,9 @@ submitted for review before they appear on the App Store.
   by a DNS TXT record (see [Cloudflare](#cloudflare)); verification is then
   requested from Play Console.
 - Nothing needs renewing beyond keeping the app updated to meet Play's target API
-  level requirements.
+  level requirements, which the weekly
+  [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
+  warns about 120 days ahead.
 
 ## Google Cloud: free only
 
@@ -394,14 +421,20 @@ names the step, and
 
 ## Website: app.nyccsda.org
 
-`app.nyccsda.org` is served by GitHub Pages from this repository. Cloudflare DNS
-points the subdomain there. It has two real jobs:
+The app website is served by GitHub Pages from this repository's `gh-pages` branch,
+which **Deploy Website and Tag** publishes after each merge to `main`. A Cloudflare
+redirect rule sends `app.nyccsda.org` to it, keeping the path. Its real jobs are
+three static pages in [`public/`](../public/):
 
 - **Privacy policy** at `app.nyccsda.org/privacy-policy.html`, which both app stores
   require for the listings.
-- **App download page** at `app.nyccsda.org/download`. The printed bulletin's app QR
-  code will point here, and the page sends each phone to the right store link.
-  Planned in [#237](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/237).
+- **Support page** at `app.nyccsda.org/support.html`, the App Store's Support URL.
+- **App download page** at `app.nyccsda.org/download`. The printed bulletin's mobile
+  app QR code points here, and the page sends each phone to the right store link
+  ([#237](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/237)).
+
+How it's published, and the rules that keep these pages working, are in
+[The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
 
 The same Expo source can also be built as a Progressive Web App (PWA), and that
 build is what GitHub Pages serves. It is a **developer preview only**. It isn't
@@ -418,8 +451,8 @@ checks nearly all of them daily.
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
-| Bible | HelloAO | `bible.helloao.org` | Bible text and translation list | In app |
-| Bible | fetch(bible) | `v1.fetch.bible` | Original-language critical texts | In app |
+| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English Bible text (BSB, KJV), each translation's book list, and English BSB audio; Bible verses on the printed bulletin | In app and Apps Script |
+| Bible | fetch(bible) | `v1.fetch.bible` | Chinese Union Version and Reina-Valera 1909 text, and original-language critical texts | In app |
 | Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin CUV, tried first, and Cantonese CUV and Spanish RV1909, their only source | In app |
 | Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |
 | Bible audio | Audio Power | `theaudiopower.com` | CUV audio, third source | In app |
@@ -437,7 +470,7 @@ checks nearly all of them daily.
 | Hymns | Hymns for Worship | `hymnsforworship.org` | English SDA Hymnal (1985) sheet music | Link |
 | Hymns | Chinese Union Mission | App Store, Google Play | 506 hymnal app store pages | Link |
 | Hymns | YouTube | `youtube.com` | 506 hymnal recordings from Chinese Hope TV's playlist | Link |
-| Printed bulletin | Sunrise-Sunset API | `api.sunrise-sunset.org` | Sunset times on the printed Queens bulletin (Apps Script only; the app calculates its own) | Apps Script |
+| Printed bulletin | Sunrise-Sunset API | `api.sunrise-sunset.org` | Sunset times on the printed Queens and Brooklyn bulletins (Apps Script only; the app calculates its own) | Apps Script |
 | Media | YouTube | `youtube.com` | Livestream and sermon archive | Link |
 | Media | Spotify | `open.spotify.com` | Sermon and class audio archive | Link |
 | Media | Zoom | `zoom.us` | Online class | Link |
@@ -446,8 +479,10 @@ checks nearly all of them daily.
 | Church | Google Maps | `google.com/maps` | Directions to each church location | Link |
 | Church | Google Sheets | `docs.google.com` | The staff quarterly schedule, which Google opens only for signed-in `nyccsda.org` accounts | Link |
 
-Only the CUV Bible audio has copies the church controls, because its owner allowed
-self-hosting. For everything else, the feature stops working if the provider goes
+Only the Bible audio has copies the church controls: Audio Power's owner allowed
+self-hosting the Mandarin recordings, and WordProject's terms don't allow playing the
+Cantonese and Spanish recordings from WordProject's servers without its approval, so the app plays only the
+church's copies. For everything else, the feature stops working if the provider goes
 away. Licensing for these sources is recorded in [Legal, Licensing & Privacy](LEGAL.md).
 Costs, published limits, and load for each one are in
 [Service Limits and Costs](operations/service-limits-and-costs.md).
@@ -491,6 +526,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
 | Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
+| Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
 
 ## Governance principles

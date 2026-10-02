@@ -12,13 +12,13 @@ layers instead:
 - Jest validates every locally generated CUV, hymnal, public-domain library,
   and curated EGW edition URL without network traffic.
 - The live monitor reads a provider's catalog once when one is available, then
-  requests one stable pseudo-random file or page from each large collection per
-  UTC day. Retries use the same sample.
+  requests three stable pseudo-random files or pages from each large collection
+  per UTC day. Retries use the same samples.
 
 This means the 1,189-file audio collections (Mandarin and Cantonese CUV, and Spanish
-RV1909) each receive one sampled media request per host per daily run, not 1,189
-requests. Project Gutenberg receives one sampled
-public-domain book request, and EGW Writings receives one sampled book request
+RV1909) each receive three sampled media requests per host per daily run, not 1,189
+requests. Project Gutenberg receives three sampled
+public-domain book requests, and EGW Writings receives three sampled book requests
 for each supported edition language. The Internet Archive receives one metadata
 request per linked library scan, which checks that the scan is still openly
 downloadable and dated before 1928 (see [Internet Archive sources](../LEGAL.md#internet-archive-sources)).
@@ -28,14 +28,18 @@ away scripts, so the monitor reads the catalog record instead.
 Fixed app destinations and small API
 contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media
-remain strict.
+remain strict. Two app links also accept a refusal: the staff schedule (401 or
+403, since it needs a sign-in) and Adventist Giving (403, from its bot
+protection).
 
 It checks that each children's Sabbath School age group will open this week's
 English lesson: Adventech lists this quarter's Junior, Teen, and Youth issues, and
 has weekly PDFs for this quarter's Alive in Jesus Beginner, Kindergarten, and
 Primary books. A failure means the app is opening that age group's Alive in Jesus
 website instead, usually because a new quarter isn't published yet or the catalog
-changed. The six age-group websites are checked too, since they're the fallback.
+changed. In a quarter's first 14 days, missing lessons are only a warning, because
+Adventech often publishes them late. The six age-group websites are checked too,
+since they're the fallback.
 See `features/sabbath-school/ChildrenLessons.ts` and
 [Children's Sabbath School Lessons](../feature_designs/sabbath_school_lessons.md).
 
@@ -53,6 +57,21 @@ npm run test:integration:external
 The command writes `external-dependency-report.json`, which is ignored by Git
 and uploaded by Actions for 30 days.
 
+## Failures and warnings
+
+A request that times out, can't connect, or gets a temporary error status such as
+403, 429, or 5xx is retried up to twice. A check that still fails is run once more
+a minute later, so only failures that last raise the alarm.
+
+A check can also pass with a warning. Warnings show in the run's summary and the
+report but open no issue:
+
+- one of a collection's three samples fails (the check fails only when most of
+  them do);
+- fewer than half of the curated books are missing from the Chinese cover
+  catalog; or
+- a children's lesson isn't published yet in the first 14 days of a quarter.
+
 ## Alerts and recovery
 
 When a run fails, the workflow:
@@ -62,10 +81,15 @@ When a run fails, the workflow:
    or comments on the existing open issue; and
 3. fails the workflow run.
 
-The issue is closed automatically after the next successful run. GitHub Actions
-notifications must be enabled in the maintainer's notification settings to
-receive email or web alerts. This is monitoring, not a guaranteed phone/SMS
-page; add a webhook-based paging service later if that becomes necessary.
+A new issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions
+variable, which notifies them even if they don't watch the repository; if that is
+empty, or GitHub rejects an assignee, the issue @mentions the run's actor instead
+(`scripts/monitor-alert-issue.cjs`). See
+[Getting notified only when action is needed](admin-runbook.md#getting-notified-only-when-action-is-needed).
+
+The issue is closed automatically after the next successful run. This is
+monitoring, not a guaranteed phone/SMS page; add a webhook-based paging service
+later if that becomes necessary.
 
 Scheduled workflows only run from the default branch. GitHub may delay them at
 busy times, which is why this schedule avoids the top of the hour. GitHub also

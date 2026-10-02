@@ -2,7 +2,7 @@
 
 How the church's store accounts, app records, and signing files are set up, and
 what has to be renewed each year to keep the app published and updatable. For how
-the build workflows use these files, see [Build Instructions](native-builds.md).
+the build workflows use these files, see [Native mobile binary builds](native-builds.md).
 For who owns each account, see
 [App stores in the architecture doc](../architecture.md#app-stores).
 
@@ -11,7 +11,8 @@ For who owns each account, see
 > Team ID, personal or church email addresses, certificate (`.p12`) and
 > provisioning profile (`.mobileprovision`) files, keystores, and every password.
 > Use placeholders in documentation, and never commit signing files or secrets.
-> Signing values live only in the protected `production` GitHub Environment.
+> Signing values live only in the protected `production` GitHub Environment, and the
+> store upload credentials only in the `store-upload` environment.
 
 ## Contents
 
@@ -303,8 +304,8 @@ the account can't be stranded. Remove access when someone leaves the role.
    [Google Play Console answers](play-console-answers.md).
 4. Under **Store listing**, add the short and full descriptions, the 512 × 512
    icon (`public/icon-512x512.png`), the 1024 × 500 feature graphic, and phone
-   screenshots. The text, in English and Chinese, is in
-   [Store listings](store-listing.md).
+   screenshots. The text, in English, Traditional Chinese, Simplified Chinese, and
+   Spanish, is in [Store listings](store-listing.md).
 
 The package name, `org.nyccsda.app`, is fixed by the first upload and can't be
 changed afterwards.

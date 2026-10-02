@@ -15,7 +15,7 @@ When any point is uncertain, the work is not included. Copyrighted material may 
 
 ## Initial catalog
 
-The first release links to source records rather than copying full text. This validates navigation, localization, catalog metadata, and rights labeling before a native reader and offline storage are introduced.
+The first release links to source records rather than copying full text. This validates navigation, localization, catalog metadata, and rights labeling before a native reader and offline storage are introduced. That still holds, apart from the church's own *Sabbath Encouragement* PDF, which is served with the web app from `public/library/`. There is no native reader or offline storage yet.
 
 Books outside the EGW collection use original covers made for this app: typographic covers in the style of gilt cloth bindings, each with an emblem for its title, drawn by `scripts/generate-library-covers.py` with open-licensed fonts. They are decorative rather than reproductions of historical covers. Book titles and all actionable information remain real text beside or below the images. On a shelf's own page, the default two-column bookshelf changes to a single-column, horizontal-cover list when the screen is narrow or effective text scale is enlarged.
 
@@ -34,6 +34,13 @@ The Library is a Christian library with an Adventist section, not an Ellen G. Wh
 | John Bunyan, *The Pilgrim's Progress* (1678) | Project Gutenberg record | Explicitly marked public domain in the U.S.; broadly accepted Protestant classic |
 | Jesse Lyman Hurlbut, *Story of the Bible Told for Young and Old* (1904) and *Hurlbut's Life of Christ for Young and Old* (1915) | Internet Archive scan of the 1905 edition; Project Gutenberg record | Public domain in the U.S.; Bible stories for children and families on the Children shelf |
 | Mrs. Howard Taylor, *Pastor Hsi* (1903), and Dr. and Mrs. Howard Taylor, *Hudson Taylor in Early Years* (1911) | Internet Archive scans of the first editions | Public domain in the U.S.; Christian lives tied to China for the Youth / Young Adults shelf |
+| Uriah Smith, *The State of the Dead and the Destiny of the Wicked* (1873) | Project Gutenberg record | Explicitly marked public domain in the U.S.; Adventist pioneer study on the Adventist Pioneers shelf |
+| Uriah Smith, *Daniel and the Revelation* (1897 edition) | EGW Writings record | Public domain in the U.S.; Adventist pioneer commentary on the Adventist Pioneers shelf. Later revisions, such as the 1944 edition, are still copyrighted |
+| Andrew Murray, *Humility: The Beauty of Holiness* (1895) | Project Gutenberg record | Explicitly marked public domain in the U.S.; devotional classic on the Christian Classics shelf |
+| Andrew Murray, *Abide in Christ* (1882) | Internet Archive scan of the 1895 Revell edition | Public domain in the U.S.; devotional classic on the Christian Classics shelf |
+| John Foxe, *Foxe's Book of Martyrs* | Project Gutenberg record of an abridged nineteenth-century American edition | Explicitly marked public domain in the U.S.; Protestant history on the Christian Classics shelf |
+| Richard Sibbes, *The Bruised Reed* (1630) | Internet Archive scan of the 1838 Pickering edition | Public domain in the U.S.; Puritan classic that leads the Christian Classics shelf |
+| *Sabbath Encouragement* (安息日勉言) | The church's own PDF, from `public/library/` | Bible verses and Ellen G. White quotations compiled by churches in China; shown only to Chinese readers, first on the Ellen G. White shelf |
 | Ellen G. White writings | Official EGW Writings website | Copyright and edition rights remain with the official service |
 
 Three books have a Spanish edition, which Spanish readers see and open instead, with a Spanish version of its cover (`spanish` in `features/library/LibraryCatalog.ts`):
@@ -76,6 +83,6 @@ Primary discovery sources are the [Encyclopedia of Seventh-day Adventists](https
 
 1. Add a native reader for one verified Project Gutenberg edition, preserving its license header and source metadata.
 2. Add chapter-level navigation and saved reading position.
-3. Add catalog search, language filters, and favorites after the native-reader data model is stable.
+3. Add language filters and favorites after the native-reader data model is stable. (Catalog search is done: the Library page's search finds any book.)
 4. Ask 時兆出版社 and the relevant archives about licensed Chinese digital editions, starting with Guo Ziying's early works.
-5. Add verified, handpicked Chinese Adventist books when exact editions and rights can be documented. The language-aware official cover refresh is tracked in [issue #176](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/176).
+5. Add verified, handpicked Chinese Adventist books when exact editions and rights can be documented. [Issue #176](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/176), which covered this and the language-aware official covers, is closed; the covers now follow the app language, as described above.

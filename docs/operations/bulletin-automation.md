@@ -311,9 +311,10 @@ For a requested date, the API builds data in this order:
 
 1. `Sabbath Calendar` supplies the canonical date, quarter, metadata, and roster.
 2. Nonblank values from matching `Sabbath Sermon Data` rows are applied by
-   location. If duplicate rows exist, the latest `Last Updated`/`Timestamp`
-   row wins for each nonblank field; a blank later cell does not erase an older
-   nonblank value.
+   location. If duplicate rows exist, the lowest row in the sheet wins for each
+   nonblank field (the code would order them by a `Last Updated` or `Timestamp`
+   column, but the current contract has neither); a blank later cell does not
+   erase an older nonblank value.
 
 The printed prompt has one additional fallback for its manual, print-only verse
 selection. The reviewed `Sabbath Sermon Data → Bible Verses` value takes priority;
@@ -322,7 +323,7 @@ used. This prevents an old manual selection from masking newly reviewed intake.
 
 Blank content remains blank in the API and renders as `TBD` in the app or as the
 bilingual printed placeholder. Missing roster rows are different: a missing
-`YYYY Sabbath` sheet or missing date row is an API error because there is no
+`Sabbath Calendar` sheet or missing date row is an API error because there is no
 canonical schedule record.
 
 ### Public response boundary
@@ -355,19 +356,21 @@ be treated as public.
   pinyin alias resolves to the dictionary's canonical English/Chinese row; it
   does not create a new person or alter the digital API.
 
-The API automatically translates selected schedule metadata (`Tithe Purpose`,
-`Pastor Travel`, and related supported metadata) into the supported language
-keys while retaining the original English. The app displays both translated and
-original English values when they differ. This translation path must not be used
-for Bible text, Bible references, names, hymns, or sermon titles.
+The API automatically translates three schedule metadata fields
+(`Special Remark`, `Tithe Purpose`, and `Pastor Travel`) into Traditional
+Chinese, Simplified Chinese, and Spanish while retaining the original English.
+The app displays both translated and original English values when they differ.
+This translation path must not be used for Bible text, Bible references, names,
+hymns, or sermon titles.
 
 The Brooklyn Sabbath Encouragement English side is a separate, explicit machine
 translation exception. The source quotes Ellen G. White but is not exclusively her
 writing; Bible quotations, editorial headings, and other source material must be
 identified separately. The English side is labeled with a disclaimer because it
-may not be fully accurate. Bible quotations inside it are replaced with direct BSB
-text from the approved Bible API. Do not silently expand machine translation to
-Scripture, names, or worship content.
+may not be fully accurate. Bible quotations inside it that have a recognizable
+reference are replaced with direct BSB text from the approved Bible API. The rest,
+Ellen White quotations included, is machine translated from the Chinese. Do not
+silently expand machine translation to Scripture, names, or worship content.
 
 ## Digital mobile bulletin behavior
 
@@ -401,14 +404,18 @@ preview surface, not the canonical release channel.
 
 ### Bible references and translations
 
-The app supports recognized multilingual book names and same-chapter ranges.
-Unsupported free-form or multiple-passage input remains visible but its Read Now
-action safely falls back to Genesis 1:1 rather than guessing a location.
+The app recognizes book names in every app language and same-chapter ranges.
+The whole entry stays visible, and its **Read now** button opens the first passage:
+for several passages it opens the first one, for a range across chapters it opens
+at the start, and a bare book name opens chapter 1. An entry it can't read, such as
+an unknown book, a backwards range, or a chapter range like `John 3-5`, falls back
+to Genesis 1:1, rather than guessing a location
+(`parseScriptureReference` in `services/BibleService.ts`).
 
-Tithe Purpose and Pastor Travel return translated metadata plus the original
-English value. The app displays both when they differ and avoids duplicating a
-string when the translation is identical. Bible text is not translated by the
-metadata translation path.
+Special Remark, Tithe Purpose, and Pastor Travel return translated metadata plus
+the original English value. The app displays both when they differ and avoids
+duplicating a string when the translation is identical. Bible text is not
+translated by the metadata translation path.
 
 ## Printed bulletin generation
 
@@ -461,7 +468,8 @@ Queens Holy Communion is four physical pages in imposed order:
 
 1. left: announcements/back; right: cover;
 2. left: Church at Study; right intentionally blank;
-3. left: Holy Communion worship plus vertical giving section; right: Church at Worship;
+3. left intentionally blank; right: Church at Worship, followed by the vertical
+   giving section with the QR codes;
 4. left: Foot Washing; right: the complete Holy Communion service.
 
 The Communion ceremony has fixed references and fixed order. The submitted study
@@ -561,9 +569,13 @@ The QR workflow generates `mobile_app_qr_code_368x368.jpg`, pointing at
 
 **Deploying the mobile app code at launch** (#323). The code leads to the store
 pages, so the script that prints it must not reach production until the app is
-public on both Google Play and the App Store. Until then, don't deploy the bulletin
-Apps Script from `main` or `release/1.0.0`, by the **Deploy Bulletin Apps Script**
-workflow or by `npm run apps-script:push`. Once both stores have released the app:
+public on both Google Play and the App Store. Since 1.0.0 it is in the script on
+`main`, and in every branch made from `main` since then. Until both stores have
+released the app, don't deploy the bulletin Apps Script at all: not by the
+**Deploy Bulletin Apps Script** workflow, `npm run apps-script:deploy`, or
+`npm run apps-script:push`. Each of them changes production whatever the branch
+(see [Deployment and verification](#deployment-and-verification)). Once both
+stores have released the app:
 
 1. Check that https://app.nyccsda.org/download sends an Android phone to Google
    Play and an iPhone to the App Store.
@@ -578,36 +590,49 @@ workflow or by `npm run apps-script:push`. Once both stores have released the ap
 ## Deployment and verification
 
 The repository is the canonical source. Local WSL deployment uses the existing
-Apps Script deployment ID so the production `/exec` URL does not change:
+Apps Script deployment ID so the production `/exec` URL does not change. Setup
+(installing clasp, `clasp login`, and copying the `.example` config files) is in
+the [Apps Script README](../../google-apps-script/README.md#setup).
 
 ```bash
 npm install
-npm test -- --runInBand test/apps-script-physical-bulletin.test.ts test/apps-script-bulletin-merge.test.ts test/apps-script-schedule-assignment-checks.test.ts
-npm run apps-script:push       # upload source only
+npm test -- test/apps-script-physical-bulletin.test.ts test/apps-script-bulletin-merge.test.ts test/apps-script-schedule-assignment-checks.test.ts
+npm run apps-script:push       # upload the code, without a new web-app version
 npm run apps-script:deploy     # upload and create a new version of the existing deployment
 ```
+
+There is one Apps Script project and no test copy, so both commands change
+production. `push` alone replaces the code the spreadsheet's **Printed Bulletin**
+menu and edit triggers run; `deploy` also moves the `/exec` web app to the new
+code.
 
 The deployment helper:
 
 - regenerates `PinyinPro.gs` from the pinned npm dependency;
 - writes ignored `.clasp.json` and `.clasp-deployment.json` from environment values;
 - accepts `APPS_SCRIPT_PROJECT_ID`, `APPS_SCRIPT_DEPLOYMENT_ID`, and an optional
-  `DEPLOYMENT_DESCRIPTION`; and
+  `APPS_SCRIPT_DEPLOYMENT_DESCRIPTION` or `DEPLOYMENT_DESCRIPTION`; and
 - can write `CLASPRC_JSON` to the WSL clasp credential file for CI-style authentication.
 
 The current workflow is manual: use the printed-bulletin dialog after the reviewed
 sheet rows are ready. Remove any obsolete spreadsheet installable triggers left by
 the former append-only workflow; the current source does not install an automatic
-content-submission trigger.
+content-submission trigger. Keep the `onScheduleNameCheckEdit` trigger: it is the
+unknown-name dialog described under
+[Name not in the Name Dictionary](#name-not-in-the-name-dictionary-popup).
 
 Run `clasp login --no-localhost` when WSL cannot receive the localhost OAuth
 callback. Never commit `.clasprc.json`, `.clasp.json`, deployment IDs, or refresh
 tokens.
 
-GitHub Actions has a manual, protected-production Apps Script deployment workflow.
-It requires `APPS_SCRIPT_PROJECT_ID`, `APPS_SCRIPT_DEPLOYMENT_ID`, and
-`CLASPRC_JSON`. A GitHub push or PR does not deploy Apps Script automatically.
-The workflow updates the existing deployment; it does not create a new public URL.
+GitHub Actions has a manual, protected-production Apps Script deployment workflow,
+**Deploy Bulletin Apps Script**. It requires `APPS_SCRIPT_PROJECT_ID`,
+`APPS_SCRIPT_DEPLOYMENT_ID`, and `CLASPRC_JSON`. A GitHub push or PR does not
+deploy Apps Script automatically. The workflow updates the existing deployment; it
+does not create a new public URL. It doesn't check the branch, so a run from any
+branch the `production` environment accepts replaces the live code; run it only
+from `main`
+([Admin Runbook](admin-runbook.md#deploying-the-bulletin-apps-script)).
 
 If clasp authorization fails repeatedly after a fixed time window, first check the
 Google Workspace session-control policy. This church account has had a 16-hour
@@ -640,7 +665,7 @@ changes the URL and requires a coordinated mobile-app update.
 | --- | --- | --- |
 | App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Sabbath Sermon Data`; allow up to 120 seconds for API cache expiry |
 | New intake verse is ignored by print prompt | Old print memory or override | Check that `Sabbath Sermon Data → Bible Verses` is nonblank; it has priority over old memory |
-| API returns schedule-not-found | Missing `YYYY Sabbath` tab or row | Restore the exact tab name and a matching Date row |
+| API returns `No schedule found for …` | Missing `Sabbath Calendar` date row (a missing or renamed tab shows as a contract violation instead) | Restore the exact tab name and a matching Date row |
 | A field moved to the wrong location | Header renamed/reordered or repeated header occurrence changed | Restore the exact header contract and deploy matching code |
 | Header says contract violation | A protected header was changed | Update Apps Script/tests/app first; technology group restores the header |
 | A roster cell is pale red | The same name is in another F:Y cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |

@@ -18,7 +18,7 @@ records.
 
 ## Status, September 29, 2026
 
-Both store listings are set up for the first release, 0.42.0. Of the confirmations
+Both store listings are set up for the first submission, 0.42.0. Of the confirmations
 below, only the donation recipient is still open.
 
 | Item | Status |
@@ -30,6 +30,9 @@ below, only the donation recipient is still open.
 | [5. Permissions](#5-permissions-and-native-behavior) | Declared: no advertising ID, and media playback for Bible audio. After the first production upload, check Play Console's permission list for the bundle shows no storage, overlay, or Wi-Fi state permissions. |
 
 The final gate's last step, testing the signed builds on physical devices, is under way.
+
+Since then, 0.43.0 and 1.0.0 have followed. 1.0.0 is the first public release, and it
+is being submitted to both stores.
 
 ## Google Play create-app declarations
 
@@ -62,8 +65,10 @@ Console administrator must accept the terms and confirm the selected key arrange
 ### US export laws
 
 The app source contains no custom cryptography, VPN, proxy, security, or encryption
-feature. It makes ordinary HTTPS requests; the only direct `node:crypto` use is a
-build-time SHA-256 helper in `scripts/download-cuv-audio.mjs`, not an app feature. The
+feature. It makes ordinary HTTPS requests; the only direct `node:crypto` uses are in
+build and maintenance scripts (SHA-256 hashes in `scripts/download-cuv-audio.mjs` and
+`scripts/render-docs-diagrams.mjs`, and certificate dates in
+`scripts/check-apple-signing-expiry.cjs`) and tests, not in the app. The
 iOS configuration also declares `usesNonExemptEncryption: false`. This evidence is
 consistent with a normal mass-market app using platform/network encryption, but it is
 not a legal export classification. The authorized organization representative should

@@ -31,7 +31,7 @@ flowchart TB
     main@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "main<br/>New-York-Chinese-Seventh-day-Adventist/sda-church-app", pos: "b", w: 40, h: 40, constraint: "on" }
     actions@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-actions.svg", label: "GitHub Actions", pos: "b", w: 44, h: 44, constraint: "on" }
     binaries["📦 Signed AAB (Android)<br/>and IPA (iOS)"]
-    qr["QR code workflow<br/>run by hand"]
+    qr["QR code workflow<br/>runs when a QR change merges,<br/>or by hand"]
   end
 
   gcloud@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-cloud.svg", label: "Google Cloud · sda-church-app-play<br/>signs in as play-upload, without a key<br/>free: no billing account, never add one", pos: "b", w: 48, h: 39, constraint: "on" }
@@ -62,7 +62,7 @@ flowchart TB
   gcloud -- "lands in internal testing;<br/>an admin publishes it after testing" --> play
   admins -. "Owners; never add billing" .-> gcloud
   binaries -- "IPA, uploaded automatically<br/>to TestFlight; an admin<br/>submits it after testing" --> appstore
-  admins -. if Drive QR files are compromised .-> qr
+  admins -. "approve each upload; rerun if<br/>Drive QR files are compromised" .-> qr
   qr -. regenerates .-> assets
 
   classDef logo fill:#ffffff,stroke:#d0d7de
