@@ -11,7 +11,7 @@ uploads to TestFlight and Google Play internal testing. Who owns the store accou
 how to recover them, is in [App Store and Google Play setup](app-store-setup.md).
 
 Signed builds run only after a change reaches `main`, or from a manual run on `main`;
-`release/**` branches and pull requests are never signed. Each signing job has a guard
+`release-candidate` and pull requests are never signed. Each signing job has a guard
 that allows only `main` in the church's repository, so a manual run from another branch
 can't reach the `production` Environment and its signing secrets. That guard is part of
 the credential boundary and must stay. Every merge into `main` starts **Native Android
@@ -243,9 +243,9 @@ optional `GOOGLE_DRIVE_FOLDER_ID` (the Drive upload). A third environment,
 
 To set up `production`, open **Settings → Environments** in the upstream repository and
 create or select `production`. Require at least one reviewer, and restrict deployment
-branches to `main` and `release/**`. The release branches need it only so the Android PR
-preview can upload its APK to Drive; the signing jobs themselves run only on `main`.
-Then:
+branches to `main` and `release-candidate`, so a manual QR code or Apps Script run from
+`release-candidate` can reach its approval step. The Android PR preview runs in `main`'s
+context, and the signing jobs themselves run only on `main`. Then:
 
 - **Store binary files base64-encoded.** The keystore, `.p12`, and provisioning profile
   are binary, so their secrets hold base64 text. Base64 is only an encoding; the GitHub
@@ -512,7 +512,7 @@ internal testing. Native failures do not block the website deployment.
 **Android PR preview** builds with no signing credentials: it makes a debug APK, signed
 only with Gradle's local debug key, for ARM phones and tablets
 (`npm run build:android:apk:debug:arm`). It runs automatically for release pull requests
-into `main`, from a `release/*` branch in this repository, and skips fork PRs. It does
+into `main`, from `release-candidate` in this repository, and skips fork PRs. It does
 not accept manual commit or pull-request SHA inputs and does not use dependency caching
 while executing PR code in the `pull_request_target` context.
 
@@ -569,7 +569,7 @@ preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
 - `screens/ios/<screen>-<variant>.png`, in the Apple Silicon artifact only: the key
   screens, described below.
 
-Pull requests into a `release/*` branch don't run it, and neither do other pull
+Pull requests into `release-candidate` don't run it, and neither do other pull
 requests into `main`, such as Dependabot's. To test a change to the workflow,
 `scripts/build-ios-simulator.mjs`, or the key screens before the release PR, start it by
 hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
@@ -961,8 +961,9 @@ release → Internal testing → Create new release**. Upload the AAB, not the A
 ## Versions and maintenance
 
 `package.json` / `app.json` retain the shared user-facing release version managed by
-`npm run sync-version`. Change it explicitly for each planned release, with
-`npm run sync-version -- --version x.y.z` in the release branch. CI doesn't change it:
+`npm run sync-version`. Change it explicitly for each release, with
+`npm run sync-version -- --version x.y.z` in a pull request into `release-candidate`
+once the release's contents are settled. CI doesn't change it:
 **Release - PR Version Sync** only checks that the version files match the release
 PR's title, and fails if they don't. Both stores'
 build numbers are computed from it; see [Version numbers](version-numbers.md).

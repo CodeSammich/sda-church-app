@@ -22,7 +22,7 @@ jobs:
     if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     steps:
-      - name: Require an organization release branch
+      - name: Require the organization's release-candidate branch
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
@@ -37,12 +37,14 @@ jobs:
           fi
 
           if [[ "$HEAD_REPOSITORY" != "$REPOSITORY" ]]; then
-            echo "::error title=Fork pull request blocked::Pull requests to main must come from a release branch in $REPOSITORY, not $HEAD_REPOSITORY."
+            echo "::error title=Fork pull request blocked::Pull requests to main must come from the release-candidate branch in $REPOSITORY, not $HEAD_REPOSITORY."
             exit 1
           fi
 
-          if [[ ! "$HEAD_REF" =~ ^release/[0-9]+\.[0-9]+\.(x|[0-9]+)$ ]]; then
-            echo "::error title=Invalid release source::Pull requests to main must come from an organization branch named release/x.y.(patch|x). Received $HEAD_REF."
+          # The release PR's title, not the branch name, sets the version; see
+          # scripts/release-version-policy.cjs.
+          if [[ "$HEAD_REF" != "release-candidate" ]]; then
+            echo "::error title=Invalid release source::Pull requests to main must come from the organization's release-candidate branch. Received $HEAD_REF."
             exit 1
           fi
 

@@ -35,18 +35,18 @@ does and what still needs a person.
 
 | Role | Who | Can |
 | --- | --- | --- |
-| Repository admin | Organization and repository admins | Run manual workflows, create `release/*` branches, merge to `main` (the ruleset lets admins merge without a second approval) |
+| Repository admin | Organization and repository admins | Run manual workflows, create the `release-candidate` branch, merge to `main` (the ruleset lets admins merge without a second approval) |
 | `release-approvers` team | Members of the GitHub team | Approve jobs that use the `production` Environment |
-| Contributor | Anyone with a fork | Open pull requests into a `release/*` branch |
+| Contributor | Anyone with a fork | Open pull requests into `release-candidate` |
 
 The `production` Environment holds the Google login (`CLASPRC_JSON`) and the Apple and
 Android signing credentials; the store upload settings are in the separate `store-upload`
 environment (see [Approving a production deployment](#approving-a-production-deployment)).
-It only accepts runs from `main` and `release/**`, and
-each run waits for a `release-approvers` member to approve it. Admins can also bypass
-that approval. To require approval even from admins, turn off **Allow administrators
-to bypass configured protection rules** under **Settings → Environments →
-production**.
+It only accepts runs from `main` and `release-candidate` (and the retired
+`release/**`), and each run waits for a `release-approvers` member to approve it.
+Admins can also bypass that approval. To require approval even from admins, turn off
+**Allow administrators to bypass configured protection rules** under **Settings →
+Environments → production**.
 
 ### Getting notified only when action is needed
 
@@ -84,7 +84,7 @@ whenever you change them.
 | --- | --- | --- | --- |
 | **Deletion Protection** | `main`, `gh-pages` | No deleting the branch and no force-pushes | Nobody |
 | **Main protection** | `main` | No deleting or force-pushing, linear history, and changes only through a pull request that meets the review rules below; the checks marked for `main` must pass | Organization admins, through a pull request |
-| **PR approval** | `main` and `release/*` | Changes only through a pull request that meets the review rules below, with every review thread resolved; the checks marked for both must pass | Organization and repository admins, through a pull request |
+| **PR approval** | `main`, `release-candidate`, and the retired `release/*` | Changes only through a pull request that meets the review rules below, with every review thread resolved; the checks marked for both must pass | Organization and repository admins, through a pull request |
 
 Review rules for both pull-request rulesets:
 - One approval is required.
@@ -97,10 +97,10 @@ Review rules for both pull-request rulesets:
 
 | Check | Comes from | Required on |
 | --- | --- | --- |
-| `Jest unit tests` | `pr-tests.yml` | `main` and `release/*` |
+| `Jest unit tests` | `pr-tests.yml` | `main` and `release-candidate` |
 | `verify-bulletin-api` | `bulletin-integration.yml` | `main` |
-| `validate-pr` | `release-validation.yml` | `main` and `release/*` |
-| `require-linked-issue` | `pr-linked-issue.yml` | `main` and `release/*` |
+| `validate-pr` | `release-validation.yml` | `main` and `release-candidate` |
+| `require-linked-issue` | `pr-linked-issue.yml` | `main` and `release-candidate` |
 | `enforce-version` | `pr-check.yml` | `main` |
 | `sync` | `release-validation.yml` | `main` |
 | `ensure_pr_to_main_from_release_branch` | `main-release-source-gate.yml` | `main` |
@@ -114,7 +114,7 @@ A skipped check counts as passed; for example, `sync` usually shows as skipped.
 
 The slow checks (`verify-bulletin-api`, the Android and iOS builds, and the Bible audio
 test) run once per release, on the release pull request into `main`. Feature pull
-requests into a release branch run only the quick checks. Any other pull request into
+requests into `release-candidate` run only the quick checks. Any other pull request into
 `main`, such as Dependabot's, skips the slow checks, because the source gate stops it
 from merging there anyway.
 
@@ -122,8 +122,8 @@ from merging there anyway.
 
 - **Add a check only after its workflow is on the branch it guards.** Otherwise pull
   requests wait for a check that never runs. For a check required on `main`, the
-  workflow must first be in the open `release/*` branch, because that branch is the head
-  of the release PR.
+  workflow must first be in `release-candidate`, because that branch is the head of the
+  release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
   job's name includes the matrix values, such as `Build iOS Simulator app (Intel Mac)`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
@@ -132,7 +132,7 @@ from merging there anyway.
   `pull_request_target`. A release PR reports the job name `main` has, so after
   renaming that job, keep the old name required until the release with the rename
   reaches `main`, then swap it. Workflows triggered by `pull_request`, such as
-  `ios-pr-preview.yml`, report the release branch's names right away.
+  `ios-pr-preview.yml`, report the names in `release-candidate` right away.
 
 ## Approving a production deployment
 
@@ -168,8 +168,9 @@ environment**):
 - **Name:** `screenshot-review`.
 - **Required reviewers:** the **release-approvers** team, the same as `production`.
 - **Deployment branches and tags:** no restriction. GitHub checks a pull request's run
-  against its merge ref (`refs/pull/…/merge`), not `release/*`, and the environment
-  holds no secrets; the job itself runs only on release pull requests into `main`.
+  against its merge ref (`refs/pull/…/merge`), not `release-candidate`, and the
+  environment holds no secrets; the job itself runs only on release pull requests into
+  `main`.
 
 If the environment is missing or has no required reviewers, the check fails and says
 so, rather than passing unreviewed.
@@ -179,21 +180,24 @@ so, rather than passing unreviewed.
 The full process is in [Contributing](../CONTRIBUTING.md#releasing-code-maintainers-only).
 The admin-only steps are:
 
-1. **Create the release branch** from `main`: **Code → branch menu → View all
-   branches → New branch**, named `release/x.y.z` (for example `release/0.39.0`).
-2. **Merge feature pull requests** into that branch. Their titles must start with
-   `Release/x.y.z:` or `Release/x.y.x:`. One of them sets the version files to `x.y.z`
-   (`npm run sync-version -- --version x.y.z`), which must be higher than `main`'s
-   version. The store build numbers are computed from it; see
-   [Version numbers](version-numbers.md).
-3. **Open the release pull request** from `release/x.y.z` into `main`, titled
-   `Release/x.y.z: …`. Write the part after the colon for testers: it becomes the
-   "What's new" text in Google Play internal testing. Copy the `Closes #…` lines from the included feature pull
-   requests into its description. Use `Part of #…` or `Related to #…` for issues
-   that should stay open. The **PR Linked Issue** check fails if the description has neither.
-4. **Merge it** once its checks and review pass. The slowest check, **iOS PR
+1. **Create `release-candidate`** from `main` when a release cycle starts: **Code →
+   branch menu → View all branches → New branch**, named `release-candidate`.
+2. **Merge feature pull requests** into it.
+3. **Set the version** once the contents are settled: pick a patch, minor, or major
+   version for what the release contains, higher than `main`'s, and merge a pull request
+   into `release-candidate` that runs `npm run sync-version -- --version x.y.z`. The store
+   build numbers are computed from it; see [Version numbers](version-numbers.md).
+4. **Open the release pull request** from `release-candidate` into `main`, titled
+   `Release/x.y.z: …` with that version; CI checks the version files match the
+   title. Write the part after the colon for testers: it becomes the "What's new" text in Google Play
+   internal testing. Copy the `Closes #…` lines from the included feature pull requests
+   into its description.
+5. **Merge it** once its checks and review pass. The slowest check, **iOS PR
    preview**, takes about 50 minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
+   GitHub then deletes `release-candidate` and moves any open feature pull requests
+   into it to `main`. Create it again for the next release, and move those pull
+   requests back to it.
 
 What runs after the merge to `main`:
 
@@ -234,7 +238,7 @@ uses, and nothing reaches Drive until someone approves:
 1. For a manual run, select **Run workflow** and choose **`main`** under *Use
    workflow from*. The upload step always runs the upload script from `main`, but
    it uploads the images the chosen branch generated from its own copy of the
-   file. A run from a release branch can test image generation; reject its upload.
+   file. A run from `release-candidate` can test image generation; reject its upload.
 2. Approve the `production` deployment when the upload job starts. Leaving it
    unapproved is safe: the run expires without changing Drive.
 3. Open the **Upload QR codes to Google Drive** log and check:
@@ -279,7 +283,7 @@ Which slots print, and why the mobile app code waits for launch (#323), is in
 deployment, and there is no test copy. The workflow doesn't check the branch: it
 pushes the chosen branch's code to the project and points the live deployment at
 it. The spreadsheet's **Printed Bulletin** menu and the app's bulletin use the new
-code at once. So a run from a `release/*` branch, which the `production`
+code at once. So a run from `release-candidate`, which the `production`
 environment also accepts, puts unreleased code live. It is not a way to try a
 change out.
 
@@ -590,7 +594,7 @@ store announces a change, check that:
 ## Android PR preview APKs
 
 **Workflow:** **Android PR preview**, which runs automatically on release pull requests
-into `main` (from a `release/*` branch in this repository).
+into `main` (from `release-candidate` in this repository).
 
 It builds a debug APK, signed only with Gradle's local debug key, never the church's
 release key. After you approve `production`, it uploads the APK
@@ -623,14 +627,12 @@ separate one for each major update (`.github/dependabot.yml`). It opens them aga
 Version Check**, and **Release - PR Version Sync**. Don't merge them into `main`. For
 each one:
 
-1. Select **Edit** next to the title and change the base branch to the current
-   `release/x.y.z`.
-2. Add `Release/x.y.z: ` to the start of the title.
-3. Comment `@dependabot rebase` so the branch is rebuilt on the release branch and the
+1. Select **Edit** next to the title and change the base branch to `release-candidate`.
+2. Comment `@dependabot rebase` so the branch is rebuilt on `release-candidate` and the
    checks run again.
 
 Or copy the `package.json` and `package-lock.json` changes from several of them into
-one pull request into the release branch, and close the Dependabot pull requests with a
+one pull request into `release-candidate`, and close the Dependabot pull requests with a
 link to it.
 
 While a Dependabot pull request still targets `main`, it runs only the quick checks.
@@ -753,7 +755,7 @@ To renew, follow the
 
 **Workflow:** **Android audio e2e**. It runs on every release pull request into
 `main`, and it can be run manually. **It's a required check on `main`**,
-so a release can't merge until it passes. Feature pull requests into a release branch
+so a release can't merge until it passes. Feature pull requests into `release-candidate`
 don't run it; to test an audio change before the release, run it manually on your
 branch.
 
@@ -825,7 +827,7 @@ the policy, no release can merge into `main`**:
 | Workflow | Why it uses `pull_request_target` | Required on `main` |
 | --- | --- | --- |
 | `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
-| `.github/workflows/android-pr-preview.yml` | The Drive upload needs the `production` environment, which only `main` may use. It builds only this repository's `release/*` branches, never fork code. | Yes: `Build Android debug APK (ARM)` |
+| `.github/workflows/android-pr-preview.yml` | The Drive upload needs the `production` environment, which a pull request run can reach only in `main`'s context. It builds only this repository's `release-candidate` branch, never fork code. | Yes: `Build Android debug APK (ARM)` |
 | `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
 
 None of them runs code from a fork with secrets or a write token, which is what makes
@@ -841,8 +843,8 @@ themselves, and tests enforce that:
   request's copy, so an outsider can't add or change one. Only a reviewed release PR
   can.
 - The gate and the label workflow never check out code. The Android preview builds
-  only this repository's `release/*` branches, which only people with write access
-  can push, and never a fork's code. Its build job has no secrets, no saved
+  only this repository's `release-candidate` branch, which changes only through approved
+  pull requests, and never a fork's code. Its build job has no secrets, no saved
   credentials, and a read-only token; the upload job, which has the Drive secret,
   runs only `main`'s upload script on the finished APK.
 - Pull request text, such as a title, body, or branch name, reaches a script only

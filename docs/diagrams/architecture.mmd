@@ -27,7 +27,7 @@ flowchart TB
 
   subgraph Dev["Development · GitHub organization"]
     forks["Forks<br/>feature branches"]
-    release["release/x.y.z branch<br/>created from main after each release"]
+    release["release-candidate branch<br/>created from main for each release"]
     main@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-icon.svg", label: "main<br/>New-York-Chinese-Seventh-day-Adventist/sda-church-app", pos: "b", w: 40, h: 40, constraint: "on" }
     actions@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/github-actions.svg", label: "GitHub Actions", pos: "b", w: 44, h: 44, constraint: "on" }
     binaries["📦 Signed AAB (Android)<br/>and IPA (iOS)"]

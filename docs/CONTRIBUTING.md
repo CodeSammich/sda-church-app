@@ -8,42 +8,45 @@ How to set up, run, and test the app is in
 Changes reach production through two distinct pull requests. Do not open a feature PR
 directly against `main`.
 
-- **Any contributor** may fork the repository, branch from the active release branch, and
-  open the first PR, the feature PR, from their fork into that release branch.
+- **Any contributor** may fork the repository, branch from `release-candidate`, and open
+  the first PR, the feature PR, from their fork into `release-candidate`.
 - **Code maintainers only** create and merge the second PR, the release PR, from the
-  primary repository's release branch into `main`. Contributors do not need write access
-  to `main` or permission to perform this release step.
+  primary repository's `release-candidate` into `main`. Contributors do not need write
+  access to `main` or permission to perform this release step.
 
 ```
 main (stable)
   ↑
-  └─ release/1.1.0 (release candidate)
+  └─ release-candidate (the next release)
        ↑
        └─ feature/awesome-feature (work in progress)
 ```
 
-Release branches are named `release/<major>.<minor>.<patch-or-x>`, for example
-`release/1.0.1` or `release/1.0.x`. Name your work branch with a prefix such as
-`feature/`, `bugfix/`, `chore/`, or `docs/`. The rulesets that protect `main` and
-`release/*`, and the checks a pull request must pass, are under
+`release-candidate` is the one release branch. It has no version in its name: a
+maintainer creates it from `main` when a release cycle starts, and it is deleted when the
+release PR merges. Name your work branch with a prefix such as `feature/`, `bugfix/`,
+`chore/`, or `docs/`. The rulesets that protect `main` and `release-candidate`, and the
+checks a pull request must pass, are under
 [Branch rules](operations/admin-runbook.md#branch-rules) in the admin runbook.
 
 ## Contributing a change
 
-1. Find the active `release/x.y.(patch|x)` branch in the primary repository. If it does
-   not exist, ask a maintainer to create it.
-2. Create the feature branch from that release branch, then push it to your fork:
+1. Check that the primary repository has a `release-candidate` branch. If it does not,
+   ask a maintainer to create it.
+2. Create the feature branch from it, then push it to your fork:
 
    ```bash
    git fetch upstream
-   git switch -c feature/your-feature upstream/release/1.1.0
+   git switch -c feature/your-feature upstream/release-candidate
    git push -u origin feature/your-feature
    ```
 
 3. Make and verify the changes; see [Testing](README.md#testing).
 4. Open the feature PR from the fork's feature branch into the primary repository's
-   matching release branch, following the format below, and wait for all checks and
-   reviews. Don't retarget it to `main`.
+   `release-candidate`, following the format below, and wait for all checks and
+   reviews. Don't retarget it to `main`. If a release merges first, GitHub moves the PR
+   to `main`; change it back once `release-candidate` is recreated, then update the
+   branch (**Update branch**, or merge `upstream/release-candidate` into it).
 5. A maintainer merges it once its checks and review pass. Its issues stay open until
    the release reaches `main`.
 
@@ -53,13 +56,9 @@ The PR template (`.github/pull_request_template.md`) starts each description wit
 `Closes #` line and has sections for what changed, key screens, and what was tested.
 Write the description however suits the change, but every feature and release PR must:
 
-- Start the PR title with a release line, for example
-  `Release/1.1.0: Add bulletin navigation` or `Release/1.1.x: Add bulletin navigation`.
-  When the destination branch is named `release/x.y.(patch|x)`, the title must use the
-  same major and minor; the patch may be concrete or `x`, and may differ from the
-  branch's. For a release PR, the title's release line is the source of truth for the
-  version; with an `x` patch, Release CI takes the concrete patch from the checked-in
-  `package.json`.
+- Title a feature PR with what it changes, for example `Add bulletin navigation`, with no
+  version. Only the release PR is titled `Release/x.y.z: Summary`, with the concrete
+  version; that title is the source of truth for the release version.
 - Describe the user-visible and technical changes.
 - Include one line per resolved issue in the description (not only in a commit message
   or the title), using a closing keyword such as `Closes #133` (`Fixes` and `Resolves`
@@ -96,7 +95,7 @@ AI coding agents read these rules from [`AGENTS.md`](../AGENTS.md), which `CLAUD
 `GEMINI.md` import. Keep them in sync with this section.
 
 GitHub closes linked issues only when the closing reference reaches the default branch.
-Therefore, `Closes #133` in a feature PR to `release/x.y.(patch|x)` links the work but does
+Therefore, `Closes #133` in a feature PR to `release-candidate` links the work but does
 not close the issue when that feature PR merges. Release automation adds the
 `pending release` label to show that the fix is merged and awaiting the production
 release. The issue closes when the release PR carries the reference into `main`.
@@ -111,25 +110,30 @@ fails with the `npm run sync-version` command to run, and you commit its changes
 a pull request. Each release must also raise the version, because the store build
 numbers are computed from it; see [Version numbers](operations/version-numbers.md).
 
-Release branch creation is currently a manual, code-maintainer action. No workflow creates
-`release/x.y.(patch|x)` automatically. This is intentional: starting a release chooses the
-version and production scope and should remain an explicit decision. The click-by-click
-steps are in
+Creating `release-candidate` and choosing the version are manual, code-maintainer
+actions; no workflow does either. The version is chosen last, once the release's contents
+are settled, because only then is it clear whether the release is a patch, minor, or
+major. The click-by-click steps are in
 [Shipping a release to `main`](operations/admin-runbook.md#shipping-a-release-to-main).
 
-1. A maintainer creates `release/x.y.(patch|x)` from the primary repository's `main`
-   branch, and feature PRs merge into it. One of them raises the version files with
-   `npm run sync-version -- --version <version>`.
-2. After all planned feature PRs are merged, a code maintainer opens the release PR from
-   `release/x.y.(patch|x)` into `main`, and copies every closing reference from the
+1. When a release cycle starts, a maintainer creates `release-candidate` from the primary
+   repository's `main` (for example `git fetch upstream` then
+   `git push upstream upstream/main:refs/heads/release-candidate`), and feature PRs merge
+   into it.
+2. Once the release's contents are settled, a maintainer picks the version and merges a
+   version PR into `release-candidate` that runs `npm run sync-version -- --version x.y.z`
+   and commits the generated files. Like any PR, it needs a `Part of #…` line or the
+   `no linked issue` label.
+3. A code maintainer opens the release PR from `release-candidate` into `main`, titled
+   `Release/x.y.z: Summary` with that version, and copies every closing reference from the
    included feature PRs into its description. This is the code maintainer's
    responsibility, not the fork contributor's. Do not rely on a reviewer to repair the
    merge commit message at the last moment.
-3. The release PR runs the slow checks below (the slowest, **iOS PR preview**, takes
+4. The release PR runs the slow checks below (the slowest, **iOS PR preview**, takes
    about 50 minutes), and **Screenshots reviewed** waits for a `release-approvers`
    member to approve the screenshots. Merge it once every check and the review pass.
-   Merging it into `main` closes the issues.
-4. The merge to `main` checks the version files, tags the release, publishes the website,
+   Merging it into `main` closes the issues and deletes `release-candidate`.
+5. The merge to `main` checks the version files, tags the release, publishes the website,
    and starts the signed Android and iOS builds. The builds wait for a `release-approvers`
    member to approve the `production` environment, then upload to Google Play internal
    testing and TestFlight. Nothing reaches the public until a maintainer checks it on
@@ -137,28 +141,29 @@ steps are in
    [Uploading to the stores](operations/admin-runbook.md#uploading-to-the-stores) and
    [Automatic store uploads](operations/native-builds.md#automatic-store-uploads).
 
-### Future release-branch automation
+### Future release automation
 
-If release creation is automated later, begin with a maintainer-run local helper that
-validates the requested version, confirms the release branch and version tag do not
-already exist, starts from the current primary-repository `main`, creates the release
-branch and synchronizes the version files, and stops before committing or pushing so the
-maintainer can review the result. Only consider a manually dispatched GitHub Actions
-workflow after that helper has worked for several releases; the workflow must validate
-the release itself, because pushes made with the standard `GITHUB_TOKEN` generally do not
-trigger another workflow run. Do not create release branches automatically from dates,
-issue activity, or feature merges.
+If choosing the version is automated later, begin with a maintainer-run local helper that
+validates the requested version, confirms its tag does not already exist, starts from the
+current primary-repository `release-candidate`, synchronizes the version files, and stops
+before committing or pushing so the maintainer can review the result. Only consider a
+manually dispatched GitHub Actions workflow after that helper has worked for several
+releases; the workflow must validate the release itself, because pushes made with the
+standard `GITHUB_TOKEN` generally do not trigger another workflow run. Do not choose
+versions or create `release-candidate` automatically from dates, issue activity, or
+feature merges.
 
 ## Automated checks
 
 Each workflow is listed by the name the Actions tab shows, with its file and its check
-names. Which checks are required on `main` and on `release/*` is in
-[Required checks](operations/admin-runbook.md#required-checks). A feature PR into a
-release branch runs only the first three workflows below (and **Issues - Pending Release
-Label** when it merges); the slower ones run once per release, on the release PR into `main`. Other PRs into `main`, such as Dependabot's,
-skip the slow ones, because the source gate stops them from merging anyway. `main` also
-requires the `CodeQL`, `Analyze (actions)`, and `Analyze (javascript-typescript)`
-checks, which come from GitHub's code scanning default setup and have no workflow file.
+names. Which checks are required on `main` and on `release-candidate` is in
+[Required checks](operations/admin-runbook.md#required-checks). A feature PR into
+`release-candidate` runs only the first three workflows below (and **Issues - Pending
+Release Label** when it merges); the slower ones run once per release, on the release PR
+into `main`. Other PRs into `main`, such as Dependabot's, skip the slow ones, because the
+source gate stops them from merging anyway. `main` also requires the `CodeQL`,
+`Analyze (actions)`, and `Analyze (javascript-typescript)` checks, which come from
+GitHub's code scanning default setup and have no workflow file.
 
 ### `PR Unit Tests` (`.github/workflows/pr-tests.yml`)
 
@@ -168,21 +173,20 @@ checks, which come from GitHub's code scanning default setup and have no workflo
 
 ### `Release - PR Version Sync` (`.github/workflows/release-validation.yml`)
 
-- **Validate PR title** (check `validate-pr`, on every pull request): Requires
-  `Release/x.y.<patch-or-x>` and ensures its major and minor match an applicable
-  `release/x.y.<patch-or-x>` destination branch or primary-repository source branch.
-  An `x` patch uses the concrete patch in `package.json`.
-- **Verify the version files** (check `sync`): For a release branch in the primary
-  repository, runs `npm run sync-version -- --version <version>` with the validated
-  version and fails if that changes `package.json`, `package-lock.json`, `app.json`, or
-  `public/sw.js`. The error gives that command to run and commit; the check never
-  changes the branch. It does not run for fork source branches, and it usually shows as
-  skipped.
+- **Validate PR title** (check `validate-pr`, on every pull request): On a PR into
+  `main`, requires a title starting `Release/x.y.z` with a concrete version. Any title
+  passes on other PRs.
+- **Verify the version files** (check `sync`): On the release PR from the primary
+  repository's `release-candidate`, runs `npm run sync-version -- --version <version>`
+  with the title's version and fails if that changes `package.json`,
+  `package-lock.json`, `app.json`, or `public/sw.js`. The error gives that command to run
+  and commit; the check never changes the branch. Other PRs skip it, so it usually shows
+  as skipped.
 
 ### `PR Linked Issue` (`.github/workflows/pr-linked-issue.yml`)
 
 - Check: `require-linked-issue`.
-- Fails a PR into `main` or a release branch whose description has no `Closes #…`
+- Fails a PR into `main` or `release-candidate` whose description has no `Closes #…`
   (or `Fixes`/`Resolves`) line and no `Part of #…`, `Related to #…`, or `Refs #…`
   line. The error says exactly what to add.
 - Reruns when the description is edited, so fixing the description clears it without a
@@ -193,14 +197,14 @@ checks, which come from GitHub's code scanning default setup and have no workflo
 
 - Check: `enforce-version`. Runs on PRs into `main`.
 - Fails unless the version in `package.json` is higher than `main`'s, so each release
-  gets a new version and a higher store build number. The one exception is a
-  `release/<version>` branch whose unchanged version has no tag yet, which allows a
-  release to be retried; it still fails if that version is already tagged.
+  gets a new version and a higher store build number. The one exception is a PR from
+  `release-candidate` whose unchanged version has no tag yet, which allows a release to
+  be retried; it still fails if that version is already tagged.
 
 ### `Main Release Source Gate` (`.github/workflows/main-release-source-gate.yml`)
 
 - Check: `ensure_pr_to_main_from_release_branch`. Runs on PRs into `main`.
-- Fails unless the PR comes from a `release/x.y.(patch|x)` branch in the primary
+- Fails unless the PR comes from the `release-candidate` branch in the primary
   repository. It runs from `main`'s copy of the workflow, so a PR can't edit it to pass.
 
 ### `Bulletin API Integration` (`.github/workflows/bulletin-integration.yml`)
@@ -239,7 +243,7 @@ checks, which come from GitHub's code scanning default setup and have no workflo
 ### `Issues - Pending Release Label` (`.github/workflows/pending-release-label.yml`)
 
 - Adds `pending release` to issues referenced with `Closes #<issue>` (or `Fixes`/`Resolves`) when a PR merges
-  into a `release/x.y.<patch-or-x>` branch, including PRs submitted from forks.
+  into `release-candidate`, including PRs submitted from forks.
 - Removes the label when the issue closes after the final release reaches `main`.
 
 ### `Deploy Website and Tag` (`.github/workflows/deploy.yml`)

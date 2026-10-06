@@ -215,7 +215,7 @@ updates can be uploaded until it's renewed.
    match the file. Its TestFlight upload reports that the build is already there,
    which is expected for a rebuild of the same release.
 6. **Record the new dates** in `.github/apple-signing-expiry.json`, in a pull request
-   into the current release branch: the values printed in step 5 for
+   into `release-candidate`: the values printed in step 5 for
    `distributionCertificate` and `provisioningProfile`, and, if it was renewed, the new
    membership date from **Membership details** for `developerMembership`. The dates
    are ISO dates, such as `2028-09-27T00:00:00Z`; the time of day doesn't matter.

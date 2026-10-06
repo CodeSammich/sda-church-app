@@ -84,12 +84,12 @@ describe('Android PR preview', () => {
 
   it('builds only release PRs, not Dependabot PRs into main', () => {
     expect(readRepoFile('.github/workflows/android-pr-preview.yml'))
-      .toContain("startsWith(github.event.pull_request.head.ref, 'release/')");
+      .toContain("github.event.pull_request.head.ref == 'release-candidate'");
   });
 });
 
 // The slow checks run once per release, on the release PR into main, where
-// the Main protection ruleset requires them. Feature PRs into a release branch
+// the Main protection ruleset requires them. Feature PRs into release-candidate
 // get only the quick checks, and PRs into main from any other branch, such as
 // Dependabot's, skip them without taking a runner.
 describe.each([
@@ -107,11 +107,11 @@ describe.each([
     expect(trigger).not.toContain('paths:');
   });
 
-  it('skips PRs whose head is not a release branch in this repository', () => {
+  it('skips PRs whose head is not the release-candidate branch in this repository', () => {
     const jobStart = workflow.indexOf(`\n  ${job}:\n`);
     expect(jobStart).toBeGreaterThan(-1);
     const condition = workflow.slice(jobStart, workflow.indexOf('\n    runs-on:', jobStart));
-    expect(condition).toContain("startsWith(github.head_ref, 'release/')");
+    expect(condition).toContain("github.head_ref == 'release-candidate'");
     expect(condition).toContain('github.event.pull_request.head.repo.full_name == github.repository');
     expect(condition).toContain("github.event_name != 'pull_request'");
   });
@@ -246,7 +246,7 @@ describe('pull_request_target', () => {
     }
   });
 
-  it('builds only release branches of this repository in the Android preview, never a fork', () => {
+  it('builds only the release-candidate branch of this repository in the Android preview, never a fork', () => {
     const workflow = readRepoFile('.github/workflows/android-pr-preview.yml');
     expect(workflow).toContain('github.event.pull_request.head.repo.full_name == github.repository');
     expect(workflow).toContain('test "$HEAD_REPOSITORY" = "$GITHUB_REPOSITORY"');
