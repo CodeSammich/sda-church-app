@@ -50,6 +50,7 @@ import {
   type HymnalHymn,
   isHymnalBookId,
 } from './Hymnals';
+import type { HymnNumber } from './HymnalNumberMappings';
 import {
   getHymnalSearchItems,
   getHymnalSearchResults,
@@ -63,7 +64,6 @@ const copy = {
     chinese: 'Chinese',
     hymnalPage: (name: string, page: number, count: number) =>
       `${name}, hymnal ${page} of ${count}`,
-    lookup: 'English–Chinese Hymn Lookup',
     searchEnglish: 'Search by number, title, or scripture...',
     searchChinese: 'Search by number or title...',
     searchButton: 'Search this hymnal',
@@ -73,8 +73,7 @@ const copy = {
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}, hymn ${number}, ${title}`,
     watchYouTube: 'YouTube',
-    crossReferenceNames: { english: 'SDA Hymnal 1985', chinese: 'Chinese Hymnal 505' },
-    crossReferenceLabel: (name: string, number: number) => `${name}, hymn ${number}`,
+    crossReferenceLabel: (name: string, number: HymnNumber) => `${name}, hymn ${number}`,
     crossReferenceHint: 'Shows this hymn in that hymnal',
   },
   zh: {
@@ -83,7 +82,6 @@ const copy = {
     chinese: '中文',
     hymnalPage: (name: string, page: number, count: number) =>
       `${name}，第 ${page}/${count} 本`,
-    lookup: '英中詩歌編號對照',
     searchEnglish: '按編號、標題或經文搜尋...',
     searchChinese: '按編號或標題搜尋...',
     searchButton: '搜尋這本詩歌',
@@ -93,8 +91,7 @@ const copy = {
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}第 ${number} 首，${title}`,
     watchYouTube: 'YouTube',
-    crossReferenceNames: { english: '英文 SDA 詩歌本 1985 年版', chinese: '中文讚美詩 505 版' },
-    crossReferenceLabel: (name: string, number: number) => `${name}第 ${number} 首`,
+    crossReferenceLabel: (name: string, number: HymnNumber) => `${name}第 ${number} 首`,
     crossReferenceHint: '在那本詩歌本中顯示這首詩歌',
   },
   'zh-cn': {
@@ -103,7 +100,6 @@ const copy = {
     chinese: '中文',
     hymnalPage: (name: string, page: number, count: number) =>
       `${name}，第 ${page}/${count} 本`,
-    lookup: '英中诗歌编号对照',
     searchEnglish: '按编号、标题或经文搜索...',
     searchChinese: '按编号或标题搜索...',
     searchButton: '搜索当前诗歌本',
@@ -113,8 +109,7 @@ const copy = {
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}第 ${number} 首，${title}`,
     watchYouTube: 'YouTube',
-    crossReferenceNames: { english: '英文 SDA 诗歌本 1985 年版', chinese: '中文赞美诗 505 版' },
-    crossReferenceLabel: (name: string, number: number) => `${name}第 ${number} 首`,
+    crossReferenceLabel: (name: string, number: HymnNumber) => `${name}第 ${number} 首`,
     crossReferenceHint: '在那本诗歌本中显示这首诗歌',
   },
   es: {
@@ -123,7 +118,6 @@ const copy = {
     chinese: 'Chino',
     hymnalPage: (name: string, page: number, count: number) =>
       `${name}, himnario ${page} de ${count}`,
-    lookup: 'Correspondencia de Himnos en Inglés y Chino',
     searchEnglish: 'Buscar por número, título o referencia...',
     searchChinese: 'Buscar por número o título...',
     searchButton: 'Buscar en este himnario',
@@ -133,8 +127,7 @@ const copy = {
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}, himno ${number}, ${title}`,
     watchYouTube: 'YouTube',
-    crossReferenceNames: { english: 'Himnario ASD 1985', chinese: 'Himnario Chino 505' },
-    crossReferenceLabel: (name: string, number: number) => `${name}, himno ${number}`,
+    crossReferenceLabel: (name: string, number: HymnNumber) => `${name}, himno ${number}`,
     crossReferenceHint: 'Muestra este himno en ese himnario',
   },
 } as const;
@@ -280,7 +273,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       ? displayHymns[0]
       : undefined;
   // A search also looks through every other hymnal, as the header's search
-  // across all hymnals once did, with the 1985 ↔ 505 equivalents of the
+  // across all hymnals once did, with the cross-reference equivalents of the
   // picked hymnal's matches first.
   const otherResults = useMemo(
     () =>
@@ -331,12 +324,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       crossReference: (hymnalId, number) =>
         `${getHymnalShortLabel(hymnalId, language)} · ${number}`,
       crossReferenceLabel: (hymnalId, number) =>
-        labels.crossReferenceLabel(
-          hymnalId === 'sdah-1985-en'
-            ? labels.crossReferenceNames.english
-            : labels.crossReferenceNames.chinese,
-          number,
-        ),
+        labels.crossReferenceLabel(getHymnalLabel(hymnalId, language), number),
       crossReferenceHint: labels.crossReferenceHint,
     }),
     [labels, language],
@@ -345,7 +333,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
   // Shows a hymn in its hymnal, as a link to it would: the same hymn from a
   // cross-reference, or a search result from another hymnal.
   const openCrossReference = useCallback(
-    (hymnalId: HymnalBookId, number: number | string) => {
+    (hymnalId: HymnalBookId, number: HymnNumber) => {
       setSelectedId(hymnalId);
       setView(hymnalId, { query: '', hymnNum: number.toString() });
       listRef.current?.scrollToOffset({ animated: false, offset: 0 });
@@ -354,8 +342,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
   );
 
   // Coming back from the Bible reopens this hymnal as it was: the same hymn
-  // or search, and the same place to go back to, such as the Bulletin or Hymn
-  // lookup.
+  // or search, and the same place to go back to, such as the Bulletin.
   const openScripture = useCallback(
     (hymnalId: HymnalBookId, reference: string) => {
       const scripture = BibleService.parseScriptureReference(reference);
@@ -378,16 +365,6 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
     },
     [backTo, defaultHymnalId, route],
   );
-
-  // The lookup comes back to this page with its params unchanged, so the
-  // page keeps its hymnal and searches.
-  const openLookup = () =>
-    router.push({
-      pathname: '/home/hymn-lookup',
-      params: {
-        backTo: getHref(route, { hymnal: hymnalParam, backTo, hymnNum, highlight, refresh }),
-      },
-    } as any);
 
   const focusSearch = useCallback(() => {
     listRef.current?.scrollToOffset({
@@ -472,24 +449,6 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
           onPageChange={(page) => setSelectedId(order[page] ?? order[0])}
         />
       </View>
-      {/* The English–Chinese lookup, which matches numbers in 1985 and 505. */}
-      <Pressable
-        accessibilityLabel={labels.lookup}
-        accessibilityRole="button"
-        onPress={openLookup}
-        style={({ pressed }) => [
-          styles.lookupChip,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.outline,
-            opacity: pressed ? 0.75 : 1,
-          },
-          Platform.OS === 'web' ? styles.webPressable : null,
-        ]}
-      >
-        <AppIcon name="translate" size={18} color={theme.colors.primary} />
-        <Text style={[styles.lookupText, { color: theme.colors.primary }]}>1985 ↔ 505</Text>
-      </Pressable>
       <View
         onLayout={(event: LayoutChangeEvent) => {
           searchTop.current = event.nativeEvent.layout.y;
@@ -570,7 +529,7 @@ type OtherHymnalRowProps = Readonly<{
   accessibilityLabel: string;
   hymnalName: string;
   item: HymnalSearchItem;
-  onOpen: (hymnalId: HymnalBookId, hymnNumber: number | string) => void;
+  onOpen: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => void;
   styles: ReturnType<typeof createStyles>;
 }>;
 
@@ -620,27 +579,10 @@ const createStyles = (
   effectiveTextScale: number,
 ) =>
   StyleSheet.create({
-    lookupChip: {
-      alignItems: 'center',
-      alignSelf: 'center',
-      borderRadius: 999,
-      borderWidth: 1,
-      flexDirection: 'row',
-      gap: 8,
-      marginTop: -8,
-      minHeight: Math.ceil(40 + Math.max(0, effectiveTextScale - 1) * 16),
-      paddingHorizontal: 16,
-      paddingVertical: 6,
-    },
-    lookupText: {
-      fontSize: scaleTypographyMetric(15, textScale),
-      fontWeight: '700',
-      lineHeight: scaleTypographyMetric(20, textScale),
-    },
+    // Under the carousel's dots, which have room below them.
     searchArea: {
       paddingBottom: 12,
       paddingHorizontal: 20,
-      paddingTop: 16,
     },
     searchbar: {
       borderRadius: 24,

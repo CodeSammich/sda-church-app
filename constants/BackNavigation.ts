@@ -52,7 +52,6 @@ export const getBackTarget = (
 
   if (route === '/you/legal') return '/you';
 
-  if (route === '/home/hymn-lookup') return '/home/hymnal-selection';
   if (route === '/home/worship') return '/home/fellowship';
   if (
     route === '/home/about-sda' ||

@@ -44,15 +44,11 @@ describe('Chinese 505 hymnal directory', () => {
     );
   });
 
-  it('adds Chinese hymns to reader search with their own route', () => {
+  it('adds Chinese hymns to the search across every hymnal', () => {
     const item = getHymnalSearchItems('zh-cn').find(
       ({ title }) => title === '91. 救主衣袍',
     );
 
-    expect(item).toMatchObject({
-      route:
-        '/home/chinese-505-hymnal?hymnNum=91&backTo=/home/hymnal-selection',
-      isHymn: true,
-    });
+    expect(item).toMatchObject({ hymnalId: 'chinese-hymnal-505', hymnNumber: 91 });
   });
 });

@@ -69,7 +69,6 @@ const HERO_UNDER_STATUS_BAR_ROUTES = new Set([
   'index',
   'library',
   'library/[collection]',
-  'hymn-lookup',
   'sabbath-school',
 ]);
 
@@ -101,7 +100,6 @@ type CustomHeaderSearchItem = {
   icon?: string;
   key: string;
   onPress: () => void;
-  searchNumber?: string;
   searchText?: string;
   subtitle: string;
   title: string;

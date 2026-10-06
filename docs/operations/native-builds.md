@@ -588,7 +588,7 @@ xcrun simctl launch booted org.nyccsda.app
 #### Key screens
 
 The Apple Silicon job also screenshots the 30 screens listed in
-`test/screens/screens.json`, 82 shots in all, so a layout problem on iPhone shows up
+`test/screens/screens.json`, 81 shots in all, so a layout problem on iPhone shows up
 before release rather than in TestFlight (#331). `scripts/capture-ios-screens.cjs`
 takes each one:
 
@@ -602,7 +602,7 @@ takes each one:
    app, and the store builds never set it, so on a real phone the app never looks for
    a saved screen. A test checks that no other workflow sets it.
 2. It launches the app, waits for the screen to load, and saves
-   `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch, so the 82 shots
+   `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch, so the 81 shots
    take about 24 of the run's 50 minutes.
 3. The status bar is fixed (9:41, full battery and signal), so images differ only when
    the app does. The iOS 26 Simulator draws the Dynamic Island into its screenshots,

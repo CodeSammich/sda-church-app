@@ -71,17 +71,11 @@ describe('Chinese 506 hymnal directory', () => {
     expect(getChinese506HymnUrl(507)).toBe(CHINESE_506_DIRECTORY_URL);
   });
 
-  it('adds 506 hymns to reader search with their own route', () => {
+  it('adds 506 hymns to the search across every hymnal', () => {
     const item = getHymnalSearchItems('zh-cn').find(
-      ({ title, route }) =>
-        title === '1. 圣哉真神' &&
-        route.startsWith('/home/chinese-506-hymnal'),
+      ({ title, hymnalId }) => title === '1. 圣哉真神' && hymnalId === 'chinese-hymnal-506',
     );
 
-    expect(item).toMatchObject({
-      route:
-        '/home/chinese-506-hymnal?hymnNum=1&backTo=/home/hymnal-selection',
-      isHymn: true,
-    });
+    expect(item).toMatchObject({ hymnNumber: 1 });
   });
 });

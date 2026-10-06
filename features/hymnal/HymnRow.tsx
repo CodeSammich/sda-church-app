@@ -12,6 +12,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
 import { formatHymnalScriptureReference } from './EnglishHymnal';
 import type { HymnalBookId } from './HymnalLabels';
+import type { HymnNumber } from './HymnalNumberMappings';
 import {
   getHymnCrossReferences,
   HYMNALS,
@@ -21,9 +22,9 @@ import {
 export type HymnRowLabels = Readonly<{
   watchYouTube: string;
   /** The cross-reference chip's text, such as "505 · 23". */
-  crossReference: (hymnalId: HymnalBookId, hymnNumber: number) => string;
-  /** What a screen reader says for the chip, such as "Chinese Hymnal 505, hymn 23". */
-  crossReferenceLabel: (hymnalId: HymnalBookId, hymnNumber: number) => string;
+  crossReference: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => string;
+  /** What a screen reader says for the chip, such as "Chinese Hymnal — 505 Edition, hymn 23". */
+  crossReferenceLabel: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => string;
   crossReferenceHint: string;
 }>;
 
@@ -35,13 +36,13 @@ type HymnRowProps = Readonly<{
   labels: HymnRowLabels;
   styles: HymnRowStyles;
   onOpenScripture: (hymnalId: HymnalBookId, reference: string) => void;
-  onOpenCrossReference: (hymnalId: HymnalBookId, hymnNumber: number) => void;
+  onOpenCrossReference: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => void;
 }>;
 
 /**
  * One hymn: its number and title open the sheet music, with its recording,
- * an English hymn's scripture, and the same hymn's number in the other primary
- * hymnal (1985 ↔ 505), which shows it there.
+ * an English hymn's scripture, and a chip for each number the same hymn has
+ * in another hymnal (from the cross-reference tables), which shows it there.
  */
 export const HymnRow = memo(function HymnRow({
   hymnalId,

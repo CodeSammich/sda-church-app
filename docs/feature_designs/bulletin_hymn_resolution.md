@@ -73,8 +73,8 @@ plugin system. Before changing one of its primary IDs, a fork must:
    and a route file that renders `HymnalScreen` with that hymnal picked, like
    `app/(tabs)/home/english-hymnal.tsx`. Add its hymns to `getHymnalSearchItems` in
    `features/hymnal/HymnalSearch.ts` so the hymnal page's search finds them from other
-   hymnals. The 1985 ↔ 505 cross-references, on the page's rows and beside its search
-   results, are specific to those two hymnals.
+   hymnals. Its cross-references come from the mappings in step 1, with no other change; see
+   [Cross-references between hymnals](hymnal_integration_design.md#54-cross-references-between-hymnals).
 5. Change `PRIMARY_BULLETIN_HYMNALS` and `BULLETIN_HYMNAL_DISPLAY_NAMES`.
 6. Extend mapping, display, routing, and accessibility tests.
 

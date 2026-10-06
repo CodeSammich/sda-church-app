@@ -15,8 +15,13 @@ import { renderWithPreferences } from './helpers/render-preferences';
 const mockPush = jest.fn();
 let mockParams: Record<string, string> = {};
 let mockScreenOptions: Record<string, any> = {};
+let mockRedirect: string | undefined;
 
 jest.mock('expo-router', () => ({
+  Redirect: ({ href }: { href: string }) => {
+    mockRedirect = href;
+    return null;
+  },
   router: { push: (...args: unknown[]) => mockPush(...args) },
   Stack: {
     Screen: ({ options }: { options: Record<string, any> }) => {
@@ -136,13 +141,17 @@ describe('the hymnal page', () => {
     expect(view.getByText(hymnTitle('sdah-1985-en', 12))).toBeTruthy();
   });
 
-  it('opens the hymn lookup from its chip and comes back with its params unchanged', () => {
-    const view = renderPage(HymnalSelectionScreen);
-    fireEvent.press(view.getByLabelText('English–Chinese Hymn Lookup'));
-    expect(mockPush).toHaveBeenCalledWith({
-      pathname: '/home/hymn-lookup',
-      params: { backTo: '/home/hymnal-selection' },
-    });
+  it('sends the old hymn lookup to the hymnal page, on the hymn it had picked', () => {
+    const HymnLookup: ComponentType = require('@/app/(tabs)/home/hymn-lookup').default;
+    renderPage(HymnLookup, { sourceHymnalId: 'chinese-hymnal-505', sourceNumber: '23' });
+    expect(mockRedirect).toBe('/home/hymnal-selection?hymnal=chinese-hymnal-505&hymnNum=23');
+    renderPage(HymnLookup);
+    expect(mockRedirect).toBe('/home/hymnal-selection');
+    renderPage(HymnLookup, { sourceHymnalId: 'not-a-hymnal', sourceNumber: '23' });
+    expect(mockRedirect).toBe('/home/hymnal-selection');
+
+    // The page itself has no lookup button now; its search does that job.
+    expect(renderPage(HymnalSelectionScreen).queryByText(/1985 ↔ 505/)).toBeNull();
   });
 
   it("shows the hymnal's name and a search button in the header once the carousel scrolls away", () => {
@@ -224,7 +233,7 @@ describe('1985 ↔ 505 cross-references', () => {
   it('shows the 505 hymn from its chip on a 1985 hymn, and back', () => {
     const view = renderPage(HymnalSelectionScreen);
     // SDAH 1 is 505's hymn 5.
-    fireEvent.press(view.getByLabelText('Chinese Hymnal 505, hymn 5'));
+    fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymn 5'));
 
     expect(dotLabels(view)[1].selected).toBe(true);
     expect(view.getAllByText(/^\d+\. /).map((text) => text.props.children.join(''))).toEqual([
@@ -232,7 +241,7 @@ describe('1985 ↔ 505 cross-references', () => {
     ]);
     expect(view.getByText('1985 · 1')).toBeTruthy();
 
-    fireEvent.press(view.getByLabelText('SDA Hymnal 1985, hymn 1'));
+    fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 1'));
     expect(dotLabels(view)[0].selected).toBe(true);
     expect(view.getByText(hymnTitle('sdah-1985-en', 1))).toBeTruthy();
     expect(view.getByText('Show all hymns')).toBeTruthy();
@@ -241,7 +250,7 @@ describe('1985 ↔ 505 cross-references', () => {
   it('labels the chip in the app language', () => {
     const view = renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
     expect(view.getByText('505 · 5')).toBeTruthy();
-    expect(view.getByLabelText('中文讚美詩 505 版第 5 首')).toBeTruthy();
+    expect(view.getByLabelText('中文讚美詩 — 505 版第 5 首')).toBeTruthy();
   });
 });
 
@@ -311,6 +320,32 @@ describe('searching every hymnal from the page', () => {
     // The 1985 hymnal still has its search.
     fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymnal 1 of 6'));
     expect(listedHymns(view)).toEqual(['694', 'heading', 'chinese-hymnal-505:497']);
+  });
+
+  it('answers "hymn 100, English or Chinese?" from any hymnal', () => {
+    // Each hymn listed, wherever it is: the picked hymnal's own rows, or the
+    // other hymnals' results, as "hymnal:number title".
+    const listedTitles = (view: ReturnType<typeof renderPage>, hymnalId: HymnalBookId) =>
+      (view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>).props.data as any[])
+        .filter((item) => item.kind !== 'heading')
+        .map((item) =>
+          item.kind === 'other'
+            ? `${item.item.hymnalId}:${item.item.title}`
+            : `${hymnalId}:${item.number}. ${item.title}`,
+        );
+    const english100 = `sdah-1985-en:${hymnTitle('sdah-1985-en', 100)}`;
+    const chinese100 = `chinese-hymnal-505:${hymnTitle('chinese-hymnal-505', 100)}`;
+
+    getHymnalOrder('en').forEach((hymnalId, index) => {
+      const view = renderPage(HymnalSelectionScreen);
+      fireEvent.press(view.getByLabelText(new RegExp(`, hymnal ${index + 1} of 6$`)));
+      fireEvent.changeText(view.getByPlaceholderText(/^Search by number/), '100');
+
+      const listed = listedTitles(view, hymnalId);
+      expect(listed[0]).toBe(`${hymnalId}:${hymnTitle(hymnalId, 100)}`);
+      expect(listed).toEqual(expect.arrayContaining([english100, chinese100]));
+      view.unmount();
+    });
   });
 
   it('says nothing matches only when no hymnal has a match', () => {

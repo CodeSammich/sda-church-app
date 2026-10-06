@@ -1,6 +1,6 @@
 /**
  * The hymnals on the hymnal page, in one place: each one's hymns, cover,
- * links, own route, and the 1985 ↔ 505 cross-references between rows.
+ * links, own route, and the cross-references between their rows.
  */
 
 import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
@@ -21,10 +21,7 @@ import {
 } from './Chinese707Hymnal';
 import { getSortedHymns, openHymnal } from './EnglishHymnal';
 import type { HymnalBookId } from './HymnalLabels';
-import {
-  getChinese505NumbersForSDAH1985,
-  getSDAH1985NumbersForChinese505,
-} from './HymnalNumberMappings';
+import { getHymnEquivalents, type HymnNumber } from './HymnalNumberMappings';
 import { getRoutedHymns } from './HymnalRouting';
 import { normalizeHymnalSearchText } from './HymnalSearch';
 
@@ -161,34 +158,25 @@ const hasHymn = (hymnalId: HymnalBookId, hymnNumber: number | string) => {
 
 export type HymnCrossReference = Readonly<{
   hymnalId: HymnalBookId;
-  number: number;
+  number: HymnNumber;
   /** Whether the other hymnal's catalog has the hymn to show. */
   available: boolean;
 }>;
 
 /**
- * The same hymn in the other primary hymnal: 505 numbers for a 1985 hymn,
- * and 1985 numbers for a 505 hymn, from the curated cross-reference table.
+ * The same hymn in other hymnals, from every cross-reference table that has
+ * this hymnal (HymnalNumberMappings), such as 505 numbers for a 1985 hymn and
+ * 1985 numbers for a 505 hymn. A hymn can map to several.
  */
 export const getHymnCrossReferences = (
   hymnalId: HymnalBookId,
-  hymnNumber: number | string,
-): readonly HymnCrossReference[] => {
-  const number = Number(hymnNumber);
-  const [targetHymnalId, targetNumbers] =
-    hymnalId === 'sdah-1985-en'
-      ? (['chinese-hymnal-505', getChinese505NumbersForSDAH1985(number)] as const)
-      : hymnalId === 'chinese-hymnal-505'
-        ? (['sdah-1985-en', getSDAH1985NumbersForChinese505(number)] as const)
-        : [undefined, undefined];
-  if (!targetHymnalId || !targetNumbers) return [];
-
-  return targetNumbers.map((targetNumber) => ({
+  hymnNumber: HymnNumber,
+): readonly HymnCrossReference[] =>
+  getHymnEquivalents(hymnalId, hymnNumber).map(({ hymnalId: targetHymnalId, number }) => ({
     hymnalId: targetHymnalId,
-    number: targetNumber,
-    available: hasHymn(targetHymnalId, targetNumber),
+    number,
+    available: hasHymn(targetHymnalId, number),
   }));
-};
 
 const searchTextByHymn = new WeakMap<HymnalHymn, string>();
 

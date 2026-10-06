@@ -166,14 +166,16 @@ Visitor) live here.
 six hymnals, in the style of the Library's featured books, puts the app language's hymnals
 first; swiping to one, or tapping its dot, shows its search and hymns below, in one list.
 Each hymnal keeps its own search. A search also looks through the other five hymnals:
-their matches follow under **In other hymnals**, led by the 505 or 1985 equivalents of the
-hymnal's own 1985 or 505 matches, and tapping one shows that hymn in its hymnal. The page
-says nothing matches only when no hymnal has a match. A 1985 SDA Hymnal hymn shows its 505
-Chinese hymnal number, and a 505 hymn its 1985 number; tapping that number shows the hymn
-in the other hymnal. A **1985 ↔ 505** chip under the carousel opens the English–Chinese
-hymn lookup. Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a
-bulletin hymn, opens the same page with that hymnal picked and just that hymn showing,
-marked, above **Show all hymns**.
+their matches follow under **In other hymnals**, and a number leads with each hymnal's
+hymn of that number, so "hymn 100" shows 1985's and 505's 100 with their titles, whichever
+hymnal is showing. Tapping a result shows that hymn in its hymnal. The page says nothing
+matches only when no hymnal has a match. A hymn with a number in another hymnal, such as a
+1985 hymn's 505 number, shows it as a chip; tapping it shows the hymn there. The chips
+come from the cross-reference tables (see [Hymnal
+integration](feature_designs/hymnal_integration_design.md#54-cross-references-between-hymnals)).
+Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn,
+opens the same page with that hymnal picked and just that hymn showing, marked, above
+**Show all hymns**. The old English–Chinese hymn lookup's route opens the hymnal page.
 
 **Tenet Alignment:**
 

@@ -2,9 +2,16 @@ import mappingData from '@/features/hymnal/HymnalNumberMappings.json';
 import chinese505Data from '@/features/hymnal/Chinese505Hymnal.json';
 import { SDA_HYMNAL_1985 } from '@/features/hymnal/EnglishHymnal';
 import {
-  getChinese505NumbersForSDAH1985,
-  getSDAH1985NumbersForChinese505,
+  getHymnalCrossReferences,
+  getHymnEquivalents,
+  HYMNAL_CROSS_REFERENCE_TABLES,
+  invertNumberMap,
 } from '@/features/hymnal/HymnalNumberMappings';
+
+const toChinese505 = (englishNumber: number) =>
+  getHymnalCrossReferences('sdah-1985-en', englishNumber, 'chinese-hymnal-505');
+const toSDAH1985 = (chineseNumber: number) =>
+  getHymnalCrossReferences('chinese-hymnal-505', chineseNumber, 'sdah-1985-en');
 
 describe('hymnal number mappings', () => {
   type NumberMap = Record<string, number[] | null | undefined>;
@@ -53,8 +60,8 @@ describe('hymnal number mappings', () => {
   it('distinguishes explicit asterisks from missing source rows', () => {
     expect(forwardMapping?.numberMap['2']).toBeNull();
     expect(forwardMapping?.numberMap).not.toHaveProperty('3');
-    expect(getChinese505NumbersForSDAH1985(2)).toBeNull();
-    expect(getChinese505NumbersForSDAH1985(3)).toBeUndefined();
+    expect(toChinese505(2)).toBeNull();
+    expect(toChinese505(3)).toBeUndefined();
   });
 
   it('looks up photographed pairs in both directions', () => {
@@ -65,12 +72,12 @@ describe('hymnal number mappings', () => {
       '497': [694],
       '505': [663],
     });
-    expect(getChinese505NumbersForSDAH1985(1)).toEqual([5]);
-    expect(getSDAH1985NumbersForChinese505(5)).toEqual([1]);
-    expect(getChinese505NumbersForSDAH1985(663)).toEqual([505]);
-    expect(getSDAH1985NumbersForChinese505(505)).toEqual([663]);
-    expect(getChinese505NumbersForSDAH1985(694)).toEqual([497]);
-    expect(getSDAH1985NumbersForChinese505(497)).toEqual([694]);
+    expect(toChinese505(1)).toEqual([5]);
+    expect(toSDAH1985(5)).toEqual([1]);
+    expect(toChinese505(663)).toEqual([505]);
+    expect(toSDAH1985(505)).toEqual([663]);
+    expect(toChinese505(694)).toEqual([497]);
+    expect(toSDAH1985(497)).toEqual([694]);
   });
 
   it('keeps the two explicit mapping entries as exact inverses', () => {
@@ -112,5 +119,31 @@ describe('hymnal number mappings', () => {
       true,
     );
     expect(Object.keys(chinese505Data)).toHaveLength(500);
+  });
+
+  it('reads both directions as one table in the registry', () => {
+    expect(HYMNAL_CROSS_REFERENCE_TABLES).toHaveLength(1);
+    expect(HYMNAL_CROSS_REFERENCE_TABLES[0].hymnalIds).toEqual([
+      'sdah-1985-en',
+      'chinese-hymnal-505',
+    ]);
+    expect(getHymnEquivalents('sdah-1985-en', 694)).toEqual([
+      { hymnalId: 'chinese-hymnal-505', number: 497 },
+    ]);
+    expect(getHymnEquivalents('chinese-hymnal-505', '497')).toEqual([
+      { hymnalId: 'sdah-1985-en', number: 694 },
+    ]);
+    // An asterisk, a missing row, and a hymnal no table has.
+    expect(getHymnEquivalents('sdah-1985-en', 2)).toEqual([]);
+    expect(getHymnEquivalents('sdah-1985-en', 3)).toEqual([]);
+    expect(getHymnEquivalents('chinese-hymnal-506', 1)).toEqual([]);
+    expect(getHymnalCrossReferences('chinese-hymnal-506', 1, 'sdah-1985-en')).toBeUndefined();
+  });
+
+  it('inverts a mapping given only one way, keeping several numbers and B arrangements', () => {
+    expect(invertNumberMap({ '1': [5], '2': null, '3': [5, '260B'] })).toEqual({
+      '5': [1, 3],
+      '260B': [3],
+    });
   });
 });

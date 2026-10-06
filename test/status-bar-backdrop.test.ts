@@ -67,7 +67,6 @@ describe('status bar backdrop', () => {
       'app/(tabs)/explore/index.tsx',
       'app/(tabs)/explore/library.tsx',
       'app/(tabs)/explore/library/[collection].tsx',
-      'app/(tabs)/home/hymn-lookup.tsx',
       'app/(tabs)/you/index.tsx',
       'features/hymnal/HymnalScreen.tsx',
     ]) {
