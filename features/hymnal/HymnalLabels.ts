@@ -61,3 +61,35 @@ export const getHymnalTitleParts = (hymnalId: HymnalBookId, language: string) =>
   const [title, edition = ''] = getHymnalLabel(hymnalId, language).split(' — ');
   return { title, edition };
 };
+
+/**
+ * Each hymnal's shortest name, beside a hymn number: on cross-reference chips
+ * and on search results from another hymnal.
+ */
+const HYMNAL_SHORT_LABELS: Record<HymnalBookId, Record<SupportedLanguage, string>> = {
+  'sdah-1985-en': { en: '1985', zh: '1985', 'zh-cn': '1985', es: '1985' },
+  'chinese-hymnal-505': { en: '505', zh: '505', 'zh-cn': '505', es: '505' },
+  'chinese-hymnal-506': { en: '506', zh: '506', 'zh-cn': '506', es: '506' },
+  'chinese-hymnal-707-v1': {
+    en: '707 New Simplified',
+    zh: '707 新編簡譜',
+    'zh-cn': '707 新编简谱',
+    es: '707 Notación Simplificada',
+  },
+  'chinese-hymnal-707-v2': {
+    en: '707 Four-Part',
+    zh: '707 四聲部',
+    'zh-cn': '707 四声部',
+    es: '707 Cuatro Voces',
+  },
+  'chinese-hymnal-707-v3': {
+    en: '707 Standard',
+    zh: '707 標準版',
+    'zh-cn': '707 标准版',
+    es: '707 Estándar',
+  },
+};
+
+export const getHymnalShortLabel = (hymnalId: HymnalBookId, language: string) =>
+  HYMNAL_SHORT_LABELS[hymnalId][language as SupportedLanguage] ||
+  HYMNAL_SHORT_LABELS[hymnalId].en;

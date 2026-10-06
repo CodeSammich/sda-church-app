@@ -162,15 +162,18 @@ of cards for **Watch Livestream**, **Weekly Bulletin**, **Tithe & Offering**, **
 & Visitor**. Giving, the hymnals, and the staff list (**Meet Our Team**, under New Member &
 Visitor) live here.
 
-**Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the six
-hymnals, in the style of the Library's featured books, puts the app language's hymnals
+**Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the
+six hymnals, in the style of the Library's featured books, puts the app language's hymnals
 first; swiping to one, or tapping its dot, shows its search and hymns below, in one list.
-Each hymnal keeps its own search. A 1985 SDA Hymnal hymn shows its 505 Chinese hymnal
-number, and a 505 hymn its 1985 number; tapping that number shows the hymn in the other
-hymnal. A **1985 ↔ 505** chip under the carousel opens the English–Chinese hymn lookup. Each
-hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn, opens
-the same page with that hymnal picked and just that hymn showing, marked, above **Show all
-hymns**.
+Each hymnal keeps its own search. A search also looks through the other five hymnals:
+their matches follow under **In other hymnals**, led by the 505 or 1985 equivalents of the
+hymnal's own 1985 or 505 matches, and tapping one shows that hymn in its hymnal. The page
+says nothing matches only when no hymnal has a match. A 1985 SDA Hymnal hymn shows its 505
+Chinese hymnal number, and a 505 hymn its 1985 number; tapping that number shows the hymn
+in the other hymnal. A **1985 ↔ 505** chip under the carousel opens the English–Chinese
+hymn lookup. Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a
+bulletin hymn, opens the same page with that hymnal picked and just that hymn showing,
+marked, above **Show all hymns**.
 
 **Tenet Alignment:**
 

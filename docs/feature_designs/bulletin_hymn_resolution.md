@@ -71,8 +71,10 @@ plugin system. Before changing one of its primary IDs, a fork must:
 4. Implement the reader route if it does not already exist: add the hymnal to `HYMNALS` in
    `features/hymnal/Hymnals.ts` and `HYMNAL_LABELS` in `features/hymnal/HymnalLabels.ts`,
    and a route file that renders `HymnalScreen` with that hymnal picked, like
-   `app/(tabs)/home/english-hymnal.tsx`. The 1985 ↔ 505 cross-reference chips on the hymnal
-   page are specific to those two hymnals (`getHymnCrossReferences`).
+   `app/(tabs)/home/english-hymnal.tsx`. Add its hymns to `getHymnalSearchItems` in
+   `features/hymnal/HymnalSearch.ts` so the hymnal page's search finds them from other
+   hymnals. The 1985 ↔ 505 cross-references, on the page's rows and beside its search
+   results, are specific to those two hymnals.
 5. Change `PRIMARY_BULLETIN_HYMNALS` and `BULLETIN_HYMNAL_DISPLAY_NAMES`.
 6. Extend mapping, display, routing, and accessibility tests.
 

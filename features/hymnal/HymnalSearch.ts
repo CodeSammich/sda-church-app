@@ -8,6 +8,10 @@ import {
   getSortedHymns,
 } from './EnglishHymnal';
 import { getHymnalLabel, type HymnalBookId } from './HymnalLabels';
+import {
+  getChinese505NumbersForSDAH1985,
+  getSDAH1985NumbersForChinese505,
+} from './HymnalNumberMappings';
 
 export interface HymnalSearchItem {
   title: string;
@@ -75,6 +79,107 @@ const isNormalizedHymnalSearchMatch = (
   item.normalizedSearchText.includes(normalizedQuery) ||
   (/^\d+$/.test(normalizedQuery) &&
     item.hymnNumber.toString() === normalizedQuery);
+
+const getCrossLanguageKeys = (item: HymnalSearchItem) => {
+  if (item.hymnalId === 'sdah-1985-en') {
+    return (getChinese505NumbersForSDAH1985(Number(item.hymnNumber)) || []).map(
+      (number) => `chinese-hymnal-505:${number}`,
+    );
+  }
+  if (item.hymnalId === 'chinese-hymnal-505') {
+    return (getSDAH1985NumbersForChinese505(Number(item.hymnNumber)) || []).map(
+      (number) => `sdah-1985-en:${number}`,
+    );
+  }
+  return [];
+};
+
+const itemsByKeyByCatalog = new WeakMap<
+  readonly HymnalSearchItem[],
+  Map<string, HymnalSearchItem>
+>();
+
+const getItemsByKey = (items: readonly HymnalSearchItem[]) => {
+  let itemsByKey = itemsByKeyByCatalog.get(items);
+  if (!itemsByKey) {
+    itemsByKey = new Map(
+      items.map((item) => [`${item.hymnalId}:${item.hymnNumber}`, item]),
+    );
+    itemsByKeyByCatalog.set(items, itemsByKey);
+  }
+  return itemsByKey;
+};
+
+/**
+ * Search every hymnal, keeping the open hymnal's direct matches first. Known
+ * English/Chinese equivalents are placed beside the matching hymn so either
+ * language can be used as the starting point.
+ *
+ * With `excludeActive`, the open hymnal's own hymns are left out, for the
+ * hymnal page, which lists them above, but the equivalents of its matches
+ * still come first: a 1985 search leads with the same hymns in the 505.
+ */
+export const getHymnalSearchResults = (
+  items: readonly HymnalSearchItem[],
+  query: string,
+  {
+    activeHymnalId,
+    excludeActive = false,
+  }: { activeHymnalId?: HymnalBookId; excludeActive?: boolean } = {},
+) => {
+  const normalizedQuery = normalizeHymnalSearchText(query);
+  if (!normalizedQuery) return [];
+  const directMatches = items.filter((item) =>
+    isNormalizedHymnalSearchMatch(item, normalizedQuery),
+  );
+  const buckets = new Map<HymnalBookId, HymnalSearchItem[]>();
+  for (const item of directMatches) {
+    const bucket = buckets.get(item.hymnalId);
+    if (bucket) bucket.push(item);
+    else buckets.set(item.hymnalId, [item]);
+  }
+  const orderedHymnalIds = [
+    ...(activeHymnalId && buckets.has(activeHymnalId)
+      ? [activeHymnalId]
+      : []),
+    ...Array.from(buckets.keys()).filter((id) => id !== activeHymnalId),
+  ];
+  const interleavedMatches: HymnalSearchItem[] = [];
+  let matchIndex = 0;
+  while (
+    interleavedMatches.length < HYMNAL_SEARCH_RESULT_LIMIT &&
+    orderedHymnalIds.some((id) => matchIndex < (buckets.get(id)?.length || 0))
+  ) {
+    for (const id of orderedHymnalIds) {
+      const match = buckets.get(id)?.[matchIndex];
+      if (match) interleavedMatches.push(match);
+      if (interleavedMatches.length >= HYMNAL_SEARCH_RESULT_LIMIT) break;
+    }
+    matchIndex += 1;
+  }
+  const itemsByKey = getItemsByKey(items);
+  const seen = new Set<string>();
+  const results: HymnalSearchItem[] = [];
+
+  for (const match of interleavedMatches) {
+    const candidates = [
+      match,
+      ...getCrossLanguageKeys(match)
+        .map((key) => itemsByKey.get(key))
+        .filter((item): item is HymnalSearchItem => Boolean(item)),
+    ];
+    for (const item of candidates) {
+      const key = `${item.hymnalId}:${item.hymnNumber}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (excludeActive && item.hymnalId === activeHymnalId) continue;
+      results.push(item);
+      if (results.length >= HYMNAL_SEARCH_RESULT_LIMIT) return results;
+    }
+  }
+
+  return results;
+};
 
 const hymnalSearchItemsByLanguage = new Map<string, HymnalSearchItem[]>();
 

@@ -245,6 +245,88 @@ describe('1985 ↔ 505 cross-references', () => {
   });
 });
 
+describe('searching every hymnal from the page', () => {
+  // What the one list holds: the picked hymnal's hymns, then the heading and
+  // the other hymnals' matches, as "hymnal:number".
+  const listedHymns = (view: ReturnType<typeof renderPage>) =>
+    (view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>).props.data as any[]).map(
+      (item) =>
+        item.kind === 'heading'
+          ? 'heading'
+          : item.kind === 'other'
+            ? `${item.item.hymnalId}:${item.item.hymnNumber}`
+            : `${item.number}`,
+    );
+
+  it('lists matches in the other Chinese hymnals under their own heading', () => {
+    const view = renderPage(HymnalSelectionScreen, {}, 'zh');
+    fireEvent.changeText(view.getByPlaceholderText('按編號或標題搜尋...'), '平安夜');
+
+    expect(listedHymns(view)).toEqual([
+      '66',
+      'heading',
+      // The 1985 equivalent of the 505's own match comes first.
+      'sdah-1985-en:143',
+      'chinese-hymnal-506:82',
+      'chinese-hymnal-707-v1:82',
+      'chinese-hymnal-707-v2:82',
+      'chinese-hymnal-707-v3:82',
+    ]);
+    expect(view.getByText('其他詩歌本').props.accessibilityRole).toBe('header');
+    const result = view.getByLabelText('中文讚美詩 — 506 版第 82 首，平安夜');
+    expect(result.props.accessibilityRole).toBe('button');
+    expect(view.getByText('506')).toBeTruthy();
+  });
+
+  it("shows the other hymnals' hymns with the same number", () => {
+    const view = renderPage(HymnalSelectionScreen);
+    fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), '100');
+
+    const listed = listedHymns(view);
+    expect(listed[0]).toBe('100');
+    expect(listed).toEqual(
+      expect.arrayContaining([
+        'chinese-hymnal-505:100',
+        'chinese-hymnal-506:100',
+        'chinese-hymnal-707-v1:100',
+        'chinese-hymnal-707-v2:100',
+        'chinese-hymnal-707-v3:100',
+      ]),
+    );
+    expect(listed.filter((key) => key.startsWith('sdah-1985-en:'))).toEqual([]);
+    expect(view.getByLabelText(`Chinese Hymnal — 506 Edition, hymn 100, ${HYMNALS['chinese-hymnal-506'].getHymns()[99].title}`)).toBeTruthy();
+  });
+
+  it('leads with the 505 equivalent of a 1985 match, and shows it when tapped', () => {
+    const view = renderPage(HymnalSelectionScreen);
+    fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'Praise God, From Whom');
+    expect(listedHymns(view)).toEqual(['694', 'heading', 'chinese-hymnal-505:497']);
+
+    fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymn 497, 赞美上帝'));
+    expect(dotLabels(view)[1].selected).toBe(true);
+    expect(listedHymns(view)).toEqual(['497']);
+    expect(view.getByText('Show all hymns')).toBeTruthy();
+    expect(view.queryByText('In other hymnals')).toBeNull();
+
+    // The 1985 hymnal still has its search.
+    fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymnal 1 of 6'));
+    expect(listedHymns(view)).toEqual(['694', 'heading', 'chinese-hymnal-505:497']);
+  });
+
+  it('says nothing matches only when no hymnal has a match', () => {
+    const view = renderPage(HymnalSelectionScreen);
+    fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'zzqqx');
+    expect(view.getByText('No hymns match your search.')).toBeTruthy();
+    expect(view.queryByText('In other hymnals')).toBeNull();
+
+    fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymnal 2 of 6'));
+    fireEvent.changeText(view.getByPlaceholderText('Search by number or title...'), 'Praise God');
+    expect(view.queryByText('No hymns match your search.')).toBeNull();
+    expect(view.getByText('In other hymnals')).toBeTruthy();
+    expect(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 694, Praise God, From Whom All Blessings')).toBeTruthy();
+  });
+});
+
 describe('hymnal search', () => {
   const english = HYMNALS['sdah-1985-en'].getHymns();
   const chinese505 = HYMNALS['chinese-hymnal-505'].getHymns();
