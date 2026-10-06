@@ -50,7 +50,7 @@ The app uses React Native's accessibility props rather than web-only ARIA:
   `accessibilityLabel`, as the Bible reader's Share and Cancel buttons do. Selected
   states use `accessibilityState`, as on the bulletin's Queens and Brooklyn tabs.
 - An `accessibilityHint` explains a result that isn't obvious, such as the
-  bulletin's admin-only schedule sheet.
+  bulletin's staff-only schedule sheet.
 - Purely visual parts, such as the switch drawing inside a menu card, are hidden
   with `accessibilityElementsHidden` and
   `importantForAccessibility="no-hide-descendants"`, so a control is read once.

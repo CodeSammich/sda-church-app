@@ -59,8 +59,8 @@ const LABELS = {
     nameWithheld: 'Name withheld',
     choir: 'Choir',
     sabbathSchoolProgram: 'Sabbath School',
-    schedule: 'Schedule sheet (admins only)',
-    scheduleHint: 'Opens a sheet that needs a church admin account.',
+    schedule: 'Schedule sheet (staff only)',
+    scheduleHint: 'Opens a sheet that needs a church staff account.',
     worshipProgram: 'Worship Program',
     serviceRoster: 'Service Roster',
     queens: 'Queens',
@@ -131,8 +131,8 @@ const LABELS = {
     nameWithheld: '姓名保留',
     choir: '詩班',
     sabbathSchoolProgram: '安息日學',
-    schedule: '時間表（僅限管理員）',
-    scheduleHint: '開啟需要教會管理員帳號的表格。',
+    schedule: '時間表（僅限同工）',
+    scheduleHint: '開啟需要教會同工帳號的表格。',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     queens: '皇后區',
@@ -203,8 +203,8 @@ const LABELS = {
     nameWithheld: '姓名保留',
     choir: '诗班',
     sabbathSchoolProgram: '安息日学',
-    schedule: '时间表（仅限管理员）',
-    scheduleHint: '打开需要教会管理员账号的表格。',
+    schedule: '时间表（仅限同工）',
+    scheduleHint: '打开需要教会同工账号的表格。',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     queens: '皇后区',
@@ -275,8 +275,8 @@ const LABELS = {
     nameWithheld: 'Nombre reservado',
     choir: 'Coro',
     sabbathSchoolProgram: 'Escuela Sabática',
-    schedule: 'Horario (solo administradores)',
-    scheduleHint: 'Abre una hoja que requiere una cuenta de administrador de la iglesia.',
+    schedule: 'Horario (solo para el personal)',
+    scheduleHint: 'Abre una hoja que requiere una cuenta del personal de la iglesia.',
     worshipProgram: 'Programa de Adoración',
     serviceRoster: 'Asignaciones de Servicio',
     queens: 'Queens',
@@ -1146,7 +1146,7 @@ export default function WeeklyBulletinScreen() {
         </View>
 
         <View style={styles.scheduleButtonRow}>
-          {/* The staff schedule needs a church admin account, so the button
+          {/* The schedule sheet needs a church staff account, so the button
               says so and stays muted, so members don't tap it expecting the
               bulletin. */}
           <Button
