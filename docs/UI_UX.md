@@ -162,6 +162,16 @@ of cards for **Watch Livestream**, **Weekly Bulletin**, **Tithe & Offering**, **
 & Visitor**. Giving, the hymnals, and the staff list (**Meet Our Team**, under New Member &
 Visitor) live here.
 
+**Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the six
+hymnals, in the style of the Library's featured books, puts the app language's hymnals
+first; swiping to one, or tapping its dot, shows its search and hymns below, in one list.
+Each hymnal keeps its own search. A 1985 SDA Hymnal hymn shows its 505 Chinese hymnal
+number, and a 505 hymn its 1985 number; tapping that number shows the hymn in the other
+hymnal. A **1985 ↔ 505** chip under the carousel opens the English–Chinese hymn lookup. Each
+hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn, opens
+the same page with that hymnal picked and just that hymn showing, marked, above **Show all
+hymns**.
+
 **Tenet Alignment:**
 
 - **Tenet 5 (Simplicity):** A widget-based dashboard provides a "glanceable" interface

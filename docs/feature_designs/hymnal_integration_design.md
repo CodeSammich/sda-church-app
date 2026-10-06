@@ -147,7 +147,7 @@ publish.
 
 `features/hymnal/EnglishHymnal.ts` stores the English hymn metadata as a
 `Record<number, HymnEntry>`. `getSortedHymns` hydrates and sorts that record for the
-reader and unified search. Search supports hymn numbers, titles, and scripture
+hymnal page and the hymn lookup. Search supports hymn numbers, titles, and scripture
 references. The app also provides YouTube discovery and Bible-reader navigation without
 storing third-party media.
 
@@ -168,9 +168,10 @@ asset.
 
 ### 5.3 Reader state
 
-The English hymnal reader retains its search state while the user visits the external
-page and returns. This preserves the user's place without importing the external content
-into the app.
+The hymnal page (`features/hymnal/HymnalScreen.tsx`), which lists the English hymnal
+alongside the Chinese ones, retains each hymnal's search while the user visits the external
+page and returns. The Bible link's way back reopens the page with the same hymn or search.
+This preserves the user's place without importing the external content into the app.
 
 ## 6. Maintenance Rules
 
