@@ -10,13 +10,8 @@ import {
   getSortedChinese506Hymns,
 } from '@/features/hymnal/Chinese506Hymnal';
 import youtubeData from '@/features/hymnal/Chinese506YouTube.json';
-import { ChineseHymnalReader } from '@/features/hymnal/ChineseHymnalReader';
+import { createHymnRowStyles, HymnRow } from '@/features/hymnal/HymnRow';
 import { renderWithPreferences } from './helpers/render-preferences';
-
-jest.mock('expo-router', () => ({
-  Stack: { Screen: () => null },
-  useLocalSearchParams: () => ({}),
-}));
 
 jest.mock('@/constants/ExternalLinks', () => ({
   ...jest.requireActual('@/constants/ExternalLinks'),
@@ -44,17 +39,29 @@ describe('Chinese 506 hymnal recordings', () => {
   });
 
   it('opens the recording when there is one and searches YouTube otherwise', () => {
+    const row = (hymn: { number: number; title: string }) =>
+      createElement(HymnRow, {
+        key: hymn.number,
+        hymnalId: 'chinese-hymnal-506',
+        hymn,
+        highlighted: false,
+        labels: {
+          watchYouTube: 'YouTube',
+          crossReference: () => '',
+          crossReferenceLabel: () => '',
+          crossReferenceHint: '',
+        },
+        styles: createHymnRowStyles(1, 1, false),
+        onOpenScripture: jest.fn(),
+        onOpenCrossReference: jest.fn(),
+      });
     const screen = renderWithPreferences(
-      createElement(ChineseHymnalReader, {
-        edition: 506,
-        coverImage: { uri: 'cover.jpg' },
-        getHymns: () => [
-          { number: 1, title: '圣哉真神' },
-          { number: 506, title: '阿门' },
-        ],
-        openHymn: jest.fn(),
-        getYouTubeUrl: (number) => getChinese506YouTubeUrl(Number(number)),
-      }),
+      createElement(
+        'View',
+        null,
+        row({ number: 1, title: '圣哉真神' }),
+        row({ number: 506, title: '阿门' }),
+      ),
     );
     const [first, last] = screen.getAllByText('YouTube');
 
