@@ -139,8 +139,8 @@ and may not be possible, so protect them above everything else.
 - **GitHub Actions** runs everything automated:
   - unit tests on pull requests, and checks of their title, version, and linked
     issue;
-  - extra checks on each release pull request into `main`: that it comes from a
-    `release/*` branch, a bulletin API integration test, an
+  - extra checks on each release pull request into `main`: that it comes from
+    `release-candidate`, a bulletin API integration test, an
     [Android preview APK](operations/admin-runbook.md#android-pr-preview-apks)
     uploaded to Google Drive,
     [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-pr-preview-builds)

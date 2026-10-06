@@ -1,6 +1,6 @@
 <!--
-Title: "Release/x.y.z: Describe the change", with the target release branch's major
-and minor version (or "Release/x.y.x: …"). CI rejects other titles.
+Title: describe the change, with no version. Open feature PRs into release-candidate;
+only the release PR into main is titled "Release/x.y.z: …".
 
 Name every issue this touches, one per line: "Closes #" and the number for an issue
 this finishes; "Part of #" or "Related to #" and the number for one it only advances.

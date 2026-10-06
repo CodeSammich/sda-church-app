@@ -7,7 +7,7 @@ name: iOS PR preview
 # Download the app from the run's artifacts to test it in the Simulator on a
 # Mac; docs/operations/native-builds.md explains how.
 on:
-  # Only the release PR into main. Feature PRs into a release branch skip the
+  # Only the release PR into main. Feature PRs into release-candidate skip the
   # Mac builds; start it by hand on a branch to test a change to this workflow
   # or scripts/build-ios-simulator.mjs early.
   pull_request:
@@ -31,13 +31,14 @@ concurrency:
 
 jobs:
   simulator:
-    # A release PR is a release/* branch in this repository. Other PRs into
-    # main, such as Dependabot's, can't merge there, so they skip it.
+    # A release PR comes from this repository's release-candidate branch.
+    # Other PRs into main, such as Dependabot's, can't merge there, so they
+    # skip it.
     # Started by hand, it builds unless it was asked only to re-check an
     # earlier run's screenshots.
     if: >-
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
-      (startsWith(github.head_ref, 'release/') &&
+      (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
     # The "Main protection" ruleset requires these job names; rename both together.
     name: Build iOS Simulator app (${{ matrix.mac }} Mac)
@@ -191,7 +192,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.run_attempt == 1 &&
-      startsWith(github.head_ref, 'release/') &&
+      github.head_ref == 'release-candidate' &&
       github.event.pull_request.head.repo.full_name == github.repository
     name: Say the screenshots are on the way
     runs-on: ubuntu-latest
@@ -218,7 +219,7 @@ jobs:
           while read -r id _; do
             [ -n "$id" ] && gh api -X DELETE "repos/$REPO/issues/comments/$id" >/dev/null
           done <<<"$comments"
-          # Release branches are named release/x.y.z, so only the slash needs encoding.
+          # Encode any slash in the branch name for the progress link.
           progress="https://github.com/$REPO/actions/workflows/ios-pr-preview.yml?query=branch%3A${HEAD_REF//\//%2F}"
           body=$(cat <<BODY
           <!-- key-screens-review pending sha=$SHA -->
@@ -239,7 +240,7 @@ jobs:
     if: >-
       !cancelled() &&
       github.event_name == 'pull_request' &&
-      startsWith(github.head_ref, 'release/') &&
+      github.head_ref == 'release-candidate' &&
       github.event.pull_request.head.repo.full_name == github.repository
     name: Post the screenshot review comment
     runs-on: ubuntu-latest
@@ -320,7 +321,7 @@ jobs:
     if: >-
       !cancelled() &&
       github.event_name == 'pull_request' &&
-      startsWith(github.head_ref, 'release/') &&
+      github.head_ref == 'release-candidate' &&
       github.event.pull_request.head.repo.full_name == github.repository
     name: Screenshots reviewed
     runs-on: ubuntu-latest

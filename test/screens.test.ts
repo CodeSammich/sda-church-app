@@ -313,7 +313,7 @@ describe('Screenshot review', () => {
   const commentJob = job('review-comment');
   const approvalJob = job('screenshots-reviewed');
   const releaseOnly = [
-    "startsWith(github.head_ref, 'release/')",
+    "github.head_ref == 'release-candidate'",
     'github.event.pull_request.head.repo.full_name == github.repository',
   ];
 
