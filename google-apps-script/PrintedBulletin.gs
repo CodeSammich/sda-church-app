@@ -31,6 +31,12 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   adventistGivingQrImageProperty: 'ADVENTIST_GIVING_QR_IMAGE_FILE_ID',
   zelleQrImageProperty: 'ZELLE_QR_IMAGE_FILE_ID',
   mobileAppQrImageProperty: 'MOBILE_APP_QR_IMAGE_FILE_ID',
+  // The QR codes live in one folder of a restricted shared drive: admins
+  // change them, and everyone else who makes bulletins can only view them.
+  // Only this folder is searched, so a same-named file elsewhere in Drive can't
+  // take a code's place. The QR code workflow uploads to the same folder.
+  qrImageFolderProperty: 'PRINTED_BULLETIN_QR_FOLDER_ID',
+  qrImageFolderId: '11esgvM1uhY5e94A_eL2ITI0iKNLIFEEr',
   legacyBrooklynCoverImageProperty: 'BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID',
   bulletinIntakeSheetUrl:
     'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit#gid=1768045043',
@@ -2608,20 +2614,9 @@ function getLeadingEmptyParagraph_(cell) {
 
 function getPrintedBulletinQrImageFileId_(kind, location) {
   var fileName = getPrintedBulletinQrImageFileName_(kind, location);
-  if (fileName && typeof DriveApp !== 'undefined' && DriveApp.getFilesByName) {
-    try {
-      var files = DriveApp.getFilesByName(fileName);
-      while (files.hasNext()) {
-        var file = files.next();
-        // getFilesByName also returns trashed files, so skip them, or a
-        // replaced code in the trash could still print.
-        if (!file.isTrashed()) {
-          return file.getId();
-        }
-      }
-    } catch (error) {
-      Logger.log('QR image lookup failed for ' + fileName + ': ' + error);
-    }
+  var foundFileId = fileName ? findPrintedBulletinQrImageInFolder_(fileName) : '';
+  if (foundFileId) {
+    return foundFileId;
   }
 
   var propertyName =
@@ -2641,6 +2636,69 @@ function getPrintedBulletinQrImageFileId_(kind, location) {
     return configuredFileId;
   }
   return configuredFileId || PRINTED_BULLETIN_CONFIG.qrPlaceholderImageFileId;
+}
+
+function getPrintedBulletinQrImageFolderId_() {
+  var configuredFolderId =
+    typeof PropertiesService !== 'undefined'
+      ? PropertiesService.getScriptProperties().getProperty(
+          PRINTED_BULLETIN_CONFIG.qrImageFolderProperty,
+        )
+      : '';
+  return configuredFolderId || PRINTED_BULLETIN_CONFIG.qrImageFolderId;
+}
+
+/**
+ * Finds a QR image by name in the QR code folder, or returns ''.
+ *
+ * The folder is in a shared drive where most people who make bulletins are
+ * viewers, and DriveApp's name search doesn't reach shared-drive files for
+ * them. So this asks the Drive API (the Drive advanced service, enabled in
+ * appsscript.json) to search that one folder, and falls back to DriveApp's
+ * folder search, which works at least for the drive's managers.
+ */
+function findPrintedBulletinQrImageInFolder_(fileName) {
+  var folderId = getPrintedBulletinQrImageFolderId_();
+  if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.list) {
+    try {
+      var response = Drive.Files.list({
+        q:
+          "'" + escapeDriveQueryValue_(folderId) + "' in parents and name = '" +
+          escapeDriveQueryValue_(fileName) + "' and trashed = false",
+        corpora: 'allDrives',
+        includeItemsFromAllDrives: true,
+        supportsAllDrives: true,
+        pageSize: 1,
+        fields: 'files(id)',
+      });
+      var found = (response && response.files) || [];
+      if (found.length && found[0].id) {
+        return found[0].id;
+      }
+    } catch (error) {
+      Logger.log('Drive API QR image lookup failed for ' + fileName + ': ' + error);
+    }
+  }
+  if (typeof DriveApp !== 'undefined' && DriveApp.getFolderById) {
+    try {
+      var files = DriveApp.getFolderById(folderId).getFilesByName(fileName);
+      while (files.hasNext()) {
+        var file = files.next();
+        // getFilesByName also returns trashed files, so skip them, or a
+        // replaced code in the trash could still print.
+        if (!file.isTrashed()) {
+          return file.getId();
+        }
+      }
+    } catch (error) {
+      Logger.log('QR image lookup failed for ' + fileName + ': ' + error);
+    }
+  }
+  return '';
+}
+
+function escapeDriveQueryValue_(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 function getPrintedBulletinQrImageFileName_(kind, location) {

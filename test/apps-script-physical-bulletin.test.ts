@@ -631,37 +631,97 @@ describe('printed bulletin Apps Script helpers', () => {
     );
   });
 
-  it('selects the renamed location-specific QR files by filename', () => {
-    const requestedNames: string[] = [];
-    const context = loadAppsScript({
-      DriveApp: {
-        getFilesByName: (name: string) => {
-          requestedNames.push(name);
-          return {
-            hasNext: () => true,
-            next: () => ({ getId: () => `id-for-${name}`, isTrashed: () => false }),
-          };
-        },
+  // The QR codes live in one folder of a restricted shared drive (#237).
+  const qrFolderId = '11esgvM1uhY5e94A_eL2ITI0iKNLIFEEr';
+  type DriveListArgs = {
+    q: string;
+    corpora?: string;
+    includeItemsFromAllDrives?: boolean;
+    supportsAllDrives?: boolean;
+  };
+  /** A Drive advanced service whose folder holds `filesInFolder`, by name. */
+  const driveApi = (filesInFolder: Record<string, string>, calls: DriveListArgs[] = []) => ({
+    Files: {
+      list: (args: DriveListArgs) => {
+        calls.push(args);
+        const name = /name = '([^']+)'/.exec(args.q)?.[1] ?? '';
+        const inFolder = args.q.includes(`'${qrFolderId}' in parents`);
+        const id = inFolder ? filesInFolder[name] : undefined;
+        return { files: id ? [{ id }] : [] };
       },
+    },
+  });
+  // Searching all of Drive by name would let a same-named file anywhere the
+  // person can see replace a code, so the lookup must never do it.
+  const driveAppWithoutGlobalSearch = (folders: Record<string, unknown> = {}) => ({
+    getFilesByName: () => {
+      throw new Error('searched all of Drive by name');
+    },
+    getFolderById: (id: string) => {
+      if (!folders[id]) throw new Error(`no access to folder ${id}`);
+      return folders[id];
+    },
+  });
+
+  it('finds each QR file by name in the QR code folder, across shared drives', () => {
+    const calls: DriveListArgs[] = [];
+    const context = loadAppsScript({
+      Drive: driveApi(
+        {
+          'brooklyn_adventist_giving_qr_code_368x368.jpg': 'brooklyn-giving-code',
+          'queens_zelle_qr_code_368x368.jpg': 'queens-zelle-code',
+          'mobile_app_qr_code_368x368.jpg': 'mobile-app-code',
+        },
+        calls,
+      ),
+      DriveApp: driveAppWithoutGlobalSearch(),
+      Logger: { log: () => undefined },
     });
 
     expect(runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving', 'brooklyn')`, context)).toBe(
-      'id-for-brooklyn_adventist_giving_qr_code_368x368.jpg',
+      'brooklyn-giving-code',
     );
     expect(runInContext(`getPrintedBulletinQrImageFileId_('zelle', 'queens')`, context)).toBe(
-      'id-for-queens_zelle_qr_code_368x368.jpg',
+      'queens-zelle-code',
     );
     expect(runInContext(`getPrintedBulletinQrImageFileId_('mobileApp', 'brooklyn')`, context)).toBe(
-      'id-for-mobile_app_qr_code_368x368.jpg',
+      'mobile-app-code',
     );
-    expect(requestedNames).toEqual([
-      'brooklyn_adventist_giving_qr_code_368x368.jpg',
-      'queens_zelle_qr_code_368x368.jpg',
-      'mobile_app_qr_code_368x368.jpg',
+    expect(calls.map((call) => call.q)).toEqual([
+      `'${qrFolderId}' in parents and name = 'brooklyn_adventist_giving_qr_code_368x368.jpg' and trashed = false`,
+      `'${qrFolderId}' in parents and name = 'queens_zelle_qr_code_368x368.jpg' and trashed = false`,
+      `'${qrFolderId}' in parents and name = 'mobile_app_qr_code_368x368.jpg' and trashed = false`,
     ]);
+    // Viewers of a shared drive only find its files when the search asks for
+    // shared drives explicitly.
+    for (const call of calls) {
+      expect(call).toMatchObject({
+        corpora: 'allDrives',
+        includeItemsFromAllDrives: true,
+        supportsAllDrives: true,
+      });
+    }
   });
 
-  it('skips QR files in the Drive trash', () => {
+  it('searches the folder set in Script Properties instead, when there is one', () => {
+    const calls: DriveListArgs[] = [];
+    const context = loadAppsScript({
+      Drive: driveApi({}, calls),
+      DriveApp: driveAppWithoutGlobalSearch(),
+      Logger: { log: () => undefined },
+      PropertiesService: {
+        getScriptProperties: () => ({
+          getProperty: (name: string) =>
+            name === 'PRINTED_BULLETIN_QR_FOLDER_ID' ? 'replacement-folder' : '',
+        }),
+      },
+    });
+
+    runInContext(`getPrintedBulletinQrImageFileId_('mobileApp', 'queens')`, context);
+    expect(calls[0].q).toContain(`'replacement-folder' in parents`);
+  });
+
+  it('falls back to searching the folder with DriveApp, skipping trashed files', () => {
     const filesNamed: Record<string, { id: string; trashed: boolean }[]> = {
       'mobile_app_qr_code_368x368.jpg': [
         { id: 'old-trashed-code', trashed: true },
@@ -669,19 +729,29 @@ describe('printed bulletin Apps Script helpers', () => {
       ],
       'queens_adventist_giving_qr_code_368x368.jpg': [{ id: 'trashed-only', trashed: true }],
     };
+    const folder = {
+      getFilesByName: (name: string) => {
+        const files = [...(filesNamed[name] ?? [])];
+        return {
+          hasNext: () => files.length > 0,
+          next: () => {
+            const file = files.shift()!;
+            return { getId: () => file.id, isTrashed: () => file.trashed };
+          },
+        };
+      },
+    };
     const context = loadAppsScript({
-      DriveApp: {
-        getFilesByName: (name: string) => {
-          const files = [...(filesNamed[name] ?? [])];
-          return {
-            hasNext: () => files.length > 0,
-            next: () => {
-              const file = files.shift()!;
-              return { getId: () => file.id, isTrashed: () => file.trashed };
-            },
-          };
+      // As when the Drive API isn't turned on for the script yet.
+      Drive: {
+        Files: {
+          list: () => {
+            throw new Error('Drive API has not been used in this project');
+          },
         },
       },
+      DriveApp: driveAppWithoutGlobalSearch({ [qrFolderId]: folder }),
+      Logger: { log: () => undefined },
       PropertiesService: {
         getScriptProperties: () => ({ getProperty: () => '' }),
       },
@@ -693,6 +763,45 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(
       runInContext(`getPrintedBulletinQrImageFileId_('adventistGiving', 'queens')`, context),
     ).toBe('12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq');
+  });
+
+  it('leaves the mobile app slot blank when nobody can read the QR code folder', () => {
+    const context = loadAppsScript({
+      Drive: driveApi({}),
+      DriveApp: driveAppWithoutGlobalSearch(),
+      Logger: { log: () => undefined },
+      PropertiesService: {
+        getScriptProperties: () => ({ getProperty: () => '' }),
+      },
+    });
+
+    expect(runInContext(`getPrintedBulletinQrImageFileId_('mobileApp', 'queens')`, context)).toBe('');
+  });
+
+  it('escapes quotes in Drive search values', () => {
+    const context = loadAppsScript({});
+    expect(runInContext(`escapeDriveQueryValue_("it's a \\\\ test")`, context)).toBe(
+      "it\\'s a \\\\ test",
+    );
+  });
+
+  it('searches the folder the QR code workflow uploads to, with the Drive API turned on', () => {
+    const workflow = readFileSync(
+      join(process.cwd(), '.github/workflows/generate-physical-bulletin-qr.yml'),
+      'utf8',
+    );
+    expect(workflow).toContain(`GOOGLE_DRIVE_FOLDER_ID: ${qrFolderId}`);
+    const context = loadAppsScript({});
+    expect(runInContext('PRINTED_BULLETIN_CONFIG.qrImageFolderId', context)).toBe(qrFolderId);
+
+    const manifest = JSON.parse(
+      readFileSync(join(process.cwd(), 'google-apps-script/appsscript.json'), 'utf8'),
+    );
+    expect(manifest.dependencies.enabledAdvancedServices).toContainEqual({
+      userSymbol: 'Drive',
+      serviceId: 'drive',
+      version: 'v3',
+    });
   });
 
   it('splits printed bilingual values into horizontal English and Chinese columns', () => {
