@@ -249,12 +249,20 @@ uses, and nothing reaches Drive until someone approves:
      `_manual_backup` before `.jpg`) and run the workflow again. The workflow then
      creates the file and can replace it on later runs. Moving the old file to the
      trash works too: the upload workflow and the bulletin script both skip trashed
-     files. Don't leave two untrashed files with the same name anywhere in Drive,
-     because the bulletin script uses the first one it finds. See
+     files. Don't leave two untrashed files with the same name in the QR code
+     folder, because the bulletin script uses the first one it finds. See
      [Credentials](#credentials-that-need-attention).
    - `Replaced …` or `Uploaded …` for each file in the table. **Replaced** keeps the
      existing Drive file, its ID, and its sharing link.
-4. The next printed bulletin you generate picks the images up from Drive by name.
+4. The next printed bulletin you generate picks the images up from the QR code
+   folder by name.
+
+**Where the QR codes live.** The workflow uploads to one folder in a restricted shared
+drive (its ID is `GOOGLE_DRIVE_FOLDER_ID` in the workflow, and the bulletin script
+searches the same folder). Admins manage that drive; everyone who only makes bulletins
+is a viewer, which is enough to print the codes but not to change them. The Google
+login in `CLASPRC_JSON` needs at least Contributor access to that drive to upload. A
+Zelle code made by hand goes in the same folder.
 
 The images are also saved as the run's **bulletin-qr-codes** artifact for 90 days.
 
