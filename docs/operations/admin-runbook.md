@@ -42,11 +42,11 @@ does and what still needs a person.
 The `production` Environment holds the Google login (`CLASPRC_JSON`) and the Apple and
 Android signing credentials; the store upload settings are in the separate `store-upload`
 environment (see [Approving a production deployment](#approving-a-production-deployment)).
-It only accepts runs from `main` and `release-candidate`, and
-each run waits for a `release-approvers` member to approve it. Admins can also bypass
-that approval. To require approval even from admins, turn off **Allow administrators
-to bypass configured protection rules** under **Settings → Environments →
-production**.
+It only accepts runs from `main` and `release-candidate` (and the retired
+`release/**`), and each run waits for a `release-approvers` member to approve it.
+Admins can also bypass that approval. To require approval even from admins, turn off
+**Allow administrators to bypass configured protection rules** under **Settings →
+Environments → production**.
 
 ### Getting notified only when action is needed
 
@@ -188,14 +188,16 @@ The admin-only steps are:
    into `release-candidate` that runs `npm run sync-version -- --version x.y.z`. The store
    build numbers are computed from it; see [Version numbers](version-numbers.md).
 4. **Open the release pull request** from `release-candidate` into `main`, titled
-   `Release/x.y.z: …` with that version; the title sets the release version. Write the
-   part after the colon for testers: it becomes the "What's new" text in Google Play
+   `Release/x.y.z: …` with that version; CI checks the version files match the
+   title. Write the part after the colon for testers: it becomes the "What's new" text in Google Play
    internal testing. Copy the `Closes #…` lines from the included feature pull requests
    into its description.
 5. **Merge it** once its checks and review pass. The slowest check, **iOS PR
    preview**, takes about 50 minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
-   GitHub then deletes `release-candidate`; create it again for the next release.
+   GitHub then deletes `release-candidate` and moves any open feature pull requests
+   into it to `main`. Create it again for the next release, and move those pull
+   requests back to it.
 
 What runs after the merge to `main`:
 
@@ -825,7 +827,7 @@ the policy, no release can merge into `main`**:
 | Workflow | Why it uses `pull_request_target` | Required on `main` |
 | --- | --- | --- |
 | `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
-| `.github/workflows/android-pr-preview.yml` | The Drive upload needs the `production` environment, which only `main` may use. It builds only this repository's `release-candidate` branch, never fork code. | Yes: `Build Android debug APK (ARM)` |
+| `.github/workflows/android-pr-preview.yml` | The Drive upload needs the `production` environment, which a pull request run can reach only in `main`'s context. It builds only this repository's `release-candidate` branch, never fork code. | Yes: `Build Android debug APK (ARM)` |
 | `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
 
 None of them runs code from a fork with secrets or a write token, which is what makes
@@ -841,8 +843,8 @@ themselves, and tests enforce that:
   request's copy, so an outsider can't add or change one. Only a reviewed release PR
   can.
 - The gate and the label workflow never check out code. The Android preview builds
-  only this repository's `release-candidate` branch, which only people with write access
-  can push, and never a fork's code. Its build job has no secrets, no saved
+  only this repository's `release-candidate` branch, which changes only through approved
+  pull requests, and never a fork's code. Its build job has no secrets, no saved
   credentials, and a read-only token; the upload job, which has the Drive secret,
   runs only `main`'s upload script on the finished APK.
 - Pull request text, such as a title, body, or branch name, reaches a script only

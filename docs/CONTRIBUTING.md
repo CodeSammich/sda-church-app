@@ -45,7 +45,8 @@ checks a pull request must pass, are under
 4. Open the feature PR from the fork's feature branch into the primary repository's
    `release-candidate`, following the format below, and wait for all checks and
    reviews. Don't retarget it to `main`. If a release merges first, GitHub moves the PR
-   to `main`; change it back once `release-candidate` is recreated.
+   to `main`; change it back once `release-candidate` is recreated, then update the
+   branch (**Update branch**, or merge `upstream/release-candidate` into it).
 5. A maintainer merges it once its checks and review pass. Its issues stay open until
    the release reaches `main`.
 
@@ -116,11 +117,13 @@ major. The click-by-click steps are in
 [Shipping a release to `main`](operations/admin-runbook.md#shipping-a-release-to-main).
 
 1. When a release cycle starts, a maintainer creates `release-candidate` from the primary
-   repository's `main` (for example `git push upstream main:refs/heads/release-candidate`),
-   and feature PRs merge into it.
+   repository's `main` (for example `git fetch upstream` then
+   `git push upstream upstream/main:refs/heads/release-candidate`), and feature PRs merge
+   into it.
 2. Once the release's contents are settled, a maintainer picks the version and merges a
    version PR into `release-candidate` that runs `npm run sync-version -- --version x.y.z`
-   and commits the generated files.
+   and commits the generated files. Like any PR, it needs a `Part of #…` line or the
+   `no linked issue` label.
 3. A code maintainer opens the release PR from `release-candidate` into `main`, titled
    `Release/x.y.z: Summary` with that version, and copies every closing reference from the
    included feature PRs into its description. This is the code maintainer's
@@ -171,7 +174,7 @@ GitHub's code scanning default setup and have no workflow file.
 ### `Release - PR Version Sync` (`.github/workflows/release-validation.yml`)
 
 - **Validate PR title** (check `validate-pr`, on every pull request): On a PR into
-  `main`, requires a title starting `Release/x.y.z:` with a concrete version. Any title
+  `main`, requires a title starting `Release/x.y.z` with a concrete version. Any title
   passes on other PRs.
 - **Verify the version files** (check `sync`): On the release PR from the primary
   repository's `release-candidate`, runs `npm run sync-version -- --version <version>`

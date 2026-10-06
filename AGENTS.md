@@ -9,8 +9,8 @@ Code, Codex, Gemini, and others). The full contributor guide is
 - Branch from `release-candidate` and open the PR into `release-candidate`.
   Never target `main`; only a maintainer's release PR does.
 - Title the PR with what it changes, with no version. Only the release PR
-  from `release-candidate` into `main` is titled `Release/x.y.z: …`, and that
-  title sets the release version.
+  from `release-candidate` into `main` is titled `Release/x.y.z: …`; that
+  title names the release version, and CI checks the version files match it.
 - Write the PR description however suits the change, but it **must** name
   its issues. Use a line `Closes #123` for each issue it finishes. Use
   `Part of #123` or `Related to #123` for an issue it only advances or
