@@ -2,37 +2,63 @@ import { LibraryCoverImage } from '@/components/LibraryCoverImage';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import type { LibraryShelfBook } from '@/features/library/useLibraryShelfBooks';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
-import { useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
+  type ImageSourcePropType,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
+  type StyleProp,
   StyleSheet,
   TouchableOpacity,
   View,
+  type ViewStyle,
 } from 'react-native';
 import { Text } from 'react-native-paper';
 
+/** One page: a library book, or a hymnal on the hymnal page. */
+export type FeaturedCarouselItem = Readonly<{
+  key: string;
+  title: string;
+  author: string;
+  accessibilityHint?: string;
+  coverSource?: ImageSourcePropType;
+  coverUrls?: readonly string[];
+  /** The label above the title, in place of `featuredLabel`. */
+  eyebrow?: string;
+  /** Without one, the page is not a button. */
+  onPress?: () => void;
+}>;
+
 type LibraryFeaturedCarouselProps = Readonly<{
-  books: readonly LibraryShelfBook[];
-  featuredLabel: string;
-  readLabel: string;
+  books: readonly FeaturedCarouselItem[];
+  featuredLabel?: string;
+  /** The pill under each title. Without one, there is no pill. */
+  readLabel?: string;
   /** Labels a page dot, for example "Featured book 2 of 4". */
-  pageLabel: (page: number, pageCount: number) => string;
+  pageLabel: (page: number, pageCount: number, book: FeaturedCarouselItem) => string;
+  /**
+   * The page to show, for a parent that follows it, such as the hymnal page,
+   * where the page picks the hymnal. Changing it scrolls to that page.
+   */
+  page?: number;
+  /** Called when a swipe or a dot shows another page. */
+  onPageChange?: (page: number) => void;
 }>;
 
 /**
  * The top of the library page: a few featured books, one per page, swiped
  * sideways. Each page shows the cover large over a blurred copy of itself.
- * It never advances on its own.
+ * It never advances on its own. The hymnal page uses it for its hymnals.
  */
 export function LibraryFeaturedCarousel({
   books,
-  featuredLabel,
+  featuredLabel = '',
+  onPageChange,
+  page: shownPage,
   pageLabel,
   readLabel,
 }: LibraryFeaturedCarouselProps) {
@@ -40,10 +66,17 @@ export function LibraryFeaturedCarousel({
   const { textScale } = useTextSize();
   const headerHeight = useGlobalHeaderHeight();
   const styles = useMemo(() => createStyles(textScale), [textScale]);
-  const listRef = useRef<FlatList<LibraryShelfBook>>(null);
+  const listRef = useRef<FlatList<FeaturedCarouselItem>>(null);
   const [pageWidth, setPageWidth] = useState(0);
-  const [page, setPage] = useState(0);
+  const [ownPage, setOwnPage] = useState(shownPage ?? 0);
+  const page = shownPage ?? ownPage;
+  const scrolledWidth = useRef(0);
 
+  const setPage = (index: number) => {
+    const next = Math.min(Math.max(index, 0), books.length - 1);
+    setOwnPage(next);
+    if (next !== page) onPageChange?.(next);
+  };
   const onLayout = (event: LayoutChangeEvent) =>
     setPageWidth(Math.round(event.nativeEvent.layout.width));
   const onScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -54,6 +87,15 @@ export function LibraryFeaturedCarousel({
     setPage(index);
     listRef.current?.scrollToOffset({ animated: true, offset: index * pageWidth });
   };
+
+  // A parent's page: jump there once the width is known, then slide to each
+  // page it picks after that.
+  useEffect(() => {
+    if (shownPage === undefined || !pageWidth) return;
+    const animated = scrolledWidth.current === pageWidth;
+    scrolledWidth.current = pageWidth;
+    listRef.current?.scrollToOffset({ animated, offset: shownPage * pageWidth });
+  }, [pageWidth, shownPage]);
 
   if (!books.length) return null;
 
@@ -66,6 +108,7 @@ export function LibraryFeaturedCarousel({
           data={books}
           getItemLayout={(_, index) => ({ index, length: pageWidth, offset: pageWidth * index })}
           horizontal
+          initialScrollIndex={shownPage || undefined}
           keyExtractor={(book) => book.key}
           onMomentumScrollEnd={onScrollEnd}
           // Web has no momentum event for a mouse or trackpad scroll.
@@ -81,31 +124,28 @@ export function LibraryFeaturedCarousel({
                 />
                 <View style={[StyleSheet.absoluteFill, styles.scrim]} />
               </View>
-              <TouchableOpacity
+              <PageContent
                 accessibilityHint={book.accessibilityHint}
-                accessibilityLabel={`${featuredLabel}: ${book.title}. ${book.author}`}
-                accessibilityRole="button"
-                activeOpacity={0.8}
+                accessibilityLabel={`${book.eyebrow ?? featuredLabel}: ${book.title}. ${book.author}`}
                 onPress={book.onPress}
                 // The page starts under the floating header, like TitleHero.
-                style={[
-                  styles.content,
-                  { paddingTop: headerHeight + 12 },
-                  Platform.OS === 'web' ? styles.webPressable : null,
-                ]}
+                style={[styles.content, { paddingTop: headerHeight + 12 }]}
+                webPressableStyle={styles.webPressable}
               >
                 <View pointerEvents="none" style={styles.coverFrame}>
                   <LibraryCoverImage coverSource={book.coverSource} coverUrls={book.coverUrls} />
                 </View>
                 <View pointerEvents="none" style={styles.details}>
-                  <Text style={styles.eyebrow}>{featuredLabel}</Text>
+                  <Text style={styles.eyebrow}>{book.eyebrow ?? featuredLabel}</Text>
                   <Text style={styles.title}>{book.title}</Text>
                   <Text style={styles.author}>{book.author}</Text>
-                  <View style={styles.readButton}>
-                    <Text style={styles.readText}>{readLabel}</Text>
-                  </View>
+                  {readLabel ? (
+                    <View style={styles.readButton}>
+                      <Text style={styles.readText}>{readLabel}</Text>
+                    </View>
+                  ) : null}
                 </View>
-              </TouchableOpacity>
+              </PageContent>
             </View>
           )}
           showsHorizontalScrollIndicator={false}
@@ -117,7 +157,7 @@ export function LibraryFeaturedCarousel({
           {books.map((book, index) => (
             <TouchableOpacity
               key={book.key}
-              accessibilityLabel={pageLabel(index + 1, books.length)}
+              accessibilityLabel={pageLabel(index + 1, books.length, book)}
               accessibilityRole="button"
               accessibilityState={{ selected: index === page }}
               hitSlop={10}
@@ -136,6 +176,42 @@ export function LibraryFeaturedCarousel({
           ))}
         </View>
       ) : null}
+    </View>
+  );
+}
+
+type PageContentProps = Readonly<{
+  accessibilityHint?: string;
+  accessibilityLabel: string;
+  children: ReactNode;
+  onPress?: () => void;
+  style: StyleProp<ViewStyle>;
+  webPressableStyle: ViewStyle;
+}>;
+
+// A page with somewhere to go is a button; otherwise it reads as one item.
+function PageContent({
+  accessibilityHint,
+  accessibilityLabel,
+  children,
+  onPress,
+  style,
+  webPressableStyle,
+}: PageContentProps) {
+  return onPress ? (
+    <TouchableOpacity
+      accessibilityHint={accessibilityHint}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      activeOpacity={0.8}
+      onPress={onPress}
+      style={[style, Platform.OS === 'web' ? webPressableStyle : null]}
+    >
+      {children}
+    </TouchableOpacity>
+  ) : (
+    <View accessibilityHint={accessibilityHint} accessibilityLabel={accessibilityLabel} accessible style={style}>
+      {children}
     </View>
   );
 }
