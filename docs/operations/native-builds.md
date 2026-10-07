@@ -48,7 +48,8 @@ on every push to `main`, is kept for browser testing and previews; see
     [key screens](#key-screens)
   - [Android audio test on release PRs](#android-audio-test-on-release-prs)
 - [Automatic store uploads](#automatic-store-uploads)
-- [Versions and maintenance](#versions-and-maintenance)
+- [Versions and maintenance](#versions-and-maintenance), including
+  [Play Console recommendations](#play-console-recommendations)
 - [Decision record](#decision-record): why the builds and credentials are set up this way
 - [Research basis](#research-basis)
 
@@ -58,7 +59,9 @@ Neither platform needs an Expo account, an Expo token, or EAS credential storage
 Android runs `expo prebuild` and then Gradle on a GitHub-hosted Linux runner
 (`npm run build:android` and `npm run build:android:apk`); a committed config plugin,
 `plugins/withAndroidLocalSigning.js`, teaches the generated Gradle project to use a
-keystore supplied through environment variables. iOS runs Expo prebuild and Xcode on a
+keystore supplied through environment variables, and
+`plugins/withAndroidPhonePortrait.js` keeps phones in portrait (see
+[Versions and maintenance](#versions-and-maintenance)). iOS runs Expo prebuild and Xcode on a
 GitHub-hosted macOS runner, in its own workflow, `.github/workflows/native-ios-build.yml`.
 The church added its Apple signing secrets to the `production` Environment in September
 2026; how they were created is in [App Store and Google Play setup](app-store-setup.md).
@@ -75,8 +78,8 @@ Which secrets each job reads is under
    restores the Apple distribution `.p12` and App Store provisioning profile, checks
    that the profile matches the team and app ID, and imports the certificate into a
    temporary keychain.
-3. Build Android with Gradle (`bundleRelease` or `assembleRelease`). The config plugin
-   changes only the generated `android/app/build.gradle`, which reads
+3. Build Android with Gradle (`bundleRelease` or `assembleRelease`). The signing config
+   plugin changes only the generated `android/app/build.gradle`, which reads
    `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
    `ANDROID_KEY_PASSWORD` at Gradle runtime; only the Gradle step gets them.
 4. Archive and export iOS with Xcode's manual signing (`xcodebuild archive` and
@@ -431,8 +434,8 @@ credentials, or records.
 ### Android direct-native commands
 
 The Android scripts generate the ignored native project with Expo prebuild when needed
-(see [Local Expo template lookup](#local-expo-template-lookup)), apply
-`plugins/withAndroidLocalSigning.js`, and invoke Gradle directly. Signed release
+(see [Local Expo template lookup](#local-expo-template-lookup)), apply the config
+plugins in `plugins/`, and invoke Gradle directly. Signed release
 commands require the four `ANDROID_*` variables (see
 [Android setup](#android-setup-github-hosted-direct-builds)); the debug commands do not:
 
@@ -981,6 +984,22 @@ workflows install the versioned `platforms;android-37.0` package, matching the c
 runner image, plus build tools and NDK. Revisit these pins with each Expo SDK upgrade
 and when Google Play's target API requirement changes.
 
+Android release builds run R8, which Expo's template turns on to shrink and obfuscate
+the code. Since #428 it also removes unused resources
+(`enableShrinkResourcesInReleaseBuilds` in `expo-build-properties`, which needs
+`enableMinifyInReleaseBuilds` set too). The shrinker can't see images and fonts the
+JavaScript loads by name, so Expo's bundler lists them in a `keep.xml` file and the
+shrinker keeps everything on that list. If an image is missing only from a release
+build, check that it's listed in `android/app/build/generated/res/react/release/raw/keep.xml`.
+
+Phones stay in portrait on both platforms. On iOS, `"orientation": "portrait"` in
+`app.json` does it. On Android, `plugins/withAndroidPhonePortrait.js` removes the
+manifest's orientation lock and asks for portrait at run time only when the screen's
+smallest width is under 600dp, so tablets and unfolded foldables turn freely. Android 16
+ignores orientation locks on screens 600dp or wider for apps that target API 36, and Play
+Console flags apps that set one (#426). Whether to support iPad is a separate decision
+(#324).
+
 Before release, run `npx expo install --check`, `npx expo-doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices, with the
 [device checks before release](admin-runbook.md#device-checks-before-release) in the
@@ -994,6 +1013,30 @@ Local builds are manageable for a maintainer comfortable installing SDK tools.
 GitHub’s macOS runner lets you build iOS without
 owning a Mac; update the runner/Xcode selection when GitHub retires that version. Both paths still need signing/account maintenance and
 periodic store-required SDK updates.
+
+### Play Console recommendations
+
+Play Console's recommendations for a release name code by its R8-obfuscated names, such
+as `d61.j`. Each app bundle carries its own R8 map, and the names change with every
+build, so use the bundle of the release Play is reporting on. Download its `app.aab`
+from that version's GitHub release, then:
+
+```sh
+unzip -p app.aab BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map > proguard.map
+grep -n ' -> d61:$' proguard.map
+```
+
+R8 merges classes, so the class on that line may not be the code Play means. Read the
+indented lines under it that end in `-> j`: each names the original method.
+
+The recommendations for 1.0.0 traced to:
+
+| Recommendation | What it was | Outcome |
+| --- | --- | --- |
+| Deprecated edge-to-edge APIs | React Native and Google's Material Components, not the app's code | Waits for those libraries to drop the calls (#425) |
+| Orientation restrictions on large screens | `"orientation": "portrait"` in `app.json` | Portrait lock moved to run time, phones only (#426) |
+| Bitmap image optimization | Fresco (React Native's image loader), Media3 audio streaming, Kotlin, and expo-audio's lock-screen artwork, which the app doesn't use | Nothing to change (#427). Lock-screen artwork, if added, should be a small image: expo-audio decodes it at full size |
+| R8 resource shrinking | Not turned on | Turned on (#428) |
 
 ## Decision record
 
