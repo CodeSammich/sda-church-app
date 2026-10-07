@@ -1,6 +1,6 @@
 # Legal, Licensing, and Privacy
 
-Last legal review: 2026-08-09. Facts about the app updated: 2026-10-02.
+Last legal review: 2026-08-09. Facts about the app updated: 2026-10-07.
 
 This document centralizes the project's licensing records, third-party source reviews,
 privacy disclosures, branding restrictions, and legal disclaimer. It records engineering
@@ -413,6 +413,34 @@ The as-built architecture, source-site findings, legal distinctions, rejected ra
 and embedding approaches, maintenance rules, and reviewed sources are documented in
 [English Hymnal Integration: As-Built Design and Link-Safety Record](feature_designs/hymnal_integration_design.md).
 
+### Piano accompaniments on YouTube
+
+An English hymn's **Piano only** button opens that hymn's piano accompaniment, with the
+words on screen, from a
+[public YouTube playlist of SDA Hymnal instrumentals](https://www.youtube.com/playlist?list=PL0MMS0VGOsOs15gO1xV2HAq_VgUSLXeVX),
+for a church without a pianist
+([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)).
+It is published by the SDA Hymnal YouTube channel, which links to
+[sdahymnal.net](https://sdahymnal.net/). The hymn's **With singing** button searches
+YouTube instead. The same limits apply as for the
+[506 recordings](#506-hymn-recordings-on-youtube):
+
+1. the repository stores only the playlist ID and one video ID per hymn number; it does
+   not copy, download, or embed the videos;
+2. a video maps to a hymn only when its number and title match the hymnal, or a person
+   has compared a differing title with the hymn;
+3. the video opens in the YouTube app or browser, under YouTube's terms and the
+   uploader's rights; and
+4. the External Dependency Monitor checks three mapped videos each day. A video that is
+   no longer public, or whose title has a different hymn number, is a warning, and the
+   check fails when two of the three are.
+
+The mapping is
+[`features/hymnal/EnglishHymnalPianoYouTube.json`](../features/hymnal/EnglishHymnalPianoYouTube.json),
+regenerated with
+[`scripts/map-english-hymnal-piano-youtube.mjs`](../scripts/map-english-hymnal-piano-youtube.mjs)
+through the YouTube Data API.
+
 ---
 
 ## Chinese Hymnal Source and Link-Safety Rationale
@@ -483,8 +511,9 @@ hymnals, search YouTube instead. The same limits apply as for zgaxr:
    has compared a differing title with the hymn;
 3. the video opens in the YouTube app or browser, under YouTube's terms and the
    uploader's rights; and
-4. the External Dependency Monitor checks a mapped video each day and fails when it is
-   no longer public.
+4. the External Dependency Monitor checks three mapped videos each day. A video that is
+   no longer public, or whose title has a different hymn number, is a warning, and the
+   check fails when two of the three are.
 
 The mapping is [`features/hymnal/Chinese506YouTube.json`](../features/hymnal/Chinese506YouTube.json),
 regenerated with [`scripts/map-chinese-506-youtube.mjs`](../scripts/map-chinese-506-youtube.mjs)

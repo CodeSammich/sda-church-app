@@ -148,8 +148,9 @@ publish.
 `features/hymnal/EnglishHymnal.ts` stores the English hymn metadata as a
 `Record<number, HymnEntry>`. `getSortedHymns` hydrates and sorts that record for the
 hymnal page and its search across every hymnal. Search supports hymn numbers, titles, and
-scripture references. The app also provides YouTube discovery and
-Bible-reader navigation without storing third-party media.
+scripture references. A hymn's scripture reference is a chip on its row that opens the
+passage in the Bible reader, and its videos open on YouTube (see
+[5.5](#55-videos-with-singing-and-piano-only)); the app stores no third-party media.
 
 ### 5.2 External routing
 
@@ -200,6 +201,22 @@ a made-up table working end to end. The printed bulletin keeps its own copy of t
 list yet needs its page entry first (see the
 [bulletin hymn resolution guide](bulletin_hymn_resolution.md#changing-or-adding-a-primary-hymnal)).
 
+### 5.5 Videos with singing and piano only
+
+Most English hymns have two YouTube buttons, for a congregation with or without a pianist
+([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)).
+**With singing** searches YouTube for the hymn. **Piano only** opens the hymn's piano
+accompaniment, with the words on screen, from a playlist of the hymnal's instrumentals.
+`features/hymnal/EnglishHymnalPianoYouTube.json` maps hymn numbers to its videos, and a hymn
+without one shows only **With singing**. `scripts/map-english-hymnal-piano-youtube.mjs`
+regenerates the mapping and lists any video whose title differs from the hymnal's, for a
+person to compare. The source and its limits are in
+[LEGAL.md](../LEGAL.md#piano-accompaniments-on-youtube).
+
+The Chinese hymnals have no accompaniments, so their hymns keep a single **YouTube**
+button. On a 505 hymn, its 1985 chip shows the English hymn, with its accompaniment if it
+has one.
+
 ## 6. Maintenance Rules
 
 When changing this integration:
@@ -225,7 +242,8 @@ When changing this integration:
 
 The focused URL tests live in `test/english-hymnal.test.ts` and should cover both padded
 hymn links and the no-number directory fallback. `test/external-url-generation.test.ts`
-also checks that all 695 hymn numbers produce HTTPS `hymnsforworship.org` links.
+also checks that the hymnal has all 695 hymns and that each produces an HTTPS
+`hymnsforworship.org` link.
 
 ## 7. Path to a Raw-Image Experience
 
