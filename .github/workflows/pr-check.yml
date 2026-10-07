@@ -31,7 +31,9 @@ jobs:
           echo "PR version: $HEAD_VER"
 
           if [ "$BASE_VER" == "$HEAD_VER" ]; then
-            if [ "$HEAD_REF" != "release/$HEAD_VER" ]; then
+            # Only a release PR may reuse main's version, and only to recover
+            # a release whose tag was never made.
+            if [ "$HEAD_REF" != "release-candidate" ]; then
               echo "::error::Validation Failed: The version in package.json has not been changed."
               exit 1
             fi

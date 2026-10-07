@@ -162,6 +162,21 @@ of cards for **Watch Livestream**, **Weekly Bulletin**, **Tithe & Offering**, **
 & Visitor**. Giving, the hymnals, and the staff list (**Meet Our Team**, under New Member &
 Visitor) live here.
 
+**Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the
+six hymnals, in the style of the Library's featured books, puts the app language's hymnals
+first; swiping to one, or tapping its dot, shows its search and hymns below, in one list.
+Each hymnal keeps its own search. A search also looks through the other five hymnals:
+their matches follow under **In other hymnals**, and a number leads with each hymnal's
+hymn of that number, so "hymn 100" shows 1985's and 505's 100 with their titles, whichever
+hymnal is showing. Tapping a result shows that hymn in its hymnal. The page says nothing
+matches only when no hymnal has a match. A hymn with a number in another hymnal, such as a
+1985 hymn's 505 number, shows it as a chip; tapping it shows the hymn there. The chips
+come from the cross-reference tables (see [Hymnal
+integration](feature_designs/hymnal_integration_design.md#54-cross-references-between-hymnals)).
+Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn,
+opens the same page with that hymnal picked and just that hymn showing, marked, above
+**Show all hymns**. The old English–Chinese hymn lookup's route opens the hymnal page.
+
 **Tenet Alignment:**
 
 - **Tenet 5 (Simplicity):** A widget-based dashboard provides a "glanceable" interface

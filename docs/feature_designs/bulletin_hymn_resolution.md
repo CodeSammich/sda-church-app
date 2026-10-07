@@ -68,7 +68,13 @@ plugin system. Before changing one of its primary IDs, a fork must:
    the printed bulletin's copy of the maps in `google-apps-script/PrintedHymnLookup.gs`.
 2. Add or import its searchable catalog in `BulletinHymnalService.ts`.
 3. Register a hymnal adapter with its catalog lookup, valid number range, and reader route.
-4. Implement the reader route if it does not already exist.
+4. Implement the reader route if it does not already exist: add the hymnal to `HYMNALS` in
+   `features/hymnal/Hymnals.ts` and `HYMNAL_LABELS` in `features/hymnal/HymnalLabels.ts`,
+   and a route file that renders `HymnalScreen` with that hymnal picked, like
+   `app/(tabs)/home/english-hymnal.tsx`. Add its hymns to `getHymnalSearchItems` in
+   `features/hymnal/HymnalSearch.ts` so the hymnal page's search finds them from other
+   hymnals. Its cross-references come from the mappings in step 1, with no other change; see
+   [Cross-references between hymnals](hymnal_integration_design.md#54-cross-references-between-hymnals).
 5. Change `PRIMARY_BULLETIN_HYMNALS` and `BULLETIN_HYMNAL_DISPLAY_NAMES`.
 6. Extend mapping, display, routing, and accessibility tests.
 

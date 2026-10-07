@@ -125,8 +125,8 @@ export const shortestTranslationLabel = (label: string) =>
 /**
  * Whether a page's hero image is under the status bar, where the header leaves
  * it uncovered. A page can say so with `heroUnderStatusBar`. Otherwise, a page
- * that shows its title chip once the hero scrolls away, or a hymnal that
- * collapses its search then, has its hero in view until that happens.
+ * that shows its title chip once the hero scrolls away has its hero in view
+ * until that happens.
  *
  * A page's options reach the header a moment after it first draws, so until
  * then `hasHero`, from the route, decides; otherwise the strip would flash
@@ -136,22 +136,14 @@ export const shortestTranslationLabel = (label: string) =>
 export const isHeroUnderStatusBar = ({
   heroUnderStatusBar,
   showTitleChip,
-  isHymnalPage,
-  hymnalSearchCollapsed,
   hasHero,
 }: {
   heroUnderStatusBar?: boolean;
   showTitleChip?: boolean;
-  isHymnalPage: boolean;
-  hymnalSearchCollapsed: boolean;
   hasHero: boolean;
 }) =>
   heroUnderStatusBar ??
-  (showTitleChip !== undefined
-    ? !showTitleChip
-    : isHymnalPage
-      ? !hymnalSearchCollapsed
-      : hasHero);
+  (showTitleChip !== undefined ? !showTitleChip : hasHero);
 
 /**
  * The header's height, including the top safe area. The Bible reader passes

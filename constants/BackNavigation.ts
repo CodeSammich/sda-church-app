@@ -52,17 +52,6 @@ export const getBackTarget = (
 
   if (route === '/you/legal') return '/you';
 
-  if (route === '/home/hymn-lookup') return '/home/hymnal-selection';
-  if (
-    route === '/home/english-hymnal' ||
-    route === '/home/chinese-505-hymnal' ||
-    route === '/home/chinese-506-hymnal' ||
-    route === '/home/chinese-707-new-simplified-hymnal' ||
-    route === '/home/chinese-707-four-part-hymnal' ||
-    route === '/home/chinese-707-standard-hymnal'
-  ) {
-    return '/home/hymnal-selection';
-  }
   if (route === '/home/worship') return '/home/fellowship';
   if (
     route === '/home/about-sda' ||
@@ -73,11 +62,19 @@ export const getBackTarget = (
   ) {
     return '/home/discover';
   }
+  // Each hymnal's own route is the hymnal page too, with that hymnal picked,
+  // so it goes back where the hymnal page does.
   if (
     route === '/home/bulletin' ||
     route === '/home/give' ||
     route === '/home/discover' ||
-    route === '/home/hymnal-selection'
+    route === '/home/hymnal-selection' ||
+    route === '/home/english-hymnal' ||
+    route === '/home/chinese-505-hymnal' ||
+    route === '/home/chinese-506-hymnal' ||
+    route === '/home/chinese-707-new-simplified-hymnal' ||
+    route === '/home/chinese-707-four-part-hymnal' ||
+    route === '/home/chinese-707-standard-hymnal'
   ) {
     return '/';
   }

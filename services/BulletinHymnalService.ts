@@ -272,13 +272,13 @@ const getMappedDestination = (
   if (!mappedNumbers) return undefined;
 
   const targetNumber = mappedNumbers.find((number) =>
-    Boolean(hymnalAdapters[targetHymnalId].getHymn(number)),
+    Boolean(hymnalAdapters[targetHymnalId].getHymn(Number(number))),
   );
   if (!targetNumber) return undefined;
 
   return {
     hymnalId: targetHymnalId,
-    hymnNumber: targetNumber,
+    hymnNumber: Number(targetNumber),
     route: getRoute(targetHymnalId),
   };
 };

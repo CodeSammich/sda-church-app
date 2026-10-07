@@ -7,7 +7,7 @@ export type RoutableHymn = {
  * Falling back to the ordinary filter keeps malformed or stale URLs usable.
  */
 export const getRoutedHymns = <Hymn extends RoutableHymn>(
-  hymns: Hymn[],
+  hymns: readonly Hymn[],
   hymnNum: string | undefined,
   matchesHighlight: (hymn: Hymn) => boolean,
 ) => {

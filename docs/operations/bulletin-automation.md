@@ -576,8 +576,11 @@ Communion, and Brooklyn:
 
 Asset file names end in `_368x368.jpg`; the mobile-app caption is
 `Download Mobile App | 下載 APP`. The script finds each code by its exact file name
-anywhere in Drive, skipping files in the trash, then by its Script Property (such as
-`MOBILE_APP_QR_IMAGE_FILE_ID`).
+in the QR code folder, skipping files in the trash, then by its Script Property (such
+as `MOBILE_APP_QR_IMAGE_FILE_ID`). The folder is in a restricted shared drive where
+most people who make bulletins are viewers, so the search goes through the Drive
+advanced service, which finds a shared drive's files for viewers too
+([Bulletin inputs in Google Drive](../architecture.md#bulletin-inputs-in-google-drive)).
 
 The QR workflow generates `mobile_app_qr_code_368x368.jpg`, pointing at
 `https://app.nyccsda.org/download`, and uploads it to Drive with the giving codes
@@ -595,9 +598,9 @@ stores have released the app:
 
 1. Check that https://app.nyccsda.org/download sends an Android phone to Google
    Play and an iPhone to the App Store.
-2. Check that `mobile_app_qr_code_368x368.jpg` is in Drive and not in the trash. If
-   `MOBILE_APP_QR_IMAGE_FILE_ID` is set, check that it names that file, not an old
-   placeholder.
+2. Check that `mobile_app_qr_code_368x368.jpg` is in the QR code folder and not in
+   the trash. If `MOBILE_APP_QR_IMAGE_FILE_ID` is set, check that it names that
+   file, not an old placeholder.
 3. Run **Deploy Bulletin Apps Script** from `main`; see
    [Deploying the bulletin Apps Script](admin-runbook.md#deploying-the-bulletin-apps-script).
 4. Generate test bulletins for Queens (Regular and Holy Communion) and Brooklyn,

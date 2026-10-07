@@ -202,23 +202,35 @@
     },
     {
       "name": "hymnal-selection",
+      "$comment": "The hymnal page (#413): a carousel of the hymnals, the app language's first, then the picked hymnal's search and its hymns, each 1985 or 505 hymn with the other hymnal's number. Vision reads the 文A icon in a chip as XA and a row's treble clef as a character, so those lines are matched anywhere.",
       "path": "home/hymnal-selection",
-      "variants": ["default", "zh"]
+      "variants": ["default", "zh"],
+      "variantRules": {
+        "default": {
+          "mustShowLines": ["^SDA Hymnal\\b", "^1985 Edition$", "Search by number, title", "\\b1\\. Praise to the Lord", "\\b505\\W+5$"]
+        },
+        "zh": {
+          "mustShowLines": ["^中文讚美詩$", "^505 ?版$", "按編號或標題搜尋", "\\b1\\. ?在主", "\\b1985\\W+82$"]
+        }
+      }
     },
     {
       "name": "hymnal",
-      "path": "home/english-hymnal",
-      "variants": ["default", "large"]
+      "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, its 505 number, and Show all hymns, which at 150% may fall below the shot.",
+      "path": "home/english-hymnal?hymnNum=12",
+      "variants": ["default", "large"],
+      "mustShowLines": ["^SDA Hymnal\\b", "\\b12\\. Joyful, Joyful", "\\b505\\W+16$"],
+      "mustNotShowLines": ["\\b1\\. Praise to the Lord", "\\b13\\. New Songs"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Show all hymns$"] }
+      }
     },
     {
       "name": "hymnal-chinese",
-      "path": "home/chinese-505-hymnal",
-      "variants": ["zh"]
-    },
-    {
-      "name": "hymn-lookup",
-      "path": "home/hymn-lookup",
-      "variants": ["default"]
+      "$comment": "An older hymnal route with an old search, highlight=平安夜, opens the hymnal page with that hymnal picked: the 506, not the 505 a Chinese interface would show first, its cover photo cropped to the carousel's 2:3 frame. Its one match, 82, comes first, then the heading over the matches in the other hymnals. Vision may read \"82. 平安夜\" without the space.",
+      "path": "home/chinese-506-hymnal?highlight=%E5%B9%B3%E5%AE%89%E5%A4%9C",
+      "variants": ["zh"],
+      "mustShowLines": ["^中文讚美詩$", "^506 ?版$", "\\b82\\. ?平安夜", "^其他詩歌本$"]
     },
     {
       "name": "discover",

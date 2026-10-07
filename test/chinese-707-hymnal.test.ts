@@ -62,17 +62,11 @@ describe('Chinese 707 hymnal directories', () => {
     expect(getChinese707HymnUrl(2, 708)).toBe(getChinese707DirectoryUrl(2));
   });
 
-  it('adds each 707 edition and its B arrangements to reader search', () => {
+  it('adds each 707 edition and its B arrangements to the search across every hymnal', () => {
     const item = getHymnalSearchItems('zh-cn').find(
-      ({ title, route }) =>
-        title === '260B. 三一颂' &&
-        route.startsWith('/home/chinese-707-four-part-hymnal'),
+      ({ title, hymnalId }) => title === '260B. 三一颂' && hymnalId === 'chinese-hymnal-707-v2',
     );
 
-    expect(item).toMatchObject({
-      route:
-        '/home/chinese-707-four-part-hymnal?hymnNum=260B&backTo=/home/hymnal-selection',
-      isHymn: true,
-    });
+    expect(item).toMatchObject({ hymnNumber: '260B' });
   });
 });

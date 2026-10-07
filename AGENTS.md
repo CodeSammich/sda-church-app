@@ -6,21 +6,20 @@ Code, Codex, Gemini, and others). The full contributor guide is
 
 ## Pull requests
 
-- Branch from the active `release/x.y.z` (or `release/x.y.x`) branch and open
-  the PR into that same branch. Never target `main`; only a maintainer's
-  release PR does.
-- Title the PR `Release/x.y.z: Describe the change` (or `Release/x.y.x: …`),
-  using the same major and minor version as the target branch. CI rejects
-  other titles.
+- Branch from `release-candidate` and open the PR into `release-candidate`.
+  Never target `main`; only a maintainer's release PR does.
+- Title the PR with what it changes, with no version. Only the release PR
+  from `release-candidate` into `main` is titled `Release/x.y.z: …`; that
+  title names the release version, and CI checks the version files match it.
 - Write the PR description however suits the change, but it **must** name
   its issues. Use a line `Closes #123` for each issue it finishes. Use
   `Part of #123` or `Related to #123` for an issue it only advances or
   touches, so that issue stays open. The **PR Linked Issue** check fails
   without one, and it reruns when you edit the description. The line goes in
   the description, not only in a commit message or the title.
-- A release PR from `release/x.y.z` into `main` must repeat every `Closes #…`
-  line from the feature PRs it includes. GitHub only closes issues when the
-  reference reaches `main`.
+- The release PR into `main` must repeat every `Closes #…` line from the
+  feature PRs it includes. GitHub only closes issues when the reference
+  reaches `main`.
 - Say what you tested, with the command and result (for example `npm test`,
   1039 passing). Mention any Android or iOS build you ran.
 - If the change affects what a screen shows or how it's laid out, update the

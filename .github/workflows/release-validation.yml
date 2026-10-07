@@ -23,26 +23,32 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
+      # Only the release PR into main carries a version, in its title
+      # ("Release/x.y.z: Summary"); feature PRs into release-candidate pass with
+      # any title. The Main protection and PR approval rulesets both require
+      # this job, so it has to report on every pull request.
       - name: Validate PR release version
         id: release-version
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
 
           VERSION="$(node scripts/release-version-policy.cjs)"
 
-          echo "Validated release version $VERSION from PR title."
+          if [[ -n "$VERSION" ]]; then
+            echo "Validated release version $VERSION from the PR title."
+          else
+            echo "Not a release PR into main; the title needs no version."
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
   sync:
     needs: validate-pr
     if: >-
-      startsWith(github.event.pull_request.head.ref, 'release/') &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.ref == 'release-candidate' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.repository == 'New-York-Chinese-Seventh-day-Adventist/sda-church-app'
     runs-on: ubuntu-latest
@@ -69,7 +75,7 @@ jobs:
           npm run sync-version -- --version "$VERSION"
 
           if ! git diff --exit-code -- package.json package-lock.json app.json public/sw.js; then
-            echo "::error title=Version files out of sync::Run npm run sync-version -- --version $VERSION and commit the generated changes to this release branch through a pull request."
+            echo "::error title=Version files out of sync::Run npm run sync-version -- --version $VERSION and commit the generated changes to release-candidate through a pull request."
             exit 1
           fi
 

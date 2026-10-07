@@ -50,8 +50,8 @@ describe('global header back navigation', () => {
 
   it('follows only return routes inside the app', () => {
     expect(getBackTarget('/bible', 'https://example.com/')).toBe('/');
-    expect(getBackTarget('/home/english-hymnal', '//example.com')).toBe('/home/hymnal-selection');
-    expect(getBackTarget('/home/english-hymnal', '/\\example.com')).toBe('/home/hymnal-selection');
+    expect(getBackTarget('/home/about-sda', '//example.com')).toBe('/home/discover');
+    expect(getBackTarget('/home/about-sda', '/\\example.com')).toBe('/home/discover');
     expect(getBackTarget('/you/legal', 'javascript:alert(1)')).toBe('/you');
   });
 
@@ -73,13 +73,13 @@ describe('global header back navigation', () => {
     ['/home/baptism', '/home/discover'],
     ['/home/fellowship', '/home/discover'],
     ['/home/worship', '/home/fellowship'],
-    ['/home/hymn-lookup', '/home/hymnal-selection'],
-    ['/home/english-hymnal', '/home/hymnal-selection'],
-    ['/home/chinese-505-hymnal', '/home/hymnal-selection'],
-    ['/home/chinese-506-hymnal', '/home/hymnal-selection'],
-    ['/home/chinese-707-new-simplified-hymnal', '/home/hymnal-selection'],
-    ['/home/chinese-707-four-part-hymnal', '/home/hymnal-selection'],
-    ['/home/chinese-707-standard-hymnal', '/home/hymnal-selection'],
+    // Each hymnal's own route is the hymnal page with that hymnal picked.
+    ['/home/english-hymnal', '/'],
+    ['/home/chinese-505-hymnal', '/'],
+    ['/home/chinese-506-hymnal', '/'],
+    ['/home/chinese-707-new-simplified-hymnal', '/'],
+    ['/home/chinese-707-four-part-hymnal', '/'],
+    ['/home/chinese-707-standard-hymnal', '/'],
     ['/explore', '/'],
     ['/explore/library', '/explore'],
     ['/explore/library/egw', '/explore/library'],
@@ -111,7 +111,6 @@ describe('global header back navigation', () => {
   it('pops back within a stack and replaces across stacks', () => {
     // Within the Home stack: pop to the parent instead of adding a copy.
     expect(getBackAction('/home/about-sda', '/home/discover')).toBe('dismissTo');
-    expect(getBackAction('/home/english-hymnal', '/home/hymnal-selection')).toBe('dismissTo');
     expect(getBackAction('/explore/library', '/explore')).toBe('dismissTo');
     // Home itself is a tab of its own, so a Home page goes back to it by replacing.
     expect(getBackAction('/home/give', '/')).toBe('replace');
@@ -142,7 +141,8 @@ describe('global header back navigation', () => {
     for (const page of pages) {
       expect([page, readFileSync(page, 'utf8')]).toEqual([
         page,
-        expect.stringMatching(/<Stack\.Screen|<ChineseHymnalReader/),
+        // A redirect, such as the old hymn lookup's, replaces itself at once.
+        expect.stringMatching(/<Stack\.Screen|<HymnalScreen|<Redirect/),
       ]);
     }
   });
@@ -163,12 +163,13 @@ describe('global header back navigation', () => {
         'english-hymnal-key',
       ),
     ).toBe(true);
-    // A search result in another hymnal goes back to the hymnal list, not the hymnal beneath.
+    // A hymnal opened from the Bulletin goes back to the Bulletin, not the
+    // hymnal page left beneath it earlier.
     expect(
       isSwipeBackToParent(
         'home',
-        [route('english-hymnal'), route('chinese-506-hymnal', { backTo: '/home/hymnal-selection' })],
-        'chinese-506-hymnal-key',
+        [route('hymnal-selection'), route('english-hymnal', { backTo: '/home/bulletin' })],
+        'english-hymnal-key',
       ),
     ).toBe(false);
     // Explore's own pages, including a shelf.

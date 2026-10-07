@@ -19,14 +19,7 @@ import {
   isHeroUnderStatusBar,
   shortestTranslationLabel,
 } from '@/hooks/useGlobalHeaderHeight';
-import {
-  filterHeaderSearchItems,
-  getHymnalSearchNavigation,
-  getHymnalSearchItems,
-  getHymnalSearchResults,
-  getHymnalSearchSubtitle,
-  type HymnalSearchItem,
-} from '@/features/hymnal/HymnalSearch';
+import { filterHeaderSearchItems } from '@/features/hymnal/HymnalSearch';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
 import { router, useGlobalSearchParams, usePathname, useSegments } from 'expo-router';
@@ -58,7 +51,14 @@ const HERO_HEADER_ROUTES = new Set([
   'discover',
   'fellowship',
   'give',
+  // The hymnal page, at its own route and each hymnal's.
   'hymnal-selection',
+  'english-hymnal',
+  'chinese-505-hymnal',
+  'chinese-506-hymnal',
+  'chinese-707-new-simplified-hymnal',
+  'chinese-707-four-part-hymnal',
+  'chinese-707-standard-hymnal',
   'team',
 ]);
 
@@ -69,30 +69,21 @@ const HERO_UNDER_STATUS_BAR_ROUTES = new Set([
   'index',
   'library',
   'library/[collection]',
-  'hymn-lookup',
   'sabbath-school',
 ]);
 
 const READER_SEARCH_LABELS = {
   en: {
     searchBiblePlaceholder: 'Search this chapter...',
-    searchCurrentHymnalPlaceholder: 'Search this hymnal...',
-    searchAllHymnalsPlaceholder: 'Search all hymnals...',
   },
   zh: {
     searchBiblePlaceholder: '搜尋本章...',
-    searchCurrentHymnalPlaceholder: '搜尋這本詩歌...',
-    searchAllHymnalsPlaceholder: '搜尋所有詩歌本...',
   },
   'zh-cn': {
     searchBiblePlaceholder: '搜索本章...',
-    searchCurrentHymnalPlaceholder: '搜索当前诗歌本...',
-    searchAllHymnalsPlaceholder: '搜索所有诗歌本...',
   },
   es: {
     searchBiblePlaceholder: 'Buscar en este capítulo...',
-    searchCurrentHymnalPlaceholder: 'Buscar en este himnario...',
-    searchAllHymnalsPlaceholder: 'Buscar en todos los himnarios...',
   },
 } as const;
 
@@ -105,12 +96,10 @@ type BibleVerseSearchResult = {
   text: string;
   title: string;
 };
-type HymnalHeaderSearchResult = HymnalSearchItem & { subtitle: string };
 type CustomHeaderSearchItem = {
   icon?: string;
   key: string;
   onPress: () => void;
-  searchNumber?: string;
   searchText?: string;
   subtitle: string;
   title: string;
@@ -119,10 +108,13 @@ type CustomHeaderSearch = {
   items: readonly CustomHeaderSearchItem[];
   placeholder: string;
 };
-type HeaderSearchResult =
-  | BibleVerseSearchResult
-  | HymnalHeaderSearchResult
-  | CustomHeaderSearchItem;
+// A search button beside the title chip, for a page whose search field is in
+// the page, such as the hymnal page once its search has scrolled away.
+type HeaderSearchButton = {
+  label: string;
+  onPress: () => void;
+};
+type HeaderSearchResult = BibleVerseSearchResult | CustomHeaderSearchItem;
 
 type BibleTranslationChipItem = Readonly<{
   badge: string;
@@ -194,28 +186,13 @@ export const GlobalHeader = (props: any) => {
   const backTo = props.options?.backTo;
   const isPillarRoot = !hasHeaderBackButton(routeSegments, backTo);
 
-  const activeHymnalRoute = routeSegments.includes('english-hymnal')
-    ? '/home/english-hymnal'
-    : routeSegments.includes('chinese-505-hymnal')
-      ? '/home/chinese-505-hymnal'
-      : routeSegments.includes('chinese-506-hymnal')
-        ? '/home/chinese-506-hymnal'
-        : routeSegments.includes('chinese-707-new-simplified-hymnal')
-          ? '/home/chinese-707-new-simplified-hymnal'
-          : routeSegments.includes('chinese-707-four-part-hymnal')
-            ? '/home/chinese-707-four-part-hymnal'
-            : routeSegments.includes('chinese-707-standard-hymnal')
-              ? '/home/chinese-707-standard-hymnal'
-              : undefined;
-  const isHymnalPage = Boolean(activeHymnalRoute);
-  const isHymnalSelectionPage = routeSegments.includes('hymnal-selection');
-  const isHymnalSearchPage = isHymnalPage || isHymnalSelectionPage;
   const customHeaderSearch = props.options?.headerSearch as
     | CustomHeaderSearch
     | undefined;
-  const isHeaderSearchPage = isHymnalSearchPage || Boolean(customHeaderSearch);
-  const hymnalSearchCollapsed =
-    isHymnalPage && props.options?.hymnalSearchCollapsed === true;
+  const isHeaderSearchPage = Boolean(customHeaderSearch);
+  const headerSearchButton = props.options?.headerSearchButton as
+    | HeaderSearchButton
+    | undefined;
   const isSubPage = !isPillarRoot;
 
   const title = props.options?.title;
@@ -301,8 +278,6 @@ export const GlobalHeader = (props: any) => {
   const heroUnderStatusBar = isHeroUnderStatusBar({
     heroUnderStatusBar: props.options?.heroUnderStatusBar,
     showTitleChip: props.options?.showTitleChip,
-    isHymnalPage,
-    hymnalSearchCollapsed,
     hasHero:
       !isBiblePage &&
       (isHeroHeaderRoute || HERO_UNDER_STATUS_BAR_ROUTES.has(props.route?.name)),
@@ -322,32 +297,6 @@ export const GlobalHeader = (props: any) => {
   const searchLabels =
     READER_SEARCH_LABELS[language as keyof typeof READER_SEARCH_LABELS] ||
     READER_SEARCH_LABELS.en;
-
-  // Hymnal readers search the complete catalog so a title or number in either
-  // language can lead directly to the matching edition. This also gives the
-  // cross-language number mapping access to both sides of the result pair.
-  const searchableItems = useMemo(
-    () => {
-      if (!isHymnalSearchPage) return [];
-      return getHymnalSearchItems(language);
-    },
-    [isHymnalSearchPage, language],
-  );
-
-  const filtered = useMemo(
-    () =>
-      getHymnalSearchResults(
-        searchableItems,
-        deferredSearchQuery,
-        activeHymnalRoute,
-      ),
-    [activeHymnalRoute, deferredSearchQuery, searchableItems],
-  );
-
-  const hymnalResults: HymnalHeaderSearchResult[] = filtered.map((item) => ({
-    ...item,
-    subtitle: `${getHymnalSearchSubtitle(language)} · ${item.hymnalLabel}`,
-  }));
 
   const customResults = useMemo(
     () => customHeaderSearch
@@ -374,32 +323,7 @@ export const GlobalHeader = (props: any) => {
 
   const results: HeaderSearchResult[] = isBiblePage
     ? bibleResults
-    : customHeaderSearch
-      ? customResults
-      : hymnalResults;
-
-  const handleSelectResult = (item: HymnalSearchItem) => {
-    const q = searchQuery.toLowerCase();
-    setSearchQuery('');
-    setIsSearching(false);
-    setIsBibleSearchExpanded(false);
-    searchExpansion.setValue(0);
-    searchRef.current?.blur();
-
-    // A search result on the current hymnal only changes its params. Replacing
-    // the same nested route while its header/list is handling a press can
-    // crash native navigation. A result for another hymnal gets a normal push
-    // so the nested home stack has a concrete destination to mount.
-    const navigation = getHymnalSearchNavigation(item.route, q);
-    if (navigation.pathname === activeHymnalRoute) {
-      // Keep where this hymnal was opened from, such as the Bulletin or Hymn
-      // lookup, rather than the search route's default of the hymnal list.
-      const { backTo: _searchBackTo, ...params } = navigation.params;
-      router.setParams(params);
-    } else {
-      router.push(navigation as any);
-    }
-  };
+    : customResults;
 
   const handleSelectBibleVerse = (verseNumber: number) => {
     collapseBibleSearch();
@@ -431,11 +355,6 @@ export const GlobalHeader = (props: any) => {
     setTimeout(() => searchRef.current?.focus(), 80);
   };
 
-  const focusHymnalSearch = () => {
-    setIsSearching(true);
-    setTimeout(() => searchRef.current?.focus(), 80);
-  };
-
   const collapseBibleSearch = () => {
     setSearchQuery('');
     setIsSearching(false);
@@ -460,11 +379,7 @@ export const GlobalHeader = (props: any) => {
       placeholder={
         isBiblePage
           ? searchLabels.searchBiblePlaceholder
-          : customHeaderSearch
-            ? customHeaderSearch.placeholder
-          : isHymnalSelectionPage
-            ? searchLabels.searchAllHymnalsPlaceholder
-            : searchLabels.searchCurrentHymnalPlaceholder
+          : customHeaderSearch?.placeholder
       }
       onChangeText={setSearchQuery}
       value={searchQuery}
@@ -476,10 +391,8 @@ export const GlobalHeader = (props: any) => {
         if (results.length > 0) {
           if (isBiblePage) {
             handleSelectBibleVerse((results[0] as (typeof bibleResults)[number]).number);
-          } else if (customHeaderSearch) {
-            handleSelectCustomResult(results[0] as CustomHeaderSearchItem);
           } else {
-            handleSelectResult(results[0] as HymnalSearchItem);
+            handleSelectCustomResult(results[0] as CustomHeaderSearchItem);
           }
         }
       }}
@@ -711,7 +624,8 @@ export const GlobalHeader = (props: any) => {
                   styles.floatingTitleChip,
                   {
                     minHeight: compactControlHeight,
-                    maxWidth: windowWidth - 86,
+                    maxWidth:
+                      windowWidth - 86 - (headerSearchButton ? compactControlHeight + 12 : 0),
                     paddingHorizontal: effectiveTextScale >= 1.75 ? 8 : 16,
                   },
                   {
@@ -903,28 +817,30 @@ export const GlobalHeader = (props: any) => {
                   )}
                 </View>
               </View>
-            ) : hymnalSearchCollapsed ? (
-              <Pressable
-                onPress={focusHymnalSearch}
-                accessibilityRole="button"
-                accessibilityLabel="Search hymnal"
-                style={({ pressed }) => [
-                  styles.collapsedSearchButton,
-                  { height: compactControlHeight, width: compactControlHeight },
-                  { backgroundColor: theme.colors.surface, opacity: pressed ? 0.75 : 1 },
-                ]}
-              >
-                <AppIcon
-                  name="magnify"
-                  size={24}
-                  textScale={headerTextScale}
-                  color={theme.colors.onSurfaceVariant}
-                />
-              </Pressable>
             ) : (
               renderSearchbar()
             )}
           </View>
+        )}
+        {!isBiblePage && !isHeaderSearchPage && headerSearchButton && (
+          <Pressable
+            onPress={headerSearchButton.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={headerSearchButton.label}
+            style={({ pressed }) => [
+              styles.collapsedSearchButton,
+              styles.headerSearchButton,
+              { height: compactControlHeight, width: compactControlHeight },
+              { backgroundColor: theme.colors.surface, opacity: pressed ? 0.75 : 1 },
+            ]}
+          >
+            <AppIcon
+              name="magnify"
+              size={24}
+              textScale={headerTextScale}
+              color={theme.colors.onSurfaceVariant}
+            />
+          </Pressable>
         )}
       </Appbar.Header>
       {isSearching && searchQuery.length > 0 && results.length > 0 && (
@@ -932,12 +848,10 @@ export const GlobalHeader = (props: any) => {
           data={results}
           initialNumToRender={8}
           keyboardShouldPersistTaps="handled"
-          keyExtractor={(item, index) =>
+          keyExtractor={(item) =>
             isBiblePage
               ? `verse-${(item as any).number}`
-              : customHeaderSearch
-                ? (item as CustomHeaderSearchItem).key
-              : `${(item as HymnalSearchItem).hymnalId}-${(item as HymnalSearchItem).hymnNumber}-${index}`
+              : (item as CustomHeaderSearchItem).key
           }
           maxToRenderPerBatch={8}
           renderItem={({ item }) => (
@@ -965,9 +879,7 @@ export const GlobalHeader = (props: any) => {
               onPress={() =>
                 isBiblePage
                   ? handleSelectBibleVerse((item as any).number)
-                  : customHeaderSearch
-                    ? handleSelectCustomResult(item as CustomHeaderSearchItem)
-                  : handleSelectResult(item as HymnalSearchItem)
+                  : handleSelectCustomResult(item as CustomHeaderSearchItem)
               }
             />
           )}
@@ -1129,6 +1041,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
+  },
+  headerSearchButton: {
+    marginRight: 12,
   },
   expandedBibleSearchbar: {
     marginLeft: 0,

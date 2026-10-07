@@ -60,8 +60,8 @@ Users don't see it; the stores show them the version.
 Every merge to `main` is a release, and every release has a new, higher version:
 **PR Version Check** fails a release PR whose version isn't higher than `main`'s. So
 one release is one version is one build number, automatically. (The one exception: a
-PR from `release/x.y.z` may keep `main`'s version `x.y.z` while no `vx.y.z` tag exists,
-so a release that was never tagged can be recovered.)
+PR from `release-candidate` may keep `main`'s version `x.y.z` while no `vx.y.z` tag
+exists, so a release that was never tagged can be recovered.)
 
 A counter kept by hand needs someone to remember it in every release, in both stores,
 and a forgotten bump only shows up as a rejected upload. Computing it from the version
@@ -81,7 +81,7 @@ removes that job entirely.
 ## Common situations
 
 - **Making a release:** nothing extra. Set the version with
-  `npm run sync-version -- --version x.y.z` in the release branch, as always.
+  `npm run sync-version -- --version x.y.z` in a pull request into `release-candidate`.
 - **Fixing something after a release:** make a patch release. `0.40.1` becomes
   `40001`.
 - **Apple rejected an uploaded build:** its build number still counts as used, so the

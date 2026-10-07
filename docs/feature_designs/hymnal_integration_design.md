@@ -147,9 +147,9 @@ publish.
 
 `features/hymnal/EnglishHymnal.ts` stores the English hymn metadata as a
 `Record<number, HymnEntry>`. `getSortedHymns` hydrates and sorts that record for the
-reader and unified search. Search supports hymn numbers, titles, and scripture
-references. The app also provides YouTube discovery and Bible-reader navigation without
-storing third-party media.
+hymnal page and its search across every hymnal. Search supports hymn numbers, titles, and
+scripture references. The app also provides YouTube discovery and
+Bible-reader navigation without storing third-party media.
 
 ### 5.2 External routing
 
@@ -168,9 +168,37 @@ asset.
 
 ### 5.3 Reader state
 
-The English hymnal reader retains its search state while the user visits the external
-page and returns. This preserves the user's place without importing the external content
-into the app.
+The hymnal page (`features/hymnal/HymnalScreen.tsx`), which lists the English hymnal
+alongside the Chinese ones, retains each hymnal's search while the user visits the external
+page and returns. The Bible link's way back reopens the page with the same hymn or search.
+This preserves the user's place without importing the external content into the app.
+
+### 5.4 Cross-references between hymnals
+
+A hymn's number in another hymnal shows as a chip on its row, such as "505 · 23" on a 1985
+hymn, and the search places those equivalents beside each match, so typing the number
+someone gave finds it in every hymnal. Both read one registry, `HYMNAL_CROSS_REFERENCE_TABLES`
+in `features/hymnal/HymnalNumberMappings.ts`, built from
+`features/hymnal/HymnalNumberMappings.json`. It holds one table today: the congregation's
+printed SDA Hymnal (1985) ↔ Chinese Hymnal (505) cross-reference.
+
+To add a mapping, add an entry to `mappings` in the JSON: `sourceHymnalId` and
+`targetHymnalId` (IDs from `features/hymnal/HymnalLabels.ts`, such as `chinese-hymnal-506`),
+its `source` and `transcriptionReview`, and a `numberMap` from each source number to a list of
+target numbers: several when a hymn has more than one equivalent, `null` for an asterisk in
+the source, and no entry for a number the source doesn't list. Add the other direction as a
+second entry when the source gives it; otherwise the app inverts the first. Declare a new
+hymnal under `hymnals`, too.
+
+Nothing else changes. Both hymnals' rows get chips, named with the other hymnal's short and
+full names from `HymnalLabels.ts`; the search pairs the new equivalents with their matches;
+a hymn in more than one table gets every chip; and `getHymnalCrossReferences`, which the
+bulletin uses between its two primary hymnals, reads the same tables. Add the new pairs to
+`test/hymnal-number-mappings.test.ts`; `test/hymnal-cross-reference-registry.test.ts` shows
+a made-up table working end to end. The printed bulletin keeps its own copy of the 1985 ↔
+505 maps in `google-apps-script/PrintedHymnLookup.gs`, and a hymnal the hymnal page doesn't
+list yet needs its page entry first (see the
+[bulletin hymn resolution guide](bulletin_hymn_resolution.md#changing-or-adding-a-primary-hymnal)).
 
 ## 6. Maintenance Rules
 
