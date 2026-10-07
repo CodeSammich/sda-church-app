@@ -114,12 +114,11 @@ describe('generated external dependency URLs', () => {
 
   it('generates every English hymnal page URL', () => {
     const hymns = getSortedHymns();
-    // Local title metadata currently stops at #694. URL routing remains
-    // intentionally valid for all 695 canonical hymn numbers.
-    expect(hymns).toHaveLength(694);
-    expect(hymns.some(({ number }) => number === 695)).toBe(false);
+    expect(hymns.map(({ number }) => number)).toEqual(
+      Array.from({ length: 695 }, (_, index) => index + 1),
+    );
     assertHttpsUrls(
-      Array.from({ length: 695 }, (_, index) => getEnglishHymnUrl(index + 1)),
+      hymns.map(({ number }) => getEnglishHymnUrl(number)),
       'hymnsforworship.org',
     );
   });

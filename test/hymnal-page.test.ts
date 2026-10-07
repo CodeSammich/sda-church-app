@@ -1,6 +1,7 @@
 import { act, fireEvent } from '@testing-library/react-native';
 import { createElement, type ComponentType } from 'react';
 import { LibraryFeaturedCarousel } from '@/components/LibraryFeaturedCarousel';
+import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { customLightTheme } from '@/constants/Themes';
 import type { HymnalBookId } from '@/features/hymnal/HymnalLabels';
@@ -31,6 +32,12 @@ jest.mock('expo-router', () => ({
   },
   useIsFocused: () => true,
   useLocalSearchParams: () => mockParams,
+}));
+
+jest.mock('@/constants/ExternalLinks', () => ({
+  ...jest.requireActual('@/constants/ExternalLinks'),
+  openURL: jest.fn(),
+  openYouTubeSearch: jest.fn(),
 }));
 
 jest.mock('react-native-safe-area-context', () =>
@@ -214,6 +221,48 @@ describe("each hymnal's own route", () => {
   });
 });
 
+describe('recordings and piano accompaniments', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('offers an English hymn with singing or piano only, and its verse as a chip', () => {
+    const view = renderPage(routes[0][1], { hymnNum: '1' });
+    expect(view.queryByText('YouTube')).toBeNull();
+    expect(view.getByText('Psalm 103:2-5')).toBeTruthy();
+
+    fireEvent.press(view.getByText('With singing'));
+    expect(openYouTubeSearch).toHaveBeenCalledWith('SDA Hymnal 1985 Praise to the Lord');
+
+    fireEvent.press(view.getByText('Piano only'));
+    expect(openURL).toHaveBeenCalledWith(
+      'https://www.youtube.com/watch?v=Uoi3zhcXZrM',
+      'Error',
+      'Could not open the YouTube video.',
+    );
+  });
+
+  it('leaves out the piano button when a hymn has no accompaniment', () => {
+    // Not in the playlist; see scripts/map-english-hymnal-piano-youtube.mjs.
+    const view = renderPage(routes[0][1], { hymnNum: '30' });
+    expect(view.getByText('With singing')).toBeTruthy();
+    expect(view.queryByText('Piano only')).toBeNull();
+  });
+
+  it('keeps the YouTube button on Chinese hymns, which have no accompaniments', () => {
+    const view = renderPage(routes[1][1], { hymnNum: '1' });
+    expect(view.getByText('YouTube')).toBeTruthy();
+    expect(view.queryByText('With singing')).toBeNull();
+    expect(view.queryByText('Piano only')).toBeNull();
+  });
+
+  it('labels the buttons in the app language', () => {
+    const view = renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
+    expect(view.getByText('演唱')).toBeTruthy();
+    expect(view.getByText('鋼琴伴奏')).toBeTruthy();
+    expect(view.getAllByA11yHint('在 YouTube 開啟影片')).toHaveLength(2);
+    expect(view.getByA11yHint('在聖經中開啟這段經文')).toBeTruthy();
+  });
+});
+
 describe('1985 ↔ 505 cross-references', () => {
   it('pairs hymns both ways from the cross-reference table', () => {
     expect(getHymnCrossReferences('sdah-1985-en', 694)).toEqual([
@@ -309,7 +358,8 @@ describe('searching every hymnal from the page', () => {
   it('leads with the 505 equivalent of a 1985 match, and shows it when tapped', () => {
     const view = renderPage(HymnalSelectionScreen);
     fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'Praise God, From Whom');
-    expect(listedHymns(view)).toEqual(['694', 'heading', 'chinese-hymnal-505:497']);
+    // The doxology in two settings; the cross-reference table pairs only 694 with 505.
+    expect(listedHymns(view)).toEqual(['694', '695', 'heading', 'chinese-hymnal-505:497']);
 
     fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymn 497, 赞美上帝'));
     expect(dotLabels(view)[1].selected).toBe(true);
@@ -319,7 +369,7 @@ describe('searching every hymnal from the page', () => {
 
     // The 1985 hymnal still has its search.
     fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymnal 1 of 6'));
-    expect(listedHymns(view)).toEqual(['694', 'heading', 'chinese-hymnal-505:497']);
+    expect(listedHymns(view)).toEqual(['694', '695', 'heading', 'chinese-hymnal-505:497']);
   });
 
   it('answers "hymn 100, English or Chinese?" from any hymnal', () => {

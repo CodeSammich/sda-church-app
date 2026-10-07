@@ -5,6 +5,7 @@ import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
 } from '@/constants/ExternalBrandAssets';
+import { openURL } from '@/constants/ExternalLinks';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { memo } from 'react';
@@ -21,6 +22,11 @@ import {
 
 export type HymnRowLabels = Readonly<{
   watchYouTube: string;
+  /** The recording's label beside a piano accompaniment. */
+  withSinging: string;
+  pianoOnly: string;
+  youtubeHint: string;
+  scriptureHint: string;
   /** The cross-reference chip's text, such as "505 · 23". */
   crossReference: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => string;
   /** What a screen reader says for the chip, such as "Chinese Hymnal — 505 Edition, hymn 23". */
@@ -40,9 +46,10 @@ type HymnRowProps = Readonly<{
 }>;
 
 /**
- * One hymn: its number and title open the sheet music, with its recording,
- * an English hymn's scripture, and a chip for each number the same hymn has
- * in another hymnal (from the cross-reference tables), which shows it there.
+ * One hymn: its number and title open the sheet music. Chips under the title
+ * open an English hymn's scripture and show the same hymn in another hymnal
+ * (from the cross-reference tables). Below are its recording and, for an
+ * English hymn, its piano accompaniment.
  */
 export const HymnRow = memo(function HymnRow({
   hymnalId,
@@ -56,6 +63,13 @@ export const HymnRow = memo(function HymnRow({
   const theme = useAppTheme();
   const hymnal = HYMNALS[hymnalId];
   const crossReferences = getHymnCrossReferences(hymnalId, hymn.number);
+  const accompanimentUrl = hymnal.getAccompanimentUrl?.(hymn);
+  const chipStyle = [styles.chip, { borderColor: theme.colors.outline }];
+  const pressableChipStyle = ({ pressed }: { pressed: boolean }) => [
+    chipStyle,
+    { opacity: pressed ? 0.7 : 1 },
+    Platform.OS === 'web' ? styles.webPressable : null,
+  ];
 
   return (
     <View style={styles.listItem}>
@@ -101,8 +115,22 @@ export const HymnRow = memo(function HymnRow({
         </TouchableRipple>
 
         {/* Outside the link above, so a screen reader reaches each chip. */}
-        {crossReferences.length > 0 && (
-          <View style={styles.crossReferences}>
+        {(hymn.scriptureReference || crossReferences.length > 0) && (
+          <View style={styles.chips}>
+            {hymn.scriptureReference && (
+              <Pressable
+                accessibilityHint={labels.scriptureHint}
+                accessibilityRole="button"
+                hitSlop={6}
+                onPress={() => onOpenScripture(hymnalId, hymn.scriptureReference!)}
+                style={pressableChipStyle}
+              >
+                <AppIcon name="book-cross" size={16} color={theme.colors.primary} />
+                <Text style={[styles.chipText, { color: theme.colors.primary }]}>
+                  {formatHymnalScriptureReference(hymn.scriptureReference)}
+                </Text>
+              </Pressable>
+            )}
             {crossReferences.map((reference) => {
               const content = (
                 <>
@@ -111,15 +139,11 @@ export const HymnRow = memo(function HymnRow({
                     size={16}
                     color={theme.colors.primary}
                   />
-                  <Text style={[styles.crossReferenceText, { color: theme.colors.primary }]}>
+                  <Text style={[styles.chipText, { color: theme.colors.primary }]}>
                     {labels.crossReference(reference.hymnalId, reference.number)}
                   </Text>
                 </>
               );
-              const chipStyle = [
-                styles.crossReferenceChip,
-                { borderColor: theme.colors.outline },
-              ];
               // A hymn missing from the other hymnal's online catalog keeps
               // its number for a printed copy, but has nothing to open.
               return reference.available ? (
@@ -133,11 +157,7 @@ export const HymnRow = memo(function HymnRow({
                   accessibilityRole="button"
                   hitSlop={6}
                   onPress={() => onOpenCrossReference(reference.hymnalId, reference.number)}
-                  style={({ pressed }) => [
-                    chipStyle,
-                    { opacity: pressed ? 0.7 : 1 },
-                    Platform.OS === 'web' ? styles.webPressable : null,
-                  ]}
+                  style={pressableChipStyle}
                 >
                   {content}
                 </Pressable>
@@ -163,6 +183,7 @@ export const HymnRow = memo(function HymnRow({
         {/* Bottom Action Section */}
         <View style={styles.bottomSection}>
           <TouchableRipple
+            accessibilityHint={hymnal.getAccompanimentUrl ? labels.youtubeHint : undefined}
             onPress={() => hymnal.openRecording(hymn)}
             style={styles.flexButton}
           >
@@ -174,12 +195,12 @@ export const HymnRow = memo(function HymnRow({
                 contentScale={EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube}
               />
               <Text style={[styles.buttonText, { color: theme.colors.brandYoutube }]}>
-                {labels.watchYouTube}
+                {hymnal.getAccompanimentUrl ? labels.withSinging : labels.watchYouTube}
               </Text>
             </View>
           </TouchableRipple>
 
-          {hymn.scriptureReference && (
+          {accompanimentUrl && (
             <>
               <View
                 style={[
@@ -188,13 +209,16 @@ export const HymnRow = memo(function HymnRow({
                 ]}
               />
               <TouchableRipple
-                onPress={() => onOpenScripture(hymnalId, hymn.scriptureReference!)}
+                accessibilityHint={labels.youtubeHint}
+                onPress={() =>
+                  openURL(accompanimentUrl, 'Error', 'Could not open the YouTube video.')
+                }
                 style={styles.flexButton}
               >
                 <View style={styles.buttonContent}>
-                  <AppIcon name="book-cross" size={22} color={theme.colors.primary} />
+                  <AppIcon name="piano" size={22} color={theme.colors.primary} />
                   <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
-                    {formatHymnalScriptureReference(hymn.scriptureReference)}
+                    {labels.pianoOnly}
                   </Text>
                 </View>
               </TouchableRipple>
@@ -249,7 +273,7 @@ export const createHymnRowStyles = (
       fontWeight: '700',
     },
     // Lined up with the title, under the treble clef.
-    crossReferences: {
+    chips: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
@@ -258,7 +282,7 @@ export const createHymnRowStyles = (
       paddingLeft: 16 + scaleTypographyMetric(DESIGN_TOKENS.ICON_SIZE_FEATURED, textScale) + 12,
       paddingRight: 16,
     },
-    crossReferenceChip: {
+    chip: {
       alignItems: 'center',
       borderRadius: 999,
       borderWidth: 1,
@@ -268,7 +292,7 @@ export const createHymnRowStyles = (
       paddingHorizontal: 12,
       paddingVertical: 4,
     },
-    crossReferenceText: {
+    chipText: {
       fontSize: scaleTypographyMetric(14, textScale),
       fontWeight: '700',
       lineHeight: scaleTypographyMetric(20, textScale),

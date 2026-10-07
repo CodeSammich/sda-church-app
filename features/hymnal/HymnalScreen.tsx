@@ -75,6 +75,10 @@ const copy = {
     watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}, hymn ${number}`,
     crossReferenceHint: 'Shows this hymn in that hymnal',
+    withSinging: 'With singing',
+    pianoOnly: 'Piano only',
+    youtubeHint: 'Opens the video on YouTube',
+    scriptureHint: 'Opens this passage in the Bible',
   },
   zh: {
     title: '詩歌本',
@@ -93,6 +97,10 @@ const copy = {
     watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}第 ${number} 首`,
     crossReferenceHint: '在那本詩歌本中顯示這首詩歌',
+    withSinging: '演唱',
+    pianoOnly: '鋼琴伴奏',
+    youtubeHint: '在 YouTube 開啟影片',
+    scriptureHint: '在聖經中開啟這段經文',
   },
   'zh-cn': {
     title: '诗歌本',
@@ -111,6 +119,10 @@ const copy = {
     watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}第 ${number} 首`,
     crossReferenceHint: '在那本诗歌本中显示这首诗歌',
+    withSinging: '演唱',
+    pianoOnly: '钢琴伴奏',
+    youtubeHint: '在 YouTube 打开视频',
+    scriptureHint: '在圣经中打开这段经文',
   },
   es: {
     title: 'Himnarios',
@@ -129,6 +141,10 @@ const copy = {
     watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}, himno ${number}`,
     crossReferenceHint: 'Muestra este himno en ese himnario',
+    withSinging: 'Cantado',
+    pianoOnly: 'Solo piano',
+    youtubeHint: 'Abre el video en YouTube',
+    scriptureHint: 'Abre este pasaje en la Biblia',
   },
 } as const;
 
@@ -321,6 +337,10 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
   const rowLabels = useMemo<HymnRowLabels>(
     () => ({
       watchYouTube: labels.watchYouTube,
+      withSinging: labels.withSinging,
+      pianoOnly: labels.pianoOnly,
+      youtubeHint: labels.youtubeHint,
+      scriptureHint: labels.scriptureHint,
       crossReference: (hymnalId, number) =>
         `${getHymnalShortLabel(hymnalId, language)} · ${number}`,
       crossReferenceLabel: (hymnalId, number) =>

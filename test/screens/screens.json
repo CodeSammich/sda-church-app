@@ -202,12 +202,12 @@
     },
     {
       "name": "hymnal-selection",
-      "$comment": "The hymnal page (#413): a carousel of the hymnals, the app language's first, then the picked hymnal's search and its hymns, each 1985 or 505 hymn with the other hymnal's number. Vision reads the 文A icon in a chip as XA and a row's treble clef as a character, so those lines are matched anywhere.",
+      "$comment": "The hymnal page (#413): a carousel of the hymnals, the app language's first, then the picked hymnal's search and its hymns, each 1985 or 505 hymn with the other hymnal's number, and an English hymn's verse in a chip beside it (#424). Vision reads the 文A icon in a chip as XA and a row's treble clef as a character, so those lines are matched anywhere.",
       "path": "home/hymnal-selection",
       "variants": ["default", "zh"],
       "variantRules": {
         "default": {
-          "mustShowLines": ["^SDA Hymnal\\b", "^1985 Edition$", "Search by number, title", "\\b1\\. Praise to the Lord", "\\b505\\W+5$"]
+          "mustShowLines": ["^SDA Hymnal\\b", "^1985 Edition$", "Search by number, title", "\\b1\\. Praise to the Lord", "\\bPsalm 103:2-5\\b", "\\b505\\W+5$"]
         },
         "zh": {
           "mustShowLines": ["^中文讚美詩$", "^505 ?版$", "按編號或標題搜尋", "\\b1\\. ?在主", "\\b1985\\W+82$"]
@@ -216,13 +216,13 @@
     },
     {
       "name": "hymnal",
-      "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, its 505 number, and Show all hymns, which at 150% may fall below the shot.",
+      "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, its 505 number, its With singing and Piano only videos (#424), and Show all hymns. At 150% the buttons stack, so they and Show all hymns may fall below the shot.",
       "path": "home/english-hymnal?hymnNum=12",
       "variants": ["default", "large"],
       "mustShowLines": ["^SDA Hymnal\\b", "\\b12\\. Joyful, Joyful", "\\b505\\W+16$"],
       "mustNotShowLines": ["\\b1\\. Praise to the Lord", "\\b13\\. New Songs"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Show all hymns$"] }
+        "default": { "mustShowLines": ["\\bWith singing\\b", "\\bPiano only\\b", "^Show all hymns$"] }
       }
     },
     {

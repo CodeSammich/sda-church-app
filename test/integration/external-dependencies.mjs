@@ -335,6 +335,19 @@ await record('daily 506 hymn recording samples', 'YouTube', async (warn) => {
   }, warn, { label: ([number]) => `hymn ${number}` });
 });
 
+await record('daily English hymn piano accompaniment samples', 'YouTube', async (warn) => {
+  const { videos } = await readJson('features/hymnal/EnglishHymnalPianoYouTube.json');
+  return spotCheck(Object.entries(videos), 1985, async ([number, videoId]) => {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const video = await getJson(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watchUrl)}`);
+    const titleNumber = [...String(video.title).matchAll(/SDA\s*HYMNAL\s*(\d{1,3})\b/gi)].at(-1)?.[1];
+    if (Number(titleNumber) !== Number(number)) {
+      throw new Error(`${watchUrl} is now titled "${video.title}"`);
+    }
+    return video.title;
+  }, warn, { label: ([number]) => `hymn ${number}` });
+});
+
 await record('directory publishes the expected English hymnal links', 'Hymns for Worship', async () => {
   const url = 'https://hymnsforworship.org/sda-hymnal/the-seventh-day-adventist-hymnal-1985-edition/';
   const { response, text: html } = await getTextPage(url, {
