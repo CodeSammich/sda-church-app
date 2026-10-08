@@ -126,6 +126,10 @@ const buildYearlyCheckup = (year, repoUrl) => {
     body: [
       `Once a year, check everything the docs say to check yearly. Tick each box as you go, note anything that changed in a comment, and close this issue when every box is ticked.`,
       '',
+      // Read by .github/workflows/due-date-reminders.yml, which comments here
+      // 30 and 7 days before this date while the issue is still open.
+      `**Due: ${year}-02-28.** If it's still open then, the due-date reminders comment here before and after.`,
+      '',
       ...sections.flat(),
       'This issue opens on the first Monday of each January (`.github/workflows/yearly-checkup.yml`). To add a yearly task, add it to `scripts/yearly-checkup.cjs` and to the upkeep calendar.',
     ].join('\n'),

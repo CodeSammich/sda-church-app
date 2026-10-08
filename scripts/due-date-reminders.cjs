@@ -7,8 +7,8 @@
  * .github/workflows/due-date-reminders.yml.
  *
  * The repository is public, so only issues opened by someone who can triage or
- * manage the repository count; anyone else's `Due:` line can't make it notify
- * people. Each comment carries a hidden marker naming the date and the stage,
+ * manage the repository, or by its own workflows (such as the yearly checkup),
+ * count; anyone else's `Due:` line can't make it notify people. Each comment carries a hidden marker naming the date and the stage,
  * so a stage is posted once per date, and changing the date starts over. Only
  * this workflow's own comments count, so nobody else can silence a reminder.
  *
@@ -80,6 +80,8 @@ const openedByMaintainer = async ({ github, repo, issue }) => {
   if (TRUSTED_AUTHORS.includes(issue.author_association)) return true;
   const username = issue.user && issue.user.login;
   if (!username) return false;
+  // Only this repository's workflows post as github-actions[bot] here.
+  if (username === REMINDER_AUTHOR) return true;
   try {
     const { data } = await github.rest.repos.getCollaboratorPermissionLevel({ ...repo, username });
     return TRUSTED_ROLES.includes(data.role_name);

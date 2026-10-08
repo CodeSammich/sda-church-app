@@ -169,6 +169,14 @@ describe('posting reminders', () => {
     expect(results[0].action).toBe('reminded (7)');
   });
 
+  it("counts an issue this repository's own workflows opened, such as the yearly checkup", async () => {
+    const github = fakeGithub([
+      { number: 50, body: '**Due: 2027-02-28.**', author_association: 'NONE', user: { login: 'github-actions[bot]' } },
+    ]);
+    const results = await postDueDateReminders({ github, context, assignees: ['church-it'], today: '2027-01-29' });
+    expect(results[0].action).toBe('reminded (30)');
+  });
+
   it("doesn't let someone else's comment with the marker silence a reminder", async () => {
     const github = fakeGithub(
       [{ number: 432, body: 'Due: 2027-04-01' }],

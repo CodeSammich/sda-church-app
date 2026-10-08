@@ -89,6 +89,12 @@ describe('yearly checkup checklist', () => {
     );
   });
 
+  it('is due at the end of February, so the due-date reminders follow it up', () => {
+    const { parseDueDate } = require('../scripts/due-date-reminders.cjs');
+    expect(parseDueDate(buildYearlyCheckup(2027, 'https://github.com/church/app').body)).toBe('2027-02-28');
+    expect(parseDueDate(buildYearlyCheckup(2028, 'https://github.com/church/app').body)).toBe('2028-02-28');
+  });
+
   it('lists every yearly row of the upkeep calendar', () => {
     const calendar = repoFile('docs/architecture.md');
     const rows = calendar.slice(calendar.indexOf('## Upkeep calendar')).split('\n## ')[0];

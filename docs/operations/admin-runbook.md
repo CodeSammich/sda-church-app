@@ -452,7 +452,9 @@ check once a year, each item linked to the doc that explains it:
 - the Workspace nonprofit terms;
 - the scheduled workflows.
 
-Work through it, note anything that changed in a comment, and close it. It runs every
+Work through it, note anything that changed in a comment, and close it. It's due
+February 28: while it's still open, the [due-date reminders](#due-date-reminders)
+comment on it around January 29, around February 21, and on March 1. It runs every
 Monday in January, but only the first opens an issue; the others find it and stop.
 Start it by hand from the Actions tab to open one early.
 
@@ -773,8 +775,9 @@ days or less, and once the day after it passes. Each comment @mentions the users
 reminder is posted once. Editing the date starts them over, and removing the line or
 closing the issue stops them.
 
-Only issues opened by someone who can triage or manage the repository count, so
-someone else's issue can't make it notify anyone. The rules are in
+Only issues opened by someone who can triage or manage the repository, or by its own
+workflows such as the yearly checkup, count, so someone else's issue can't make it
+notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.
 
