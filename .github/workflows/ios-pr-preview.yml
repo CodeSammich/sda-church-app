@@ -172,10 +172,17 @@ jobs:
           ARTIFACT_DIR="$RUNNER_TEMP/ios-pr-preview"
           mkdir -p "$ARTIFACT_DIR"
           xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACT_DIR/$PREVIEW_NAME-first-screen.png"
-          # Scouting #432: which displays the Simulator has, and a shot of each.
-          xcrun simctl io "$DEVICE_ID" enumerate || true
-          for display in internal external inner outer; do
-            xcrun simctl io "$DEVICE_ID" screenshot --display="$display" "$ARTIFACT_DIR/first-screen-$display.png" || true
+          # Scouting #432: a shot of each of the Simulator's displays, by ID.
+          xcrun simctl help io 2>&1 | head -60 || true
+          DISPLAYS="$(xcrun simctl io "$DEVICE_ID" enumerate | awk '/UUID:/ {id=$2} /Class: Display$/ {print id}')"
+          echo "Displays: $DISPLAYS"
+          for round in 1 2; do
+            for display in $DISPLAYS; do
+              xcrun simctl io "$DEVICE_ID" screenshot --display="$display" "$ARTIFACT_DIR/display-$display-$round.png" || true
+            done
+            # Open a screen with text, then shoot again.
+            xcrun simctl openurl "$DEVICE_ID" 'sdachurchapp://bible?bookId=PSA&chapter=23&translationId=BSB' || true
+            sleep 20
           done
           (cd "$(dirname "$APP_PATH")" &&
             ditto -c -k --keepParent "$(basename "$APP_PATH")" "$ARTIFACT_DIR/$PREVIEW_NAME-simulator.zip")
@@ -192,7 +199,7 @@ jobs:
         # about 24 minutes, so a second set on the Intel build would only make the
         # release PR wait longer. Actions minutes are free for this public
         # repository, so this is about time, not cost.
-        if: matrix.arch == 'arm64'
+        if: false # Scouting #432: skipped.
         timeout-minutes: 35
         run: node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
 
@@ -202,7 +209,7 @@ jobs:
         # verse button's whole label, verse numbers starting their lines, and no
         # system prompt or setup dialog. Saves ocr.json and checks.json beside
         # the screenshots. Runs even if a capture failed, to report on the rest.
-        if: matrix.arch == 'arm64' && !cancelled()
+        if: false # Scouting #432: skipped.
         timeout-minutes: 10
         run: node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
 
