@@ -177,8 +177,9 @@ This preserves the user's place without importing the external content into the 
 ### 5.4 Cross-references between hymnals
 
 A hymn's number in another hymnal shows as a chip on its row, such as "505 · 23" on a 1985
-hymn, and the search places those equivalents beside each match, so typing the number
-someone gave finds it in every hymnal. Both read one registry, `HYMNAL_CROSS_REFERENCE_TABLES`
+hymn, and the search adds those equivalents to the other hymnals' results, so typing the
+number someone gave finds it in every hymnal, and a title in one language finds the hymn
+in the other. Those results are grouped by hymnal, with the paired hymnal's group first. Both read one registry, `HYMNAL_CROSS_REFERENCE_TABLES`
 in `features/hymnal/HymnalNumberMappings.ts`, built from
 `features/hymnal/HymnalNumberMappings.json`. It holds one table today: the congregation's
 printed SDA Hymnal (1985) ↔ Chinese Hymnal (505) cross-reference.
@@ -192,7 +193,8 @@ second entry when the source gives it; otherwise the app inverts the first. Decl
 hymnal under `hymnals`, too.
 
 Nothing else changes. Both hymnals' rows get chips, named with the other hymnal's short and
-full names from `HymnalLabels.ts`; the search pairs the new equivalents with their matches;
+full names from `HymnalLabels.ts`; the search adds the new equivalents to its results and
+lists the newly paired hymnal's group first;
 a hymn in more than one table gets every chip; and `getHymnalCrossReferences`, which the
 bulletin uses between its two primary hymnals, reads the same tables. Add the new pairs to
 `test/hymnal-number-mappings.test.ts`; `test/hymnal-cross-reference-registry.test.ts` shows
