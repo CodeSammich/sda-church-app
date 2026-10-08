@@ -486,6 +486,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
+| Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 
 ## Governance principles
 

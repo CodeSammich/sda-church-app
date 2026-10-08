@@ -27,6 +27,7 @@ does and what still needs a person.
 - [External dependency monitor alerts](#external-dependency-monitor-alerts)
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
+- [Due-date reminders](#due-date-reminders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
 - [Actions event policy for `pull_request_target`](#actions-event-policy-for-pull_request_target)
@@ -58,6 +59,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. Both monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
+| An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
 The monitors can't read `release-approvers` membership or reliably @mention the
 team: they run with the built-in Actions token, which has no organization
@@ -758,6 +760,23 @@ when they differ, for example after a renewal that didn't update the file.
 
 To renew, follow the
 [renewal checklist](app-store-setup.md#renewal-checklist).
+
+## Due-date reminders
+
+**Workflow:** **Due-Date Reminders**, which runs daily and can be run manually.
+
+To give an issue a deadline, start a line of its description with `Due:` and the date
+as *YYYY-MM-DD*, for example `**Due: 2027-04-01**`. Only the first such line counts.
+The workflow comments on the issue once the date is 30 days away or less, again at 7
+days or less, and once the day after it passes. Each comment @mentions the users in
+`MONITOR_ALERT_ASSIGNEES`, or, if that is empty, whoever triggered the run. Each
+reminder is posted once. Editing the date starts them over, and removing the line or
+closing the issue stops them.
+
+Only issues opened by someone who can triage or manage the repository count, so
+someone else's issue can't make it notify anyone. The rules are in
+`scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
+still get their reminders and the run fails, so check its log.
 
 ## Bible audio emulator test
 

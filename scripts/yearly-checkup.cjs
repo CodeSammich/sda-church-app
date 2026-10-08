@@ -104,7 +104,7 @@ const CHECKLIST = [
         'upkeep-calendar',
       ],
       [
-        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Apple Signing Monitor, and Yearly Checkup. GitHub turns schedules off after 60 days without activity in the repository.',
+        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Apple Signing Monitor, Yearly Checkup, and Due-Date Reminders. GitHub turns schedules off after 60 days without activity in the repository.',
         'docs/operations/external-dependency-monitor.md',
         'alerts-and-recovery',
       ],

@@ -266,7 +266,8 @@ GitHub's code scanning default setup and have no workflow file.
   [Native mobile binary builds](operations/native-builds.md).
 
 The other workflows never run on pull requests. **External Dependency Monitor**, **Store
-Toolchain Monitor**, **Apple Signing Monitor**, and **Yearly Checkup** run on a schedule;
+Toolchain Monitor**, **Apple Signing Monitor**, **Yearly Checkup**, and **Due-Date
+Reminders** run on a schedule;
 **Deploy Bulletin Apps Script** runs by hand; and **Generate physical bulletin QR codes**
 runs when a merge into `main` changes the QR code list or its script. The
 [admin runbook](operations/admin-runbook.md) explains each.
