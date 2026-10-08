@@ -171,8 +171,9 @@ hymnal a cross-reference table pairs with this one first (1985 ↔ 505). Each gr
 number order and shows its first 10 matches, with **Show all** for the rest. A number
 leads each group with its hymn of that number, so "hymn 100" shows 1985's and 505's 100
 with their titles, whichever hymnal is showing. Tapping a result shows that hymn in its hymnal. The page says nothing
-matches only when no hymnal has a match. A hymn with a number in another hymnal, such as a
-1985 hymn's 505 number, shows it as a chip; tapping it shows the hymn there. The chips
+matches only when no hymnal has a match. A hymn with a number in another hymnal shows it as a
+chip, such as "Chinese 505 · 16" on a 1985 hymn or "English · 82" on a 505 hymn; tapping it
+shows the hymn there. The chips
 come from the cross-reference tables (see [Hymnal
 integration](feature_designs/hymnal_integration_design.md#54-cross-references-between-hymnals)).
 An English hymn's scripture reference is a chip there too, and opens the passage in the
@@ -201,8 +202,9 @@ Bible audio.
 
 **UI:** Immersive reader with chapter-local search and persistent audio controls.
 Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
-includes it, **Hymn** (or **Hymns**, which lists them): the English hymns for BSB and KJV,
-the same hymns in the 505 for CUV and CUVS, and none for RVR 1909. It opens the hymn on
+includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as
+"Psalm 23 · English"): the English hymns for BSB and KJV, the same hymns in the 505 for CUV
+and CUVS, and none for RVR 1909. It opens the hymn on
 the hymnal page, whose way back returns to the verse (`features/hymnal/HymnScripture.ts`).
 
 **Tenet Alignment:**

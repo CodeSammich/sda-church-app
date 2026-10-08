@@ -121,6 +121,7 @@ import {
 } from '@/services/SavedVersesService';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
+import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
 import { HYMNALS } from '@/features/hymnal/Hymnals';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
@@ -4454,6 +4455,8 @@ export default function BibleScreen() {
                             hymn.scriptureReference,
                             language,
                           )}
+                          {' · '}
+                          {getHymnalShortLabel(hymn.hymnalId, language)}
                         </Text>
                       </View>
                     </TouchableOpacity>

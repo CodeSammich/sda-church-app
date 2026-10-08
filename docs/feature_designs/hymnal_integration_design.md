@@ -181,7 +181,7 @@ This preserves the user's place without importing the external content into the 
 
 ### 5.4 Cross-references between hymnals
 
-A hymn's number in another hymnal shows as a chip on its row, such as "505 · 23" on a 1985
+A hymn's number in another hymnal shows as a chip on its row, such as "Chinese 505 · 23" on a 1985
 hymn, and the search adds those equivalents to the other hymnals' results, so typing the
 number someone gave finds it in every hymnal, and a title in one language finds the hymn
 in the other. Those results are grouped by hymnal, with the paired hymnal's group first. Both read one registry, `HYMNAL_CROSS_REFERENCE_TABLES`

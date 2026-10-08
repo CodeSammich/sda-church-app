@@ -28,7 +28,7 @@ export type HymnRowLabels = Readonly<{
   scriptureHint: string;
   /** How a hymn's verse reads on its chip: see formatHymnScriptureReference. */
   scriptureReference: (hymnalId: HymnalBookId, reference: string) => string;
-  /** The cross-reference chip's text, such as "505 · 23". */
+  /** The cross-reference chip's text, such as "Chinese 505 · 23". */
   crossReference: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => string;
   /** What a screen reader says for the chip, such as "Chinese Hymnal — 505 Edition, hymn 23". */
   crossReferenceLabel: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => string;
@@ -291,11 +291,14 @@ export const createHymnRowStyles = (
       borderWidth: 1,
       flexDirection: 'row',
       gap: 6,
+      // A long label wraps inside the chip rather than running off the card.
+      maxWidth: '100%',
       minHeight: Math.ceil(32 + Math.max(0, effectiveTextScale - 1) * 12),
       paddingHorizontal: 12,
       paddingVertical: 4,
     },
     chipText: {
+      flexShrink: 1,
       fontSize: scaleTypographyMetric(14, textScale),
       fontWeight: '700',
       lineHeight: scaleTypographyMetric(20, textScale),

@@ -325,7 +325,7 @@ describe('1985 ↔ 505 cross-references', () => {
     expect(view.getAllByText(/^\d+\. /).map((text) => text.props.children.join(''))).toEqual([
       hymnTitle('chinese-hymnal-505', 5),
     ]);
-    expect(view.getByText('1985 · 1')).toBeTruthy();
+    expect(view.getByText('English · 1')).toBeTruthy();
 
     fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 1'));
     expect(dotLabels(view)[0].selected).toBe(true);
@@ -335,8 +335,12 @@ describe('1985 ↔ 505 cross-references', () => {
 
   it('labels the chip in the app language', () => {
     const view = renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
-    expect(view.getByText('505 · 5')).toBeTruthy();
+    expect(view.getByText('中文 505 · 5')).toBeTruthy();
     expect(view.getByLabelText('中文讚美詩 — 505 版第 5 首')).toBeTruthy();
+    view.unmount();
+
+    const english = renderPage(routes[1][1], { hymnNum: '5' });
+    expect(english.getByText('English · 1')).toBeTruthy();
   });
 });
 
