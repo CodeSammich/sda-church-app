@@ -199,6 +199,10 @@ opens the same page with that hymnal picked and just that hymn showing, marked, 
 Bible audio.
 
 **UI:** Immersive reader with chapter-local search and persistent audio controls.
+Tapping a verse opens its details, with **Save**, **Share**, and, when an English hymn's
+scripture reference includes the verse, **Hymn** (or **Hymns**, which lists them). It
+opens the hymn on the hymnal page, whose way back returns to the verse
+(`features/hymnal/HymnsForVerse.ts`).
 
 **Tenet Alignment:**
 

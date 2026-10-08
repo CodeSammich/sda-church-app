@@ -149,7 +149,10 @@ publish.
 `Record<number, HymnEntry>`. `getSortedHymns` hydrates and sorts that record for the
 hymnal page and its search across every hymnal. Search supports hymn numbers, titles, and
 scripture references. A hymn's scripture reference is a chip on its row that opens the
-passage in the Bible reader, and its videos open on YouTube (see
+passage in the Bible reader. The other way, a verse's details in the Bible show a **Hymn**
+button when a hymn's reference includes that verse (`features/hymnal/HymnsForVerse.ts`;
+a whole-chapter reference, such as "Psalm 23", includes every verse). A hymn's videos open
+on YouTube (see
 [5.5](#55-videos-with-singing-and-piano-only)); the app stores no third-party media.
 
 ### 5.2 External routing
