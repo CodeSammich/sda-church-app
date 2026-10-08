@@ -1,0 +1,55 @@
+name: Due-Date Reminders
+
+# Comments on an open issue 30 days and 7 days before the date on its `Due:`
+# line, and once after it passes, @mentioning the usernames in
+# MONITOR_ALERT_ASSIGNEES. The rules are in scripts/due-date-reminders.cjs. It
+# uses no credentials beyond commenting on issues.
+
+on:
+  schedule:
+    # Daily, away from the top of the hour, when scheduled Actions are busiest.
+    - cron: "17 9 * * *"
+      timezone: "America/New_York"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: due-date-reminders
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    # Forks commonly disable Issues. Keep it to the canonical repository.
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Comment on issues coming due
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          # Comma-separated GitHub usernames to @mention.
+          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const reminders = require(`${process.env.GITHUB_WORKSPACE}/scripts/due-date-reminders.cjs`);
+            const results = await reminders.postDueDateReminders({
+              github,
+              context,
+              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
+            });
+            for (const { number, dueDate, action } of results) {
+              core.info(`#${number} (due ${dueDate}): ${action}`);
+            }
+            if (!results.length) core.info('No open issue has a due date.');
+            // The other issues still got their reminders; fail so someone looks.
+            const failed = results.filter(({ action }) => action.startsWith('failed'));
+            if (failed.length) core.setFailed(`Could not remind ${failed.map(({ number }) => `#${number}`).join(', ')}.`);

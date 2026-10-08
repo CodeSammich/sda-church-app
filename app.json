@@ -2,7 +2,7 @@
   "expo": {
     "name": "New York Chinese SDA Church",
     "slug": "sda-church-app",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
@@ -71,7 +71,9 @@
           "android": {
             "compileSdkVersion": 37,
             "targetSdkVersion": 36,
-            "buildToolsVersion": "37.0.0"
+            "buildToolsVersion": "37.0.0",
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ],
@@ -86,7 +88,8 @@
         }
       ],
       "expo-status-bar",
-      "./plugins/withAndroidLocalSigning"
+      "./plugins/withAndroidLocalSigning",
+      "./plugins/withAndroidPhonePortrait"
     ],
     "extra": {
       "router": {}

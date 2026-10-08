@@ -448,3 +448,36 @@ describe('Expo template pin', () => {
     expect([...versions]).toHaveLength(1);
   });
 });
+
+describe('Bulletin Apps Script deploy', () => {
+  const workflow = readRepoFile('.github/workflows/apps-script-deploy.yml');
+  const trigger = workflow.slice(workflow.indexOf('\non:'), workflow.indexOf('\npermissions:'));
+  const job = workflow.slice(workflow.indexOf('\n  deploy:\n'));
+
+  it('starts on every merge into main, and by hand, but never on a pull request', () => {
+    // #442: like the native builds, a release starts it and production approval gates it.
+    expect(trigger).toMatch(/\n  push:\n    branches:\n      - main\n(?! {6}-)/);
+    expect(trigger).not.toContain('paths:');
+    expect(trigger).toContain('workflow_dispatch:');
+    expect(trigger).not.toContain('pull_request');
+  });
+
+  it('deploys only main in the church repository, after production approval', () => {
+    // A manual run from release-candidate would otherwise put unreleased code live.
+    const condition = job.slice(job.indexOf('if:'), job.indexOf('environment:'));
+    expect(condition).toContain("github.ref == 'refs/heads/main'");
+    expect(condition).toContain('github.event.repository.fork == false');
+    expect(job).toMatch(/\n    environment: production\n/);
+  });
+
+  it('describes a merge deploy with git, never by pasting the commit message into the shell', () => {
+    expect(workflow).toContain('DEPLOYMENT_DESCRIPTION="${DEPLOYMENT_DESCRIPTION:-$(git log -1 --format=%s)}"');
+    expect(workflow).not.toContain('head_commit');
+  });
+
+  it('pins the clasp version it installs', () => {
+    // It runs on every release with the deploy credentials, so a new clasp
+    // release must not reach it unreviewed.
+    expect(workflow).toMatch(/npm install --global @google\/clasp@\d+\.\d+\.\d+\n/);
+  });
+});

@@ -46,7 +46,11 @@ describe('Chinese 506 hymnal recordings', () => {
         hymn,
         highlighted: false,
         labels: {
-          watchYouTube: 'YouTube',
+          withSinging: 'With singing',
+          pianoOnly: 'Piano only',
+          youtubeHint: '',
+          scriptureHint: '',
+          scriptureReference: (_hymnalId, reference) => reference,
           crossReference: () => '',
           crossReferenceLabel: () => '',
           crossReferenceHint: '',
@@ -63,7 +67,9 @@ describe('Chinese 506 hymnal recordings', () => {
         row({ number: 506, title: '阿门' }),
       ),
     );
-    const [first, last] = screen.getAllByText('YouTube');
+    // The 506 hymnal has no piano accompaniments yet.
+    expect(screen.queryByText('Piano only')).toBeNull();
+    const [first, last] = screen.getAllByText('With singing');
 
     fireEvent.press(first);
     expect(openURL).toHaveBeenCalledWith(

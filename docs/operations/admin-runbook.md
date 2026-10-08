@@ -27,6 +27,7 @@ does and what still needs a person.
 - [External dependency monitor alerts](#external-dependency-monitor-alerts)
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
+- [Due-date reminders](#due-date-reminders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
 - [Actions event policy for `pull_request_target`](#actions-event-policy-for-pull_request_target)
@@ -58,6 +59,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. Both monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
+| An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
 The monitors can't read `release-approvers` membership or reliably @mention the
 team: they run with the built-in Actions token, which has no organization
@@ -206,6 +208,7 @@ What runs after the merge to `main`:
 | Deploy Website and Tag | Yes | Nothing. It tags `vx.y.z` and publishes [the app website](#the-app-website-appnyccsdaorg). |
 | Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK, upload the AAB to Google Play internal testing, and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
+| Deploy Bulletin Apps Script | Waits for `production` approval | Approve it when nobody is making a bulletin, then check the live bulletin. Reject it to skip this deploy. See [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script). |
 
 Workflows that run from `main`'s copy (Android PR preview, and the upload step of the
 QR workflow) keep their old behavior until the release that changes them is merged.
@@ -279,34 +282,40 @@ It refuses every other name, so bulletin files such as the logo, artwork, and th
 Sabbath Encouragement PDF can't be overwritten. To upload a new file, add its exact
 name to the allowlist in a reviewed pull request.
 
-Which slots print, and why the mobile app code waits for launch (#323), is in
+Which slots print, and why the mobile app code waited for launch (#323), is in
 [Giving QR slots](bulletin-automation.md#giving-qr-slots). The Zelle codes are made by hand.
 
 ## Deploying the bulletin Apps Script
 
-**Workflow:** Actions → **Deploy Bulletin Apps Script**
-(`.github/workflows/apps-script-deploy.yml`). Manual only.
+**Workflow:** **Deploy Bulletin Apps Script**
+(`.github/workflows/apps-script-deploy.yml`). Every merge into `main` starts it, and
+it waits for `production` approval, like the native builds. It can also be run by
+hand from `main`.
 
-**Every run changes production.** There is one Apps Script project and one web-app
-deployment, and there is no test copy. The workflow doesn't check the branch: it
-pushes the chosen branch's code to the project and points the live deployment at
-it. The spreadsheet's **Printed Bulletin** menu and the app's bulletin use the new
-code at once. So a run from `release-candidate`, which the `production`
-environment also accepts, puts unreleased code live. It is not a way to try a
-change out.
+**Every approved run changes production.** There is one Apps Script project and one
+web-app deployment, and there is no test copy. Approving pushes the merged commit's
+code to the project and points the live deployment at it. The spreadsheet's **Printed Bulletin**
+menu and the app's bulletin use the new code at once. The workflow runs only for
+`main`: started from any other branch, it skips, so it is not a way to try a change
+out.
 
-**Not before launch.** Don't run this workflow until the app is public in both stores;
-[Giving QR slots](bulletin-automation.md#giving-qr-slots) says why and what to check first (#323).
+After a release merges into `main`:
 
-1. Merge the Apps Script change into `main` first, and run from `main`.
-2. Select **Run workflow**, choose **`main`** under *Use workflow from*, and
-   optionally enter a description (shown in the Apps Script version history).
-3. Approve the `production` deployment. Check the branch first, and reject a run
-   from any branch other than `main`.
-4. Follow the checks in
+1. Approve the run's `production` deployment when nobody is making a bulletin, so
+   the menu doesn't change under them, and after any sheet change the release
+   needs, such as a new header. A release that didn't change the bulletin code
+   starts a run too; approving it republishes the current code. Rejecting a run
+   skips that deploy. Don't leave a run waiting: later deploys queue behind it
+   until it's approved or rejected, and GitHub cancels it after 30 days.
+2. Follow the checks in
    [Deployment and verification](bulletin-automation.md#deployment-and-verification):
    reload the spreadsheet, generate a test bulletin for each changed layout, and check
    the Doc, the PDF, and the public `/exec` response.
+
+To redeploy between releases, select **Run workflow**, choose **`main`** under *Use
+workflow from*, optionally enter a description, and approve it. The description is
+shown in the Apps Script version history; a merge's deploy uses the release pull
+request's title.
 
 The workflow updates the existing web app deployment, so the URL the mobile app uses
 doesn't change. Never create a new deployment just to publish code.
@@ -450,7 +459,9 @@ check once a year, each item linked to the doc that explains it:
 - the Workspace nonprofit terms;
 - the scheduled workflows.
 
-Work through it, note anything that changed in a comment, and close it. It runs every
+Work through it, note anything that changed in a comment, and close it. It's due
+February 28: while it's still open, the [due-date reminders](#due-date-reminders)
+comment on it around January 29, around February 21, and on March 1. It runs every
 Monday in January, but only the first opens an issue; the others find it and stop.
 Start it by hand from the Actions tab to open one early.
 
@@ -758,6 +769,24 @@ when they differ, for example after a renewal that didn't update the file.
 
 To renew, follow the
 [renewal checklist](app-store-setup.md#renewal-checklist).
+
+## Due-date reminders
+
+**Workflow:** **Due-Date Reminders**, which runs daily and can be run manually.
+
+To give an issue a deadline, start a line of its description with `Due:` and the date
+as *YYYY-MM-DD*, for example `**Due: 2027-04-01**`. Only the first such line counts.
+The workflow comments on the issue once the date is 30 days away or less, again at 7
+days or less, and once the day after it passes. Each comment @mentions the users in
+`MONITOR_ALERT_ASSIGNEES`, or, if that is empty, whoever triggered the run. Each
+reminder is posted once. Editing the date starts them over, and removing the line or
+closing the issue stops them.
+
+Only issues opened by someone who can triage or manage the repository, or by its own
+workflows such as the yearly checkup, count, so someone else's issue can't make it
+notify anyone. The rules are in
+`scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
+still get their reminders and the run fails, so check its log.
 
 ## Bible audio emulator test
 

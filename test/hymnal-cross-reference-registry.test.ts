@@ -1,7 +1,7 @@
 import { fireEvent } from '@testing-library/react-native';
 import { createElement, type ComponentType } from 'react';
 import { customLightTheme } from '@/constants/Themes';
-import { getHymnCrossReferences } from '@/features/hymnal/Hymnals';
+import { getHymnalOrder, getHymnCrossReferences } from '@/features/hymnal/Hymnals';
 import {
   HYMNAL_CROSS_REFERENCE_TABLES,
   type HymnalCrossReferenceTable,
@@ -9,7 +9,7 @@ import {
 } from '@/features/hymnal/HymnalNumberMappings';
 import {
   getHymnalSearchItems,
-  getHymnalSearchResults,
+  getOtherHymnalSearchGroups,
 } from '@/features/hymnal/HymnalSearch';
 import { renderWithPreferences } from './helpers/render-preferences';
 
@@ -55,16 +55,15 @@ describe('a new cross-reference table', () => {
     ]);
   });
 
-  it('places the new equivalent beside the matching hymn in the search', () => {
-    const results = getHymnalSearchResults(getHymnalSearchItems('en'), 'Holy, Holy, Holy').map(
-      (item) => `${item.hymnalId}:${item.hymnNumber}`,
-    );
-    const index = results.indexOf('sdah-1985-en:73');
-    expect(index).toBeGreaterThanOrEqual(0);
-    expect(results.slice(index, index + 3)).toEqual([
-      'sdah-1985-en:73',
-      'chinese-hymnal-505:2',
-      'chinese-hymnal-506:1',
+  it("adds the new equivalent to its hymnal's search results, which come first", () => {
+    const groups = getOtherHymnalSearchGroups(getHymnalSearchItems('en'), 'Holy, Holy, Holy', {
+      activeHymnalId: 'sdah-1985-en',
+      hymnalOrder: getHymnalOrder('en'),
+    });
+    // Both tables pair a hymnal with the 1985, so both lead, in the app's order.
+    expect(groups.slice(0, 2).map(({ hymnalId, hymns }) => [hymnalId, hymns[0].hymnNumber])).toEqual([
+      ['chinese-hymnal-505', 2],
+      ['chinese-hymnal-506', 1],
     ]);
   });
 
@@ -73,13 +72,13 @@ describe('a new cross-reference table', () => {
       theme: customLightTheme,
     });
     fireEvent.press(view.getByLabelText('Chinese Hymnal — 506 Edition, hymnal 3 of 6'));
-    expect(view.getByText('1985 · 73')).toBeTruthy();
+    expect(view.getByText('English · 73')).toBeTruthy();
     // A hymn that maps to two numbers gets a chip for each.
-    expect(view.getByText('1985 · 4')).toBeTruthy();
-    expect(view.getByText('1985 · 5')).toBeTruthy();
+    expect(view.getByText('English · 4')).toBeTruthy();
+    expect(view.getByText('English · 5')).toBeTruthy();
 
     fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 73'));
-    expect(view.getByText('505 · 2')).toBeTruthy();
+    expect(view.getByText('Chinese 505 · 2')).toBeTruthy();
     expect(view.getByLabelText('Chinese Hymnal — 506 Edition, hymn 1')).toBeTruthy();
     expect(view.getByText('Show all hymns')).toBeTruthy();
   });

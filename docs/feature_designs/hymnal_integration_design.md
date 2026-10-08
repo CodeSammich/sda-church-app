@@ -148,8 +148,14 @@ publish.
 `features/hymnal/EnglishHymnal.ts` stores the English hymn metadata as a
 `Record<number, HymnEntry>`. `getSortedHymns` hydrates and sorts that record for the
 hymnal page and its search across every hymnal. Search supports hymn numbers, titles, and
-scripture references. The app also provides YouTube discovery and
-Bible-reader navigation without storing third-party media.
+scripture references. A hymn's scripture reference is a chip on its row that opens the
+passage in the Bible reader. A 505 hymn shows the reference of its 1985 equivalent, in
+the app's language, and opens it in the Chinese Bible. The other way, a verse's details in
+the Bible show a **Hymn** button when a hymn's reference includes that verse, listing the
+English hymns and their 505 equivalents, the 505 first for a Chinese translation
+(`features/hymnal/HymnScripture.ts`; a whole-chapter reference, such as "Psalm 23",
+includes every verse). A hymn's videos open on YouTube (see
+[5.5](#55-videos-with-singing-and-piano-only)); the app stores no third-party media.
 
 ### 5.2 External routing
 
@@ -175,9 +181,10 @@ This preserves the user's place without importing the external content into the 
 
 ### 5.4 Cross-references between hymnals
 
-A hymn's number in another hymnal shows as a chip on its row, such as "505 · 23" on a 1985
-hymn, and the search places those equivalents beside each match, so typing the number
-someone gave finds it in every hymnal. Both read one registry, `HYMNAL_CROSS_REFERENCE_TABLES`
+A hymn's number in another hymnal shows as a chip on its row, such as "Chinese 505 · 23" on a 1985
+hymn, and the search adds those equivalents to the other hymnals' results, so typing the
+number someone gave finds it in every hymnal, and a title in one language finds the hymn
+in the other. Those results are grouped by hymnal, with the paired hymnal's group first. Both read one registry, `HYMNAL_CROSS_REFERENCE_TABLES`
 in `features/hymnal/HymnalNumberMappings.ts`, built from
 `features/hymnal/HymnalNumberMappings.json`. It holds one table today: the congregation's
 printed SDA Hymnal (1985) ↔ Chinese Hymnal (505) cross-reference.
@@ -191,7 +198,8 @@ second entry when the source gives it; otherwise the app inverts the first. Decl
 hymnal under `hymnals`, too.
 
 Nothing else changes. Both hymnals' rows get chips, named with the other hymnal's short and
-full names from `HymnalLabels.ts`; the search pairs the new equivalents with their matches;
+full names from `HymnalLabels.ts`; the search adds the new equivalents to its results and
+lists the newly paired hymnal's group first;
 a hymn in more than one table gets every chip; and `getHymnalCrossReferences`, which the
 bulletin uses between its two primary hymnals, reads the same tables. Add the new pairs to
 `test/hymnal-number-mappings.test.ts`; `test/hymnal-cross-reference-registry.test.ts` shows
@@ -199,6 +207,31 @@ a made-up table working end to end. The printed bulletin keeps its own copy of t
 505 maps in `google-apps-script/PrintedHymnLookup.gs`, and a hymnal the hymnal page doesn't
 list yet needs its page entry first (see the
 [bulletin hymn resolution guide](bulletin_hymn_resolution.md#changing-or-adding-a-primary-hymnal)).
+
+### 5.5 Videos with singing and piano only
+
+Every hymn has a **With singing** button, which opens its recording on YouTube or searches
+YouTube for it. Most English and 505 hymns also have **Piano only**, for a congregation
+without a pianist
+([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)):
+the hymn's piano accompaniment, with the words on screen, from a playlist of that hymnal's
+accompaniments.
+`features/hymnal/EnglishHymnalPianoYouTube.json` and
+`features/hymnal/Chinese505PianoYouTube.json` map hymn numbers to the videos, and a hymn
+without one shows only **With singing**. A hymnal's `getAccompanimentUrl` in
+`features/hymnal/Hymnals.ts` gives its rows both buttons.
+
+`scripts/map-english-hymnal-piano-youtube.mjs` and
+`scripts/map-chinese-505-piano-youtube.mjs` regenerate the mappings, through
+`scripts/youtube-hymn-playlist.mjs`, which the 506 recordings' script shares. Each lists any
+video whose title differs from the hymnal's, for a person to compare. The 505 mapping
+leaves out 493 and 494, whose videos have each other's numbers; the 505 list follows
+zgaxr's scores (see `scripts/scrape-chinese-505-hymnal.mjs`). The sources and their limits
+are in [LEGAL.md](../LEGAL.md#piano-accompaniments-on-youtube).
+
+The 506 and 707 hymnals have no accompaniments yet, so their hymns show only **With
+singing**. Mapping a playlist the same way and giving the hymnal a `getAccompanimentUrl`
+adds **Piano only** to them, with no other change.
 
 ## 6. Maintenance Rules
 
@@ -225,7 +258,8 @@ When changing this integration:
 
 The focused URL tests live in `test/english-hymnal.test.ts` and should cover both padded
 hymn links and the no-number directory fallback. `test/external-url-generation.test.ts`
-also checks that all 695 hymn numbers produce HTTPS `hymnsforworship.org` links.
+also checks that the hymnal has all 695 hymns and that each produces an HTTPS
+`hymnsforworship.org` link.
 
 ## 7. Path to a Raw-Image Experience
 

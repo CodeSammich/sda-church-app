@@ -1,6 +1,7 @@
 import { act, fireEvent } from '@testing-library/react-native';
 import { createElement, type ComponentType } from 'react';
 import { LibraryFeaturedCarousel } from '@/components/LibraryFeaturedCarousel';
+import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { customLightTheme } from '@/constants/Themes';
 import type { HymnalBookId } from '@/features/hymnal/HymnalLabels';
@@ -31,6 +32,12 @@ jest.mock('expo-router', () => ({
   },
   useIsFocused: () => true,
   useLocalSearchParams: () => mockParams,
+}));
+
+jest.mock('@/constants/ExternalLinks', () => ({
+  ...jest.requireActual('@/constants/ExternalLinks'),
+  openURL: jest.fn(),
+  openYouTubeSearch: jest.fn(),
 }));
 
 jest.mock('react-native-safe-area-context', () =>
@@ -200,6 +207,29 @@ describe("each hymnal's own route", () => {
     expect(view.getByPlaceholderText('Search by number or title...').props.value).toBe('主');
   });
 
+  it("shows a 505 hymn its 1985 equivalent's verse, and opens it in the Chinese Bible", () => {
+    // 505's 5 is SDAH 1, on Psalm 103:2-5.
+    const view = renderPage(routes[1][1], { hymnNum: '5' }, 'zh');
+    fireEvent.press(view.getByText('詩篇 103:2-5'));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/bible',
+      params: expect.objectContaining({
+        translationId: 'cmn_cuv',
+        bookId: 'PSA',
+        chapter: '103',
+        backTo: '/home/chinese-505-hymnal?hymnNum=5',
+      }),
+    });
+    view.unmount();
+
+    // In Simplified Chinese, the Simplified Bible. The 506 has no verses yet.
+    const simplified = renderPage(routes[1][1], { hymnNum: '5' }, 'zh-cn');
+    fireEvent.press(simplified.getByText('诗篇 103:2-5'));
+    expect(mockPush).toHaveBeenLastCalledWith(
+      expect.objectContaining({ params: expect.objectContaining({ translationId: 'cmn_cu1' }) }),
+    );
+  });
+
   it('brings the Bible back to the same hymnal, hymn, and return route', () => {
     const view = renderPage(routes[0][1], { hymnNum: '1', backTo: '/home/bulletin' });
     fireEvent.press(view.getByText('Psalm 103:2-5'));
@@ -211,6 +241,62 @@ describe("each hymnal's own route", () => {
         backTo: '/home/english-hymnal?backTo=%2Fhome%2Fbulletin&hymnNum=1',
       }),
     });
+  });
+});
+
+describe('recordings and piano accompaniments', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('offers an English hymn with singing or piano only, and its verse as a chip', () => {
+    const view = renderPage(routes[0][1], { hymnNum: '1' });
+    expect(view.queryByText('YouTube')).toBeNull();
+    expect(view.getByText('Psalm 103:2-5')).toBeTruthy();
+
+    fireEvent.press(view.getByText('With singing'));
+    expect(openYouTubeSearch).toHaveBeenCalledWith('SDA Hymnal 1985 Praise to the Lord');
+
+    fireEvent.press(view.getByText('Piano only'));
+    expect(openURL).toHaveBeenCalledWith(
+      'https://www.youtube.com/watch?v=Uoi3zhcXZrM',
+      'Error',
+      'Could not open the YouTube video.',
+    );
+  });
+
+  it('leaves out the piano button when a hymn has no accompaniment', () => {
+    // Not in the playlist; see scripts/map-english-hymnal-piano-youtube.mjs.
+    const view = renderPage(routes[0][1], { hymnNum: '30' });
+    expect(view.getByText('With singing')).toBeTruthy();
+    expect(view.queryByText('Piano only')).toBeNull();
+  });
+
+  it('offers a 505 hymn with singing or piano only too', () => {
+    const view = renderPage(routes[1][1], { hymnNum: '1' }, 'zh');
+    fireEvent.press(view.getByText('演唱'));
+    expect(openYouTubeSearch).toHaveBeenCalledWith('505版赞美诗 1 在主宝座前');
+
+    fireEvent.press(view.getByText('鋼琴伴奏'));
+    expect(openURL).toHaveBeenCalledWith(
+      'https://www.youtube.com/watch?v=JxR9rqNut-s',
+      'Error',
+      'Could not open the YouTube video.',
+    );
+  });
+
+  it.each(routes.slice(2))('offers only With singing on /home/%s, which has no accompaniments yet', (_route, page, hymnalId) => {
+    const view = renderPage(page, { hymnNum: HYMNALS[hymnalId].getHymns()[0].number.toString() });
+    expect(view.getByText('With singing')).toBeTruthy();
+    expect(view.getByA11yHint('Opens the video on YouTube')).toBeTruthy();
+    expect(view.queryByText('YouTube')).toBeNull();
+    expect(view.queryByText('Piano only')).toBeNull();
+  });
+
+  it('labels the buttons in the app language', () => {
+    const view = renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
+    expect(view.getByText('演唱')).toBeTruthy();
+    expect(view.getByText('鋼琴伴奏')).toBeTruthy();
+    expect(view.getAllByA11yHint('在 YouTube 開啟影片')).toHaveLength(2);
+    expect(view.getByA11yHint('在聖經中開啟這段經文')).toBeTruthy();
   });
 });
 
@@ -239,7 +325,7 @@ describe('1985 ↔ 505 cross-references', () => {
     expect(view.getAllByText(/^\d+\. /).map((text) => text.props.children.join(''))).toEqual([
       hymnTitle('chinese-hymnal-505', 5),
     ]);
-    expect(view.getByText('1985 · 1')).toBeTruthy();
+    expect(view.getByText('English · 1')).toBeTruthy();
 
     fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 1'));
     expect(dotLabels(view)[0].selected).toBe(true);
@@ -249,22 +335,31 @@ describe('1985 ↔ 505 cross-references', () => {
 
   it('labels the chip in the app language', () => {
     const view = renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
-    expect(view.getByText('505 · 5')).toBeTruthy();
+    expect(view.getByText('中文 505 · 5')).toBeTruthy();
     expect(view.getByLabelText('中文讚美詩 — 505 版第 5 首')).toBeTruthy();
+    view.unmount();
+
+    const english = renderPage(routes[1][1], { hymnNum: '5' });
+    expect(english.getByText('English · 1')).toBeTruthy();
   });
 });
 
 describe('searching every hymnal from the page', () => {
   // What the one list holds: the picked hymnal's hymns, then the heading and
-  // the other hymnals' matches, as "hymnal:number".
+  // the other hymnals' matches, as "hymnal:number" under each "hymnal" name,
+  // with "more hymnal" for a Show all button.
   const listedHymns = (view: ReturnType<typeof renderPage>) =>
     (view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>).props.data as any[]).map(
       (item) =>
         item.kind === 'heading'
           ? 'heading'
-          : item.kind === 'other'
-            ? `${item.item.hymnalId}:${item.item.hymnNumber}`
-            : `${item.number}`,
+          : item.kind === 'group'
+            ? item.hymnalId
+            : item.kind === 'more'
+              ? `more ${item.hymnalId}`
+              : item.kind === 'other'
+                ? `${item.item.hymnalId}:${item.item.hymnNumber}`
+                : `${item.number}`,
     );
 
   it('lists matches in the other Chinese hymnals under their own heading', () => {
@@ -274,17 +369,23 @@ describe('searching every hymnal from the page', () => {
     expect(listedHymns(view)).toEqual([
       '66',
       'heading',
-      // The 1985 equivalent of the 505's own match comes first.
+      // The 1985, which the cross-reference table pairs with the 505, comes
+      // first with its equivalent of the 505's own match, then the app's order.
+      'sdah-1985-en',
       'sdah-1985-en:143',
+      'chinese-hymnal-506',
       'chinese-hymnal-506:82',
-      'chinese-hymnal-707-v1:82',
-      'chinese-hymnal-707-v2:82',
+      'chinese-hymnal-707-v3',
       'chinese-hymnal-707-v3:82',
+      'chinese-hymnal-707-v2',
+      'chinese-hymnal-707-v2:82',
+      'chinese-hymnal-707-v1',
+      'chinese-hymnal-707-v1:82',
     ]);
     expect(view.getByText('其他詩歌本').props.accessibilityRole).toBe('header');
+    expect(view.getByText('中文讚美詩 — 506 版').props.accessibilityRole).toBe('header');
     const result = view.getByLabelText('中文讚美詩 — 506 版第 82 首，平安夜');
     expect(result.props.accessibilityRole).toBe('button');
-    expect(view.getByText('506')).toBeTruthy();
   });
 
   it("shows the other hymnals' hymns with the same number", () => {
@@ -303,13 +404,19 @@ describe('searching every hymnal from the page', () => {
       ]),
     );
     expect(listed.filter((key) => key.startsWith('sdah-1985-en:'))).toEqual([]);
-    expect(view.getByLabelText(`Chinese Hymnal — 506 Edition, hymn 100, ${HYMNALS['chinese-hymnal-506'].getHymns()[99].title}`)).toBeTruthy();
+    // Each other hymnal leads with its 100, the 505 first.
+    expect(listed.slice(listed.indexOf('heading') + 1, listed.indexOf('heading') + 3)).toEqual([
+      'chinese-hymnal-505',
+      'chinese-hymnal-505:100',
+    ]);
+    expect(view.getByLabelText(`Chinese Hymnal — 505 Edition, hymn 100, ${hymnTitle('chinese-hymnal-505', 100).replace('100. ', '')}`)).toBeTruthy();
   });
 
   it('leads with the 505 equivalent of a 1985 match, and shows it when tapped', () => {
     const view = renderPage(HymnalSelectionScreen);
     fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'Praise God, From Whom');
-    expect(listedHymns(view)).toEqual(['694', 'heading', 'chinese-hymnal-505:497']);
+    // The doxology in two settings; the cross-reference table pairs only 694 with 505.
+    expect(listedHymns(view)).toEqual(['694', '695', 'heading', 'chinese-hymnal-505', 'chinese-hymnal-505:497']);
 
     fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymn 497, 赞美上帝'));
     expect(dotLabels(view)[1].selected).toBe(true);
@@ -319,7 +426,40 @@ describe('searching every hymnal from the page', () => {
 
     // The 1985 hymnal still has its search.
     fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymnal 1 of 6'));
-    expect(listedHymns(view)).toEqual(['694', 'heading', 'chinese-hymnal-505:497']);
+    expect(listedHymns(view)).toEqual(['694', '695', 'heading', 'chinese-hymnal-505', 'chinese-hymnal-505:497']);
+  });
+
+  it("shows another hymnal's first 10 matches, and the rest with Show all", () => {
+    const view = renderPage(HymnalSelectionScreen);
+    const searchbar = view.getByPlaceholderText('Search by number, title, or scripture...');
+    fireEvent.changeText(searchbar, '耶穌');
+    const more = () =>
+      (view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>).props.data as any[]).find(
+        (item) => item.kind === 'more' && item.hymnalId === 'chinese-hymnal-505',
+      );
+    const count = more().count;
+    expect(count).toBeGreaterThan(10);
+
+    // No 1985 title has 耶穌, so the 505 leads the list.
+    const listed = listedHymns(view);
+    expect(listed.slice(0, 2)).toEqual(['heading', 'chinese-hymnal-505']);
+    expect(listed.slice(2, 12).every((key) => key.startsWith('chinese-hymnal-505:'))).toBe(true);
+    expect(listed[12]).toBe('more chinese-hymnal-505');
+
+    // The list renders rows this far down only once it's laid out, so render
+    // the button from the list's own renderItem and press it.
+    const list = view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>);
+    const button = list.props.renderItem({ item: more() });
+    expect(button.props.accessibilityLabel).toBe(`Show all ${count}, Chinese Hymnal — 505 Edition`);
+    act(() => button.props.onPress());
+    const expanded = listedHymns(view);
+    expect(expanded.filter((key) => key.startsWith('chinese-hymnal-505:'))).toHaveLength(count);
+    expect(expanded).not.toContain('more chinese-hymnal-505');
+    expect(expanded).toContain('more chinese-hymnal-506');
+
+    // Another search shows 10 again.
+    fireEvent.changeText(searchbar, '主');
+    expect(more()).toBeTruthy();
   });
 
   it('answers "hymn 100, English or Chinese?" from any hymnal', () => {

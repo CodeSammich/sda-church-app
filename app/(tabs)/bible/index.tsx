@@ -5,7 +5,7 @@ import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setIsAudioActiveAsync } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { addNetworkStateListener } from 'expo-network';
 import {
   useContext,
@@ -120,6 +120,9 @@ import {
   storeSavedVerses,
 } from '@/services/SavedVersesService';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
+import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
+import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
+import { HYMNALS } from '@/features/hymnal/Hymnals';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
 import {
@@ -224,11 +227,9 @@ const uiLabels = {
     selectedVersesLabel: (count: number) =>
       count === 1 ? '1 verse selected' : `${count} verses selected`,
     verseInteractionHint: 'Tap a verse for details • Press and hold to select',
-    verseHelpTitle: 'Using verses',
-    verseHelpTap: 'Tap a verse to view details, original text, and footnotes.',
-    verseHelpHold: 'Press and hold a verse to begin selecting multiple verses.',
-    verseHelpSelect:
-      'While selecting, tap more verses to add or remove them. Then save or share from the toolbar.',
+    hymnsAction: (count: number) => (count === 1 ? 'Hymn' : 'Hymns'),
+    verseHymnsTitle: 'Hymns on this verse',
+    verseHymnHint: 'Opens the hymn in the hymnal',
     audioPlayer: 'Bible audio',
     audio: 'Audio',
     narrator: 'Narrator',
@@ -312,10 +313,9 @@ const uiLabels = {
     sortBibleOrder: '聖經順序',
     selectedVersesLabel: (count: number) => `已選取 ${count} 節經文`,
     verseInteractionHint: '點按經文查看詳情 • 長按以選取',
-    verseHelpTitle: '經文操作',
-    verseHelpTap: '點按經文可查看詳情、原文和腳注。',
-    verseHelpHold: '長按一節經文可開始選取多節經文。',
-    verseHelpSelect: '選取時，點按其他經文可加入或移除，然後從工具列儲存或分享。',
+    hymnsAction: () => '詩歌',
+    verseHymnsTitle: '這節經文的詩歌',
+    verseHymnHint: '在詩歌本中開啟這首詩歌',
     audioPlayer: '聖經有聲書',
     audio: '有聲書',
     narrator: '朗讀者',
@@ -397,10 +397,9 @@ const uiLabels = {
     sortBibleOrder: '圣经顺序',
     selectedVersesLabel: (count: number) => `已选择 ${count} 节经文`,
     verseInteractionHint: '点击经文查看详情 • 长按以选择',
-    verseHelpTitle: '经文操作',
-    verseHelpTap: '点击经文可查看详情、原文和脚注。',
-    verseHelpHold: '长按一节经文可开始选择多节经文。',
-    verseHelpSelect: '选择时，点击其他经文可加入或移除，然后从工具栏保存或分享。',
+    hymnsAction: () => '诗歌',
+    verseHymnsTitle: '这节经文的诗歌',
+    verseHymnHint: '在诗歌本中打开这首诗歌',
     audioPlayer: '圣经有声书',
     audio: '有声书',
     narrator: '朗读者',
@@ -484,11 +483,9 @@ const uiLabels = {
       count === 1 ? '1 versículo seleccionado' : `${count} versículos seleccionados`,
     verseInteractionHint:
       'Toca un versículo para ver detalles • Mantén pulsado para seleccionar',
-    verseHelpTitle: 'Uso de los versículos',
-    verseHelpTap: 'Toca un versículo para ver detalles, el texto original y las notas.',
-    verseHelpHold: 'Mantén pulsado un versículo para comenzar a seleccionar varios.',
-    verseHelpSelect:
-      'Durante la selección, toca otros versículos para añadirlos o quitarlos. Después, guárdalos o compártelos desde la barra.',
+    hymnsAction: (count: number) => (count === 1 ? 'Himno' : 'Himnos'),
+    verseHymnsTitle: 'Himnos de este versículo',
+    verseHymnHint: 'Abre el himno en el himnario',
     audioPlayer: 'Audio de la Biblia',
     audio: 'Audio',
     narrator: 'Narrador',
@@ -739,7 +736,7 @@ export default function BibleScreen() {
     | 'chapter'
     | 'verse'
     | 'verse-detail'
-    | 'verse-help'
+    | 'verse-hymns'
     | 'saved'
     | null
   >(null);
@@ -3306,6 +3303,32 @@ export default function BibleScreen() {
 
   const closeModal = () => setModalType(null);
 
+  // The hymns on the verse whose details are open, the main translation's
+  // hymnal first: the reverse of a hymn's verse chip.
+  const verseHymns = useMemo(
+    () =>
+      book && selectedVerseNum
+        ? getHymnsForVerse(book.id, chapterNum, selectedVerseNum, supportedTranslation.lang)
+        : [],
+    [book, chapterNum, selectedVerseNum, supportedTranslation.lang],
+  );
+  // Opens a hymn on the hymnal page, whose way back returns to this verse.
+  const openVerseHymn = ({ hymnalId, number }: (typeof verseHymns)[number]) => {
+    closeModal();
+    const verse = String(selectedVerseNum || 1);
+    const backTo = `/bible?${new URLSearchParams({
+      translationId: supportedTranslation.id,
+      bookId: book?.id || '',
+      chapter: String(chapterNum),
+      verseStart: verse,
+      verseEnd: verse,
+    }).toString()}`;
+    router.push({
+      pathname: HYMNALS[hymnalId].route,
+      params: { hymnNum: String(number), backTo },
+    } as any);
+  };
+
   const bibleChapterVerses = (chapterData?.chapter.content || [])
     .filter((content): content is BibleService.ChapterVerse => content.type === 'verse')
     .map((verse) => ({
@@ -4387,51 +4410,58 @@ export default function BibleScreen() {
           ]}
         >
           <View style={ReaderStyles.modalInner}>
-            {lastActiveType === 'verse-help' ? (
+            {lastActiveType === 'verse-hymns' ? (
               <>
                 <Text
                   variant="titleLarge"
                   style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
                 >
-                  {labels.verseHelpTitle}
+                  {labels.verseHymnsTitle}
                 </Text>
                 <Divider />
-                <View style={styles.verseHelpContent}>
-                  <View style={styles.verseHelpRow}>
-                    <AppIcon
-                      name="gesture-tap"
-                      size={26}
-                      textScale={bibleUiTextScale}
-                      color={theme.colors.primary}
-                    />
-                    <Text
-                      style={[styles.verseHelpText, { color: theme.colors.onSurface }]}
+                <ScrollView contentContainerStyle={{ paddingVertical: 4 }}>
+                  {verseHymns.map((hymn) => (
+                    <TouchableOpacity
+                      key={`${hymn.hymnalId}:${hymn.number}`}
+                      accessibilityHint={labels.verseHymnHint}
+                      accessibilityRole="button"
+                      onPress={() => openVerseHymn(hymn)}
+                      style={styles.savedVerseMainAction}
                     >
-                      {labels.verseHelpTap}
-                    </Text>
-                  </View>
-                  <View style={styles.verseHelpRow}>
-                    <AppIcon
-                      name="gesture-tap-hold"
-                      size={26}
-                      textScale={bibleUiTextScale}
-                      color={theme.colors.primary}
-                    />
-                    <Text
-                      style={[styles.verseHelpText, { color: theme.colors.onSurface }]}
-                    >
-                      {labels.verseHelpHold}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.verseHelpSupportingText,
-                      { color: theme.colors.onSurfaceVariant },
-                    ]}
-                  >
-                    {labels.verseHelpSelect}
-                  </Text>
-                </View>
+                      <AppIcon
+                        pointerEvents="none"
+                        name="music-clef-treble"
+                        size={24}
+                        textScale={bibleUiTextScale}
+                        color={theme.colors.primary}
+                      />
+                      <View pointerEvents="none" style={styles.savedVerseText}>
+                        <Text
+                          style={[
+                            styles.pressRowText,
+                            { color: theme.colors.onSurface, fontWeight: '700' },
+                          ]}
+                        >
+                          {hymn.number}. {hymn.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.savedVerseDescription,
+                            { color: theme.colors.onSurfaceVariant },
+                          ]}
+                        >
+                          {formatHymnScriptureReference(
+                            hymn.hymnalId,
+                            hymn.scriptureReference,
+                            language,
+                          )}
+                          {' · '}
+                          {getHymnalShortLabel(hymn.hymnalId, language)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </>
             ) : lastActiveType === 'saved' ? (
               <>
@@ -4856,27 +4886,39 @@ export default function BibleScreen() {
                       {labels.share}
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityLabel={labels.verseHelpTitle}
-                    onPress={() => setModalType('verse-help')}
-                    style={[
-                      styles.detailActionButton,
-                      styles.detailOutlinedAction,
-                      { borderColor: theme.colors.outline },
-                    ]}
-                  >
-                    <AppIcon
-                      pointerEvents="none"
-                      name="gesture-tap-hold"
-                      size={22}
-                      textScale={bibleUiTextScale}
-                      color={theme.colors.primary}
-                    />
-                    <Text style={[styles.detailActionText, { color: theme.colors.primary }]}>
-                      {labels.verseHelpTitle}
-                    </Text>
-                  </TouchableOpacity>
+                  {/* One hymn opens on the hymnal page; several open a list. */}
+                  {verseHymns.length > 0 && (
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        verseHymns.length === 1
+                          ? `${labels.hymnsAction(1)}: ${verseHymns[0].number}. ${verseHymns[0].title}`
+                          : labels.verseHymnsTitle
+                      }
+                      accessibilityHint={verseHymns.length === 1 ? labels.verseHymnHint : undefined}
+                      onPress={() =>
+                        verseHymns.length === 1
+                          ? openVerseHymn(verseHymns[0])
+                          : setModalType('verse-hymns')
+                      }
+                      style={[
+                        styles.detailActionButton,
+                        styles.detailOutlinedAction,
+                        { borderColor: theme.colors.outline },
+                      ]}
+                    >
+                      <AppIcon
+                        pointerEvents="none"
+                        name="music-clef-treble"
+                        size={22}
+                        textScale={bibleUiTextScale}
+                        color={theme.colors.primary}
+                      />
+                      <Text style={[styles.detailActionText, { color: theme.colors.primary }]}>
+                        {labels.hymnsAction(verseHymns.length)}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </>
             ) : (
@@ -5209,24 +5251,6 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     verseDetailModalContent: {
       marginTop: 8,
       marginBottom: 8,
-    },
-    verseHelpContent: {
-      gap: 16,
-      padding: 20,
-    },
-    verseHelpRow: {
-      alignItems: 'flex-start',
-      flexDirection: 'row',
-      gap: 12,
-    },
-    verseHelpText: {
-      flex: 1,
-      fontSize: scaleTypographyMetric(16, textScale),
-      lineHeight: scaleTypographyMetric(24, textScale),
-    },
-    verseHelpSupportingText: {
-      fontSize: scaleTypographyMetric(14, textScale),
-      lineHeight: scaleTypographyMetric(21, textScale),
     },
     selectionBarInner: {
       flexDirection: 'row',

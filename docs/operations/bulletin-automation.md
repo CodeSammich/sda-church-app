@@ -586,24 +586,17 @@ The QR workflow generates `mobile_app_qr_code_368x368.jpg`, pointing at
 `https://app.nyccsda.org/download`, and uploads it to Drive with the giving codes
 ([Admin Runbook](admin-runbook.md#bulletin-qr-codes)).
 
-**Deploying the mobile app code at launch** (#323). The code leads to the store
-pages, so the script that prints it must not reach production until the app is
-public on both Google Play and the App Store. Since 1.0.0 it is in the script on
-`main`, and in every branch made from `main` since then. Until both stores have
-released the app, don't deploy the bulletin Apps Script at all: not by the
-**Deploy Bulletin Apps Script** workflow, `npm run apps-script:deploy`, or
-`npm run apps-script:push`. Each of them changes production whatever the branch
-(see the Apps Script README's [Commands](../../google-apps-script/README.md#commands)). Once both
-stores have released the app:
+**The mobile app code** (#323). The code leads to the store pages, so the script
+that prints it waited until the app was public on both Google Play and the App
+Store. Both stores have released it, so it now goes live with each approved
+deploy. If a printed code stops working:
 
 1. Check that https://app.nyccsda.org/download sends an Android phone to Google
    Play and an iPhone to the App Store.
 2. Check that `mobile_app_qr_code_368x368.jpg` is in the QR code folder and not in
    the trash. If `MOBILE_APP_QR_IMAGE_FILE_ID` is set, check that it names that
    file, not an old placeholder.
-3. Run **Deploy Bulletin Apps Script** from `main`; see
-   [Deploying the bulletin Apps Script](admin-runbook.md#deploying-the-bulletin-apps-script).
-4. Generate test bulletins for Queens (Regular and Holy Communion) and Brooklyn,
+3. Generate test bulletins for Queens (Regular and Holy Communion) and Brooklyn,
    and scan the printed code with an Android phone and an iPhone.
 
 ## Deployment and verification
@@ -613,8 +606,7 @@ Apps Script deployment ID so the production `/exec` URL does not change. Setup
 (installing clasp, `clasp login`, and copying the `.example` config files) is in
 the [Apps Script README](../../google-apps-script/README.md#setup), and the test,
 push, and deploy commands, with what each one changes in production, are in its
-[Commands](../../google-apps-script/README.md#commands). Until the app is public
-in both stores, don't push or deploy; see [Giving QR slots](#giving-qr-slots).
+[Commands](../../google-apps-script/README.md#commands).
 
 The deployment helper:
 
@@ -631,10 +623,11 @@ content-submission trigger. Keep the `onScheduleNameCheckEdit` trigger: it is th
 unknown-name dialog described under
 [Name not in the Name Dictionary](#name-not-in-the-name-dictionary-popup).
 
-From GitHub, the manual **Deploy Bulletin Apps Script** workflow runs the same
-deploy with the `production` environment's `APPS_SCRIPT_PROJECT_ID`,
-`APPS_SCRIPT_DEPLOYMENT_ID`, and `CLASPRC_JSON` secrets; a push or PR never deploys. How to run and approve it, only from
-`main`, is in the Admin Runbook's
+From GitHub, **Deploy Bulletin Apps Script** runs the same deploy with the
+`production` environment's `APPS_SCRIPT_PROJECT_ID`, `APPS_SCRIPT_DEPLOYMENT_ID`, and
+`CLASPRC_JSON` secrets. Every merge into `main` starts it, and it waits for
+`production` approval; a pull request never deploys. How to approve it, or run it by
+hand from `main`, is in the Admin Runbook's
 [Deploying the bulletin Apps Script](admin-runbook.md#deploying-the-bulletin-apps-script).
 
 If clasp authorization fails repeatedly after a fixed time window, first check the
@@ -695,11 +688,12 @@ Before changing a bulletin field, sheet column, or layout:
 - update the three-sheet/header documentation;
 - add or update deterministic tests;
 - run the relevant Apps Script and mobile tests;
-- deploy Apps Script as a new version when `.gs` changes;
+- approve the Apps Script deploy that the release's merge into `main` starts;
 - build/upload an APK only when native app code changes; and
 - verify a generated Doc, PDF, and public API response for the affected location.
 
 For header changes, the order is mandatory: change the repository contract,
 tests, and mobile app first; then have the technology group update the protected
-sheet header; then deploy and verify. Do not solve a contract mismatch by making
+sheet header; then approve the deploy and verify. The release's merge starts the
+deploy, but it waits for approval, so hold it until the header is updated. Do not solve a contract mismatch by making
 the public API read arbitrary columns.

@@ -168,11 +168,23 @@ describe('screen rules', () => {
     // English: Vision reads each button's icon as a character before its label.
     const homeEn = shot('home-xl-ios-large-text');
     const enTabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.94));
-    expect(checkShot(homeEn, [...enTabs, line('‹ Share Verse', 0.69), line('a Read Verse', 0.8)])).toEqual([]);
-    // A long daily verse, such as John 1:1, pushes Read Verse below the shot.
-    expect(checkShot(homeEn, [...enTabs, line('‹ Share Verse', 0.78)])).toEqual([]);
-    expect(checkShot(homeEn, [...enTabs, line('Shar', 0.69), line('Rea', 0.7)])).toEqual([
-      'no line matches /\\bShare Verse\\b/',
+    const heading = line("Today's Verse", 0.09);
+    expect(checkShot(homeEn, [...enTabs, heading, line('‹ Share Verse', 0.69), line('a Read Verse', 0.8)]))
+      .toEqual([]);
+    // A long daily verse pushes Read Verse below the shot, as John 1:1 does, or
+    // both buttons, as Genesis 1:27 does.
+    expect(checkShot(homeEn, [...enTabs, heading, line('‹ Share Verse', 0.78)])).toEqual([]);
+    expect(checkShot(homeEn, [...enTabs, heading, line('male and female', 0.65), line('them.', 0.81)]))
+      .toEqual([]);
+    // What the 0.43.0 run showed: the buttons cut off.
+    const cutOff = '/\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$/, which must not show';
+    expect(checkShot(homeEn, [...enTabs, heading, line('‹ Shar', 0.69), line('a Rea', 0.7)])).toEqual([
+      `"‹ Shar" matches ${cutOff}`,
+    ]);
+    expect(checkShot(homeEn, [...enTabs, heading, line('a Rea', 0.7)])).toEqual([`"a Rea" matches ${cutOff}`]);
+    expect(checkShot(homeEn, [...enTabs, line("Today's Vers", 0.09), line('e', 0.15)])).toEqual([
+      "no line matches /^Today.s Verse$/",
+      `"Today's Vers" matches ${cutOff}`,
     ]);
   });
 

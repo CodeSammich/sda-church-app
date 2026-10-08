@@ -154,8 +154,9 @@ and may not be possible, so protect them above everything else.
     and attached to that version's GitHub release;
   - the [website](#website-appnyccsdaorg) deploy to GitHub Pages, and the version
     tag, after each merge to `main`;
-  - bulletin Apps Script deploys, run by hand, using [`clasp`](https://github.com/google/clasp),
-    Google's command-line tool for uploading Apps Script code;
+  - bulletin Apps Script deploys after each merge to `main`, once approved, using
+    [`clasp`](https://github.com/google/clasp), Google's command-line tool for
+    uploading Apps Script code;
   - bulletin [QR code](operations/admin-runbook.md#bulletin-qr-codes) generation into
     Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
@@ -430,7 +431,7 @@ checks nearly all of them daily.
 | Hymns | zgaxr | `m.zgaxr.com` | Chinese 505, 506, and 707 hymnal sheet music | Link |
 | Hymns | Hymns for Worship | `hymnsforworship.org` | English SDA Hymnal (1985) sheet music | Link |
 | Hymns | Chinese Union Mission | App Store, Google Play | 506 hymnal app store pages | Link |
-| Hymns | YouTube | `youtube.com` | 506 hymnal recordings from Chinese Hope TV's playlist | Link |
+| Hymns | YouTube | `youtube.com` | 506 hymnal recordings from Chinese Hope TV's playlist; piano accompaniments for the English hymnal, from the SDA Hymnal channel's playlist, and for the 505 hymnal, credited to the Auckland Chinese Adventist church | Link |
 | Printed bulletin | Sunrise-Sunset API | `api.sunrise-sunset.org` | Sunset times on the printed Queens and Brooklyn bulletins (Apps Script only; the app calculates its own) | Apps Script |
 | Media | YouTube | `youtube.com` | Livestream and sermon archive | Link |
 | Media | Spotify | `open.spotify.com` | Sermon and class audio archive | Link |
@@ -480,12 +481,13 @@ there must stay on a free plan that fails at its limits instead of billing.
 | --- | --- | --- |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Developer membership and resubmit nonprofit status | App removed from the App Store |
 | Yearly (GitHub opens an issue 60 days ahead) | Renew the Apple Distribution certificate and provisioning profile, update GitHub secrets, and record the new dates; see the [renewal checklist](operations/app-store-setup.md#renewal-checklist) | iOS builds fail; app can't be updated |
-| First Monday of January (GitHub opens the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue) | Work through the checklist, which covers the yearly rows below and more | A card expires, a bill starts, or an account can't be recovered, unnoticed |
+| First Monday of January (GitHub opens the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, due February 28) | Work through the checklist, which covers the yearly rows below and more | A card expires, a bill starts, or an account can't be recovered, unnoticed |
 | Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
 | Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
+| Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 
 ## Governance principles
 

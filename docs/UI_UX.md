@@ -166,13 +166,21 @@ Visitor) live here.
 six hymnals, in the style of the Library's featured books, puts the app language's hymnals
 first; swiping to one, or tapping its dot, shows its search and hymns below, in one list.
 Each hymnal keeps its own search. A search also looks through the other five hymnals:
-their matches follow under **In other hymnals**, and a number leads with each hymnal's
-hymn of that number, so "hymn 100" shows 1985's and 505's 100 with their titles, whichever
-hymnal is showing. Tapping a result shows that hymn in its hymnal. The page says nothing
-matches only when no hymnal has a match. A hymn with a number in another hymnal, such as a
-1985 hymn's 505 number, shows it as a chip; tapping it shows the hymn there. The chips
+their matches follow under **In other hymnals**, grouped under each hymnal's name, the
+hymnal a cross-reference table pairs with this one first (1985 ↔ 505). Each group is in
+number order and shows its first 10 matches, with **Show all** for the rest. A number
+leads each group with its hymn of that number, so "hymn 100" shows 1985's and 505's 100
+with their titles, whichever hymnal is showing. Tapping a result shows that hymn in its hymnal. The page says nothing
+matches only when no hymnal has a match. A hymn with a number in another hymnal shows it as a
+chip, such as "Chinese 505 · 16" on a 1985 hymn or "English · 82" on a 505 hymn; tapping it
+shows the hymn there. The chips
 come from the cross-reference tables (see [Hymnal
 integration](feature_designs/hymnal_integration_design.md#54-cross-references-between-hymnals)).
+An English hymn's scripture reference is a chip there too, and opens the passage in the
+Bible. A 505 hymn shows its 1985 equivalent's, in the app's language (詩篇 103:2-5), and
+opens it in the Chinese Bible. Below each hymn, **With singing** opens its recording on YouTube or a search for it.
+Most English and 505 hymns also have **Piano only**: the hymn's piano accompaniment, for a
+church without a pianist.
 Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn,
 opens the same page with that hymnal picked and just that hymn showing, marked, above
 **Show all hymns**. The old English–Chinese hymn lookup's route opens the hymnal page.
@@ -193,6 +201,11 @@ opens the same page with that hymnal picked and just that hymn showing, marked, 
 Bible audio.
 
 **UI:** Immersive reader with chapter-local search and persistent audio controls.
+Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
+includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as
+"Psalm 23 · English"): the English hymns and the same hymns in the 505, with the 505 first
+for CUV and CUVS and the English hymnal first otherwise. It opens the hymn on
+the hymnal page, whose way back returns to the verse (`features/hymnal/HymnScripture.ts`).
 
 **Tenet Alignment:**
 
