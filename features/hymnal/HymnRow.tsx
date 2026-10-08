@@ -11,7 +11,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { memo } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Divider, Text, TouchableRipple } from 'react-native-paper';
-import { formatHymnalScriptureReference } from './EnglishHymnal';
+import { getHymnScriptureReference } from './HymnScripture';
 import type { HymnalBookId } from './HymnalLabels';
 import type { HymnNumber } from './HymnalNumberMappings';
 import {
@@ -26,7 +26,9 @@ export type HymnRowLabels = Readonly<{
   pianoOnly: string;
   youtubeHint: string;
   scriptureHint: string;
-  /** The cross-reference chip's text, such as "505 · 23". */
+  /** How a hymn's verse reads on its chip: see formatHymnScriptureReference. */
+  scriptureReference: (hymnalId: HymnalBookId, reference: string) => string;
+  /** The cross-reference chip's text, such as "Chinese 505 · 23". */
   crossReference: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => string;
   /** What a screen reader says for the chip, such as "Chinese Hymnal — 505 Edition, hymn 23". */
   crossReferenceLabel: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => string;
@@ -46,7 +48,8 @@ type HymnRowProps = Readonly<{
 
 /**
  * One hymn: its number and title open the sheet music. Chips under the title
- * open an English hymn's scripture and show the same hymn in another hymnal
+ * open its verse (an English hymn's, or a 505 hymn's 1985 equivalent's; see
+ * HymnScripture.ts) and show the same hymn in another hymnal
  * (from the cross-reference tables). Below are its recording and, in a
  * hymnal that has them, its piano accompaniment.
  */
@@ -62,6 +65,7 @@ export const HymnRow = memo(function HymnRow({
   const theme = useAppTheme();
   const hymnal = HYMNALS[hymnalId];
   const crossReferences = getHymnCrossReferences(hymnalId, hymn.number);
+  const scriptureReference = getHymnScriptureReference(hymnalId, hymn.number);
   const accompanimentUrl = hymnal.getAccompanimentUrl?.(hymn);
   const chipStyle = [styles.chip, { borderColor: theme.colors.outline }];
   const pressableChipStyle = ({ pressed }: { pressed: boolean }) => [
@@ -114,19 +118,19 @@ export const HymnRow = memo(function HymnRow({
         </TouchableRipple>
 
         {/* Outside the link above, so a screen reader reaches each chip. */}
-        {(hymn.scriptureReference || crossReferences.length > 0) && (
+        {(scriptureReference || crossReferences.length > 0) && (
           <View style={styles.chips}>
-            {hymn.scriptureReference && (
+            {scriptureReference && (
               <Pressable
                 accessibilityHint={labels.scriptureHint}
                 accessibilityRole="button"
                 hitSlop={6}
-                onPress={() => onOpenScripture(hymnalId, hymn.scriptureReference!)}
+                onPress={() => onOpenScripture(hymnalId, scriptureReference)}
                 style={pressableChipStyle}
               >
                 <AppIcon name="book-cross" size={16} color={theme.colors.primary} />
                 <Text style={[styles.chipText, { color: theme.colors.primary }]}>
-                  {formatHymnalScriptureReference(hymn.scriptureReference)}
+                  {labels.scriptureReference(hymnalId, scriptureReference)}
                 </Text>
               </Pressable>
             )}
@@ -287,11 +291,14 @@ export const createHymnRowStyles = (
       borderWidth: 1,
       flexDirection: 'row',
       gap: 6,
+      // A long label wraps inside the chip rather than running off the card.
+      maxWidth: '100%',
       minHeight: Math.ceil(32 + Math.max(0, effectiveTextScale - 1) * 12),
       paddingHorizontal: 12,
       paddingVertical: 4,
     },
     chipText: {
+      flexShrink: 1,
       fontSize: scaleTypographyMetric(14, textScale),
       fontWeight: '700',
       lineHeight: scaleTypographyMetric(20, textScale),

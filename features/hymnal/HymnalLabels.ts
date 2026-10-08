@@ -64,12 +64,12 @@ export const getHymnalTitleParts = (hymnalId: HymnalBookId, language: string) =>
 
 /**
  * Each hymnal's shortest name, beside a hymn number: on cross-reference chips
- * and on search results from another hymnal.
+ * ("English · 82") and in the Bible's list of a verse's hymns.
  */
 const HYMNAL_SHORT_LABELS: Record<HymnalBookId, Record<SupportedLanguage, string>> = {
-  'sdah-1985-en': { en: '1985', zh: '1985', 'zh-cn': '1985', es: '1985' },
-  'chinese-hymnal-505': { en: '505', zh: '505', 'zh-cn': '505', es: '505' },
-  'chinese-hymnal-506': { en: '506', zh: '506', 'zh-cn': '506', es: '506' },
+  'sdah-1985-en': { en: 'English', zh: '英文', 'zh-cn': '英文', es: 'Inglés' },
+  'chinese-hymnal-505': { en: 'Chinese 505', zh: '中文 505', 'zh-cn': '中文 505', es: 'Chino 505' },
+  'chinese-hymnal-506': { en: 'Chinese 506', zh: '中文 506', 'zh-cn': '中文 506', es: 'Chino 506' },
   'chinese-hymnal-707-v1': {
     en: '707 New Simplified',
     zh: '707 新編簡譜',

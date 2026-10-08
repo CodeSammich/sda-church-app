@@ -207,6 +207,29 @@ describe("each hymnal's own route", () => {
     expect(view.getByPlaceholderText('Search by number or title...').props.value).toBe('主');
   });
 
+  it("shows a 505 hymn its 1985 equivalent's verse, and opens it in the Chinese Bible", () => {
+    // 505's 5 is SDAH 1, on Psalm 103:2-5.
+    const view = renderPage(routes[1][1], { hymnNum: '5' }, 'zh');
+    fireEvent.press(view.getByText('詩篇 103:2-5'));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/bible',
+      params: expect.objectContaining({
+        translationId: 'cmn_cuv',
+        bookId: 'PSA',
+        chapter: '103',
+        backTo: '/home/chinese-505-hymnal?hymnNum=5',
+      }),
+    });
+    view.unmount();
+
+    // In Simplified Chinese, the Simplified Bible. The 506 has no verses yet.
+    const simplified = renderPage(routes[1][1], { hymnNum: '5' }, 'zh-cn');
+    fireEvent.press(simplified.getByText('诗篇 103:2-5'));
+    expect(mockPush).toHaveBeenLastCalledWith(
+      expect.objectContaining({ params: expect.objectContaining({ translationId: 'cmn_cu1' }) }),
+    );
+  });
+
   it('brings the Bible back to the same hymnal, hymn, and return route', () => {
     const view = renderPage(routes[0][1], { hymnNum: '1', backTo: '/home/bulletin' });
     fireEvent.press(view.getByText('Psalm 103:2-5'));
@@ -302,7 +325,7 @@ describe('1985 ↔ 505 cross-references', () => {
     expect(view.getAllByText(/^\d+\. /).map((text) => text.props.children.join(''))).toEqual([
       hymnTitle('chinese-hymnal-505', 5),
     ]);
-    expect(view.getByText('1985 · 1')).toBeTruthy();
+    expect(view.getByText('English · 1')).toBeTruthy();
 
     fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 1'));
     expect(dotLabels(view)[0].selected).toBe(true);
@@ -312,8 +335,12 @@ describe('1985 ↔ 505 cross-references', () => {
 
   it('labels the chip in the app language', () => {
     const view = renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
-    expect(view.getByText('505 · 5')).toBeTruthy();
+    expect(view.getByText('中文 505 · 5')).toBeTruthy();
     expect(view.getByLabelText('中文讚美詩 — 505 版第 5 首')).toBeTruthy();
+    view.unmount();
+
+    const english = renderPage(routes[1][1], { hymnNum: '5' });
+    expect(english.getByText('English · 1')).toBeTruthy();
   });
 });
 
