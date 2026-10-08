@@ -50,12 +50,10 @@ jobs:
         include:
           # The Simulator runs apps built for the Mac's own processor, so each
           # kind of Mac gets its own build, checked on a runner of that kind.
+          # Scouting #432 (never merged): Xcode 27.1 and the iPhone Duo.
           - mac: Apple Silicon
-            runner: macos-26
+            runner: xcode-27
             arch: arm64
-          - mac: Intel
-            runner: macos-26-intel
-            arch: x86_64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -67,15 +65,43 @@ jobs:
         run: |
           set -euo pipefail
           # Keep this in step with native-ios-build.yml.
-          XCODE_DEVELOPER_DIR='/Applications/Xcode_26.6.app/Contents/Developer'
+          XCODE_DEVELOPER_DIR='/Applications/Xcode_27.1.app/Contents/Developer'
           test -d "$XCODE_DEVELOPER_DIR" || {
             echo "Expected Xcode at $XCODE_DEVELOPER_DIR; update this workflow when the runner image changes." >&2
             exit 1
           }
           sudo xcode-select -s "$XCODE_DEVELOPER_DIR"
           xcodebuild -version
+          xcodebuild -showsdks | grep -i ios
           pod --version
           uname -m
+
+      - name: Find the iPhone Duo Simulator (scouting #432)
+        run: |
+          set -uo pipefail
+          xcrun simctl list runtimes
+          if ! xcrun simctl list runtimes | grep -q 'iOS 27\.1'; then
+            time xcodebuild -downloadPlatform iOS || echo '::warning::Could not download the iOS 27.1 Simulator runtime.'
+            xcrun simctl list runtimes
+          fi
+          xcrun simctl list devicetypes | grep -i iphone
+          DUO="$(xcrun simctl list devicetypes --json | node -e "const t=JSON.parse(require('fs').readFileSync(0)).devicetypes.find((d)=>/duo|fold/i.test(d.name)); process.stdout.write(t ? t.name : '')")"
+          echo "Duo device type: ${DUO:-none}"
+          if [ -n "$DUO" ]; then
+            # Only in this run: the key screens below then use the Duo.
+            node -e "const f='test/screens/screens.json'; const s=JSON.parse(require('fs').readFileSync(f)); s.ios.device=process.argv[1]; require('fs').writeFileSync(f, JSON.stringify(s, null, 2))" "$DUO"
+          fi
+          echo '--- simctl commands mentioning folds, postures or displays:'
+          xcrun simctl help 2>&1 | grep -i -E 'fold|posture|hinge|display|io ' || true
+          xcrun simctl help io 2>&1 | grep -i -E 'display|screenshot' || true
+          {
+            echo '### iPhone Duo scouting (#432)'
+            echo "- Xcode: $(xcodebuild -version | tr '\n' ' ')"
+            echo "- Duo Simulator: ${DUO:-none found}"
+            echo '```'
+            xcrun simctl list runtimes
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install dependencies
         run: npm ci --force
@@ -146,6 +172,11 @@ jobs:
           ARTIFACT_DIR="$RUNNER_TEMP/ios-pr-preview"
           mkdir -p "$ARTIFACT_DIR"
           xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACT_DIR/$PREVIEW_NAME-first-screen.png"
+          # Scouting #432: which displays the Simulator has, and a shot of each.
+          xcrun simctl io "$DEVICE_ID" enumerate || true
+          for display in internal external inner outer; do
+            xcrun simctl io "$DEVICE_ID" screenshot --display="$display" "$ARTIFACT_DIR/first-screen-$display.png" || true
+          done
           (cd "$(dirname "$APP_PATH")" &&
             ditto -c -k --keepParent "$(basename "$APP_PATH")" "$ARTIFACT_DIR/$PREVIEW_NAME-simulator.zip")
           RUNNING_SERVICES="$(xcrun simctl spawn "$DEVICE_ID" launchctl list)"
