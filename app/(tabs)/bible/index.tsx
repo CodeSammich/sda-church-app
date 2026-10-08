@@ -3303,8 +3303,8 @@ export default function BibleScreen() {
 
   const closeModal = () => setModalType(null);
 
-  // The hymns on the verse whose details are open, in the main translation's
-  // language: the reverse of a hymn's verse chip.
+  // The hymns on the verse whose details are open, the main translation's
+  // hymnal first: the reverse of a hymn's verse chip.
   const verseHymns = useMemo(
     () =>
       book && selectedVerseNum

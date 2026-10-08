@@ -3,7 +3,7 @@
  * chip on the hymnal page, and the hymns on a verse in the Bible's verse
  * details. The references are the English hymns' (EnglishHymnal.ts). A 505
  * hymn has the reference of the 1985 hymn the cross-reference table pairs it
- * with, so Chinese readers get the Chinese hymn. A reference to a whole
+ * with, so a verse lists the Chinese hymn too. A reference to a whole
  * chapter, such as "Psalm 23", covers every verse in it.
  */
 
@@ -14,7 +14,7 @@ import { getSortedHymns, type HydratedHymn } from './EnglishHymnal';
 import type { HymnalBookId } from './HymnalLabels';
 import { getHymnEquivalents, type HymnNumber } from './HymnalNumberMappings';
 
-/** A hymn on a verse, in the hymnal for the verse's translation. */
+/** A hymn on a verse, in the English hymnal or the 505. */
 export type VerseHymn = Readonly<{
   hymnalId: HymnalBookId;
   number: number;
@@ -91,10 +91,9 @@ export const formatHymnScriptureReference = (
 };
 
 /**
- * The hymns on a verse for a translation's language, in number order: the
- * English hymns for an English translation, their 505 equivalents for a
- * Chinese one, and none for the others, which have no hymnal yet. `bookId` is
- * a USFM ID, such as "PSA".
+ * Every hymn on a verse: the English hymns and their 505 equivalents, each
+ * hymnal in number order, the 505 first for a Chinese translation and the
+ * English hymnal first for any other. `bookId` is a USFM ID, such as "PSA".
  */
 export const getHymnsForVerse = (
   bookId: string,
@@ -109,15 +108,14 @@ export const getHymnsForVerse = (
       (passage.verseStart === undefined ||
         (verse >= passage.verseStart && verse <= (passage.verseEnd ?? passage.verseStart))),
   );
-  if (translationLanguage === 'en') {
-    return english.map(({ hymn }) => ({
+  const englishHymns = english.map(
+    ({ hymn }): VerseHymn => ({
       hymnalId: 'sdah-1985-en',
       number: hymn.number,
       title: hymn.title,
       scriptureReference: hymn.scriptureReference!,
-    }));
-  }
-  if (translationLanguage !== 'zh' && translationLanguage !== 'zh-cn') return [];
+    }),
+  );
   const chinese = new Map<number, VerseHymn>();
   for (const { hymn } of english) {
     for (const { number } of get505Equivalents(hymn.number)) {
@@ -131,5 +129,8 @@ export const getHymnsForVerse = (
       });
     }
   }
-  return [...chinese.values()].sort((a, b) => a.number - b.number);
+  const chineseHymns = [...chinese.values()].sort((a, b) => a.number - b.number);
+  return translationLanguage === 'zh' || translationLanguage === 'zh-cn'
+    ? [...chineseHymns, ...englishHymns]
+    : [...englishHymns, ...chineseHymns];
 };

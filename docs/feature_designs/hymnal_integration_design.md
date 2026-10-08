@@ -151,8 +151,8 @@ hymnal page and its search across every hymnal. Search supports hymn numbers, ti
 scripture references. A hymn's scripture reference is a chip on its row that opens the
 passage in the Bible reader. A 505 hymn shows the reference of its 1985 equivalent, in
 the app's language, and opens it in the Chinese Bible. The other way, a verse's details in
-the Bible show a **Hymn** button when a hymn's reference includes that verse: English
-hymns for an English translation, their 505 equivalents for a Chinese one
+the Bible show a **Hymn** button when a hymn's reference includes that verse, listing the
+English hymns and their 505 equivalents, the 505 first for a Chinese translation
 (`features/hymnal/HymnScripture.ts`; a whole-chapter reference, such as "Psalm 23",
 includes every verse). A hymn's videos open on YouTube (see
 [5.5](#55-videos-with-singing-and-piano-only)); the app stores no third-party media.

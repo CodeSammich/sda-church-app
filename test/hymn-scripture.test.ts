@@ -7,8 +7,16 @@ import {
 import { parseScriptureReference } from '@/services/BibleService';
 
 describe('the hymns on a Bible verse', () => {
-  const numbers = (bookId: string, chapter: number, verse: number, language = 'en') =>
-    getHymnsForVerse(bookId, chapter, verse, language).map(({ number }) => number);
+  // The English hymns' numbers, as from an English translation.
+  const numbers = (bookId: string, chapter: number, verse: number) =>
+    getHymnsForVerse(bookId, chapter, verse, 'en')
+      .filter(({ hymnalId }) => hymnalId === 'sdah-1985-en')
+      .map(({ number }) => number);
+  // Every hymn, as "hymnal:number".
+  const listed = (bookId: string, chapter: number, verse: number, language: string) =>
+    getHymnsForVerse(bookId, chapter, verse, language).map(
+      ({ hymnalId, number }) => `${hymnalId}:${number}`,
+    );
 
   it("reads every English hymn's scripture reference", () => {
     const references = getSortedHymns().filter(({ scriptureReference }) => scriptureReference);
@@ -39,23 +47,34 @@ describe('the hymns on a Bible verse', () => {
     expect(numbers('PSA', 24, 1)).not.toContain(104);
   });
 
-  it('gives a Chinese translation the same hymns in the 505, where it has them', () => {
+  it('adds the same hymns in the 505, the hymnal of the translation first', () => {
     // SDAH 1 is 505's 5; SDAH 4 has no 505 number.
-    expect(getHymnsForVerse('PSA', 103, 3, 'zh')).toEqual([
-      {
-        hymnalId: 'chinese-hymnal-505',
-        number: 5,
-        title: '赞美上主',
-        scriptureReference: 'Psalm 103:2-5',
-      },
+    expect(listed('PSA', 103, 3, 'en')).toEqual([
+      'sdah-1985-en:1',
+      'sdah-1985-en:4',
+      'chinese-hymnal-505:5',
     ]);
-    expect(numbers('PSA', 23, 1, 'zh-cn')).toEqual([381, 476]);
+    expect(listed('PSA', 103, 3, 'zh')).toEqual([
+      'chinese-hymnal-505:5',
+      'sdah-1985-en:1',
+      'sdah-1985-en:4',
+    ]);
+    expect(getHymnsForVerse('PSA', 103, 3, 'zh')[0]).toEqual({
+      hymnalId: 'chinese-hymnal-505',
+      number: 5,
+      title: '赞美上主',
+      scriptureReference: 'Psalm 103:2-5',
+    });
+    expect(listed('PSA', 23, 1, 'zh-cn').slice(0, 2)).toEqual([
+      'chinese-hymnal-505:381',
+      'chinese-hymnal-505:476',
+    ]);
     // None of the four Revelation 21:4 hymns is in the 505.
-    expect(numbers('REV', 21, 4, 'zh')).toEqual([]);
+    expect(listed('REV', 21, 4, 'zh')).toEqual(listed('REV', 21, 4, 'en'));
   });
 
-  it('gives no hymns to a translation with no hymnal yet', () => {
-    expect(numbers('PSA', 103, 3, 'es')).toEqual([]);
+  it('lists the English hymnal first for a translation with no hymnal of its own', () => {
+    expect(listed('PSA', 103, 3, 'es')).toEqual(listed('PSA', 103, 3, 'en'));
   });
 
   it('finds nothing for a verse no hymn names', () => {

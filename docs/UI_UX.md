@@ -203,8 +203,8 @@ Bible audio.
 **UI:** Immersive reader with chapter-local search and persistent audio controls.
 Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
 includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as
-"Psalm 23 · English"): the English hymns for BSB and KJV, the same hymns in the 505 for CUV
-and CUVS, and none for RVR 1909. It opens the hymn on
+"Psalm 23 · English"): the English hymns and the same hymns in the 505, with the 505 first
+for CUV and CUVS and the English hymnal first otherwise. It opens the hymn on
 the hymnal page, whose way back returns to the verse (`features/hymnal/HymnScripture.ts`).
 
 **Tenet Alignment:**
