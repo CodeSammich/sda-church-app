@@ -260,10 +260,11 @@ describe('recordings and piano accompaniments', () => {
     );
   });
 
-  it.each(routes.slice(2))('keeps the YouTube button on /home/%s, which has no accompaniments', (_route, page, hymnalId) => {
+  it.each(routes.slice(2))('offers only With singing on /home/%s, which has no accompaniments yet', (_route, page, hymnalId) => {
     const view = renderPage(page, { hymnNum: HYMNALS[hymnalId].getHymns()[0].number.toString() });
-    expect(view.getByText('YouTube')).toBeTruthy();
-    expect(view.queryByText('With singing')).toBeNull();
+    expect(view.getByText('With singing')).toBeTruthy();
+    expect(view.getByA11yHint('Opens the video on YouTube')).toBeTruthy();
+    expect(view.queryByText('YouTube')).toBeNull();
     expect(view.queryByText('Piano only')).toBeNull();
   });
 

@@ -72,7 +72,6 @@ const copy = {
     otherHymnals: 'In other hymnals',
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}, hymn ${number}, ${title}`,
-    watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}, hymn ${number}`,
     crossReferenceHint: 'Shows this hymn in that hymnal',
     withSinging: 'With singing',
@@ -94,7 +93,6 @@ const copy = {
     otherHymnals: '其他詩歌本',
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}第 ${number} 首，${title}`,
-    watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}第 ${number} 首`,
     crossReferenceHint: '在那本詩歌本中顯示這首詩歌',
     withSinging: '演唱',
@@ -116,7 +114,6 @@ const copy = {
     otherHymnals: '其他诗歌本',
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}第 ${number} 首，${title}`,
-    watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}第 ${number} 首`,
     crossReferenceHint: '在那本诗歌本中显示这首诗歌',
     withSinging: '演唱',
@@ -138,7 +135,6 @@ const copy = {
     otherHymnals: 'En otros himnarios',
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}, himno ${number}, ${title}`,
-    watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}, himno ${number}`,
     crossReferenceHint: 'Muestra este himno en ese himnario',
     withSinging: 'Cantado',
@@ -336,7 +332,6 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
 
   const rowLabels = useMemo<HymnRowLabels>(
     () => ({
-      watchYouTube: labels.watchYouTube,
       withSinging: labels.withSinging,
       pianoOnly: labels.pianoOnly,
       youtubeHint: labels.youtubeHint,

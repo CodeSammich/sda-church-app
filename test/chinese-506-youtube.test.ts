@@ -46,7 +46,6 @@ describe('Chinese 506 hymnal recordings', () => {
         hymn,
         highlighted: false,
         labels: {
-          watchYouTube: 'YouTube',
           withSinging: 'With singing',
           pianoOnly: 'Piano only',
           youtubeHint: '',
@@ -67,9 +66,9 @@ describe('Chinese 506 hymnal recordings', () => {
         row({ number: 506, title: '阿门' }),
       ),
     );
-    // The 506 hymnal has no piano accompaniments, so its button stays "YouTube".
+    // The 506 hymnal has no piano accompaniments yet.
     expect(screen.queryByText('Piano only')).toBeNull();
-    const [first, last] = screen.getAllByText('YouTube');
+    const [first, last] = screen.getAllByText('With singing');
 
     fireEvent.press(first);
     expect(openURL).toHaveBeenCalledWith(

@@ -203,10 +203,12 @@ list yet needs its page entry first (see the
 
 ### 5.5 Videos with singing and piano only
 
-Most English and 505 hymns have two YouTube buttons, for a congregation with or without a
-pianist ([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)).
-**With singing** searches YouTube for the hymn. **Piano only** opens the hymn's piano
-accompaniment, with the words on screen, from a playlist of that hymnal's accompaniments.
+Every hymn has a **With singing** button, which opens its recording on YouTube or searches
+YouTube for it. Most English and 505 hymns also have **Piano only**, for a congregation
+without a pianist
+([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)):
+the hymn's piano accompaniment, with the words on screen, from a playlist of that hymnal's
+accompaniments.
 `features/hymnal/EnglishHymnalPianoYouTube.json` and
 `features/hymnal/Chinese505PianoYouTube.json` map hymn numbers to the videos, and a hymn
 without one shows only **With singing**. A hymnal's `getAccompanimentUrl` in
@@ -220,8 +222,9 @@ leaves out 493 and 494, whose videos have each other's numbers; the 505 list fol
 zgaxr's scores (see `scripts/scrape-chinese-505-hymnal.mjs`). The sources and their limits
 are in [LEGAL.md](../LEGAL.md#piano-accompaniments-on-youtube).
 
-The 506 and 707 hymnals have no accompaniments, so their hymns keep a single **YouTube**
-button.
+The 506 and 707 hymnals have no accompaniments yet, so their hymns show only **With
+singing**. Mapping a playlist the same way and giving the hymnal a `getAccompanimentUrl`
+adds **Piano only** to them, with no other change.
 
 ## 6. Maintenance Rules
 

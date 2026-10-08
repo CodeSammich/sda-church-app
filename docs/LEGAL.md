@@ -506,7 +506,7 @@ The checked-in mappings and their regeneration scripts are:
 
 ### 506 hymn recordings on YouTube
 
-The 506 hymnal's YouTube button opens that hymn's recording from a
+The 506 hymnal's **With singing** button opens that hymn's recording from a
 [public YouTube playlist of the 506 hymnal](https://www.youtube.com/playlist?list=PLZpA9AftZl_JIt-MCXSfP364-qR3ddrd3),
 which the church recommended. It is published by CHTV 希望電視台 (Chinese Hope TV,
 [chinesehope.tv](https://chinesehope.tv/)), the Chinese-language Hope Channel of the
