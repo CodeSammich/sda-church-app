@@ -110,7 +110,7 @@ describe('hymnal number mappings', () => {
   });
 
   it('permits source mappings to Chinese hymns whose online page is unavailable', () => {
-    const unavailableOnlineHymns = new Set(['90', '193', '201', '206', '307']);
+    const unavailableOnlineHymns = new Set(['90', '194', '201', '207', '307', '370']);
     const mappedTargetNumbers = Object.values(forwardMapping!.numberMap)
       .flatMap((targetNumbers) => targetNumbers ?? [])
       .map(String);
@@ -118,7 +118,7 @@ describe('hymnal number mappings', () => {
     expect(mappedTargetNumbers.some((number) => unavailableOnlineHymns.has(number))).toBe(
       true,
     );
-    expect(Object.keys(chinese505Data)).toHaveLength(500);
+    expect(Object.keys(chinese505Data)).toHaveLength(499);
   });
 
   it('reads both directions as one table in the registry', () => {

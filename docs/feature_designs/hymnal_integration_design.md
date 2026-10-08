@@ -148,8 +148,9 @@ publish.
 `features/hymnal/EnglishHymnal.ts` stores the English hymn metadata as a
 `Record<number, HymnEntry>`. `getSortedHymns` hydrates and sorts that record for the
 hymnal page and its search across every hymnal. Search supports hymn numbers, titles, and
-scripture references. The app also provides YouTube discovery and
-Bible-reader navigation without storing third-party media.
+scripture references. A hymn's scripture reference is a chip on its row that opens the
+passage in the Bible reader, and its videos open on YouTube (see
+[5.5](#55-videos-with-singing-and-piano-only)); the app stores no third-party media.
 
 ### 5.2 External routing
 
@@ -200,6 +201,28 @@ a made-up table working end to end. The printed bulletin keeps its own copy of t
 list yet needs its page entry first (see the
 [bulletin hymn resolution guide](bulletin_hymn_resolution.md#changing-or-adding-a-primary-hymnal)).
 
+### 5.5 Videos with singing and piano only
+
+Most English and 505 hymns have two YouTube buttons, for a congregation with or without a
+pianist ([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)).
+**With singing** searches YouTube for the hymn. **Piano only** opens the hymn's piano
+accompaniment, with the words on screen, from a playlist of that hymnal's accompaniments.
+`features/hymnal/EnglishHymnalPianoYouTube.json` and
+`features/hymnal/Chinese505PianoYouTube.json` map hymn numbers to the videos, and a hymn
+without one shows only **With singing**. A hymnal's `getAccompanimentUrl` in
+`features/hymnal/Hymnals.ts` gives its rows both buttons.
+
+`scripts/map-english-hymnal-piano-youtube.mjs` and
+`scripts/map-chinese-505-piano-youtube.mjs` regenerate the mappings, through
+`scripts/youtube-hymn-playlist.mjs`, which the 506 recordings' script shares. Each lists any
+video whose title differs from the hymnal's, for a person to compare. The 505 mapping
+leaves out 493 and 494, whose videos have each other's numbers; the 505 list follows
+zgaxr's scores (see `scripts/scrape-chinese-505-hymnal.mjs`). The sources and their limits
+are in [LEGAL.md](../LEGAL.md#piano-accompaniments-on-youtube).
+
+The 506 and 707 hymnals have no accompaniments, so their hymns keep a single **YouTube**
+button.
+
 ## 6. Maintenance Rules
 
 When changing this integration:
@@ -225,7 +248,8 @@ When changing this integration:
 
 The focused URL tests live in `test/english-hymnal.test.ts` and should cover both padded
 hymn links and the no-number directory fallback. `test/external-url-generation.test.ts`
-also checks that all 695 hymn numbers produce HTTPS `hymnsforworship.org` links.
+also checks that the hymnal has all 695 hymns and that each produces an HTTPS
+`hymnsforworship.org` link.
 
 ## 7. Path to a Raw-Image Experience
 

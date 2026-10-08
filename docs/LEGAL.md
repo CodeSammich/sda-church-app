@@ -1,6 +1,6 @@
 # Legal, Licensing, and Privacy
 
-Last legal review: 2026-08-09. Facts about the app updated: 2026-10-02.
+Last legal review: 2026-08-09. Facts about the app updated: 2026-10-07.
 
 This document centralizes the project's licensing records, third-party source reviews,
 privacy disclosures, branding restrictions, and legal disclaimer. It records engineering
@@ -413,6 +413,43 @@ The as-built architecture, source-site findings, legal distinctions, rejected ra
 and embedding approaches, maintenance rules, and reviewed sources are documented in
 [English Hymnal Integration: As-Built Design and Link-Safety Record](feature_designs/hymnal_integration_design.md).
 
+### Piano accompaniments on YouTube
+
+The **Piano only** button on an English or 505 hymn opens that hymn's piano accompaniment,
+with the words on screen, for a church without a pianist
+([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)).
+The hymn's **With singing** button searches YouTube instead. The accompaniments come from
+two public YouTube playlists:
+
+- **SDA Hymnal (1985):** a
+  [playlist of SDA Hymnal instrumentals](https://www.youtube.com/playlist?list=PL0MMS0VGOsOs15gO1xV2HAq_VgUSLXeVX),
+  published by the SDA Hymnal YouTube channel, which links to
+  [sdahymnal.net](https://sdahymnal.net/).
+- **Chinese Hymnal (505):** a
+  [playlist of the 505 hymnal's piano accompaniments](https://www.youtube.com/playlist?list=PLHVD8S8qdEPG--5KUGCfXs9nfIwIw-QiC),
+  with the words in Chinese and English. The videos are one channel's uploads, and their
+  descriptions credit the Auckland Chinese Seventh-day Adventist Church in New Zealand
+  (紐西蘭奧克蘭華人教會).
+
+The same limits apply as for the [506 recordings](#506-hymn-recordings-on-youtube):
+
+1. the repository stores only the playlist ID and one video ID per hymn number; it does
+   not copy, download, or embed the videos;
+2. a video maps to a hymn only when its number and title match the hymnal, or a person
+   has compared a differing title with the hymn;
+3. the video opens in the YouTube app or browser, under YouTube's terms and the
+   uploader's rights; and
+4. the External Dependency Monitor checks three mapped videos each day. A video that is
+   no longer public, or whose title has a different hymn number, is a warning, and the
+   check fails when two of the three are.
+
+The mappings are
+[`features/hymnal/EnglishHymnalPianoYouTube.json`](../features/hymnal/EnglishHymnalPianoYouTube.json)
+and [`features/hymnal/Chinese505PianoYouTube.json`](../features/hymnal/Chinese505PianoYouTube.json),
+regenerated through the YouTube Data API with
+[`scripts/map-english-hymnal-piano-youtube.mjs`](../scripts/map-english-hymnal-piano-youtube.mjs)
+and [`scripts/map-chinese-505-piano-youtube.mjs`](../scripts/map-chinese-505-piano-youtube.mjs).
+
 ---
 
 ## Chinese Hymnal Source and Link-Safety Rationale
@@ -475,7 +512,7 @@ which the church recommended. It is published by CHTV 希望電視台 (Chinese H
 [chinesehope.tv](https://chinesehope.tv/)), the Chinese-language Hope Channel of the
 Seventh-day Adventist Church's Northern Asia-Pacific Division, and the recordings carry
 its watermark. Hymns without a recording yet, and the 505 and 707
-hymnals, search YouTube instead. The same limits apply as for zgaxr:
+hymnals' sung buttons, search YouTube instead. The same limits apply as for zgaxr:
 
 1. the repository stores only the playlist ID and one video ID per hymn number; it does
    not copy, download, or embed the recordings;
@@ -483,8 +520,9 @@ hymnals, search YouTube instead. The same limits apply as for zgaxr:
    has compared a differing title with the hymn;
 3. the video opens in the YouTube app or browser, under YouTube's terms and the
    uploader's rights; and
-4. the External Dependency Monitor checks a mapped video each day and fails when it is
-   no longer public.
+4. the External Dependency Monitor checks three mapped videos each day. A video that is
+   no longer public, or whose title has a different hymn number, is a warning, and the
+   check fails when two of the three are.
 
 The mapping is [`features/hymnal/Chinese506YouTube.json`](../features/hymnal/Chinese506YouTube.json),
 regenerated with [`scripts/map-chinese-506-youtube.mjs`](../scripts/map-chinese-506-youtube.mjs)

@@ -33,8 +33,13 @@
  *
  * Evidence, legal limitations, and the maintenance decision record:
  * docs/feature_designs/hymnal_integration_design.md
+ *
+ * Piano accompaniments come from a YouTube playlist of the hymnal, for churches
+ * without a pianist. Regenerate their mapping with
+ * scripts/map-english-hymnal-piano-youtube.mjs.
  */
 
+import pianoData from './EnglishHymnalPianoYouTube.json';
 import { openInSystemBrowser } from '@/constants/ExternalLinks';
 
 export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
@@ -54,6 +59,14 @@ export const openHymnal = (hymnNumber?: string | number) => {
     'Error',
     'Could not open the English hymnal page.',
   );
+};
+
+const ENGLISH_HYMN_PIANO_VIDEOS = pianoData.videos as Record<string, string>;
+
+/** The hymn's piano accompaniment in the playlist, if it has one. */
+export const getEnglishHymnPianoUrl = (hymnNumber: string | number) => {
+  const videoId = ENGLISH_HYMN_PIANO_VIDEOS[hymnNumber.toString()];
+  return videoId ? `https://www.youtube.com/watch?v=${videoId}` : undefined;
 };
 
 export interface HymnEntry {
@@ -96,7 +109,7 @@ export const SDA_HYMNAL_1985: SDAHymnalData = {
     1: { title: 'Praise to the Lord', scriptureReference: 'Psalm 103:2-5' },
     2: { title: 'All Creatures of Our God and King' },
     3: { title: 'God Himself Is With Us' },
-    4: { title: 'Immortal, Invisible, God Only Wise', scriptureReference: 'Psalm 103' },
+    4: { title: 'Praise, My Soul, the King of Heaven', scriptureReference: 'Psalm 103' },
     5: { title: 'All My Hope on God Is Founded' },
     6: { title: 'O Worship the Lord' },
     7: { title: 'The Lord in Zion Reigneth' },
@@ -140,7 +153,7 @@ export const SDA_HYMNAL_1985: SDAHymnalData = {
     39: { title: 'Lord, in the Morning', scriptureReference: 'Psalm 5' },
     40: { title: 'The Dawn of God’s Dear Sabbath' },
     41: { title: 'O Splendor of God’s Glory Bright', scriptureReference: 'Hebrews 1:3' },
-    42: { title: 'Now That Daylight Fills the Sky' },
+    42: { title: 'Now That the Daylight Fills the Sky' },
     43: { title: 'When Morning Gilds the Skies', scriptureReference: 'Psalm 150:6' },
     44: { title: 'Morning Has Broken' },
     45: { title: 'Open Now Thy Gates of Beauty' },
@@ -638,7 +651,7 @@ export const SDA_HYMNAL_1985: SDAHymnalData = {
     492: { title: 'Like Jesus' },
     493: { title: 'Fill My Cup, Lord' },
     494: { title: 'We Would See Jesus', scriptureReference: 'John 12:21' },
-    495: { title: 'Near the Heart of God' },
+    495: { title: 'Near to the Heart of God' },
     496: { title: 'Eternal Love, We Have No Good', scriptureReference: 'Revelation 8:3' },
     497: { title: 'O Gracious Father of Mankind' },
     498: { title: 'Still, Still With Thee' },
@@ -853,6 +866,10 @@ export const SDA_HYMNAL_1985: SDAHymnalData = {
     },
     693: { title: 'Almighty Father', scriptureReference: 'Isaiah 30:18' },
     694: {
+      title: 'Praise God, From Whom All Blessings',
+      scriptureReference: 'Psalm 148:1-2',
+    },
+    695: {
       title: 'Praise God, From Whom All Blessings',
       scriptureReference: 'Psalm 148:1-2',
     },

@@ -6,6 +6,7 @@
 import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import type { ImageSourcePropType } from 'react-native';
 import {
+  getChinese505PianoUrl,
   getSortedChinese505Hymns,
   openChinese505Hymn,
 } from './Chinese505Hymnal';
@@ -19,7 +20,7 @@ import {
   getSortedChinese707Hymns,
   openChinese707Hymn,
 } from './Chinese707Hymnal';
-import { getSortedHymns, openHymnal } from './EnglishHymnal';
+import { getEnglishHymnPianoUrl, getSortedHymns, openHymnal } from './EnglishHymnal';
 import type { HymnalBookId } from './HymnalLabels';
 import { getHymnEquivalents, type HymnNumber } from './HymnalNumberMappings';
 import { getRoutedHymns } from './HymnalRouting';
@@ -43,6 +44,11 @@ export type HymnalDefinition = Readonly<{
   openHymn: (hymnNumber: number | string) => void;
   /** Opens the hymn's own recording, or else a YouTube search for it. */
   openRecording: (hymn: HymnalHymn) => void;
+  /**
+   * The hymn's piano accompaniment, for a hymnal that has them. Its hymns
+   * label the recording "With singing" beside it.
+   */
+  getAccompanimentUrl?: (hymn: HymnalHymn) => string | undefined;
 }>;
 
 export const HYMNAL_SELECTION_ROUTE = '/home/hymnal-selection';
@@ -88,6 +94,7 @@ export const HYMNALS: Record<HymnalBookId, HymnalDefinition> = {
     getHymns: once(() => getSortedHymns('en')),
     openHymn: openHymnal,
     openRecording: (hymn) => openYouTubeSearch(`SDA Hymnal 1985 ${hymn.title}`),
+    getAccompanimentUrl: (hymn) => getEnglishHymnPianoUrl(hymn.number),
   },
   'chinese-hymnal-505': {
     id: 'chinese-hymnal-505',
@@ -97,6 +104,7 @@ export const HYMNALS: Record<HymnalBookId, HymnalDefinition> = {
     getHymns: once(getSortedChinese505Hymns),
     openHymn: (hymnNumber) => openChinese505Hymn(Number(hymnNumber)),
     openRecording: chineseRecording(505),
+    getAccompanimentUrl: (hymn) => getChinese505PianoUrl(Number(hymn.number)),
   },
   'chinese-hymnal-506': {
     id: 'chinese-hymnal-506',

@@ -173,6 +173,10 @@ matches only when no hymnal has a match. A hymn with a number in another hymnal,
 1985 hymn's 505 number, shows it as a chip; tapping it shows the hymn there. The chips
 come from the cross-reference tables (see [Hymnal
 integration](feature_designs/hymnal_integration_design.md#54-cross-references-between-hymnals)).
+An English hymn's scripture reference is a chip there too, and opens the passage in the
+Bible. Below each hymn, **YouTube** opens its recording or a search for it. An English or
+505 hymn has **With singing** instead and, when its playlist has one, **Piano only**: its
+piano accompaniment for a church without a pianist.
 Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn,
 opens the same page with that hymnal picked and just that hymn showing, marked, above
 **Show all hymns**. The old English–Chinese hymn lookup's route opens the hymnal page.
