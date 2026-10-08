@@ -203,19 +203,25 @@ list yet needs its page entry first (see the
 
 ### 5.5 Videos with singing and piano only
 
-Most English hymns have two YouTube buttons, for a congregation with or without a pianist
-([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)).
+Most English and 505 hymns have two YouTube buttons, for a congregation with or without a
+pianist ([#424](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/424)).
 **With singing** searches YouTube for the hymn. **Piano only** opens the hymn's piano
-accompaniment, with the words on screen, from a playlist of the hymnal's instrumentals.
-`features/hymnal/EnglishHymnalPianoYouTube.json` maps hymn numbers to its videos, and a hymn
-without one shows only **With singing**. `scripts/map-english-hymnal-piano-youtube.mjs`
-regenerates the mapping and lists any video whose title differs from the hymnal's, for a
-person to compare. The source and its limits are in
-[LEGAL.md](../LEGAL.md#piano-accompaniments-on-youtube).
+accompaniment, with the words on screen, from a playlist of that hymnal's accompaniments.
+`features/hymnal/EnglishHymnalPianoYouTube.json` and
+`features/hymnal/Chinese505PianoYouTube.json` map hymn numbers to the videos, and a hymn
+without one shows only **With singing**. A hymnal's `getAccompanimentUrl` in
+`features/hymnal/Hymnals.ts` gives its rows both buttons.
 
-The Chinese hymnals have no accompaniments, so their hymns keep a single **YouTube**
-button. On a 505 hymn, its 1985 chip shows the English hymn, with its accompaniment if it
-has one.
+`scripts/map-english-hymnal-piano-youtube.mjs` and
+`scripts/map-chinese-505-piano-youtube.mjs` regenerate the mappings, through
+`scripts/youtube-hymn-playlist.mjs`, which the 506 recordings' script shares. Each lists any
+video whose title differs from the hymnal's, for a person to compare. The 505 mapping
+leaves out 493 and 494, whose videos have each other's numbers; the 505 list follows
+zgaxr's scores (see `scripts/scrape-chinese-505-hymnal.mjs`). The sources and their limits
+are in [LEGAL.md](../LEGAL.md#piano-accompaniments-on-youtube).
+
+The 506 and 707 hymnals have no accompaniments, so their hymns keep a single **YouTube**
+button.
 
 ## 6. Maintenance Rules
 
