@@ -71,7 +71,9 @@
           "android": {
             "compileSdkVersion": 37,
             "targetSdkVersion": 36,
-            "buildToolsVersion": "37.0.0"
+            "buildToolsVersion": "37.0.0",
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ],
@@ -86,7 +88,8 @@
         }
       ],
       "expo-status-bar",
-      "./plugins/withAndroidLocalSigning"
+      "./plugins/withAndroidLocalSigning",
+      "./plugins/withAndroidPhonePortrait"
     ],
     "extra": {
       "router": {}
