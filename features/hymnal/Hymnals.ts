@@ -44,10 +44,7 @@ export type HymnalDefinition = Readonly<{
   openHymn: (hymnNumber: number | string) => void;
   /** Opens the hymn's own recording, or else a YouTube search for it. */
   openRecording: (hymn: HymnalHymn) => void;
-  /**
-   * The hymn's piano accompaniment, for a hymnal that has them. Its hymns
-   * label the recording "With singing" beside it.
-   */
+  /** The hymn's piano accompaniment, for a hymnal that has them. */
   getAccompanimentUrl?: (hymn: HymnalHymn) => string | undefined;
 }>;
 

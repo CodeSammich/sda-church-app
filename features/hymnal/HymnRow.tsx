@@ -21,8 +21,7 @@ import {
 } from './Hymnals';
 
 export type HymnRowLabels = Readonly<{
-  watchYouTube: string;
-  /** The recording's label beside a piano accompaniment. */
+  /** The recording's label, which tells it apart from a piano accompaniment. */
   withSinging: string;
   pianoOnly: string;
   youtubeHint: string;
@@ -183,7 +182,7 @@ export const HymnRow = memo(function HymnRow({
         {/* Bottom Action Section */}
         <View style={styles.bottomSection}>
           <TouchableRipple
-            accessibilityHint={hymnal.getAccompanimentUrl ? labels.youtubeHint : undefined}
+            accessibilityHint={labels.youtubeHint}
             onPress={() => hymnal.openRecording(hymn)}
             style={styles.flexButton}
           >
@@ -195,7 +194,7 @@ export const HymnRow = memo(function HymnRow({
                 contentScale={EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube}
               />
               <Text style={[styles.buttonText, { color: theme.colors.brandYoutube }]}>
-                {hymnal.getAccompanimentUrl ? labels.withSinging : labels.watchYouTube}
+                {labels.withSinging}
               </Text>
             </View>
           </TouchableRipple>

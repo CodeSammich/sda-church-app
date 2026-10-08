@@ -53,7 +53,7 @@ import {
 import type { HymnNumber } from './HymnalNumberMappings';
 import {
   getHymnalSearchItems,
-  getHymnalSearchResults,
+  getOtherHymnalSearchGroups,
   type HymnalSearchItem,
 } from './HymnalSearch';
 
@@ -70,9 +70,9 @@ const copy = {
     showAll: 'Show all hymns',
     noMatch: 'No hymns match your search.',
     otherHymnals: 'In other hymnals',
+    showAllMatches: (count: number) => `Show all ${count}`,
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}, hymn ${number}, ${title}`,
-    watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}, hymn ${number}`,
     crossReferenceHint: 'Shows this hymn in that hymnal',
     withSinging: 'With singing',
@@ -92,9 +92,9 @@ const copy = {
     showAll: '顯示全部詩歌',
     noMatch: '沒有符合搜尋的詩歌。',
     otherHymnals: '其他詩歌本',
+    showAllMatches: (count: number) => `顯示全部 ${count} 首`,
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}第 ${number} 首，${title}`,
-    watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}第 ${number} 首`,
     crossReferenceHint: '在那本詩歌本中顯示這首詩歌',
     withSinging: '演唱',
@@ -114,9 +114,9 @@ const copy = {
     showAll: '显示全部诗歌',
     noMatch: '没有符合搜索的诗歌。',
     otherHymnals: '其他诗歌本',
+    showAllMatches: (count: number) => `显示全部 ${count} 首`,
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}第 ${number} 首，${title}`,
-    watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}第 ${number} 首`,
     crossReferenceHint: '在那本诗歌本中显示这首诗歌',
     withSinging: '演唱',
@@ -136,9 +136,9 @@ const copy = {
     showAll: 'Mostrar todos los himnos',
     noMatch: 'Ningún himno coincide con tu búsqueda.',
     otherHymnals: 'En otros himnarios',
+    showAllMatches: (count: number) => `Mostrar los ${count}`,
     otherResultLabel: (hymnal: string, number: number | string, title: string) =>
       `${hymnal}, himno ${number}, ${title}`,
-    watchYouTube: 'YouTube',
     crossReferenceLabel: (name: string, number: HymnNumber) => `${name}, himno ${number}`,
     crossReferenceHint: 'Muestra este himno en ese himnario',
     withSinging: 'Cantado',
@@ -149,10 +149,22 @@ const copy = {
 } as const;
 
 // The list holds the picked hymnal's hymns and, while searching, a heading
-// and the matches from the other hymnals.
+// and the other hymnals' matches: each hymnal's name, its first matches, and
+// a button for the rest.
 const OTHER_HYMNALS_HEADING = { kind: 'heading' } as const;
+type OtherHymnalHeading = Readonly<{ kind: 'group'; hymnalId: HymnalBookId }>;
 type OtherHymnalResult = Readonly<{ kind: 'other'; item: HymnalSearchItem }>;
-type HymnalListItem = HymnalHymn | typeof OTHER_HYMNALS_HEADING | OtherHymnalResult;
+type OtherHymnalMore = Readonly<{ kind: 'more'; hymnalId: HymnalBookId; count: number }>;
+type HymnalListItem =
+  | HymnalHymn
+  | typeof OTHER_HYMNALS_HEADING
+  | OtherHymnalHeading
+  | OtherHymnalResult
+  | OtherHymnalMore;
+
+// Another hymnal shows this many matches until its Show all button is pressed.
+const OTHER_HYMNAL_MATCH_LIMIT = 10;
+const NO_HYMNALS: readonly HymnalBookId[] = [];
 
 const isHymn = (item: HymnalListItem): item is HymnalHymn => !('kind' in item);
 
@@ -289,28 +301,54 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       ? displayHymns[0]
       : undefined;
   // A search also looks through every other hymnal, as the header's search
-  // across all hymnals once did, with the cross-reference equivalents of the
-  // picked hymnal's matches first.
-  const otherResults = useMemo(
+  // across all hymnals once did, grouped by hymnal: the one a cross-reference
+  // table pairs with the picked hymnal first, each in number order.
+  const otherGroups = useMemo(
     () =>
       routedHymn || !query.trim()
         ? []
-        : getHymnalSearchResults(getHymnalSearchItems(language), query, {
+        : getOtherHymnalSearchGroups(getHymnalSearchItems(language), query, {
             activeHymnalId: selectedId,
-            excludeActive: true,
+            hymnalOrder: order,
           }),
-    [language, query, routedHymn, selectedId],
+    [language, order, query, routedHymn, selectedId],
+  );
+  // The hymnals whose Show all was pressed, for this hymnal and search only.
+  const searchKey = `${selectedId}\n${query}`;
+  const [expanded, setExpanded] = useState<{
+    searchKey: string;
+    hymnalIds: readonly HymnalBookId[];
+  }>({ searchKey: '', hymnalIds: NO_HYMNALS });
+  const expandedHymnalIds = expanded.searchKey === searchKey ? expanded.hymnalIds : NO_HYMNALS;
+  const showAllMatches = useCallback(
+    (hymnalId: HymnalBookId) =>
+      setExpanded((current) => ({
+        searchKey,
+        hymnalIds: [...(current.searchKey === searchKey ? current.hymnalIds : []), hymnalId],
+      })),
+    [searchKey],
   );
   const listData = useMemo<readonly HymnalListItem[]>(
     () =>
-      otherResults.length
+      otherGroups.length
         ? [
             ...displayHymns,
             OTHER_HYMNALS_HEADING,
-            ...otherResults.map((item) => ({ kind: 'other' as const, item })),
+            ...otherGroups.flatMap(({ hymnalId, hymns }): HymnalListItem[] => {
+              const shown = expandedHymnalIds.includes(hymnalId)
+                ? hymns
+                : hymns.slice(0, OTHER_HYMNAL_MATCH_LIMIT);
+              return [
+                { kind: 'group', hymnalId },
+                ...shown.map((item) => ({ kind: 'other' as const, item })),
+                ...(shown.length < hymns.length
+                  ? [{ kind: 'more' as const, hymnalId, count: hymns.length }]
+                  : []),
+              ];
+            }),
           ]
         : displayHymns,
-    [displayHymns, otherResults],
+    [displayHymns, expandedHymnalIds, otherGroups],
   );
 
   const setView = useCallback(
@@ -336,7 +374,6 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
 
   const rowLabels = useMemo<HymnRowLabels>(
     () => ({
-      watchYouTube: labels.watchYouTube,
       withSinging: labels.withSinging,
       pianoOnly: labels.pianoOnly,
       youtubeHint: labels.youtubeHint,
@@ -427,6 +464,28 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
         >
           {labels.otherHymnals}
         </Text>
+      ) : item.kind === 'group' ? (
+        <Text
+          accessibilityRole="header"
+          style={[styles.otherGroupHeading, { color: theme.colors.primary }]}
+        >
+          {getHymnalLabel(item.hymnalId, language)}
+        </Text>
+      ) : item.kind === 'more' ? (
+        <Pressable
+          accessibilityLabel={`${labels.showAllMatches(item.count)}, ${getHymnalLabel(item.hymnalId, language)}`}
+          accessibilityRole="button"
+          onPress={() => showAllMatches(item.hymnalId)}
+          style={({ pressed }) => [
+            styles.showMore,
+            { opacity: pressed ? 0.7 : 1 },
+            Platform.OS === 'web' ? styles.webPressable : null,
+          ]}
+        >
+          <Text style={[styles.showAllText, { color: theme.colors.primary }]}>
+            {labels.showAllMatches(item.count)}
+          </Text>
+        </Pressable>
       ) : (
         <OtherHymnalRow
           accessibilityHint={labels.crossReferenceHint}
@@ -435,7 +494,6 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
             item.item.hymnNumber,
             item.item.title.replace(`${item.item.hymnNumber}. `, ''),
           )}
-          hymnalName={getHymnalShortLabel(item.item.hymnalId, language)}
           item={item.item}
           onOpen={openCrossReference}
           styles={styles}
@@ -450,6 +508,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       rowLabels,
       rowStyles,
       selectedId,
+      showAllMatches,
       styles,
       theme,
     ],
@@ -511,7 +570,9 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
             ? item.number.toString()
             : item.kind === 'heading'
               ? 'other-hymnals'
-              : `${item.item.hymnalId}:${item.item.hymnNumber}`}
+              : item.kind === 'other'
+                ? `${item.item.hymnalId}:${item.item.hymnNumber}`
+                : `${item.kind}:${item.hymnalId}`}
         // Only when no hymnal at all has a match.
         ListEmptyComponent={
           <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
@@ -547,17 +608,15 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
 type OtherHymnalRowProps = Readonly<{
   accessibilityHint: string;
   accessibilityLabel: string;
-  hymnalName: string;
   item: HymnalSearchItem;
   onOpen: (hymnalId: HymnalBookId, hymnNumber: HymnNumber) => void;
   styles: ReturnType<typeof createStyles>;
 }>;
 
-/** A search result from another hymnal: its hymnal, number, and title. */
+/** A search result from another hymnal, under that hymnal's name: its number and title. */
 const OtherHymnalRow = memo(function OtherHymnalRow({
   accessibilityHint,
   accessibilityLabel,
-  hymnalName,
   item,
   onOpen,
   styles,
@@ -581,7 +640,6 @@ const OtherHymnalRow = memo(function OtherHymnalRow({
         ]}
       >
         <View style={styles.otherText}>
-          <Text style={[styles.otherHymnal, { color: theme.colors.primary }]}>{hymnalName}</Text>
           <Text style={[styles.otherTitle, { color: theme.colors.onSurface }]}>{item.title}</Text>
         </View>
         <AppIcon
@@ -649,10 +707,14 @@ const createStyles = (
       flex: 1,
       minWidth: 0,
     },
-    otherHymnal: {
-      fontSize: scaleTypographyMetric(13, textScale),
+    // Each other hymnal's name, above its matches.
+    otherGroupHeading: {
+      fontSize: scaleTypographyMetric(14, textScale),
       fontWeight: '700',
-      lineHeight: scaleTypographyMetric(18, textScale),
+      lineHeight: scaleTypographyMetric(20, textScale),
+      paddingBottom: 6,
+      paddingHorizontal: 20,
+      paddingTop: 8,
     },
     otherTitle: {
       fontSize: scaleTypographyMetric(16, textScale),
@@ -663,6 +725,15 @@ const createStyles = (
       alignItems: 'center',
       alignSelf: 'center',
       justifyContent: 'center',
+      minHeight: Math.ceil(44 + Math.max(0, effectiveTextScale - 1) * 20),
+      paddingHorizontal: 20,
+    },
+    // A hymnal's Show all, under its first matches.
+    showMore: {
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      justifyContent: 'center',
+      marginBottom: 8,
       minHeight: Math.ceil(44 + Math.max(0, effectiveTextScale - 1) * 20),
       paddingHorizontal: 20,
     },

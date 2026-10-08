@@ -166,17 +166,19 @@ Visitor) live here.
 six hymnals, in the style of the Library's featured books, puts the app language's hymnals
 first; swiping to one, or tapping its dot, shows its search and hymns below, in one list.
 Each hymnal keeps its own search. A search also looks through the other five hymnals:
-their matches follow under **In other hymnals**, and a number leads with each hymnal's
-hymn of that number, so "hymn 100" shows 1985's and 505's 100 with their titles, whichever
-hymnal is showing. Tapping a result shows that hymn in its hymnal. The page says nothing
+their matches follow under **In other hymnals**, grouped under each hymnal's name, the
+hymnal a cross-reference table pairs with this one first (1985 ↔ 505). Each group is in
+number order and shows its first 10 matches, with **Show all** for the rest. A number
+leads each group with its hymn of that number, so "hymn 100" shows 1985's and 505's 100
+with their titles, whichever hymnal is showing. Tapping a result shows that hymn in its hymnal. The page says nothing
 matches only when no hymnal has a match. A hymn with a number in another hymnal, such as a
 1985 hymn's 505 number, shows it as a chip; tapping it shows the hymn there. The chips
 come from the cross-reference tables (see [Hymnal
 integration](feature_designs/hymnal_integration_design.md#54-cross-references-between-hymnals)).
 An English hymn's scripture reference is a chip there too, and opens the passage in the
-Bible. Below each hymn, **YouTube** opens its recording or a search for it. An English or
-505 hymn has **With singing** instead and, when its playlist has one, **Piano only**: its
-piano accompaniment for a church without a pianist.
+Bible. Below each hymn, **With singing** opens its recording on YouTube or a search for it.
+Most English and 505 hymns also have **Piano only**: the hymn's piano accompaniment, for a
+church without a pianist.
 Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn,
 opens the same page with that hymnal picked and just that hymn showing, marked, above
 **Show all hymns**. The old English–Chinese hymn lookup's route opens the hymnal page.

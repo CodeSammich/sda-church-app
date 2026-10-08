@@ -4,7 +4,7 @@ import { getSortedChinese506Hymns } from './Chinese506Hymnal';
 import { getSortedChinese707Hymns } from './Chinese707Hymnal';
 import { getSortedHymns } from './EnglishHymnal';
 import { getHymnalLabel, type HymnalBookId } from './HymnalLabels';
-import { getHymnEquivalents } from './HymnalNumberMappings';
+import { getHymnEquivalents, HYMNAL_CROSS_REFERENCE_TABLES } from './HymnalNumberMappings';
 
 /** One hymn in the search across every hymnal. */
 export interface HymnalSearchItem {
@@ -77,85 +77,83 @@ const getItemsByKey = (items: readonly HymnalSearchItem[]) => {
   return itemsByKey;
 };
 
+/** One hymnal's matches in the search across the other hymnals. */
+export type HymnalSearchGroup = Readonly<{
+  hymnalId: HymnalBookId;
+  /** By number, with the hymn of exactly the number searched for first. */
+  hymns: readonly HymnalSearchItem[];
+}>;
+
+// The hymnals a cross-reference table pairs with this one, such as the 505 for
+// the 1985.
+const getPairedHymnalIds = (hymnalId: HymnalBookId) =>
+  new Set(
+    HYMNAL_CROSS_REFERENCE_TABLES.filter(({ hymnalIds }) => hymnalIds.includes(hymnalId))
+      .flatMap(({ hymnalIds }) => hymnalIds)
+      .filter((id) => id !== hymnalId),
+  );
+
+// Hymn numbers in order, with 707's "12B" after 12.
+const compareHymnNumbers = (a: number | string, b: number | string) =>
+  Number.parseInt(a.toString(), 10) - Number.parseInt(b.toString(), 10) ||
+  a.toString().localeCompare(b.toString());
+
 /**
- * Search every hymnal, keeping the open hymnal's direct matches first, and
- * each hymnal's hymn with exactly the number searched for first among its
- * own. Equivalents from the cross-reference tables, such as 1985 ↔ 505, are
- * placed beside the matching hymn so either language can be used as the
- * starting point.
- *
- * With `excludeActive`, the open hymnal's own hymns are left out, for the
- * hymnal page, which lists them above, but the equivalents of its matches
- * still come first: a 1985 search leads with the same hymns in the 505.
+ * The other hymnals' matches for the hymnal page's search, one group per
+ * hymnal: first the hymnals a cross-reference table pairs with the open one,
+ * then the rest in `hymnalOrder`. A group also holds the same hymn as any match
+ * in another hymnal, from the cross-reference tables, so a 1985 title search
+ * finds the 505 hymn and a Chinese one finds the 1985 hymn.
  */
-export const getHymnalSearchResults = (
+export const getOtherHymnalSearchGroups = (
   items: readonly HymnalSearchItem[],
   query: string,
   {
     activeHymnalId,
-    excludeActive = false,
-  }: { activeHymnalId?: HymnalBookId; excludeActive?: boolean } = {},
-) => {
+    hymnalOrder,
+  }: { activeHymnalId: HymnalBookId; hymnalOrder: readonly HymnalBookId[] },
+): HymnalSearchGroup[] => {
   const normalizedQuery = normalizeHymnalSearchText(query);
   if (!normalizedQuery) return [];
-  const directMatches = items.filter((item) =>
-    isNormalizedHymnalSearchMatch(item, normalizedQuery),
-  );
-  const buckets = new Map<HymnalBookId, HymnalSearchItem[]>();
-  for (const item of directMatches) {
-    const bucket = buckets.get(item.hymnalId);
-    if (bucket) bucket.push(item);
-    else buckets.set(item.hymnalId, [item]);
+  const itemsByKey = getItemsByKey(items);
+  const hymnsByHymnal = new Map<HymnalBookId, Map<string, HymnalSearchItem>>();
+  const add = (item: HymnalSearchItem) => {
+    if (item.hymnalId === activeHymnalId) return;
+    let hymns = hymnsByHymnal.get(item.hymnalId);
+    if (!hymns) hymnsByHymnal.set(item.hymnalId, (hymns = new Map()));
+    hymns.set(item.hymnNumber.toString(), item);
+  };
+  for (const item of items) {
+    if (!isNormalizedHymnalSearchMatch(item, normalizedQuery)) continue;
+    add(item);
+    for (const key of getEquivalentKeys(item)) {
+      const equivalent = itemsByKey.get(key);
+      if (equivalent) add(equivalent);
+    }
   }
+
   // A number someone was given, such as "100", leads with each hymnal's 100
   // rather than the hymns whose titles or scripture mention it.
-  for (const bucket of buckets.values()) {
-    const exactIndex = bucket.findIndex(
-      (item) => item.hymnNumber.toString().toLocaleLowerCase() === normalizedQuery,
-    );
-    if (exactIndex > 0) bucket.unshift(...bucket.splice(exactIndex, 1));
-  }
-  const orderedHymnalIds = [
-    ...(activeHymnalId && buckets.has(activeHymnalId)
-      ? [activeHymnalId]
-      : []),
-    ...Array.from(buckets.keys()).filter((id) => id !== activeHymnalId),
-  ];
-  const interleavedMatches: HymnalSearchItem[] = [];
-  let matchIndex = 0;
-  while (
-    interleavedMatches.length < HYMNAL_SEARCH_RESULT_LIMIT &&
-    orderedHymnalIds.some((id) => matchIndex < (buckets.get(id)?.length || 0))
-  ) {
-    for (const id of orderedHymnalIds) {
-      const match = buckets.get(id)?.[matchIndex];
-      if (match) interleavedMatches.push(match);
-      if (interleavedMatches.length >= HYMNAL_SEARCH_RESULT_LIMIT) break;
-    }
-    matchIndex += 1;
-  }
-  const itemsByKey = getItemsByKey(items);
-  const seen = new Set<string>();
-  const results: HymnalSearchItem[] = [];
-
-  for (const match of interleavedMatches) {
-    const candidates = [
-      match,
-      ...getEquivalentKeys(match)
-        .map((key) => itemsByKey.get(key))
-        .filter((item): item is HymnalSearchItem => Boolean(item)),
+  const isExactNumber = (item: HymnalSearchItem) =>
+    item.hymnNumber.toString().toLocaleLowerCase() === normalizedQuery;
+  const paired = getPairedHymnalIds(activeHymnalId);
+  return [
+    ...hymnalOrder.filter((id) => paired.has(id)),
+    ...hymnalOrder.filter((id) => !paired.has(id)),
+  ].flatMap((hymnalId) => {
+    const hymns = hymnsByHymnal.get(hymnalId);
+    if (!hymns) return [];
+    return [
+      {
+        hymnalId,
+        hymns: [...hymns.values()].sort(
+          (a, b) =>
+            Number(isExactNumber(b)) - Number(isExactNumber(a)) ||
+            compareHymnNumbers(a.hymnNumber, b.hymnNumber),
+        ),
+      },
     ];
-    for (const item of candidates) {
-      const key = `${item.hymnalId}:${item.hymnNumber}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (excludeActive && item.hymnalId === activeHymnalId) continue;
-      results.push(item);
-      if (results.length >= HYMNAL_SEARCH_RESULT_LIMIT) return results;
-    }
-  }
-
-  return results;
+  });
 };
 
 const hymnalSearchItemsByLanguage = new Map<string, HymnalSearchItem[]>();
