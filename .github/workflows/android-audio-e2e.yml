@@ -96,6 +96,9 @@ jobs:
       - name: Make the church's audio host unreachable
         run: |
           set -euo pipefail
+          # The runner image's package lists go stale when Ubuntu replaces a
+          # package, and installing from them fails with a 404.
+          sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends dnsmasq-base >/dev/null
           dns_ip="$(hostname -I | awk '{print $1}')"
           sudo dnsmasq --listen-address="$dns_ip" --bind-interfaces --no-hosts \
