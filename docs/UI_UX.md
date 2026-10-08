@@ -176,7 +176,8 @@ matches only when no hymnal has a match. A hymn with a number in another hymnal,
 come from the cross-reference tables (see [Hymnal
 integration](feature_designs/hymnal_integration_design.md#54-cross-references-between-hymnals)).
 An English hymn's scripture reference is a chip there too, and opens the passage in the
-Bible. Below each hymn, **With singing** opens its recording on YouTube or a search for it.
+Bible. A 505 hymn shows its 1985 equivalent's, in the app's language (詩篇 103:2-5), and
+opens it in the Chinese Bible. Below each hymn, **With singing** opens its recording on YouTube or a search for it.
 Most English and 505 hymns also have **Piano only**: the hymn's piano accompaniment, for a
 church without a pianist.
 Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn,
@@ -199,10 +200,10 @@ opens the same page with that hymnal picked and just that hymn showing, marked, 
 Bible audio.
 
 **UI:** Immersive reader with chapter-local search and persistent audio controls.
-Tapping a verse opens its details, with **Save**, **Share**, and, when an English hymn's
-scripture reference includes the verse, **Hymn** (or **Hymns**, which lists them). It
-opens the hymn on the hymnal page, whose way back returns to the verse
-(`features/hymnal/HymnsForVerse.ts`).
+Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
+includes it, **Hymn** (or **Hymns**, which lists them): the English hymns for BSB and KJV,
+the same hymns in the 505 for CUV and CUVS, and none for RVR 1909. It opens the hymn on
+the hymnal page, whose way back returns to the verse (`features/hymnal/HymnScripture.ts`).
 
 **Tenet Alignment:**
 

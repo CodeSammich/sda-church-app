@@ -207,6 +207,29 @@ describe("each hymnal's own route", () => {
     expect(view.getByPlaceholderText('Search by number or title...').props.value).toBe('主');
   });
 
+  it("shows a 505 hymn its 1985 equivalent's verse, and opens it in the Chinese Bible", () => {
+    // 505's 5 is SDAH 1, on Psalm 103:2-5.
+    const view = renderPage(routes[1][1], { hymnNum: '5' }, 'zh');
+    fireEvent.press(view.getByText('詩篇 103:2-5'));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/bible',
+      params: expect.objectContaining({
+        translationId: 'cmn_cuv',
+        bookId: 'PSA',
+        chapter: '103',
+        backTo: '/home/chinese-505-hymnal?hymnNum=5',
+      }),
+    });
+    view.unmount();
+
+    // In Simplified Chinese, the Simplified Bible. The 506 has no verses yet.
+    const simplified = renderPage(routes[1][1], { hymnNum: '5' }, 'zh-cn');
+    fireEvent.press(simplified.getByText('诗篇 103:2-5'));
+    expect(mockPush).toHaveBeenLastCalledWith(
+      expect.objectContaining({ params: expect.objectContaining({ translationId: 'cmn_cu1' }) }),
+    );
+  });
+
   it('brings the Bible back to the same hymnal, hymn, and return route', () => {
     const view = renderPage(routes[0][1], { hymnNum: '1', backTo: '/home/bulletin' });
     fireEvent.press(view.getByText('Psalm 103:2-5'));

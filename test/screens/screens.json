@@ -205,7 +205,7 @@
     },
     {
       "name": "hymnal-selection",
-      "$comment": "The hymnal page (#413): a carousel of the hymnals, the app language's first, then the picked hymnal's search and its hymns, each 1985 or 505 hymn with the other hymnal's number, an English hymn's verse in a chip beside it, and the 1985 and 505 hymns' Piano only videos (#424). Vision reads the 文A icon in a chip as XA and a row's treble clef as a character, so those lines are matched anywhere.",
+      "$comment": "The hymnal page (#413): a carousel of the hymnals, the app language's first, then the picked hymnal's search and its hymns, each 1985 or 505 hymn with the other hymnal's number, a verse chip beside it (an English hymn's own, and a 505 hymn's 1985 equivalent's in Chinese, such as 詩篇 100 on 505's 1), and the 1985 and 505 hymns' Piano only videos (#424). Vision reads the 文A icon in a chip as XA and a row's treble clef as a character, so those lines are matched anywhere.",
       "path": "home/hymnal-selection",
       "variants": ["default", "zh"],
       "variantRules": {
@@ -213,7 +213,7 @@
           "mustShowLines": ["^SDA Hymnal\\b", "^1985 Edition$", "Search by number, title", "\\b1\\. Praise to the Lord", "\\bPsalm 103:2-5\\b", "\\b505\\W+5$"]
         },
         "zh": {
-          "mustShowLines": ["^中文讚美詩$", "^505 ?版$", "按編號或標題搜尋", "\\b1\\. ?在主", "\\b1985\\W+82$", "鋼琴伴奏"]
+          "mustShowLines": ["^中文讚美詩$", "^505 ?版$", "按編號或標題搜尋", "\\b1\\. ?在主", "詩篇 ?100", "\\b1985\\W+82$", "鋼琴伴奏"]
         }
       }
     },

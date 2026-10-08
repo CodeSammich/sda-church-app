@@ -1,16 +1,6 @@
-import {
-  formatHymnalScriptureReference,
-  getEnglishHymnUrl,
-} from '@/features/hymnal/EnglishHymnal';
+import { getEnglishHymnUrl } from '@/features/hymnal/EnglishHymnal';
 
-describe('English hymnal scripture references', () => {
-  it('keeps the visible reference concise without appending BSB', () => {
-    expect(formatHymnalScriptureReference('Psalm 103:2-5')).toBe(
-      'Psalm 103:2-5',
-    );
-    expect(formatHymnalScriptureReference(undefined)).toBeUndefined();
-  });
-
+describe('English hymnal links', () => {
   it('opens a hymn page at its sheet-music section', () => {
     expect(getEnglishHymnUrl(1)).toBe(
       'https://hymnsforworship.org/sdah-001#hymn-score',

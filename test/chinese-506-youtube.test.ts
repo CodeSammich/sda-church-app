@@ -50,6 +50,7 @@ describe('Chinese 506 hymnal recordings', () => {
           pianoOnly: 'Piano only',
           youtubeHint: '',
           scriptureHint: '',
+          scriptureReference: (_hymnalId, reference) => reference,
           crossReference: () => '',
           crossReferenceLabel: () => '',
           crossReferenceHint: '',

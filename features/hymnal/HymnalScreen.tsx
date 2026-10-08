@@ -56,6 +56,7 @@ import {
   getOtherHymnalSearchGroups,
   type HymnalSearchItem,
 } from './HymnalSearch';
+import { formatHymnScriptureReference } from './HymnScripture';
 
 const copy = {
   en: {
@@ -378,6 +379,8 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       pianoOnly: labels.pianoOnly,
       youtubeHint: labels.youtubeHint,
       scriptureHint: labels.scriptureHint,
+      scriptureReference: (hymnalId, reference) =>
+        formatHymnScriptureReference(hymnalId, reference, language),
       crossReference: (hymnalId, number) =>
         `${getHymnalShortLabel(hymnalId, language)} · ${number}`,
       crossReferenceLabel: (hymnalId, number) =>
@@ -399,7 +402,8 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
   );
 
   // Coming back from the Bible reopens this hymnal as it was: the same hymn
-  // or search, and the same place to go back to, such as the Bulletin.
+  // or search, and the same place to go back to, such as the Bulletin. A
+  // Chinese hymn's verse opens in the Chinese Bible, in the app's script.
   const openScripture = useCallback(
     (hymnalId: HymnalBookId, reference: string) => {
       const scripture = BibleService.parseScriptureReference(reference);
@@ -407,7 +411,10 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       router.push({
         pathname: '/bible',
         params: {
-          translationId: 'BSB',
+          translationId:
+            HYMNALS[hymnalId].language === 'zh'
+              ? BibleService.DEFAULT_TRANSLATION_MAP[language === 'zh-cn' ? 'zh-cn' : 'zh']
+              : 'BSB',
           backTo: getHref(route, {
             hymnal: hymnalId !== defaultHymnalId ? hymnalId : undefined,
             backTo,
@@ -420,7 +427,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
         },
       } as any);
     },
-    [backTo, defaultHymnalId, route],
+    [backTo, defaultHymnalId, language, route],
   );
 
   const focusSearch = useCallback(() => {

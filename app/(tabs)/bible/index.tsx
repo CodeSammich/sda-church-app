@@ -120,7 +120,8 @@ import {
   storeSavedVerses,
 } from '@/services/SavedVersesService';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
-import { getEnglishHymnsForVerse } from '@/features/hymnal/HymnsForVerse';
+import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
+import { HYMNALS } from '@/features/hymnal/Hymnals';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
 import {
@@ -3301,17 +3302,17 @@ export default function BibleScreen() {
 
   const closeModal = () => setModalType(null);
 
-  // The English hymns on the verse whose details are open, from their
-  // scripture references: the reverse of a hymn's verse chip.
+  // The hymns on the verse whose details are open, in the main translation's
+  // language: the reverse of a hymn's verse chip.
   const verseHymns = useMemo(
     () =>
       book && selectedVerseNum
-        ? getEnglishHymnsForVerse(book.id, chapterNum, selectedVerseNum)
+        ? getHymnsForVerse(book.id, chapterNum, selectedVerseNum, supportedTranslation.lang)
         : [],
-    [book, chapterNum, selectedVerseNum],
+    [book, chapterNum, selectedVerseNum, supportedTranslation.lang],
   );
   // Opens a hymn on the hymnal page, whose way back returns to this verse.
-  const openVerseHymn = (hymnNumber: number) => {
+  const openVerseHymn = ({ hymnalId, number }: (typeof verseHymns)[number]) => {
     closeModal();
     const verse = String(selectedVerseNum || 1);
     const backTo = `/bible?${new URLSearchParams({
@@ -3322,8 +3323,8 @@ export default function BibleScreen() {
       verseEnd: verse,
     }).toString()}`;
     router.push({
-      pathname: '/home/english-hymnal',
-      params: { hymnNum: String(hymnNumber), backTo },
+      pathname: HYMNALS[hymnalId].route,
+      params: { hymnNum: String(number), backTo },
     } as any);
   };
 
@@ -4420,10 +4421,10 @@ export default function BibleScreen() {
                 <ScrollView contentContainerStyle={{ paddingVertical: 4 }}>
                   {verseHymns.map((hymn) => (
                     <TouchableOpacity
-                      key={hymn.number}
+                      key={`${hymn.hymnalId}:${hymn.number}`}
                       accessibilityHint={labels.verseHymnHint}
                       accessibilityRole="button"
-                      onPress={() => openVerseHymn(hymn.number)}
+                      onPress={() => openVerseHymn(hymn)}
                       style={styles.savedVerseMainAction}
                     >
                       <AppIcon
@@ -4448,7 +4449,11 @@ export default function BibleScreen() {
                             { color: theme.colors.onSurfaceVariant },
                           ]}
                         >
-                          {hymn.scriptureReference}
+                          {formatHymnScriptureReference(
+                            hymn.hymnalId,
+                            hymn.scriptureReference,
+                            language,
+                          )}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -4890,7 +4895,7 @@ export default function BibleScreen() {
                       accessibilityHint={verseHymns.length === 1 ? labels.verseHymnHint : undefined}
                       onPress={() =>
                         verseHymns.length === 1
-                          ? openVerseHymn(verseHymns[0].number)
+                          ? openVerseHymn(verseHymns[0])
                           : setModalType('verse-hymns')
                       }
                       style={[
