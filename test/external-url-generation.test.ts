@@ -137,7 +137,7 @@ describe('generated external dependency URLs', () => {
     );
 
     assertHttpsUrls([...urls505, ...urls506, ...urls707], 'm.zgaxr.com');
-    expect(urls505).toHaveLength(500);
+    expect(urls505).toHaveLength(499);
     expect(urls506).toHaveLength(506);
     expect(urls707).toHaveLength(2137);
   });

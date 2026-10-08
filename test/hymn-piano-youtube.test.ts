@@ -90,8 +90,8 @@ describe('505 hymn piano accompaniments', () => {
 
   it('links a mapped hymn to its accompaniment and leaves the rest without one', () => {
     expect(getChinese505PianoUrl(1)).toBe('https://www.youtube.com/watch?v=JxR9rqNut-s');
-    // The video is another hymn than the hymnal's title at this number.
-    expect(getChinese505PianoUrl(207)).toBeUndefined();
+    // The playlist's 493 and 494 have each other's numbers.
+    expect(getChinese505PianoUrl(493)).toBeUndefined();
   });
 });
 
@@ -105,14 +105,14 @@ describe('scripts/map-chinese-505-piano-youtube.mjs', () => {
       { videoId: 'cutShort048', title: '48)主在錫安掌The Lord in Zion reigneth' },
       // Hymn 63 has a reviewed title: the hymnal's has a typo (没 for 美).
       { videoId: 'reviewed063', title: '63)美哉小城O little town of Bethlehem' },
-      // Another hymn under hymn 207's number is left for review.
-      { videoId: 'otherHymn07', title: '207)感恩信徒一齊來Come ye thankful people' },
+      // Another hymn under hymn 493's number is left for review.
+      { videoId: 'otherHym493', title: '493)靠主得勝Conquering now and still to conquer' },
       { videoId: 'notAHymn123', title: 'Hymns piano lyrics' },
     ]);
 
     expect(mapping.playlistId).toBe(piano505Data.playlistId);
     expect(mapping.videos).toEqual({ 1: 'JxR9rqNut-s', 48: 'cutShort048', 63: 'reviewed063' });
-    expect(log).toContain('Mapped 3 of 500 hymns from 6 videos.');
-    expect(log).toContain('207: "感恩信徒一齊來" (hymnal: "将进天乡")');
+    expect(log).toContain('Mapped 3 of 499 hymns from 6 videos.');
+    expect(log).toContain('493: "靠主得勝" (hymnal: "赞美耶和华")');
   });
 });

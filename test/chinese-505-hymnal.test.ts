@@ -9,7 +9,7 @@ describe('Chinese 505 hymnal directory', () => {
   const hymns = getSortedChinese505Hymns();
 
   it('contains every landing page currently published by the source directory', () => {
-    expect(hymns).toHaveLength(500);
+    expect(hymns).toHaveLength(499);
     expect(hymns[0]).toEqual({
       number: 1,
       title: '在主宝座前',
@@ -22,14 +22,19 @@ describe('Chinese 505 hymnal directory', () => {
     });
   });
 
-  it('normalizes the source typo for hymn 483 and does not invent missing links', () => {
-    expect(hymns.find(({ number }) => number === 483)).toEqual({
-      number: 483,
-      title: '荣美之山',
-      pageId: 6291,
-    });
+  it("numbers each page by its score and does not invent missing links", () => {
+    // Labeled 383, 194, and 207, with scores numbered 483, 193, and 206.
+    expect(hymns.filter(({ pageId }) => [6291, 5992, 6003].includes(pageId))).toEqual([
+      { number: 193, title: '万福根源', pageId: 5992 },
+      { number: 206, title: '将进天乡', pageId: 6003 },
+      { number: 483, title: '荣美之山', pageId: 6291 },
+    ]);
+    // "370.黄昏求恩" shows hymn 37's score, which is already listed.
+    expect(hymns.filter(({ title }) => title === '黄昏求恩')).toEqual([
+      { number: 37, title: '黄昏求恩', pageId: 5835 },
+    ]);
 
-    for (const missingNumber of [90, 193, 201, 206, 307]) {
+    for (const missingNumber of [90, 194, 201, 207, 307, 370]) {
       expect(hymns.some(({ number }) => number === missingNumber)).toBe(false);
       expect(getChinese505HymnUrl(missingNumber)).toBe(CHINESE_505_DIRECTORY_URL);
     }

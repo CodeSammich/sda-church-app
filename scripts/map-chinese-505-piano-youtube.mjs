@@ -30,9 +30,8 @@ const HYMNAL = resolve('features/hymnal/Chinese505Hymnal.json');
 // were also checked against the English title of the 1985 hymn that the
 // cross-reference table pairs with the 505 number.
 //
-// Left out on purpose: 194, 207, 370, 493, and 494, where the video is another
-// hymn than the hymnal's title. At 207 and 370 the cross-reference table agrees
-// with the video, so the hymnal's titles there may be the ones that are wrong.
+// Left out on purpose: 493 and 494, whose videos have each other's numbers.
+// zgaxr's scores, which the hymnal follows, number 赞美耶和华 493 and 靠恩得胜 494.
 const REVIEWED_TITLES = {
   7: '主慈愛如河',
   10: '聖徙祟拜',
