@@ -230,11 +230,11 @@
     },
     {
       "name": "hymnal-chinese",
-      "$comment": "An older hymnal route with an old search, highlight=平安夜, opens the hymnal page with that hymnal picked: the 506, not the 505 a Chinese interface would show first, its cover photo cropped to the carousel's 2:3 frame. Its one match, 82, comes first, with its recording labeled 演唱 (With singing) although the 506 has no piano videos yet, then the heading over the matches in the other hymnals, each under its hymnal's name, the 505's 66 first. Vision may read \"82. 平安夜\" without the space, may read the dash in a hymnal's name as 一, and reads the YouTube logo before 演唱 as a character.",
+      "$comment": "An older hymnal route with an old search, highlight=平安夜, opens the hymnal page with that hymnal picked: the 506, not the 505 a Chinese interface would show first, its cover photo cropped to the carousel's 2:3 frame. Its one match, 82, comes first, with its recording labeled 演唱 (With singing) although the 506 has no piano videos yet, then the heading over the matches in the other hymnals, each under its hymnal's name, the 505's 66 first, and no longer the hymnal's short name on each result's own line (\"505\", \"1985\", \"707 新編簡譜\"). Vision may read \"82. 平安夜\" without the space, may read the dash in a hymnal's name as 一, and reads the YouTube logo before 演唱 as a character.",
       "path": "home/chinese-506-hymnal?highlight=%E5%B9%B3%E5%AE%89%E5%A4%9C",
       "variants": ["zh"],
       "mustShowLines": ["^中文讚美詩$", "^506 ?版$", "\\b82\\. ?平安夜", "演唱", "^其他詩歌本$", "讚美詩\\W*505 ?版$", "\\b66\\. ?平安夜"],
-      "mustNotShowLines": ["YouTube"]
+      "mustNotShowLines": ["YouTube", "^505$", "^1985$", "^707 新編簡譜$"]
     },
     {
       "name": "discover",
