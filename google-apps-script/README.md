@@ -51,9 +51,9 @@ npm run apps-script:deploy    # upload, then update the existing web-app deploym
 the live spreadsheet, and no test copy. `push` replaces the code the
 spreadsheet's **Printed Bulletin** menu and edit triggers run; `deploy` also
 points the public `/exec` web app, which the mobile app reads, at the new code,
-keeping the same URL. Don't run either until the app is public in both stores;
-see [Giving QR slots](../docs/operations/bulletin-automation.md#giving-qr-slots).
+keeping the same URL.
 
 The **Deploy Bulletin Apps Script** workflow does the same as
-`apps-script:deploy` from GitHub Actions, after `production` approval; see
+`apps-script:deploy` from GitHub Actions. Every merge into `main` starts it, and it
+waits for `production` approval; see
 [Deploying the bulletin Apps Script](../docs/operations/admin-runbook.md#deploying-the-bulletin-apps-script).

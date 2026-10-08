@@ -154,8 +154,9 @@ and may not be possible, so protect them above everything else.
     and attached to that version's GitHub release;
   - the [website](#website-appnyccsdaorg) deploy to GitHub Pages, and the version
     tag, after each merge to `main`;
-  - bulletin Apps Script deploys, run by hand, using [`clasp`](https://github.com/google/clasp),
-    Google's command-line tool for uploading Apps Script code;
+  - bulletin Apps Script deploys after each merge to `main`, once approved, using
+    [`clasp`](https://github.com/google/clasp), Google's command-line tool for
+    uploading Apps Script code;
   - bulletin [QR code](operations/admin-runbook.md#bulletin-qr-codes) generation into
     Google Drive, when a change to the QR codes merges into `main` or by hand;
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);

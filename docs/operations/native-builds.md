@@ -246,8 +246,9 @@ optional `GOOGLE_DRIVE_FOLDER_ID` (the Drive upload). A third environment,
 
 To set up `production`, open **Settings → Environments** in the upstream repository and
 create or select `production`. Require at least one reviewer, and restrict deployment
-branches to `main` and `release-candidate`, so a manual QR code or Apps Script run from
-`release-candidate` can reach its approval step. The Android PR preview runs in `main`'s
+branches to `main` and `release-candidate`, so a manual QR code run from
+`release-candidate` can reach its approval step (the Apps Script deploy skips on any
+branch but `main`). The Android PR preview runs in `main`'s
 context, and the signing jobs themselves run only on `main`. Then:
 
 - **Store binary files base64-encoded.** The keystore, `.p12`, and provisioning profile

@@ -1,6 +1,13 @@
 name: Deploy Bulletin Apps Script
 
 on:
+  # Every merge into main starts a deploy, which waits for production approval
+  # like the native builds (#442). Approving it updates the live bulletin, so
+  # approve when nobody is in the middle of making one; rejecting it skips this
+  # deploy. Run it by hand from main to redeploy.
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       description:
@@ -18,8 +25,13 @@ concurrency:
 
 jobs:
   deploy:
-    # This job can update the live web-app deployment. Keep it manual and put
-    # it behind a protected production Environment.
+    # This job updates the live web-app deployment, so it runs only for main in
+    # the church's repository and waits behind the protected production
+    # Environment. A manual run from any other branch skips instead of putting
+    # unreleased code live.
+    if: >-
+      github.event.repository.fork == false &&
+      github.ref == 'refs/heads/main'
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -38,8 +50,10 @@ jobs:
       - name: Install dependencies
         run: npm ci --force --ignore-scripts
 
+      # Pinned: this runs on every release, in a job that can read the deploy
+      # credentials. Update it on purpose.
       - name: Install clasp
-        run: npm install --global @google/clasp
+        run: npm install --global @google/clasp@3.4.1
 
       - name: Configure Apps Script project and credentials
         env:
@@ -52,6 +66,10 @@ jobs:
           test -n "$APPS_SCRIPT_PROJECT_ID" || { echo 'Missing APPS_SCRIPT_PROJECT_ID.' >&2; exit 1; }
           test -n "$APPS_SCRIPT_DEPLOYMENT_ID" || { echo 'Missing APPS_SCRIPT_DEPLOYMENT_ID.' >&2; exit 1; }
           test -n "$CLASPRC_JSON" || { echo 'Missing CLASPRC_JSON.' >&2; exit 1; }
+          # A merge's deploy is described by its release pull request's title, the
+          # subject of the squash-merge commit. Read it with git: pasting the
+          # commit message into this script could run commands.
+          export DEPLOYMENT_DESCRIPTION="${DEPLOYMENT_DESCRIPTION:-$(git log -1 --format=%s)}"
 
           node -e 'const fs=require("node:fs"); JSON.parse(process.env.CLASPRC_JSON); fs.writeFileSync("google-apps-script/.clasp.json", JSON.stringify({scriptId:process.env.APPS_SCRIPT_PROJECT_ID,rootDir:"."})+"\n"); fs.writeFileSync("google-apps-script/.clasp-deployment.json", JSON.stringify({deploymentId:process.env.APPS_SCRIPT_DEPLOYMENT_ID,description:process.env.DEPLOYMENT_DESCRIPTION||"Bulletin Apps Script update"})+"\n"); fs.writeFileSync(process.env.HOME+"/.clasprc.json", process.env.CLASPRC_JSON);'
           chmod 600 "$HOME/.clasprc.json"
