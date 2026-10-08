@@ -88,9 +88,6 @@ export interface SDAHymnalData {
   // Add other languages here if supported in the future
 }
 
-export const formatHymnalScriptureReference = (reference?: string) =>
-  reference || undefined;
-
 /**
  * Converts the Record-based hymnal data into a sorted array.
  * This is the preferred way to "fetch" data for FlatLists or search screens.
