@@ -335,6 +335,18 @@ await record('daily 506 hymn recording samples', 'YouTube', async (warn) => {
   }, warn, { label: ([number]) => `hymn ${number}` });
 });
 
+await record('daily 505 hymn piano accompaniment samples', 'YouTube', async (warn) => {
+  const { videos } = await readJson('features/hymnal/Chinese505PianoYouTube.json');
+  return spotCheck(Object.entries(videos), 505, async ([number, videoId]) => {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const video = await getJson(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(watchUrl)}`);
+    if (Number(String(video.title).match(/^\s*(\d+)/)?.[1]) !== Number(number)) {
+      throw new Error(`${watchUrl} is now titled "${video.title}"`);
+    }
+    return video.title;
+  }, warn, { label: ([number]) => `hymn ${number}` });
+});
+
 await record('daily English hymn piano accompaniment samples', 'YouTube', async (warn) => {
   const { videos } = await readJson('features/hymnal/EnglishHymnalPianoYouTube.json');
   return spotCheck(Object.entries(videos), 1985, async ([number, videoId]) => {

@@ -48,8 +48,8 @@ type HymnRowProps = Readonly<{
 /**
  * One hymn: its number and title open the sheet music. Chips under the title
  * open an English hymn's scripture and show the same hymn in another hymnal
- * (from the cross-reference tables). Below are its recording and, for an
- * English hymn, its piano accompaniment.
+ * (from the cross-reference tables). Below are its recording and, in a
+ * hymnal that has them, its piano accompaniment.
  */
 export const HymnRow = memo(function HymnRow({
   hymnalId,

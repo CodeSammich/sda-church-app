@@ -4,9 +4,14 @@
  * This module stores factual metadata and external landing-page IDs only. The
  * sheet music remains on m.zgaxr.com and is always opened in the user's browser.
  * Regenerate the mapping with scripts/scrape-chinese-505-hymnal.mjs.
+ *
+ * Piano accompaniments come from a YouTube playlist of the 505 hymnal, for
+ * churches without a pianist. Regenerate their mapping with
+ * scripts/map-chinese-505-piano-youtube.mjs.
  */
 
 import hymnalData from './Chinese505Hymnal.json';
+import pianoData from './Chinese505PianoYouTube.json';
 import { openURL } from '@/constants/ExternalLinks';
 
 export const CHINESE_505_DIRECTORY_URL =
@@ -48,3 +53,11 @@ export const openChinese505Hymn = (hymnNumber?: number) =>
     'Error',
     'Could not open the Chinese hymnal link.',
   );
+
+const CHINESE_505_PIANO_VIDEOS = pianoData.videos as Record<string, string>;
+
+/** The hymn's piano accompaniment in the playlist, if it has one. */
+export const getChinese505PianoUrl = (hymnNumber: number) => {
+  const videoId = CHINESE_505_PIANO_VIDEOS[hymnNumber.toString()];
+  return videoId ? `https://www.youtube.com/watch?v=${videoId}` : undefined;
+};

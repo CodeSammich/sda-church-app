@@ -6,6 +6,7 @@
 import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
 import type { ImageSourcePropType } from 'react-native';
 import {
+  getChinese505PianoUrl,
   getSortedChinese505Hymns,
   openChinese505Hymn,
 } from './Chinese505Hymnal';
@@ -103,6 +104,7 @@ export const HYMNALS: Record<HymnalBookId, HymnalDefinition> = {
     getHymns: once(getSortedChinese505Hymns),
     openHymn: (hymnNumber) => openChinese505Hymn(Number(hymnNumber)),
     openRecording: chineseRecording(505),
+    getAccompanimentUrl: (hymn) => getChinese505PianoUrl(Number(hymn.number)),
   },
   'chinese-hymnal-506': {
     id: 'chinese-hymnal-506',

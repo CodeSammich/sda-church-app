@@ -247,8 +247,21 @@ describe('recordings and piano accompaniments', () => {
     expect(view.queryByText('Piano only')).toBeNull();
   });
 
-  it('keeps the YouTube button on Chinese hymns, which have no accompaniments', () => {
-    const view = renderPage(routes[1][1], { hymnNum: '1' });
+  it('offers a 505 hymn with singing or piano only too', () => {
+    const view = renderPage(routes[1][1], { hymnNum: '1' }, 'zh');
+    fireEvent.press(view.getByText('演唱'));
+    expect(openYouTubeSearch).toHaveBeenCalledWith('505版赞美诗 1 在主宝座前');
+
+    fireEvent.press(view.getByText('鋼琴伴奏'));
+    expect(openURL).toHaveBeenCalledWith(
+      'https://www.youtube.com/watch?v=JxR9rqNut-s',
+      'Error',
+      'Could not open the YouTube video.',
+    );
+  });
+
+  it.each(routes.slice(2))('keeps the YouTube button on /home/%s, which has no accompaniments', (_route, page, hymnalId) => {
+    const view = renderPage(page, { hymnNum: HYMNALS[hymnalId].getHymns()[0].number.toString() });
     expect(view.getByText('YouTube')).toBeTruthy();
     expect(view.queryByText('With singing')).toBeNull();
     expect(view.queryByText('Piano only')).toBeNull();
