@@ -132,7 +132,7 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
   });
 
-  it('calculates quarter boundaries and next-quarter Saturday values', () => {
+  it('calculates quarter boundaries and date keys', () => {
     const context = loadAppsScript({});
     const values = JSON.parse(
       runInContext(
@@ -209,7 +209,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(calls.filter((call) => call === 'warning:false')).toHaveLength(2);
   });
 
-  it('does not advance past an already complete next quarter', () => {
+  it('finds no missing Saturdays in a complete quarter', () => {
     const context = loadAppsScript({});
     const values = JSON.parse(
       runInContext(
@@ -1841,5 +1841,386 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(names.private.queens.chairPastoralPrayer).toBe('Wen Jie Koh');
     expect(names.private.brooklyn.technician).toBe('Jordan Ho');
     expect(names.private.brooklyn.encouragement).toBe('Hannah Huang');
+  });
+});
+
+describe('Sabbath Calendar year-ahead rows', () => {
+  const SCHEDULE_HEADERS = [
+    'Date', 'Quarter', 'Special Remark', 'Tithe Purpose', 'Pastor Travel',
+    'Queens Sermon', 'Translation', 'Chinese Teacher', 'English Teacher',
+    'Youth Teacher', 'Kids Teacher', 'Chair/Pastoral Prayer', 'Special Music',
+    'Offering Prayer', 'Pianist', 'SS Chair', 'SS Opening Prayer',
+    'SS Closing Prayer', 'Flower Offering', 'Brooklyn Sermon',
+    'Chair/Pastoral Prayer', 'Offering Prayer', 'Technician',
+    'Encouragement', 'Sabbath School',
+  ];
+  const QUEENS_SERMON = 6;
+  const BROOKLYN_SERMON = 20;
+  const CONFLICT = '#ea9999';
+  const WHITE = '#ffffff';
+
+  const pad = (value: number) => String(value).padStart(2, '0');
+  // Appended rows hold Date objects from the script's own realm, so check the
+  // type by tag rather than instanceof.
+  const isDate = (value: unknown): value is Date =>
+    Object.prototype.toString.call(value) === '[object Date]';
+  const dateKey = (value: unknown) =>
+    isDate(value)
+      ? `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+      : String(value);
+
+  // Every Saturday of one calendar quarter, as ISO dates.
+  const quarterSaturdays = (year: number, quarter: number) => {
+    const dates: string[] = [];
+    const cursor = new Date(Date.UTC(year, (quarter - 1) * 3, 1));
+    const end = new Date(Date.UTC(year, quarter * 3, 0));
+    cursor.setUTCDate(cursor.getUTCDate() + ((6 - cursor.getUTCDay() + 7) % 7));
+    while (cursor <= end) {
+      dates.push(cursor.toISOString().slice(0, 10));
+      cursor.setUTCDate(cursor.getUTCDate() + 7);
+    }
+    return dates;
+  };
+
+  // Seeded rows keep their dates as ISO text, which the maintenance parser
+  // reads from the display value.
+  const quarterRows = (year: number, quarter: number, label: unknown = `Q${quarter}`) =>
+    quarterSaturdays(year, quarter).map((date): unknown[] => [date, label]);
+
+  const createScheduleSheet = (rows: unknown[][], spareRows = 100) => {
+    const width = SCHEDULE_HEADERS.length;
+    const values: unknown[][] = [SCHEDULE_HEADERS, ...rows].map((row) =>
+      Array.from({ length: width }, (_, index) => row[index] ?? ''),
+    );
+    const backgrounds: string[][] = values.map(() => Array(width).fill(WHITE));
+    const calls: string[] = [];
+    let maxRows = values.length + spareRows;
+
+    const makeRange = (row: number, column = 1, numRows = 1, numColumns = 1) => {
+      const read = <T,>(grid: T[][], blank: T) =>
+        Array.from({ length: numRows }, (_, r) =>
+          Array.from({ length: numColumns }, (_, c) => grid[row - 1 + r]?.[column - 1 + c] ?? blank),
+        );
+      const write = <T,>(grid: T[][], blank: T, next: T[][]) => {
+        if (row + numRows - 1 > maxRows) {
+          throw new Error('The coordinates of the range are outside the dimensions of the sheet.');
+        }
+        next.forEach((line, r) => {
+          grid[row - 1 + r] = grid[row - 1 + r] ?? Array(width).fill(blank);
+          line.forEach((value, c) => {
+            grid[row - 1 + r][column - 1 + c] = value;
+          });
+        });
+      };
+      return {
+        getRow: () => row,
+        getNumRows: () => numRows,
+        getValues: () => read(values, ''),
+        getDisplayValues: () =>
+          read(values, '').map((line) =>
+            line.map((value) =>
+              isDate(value)
+                ? `${value.getMonth() + 1}/${value.getDate()}/${value.getFullYear()}`
+                : String(value),
+            ),
+          ),
+        getValue: () => values[row - 1]?.[column - 1] ?? '',
+        setValues: (next: unknown[][]) => write(values, '', next),
+        getBackgrounds: () => read(backgrounds, WHITE),
+        setBackgrounds: (next: (string | null)[][]) =>
+          write(backgrounds, WHITE, next.map((line) => line.map((color) => color ?? WHITE))),
+        getNotes: () => read<string>([], ''),
+        setNotes: () => undefined,
+        getNumberFormat: () => 'yyyy-mm-dd',
+        setNumberFormat: (format: string) => calls.push(`numberFormat:${row}:${numRows}:${format}`),
+        // Like PASTE_FORMAT, repeats the source row's fills down the target.
+        copyTo: (target: { getRow: () => number; getNumRows: () => number }) => {
+          for (let r = 0; r < target.getNumRows(); r += 1) {
+            backgrounds[target.getRow() - 1 + r] = [...backgrounds[row - 1]];
+          }
+        },
+        setDataValidation: () => calls.push(`validation:${row}:${numRows}`),
+        getA1Notation: () => `A${row}:Y${row + numRows - 1}`,
+      };
+    };
+
+    return {
+      getName: () => 'Sabbath Calendar',
+      getLastRow: () => values.length,
+      getLastColumn: () => width,
+      getMaxRows: () => maxRows,
+      insertRowsAfter: (after: number, count: number) => {
+        calls.push(`insert:${after}:${count}`);
+        maxRows += count;
+      },
+      getRange: makeRange,
+      getDataRange: () => makeRange(1, 1, values.length, width),
+      hideRows: (start: number, count: number) => calls.push(`hide:${start}:${count}`),
+      showRows: (start: number, count: number) => calls.push(`show:${start}:${count}`),
+      values,
+      backgrounds,
+      calls,
+    };
+  };
+
+  const loadMaintenance = (
+    sheet: ReturnType<typeof createScheduleSheet>,
+    spreadsheetApp: Record<string, unknown> = {},
+    extra: Record<string, unknown> = {},
+  ) => {
+    const context = loadAppsScript({
+      Logger: { log: () => undefined },
+      SpreadsheetApp: { CopyPasteType: { PASTE_FORMAT: 'PASTE_FORMAT' }, ...spreadsheetApp },
+      ...extra,
+    });
+    (context as { testSheet: unknown }).testSheet = sheet;
+    return context;
+  };
+
+  // Noon keeps the test date clear of midnight in any time zone.
+  const populate = (context: object, date: string) =>
+    runInContext(
+      `populateUpcomingBulletinQuarters_(testSheet, new Date('${date}T12:00:00'))`,
+      context,
+    ) as number;
+
+  const datesFrom = (sheet: ReturnType<typeof createScheduleSheet>, firstRow: number) =>
+    sheet.values.slice(firstRow - 1).map((row) => dateKey(row[0]));
+  const quartersFrom = (sheet: ReturnType<typeof createScheduleSheet>, firstRow: number) =>
+    sheet.values.slice(firstRow - 1).map((row) => row[1]);
+
+  it('catches up to a year ahead, in date order, from a sheet that ends at the current quarter', () => {
+    const sheet = createScheduleSheet(quarterRows(2026, 4));
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2026-10-10')).toBe(39);
+
+    const added = datesFrom(sheet, 15);
+    expect(added).toEqual([
+      ...quarterSaturdays(2027, 1),
+      ...quarterSaturdays(2027, 2),
+      ...quarterSaturdays(2027, 3),
+    ]);
+    expect(added[0]).toBe('2027-01-02');
+    expect(added[added.length - 1]).toBe('2027-09-25');
+    expect(quartersFrom(sheet, 15)).toEqual([
+      ...Array(13).fill('Q1'),
+      ...Array(13).fill('Q2'),
+      ...Array(13).fill('Q3'),
+    ]);
+    expect(sheet.values.slice(14).every((row) => row.slice(2).every((cell) => cell === ''))).toBe(
+      true,
+    );
+    expect(sheet.calls).toContain('numberFormat:15:39:yyyy-mm-dd');
+  });
+
+  it('adds nothing outside the final 21 days once a year of rows exists', () => {
+    const sheet = createScheduleSheet([
+      ...quarterRows(2026, 4),
+      ...quarterRows(2027, 1),
+      ...quarterRows(2027, 2),
+      ...quarterRows(2027, 3),
+    ]);
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2026-10-01')).toBe(0);
+    expect(populate(context, '2026-11-15')).toBe(0);
+    // 22 days before the quarter ends: one day before the window opens.
+    expect(populate(context, '2026-12-09')).toBe(0);
+    expect(sheet.values).toHaveLength(53);
+  });
+
+  it('adds exactly the fourth quarter ahead in the final 21 days, across the year boundary', () => {
+    const sheet = createScheduleSheet([
+      ...quarterRows(2026, 4),
+      ...quarterRows(2027, 1),
+      ...quarterRows(2027, 2),
+      ...quarterRows(2027, 3),
+    ]);
+    const context = loadMaintenance(sheet);
+
+    // Q4 2026 + 4 is Q4 2027.
+    expect(populate(context, '2026-12-10')).toBe(13);
+    expect(datesFrom(sheet, 54)).toEqual(quarterSaturdays(2027, 4));
+    expect(quartersFrom(sheet, 54)).toEqual(Array(13).fill('Q4'));
+
+    // Later runs in the same window, and the next quarter before its own
+    // window, find the year already in place.
+    expect(populate(context, '2026-12-31')).toBe(0);
+    expect(populate(context, '2027-01-01')).toBe(0);
+    expect(populate(context, '2027-03-09')).toBe(0);
+
+    // Q1 2027's window adds Q1 2028, whose first day is a Saturday.
+    expect(populate(context, '2027-03-20')).toBe(13);
+    expect(datesFrom(sheet, 67)).toEqual(quarterSaturdays(2028, 1));
+    expect(datesFrom(sheet, 67)[0]).toBe('2028-01-01');
+    expect(quartersFrom(sheet, 67)).toEqual(Array(13).fill('Q1'));
+  });
+
+  it('opens the window 21 days before the quarter ends, even across a daylight-saving change', () => {
+    // In the script's America/New_York time zone, clocks change on
+    // 2027-03-14, so these spans are an hour short of whole days there.
+    const sheet = createScheduleSheet([
+      ...quarterRows(2027, 1),
+      ...quarterRows(2027, 2),
+      ...quarterRows(2027, 3),
+      ...quarterRows(2027, 4),
+    ]);
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2027-03-09')).toBe(0);
+    expect(populate(context, '2027-03-10')).toBe(13);
+    expect(datesFrom(sheet, 54)).toEqual(quarterSaturdays(2028, 1));
+  });
+
+  it('never duplicates a date or appends past the fourth quarter ahead', () => {
+    const sheet = createScheduleSheet([
+      ...quarterRows(2026, 4),
+      // Entered by hand ahead of the automatic rows.
+      ['2027-01-02', 'Q1'],
+      ['2027-01-16', 'Q1'],
+      ['2028-06-03', 'Q2'],
+    ]);
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2026-10-10')).toBe(37);
+    expect(populate(context, '2026-12-20')).toBe(13);
+    expect(populate(context, '2026-12-21')).toBe(0);
+
+    const dates = datesFrom(sheet, 2);
+    expect(new Set(dates).size).toBe(dates.length);
+    expect(dates.filter((date) => date === '2027-01-02' || date === '2027-01-16')).toHaveLength(2);
+    expect(dates.filter((date) => date > '2027-12-31')).toEqual(['2028-06-03']);
+    expect([...dates].sort()).toEqual([
+      ...quarterSaturdays(2026, 4),
+      ...quarterSaturdays(2027, 1),
+      ...quarterSaturdays(2027, 2),
+      ...quarterSaturdays(2027, 3),
+      ...quarterSaturdays(2027, 4),
+      '2028-06-03',
+    ]);
+  });
+
+  it.each([
+    ['Q4', ['Q1', 'Q2', 'Q3']],
+    ['q 4', ['Q1', 'Q2', 'Q3']],
+    ['4', ['1', '2', '3']],
+    [4, [1, 2, 3]],
+  ])('writes the Quarter cell in the style of the last row (%p)', (style, expected) => {
+    const sheet = createScheduleSheet(quarterRows(2026, 4, style));
+    const context = loadMaintenance(sheet);
+
+    populate(context, '2026-10-10');
+
+    expect([...new Set(quartersFrom(sheet, 15))]).toEqual(expected);
+  });
+
+  it('adds grid rows first when the sheet has no blank rows left', () => {
+    const sheet = createScheduleSheet(quarterRows(2026, 4), 0);
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2026-10-10')).toBe(39);
+    expect(sheet.calls).toContain('insert:14:39');
+    expect(sheet.values).toHaveLength(53);
+  });
+
+  it('hides only past rows and shows the year ahead in one range', () => {
+    const sheet = createScheduleSheet([
+      ...quarterRows(2026, 3),
+      ...quarterRows(2026, 4),
+      ...quarterRows(2027, 1),
+      ...quarterRows(2027, 2),
+      ...quarterRows(2027, 3),
+    ]);
+    const context = loadMaintenance(sheet);
+    const hide = (date: string) =>
+      runInContext(
+        `hideOldBulletinScheduleRows_(testSheet, new Date('${date}T12:00:00'))`,
+        context,
+      ) as number;
+
+    expect(hide('2026-10-10')).toBe(13);
+    expect(sheet.calls).toEqual(['hide:2:13', 'show:15:52']);
+
+    // At a quarter boundary the previous Sabbath stays visible.
+    sheet.calls.length = 0;
+    expect(hide('2026-10-02')).toBe(12);
+    expect(sheet.calls).toEqual(['hide:2:12', 'show:14:53']);
+  });
+
+  it('runs validation and the roster scan over every appended row', () => {
+    const rows = quarterRows(2026, 4);
+    const lastRow = rows[rows.length - 1];
+    lastRow[QUEENS_SERMON - 1] = 'Avery Example';
+    lastRow[BROOKLYN_SERMON - 1] = 'Avery Example';
+    const sheet = createScheduleSheet(rows, 0);
+    // Painted by an earlier scan, so the format copy carries it into new rows.
+    sheet.backgrounds[13][QUEENS_SERMON - 1] = CONFLICT;
+    sheet.backgrounds[13][BROOKLYN_SERMON - 1] = CONFLICT;
+
+    const sermonHeaders = [
+      'Date', 'Location', 'English Hymn of Praise', 'Chinese Hymn of Praise',
+      'English Sermon Title', 'Chinese Sermon Title', 'English Hymn of Response',
+      'Chinese Hymn of Response', 'Bible Verses',
+    ];
+    const sermonSheet = {
+      getName: () => 'Sabbath Sermon Data',
+      getDataRange: () => ({
+        getValues: () => [sermonHeaders],
+        getDisplayValues: () => [sermonHeaders],
+      }),
+      getRange: () => ({ setDataValidation: () => undefined }),
+    };
+    const builder: Record<string, unknown> = { build: () => 'rule' };
+    ['requireValueInList', 'requireFormulaSatisfied', 'setAllowInvalid', 'setHelpText'].forEach(
+      (name) => {
+        builder[name] = () => builder;
+      },
+    );
+    const context = loadMaintenance(
+      sheet,
+      {
+        ProtectionType: { RANGE: 'RANGE' },
+        getActiveSpreadsheet: () => ({
+          getSheetByName: (name: string) =>
+            ({ 'Sabbath Calendar': sheet, 'Sabbath Sermon Data': sermonSheet } as Record<
+              string,
+              unknown
+            >)[name] ?? null,
+        }),
+        newDataValidation: () => builder,
+        flush: () => undefined,
+      },
+      {
+        LockService: {
+          getDocumentLock: () => ({ tryLock: () => true, releaseLock: () => undefined }),
+        },
+      },
+    );
+
+    const result = JSON.parse(
+      runInContext(
+        `JSON.stringify(runBulletinScheduleMaintenance_(new Date('2026-10-10T12:00:00')))`,
+        context,
+      ) as string,
+    );
+
+    expect(result.populated).toBe(39);
+    expect(result.validation).toEqual({
+      installed: 'A2:Y14',
+      updatedAfterQuarterAppend: 'A2:Y53',
+    });
+    expect(result.hidden).toBe(0);
+    expect(sheet.calls).toContain('show:2:52');
+    expect(result.conflicts).toBe(2);
+    expect(sheet.backgrounds[13][QUEENS_SERMON - 1]).toBe(CONFLICT);
+    expect(
+      sheet.backgrounds
+        .slice(14)
+        .every((row) => row[QUEENS_SERMON - 1] === WHITE && row[BROOKLYN_SERMON - 1] === WHITE),
+    ).toBe(true);
+    expect(
+      runInContext(`formatBulletinScheduleMaintenanceResult_(${JSON.stringify(result)})`, context),
+    ).toBe('Schedule maintenance complete. Added 39 upcoming Saturday(s) and hid 0 old row(s).');
   });
 });
