@@ -651,7 +651,8 @@ export default function BibleScreen() {
   };
   const popupMaxHeight = usePopupMaxHeight(0.8);
   const audioSettingsMaxHeight = usePopupMaxHeight(0.82);
-  const verseDetailMaxHeight = usePopupMaxHeight(0.94);
+  // Short enough to leave room above and below for a tap that closes it.
+  const verseDetailMaxHeight = usePopupMaxHeight(0.85);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
@@ -4402,10 +4403,7 @@ export default function BibleScreen() {
           contentContainerStyle={[
             ReaderStyles.modalContent,
             { maxHeight: popupMaxHeight },
-            lastActiveType === 'verse-detail' && [
-              styles.verseDetailModalContent,
-              { maxHeight: verseDetailMaxHeight },
-            ],
+            lastActiveType === 'verse-detail' && { maxHeight: verseDetailMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
         >
@@ -4612,12 +4610,23 @@ export default function BibleScreen() {
               </>
             ) : lastActiveType === 'verse-detail' ? (
               <>
-                <Text
-                  variant="titleLarge"
-                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-                >
-                  {book?.name} {chapterNum}:{selectedVerseNum}
-                </Text>
+                {/* The empty side matches the X, so the title stays centered. */}
+                <View style={styles.verseDetailHeader}>
+                  <View style={styles.verseDetailCloseButton} />
+                  <Text
+                    variant="titleLarge"
+                    style={[styles.verseDetailTitle, { color: theme.colors.onSurface }]}
+                  >
+                    {book?.name} {chapterNum}:{selectedVerseNum}
+                  </Text>
+                  <IconButton
+                    icon="close"
+                    size={scaleTypographyMetric(24, bibleUiTextScale)}
+                    onPress={closeModal}
+                    accessibilityLabel={labels.closeAction}
+                    style={styles.verseDetailCloseButton}
+                  />
+                </View>
                 <Divider />
                 <ScrollView style={ReaderStyles.modalScroll}>
                   <View style={ReaderStyles.detailSection}>
@@ -5248,9 +5257,23 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     controlDockScrollContent: {
       flexGrow: 1,
     },
-    verseDetailModalContent: {
-      marginTop: 8,
-      marginBottom: 8,
+    verseDetailHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: -8,
+      marginBottom: 4,
+      paddingHorizontal: 4,
+    },
+    verseDetailTitle: {
+      flex: 1,
+      textAlign: 'center',
+    },
+    // Fits the icon at the reader's largest control size (1.3×).
+    verseDetailCloseButton: {
+      margin: 0,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
     },
     selectionBarInner: {
       flexDirection: 'row',
