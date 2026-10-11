@@ -225,10 +225,17 @@ describe('iOS PR preview', () => {
     expect(workflow.match(/ios-simulator-app-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
   });
 
-  it('boots the compiling runner\'s iPhone only after its build, which a boot alongside slows', () => {
+  it('boots the compiling runner\'s iPhone after its build when it restored a compile cache', () => {
     const boot = workflow.slice(workflow.indexOf('- name: Boot the simulated iPhone in the background'));
+    // Every other runner boots while it waits; the compiling one boots
+    // alongside its build only when there was no cache to restore.
+    expect(boot).toContain(
+      "BOOT_NOW: ${{ !matrix.builds || steps.compile-cache.outputs.cache-matched-key == '' }}\n",
+    );
+    expect(workflow).toMatch(/- name: Restore the compile cache from main\n\s+if: .+\n\s+id: compile-cache\n/);
+    expect(workflow.indexOf('id: compile-cache')).toBeLessThan(workflow.indexOf('BOOT_NOW:'));
     expect(boot).toMatch(
-      /if \[ "\$BUILDS" != true \]; then\n\s+nohup xcrun simctl bootstatus "\$DEVICE_ID" -b [^\n]+&\n\s+fi\n/,
+      /if \[ "\$BOOT_NOW" = true \]; then\n\s+nohup xcrun simctl bootstatus "\$DEVICE_ID" -b [^\n]+&\n\s+fi\n/,
     );
     expect(workflow.match(/nohup xcrun simctl bootstatus/g)).toHaveLength(1);
     // The launch step, after the build, boots it or waits for it.
@@ -491,7 +498,7 @@ describe('Screenshot review', () => {
     expect(announce).toContain('github.run_attempt == 1');
     expect(announce).toContain('<!-- key-screens-review pending sha=$SHA -->');
     expect(announce).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
-    expect(announce).toContain('about 25 minutes');
+    expect(announce).toContain('takes 15 to 25 minutes');
   });
 
   it.each([

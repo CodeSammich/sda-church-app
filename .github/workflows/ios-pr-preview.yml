@@ -132,6 +132,7 @@ jobs:
       # outdated file in the build.
       - name: Restore the compile cache from main
         if: ${{ matrix.builds }}
+        id: compile-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Caches/ccache
@@ -154,18 +155,20 @@ jobs:
         # services, and on their 3 processors it slows whatever runs
         # alongside it (docs/operations/native-builds.md). So it starts after
         # the package installs, while the other runners wait for the app. The
-        # runner that compiles boots its iPhone only after the build, in the
-        # launch step: booting alongside, a build from a matching compile
-        # cache took 10.8 minutes instead of 2.3.
+        # runner that compiles boots its iPhone after the build, in the launch
+        # step, when it restored a compile cache: booting alongside, a build
+        # from a matching cache took 10.8 minutes instead of 2.3. With no cache,
+        # the compile is long anyway, and booting after it made this runner
+        # finish last.
         env:
-          BUILDS: ${{ matrix.builds && 'true' || 'false' }}
+          BOOT_NOW: ${{ !matrix.builds || steps.compile-cache.outputs.cache-matched-key == '' }}
         run: |
           set -euo pipefail
           # The iPhone test/screens/screens.json names, on the newest installed
           # iOS runtime, so the launch check and the key screens share it.
           DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
-          if [ "$BUILDS" != true ]; then
+          if [ "$BOOT_NOW" = true ]; then
             nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
           fi
 
@@ -397,7 +400,7 @@ jobs:
 
   announce:
     # Says the screenshots are on the way as soon as a release PR opens or gets
-    # a new push, since they take about 25 minutes, and removes the screenshots
+    # a new push, since they take 15 to 25 minutes, and removes the screenshots
     # from before the push, which are out of date (#331). The review-comment
     # job replaces the notice with the screenshots.
     if: >-
@@ -436,7 +439,7 @@ jobs:
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 25 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes 15 to 25 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY

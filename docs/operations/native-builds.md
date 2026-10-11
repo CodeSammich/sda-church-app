@@ -565,9 +565,10 @@ each release PR into `main` without signing, on Apple Silicon runners (`macos-26
 arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
 once, **Key screens (`<group>`)**, one per key-screen group:
 
-- The `worship-and-you` runner, which has the lightest group, compiles the app once
-  and shares it with the others as an artifact. Its simulated iPhone boots during the
-  compile.
+- The `worship-and-you` runner, which has the lightest group, compiles the app once,
+  reusing what it can from the compile cache (below), and shares it with the others as
+  an artifact. It boots its own simulated iPhone after the compile when it restored a
+  compile cache, and during the compile when there was none.
 - The other four install packages, start booting their iPhones, and wait for the shared
   app, giving up at once if the compiling runner fails.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
@@ -594,40 +595,47 @@ Measured in October 2026:
 | --- | --- |
 | One runner took every key screen (average of 13 runs) | 47 min |
 | Five runners, each compiling the app | 40 min |
-| Five runners, one compile shared: the current setup ([run 38109635541](https://github.com/CodeSammich/sda-church-app/actions/runs/38109635541) and [run 38114551220](https://github.com/CodeSammich/sda-church-app/actions/runs/38114551220)) | 25.2 min average (22.4 and 28.0) |
+| Five runners, one compile shared, no compile cache ([run 38109635541](https://github.com/CodeSammich/sda-church-app/actions/runs/38109635541) and [run 38114551220](https://github.com/CodeSammich/sda-church-app/actions/runs/38114551220)) | 25.2 min average (22.4 and 28.0) |
+| The current setup, with a matching compile cache ([run 38151475093](https://github.com/CodeSammich/sda-church-app/actions/runs/38151475093)) | 14.8 min |
 
-In those two runs:
+With no compile cache to restore, the current setup boots the compiling runner's iPhone
+during the compile, as in the 25.2-minute runs.
+
+In the run with a matching compile cache:
 
 | Step | Time |
 | --- | --- |
-| Setup, packages, and CocoaPods on the compiling runner | 2.0–2.2 min |
-| Compile, once | 12.7 min average (10.4 and 14.9) |
-| Each other runner: download the shared app | 0.2–0.4 min after the compile |
-| Each runner: install the app and check it launches | 1.1–1.6 min |
-| Each group's key screens | 2.8–6.3 min |
-| Text checks | 0.5–1.6 min |
-| Joining the groups | 0.7 min |
+| Setup, packages, and CocoaPods on the compiling runner | 2.1 min |
+| Compile, once | 2.3 min |
+| Each other runner: download the shared app | 0.3–0.6 min after the compile |
+| Compiling runner: boot its iPhone, install the app, check it launches | 3.8 min |
+| Each other runner: install the app and check it launches | 1.1–1.7 min |
+| Each group's key screens | 3.4–5.2 min |
+| Text checks | 0.6–1.3 min |
+| Joining the groups | 0.5 min |
 
-The two runs differ mostly in the compile, which varies from run to run. Each **Key
-screens** job times out after 40 minutes; the longest took 27.2.
+After a library update, the compile reuses less of the cache: 3.7 to 6.1 minutes in the
+compile-only runs under **Compile cache**, so expect a run of about 16 to 19 minutes.
+Each **Key screens** job times out after 40 minutes; the longest took 27.2.
 
 From the logs of earlier runs:
 
-- The compile step took 6.4 to 14.9 minutes for the same code. About 3 minutes of that
-  is the iPhone booting alongside it (below). GitHub doesn't say which machine a run got
-  or how busy it was, so the rest can't be traced from the logs.
+- Without a cache, the compile step took 6.4 to 14.9 minutes for the same code. Part of
+  that was the iPhone booting alongside it, which no longer happens (below). GitHub
+  doesn't say which machine a run got or how busy it was, so the rest can't be traced
+  from the logs.
 - A simulated iPhone's first boot takes about 5.5 minutes, 3.8 of them iOS's one-time
   data migration for location services, and on these 3-processor runners it slows
   whatever runs alongside it. Started with the package installs, it slowed them from
-  about half a minute to as much as 7.7. So each runner starts it in the background after
-  installing packages: on the compiling runner, just before the compile, which hides it;
-  on the others, while they wait for the app.
-- On the compiling runner, the boot still costs about 3 minutes. Xcode began its first
-  build task 2.8 to 4.2 minutes into the build step (5 runs), against 0.5 to 0.9 without
-  a boot (4 runs). Starting the boot once Xcode was building was tried
-  ([run 38116114906](https://github.com/CodeSammich/sda-church-app/actions/runs/38116114906)):
-  Xcode started at once, but the compile took about that much longer. Booting only after
-  the compile would put the whole boot on that runner's path, so it would finish last.
+  about half a minute to as much as 7.7. Started with the compile, it held up Xcode's
+  start by about 3 minutes, and a build from a matching compile cache took 10.8 minutes
+  instead of 2.3 ([run 38149745424](https://github.com/CodeSammich/sda-church-app/actions/runs/38149745424)).
+  So the four runners that wait for the app boot their iPhones after installing
+  packages, while they wait, and the compiling runner boots its own after the compile.
+  With no cache to restore, though, booting after an 11.4-minute compile left that
+  runner finishing last, at 28.6 minutes
+  ([run 38152553765](https://github.com/CodeSammich/sda-church-app/actions/runs/38152553765)),
+  so then it boots during the compile.
 - Installing the app on a booted iPhone usually takes about a minute, but once took 11.4
   minutes. The log shows only when `simctl install` returned, so the cause is unknown; if
   it recurs, look there first.
@@ -819,7 +827,7 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the run takes about 25 minutes) and removes the comment with the
+opens or gets a push (the run takes 15 to 25 minutes) and removes the comment with the
 earlier, now out-of-date screenshots. When the run finishes, it replaces the notice with a
 comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.
