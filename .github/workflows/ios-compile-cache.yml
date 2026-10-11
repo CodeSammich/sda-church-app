@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - main
+      - feat/455-ios-compile-cache # TEMP: fork test only, reverted before the PR
   # GitHub deletes a cache no one has used for 7 days. Restoring it twice a
   # week keeps it for a release PR that comes more than a week after the last
   # merge into main.
@@ -35,8 +36,8 @@ jobs:
     # describe it.
     if: >-
       github.event_name != 'schedule' &&
-      github.ref == 'refs/heads/main' &&
-      github.repository == 'New-York-Chinese-Seventh-day-Adventist/sda-church-app'
+      github.ref == 'refs/heads/feat/455-ios-compile-cache' &&
+      github.repository == 'CodeSammich/sda-church-app'
     name: Save the iOS compile cache
     runs-on: macos-26
     timeout-minutes: 45
