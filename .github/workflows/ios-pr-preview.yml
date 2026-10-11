@@ -153,17 +153,22 @@ jobs:
             echo 'The app is not running 45 seconds after launch; it probably crashed on start.' >&2
             exit 1
           }
+          # The key-screen capture installs it on its extra iPhones.
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
 
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
-        # One set is enough: both builds run the same JavaScript. 83 shots take
-        # about 24 minutes, so a second set on the Intel build would only make the
-        # release PR wait longer. Actions minutes are free for this public
-        # repository, so this is about time, not cost.
+        # One set is enough: both builds run the same JavaScript. Most of each
+        # shot is waiting for the screen to load, so three iPhones take turns
+        # from one list, which the runner's 3 processors and 7 GB of memory
+        # allow. Actions minutes are free for this public repository, so this
+        # is about time, not cost.
         if: matrix.arch == 'arm64'
         timeout-minutes: 35
-        run: node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
+        run: >-
+          node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
+          --workers 3 --app "$APP_PATH"
 
       - name: Check the text on the key screens
         # Reads each screenshot's text with Apple's Vision framework and checks

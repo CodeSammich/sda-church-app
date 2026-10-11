@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const {
+  runQueue,
+  settledAfter,
   SETTING_KEYS,
   loadConfig,
   planCaptures,
@@ -190,9 +192,64 @@ describe('iOS PR preview', () => {
     expect(workflow).toMatch(/Capture the key screens\n(?:\s+#.*\n)*\s+if: matrix\.arch == 'arm64'/);
   });
 
+  it('captures on several iPhones, installing the built app on the extra ones', () => {
+    expect(workflow).toMatch(/--workers \d+ --app "\$APP_PATH"/);
+    expect(workflow).toContain('echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"');
+  });
+
   it('reads no secrets and keeps a read-only token', () => {
     expect(workflow).not.toMatch(/secrets\./);
     expect(workflow).toMatch(/permissions:\n\s+contents: read\n/);
+  });
+});
+
+describe('capturing on several iPhones', () => {
+  const tick = () => new Promise((done) => setTimeout(done, 0));
+
+  it('gives each iPhone the next shot in list order as it finishes one', async () => {
+    const taken: string[] = [];
+    const busy = new Set<number>();
+    let mostAtOnce = 0;
+    await runQueue(['a', 'b', 'c', 'd', 'e'], 3, async (shot: string, lane: number) => {
+      expect(busy.has(lane)).toBe(false);
+      busy.add(lane);
+      mostAtOnce = Math.max(mostAtOnce, busy.size);
+      taken.push(shot);
+      // Lane 0 is slow, so the others take more shots.
+      for (let step = 0; step < (lane === 0 ? 5 : 1); step++) await tick();
+      busy.delete(lane);
+    });
+    expect(taken).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(mostAtOnce).toBe(3);
+  });
+
+  it('uses no more iPhones than there are shots, and at least one', async () => {
+    const lanes = new Set<number>();
+    await runQueue(['a'], 3, async (_shot: string, lane: number) => {
+      lanes.add(lane);
+    });
+    await runQueue(['b'], 0, async (_shot: string, lane: number) => {
+      lanes.add(lane);
+    });
+    expect([...lanes]).toEqual([0]);
+  });
+});
+
+describe('settle times', () => {
+  const samples = (sames: boolean[]) => sames.map((same, index) => ({ seconds: index + 1, same }));
+
+  it('is the earliest sample from which every later one matched the final shot', () => {
+    expect(settledAfter(samples([false, false, true, true, true]), 6)).toBe(3);
+    expect(settledAfter(samples([true, true, true]), 4)).toBe(1);
+  });
+
+  it('ignores a sample that matched only before the screen changed again', () => {
+    expect(settledAfter(samples([true, false, true, true]), 5)).toBe(3);
+  });
+
+  it('is the final shot when even the last sample differed', () => {
+    expect(settledAfter(samples([false, true, false]), 10)).toBe(10);
+    expect(settledAfter([], 10)).toBe(10);
   });
 });
 

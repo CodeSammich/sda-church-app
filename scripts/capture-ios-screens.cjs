@@ -15,14 +15,19 @@
  * screen.
  *
  *   node scripts/capture-ios-screens.cjs --pick-device   Prints the configured iPhone's UDID, creating it if needed
- *   node scripts/capture-ios-screens.cjs --out <dir>     Captures every screen into <dir>
+ *   node scripts/capture-ios-screens.cjs --out <dir> [--workers <n> --app <path>]
+ *                                                        Captures every screen into <dir>
  *
- * The app must already be installed on that iPhone. The Simulator only runs on
- * macOS with Xcode.
+ * The app must already be installed on that iPhone. With --workers, that many
+ * iPhones take shots side by side; the extra ones are created as needed and get
+ * the app from --app (the built .app). The Simulator only runs on macOS with
+ * Xcode.
  */
-const { execFileSync, spawnSync } = require('node:child_process');
-const { appendFileSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { execFile, execFileSync, spawnSync } = require('node:child_process');
+const { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const { tmpdir } = require('node:os');
 const { dirname, join, resolve } = require('node:path');
+const { promisify } = require('node:util');
 
 const projectRoot = resolve(__dirname, '..');
 const SCHEME = 'sdachurchapp';
@@ -63,6 +68,11 @@ const BIBLE_WAIT = 15;
 // Screenshots taken again, 2 seconds apart, while the screen is still blank or
 // still shows the launch splash.
 const BLANK_RETRIES = 10;
+
+// While waiting, a sample screenshot every this many seconds. Comparing them
+// with the final shot records when each screen stopped changing, so the waits
+// above can be shortened from measurements rather than guesses.
+const SAMPLE_EVERY = 1;
 
 // Where services/ScreenshotRoute.ts looks for the screen to open.
 const ROUTE_KEY = 'screenshot-route';
@@ -142,22 +152,60 @@ const newestRuntime = () => {
 };
 
 /** The configured iPhone on the newest iOS runtime, created if the runner lacks one. */
-const pickDevice = (config) => {
-  const name = config.ios.device;
+const pickDevice = (config, name = config.ios.device) => {
   const runtime = newestRuntime();
   const { devices } = JSON.parse(simctl('list', 'devices', 'available', '--json'));
   const existing = (devices[runtime.identifier] || []).find((device) => device.name === name);
   if (existing) return { udid: existing.udid, name, runtime: runtime.name };
   const { devicetypes } = JSON.parse(simctl('list', 'devicetypes', '--json'));
-  const type = devicetypes.find((candidate) => candidate.name === name);
-  if (!type) throw new Error(`This Xcode has no "${name}" Simulator; update ios.device in test/screens/screens.json.`);
+  const type = devicetypes.find((candidate) => candidate.name === config.ios.device);
+  if (!type) throw new Error(`This Xcode has no "${config.ios.device}" Simulator; update ios.device in test/screens/screens.json.`);
   return { udid: simctl('create', name, type.identifier, runtime.identifier), name, runtime: runtime.name };
 };
 
-const sleep = (seconds) => new Promise((done) => setTimeout(done, seconds * 1000));
+// The same as simctl(), but other Simulators carry on while it runs.
+const execFileAsync = promisify(execFile);
+const simctlAsync = async (...args) =>
+  (await execFileAsync('xcrun', ['simctl', ...args], { encoding: 'utf8' })).stdout.trim();
 
-const isRunning = (udid, bundleId) =>
-  simctl('spawn', udid, 'launchctl', 'list').includes(`UIKitApplication:${bundleId}`);
+const sleep = (seconds) => new Promise((done) => setTimeout(done, seconds * 1000));
+const sleepUntil = (time) => new Promise((done) => setTimeout(done, Math.max(0, time - Date.now())));
+
+const isRunning = async (udid, bundleId) =>
+  (await simctlAsync('spawn', udid, 'launchctl', 'list')).includes(`UIKitApplication:${bundleId}`);
+
+/**
+ * Runs `work` on each item, `lanes` at a time: each lane takes the next item in
+ * list order when it finishes one.
+ */
+const runQueue = async (items, lanes, work) => {
+  let next = 0;
+  const lane = async (index) => {
+    while (next < items.length) await work(items[next++], index);
+  };
+  const count = Math.max(1, Math.min(lanes, items.length));
+  await Promise.all(Array.from({ length: count }, (_, index) => lane(index)));
+};
+
+/**
+ * Seconds after launch from which the screen matched the final shot: the
+ * earliest sample from which every later sample matched. Equal to the final
+ * shot's time when even the last sample differed, so the screen may still have
+ * been changing. `samples` are { seconds, same }, in time order.
+ */
+const settledAfter = (samples, finalSeconds) => {
+  let settled = finalSeconds;
+  for (let index = samples.length - 1; index >= 0 && samples[index].same; index--) {
+    settled = samples[index].seconds;
+  }
+  return settled;
+};
+
+const sameImage = async (left, right) => {
+  const sharp = require('sharp');
+  const [a, b] = await Promise.all([left, right].map((file) => sharp(file).raw().toBuffer()));
+  return a.equals(b);
+};
 
 const largestSpread = (stats) => Math.max(...stats.channels.map((channel) => channel.stdev));
 
@@ -243,61 +291,111 @@ const statusBarClear = async (file) => {
 
 const CHECKS = { statusBarClear };
 
-const capture = async (outDir) => {
+/** Boots an iPhone, fixes its status bar, and installs the app if `appPath` is given. */
+const prepareDevice = async (device, bundleId, appPath) => {
+  await simctlAsync('boot', device.udid).catch(() => {}); // Already booted is fine.
+  await simctlAsync('bootstatus', device.udid, '-b');
+  // A fixed status bar, so the images differ only when the app does.
+  await simctlAsync('status_bar', device.udid, 'override', '--time', '9:41', '--dataNetwork', 'wifi',
+    '--wifiMode', 'active', '--wifiBars', '3', '--cellularMode', 'active', '--cellularBars', '4',
+    '--batteryState', 'discharging', '--batteryLevel', '100');
+  if (appPath) await simctlAsync('install', device.udid, appPath);
+  return { ...device, dataContainer: await simctlAsync('get_app_container', device.udid, bundleId, 'data') };
+};
+
+const captureShot = async (shot, { udid, dataContainer }, bundleId, outDir, sampleDir) => {
+  await simctlAsync('terminate', udid, bundleId).catch(() => {}); // Not running is fine.
+  const manifest = manifestPath(dataContainer, bundleId);
+  mkdirSync(dirname(manifest), { recursive: true });
+  writeFileSync(manifest, JSON.stringify(buildManifest(shot.settings, shot.route)));
+  await simctlAsync('ui', udid, 'appearance', shot.settings.theme === 'dark' ? 'dark' : 'light');
+  await simctlAsync('ui', udid, 'content_size', shot.settings.iosTextSize);
+  await simctlAsync('launch', udid, bundleId);
+  const launched = Date.now();
+
+  // The whole rectangular screen, without the rounded corners. (The iOS 26
+  // Simulator still draws the Dynamic Island.)
+  const screenshot = (file) => simctlAsync('io', udid, 'screenshot', '--type=png', '--mask=ignored', file);
+  const samples = [];
+  for (let seconds = SAMPLE_EVERY; seconds < shot.wait; seconds += SAMPLE_EVERY) {
+    await sleepUntil(launched + seconds * 1000);
+    const sample = join(sampleDir, `${shot.name}-${seconds}.png`);
+    await screenshot(sample);
+    samples.push({ seconds, file: sample });
+  }
+  await sleepUntil(launched + shot.wait * 1000);
+
+  const file = join(outDir, shot.file);
+  mkdirSync(dirname(file), { recursive: true });
+  // Taken even when something went wrong, so the artifact shows what was on
+  // screen. If the app hasn't drawn yet, or still shows its splash, as happens
+  // on some slow launches, it tries again for a while.
+  const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
+  await screenshot(file);
+  for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
+    await sleep(2);
+    await screenshot(file);
+  }
+  const finalSeconds = Math.round((Date.now() - launched) / 1000);
+  for (const sample of samples) sample.same = await sameImage(sample.file, file);
+
+  const problems = [];
+  if (!(await isRunning(udid, bundleId))) problems.push(`the app wasn't running after opening ${shot.url}`);
+  // The app removes the saved screen once it has opened it.
+  const left = JSON.parse(readFileSync(manifest, 'utf8'));
+  if (shot.route && left[ROUTE_KEY]) problems.push("the app didn't open the saved screen");
+  if (await looksBlank(file)) problems.push('the screen is blank');
+  else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
+  for (const check of shot.checks) {
+    if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
+    else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
+  }
+  const settled = settledAfter(samples, finalSeconds);
+  console.log(
+    `${shot.file} <- ${shot.url}  (settled after ${settled}s of ${finalSeconds}s)` +
+      (problems.length ? `  (${problems.join(', ')})` : ''),
+  );
+  return { problems, timing: { shot: shot.name, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled } };
+};
+
+const capture = async (outDir, { workers = 1, appPath } = {}) => {
   const config = loadConfig();
   const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
-  const device = pickDevice(config);
-  const { udid } = device;
-  spawnSync('xcrun', ['simctl', 'boot', udid]); // Already booted is fine.
-  simctl('bootstatus', udid, '-b');
-  // A fixed status bar, so the images differ only when the app does.
-  simctl('status_bar', udid, 'override', '--time', '9:41', '--dataNetwork', 'wifi', '--wifiMode', 'active',
-    '--wifiBars', '3', '--cellularMode', 'active', '--cellularBars', '4', '--batteryState', 'discharging',
-    '--batteryLevel', '100');
-  const dataContainer = simctl('get_app_container', udid, bundleId, 'data');
-  const failures = [];
-  const captured = new Set();
+  if (workers > 1 && !appPath) throw new Error('--workers needs --app, to install the app on the extra iPhones.');
+  // The first iPhone already has the app; the others are created beside it.
+  const devices = await Promise.all(
+    Array.from({ length: workers }, (_, index) =>
+      index === 0
+        ? prepareDevice(pickDevice(config), bundleId)
+        : prepareDevice(pickDevice(config, `${config.ios.device} (key screens ${index + 1})`), bundleId, appPath),
+    ),
+  );
+  const sampleDir = mkdtempSync(join(tmpdir(), 'key-screen-samples-'));
+  const plan = planCaptures(config);
+  const results = new Map();
   const started = Date.now();
 
-  for (const shot of planCaptures(config)) {
-    spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
-    const manifest = manifestPath(dataContainer, bundleId);
-    mkdirSync(dirname(manifest), { recursive: true });
-    writeFileSync(manifest, JSON.stringify(buildManifest(shot.settings, shot.route)));
-    simctl('ui', udid, 'appearance', shot.settings.theme === 'dark' ? 'dark' : 'light');
-    simctl('ui', udid, 'content_size', shot.settings.iosTextSize);
-    simctl('launch', udid, bundleId);
-    await sleep(shot.wait);
+  try {
+    await runQueue(plan, devices.length, async (shot, lane) => {
+      // Start the iPhones a few seconds apart, so their first launches don't
+      // compete for the processor.
+      if (!results.size && lane) await sleep(lane * 3);
+      results.set(shot.name, await captureShot(shot, devices[lane], bundleId, outDir, sampleDir));
+    });
+  } finally {
+    rmSync(sampleDir, { recursive: true, force: true });
+  }
 
-    const file = join(outDir, shot.file);
-    mkdirSync(dirname(file), { recursive: true });
-    // The whole rectangular screen, without the rounded corners. (The iOS 26
-    // Simulator still draws the Dynamic Island.) Taken even when something went
-    // wrong, so the artifact shows what was on screen. If the app hasn't drawn
-    // yet, or still shows its splash, as happens on some slow launches, it
-    // tries again for a while.
-    const screenshot = () => simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', file);
-    const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
-    screenshot();
-    for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
-      await sleep(2);
-      screenshot();
-    }
-    const problems = [];
-    if (!isRunning(udid, bundleId)) problems.push(`the app wasn't running after opening ${shot.url}`);
-    // The app removes the saved screen once it has opened it.
-    const left = JSON.parse(readFileSync(manifest, 'utf8'));
-    if (shot.route && left[ROUTE_KEY]) problems.push("the app didn't open the saved screen");
-    if (await looksBlank(file)) problems.push('the screen is blank');
-    else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
-    for (const check of shot.checks) {
-      if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
-      else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
-    }
+  // Reported in list order, whichever iPhone took each shot.
+  const failures = [];
+  const captured = new Set();
+  for (const shot of plan) {
+    const { problems } = results.get(shot.name);
     if (problems.length) failures.push(`${shot.file}: ${problems.join(', ')}`);
     else captured.add(shot.name);
-    console.log(`${shot.file} <- ${shot.url}${problems.length ? `  (${problems.join(', ')})` : ''}`);
   }
+  const timings = plan.map((shot) => results.get(shot.name).timing);
+  writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
 
   for (const copy of planAppStore(config)) {
     if (!captured.has(copy.name)) {
@@ -310,12 +408,17 @@ const capture = async (outDir) => {
   }
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
+  const slowest = [...timings].sort((a, b) => b.settledAfter - a.settledAfter).slice(0, 5);
   const summary = [
-    `### Key screens (${device.name}, ${device.runtime})`,
+    `### Key screens (${devices[0].name}, ${devices[0].runtime})`,
     '',
-    `${captured.size} captured in ${minutes} minutes, in the Apple Silicon artifact's \`screens/\` folder,`,
+    `${captured.size} captured in ${minutes} minutes on ${devices.length} Simulator${devices.length === 1 ? '' : 's'}, in the Apple Silicon artifact's \`screens/\` folder,`,
     'with the App Store shots in `screens/app-store/`.',
     ...failures.map((failure) => `- ❌ ${failure}`),
+    '',
+    `Settled within 5 seconds: ${timings.filter((timing) => timing.settledAfter <= 5).length} of ${timings.length}. ` +
+      `Slowest: ${slowest.map((timing) => `${timing.shot} ${timing.settledAfter}s`).join(', ')} ` +
+      '(every shot is in `settle-times.json`).',
     '',
   ].join('\n');
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
@@ -323,17 +426,23 @@ const capture = async (outDir) => {
   if (failures.length) process.exitCode = 1;
 };
 
+const argument = (name) => {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? undefined : process.argv[index + 1];
+};
+
 if (require.main === module) {
   if (process.argv.includes('--pick-device')) {
     console.log(pickDevice(loadConfig()).udid);
   } else {
-    const outIndex = process.argv.indexOf('--out');
-    const outDir = outIndex === -1 ? undefined : process.argv[outIndex + 1];
-    if (!outDir) {
-      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir>');
+    const outDir = argument('--out');
+    const workers = Number(argument('--workers') || 1);
+    const appPath = argument('--app');
+    if (!outDir || !Number.isInteger(workers) || workers < 1) {
+      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir> [--workers <n> --app <path>]');
       process.exit(2);
     }
-    capture(resolve(outDir)).catch((error) => {
+    capture(resolve(outDir), { workers, appPath: appPath && resolve(appPath) }).catch((error) => {
       console.error(error);
       process.exit(1);
     });
@@ -341,6 +450,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  runQueue,
+  settledAfter,
   looksBlank,
   looksLikeSplash,
   SETTING_KEYS,
