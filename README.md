@@ -90,6 +90,10 @@ one place. Church admins can start at [Operate](#operate).
   on file (only Cloudflare, for the domain), and why no other may
 - [Credentials that need attention](docs/operations/admin-runbook.md#credentials-that-need-attention):
   each secret and key, where it's kept, and when to act
+- [Pastors and elders](docs/operations/admin-runbook.md#updating-pastors-and-elders):
+  keep the bulletin spreadsheet's `Leadership` tab current after each officer
+  election; the printed bulletin's Pastor and Elder titles and the Communion pastor
+  come from it
 
 ### Services and costs
 
