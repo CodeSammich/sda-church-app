@@ -78,7 +78,7 @@ jobs:
           uname -m
 
       - name: Boot the simulated iPhone while the app builds
-        # A fresh Simulator's first boot takes 4 to 6.5 minutes on these
+        # A fresh Simulator's first boot takes about 5.5 minutes on these
         # runners, most of it one iOS data-migration step for location
         # services (docs/operations/native-builds.md). It starts in the
         # background now, so the compile hides it, and the launch step waits

@@ -580,22 +580,24 @@ hand on your branch from the Actions tab. The workflow reads no secrets, so it i
 
 **How long it takes, and why it varies.** A run finishes when its slowest runner does:
 setup and packages, then the compile and the iPhone's boot, then its bucket's screenshots.
-The same steps take different times from run to run on GitHub's Mac runners. Measured in
-October 2026, from 16 runs for the compile and the job logs of three runs for the rest:
+Averages from 13 runs in October 2026, when one runner took all the key screens, with
+the launch step broken down from the job logs of three of them:
 
-| Step | Measured |
+| Step | Average |
 | --- | --- |
-| Compile | 5.5–12.4 min, typically ~10 |
-| First boot of the simulated iPhone | 4–6.5 min, of which one iOS setup step, migrating data for location services, took 2–5 |
-| Installing the app on it (`simctl install`, 65 MB) | about 1–1.5 min, but once 11.4 min |
-| Launch, the 45-second wait, and the first screenshot | about 1–1.5 min |
+| Setup and installing packages | 3.1 min |
+| Compile | 10.0 min |
+| First boot of the simulated iPhone | 5.5 min, of which iOS's one-time data migration for location services is 3.8 |
+| Installing the app on it (`simctl install`, 65 MB) | 1.3 min |
+| Launch, the 45-second wait, and the first screenshot | 1.2 min |
+| Key screens, all 81 on one runner | 23.4 min |
+| Text checks | 2.8 min |
 
-- The compile ran the same code in each run. GitHub doesn't say which machine a run
-  got or how busy it was, so the spread can't be traced further from the logs.
-- The first boot runs iOS's one-time data migration, and the location-services step
-  is most of it every time.
-- The 11-minute install is unexplained: the log shows only that `simctl install`
-  returned 11 minutes after the boot finished. If it recurs, look there first.
+- The same code compiled in 6.4 to 12.4 minutes. GitHub doesn't say which machine a run
+  got or how busy it was, so that spread can't be traced further from the logs.
+- One outlier: in one run, installing the app took 11.4 minutes instead of about one,
+  making that run's launch step 19 minutes. The log shows only when `simctl install`
+  returned, so the cause is unknown; if it recurs, look there first.
 - With five runners, a run waits for the slowest, so one runner's slow step holds up
   the run. So the workflow starts each iPhone's boot in the background right after
   selecting Xcode, and the compile hides it. While it boots, installing packages and
