@@ -565,7 +565,7 @@ once, **Key screens (`<group>`)**, one per key-screen group:
 
 - The `worship-and-you` runner, which has the lightest group, compiles the app once
   and shares it with the others as an artifact. Its simulated iPhone boots during the
-  compile.
+  compile, once Xcode has started building.
 - The other four install packages, start booting their iPhones, and wait for the shared
   app, giving up at once if the compiling runner fails.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
@@ -611,28 +611,39 @@ From the logs of earlier runs:
 - The same code compiled in 6.4 to 14.5 minutes. GitHub doesn't say which machine a run
   got or how busy it was, so that spread can't be traced further from the logs.
 - A simulated iPhone's first boot takes about 5.5 minutes, 3.8 of them iOS's one-time
-  data migration for location services. Each runner starts it in the background after
-  installing packages: on the compiling runner, after CocoaPods, so the compile hides it;
-  on the others, while they wait for the app. Started any earlier, it slowed the package
-  installs, which share the runner's disk, from about half a minute to as much as 7.7.
+  data migration for location services, and it slows whatever starts alongside it.
+  Started with the package installs, it slowed them from about half a minute to as much
+  as 7.7. Started just before the compile, it held up Xcode's start: Xcode began its
+  first build task 2.8 to 4.2 minutes in, against about half a minute without a boot.
+  So each runner starts the boot in the background after installing packages, and the
+  compiling runner waits until Xcode logs its first build task; the compile then hides
+  the boot. The others boot while they wait for the app.
 - Installing the app on a booted iPhone usually takes about a minute, but once took 11.4
   minutes. The log shows only when `simctl install` returned, so the cause is unknown; if
   it recurs, look there first.
 - The launch step prints the boot's own log, with timestamps, under **Simulated iPhone
   boot log**, to show what a slow boot was waiting on.
 
-**No compile cache.** A ccache for the compile was tried in October 2026 (#455) and
-dropped, because it didn't pay for itself. Xcode compiles the app's native libraries
-(React Native's core and most of Expo's modules arrive precompiled; the rest is C, C++,
-and Objective-C, mostly in react-native-screens, Reanimated, and Worklets, plus Swift in
-Expo's modules). With every C, C++, and Objective-C file a cache hit, all the compiling
-took about 2 minutes, but the build step still took 9.75 minutes, against 10.4 without
-ccache: most of it is Xcode planning the build, setup scripts, and bundling the
-JavaScript, which ccache doesn't touch. Filling an empty cache, as after any native
-dependency change, made the build about 4.5 minutes slower (14.5 and 15.4 minutes). For
-ccache to work at all, React Native's `ccache-clang.sh` also needs `CCACHE_BINARY` in the
-environment: Xcode passes that build setting to script phases but not to the compiler.
-Xcode's own build caching, which also covers Swift, hasn't been tried.
+**No compile cache, for now.** A ccache for the compile was tried in October 2026
+(#455) and left out. Xcode compiles the app's native libraries (React Native's core and
+most of Expo's modules arrive precompiled; the rest is C, C++, and Objective-C, mostly in
+react-native-screens, Reanimated, and Worklets, plus Swift in Expo's modules). From
+Xcode's first compile task to its last:
+
+| Compile cache | Compiling |
+| --- | --- |
+| None (5 runs) | 5.8–6.7 min |
+| Empty, filled while compiling (2 runs) | 8.7–8.9 min |
+| Every C, C++, and Objective-C file found in it (1 run) | 2.0 min |
+
+So a filled cache saves about 4 minutes, and an empty one costs 2 to 3. To keep pull
+requests from planting compiled code in it, only `main` could fill it, and only for the
+exact same native dependencies, so a release PR would save time only when its native
+dependencies matched `main`'s: about half of the releases from 0.34.0 to 1.2.0. That
+saving was weighed against keeping a cache workflow warm and secure, and left for #455.
+For ccache to work at all, React Native's `ccache-clang.sh` also needs `CCACHE_BINARY`
+in the environment: Xcode passes that build setting to script phases but not to the
+compiler. Xcode's own build caching, which also covers Swift, hasn't been tried.
 
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
 artifact ending in `-arm64`, and unzip the download and then the `.zip` inside it to get
@@ -651,11 +662,11 @@ it took 25–49 minutes and only served the Simulator on an Intel Mac. On an Int
 build the app yourself with `npm run build:ios:simulator` (**On a Mac**, above), which
 builds for the Mac's own processor. To build it in the workflow again:
 
-1. Add a job to `.github/workflows/ios-pr-preview.yml` modelled on `capture`, without
-   its matrix or key-screen steps, that runs on `macos-26-intel` and builds with `ARCH: x86_64`. It should always
-   zip the app and take the first screenshot, which `capture` does only for the `home`
-   group, name them `…-x86_64`, and upload them as an artifact ending in `-x86_64`,
-   kept 14 days.
+1. Add a job to `.github/workflows/ios-pr-preview.yml` modelled on `capture`'s compiling
+   runner, without its matrix, sharing, or key-screen steps, that runs on
+   `macos-26-intel` and builds with `ARCH: x86_64`. It should zip the app and take the
+   first screenshot, name them `…-x86_64`, and upload them as an artifact ending in
+   `-x86_64`, kept 14 days.
 2. Update the test in `test/native-build-safety.test.ts` that checks the workflow
    builds for Apple Silicon only.
 3. Once that's in `release-candidate`, add the new job's name to the

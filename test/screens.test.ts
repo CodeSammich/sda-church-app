@@ -222,6 +222,14 @@ describe('iOS PR preview', () => {
     expect(workflow.match(/ios-simulator-app-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
   });
 
+  it('boots the compiling runner\'s iPhone once Xcode starts building, from the log the build writes', () => {
+    // A booting iPhone held up Xcode's start by minutes. If the build stopped
+    // writing this log, the boot would wait until the launch step instead.
+    expect(workflow.match(/"\$RUNNER_TEMP\/xcodebuild\.log"/g)).toHaveLength(2);
+    expect(workflow).toContain('build | tee "$RUNNER_TEMP/xcodebuild.log"\n');
+    expect(workflow).toContain('grep -qsF "(in target " "$1"');
+  });
+
   it('joins the groups in the required job, which fails rather than skips when a group fails', () => {
     const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
     expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');
