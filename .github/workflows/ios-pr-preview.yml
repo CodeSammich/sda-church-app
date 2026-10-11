@@ -78,8 +78,11 @@ jobs:
           uname -m
 
       - name: Boot the simulated iPhone while the app builds
-        # Booting a fresh Simulator takes 3 to 19 minutes on these runners, so
-        # it starts in the background now and the launch step waits for it.
+        # A fresh Simulator's first boot takes 3 to 19 minutes on these
+        # runners, about 8 usually and once 30, mostly disk work that varies
+        # with the machine (docs/operations/native-builds.md). It starts in the
+        # background now, so the compile hides it, and the launch step waits
+        # for it.
         run: |
           set -euo pipefail
           # The iPhone test/screens/screens.json names, on the newest installed

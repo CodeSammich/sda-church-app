@@ -578,6 +578,28 @@ requests into `main`, such as Dependabot's. To test a change to the workflow,
 `scripts/build-ios-simulator.mjs`, or the key screens before the release PR, start it by
 hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
+**How long it takes, and why it varies.** A run finishes when its slowest runner does:
+setup and packages, then the compile and the iPhone's boot, then its bucket's screenshots.
+GitHub's Mac runners are virtual machines on shared hardware, so the same steps take very
+different times from run to run. Over 17 runs in October 2026:
+
+| Step | Range | Typical |
+| --- | --- | --- |
+| Compile | 5.5–12.4 min | ~10 min |
+| First boot of the simulated iPhone, with the launch check | 3–19 min, once 30 | ~8 min |
+
+- The compile depends on how fast and how busy the physical machine behind the runner
+  is, and on its disk that day.
+- A fresh simulated iPhone's first boot does one-time setup, mostly building iOS's
+  shared system-library caches. Some runner images arrive with part of that done and
+  some don't. It's mostly disk work, and the disk is the most variable part of these
+  machines.
+- With five runners, a run waits for the slowest. Five draws make a slow one more
+  likely than one draw did, so the workflow starts each iPhone's boot in the background
+  right after selecting Xcode, hiding most boots, even slow ones, behind the compile.
+  While it boots, installing packages and CocoaPods take a few minutes longer, because
+  they share that runner's disk.
+
 **Compile cache.** Most of the build compiles the native libraries (React Native, Expo's
 modules, Reanimated), which change only when a dependency does; the app's own code is
 JavaScript and isn't compiled by Xcode. So the five runners use ccache, which keeps each
