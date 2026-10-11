@@ -20,7 +20,8 @@ const TRUSTED_AUTHORS = ['OWNER', 'MEMBER', 'COLLABORATOR'];
 const TRUSTED_ROLES = ['admin', 'maintain', 'write', 'triage'];
 const REMINDER_AUTHOR = 'github-actions[bot]';
 
-// Longest lead first: the first stage a date has reached is the one to post.
+// Checked most urgent first, so a date gets the stage it's closest to.
+// In time they arrive the other way: 30 days, then 7, then overdue.
 const STAGES = [
   { key: 'overdue', reached: (daysLeft) => daysLeft < 0 },
   { key: '7', reached: (daysLeft) => daysLeft <= 7 },
