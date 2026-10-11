@@ -593,14 +593,14 @@ Measured in October 2026:
 | One runner took every key screen (average of 13 runs) | 47 min |
 | Five runners, each compiling the app | 40 min |
 | Five runners, one compile shared ([run 38109635541](https://github.com/CodeSammich/sda-church-app/actions/runs/38109635541)) | 22.4 min |
-| The same, with ccache filling an empty cache ([run 38111066352](https://github.com/CodeSammich/sda-church-app/actions/runs/38111066352)) | 26.9 min |
+| The same, plus the 9-second Bible wait, with ccache (since dropped) filling an empty cache ([run 38111066352](https://github.com/CodeSammich/sda-church-app/actions/runs/38111066352)) | 26.9 min |
 
 In the last of those runs:
 
 | Step | Time |
 | --- | --- |
 | Setup, packages, and CocoaPods on the compiling runner | 2.3 min |
-| Compile, once | 14.5 min (10.4 in the run before) |
+| Compile, once | 14.5 min, about 4.5 of them ccache filling an empty cache (10.4 in the run before, without it) |
 | Each runner: download the shared app, install and launch it | 1.2–1.6 min |
 | Each group's key screens | 2.7–5.9 min |
 | Text checks | 0.5–1.3 min |
@@ -621,48 +621,18 @@ From the logs of earlier runs:
 - The launch step prints the boot's own log, with timestamps, under **Simulated iPhone
   boot log**, to show what a slow boot was waiting on.
 
-**Compile cache.** The app's own code is JavaScript, which Xcode doesn't compile, and
-React Native's core and most of Expo's modules arrive precompiled. What Xcode compiles is
-the rest of the native libraries: C, C++, and Objective-C, mostly in react-native-screens,
-Reanimated, Worklets, React Native's generated code, the gesture handler, and
-safe-area-context, and Swift in most of Expo's modules. These change only when a
-dependency does. So the runner that compiles uses ccache, which keeps each compiled C,
-C++, and Objective-C file and reuses it when the file and its compiler settings are
-unchanged; Swift is always compiled. `ios-compile-cache.yml` builds the app the same way
-and saves the cache on every push to `main`, dropping anything unused for 30 days. It
-also runs twice a week, because GitHub deletes a cache no one has used for 7 days. The
-preview only restores it (`actions/cache/restore`), and prints its own build's hits
-after compiling. The release PR therefore reuses what `main` compiled, when
-the native dependencies haven't changed since. To keep a pull request from planting compiled code in later builds
-(cache poisoning):
-
-- only `ios-compile-cache.yml`, on `main` in this repository, saves the cache, and pull
-  requests can read `main`'s caches but never write them;
-- that workflow reads no secrets and has a read-only token;
-- the preview only restores the cache;
-- the signed store builds never use ccache or the cache, and compile from scratch.
-
-Both workflows set `USE_CCACHE=1`, which makes React Native's CocoaPods setup compile
-through its `ccache-clang.sh`, and put `CCACHE_BINARY` in the environment: that script
-calls ccache by it, and Xcode passes the build setting of that name to script phases but
-not to the compiler, so without it every compile quietly skips ccache.
-
-The cache is reused only for the exact same native dependencies. Its key is the Xcode
-version and the hash of `ios/Podfile.lock`, which CocoaPods writes with every native
-library and its version, and there's no broader fallback: after a dependency change, the
-first build on `main` compiles from scratch and starts a new cache. Within the same
-dependencies, there's no diffing against the last build: for each file, ccache hashes the
-compiler, the flags, the source, and the headers it includes, and reuses the stored result
-only on an exact match, so a changed file is compiled again. React Native's
-`ccache.conf` relaxes a few of those checks for speed (system headers and Clang modules
-among them); the Podfile key keeps those inputs the same between builds that share a
-cache. To force a fresh compile, delete the `ccache-ios-sim-…` caches under **Actions →
-Caches**.
-
-`test/native-build-safety.test.ts` fails if the cache workflow runs anywhere but `main`
-or reads a secret, if the preview saves the cache, if a signed build uses it, or if the
-two workflows' install and build commands differ. The cache is empty until the first
-push to `main` after it was added, so that release's own PR compiles everything.
+**No compile cache.** A ccache for the compile was tried in October 2026 (#455) and
+dropped, because it didn't pay for itself. Xcode compiles the app's native libraries
+(React Native's core and most of Expo's modules arrive precompiled; the rest is C, C++,
+and Objective-C, mostly in react-native-screens, Reanimated, and Worklets, plus Swift in
+Expo's modules). With every C, C++, and Objective-C file a cache hit, all the compiling
+took about 2 minutes, but the build step still took 9.75 minutes, against 10.4 without
+ccache: most of it is Xcode planning the build, setup scripts, and bundling the
+JavaScript, which ccache doesn't touch. Filling an empty cache, as after any native
+dependency change, made the build about 4.5 minutes slower (14.5 and 15.4 minutes). For
+ccache to work at all, React Native's `ccache-clang.sh` also needs `CCACHE_BINARY` in the
+environment: Xcode passes that build setting to script phases but not to the compiler.
+Xcode's own build caching, which also covers Swift, hasn't been tried.
 
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
 artifact ending in `-arm64`, and unzip the download and then the `.zip` inside it to get
@@ -682,8 +652,7 @@ build the app yourself with `npm run build:ios:simulator` (**On a Mac**, above),
 builds for the Mac's own processor. To build it in the workflow again:
 
 1. Add a job to `.github/workflows/ios-pr-preview.yml` modelled on `capture`, without
-   its matrix, compile-cache steps (the cache holds Apple Silicon code), or key-screen
-   steps, that runs on `macos-26-intel` and builds with `ARCH: x86_64`. It should always
+   its matrix or key-screen steps, that runs on `macos-26-intel` and builds with `ARCH: x86_64`. It should always
    zip the app and take the first screenshot, which `capture` does only for the `home`
    group, name them `…-x86_64`, and upload them as an artifact ending in `-x86_64`,
    kept 14 days.

@@ -919,11 +919,7 @@ themselves, and tests enforce that:
 - CodeQL scans the workflows for these mistakes too (**Security → Code scanning**).
 
 GitHub adds its own limits: a `pull_request_target` run can read `main`'s cache but
-not write to it, so it can't poison the cache the signing builds use. The iOS compile
-cache follows the same rule: only `ios-compile-cache.yml`, on `main`, saves it; the iOS
-PR preview only restores it; and the signed builds never use it (see
-[Compile cache](native-builds.md#ios-pr-preview-unsigned-simulator-builds)).
-Elsewhere:
+not write to it, so it can't poison the cache the signing builds use. Elsewhere:
 
 - `pull_request` workflows for a fork's pull request get no secrets and a read-only
   token, and none runs until a maintainer approves it (**Settings → Actions → General

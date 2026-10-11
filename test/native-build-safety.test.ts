@@ -215,78 +215,13 @@ describe('Apple signing reminders', () => {
   });
 });
 
-// The iOS PR preview reuses compiled native code that only main saves (#455).
-// A pull request must never be able to write that cache, and the signed store
-// builds must never read it.
-describe('iOS compile cache', () => {
-  const saver = readRepoFile('.github/workflows/ios-compile-cache.yml');
-  const preview = readRepoFile('.github/workflows/ios-pr-preview.yml');
-  // A step's run script, from its `run:` line to the next step or job.
-  const runOf = (workflow: string, name: string) => {
-    const start = workflow.indexOf(`- name: ${name}\n`);
-    expect(start).toBeGreaterThan(-1);
-    const step = workflow.slice(start, workflow.slice(start + 1).search(/\n {6}- |\n {2}[a-z-]+:\n/) + start + 1);
-    // Comments between steps belong to the next step, so they're left out.
-    return step
-      .slice(step.indexOf('run:'))
-      .split('\n')
-      .filter((line) => !/^ {6}#/.test(line))
-      .join('\n');
-  };
-
-  it('is saved only on main in this repository, with no secrets and a read-only token', () => {
-    const triggers = saver.slice(saver.indexOf('\non:\n'), saver.indexOf('\npermissions:'));
-    expect(triggers).toMatch(/push:\n\s+branches:\n\s+- main\n/);
-    expect(triggers).not.toContain('pull_request');
-    expect(saver).toMatch(
-      /if: >-\n\s+github\.ref == 'refs\/heads\/main' &&\n\s+github\.repository == 'New-York-Chinese-Seventh-day-Adventist\/sda-church-app'\n/,
-    );
-    // A scheduled run keeps the cache from expiring between releases.
-    expect(triggers).toMatch(/schedule:\n\s+- cron: /);
-    expect(saver).not.toMatch(/secrets\./);
-    expect(saver).toMatch(/\npermissions:\n {2}contents: read\n\n/);
-    expect(saver).toContain('actions/cache/save@');
-  });
-
-  it('is only restored by the iOS PR preview, never saved there', () => {
-    expect(preview).toContain('actions/cache/restore@');
-    expect(preview).not.toMatch(/actions\/cache(\/save)?@/);
-  });
-
-  it('never reaches the signed store builds', () => {
+// The signed store builds compile from scratch: no compile cache, which a
+// pull request could otherwise try to plant compiled code in. (A ccache for the
+// iOS preview was measured and dropped in #455.)
+describe('signed store builds', () => {
+  it('never use a compile cache', () => {
     for (const file of ['native-ios-build.yml', 'native-android-build.yml']) {
       expect(readRepoFile(`.github/workflows/${file}`)).not.toMatch(/ccache|USE_CCACHE|actions\/cache/);
-    }
-  });
-
-  it('installs and builds as the preview does, under a key naming the same Xcode, so the cache matches', () => {
-    for (const step of [
-      'Install dependencies',
-      'Generate iOS project',
-      'Install CocoaPods dependencies',
-      'Build for the Simulator without signing',
-    ]) {
-      expect(runOf(saver, step)).toBe(runOf(preview, step));
-    }
-    const arch = (workflow: string) => /\n {10}ARCH: (\S+)\n/.exec(workflow)![1];
-    expect(arch(saver)).toBe(arch(preview));
-    const xcode = (workflow: string) => /\/Applications\/Xcode_([\d.]+)\.app/.exec(workflow)![1];
-    expect(xcode(saver)).toBe(xcode(preview));
-    for (const workflow of [saver, preview]) {
-      // Keyed on the exact native dependencies, with no broader fallback, so a
-      // dependency change starts a fresh cache rather than reusing an old one.
-      expect(workflow).toContain(`key: ccache-ios-sim-xcode-${xcode(workflow)}-\${{ hashFiles('ios/Podfile.lock') }}`);
-      expect(workflow).not.toMatch(/ccache-ios-sim-xcode-[\d.]+-\n/);
-      expect(workflow).not.toContain("hashFiles('package-lock.json')");
-      // Podfile.lock exists only after CocoaPods runs.
-      expect(workflow.indexOf('actions/cache/restore@')).toBeGreaterThan(workflow.indexOf('pod install'));
-      expect(workflow).toContain('echo "USE_CCACHE=1" >> "$GITHUB_ENV"');
-      // Without it, React Native's ccache-clang.sh never reaches ccache.
-      expect(workflow).toContain('echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"');
-      expect(workflow).toContain('path: ~/Library/Caches/ccache');
-      // ccache keeps its counters in the cache, so they're zeroed only after
-      // the restore, or the hits it reports would include earlier runs'.
-      expect(workflow.indexOf('ccache --zero-stats')).toBeGreaterThan(workflow.indexOf('actions/cache/restore@'));
     }
   });
 });
