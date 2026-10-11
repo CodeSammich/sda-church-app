@@ -565,7 +565,7 @@ once, **Key screens (`<group>`)**, one per key-screen group:
 
 - The `worship-and-you` runner, which has the lightest group, compiles the app once
   and shares it with the others as an artifact. Its simulated iPhone boots during the
-  compile, once Xcode has started building.
+  compile.
 - The other four install packages, start booting their iPhones, and wait for the shared
   app, giving up at once if the compiling runner fails.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
@@ -592,33 +592,39 @@ Measured in October 2026:
 | --- | --- |
 | One runner took every key screen (average of 13 runs) | 47 min |
 | Five runners, each compiling the app | 40 min |
-| Five runners, one compile shared ([run 38109635541](https://github.com/CodeSammich/sda-church-app/actions/runs/38109635541)) | 22.4 min |
-| The same, plus the 9-second Bible wait, with ccache (since dropped) filling an empty cache ([run 38111066352](https://github.com/CodeSammich/sda-church-app/actions/runs/38111066352)) | 26.9 min |
+| Five runners, one compile shared: the current setup ([run 38109635541](https://github.com/CodeSammich/sda-church-app/actions/runs/38109635541) and [run 38114551220](https://github.com/CodeSammich/sda-church-app/actions/runs/38114551220)) | 25.2 min average (22.4 and 28.0) |
 
-In the last of those runs:
+In those two runs:
 
 | Step | Time |
 | --- | --- |
-| Setup, packages, and CocoaPods on the compiling runner | 2.3 min |
-| Compile, once | 14.5 min, about 4.5 of them ccache filling an empty cache (10.4 in the run before, without it) |
-| Each runner: download the shared app, install and launch it | 1.2–1.6 min |
-| Each group's key screens | 2.7–5.9 min |
-| Text checks | 0.5–1.3 min |
-| Joining the groups | 0.6 min |
+| Setup, packages, and CocoaPods on the compiling runner | 2.0–2.2 min |
+| Compile, once | 12.7 min average (10.4 and 14.9) |
+| Each other runner: download the shared app | 0.2–0.4 min after the compile |
+| Each runner: install the app and check it launches | 1.1–1.6 min |
+| Each group's key screens | 2.8–6.3 min |
+| Text checks | 0.5–1.6 min |
+| Joining the groups | 0.7 min |
+
+The two runs differ mostly in the compile, which varies from run to run.
 
 From the logs of earlier runs:
 
-- The same code compiled in 6.4 to 14.5 minutes. GitHub doesn't say which machine a run
-  got or how busy it was, so that spread can't be traced further from the logs.
+- The compile step took 6.4 to 14.9 minutes for the same code. About 3 minutes of that
+  is the iPhone booting alongside it (below). GitHub doesn't say which machine a run got
+  or how busy it was, so the rest can't be traced from the logs.
 - A simulated iPhone's first boot takes about 5.5 minutes, 3.8 of them iOS's one-time
-  data migration for location services, and it slows whatever starts alongside it.
-  Started with the package installs, it slowed them from about half a minute to as much
-  as 7.7. Started just before the compile, it held up Xcode's start: Xcode began its
-  first build task 2.8 to 4.2 minutes into the build step (5 runs), against 0.5 to 0.9
-  without a boot (4 runs).
-  So each runner starts the boot in the background after installing packages, and the
-  compiling runner waits until Xcode logs its first build task; the compile then hides
-  the boot. The others boot while they wait for the app.
+  data migration for location services, and on these 3-processor runners it slows
+  whatever runs alongside it. Started with the package installs, it slowed them from
+  about half a minute to as much as 7.7. So each runner starts it in the background after
+  installing packages: on the compiling runner, just before the compile, which hides it;
+  on the others, while they wait for the app.
+- On the compiling runner, the boot still costs about 3 minutes. Xcode began its first
+  build task 2.8 to 4.2 minutes into the build step (5 runs), against 0.5 to 0.9 without
+  a boot (4 runs). Starting the boot once Xcode was building was tried
+  ([run 38116114906](https://github.com/CodeSammich/sda-church-app/actions/runs/38116114906)):
+  Xcode started at once, but the compile took about that much longer. Booting only after
+  the compile would put the whole boot on that runner's path, so it would finish last.
 - Installing the app on a booted iPhone usually takes about a minute, but once took 11.4
   minutes. The log shows only when `simctl install` returned, so the cause is unknown; if
   it recurs, look there first.

@@ -105,31 +105,17 @@ jobs:
       - name: Boot the simulated iPhone in the background
         # A fresh Simulator's first boot takes about 5.5 minutes on these
         # runners, most of it one iOS data-migration step for location
-        # services (docs/operations/native-builds.md). It slows whatever else
-        # starts with it, so it waits until the package installs are done. On
-        # the runner that compiles, it also waits until Xcode starts building,
-        # which a booting iPhone held up by about 3 minutes; the compile then
-        # hides it. On the others, the wait for the app does. The launch step
-        # waits for it.
-        env:
-          BUILDS: ${{ matrix.builds && 'true' || 'false' }}
+        # services (docs/operations/native-builds.md). It starts here, after
+        # the package installs, which it would slow: on the runner that
+        # compiles, the compile hides it; on the others, the wait for the app
+        # does. The launch step waits for it.
         run: |
           set -euo pipefail
           # The iPhone test/screens/screens.json names, on the newest installed
           # iOS runtime, so the launch check and the key screens share it.
           DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
-          BOOT_LOG="$RUNNER_TEMP/simulator-boot.log"
-          if [ "$BUILDS" = true ]; then
-            # Xcode logs each build task "(in target …)" once it has planned
-            # the build.
-            nohup bash -c 'until grep -qsF "(in target " "$1"; do sleep 5; done
-              echo "Xcode started building at $(date -u +%H:%M:%S) UTC; booting."
-              exec xcrun simctl bootstatus "$2" -b' \
-              boot "$RUNNER_TEMP/xcodebuild.log" "$DEVICE_ID" > "$BOOT_LOG" 2>&1 &
-          else
-            nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$BOOT_LOG" 2>&1 &
-          fi
+          nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
 
       - name: Build for the Simulator without signing
         if: ${{ matrix.builds }}
@@ -157,7 +143,7 @@ jobs:
             ARCHS="$ARCH" \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
-            build | tee "$RUNNER_TEMP/xcodebuild.log"
+            build
 
       - name: Zip the app to share
         if: ${{ matrix.builds }}
