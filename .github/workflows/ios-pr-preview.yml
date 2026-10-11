@@ -65,7 +65,8 @@ jobs:
       - name: Select and verify Xcode tools
         run: |
           set -euo pipefail
-          # Keep this in step with native-ios-build.yml.
+          # Keep this in step with native-ios-build.yml, ios-compile-cache.yml,
+          # and the compile-cache key below.
           XCODE_DEVELOPER_DIR='/Applications/Xcode_26.6.app/Contents/Developer'
           test -d "$XCODE_DEVELOPER_DIR" || {
             echo "Expected Xcode at $XCODE_DEVELOPER_DIR; update this workflow when the runner image changes." >&2
@@ -86,6 +87,29 @@ jobs:
           DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
           nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
+
+      - name: Set up the compile cache
+        # ccache reuses the C, C++, and Objective-C that ios-compile-cache.yml
+        # compiled on main after the last release (#455), so only what changed
+        # since then is compiled again.
+        run: |
+          set -euo pipefail
+          command -v ccache >/dev/null || HOMEBREW_NO_AUTO_UPDATE=1 brew install ccache
+          ccache --max-size=1G
+          ccache --zero-stats
+          # React Native's CocoaPods setup compiles through ccache when this is set.
+          echo "USE_CCACHE=1" >> "$GITHUB_ENV"
+
+      # Restore only. Only main saves this cache, so a pull request can't
+      # change what a later run gets; the signed store builds never use it.
+      - name: Restore the compile cache from main
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}-
+            ccache-ios-sim-xcode-26.6-
 
       - name: Install dependencies
         run: npm ci --force
@@ -125,6 +149,10 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Show how much the compile cache saved
+        if: ${{ !cancelled() }}
+        run: ccache --show-stats
 
       - name: Launch on a simulated iPhone
         env:

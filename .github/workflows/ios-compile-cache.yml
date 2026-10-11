@@ -1,0 +1,114 @@
+name: iOS compile cache
+
+# Saves the compiled native code that the iOS PR preview reuses (#455), so a
+# release PR's runners recompile only the C, C++, and Objective-C that changed
+# since the last release, rather than all of it.
+#
+# Only main writes this cache. A run on main builds reviewed code, and pull
+# requests can read main's caches but never write them, so a pull request
+# can't change what a later run gets. This workflow reads no secrets, and the
+# signed store builds never use the cache. It builds exactly as
+# ios-pr-preview.yml does, or the cache wouldn't match; a test checks that.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-compile-cache
+  cancel-in-progress: true
+
+jobs:
+  save:
+    # main in this repository only: never a fork, never another branch.
+    if: github.ref == 'refs/heads/main' && github.event.repository.fork == false
+    name: Save the iOS compile cache
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Select and verify Xcode tools
+        run: |
+          set -euo pipefail
+          # Keep this in step with ios-pr-preview.yml and the cache key below.
+          XCODE_DEVELOPER_DIR='/Applications/Xcode_26.6.app/Contents/Developer'
+          test -d "$XCODE_DEVELOPER_DIR" || {
+            echo "Expected Xcode at $XCODE_DEVELOPER_DIR; update this workflow when the runner image changes." >&2
+            exit 1
+          }
+          sudo xcode-select -s "$XCODE_DEVELOPER_DIR"
+          xcodebuild -version
+
+      - name: Set up the compile cache
+        run: |
+          set -euo pipefail
+          command -v ccache >/dev/null || HOMEBREW_NO_AUTO_UPDATE=1 brew install ccache
+          ccache --max-size=1G
+          ccache --zero-stats
+          # React Native's CocoaPods setup compiles through ccache when this is set.
+          echo "USE_CCACHE=1" >> "$GITHUB_ENV"
+
+      # Starts from the last cache, so this run adds only what changed.
+      - name: Restore the last compile cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}-
+            ccache-ios-sim-xcode-26.6-
+
+      - name: Install dependencies
+        run: npm ci --force
+
+      - name: Generate iOS project
+        run: >-
+          npx expo prebuild
+          --template expo-template-bare-minimum@58.0.9
+          --platform ios --clean --no-install
+
+      - name: Install CocoaPods dependencies
+        run: pod install --project-directory=ios
+
+      - name: Build for the Simulator without signing
+        env:
+          ARCH: arm64
+          # Not the preview's key-screens setting: only the preview may set it,
+          # and it changes only the JavaScript, not the native code cached here.
+        run: |
+          set -euo pipefail
+          WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          test -n "$WORKSPACE" || {
+            echo 'Expo prebuild did not create an Xcode workspace.' >&2
+            exit 1
+          }
+          SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/ios-simulator" \
+            ARCHS="$ARCH" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Show how much the cache saved
+        run: ccache --show-stats
+
+      - name: Save the compile cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}-${{ github.run_id }}

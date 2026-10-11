@@ -215,6 +215,55 @@ describe('Apple signing reminders', () => {
   });
 });
 
+// The iOS PR preview reuses compiled native code that only main saves (#455).
+// A pull request must never be able to write that cache, and the signed store
+// builds must never read it.
+describe('iOS compile cache', () => {
+  const saver = readRepoFile('.github/workflows/ios-compile-cache.yml');
+  const preview = readRepoFile('.github/workflows/ios-pr-preview.yml');
+  // A step's run script, from its `run:` line to the next step or job.
+  const runOf = (workflow: string, name: string) => {
+    const start = workflow.indexOf(`- name: ${name}\n`);
+    expect(start).toBeGreaterThan(-1);
+    const step = workflow.slice(start, workflow.slice(start + 1).search(/\n {6}- |\n {2}[a-z-]+:\n/) + start + 1);
+    return step.slice(step.indexOf('run:'));
+  };
+
+  it('is saved only on main in this repository, with no secrets and a read-only token', () => {
+    const triggers = saver.slice(saver.indexOf('\non:\n'), saver.indexOf('\npermissions:'));
+    expect(triggers).toMatch(/push:\n\s+branches:\n\s+- main\n/);
+    expect(triggers).not.toContain('pull_request');
+    expect(saver).toContain("if: github.ref == 'refs/heads/main' && github.event.repository.fork == false");
+    expect(saver).not.toMatch(/secrets\./);
+    expect(saver).toMatch(/\npermissions:\n {2}contents: read\n\n/);
+    expect(saver).toContain('actions/cache/save@');
+  });
+
+  it('is only restored by the iOS PR preview, never saved there', () => {
+    expect(preview).toContain('actions/cache/restore@');
+    expect(preview).not.toMatch(/actions\/cache(\/save)?@/);
+  });
+
+  it('never reaches the signed store builds', () => {
+    for (const file of ['native-ios-build.yml', 'native-android-build.yml']) {
+      expect(readRepoFile(`.github/workflows/${file}`)).not.toMatch(/ccache|USE_CCACHE|actions\/cache/);
+    }
+  });
+
+  it('builds exactly as the preview does, under a key naming the same Xcode, so the cache matches', () => {
+    for (const step of ['Generate iOS project', 'Install CocoaPods dependencies', 'Build for the Simulator without signing']) {
+      expect(runOf(saver, step)).toBe(runOf(preview, step));
+    }
+    const xcode = (workflow: string) => /\/Applications\/Xcode_([\d.]+)\.app/.exec(workflow)![1];
+    expect(xcode(saver)).toBe(xcode(preview));
+    for (const workflow of [saver, preview]) {
+      expect(workflow).toContain(`key: ccache-ios-sim-xcode-${xcode(workflow)}-\${{ hashFiles('package-lock.json') }}`);
+      expect(workflow).toContain('echo "USE_CCACHE=1" >> "$GITHUB_ENV"');
+      expect(workflow).toContain('path: ~/Library/Caches/ccache');
+    }
+  });
+});
+
 describe('pull_request_target', () => {
   it('is used only by the three workflows the Actions event policy allows', () => {
     // The repository's Actions event policy allows every event, so this test is

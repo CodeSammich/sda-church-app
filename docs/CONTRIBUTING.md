@@ -232,6 +232,14 @@ GitHub's code scanning default setup and have no workflow file.
   screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
 
+### `iOS compile cache` (`.github/workflows/ios-compile-cache.yml`)
+
+- No check. Runs on every push to `main` in this repository, and by hand on `main`.
+- Builds the iOS Simulator app with ccache and saves the compiled native code, which
+  **iOS PR preview** restores so it recompiles only what changed. Only this workflow
+  saves the cache, and the signed store builds never use it; see
+  [Compile cache](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+
 ### `Android audio e2e` (`.github/workflows/android-audio-e2e.yml`)
 
 - Check: `Bible audio on an Android emulator`. Runs on the release PR into `main`, and by

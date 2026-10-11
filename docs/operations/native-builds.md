@@ -578,6 +578,27 @@ requests into `main`, such as Dependabot's. To test a change to the workflow,
 `scripts/build-ios-simulator.mjs`, or the key screens before the release PR, start it by
 hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
+**Compile cache.** Most of the build compiles the native libraries (React Native, Expo's
+modules, Reanimated), which change only when a dependency does; the app's own code is
+JavaScript and isn't compiled by Xcode. So the five runners use ccache, which keeps each
+compiled C, C++, and Objective-C file and reuses it when the file and its compiler
+settings are unchanged; Swift isn't cached. `ios-compile-cache.yml` builds the app the
+same way on every push to `main` and saves the cache; the preview's runners only
+restore it (`actions/cache/restore`), and each prints its hits after the build. The
+release PR therefore reuses what `main` compiled after the last release. To keep a pull
+request from planting compiled code in later builds (cache poisoning):
+
+- only the `main` workflow saves the cache, and pull requests can read `main`'s caches
+  but never write them;
+- the cache workflow reads no secrets and has a read-only token;
+- the signed store builds never use ccache or the cache, and compile from scratch;
+- the key names the Xcode version and the `package-lock.json` hash, so a change means
+  a slower build, never a mismatched one.
+
+`test/native-build-safety.test.ts` fails if any of that changes, or if the two
+workflows stop building the same way. The cache is empty until the first push to
+`main` after it was added, so that release's own PR compiles everything.
+
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
 artifact ending in `-arm64`, and unzip the download and then the `.zip` inside it to get
 the `.app`. It runs on an Apple Silicon Mac; for an Intel Mac, see below. Open the Simulator
