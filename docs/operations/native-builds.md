@@ -614,7 +614,8 @@ From the logs of earlier runs:
   data migration for location services, and it slows whatever starts alongside it.
   Started with the package installs, it slowed them from about half a minute to as much
   as 7.7. Started just before the compile, it held up Xcode's start: Xcode began its
-  first build task 2.8 to 4.2 minutes in, against about half a minute without a boot.
+  first build task 2.8 to 4.2 minutes into the build step (5 runs), against 0.5 to 0.9
+  without a boot (4 runs).
   So each runner starts the boot in the background after installing packages, and the
   compiling runner waits until Xcode logs its first build task; the compile then hides
   the boot. The others boot while they wait for the app.
@@ -630,13 +631,13 @@ most of Expo's modules arrive precompiled; the rest is C, C++, and Objective-C, 
 react-native-screens, Reanimated, and Worklets, plus Swift in Expo's modules). From
 Xcode's first compile task to its last:
 
-| Compile cache | Compiling |
-| --- | --- |
-| None (5 runs) | 5.8–6.7 min |
-| Empty, filled while compiling (2 runs) | 8.7–8.9 min |
-| Every C, C++, and Objective-C file found in it (1 run) | 2.0 min |
+| Compile cache | Compiling, average | Range |
+| --- | --- | --- |
+| None (6 runs) | 6.5 min | 5.8–8.1 min |
+| Empty, filled while compiling (2 runs) | 8.8 min | 8.7–8.9 min |
+| Every C, C++, and Objective-C file found in it (1 run) | 2.0 min | |
 
-So a filled cache saves about 4 minutes, and an empty one costs 2 to 3. To keep pull
+So a filled cache saved about 4.5 minutes, and an empty one cost about 2.3. To keep pull
 requests from planting compiled code in it, only `main` could fill it, and only for the
 exact same native dependencies, so a release PR would save time only when its native
 dependencies matched `main`'s: about half of the releases from 0.34.0 to 1.2.0. That

@@ -108,7 +108,7 @@ jobs:
         # services (docs/operations/native-builds.md). It slows whatever else
         # starts with it, so it waits until the package installs are done. On
         # the runner that compiles, it also waits until Xcode starts building,
-        # which a booting iPhone held up by 2 to 4 minutes; the compile then
+        # which a booting iPhone held up by about 3 minutes; the compile then
         # hides it. On the others, the wait for the app does. The launch step
         # waits for it.
         env:
