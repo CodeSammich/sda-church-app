@@ -561,18 +561,18 @@ needs a Mac.
 **In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
 each release PR into `main` without signing, on Apple Silicon runners (`macos-26`,
 arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
-once, **Key screens (`<bucket>`)**, one per key-screen bucket:
+once, **Key screens (`<group>`)**, one per key-screen group:
 
-- The `worship-and-you` runner, which has the lightest bucket, compiles the app once
+- The `worship-and-you` runner, which has the lightest group, compiles the app once
   and shares it with the others as an artifact. Its simulated iPhone boots during the
   compile.
 - The other four install packages, start booting their iPhones, and wait for the shared
   app, giving up at once if the compiling runner fails.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
-  running 45 seconds after launch, and takes its bucket's key screens.
+  running 45 seconds after launch, and takes its group's key screens.
 
-**Build iOS Simulator app (Apple Silicon Mac)** then joins the buckets and uploads the
+**Build iOS Simulator app (Apple Silicon Mac)** then joins the groups and uploads the
 app and a screenshot of its first screen (14-day retention), named like the Android
 preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
 
@@ -587,8 +587,8 @@ hand on your branch from the Actions tab. The workflow reads no secrets, so it i
 
 **How long it takes, and why it varies.** A run finishes when its slowest runner does.
 Each runner sets up, installs packages, and runs CocoaPods; compiles while its simulated
-iPhone boots; installs and launches the app; then captures and checks its bucket. The
-first five-bucket run (October 2026) took 40 minutes, against an average of 47 when one
+iPhone boots; installs and launches the app; then captures and checks its group. The
+first five-group run (October 2026) took 40 minutes, against an average of 47 when one
 runner took every key screen. Its runners took 23–37 minutes each; the slowest,
 `library`, spent 7.7 minutes installing packages while its iPhone booted, and 13.9
 compiling.
@@ -607,14 +607,14 @@ broken down from the job logs of three of them:
 | Text checks | 2.8 min |
 
 - The same code compiled in 6.4 to 12.4 minutes in those runs, and in up to 13.9 in the
-  five-bucket run. GitHub doesn't say which machine a run got or how busy it was, so
+  five-group run. GitHub doesn't say which machine a run got or how busy it was, so
   that spread can't be traced further from the logs.
 - One outlier: in one run, installing the app took 11.4 minutes instead of about one,
   making that run's launch step 19 minutes. The log shows only when `simctl install`
   returned, so the cause is unknown; if it recurs, look there first.
 - With five runners, a run waits for the slowest, so one runner's slow step holds up
   the run. So each runner starts its iPhone's boot in the background right after
-  selecting Xcode, and the compile hides it: in the five-bucket run, the launch step
+  selecting Xcode, and the compile hides it: in the five-group run, the launch step
   took 1.2–1.5 minutes instead of about 8. The cost is that installing packages and
   CocoaPods, which run while it boots, took 5–12 minutes together instead of about 3.
   Starting the boot after CocoaPods instead might do better; it hasn't been measured.
@@ -684,7 +684,7 @@ builds for the Mac's own processor. To build it in the workflow again:
    its matrix, compile-cache steps (the cache holds Apple Silicon code), or key-screen
    steps, that runs on `macos-26-intel` and builds with `ARCH: x86_64`. It should always
    zip the app and take the first screenshot, which `capture` does only for the `home`
-   bucket, name them `…-x86_64`, and upload them as an artifact ending in `-x86_64`,
+   group, name them `…-x86_64`, and upload them as an artifact ending in `-x86_64`,
    kept 14 days.
 2. Update the test in `test/native-build-safety.test.ts` that checks the workflow
    builds for Apple Silicon only.
@@ -696,14 +696,14 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 The five runners screenshot the 29 screens listed in `test/screens/screens.json`, 81
 shots in all, so a layout problem on iPhone shows up before release rather than in
-TestFlight (#331). Each runner takes one bucket (`--bucket <name>`): a group of related
-screens, such as the Bible reader's layout or the library, listed under `buckets` in
+TestFlight (#331). Each runner takes one group (`--group <name>`) of related
+screens, such as the Bible reader's layout or the library, listed under `groups` in
 `screens.json` with what each holds. Each runner checks its shots' text, and
-`scripts/merge-key-screens.cjs` joins the buckets into one `screens/` folder and makes
-the App Store copies. The release PR waits only for the slowest bucket.
+`scripts/merge-key-screens.cjs` joins the groups into one `screens/` folder and makes
+the App Store copies. The release PR waits only for the slowest group.
 
-**Adding a key screen.** Give it the `bucket` for its part of the app, as `buckets`
-describes. A test fails if any bucket would take more than 6 minutes to capture. The
+**Adding a key screen.** Give it the `group` for its part of the app, as `groups`
+describes. A test fails if any group would take more than 6 minutes to capture. The
 limit is a reminder to prune, not a rule:
 
 1. Prune first: drop variants that repeat what another shot already shows, such as a
@@ -711,11 +711,11 @@ limit is a reminder to prune, not a rule:
    worth a check.
 2. Spend the time saved on what the key screens miss: screens, popups, and states no
    shot covers yet (#456).
-3. Then rebalance: move a related group of screens to a lighter bucket, or split one,
-   and update the `bucket` list in `ios-pr-preview.yml`, which a test keeps in step with
+3. Then rebalance: move some related screens to a lighter group, or split one,
+   and update the `group` list in `ios-pr-preview.yml`, which a test keeps in step with
    `screens.json`. GitHub's free plan runs five Mac jobs at once, so keep to five
-   buckets.
-4. If a bucket is still over after that, raise the limit in `test/screens.test.ts`
+   groups.
+4. If a group is still over after that, raise the limit in `test/screens.test.ts`
    rather than cutting screenshots that earn their place.
 
 `scripts/capture-ios-screens.cjs` takes each shot:
@@ -731,7 +731,7 @@ limit is a reminder to prune, not a rule:
    a saved screen. A test checks that no other workflow sets it.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
-   wait (15 for the Bible), so a bucket's 13 to 22 shots take about 3–6 minutes. While it
+   wait (15 for the Bible), so a group's 13 to 22 shots take about 3–6 minutes. While it
    waits, it takes a screenshot every 2 seconds and records in
    `screens/settle-times.json` when each screen stopped changing, so the waits can be
    shortened from measurements (#453). Three Simulators on one runner were tried and
@@ -803,7 +803,7 @@ Simulator's PNGs have, which App Store Connect rejects. They're ready to upload;
 [Store assets](../store-assets/README.md). When to refresh the stores' screenshots is in
 step 2 of the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the-stores).
 
-To add a screen, add an entry to `test/screens/screens.json`: a `name`, its `bucket`
+To add a screen, add an entry to `test/screens/screens.json`: a `name`, its `group`
 (see **Adding a key screen**, above), the deep link `path` without the scheme, any Bible
 `settings`, the `variants` to take, and any `checks`. Leave out screens that show members' names or photos, such as the bulletin,
 the team page, and the fellowship page; `test/screens.test.ts` checks this. A new
@@ -1191,7 +1191,7 @@ be tested as an update. These controls matter more than the build command itself
 #### Why the final credential boundary is a GitHub Environment
 
 The final design is a protected GitHub `production` Environment, not a general
-repository-secret bucket. Environment secrets are limited to jobs that name that
+repository-secret group. Environment secrets are limited to jobs that name that
 Environment and are made available only after its protection rules—especially
 required-reviewer approval—have passed. Repository secrets are available to all
 workflows in the repository and are read earlier in the workflow lifecycle. See

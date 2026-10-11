@@ -72,8 +72,8 @@ Write the description however suits the change, but every feature and release PR
   in `test/screens/screens.json`, for every platform that captures them: the iPhone today,
   and Android once #372 adds its screenshots. Add the screen or variant that shows the
   change, and text checks (`mustShowLines`, `mustNotShowLines`, `variantRules`) that fail
-  if it breaks. Give a new screen the `bucket` for its part of the app. Each shot
-  lengthens its bucket's runner, and the release PR waits for the slowest bucket, so
+  if it breaks. Give a new screen the `group` for its part of the app. Each shot
+  lengthens its group's runner, and the release PR waits for the slowest group, so
   prefer a check on an existing shot, and replace checks that no longer earn their
   place. See [Key screens](operations/native-builds.md#key-screens).
 - Include no secrets, private keys, certificates, passwords, `.env` files, or generated
@@ -226,9 +226,9 @@ GitHub's code scanning default setup and have no workflow file.
 - Checks: `Build iOS Simulator app (Apple Silicon Mac)` and `Screenshots reviewed`. Runs on
   the release PR into `main`, and by hand on any branch.
 - Builds the app for the iOS Simulator once, without signing, and shares it with one
-  runner per key-screen bucket (`Key screens (<bucket>)`). Each launches it, screenshots
-  its bucket of the key screens in `test/screens/screens.json`, and checks their text;
-  `Build iOS Simulator app (Apple Silicon Mac)` joins the buckets and fails if any failed.
+  runner per key-screen group (`Key screens (<group>)`). Each launches it, screenshots
+  its group of the key screens in `test/screens/screens.json`, and checks their text;
+  `Build iOS Simulator app (Apple Silicon Mac)` joins the groups and fails if any failed.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Joins the key-screen buckets that several runners captured and checked
- * (capture-ios-screens.cjs and check-screens.cjs with --bucket) into the one
+ * Joins the key-screen groups that several runners captured and checked
+ * (capture-ios-screens.cjs and check-screens.cjs with --group) into the one
  * folder a single runner used to make, for the screenshot review (#453):
  * every ios/*.png, ocr.json, checks.json, and settle-times.json in list order,
  * and the App Store copies, which need shots from every part.
@@ -32,7 +32,7 @@ const mergeResults = (shots, parts) => {
     for (const [file, lines] of Object.entries(part.ocr)) ocr[file.slice(file.lastIndexOf('/ios/') + 1)] = lines;
   }
   return {
-    checks: shots.map((shot) => checks.get(shot.file) || { file: shot.file, problems: ['no bucket checked it'] }),
+    checks: shots.map((shot) => checks.get(shot.file) || { file: shot.file, problems: ['no group checked it'] }),
     timings: shots.map((shot) => timings.get(shot.name)).filter(Boolean),
     ocr,
   };
@@ -60,7 +60,7 @@ const merge = async (outDir, partDirs) => {
 
   const problems = [];
   for (const shot of shots) {
-    if (!existsSync(join(outDir, shot.file))) problems.push(`${shot.file}: no bucket captured it`);
+    if (!existsSync(join(outDir, shot.file))) problems.push(`${shot.file}: no group captured it`);
   }
   for (const copy of planAppStore(config)) {
     const source = join(outDir, `ios/${copy.name}.png`);
@@ -73,7 +73,7 @@ const merge = async (outDir, partDirs) => {
   const failed = checks.filter((check) => check.problems.length);
   const slowest = [...timings].sort((a, b) => b.settledAfter - a.settledAfter).slice(0, 5);
   const summary = [
-    `### Key screens, ${partDirs.length} buckets joined`,
+    `### Key screens, ${partDirs.length} groups joined`,
     '',
     `${shots.length - problems.length} of ${shots.length} captured; ${checks.length - failed.length} of ${checks.length} pass the text checks.`,
     ...problems.map((problem) => `- ❌ ${problem}`),

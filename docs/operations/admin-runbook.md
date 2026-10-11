@@ -110,7 +110,7 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<bucket>)` jobs and fails if any of them failed, so they need no entries of their own and a new bucket needs no ruleset change | `ios-pr-preview.yml` | `main` |
+| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
 | `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -628,10 +628,10 @@ summary links to it. Fork pull requests are skipped. See
 into `main`, and can be run manually on any branch.
 
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
-five runners, one per key-screen bucket, which run at once. Each launches the app on a
-simulated iPhone, captures its bucket of the key screens in `test/screens/screens.json`
+five runners, one per key-screen group, which run at once. Each launches the app on a
+simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
 (81 screenshots of 29 screens in all), and checks their text with
-`scripts/check-screens.cjs`. Another job then joins the buckets,
+`scripts/check-screens.cjs`. Another job then joins the groups,
 before the review comment and **Screenshots reviewed**. The run takes about 40 minutes. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).

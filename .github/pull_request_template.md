@@ -23,9 +23,9 @@ text checks cover it (see "Key screens" in docs/operations/native-builds.md):
 - add text checks that fail if it breaks: mustShowLines, mustNotShowLines, or
   variantRules for one variant;
 - update appStore if the App Store screenshots should change.
-Give a new screen the bucket for its part of the app (bucket in screens.json). Prefer a
-check on an existing shot to a new shot, since each shot lengthens its bucket's runner
-and the release PR waits for the slowest bucket, and replace checks that no longer earn
+Give a new screen the group for its part of the app (group in screens.json). Prefer a
+check on an existing shot to a new shot, since each shot lengthens its group's runner
+and the release PR waits for the slowest group, and replace checks that no longer earn
 their place.
 -->
 - [ ] Key screens and their checks are updated, or this doesn't change what a screen shows.

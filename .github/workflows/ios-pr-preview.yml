@@ -40,7 +40,7 @@ jobs:
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
-    name: Key screens (${{ matrix.bucket }})
+    name: Key screens (${{ matrix.group }})
     # Apple Silicon only. The Intel Mac build was dropped in 1.2.1;
     # docs/operations/native-builds.md ("On an Intel Mac") says how to build one.
     runs-on: macos-26
@@ -52,19 +52,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One runner per bucket in test/screens/screens.json, a group of
-        # related screens, so the release PR waits for the slowest bucket
+        # One runner per key-screen group in test/screens/screens.json, each
+        # of related screens, so the release PR waits for the slowest group
         # rather than all 81 shots (#453). A test keeps this list and
         # screens.json in step. GitHub's free plan runs five Mac jobs at once.
         # Three Simulators on one runner were slower: its 3 processors couldn't
         # keep up with them.
-        bucket: [home, bible-reading, bible-text, library, worship-and-you]
-        # The app is compiled once, by the runner with the smallest bucket, and
+        group: [home, bible-reading, bible-text, library, worship-and-you]
+        # The app is compiled once, by the runner with the smallest group, and
         # shared with the others, which boot their iPhones meanwhile; five
         # separate compiles made the run wait for the slowest of five. A test
-        # checks that exactly one bucket builds and that the others wait for it.
+        # checks that exactly one group builds and that the others wait for it.
         include:
-          - bucket: worship-and-you
+          - group: worship-and-you
             builds: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -291,11 +291,11 @@ jobs:
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
-        # Only this bucket's screens.
+        # Only this group's screens.
         timeout-minutes: 20
         run: >-
           node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
-          --bucket ${{ matrix.bucket }}
+          --group ${{ matrix.group }}
 
       - name: Check the text on the key screens
         # Reads each screenshot's text with Apple's Vision framework and checks
@@ -307,22 +307,22 @@ jobs:
         timeout-minutes: 10
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
-          --bucket ${{ matrix.bucket }}
+          --group ${{ matrix.group }}
 
-      - name: Upload this bucket
+      - name: Upload this group
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: key-screens-${{ github.run_id }}-${{ matrix.bucket }}
+          name: key-screens-${{ github.run_id }}-${{ matrix.group }}
           path: ${{ runner.temp }}/ios-pr-preview/
           if-no-files-found: warn
           retention-days: 1
 
   simulator:
-    # Joins the buckets into the one artifact the review comment links: the
-    # app and its first screen from the runner that compiled it, and every bucket's
-    # screenshots and checks. It fails if any bucket failed, so a failed
-    # bucket can't pass as skipped. The "Main protection" ruleset requires
+    # Joins the groups into the one artifact the review comment links: the
+    # app and its first screen from the runner that compiled it, and every group's
+    # screenshots and checks. It fails if any group failed, so a failed
+    # group can't pass as skipped. The "Main protection" ruleset requires
     # this job's name.
     needs: capture
     if: >-
@@ -344,7 +344,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --force
 
-      - name: Download the buckets
+      - name: Download the groups
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: key-screens-${{ github.run_id }}-*
@@ -368,12 +368,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Fail if a bucket failed
+      - name: Fail if a group failed
         if: ${{ !cancelled() && needs.capture.result != 'success' }}
         env:
           RESULT: ${{ needs.capture.result }}
         run: |
-          echo "::error::A key-screen bucket ended as $RESULT; its job's log says why."
+          echo "::error::A key-screen group ended as $RESULT; its job's log says why."
           exit 1
 
   announce:

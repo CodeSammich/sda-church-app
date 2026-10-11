@@ -27,9 +27,9 @@ Code, Codex, Gemini, and others). The full contributor guide is
   them: the iPhone today, and Android once #372 adds its screenshots. Add the
   screen or variant that shows the change, and text checks (`mustShowLines`,
   `mustNotShowLines`, `variantRules`) that fail if it breaks, and give a new
-  screen the `bucket` for its part of the app. Don't overdo it: each shot
-  lengthens its bucket's runner, and the release PR waits for the slowest
-  bucket, so prefer a check on an existing shot, and replace checks that no
+  screen the `group` for its part of the app. Don't overdo it: each shot
+  lengthens its group's runner, and the release PR waits for the slowest
+  group, so prefer a check on an existing shot, and replace checks that no
   longer earn their place. See
   [Key screens](docs/operations/native-builds.md#key-screens). The PR template
   asks about this too.

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 const { mergeResults } = require('../scripts/merge-key-screens.cjs');
 const {
   shotCost,
-  takeBucket,
+  takeGroup,
   settledAfter,
   SETTING_KEYS,
   loadConfig,
@@ -189,21 +189,21 @@ describe('saved settings', () => {
 describe('iOS PR preview', () => {
   const workflow = repoFile('.github/workflows/ios-pr-preview.yml');
 
-  it('runs one runner per bucket, each capturing and checking only its bucket', () => {
-    const buckets = /\n\s+bucket: \[([a-z, -]+)\]\n/.exec(workflow)![1].split(', ');
-    expect(buckets).toEqual(Object.keys(config.buckets));
-    expect(workflow).toMatch(/capture-ios-screens\.cjs --out [^\n]+\n\s+--bucket \$\{\{ matrix\.bucket \}\}\n/);
-    expect(workflow).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--bucket \$\{\{ matrix\.bucket \}\}\n/);
+  it('runs one runner per group, each capturing and checking only its group', () => {
+    const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(workflow)![1].split(', ');
+    expect(groups).toEqual(Object.keys(config.groups));
+    expect(workflow).toMatch(/capture-ios-screens\.cjs --out [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
+    expect(workflow).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
   });
 
-  it('compiles the app once, on the lightest bucket\'s runner, and the others wait for it', () => {
-    const builder = /include:\n\s+- bucket: ([a-z-]+)\n\s+builds: true\n/.exec(workflow)![1];
+  it('compiles the app once, on the lightest group\'s runner, and the others wait for it', () => {
+    const builder = /include:\n\s+- group: ([a-z-]+)\n\s+builds: true\n/.exec(workflow)![1];
     expect(workflow.match(/builds: true/g)).toHaveLength(1);
     // The builder also takes its own shots after compiling, so it gets the
-    // lightest bucket.
-    const cost = (bucket: string) =>
-      takeBucket(shots, bucket, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-    for (const bucket of Object.keys(config.buckets)) expect(cost(builder)).toBeLessThanOrEqual(cost(bucket));
+    // lightest group.
+    const cost = (group: string) =>
+      takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
+    for (const group of Object.keys(config.groups)) expect(cost(builder)).toBeLessThanOrEqual(cost(group));
     const guard = (step: string) => new RegExp(`- name: ${step}\n(?:\\s+#.*\n)*\\s+if: (.+)\n`).exec(workflow)?.[1];
     for (const step of [
       'Set up the compile cache',
@@ -224,7 +224,7 @@ describe('iOS PR preview', () => {
     expect(workflow.match(/ios-simulator-app-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
   });
 
-  it('joins the buckets in the required job, which fails rather than skips when a bucket fails', () => {
+  it('joins the groups in the required job, which fails rather than skips when a group fails', () => {
     const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
     expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');
     expect(merge).toContain('needs: capture');
@@ -243,44 +243,44 @@ describe('iOS PR preview', () => {
   });
 });
 
-describe('key-screen buckets', () => {
-  it('puts every screen in a bucket that says what it holds, at most five buckets', () => {
-    // GitHub's free plan runs five Mac jobs at once, one per bucket.
-    expect(Object.keys(config.buckets).length).toBeLessThanOrEqual(5);
-    for (const [bucket, holds] of Object.entries(config.buckets)) {
+describe('key-screen groups', () => {
+  it('puts every screen in a group that says what it holds, at most five groups', () => {
+    // GitHub's free plan runs five Mac jobs at once, one per group.
+    expect(Object.keys(config.groups).length).toBeLessThanOrEqual(5);
+    for (const [group, holds] of Object.entries(config.groups)) {
       expect(holds).toMatch(/^[A-Z].{20,}\.$/);
-      expect(shots.some((shot: { bucket: string }) => shot.bucket === bucket)).toBe(true);
+      expect(shots.some((shot: { group: string }) => shot.group === group)).toBe(true);
     }
     for (const screen of config.screens) {
-      expect({ screen: screen.name, known: Object.hasOwn(config.buckets, screen.bucket) }).toEqual({
+      expect({ screen: screen.name, known: Object.hasOwn(config.groups, screen.group) }).toEqual({
         screen: screen.name,
         known: true,
       });
     }
   });
 
-  it('flags a bucket over 6 minutes of capture, as a reminder to prune its screenshots', () => {
-    // The 6-minute limit is a reminder, not a rule. When a bucket passes it,
+  it('flags a group over 6 minutes of capture, as a reminder to prune its screenshots', () => {
+    // The 6-minute limit is a reminder, not a rule. When a group passes it,
     // first prune: drop variants that repeat what another shot already shows
     // (say, a dark or Chinese copy of a screen whose layout doesn't change),
     // and screens no longer worth a check. Then spend the time saved on what
     // the key screens miss: screens, popups, and states no shot covers yet
-    // (#456). Only then move a related group of screens to a lighter bucket,
-    // or split one. If a bucket is still over after that, raise the limit;
+    // (#456). Only then move some related screens to a lighter group,
+    // or split one. If a group is still over after that, raise the limit;
     // don't cut useful screenshots to fit it.
-    for (const bucket of Object.keys(config.buckets)) {
-      const seconds = takeBucket(shots, bucket, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ bucket, minutes: Math.round(seconds / 6) / 10, over: seconds > 360 }).toMatchObject({ bucket, over: false });
+    for (const group of Object.keys(config.groups)) {
+      const seconds = takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
+      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 360 }).toMatchObject({ group, over: false });
     }
   });
 
-  it('takes one bucket, every shot without one, and rejects an unknown bucket', () => {
-    expect(takeBucket(shots, 'bible-reading', config).every((shot: { bucket: string }) => shot.bucket === 'bible-reading')).toBe(true);
-    expect(takeBucket(shots, undefined, config)).toBe(shots);
-    expect(() => takeBucket(shots, 'bibel', config)).toThrow('No bucket "bibel"');
+  it('takes one group, every shot without one, and rejects an unknown group', () => {
+    expect(takeGroup(shots, 'bible-reading', config).every((shot: { group: string }) => shot.group === 'bible-reading')).toBe(true);
+    expect(takeGroup(shots, undefined, config)).toBe(shots);
+    expect(() => takeGroup(shots, 'bibel', config)).toThrow('No group "bibel"');
   });
 
-  it('joins the buckets\' results in list order, flagging a shot no bucket checked', () => {
+  it('joins the groups\' results in list order, flagging a shot no group checked', () => {
     const [a, b, c] = shots;
     const merged = mergeResults(
       [a, b, c],
@@ -295,7 +295,7 @@ describe('key-screen buckets', () => {
     );
     expect(merged.checks).toEqual([
       { file: a.file, problems: ['x'] },
-      { file: b.file, problems: ['no bucket checked it'] },
+      { file: b.file, problems: ['no group checked it'] },
       { file: c.file, problems: [] },
     ]);
     expect(merged.timings.map((timing: { shot: string }) => timing.shot)).toEqual([a.name, c.name]);

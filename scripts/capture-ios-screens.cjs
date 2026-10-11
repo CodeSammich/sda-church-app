@@ -16,8 +16,8 @@
  *
  *   node scripts/capture-ios-screens.cjs --pick-device   Prints the configured iPhone's UDID, creating it if needed
  *   node scripts/capture-ios-screens.cjs --out <dir>     Captures every screen into <dir>
- *   node scripts/capture-ios-screens.cjs --out <dir> --bucket bible-reading
- *                                                        Captures only that bucket's screens, for one of
+ *   node scripts/capture-ios-screens.cjs --out <dir> --group bible-reading
+ *                                                        Captures only that group's screens, for one of
  *                                                        several runners; merge-key-screens.cjs joins them
  *
  * The app must already be installed on that iPhone. The Simulator only runs on
@@ -84,15 +84,15 @@ const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
 const shotCost = (shot) => shot.wait + 5;
 
 /**
- * The shots of one bucket in test/screens/screens.json: a group of related
- * screens captured together on one runner. Without a bucket, every shot.
+ * The shots of one group in test/screens/screens.json: related screens
+ * captured together on one runner. Without a group, every shot.
  */
-const takeBucket = (shots, bucket, config) => {
-  if (!bucket) return shots;
-  if (!Object.hasOwn(config.buckets, bucket)) {
-    throw new Error(`No bucket "${bucket}"; screens.json has ${Object.keys(config.buckets).join(', ')}.`);
+const takeGroup = (shots, group, config) => {
+  if (!group) return shots;
+  if (!Object.hasOwn(config.groups, group)) {
+    throw new Error(`No group "${group}"; screens.json has ${Object.keys(config.groups).join(', ')}.`);
   }
-  return shots.filter((shot) => shot.bucket === bucket);
+  return shots.filter((shot) => shot.group === group);
 };
 
 /** Lists every shot: its name, file, deep link, settings, and checks. */
@@ -103,7 +103,7 @@ const planCaptures = (config) =>
       if (!overrides) throw new Error(`Screen "${screen.name}" uses unknown variant "${variant}".`);
       return {
         screen: screen.name,
-        bucket: screen.bucket,
+        group: screen.group,
         name: `${screen.name}-${variant}`,
         file: `ios/${screen.name}-${variant}.png`,
         route: screen.path,
@@ -292,7 +292,7 @@ const statusBarClear = async (file) => {
 
 const CHECKS = { statusBarClear };
 
-const capture = async (outDir, bucket) => {
+const capture = async (outDir, group) => {
   const config = loadConfig();
   const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
   const device = pickDevice(config);
@@ -310,7 +310,7 @@ const capture = async (outDir, bucket) => {
   const sampleDir = mkdtempSync(join(tmpdir(), 'key-screen-samples-'));
   const started = Date.now();
 
-  for (const shot of takeBucket(planCaptures(config), bucket, config)) {
+  for (const shot of takeGroup(planCaptures(config), group, config)) {
     spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
     const manifest = manifestPath(dataContainer, bundleId);
     mkdirSync(dirname(manifest), { recursive: true });
@@ -367,9 +367,9 @@ const capture = async (outDir, bucket) => {
   rmSync(sampleDir, { recursive: true, force: true });
   writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
 
-  // A bucket has only some of the shots; merge-key-screens.cjs makes these
-  // once the buckets are joined.
-  for (const copy of bucket ? [] : planAppStore(config)) {
+  // A group has only some of the shots; merge-key-screens.cjs makes these
+  // once the groups are joined.
+  for (const copy of group ? [] : planAppStore(config)) {
     if (!captured.has(copy.name)) {
       failures.push(`${copy.file}: its shot "${copy.name}" wasn't captured`);
       continue;
@@ -380,12 +380,12 @@ const capture = async (outDir, bucket) => {
   }
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
-  const part = bucket ? `, bucket ${bucket}` : '';
+  const part = group ? `, group ${group}` : '';
   const summary = [
     `### Key screens (${device.name}, ${device.runtime}${part})`,
     '',
-    bucket
-      ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every bucket's.`
+    group
+      ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
       : `${captured.size} captured in ${minutes} minutes, in \`screens/\`, with the App Store shots in \`screens/app-store/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
     '',
@@ -412,10 +412,10 @@ if (require.main === module) {
     };
     const outDir = argument('--out');
     if (!outDir) {
-      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir> [--bucket <bucket>]');
+      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir> [--group <group>]');
       process.exit(2);
     }
-    capture(resolve(outDir), argument('--bucket')).catch((error) => {
+    capture(resolve(outDir), argument('--group')).catch((error) => {
       console.error(error);
       process.exit(1);
     });
@@ -424,7 +424,7 @@ if (require.main === module) {
 
 module.exports = {
   shotCost,
-  takeBucket,
+  takeGroup,
   settledAfter,
   looksBlank,
   looksLikeSplash,
