@@ -153,23 +153,18 @@ jobs:
             echo 'The app is not running 45 seconds after launch; it probably crashed on start.' >&2
             exit 1
           }
-          # The key-screen capture installs it on its extra iPhones.
-          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
 
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
         # Only the Apple Silicon build takes them, should another kind of Mac be
-        # added back. Most of each shot is waiting for the screen to load, so three
-        # iPhones take turns
-        # from one list, which the runner's 3 processors and 7 GB of memory
-        # allow. Actions minutes are free for this public repository, so this
-        # is about time, not cost.
+        # added back. The 81 shots take about 21 minutes, one after another.
+        # Three Simulators at once were slower (#453): booting the extra iPhones
+        # took about 20 minutes, and they slowed each other's launches on the
+        # runner's 3 processors.
         if: matrix.arch == 'arm64'
         timeout-minutes: 35
-        run: >-
-          node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
-          --workers 3 --app "$APP_PATH"
+        run: node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
 
       - name: Check the text on the key screens
         # Reads each screenshot's text with Apple's Vision framework and checks
@@ -192,7 +187,7 @@ jobs:
 
   announce:
     # Says the screenshots are on the way as soon as a release PR opens or gets
-    # a new push, since they take about 50 minutes, and removes the screenshots
+    # a new push, since they take about 40 minutes, and removes the screenshots
     # from before the push, which are out of date (#331). The review-comment
     # job replaces the notice with the screenshots.
     if: >-
@@ -231,7 +226,7 @@ jobs:
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 50 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY

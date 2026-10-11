@@ -628,7 +628,10 @@ takes each one:
    a saved screen. A test checks that no other workflow sets it.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch, so the 81 shots
-   take about 24 of the run's 50 minutes.
+   take about 21 of the run's 40 minutes. While it waits, it takes a screenshot every 2
+   seconds and records in `screens/settle-times.json` when each screen stopped changing,
+   so the waits can be shortened from measurements (#453). Taking shots on three
+   Simulators at once was tried and was slower on the 3-processor runner.
 3. The status bar is fixed (9:41, full battery and signal), so images differ only when
    the app does. The iOS 26 Simulator draws the Dynamic Island into its screenshots,
    although a real iPhone's screenshots leave it out.
@@ -681,7 +684,7 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the run takes about 50 minutes) and removes the comment with the
+opens or gets a push (the run takes about 40 minutes) and removes the comment with the
 earlier, now out-of-date screenshots. When the run finishes, it replaces the notice with a
 comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.

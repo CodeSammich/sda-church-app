@@ -130,7 +130,7 @@ major. The click-by-click steps are in
    responsibility, not the fork contributor's. Do not rely on a reviewer to repair the
    merge commit message at the last moment.
 4. The release PR runs the slow checks below (the slowest, **iOS PR preview**, takes
-   about 50 minutes), and **Screenshots reviewed** waits for a `release-approvers`
+   about 40 minutes), and **Screenshots reviewed** waits for a `release-approvers`
    member to approve the screenshots. Merge it once every check and the review pass.
    Merging it into `main` closes the issues and deletes `release-candidate`.
 5. The merge to `main` checks the version files, tags the release, publishes the website,

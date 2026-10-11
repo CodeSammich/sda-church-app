@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const {
-  runQueue,
   settledAfter,
   SETTING_KEYS,
   loadConfig,
@@ -192,46 +191,9 @@ describe('iOS PR preview', () => {
     expect(workflow).toMatch(/Capture the key screens\n(?:\s+#.*\n)*\s+if: matrix\.arch == 'arm64'/);
   });
 
-  it('captures on several iPhones, installing the built app on the extra ones', () => {
-    expect(workflow).toMatch(/--workers \d+ --app "\$APP_PATH"/);
-    expect(workflow).toContain('echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"');
-  });
-
   it('reads no secrets and keeps a read-only token', () => {
     expect(workflow).not.toMatch(/secrets\./);
     expect(workflow).toMatch(/permissions:\n\s+contents: read\n/);
-  });
-});
-
-describe('capturing on several iPhones', () => {
-  const tick = () => new Promise((done) => setTimeout(done, 0));
-
-  it('gives each iPhone the next shot in list order as it finishes one', async () => {
-    const taken: string[] = [];
-    const busy = new Set<number>();
-    let mostAtOnce = 0;
-    await runQueue(['a', 'b', 'c', 'd', 'e'], 3, async (shot: string, lane: number) => {
-      expect(busy.has(lane)).toBe(false);
-      busy.add(lane);
-      mostAtOnce = Math.max(mostAtOnce, busy.size);
-      taken.push(shot);
-      // Lane 0 is slow, so the others take more shots.
-      for (let step = 0; step < (lane === 0 ? 5 : 1); step++) await tick();
-      busy.delete(lane);
-    });
-    expect(taken).toEqual(['a', 'b', 'c', 'd', 'e']);
-    expect(mostAtOnce).toBe(3);
-  });
-
-  it('uses no more iPhones than there are shots, and at least one', async () => {
-    const lanes = new Set<number>();
-    await runQueue(['a'], 3, async (_shot: string, lane: number) => {
-      lanes.add(lane);
-    });
-    await runQueue(['b'], 0, async (_shot: string, lane: number) => {
-      lanes.add(lane);
-    });
-    expect([...lanes]).toEqual([0]);
   });
 });
 
@@ -408,7 +370,7 @@ describe('Screenshot review', () => {
     expect(announce).toContain('github.run_attempt == 1');
     expect(announce).toContain('<!-- key-screens-review pending sha=$SHA -->');
     expect(announce).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
-    expect(announce).toContain('about 50 minutes');
+    expect(announce).toContain('about 40 minutes');
   });
 
   it.each([
