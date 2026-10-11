@@ -14,6 +14,11 @@ on:
   push:
     branches:
       - main
+  # GitHub deletes a cache no one has used for 7 days. Restoring it here twice
+  # a week keeps it for a release PR that comes more than a week after the
+  # last merge into main. Actions minutes are free for this public repository.
+  schedule:
+    - cron: '17 9 * * 1,4'
   workflow_dispatch:
 
 permissions:
@@ -25,8 +30,12 @@ concurrency:
 
 jobs:
   save:
-    # main in this repository only: never a fork, never another branch.
-    if: github.ref == 'refs/heads/main' && github.event.repository.fork == false
+    # main in this repository only: never a fork, never another branch. The
+    # repository is checked by name because a scheduled run's event doesn't
+    # describe it.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'New-York-Chinese-Seventh-day-Adventist/sda-church-app'
     name: Save the iOS compile cache
     runs-on: macos-26
     timeout-minutes: 45

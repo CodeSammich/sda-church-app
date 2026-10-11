@@ -629,7 +629,8 @@ safe-area-context, and Swift in most of Expo's modules. These change only when a
 dependency does. So the runner that compiles uses ccache, which keeps each compiled C,
 C++, and Objective-C file and reuses it when the file and its compiler settings are
 unchanged; Swift is always compiled. `ios-compile-cache.yml` builds the app the same way
-on every push to `main` and saves the cache, dropping anything unused for 30 days; the
+and saves the cache on every push to `main`, dropping anything unused for 30 days. It
+also runs twice a week, because GitHub deletes a cache no one has used for 7 days. The
 preview only restores it (`actions/cache/restore`), and prints its own build's hits
 after compiling. The release PR therefore reuses what `main` compiled after
 the last release. To keep a pull request from planting compiled code in later builds

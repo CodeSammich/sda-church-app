@@ -235,7 +235,8 @@ GitHub's code scanning default setup and have no workflow file.
 
 ### `iOS compile cache` (`.github/workflows/ios-compile-cache.yml`)
 
-- No check. Runs on every push to `main` in this repository, and by hand on `main`.
+- No check. Runs on every push to `main` in this repository, twice a week (GitHub deletes
+  a cache unused for 7 days), and by hand on `main`.
 - Builds the iOS Simulator app with ccache and saves the compiled native code, which
   **iOS PR preview** restores, so it reuses the C, C++, and Objective-C that didn't change
   (Swift is always compiled). Only this workflow

@@ -238,7 +238,11 @@ describe('iOS compile cache', () => {
     const triggers = saver.slice(saver.indexOf('\non:\n'), saver.indexOf('\npermissions:'));
     expect(triggers).toMatch(/push:\n\s+branches:\n\s+- main\n/);
     expect(triggers).not.toContain('pull_request');
-    expect(saver).toContain("if: github.ref == 'refs/heads/main' && github.event.repository.fork == false");
+    expect(saver).toMatch(
+      /if: >-\n\s+github\.ref == 'refs\/heads\/main' &&\n\s+github\.repository == 'New-York-Chinese-Seventh-day-Adventist\/sda-church-app'\n/,
+    );
+    // A scheduled run keeps the cache from expiring between releases.
+    expect(triggers).toMatch(/schedule:\n\s+- cron: /);
     expect(saver).not.toMatch(/secrets\./);
     expect(saver).toMatch(/\npermissions:\n {2}contents: read\n\n/);
     expect(saver).toContain('actions/cache/save@');
