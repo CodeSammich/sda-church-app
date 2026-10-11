@@ -72,9 +72,10 @@ Write the description however suits the change, but every feature and release PR
   in `test/screens/screens.json`, for every platform that captures them: the iPhone today,
   and Android once #372 adds its screenshots. Add the screen or variant that shows the
   change, and text checks (`mustShowLines`, `mustNotShowLines`, `variantRules`) that fail
-  if it breaks. Each shot lengthens every release PR's run, so prefer a check on an
-  existing shot, and replace checks that no longer earn their place. See
-  [Key screens](operations/native-builds.md#key-screens).
+  if it breaks. Give a new screen the `bucket` for its part of the app. Each shot
+  lengthens its bucket's runner, and the release PR waits for the slowest bucket, so
+  prefer a check on an existing shot, and replace checks that no longer earn their
+  place. See [Key screens](operations/native-builds.md#key-screens).
 - Include no secrets, private keys, certificates, passwords, `.env` files, or generated
   signing artifacts. Workflow changes must not print secrets, dump environments, or
   upload secret-bearing files.
@@ -130,7 +131,7 @@ major. The click-by-click steps are in
    responsibility, not the fork contributor's. Do not rely on a reviewer to repair the
    merge commit message at the last moment.
 4. The release PR runs the slow checks below (the slowest, **iOS PR preview**, takes
-   about 25 minutes), and **Screenshots reviewed** waits for a `release-approvers`
+   about 40 minutes), and **Screenshots reviewed** waits for a `release-approvers`
    member to approve the screenshots. Merge it once every check and the review pass.
    Merging it into `main` closes the issues and deletes `release-candidate`.
 5. The merge to `main` checks the version files, tags the release, publishes the website,
@@ -224,9 +225,9 @@ GitHub's code scanning default setup and have no workflow file.
 
 - Checks: `Build iOS Simulator app (Apple Silicon Mac)` and `Screenshots reviewed`. Runs on
   the release PR into `main`, and by hand on any branch.
-- Builds the app for the iOS Simulator without signing on one runner per key-screen
-  bucket (`Key screens (<bucket>)`). Each launches it, screenshots its bucket of the key
-  screens in `test/screens/screens.json`, and checks their text;
+- Builds the app for the iOS Simulator once, without signing, and shares it with one
+  runner per key-screen bucket (`Key screens (<bucket>)`). Each launches it, screenshots
+  its bucket of the key screens in `test/screens/screens.json`, and checks their text;
   `Build iOS Simulator app (Apple Silicon Mac)` joins the buckets and fails if any failed.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   screenshots in the `screenshot-review` environment; see
@@ -236,7 +237,8 @@ GitHub's code scanning default setup and have no workflow file.
 
 - No check. Runs on every push to `main` in this repository, and by hand on `main`.
 - Builds the iOS Simulator app with ccache and saves the compiled native code, which
-  **iOS PR preview** restores so it recompiles only what changed. Only this workflow
+  **iOS PR preview** restores, so it reuses the C, C++, and Objective-C that didn't change
+  (Swift is always compiled). Only this workflow
   saves the cache, and the signed store builds never use it; see
   [Compile cache](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 

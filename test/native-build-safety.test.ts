@@ -250,16 +250,26 @@ describe('iOS compile cache', () => {
     }
   });
 
-  it('builds exactly as the preview does, under a key naming the same Xcode, so the cache matches', () => {
-    for (const step of ['Generate iOS project', 'Install CocoaPods dependencies', 'Build for the Simulator without signing']) {
+  it('installs and builds as the preview does, under a key naming the same Xcode, so the cache matches', () => {
+    for (const step of [
+      'Install dependencies',
+      'Generate iOS project',
+      'Install CocoaPods dependencies',
+      'Build for the Simulator without signing',
+    ]) {
       expect(runOf(saver, step)).toBe(runOf(preview, step));
     }
+    const arch = (workflow: string) => /\n {10}ARCH: (\S+)\n/.exec(workflow)![1];
+    expect(arch(saver)).toBe(arch(preview));
     const xcode = (workflow: string) => /\/Applications\/Xcode_([\d.]+)\.app/.exec(workflow)![1];
     expect(xcode(saver)).toBe(xcode(preview));
     for (const workflow of [saver, preview]) {
       expect(workflow).toContain(`key: ccache-ios-sim-xcode-${xcode(workflow)}-\${{ hashFiles('package-lock.json') }}`);
       expect(workflow).toContain('echo "USE_CCACHE=1" >> "$GITHUB_ENV"');
       expect(workflow).toContain('path: ~/Library/Caches/ccache');
+      // ccache keeps its counters in the cache, so they're zeroed only after
+      // the restore, or the hits it reports would include earlier runs'.
+      expect(workflow.indexOf('ccache --zero-stats')).toBeGreaterThan(workflow.indexOf('actions/cache/restore@'));
     }
   });
 });

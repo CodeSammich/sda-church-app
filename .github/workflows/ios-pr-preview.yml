@@ -45,16 +45,27 @@ jobs:
     # docs/operations/native-builds.md ("On an Intel Mac") says how to build one.
     runs-on: macos-26
     timeout-minutes: 60
+    permissions:
+      contents: read
+      # To see when the shared app is ready, and whether its runner failed.
+      actions: read
     strategy:
       fail-fast: false
       matrix:
         # One runner per bucket in test/screens/screens.json, a group of
-        # related screens; each builds the app and captures its bucket, so the
-        # release PR waits for the slowest bucket rather than all 81 shots
-        # (#453). A test keeps this list and screens.json in step. GitHub's
-        # free plan runs five Mac jobs at once. Three Simulators on one runner
-        # were slower: its 3 processors couldn't keep up with them.
+        # related screens, so the release PR waits for the slowest bucket
+        # rather than all 81 shots (#453). A test keeps this list and
+        # screens.json in step. GitHub's free plan runs five Mac jobs at once.
+        # Three Simulators on one runner were slower: its 3 processors couldn't
+        # keep up with them.
         bucket: [home, bible-reading, bible-text, library, worship-and-you]
+        # The app is compiled once, by the runner with the smallest bucket, and
+        # shared with the others, which boot their iPhones meanwhile; five
+        # separate compiles made the run wait for the slowest of five. A test
+        # checks that exactly one bucket builds and that the others wait for it.
+        include:
+          - bucket: worship-and-you
+            builds: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -77,35 +88,21 @@ jobs:
           pod --version
           uname -m
 
-      - name: Boot the simulated iPhone while the app builds
-        # A fresh Simulator's first boot takes about 5.5 minutes on these
-        # runners, most of it one iOS data-migration step for location
-        # services (docs/operations/native-builds.md). It starts in the
-        # background now, so the compile hides it, and the launch step waits
-        # for it.
-        run: |
-          set -euo pipefail
-          # The iPhone test/screens/screens.json names, on the newest installed
-          # iOS runtime, so the launch check and the key screens share it.
-          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
-          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
-          nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
-
       - name: Set up the compile cache
         # ccache reuses the C, C++, and Objective-C that ios-compile-cache.yml
         # compiled on main after the last release (#455), so only what changed
-        # since then is compiled again.
+        # since then is compiled again. Swift is always compiled.
+        if: ${{ matrix.builds }}
         run: |
           set -euo pipefail
           command -v ccache >/dev/null || HOMEBREW_NO_AUTO_UPDATE=1 brew install ccache
-          ccache --max-size=1G
-          ccache --zero-stats
           # React Native's CocoaPods setup compiles through ccache when this is set.
           echo "USE_CCACHE=1" >> "$GITHUB_ENV"
 
       # Restore only. Only main saves this cache, so a pull request can't
       # change what a later run gets; the signed store builds never use it.
       - name: Restore the compile cache from main
+        if: ${{ matrix.builds }}
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Caches/ccache
@@ -114,19 +111,44 @@ jobs:
             ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}-
             ccache-ios-sim-xcode-26.6-
 
+      # ccache keeps its counters in the cache, so start them at zero after
+      # restoring it, or the stats after the build would include main's.
+      - name: Count only this build's compile-cache hits
+        if: ${{ matrix.builds }}
+        run: ccache --zero-stats
+
+      # Every runner needs sharp, which the key-screen scripts use.
       - name: Install dependencies
         run: npm ci --force
 
       - name: Generate iOS project
+        if: ${{ matrix.builds }}
         run: >-
           npx expo prebuild
           --template expo-template-bare-minimum@58.0.9
           --platform ios --clean --no-install
 
       - name: Install CocoaPods dependencies
+        if: ${{ matrix.builds }}
         run: pod install --project-directory=ios
 
+      - name: Boot the simulated iPhone in the background
+        # A fresh Simulator's first boot takes about 5.5 minutes on these
+        # runners, most of it one iOS data-migration step for location
+        # services (docs/operations/native-builds.md). It starts here, after
+        # the package installs, which it would slow: on the runner that
+        # compiles, the compile hides it; on the others, the wait for the app
+        # does. The launch step waits for it.
+        run: |
+          set -euo pipefail
+          # The iPhone test/screens/screens.json names, on the newest installed
+          # iOS runtime, so the launch check and the key screens share it.
+          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
+
       - name: Build for the Simulator without signing
+        if: ${{ matrix.builds }}
         env:
           ARCH: arm64
           # Lets the key-screen capture open each screen from a saved setting
@@ -154,14 +176,11 @@ jobs:
             build
 
       - name: Show how much the compile cache saved
-        if: ${{ !cancelled() }}
+        if: ${{ matrix.builds && !cancelled() }}
         run: ccache --show-stats
 
-      - name: Launch on a simulated iPhone
-        env:
-          BUCKET: ${{ matrix.bucket }}
-          # Named like the Android preview's sda-church-app-pr-<number>-<run>-arm-debug.apk.
-          PREVIEW_NAME: sda-church-app-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || 'manual' }}-${{ github.run_id }}-arm64
+      - name: Zip the app to share
+        if: ${{ matrix.builds }}
         run: |
           set -euo pipefail
           APP_PATH="$(find "$RUNNER_TEMP/ios-simulator/Build/Products/Release-iphonesimulator" \
@@ -170,12 +189,79 @@ jobs:
             echo 'The build did not produce a Simulator app.' >&2
             exit 1
           }
+          mkdir -p "$RUNNER_TEMP/ios-simulator-app"
+          # ditto keeps the app bundle's symbolic links and permissions.
+          (cd "$(dirname "$APP_PATH")" &&
+            ditto -c -k --keepParent "$(basename "$APP_PATH")" "$RUNNER_TEMP/ios-simulator-app/app.zip")
+
+      - name: Share the app with the other runners
+        if: ${{ matrix.builds }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ios-simulator-app-${{ github.run_id }}
+          path: ${{ runner.temp }}/ios-simulator-app/app.zip
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Wait for the shared app
+        # The worship-and-you runner uploads it when its compile finishes.
+        # Gives up as soon as that runner ends without it, rather than waiting
+        # out the timeout.
+        if: ${{ !matrix.builds }}
+        timeout-minutes: 45
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          until gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' |
+            grep -qx "ios-simulator-app-$RUN_ID"; do
+            builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+              --jq '.jobs[] | select(.name == "Key screens (worship-and-you)") | .conclusion // ""')"
+            if [ -n "$builder" ]; then
+              echo "::error::The worship-and-you runner ended ($builder) without sharing the app." >&2
+              exit 1
+            fi
+            sleep 15
+          done
+
+      - name: Download the shared app
+        if: ${{ !matrix.builds }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ios-simulator-app-${{ github.run_id }}
+          path: ${{ runner.temp }}/ios-simulator-app
+
+      - name: Unpack the shared app
+        if: ${{ !matrix.builds }}
+        run: ditto -x -k "$RUNNER_TEMP/ios-simulator-app/app.zip" "$RUNNER_TEMP/ios-simulator-app"
+
+      - name: Launch on a simulated iPhone
+        env:
+          BUILDS: ${{ matrix.builds && 'true' || 'false' }}
+          # Named like the Android preview's sda-church-app-pr-<number>-<run>-arm-debug.apk.
+          PREVIEW_NAME: sda-church-app-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || 'manual' }}-${{ github.run_id }}-arm64
+        run: |
+          set -euo pipefail
+          # Compiled here, or shared by the runner that compiled it.
+          APP_PATH="$(find "$RUNNER_TEMP/ios-simulator/Build/Products/Release-iphonesimulator" \
+            "$RUNNER_TEMP/ios-simulator-app" -maxdepth 1 -name '*.app' -print -quit 2>/dev/null || true)"
+          test -n "$APP_PATH" || {
+            echo 'No Simulator app was built or shared.' >&2
+            exit 1
+          }
           EXECUTABLE="$(plutil -extract CFBundleExecutable raw "$APP_PATH/Info.plist")"
           lipo -archs "$APP_PATH/$EXECUTABLE"
           BUNDLE_ID="$(node -p "require('./app.json').expo.ios.bundleIdentifier")"
 
-          # The iPhone started booting before the build; wait until it's ready.
+          # The iPhone started booting earlier; wait until it's ready.
           xcrun simctl bootstatus "$DEVICE_ID" -b
+          # The background boot's own log, with timestamps, to see what a slow
+          # boot was waiting on.
+          echo '::group::Simulated iPhone boot log'
+          cat "$RUNNER_TEMP/simulator-boot.log" || true
+          echo '::endgroup::'
           xcrun simctl install "$DEVICE_ID" "$APP_PATH"
           xcrun simctl launch "$DEVICE_ID" "$BUNDLE_ID"
 
@@ -183,11 +269,10 @@ jobs:
           sleep 45
           ARTIFACT_DIR="$RUNNER_TEMP/ios-pr-preview"
           mkdir -p "$ARTIFACT_DIR"
-          # The download needs one copy of the app; the home bucket's is kept.
-          if [ "$BUCKET" = home ]; then
+          # The download needs one copy of the app; the compiling runner's is kept.
+          if [ "$BUILDS" = true ]; then
             xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACT_DIR/$PREVIEW_NAME-first-screen.png"
-            (cd "$(dirname "$APP_PATH")" &&
-              ditto -c -k --keepParent "$(basename "$APP_PATH")" "$ARTIFACT_DIR/$PREVIEW_NAME-simulator.zip")
+            cp "$RUNNER_TEMP/ios-simulator-app/app.zip" "$ARTIFACT_DIR/$PREVIEW_NAME-simulator.zip"
           fi
           RUNNING_SERVICES="$(xcrun simctl spawn "$DEVICE_ID" launchctl list)"
           grep -q "UIKitApplication:$BUNDLE_ID" <<<"$RUNNING_SERVICES" || {
@@ -227,7 +312,7 @@ jobs:
 
   simulator:
     # Joins the buckets into the one artifact the review comment links: the
-    # app and its first screen from the home bucket, and every bucket's
+    # app and its first screen from the runner that compiled it, and every bucket's
     # screenshots and checks. It fails if any bucket failed, so a failed
     # bucket can't pass as skipped. The "Main protection" ruleset requires
     # this job's name.
@@ -285,7 +370,7 @@ jobs:
 
   announce:
     # Says the screenshots are on the way as soon as a release PR opens or gets
-    # a new push, since they take about 25 minutes, and removes the screenshots
+    # a new push, since they take about 40 minutes, and removes the screenshots
     # from before the push, which are out of date (#331). The review-comment
     # job replaces the notice with the screenshots.
     if: >-
@@ -324,7 +409,7 @@ jobs:
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 25 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY

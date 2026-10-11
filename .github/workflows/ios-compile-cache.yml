@@ -7,8 +7,9 @@ name: iOS compile cache
 # Only main writes this cache. A run on main builds reviewed code, and pull
 # requests can read main's caches but never write them, so a pull request
 # can't change what a later run gets. This workflow reads no secrets, and the
-# signed store builds never use the cache. It builds exactly as
-# ios-pr-preview.yml does, or the cache wouldn't match; a test checks that.
+# signed store builds never use the cache. It must compile the way
+# ios-pr-preview.yml does, or the cache wouldn't match; a test compares the
+# two workflows' install and build commands.
 on:
   push:
     branches:
@@ -52,8 +53,6 @@ jobs:
         run: |
           set -euo pipefail
           command -v ccache >/dev/null || HOMEBREW_NO_AUTO_UPDATE=1 brew install ccache
-          ccache --max-size=1G
-          ccache --zero-stats
           # React Native's CocoaPods setup compiles through ccache when this is set.
           echo "USE_CCACHE=1" >> "$GITHUB_ENV"
 
@@ -66,6 +65,11 @@ jobs:
           restore-keys: |
             ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}-
             ccache-ios-sim-xcode-26.6-
+
+      # ccache keeps its counters in the cache, so start them at zero after
+      # restoring it, or the stats after the build would include earlier runs'.
+      - name: Count only this build's compile-cache hits
+        run: ccache --zero-stats
 
       - name: Install dependencies
         run: npm ci --force
@@ -106,6 +110,11 @@ jobs:
 
       - name: Show how much the cache saved
         run: ccache --show-stats
+
+      # Drops what no build has used for 30 days, so the cache doesn't grow
+      # with every release.
+      - name: Trim the compile cache
+        run: ccache --evict-older-than 30d
 
       - name: Save the compile cache
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

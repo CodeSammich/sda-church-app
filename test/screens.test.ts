@@ -196,6 +196,34 @@ describe('iOS PR preview', () => {
     expect(workflow).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--bucket \$\{\{ matrix\.bucket \}\}\n/);
   });
 
+  it('compiles the app once, on the lightest bucket\'s runner, and the others wait for it', () => {
+    const builder = /include:\n\s+- bucket: ([a-z-]+)\n\s+builds: true\n/.exec(workflow)![1];
+    expect(workflow.match(/builds: true/g)).toHaveLength(1);
+    // The builder also takes its own shots after compiling, so it gets the
+    // lightest bucket.
+    const cost = (bucket: string) =>
+      takeBucket(shots, bucket, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
+    for (const bucket of Object.keys(config.buckets)) expect(cost(builder)).toBeLessThanOrEqual(cost(bucket));
+    const guard = (step: string) => new RegExp(`- name: ${step}\n(?:\\s+#.*\n)*\\s+if: (.+)\n`).exec(workflow)?.[1];
+    for (const step of [
+      'Set up the compile cache',
+      'Restore the compile cache from main',
+      'Generate iOS project',
+      'Install CocoaPods dependencies',
+      'Build for the Simulator without signing',
+      'Zip the app to share',
+      'Share the app with the other runners',
+    ]) {
+      expect({ step, guard: guard(step) }).toEqual({ step, guard: '${{ matrix.builds }}' });
+    }
+    for (const step of ['Wait for the shared app', 'Download the shared app', 'Unpack the shared app']) {
+      expect({ step, guard: guard(step) }).toEqual({ step, guard: '${{ !matrix.builds }}' });
+    }
+    // The others stop waiting as soon as the builder's job ends without the app.
+    expect(workflow).toContain(`select(.name == "Key screens (${builder})")`);
+    expect(workflow.match(/ios-simulator-app-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
+  });
+
   it('joins the buckets in the required job, which fails rather than skips when a bucket fails', () => {
     const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
     expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');
@@ -448,7 +476,7 @@ describe('Screenshot review', () => {
     expect(announce).toContain('github.run_attempt == 1');
     expect(announce).toContain('<!-- key-screens-review pending sha=$SHA -->');
     expect(announce).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
-    expect(announce).toContain('about 25 minutes');
+    expect(announce).toContain('about 40 minutes');
   });
 
   it.each([

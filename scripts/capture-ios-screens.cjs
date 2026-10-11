@@ -384,8 +384,9 @@ const capture = async (outDir, bucket) => {
   const summary = [
     `### Key screens (${device.name}, ${device.runtime}${part})`,
     '',
-    `${captured.size} captured in ${minutes} minutes, in the Apple Silicon artifact's \`screens/\` folder,`,
-    'with the App Store shots in `screens/app-store/`.',
+    bucket
+      ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every bucket's.`
+      : `${captured.size} captured in ${minutes} minutes, in \`screens/\`, with the App Store shots in \`screens/app-store/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
     '',
     `Settled within 5 seconds: ${timings.filter((timing) => timing.settledAfter <= 5).length} of ${timings.length}. ` +

@@ -559,15 +559,22 @@ works on Intel and Apple Silicon Macs. On Windows or Linux, the command explains
 needs a Mac.
 
 **In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
-each release PR into `main` without signing, on one Apple Silicon runner (`macos-26`,
-arm64) per key-screen bucket, five at once, with the same Xcode as the signed iOS build.
-Each runner, a `capture` job named **Key screens (`<bucket>`)**, starts booting
-the simulated iPhone that `test/screens/screens.json` names (an iPhone 17 Pro Max, on
-the newest iOS runtime) while the app compiles, then installs the app, fails if it
-isn't still running 45 seconds after launch, and takes its bucket's key screens.
-**Build iOS Simulator app (Apple Silicon Mac)** then joins the buckets and uploads
-the app and a screenshot of its first screen (14-day retention), named like the
-Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
+each release PR into `main` without signing, on Apple Silicon runners (`macos-26`,
+arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
+once, **Key screens (`<bucket>`)**, one per key-screen bucket:
+
+- The `worship-and-you` runner, which has the lightest bucket, compiles the app once
+  and shares it with the others as an artifact. Its simulated iPhone boots during the
+  compile.
+- The other four install packages, start booting their iPhones, and wait for the shared
+  app, giving up at once if the compiling runner fails.
+- Each then installs the app on the simulated iPhone that `test/screens/screens.json`
+  names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
+  running 45 seconds after launch, and takes its bucket's key screens.
+
+**Build iOS Simulator app (Apple Silicon Mac)** then joins the buckets and uploads the
+app and a screenshot of its first screen (14-day retention), named like the Android
+preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
 
 - `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`: the app;
 - `sda-church-app-pr-<number>-<run>-arm64-first-screen.png`: the screenshot;
@@ -578,14 +585,20 @@ requests into `main`, such as Dependabot's. To test a change to the workflow,
 `scripts/build-ios-simulator.mjs`, or the key screens before the release PR, start it by
 hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
-**How long it takes, and why it varies.** A run finishes when its slowest runner does:
-setup and packages, then the compile and the iPhone's boot, then its bucket's screenshots.
-Averages from 13 runs in October 2026, when one runner took all the key screens, with
-the launch step broken down from the job logs of three of them:
+**How long it takes, and why it varies.** A run finishes when its slowest runner does.
+Each runner sets up, installs packages, and runs CocoaPods; compiles while its simulated
+iPhone boots; installs and launches the app; then captures and checks its bucket. The
+first five-bucket run (October 2026) took 40 minutes, against an average of 47 when one
+runner took every key screen. Its runners took 23–37 minutes each; the slowest,
+`library`, spent 7.7 minutes installing packages while its iPhone booted, and 13.9
+compiling.
+
+Averages from 13 runs when one runner took every key screen, with the launch step
+broken down from the job logs of three of them:
 
 | Step | Average |
 | --- | --- |
-| Setup and installing packages | 3.1 min |
+| Setup, packages, and CocoaPods | 3.1 min |
 | Compile | 10.0 min |
 | First boot of the simulated iPhone | 5.5 min, of which iOS's one-time data migration for location services is 3.8 |
 | Installing the app on it (`simctl install`, 65 MB) | 1.3 min |
@@ -593,36 +606,50 @@ the launch step broken down from the job logs of three of them:
 | Key screens, all 81 on one runner | 23.4 min |
 | Text checks | 2.8 min |
 
-- The same code compiled in 6.4 to 12.4 minutes. GitHub doesn't say which machine a run
-  got or how busy it was, so that spread can't be traced further from the logs.
+- The same code compiled in 6.4 to 12.4 minutes in those runs, and in up to 13.9 in the
+  five-bucket run. GitHub doesn't say which machine a run got or how busy it was, so
+  that spread can't be traced further from the logs.
 - One outlier: in one run, installing the app took 11.4 minutes instead of about one,
   making that run's launch step 19 minutes. The log shows only when `simctl install`
   returned, so the cause is unknown; if it recurs, look there first.
 - With five runners, a run waits for the slowest, so one runner's slow step holds up
-  the run. So the workflow starts each iPhone's boot in the background right after
-  selecting Xcode, and the compile hides it. While it boots, installing packages and
-  CocoaPods take a few minutes longer on that runner.
+  the run. So each runner starts its iPhone's boot in the background right after
+  selecting Xcode, and the compile hides it: in the five-bucket run, the launch step
+  took 1.2–1.5 minutes instead of about 8. The cost is that installing packages and
+  CocoaPods, which run while it boots, took 5–12 minutes together instead of about 3.
+  Starting the boot after CocoaPods instead might do better; it hasn't been measured.
+- The launch step prints the boot's own log, with timestamps, under **Simulated iPhone
+  boot log**, to show what a slow boot was waiting on.
 
-**Compile cache.** Most of the build compiles the native libraries (React Native, Expo's
-modules, Reanimated), which change only when a dependency does; the app's own code is
-JavaScript and isn't compiled by Xcode. So the five runners use ccache, which keeps each
-compiled C, C++, and Objective-C file and reuses it when the file and its compiler
-settings are unchanged; Swift isn't cached. `ios-compile-cache.yml` builds the app the
-same way on every push to `main` and saves the cache; the preview's runners only
-restore it (`actions/cache/restore`), and each prints its hits after the build. The
-release PR therefore reuses what `main` compiled after the last release. To keep a pull
-request from planting compiled code in later builds (cache poisoning):
+**Compile cache.** The app's own code is JavaScript, which Xcode doesn't compile, and
+React Native's core and most of Expo's modules arrive precompiled. What Xcode compiles is
+the rest of the native libraries: C, C++, and Objective-C, mostly in react-native-screens,
+Reanimated, Worklets, React Native's generated code, the gesture handler, and
+safe-area-context, and Swift in most of Expo's modules. These change only when a
+dependency does. So the runner that compiles uses ccache, which keeps each compiled C,
+C++, and Objective-C file and reuses it when the file and its compiler settings are
+unchanged; Swift is always compiled. `ios-compile-cache.yml` builds the app the same way
+on every push to `main` and saves the cache, dropping anything unused for 30 days; the
+preview only restores it (`actions/cache/restore`), and prints its own build's hits
+after compiling. The release PR therefore reuses what `main` compiled after
+the last release. To keep a pull request from planting compiled code in later builds
+(cache poisoning):
 
-- only the `main` workflow saves the cache, and pull requests can read `main`'s caches
-  but never write them;
-- the cache workflow reads no secrets and has a read-only token;
-- the signed store builds never use ccache or the cache, and compile from scratch;
-- the key names the Xcode version and the `package-lock.json` hash, so a change means
-  a slower build, never a mismatched one.
+- only `ios-compile-cache.yml`, on pushes to `main` in this repository, saves the cache,
+  and pull requests can read `main`'s caches but never write them;
+- that workflow reads no secrets and has a read-only token;
+- the preview only restores the cache;
+- the signed store builds never use ccache or the cache, and compile from scratch.
 
-`test/native-build-safety.test.ts` fails if any of that changes, or if the two
-workflows stop building the same way. The cache is empty until the first push to
-`main` after it was added, so that release's own PR compiles everything.
+A stale cache can only cost time: ccache checks each file's contents and compiler
+settings before reusing it, so a changed file is compiled again. The key names the Xcode
+version and the `package-lock.json` hash, and falls back to the newest cache for the
+same Xcode.
+
+`test/native-build-safety.test.ts` fails if the cache workflow runs anywhere but `main`
+or reads a secret, if the preview saves the cache, if a signed build uses it, or if the
+two workflows' install and build commands differ. The cache is empty until the first
+push to `main` after it was added, so that release's own PR compiles everything.
 
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
 artifact ending in `-arm64`, and unzip the download and then the `.zip` inside it to get
@@ -635,16 +662,18 @@ xcrun simctl install booted /path/to/the.app
 xcrun simctl launch booted org.nyccsda.app
 ```
 
-**On an Intel Mac.** The workflow builds only for Apple Silicon, which nearly every Mac
-in use has; Apple sold its last Intel Mac in 2023. The Intel build was dropped in 1.2.1:
+**On an Intel Mac.** The workflow builds only for Apple Silicon, which most Macs in use
+have; Apple sold its last Intel Mac in 2023. The Intel build was dropped in 1.2.1:
 it took 25–49 minutes and only served the Simulator on an Intel Mac. On an Intel Mac,
 build the app yourself with `npm run build:ios:simulator` (**On a Mac**, above), which
 builds for the Mac's own processor. To build it in the workflow again:
 
 1. Add a job to `.github/workflows/ios-pr-preview.yml` modelled on `capture`, without
-   its matrix or key-screen steps, that runs on `macos-26-intel`, builds with
-   `ARCH: x86_64`, names its app `…-x86_64`, and uploads it as an artifact ending in
-   `-x86_64`.
+   its matrix, compile-cache steps (the cache holds Apple Silicon code), or key-screen
+   steps, that runs on `macos-26-intel` and builds with `ARCH: x86_64`. It should always
+   zip the app and take the first screenshot, which `capture` does only for the `home`
+   bucket, name them `…-x86_64`, and upload them as an artifact ending in `-x86_64`,
+   kept 14 days.
 2. Update the test in `test/native-build-safety.test.ts` that checks the workflow
    builds for Apple Silicon only.
 3. Once that's in `release-candidate`, add the new job's name to the
@@ -653,7 +682,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 30 screens listed in `test/screens/screens.json`, 81
+The five runners screenshot the 29 screens listed in `test/screens/screens.json`, 81
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner takes one bucket (`--bucket <name>`): a group of related
 screens, such as the Bible reader's layout or the library, listed under `buckets` in
@@ -676,6 +705,7 @@ limit is a reminder to prune, not a rule:
    buckets.
 4. If a bucket is still over after that, raise the limit in `test/screens.test.ts`
    rather than cutting screenshots that earn their place.
+
 `scripts/capture-ios-screens.cjs` takes each shot:
 
 1. It saves the settings the app reads at startup into the app's storage: setup
@@ -735,7 +765,7 @@ such as the Bible while reading, sets `"tabs": false`. What Vision read is saved
 
 The first real runs showed what this catches. Every screen covered by iOS's "Open in"
 prompt failed, and so did one screenshot the app hadn't drawn yet, which the blank check
-then missed. To try a rule change without waiting for a 50-minute run, start the
+then missed. To try a rule change without waiting for a full run, start the
 workflow by hand with **screens_from_run** set to an earlier run's ID: it downloads that
 run's screenshots and only checks them. The tests use text Vision read from real screenshots
 (`test/screens/ocr-samples.json`), unedited. It includes Vision's mistakes on text
@@ -746,7 +776,7 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the run takes about 25 minutes) and removes the comment with the
+opens or gets a push (the run takes about 40 minutes) and removes the comment with the
 earlier, now out-of-date screenshots. When the run finishes, it replaces the notice with a
 comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.
@@ -761,9 +791,9 @@ Simulator's PNGs have, which App Store Connect rejects. They're ready to upload;
 [Store assets](../store-assets/README.md). When to refresh the stores' screenshots is in
 step 2 of the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the-stores).
 
-To add a screen, add an entry to `test/screens/screens.json`: a `name`, the deep link
-`path` without the scheme, any Bible `settings`, the `variants` to take, and any
-`checks`. Leave out screens that show members' names or photos, such as the bulletin,
+To add a screen, add an entry to `test/screens/screens.json`: a `name`, its `bucket`
+(see **Adding a key screen**, above), the deep link `path` without the scheme, any Bible
+`settings`, the `variants` to take, and any `checks`. Leave out screens that show members' names or photos, such as the bulletin,
 the team page, and the fellowship page; `test/screens.test.ts` checks this. A new
 setting also needs its storage key in the script's `SETTING_KEYS`, and the test checks
 the app still reads that key. A screen whose content changes every day, such as Home
