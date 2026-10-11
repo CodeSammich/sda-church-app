@@ -44,7 +44,10 @@ jobs:
     # Apple Silicon only. The Intel Mac build was dropped in 1.2.1;
     # docs/operations/native-builds.md ("On an Intel Mac") says how to build one.
     runs-on: macos-26
-    timeout-minutes: 60
+    # The longest of these jobs took 21.5 to 27.2 minutes per run in October
+    # 2026. 40 leaves room for a slow compile or the one 11-minute app install
+    # seen, without a stuck job holding a Mac for an hour.
+    timeout-minutes: 40
     permissions:
       contents: read
       # To see when the shared app is ready, and whether its runner failed.
@@ -174,7 +177,9 @@ jobs:
         # Gives up as soon as that runner ends without it, rather than waiting
         # out the timeout.
         if: ${{ !matrix.builds }}
-        timeout-minutes: 45
+        # The app was ready 13 to 17 minutes into the job; this leaves the rest of the
+        # job's 40 minutes for the key screens.
+        timeout-minutes: 25
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}

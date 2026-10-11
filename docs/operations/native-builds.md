@@ -606,7 +606,8 @@ In those two runs:
 | Text checks | 0.5–1.6 min |
 | Joining the groups | 0.7 min |
 
-The two runs differ mostly in the compile, which varies from run to run.
+The two runs differ mostly in the compile, which varies from run to run. Each **Key
+screens** job times out after 40 minutes; the longest took 27.2.
 
 From the logs of earlier runs:
 
