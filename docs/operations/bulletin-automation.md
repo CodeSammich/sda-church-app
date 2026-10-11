@@ -25,6 +25,7 @@ Contents:
 
 - [System boundaries](#system-boundaries)
 - [The three mandatory sheets](#the-three-mandatory-sheets)
+- [The `Leadership` tab](#the-leadership-tab)
 - [Header protection and validation automation](#header-protection-and-validation-automation)
 - [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)
 - [Privacy, auto-translation, and name behavior](#privacy-auto-translation-and-name-behavior)
@@ -41,7 +42,8 @@ Contents:
 Master spreadsheet
 ├── Sabbath Calendar       roster, service assignments, metadata
 ├── Sabbath Sermon Data    reviewed final-owner bulletin content
-└── Name Dictionary        private physical-print name resolution
+├── Name Dictionary        private physical-print name resolution
+└── Leadership             pastors and elders, for printed titles
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
@@ -94,27 +96,19 @@ the church's Workspace terms during annual maintenance.
 ## The three mandatory sheets
 
 These three tabs are the stable workbook contract. Keep their first-row headers
-exactly as documented, including capitalization and order (the Name
-Dictionary's title columns, below, are the one exception). Do not insert a new
+exactly as documented, including capitalization and order. Do not insert a new
 column between existing columns without updating Apps Script, tests, and the
 mobile app first.
 
 ### 1. `Name Dictionary`
 
-Row 1 must start with:
+Row 1 must be:
 
 ```text
 English Name | Chinese Name
 ```
 
-Data begins on row 2. Two more columns, anywhere to the right, list the people
-who print with a title. They are found by a row-1 header that holds only the
-title, in either language and either case (`Pastors`, `Pastor(s)`,
-`Pastors 牧師`, `牧師`):
-
-```text
-Pastors | Elders
-```
+Data begins on row 2.
 
 - `English Name` is the canonical English name used for physical printing.
 - `Chinese Name` is the traditional-Chinese display name. The dictionary normally
@@ -125,18 +119,6 @@ Pastors | Elders
   Chinese names in the digital bulletin.
 - If the sheet is missing, a name is printed exactly as supplied. If a lookup
   is incomplete or unmatched, the source value is preserved rather than guessed.
-- A person in `Pastors` or `Elders` prints as `Pastor …` / `…牧師` or
-  `Elder …` / `…長老` in the order of service. Enter one plain name per cell, in
-  English or Chinese, as it appears in the first two columns. The roster grid
-  (`Meetings Schedule`) keeps plain names, since its cells are too narrow for
-  titles.
-- Enter plain names in the Sabbath Calendar too: titles come only from these
-  lists, so adding or removing someone changes the next print without a code
-  change. A person on both lists prints as Pastor. To add another title, add a
-  column and an entry in `PHYSICAL_NAME_TITLES` in `PrintedBulletin.gs`.
-- The first name in `Pastors` leads the Communion service. Sorting the whole
-  tab moves these cells with the rows, so check that the lead pastor is still
-  first afterward. If `Pastors` is missing or empty, those rows print `TBD`.
 
 The pinyin implementation is generated from the pinned `pinyin-pro` dependency
 when Apps Script is deployed. `PinyinPro.gs` is generated output: do not edit it
@@ -207,6 +189,45 @@ Rules:
 
 The printed-bulletin dialog links directly to this sheet. This is the only
 normal bulletin-content intake workflow.
+
+## The `Leadership` tab
+
+This optional tab lists the church's pastors and elders, so the printed
+bulletin can give them their titles without naming anyone in the schedule or
+the code. Keeping it current is a maintainer's job; see
+[Updating pastors and elders](admin-runbook.md#updating-pastors-and-elders).
+
+```text
+     | Pastors   | Elders
+Head | Paul Wen  | Ruth Ho
+     | Grace Lin | Mark Sun
+```
+
+- Row 1 holds the headers. `Pastors` and `Elders` are found by a header that
+  holds only the title, in any column and either case, in English, Chinese, or
+  both (`Pastors`, `Pastor(s)`, `Pastors 牧師`, and `牧師` all work; `Pastors
+  list` doesn't).
+- Enter one plain name per cell, in English or Chinese, spelled as in the
+  `Name Dictionary`. A `Pastor`/`Elder` typed before the name, or `牧師`/`長老`
+  before or after it, is dropped.
+- A listed person prints as `Pastor …` / `…牧師` or `Elder …` / `…長老` on every
+  printed person row except the roster grid, whichever language the schedule
+  cell uses, as long as the person is in the `Name Dictionary`. Someone who
+  isn't must be scheduled under the same spelling, and gets the title only on
+  that language's line, with `—` on the other. A person on both lists prints
+  as Pastor.
+- The roster grid (`Meetings Schedule`) keeps plain names, since its cells are
+  too narrow for titles. Enter plain names in the `Sabbath Calendar` too:
+  titles come only from this tab.
+- `Head` in a column other than `Pastors` and `Elders` (column A above) marks
+  that row's pastor as the one who leads Communion; the topmost `Head` row
+  counts. It is only read, never printed: the title stays `Pastor`. Without a
+  `Head` row, or with its `Pastors` cell blank, the first name in `Pastors`
+  leads Communion; with no pastors listed, those rows print `TBD`.
+- Edits take effect on the next print, with no deploy. If the tab is missing,
+  names print without titles.
+- To add another title, add a column here and an entry in
+  `PHYSICAL_NAME_TITLES` in `PrintedBulletin.gs`.
 
 ## Header protection and validation automation
 
@@ -519,8 +540,8 @@ Queens Holy Communion is four physical pages in imposed order:
 
 The Communion ceremony has fixed references and fixed order. The submitted study
 verse cannot replace the Foot Washing or Communion readings. Communion service
-assignments use the first name in the Name Dictionary's `Pastors` column, with
-the title, except for Congregation. Brooklyn Communion is
+assignments use the `Leadership` tab's head pastor (or, without one, its first
+pastor), with the title, except for Congregation. Brooklyn Communion is
 rejected server-side and should remain disabled in any intake UI.
 
 Brooklyn Regular is three physical pages:
@@ -700,6 +721,7 @@ changes the URL and requires a coordinated mobile-app update.
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
 | Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
 | QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
+| A pastor or elder prints without a title, or Communion rows print `TBD` | The name isn't in the `Leadership` tab, is spelled differently from the schedule or the `Name Dictionary`, or the tab or its `Pastors`/`Elders` header was renamed (a header must hold only the title) | Fix the [`Leadership` tab](#the-leadership-tab); **Extensions → Apps Script → Executions** logs a missing tab or column. No deploy is needed |
 | Brooklyn Communion is unavailable | Intentional safety/layout restriction | Use Queens Holy Communion or Brooklyn Regular; do not re-enable without a dedicated layout review |
 | Apps Script deploy fails after working previously | Workspace session-control reauthorization | Verify Trusted Apps and Exempt Trusted apps policy before rotating credentials |
 | Mobile app receives a Google sign-in page/403 | Web app access or deployment settings changed | Deploy as a web app executing as the owner with anonymous access and preserve the `/exec` URL |

@@ -1506,17 +1506,30 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(dictionary.chineseToEnglish['只有中文']).toBeUndefined();
   });
 
-  it('reads the Pastors and Elders title columns by header', () => {
-    const loadDictionary = (rows: string[][]) => {
+  it('reads Pastor and Elder titles from the Leadership tab', () => {
+    const nameDictionaryRows = [
+      ['English Name', 'Chinese Name'],
+      ['Paul Wen', '溫保羅'],
+      ['Wei He', '何　偉'],
+      ['Mark Sun', '孫馬可'],
+      ['Grace Lin', '林恩典'],
+      ['Elderidge Moss', '莫艾德'],
+    ];
+    const loadDictionary = (leadershipRows: string[][] | null, withNameDictionary = true) => {
       const logs: string[] = [];
-      const dictionarySheet = {
+      const sheetFor = (rows: string[][]) => ({
         getDataRange: () => ({ getValues: () => rows, getDisplayValues: () => rows }),
-      };
+      });
+      const sheets: Record<string, unknown> = {};
+      if (withNameDictionary) {
+        sheets['Name Dictionary'] = sheetFor(nameDictionaryRows);
+      }
+      if (leadershipRows) {
+        sheets.Leadership = sheetFor(leadershipRows);
+      }
       const context = loadAppsScript({
         SpreadsheetApp: {
-          getActiveSpreadsheet: () => ({
-            getSheetByName: (name: string) => (name === 'Name Dictionary' ? dictionarySheet : null),
-          }),
+          getActiveSpreadsheet: () => ({ getSheetByName: (name: string) => sheets[name] || null }),
         },
         Logger: { log: (message: string) => logs.push(message) },
       });
@@ -1538,19 +1551,21 @@ describe('printed bulletin Apps Script helpers', () => {
     };
 
     const output = loadDictionary([
-      ['English Name', 'Chinese Name', '', 'Pastors 牧師', 'Elder(s)'],
-      ['Paul Wen', '溫保羅', '', 'Pastor Paul Wen', '何偉'],
-      ['Wei He', '何　偉', '', '林恩典', 'Mark Sun'],
-      ['Mark Sun', '孫馬可', '', '', '溫保羅'],
-      ['Grace Lin', '林恩典', '', '', ''],
+      ['', 'Pastors 牧師', 'Elder(s)'],
+      ['', 'Pastor Paul Wen', '何偉長老'],
+      ['Head', '牧师 林恩典', 'Elder: Mark Sun'],
+      ['', '', '溫保羅'],
+      ['', '', 'Elderidge Moss'],
     ]);
     const { dictionary } = output;
 
-    // A title typed into a list is dropped; the lists keep sheet order.
+    // A title typed before or after a name is dropped, but a name that merely
+    // starts with a title's letters is kept; the lists keep sheet order.
     expect(dictionary.titledNames).toEqual({
       pastor: ['Paul Wen', '林恩典'],
-      elder: ['何偉', 'Mark Sun', '溫保羅'],
+      elder: ['何偉', 'Mark Sun', '溫保羅', 'Elderidge Moss'],
     });
+    expect(dictionary.heads).toEqual({ pastor: '林恩典', elder: 'Mark Sun' });
     // Each list entry titles both of the person's names, and a person on both
     // lists stays Pastor even when the lists use different languages.
     expect(dictionary.titles['paul wen']).toEqual({ english: 'Pastor', chinese: '牧師' });
@@ -1558,27 +1573,50 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(dictionary.titles['grace lin']).toEqual({ english: 'Pastor', chinese: '牧師' });
     expect(dictionary.titles['wei he']).toEqual({ english: 'Elder', chinese: '長老' });
     expect(dictionary.titles['mark sun']).toEqual({ english: 'Elder', chinese: '長老' });
+    expect(dictionary.titles.head).toBeUndefined();
     // A padded two-character name matches with or without the padding.
     expect(dictionary.chineseToEnglish['何偉']).toBe('Wei He');
     expect(output.paddedChinese).toBe('何偉長老\nElder Wei He');
-    expect(output.communionPastor).toBe('溫保羅牧師\nPastor Paul Wen');
-    // The title columns don't change the English/Chinese lookups.
-    expect(dictionary.englishToChinese['wei he']).toBe('何　偉');
+    // The Head row's pastor leads Communion, wherever the row is.
+    expect(output.communionPastor).toBe('林恩典牧師\nPastor Grace Lin');
     expect(output.logs).toEqual([]);
 
-    const untitled = loadDictionary([
-      ['English Name', 'Chinese Name', 'Pastor Travel'],
-      ['Paul Wen', '溫保羅', 'Paul Wen'],
+    // Without a Head row, the first pastor leads Communion.
+    const noHead = loadDictionary([
+      ['', 'Pastors', 'Elders'],
+      ['', 'Paul Wen', 'Mark Sun'],
+      ['', 'Grace Lin', ''],
     ]);
-    expect(untitled.dictionary.titles).toEqual({});
-    expect(untitled.communionPastor).toBe('');
-    expect(untitled.logs).toEqual([
-      'Name Dictionary has no Pastors column; printing without that title.',
-      'Name Dictionary has no Elders column; printing without that title.',
+    expect(noHead.communionPastor).toBe('溫保羅牧師\nPastor Paul Wen');
+
+    const noElders = loadDictionary([['Pastor Travel'], ['Paul Wen']]);
+    expect(noElders.dictionary.titles).toEqual({});
+    expect(noElders.communionPastor).toBe('');
+    expect(noElders.logs).toEqual([
+      'Leadership has no Pastors column; printing without that title.',
+      'Leadership has no Elders column; printing without that title.',
+    ]);
+
+    const noLeadership = loadDictionary(null);
+    expect(noLeadership.dictionary.titles).toEqual({});
+    expect(noLeadership.dictionary.englishToChinese['paul wen']).toBe('溫保羅');
+    expect(noLeadership.logs).toEqual([
+      'Leadership sheet not found; printing names without titles.',
+    ]);
+
+    // The Leadership tab still applies without a Name Dictionary.
+    const noNameDictionary = loadDictionary(
+      [['Head', 'Pastors'], ['Head', 'Paul Wen']],
+      false,
+    );
+    expect(noNameDictionary.communionPastor).toBe('—\nPastor Paul Wen');
+    expect(noNameDictionary.logs).toEqual([
+      'Name Dictionary sheet not found; printing source names only.',
+      'Leadership has no Elders column; printing without that title.',
     ]);
   });
 
-  it('adds Name Dictionary titles in either language without hardcoded names', () => {
+  it('adds Leadership titles in either language without hardcoded names', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
       runInContext(

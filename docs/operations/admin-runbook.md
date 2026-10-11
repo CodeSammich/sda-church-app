@@ -28,6 +28,7 @@ does and what still needs a person.
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
 - [Due-date reminders](#due-date-reminders)
+- [Updating pastors and elders](#updating-pastors-and-elders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
 - [Actions event policy for `pull_request_target`](#actions-event-policy-for-pull_request_target)
@@ -787,6 +788,26 @@ workflows such as the yearly checkup, count, so someone else's issue can't make 
 notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.
+
+## Updating pastors and elders
+
+The printed bulletin adds Pastor and Elder titles from the master spreadsheet's
+`Leadership` tab, and the pastor on its `Head` row leads the Communion service.
+Keeping the tab current is a maintainer's duty: check it after each church
+officer election, and update it whenever a pastor or elder starts or leaves.
+
+1. Open the `Leadership` tab.
+2. Add or remove names under `Pastors` or `Elders`, one plain name per cell,
+   spelled as in the `Name Dictionary`. Add anyone new to the `Name Dictionary`
+   too, with their Chinese name, so both lines of the bulletin get the title.
+3. Keep `Head` on the row of the pastor who leads Communion. It is never
+   printed.
+4. When you next make the coming Sabbath's bulletin (**Printed Bulletin → Create
+   Google Doc + PDF…**), check the titles of the people scheduled that day. Only
+   a Queens Holy Communion bulletin shows the `Head` pastor.
+
+No code change or deploy is needed; the next print reads the tab. The layout
+rules are in [The `Leadership` tab](bulletin-automation.md#the-leadership-tab).
 
 ## Bible audio emulator test
 

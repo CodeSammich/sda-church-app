@@ -1826,11 +1826,16 @@ function selectPhysicalBibleVerses_(chapter, passage) {
 }
 
 /**
- * Name Dictionary columns whose names print with a title. Each column is found
- * by its header, so the lists sit beside English Name and Chinese Name without
- * changing them, and the schedule keeps plain names. A header matches when it
- * holds only the title words (`Pastors`, `Pastor(s)`, `Pastors 牧師`, `牧師`). A
- * person in more than one list takes the first title here.
+ * The tab listing who prints with a title. Maintainers keep it current; the
+ * schedule and the Name Dictionary keep plain names.
+ */
+var PHYSICAL_LEADERSHIP_SHEET_NAME = 'Leadership';
+
+/**
+ * Leadership columns whose names print with a title. Each column is found by
+ * a header that holds only the title words (`Pastors`, `Pastor(s)`,
+ * `Pastors 牧師`, `牧師`). A person in more than one list takes the first title
+ * here.
  */
 var PHYSICAL_NAME_TITLES = Object.freeze([
   Object.freeze({
@@ -1856,9 +1861,11 @@ function buildPhysicalNameDictionary_() {
     pinyinToEnglish: {},
     titles: {},
     titledNames: {},
+    heads: {},
   };
   if (!sheet) {
     Logger.log('Name Dictionary sheet not found; printing source names only.');
+    readPhysicalLeadershipTitles_(dictionary);
     return dictionary;
   }
 
@@ -1890,17 +1897,36 @@ function buildPhysicalNameDictionary_() {
       }
     });
   });
-  readPhysicalNameTitles_(table, dictionary);
+  readPhysicalLeadershipTitles_(dictionary);
   return dictionary;
 }
 
 /**
- * Reads the title columns (Pastors, Elders) into a lookup keyed by normalized
- * name. A list may hold the English or the Chinese name; the formatter checks
- * both sides of the resolved name. titledNames keeps each list in sheet order.
+ * Reads the Leadership tab's title columns (Pastors, Elders) into a lookup
+ * keyed by normalized name. A list may hold the English or the Chinese name;
+ * each entry titles both of the person's names from the Name Dictionary, so
+ * either language matches a schedule cell. titledNames keeps each list in
+ * sheet order, and heads holds each list's name on the row labeled Head.
  */
-function readPhysicalNameTitles_(table, dictionary) {
+// Titles a maintainer might type around a name in the Leadership tab, in
+// English or either Chinese script.
+var PHYSICAL_TYPED_TITLE_PREFIX = /^(?:(?:pastors?|elders?)[\s:：.]+|(?:牧[師师]|長老|长老)[\s:：]*)/i;
+var PHYSICAL_TYPED_TITLE_SUFFIX = /\s*(?:牧[師师]|長老|长老)$/;
+
+function readPhysicalLeadershipTitles_(dictionary) {
   PHYSICAL_NAME_TITLES.forEach(function (title) {
+    dictionary.titledNames[title.key] = [];
+  });
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(
+    PHYSICAL_LEADERSHIP_SHEET_NAME,
+  );
+  if (!sheet) {
+    Logger.log('Leadership sheet not found; printing names without titles.');
+    return;
+  }
+
+  var table = readTable_(sheet);
+  var columns = PHYSICAL_NAME_TITLES.map(function (title) {
     var column = -1;
     table.headers.forEach(function (header, index) {
       var compact = String(header || '').replace(/[^A-Za-z\u3400-\u9fff]/g, '');
@@ -1908,25 +1934,37 @@ function readPhysicalNameTitles_(table, dictionary) {
         column = index;
       }
     });
-    dictionary.titledNames[title.key] = [];
+    return column;
+  });
+  // "Head" in any other cell of a row marks that row's names as the heads,
+  // such as the pastor who leads Communion.
+  var headRows = table.rows.map(function (row) {
+    return row.some(function (value, index) {
+      return columns.indexOf(index) === -1 && normalizePhysicalNameKey_(displayValue_(value)) === 'head';
+    });
+  });
+
+  PHYSICAL_NAME_TITLES.forEach(function (title, titleIndex) {
+    var column = columns[titleIndex];
     if (column === -1) {
-      Logger.log('Name Dictionary has no ' + title.english + 's column; printing without that title.');
+      Logger.log('Leadership has no ' + title.english + 's column; printing without that title.');
       return;
     }
-    table.rows.forEach(function (row) {
+    table.rows.forEach(function (row, rowIndex) {
       // A title typed into the list is dropped so it doesn't print twice.
       var name = displayValue_(row[column])
         .replace(/\s+/g, ' ')
-        .replace(new RegExp('^' + title.english + '\\s+', 'i'), '')
-        .replace(new RegExp(title.chinese + '$'), '')
+        .replace(PHYSICAL_TYPED_TITLE_PREFIX, '')
+        .replace(PHYSICAL_TYPED_TITLE_SUFFIX, '')
         .trim();
       var key = normalizePhysicalNameKey_(name);
       if (!key) {
         return;
       }
       dictionary.titledNames[title.key].push(name);
-      // Title both sides of the person, so a list in either language matches
-      // a schedule cell in either language.
+      if (headRows[rowIndex] && !dictionary.heads[title.key]) {
+        dictionary.heads[title.key] = name;
+      }
       [
         key,
         normalizePhysicalNameKey_(dictionary.englishToChinese[key]),
@@ -2019,10 +2057,13 @@ function preparePrintedBulletinForPrint_(bulletin, nameDictionary) {
       }
     });
   });
-  // The first name in the Name Dictionary's Pastors column leads Communion.
-  var pastors = (nameDictionary && nameDictionary.titledNames && nameDictionary.titledNames.pastor) || [];
-  bulletin.communionPastor = pastors.length
-    ? formatPhysicalPersonValue_(pastors[0], nameDictionary, { titles: true })
+  // The Leadership tab's head pastor leads Communion. Without a Head row, the
+  // first name in Pastors does.
+  var titledNames = (nameDictionary && nameDictionary.titledNames) || {};
+  var heads = (nameDictionary && nameDictionary.heads) || {};
+  var communionPastor = heads.pastor || (titledNames.pastor || [])[0] || '';
+  bulletin.communionPastor = communionPastor
+    ? formatPhysicalPersonValue_(communionPastor, nameDictionary, { titles: true })
     : '';
   return bulletin;
 }
@@ -2080,7 +2121,7 @@ function formatPhysicalSinglePerson_(value, dictionary, titles) {
     return formatPhysicalBilingualPerson_(pinyinChinese, pinyinEnglish, titles);
   }
 
-  return /[㐀-鿿]/.test(text)
+  return /[\u3400-\u9fff]/.test(text)
     ? formatPhysicalBilingualPerson_(text, '', titles)
     : formatPhysicalBilingualPerson_('', text, titles);
 }
@@ -2090,10 +2131,10 @@ function formatPhysicalBilingualPerson_(chinese, english, titles) {
     (titles && titles[normalizePhysicalNameKey_(english)]) ||
     (titles && titles[normalizePhysicalNameKey_(chinese)]);
   if (title) {
-    // Chinese titles follow the name (陳雨婷牧師). Drop the spacing that pads
+    // Chinese titles follow the name (溫保羅牧師). Drop the spacing that pads
     // a two-character name to three, since the title already lengthens it.
     chinese = chinese
-      ? chinese.replace(/([㐀-鿿])\s+(?=[㐀-鿿])/g, '$1') + title.chinese
+      ? chinese.replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, '$1') + title.chinese
       : '';
     english = english ? title.english + ' ' + english : '';
   }

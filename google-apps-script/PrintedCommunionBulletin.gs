@@ -104,8 +104,8 @@ function getPrintedCommunionWholeCongregation_() {
   );
 }
 
-// The first name in the Name Dictionary's Pastors column, with its title; set
-// by preparePrintedBulletinForPrint_. TBD shows the list is missing or empty.
+// The Leadership tab's head pastor (or its first pastor), with the title; set
+// by preparePrintedBulletinForPrint_. TBD means no pastor is listed.
 function getPrintedCommunionPastor_(bulletin) {
   return (bulletin && bulletin.communionPastor) || physicalTbdText_('尚未安排');
 }
