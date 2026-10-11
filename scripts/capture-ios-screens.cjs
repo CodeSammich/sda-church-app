@@ -60,9 +60,12 @@ const BASE_SETTINGS = {
   iosTextSize: 'large',
 };
 
-// Seconds to wait after launching: the Bible loads its text over the network.
+// Seconds to wait after launching, before the screenshot. Measured over three
+// runs in October 2026 (settle-times.json): Bible screens, which load their
+// text over the network, were done changing within 6 seconds every time, so
+// 9 leaves a margin; Explore and the EGW shelf took up to 8 of their 10.
 const WAIT = 10;
-const BIBLE_WAIT = 15;
+const BIBLE_WAIT = 9;
 
 // Screenshots taken again, 2 seconds apart, while the screen is still blank or
 // still shows the launch splash.

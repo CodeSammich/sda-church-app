@@ -731,7 +731,8 @@ limit is a reminder to prune, not a rule:
    a saved screen. A test checks that no other workflow sets it.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
-   wait (15 for the Bible), so a group's 13 to 22 shots take about 3–6 minutes. While it
+   wait (9 for the Bible, which measured settles within 6), so a group's 13 to 22 shots
+   take about 3–6 minutes. While it
    waits, it takes a screenshot every 2 seconds and records in
    `screens/settle-times.json` when each screen stopped changing, so the waits can be
    shortened from measurements (#453). Three Simulators on one runner were tried and
