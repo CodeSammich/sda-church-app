@@ -18,7 +18,7 @@ the credential boundary and must stay. Every merge into `main` starts **Native A
 build** and **Native iOS build**, which wait for `production` approval. Pull requests
 get only unsigned builds that read no signing secrets: on the release pull request into
 `main`, **Android PR preview** builds a debug APK for ARM phones and **iOS PR preview**
-builds the app for the iOS Simulator on Apple Silicon and Intel Macs. Fork pull requests
+builds the app for the iOS Simulator on Apple Silicon Macs. Fork pull requests
 get no native builds. Signed builds upload to TestFlight and Google Play internal testing
 only; nothing is released to the public automatically (see
 [Automatic store uploads](#automatic-store-uploads)).
@@ -560,18 +560,16 @@ needs a Mac.
 
 **In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
 each release PR into `main` without signing. It runs on an Apple
-Silicon runner (`macos-26`, arm64) and an Intel runner (`macos-26-intel`, x86_64), with
-the same Xcode as the signed iOS build. Each job installs the app on the simulated
-iPhone that `test/screens/screens.json` names (an iPhone 17 Pro Max, on the newest iOS
-runtime) and fails if it isn't still running 45 seconds after launch. Each also uploads the app
-and a screenshot of its first screen (14-day retention), named like the Android
-preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
+Silicon runner (`macos-26`, arm64), with the same Xcode as the signed iOS build. The job
+installs the app on the simulated iPhone that `test/screens/screens.json` names (an
+iPhone 17 Pro Max, on the newest iOS runtime) and fails if it isn't still running 45
+seconds after launch. It also uploads the app and a screenshot of its first screen
+(14-day retention), named like the Android preview's
+`sda-church-app-pr-<number>-<run>-arm-debug.apk`:
 
-- `sda-church-app-pr-<number>-<run>-arm64-simulator.zip` and `…-x86_64-simulator.zip`:
-  the app;
-- `sda-church-app-pr-<number>-<run>-<arch>-first-screen.png`: the screenshot;
-- `screens/ios/<screen>-<variant>.png`, in the Apple Silicon artifact only: the key
-  screens, described below.
+- `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`: the app;
+- `sda-church-app-pr-<number>-<run>-arm64-first-screen.png`: the screenshot;
+- `screens/ios/<screen>-<variant>.png`: the key screens, described below.
 
 Pull requests into `release-candidate` don't run it, and neither do other pull
 requests into `main`, such as Dependabot's. To test a change to the workflow,
@@ -579,8 +577,8 @@ requests into `main`, such as Dependabot's. To test a change to the workflow,
 hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
-artifact ending in `-x86_64` for an Intel Mac or `-arm64` for Apple Silicon, and unzip
-the download and then the `.zip` inside it to get the `.app`. Open the Simulator
+artifact ending in `-arm64`, and unzip the download and then the `.zip` inside it to get
+the `.app`. It runs on an Apple Silicon Mac; for an Intel Mac, see below. Open the Simulator
 (Xcode > Open Developer Tool > Simulator) and drag the `.app` onto the simulated
 iPhone, or run:
 
@@ -588,6 +586,29 @@ iPhone, or run:
 xcrun simctl install booted /path/to/the.app
 xcrun simctl launch booted org.nyccsda.app
 ```
+
+**On an Intel Mac.** The workflow builds only for Apple Silicon, which nearly every Mac
+in use has; Apple sold its last Intel Mac in 2023. The Intel build was dropped in 1.2.1,
+because it took about 37 minutes and held up every release PR. On an Intel Mac, build
+the app yourself with `npm run build:ios:simulator` (**On a Mac**, above), which builds
+for the Mac's own processor. To build it in the workflow again:
+
+1. Add the Intel runner back to the `simulator` job's matrix in
+   `.github/workflows/ios-pr-preview.yml`:
+
+   ```yaml
+             - mac: Intel
+               runner: macos-26-intel
+               arch: x86_64
+   ```
+
+   The key-screen steps already run only on the Apple Silicon build, and its
+   artifact ends in `-x86_64`.
+2. Update the test in `test/native-build-safety.test.ts` that checks the job builds for
+   Apple Silicon only.
+3. Once that's in `release-candidate`, add `Build iOS Simulator app (Intel Mac)` to the
+   **Main protection** ruleset's required checks; see
+   [Changing a required check](admin-runbook.md#changing-a-required-check).
 
 #### Key screens
 

@@ -222,8 +222,7 @@ GitHub's code scanning default setup and have no workflow file.
 
 ### `iOS PR preview` (`.github/workflows/ios-pr-preview.yml`)
 
-- Checks: `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel
-  Mac)`, and `Screenshots reviewed`. Runs on the release PR into `main`, and by hand on
+- Checks: `Build iOS Simulator app (Apple Silicon Mac)` and `Screenshots reviewed`. Runs on the release PR into `main`, and by hand on
   any branch.
 - Builds the app for the iOS Simulator without signing and launches it. The Apple Silicon
   job also screenshots the key screens in `test/screens/screens.json` and checks their

@@ -392,18 +392,18 @@ describe('iOS PR preview', () => {
     expect(workflow).not.toContain('pull_request_target');
   });
 
-  it('builds for both Apple Silicon and Intel Macs', () => {
+  it('builds for Apple Silicon Macs only', () => {
+    // The Intel Mac build was dropped in 1.2.1; the Main protection ruleset no
+    // longer requires it. Adding it back needs the ruleset check too.
     expect(workflow).toMatch(/runner: macos-26\s+arch: arm64/);
-    expect(workflow).toMatch(/runner: macos-26-intel\s+arch: x86_64/);
+    expect(workflow).not.toContain('macos-26-intel');
   });
 
-  it('keeps the job names the Main protection ruleset requires', () => {
-    // Required checks: "Build iOS Simulator app (Apple Silicon Mac)" and
-    // "Build iOS Simulator app (Intel Mac)". Renaming the job without
-    // updating the ruleset blocks every release PR.
+  it('keeps the job name the Main protection ruleset requires', () => {
+    // Required check: "Build iOS Simulator app (Apple Silicon Mac)". Renaming
+    // the job without updating the ruleset blocks every release PR.
     expect(workflow).toContain('name: Build iOS Simulator app (${{ matrix.mac }} Mac)');
     expect(workflow).toMatch(/- mac: Apple Silicon\n/);
-    expect(workflow).toMatch(/- mac: Intel\n/);
   });
 
   it('uses the same Xcode as the signed iOS build', () => {

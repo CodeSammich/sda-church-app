@@ -110,7 +110,7 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel Mac)` | `ios-pr-preview.yml` | `main` |
+| `Build iOS Simulator app (Apple Silicon Mac)` | `ios-pr-preview.yml` | `main` |
 | `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -128,7 +128,7 @@ from merging there anyway.
   workflow must first be in `release-candidate`, because that branch is the head of the
   release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
-  job's name includes the matrix values, such as `Build iOS Simulator app (Intel Mac)`.
+  job's name includes the matrix values, such as `Build iOS Simulator app (Apple Silicon Mac)`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
   otherwise merges block on the old name.
 - **`android-pr-preview.yml` runs from `main`'s copy of the workflow**, because it uses
@@ -627,16 +627,16 @@ summary links to it. Fork pull requests are skipped. See
 **Workflow:** **iOS PR preview**, which runs automatically on release pull requests
 into `main`, and can be run manually on any branch.
 
-It builds the app without signing for an Apple Silicon Mac and an Intel Mac and
-launches each on a simulated iPhone. The Apple Silicon build then captures every key
-screen in `test/screens/screens.json` (82 screenshots of 30 screens) and checks their
-text with `scripts/check-screens.cjs`. The run takes about 50 minutes in all, about 24
+It builds the app without signing for an Apple Silicon Mac and launches it on a
+simulated iPhone. It then captures every key screen in `test/screens/screens.json` (81
+screenshots of 30 screens), on three simulated iPhones at once, and checks their text
+with `scripts/check-screens.cjs`. The run takes about 50 minutes in all, about 24
 of them for the screenshots. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
-The builds need no `production` approval, because they read no secrets. Download the
-build for your Mac from the run's Artifacts section (kept 14 days) to test the release
-on a Mac before merging; you don't need an iPhone. See
+The build needs no `production` approval, because it reads no secrets. Download it
+from the run's Artifacts section (kept 14 days) to test the release on an Apple Silicon
+Mac before merging; you don't need an iPhone. See
 [iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 
 ## Dependabot pull requests

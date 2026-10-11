@@ -1,8 +1,8 @@
 name: iOS PR preview
 
-# The iOS counterpart of android-pr-preview.yml: unsigned iOS Simulator builds
-# of a release before it merges into main, for an Apple Silicon Mac and an
-# Intel Mac. A Simulator build needs no Apple signing,
+# The iOS counterpart of android-pr-preview.yml: an unsigned iOS Simulator
+# build of a release before it merges into main, for an Apple Silicon Mac. A
+# Simulator build needs no Apple signing,
 # so this workflow reads no secrets and can safely run on pull requests.
 # Download the app from the run's artifacts to test it in the Simulator on a
 # Mac; docs/operations/native-builds.md explains how.
@@ -49,13 +49,13 @@ jobs:
       matrix:
         include:
           # The Simulator runs apps built for the Mac's own processor, so each
-          # kind of Mac gets its own build, checked on a runner of that kind.
+          # kind of Mac needs its own build, checked on a runner of that kind.
+          # The Intel Mac build was dropped in 1.2.1: it took about 37 minutes
+          # and held up every release PR. docs/operations/native-builds.md
+          # ("On an Intel Mac") says how to build one locally or restore it.
           - mac: Apple Silicon
             runner: macos-26
             arch: arm64
-          - mac: Intel
-            runner: macos-26-intel
-            arch: x86_64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -159,8 +159,9 @@ jobs:
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
-        # One set is enough: both builds run the same JavaScript. Most of each
-        # shot is waiting for the screen to load, so three iPhones take turns
+        # Only the Apple Silicon build takes them, should another kind of Mac be
+        # added back. Most of each shot is waiting for the screen to load, so three
+        # iPhones take turns
         # from one list, which the runner's 3 processors and 7 GB of memory
         # allow. Actions minutes are free for this public repository, so this
         # is about time, not cost.
