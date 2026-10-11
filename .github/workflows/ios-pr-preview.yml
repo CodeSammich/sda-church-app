@@ -378,7 +378,7 @@ jobs:
 
   announce:
     # Says the screenshots are on the way as soon as a release PR opens or gets
-    # a new push, since they take about 40 minutes, and removes the screenshots
+    # a new push, since they take about 25 minutes, and removes the screenshots
     # from before the push, which are out of date (#331). The review-comment
     # job replaces the notice with the screenshots.
     if: >-
@@ -417,7 +417,7 @@ jobs:
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 25 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY

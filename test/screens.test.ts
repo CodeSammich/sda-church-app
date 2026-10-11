@@ -476,7 +476,7 @@ describe('Screenshot review', () => {
     expect(announce).toContain('github.run_attempt == 1');
     expect(announce).toContain('<!-- key-screens-review pending sha=$SHA -->');
     expect(announce).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
-    expect(announce).toContain('about 40 minutes');
+    expect(announce).toContain('about 25 minutes');
   });
 
   it.each([

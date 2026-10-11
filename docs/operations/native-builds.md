@@ -586,38 +586,38 @@ requests into `main`, such as Dependabot's. To test a change to the workflow,
 hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
 **How long it takes, and why it varies.** A run finishes when its slowest runner does.
-Each runner sets up, installs packages, and runs CocoaPods; compiles while its simulated
-iPhone boots; installs and launches the app; then captures and checks its group. The
-first five-group run (October 2026) took 40 minutes, against an average of 47 when one
-runner took every key screen. Its runners took 23–37 minutes each; the slowest,
-`library`, spent 7.7 minutes installing packages while its iPhone booted, and 13.9
-compiling.
+Measured in October 2026:
 
-Averages from 13 runs when one runner took every key screen, with the launch step
-broken down from the job logs of three of them:
-
-| Step | Average |
+| Setup | Whole run |
 | --- | --- |
-| Setup, packages, and CocoaPods | 3.1 min |
-| Compile | 10.0 min |
-| First boot of the simulated iPhone | 5.5 min, of which iOS's one-time data migration for location services is 3.8 |
-| Installing the app on it (`simctl install`, 65 MB) | 1.3 min |
-| Launch, the 45-second wait, and the first screenshot | 1.2 min |
-| Key screens, all 81 on one runner | 23.4 min |
-| Text checks | 2.8 min |
+| One runner took every key screen (average of 13 runs) | 47 min |
+| Five runners, each compiling the app | 40 min |
+| Five runners, one compile shared ([run 38109635541](https://github.com/CodeSammich/sda-church-app/actions/runs/38109635541)) | 22.4 min |
+| The same, with ccache filling an empty cache ([run 38111066352](https://github.com/CodeSammich/sda-church-app/actions/runs/38111066352)) | 26.9 min |
 
-- The same code compiled in 6.4 to 12.4 minutes in those runs, and in up to 13.9 in the
-  five-group run. GitHub doesn't say which machine a run got or how busy it was, so
-  that spread can't be traced further from the logs.
-- One outlier: in one run, installing the app took 11.4 minutes instead of about one,
-  making that run's launch step 19 minutes. The log shows only when `simctl install`
-  returned, so the cause is unknown; if it recurs, look there first.
-- With five runners, a run waits for the slowest, so one runner's slow step holds up
-  the run. So each runner starts its iPhone's boot in the background right after
-  selecting Xcode, and the compile hides it: in the five-group run, the launch step
-  took 1.2–1.5 minutes instead of about 8. The cost is that installing packages and
-  CocoaPods, which run while it boots, took 5–12 minutes together instead of about 3.
-  Starting the boot after CocoaPods instead might do better; it hasn't been measured.
+In the last of those runs:
+
+| Step | Time |
+| --- | --- |
+| Setup, packages, and CocoaPods on the compiling runner | 2.3 min |
+| Compile, once | 14.5 min (10.4 in the run before) |
+| Each runner: download the shared app, install and launch it | 1.2–1.6 min |
+| Each group's key screens | 2.7–5.9 min |
+| Text checks | 0.5–1.3 min |
+| Joining the groups | 0.6 min |
+
+From the logs of earlier runs:
+
+- The same code compiled in 6.4 to 14.5 minutes. GitHub doesn't say which machine a run
+  got or how busy it was, so that spread can't be traced further from the logs.
+- A simulated iPhone's first boot takes about 5.5 minutes, 3.8 of them iOS's one-time
+  data migration for location services. Each runner starts it in the background after
+  installing packages: on the compiling runner, after CocoaPods, so the compile hides it;
+  on the others, while they wait for the app. Started any earlier, it slowed the package
+  installs, which share the runner's disk, from about half a minute to as much as 7.7.
+- Installing the app on a booted iPhone usually takes about a minute, but once took 11.4
+  minutes. The log shows only when `simctl install` returned, so the cause is unknown; if
+  it recurs, look there first.
 - The launch step prints the boot's own log, with timestamps, under **Simulated iPhone
   boot log**, to show what a slow boot was waiting on.
 
@@ -632,12 +632,12 @@ unchanged; Swift is always compiled. `ios-compile-cache.yml` builds the app the 
 and saves the cache on every push to `main`, dropping anything unused for 30 days. It
 also runs twice a week, because GitHub deletes a cache no one has used for 7 days. The
 preview only restores it (`actions/cache/restore`), and prints its own build's hits
-after compiling. The release PR therefore reuses what `main` compiled after
-the last release. To keep a pull request from planting compiled code in later builds
+after compiling. The release PR therefore reuses what `main` compiled, when
+the native dependencies haven't changed since. To keep a pull request from planting compiled code in later builds
 (cache poisoning):
 
-- only `ios-compile-cache.yml`, on pushes to `main` in this repository, saves the cache,
-  and pull requests can read `main`'s caches but never write them;
+- only `ios-compile-cache.yml`, on `main` in this repository, saves the cache, and pull
+  requests can read `main`'s caches but never write them;
 - that workflow reads no secrets and has a read-only token;
 - the preview only restores the cache;
 - the signed store builds never use ccache or the cache, and compile from scratch.
@@ -790,7 +790,7 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the run takes about 40 minutes) and removes the comment with the
+opens or gets a push (the run takes about 25 minutes) and removes the comment with the
 earlier, now out-of-date screenshots. When the run finishes, it replaces the notice with a
 comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.

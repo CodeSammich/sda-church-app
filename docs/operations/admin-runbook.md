@@ -196,7 +196,7 @@ The admin-only steps are:
    internal testing. Copy the `Closes #…` lines from the included feature pull requests
    into its description.
 5. **Merge it** once its checks and review pass. The slowest check, **iOS PR
-   preview**, takes about 40 minutes, and **Screenshots reviewed** waits until a
+   preview**, takes about 25 minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate` and moves any open feature pull requests
    into it to `main`. Create it again for the next release, and move those pull
@@ -632,7 +632,7 @@ five runners, one per key-screen group, which run at once. Each launches the app
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
 (81 screenshots of 29 screens in all), and checks their text with
 `scripts/check-screens.cjs`. Another job then joins the groups,
-before the review comment and **Screenshots reviewed**. The run takes about 40 minutes. On a release pull request, a comment
+before the review comment and **Screenshots reviewed**. The run takes about 25 minutes. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
 The build needs no `production` approval, because it reads no secrets. Download the
@@ -819,7 +819,7 @@ don't run it; to test an audio change before the release, run it manually on you
 branch.
 
 It takes about 20 minutes, and runs alongside **iOS PR preview**, which takes about
-40 minutes.
+25 minutes.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:
