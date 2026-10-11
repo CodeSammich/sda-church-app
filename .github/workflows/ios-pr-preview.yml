@@ -79,7 +79,8 @@ jobs:
       - name: Select and verify Xcode tools
         run: |
           set -euo pipefail
-          # Keep this in step with native-ios-build.yml.
+          # Keep this in step with native-ios-build.yml, ios-compile-cache.yml,
+          # and the compile-cache keys below.
           XCODE_DEVELOPER_DIR='/Applications/Xcode_26.6.app/Contents/Developer'
           test -d "$XCODE_DEVELOPER_DIR" || {
             echo "Expected Xcode at $XCODE_DEVELOPER_DIR; update this workflow when the runner image changes." >&2
@@ -89,6 +90,23 @@ jobs:
           xcodebuild -version
           pod --version
           uname -m
+
+      - name: Set up the compile cache
+        # ccache reuses the C, C++, and Objective-C that ios-compile-cache.yml
+        # compiled on main (#455). Swift is always compiled.
+        if: ${{ matrix.builds }}
+        run: |
+          set -euo pipefail
+          command -v ccache >/dev/null || HOMEBREW_NO_AUTO_UPDATE=1 brew install ccache
+          # React Native's CocoaPods setup compiles through ccache when this is set.
+          echo "USE_CCACHE=1" >> "$GITHUB_ENV"
+          # Its ccache-clang.sh calls ccache by CCACHE_BINARY, which Xcode gives
+          # to script phases but not to the compiler, so without this every
+          # compile skipped ccache. xcodebuild passes its own environment on.
+          echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"
+          # Read-only: reuse main's compiled files, but store nothing, not even
+          # on this runner. A pull request's compile never reaches a cache.
+          echo "CCACHE_READONLY=1" >> "$GITHUB_ENV"
 
       # Every runner needs sharp, which the key-screen scripts use.
       - name: Install dependencies
@@ -104,6 +122,31 @@ jobs:
       - name: Install CocoaPods dependencies
         if: ${{ matrix.builds }}
         run: pod install --project-directory=ios
+
+      # Restore only: only main saves this cache, so a pull request can't
+      # change what a later run gets, and the signed store builds never use it.
+      # The newest cache for these native dependencies, or else main's newest
+      # for this Xcode, so a library update recompiles only what it changed.
+      # ccache reuses a compiled file only when its compiler, flags, source, and
+      # every header it includes hash the same, so an older cache can't put an
+      # outdated file in the build.
+      - name: Restore the compile cache from main
+        if: ${{ matrix.builds }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-ios-sim-xcode-26.6-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ccache-ios-sim-xcode-26.6-${{ hashFiles('ios/Podfile.lock') }}-
+            ccache-ios-sim-xcode-26.6-
+
+      # ccache keeps its counters in the cache, so start them at zero after
+      # restoring it, or the stats after the build would include main's.
+      # Zeroing them writes to this runner's copy, so it runs outside
+      # read-only mode.
+      - name: Count only this build's compile-cache hits
+        if: ${{ matrix.builds }}
+        run: env -u CCACHE_READONLY ccache --zero-stats
 
       - name: Boot the simulated iPhone in the background
         # A fresh Simulator's first boot takes about 5.5 minutes on these
@@ -147,6 +190,10 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Show how much the compile cache saved
+        if: ${{ matrix.builds && !cancelled() }}
+        run: ccache --show-stats
 
       - name: Zip the app to share
         if: ${{ matrix.builds }}

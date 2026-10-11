@@ -206,6 +206,9 @@ describe('iOS PR preview', () => {
     for (const group of Object.keys(config.groups)) expect(cost(builder)).toBeLessThanOrEqual(cost(group));
     const guard = (step: string) => new RegExp(`- name: ${step}\n(?:\\s+#.*\n)*\\s+if: (.+)\n`).exec(workflow)?.[1];
     for (const step of [
+      'Set up the compile cache',
+      'Restore the compile cache from main',
+      "Count only this build's compile-cache hits",
       'Generate iOS project',
       'Install CocoaPods dependencies',
       'Build for the Simulator without signing',
