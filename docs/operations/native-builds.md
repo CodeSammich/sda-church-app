@@ -580,25 +580,26 @@ hand on your branch from the Actions tab. The workflow reads no secrets, so it i
 
 **How long it takes, and why it varies.** A run finishes when its slowest runner does:
 setup and packages, then the compile and the iPhone's boot, then its bucket's screenshots.
-GitHub's Mac runners are virtual machines on shared hardware, so the same steps take very
-different times from run to run. Over 17 runs in October 2026:
+The same steps take different times from run to run on GitHub's Mac runners. Measured in
+October 2026, from 16 runs for the compile and the job logs of three runs for the rest:
 
-| Step | Range | Typical |
-| --- | --- | --- |
-| Compile | 5.5–12.4 min | ~10 min |
-| First boot of the simulated iPhone, with the launch check | 3–19 min, once 30 | ~8 min |
+| Step | Measured |
+| --- | --- |
+| Compile | 5.5–12.4 min, typically ~10 |
+| First boot of the simulated iPhone | 4–6.5 min, of which one iOS setup step, migrating data for location services, took 2–5 |
+| Installing the app on it (`simctl install`, 65 MB) | about 1–1.5 min, but once 11.4 min |
+| Launch, the 45-second wait, and the first screenshot | about 1–1.5 min |
 
-- The compile depends on how fast and how busy the physical machine behind the runner
-  is, and on its disk that day.
-- A fresh simulated iPhone's first boot does one-time setup, mostly building iOS's
-  shared system-library caches. Some runner images arrive with part of that done and
-  some don't. It's mostly disk work, and the disk is the most variable part of these
-  machines.
-- With five runners, a run waits for the slowest. Five draws make a slow one more
-  likely than one draw did, so the workflow starts each iPhone's boot in the background
-  right after selecting Xcode, hiding most boots, even slow ones, behind the compile.
-  While it boots, installing packages and CocoaPods take a few minutes longer, because
-  they share that runner's disk.
+- The compile ran the same code in each run. GitHub doesn't say which machine a run
+  got or how busy it was, so the spread can't be traced further from the logs.
+- The first boot runs iOS's one-time data migration, and the location-services step
+  is most of it every time.
+- The 11-minute install is unexplained: the log shows only that `simctl install`
+  returned 11 minutes after the boot finished. If it recurs, look there first.
+- With five runners, a run waits for the slowest, so one runner's slow step holds up
+  the run. So the workflow starts each iPhone's boot in the background right after
+  selecting Xcode, and the compile hides it. While it boots, installing packages and
+  CocoaPods take a few minutes longer on that runner.
 
 **Compile cache.** Most of the build compiles the native libraries (React Native, Expo's
 modules, Reanimated), which change only when a dependency does; the app's own code is
