@@ -1,7 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+const { mergeResults } = require('../scripts/merge-key-screens.cjs');
 const {
+  parseShard,
+  takeShard,
   settledAfter,
   SETTING_KEYS,
   loadConfig,
@@ -186,14 +189,73 @@ describe('saved settings', () => {
 describe('iOS PR preview', () => {
   const workflow = repoFile('.github/workflows/ios-pr-preview.yml');
 
-  it('captures the key screens once, on the Apple Silicon build', () => {
-    expect(workflow).toContain('node scripts/capture-ios-screens.cjs --out');
-    expect(workflow).toMatch(/Capture the key screens\n(?:\s+#.*\n)*\s+if: matrix\.arch == 'arm64'/);
+  it('splits the key screens across parallel runners, each capturing and checking its own part', () => {
+    const parts = JSON.parse(/\n\s+part: (\[[\d, ]+\])\n/.exec(workflow)![1]);
+    expect(parts).toEqual(parts.map((_: number, index: number) => index + 1));
+    // GitHub's free plan runs five Mac jobs at once.
+    expect(parts.length).toBeLessThanOrEqual(5);
+    const shard = `--shard \${{ matrix.part }}/${parts.length}`;
+    expect(workflow).toMatch(new RegExp(`capture-ios-screens\\.cjs --out [^\\n]+\\n\\s+${shard.replace(/[$/{}.]/g, '\\$&')}`));
+    expect(workflow).toMatch(new RegExp(`check-screens\\.cjs --dir [^\\n]+\\n\\s+${shard.replace(/[$/{}.]/g, '\\$&')}`));
+  });
+
+  it('joins the parts in the required job, which fails rather than skips when a part fails', () => {
+    const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
+    expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');
+    expect(merge).toContain('needs: capture');
+    // A skipped required check counts as passed, so this job must still run
+    // after a failed part, and then fail.
+    expect(merge).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
+    expect(merge).toContain("needs.capture.result != 'success'");
+    expect(merge).toContain('node scripts/merge-key-screens.cjs --out');
+    // The review comment and earlier-run checks look for this artifact name.
+    expect(merge).toMatch(/name: ios-pr-preview-.*-arm64\n/);
   });
 
   it('reads no secrets and keeps a read-only token', () => {
     expect(workflow).not.toMatch(/secrets\./);
     expect(workflow).toMatch(/permissions:\n\s+contents: read\n/);
+  });
+});
+
+describe('splitting the key screens into parts', () => {
+  it('gives every shot to exactly one part, alternating so slow screens spread out', () => {
+    const parts = [1, 2, 3, 4, 5].map((index) => takeShard(shots, { index, count: 5 }));
+    expect(parts.flat().map((shot: { name: string }) => shot.name).sort()).toEqual(
+      shots.map((shot: { name: string }) => shot.name).sort(),
+    );
+    expect(Math.max(...parts.map((part) => part.length)) - Math.min(...parts.map((part) => part.length))).toBeLessThanOrEqual(1);
+    expect(parts[1][0]).toBe(shots[1]);
+    expect(parts[1][1]).toBe(shots[6]);
+  });
+
+  it('reads a part such as 2/5, and is the whole list without one', () => {
+    expect(parseShard('2/5')).toEqual({ index: 2, count: 5 });
+    expect(parseShard(undefined)).toEqual({ index: 1, count: 1 });
+    expect(() => parseShard('6/5')).toThrow('--shard');
+    expect(() => parseShard('two')).toThrow('--shard');
+  });
+
+  it('joins the parts\' results in list order, flagging a shot no part checked', () => {
+    const [a, b, c] = shots;
+    const merged = mergeResults(
+      [a, b, c],
+      [
+        {
+          checks: [{ file: c.file, problems: [] }, { file: a.file, problems: ['x'] }],
+          timings: [{ shot: c.name, settledAfter: 4 }],
+          ocr: { [`/Users/runner/work/_temp/ios-pr-preview/screens/${a.file}`]: [{ text: 'A' }] },
+        },
+        { checks: [], timings: [{ shot: a.name, settledAfter: 2 }], ocr: {} },
+      ],
+    );
+    expect(merged.checks).toEqual([
+      { file: a.file, problems: ['x'] },
+      { file: b.file, problems: ['no part checked it'] },
+      { file: c.file, problems: [] },
+    ]);
+    expect(merged.timings.map((timing: { shot: string }) => timing.shot)).toEqual([a.name, c.name]);
+    expect(merged.ocr).toEqual({ [a.file]: [{ text: 'A' }] });
   });
 });
 
@@ -370,7 +432,7 @@ describe('Screenshot review', () => {
     expect(announce).toContain('github.run_attempt == 1');
     expect(announce).toContain('<!-- key-screens-review pending sha=$SHA -->');
     expect(announce).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
-    expect(announce).toContain('about 40 minutes');
+    expect(announce).toContain('about 25 minutes');
   });
 
   it.each([

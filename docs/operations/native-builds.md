@@ -559,13 +559,15 @@ works on Intel and Apple Silicon Macs. On Windows or Linux, the command explains
 needs a Mac.
 
 **In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
-each release PR into `main` without signing. It runs on an Apple
-Silicon runner (`macos-26`, arm64), with the same Xcode as the signed iOS build. The job
-installs the app on the simulated iPhone that `test/screens/screens.json` names (an
-iPhone 17 Pro Max, on the newest iOS runtime) and fails if it isn't still running 45
-seconds after launch. It also uploads the app and a screenshot of its first screen
-(14-day retention), named like the Android preview's
-`sda-church-app-pr-<number>-<run>-arm-debug.apk`:
+each release PR into `main` without signing, on five Apple Silicon runners (`macos-26`,
+arm64) at once, with the same Xcode as the signed iOS build. Each runner, a part of the
+`capture` job named **Key screens on a simulated iPhone (part N of 5)**, starts booting
+the simulated iPhone that `test/screens/screens.json` names (an iPhone 17 Pro Max, on
+the newest iOS runtime) while the app compiles, then installs the app, fails if it
+isn't still running 45 seconds after launch, and takes its fifth of the key screens.
+**Build iOS Simulator app (Apple Silicon Mac)** then joins the five parts and uploads
+the app and a screenshot of its first screen (14-day retention), named like the
+Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
 
 - `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`: the app;
 - `sda-church-app-pr-<number>-<run>-arm64-first-screen.png`: the screenshot;
@@ -588,34 +590,29 @@ xcrun simctl launch booted org.nyccsda.app
 ```
 
 **On an Intel Mac.** The workflow builds only for Apple Silicon, which nearly every Mac
-in use has; Apple sold its last Intel Mac in 2023. The Intel build was dropped in 1.2.1,
-because it took about 37 minutes and held up every release PR. On an Intel Mac, build
-the app yourself with `npm run build:ios:simulator` (**On a Mac**, above), which builds
-for the Mac's own processor. To build it in the workflow again:
+in use has; Apple sold its last Intel Mac in 2023. The Intel build was dropped in 1.2.1:
+it took 25–49 minutes and only served the Simulator on an Intel Mac. On an Intel Mac,
+build the app yourself with `npm run build:ios:simulator` (**On a Mac**, above), which
+builds for the Mac's own processor. To build it in the workflow again:
 
-1. Add the Intel runner back to the `simulator` job's matrix in
-   `.github/workflows/ios-pr-preview.yml`:
-
-   ```yaml
-             - mac: Intel
-               runner: macos-26-intel
-               arch: x86_64
-   ```
-
-   The key-screen steps already run only on the Apple Silicon build, and its
-   artifact ends in `-x86_64`.
-2. Update the test in `test/native-build-safety.test.ts` that checks the job builds for
-   Apple Silicon only.
-3. Once that's in `release-candidate`, add `Build iOS Simulator app (Intel Mac)` to the
+1. Add a job to `.github/workflows/ios-pr-preview.yml` modelled on `capture`, without
+   its matrix or key-screen steps, that runs on `macos-26-intel`, builds with
+   `ARCH: x86_64`, names its app `…-x86_64`, and uploads it as an artifact ending in
+   `-x86_64`.
+2. Update the test in `test/native-build-safety.test.ts` that checks the workflow
+   builds for Apple Silicon only.
+3. Once that's in `release-candidate`, add the new job's name to the
    **Main protection** ruleset's required checks; see
    [Changing a required check](admin-runbook.md#changing-a-required-check).
 
 #### Key screens
 
-The Apple Silicon job also screenshots the 30 screens listed in
-`test/screens/screens.json`, 81 shots in all, so a layout problem on iPhone shows up
-before release rather than in TestFlight (#331). `scripts/capture-ios-screens.cjs`
-takes each one:
+The five runners screenshot the 30 screens listed in `test/screens/screens.json`, 81
+shots in all, so a layout problem on iPhone shows up before release rather than in
+TestFlight (#331). Each takes every fifth shot (`--shard N/5`), about 16, so slow Bible
+screens spread across them, and checks their text; `scripts/merge-key-screens.cjs` then
+joins the parts into one `screens/` folder and makes the App Store copies.
+`scripts/capture-ios-screens.cjs` takes each shot:
 
 1. It saves the settings the app reads at startup into the app's storage: setup
    finished, the language, theme, and text size for that shot, and the screen to
@@ -627,11 +624,12 @@ takes each one:
    app, and the store builds never set it, so on a real phone the app never looks for
    a saved screen. A test checks that no other workflow sets it.
 2. It launches the app, waits for the screen to load, and saves
-   `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch, so the 81 shots
-   take about 21 of the run's 40 minutes. While it waits, it takes a screenshot every 2
-   seconds and records in `screens/settle-times.json` when each screen stopped changing,
-   so the waits can be shortened from measurements (#453). Taking shots on three
-   Simulators at once was tried and was slower on the 3-processor runner.
+   `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
+   wait (15 for the Bible), so a part's 16 or so shots take about 4–5 minutes. While it
+   waits, it takes a screenshot every 2 seconds and records in
+   `screens/settle-times.json` when each screen stopped changing, so the waits can be
+   shortened from measurements (#453). Three Simulators on one runner were tried and
+   were slower: the runner's 3 processors couldn't keep up.
 3. The status bar is fixed (9:41, full battery and signal), so images differ only when
    the app does. The iOS 26 Simulator draws the Dynamic Island into its screenshots,
    although a real iPhone's screenshots leave it out.
@@ -684,7 +682,7 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the run takes about 40 minutes) and removes the comment with the
+opens or gets a push (the run takes about 25 minutes) and removes the comment with the
 earlier, now out-of-date screenshots. When the run finishes, it replaces the notice with a
 comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.

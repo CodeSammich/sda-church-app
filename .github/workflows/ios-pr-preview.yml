@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  simulator:
+  capture:
     # A release PR comes from this repository's release-candidate branch.
     # Other PRs into main, such as Dependabot's, can't merge there, so they
     # skip it.
@@ -40,22 +40,19 @@ jobs:
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
-    # The "Main protection" ruleset requires these job names; rename both together.
-    name: Build iOS Simulator app (${{ matrix.mac }} Mac)
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    name: Key screens on a simulated iPhone (part ${{ matrix.part }} of 5)
+    # Apple Silicon only. The Intel Mac build was dropped in 1.2.1;
+    # docs/operations/native-builds.md ("On an Intel Mac") says how to build one.
+    runs-on: macos-26
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # The Simulator runs apps built for the Mac's own processor, so each
-          # kind of Mac needs its own build, checked on a runner of that kind.
-          # The Intel Mac build was dropped in 1.2.1: it took about 37 minutes
-          # and held up every release PR. docs/operations/native-builds.md
-          # ("On an Intel Mac") says how to build one locally or restore it.
-          - mac: Apple Silicon
-            runner: macos-26
-            arch: arm64
+        # Five runners each build the app and take every fifth key screen, so
+        # the release PR waits for a fifth of them (#453). GitHub's free plan
+        # runs five Mac jobs at once. Three Simulators on one runner were
+        # slower: its 3 processors couldn't keep up with them.
+        part: [1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -77,6 +74,17 @@ jobs:
           pod --version
           uname -m
 
+      - name: Boot the simulated iPhone while the app builds
+        # Booting a fresh Simulator takes 3 to 19 minutes on these runners, so
+        # it starts in the background now and the launch step waits for it.
+        run: |
+          set -euo pipefail
+          # The iPhone test/screens/screens.json names, on the newest installed
+          # iOS runtime, so the launch check and the key screens share it.
+          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
+
       - name: Install dependencies
         run: npm ci --force
 
@@ -91,7 +99,7 @@ jobs:
 
       - name: Build for the Simulator without signing
         env:
-          ARCH: ${{ matrix.arch }}
+          ARCH: arm64
           # Lets the key-screen capture open each screen from a saved setting
           # (services/ScreenshotRoute.ts). Expo writes it into this build only;
           # the store builds in native-ios-build.yml never set it.
@@ -118,9 +126,9 @@ jobs:
 
       - name: Launch on a simulated iPhone
         env:
-          ARCH: ${{ matrix.arch }}
+          PART: ${{ matrix.part }}
           # Named like the Android preview's sda-church-app-pr-<number>-<run>-arm-debug.apk.
-          PREVIEW_NAME: sda-church-app-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || 'manual' }}-${{ github.run_id }}-${{ matrix.arch }}
+          PREVIEW_NAME: sda-church-app-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || 'manual' }}-${{ github.run_id }}-arm64
         run: |
           set -euo pipefail
           APP_PATH="$(find "$RUNNER_TEMP/ios-simulator/Build/Products/Release-iphonesimulator" \
@@ -133,10 +141,7 @@ jobs:
           lipo -archs "$APP_PATH/$EXECUTABLE"
           BUNDLE_ID="$(node -p "require('./app.json').expo.ios.bundleIdentifier")"
 
-          # The iPhone test/screens/screens.json names, on the newest installed iOS
-          # runtime, so this check and the key screens below share one Simulator.
-          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
-          xcrun simctl boot "$DEVICE_ID"
+          # The iPhone started booting before the build; wait until it's ready.
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" "$APP_PATH"
           xcrun simctl launch "$DEVICE_ID" "$BUNDLE_ID"
@@ -145,9 +150,12 @@ jobs:
           sleep 45
           ARTIFACT_DIR="$RUNNER_TEMP/ios-pr-preview"
           mkdir -p "$ARTIFACT_DIR"
-          xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACT_DIR/$PREVIEW_NAME-first-screen.png"
-          (cd "$(dirname "$APP_PATH")" &&
-            ditto -c -k --keepParent "$(basename "$APP_PATH")" "$ARTIFACT_DIR/$PREVIEW_NAME-simulator.zip")
+          # The download needs one copy of the app; part 1's is kept.
+          if [ "$PART" = 1 ]; then
+            xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACT_DIR/$PREVIEW_NAME-first-screen.png"
+            (cd "$(dirname "$APP_PATH")" &&
+              ditto -c -k --keepParent "$(basename "$APP_PATH")" "$ARTIFACT_DIR/$PREVIEW_NAME-simulator.zip")
+          fi
           RUNNING_SERVICES="$(xcrun simctl spawn "$DEVICE_ID" launchctl list)"
           grep -q "UIKitApplication:$BUNDLE_ID" <<<"$RUNNING_SERVICES" || {
             echo 'The app is not running 45 seconds after launch; it probably crashed on start.' >&2
@@ -157,14 +165,11 @@ jobs:
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
-        # Only the Apple Silicon build takes them, should another kind of Mac be
-        # added back. The 81 shots take about 21 minutes, one after another.
-        # Three Simulators at once were slower (#453): booting the extra iPhones
-        # took about 20 minutes, and they slowed each other's launches on the
-        # runner's 3 processors.
-        if: matrix.arch == 'arm64'
-        timeout-minutes: 35
-        run: node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
+        # This part takes every fifth shot, about 16 of the 81.
+        timeout-minutes: 20
+        run: >-
+          node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
+          --shard ${{ matrix.part }}/5
 
       - name: Check the text on the key screens
         # Reads each screenshot's text with Apple's Vision framework and checks
@@ -172,22 +177,81 @@ jobs:
         # verse button's whole label, verse numbers starting their lines, and no
         # system prompt or setup dialog. Saves ocr.json and checks.json beside
         # the screenshots. Runs even if a capture failed, to report on the rest.
-        if: matrix.arch == 'arm64' && !cancelled()
+        if: ${{ !cancelled() }}
         timeout-minutes: 10
-        run: node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
+        run: >-
+          node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
+          --shard ${{ matrix.part }}/5
+
+      - name: Upload this part
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ios-pr-preview-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-arm64-part-${{ matrix.part }}
+          path: ${{ runner.temp }}/ios-pr-preview/
+          if-no-files-found: warn
+          retention-days: 1
+
+  simulator:
+    # Joins the five parts into the one artifact the review comment links: the
+    # app and its first screen from part 1, and every part's screenshots and
+    # checks. It fails if any part failed, so a failed part can't pass as
+    # skipped. The "Main protection" ruleset requires this job's name.
+    needs: capture
+    if: >-
+      !cancelled() && (
+      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
+      (github.head_ref == 'release-candidate' &&
+        github.event.pull_request.head.repo.full_name == github.repository))
+    name: Build iOS Simulator app (Apple Silicon Mac)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # For sharp, which writes the App Store copies.
+      - name: Install dependencies
+        run: npm ci --force
+
+      - name: Download the parts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: ios-pr-preview-*-arm64-part-*
+          path: ${{ runner.temp }}/parts
+
+      - name: Join the key screens
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/ios-pr-preview"
+          mkdir -p "$OUT"
+          find "$RUNNER_TEMP/parts" -maxdepth 2 -type f \( -name '*-simulator.zip' -o -name '*-first-screen.png' \) \
+            -exec cp {} "$OUT/" \;
+          node scripts/merge-key-screens.cjs --out "$OUT/screens" "$RUNNER_TEMP"/parts/*/screens
 
       - name: Upload the Simulator app and screenshots
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: ios-pr-preview-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-${{ matrix.arch }}
+          name: ios-pr-preview-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-arm64
           path: ${{ runner.temp }}/ios-pr-preview/
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Fail if a part failed
+        if: ${{ !cancelled() && needs.capture.result != 'success' }}
+        env:
+          RESULT: ${{ needs.capture.result }}
+        run: |
+          echo "::error::A key-screen part ended as $RESULT; its job log says why."
+          exit 1
+
   announce:
     # Says the screenshots are on the way as soon as a release PR opens or gets
-    # a new push, since they take about 40 minutes, and removes the screenshots
+    # a new push, since they take about 25 minutes, and removes the screenshots
     # from before the push, which are out of date (#331). The review-comment
     # job replaces the notice with the screenshots.
     if: >-
@@ -226,7 +290,7 @@ jobs:
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes about 25 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY
@@ -354,7 +418,7 @@ jobs:
 
   earlier-screens:
     # Re-checks an earlier run's screenshots in a few minutes, instead of a
-    # 40-minute build, while tuning the text checks.
+    # full build, while tuning the text checks.
     if: github.event_name == 'workflow_dispatch' && inputs.screens_from_run != ''
     name: Check the key screens of an earlier run
     runs-on: macos-26

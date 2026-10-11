@@ -21,6 +21,9 @@
  * enlarged and with more contrast, before reporting it.
  *
  *   node scripts/check-screens.cjs --dir <screens folder>   The folder holding ios/*.png
+ *   node scripts/check-screens.cjs --dir <screens folder> --shard 2/4
+ *                                                         Checks only that part's shots, as captured by
+ *                                                         capture-ios-screens.cjs --shard 2/4
  *
  * Writes ocr.json and checks.json into that folder, and a summary to the step
  * summary. Exits 1 if any rule fails.
@@ -29,7 +32,7 @@ const { execFileSync } = require('node:child_process');
 const { appendFileSync, existsSync, mkdtempSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
-const { loadConfig, planCaptures } = require('./capture-ios-screens.cjs');
+const { loadConfig, parseShard, planCaptures, takeShard } = require('./capture-ios-screens.cjs');
 
 // Vision's languages for each app language, most important first. Bible screens
 // in English also show Chinese, so English reads both.
@@ -240,13 +243,16 @@ const readText = async (dir, shots) => {
 };
 
 const main = async () => {
-  const dirIndex = process.argv.indexOf('--dir');
-  const dir = dirIndex === -1 ? undefined : resolve(process.argv[dirIndex + 1]);
+  const argument = (name) => {
+    const index = process.argv.indexOf(name);
+    return index === -1 ? undefined : process.argv[index + 1];
+  };
+  const dir = argument('--dir') && resolve(argument('--dir'));
   if (!dir) {
-    console.error('Usage: node scripts/check-screens.cjs --dir <screens folder>');
+    console.error('Usage: node scripts/check-screens.cjs --dir <screens folder> [--shard <part>/<parts>]');
     process.exit(2);
   }
-  const shots = planChecks(loadConfig());
+  const shots = takeShard(planChecks(loadConfig()), parseShard(argument('--shard')));
   const text = await readText(dir, shots);
   writeFileSync(join(dir, 'ocr.json'), JSON.stringify(text, null, 1));
 

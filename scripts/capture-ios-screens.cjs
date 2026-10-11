@@ -16,6 +16,9 @@
  *
  *   node scripts/capture-ios-screens.cjs --pick-device   Prints the configured iPhone's UDID, creating it if needed
  *   node scripts/capture-ios-screens.cjs --out <dir>     Captures every screen into <dir>
+ *   node scripts/capture-ios-screens.cjs --out <dir> --shard 2/4
+ *                                                        Captures only the second of four parts, for one
+ *                                                        of several runners; merge-key-screens.cjs joins them
  *
  * The app must already be installed on that iPhone. The Simulator only runs on
  * macOS with Xcode.
@@ -75,6 +78,26 @@ const ROUTE_KEY = 'screenshot-route';
 
 const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
   JSON.parse(readFileSync(file, 'utf8'));
+
+/**
+ * Reads a part such as "2/4" into { index: 2, count: 4 }. Without one, the
+ * whole list is one part.
+ */
+const parseShard = (value) => {
+  if (!value) return { index: 1, count: 1 };
+  const match = /^(\d+)\/(\d+)$/.exec(value);
+  const shard = match && { index: Number(match[1]), count: Number(match[2]) };
+  if (!shard || shard.index < 1 || shard.index > shard.count) {
+    throw new Error(`--shard takes a part such as 2/4, not "${value}".`);
+  }
+  return shard;
+};
+
+/**
+ * One part of a list of shots: every count-th shot, starting at the index-th,
+ * so slow screens, such as the Bible's, spread across the parts.
+ */
+const takeShard = (shots, { index, count }) => shots.filter((_, position) => position % count === index - 1);
 
 /** Lists every shot: its name, file, deep link, settings, and checks. */
 const planCaptures = (config) =>
@@ -271,7 +294,7 @@ const statusBarClear = async (file) => {
 
 const CHECKS = { statusBarClear };
 
-const capture = async (outDir) => {
+const capture = async (outDir, shard = parseShard()) => {
   const config = loadConfig();
   const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
   const device = pickDevice(config);
@@ -289,7 +312,7 @@ const capture = async (outDir) => {
   const sampleDir = mkdtempSync(join(tmpdir(), 'key-screen-samples-'));
   const started = Date.now();
 
-  for (const shot of planCaptures(config)) {
+  for (const shot of takeShard(planCaptures(config), shard)) {
     spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
     const manifest = manifestPath(dataContainer, bundleId);
     mkdirSync(dirname(manifest), { recursive: true });
@@ -346,7 +369,9 @@ const capture = async (outDir) => {
   rmSync(sampleDir, { recursive: true, force: true });
   writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
 
-  for (const copy of planAppStore(config)) {
+  // A part has only some of the shots; merge-key-screens.cjs makes these once
+  // the parts are joined.
+  for (const copy of shard.count === 1 ? planAppStore(config) : []) {
     if (!captured.has(copy.name)) {
       failures.push(`${copy.file}: its shot "${copy.name}" wasn't captured`);
       continue;
@@ -357,8 +382,9 @@ const capture = async (outDir) => {
   }
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
+  const part = shard.count === 1 ? '' : `, part ${shard.index} of ${shard.count}`;
   const summary = [
-    `### Key screens (${device.name}, ${device.runtime})`,
+    `### Key screens (${device.name}, ${device.runtime}${part})`,
     '',
     `${captured.size} captured in ${minutes} minutes, in the Apple Silicon artifact's \`screens/\` folder,`,
     'with the App Store shots in `screens/app-store/`.',
@@ -381,13 +407,16 @@ if (require.main === module) {
   if (process.argv.includes('--pick-device')) {
     console.log(pickDevice(loadConfig()).udid);
   } else {
-    const outIndex = process.argv.indexOf('--out');
-    const outDir = outIndex === -1 ? undefined : process.argv[outIndex + 1];
+    const argument = (name) => {
+      const index = process.argv.indexOf(name);
+      return index === -1 ? undefined : process.argv[index + 1];
+    };
+    const outDir = argument('--out');
     if (!outDir) {
-      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir>');
+      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir> [--shard <part>/<parts>]');
       process.exit(2);
     }
-    capture(resolve(outDir)).catch((error) => {
+    capture(resolve(outDir), parseShard(argument('--shard'))).catch((error) => {
       console.error(error);
       process.exit(1);
     });
@@ -395,6 +424,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  parseShard,
+  takeShard,
   settledAfter,
   looksBlank,
   looksLikeSplash,

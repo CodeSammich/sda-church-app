@@ -110,7 +110,7 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)` | `ios-pr-preview.yml` | `main` |
+| `Key screens on a simulated iPhone (part 1 of 5)` through `(part 5 of 5)`, and `Build iOS Simulator app (Apple Silicon Mac)`, which joins them | `ios-pr-preview.yml` | `main` |
 | `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -128,7 +128,7 @@ from merging there anyway.
   workflow must first be in `release-candidate`, because that branch is the head of the
   release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
-  job's name includes the matrix values, such as `Build iOS Simulator app (Apple Silicon Mac)`.
+  job's name includes the matrix values, such as `Key screens on a simulated iPhone (part 1 of 5)`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
   otherwise merges block on the old name.
 - **`android-pr-preview.yml` runs from `main`'s copy of the workflow**, because it uses
@@ -196,7 +196,7 @@ The admin-only steps are:
    internal testing. Copy the `Closes #…` lines from the included feature pull requests
    into its description.
 5. **Merge it** once its checks and review pass. The slowest check, **iOS PR
-   preview**, takes about 40 minutes, and **Screenshots reviewed** waits until a
+   preview**, takes about 25 minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate` and moves any open feature pull requests
    into it to `main`. Create it again for the next release, and move those pull
@@ -627,10 +627,11 @@ summary links to it. Fork pull requests are skipped. See
 **Workflow:** **iOS PR preview**, which runs automatically on release pull requests
 into `main`, and can be run manually on any branch.
 
-It builds the app without signing for an Apple Silicon Mac and launches it on a
-simulated iPhone. It then captures every key screen in `test/screens/screens.json` (81
-screenshots of 30 screens) and checks their text with `scripts/check-screens.cjs`. The
-run takes about 40 minutes in all, about 21 of them for the screenshots. On a release pull request, a comment
+It builds the app without signing for an Apple Silicon Mac on five runners at once. Each
+launches it on a simulated iPhone, captures a fifth of the key screens in
+`test/screens/screens.json` (81 screenshots of 30 screens), and checks their text with
+`scripts/check-screens.cjs`; a last job joins the parts. The run takes about 25
+minutes. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
 The build needs no `production` approval, because it reads no secrets. Download it
@@ -817,7 +818,7 @@ don't run it; to test an audio change before the release, run it manually on you
 branch.
 
 It takes about 20 minutes, and runs alongside **iOS PR preview**, which takes about
-40 minutes.
+25 minutes.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:

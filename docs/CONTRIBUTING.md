@@ -130,7 +130,7 @@ major. The click-by-click steps are in
    responsibility, not the fork contributor's. Do not rely on a reviewer to repair the
    merge commit message at the last moment.
 4. The release PR runs the slow checks below (the slowest, **iOS PR preview**, takes
-   about 40 minutes), and **Screenshots reviewed** waits for a `release-approvers`
+   about 25 minutes), and **Screenshots reviewed** waits for a `release-approvers`
    member to approve the screenshots. Merge it once every check and the review pass.
    Merging it into `main` closes the issues and deletes `release-candidate`.
 5. The merge to `main` checks the version files, tags the release, publishes the website,
@@ -222,11 +222,12 @@ GitHub's code scanning default setup and have no workflow file.
 
 ### `iOS PR preview` (`.github/workflows/ios-pr-preview.yml`)
 
-- Checks: `Build iOS Simulator app (Apple Silicon Mac)` and `Screenshots reviewed`. Runs on the release PR into `main`, and by hand on
-  any branch.
-- Builds the app for the iOS Simulator without signing and launches it. The Apple Silicon
-  job also screenshots the key screens in `test/screens/screens.json` and checks their
-  text.
+- Checks: `Key screens on a simulated iPhone (part 1 of 5)` through `(part 5 of 5)`,
+  `Build iOS Simulator app (Apple Silicon Mac)`, and `Screenshots reviewed`. Runs on the
+  release PR into `main`, and by hand on any branch.
+- Builds the app for the iOS Simulator without signing on five runners at once. Each
+  launches it, screenshots a fifth of the key screens in `test/screens/screens.json`, and
+  checks their text; `Build iOS Simulator app (Apple Silicon Mac)` joins the parts.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
