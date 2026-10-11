@@ -225,6 +225,20 @@ describe('iOS PR preview', () => {
     expect(workflow.match(/ios-simulator-app-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
   });
 
+  it('boots the compiling runner\'s iPhone only after its build, which a boot alongside slows', () => {
+    const boot = workflow.slice(workflow.indexOf('- name: Boot the simulated iPhone in the background'));
+    expect(boot).toMatch(
+      /if \[ "\$BUILDS" != true \]; then\n\s+nohup xcrun simctl bootstatus "\$DEVICE_ID" -b [^\n]+&\n\s+fi\n/,
+    );
+    expect(workflow.match(/nohup xcrun simctl bootstatus/g)).toHaveLength(1);
+    // The launch step, after the build, boots it or waits for it.
+    const launch = workflow.slice(workflow.indexOf('- name: Launch on a simulated iPhone'));
+    expect(launch.indexOf('xcrun simctl bootstatus "$DEVICE_ID" -b\n')).toBeGreaterThan(-1);
+    expect(workflow.indexOf('- name: Launch on a simulated iPhone')).toBeGreaterThan(
+      workflow.indexOf('- name: Build for the Simulator without signing'),
+    );
+  });
+
   it('joins the groups in the required job, which fails rather than skips when a group fails', () => {
     const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
     expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');

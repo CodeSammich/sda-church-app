@@ -151,17 +151,23 @@ jobs:
       - name: Boot the simulated iPhone in the background
         # A fresh Simulator's first boot takes about 5.5 minutes on these
         # runners, most of it one iOS data-migration step for location
-        # services (docs/operations/native-builds.md). It starts here, after
-        # the package installs, which it would slow: on the runner that
-        # compiles, the compile hides it; on the others, the wait for the app
-        # does. The launch step waits for it.
+        # services, and on their 3 processors it slows whatever runs
+        # alongside it (docs/operations/native-builds.md). So it starts after
+        # the package installs, while the other runners wait for the app. The
+        # runner that compiles boots its iPhone only after the build, in the
+        # launch step: booting alongside, a build from a matching compile
+        # cache took 10.8 minutes instead of 2.3.
+        env:
+          BUILDS: ${{ matrix.builds && 'true' || 'false' }}
         run: |
           set -euo pipefail
           # The iPhone test/screens/screens.json names, on the newest installed
           # iOS runtime, so the launch check and the key screens share it.
           DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
-          nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
+          if [ "$BUILDS" != true ]; then
+            nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
+          fi
 
       - name: Build for the Simulator without signing
         if: ${{ matrix.builds }}
@@ -273,13 +279,16 @@ jobs:
           lipo -archs "$APP_PATH/$EXECUTABLE"
           BUNDLE_ID="$(node -p "require('./app.json').expo.ios.bundleIdentifier")"
 
-          # The iPhone started booting earlier; wait until it's ready.
+          # Waits for the boot started earlier, or, on the runner that
+          # compiled, boots the iPhone now.
           xcrun simctl bootstatus "$DEVICE_ID" -b
           # The background boot's own log, with timestamps, to see what a slow
           # boot was waiting on.
-          echo '::group::Simulated iPhone boot log'
-          cat "$RUNNER_TEMP/simulator-boot.log" || true
-          echo '::endgroup::'
+          if [ -f "$RUNNER_TEMP/simulator-boot.log" ]; then
+            echo '::group::Simulated iPhone boot log'
+            cat "$RUNNER_TEMP/simulator-boot.log"
+            echo '::endgroup::'
+          fi
           xcrun simctl install "$DEVICE_ID" "$APP_PATH"
           xcrun simctl launch "$DEVICE_ID" "$BUNDLE_ID"
 

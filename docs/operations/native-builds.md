@@ -147,7 +147,9 @@ build, not a `package.json` edit. Pinning the runner (the current workflows use
 deliberate update when GitHub retires that image. Expo SDK 58 needs Xcode 26.6 or
 later: with Xcode 26.2, its `ExpoModulesJSI` framework fails to compile. The iOS PR
 preview uses the same Xcode as the signed build, so a toolchain problem shows up on a
-release PR before a signed build. The direct workflows keep build
+release PR before a signed build. Change it in `ios-compile-cache.yml` too, including its
+cache keys, which name the Xcode version (a test checks it matches the preview); the
+first build after starts a new compile cache. The direct workflows keep build
 orchestration visible in this repository and avoid another credential boundary.
 
 ## Expo 58 Android prebuild
@@ -632,26 +634,65 @@ From the logs of earlier runs:
 - The launch step prints the boot's own log, with timestamps, under **Simulated iPhone
   boot log**, to show what a slow boot was waiting on.
 
-**No compile cache, for now.** A ccache for the compile was tried in October 2026
-(#455) and left out. Xcode compiles the app's native libraries (React Native's core and
-most of Expo's modules arrive precompiled; the rest is C, C++, and Objective-C, mostly in
-react-native-screens, Reanimated, and Worklets, plus Swift in Expo's modules). From
-Xcode's first compile task to its last:
+**Compile cache.** The app's own code is JavaScript, which Xcode doesn't compile, and
+React Native's core and most of Expo's modules arrive precompiled. What Xcode compiles is
+the rest of the native libraries: C, C++, and Objective-C, mostly in react-native-screens,
+Reanimated, and Worklets, plus Swift in Expo's modules. These change only when a library
+is updated. So the compiling runner uses ccache, which stores each compiled C, C++, and
+Objective-C file and reuses it when nothing that went into it has changed. Swift is
+always compiled.
 
-| Compile cache | Compiling, average | Range |
+- `ios-compile-cache.yml` builds the app the same way on every push to `main` and saves
+  the cache, dropping files no build has used for 30 days, such as those from library
+  versions the app no longer uses. Twice a week it only restores the newest cache,
+  because GitHub deletes a cache no one has used for 7 days.
+- The preview restores the newest cache for the same native libraries, or else `main`'s
+  newest for the same Xcode. The first is keyed on the hash of `ios/Podfile.lock`, which
+  CocoaPods writes with every native library and its version. A new Xcode starts a new
+  cache.
+- The preview prints its build's hits under **Show how much the compile cache saved**.
+
+Measured in October 2026, the build step alone, with nothing else running on the runner
+(compile-only runs, listed in #455):
+
+| Compile cache | Runs | Build step |
 | --- | --- | --- |
-| None (6 runs) | 6.5 min | 5.8–8.1 min |
-| Empty, filled while compiling (2 runs) | 8.8 min | 8.7–8.9 min |
-| Every C, C++, and Objective-C file found in it (1 run) | 2.0 min | |
+| None | 2 | 9.8 and 13.0 min |
+| Empty | 2 | 11.2 and 12.7 min |
+| Matching: all 453 C, C++, and Objective-C files reused | 1 | 2.3 min |
+| From before #444's updates to Expo, Reanimated, and safe-area-context: 70% reused | 3 | 3.7 to 6.1 min |
 
-So a filled cache saved about 4.5 minutes, and an empty one cost about 2.3. To keep pull
-requests from planting compiled code in it, only `main` could fill it, and only for the
-exact same native dependencies, so a release PR would save time only when its native
-dependencies matched `main`'s: about half of the releases from 0.34.0 to 1.2.0. That
-saving was weighed against keeping a cache workflow warm and secure, and left for #455.
-For ccache to work at all, React Native's `ccache-clang.sh` also needs `CCACHE_BINARY`
-in the environment: Xcode passes that build setting to script phases but not to the
-compiler. Xcode's own build caching, which also covers Swift, hasn't been tried.
+**An older cache can't put an outdated file in the build.** ccache doesn't compare
+against the last build. For each file it hashes the compiler, the flags, the source, and
+every header the file includes, and reuses a stored result only on an exact match;
+anything else is compiled fresh. React Native's `ccache.conf` relaxes a few checks for
+speed, such as on Xcode's own system headers, which is why a new Xcode starts a new
+cache. To force a fresh compile anyway, delete the `ccache-ios-sim-…` caches under
+**Actions → Caches**.
+
+**A pull request can't poison it.** Cache poisoning means getting one's own compiled code
+into a cache that a later build trusts. Here:
+
+- only `ios-compile-cache.yml`, on `main` in this repository, saves the cache, so it holds
+  only code that was reviewed and merged. GitHub doesn't let a pull request's run write a
+  cache that `main`'s runs read;
+- that workflow reads no secrets and has a read-only token;
+- the preview only restores the cache, in ccache's read-only mode, so nothing a pull
+  request compiles is stored, even on its own runner;
+- the signed store builds never use ccache or the cache, and compile from scratch. Even
+  a bad cache could affect only the unsigned preview, never what reaches the stores.
+
+`test/native-build-safety.test.ts` fails if the cache workflow runs anywhere but `main`,
+reads a secret, or builds on its scheduled run; if the preview saves the cache or isn't
+read-only; if a signed build uses it; if a restore key is broader than the Xcode version;
+or if the two workflows' install and build commands differ.
+
+Both workflows set `USE_CCACHE=1`, which makes React Native's CocoaPods setup compile
+through its `ccache-clang.sh`, and put `CCACHE_BINARY` in the environment: that script
+calls ccache by it, and Xcode passes the build setting of that name to script phases but
+not to the compiler, so without it every compile quietly skips ccache. Xcode's own build
+caching, which also covers Swift, hasn't been tried. The cache is empty until the first
+push to `main` after it was added, so that release's own PR compiles everything.
 
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
 artifact ending in `-arm64`, and unzip the download and then the `.zip` inside it to get

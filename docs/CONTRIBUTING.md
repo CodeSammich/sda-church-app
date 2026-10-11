@@ -233,6 +233,18 @@ GitHub's code scanning default setup and have no workflow file.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
+- The compiling runner reuses the compiled native code that `iOS compile cache` saved on
+  `main`, read-only.
+
+### `iOS compile cache` (`.github/workflows/ios-compile-cache.yml`)
+
+- No check. Runs on every push to `main` in this repository, twice a week, and by hand on
+  `main`.
+- On a push, builds the iOS Simulator app with ccache and saves the compiled C, C++, and
+  Objective-C, which **iOS PR preview** reuses. Twice a week it only restores the cache,
+  because GitHub deletes a cache unused for 7 days. Only this workflow saves the cache,
+  and the signed store builds never use it; see
+  [Compile cache](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 
 ### `Android audio e2e` (`.github/workflows/android-audio-e2e.yml`)
 
