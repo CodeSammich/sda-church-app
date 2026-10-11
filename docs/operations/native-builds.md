@@ -596,12 +596,12 @@ Measured in October 2026:
 | One runner took every key screen (average of 13 runs) | 47 min |
 | Five runners, each compiling the app | 40 min |
 | Five runners, one compile shared, no compile cache ([run 38109635541](https://github.com/CodeSammich/sda-church-app/actions/runs/38109635541) and [run 38114551220](https://github.com/CodeSammich/sda-church-app/actions/runs/38114551220)) | 25.2 min average (22.4 and 28.0) |
-| The current setup, with a matching compile cache ([run 38151475093](https://github.com/CodeSammich/sda-church-app/actions/runs/38151475093)) | 14.8 min |
+| The current setup, with a matching compile cache ([run 38151475093](https://github.com/CodeSammich/sda-church-app/actions/runs/38151475093) and [run 38154712058](https://github.com/CodeSammich/sda-church-app/actions/runs/38154712058)) | 19.0 min average (14.8 and 23.2) |
 
 With no compile cache to restore, the current setup boots the compiling runner's iPhone
 during the compile, as in the 25.2-minute runs.
 
-In the run with a matching compile cache:
+In the faster of the runs with a matching compile cache:
 
 | Step | Time |
 | --- | --- |
@@ -614,8 +614,10 @@ In the run with a matching compile cache:
 | Text checks | 0.6–1.3 min |
 | Joining the groups | 0.5 min |
 
-After a library update, the compile reuses less of the cache: 3.7 to 6.1 minutes in the
-compile-only runs under **Compile cache**, so expect a run of about 16 to 19 minutes.
+In the slower one, the compiling runner was slow throughout: 3 minutes just to list its
+simulated iPhones, then 3.7 to compile and 6.0 to boot, install, and launch, so it finished
+last. After a library update, the compile reuses less of the cache: 3.7 to 6.1 minutes in
+the compile-only runs under **Compile cache**, so expect a run a few minutes longer.
 Each **Key screens** job times out after 40 minutes; the longest took 27.2.
 
 From the logs of earlier runs:
