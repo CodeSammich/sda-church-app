@@ -226,7 +226,12 @@ describe('iOS compile cache', () => {
     const start = workflow.indexOf(`- name: ${name}\n`);
     expect(start).toBeGreaterThan(-1);
     const step = workflow.slice(start, workflow.slice(start + 1).search(/\n {6}- |\n {2}[a-z-]+:\n/) + start + 1);
-    return step.slice(step.indexOf('run:'));
+    // Comments between steps belong to the next step, so they're left out.
+    return step
+      .slice(step.indexOf('run:'))
+      .split('\n')
+      .filter((line) => !/^ {6}#/.test(line))
+      .join('\n');
   };
 
   it('is saved only on main in this repository, with no secrets and a read-only token', () => {
@@ -264,7 +269,13 @@ describe('iOS compile cache', () => {
     const xcode = (workflow: string) => /\/Applications\/Xcode_([\d.]+)\.app/.exec(workflow)![1];
     expect(xcode(saver)).toBe(xcode(preview));
     for (const workflow of [saver, preview]) {
-      expect(workflow).toContain(`key: ccache-ios-sim-xcode-${xcode(workflow)}-\${{ hashFiles('package-lock.json') }}`);
+      // Keyed on the exact native dependencies, with no broader fallback, so a
+      // dependency change starts a fresh cache rather than reusing an old one.
+      expect(workflow).toContain(`key: ccache-ios-sim-xcode-${xcode(workflow)}-\${{ hashFiles('ios/Podfile.lock') }}`);
+      expect(workflow).not.toMatch(/ccache-ios-sim-xcode-[\d.]+-\n/);
+      expect(workflow).not.toContain("hashFiles('package-lock.json')");
+      // Podfile.lock exists only after CocoaPods runs.
+      expect(workflow.indexOf('actions/cache/restore@')).toBeGreaterThan(workflow.indexOf('pod install'));
       expect(workflow).toContain('echo "USE_CCACHE=1" >> "$GITHUB_ENV"');
       // Without it, React Native's ccache-clang.sh never reaches ccache.
       expect(workflow).toContain('echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"');

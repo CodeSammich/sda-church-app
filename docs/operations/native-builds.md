@@ -646,10 +646,17 @@ through its `ccache-clang.sh`, and put `CCACHE_BINARY` in the environment: that 
 calls ccache by it, and Xcode passes the build setting of that name to script phases but
 not to the compiler, so without it every compile quietly skips ccache.
 
-A stale cache can only cost time: ccache checks each file's contents and compiler
-settings before reusing it, so a changed file is compiled again. The key names the Xcode
-version and the `package-lock.json` hash, and falls back to the newest cache for the
-same Xcode.
+The cache is reused only for the exact same native dependencies. Its key is the Xcode
+version and the hash of `ios/Podfile.lock`, which CocoaPods writes with every native
+library and its version, and there's no broader fallback: after a dependency change, the
+first build on `main` compiles from scratch and starts a new cache. Within the same
+dependencies, there's no diffing against the last build: for each file, ccache hashes the
+compiler, the flags, the source, and the headers it includes, and reuses the stored result
+only on an exact match, so a changed file is compiled again. React Native's
+`ccache.conf` relaxes a few of those checks for speed (system headers and Clang modules
+among them); the Podfile key keeps those inputs the same between builds that share a
+cache. To force a fresh compile, delete the `ccache-ios-sim-…` caches under **Actions →
+Caches**.
 
 `test/native-build-safety.test.ts` fails if the cache workflow runs anywhere but `main`
 or reads a secret, if the preview saves the cache, if a signed build uses it, or if the

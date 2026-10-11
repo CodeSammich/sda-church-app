@@ -1,8 +1,8 @@
 name: iOS compile cache
 
-# Saves the compiled native code that the iOS PR preview reuses (#455), so a
-# release PR's runners recompile only the C, C++, and Objective-C that changed
-# since the last release, rather than all of it.
+# Saves the compiled native code that the iOS PR preview reuses (#455): its
+# compiling runner reuses C, C++, and Objective-C from this build when the
+# native dependencies are exactly the same, rather than compiling all of it.
 #
 # Only main writes this cache. A run on main builds reviewed code, and pull
 # requests can read main's caches but never write them, so a pull request
@@ -60,21 +60,6 @@ jobs:
           # compile skipped ccache. xcodebuild passes its own environment on.
           echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"
 
-      # Starts from the last cache, so this run adds only what changed.
-      - name: Restore the last compile cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/Library/Caches/ccache
-          key: ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}-
-            ccache-ios-sim-xcode-26.6-
-
-      # ccache keeps its counters in the cache, so start them at zero after
-      # restoring it, or the stats after the build would include earlier runs'.
-      - name: Count only this build's compile-cache hits
-        run: ccache --zero-stats
-
       - name: Install dependencies
         run: npm ci --force
 
@@ -86,6 +71,24 @@ jobs:
 
       - name: Install CocoaPods dependencies
         run: pod install --project-directory=ios
+
+      # Restored only for the exact same native dependencies: the key is the
+      # hash of ios/Podfile.lock, which lists every native library and its
+      # version, so a dependency change starts a fresh cache. ccache then
+      # reuses a compiled file only when its compiler, flags, source, and
+      # headers all hash the same as before.
+      - name: Restore the compile cache for these native dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-ios-sim-xcode-26.6-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ccache-ios-sim-xcode-26.6-${{ hashFiles('ios/Podfile.lock') }}-
+
+      # ccache keeps its counters in the cache, so start them at zero after
+      # restoring it, or the stats after the build would include earlier runs'.
+      - name: Count only this build's compile-cache hits
+        run: ccache --zero-stats
 
       - name: Build for the Simulator without signing
         env:
@@ -124,4 +127,4 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Caches/ccache
-          key: ccache-ios-sim-xcode-26.6-${{ hashFiles('package-lock.json') }}-${{ github.run_id }}
+          key: ccache-ios-sim-xcode-26.6-${{ hashFiles('ios/Podfile.lock') }}-${{ github.run_id }}
