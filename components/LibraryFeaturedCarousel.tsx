@@ -1,11 +1,6 @@
 import { AppIcon } from '@/components/AppIcon';
 import { LibraryCoverImage } from '@/components/LibraryCoverImage';
-import {
-  getBottomTabIconTextScale,
-  scaleTypographyMetric,
-  type TextScale,
-} from '@/constants/AppPreferences';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -46,7 +41,7 @@ type LibraryFeaturedCarouselProps = Readonly<{
   readLabel?: string;
   /** Labels a page dot, for example "Featured book 2 of 4". */
   pageLabel: (page: number, pageCount: number, book: FeaturedCarouselItem) => string;
-  /** Labels the arrows beside the dots, for example "Previous featured book". */
+  /** Labels the arrows on the banner's sides, for example "Previous featured book". */
   previousLabel: string;
   nextLabel: string;
   /**
@@ -61,8 +56,8 @@ type LibraryFeaturedCarouselProps = Readonly<{
 /**
  * The top of the library page: a few featured books, one per page, swiped
  * sideways. Each page shows the cover large over a blurred copy of itself.
- * It never advances on its own. Arrows either side of the dots show that it
- * moves, and turn the page for a mouse, which can't swipe. The hymnal page
+ * It never advances on its own. Little arrows on the banner's sides show that
+ * it moves, and turn the page for a mouse, which can't swipe. The hymnal page
  * uses it for its hymnals.
  */
 export function LibraryFeaturedCarousel({
@@ -112,30 +107,38 @@ export function LibraryFeaturedCarousel({
 
   if (!books.length) return null;
 
-  // At the first or last page, the arrow that way is dimmed and does nothing.
+  // A little arrow in the banner's side margin, beside the page's content, so
+  // it covers neither the cover nor the title. None points past the first or
+  // last page. Only the arrow itself is tappable: a swipe that starts
+  // elsewhere on the edge still turns the page.
   const renderArrow = (step: -1 | 1) => {
     const target = page + step;
-    const disabled = target < 0 || target >= books.length;
+    if (target < 0 || target >= books.length) return null;
     return (
-      <TouchableOpacity
-        accessibilityLabel={step < 0 ? previousLabel : nextLabel}
-        accessibilityRole="button"
-        accessibilityState={{ disabled }}
-        disabled={disabled}
-        onPress={() => showPage(target)}
+      <View
+        pointerEvents="box-none"
         style={[
-          styles.arrow,
-          { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline },
-          disabled ? styles.disabledArrow : Platform.OS === 'web' ? styles.webPressable : null,
+          styles.arrowColumn,
+          step < 0 ? styles.arrowColumnStart : styles.arrowColumnEnd,
+          // The same box as the page's content, which starts under the header.
+          { top: headerHeight + 12, bottom: 24 },
         ]}
       >
-        <AppIcon
-          name={step < 0 ? 'chevron-left' : 'chevron-right'}
-          size={DESIGN_TOKENS.ICON_SIZE_STANDARD}
-          textScale={getBottomTabIconTextScale(textScale)}
-          color={theme.colors.primary}
-        />
-      </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityLabel={step < 0 ? previousLabel : nextLabel}
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          onPress={() => showPage(target)}
+          style={[styles.arrow, Platform.OS === 'web' ? styles.webPressable : null]}
+        >
+          <AppIcon
+            name={step < 0 ? 'chevron-left' : 'chevron-right'}
+            size={ARROW_SIZE}
+            scaleWithText={false}
+            color="rgba(255, 255, 255, 0.85)"
+          />
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -190,34 +193,32 @@ export function LibraryFeaturedCarousel({
           )}
           showsHorizontalScrollIndicator={false}
         />
+        {renderArrow(-1)}
+        {renderArrow(1)}
         </View>
       ) : null}
       {books.length > 1 ? (
-        <View style={styles.pager}>
-          {renderArrow(-1)}
-          <View style={styles.dots}>
-            {books.map((book, index) => (
-              <TouchableOpacity
-                key={book.key}
-                accessibilityLabel={pageLabel(index + 1, books.length, book)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: index === page }}
-                hitSlop={10}
-                onPress={() => showPage(index)}
-                style={Platform.OS === 'web' ? styles.webPressable : null}
-              >
-                <View
-                  style={[
-                    styles.dot,
-                    index === page
-                      ? [styles.activeDot, { backgroundColor: theme.colors.primary }]
-                      : { backgroundColor: theme.colors.outlineVariant },
-                  ]}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-          {renderArrow(1)}
+        <View style={styles.dots}>
+          {books.map((book, index) => (
+            <TouchableOpacity
+              key={book.key}
+              accessibilityLabel={pageLabel(index + 1, books.length, book)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: index === page }}
+              hitSlop={10}
+              onPress={() => showPage(index)}
+              style={Platform.OS === 'web' ? styles.webPressable : null}
+            >
+              <View
+                style={[
+                  styles.dot,
+                  index === page
+                    ? [styles.activeDot, { backgroundColor: theme.colors.primary }]
+                    : { backgroundColor: theme.colors.outlineVariant },
+                ]}
+              />
+            </TouchableOpacity>
+          ))}
         </View>
       ) : null}
     </View>
@@ -260,11 +261,9 @@ function PageContent({
   );
 }
 
-// Sized like the header's buttons: 44pt, growing with the text. Like the tab
-// bar's icons, the arrows stop growing at 130%, so at larger sizes they don't
-// push the page's content further down.
-const getArrowSize = (textScale: TextScale) =>
-  Math.ceil(44 + (getBottomTabIconTextScale(textScale) - 1) * 24);
+// The arrows fit the page content's 20pt side margin at every text size, so
+// they don't grow with the text.
+const ARROW_SIZE = 20;
 
 // The page sits on a darkened, blurred cover in both themes, so its text is
 // always light.
@@ -340,29 +339,30 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
       fontWeight: '700',
       lineHeight: scaleTypographyMetric(20, textScale),
     },
-    pager: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: 16,
+    // A margin-wide column at each side, centring its arrow on the content.
+    arrowColumn: {
       justifyContent: 'center',
-      marginTop: 4,
+      position: 'absolute',
+      width: 20,
     },
-    // Round like the header's buttons.
+    arrowColumnStart: {
+      left: 0,
+    },
+    arrowColumnEnd: {
+      right: 0,
+    },
     arrow: {
       alignItems: 'center',
-      borderRadius: 999,
-      borderWidth: 1,
-      height: getArrowSize(textScale),
+      height: 44,
       justifyContent: 'center',
-      width: getArrowSize(textScale),
-    },
-    disabledArrow: {
-      opacity: 0.4,
+      width: 20,
     },
     dots: {
       alignItems: 'center',
       flexDirection: 'row',
       gap: 8,
+      justifyContent: 'center',
+      marginTop: 12,
     },
     dot: {
       borderRadius: 4,

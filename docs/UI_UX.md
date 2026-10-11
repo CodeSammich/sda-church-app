@@ -164,7 +164,7 @@ Visitor) live here.
 
 **Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the
 six hymnals, in the style of the Library's featured books, puts the app language's hymnals
-first; swiping to one, tapping its dot, or tapping the arrows either side of the dots
+first; swiping to one, tapping its dot, or tapping the little arrows on the banner's sides
 (#447) shows its search and hymns below, in one list. Each hymnal keeps its own search. A
 search also looks through the other five hymnals: their matches follow under
 **In other hymnals**, grouped under each hymnal's name, the hymnal a cross-reference
@@ -220,7 +220,7 @@ the hymnal page, whose way back returns to the verse (`features/hymnal/HymnScrip
 **UI:** A short list of cards (`app/(tabs)/explore/index.tsx`): **Library**, **Sermon
 Archive** (YouTube), **Audio Archive** (Spotify), and **Zoom Class**. The Library is the
 bookshelf-style part: a carousel of featured books, turned by swiping, a dot, or the
-arrows either side of the dots, then shelves that are each a row of covers, with a search
+little arrows on the banner's sides, then shelves that are each a row of covers, with a search
 across all books (see [Christian Library](feature_designs/christian_library.md)). Hymnals
 are on Home, not here.
 
