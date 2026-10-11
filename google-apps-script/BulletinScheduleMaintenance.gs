@@ -7,11 +7,14 @@
  * - Keep the current calendar quarter visible.
  * - Keep the immediately preceding seven days visible at a quarter boundary.
  * - Hide older dated rows, but never delete them.
- * - During the final 21 days of a quarter, append the immediately following
- *   quarter's Saturdays when they are not already present.
- * - If that following quarter is already complete, do nothing and wait until
- *   the next quarter boundary. This prevents pre-populating a later quarter
- *   just because an earlier one was entered manually.
+ * - Keep a year of Saturdays to plan in: the three quarters after the current
+ *   one always have rows. A sheet that has fallen behind catches up on the
+ *   next run, appending the missing quarters in date order.
+ * - During the final 21 days of a quarter, also append the fourth quarter
+ *   ahead. Each quarter-end window therefore adds exactly one quarter, which
+ *   starts three weeks and three quarters later.
+ * - Append only Saturdays that are not already present, and never append past
+ *   that fourth quarter, even when planners entered later dates by hand.
  *
  * The bound spreadsheet's simple onOpen trigger runs this automatically for
  * every user who opens the sheet. It deliberately does not use an admin email
@@ -22,6 +25,10 @@ var BULLETIN_SCHEDULE_MAINTENANCE_CONFIG = Object.freeze({
   scheduleSheetName: 'Sabbath Calendar',
   dateHeader: 'Date',
   quarterHeader: 'Quarter',
+  // Quarters after the current one that always have rows. With the current
+  // quarter, that is a year of Saturdays.
+  quartersAhead: 3,
+  // During a quarter's final days, one more quarter is appended.
   populateLeadDays: 21,
   previousWeekDays: 7,
 });
@@ -159,7 +166,8 @@ function maintainBulletinScheduleOnOpen_() {
   return runBulletinScheduleMaintenance_();
 }
 
-function runBulletinScheduleMaintenance_() {
+// `now` defaults to the current time; tests pass a fixed date.
+function runBulletinScheduleMaintenance_(now) {
   var lock = LockService.getDocumentLock();
   if (!lock.tryLock(5000)) {
     return { skipped: true, reason: 'another maintenance run is active' };
@@ -172,13 +180,13 @@ function runBulletinScheduleMaintenance_() {
       installed: installSabbathCalendarEnglishValidation_(sheet),
       updatedAfterQuarterAppend: false,
     };
-    var populated = populateNextBulletinQuarterIfDue_(sheet);
+    var populated = populateUpcomingBulletinQuarters_(sheet, now);
     if (populated) {
       validation.updatedAfterQuarterAppend = updateSabbathCalendarEnglishValidation_(
         sheet,
       );
     }
-    var hidden = hideOldBulletinScheduleRows_(sheet);
+    var hidden = hideOldBulletinScheduleRows_(sheet, now);
     // Runs after quarter rows are appended so the scan covers every row.
     var conflicts = refreshScheduleRosterChecksSafely_(sheet);
     SpreadsheetApp.flush();
@@ -330,62 +338,71 @@ function getBulletinScheduleMaintenanceSheet_() {
   return sheet;
 }
 
-function populateNextBulletinQuarterIfDue_(sheet) {
+/**
+ * Appends the Saturdays missing from the quarters planners should already
+ * see: the next `quartersAhead` quarters, plus one more during the current
+ * quarter's final `populateLeadDays` days. Quarters are walked in date order
+ * and existing dates are skipped, so a run appends nothing once the sheet is
+ * caught up. Returns the number of rows appended.
+ */
+function populateUpcomingBulletinQuarters_(sheet, now) {
   var columns = getBulletinScheduleMaintenanceColumns_(sheet);
-  var today = getBulletinMaintenanceDateOnly_(new Date());
-  var currentQuarterEnd = getBulletinQuarterEnd_(today);
-  var daysUntilQuarterEnd = Math.floor(
-    (currentQuarterEnd.getTime() - today.getTime()) / 86400000,
+  var today = getBulletinMaintenanceDateOnly_(now || new Date());
+  var currentQuarterStart = getBulletinQuarterStart_(today);
+  // Round rather than floor: a daylight-saving change between the two
+  // midnights makes the difference an hour off a whole number of days.
+  var daysUntilQuarterEnd = Math.round(
+    (getBulletinQuarterEnd_(today).getTime() - today.getTime()) / 86400000,
   );
-  if (
-    daysUntilQuarterEnd >
-    BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.populateLeadDays
-  ) {
-    return 0;
+  var quarterCount = BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.quartersAhead;
+  if (daysUntilQuarterEnd <= BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.populateLeadDays) {
+    quarterCount += 1;
   }
 
-  var nextQuarterStart = new Date(
-    currentQuarterEnd.getFullYear(),
-    currentQuarterEnd.getMonth() + 1,
-    1,
-  );
-  var nextQuarterEnd = new Date(
-    nextQuarterStart.getFullYear(),
-    nextQuarterStart.getMonth() + 3,
-    0,
-  );
-  var quarterNumber = Math.floor(nextQuarterStart.getMonth() / 3) + 1;
   var existingDates = getBulletinScheduleDateKeys_(sheet, columns.dateColumn);
-  var datesToAdd = getBulletinMissingQuarterSaturdays_(
-    nextQuarterStart,
-    nextQuarterEnd,
-    existingDates,
-  );
-
-  // Leave a complete quarter alone. The next quarter will be considered when
-  // the current quarter reaches its own final-21-day window.
-  if (datesToAdd.length === 0) {
-    return 0;
-  }
-
-  if (!datesToAdd.length) {
-    return 0;
-  }
-
   var width = Math.max(sheet.getLastColumn(), columns.dateColumn, columns.quarterColumn);
   var sourceRow = Math.max(2, sheet.getLastRow());
-  var rows = datesToAdd.map(function (date) {
-    var row = Array(width).fill('');
-    row[columns.dateColumn - 1] = date;
-    row[columns.quarterColumn - 1] = getBulletinQuarterCellValue_(
+  var rows = [];
+  for (var offset = 1; offset <= quarterCount; offset += 1) {
+    // Month overflow rolls into later years: Q4 2026 + 4 is Q4 2027.
+    var quarterStart = new Date(
+      currentQuarterStart.getFullYear(),
+      currentQuarterStart.getMonth() + offset * 3,
+      1,
+    );
+    var datesToAdd = getBulletinMissingQuarterSaturdays_(
+      quarterStart,
+      getBulletinQuarterEnd_(quarterStart),
+      existingDates,
+    );
+    if (!datesToAdd.length) {
+      continue;
+    }
+    var quarterValue = getBulletinQuarterCellValue_(
       sheet,
       columns.quarterColumn,
       sourceRow,
-      quarterNumber,
+      Math.floor(quarterStart.getMonth() / 3) + 1,
     );
-    return row;
-  });
+    for (var index = 0; index < datesToAdd.length; index += 1) {
+      var row = Array(width).fill('');
+      row[columns.dateColumn - 1] = datesToAdd[index];
+      row[columns.quarterColumn - 1] = quarterValue;
+      rows.push(row);
+    }
+  }
+
+  if (!rows.length) {
+    return 0;
+  }
+
   var firstNewRow = sheet.getLastRow() + 1;
+  // A catch-up can append most of a year at once. Sheets rejects a range past
+  // the grid's last row, so add grid rows first when the sheet is too short.
+  var missingGridRows = firstNewRow + rows.length - 1 - sheet.getMaxRows();
+  if (missingGridRows > 0) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), missingGridRows);
+  }
   var target = sheet.getRange(firstNewRow, 1, rows.length, width);
   target.setValues(rows);
   if (sourceRow >= 2 && sourceRow < firstNewRow) {
@@ -426,14 +443,14 @@ function getBulletinMissingQuarterSaturdays_(
   );
 }
 
-function hideOldBulletinScheduleRows_(sheet) {
+function hideOldBulletinScheduleRows_(sheet, now) {
   var columns = getBulletinScheduleMaintenanceColumns_(sheet);
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     return 0;
   }
 
-  var today = getBulletinMaintenanceDateOnly_(new Date());
+  var today = getBulletinMaintenanceDateOnly_(now || new Date());
   var currentQuarterStart = getBulletinQuarterStart_(today);
   var previousWeekStart = new Date(today);
   previousWeekStart.setDate(
@@ -446,6 +463,9 @@ function hideOldBulletinScheduleRows_(sheet) {
   var displayValues = dateRange.getDisplayValues();
   var hiddenCount = 0;
   var hiddenStart = 0;
+  // Visible rows are shown in contiguous runs too: with a year of upcoming
+  // Saturdays, one call per row would be dozens of calls on every open.
+  var shownStart = 0;
 
   function flushHiddenRange(endRow) {
     if (!hiddenStart) {
@@ -457,26 +477,39 @@ function hideOldBulletinScheduleRows_(sheet) {
     hiddenStart = 0;
   }
 
+  function flushShownRange(endRow) {
+    if (!shownStart) {
+      return;
+    }
+    sheet.showRows(shownStart, endRow - shownStart);
+    shownStart = 0;
+  }
+
   for (var index = 0; index < rowCount; index += 1) {
     var date = parseBulletinMaintenanceDate_(rawValues[index][0], displayValues[index][0]);
     var rowNumber = index + 2;
     if (!date) {
       flushHiddenRange(rowNumber);
+      flushShownRange(rowNumber);
       continue;
     }
 
     var shouldHide =
       date < currentQuarterStart && date < previousWeekStart;
     if (shouldHide) {
+      flushShownRange(rowNumber);
       if (!hiddenStart) {
         hiddenStart = rowNumber;
       }
     } else {
       flushHiddenRange(rowNumber);
-      sheet.showRows(rowNumber, 1);
+      if (!shownStart) {
+        shownStart = rowNumber;
+      }
     }
   }
   flushHiddenRange(lastRow + 1);
+  flushShownRange(lastRow + 1);
   return hiddenCount;
 }
 
@@ -579,7 +612,7 @@ function formatBulletinScheduleMaintenanceResult_(result) {
   return (
     'Schedule maintenance complete. Added ' +
     result.populated +
-    ' next-quarter date(s) and hid ' +
+    ' upcoming Saturday(s) and hid ' +
     result.hidden +
     ' old row(s).'
   );

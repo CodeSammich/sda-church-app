@@ -202,8 +202,8 @@ On open, the script:
 3. normalizes the header protections and restricts their editors to
    `technology@nyccsda.org`;
 4. protects `Sabbath Calendar!A:B` for the technology group;
-5. appends missing Saturdays for the next quarter when the current quarter is in
-   its final 21 days;
+5. appends missing Saturdays so the next three quarters always have rows, plus
+   the fourth quarter ahead when the current quarter is in its final 21 days;
 6. hides old schedule rows without deleting them; and
 7. repaints the conflict highlights described below across every schedule row.
 
@@ -246,11 +246,15 @@ The schedule-maintenance behavior is intentionally non-destructive:
 - the current quarter remains visible;
 - the immediately preceding seven days remain visible at quarter boundaries;
 - older dated rows are hidden, never deleted;
-- during the final 21 days of a quarter, missing Saturdays in the immediately
-  following quarter are appended with blank assignment cells and the correct
-  quarter value; and
-- if the next quarter is already complete, nothing is appended and the script
-  waits until the following quarter boundary.
+- the next three quarters always have rows, so planners have a year of
+  Saturdays to plan in; missing Saturdays are appended in date order with blank
+  assignment cells and the correct quarter value, which also catches up a sheet
+  that has fallen behind;
+- during the final 21 days of a quarter, the fourth quarter ahead is appended
+  too, so each quarter adds exactly one new quarter, starting three weeks and
+  three quarters later; and
+- nothing is appended past that fourth quarter, even if later dates were
+  entered by hand.
 
 The operation is idempotent. It compares existing dates before appending, so
 opening the sheet repeatedly does not create duplicates. If rows already exist
