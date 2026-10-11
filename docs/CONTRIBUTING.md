@@ -22,10 +22,10 @@ main (stable)
        └─ feature/awesome-feature (work in progress)
 ```
 
-`release-candidate` is the one release branch. It has no version in its name: a
-maintainer creates it from `main` when a release cycle starts, and it is deleted when the
-release PR merges. Name your work branch with a prefix such as `feature/`, `bugfix/`,
-`chore/`, or `docs/`. The rulesets that protect `main` and `release-candidate`, and the
+`release-candidate` is the one release branch. It has no version in its name: it is
+deleted when the release PR merges, and a workflow creates it again from `main` right
+after. Name your work branch with a prefix such as `feature/`, `bugfix/`, `chore/`, or
+`docs/`. The rulesets that protect `main` and `release-candidate`, and the
 checks a pull request must pass, are under
 [Branch rules](operations/admin-runbook.md#branch-rules) in the admin runbook.
 
@@ -45,8 +45,8 @@ checks a pull request must pass, are under
 4. Open the feature PR from the fork's feature branch into the primary repository's
    `release-candidate`, following the format below, and wait for all checks and
    reviews. Don't retarget it to `main`. If a release merges first, GitHub moves the PR
-   to `main`; change it back once `release-candidate` is recreated, then update the
-   branch (**Update branch**, or merge `upstream/release-candidate` into it).
+   to `main`; change it back to `release-candidate` once that is created again, then
+   update the branch (**Update branch**, or merge `upstream/release-candidate` into it).
 5. A maintainer merges it once its checks and review pass. Its issues stay open until
    the release reaches `main`.
 
@@ -111,16 +111,15 @@ fails with the `npm run sync-version` command to run, and you commit its changes
 a pull request. Each release must also raise the version, because the store build
 numbers are computed from it; see [Version numbers](operations/version-numbers.md).
 
-Creating `release-candidate` and choosing the version are manual, code-maintainer
-actions; no workflow does either. The version is chosen last, once the release's contents
-are settled, because only then is it clear whether the release is a patch, minor, or
-major. The click-by-click steps are in
+Choosing the version is a manual, code-maintainer action; no workflow does it. The
+version is chosen last, once the release's contents are settled, because only then is it
+clear whether the release is a patch, minor, or major. The click-by-click steps are in
 [Shipping a release to `main`](operations/admin-runbook.md#shipping-a-release-to-main).
 
-1. When a release cycle starts, a maintainer creates `release-candidate` from the primary
-   repository's `main` (for example `git fetch upstream` then
-   `git push upstream upstream/main:refs/heads/release-candidate`), and feature PRs merge
-   into it.
+1. Feature PRs merge into `release-candidate`. **Release - After Merge** creates it from
+   `main` after each release merges. If it's missing, a maintainer creates it from the
+   primary repository's `main` (for example `git fetch upstream` then
+   `git push upstream upstream/main:refs/heads/release-candidate`).
 2. Once the release's contents are settled, a maintainer picks the version and merges a
    version PR into `release-candidate` that runs `npm run sync-version -- --version x.y.z`
    and commits the generated files. Like any PR, it needs a `Part of #…` line or the
@@ -133,12 +132,15 @@ major. The click-by-click steps are in
 4. The release PR runs the slow checks below (the slowest, **iOS PR preview**, takes
    about 25 minutes), and **Screenshots reviewed** waits for a `release-approvers`
    member to approve the screenshots. Merge it once every check and the review pass.
-   Merging it into `main` closes the issues and deletes `release-candidate`.
+   Merging it into `main` closes the issues and deletes `release-candidate`, and
+   **Release - After Merge** creates it again from `main`.
 5. The merge to `main` checks the version files, tags the release, publishes the website,
-   and starts the signed Android and iOS builds. The builds wait for a `release-approvers`
-   member to approve the `production` environment, then upload to Google Play internal
-   testing and TestFlight. Nothing reaches the public until a maintainer checks it on
-   real phones and submits it in each store; see
+   and starts the signed Android and iOS builds and the bulletin Apps Script deploy.
+   **Release - After Merge** comments on the release PR with links to those three runs.
+   The builds wait for a `release-approvers` member to approve the `production`
+   environment, then upload to Google Play internal testing and TestFlight. Nothing
+   reaches the public until a maintainer checks it on real phones and submits it in each
+   store; see
    [Uploading to the stores](operations/admin-runbook.md#uploading-to-the-stores) and
    [Automatic store uploads](operations/native-builds.md#automatic-store-uploads).
 
@@ -151,8 +153,7 @@ before committing or pushing so the maintainer can review the result. Only consi
 manually dispatched GitHub Actions workflow after that helper has worked for several
 releases; the workflow must validate the release itself, because pushes made with the
 standard `GITHUB_TOKEN` generally do not trigger another workflow run. Do not choose
-versions or create `release-candidate` automatically from dates, issue activity, or
-feature merges.
+versions automatically from dates, issue activity, or feature merges.
 
 ## Automated checks
 
@@ -257,6 +258,16 @@ GitHub's code scanning default setup and have no workflow file.
   listings link to its privacy policy and support pages, and QR codes point at its
   download page. The browser build of the app is published with it, for testing and
   demos. See [The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
+
+### `Release - After Merge` (`.github/workflows/release-after-merge.yml`)
+
+- Runs on every merge into `main`. When the release PR's merge deletes
+  `release-candidate`, creates it again from the merge commit. It never changes a branch
+  that already exists.
+- Comments on the merged PR with links to that merge's **Native iOS build**, **Native
+  Android build**, and **Deploy Bulletin Apps Script** runs, which wait for `production`
+  approval, and to the branches page. The comment says if `release-candidate` couldn't
+  be created.
 
 ### `Native Android build` and `Native iOS build` (`native-android-build.yml`, `native-ios-build.yml`)
 

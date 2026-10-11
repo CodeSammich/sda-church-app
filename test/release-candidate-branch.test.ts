@@ -41,6 +41,25 @@ describe('release-candidate branch', () => {
     expect(sync).toContain('npm run sync-version -- --version "$VERSION"');
   });
 
+  it('is created again from main after a merge, never overwritten', () => {
+    const workflow = readWorkflow('release-after-merge.yml');
+    expect(workflow).toMatch(/\non:\n  push:\n    branches:\n      - main\n\n/);
+    // Creating a ref that exists fails, so an existing branch is left alone.
+    expect(workflow).toContain('-f ref=refs/heads/release-candidate -f sha="$GITHUB_SHA"');
+    expect(workflow).not.toMatch(/--method (PATCH|DELETE)|force/);
+    expect(workflow).not.toContain('actions/checkout');
+  });
+
+  it('links the merged PR to the runs that wait for production approval', () => {
+    const workflow = readWorkflow('release-after-merge.yml');
+    for (const file of ['native-ios-build.yml', 'native-android-build.yml', 'apps-script-deploy.yml']) {
+      expect(workflow).toContain(`run_link ${file} `);
+      // The link finds this push's run, so each must start on the merge.
+      expect(readWorkflow(file)).toMatch(/\non:\n(  #.*\n)*  push:\n    branches:\n      - main\n/);
+      expect(readWorkflow(file)).toContain('environment: production');
+    }
+  });
+
   it('may reuse main\'s version only to recover an untagged release', () => {
     const check = readWorkflow('pr-check.yml');
     expect(check).toContain('if [ "$HEAD_REF" != "release-candidate" ]; then');
