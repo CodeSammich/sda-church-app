@@ -132,6 +132,28 @@ describe('the hymnal page', () => {
     expect(view.getByPlaceholderText('Search by number or title...')).toBeTruthy();
   });
 
+  it('picks the next or previous hymnal with the carousel arrows, in each language (#447)', () => {
+    const view = renderPage(HymnalSelectionScreen);
+    expect(view.getByLabelText('Previous hymnal').props.accessibilityState).toEqual({ disabled: true });
+    fireEvent.press(view.getByLabelText('Next hymnal'));
+    expect(dotLabels(view)[1].selected).toBe(true);
+    expect(view.getByText(hymnTitle('chinese-hymnal-505', 1))).toBeTruthy();
+    fireEvent.press(view.getByLabelText('Previous hymnal'));
+    expect(dotLabels(view)[0].selected).toBe(true);
+    expect(view.getByText(hymnTitle('sdah-1985-en', 1))).toBeTruthy();
+    view.unmount();
+
+    // The last hymnal has no next one.
+    const chinese = renderPage(routes[0][1], {}, 'zh');
+    expect(dotLabels(chinese)[5].selected).toBe(true);
+    expect(chinese.getByLabelText('下一本詩歌本').props.accessibilityState).toEqual({ disabled: true });
+    expect(chinese.getByLabelText('上一本詩歌本').props.accessibilityState).toEqual({ disabled: false });
+    chinese.unmount();
+
+    expect(renderPage(HymnalSelectionScreen, {}, 'zh-cn').getByLabelText('下一本诗歌本')).toBeTruthy();
+    expect(renderPage(HymnalSelectionScreen, {}, 'es').getByLabelText('Himnario siguiente')).toBeTruthy();
+  });
+
   it("keeps each hymnal's own search when another hymnal is picked", () => {
     const view = renderPage(HymnalSelectionScreen);
     fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'Joyful');
@@ -537,7 +559,9 @@ describe('Library featured carousel', () => {
           { key: 'b', title: 'Second Book', author: 'B. Writer', accessibilityHint: 'Opens the book', onPress },
         ],
         featuredLabel: 'Featured',
+        nextLabel: 'Next featured book',
         pageLabel: (page: number, count: number) => `Featured book ${page} of ${count}`,
+        previousLabel: 'Previous featured book',
         readLabel: 'Read',
       }),
       { theme: customLightTheme },
@@ -562,7 +586,9 @@ describe('Library featured carousel', () => {
     const view = renderWithPreferences(
       createElement(LibraryFeaturedCarousel, {
         books: [{ key: 'h', title: 'SDA Hymnal', author: '1985 Edition', eyebrow: 'English' }],
+        nextLabel: 'Next hymnal',
         pageLabel: () => '',
+        previousLabel: 'Previous hymnal',
       }),
       { theme: customLightTheme },
     );
@@ -571,5 +597,81 @@ describe('Library featured carousel', () => {
     const page = view.getByLabelText('English: SDA Hymnal. 1985 Edition');
     expect(page.props.accessibilityRole).toBeUndefined();
     expect(view.queryByText('Read')).toBeNull();
+    // One page can't move, so it has no arrows.
+    expect(view.queryByLabelText('Previous hymnal')).toBeNull();
+    expect(view.queryByLabelText('Next hymnal')).toBeNull();
+  });
+
+  it('has arrows that turn the page, dimmed at the first and last page (#447)', () => {
+    const view = renderWithPreferences(
+      createElement(LibraryFeaturedCarousel, {
+        books: ['a', 'b', 'c'].map((key) => ({ key, title: `Book ${key}`, author: 'A. Writer' })),
+        nextLabel: 'Next featured book',
+        pageLabel: (page: number, count: number) => `Featured book ${page} of ${count}`,
+        previousLabel: 'Previous featured book',
+      }),
+      { theme: customLightTheme },
+    );
+    const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
+    act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+    const list = view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>);
+    const scrollToOffset = jest.spyOn(list.instance, 'scrollToOffset');
+    const arrow = (label: string) => view.getByLabelText(label);
+    const selectedPage = () =>
+      [1, 2, 3].find((page) => view.getByLabelText(`Featured book ${page} of 3`).props.accessibilityState.selected);
+
+    expect(arrow('Previous featured book').props.accessibilityRole).toBe('button');
+    expect(arrow('Previous featured book').props.accessibilityState).toEqual({ disabled: true });
+    expect(arrow('Next featured book').props.accessibilityState).toEqual({ disabled: false });
+    fireEvent.press(arrow('Previous featured book'));
+    expect(selectedPage()).toBe(1);
+    expect(scrollToOffset).not.toHaveBeenCalled();
+
+    fireEvent.press(arrow('Next featured book'));
+    expect(selectedPage()).toBe(2);
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 400 });
+    expect(arrow('Previous featured book').props.accessibilityState).toEqual({ disabled: false });
+
+    fireEvent.press(arrow('Next featured book'));
+    expect(selectedPage()).toBe(3);
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 800 });
+    expect(arrow('Next featured book').props.accessibilityState).toEqual({ disabled: true });
+
+    fireEvent.press(arrow('Previous featured book'));
+    expect(selectedPage()).toBe(2);
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 400 });
+
+    // A swipe moves the arrows along with the dots.
+    act(() => list.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 800, y: 0 } } }));
+    expect(selectedPage()).toBe(3);
+    expect(arrow('Next featured book').props.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it('keeps its arrows at least 44pt, growing with the text only to 130%', () => {
+    const arrowWidth = (textScale: 1 | 1.25 | 2) => {
+      const view = renderWithPreferences(
+        createElement(LibraryFeaturedCarousel, {
+          books: ['a', 'b'].map((key) => ({ key, title: `Book ${key}`, author: 'A. Writer' })),
+          nextLabel: 'Next featured book',
+          pageLabel: () => '',
+          previousLabel: 'Previous featured book',
+        }),
+        { textScale, theme: customLightTheme },
+      );
+      const { StyleSheet } = require('react-native');
+      const width = StyleSheet.flatten(view.getByLabelText('Next featured book').props.style).width;
+      view.unmount();
+      return width;
+    };
+    expect([arrowWidth(1), arrowWidth(1.25), arrowWidth(2)]).toEqual([44, 50, 52]);
+  });
+
+  it('has its arrows on the library page, labeled in the app language', () => {
+    const LibraryScreen: ComponentType = require('@/app/(tabs)/explore/library').default;
+    const english = renderPage(LibraryScreen);
+    expect(english.getByLabelText('Previous featured book').props.accessibilityState).toEqual({ disabled: true });
+    expect(english.getByLabelText('Next featured book').props.accessibilityState).toEqual({ disabled: false });
+    english.unmount();
+    expect(renderPage(LibraryScreen, {}, 'es').getByLabelText('Libro destacado siguiente')).toBeTruthy();
   });
 });

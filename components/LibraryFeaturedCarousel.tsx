@@ -1,5 +1,11 @@
+import { AppIcon } from '@/components/AppIcon';
 import { LibraryCoverImage } from '@/components/LibraryCoverImage';
-import { scaleTypographyMetric } from '@/constants/AppPreferences';
+import {
+  getBottomTabIconTextScale,
+  scaleTypographyMetric,
+  type TextScale,
+} from '@/constants/AppPreferences';
+import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -40,6 +46,9 @@ type LibraryFeaturedCarouselProps = Readonly<{
   readLabel?: string;
   /** Labels a page dot, for example "Featured book 2 of 4". */
   pageLabel: (page: number, pageCount: number, book: FeaturedCarouselItem) => string;
+  /** Labels the arrows beside the dots, for example "Previous featured book". */
+  previousLabel: string;
+  nextLabel: string;
   /**
    * The page to show, for a parent that follows it, such as the hymnal page,
    * where the page picks the hymnal. Changing it scrolls to that page.
@@ -52,14 +61,18 @@ type LibraryFeaturedCarouselProps = Readonly<{
 /**
  * The top of the library page: a few featured books, one per page, swiped
  * sideways. Each page shows the cover large over a blurred copy of itself.
- * It never advances on its own. The hymnal page uses it for its hymnals.
+ * It never advances on its own. Arrows either side of the dots show that it
+ * moves, and turn the page for a mouse, which can't swipe. The hymnal page
+ * uses it for its hymnals.
  */
 export function LibraryFeaturedCarousel({
   books,
   featuredLabel = '',
+  nextLabel,
   onPageChange,
   page: shownPage,
   pageLabel,
+  previousLabel,
   readLabel,
 }: LibraryFeaturedCarouselProps) {
   const theme = useAppTheme();
@@ -98,6 +111,33 @@ export function LibraryFeaturedCarousel({
   }, [pageWidth, shownPage]);
 
   if (!books.length) return null;
+
+  // At the first or last page, the arrow that way is dimmed and does nothing.
+  const renderArrow = (step: -1 | 1) => {
+    const target = page + step;
+    const disabled = target < 0 || target >= books.length;
+    return (
+      <TouchableOpacity
+        accessibilityLabel={step < 0 ? previousLabel : nextLabel}
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={() => showPage(target)}
+        style={[
+          styles.arrow,
+          { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline },
+          disabled ? styles.disabledArrow : Platform.OS === 'web' ? styles.webPressable : null,
+        ]}
+      >
+        <AppIcon
+          name={step < 0 ? 'chevron-left' : 'chevron-right'}
+          size={DESIGN_TOKENS.ICON_SIZE_STANDARD}
+          textScale={getBottomTabIconTextScale(textScale)}
+          color={theme.colors.primary}
+        />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View onLayout={onLayout} style={styles.carousel}>
@@ -153,27 +193,31 @@ export function LibraryFeaturedCarousel({
         </View>
       ) : null}
       {books.length > 1 ? (
-        <View style={styles.dots}>
-          {books.map((book, index) => (
-            <TouchableOpacity
-              key={book.key}
-              accessibilityLabel={pageLabel(index + 1, books.length, book)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: index === page }}
-              hitSlop={10}
-              onPress={() => showPage(index)}
-              style={Platform.OS === 'web' ? styles.webPressable : null}
-            >
-              <View
-                style={[
-                  styles.dot,
-                  index === page
-                    ? [styles.activeDot, { backgroundColor: theme.colors.primary }]
-                    : { backgroundColor: theme.colors.outlineVariant },
-                ]}
-              />
-            </TouchableOpacity>
-          ))}
+        <View style={styles.pager}>
+          {renderArrow(-1)}
+          <View style={styles.dots}>
+            {books.map((book, index) => (
+              <TouchableOpacity
+                key={book.key}
+                accessibilityLabel={pageLabel(index + 1, books.length, book)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: index === page }}
+                hitSlop={10}
+                onPress={() => showPage(index)}
+                style={Platform.OS === 'web' ? styles.webPressable : null}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    index === page
+                      ? [styles.activeDot, { backgroundColor: theme.colors.primary }]
+                      : { backgroundColor: theme.colors.outlineVariant },
+                  ]}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+          {renderArrow(1)}
         </View>
       ) : null}
     </View>
@@ -215,6 +259,12 @@ function PageContent({
     </View>
   );
 }
+
+// Sized like the header's buttons: 44pt, growing with the text. Like the tab
+// bar's icons, the arrows stop growing at 130%, so at larger sizes they don't
+// push the page's content further down.
+const getArrowSize = (textScale: TextScale) =>
+  Math.ceil(44 + (getBottomTabIconTextScale(textScale) - 1) * 24);
 
 // The page sits on a darkened, blurred cover in both themes, so its text is
 // always light.
@@ -290,12 +340,29 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
       fontWeight: '700',
       lineHeight: scaleTypographyMetric(20, textScale),
     },
+    pager: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 16,
+      justifyContent: 'center',
+      marginTop: 4,
+    },
+    // Round like the header's buttons.
+    arrow: {
+      alignItems: 'center',
+      borderRadius: 999,
+      borderWidth: 1,
+      height: getArrowSize(textScale),
+      justifyContent: 'center',
+      width: getArrowSize(textScale),
+    },
+    disabledArrow: {
+      opacity: 0.4,
+    },
     dots: {
       alignItems: 'center',
       flexDirection: 'row',
       gap: 8,
-      justifyContent: 'center',
-      marginTop: 12,
     },
     dot: {
       borderRadius: 4,

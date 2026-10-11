@@ -164,10 +164,11 @@ Visitor) live here.
 
 **Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the
 six hymnals, in the style of the Library's featured books, puts the app language's hymnals
-first; swiping to one, or tapping its dot, shows its search and hymns below, in one list.
-Each hymnal keeps its own search. A search also looks through the other five hymnals:
-their matches follow under **In other hymnals**, grouped under each hymnal's name, the
-hymnal a cross-reference table pairs with this one first (1985 ↔ 505). Each group is in
+first; swiping to one, tapping its dot, or tapping the arrows either side of the dots
+(#447) shows its search and hymns below, in one list. Each hymnal keeps its own search. A
+search also looks through the other five hymnals: their matches follow under
+**In other hymnals**, grouped under each hymnal's name, the hymnal a cross-reference
+table pairs with this one first (1985 ↔ 505). Each group is in
 number order and shows its first 10 matches, with **Show all** for the rest. A number
 leads each group with its hymn of that number, so "hymn 100" shows 1985's and 505's 100
 with their titles, whichever hymnal is showing. Tapping a result shows that hymn in its hymnal. The page says nothing
@@ -218,9 +219,10 @@ the hymnal page, whose way back returns to the verse (`features/hymnal/HymnScrip
 
 **UI:** A short list of cards (`app/(tabs)/explore/index.tsx`): **Library**, **Sermon
 Archive** (YouTube), **Audio Archive** (Spotify), and **Zoom Class**. The Library is the
-bookshelf-style part: each shelf is a row of covers, with a search across all books (see
-[Christian Library](feature_designs/christian_library.md)). Hymnals are on Home, not
-here.
+bookshelf-style part: a carousel of featured books, turned by swiping, a dot, or the
+arrows either side of the dots, then shelves that are each a row of covers, with a search
+across all books (see [Christian Library](feature_designs/christian_library.md)). Hymnals
+are on Home, not here.
 
 **Tenet Alignment:**
 
