@@ -132,7 +132,7 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
   });
 
-  it('calculates quarter boundaries and next-quarter Saturday values', () => {
+  it('calculates quarter boundaries and date keys', () => {
     const context = loadAppsScript({});
     const values = JSON.parse(
       runInContext(
@@ -209,7 +209,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(calls.filter((call) => call === 'warning:false')).toHaveLength(2);
   });
 
-  it('does not advance past an already complete next quarter', () => {
+  it('finds no missing Saturdays in a complete quarter', () => {
     const context = loadAppsScript({});
     const values = JSON.parse(
       runInContext(
@@ -908,7 +908,8 @@ describe('printed bulletin Apps Script helpers', () => {
           service: getPrintedCommunionServiceScripture_(),
           responseHymn: getPrintedCommunionResponseHymn_(),
           wholeCongregation: getPrintedCommunionWholeCongregation_(),
-          communionPastor: getPrintedCommunionPastor_(),
+          communionPastor: getPrintedCommunionPastor_({ communionPastor: '溫保羅牧師\\nPastor Paul Wen' }),
+          missingPastor: getPrintedCommunionPastor_({ communionPastor: '' }),
           footWashing: getPrintedCommunionFootWashingScripture_(),
           footWashingLookup: getPrintedCommunionFootWashingLookupScripture_(),
           passageDefinitions: {
@@ -925,7 +926,8 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.service).toBe('1 Corinthians 11:23–26');
     expect(output.responseHymn).toBe('第413首 教會基礎\nAH 348 The Church Has One Foundation');
     expect(output.wholeCongregation).toBe('會眾\nCongregation');
-    expect(output.communionPastor).toBe('方舟\nMoses Fang');
+    expect(output.communionPastor).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.missingPastor).toBe('尚未安排\nTBD');
     expect(output.footWashing).toBe('John 13:1–10; 12–17');
     expect(output.footWashingLookup).toBe('John 13:1–10; John 13:12–17');
     expect(output.passageDefinitions).toEqual({
@@ -1504,6 +1506,194 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(dictionary.chineseToEnglish['只有中文']).toBeUndefined();
   });
 
+  it('reads Pastor and Elder titles from the Leadership tab', () => {
+    const nameDictionaryRows = [
+      ['English Name', 'Chinese Name'],
+      ['Paul Wen', '溫保羅'],
+      ['Wei He', '何　偉'],
+      ['Mark Sun', '孫馬可'],
+      ['Grace Lin', '林恩典'],
+      ['Elderidge Moss', '莫艾德'],
+    ];
+    const loadDictionary = (leadershipRows: string[][] | null, withNameDictionary = true) => {
+      const logs: string[] = [];
+      const sheetFor = (rows: string[][]) => ({
+        getDataRange: () => ({ getValues: () => rows, getDisplayValues: () => rows }),
+      });
+      const sheets: Record<string, unknown> = {};
+      if (withNameDictionary) {
+        sheets['Name Dictionary'] = sheetFor(nameDictionaryRows);
+      }
+      if (leadershipRows) {
+        sheets.Leadership = sheetFor(leadershipRows);
+      }
+      const context = loadAppsScript({
+        SpreadsheetApp: {
+          getActiveSpreadsheet: () => ({ getSheetByName: (name: string) => sheets[name] || null }),
+        },
+        Logger: { log: (message: string) => logs.push(message) },
+      });
+      const output = JSON.parse(
+        runInContext(
+          `var dictionary = buildPhysicalNameDictionary_();
+          JSON.stringify({
+            dictionary: dictionary,
+            paddedChinese: formatPhysicalPersonValue_('何偉', dictionary, { titles: true }),
+            communionPastor: preparePrintedBulletinForPrint_(
+              { queens: {}, brooklyn: {} },
+              dictionary
+            ).communionPastor
+          })`,
+          context,
+        ) as string,
+      );
+      return { ...output, logs };
+    };
+
+    const output = loadDictionary([
+      ['', 'Pastors 牧師', 'Elder(s)'],
+      ['', 'Pastor Paul Wen', '何偉長老'],
+      ['Head', '牧师 林恩典', 'Elder: Mark Sun'],
+      ['', '', '溫保羅'],
+      ['', '', 'Elderidge Moss'],
+    ]);
+    const { dictionary } = output;
+
+    // A title typed before or after a name is dropped, but a name that merely
+    // starts with a title's letters is kept; the lists keep sheet order.
+    expect(dictionary.titledNames).toEqual({
+      pastor: ['Paul Wen', '林恩典'],
+      elder: ['何偉', 'Mark Sun', '溫保羅', 'Elderidge Moss'],
+    });
+    expect(dictionary.heads).toEqual({ pastor: '林恩典', elder: 'Mark Sun' });
+    // Each list entry titles both of the person's names, and a person on both
+    // lists stays Pastor even when the lists use different languages.
+    expect(dictionary.titles['paul wen']).toEqual({ english: 'Pastor', chinese: '牧師' });
+    expect(dictionary.titles['溫保羅']).toEqual({ english: 'Pastor', chinese: '牧師' });
+    expect(dictionary.titles['grace lin']).toEqual({ english: 'Pastor', chinese: '牧師' });
+    expect(dictionary.titles['wei he']).toEqual({ english: 'Elder', chinese: '長老' });
+    expect(dictionary.titles['mark sun']).toEqual({ english: 'Elder', chinese: '長老' });
+    expect(dictionary.titles.head).toBeUndefined();
+    // A padded two-character name matches with or without the padding.
+    expect(dictionary.chineseToEnglish['何偉']).toBe('Wei He');
+    expect(output.paddedChinese).toBe('何偉長老\nElder Wei He');
+    // The Head row's pastor leads Communion, wherever the row is.
+    expect(output.communionPastor).toBe('林恩典牧師\nPastor Grace Lin');
+    expect(output.logs).toEqual([]);
+
+    // Without a Head row, the first pastor leads Communion.
+    const noHead = loadDictionary([
+      ['', 'Pastors', 'Elders'],
+      ['', 'Paul Wen', 'Mark Sun'],
+      ['', 'Grace Lin', ''],
+    ]);
+    expect(noHead.communionPastor).toBe('溫保羅牧師\nPastor Paul Wen');
+
+    const noElders = loadDictionary([['Pastor Travel'], ['Paul Wen']]);
+    expect(noElders.dictionary.titles).toEqual({});
+    expect(noElders.communionPastor).toBe('');
+    expect(noElders.logs).toEqual([
+      'Leadership has no Pastors column; printing without that title.',
+      'Leadership has no Elders column; printing without that title.',
+    ]);
+
+    const noLeadership = loadDictionary(null);
+    expect(noLeadership.dictionary.titles).toEqual({});
+    expect(noLeadership.dictionary.englishToChinese['paul wen']).toBe('溫保羅');
+    expect(noLeadership.logs).toEqual([
+      'Leadership sheet not found; printing names without titles.',
+    ]);
+
+    // The Leadership tab still applies without a Name Dictionary.
+    const noNameDictionary = loadDictionary(
+      [['Head', 'Pastors'], ['Head', 'Paul Wen']],
+      false,
+    );
+    expect(noNameDictionary.communionPastor).toBe('—\nPastor Paul Wen');
+    expect(noNameDictionary.logs).toEqual([
+      'Name Dictionary sheet not found; printing source names only.',
+      'Leadership has no Elders column; printing without that title.',
+    ]);
+  });
+
+  it('adds Leadership titles in either language without hardcoded names', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `var dictionary = {
+          englishToChinese: { 'paul wen': '溫　保羅', 'ruth ho': '何路得', 'grace lin': '林恩典' },
+          chineseToEnglish: { '溫保羅': 'Paul Wen', '何路得': 'Ruth Ho', '林恩典': 'Grace Lin' },
+          pinyinToChinese: { 'he lude': '何路得' },
+          pinyinToEnglish: { 'he lude': 'Ruth Ho' },
+          titles: {
+            'paul wen': { english: 'Pastor', chinese: '牧師' },
+            '林恩典': { english: 'Pastor', chinese: '牧師' },
+            'ruth ho': { english: 'Elder', chinese: '長老' },
+            'mark sun': { english: 'Elder', chinese: '長老' }
+          },
+          titledNames: { pastor: ['Paul Wen', '林恩典'], elder: ['Ruth Ho', 'Mark Sun'] }
+        };
+        JSON.stringify({
+          english: formatPhysicalPersonValue_('Paul Wen', dictionary, { titles: true }),
+          chinese: formatPhysicalPersonValue_('溫 保羅', dictionary, { titles: true }),
+          listedInChinese: formatPhysicalPersonValue_('Grace Lin', dictionary, { titles: true }),
+          pinyin: formatPhysicalPersonValue_('he lude', dictionary, { titles: true }),
+          notInDictionary: formatPhysicalPersonValue_('Mark Sun', dictionary, { titles: true }),
+          pair: formatPhysicalPersonValue_('Ruth Ho / Unknown Person', dictionary, { titles: true }),
+          untitled: formatPhysicalPersonValue_('Paul Wen', dictionary),
+          prepared: preparePrintedBulletinForPrint_(
+            { queens: { sermon: 'Paul Wen', pianist: 'Ruth Ho' }, brooklyn: { chair: 'Grace Lin' } },
+            dictionary
+          ),
+          noPastors: preparePrintedBulletinForPrint_(
+            { queens: {}, brooklyn: {} },
+            { englishToChinese: {}, chineseToEnglish: {} }
+          ).communionPastor
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(output.english).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.chinese).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.listedInChinese).toBe('林恩典牧師\nPastor Grace Lin');
+    expect(output.pinyin).toBe('何路得長老\nElder Ruth Ho');
+    expect(output.notInDictionary).toBe('—\nElder Mark Sun');
+    expect(output.pair).toBe('何路得長老\nElder Ruth Ho / —\nUnknown Person');
+    expect(output.untitled).toBe('溫　保羅\nPaul Wen');
+    expect(output.prepared.queens.sermon).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.prepared.queens.rosterNames).toEqual({
+      sermon: '溫　保羅\nPaul Wen',
+      pianist: '何路得\nRuth Ho',
+    });
+    expect(output.prepared.brooklyn.chair).toBe('林恩典牧師\nPastor Grace Lin');
+    expect(output.prepared.communionPastor).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.noPastors).toBe('');
+  });
+
+  it('keeps the roster grid on plain names while other rows show titles', () => {
+    const tables: string[][][] = [];
+    const context = loadAppsScript({
+      capturedTables: tables,
+      DocumentApp: { HorizontalAlignment: { LEFT: 'left', CENTER: 'center' } },
+    });
+    runInContext(
+      `appendDataTable_ = function (cell, rows) { capturedTables.push(rows); };
+      appendHorizontalScheduleTable_({}, {
+        sermon: '溫保羅牧師\\nPastor Paul Wen',
+        sunsetTime: '6:12 PM',
+        rosterNames: { sermon: '溫　保羅\\nPaul Wen' }
+      }, null, [
+        [printedBilingualText_('Sermon', '崇拜證道'), function (location) { return location.sermon; }],
+        [printedBilingualText_('Sunset Times', '日落時間'), function (location) { return location.sunsetTime; }]
+      ])`,
+      context,
+    );
+
+    expect(tables[0][1].slice(3, 5)).toEqual(['Paul Wen', '溫　保羅']);
+    expect(tables[0][2][3]).toBe('6:12 PM');
+  });
+
   it('keeps bilingual labels and content in the physical output helpers', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
@@ -1841,5 +2031,386 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(names.private.queens.chairPastoralPrayer).toBe('Wen Jie Koh');
     expect(names.private.brooklyn.technician).toBe('Jordan Ho');
     expect(names.private.brooklyn.encouragement).toBe('Hannah Huang');
+  });
+});
+
+describe('Sabbath Calendar year-ahead rows', () => {
+  const SCHEDULE_HEADERS = [
+    'Date', 'Quarter', 'Special Remark', 'Tithe Purpose', 'Pastor Travel',
+    'Queens Sermon', 'Translation', 'Chinese Teacher', 'English Teacher',
+    'Youth Teacher', 'Kids Teacher', 'Chair/Pastoral Prayer', 'Special Music',
+    'Offering Prayer', 'Pianist', 'SS Chair', 'SS Opening Prayer',
+    'SS Closing Prayer', 'Flower Offering', 'Brooklyn Sermon',
+    'Chair/Pastoral Prayer', 'Offering Prayer', 'Technician',
+    'Encouragement', 'Sabbath School',
+  ];
+  const QUEENS_SERMON = 6;
+  const BROOKLYN_SERMON = 20;
+  const CONFLICT = '#ea9999';
+  const WHITE = '#ffffff';
+
+  const pad = (value: number) => String(value).padStart(2, '0');
+  // Appended rows hold Date objects from the script's own realm, so check the
+  // type by tag rather than instanceof.
+  const isDate = (value: unknown): value is Date =>
+    Object.prototype.toString.call(value) === '[object Date]';
+  const dateKey = (value: unknown) =>
+    isDate(value)
+      ? `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+      : String(value);
+
+  // Every Saturday of one calendar quarter, as ISO dates.
+  const quarterSaturdays = (year: number, quarter: number) => {
+    const dates: string[] = [];
+    const cursor = new Date(Date.UTC(year, (quarter - 1) * 3, 1));
+    const end = new Date(Date.UTC(year, quarter * 3, 0));
+    cursor.setUTCDate(cursor.getUTCDate() + ((6 - cursor.getUTCDay() + 7) % 7));
+    while (cursor <= end) {
+      dates.push(cursor.toISOString().slice(0, 10));
+      cursor.setUTCDate(cursor.getUTCDate() + 7);
+    }
+    return dates;
+  };
+
+  // Seeded rows keep their dates as ISO text, which the maintenance parser
+  // reads from the display value.
+  const quarterRows = (year: number, quarter: number, label: unknown = `Q${quarter}`) =>
+    quarterSaturdays(year, quarter).map((date): unknown[] => [date, label]);
+
+  const createScheduleSheet = (rows: unknown[][], spareRows = 100) => {
+    const width = SCHEDULE_HEADERS.length;
+    const values: unknown[][] = [SCHEDULE_HEADERS, ...rows].map((row) =>
+      Array.from({ length: width }, (_, index) => row[index] ?? ''),
+    );
+    const backgrounds: string[][] = values.map(() => Array(width).fill(WHITE));
+    const calls: string[] = [];
+    let maxRows = values.length + spareRows;
+
+    const makeRange = (row: number, column = 1, numRows = 1, numColumns = 1) => {
+      const read = <T,>(grid: T[][], blank: T) =>
+        Array.from({ length: numRows }, (_, r) =>
+          Array.from({ length: numColumns }, (_, c) => grid[row - 1 + r]?.[column - 1 + c] ?? blank),
+        );
+      const write = <T,>(grid: T[][], blank: T, next: T[][]) => {
+        if (row + numRows - 1 > maxRows) {
+          throw new Error('The coordinates of the range are outside the dimensions of the sheet.');
+        }
+        next.forEach((line, r) => {
+          grid[row - 1 + r] = grid[row - 1 + r] ?? Array(width).fill(blank);
+          line.forEach((value, c) => {
+            grid[row - 1 + r][column - 1 + c] = value;
+          });
+        });
+      };
+      return {
+        getRow: () => row,
+        getNumRows: () => numRows,
+        getValues: () => read(values, ''),
+        getDisplayValues: () =>
+          read(values, '').map((line) =>
+            line.map((value) =>
+              isDate(value)
+                ? `${value.getMonth() + 1}/${value.getDate()}/${value.getFullYear()}`
+                : String(value),
+            ),
+          ),
+        getValue: () => values[row - 1]?.[column - 1] ?? '',
+        setValues: (next: unknown[][]) => write(values, '', next),
+        getBackgrounds: () => read(backgrounds, WHITE),
+        setBackgrounds: (next: (string | null)[][]) =>
+          write(backgrounds, WHITE, next.map((line) => line.map((color) => color ?? WHITE))),
+        getNotes: () => read<string>([], ''),
+        setNotes: () => undefined,
+        getNumberFormat: () => 'yyyy-mm-dd',
+        setNumberFormat: (format: string) => calls.push(`numberFormat:${row}:${numRows}:${format}`),
+        // Like PASTE_FORMAT, repeats the source row's fills down the target.
+        copyTo: (target: { getRow: () => number; getNumRows: () => number }) => {
+          for (let r = 0; r < target.getNumRows(); r += 1) {
+            backgrounds[target.getRow() - 1 + r] = [...backgrounds[row - 1]];
+          }
+        },
+        setDataValidation: () => calls.push(`validation:${row}:${numRows}`),
+        getA1Notation: () => `A${row}:Y${row + numRows - 1}`,
+      };
+    };
+
+    return {
+      getName: () => 'Sabbath Calendar',
+      getLastRow: () => values.length,
+      getLastColumn: () => width,
+      getMaxRows: () => maxRows,
+      insertRowsAfter: (after: number, count: number) => {
+        calls.push(`insert:${after}:${count}`);
+        maxRows += count;
+      },
+      getRange: makeRange,
+      getDataRange: () => makeRange(1, 1, values.length, width),
+      hideRows: (start: number, count: number) => calls.push(`hide:${start}:${count}`),
+      showRows: (start: number, count: number) => calls.push(`show:${start}:${count}`),
+      values,
+      backgrounds,
+      calls,
+    };
+  };
+
+  const loadMaintenance = (
+    sheet: ReturnType<typeof createScheduleSheet>,
+    spreadsheetApp: Record<string, unknown> = {},
+    extra: Record<string, unknown> = {},
+  ) => {
+    const context = loadAppsScript({
+      Logger: { log: () => undefined },
+      SpreadsheetApp: { CopyPasteType: { PASTE_FORMAT: 'PASTE_FORMAT' }, ...spreadsheetApp },
+      ...extra,
+    });
+    (context as { testSheet: unknown }).testSheet = sheet;
+    return context;
+  };
+
+  // Noon keeps the test date clear of midnight in any time zone.
+  const populate = (context: object, date: string) =>
+    runInContext(
+      `populateUpcomingBulletinQuarters_(testSheet, new Date('${date}T12:00:00'))`,
+      context,
+    ) as number;
+
+  const datesFrom = (sheet: ReturnType<typeof createScheduleSheet>, firstRow: number) =>
+    sheet.values.slice(firstRow - 1).map((row) => dateKey(row[0]));
+  const quartersFrom = (sheet: ReturnType<typeof createScheduleSheet>, firstRow: number) =>
+    sheet.values.slice(firstRow - 1).map((row) => row[1]);
+
+  it('catches up to a year ahead, in date order, from a sheet that ends at the current quarter', () => {
+    const sheet = createScheduleSheet(quarterRows(2026, 4));
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2026-10-10')).toBe(39);
+
+    const added = datesFrom(sheet, 15);
+    expect(added).toEqual([
+      ...quarterSaturdays(2027, 1),
+      ...quarterSaturdays(2027, 2),
+      ...quarterSaturdays(2027, 3),
+    ]);
+    expect(added[0]).toBe('2027-01-02');
+    expect(added[added.length - 1]).toBe('2027-09-25');
+    expect(quartersFrom(sheet, 15)).toEqual([
+      ...Array(13).fill('Q1'),
+      ...Array(13).fill('Q2'),
+      ...Array(13).fill('Q3'),
+    ]);
+    expect(sheet.values.slice(14).every((row) => row.slice(2).every((cell) => cell === ''))).toBe(
+      true,
+    );
+    expect(sheet.calls).toContain('numberFormat:15:39:yyyy-mm-dd');
+  });
+
+  it('adds nothing outside the final 21 days once a year of rows exists', () => {
+    const sheet = createScheduleSheet([
+      ...quarterRows(2026, 4),
+      ...quarterRows(2027, 1),
+      ...quarterRows(2027, 2),
+      ...quarterRows(2027, 3),
+    ]);
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2026-10-01')).toBe(0);
+    expect(populate(context, '2026-11-15')).toBe(0);
+    // 22 days before the quarter ends: one day before the window opens.
+    expect(populate(context, '2026-12-09')).toBe(0);
+    expect(sheet.values).toHaveLength(53);
+  });
+
+  it('adds exactly the fourth quarter ahead in the final 21 days, across the year boundary', () => {
+    const sheet = createScheduleSheet([
+      ...quarterRows(2026, 4),
+      ...quarterRows(2027, 1),
+      ...quarterRows(2027, 2),
+      ...quarterRows(2027, 3),
+    ]);
+    const context = loadMaintenance(sheet);
+
+    // Q4 2026 + 4 is Q4 2027.
+    expect(populate(context, '2026-12-10')).toBe(13);
+    expect(datesFrom(sheet, 54)).toEqual(quarterSaturdays(2027, 4));
+    expect(quartersFrom(sheet, 54)).toEqual(Array(13).fill('Q4'));
+
+    // Later runs in the same window, and the next quarter before its own
+    // window, find the year already in place.
+    expect(populate(context, '2026-12-31')).toBe(0);
+    expect(populate(context, '2027-01-01')).toBe(0);
+    expect(populate(context, '2027-03-09')).toBe(0);
+
+    // Q1 2027's window adds Q1 2028, whose first day is a Saturday.
+    expect(populate(context, '2027-03-20')).toBe(13);
+    expect(datesFrom(sheet, 67)).toEqual(quarterSaturdays(2028, 1));
+    expect(datesFrom(sheet, 67)[0]).toBe('2028-01-01');
+    expect(quartersFrom(sheet, 67)).toEqual(Array(13).fill('Q1'));
+  });
+
+  it('opens the window 21 days before the quarter ends, even across a daylight-saving change', () => {
+    // In the script's America/New_York time zone, clocks change on
+    // 2027-03-14, so these spans are an hour short of whole days there.
+    const sheet = createScheduleSheet([
+      ...quarterRows(2027, 1),
+      ...quarterRows(2027, 2),
+      ...quarterRows(2027, 3),
+      ...quarterRows(2027, 4),
+    ]);
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2027-03-09')).toBe(0);
+    expect(populate(context, '2027-03-10')).toBe(13);
+    expect(datesFrom(sheet, 54)).toEqual(quarterSaturdays(2028, 1));
+  });
+
+  it('never duplicates a date or appends past the fourth quarter ahead', () => {
+    const sheet = createScheduleSheet([
+      ...quarterRows(2026, 4),
+      // Entered by hand ahead of the automatic rows.
+      ['2027-01-02', 'Q1'],
+      ['2027-01-16', 'Q1'],
+      ['2028-06-03', 'Q2'],
+    ]);
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2026-10-10')).toBe(37);
+    expect(populate(context, '2026-12-20')).toBe(13);
+    expect(populate(context, '2026-12-21')).toBe(0);
+
+    const dates = datesFrom(sheet, 2);
+    expect(new Set(dates).size).toBe(dates.length);
+    expect(dates.filter((date) => date === '2027-01-02' || date === '2027-01-16')).toHaveLength(2);
+    expect(dates.filter((date) => date > '2027-12-31')).toEqual(['2028-06-03']);
+    expect([...dates].sort()).toEqual([
+      ...quarterSaturdays(2026, 4),
+      ...quarterSaturdays(2027, 1),
+      ...quarterSaturdays(2027, 2),
+      ...quarterSaturdays(2027, 3),
+      ...quarterSaturdays(2027, 4),
+      '2028-06-03',
+    ]);
+  });
+
+  it.each([
+    ['Q4', ['Q1', 'Q2', 'Q3']],
+    ['q 4', ['Q1', 'Q2', 'Q3']],
+    ['4', ['1', '2', '3']],
+    [4, [1, 2, 3]],
+  ])('writes the Quarter cell in the style of the last row (%p)', (style, expected) => {
+    const sheet = createScheduleSheet(quarterRows(2026, 4, style));
+    const context = loadMaintenance(sheet);
+
+    populate(context, '2026-10-10');
+
+    expect([...new Set(quartersFrom(sheet, 15))]).toEqual(expected);
+  });
+
+  it('adds grid rows first when the sheet has no blank rows left', () => {
+    const sheet = createScheduleSheet(quarterRows(2026, 4), 0);
+    const context = loadMaintenance(sheet);
+
+    expect(populate(context, '2026-10-10')).toBe(39);
+    expect(sheet.calls).toContain('insert:14:39');
+    expect(sheet.values).toHaveLength(53);
+  });
+
+  it('hides only past rows and shows the year ahead in one range', () => {
+    const sheet = createScheduleSheet([
+      ...quarterRows(2026, 3),
+      ...quarterRows(2026, 4),
+      ...quarterRows(2027, 1),
+      ...quarterRows(2027, 2),
+      ...quarterRows(2027, 3),
+    ]);
+    const context = loadMaintenance(sheet);
+    const hide = (date: string) =>
+      runInContext(
+        `hideOldBulletinScheduleRows_(testSheet, new Date('${date}T12:00:00'))`,
+        context,
+      ) as number;
+
+    expect(hide('2026-10-10')).toBe(13);
+    expect(sheet.calls).toEqual(['hide:2:13', 'show:15:52']);
+
+    // At a quarter boundary the previous Sabbath stays visible.
+    sheet.calls.length = 0;
+    expect(hide('2026-10-02')).toBe(12);
+    expect(sheet.calls).toEqual(['hide:2:12', 'show:14:53']);
+  });
+
+  it('runs validation and the roster scan over every appended row', () => {
+    const rows = quarterRows(2026, 4);
+    const lastRow = rows[rows.length - 1];
+    lastRow[QUEENS_SERMON - 1] = 'Avery Example';
+    lastRow[BROOKLYN_SERMON - 1] = 'Avery Example';
+    const sheet = createScheduleSheet(rows, 0);
+    // Painted by an earlier scan, so the format copy carries it into new rows.
+    sheet.backgrounds[13][QUEENS_SERMON - 1] = CONFLICT;
+    sheet.backgrounds[13][BROOKLYN_SERMON - 1] = CONFLICT;
+
+    const sermonHeaders = [
+      'Date', 'Location', 'English Hymn of Praise', 'Chinese Hymn of Praise',
+      'English Sermon Title', 'Chinese Sermon Title', 'English Hymn of Response',
+      'Chinese Hymn of Response', 'Bible Verses',
+    ];
+    const sermonSheet = {
+      getName: () => 'Sabbath Sermon Data',
+      getDataRange: () => ({
+        getValues: () => [sermonHeaders],
+        getDisplayValues: () => [sermonHeaders],
+      }),
+      getRange: () => ({ setDataValidation: () => undefined }),
+    };
+    const builder: Record<string, unknown> = { build: () => 'rule' };
+    ['requireValueInList', 'requireFormulaSatisfied', 'setAllowInvalid', 'setHelpText'].forEach(
+      (name) => {
+        builder[name] = () => builder;
+      },
+    );
+    const context = loadMaintenance(
+      sheet,
+      {
+        ProtectionType: { RANGE: 'RANGE' },
+        getActiveSpreadsheet: () => ({
+          getSheetByName: (name: string) =>
+            ({ 'Sabbath Calendar': sheet, 'Sabbath Sermon Data': sermonSheet } as Record<
+              string,
+              unknown
+            >)[name] ?? null,
+        }),
+        newDataValidation: () => builder,
+        flush: () => undefined,
+      },
+      {
+        LockService: {
+          getDocumentLock: () => ({ tryLock: () => true, releaseLock: () => undefined }),
+        },
+      },
+    );
+
+    const result = JSON.parse(
+      runInContext(
+        `JSON.stringify(runBulletinScheduleMaintenance_(new Date('2026-10-10T12:00:00')))`,
+        context,
+      ) as string,
+    );
+
+    expect(result.populated).toBe(39);
+    expect(result.validation).toEqual({
+      installed: 'A2:Y14',
+      updatedAfterQuarterAppend: 'A2:Y53',
+    });
+    expect(result.hidden).toBe(0);
+    expect(sheet.calls).toContain('show:2:52');
+    expect(result.conflicts).toBe(2);
+    expect(sheet.backgrounds[13][QUEENS_SERMON - 1]).toBe(CONFLICT);
+    expect(
+      sheet.backgrounds
+        .slice(14)
+        .every((row) => row[QUEENS_SERMON - 1] === WHITE && row[BROOKLYN_SERMON - 1] === WHITE),
+    ).toBe(true);
+    expect(
+      runInContext(`formatBulletinScheduleMaintenanceResult_(${JSON.stringify(result)})`, context),
+    ).toBe('Schedule maintenance complete. Added 39 upcoming Saturday(s) and hid 0 old row(s).');
   });
 });

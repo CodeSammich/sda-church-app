@@ -239,7 +239,7 @@ their own [credentials](#source-code-and-cicd).
 
 | File | Used for | How the script finds it |
 | --- | --- | --- |
-| Master scheduling spreadsheet (`Sabbath Calendar`, `Sabbath Sermon Data`, and `Name Dictionary` tabs) | Roster, sermon data, and full names for print | Bound Apps Script project; layout in [Bulletin Automation Operations](operations/bulletin-automation.md) |
+| Master scheduling spreadsheet (`Sabbath Calendar`, `Sabbath Sermon Data`, `Name Dictionary`, and `Leadership` tabs) | Roster, sermon data, and full names and titles for print | Bound Apps Script project; layout in [Bulletin Automation Operations](operations/bulletin-automation.md) |
 | Church sketch image | Cover of the regular Queens and Brooklyn bulletins | The `CHURCH_SKETCH_IMAGE_FILE_ID` script property (or the older `BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID`), or else the Drive file ID in `PRINTED_BULLETIN_CONFIG.churchSketchImageFileId` |
 | Last Supper image | Communion bulletin cover | `LAST_SUPPER_IMAGE_FILE_ID`, or else `lastSupperImageFileId` |
 | SDA logo | Printed bulletin logo | `SDA_LOGO_IMAGE_FILE_ID`, or else `sdaLogoImageFileId`. Restricted branding: see [Branding & Trademark Policy](LEGAL_BRANDING.md) |
@@ -485,6 +485,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
 | Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
+| After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
 | Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |

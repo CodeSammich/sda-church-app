@@ -6,7 +6,7 @@
  *    pale red, with a hover note naming their other roles. Queens and Brooklyn columns are compared together because one
  *    person cannot serve both locations at once. The scan always covers every
  *    data row, including rows hidden by schedule maintenance and rows appended
- *    for the next quarter, so highlights never drift from the sheet's contents.
+ *    for upcoming quarters, so highlights never drift from the sheet's contents.
  *
  * 2. Unknown-name warning: when an edited person cell contains a name that is
  *    not in the Name Dictionary, the editor gets a popup with close spellings

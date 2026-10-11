@@ -25,6 +25,7 @@ Contents:
 
 - [System boundaries](#system-boundaries)
 - [The three mandatory sheets](#the-three-mandatory-sheets)
+- [The `Leadership` tab](#the-leadership-tab)
 - [Header protection and validation automation](#header-protection-and-validation-automation)
 - [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)
 - [Privacy, auto-translation, and name behavior](#privacy-auto-translation-and-name-behavior)
@@ -41,7 +42,8 @@ Contents:
 Master spreadsheet
 ├── Sabbath Calendar       roster, service assignments, metadata
 ├── Sabbath Sermon Data    reviewed final-owner bulletin content
-└── Name Dictionary        private physical-print name resolution
+├── Name Dictionary        private physical-print name resolution
+└── Leadership             pastors and elders, for printed titles
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
@@ -188,6 +190,45 @@ Rules:
 The printed-bulletin dialog links directly to this sheet. This is the only
 normal bulletin-content intake workflow.
 
+## The `Leadership` tab
+
+This optional tab lists the church's pastors and elders, so the printed
+bulletin can give them their titles without naming anyone in the schedule or
+the code. Keeping it current is a maintainer's job; see
+[Updating pastors and elders](admin-runbook.md#updating-pastors-and-elders).
+
+```text
+     | Pastors   | Elders
+Head | Paul Wen  | Ruth Ho
+     | Grace Lin | Mark Sun
+```
+
+- Row 1 holds the headers. `Pastors` and `Elders` are found by a header that
+  holds only the title, in any column and either case, in English, Chinese, or
+  both (`Pastors`, `Pastor(s)`, `Pastors 牧師`, and `牧師` all work; `Pastors
+  list` doesn't).
+- Enter one plain name per cell, in English or Chinese, spelled as in the
+  `Name Dictionary`. A `Pastor`/`Elder` typed before the name, or `牧師`/`長老`
+  before or after it, is dropped.
+- A listed person prints as `Pastor …` / `…牧師` or `Elder …` / `…長老` on every
+  printed person row except the roster grid, whichever language the schedule
+  cell uses, as long as the person is in the `Name Dictionary`. Someone who
+  isn't must be scheduled under the same spelling, and gets the title only on
+  that language's line, with `—` on the other. A person on both lists prints
+  as Pastor.
+- The roster grid (`Meetings Schedule`) keeps plain names, since its cells are
+  too narrow for titles. Enter plain names in the `Sabbath Calendar` too:
+  titles come only from this tab.
+- `Head` in a column other than `Pastors` and `Elders` (column A above) marks
+  that row's pastor as the one who leads Communion; the topmost `Head` row
+  counts. It is only read, never printed: the title stays `Pastor`. Without a
+  `Head` row, or with its `Pastors` cell blank, the first name in `Pastors`
+  leads Communion; with no pastors listed, those rows print `TBD`.
+- Edits take effect on the next print, with no deploy. If the tab is missing,
+  names print without titles.
+- To add another title, add a column here and an entry in
+  `PHYSICAL_NAME_TITLES` in `PrintedBulletin.gs`.
+
 ## Header protection and validation automation
 
 The bound spreadsheet's simple `onOpen` maintenance path runs for every user who
@@ -202,8 +243,8 @@ On open, the script:
 3. normalizes the header protections and restricts their editors to
    `technology@nyccsda.org`;
 4. protects `Sabbath Calendar!A:B` for the technology group;
-5. appends missing Saturdays for the next quarter when the current quarter is in
-   its final 21 days;
+5. appends missing Saturdays so the next three quarters always have rows, plus
+   the fourth quarter ahead when the current quarter is in its final 21 days;
 6. hides old schedule rows without deleting them; and
 7. repaints the conflict highlights described below across every schedule row.
 
@@ -246,11 +287,15 @@ The schedule-maintenance behavior is intentionally non-destructive:
 - the current quarter remains visible;
 - the immediately preceding seven days remain visible at quarter boundaries;
 - older dated rows are hidden, never deleted;
-- during the final 21 days of a quarter, missing Saturdays in the immediately
-  following quarter are appended with blank assignment cells and the correct
-  quarter value; and
-- if the next quarter is already complete, nothing is appended and the script
-  waits until the following quarter boundary.
+- the next three quarters always have rows, so planners have a year of
+  Saturdays to plan in; missing Saturdays are appended in date order with blank
+  assignment cells and the correct quarter value, which also catches up a sheet
+  that has fallen behind;
+- during the final 21 days of a quarter, the fourth quarter ahead is appended
+  too, so each quarter adds exactly one new quarter, starting three weeks and
+  three quarters later; and
+- nothing is appended past that fourth quarter, even if later dates were
+  entered by hand.
 
 The operation is idempotent. It compares existing dates before appending, so
 opening the sheet repeatedly does not create duplicates. If rows already exist
@@ -495,7 +540,8 @@ Queens Holy Communion is four physical pages in imposed order:
 
 The Communion ceremony has fixed references and fixed order. The submitted study
 verse cannot replace the Foot Washing or Communion readings. Communion service
-assignments use Moses Fang (`方舟`) except for Congregation. Brooklyn Communion is
+assignments use the `Leadership` tab's head pastor (or, without one, its first
+pastor), with the title, except for Congregation. Brooklyn Communion is
 rejected server-side and should remain disabled in any intake UI.
 
 Brooklyn Regular is three physical pages:
@@ -675,6 +721,7 @@ changes the URL and requires a coordinated mobile-app update.
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
 | Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
 | QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
+| A pastor or elder prints without a title, or Communion rows print `TBD` | The name isn't in the `Leadership` tab, is spelled differently from the schedule or the `Name Dictionary`, or the tab or its `Pastors`/`Elders` header was renamed (a header must hold only the title) | Fix the [`Leadership` tab](#the-leadership-tab); **Extensions → Apps Script → Executions** logs a missing tab or column. No deploy is needed |
 | Brooklyn Communion is unavailable | Intentional safety/layout restriction | Use Queens Holy Communion or Brooklyn Regular; do not re-enable without a dedicated layout review |
 | Apps Script deploy fails after working previously | Workspace session-control reauthorization | Verify Trusted Apps and Exempt Trusted apps policy before rotating credentials |
 | Mobile app receives a Google sign-in page/403 | Web app access or deployment settings changed | Deploy as a web app executing as the owner with anonymous access and preserve the `/exec` URL |

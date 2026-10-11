@@ -28,6 +28,7 @@ does and what still needs a person.
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
 - [Due-date reminders](#due-date-reminders)
+- [Updating pastors and elders](#updating-pastors-and-elders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
 - [Actions event policy for `pull_request_target`](#actions-event-policy-for-pull_request_target)
@@ -109,7 +110,7 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel Mac)` | `ios-pr-preview.yml` | `main` |
+| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
 | `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -127,7 +128,7 @@ from merging there anyway.
   workflow must first be in `release-candidate`, because that branch is the head of the
   release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
-  job's name includes the matrix values, such as `Build iOS Simulator app (Intel Mac)`.
+  job's name includes the matrix values, such as `Key screens (bible-reading)`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
   otherwise merges block on the old name.
 - **`android-pr-preview.yml` runs from `main`'s copy of the workflow**, because it uses
@@ -182,8 +183,9 @@ so, rather than passing unreviewed.
 The full process is in [Contributing](../CONTRIBUTING.md#releasing-code-maintainers-only).
 The admin-only steps are:
 
-1. **Create `release-candidate`** from `main` when a release cycle starts: **Code →
-   branch menu → View all branches → New branch**, named `release-candidate`.
+1. **Check that `release-candidate` exists.** **Release - After Merge** creates it from
+   `main` after each release merges. If it's missing, create it: **Code → branch menu →
+   View all branches → New branch**, named `release-candidate`, from `main`.
 2. **Merge feature pull requests** into it.
 3. **Set the version** once the contents are settled: pick a patch, minor, or major
    version for what the release contains, higher than `main`'s, and merge a pull request
@@ -194,18 +196,20 @@ The admin-only steps are:
    title. Write the part after the colon for testers: it becomes the "What's new" text in Google Play
    internal testing. Copy the `Closes #…` lines from the included feature pull requests
    into its description.
-5. **Merge it** once its checks and review pass. The slowest check, **iOS PR
-   preview**, takes about 50 minutes, and **Screenshots reviewed** waits until a
+5. **Merge it** once its checks and review pass. **iOS PR preview** takes 15 to 25
+   minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate` and moves any open feature pull requests
-   into it to `main`. Create it again for the next release, and move those pull
-   requests back to it.
+   into it to `main`. **Release - After Merge** creates it again from `main` and comments
+   on the release pull request with links to the runs below that wait for approval.
+   Move those feature pull requests back to `release-candidate`.
 
 What runs after the merge to `main`:
 
 | Workflow | Automatic? | What you do |
 | --- | --- | --- |
 | Deploy Website and Tag | Yes | Nothing. It tags `vx.y.z` and publishes [the app website](#the-app-website-appnyccsdaorg). |
+| Release - After Merge | Yes | Nothing, unless its comment on the release pull request says `release-candidate` couldn't be created. Its links open the three runs below. |
 | Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK, upload the AAB to Google Play internal testing, and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 | Deploy Bulletin Apps Script | Waits for `production` approval | Approve it when nobody is making a bulletin, then check the live bulletin. Reject it to skip this deploy. See [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script). |
@@ -626,16 +630,17 @@ summary links to it. Fork pull requests are skipped. See
 **Workflow:** **iOS PR preview**, which runs automatically on release pull requests
 into `main`, and can be run manually on any branch.
 
-It builds the app without signing for an Apple Silicon Mac and an Intel Mac and
-launches each on a simulated iPhone. The Apple Silicon build then captures every key
-screen in `test/screens/screens.json` (82 screenshots of 30 screens) and checks their
-text with `scripts/check-screens.cjs`. The run takes about 50 minutes in all, about 24
-of them for the screenshots. On a release pull request, a comment
+It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
+five runners, one per key-screen group, which run at once. Each launches the app on a
+simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
+(81 screenshots of 29 screens in all), and checks their text with
+`scripts/check-screens.cjs`. Another job then joins the groups,
+before the review comment and **Screenshots reviewed**. The run takes 15 to 25 minutes, depending on how much of the compile cache it reuses. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
-The builds need no `production` approval, because they read no secrets. Download the
-build for your Mac from the run's Artifacts section (kept 14 days) to test the release
-on a Mac before merging; you don't need an iPhone. See
+The build needs no `production` approval, because it reads no secrets. Download the
+artifact ending in `-arm64` from the run's Artifacts section (kept 14 days) to test the release on an Apple Silicon
+Mac before merging; you don't need an iPhone. See
 [iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 
 ## Dependabot pull requests
@@ -788,6 +793,26 @@ notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.
 
+## Updating pastors and elders
+
+The printed bulletin adds Pastor and Elder titles from the master spreadsheet's
+`Leadership` tab, and the pastor on its `Head` row leads the Communion service.
+Keeping the tab current is a maintainer's duty: check it after each church
+officer election, and update it whenever a pastor or elder starts or leaves.
+
+1. Open the `Leadership` tab.
+2. Add or remove names under `Pastors` or `Elders`, one plain name per cell,
+   spelled as in the `Name Dictionary`. Add anyone new to the `Name Dictionary`
+   too, with their Chinese name, so both lines of the bulletin get the title.
+3. Keep `Head` on the row of the pastor who leads Communion. It is never
+   printed.
+4. When you next make the coming Sabbath's bulletin (**Printed Bulletin → Create
+   Google Doc + PDF…**), check the titles of the people scheduled that day. Only
+   a Queens Holy Communion bulletin shows the `Head` pastor.
+
+No code change or deploy is needed; the next print reads the tab. The layout
+rules are in [The `Leadership` tab](bulletin-automation.md#the-leadership-tab).
+
 ## Bible audio emulator test
 
 **Workflow:** **Android audio e2e**. It runs on every release pull request into
@@ -796,8 +821,8 @@ so a release can't merge until it passes. Feature pull requests into `release-ca
 don't run it; to test an audio change before the release, run it manually on your
 branch.
 
-It takes about 20 minutes, and runs alongside **iOS PR preview**, which takes about
-50 minutes.
+It takes about 20 minutes, and runs alongside **iOS PR preview**, which takes 15 to 25
+minutes.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:
@@ -897,7 +922,11 @@ themselves, and tests enforce that:
 - CodeQL scans the workflows for these mistakes too (**Security → Code scanning**).
 
 GitHub adds its own limits: a `pull_request_target` run can read `main`'s cache but
-not write to it, so it can't poison the cache the signing builds use. Elsewhere:
+not write to it, so it can't poison the cache the signing builds use. The iOS compile
+cache follows the same rule: only `ios-compile-cache.yml`, on `main`, saves it; the iOS
+PR preview only reads it; and the signed builds never use it (see
+[Compile cache](native-builds.md#ios-pr-preview-unsigned-simulator-builds)).
+Elsewhere:
 
 - `pull_request` workflows for a fork's pull request get no secrets and a read-only
   token, and none runs until a maintainer approves it (**Settings → Actions → General

@@ -16,12 +16,16 @@
  *
  *   node scripts/capture-ios-screens.cjs --pick-device   Prints the configured iPhone's UDID, creating it if needed
  *   node scripts/capture-ios-screens.cjs --out <dir>     Captures every screen into <dir>
+ *   node scripts/capture-ios-screens.cjs --out <dir> --group bible-reading
+ *                                                        Captures only that group's screens, for one of
+ *                                                        several runners; merge-key-screens.cjs joins them
  *
  * The app must already be installed on that iPhone. The Simulator only runs on
  * macOS with Xcode.
  */
 const { execFileSync, spawnSync } = require('node:child_process');
-const { appendFileSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const { tmpdir } = require('node:os');
 const { dirname, join, resolve } = require('node:path');
 
 const projectRoot = resolve(__dirname, '..');
@@ -56,19 +60,43 @@ const BASE_SETTINGS = {
   iosTextSize: 'large',
 };
 
-// Seconds to wait after launching: the Bible loads its text over the network.
+// Seconds to wait after launching, before the screenshot. Measured over three
+// runs in October 2026 (settle-times.json): Bible screens, which load their
+// text over the network, were done changing within 6 seconds every time, so
+// 9 leaves a margin; Explore and the EGW shelf took up to 8 of their 10.
 const WAIT = 10;
-const BIBLE_WAIT = 15;
+const BIBLE_WAIT = 9;
 
 // Screenshots taken again, 2 seconds apart, while the screen is still blank or
 // still shows the launch splash.
 const BLANK_RETRIES = 10;
+
+// While waiting, a sample screenshot every this many seconds. Comparing them
+// with the final shot records when each screen stopped changing, so the waits
+// above can be shortened from measurements rather than guesses (#453).
+const SAMPLE_EVERY = 2;
 
 // Where services/ScreenshotRoute.ts looks for the screen to open.
 const ROUTE_KEY = 'screenshot-route';
 
 const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
   JSON.parse(readFileSync(file, 'utf8'));
+
+// A shot's rough cost in seconds: its wait, plus about 5 to relaunch the app
+// and take the screenshot.
+const shotCost = (shot) => shot.wait + 5;
+
+/**
+ * The shots of one group in test/screens/screens.json: related screens
+ * captured together on one runner. Without a group, every shot.
+ */
+const takeGroup = (shots, group, config) => {
+  if (!group) return shots;
+  if (!Object.hasOwn(config.groups, group)) {
+    throw new Error(`No group "${group}"; screens.json has ${Object.keys(config.groups).join(', ')}.`);
+  }
+  return shots.filter((shot) => shot.group === group);
+};
 
 /** Lists every shot: its name, file, deep link, settings, and checks. */
 const planCaptures = (config) =>
@@ -77,6 +105,8 @@ const planCaptures = (config) =>
       const overrides = config.variants[variant];
       if (!overrides) throw new Error(`Screen "${screen.name}" uses unknown variant "${variant}".`);
       return {
+        screen: screen.name,
+        group: screen.group,
         name: `${screen.name}-${variant}`,
         file: `ios/${screen.name}-${variant}.png`,
         route: screen.path,
@@ -155,6 +185,28 @@ const pickDevice = (config) => {
 };
 
 const sleep = (seconds) => new Promise((done) => setTimeout(done, seconds * 1000));
+const sleepUntil = (time) => new Promise((done) => setTimeout(done, Math.max(0, time - Date.now())));
+
+/**
+ * Seconds after launch from which the screen matched the final shot: the
+ * earliest sample from which every later sample matched. Equal to the final
+ * shot's time when even the last sample differed, so the screen may still have
+ * been changing. `samples` are { seconds, same }, in time order.
+ */
+const settledAfter = (samples, finalSeconds) => {
+  let settled = finalSeconds;
+  for (let index = samples.length - 1; index >= 0 && samples[index].same; index--) {
+    settled = samples[index].seconds;
+  }
+  return settled;
+};
+
+/** Marks each sample that is pixel for pixel the same as the final shot. */
+const compareSamples = async (samples, file) => {
+  const sharp = require('sharp');
+  const final = await sharp(file).raw().toBuffer();
+  for (const sample of samples) sample.same = (await sharp(sample.file).raw().toBuffer()).equals(final);
+};
 
 const isRunning = (udid, bundleId) =>
   simctl('spawn', udid, 'launchctl', 'list').includes(`UIKitApplication:${bundleId}`);
@@ -243,7 +295,7 @@ const statusBarClear = async (file) => {
 
 const CHECKS = { statusBarClear };
 
-const capture = async (outDir) => {
+const capture = async (outDir, group) => {
   const config = loadConfig();
   const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
   const device = pickDevice(config);
@@ -257,9 +309,11 @@ const capture = async (outDir) => {
   const dataContainer = simctl('get_app_container', udid, bundleId, 'data');
   const failures = [];
   const captured = new Set();
+  const timings = [];
+  const sampleDir = mkdtempSync(join(tmpdir(), 'key-screen-samples-'));
   const started = Date.now();
 
-  for (const shot of planCaptures(config)) {
+  for (const shot of takeGroup(planCaptures(config), group, config)) {
     spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
     const manifest = manifestPath(dataContainer, bundleId);
     mkdirSync(dirname(manifest), { recursive: true });
@@ -267,7 +321,15 @@ const capture = async (outDir) => {
     simctl('ui', udid, 'appearance', shot.settings.theme === 'dark' ? 'dark' : 'light');
     simctl('ui', udid, 'content_size', shot.settings.iosTextSize);
     simctl('launch', udid, bundleId);
-    await sleep(shot.wait);
+    const launched = Date.now();
+    const samples = [];
+    for (let seconds = SAMPLE_EVERY; seconds < shot.wait; seconds += SAMPLE_EVERY) {
+      await sleepUntil(launched + seconds * 1000);
+      const sample = join(sampleDir, `${seconds}.png`);
+      simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', sample);
+      samples.push({ seconds, file: sample });
+    }
+    await sleepUntil(launched + shot.wait * 1000);
 
     const file = join(outDir, shot.file);
     mkdirSync(dirname(file), { recursive: true });
@@ -283,6 +345,10 @@ const capture = async (outDir) => {
       await sleep(2);
       screenshot();
     }
+    const finalSeconds = Math.round((Date.now() - launched) / 1000);
+    await compareSamples(samples, file);
+    const settled = settledAfter(samples, finalSeconds);
+    timings.push({ shot: shot.name, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
     const problems = [];
     if (!isRunning(udid, bundleId)) problems.push(`the app wasn't running after opening ${shot.url}`);
     // The app removes the saved screen once it has opened it.
@@ -296,10 +362,17 @@ const capture = async (outDir) => {
     }
     if (problems.length) failures.push(`${shot.file}: ${problems.join(', ')}`);
     else captured.add(shot.name);
-    console.log(`${shot.file} <- ${shot.url}${problems.length ? `  (${problems.join(', ')})` : ''}`);
+    console.log(
+      `${shot.file} <- ${shot.url}  (settled after ${settled}s of ${finalSeconds}s)` +
+        (problems.length ? `  (${problems.join(', ')})` : ''),
+    );
   }
+  rmSync(sampleDir, { recursive: true, force: true });
+  writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
 
-  for (const copy of planAppStore(config)) {
+  // A group has only some of the shots; merge-key-screens.cjs makes these
+  // once the groups are joined.
+  for (const copy of group ? [] : planAppStore(config)) {
     if (!captured.has(copy.name)) {
       failures.push(`${copy.file}: its shot "${copy.name}" wasn't captured`);
       continue;
@@ -310,12 +383,21 @@ const capture = async (outDir) => {
   }
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
+  const part = group ? `, group ${group}` : '';
   const summary = [
-    `### Key screens (${device.name}, ${device.runtime})`,
+    `### Key screens (${device.name}, ${device.runtime}${part})`,
     '',
-    `${captured.size} captured in ${minutes} minutes, in the Apple Silicon artifact's \`screens/\` folder,`,
-    'with the App Store shots in `screens/app-store/`.',
+    group
+      ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
+      : `${captured.size} captured in ${minutes} minutes, in \`screens/\`, with the App Store shots in \`screens/app-store/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
+    '',
+    `Settled within 5 seconds: ${timings.filter((timing) => timing.settledAfter <= 5).length} of ${timings.length}. ` +
+      `Slowest: ${[...timings]
+        .sort((a, b) => b.settledAfter - a.settledAfter)
+        .slice(0, 5)
+        .map((timing) => `${timing.shot} ${timing.settledAfter}s`)
+        .join(', ')} (every shot is in \`settle-times.json\`).`,
     '',
   ].join('\n');
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
@@ -327,13 +409,16 @@ if (require.main === module) {
   if (process.argv.includes('--pick-device')) {
     console.log(pickDevice(loadConfig()).udid);
   } else {
-    const outIndex = process.argv.indexOf('--out');
-    const outDir = outIndex === -1 ? undefined : process.argv[outIndex + 1];
+    const argument = (name) => {
+      const index = process.argv.indexOf(name);
+      return index === -1 ? undefined : process.argv[index + 1];
+    };
+    const outDir = argument('--out');
     if (!outDir) {
-      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir>');
+      console.error('Usage: node scripts/capture-ios-screens.cjs --pick-device | --out <dir> [--group <group>]');
       process.exit(2);
     }
-    capture(resolve(outDir)).catch((error) => {
+    capture(resolve(outDir), argument('--group')).catch((error) => {
       console.error(error);
       process.exit(1);
     });
@@ -341,6 +426,9 @@ if (require.main === module) {
 }
 
 module.exports = {
+  shotCost,
+  takeGroup,
+  settledAfter,
   looksBlank,
   looksLikeSplash,
   SETTING_KEYS,

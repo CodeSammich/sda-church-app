@@ -73,6 +73,12 @@ const hymnTitle = (hymnalId: HymnalBookId, number: number | string) => {
 };
 
 // The carousel's dots name each hymnal in order, and mark the one showing.
+// The carousel draws its pages, and the arrows on them, once it knows its width.
+const layOutCarousel = (view: ReturnType<typeof renderPage>) => {
+  const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
+  act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+};
+
 const dotLabels = (view: ReturnType<typeof renderPage>) =>
   view.getAllByLabelText(/(, hymnal \d+ of|，第 \d+\/\d+ 本)/).map((dot) => ({
     label: dot.props.accessibilityLabel as string,
@@ -130,6 +136,35 @@ describe('the hymnal page', () => {
     expect(view.getByText(hymnTitle('chinese-hymnal-506', 1))).toBeTruthy();
     expect(view.queryByText(hymnTitle('sdah-1985-en', 1))).toBeNull();
     expect(view.getByPlaceholderText('Search by number or title...')).toBeTruthy();
+  });
+
+  it('picks the next or previous hymnal with the carousel arrows, in each language (#447)', () => {
+    const view = renderPage(HymnalSelectionScreen);
+    layOutCarousel(view);
+    // The first hymnal has no previous one.
+    expect(view.queryByLabelText('Previous hymnal')).toBeNull();
+    fireEvent.press(view.getByLabelText('Next hymnal'));
+    expect(dotLabels(view)[1].selected).toBe(true);
+    expect(view.getByText(hymnTitle('chinese-hymnal-505', 1))).toBeTruthy();
+    fireEvent.press(view.getByLabelText('Previous hymnal'));
+    expect(dotLabels(view)[0].selected).toBe(true);
+    expect(view.getByText(hymnTitle('sdah-1985-en', 1))).toBeTruthy();
+    view.unmount();
+
+    // The last hymnal has no next one.
+    const chinese = renderPage(routes[0][1], {}, 'zh');
+    layOutCarousel(chinese);
+    expect(dotLabels(chinese)[5].selected).toBe(true);
+    expect(chinese.queryByLabelText('下一本詩歌本')).toBeNull();
+    expect(chinese.getByLabelText('上一本詩歌本')).toBeTruthy();
+    chinese.unmount();
+
+    for (const [language, label] of [['zh-cn', '下一本诗歌本'], ['es', 'Himnario siguiente']] as const) {
+      const translated = renderPage(HymnalSelectionScreen, {}, language);
+      layOutCarousel(translated);
+      expect(translated.getByLabelText(label)).toBeTruthy();
+      translated.unmount();
+    }
   });
 
   it("keeps each hymnal's own search when another hymnal is picked", () => {
@@ -537,7 +572,9 @@ describe('Library featured carousel', () => {
           { key: 'b', title: 'Second Book', author: 'B. Writer', accessibilityHint: 'Opens the book', onPress },
         ],
         featuredLabel: 'Featured',
+        nextLabel: 'Next featured book',
         pageLabel: (page: number, count: number) => `Featured book ${page} of ${count}`,
+        previousLabel: 'Previous featured book',
         readLabel: 'Read',
       }),
       { theme: customLightTheme },
@@ -562,7 +599,9 @@ describe('Library featured carousel', () => {
     const view = renderWithPreferences(
       createElement(LibraryFeaturedCarousel, {
         books: [{ key: 'h', title: 'SDA Hymnal', author: '1985 Edition', eyebrow: 'English' }],
+        nextLabel: 'Next hymnal',
         pageLabel: () => '',
+        previousLabel: 'Previous hymnal',
       }),
       { theme: customLightTheme },
     );
@@ -571,5 +610,83 @@ describe('Library featured carousel', () => {
     const page = view.getByLabelText('English: SDA Hymnal. 1985 Edition');
     expect(page.props.accessibilityRole).toBeUndefined();
     expect(view.queryByText('Read')).toBeNull();
+    // One page can't move, so it has no arrows.
+    expect(view.queryByLabelText('Previous hymnal')).toBeNull();
+    expect(view.queryByLabelText('Next hymnal')).toBeNull();
+  });
+
+  it('has little arrows that turn the page, with none past the first or last page (#447)', () => {
+    const view = renderWithPreferences(
+      createElement(LibraryFeaturedCarousel, {
+        books: ['a', 'b', 'c'].map((key) => ({ key, title: `Book ${key}`, author: 'A. Writer' })),
+        nextLabel: 'Next featured book',
+        pageLabel: (page: number, count: number) => `Featured book ${page} of ${count}`,
+        previousLabel: 'Previous featured book',
+      }),
+      { theme: customLightTheme },
+    );
+    const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
+    act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+    const list = view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>);
+    const scrollToOffset = jest.spyOn(list.instance, 'scrollToOffset');
+    const arrow = (label: string) => view.queryByLabelText(label);
+    const selectedPage = () =>
+      [1, 2, 3].find((page) => view.getByLabelText(`Featured book ${page} of 3`).props.accessibilityState.selected);
+
+    expect(arrow('Previous featured book')).toBeNull();
+    expect(arrow('Next featured book')!.props.accessibilityRole).toBe('button');
+
+    fireEvent.press(arrow('Next featured book')!);
+    expect(selectedPage()).toBe(2);
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 400 });
+    expect(arrow('Previous featured book')).toBeTruthy();
+
+    fireEvent.press(arrow('Next featured book')!);
+    expect(selectedPage()).toBe(3);
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 800 });
+    expect(arrow('Next featured book')).toBeNull();
+
+    fireEvent.press(arrow('Previous featured book')!);
+    expect(selectedPage()).toBe(2);
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 400 });
+
+    // A swipe moves the arrows along with the dots.
+    act(() => list.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 800, y: 0 } } }));
+    expect(selectedPage()).toBe(3);
+    expect(arrow('Next featured book')).toBeNull();
+  });
+
+  it('keeps its arrows small, in the banner\'s 20pt side margin, at every text size', () => {
+    const { StyleSheet } = require('react-native');
+    for (const textScale of [1, 2] as const) {
+      const view = renderWithPreferences(
+        createElement(LibraryFeaturedCarousel, {
+          books: ['a', 'b'].map((key) => ({ key, title: `Book ${key}`, author: 'A. Writer' })),
+          nextLabel: 'Next featured book',
+          pageLabel: () => '',
+          previousLabel: 'Previous featured book',
+        }),
+        { textScale, theme: customLightTheme },
+      );
+      const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
+      act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+      let column: any = view.getByLabelText('Next featured book');
+      expect(StyleSheet.flatten(column.props.style).width).toBe(20);
+      while (StyleSheet.flatten(column.props.style)?.position !== 'absolute') column = column.parent;
+      expect(StyleSheet.flatten(column.props.style)).toMatchObject({ position: 'absolute', right: 0, width: 20 });
+      view.unmount();
+    }
+  });
+
+  it('has its arrows on the library page, labeled in the app language', () => {
+    const LibraryScreen: ComponentType = require('@/app/(tabs)/explore/library').default;
+    const english = renderPage(LibraryScreen);
+    layOutCarousel(english);
+    expect(english.queryByLabelText('Previous featured book')).toBeNull();
+    expect(english.getByLabelText('Next featured book')).toBeTruthy();
+    english.unmount();
+    const spanish = renderPage(LibraryScreen, {}, 'es');
+    layOutCarousel(spanish);
+    expect(spanish.getByLabelText('Libro destacado siguiente')).toBeTruthy();
   });
 });

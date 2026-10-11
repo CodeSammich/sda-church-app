@@ -22,10 +22,10 @@ main (stable)
        └─ feature/awesome-feature (work in progress)
 ```
 
-`release-candidate` is the one release branch. It has no version in its name: a
-maintainer creates it from `main` when a release cycle starts, and it is deleted when the
-release PR merges. Name your work branch with a prefix such as `feature/`, `bugfix/`,
-`chore/`, or `docs/`. The rulesets that protect `main` and `release-candidate`, and the
+`release-candidate` is the one release branch. It has no version in its name: it is
+deleted when the release PR merges, and a workflow creates it again from `main` right
+after. Name your work branch with a prefix such as `feature/`, `bugfix/`, `chore/`, or
+`docs/`. The rulesets that protect `main` and `release-candidate`, and the
 checks a pull request must pass, are under
 [Branch rules](operations/admin-runbook.md#branch-rules) in the admin runbook.
 
@@ -45,8 +45,8 @@ checks a pull request must pass, are under
 4. Open the feature PR from the fork's feature branch into the primary repository's
    `release-candidate`, following the format below, and wait for all checks and
    reviews. Don't retarget it to `main`. If a release merges first, GitHub moves the PR
-   to `main`; change it back once `release-candidate` is recreated, then update the
-   branch (**Update branch**, or merge `upstream/release-candidate` into it).
+   to `main`; change it back to `release-candidate` once that is created again, then
+   update the branch (**Update branch**, or merge `upstream/release-candidate` into it).
 5. A maintainer merges it once its checks and review pass. Its issues stay open until
    the release reaches `main`.
 
@@ -72,9 +72,10 @@ Write the description however suits the change, but every feature and release PR
   in `test/screens/screens.json`, for every platform that captures them: the iPhone today,
   and Android once #372 adds its screenshots. Add the screen or variant that shows the
   change, and text checks (`mustShowLines`, `mustNotShowLines`, `variantRules`) that fail
-  if it breaks. Each shot lengthens every release PR's run, so prefer a check on an
-  existing shot, and replace checks that no longer earn their place. See
-  [Key screens](operations/native-builds.md#key-screens).
+  if it breaks. Give a new screen the `group` for its part of the app. Each shot
+  lengthens its group's runner, and the release PR waits for the slowest group, so
+  prefer a check on an existing shot, and replace checks that no longer earn their
+  place. See [Key screens](operations/native-builds.md#key-screens).
 - Include no secrets, private keys, certificates, passwords, `.env` files, or generated
   signing artifacts. Workflow changes must not print secrets, dump environments, or
   upload secret-bearing files.
@@ -110,16 +111,15 @@ fails with the `npm run sync-version` command to run, and you commit its changes
 a pull request. Each release must also raise the version, because the store build
 numbers are computed from it; see [Version numbers](operations/version-numbers.md).
 
-Creating `release-candidate` and choosing the version are manual, code-maintainer
-actions; no workflow does either. The version is chosen last, once the release's contents
-are settled, because only then is it clear whether the release is a patch, minor, or
-major. The click-by-click steps are in
+Choosing the version is a manual, code-maintainer action; no workflow does it. The
+version is chosen last, once the release's contents are settled, because only then is it
+clear whether the release is a patch, minor, or major. The click-by-click steps are in
 [Shipping a release to `main`](operations/admin-runbook.md#shipping-a-release-to-main).
 
-1. When a release cycle starts, a maintainer creates `release-candidate` from the primary
-   repository's `main` (for example `git fetch upstream` then
-   `git push upstream upstream/main:refs/heads/release-candidate`), and feature PRs merge
-   into it.
+1. Feature PRs merge into `release-candidate`. **Release - After Merge** creates it from
+   `main` after each release merges. If it's missing, a maintainer creates it from the
+   primary repository's `main` (for example `git fetch upstream` then
+   `git push upstream upstream/main:refs/heads/release-candidate`).
 2. Once the release's contents are settled, a maintainer picks the version and merges a
    version PR into `release-candidate` that runs `npm run sync-version -- --version x.y.z`
    and commits the generated files. Like any PR, it needs a `Part of #…` line or the
@@ -129,15 +129,18 @@ major. The click-by-click steps are in
    included feature PRs into its description. This is the code maintainer's
    responsibility, not the fork contributor's. Do not rely on a reviewer to repair the
    merge commit message at the last moment.
-4. The release PR runs the slow checks below (the slowest, **iOS PR preview**, takes
-   about 50 minutes), and **Screenshots reviewed** waits for a `release-approvers`
+4. The release PR runs the slow checks below (**iOS PR preview** takes 15 to 25
+   minutes, and **Android audio e2e** about 20), and **Screenshots reviewed** waits for a `release-approvers`
    member to approve the screenshots. Merge it once every check and the review pass.
-   Merging it into `main` closes the issues and deletes `release-candidate`.
+   Merging it into `main` closes the issues and deletes `release-candidate`, and
+   **Release - After Merge** creates it again from `main`.
 5. The merge to `main` checks the version files, tags the release, publishes the website,
-   and starts the signed Android and iOS builds. The builds wait for a `release-approvers`
-   member to approve the `production` environment, then upload to Google Play internal
-   testing and TestFlight. Nothing reaches the public until a maintainer checks it on
-   real phones and submits it in each store; see
+   and starts the signed Android and iOS builds and the bulletin Apps Script deploy.
+   **Release - After Merge** comments on the release PR with links to those three runs.
+   The builds wait for a `release-approvers` member to approve the `production`
+   environment, then upload to Google Play internal testing and TestFlight. Nothing
+   reaches the public until a maintainer checks it on real phones and submits it in each
+   store; see
    [Uploading to the stores](operations/admin-runbook.md#uploading-to-the-stores) and
    [Automatic store uploads](operations/native-builds.md#automatic-store-uploads).
 
@@ -150,8 +153,7 @@ before committing or pushing so the maintainer can review the result. Only consi
 manually dispatched GitHub Actions workflow after that helper has worked for several
 releases; the workflow must validate the release itself, because pushes made with the
 standard `GITHUB_TOKEN` generally do not trigger another workflow run. Do not choose
-versions or create `release-candidate` automatically from dates, issue activity, or
-feature merges.
+versions automatically from dates, issue activity, or feature merges.
 
 ## Automated checks
 
@@ -222,15 +224,27 @@ GitHub's code scanning default setup and have no workflow file.
 
 ### `iOS PR preview` (`.github/workflows/ios-pr-preview.yml`)
 
-- Checks: `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel
-  Mac)`, and `Screenshots reviewed`. Runs on the release PR into `main`, and by hand on
-  any branch.
-- Builds the app for the iOS Simulator without signing and launches it. The Apple Silicon
-  job also screenshots the key screens in `test/screens/screens.json` and checks their
-  text.
+- Checks: `Build iOS Simulator app (Apple Silicon Mac)` and `Screenshots reviewed`. Runs on
+  the release PR into `main`, and by hand on any branch.
+- Builds the app for the iOS Simulator once, without signing, and shares it with one
+  runner per key-screen group (`Key screens (<group>)`). Each launches it, screenshots
+  its group of the key screens in `test/screens/screens.json`, and checks their text;
+  `Build iOS Simulator app (Apple Silicon Mac)` joins the groups and fails if any failed.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
+- The compiling runner reuses the compiled native code that `iOS compile cache` saved on
+  `main`, read-only.
+
+### `iOS compile cache` (`.github/workflows/ios-compile-cache.yml`)
+
+- No check. Runs on every push to `main` in this repository, twice a week, and by hand on
+  `main`.
+- On a push, builds the iOS Simulator app with ccache and saves the compiled C, C++, and
+  Objective-C, which **iOS PR preview** reuses. Twice a week it only restores the cache,
+  because GitHub deletes a cache unused for 7 days. Only this workflow saves the cache,
+  and the signed store builds never use it; see
+  [Compile cache](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 
 ### `Android audio e2e` (`.github/workflows/android-audio-e2e.yml`)
 
@@ -256,6 +270,16 @@ GitHub's code scanning default setup and have no workflow file.
   listings link to its privacy policy and support pages, and QR codes point at its
   download page. The browser build of the app is published with it, for testing and
   demos. See [The app website](operations/admin-runbook.md#the-app-website-appnyccsdaorg).
+
+### `Release - After Merge` (`.github/workflows/release-after-merge.yml`)
+
+- Runs on every merge into `main`. When the release PR's merge deletes
+  `release-candidate`, creates it again from the merge commit. It never changes a branch
+  that already exists.
+- Comments on the merged PR with links to that merge's **Native iOS build**, **Native
+  Android build**, and **Deploy Bulletin Apps Script** runs, which wait for `production`
+  approval, and to the branches page. The comment says if `release-candidate` couldn't
+  be created.
 
 ### `Native Android build` and `Native iOS build` (`native-android-build.yml`, `native-ios-build.yml`)
 

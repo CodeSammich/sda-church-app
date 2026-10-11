@@ -1,7 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+const { mergeResults } = require('../scripts/merge-key-screens.cjs');
 const {
+  shotCost,
+  takeGroup,
+  settledAfter,
   SETTING_KEYS,
   loadConfig,
   planCaptures,
@@ -185,14 +189,157 @@ describe('saved settings', () => {
 describe('iOS PR preview', () => {
   const workflow = repoFile('.github/workflows/ios-pr-preview.yml');
 
-  it('captures the key screens once, on the Apple Silicon build', () => {
-    expect(workflow).toContain('node scripts/capture-ios-screens.cjs --out');
-    expect(workflow).toMatch(/Capture the key screens\n(?:\s+#.*\n)*\s+if: matrix\.arch == 'arm64'/);
+  it('runs one runner per group, each capturing and checking only its group', () => {
+    const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(workflow)![1].split(', ');
+    expect(groups).toEqual(Object.keys(config.groups));
+    expect(workflow).toMatch(/capture-ios-screens\.cjs --out [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
+    expect(workflow).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
+  });
+
+  it('compiles the app once, on the lightest group\'s runner, and the others wait for it', () => {
+    const builder = /include:\n\s+- group: ([a-z-]+)\n\s+builds: true\n/.exec(workflow)![1];
+    expect(workflow.match(/builds: true/g)).toHaveLength(1);
+    // The builder also takes its own shots after compiling, so it gets the
+    // lightest group.
+    const cost = (group: string) =>
+      takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
+    for (const group of Object.keys(config.groups)) expect(cost(builder)).toBeLessThanOrEqual(cost(group));
+    const guard = (step: string) => new RegExp(`- name: ${step}\n(?:\\s+#.*\n)*\\s+if: (.+)\n`).exec(workflow)?.[1];
+    for (const step of [
+      'Set up the compile cache',
+      'Restore the compile cache from main',
+      "Count only this build's compile-cache hits",
+      'Generate iOS project',
+      'Install CocoaPods dependencies',
+      'Build for the Simulator without signing',
+      'Zip the app to share',
+      'Share the app with the other runners',
+    ]) {
+      expect({ step, guard: guard(step) }).toEqual({ step, guard: '${{ matrix.builds }}' });
+    }
+    for (const step of ['Wait for the shared app', 'Download the shared app', 'Unpack the shared app']) {
+      expect({ step, guard: guard(step) }).toEqual({ step, guard: '${{ !matrix.builds }}' });
+    }
+    // The others stop waiting as soon as the builder's job ends without the app.
+    expect(workflow).toContain(`select(.name == "Key screens (${builder})")`);
+    expect(workflow.match(/ios-simulator-app-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
+  });
+
+  it('boots the compiling runner\'s iPhone after its build when it restored a compile cache', () => {
+    const boot = workflow.slice(workflow.indexOf('- name: Boot the simulated iPhone in the background'));
+    // Every other runner boots while it waits; the compiling one boots
+    // alongside its build only when there was no cache to restore.
+    expect(boot).toContain(
+      "BOOT_NOW: ${{ !matrix.builds || steps.compile-cache.outputs.cache-matched-key == '' }}\n",
+    );
+    expect(workflow).toMatch(/- name: Restore the compile cache from main\n\s+if: .+\n\s+id: compile-cache\n/);
+    expect(workflow.indexOf('id: compile-cache')).toBeLessThan(workflow.indexOf('BOOT_NOW:'));
+    expect(boot).toMatch(
+      /if \[ "\$BOOT_NOW" = true \]; then\n\s+nohup xcrun simctl bootstatus "\$DEVICE_ID" -b [^\n]+&\n\s+fi\n/,
+    );
+    expect(workflow.match(/nohup xcrun simctl bootstatus/g)).toHaveLength(1);
+    // The launch step, after the build, boots it or waits for it.
+    const launch = workflow.slice(workflow.indexOf('- name: Launch on a simulated iPhone'));
+    expect(launch.indexOf('xcrun simctl bootstatus "$DEVICE_ID" -b\n')).toBeGreaterThan(-1);
+    expect(workflow.indexOf('- name: Launch on a simulated iPhone')).toBeGreaterThan(
+      workflow.indexOf('- name: Build for the Simulator without signing'),
+    );
+  });
+
+  it('joins the groups in the required job, which fails rather than skips when a group fails', () => {
+    const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
+    expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');
+    expect(merge).toContain('needs: capture');
+    // A skipped required check counts as passed, so this job must still run
+    // after a failed part, and then fail.
+    expect(merge).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
+    expect(merge).toContain("needs.capture.result != 'success'");
+    expect(merge).toContain('node scripts/merge-key-screens.cjs --out');
+    // The review comment and earlier-run checks look for this artifact name.
+    expect(merge).toMatch(/name: ios-pr-preview-.*-arm64\n/);
   });
 
   it('reads no secrets and keeps a read-only token', () => {
     expect(workflow).not.toMatch(/secrets\./);
     expect(workflow).toMatch(/permissions:\n\s+contents: read\n/);
+  });
+});
+
+describe('key-screen groups', () => {
+  it('puts every screen in a group that says what it holds, at most five groups', () => {
+    // GitHub's free plan runs five Mac jobs at once, one per group.
+    expect(Object.keys(config.groups).length).toBeLessThanOrEqual(5);
+    for (const [group, holds] of Object.entries(config.groups)) {
+      expect(holds).toMatch(/^[A-Z].{20,}\.$/);
+      expect(shots.some((shot: { group: string }) => shot.group === group)).toBe(true);
+    }
+    for (const screen of config.screens) {
+      expect({ screen: screen.name, known: Object.hasOwn(config.groups, screen.group) }).toEqual({
+        screen: screen.name,
+        known: true,
+      });
+    }
+  });
+
+  it('flags a group over 6 minutes of capture, as a reminder to prune its screenshots', () => {
+    // The 6-minute limit is a reminder, not a rule. When a group passes it,
+    // first prune: drop variants that repeat what another shot already shows
+    // (say, a dark or Chinese copy of a screen whose layout doesn't change),
+    // and screens no longer worth a check. Then spend the time saved on what
+    // the key screens miss: screens, popups, and states no shot covers yet
+    // (#456). Only then move some related screens to a lighter group,
+    // or split one. If a group is still over after that, raise the limit;
+    // don't cut useful screenshots to fit it.
+    for (const group of Object.keys(config.groups)) {
+      const seconds = takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
+      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 360 }).toMatchObject({ group, over: false });
+    }
+  });
+
+  it('takes one group, every shot without one, and rejects an unknown group', () => {
+    expect(takeGroup(shots, 'bible-reading', config).every((shot: { group: string }) => shot.group === 'bible-reading')).toBe(true);
+    expect(takeGroup(shots, undefined, config)).toBe(shots);
+    expect(() => takeGroup(shots, 'bibel', config)).toThrow('No group "bibel"');
+  });
+
+  it('joins the groups\' results in list order, flagging a shot no group checked', () => {
+    const [a, b, c] = shots;
+    const merged = mergeResults(
+      [a, b, c],
+      [
+        {
+          checks: [{ file: c.file, problems: [] }, { file: a.file, problems: ['x'] }],
+          timings: [{ shot: c.name, settledAfter: 4 }],
+          ocr: { [`/Users/runner/work/_temp/ios-pr-preview/screens/${a.file}`]: [{ text: 'A' }] },
+        },
+        { checks: [], timings: [{ shot: a.name, settledAfter: 2 }], ocr: {} },
+      ],
+    );
+    expect(merged.checks).toEqual([
+      { file: a.file, problems: ['x'] },
+      { file: b.file, problems: ['no group checked it'] },
+      { file: c.file, problems: [] },
+    ]);
+    expect(merged.timings.map((timing: { shot: string }) => timing.shot)).toEqual([a.name, c.name]);
+    expect(merged.ocr).toEqual({ [a.file]: [{ text: 'A' }] });
+  });
+});
+
+describe('settle times', () => {
+  const samples = (sames: boolean[]) => sames.map((same, index) => ({ seconds: index + 1, same }));
+
+  it('is the earliest sample from which every later one matched the final shot', () => {
+    expect(settledAfter(samples([false, false, true, true, true]), 6)).toBe(3);
+    expect(settledAfter(samples([true, true, true]), 4)).toBe(1);
+  });
+
+  it('ignores a sample that matched only before the screen changed again', () => {
+    expect(settledAfter(samples([true, false, true, true]), 5)).toBe(3);
+  });
+
+  it('is the final shot when even the last sample differed', () => {
+    expect(settledAfter(samples([false, true, false]), 10)).toBe(10);
+    expect(settledAfter([], 10)).toBe(10);
   });
 });
 
@@ -351,7 +498,7 @@ describe('Screenshot review', () => {
     expect(announce).toContain('github.run_attempt == 1');
     expect(announce).toContain('<!-- key-screens-review pending sha=$SHA -->');
     expect(announce).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
-    expect(announce).toContain('about 50 minutes');
+    expect(announce).toContain('takes 15 to 25 minutes');
   });
 
   it.each([

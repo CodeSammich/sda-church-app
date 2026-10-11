@@ -215,6 +215,103 @@ describe('Apple signing reminders', () => {
   });
 });
 
+// The iOS PR preview reuses compiled native code that only main saves (#455).
+// A pull request must never be able to write that cache, and the signed store
+// builds must never read it.
+describe('iOS compile cache', () => {
+  const saver = readRepoFile('.github/workflows/ios-compile-cache.yml');
+  const preview = readRepoFile('.github/workflows/ios-pr-preview.yml');
+  // A step's run script, from its `run:` line to the next step or job.
+  const runOf = (workflow: string, name: string) => {
+    const start = workflow.indexOf(`- name: ${name}\n`);
+    expect(start).toBeGreaterThan(-1);
+    const step = workflow.slice(start, workflow.slice(start + 1).search(/\n {6}- |\n {2}[a-z-]+:\n/) + start + 1);
+    // Comments between steps belong to the next step, so they're left out.
+    return step
+      .slice(step.indexOf('run:'))
+      .split('\n')
+      .filter((line) => !/^ {6}#/.test(line))
+      .join('\n');
+  };
+  const xcode = (workflow: string) => /\/Applications\/Xcode_([\d.]+)\.app/.exec(workflow)![1];
+
+  it('is saved only on main in this repository, with no secrets and a read-only token', () => {
+    const triggers = saver.slice(saver.indexOf('\non:\n'), saver.indexOf('\npermissions:'));
+    expect(triggers).toMatch(/push:\n\s+branches:\n\s+- main\n/);
+    expect(triggers).not.toContain('pull_request');
+    // Every job, the saving one and the scheduled one, runs only there.
+    const guards = saver.match(/\n {4}if: >-\n(?: {6}.+\n)+/g)!;
+    expect(guards).toHaveLength(2);
+    for (const guard of guards) {
+      expect(guard).toMatch(
+        /github\.ref == 'refs\/heads\/main' &&\n\s+github\.repository == 'New-York-Chinese-Seventh-day-Adventist\/sda-church-app'\n$/,
+      );
+    }
+    const jobs = saver.slice(saver.indexOf('\njobs:\n')).match(/\n {2}[a-z-]+:\n/g)!;
+    expect(jobs).toHaveLength(guards.length);
+    // A scheduled run keeps the cache from expiring between releases, by
+    // restoring it, without building or saving.
+    expect(triggers).toMatch(/schedule:\n\s+- cron: /);
+    const keep = saver.slice(saver.indexOf('\n  keep:\n'));
+    expect(keep).toContain("github.event_name == 'schedule' &&");
+    expect(keep).not.toMatch(/xcodebuild|actions\/cache\/save@/);
+    expect(saver).not.toMatch(/secrets\./);
+    expect(saver).toMatch(/\npermissions:\n {2}contents: read\n\n/);
+    expect(saver).toContain('actions/cache/save@');
+  });
+
+  it('is only read by the iOS PR preview, which stores nothing', () => {
+    expect(preview).toContain('actions/cache/restore@');
+    expect(preview).not.toMatch(/actions\/cache(\/save)?@/);
+    // ccache's read-only mode: hits come from the cache; misses are compiled
+    // and not stored, even on the runner.
+    expect(runOf(preview, 'Set up the compile cache')).toContain('echo "CCACHE_READONLY=1" >> "$GITHUB_ENV"');
+    expect(saver).not.toContain('CCACHE_READONLY');
+  });
+
+  it('never reaches the signed store builds', () => {
+    for (const file of ['native-ios-build.yml', 'native-android-build.yml']) {
+      expect(readRepoFile(`.github/workflows/${file}`)).not.toMatch(/ccache|USE_CCACHE|actions\/cache/);
+    }
+  });
+
+  it('installs and builds as the preview does, under keys naming the same Xcode, so the cache matches', () => {
+    for (const step of [
+      'Install dependencies',
+      'Generate iOS project',
+      'Install CocoaPods dependencies',
+      'Build for the Simulator without signing',
+    ]) {
+      expect(runOf(saver, step)).toBe(runOf(preview, step));
+    }
+    const arch = (workflow: string) => /\n {10}ARCH: (\S+)\n/.exec(workflow)![1];
+    expect(arch(saver)).toBe(arch(preview));
+    expect(xcode(saver)).toBe(xcode(preview));
+    for (const workflow of [saver, preview]) {
+      const prefix = `ccache-ios-sim-xcode-${xcode(workflow)}-`;
+      // The exact native dependencies first, then the newest cache for the
+      // same Xcode. Never a broader key: a new Xcode starts a new cache.
+      expect(workflow).toContain(
+        `key: ${prefix}\${{ hashFiles('ios/Podfile.lock') }}\n` +
+          `          restore-keys: |\n` +
+          `            ${prefix}\${{ hashFiles('ios/Podfile.lock') }}-\n` +
+          `            ${prefix}\n`,
+      );
+      for (const key of workflow.match(/ccache-ios-sim-\S*/g)!) expect(key.startsWith(prefix)).toBe(true);
+      expect(workflow).not.toContain("hashFiles('package-lock.json')");
+      // Podfile.lock exists only after CocoaPods runs.
+      expect(workflow.indexOf('actions/cache/restore@')).toBeGreaterThan(workflow.indexOf('pod install'));
+      expect(workflow).toContain('echo "USE_CCACHE=1" >> "$GITHUB_ENV"');
+      // Without it, React Native's ccache-clang.sh never reaches ccache.
+      expect(workflow).toContain('echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"');
+      expect(workflow).toContain('path: ~/Library/Caches/ccache');
+      // ccache keeps its counters in the cache, so they're zeroed only after
+      // the restore, or the hits it reports would include earlier runs'.
+      expect(workflow.indexOf('ccache --zero-stats')).toBeGreaterThan(workflow.indexOf('actions/cache/restore@'));
+    }
+  });
+});
+
 describe('pull_request_target', () => {
   it('is used only by the three workflows the Actions event policy allows', () => {
     // The repository's Actions event policy allows every event, so this test is
@@ -392,18 +489,19 @@ describe('iOS PR preview', () => {
     expect(workflow).not.toContain('pull_request_target');
   });
 
-  it('builds for both Apple Silicon and Intel Macs', () => {
-    expect(workflow).toMatch(/runner: macos-26\s+arch: arm64/);
-    expect(workflow).toMatch(/runner: macos-26-intel\s+arch: x86_64/);
+  it('builds for Apple Silicon Macs only', () => {
+    // The Intel Mac build was dropped in 1.2.1; the Main protection ruleset no
+    // longer requires it. Adding it back needs the ruleset check too.
+    expect(workflow).toMatch(/\n    runs-on: macos-26\n/);
+    expect(workflow).toContain('ARCH: arm64');
+    expect(workflow).not.toContain('macos-26-intel');
   });
 
-  it('keeps the job names the Main protection ruleset requires', () => {
-    // Required checks: "Build iOS Simulator app (Apple Silicon Mac)" and
-    // "Build iOS Simulator app (Intel Mac)". Renaming the job without
-    // updating the ruleset blocks every release PR.
-    expect(workflow).toContain('name: Build iOS Simulator app (${{ matrix.mac }} Mac)');
-    expect(workflow).toMatch(/- mac: Apple Silicon\n/);
-    expect(workflow).toMatch(/- mac: Intel\n/);
+  it('keeps the job name the Main protection ruleset requires', () => {
+    // Required check: "Build iOS Simulator app (Apple Silicon Mac)", the job
+    // that joins the parts. Renaming it without updating the ruleset blocks
+    // every release PR.
+    expect(workflow).toContain('\n    name: Build iOS Simulator app (Apple Silicon Mac)\n');
   });
 
   it('uses the same Xcode as the signed iOS build', () => {

@@ -65,6 +65,8 @@ const copy = {
     chinese: 'Chinese',
     hymnalPage: (name: string, page: number, count: number) =>
       `${name}, hymnal ${page} of ${count}`,
+    previousHymnal: 'Previous hymnal',
+    nextHymnal: 'Next hymnal',
     searchEnglish: 'Search by number, title, or scripture...',
     searchChinese: 'Search by number or title...',
     searchButton: 'Search this hymnal',
@@ -87,6 +89,8 @@ const copy = {
     chinese: '中文',
     hymnalPage: (name: string, page: number, count: number) =>
       `${name}，第 ${page}/${count} 本`,
+    previousHymnal: '上一本詩歌本',
+    nextHymnal: '下一本詩歌本',
     searchEnglish: '按編號、標題或經文搜尋...',
     searchChinese: '按編號或標題搜尋...',
     searchButton: '搜尋這本詩歌',
@@ -109,6 +113,8 @@ const copy = {
     chinese: '中文',
     hymnalPage: (name: string, page: number, count: number) =>
       `${name}，第 ${page}/${count} 本`,
+    previousHymnal: '上一本诗歌本',
+    nextHymnal: '下一本诗歌本',
     searchEnglish: '按编号、标题或经文搜索...',
     searchChinese: '按编号或标题搜索...',
     searchButton: '搜索当前诗歌本',
@@ -131,6 +137,8 @@ const copy = {
     chinese: 'Chino',
     hymnalPage: (name: string, page: number, count: number) =>
       `${name}, himnario ${page} de ${count}`,
+    previousHymnal: 'Himnario anterior',
+    nextHymnal: 'Himnario siguiente',
     searchEnglish: 'Buscar por número, título o referencia...',
     searchChinese: 'Buscar por número o título...',
     searchButton: 'Buscar en este himnario',
@@ -529,9 +537,11 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       <View onLayout={onHeroLayout}>
         <LibraryFeaturedCarousel
           books={carouselItems}
+          nextLabel={labels.nextHymnal}
           page={selectedIndex}
           pageLabel={(page, count, book) =>
             labels.hymnalPage(`${book.title} — ${book.author}`, page, count)}
+          previousLabel={labels.previousHymnal}
           onPageChange={(page) => setSelectedId(order[page] ?? order[0])}
         />
       </View>
