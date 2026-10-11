@@ -94,19 +94,27 @@ the church's Workspace terms during annual maintenance.
 ## The three mandatory sheets
 
 These three tabs are the stable workbook contract. Keep their first-row headers
-exactly as documented, including capitalization and order. Do not insert a new
+exactly as documented, including capitalization and order (the Name
+Dictionary's title columns, below, are the one exception). Do not insert a new
 column between existing columns without updating Apps Script, tests, and the
 mobile app first.
 
 ### 1. `Name Dictionary`
 
-Row 1 must be:
+Row 1 must start with:
 
 ```text
 English Name | Chinese Name
 ```
 
-Data begins on row 2.
+Data begins on row 2. Two more columns, anywhere to the right, list the people
+who print with a title. They are found by a row-1 header that holds only the
+title, in either language and either case (`Pastors`, `Pastor(s)`,
+`Pastors 牧師`, `牧師`):
+
+```text
+Pastors | Elders
+```
 
 - `English Name` is the canonical English name used for physical printing.
 - `Chinese Name` is the traditional-Chinese display name. The dictionary normally
@@ -117,6 +125,18 @@ Data begins on row 2.
   Chinese names in the digital bulletin.
 - If the sheet is missing, a name is printed exactly as supplied. If a lookup
   is incomplete or unmatched, the source value is preserved rather than guessed.
+- A person in `Pastors` or `Elders` prints as `Pastor …` / `…牧師` or
+  `Elder …` / `…長老` in the order of service. Enter one plain name per cell, in
+  English or Chinese, as it appears in the first two columns. The roster grid
+  (`Meetings Schedule`) keeps plain names, since its cells are too narrow for
+  titles.
+- Enter plain names in the Sabbath Calendar too: titles come only from these
+  lists, so adding or removing someone changes the next print without a code
+  change. A person on both lists prints as Pastor. To add another title, add a
+  column and an entry in `PHYSICAL_NAME_TITLES` in `PrintedBulletin.gs`.
+- The first name in `Pastors` leads the Communion service. Sorting the whole
+  tab moves these cells with the rows, so check that the lead pastor is still
+  first afterward. If `Pastors` is missing or empty, those rows print `TBD`.
 
 The pinyin implementation is generated from the pinned `pinyin-pro` dependency
 when Apps Script is deployed. `PinyinPro.gs` is generated output: do not edit it
@@ -499,7 +519,8 @@ Queens Holy Communion is four physical pages in imposed order:
 
 The Communion ceremony has fixed references and fixed order. The submitted study
 verse cannot replace the Foot Washing or Communion readings. Communion service
-assignments use Moses Fang (`方舟`) except for Congregation. Brooklyn Communion is
+assignments use the first name in the Name Dictionary's `Pastors` column, with
+the title, except for Congregation. Brooklyn Communion is
 rejected server-side and should remain disabled in any intake UI.
 
 Brooklyn Regular is three physical pages:

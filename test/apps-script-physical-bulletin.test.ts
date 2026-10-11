@@ -908,7 +908,8 @@ describe('printed bulletin Apps Script helpers', () => {
           service: getPrintedCommunionServiceScripture_(),
           responseHymn: getPrintedCommunionResponseHymn_(),
           wholeCongregation: getPrintedCommunionWholeCongregation_(),
-          communionPastor: getPrintedCommunionPastor_(),
+          communionPastor: getPrintedCommunionPastor_({ communionPastor: '溫保羅牧師\\nPastor Paul Wen' }),
+          missingPastor: getPrintedCommunionPastor_({ communionPastor: '' }),
           footWashing: getPrintedCommunionFootWashingScripture_(),
           footWashingLookup: getPrintedCommunionFootWashingLookupScripture_(),
           passageDefinitions: {
@@ -925,7 +926,8 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.service).toBe('1 Corinthians 11:23–26');
     expect(output.responseHymn).toBe('第413首 教會基礎\nAH 348 The Church Has One Foundation');
     expect(output.wholeCongregation).toBe('會眾\nCongregation');
-    expect(output.communionPastor).toBe('方舟\nMoses Fang');
+    expect(output.communionPastor).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.missingPastor).toBe('尚未安排\nTBD');
     expect(output.footWashing).toBe('John 13:1–10; 12–17');
     expect(output.footWashingLookup).toBe('John 13:1–10; John 13:12–17');
     expect(output.passageDefinitions).toEqual({
@@ -1502,6 +1504,156 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(dictionary.pinyinToEnglish['wen zhong']).toBe('Official Person');
     expect(dictionary.englishToChinese['english only']).toBeUndefined();
     expect(dictionary.chineseToEnglish['只有中文']).toBeUndefined();
+  });
+
+  it('reads the Pastors and Elders title columns by header', () => {
+    const loadDictionary = (rows: string[][]) => {
+      const logs: string[] = [];
+      const dictionarySheet = {
+        getDataRange: () => ({ getValues: () => rows, getDisplayValues: () => rows }),
+      };
+      const context = loadAppsScript({
+        SpreadsheetApp: {
+          getActiveSpreadsheet: () => ({
+            getSheetByName: (name: string) => (name === 'Name Dictionary' ? dictionarySheet : null),
+          }),
+        },
+        Logger: { log: (message: string) => logs.push(message) },
+      });
+      const output = JSON.parse(
+        runInContext(
+          `var dictionary = buildPhysicalNameDictionary_();
+          JSON.stringify({
+            dictionary: dictionary,
+            paddedChinese: formatPhysicalPersonValue_('何偉', dictionary, { titles: true }),
+            communionPastor: preparePrintedBulletinForPrint_(
+              { queens: {}, brooklyn: {} },
+              dictionary
+            ).communionPastor
+          })`,
+          context,
+        ) as string,
+      );
+      return { ...output, logs };
+    };
+
+    const output = loadDictionary([
+      ['English Name', 'Chinese Name', '', 'Pastors 牧師', 'Elder(s)'],
+      ['Paul Wen', '溫保羅', '', 'Pastor Paul Wen', '何偉'],
+      ['Wei He', '何　偉', '', '林恩典', 'Mark Sun'],
+      ['Mark Sun', '孫馬可', '', '', '溫保羅'],
+      ['Grace Lin', '林恩典', '', '', ''],
+    ]);
+    const { dictionary } = output;
+
+    // A title typed into a list is dropped; the lists keep sheet order.
+    expect(dictionary.titledNames).toEqual({
+      pastor: ['Paul Wen', '林恩典'],
+      elder: ['何偉', 'Mark Sun', '溫保羅'],
+    });
+    // Each list entry titles both of the person's names, and a person on both
+    // lists stays Pastor even when the lists use different languages.
+    expect(dictionary.titles['paul wen']).toEqual({ english: 'Pastor', chinese: '牧師' });
+    expect(dictionary.titles['溫保羅']).toEqual({ english: 'Pastor', chinese: '牧師' });
+    expect(dictionary.titles['grace lin']).toEqual({ english: 'Pastor', chinese: '牧師' });
+    expect(dictionary.titles['wei he']).toEqual({ english: 'Elder', chinese: '長老' });
+    expect(dictionary.titles['mark sun']).toEqual({ english: 'Elder', chinese: '長老' });
+    // A padded two-character name matches with or without the padding.
+    expect(dictionary.chineseToEnglish['何偉']).toBe('Wei He');
+    expect(output.paddedChinese).toBe('何偉長老\nElder Wei He');
+    expect(output.communionPastor).toBe('溫保羅牧師\nPastor Paul Wen');
+    // The title columns don't change the English/Chinese lookups.
+    expect(dictionary.englishToChinese['wei he']).toBe('何　偉');
+    expect(output.logs).toEqual([]);
+
+    const untitled = loadDictionary([
+      ['English Name', 'Chinese Name', 'Pastor Travel'],
+      ['Paul Wen', '溫保羅', 'Paul Wen'],
+    ]);
+    expect(untitled.dictionary.titles).toEqual({});
+    expect(untitled.communionPastor).toBe('');
+    expect(untitled.logs).toEqual([
+      'Name Dictionary has no Pastors column; printing without that title.',
+      'Name Dictionary has no Elders column; printing without that title.',
+    ]);
+  });
+
+  it('adds Name Dictionary titles in either language without hardcoded names', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `var dictionary = {
+          englishToChinese: { 'paul wen': '溫　保羅', 'ruth ho': '何路得', 'grace lin': '林恩典' },
+          chineseToEnglish: { '溫保羅': 'Paul Wen', '何路得': 'Ruth Ho', '林恩典': 'Grace Lin' },
+          pinyinToChinese: { 'he lude': '何路得' },
+          pinyinToEnglish: { 'he lude': 'Ruth Ho' },
+          titles: {
+            'paul wen': { english: 'Pastor', chinese: '牧師' },
+            '林恩典': { english: 'Pastor', chinese: '牧師' },
+            'ruth ho': { english: 'Elder', chinese: '長老' },
+            'mark sun': { english: 'Elder', chinese: '長老' }
+          },
+          titledNames: { pastor: ['Paul Wen', '林恩典'], elder: ['Ruth Ho', 'Mark Sun'] }
+        };
+        JSON.stringify({
+          english: formatPhysicalPersonValue_('Paul Wen', dictionary, { titles: true }),
+          chinese: formatPhysicalPersonValue_('溫 保羅', dictionary, { titles: true }),
+          listedInChinese: formatPhysicalPersonValue_('Grace Lin', dictionary, { titles: true }),
+          pinyin: formatPhysicalPersonValue_('he lude', dictionary, { titles: true }),
+          notInDictionary: formatPhysicalPersonValue_('Mark Sun', dictionary, { titles: true }),
+          pair: formatPhysicalPersonValue_('Ruth Ho / Unknown Person', dictionary, { titles: true }),
+          untitled: formatPhysicalPersonValue_('Paul Wen', dictionary),
+          prepared: preparePrintedBulletinForPrint_(
+            { queens: { sermon: 'Paul Wen', pianist: 'Ruth Ho' }, brooklyn: { chair: 'Grace Lin' } },
+            dictionary
+          ),
+          noPastors: preparePrintedBulletinForPrint_(
+            { queens: {}, brooklyn: {} },
+            { englishToChinese: {}, chineseToEnglish: {} }
+          ).communionPastor
+        })`,
+        context,
+      ) as string,
+    );
+
+    expect(output.english).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.chinese).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.listedInChinese).toBe('林恩典牧師\nPastor Grace Lin');
+    expect(output.pinyin).toBe('何路得長老\nElder Ruth Ho');
+    expect(output.notInDictionary).toBe('—\nElder Mark Sun');
+    expect(output.pair).toBe('何路得長老\nElder Ruth Ho / —\nUnknown Person');
+    expect(output.untitled).toBe('溫　保羅\nPaul Wen');
+    expect(output.prepared.queens.sermon).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.prepared.queens.rosterNames).toEqual({
+      sermon: '溫　保羅\nPaul Wen',
+      pianist: '何路得\nRuth Ho',
+    });
+    expect(output.prepared.brooklyn.chair).toBe('林恩典牧師\nPastor Grace Lin');
+    expect(output.prepared.communionPastor).toBe('溫保羅牧師\nPastor Paul Wen');
+    expect(output.noPastors).toBe('');
+  });
+
+  it('keeps the roster grid on plain names while other rows show titles', () => {
+    const tables: string[][][] = [];
+    const context = loadAppsScript({
+      capturedTables: tables,
+      DocumentApp: { HorizontalAlignment: { LEFT: 'left', CENTER: 'center' } },
+    });
+    runInContext(
+      `appendDataTable_ = function (cell, rows) { capturedTables.push(rows); };
+      appendHorizontalScheduleTable_({}, {
+        sermon: '溫保羅牧師\\nPastor Paul Wen',
+        sunsetTime: '6:12 PM',
+        rosterNames: { sermon: '溫　保羅\\nPaul Wen' }
+      }, null, [
+        [printedBilingualText_('Sermon', '崇拜證道'), function (location) { return location.sermon; }],
+        [printedBilingualText_('Sunset Times', '日落時間'), function (location) { return location.sunsetTime; }]
+      ])`,
+      context,
+    );
+
+    expect(tables[0][1].slice(3, 5)).toEqual(['Paul Wen', '溫　保羅']);
+    expect(tables[0][2][3]).toBe('6:12 PM');
   });
 
   it('keeps bilingual labels and content in the physical output helpers', () => {

@@ -1825,6 +1825,28 @@ function selectPhysicalBibleVerses_(chapter, passage) {
     });
 }
 
+/**
+ * Name Dictionary columns whose names print with a title. Each column is found
+ * by its header, so the lists sit beside English Name and Chinese Name without
+ * changing them, and the schedule keeps plain names. A header matches when it
+ * holds only the title words (`Pastors`, `Pastor(s)`, `Pastors 牧師`, `牧師`). A
+ * person in more than one list takes the first title here.
+ */
+var PHYSICAL_NAME_TITLES = Object.freeze([
+  Object.freeze({
+    key: 'pastor',
+    words: /pastors?|牧[師师]/gi,
+    english: 'Pastor',
+    chinese: '牧師',
+  }),
+  Object.freeze({
+    key: 'elder',
+    words: /elders?|長老|长老/gi,
+    english: 'Elder',
+    chinese: '長老',
+  }),
+]);
+
 function buildPhysicalNameDictionary_() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Name Dictionary');
   var dictionary = {
@@ -1832,6 +1854,8 @@ function buildPhysicalNameDictionary_() {
     chineseToEnglish: {},
     pinyinToChinese: {},
     pinyinToEnglish: {},
+    titles: {},
+    titledNames: {},
   };
   if (!sheet) {
     Logger.log('Name Dictionary sheet not found; printing source names only.');
@@ -1866,7 +1890,54 @@ function buildPhysicalNameDictionary_() {
       }
     });
   });
+  readPhysicalNameTitles_(table, dictionary);
   return dictionary;
+}
+
+/**
+ * Reads the title columns (Pastors, Elders) into a lookup keyed by normalized
+ * name. A list may hold the English or the Chinese name; the formatter checks
+ * both sides of the resolved name. titledNames keeps each list in sheet order.
+ */
+function readPhysicalNameTitles_(table, dictionary) {
+  PHYSICAL_NAME_TITLES.forEach(function (title) {
+    var column = -1;
+    table.headers.forEach(function (header, index) {
+      var compact = String(header || '').replace(/[^A-Za-z\u3400-\u9fff]/g, '');
+      if (column === -1 && compact && !compact.replace(title.words, '')) {
+        column = index;
+      }
+    });
+    dictionary.titledNames[title.key] = [];
+    if (column === -1) {
+      Logger.log('Name Dictionary has no ' + title.english + 's column; printing without that title.');
+      return;
+    }
+    table.rows.forEach(function (row) {
+      // A title typed into the list is dropped so it doesn't print twice.
+      var name = displayValue_(row[column])
+        .replace(/\s+/g, ' ')
+        .replace(new RegExp('^' + title.english + '\\s+', 'i'), '')
+        .replace(new RegExp(title.chinese + '$'), '')
+        .trim();
+      var key = normalizePhysicalNameKey_(name);
+      if (!key) {
+        return;
+      }
+      dictionary.titledNames[title.key].push(name);
+      // Title both sides of the person, so a list in either language matches
+      // a schedule cell in either language.
+      [
+        key,
+        normalizePhysicalNameKey_(dictionary.englishToChinese[key]),
+        normalizePhysicalNameKey_(dictionary.chineseToEnglish[key]),
+      ].forEach(function (titleKey) {
+        if (titleKey && !dictionary.titles[titleKey]) {
+          dictionary.titles[titleKey] = { english: title.english, chinese: title.chinese };
+        }
+      });
+    });
+  });
 }
 
 /**
@@ -1937,16 +2008,26 @@ function preparePrintedBulletinForPrint_(bulletin, nameDictionary) {
   ];
   ['queens', 'brooklyn'].forEach(function (locationKey) {
     var location = bulletin[locationKey];
+    // The roster grid's 7pt cells are too narrow for titles, so it reads
+    // plain names from rosterNames. Every other printed row shows titles.
+    location.rosterNames = {};
     personFields.forEach(function (field) {
       if (Object.prototype.hasOwnProperty.call(location, field)) {
-        location[field] = formatPhysicalPersonValue_(location[field], nameDictionary);
+        var value = location[field];
+        location.rosterNames[field] = formatPhysicalPersonValue_(value, nameDictionary);
+        location[field] = formatPhysicalPersonValue_(value, nameDictionary, { titles: true });
       }
     });
   });
+  // The first name in the Name Dictionary's Pastors column leads Communion.
+  var pastors = (nameDictionary && nameDictionary.titledNames && nameDictionary.titledNames.pastor) || [];
+  bulletin.communionPastor = pastors.length
+    ? formatPhysicalPersonValue_(pastors[0], nameDictionary, { titles: true })
+    : '';
   return bulletin;
 }
 
-function formatPhysicalPersonValue_(value, nameDictionary) {
+function formatPhysicalPersonValue_(value, nameDictionary, options) {
   var text = String(value === null || typeof value === 'undefined' ? '' : value)
     .trim()
     .replace(/[^\S\r\n]+/g, ' ');
@@ -1960,18 +2041,19 @@ function formatPhysicalPersonValue_(value, nameDictionary) {
     pinyinToChinese: {},
     pinyinToEnglish: {},
   };
+  var titles = options && options.titles ? dictionary.titles || {} : {};
   return text
     .split(/(\s*(?:\/|&|\+|\n|\band\b)\s*)/i)
     .map(function (part, index) {
       if (index % 2 === 1) {
         return part;
       }
-      return formatPhysicalSinglePerson_(part, dictionary);
+      return formatPhysicalSinglePerson_(part, dictionary, titles);
     })
     .join('');
 }
 
-function formatPhysicalSinglePerson_(value, dictionary) {
+function formatPhysicalSinglePerson_(value, dictionary, titles) {
   var text = String(value || '').trim();
   var key = normalizePhysicalNameKey_(text);
   if (!key) {
@@ -1983,31 +2065,51 @@ function formatPhysicalSinglePerson_(value, dictionary) {
 
   var chinese = dictionary.englishToChinese[key];
   if (chinese) {
-    return chinese + '\n' + text;
+    return formatPhysicalBilingualPerson_(chinese, text, titles);
   }
 
   var english = dictionary.chineseToEnglish[key];
   if (english) {
-    return text + '\n' + english;
+    return formatPhysicalBilingualPerson_(text, english, titles);
   }
 
   var pinyinKey = normalizePhysicalPinyinKey_(text);
   var pinyinChinese = dictionary.pinyinToChinese && dictionary.pinyinToChinese[pinyinKey];
   var pinyinEnglish = dictionary.pinyinToEnglish && dictionary.pinyinToEnglish[pinyinKey];
   if (pinyinChinese && pinyinEnglish) {
-    return pinyinChinese + '\n' + pinyinEnglish;
+    return formatPhysicalBilingualPerson_(pinyinChinese, pinyinEnglish, titles);
   }
 
+  return /[㐀-鿿]/.test(text)
+    ? formatPhysicalBilingualPerson_(text, '', titles)
+    : formatPhysicalBilingualPerson_('', text, titles);
+}
+
+function formatPhysicalBilingualPerson_(chinese, english, titles) {
+  var title =
+    (titles && titles[normalizePhysicalNameKey_(english)]) ||
+    (titles && titles[normalizePhysicalNameKey_(chinese)]);
+  if (title) {
+    // Chinese titles follow the name (陳雨婷牧師). Drop the spacing that pads
+    // a two-character name to three, since the title already lengthens it.
+    chinese = chinese
+      ? chinese.replace(/([㐀-鿿])\s+(?=[㐀-鿿])/g, '$1') + title.chinese
+      : '';
+    english = english ? title.english + ' ' + english : '';
+  }
   // Google Docs can collapse a truly blank line in a table cell. Use a small,
   // explicit physical-only marker so the two language rows stay aligned. The
   // public digital API never uses this formatter.
-  return /[\u3400-\u9fff]/.test(text) ? text + '\n—' : '—\n' + text;
+  return (chinese || '—') + '\n' + (english || '—');
 }
 
 function normalizePhysicalNameKey_(value) {
   return String(value || '')
     .trim()
     .replace(/\s+/g, ' ')
+    // A two-character Chinese name is often padded to three (何　偉); match
+    // it with or without the padding.
+    .replace(/([\u3400-\u9fff]) (?=[\u3400-\u9fff])/g, '$1')
     .toLowerCase();
 }
 
@@ -2716,6 +2818,8 @@ function getPrintedBulletinQrImageFileName_(kind, location) {
 }
 
 function appendHorizontalScheduleTable_(cell, current, next, entries, currentData, nextData) {
+  current = withPhysicalRosterNames_(current);
+  next = withPhysicalRosterNames_(next);
   var rows = [['', 'Meetings Schedule', '節目輪值', 'Today', '今日', 'Next Sab', '下週']];
   entries.forEach(function (entry, index) {
     var role = splitPrintedBilingualValue_(entry[0]);
@@ -2754,6 +2858,14 @@ function appendHorizontalScheduleTable_(cell, current, next, entries, currentDat
     paddingTop: 0,
     paddingBottom: 0,
   });
+}
+
+// Swaps in the untitled names preparePrintedBulletinForPrint_ kept for the
+// roster grid; other fields, such as sunset times, stay as they are.
+function withPhysicalRosterNames_(location) {
+  return location && location.rosterNames
+    ? Object.assign({}, location, location.rosterNames)
+    : location;
 }
 
 function formatPrintedScheduleValue_(value) {

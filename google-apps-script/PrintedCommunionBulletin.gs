@@ -26,8 +26,8 @@ function appendFootWashingPanel_(cell, bulletin) {
 
 function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
   appendProgramTable_(cell, [
-    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', getPrintedCommunionPastor_()],
-    [printedBilingualText_('Breaking the Bread', '分餅'), '', getPrintedCommunionPastor_()],
+    [printedBilingualText_('Blessing the Bread', '分餅祝福禱告'), '', getPrintedCommunionPastor_(bulletin)],
+    [printedBilingualText_('Breaking the Bread', '分餅'), '', getPrintedCommunionPastor_(bulletin)],
   ]);
   appendProgramTable_(cell, [
     [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
@@ -36,8 +36,8 @@ function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
 
 function appendCommunionContinuationActionsPanel_(cell, bulletin, locationKey) {
   appendProgramTable_(cell, [
-    [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', getPrintedCommunionPastor_()],
-    [printedBilingualText_('Share the Cup', '分杯'), '', getPrintedCommunionPastor_()],
+    [printedBilingualText_('Blessing the Cup', '分杯祝福禱告'), '', getPrintedCommunionPastor_(bulletin)],
+    [printedBilingualText_('Share the Cup', '分杯'), '', getPrintedCommunionPastor_(bulletin)],
   ]);
   appendProgramTable_(cell, [
     [printedBilingualText_('Prayer of Silence', '默禱'), '', printedBilingualText_('Congregation', '會眾')],
@@ -56,8 +56,6 @@ var PRINTED_COMMUNION_LAYOUT = Object.freeze({
   responseHymnChinese: '第413首 教會基礎',
   wholeCongregation: 'Congregation',
   wholeCongregationChinese: '會眾',
-  communionPastor: 'Moses Fang',
-  communionPastorChinese: '方舟',
   footWashingScripture: 'John 13:1–10; 12–17',
   footWashingLookupScripture: 'John 13:1–10; John 13:12–17',
   footWashingBoxScripture: 'John 13:1–10',
@@ -106,11 +104,10 @@ function getPrintedCommunionWholeCongregation_() {
   );
 }
 
-function getPrintedCommunionPastor_() {
-  return printedBilingualText_(
-    PRINTED_COMMUNION_LAYOUT.communionPastor,
-    PRINTED_COMMUNION_LAYOUT.communionPastorChinese,
-  );
+// The first name in the Name Dictionary's Pastors column, with its title; set
+// by preparePrintedBulletinForPrint_. TBD shows the list is missing or empty.
+function getPrintedCommunionPastor_(bulletin) {
+  return (bulletin && bulletin.communionPastor) || physicalTbdText_('尚未安排');
 }
 
 function getPrintedCommunionFootWashingScripture_() {
@@ -254,14 +251,14 @@ function appendCommunionClosingRows_(cell, bulletin, locationKey) {
     [
       printedBilingualText_('Benediction', '祝禱'),
       '',
-      getPrintedCommunionPastor_(),
+      getPrintedCommunionPastor_(bulletin),
     ],
     [
       printedBilingualText_('Postlude', '後奏'),
       printedBilingualText_('SDAH 690 — Dismiss Us, Lord', '第504首 散會頌'),
       printedBilingualText_('Congregation', '會眾'),
     ],
-  ], { columnWidths: [90, 200, 70] });
+  ], { columnWidths: [90, 180, 90] });
   appendSpacer_(cell);
   appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
 }
