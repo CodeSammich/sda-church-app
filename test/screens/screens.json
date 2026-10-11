@@ -159,8 +159,10 @@
     },
     {
       "name": "library",
+      "$comment": "The featured carousel's arrows sit beside its dots, under the carousel, so they never cover its first book's title (#447): The Bruised Reed in every language, whole on one line, right of the cover. The shelf below wraps the same title after The Bruised, so only the carousel's line matches. Vision isn't asked to read the arrows: a chevron alone in a circle is no reliable text.",
       "path": "explore/library",
-      "variants": ["default", "dark", "zh", "zh-cn", "es"]
+      "variants": ["default", "dark", "zh", "zh-cn", "es"],
+      "mustShowLines": [{ "line": "^The Bruised Reed$", "minLeft": 0.3 }]
     },
     {
       "name": "library-egw",

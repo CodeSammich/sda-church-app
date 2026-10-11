@@ -23,18 +23,22 @@ const copy = {
   en: {
     title: 'Library', seeAll: 'See all', featured: 'Featured', read: 'Read',
     featuredPage: (page: number, count: number) => `Featured book ${page} of ${count}`,
+    previousFeatured: 'Previous featured book', nextFeatured: 'Next featured book',
   },
   zh: {
     title: '圖書館', seeAll: '查看全部', featured: '精選', read: '閱讀',
     featuredPage: (page: number, count: number) => `精選書籍 ${page}/${count}`,
+    previousFeatured: '上一本精選書籍', nextFeatured: '下一本精選書籍',
   },
   'zh-cn': {
     title: '图书馆', seeAll: '查看全部', featured: '精选', read: '阅读',
     featuredPage: (page: number, count: number) => `精选书籍 ${page}/${count}`,
+    previousFeatured: '上一本精选书籍', nextFeatured: '下一本精选书籍',
   },
   es: {
     title: 'Biblioteca', seeAll: 'Ver todo', featured: 'Destacado', read: 'Leer',
     featuredPage: (page: number, count: number) => `Libro destacado ${page} de ${count}`,
+    previousFeatured: 'Libro destacado anterior', nextFeatured: 'Libro destacado siguiente',
   },
 } as const;
 
@@ -120,7 +124,9 @@ export default function LibraryHubScreen() {
           <LibraryFeaturedCarousel
             books={getBooks(FEATURED_LIBRARY_BOOKS)}
             featuredLabel={labels.featured}
+            nextLabel={labels.nextFeatured}
             pageLabel={labels.featuredPage}
+            previousLabel={labels.previousFeatured}
             readLabel={labels.read}
           />
         </View>

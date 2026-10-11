@@ -1,3 +1,4 @@
+import { AppIcon } from '@/components/AppIcon';
 import { LibraryCoverImage } from '@/components/LibraryCoverImage';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -40,6 +41,9 @@ type LibraryFeaturedCarouselProps = Readonly<{
   readLabel?: string;
   /** Labels a page dot, for example "Featured book 2 of 4". */
   pageLabel: (page: number, pageCount: number, book: FeaturedCarouselItem) => string;
+  /** Labels the arrows on the banner's sides, for example "Previous featured book". */
+  previousLabel: string;
+  nextLabel: string;
   /**
    * The page to show, for a parent that follows it, such as the hymnal page,
    * where the page picks the hymnal. Changing it scrolls to that page.
@@ -52,14 +56,18 @@ type LibraryFeaturedCarouselProps = Readonly<{
 /**
  * The top of the library page: a few featured books, one per page, swiped
  * sideways. Each page shows the cover large over a blurred copy of itself.
- * It never advances on its own. The hymnal page uses it for its hymnals.
+ * It never advances on its own. Little arrows on the banner's sides show that
+ * it moves, and turn the page for a mouse, which can't swipe. The hymnal page
+ * uses it for its hymnals.
  */
 export function LibraryFeaturedCarousel({
   books,
   featuredLabel = '',
+  nextLabel,
   onPageChange,
   page: shownPage,
   pageLabel,
+  previousLabel,
   readLabel,
 }: LibraryFeaturedCarouselProps) {
   const theme = useAppTheme();
@@ -98,6 +106,41 @@ export function LibraryFeaturedCarousel({
   }, [pageWidth, shownPage]);
 
   if (!books.length) return null;
+
+  // A little arrow in the banner's side margin, beside the page's content, so
+  // it covers neither the cover nor the title. None points past the first or
+  // last page. Only the arrow itself is tappable: a swipe that starts
+  // elsewhere on the edge still turns the page.
+  const renderArrow = (step: -1 | 1) => {
+    const target = page + step;
+    if (target < 0 || target >= books.length) return null;
+    return (
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.arrowColumn,
+          step < 0 ? styles.arrowColumnStart : styles.arrowColumnEnd,
+          // The same box as the page's content, which starts under the header.
+          { top: headerHeight + 12, bottom: 24 },
+        ]}
+      >
+        <TouchableOpacity
+          accessibilityLabel={step < 0 ? previousLabel : nextLabel}
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          onPress={() => showPage(target)}
+          style={[styles.arrow, Platform.OS === 'web' ? styles.webPressable : null]}
+        >
+          <AppIcon
+            name={step < 0 ? 'chevron-left' : 'chevron-right'}
+            size={ARROW_SIZE}
+            scaleWithText={false}
+            color="rgba(255, 255, 255, 0.85)"
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View onLayout={onLayout} style={styles.carousel}>
@@ -150,6 +193,8 @@ export function LibraryFeaturedCarousel({
           )}
           showsHorizontalScrollIndicator={false}
         />
+        {renderArrow(-1)}
+        {renderArrow(1)}
         </View>
       ) : null}
       {books.length > 1 ? (
@@ -215,6 +260,10 @@ function PageContent({
     </View>
   );
 }
+
+// The arrows fit the page content's 20pt side margin at every text size, so
+// they don't grow with the text.
+const ARROW_SIZE = 20;
 
 // The page sits on a darkened, blurred cover in both themes, so its text is
 // always light.
@@ -289,6 +338,24 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
       fontSize: scaleTypographyMetric(15, textScale),
       fontWeight: '700',
       lineHeight: scaleTypographyMetric(20, textScale),
+    },
+    // A margin-wide column at each side, centring its arrow on the content.
+    arrowColumn: {
+      justifyContent: 'center',
+      position: 'absolute',
+      width: 20,
+    },
+    arrowColumnStart: {
+      left: 0,
+    },
+    arrowColumnEnd: {
+      right: 0,
+    },
+    arrow: {
+      alignItems: 'center',
+      height: 44,
+      justifyContent: 'center',
+      width: 20,
     },
     dots: {
       alignItems: 'center',
