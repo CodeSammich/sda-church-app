@@ -183,8 +183,9 @@ so, rather than passing unreviewed.
 The full process is in [Contributing](../CONTRIBUTING.md#releasing-code-maintainers-only).
 The admin-only steps are:
 
-1. **Create `release-candidate`** from `main` when a release cycle starts: **Code →
-   branch menu → View all branches → New branch**, named `release-candidate`.
+1. **Check that `release-candidate` exists.** **Release - After Merge** creates it from
+   `main` after each release merges. If it's missing, create it: **Code → branch menu →
+   View all branches → New branch**, named `release-candidate`, from `main`.
 2. **Merge feature pull requests** into it.
 3. **Set the version** once the contents are settled: pick a patch, minor, or major
    version for what the release contains, higher than `main`'s, and merge a pull request
@@ -199,14 +200,16 @@ The admin-only steps are:
    preview**, takes about 25 minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate` and moves any open feature pull requests
-   into it to `main`. Create it again for the next release, and move those pull
-   requests back to it.
+   into it to `main`. **Release - After Merge** creates it again from `main` and comments
+   on the release pull request with links to the runs below that wait for approval.
+   Move those feature pull requests back to `release-candidate`.
 
 What runs after the merge to `main`:
 
 | Workflow | Automatic? | What you do |
 | --- | --- | --- |
 | Deploy Website and Tag | Yes | Nothing. It tags `vx.y.z` and publishes [the app website](#the-app-website-appnyccsdaorg). |
+| Release - After Merge | Yes | Nothing, unless its comment on the release pull request says `release-candidate` couldn't be created. Its links open the three runs below. |
 | Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK, upload the AAB to Google Play internal testing, and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 | Deploy Bulletin Apps Script | Waits for `production` approval | Approve it when nobody is making a bulletin, then check the live bulletin. Reject it to skip this deploy. See [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script). |

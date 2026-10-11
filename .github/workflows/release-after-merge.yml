@@ -1,0 +1,125 @@
+name: Release - After Merge
+
+# After a merge into main, creates release-candidate again for the next release
+# (GitHub deletes it when the release pull request merges) and comments on the
+# merged pull request with links to the runs that wait for production
+# approval. It checks out no code.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-after-merge
+  cancel-in-progress: false
+
+jobs:
+  next-steps:
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+    steps:
+      - name: Find the merged pull request
+        id: pr
+        run: |
+          set -euo pipefail
+          # The squash-merge commit is linked to the pull request it came from.
+          # A direct push to main has none, so the comment step skips.
+          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '
+            [.[] | select(.merged_at != null and .base.ref == "main")][0] // empty
+            | "number=\(.number)\nhead_ref=\(.head.ref)"' >> "$GITHUB_OUTPUT"
+
+      - name: Create release-candidate from main
+        id: branch
+        env:
+          HEAD_REF: ${{ steps.pr.outputs.head_ref }}
+        run: |
+          set -euo pipefail
+          branch_exists() {
+            gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/release-candidate" --silent 2>/dev/null
+          }
+
+          # GitHub deletes release-candidate moments after the release pull
+          # request merges. Wait for that, so it isn't recreated only to be
+          # deleted.
+          if [[ "$HEAD_REF" == "release-candidate" ]]; then
+            for _ in $(seq 1 12); do
+              branch_exists || break
+              sleep 10
+            done
+            if branch_exists; then
+              echo "::warning title=release-candidate not deleted::It still holds the released commits. Delete it, then create it from main."
+              echo "result=stale" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          elif branch_exists; then
+            echo "release-candidate already exists; leaving it alone."
+            echo "result=exists" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Never overwrites: creating a branch that already exists fails.
+          if gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref=refs/heads/release-candidate -f sha="$GITHUB_SHA" --silent; then
+            echo "Created release-candidate at $GITHUB_SHA."
+            echo "result=created" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning title=release-candidate not created::Create it from main on the branches page."
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment the next steps on the pull request
+        if: steps.pr.outputs.number != ''
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          BRANCH_RESULT: ${{ steps.branch.outputs.result }}
+        run: |
+          set -euo pipefail
+          # The same push starts each of these workflows. Link this merge's run,
+          # where the approval button is, or the workflow page if it's missing.
+          run_link() {
+            local file=$1 name=$2 url=''
+            for _ in $(seq 1 6); do
+              url=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$file/runs?head_sha=$GITHUB_SHA&event=push&per_page=1" \
+                --jq '.workflow_runs[0].html_url // empty')
+              [[ -n "$url" ]] && break
+              sleep 10
+            done
+            echo "- [$name](${url:-$REPO_URL/actions/workflows/$file}) ([all runs]($REPO_URL/actions/workflows/$file))$3"
+          }
+
+          branches="[branches page]($REPO_URL/branches)"
+          case "$BRANCH_RESULT" in
+            created)
+              branch_line="Created \`release-candidate\` from this merge for the next release ($branches). GitHub moves open feature pull requests to \`main\` when it deletes the old branch; [move them back]($REPO_URL/pulls?q=is%3Apr+is%3Aopen+base%3Amain) to \`release-candidate\`." ;;
+            stale)
+              branch_line="\`release-candidate\` wasn't deleted, so it still holds this release's commits. Delete it on the $branches, then create it again from \`main\`." ;;
+            exists)
+              branch_line="\`release-candidate\` already exists ($branches)." ;;
+            *)
+              branch_line="Couldn't create \`release-candidate\`. Create it from \`main\` on the $branches." ;;
+          esac
+
+          {
+            echo "Merged into \`main\`. These runs wait for \`production\` approval:"
+            echo
+            run_link native-ios-build.yml 'Native iOS build' ''
+            run_link native-android-build.yml 'Native Android build' ''
+            run_link apps-script-deploy.yml 'Deploy Bulletin Apps Script' ': approve when nobody is making a bulletin, or reject it to skip this deploy.'
+            echo
+            echo "$branch_line"
+          } > comment.md
+
+          gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+            -F body=@comment.md --silent
+          echo "Commented on #$PR_NUMBER."
