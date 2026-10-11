@@ -110,7 +110,7 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, `Build iOS Simulator app (Intel Mac)` | `ios-pr-preview.yml` | `main` |
+| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
 | `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -128,7 +128,7 @@ from merging there anyway.
   workflow must first be in `release-candidate`, because that branch is the head of the
   release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
-  job's name includes the matrix values, such as `Build iOS Simulator app (Intel Mac)`.
+  job's name includes the matrix values, such as `Key screens (bible-reading)`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
   otherwise merges block on the old name.
 - **`android-pr-preview.yml` runs from `main`'s copy of the workflow**, because it uses
@@ -196,7 +196,7 @@ The admin-only steps are:
    internal testing. Copy the `Closes #…` lines from the included feature pull requests
    into its description.
 5. **Merge it** once its checks and review pass. The slowest check, **iOS PR
-   preview**, takes about 50 minutes, and **Screenshots reviewed** waits until a
+   preview**, takes about 25 minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate` and moves any open feature pull requests
    into it to `main`. Create it again for the next release, and move those pull
@@ -627,16 +627,17 @@ summary links to it. Fork pull requests are skipped. See
 **Workflow:** **iOS PR preview**, which runs automatically on release pull requests
 into `main`, and can be run manually on any branch.
 
-It builds the app without signing for an Apple Silicon Mac and an Intel Mac and
-launches each on a simulated iPhone. The Apple Silicon build then captures every key
-screen in `test/screens/screens.json` (82 screenshots of 30 screens) and checks their
-text with `scripts/check-screens.cjs`. The run takes about 50 minutes in all, about 24
-of them for the screenshots. On a release pull request, a comment
+It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
+five runners, one per key-screen group, which run at once. Each launches the app on a
+simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
+(81 screenshots of 29 screens in all), and checks their text with
+`scripts/check-screens.cjs`. Another job then joins the groups,
+before the review comment and **Screenshots reviewed**. The run takes about 25 minutes. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
-The builds need no `production` approval, because they read no secrets. Download the
-build for your Mac from the run's Artifacts section (kept 14 days) to test the release
-on a Mac before merging; you don't need an iPhone. See
+The build needs no `production` approval, because it reads no secrets. Download the
+artifact ending in `-arm64` from the run's Artifacts section (kept 14 days) to test the release on an Apple Silicon
+Mac before merging; you don't need an iPhone. See
 [iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
 
 ## Dependabot pull requests
@@ -818,7 +819,7 @@ don't run it; to test an audio change before the release, run it manually on you
 branch.
 
 It takes about 20 minutes, and runs alongside **iOS PR preview**, which takes about
-50 minutes.
+25 minutes.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:

@@ -26,9 +26,11 @@ Code, Codex, Gemini, and others). The full contributor guide is
   key screens in `test/screens/screens.json`, for every platform that captures
   them: the iPhone today, and Android once #372 adds its screenshots. Add the
   screen or variant that shows the change, and text checks (`mustShowLines`,
-  `mustNotShowLines`, `variantRules`) that fail if it breaks. Don't overdo it:
-  each shot lengthens every release PR's run, so prefer a check on an existing
-  shot, and replace checks that no longer earn their place. See
+  `mustNotShowLines`, `variantRules`) that fail if it breaks, and give a new
+  screen the `group` for its part of the app. Don't overdo it: each shot
+  lengthens its group's runner, and the release PR waits for the slowest
+  group, so prefer a check on an existing shot, and replace checks that no
+  longer earn their place. See
   [Key screens](docs/operations/native-builds.md#key-screens). The PR template
   asks about this too.
 
