@@ -266,6 +266,8 @@ describe('iOS compile cache', () => {
     for (const workflow of [saver, preview]) {
       expect(workflow).toContain(`key: ccache-ios-sim-xcode-${xcode(workflow)}-\${{ hashFiles('package-lock.json') }}`);
       expect(workflow).toContain('echo "USE_CCACHE=1" >> "$GITHUB_ENV"');
+      // Without it, React Native's ccache-clang.sh never reaches ccache.
+      expect(workflow).toContain('echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"');
       expect(workflow).toContain('path: ~/Library/Caches/ccache');
       // ccache keeps its counters in the cache, so they're zeroed only after
       // the restore, or the hits it reports would include earlier runs'.

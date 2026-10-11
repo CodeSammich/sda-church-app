@@ -55,6 +55,10 @@ jobs:
           command -v ccache >/dev/null || HOMEBREW_NO_AUTO_UPDATE=1 brew install ccache
           # React Native's CocoaPods setup compiles through ccache when this is set.
           echo "USE_CCACHE=1" >> "$GITHUB_ENV"
+          # Its ccache-clang.sh calls ccache by CCACHE_BINARY, which Xcode gives
+          # to script phases but not to the compiler, so without this every
+          # compile skipped ccache. xcodebuild passes its own environment on.
+          echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"
 
       # Starts from the last cache, so this run adds only what changed.
       - name: Restore the last compile cache

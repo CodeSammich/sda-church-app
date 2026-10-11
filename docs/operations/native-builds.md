@@ -641,6 +641,11 @@ the last release. To keep a pull request from planting compiled code in later bu
 - the preview only restores the cache;
 - the signed store builds never use ccache or the cache, and compile from scratch.
 
+Both workflows set `USE_CCACHE=1`, which makes React Native's CocoaPods setup compile
+through its `ccache-clang.sh`, and put `CCACHE_BINARY` in the environment: that script
+calls ccache by it, and Xcode passes the build setting of that name to script phases but
+not to the compiler, so without it every compile quietly skips ccache.
+
 A stale cache can only cost time: ccache checks each file's contents and compiler
 settings before reusing it, so a changed file is compiled again. The key names the Xcode
 version and the `package-lock.json` hash, and falls back to the newest cache for the
