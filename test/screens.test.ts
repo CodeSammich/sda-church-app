@@ -235,10 +235,11 @@ describe('key-screen buckets', () => {
     // The 6-minute limit is a reminder, not a rule. When a bucket passes it,
     // first prune: drop variants that repeat what another shot already shows
     // (say, a dark or Chinese copy of a screen whose layout doesn't change),
-    // and screens no longer worth a check. Only then move a related group of
-    // screens to a lighter bucket, or split one. If a bucket is still over
-    // after pruning and rebalancing, raise the limit; don't cut useful
-    // screenshots to fit it.
+    // and screens no longer worth a check. Then spend the time saved on what
+    // the key screens miss: screens, popups, and states no shot covers yet
+    // (#456). Only then move a related group of screens to a lighter bucket,
+    // or split one. If a bucket is still over after that, raise the limit;
+    // don't cut useful screenshots to fit it.
     for (const bucket of Object.keys(config.buckets)) {
       const seconds = takeBucket(shots, bucket, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
       expect({ bucket, minutes: Math.round(seconds / 6) / 10, over: seconds > 360 }).toMatchObject({ bucket, over: false });

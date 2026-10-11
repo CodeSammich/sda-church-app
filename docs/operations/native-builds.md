@@ -643,11 +643,13 @@ limit is a reminder to prune, not a rule:
 1. Prune first: drop variants that repeat what another shot already shows, such as a
    dark or Chinese copy of a screen whose layout doesn't change, and screens no longer
    worth a check.
-2. Then rebalance: move a related group of screens to a lighter bucket, or split one,
+2. Spend the time saved on what the key screens miss: screens, popups, and states no
+   shot covers yet (#456).
+3. Then rebalance: move a related group of screens to a lighter bucket, or split one,
    and update the `bucket` list in `ios-pr-preview.yml`, which a test keeps in step with
    `screens.json`. GitHub's free plan runs five Mac jobs at once, so keep to five
    buckets.
-3. If a bucket is still over after that, raise the limit in `test/screens.test.ts`
+4. If a bucket is still over after that, raise the limit in `test/screens.test.ts`
    rather than cutting screenshots that earn their place.
 `scripts/capture-ios-screens.cjs` takes each shot:
 
