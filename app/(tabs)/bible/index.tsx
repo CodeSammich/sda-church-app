@@ -1,6 +1,7 @@
 import { AppIcon } from '@/components/AppIcon';
 import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
+import { PopupHeader } from '@/components/PopupHeader';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setIsAudioActiveAsync } from 'expo-audio';
@@ -119,6 +120,7 @@ import {
   SavedVerseSort,
   storeSavedVerses,
 } from '@/services/SavedVersesService';
+import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
 import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
@@ -602,6 +604,7 @@ export default function BibleScreen() {
     verseEnd: paramVerseEnd,
     referenceRequest: paramReferenceRequest,
     backTo: paramBackTo,
+    popup: paramPopup,
   } = useLocalSearchParams<{
     bookId?: string;
     chapter?: string;
@@ -610,6 +613,7 @@ export default function BibleScreen() {
     verseEnd?: string;
     referenceRequest?: string;
     backTo?: string;
+    popup?: string;
   }>();
 
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
@@ -651,7 +655,8 @@ export default function BibleScreen() {
   };
   const popupMaxHeight = usePopupMaxHeight(0.8);
   const audioSettingsMaxHeight = usePopupMaxHeight(0.82);
-  const verseDetailMaxHeight = usePopupMaxHeight(0.94);
+  // Short enough to leave room above and below for a tap that closes it.
+  const verseDetailMaxHeight = usePopupMaxHeight(0.85);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
@@ -2831,6 +2836,21 @@ export default function BibleScreen() {
     setModalType('verse-detail');
   };
 
+  // The key-screen capture can't tap a verse, so its build opens the popup
+  // from the path (popup=verse, for verseStart), once the linked chapter has
+  // loaded (#372). A chapter change clears chapterData first, so a loaded
+  // chapter that matches the link is the linked one.
+  const screenshotPopupOpened = useRef(false);
+  useEffect(() => {
+    if (screenshotPopupOpened.current || !chapterData) return;
+    if (getScreenshotPopup(paramPopup, ['verse']) !== 'verse') return;
+    if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
+    const verse = Number(paramVerseStart);
+    if (!Number.isInteger(verse) || verse < 1) return;
+    screenshotPopupOpened.current = true;
+    openVerseDetails(verse);
+  }, [book?.id, chapterData, chapterNum, paramBookId, paramChapter, paramPopup, paramVerseStart]);
+
   const supportingVerses = useMemo(
     () => indexChapterVerses(supportingChapterData),
     [supportingChapterData],
@@ -3302,6 +3322,17 @@ export default function BibleScreen() {
   };
 
   const closeModal = () => setModalType(null);
+
+  const renderPopupHeader = (title: string, onClose: () => void) => (
+    <PopupHeader
+      centered
+      closeLabel={labels.closeAction}
+      onClose={onClose}
+      style={styles.popupHeader}
+      textScale={bibleUiTextScale}
+      title={title}
+    />
+  );
 
   // The hymns on the verse whose details are open, the main translation's
   // hymnal first: the reverse of a hymn's verse chip.
@@ -4069,12 +4100,7 @@ export default function BibleScreen() {
           ]}
         >
           <View style={ReaderStyles.modalInner}>
-            <Text
-              variant="titleLarge"
-              style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-            >
-              {labels.audioSettings}
-            </Text>
+            {renderPopupHeader(labels.audioSettings, () => setAudioSettingsVisible(false))}
             <Divider />
             <ScrollView>
               <Text
@@ -4328,12 +4354,7 @@ export default function BibleScreen() {
           ]}
         >
           <View style={ReaderStyles.modalInner}>
-            <Text
-              variant="titleLarge"
-              style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-            >
-              {labels.sleepTimer}
-            </Text>
+            {renderPopupHeader(labels.sleepTimer, () => setSleepTimerVisible(false))}
             <Divider />
             <ScrollView>
               {(
@@ -4402,22 +4423,14 @@ export default function BibleScreen() {
           contentContainerStyle={[
             ReaderStyles.modalContent,
             { maxHeight: popupMaxHeight },
-            lastActiveType === 'verse-detail' && [
-              styles.verseDetailModalContent,
-              { maxHeight: verseDetailMaxHeight },
-            ],
+            lastActiveType === 'verse-detail' && { maxHeight: verseDetailMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
         >
           <View style={ReaderStyles.modalInner}>
             {lastActiveType === 'verse-hymns' ? (
               <>
-                <Text
-                  variant="titleLarge"
-                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-                >
-                  {labels.verseHymnsTitle}
-                </Text>
+                {renderPopupHeader(labels.verseHymnsTitle, closeModal)}
                 <Divider />
                 <ScrollView contentContainerStyle={{ paddingVertical: 4 }}>
                   {verseHymns.map((hymn) => (
@@ -4465,12 +4478,7 @@ export default function BibleScreen() {
               </>
             ) : lastActiveType === 'saved' ? (
               <>
-                <Text
-                  variant="titleLarge"
-                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-                >
-                  {labels.savedVerses}
-                </Text>
+                {renderPopupHeader(labels.savedVerses, closeModal)}
                 <Text
                   variant="bodySmall"
                   style={{
@@ -4612,12 +4620,10 @@ export default function BibleScreen() {
               </>
             ) : lastActiveType === 'verse-detail' ? (
               <>
-                <Text
-                  variant="titleLarge"
-                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-                >
-                  {book?.name} {chapterNum}:{selectedVerseNum}
-                </Text>
+                {renderPopupHeader(
+                  `${book?.name ?? ''} ${chapterNum}:${selectedVerseNum}`,
+                  closeModal,
+                )}
                 <Divider />
                 <ScrollView style={ReaderStyles.modalScroll}>
                   <View style={ReaderStyles.detailSection}>
@@ -4923,18 +4929,16 @@ export default function BibleScreen() {
               </>
             ) : (
               <>
-                <Text
-                  variant="titleLarge"
-                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-                >
-                  {lastActiveType === 'translation'
+                {renderPopupHeader(
+                  lastActiveType === 'translation'
                     ? labels.translation
                     : lastActiveType === 'book'
                       ? labels.book
                       : lastActiveType === 'verse'
                         ? labels.verse
-                        : labels.chapter}
-                </Text>
+                        : labels.chapter,
+                  closeModal,
+                )}
                 <Divider />
                 <FlatList<
                   | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
@@ -5248,9 +5252,10 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     controlDockScrollContent: {
       flexGrow: 1,
     },
-    verseDetailModalContent: {
-      marginTop: 8,
-      marginBottom: 8,
+    popupHeader: {
+      marginTop: -8,
+      marginBottom: 4,
+      paddingHorizontal: 4,
     },
     selectionBarInner: {
       flexDirection: 'row',

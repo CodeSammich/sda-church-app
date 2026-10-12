@@ -43,6 +43,25 @@ describe('key-screen text checks on real screenshots', () => {
   });
 });
 
+describe('popup shots (#372)', () => {
+  const verse = samples.clean['bible-verse-popup-default'] as Line[];
+  const textSize = samples.clean['text-size-xl'] as Line[];
+
+  it("don't need the tab bar or the verse button, which the popup covers or dims", () => {
+    expect(checkShot(shot('bible-verse-popup-default'), verse)).toEqual([]);
+    expect(checkShot(shot('text-size-xl'), textSize)).toEqual([]);
+  });
+
+  it('catch a Close or Apply button coming back', () => {
+    expect(checkShot(shot('bible-verse-popup-default'), [...verse, line('Close', 0.8)])).toEqual([
+      '"Close" matches /^Close$/, which must not show',
+    ]);
+    expect(checkShot(shot('text-size-xl'), [...textSize, line('Apply', 0.9)])).toEqual([
+      '"Apply" matches /^Apply$/, which must not show',
+    ]);
+  });
+});
+
 describe('the bugs fixed in 0.42.0', () => {
   const bible = samples.clean['bible-dual-default'] as Line[];
 

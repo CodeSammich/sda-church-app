@@ -13,11 +13,12 @@ import {
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import packageJson from '@/package.json';
+import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack } from 'expo-router';
-import { useContext, useState } from 'react';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useContext, useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { List, Text, TouchableRipple } from 'react-native-paper';
@@ -98,6 +99,16 @@ export default function YouScreen() {
   const [showLanguage, setShowLanguage] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
   const headerHeight = useGlobalHeaderHeight();
+  const { popup } = useLocalSearchParams<{ popup?: string }>();
+
+  // The key-screen capture can't tap, so its build opens a dialog from the
+  // path, such as you?popup=text-size (#372).
+  useEffect(() => {
+    const screenshotPopup = getScreenshotPopup(popup, ['language', 'text-size', 'theme']);
+    if (screenshotPopup === 'language') setShowLanguage(true);
+    if (screenshotPopup === 'text-size') setShowTextSize(true);
+    if (screenshotPopup === 'theme') setShowThemeDialog(true);
+  }, [popup]);
   const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);

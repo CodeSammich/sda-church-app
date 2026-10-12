@@ -565,7 +565,7 @@ each release PR into `main` without signing, on Apple Silicon runners (`macos-26
 arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
 once, **Key screens (`<group>`)**, one per key-screen group:
 
-- The `worship-and-you` runner, which has the lightest group, compiles the app once,
+- The `bible-text` runner, which has the lightest group, compiles the app once,
   reusing what it can from the compile cache (below), and shares it with the others as
   an artifact. It boots its own simulated iPhone after the compile when it restored a
   compile cache, and during the compile when there was none.
@@ -734,7 +734,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 29 screens listed in `test/screens/screens.json`, 81
+The five runners screenshot the 32 screens listed in `test/screens/screens.json`, 85
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner takes one group (`--group <name>`) of related
 screens, such as the Bible reader's layout or the library, listed under `groups` in
@@ -769,9 +769,15 @@ limit is a reminder to prune, not a rule:
    that: its build step sets `EXPO_PUBLIC_KEY_SCREENS=1`, which Expo writes into the
    app, and the store builds never set it, so on a real phone the app never looks for
    a saved screen. A test checks that no other workflow sets it.
+
+   Nothing can tap a popup or dialog open either, so a screen's path can ask for one
+   with `popup=`, such as `you?popup=text-size` or the Bible's `popup=verse`, which
+   opens the popup for `verseStart` once the chapter loads (#372). Only this build
+   reads it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens just
+   the screen.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
-   wait (9 for the Bible, which measured settles within 6), so a group's 13 to 22 shots
+   wait (9 for the Bible, which measured settles within 6), so a group's 14 to 22 shots
    take about 3–6 minutes. While it
    waits, it takes a screenshot every 2 seconds and records in
    `screens/settle-times.json` when each screen stopped changing, so the waits can be
@@ -813,7 +819,9 @@ Each label counts only where it belongs, so "Read Verse" on Home isn't the verse
 A missing label gets a second read of its strip, enlarged and with its contrast
 stretched. One-character labels, such as 您 and 節, aren't required: Vision often misses
 a lone Chinese character, and it can't be cut short anyway. A screen without the tab bar,
-such as the Bible while reading, sets `"tabs": false`. What Vision read is saved as
+such as the Bible while reading, sets `"tabs": false`. A popup's shot skips the tab
+labels and the verse button, which the popup covers or dims, and relies on its own
+`mustShowLines` and `mustNotShowLines`. What Vision read is saved as
 `ocr.json` beside the screenshots, and the results as `checks.json`.
 
 The first real runs showed what this catches. Every screen covered by iOS's "Open in"

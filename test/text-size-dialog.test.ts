@@ -1,8 +1,5 @@
-import {
-  shouldStackTextSizeDialogControls,
-  TextSizeDialog,
-} from '@/components/TextSizeDialog';
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { TextSizeDialog } from '@/components/TextSizeDialog';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import { createElement } from 'react';
 import { StyleSheet } from 'react-native';
 import { Dialog } from 'react-native-paper';
@@ -80,12 +77,6 @@ describe('TextSizeDialog', () => {
     },
   );
 
-  it('reflows dense native controls for phone-width enlarged text', () => {
-    expect(shouldStackTextSizeDialogControls(320, 4)).toBe(true);
-    expect(shouldStackTextSizeDialogControls(320, 2)).toBe(true);
-    expect(shouldStackTextSizeDialogControls(1024, 1)).toBe(false);
-  });
-
   it.each(languageCases)(
     'renders complete localized controls for $language',
     ({
@@ -113,14 +104,8 @@ describe('TextSizeDialog', () => {
     },
   );
 
-  it('applies a 5% change and dismisses only after persistence resolves', async () => {
-    let resolvePersistence: (() => void) | undefined;
-    const setTextScale = jest.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          resolvePersistence = resolve;
-        }),
-    );
+  it('applies each 5% change at once and stays open', () => {
+    const setTextScale = jest.fn().mockResolvedValue(undefined);
     const onDismiss = jest.fn();
     const screen = renderWithPreferences(
       createElement(TextSizeDialog, { onDismiss, visible: true }),
@@ -131,37 +116,52 @@ describe('TextSizeDialog', () => {
       screen.getByLabelText('Increase text size by five percent'),
     );
     expect(screen.getByText('Current selection: 130%')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Apply' }));
-
-    expect(setTextScale).toHaveBeenCalledWith(1.3);
-    expect(onDismiss).not.toHaveBeenCalled();
+    expect(setTextScale).toHaveBeenLastCalledWith(1.3);
 
     fireEvent(
       screen.getByRole('adjustable'),
       'accessibilityAction',
       { nativeEvent: { actionName: 'increment' } },
     );
-    expect(screen.queryByText('Current selection: 135%')).toBeNull();
-    expect(setTextScale).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      resolvePersistence?.();
-    });
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Current selection: 135%')).toBeTruthy();
+    expect(setTextScale).toHaveBeenLastCalledWith(1.35);
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull();
   });
 
-  it('resets a smaller selection to the 125% default', () => {
+  it('applies a slider drag when the finger lifts', () => {
+    const setTextScale = jest.fn().mockResolvedValue(undefined);
     const screen = renderWithPreferences(
       createElement(TextSizeDialog, { onDismiss: jest.fn(), visible: true }),
-      { textScale: 1 },
+      { setTextScale },
+    );
+    const slider = screen.getByRole('adjustable');
+
+    fireEvent(slider, 'layout', { nativeEvent: { layout: { width: 200 } } });
+    fireEvent(slider, 'responderGrant', { nativeEvent: { locationX: 100 } });
+    fireEvent(slider, 'responderMove', { nativeEvent: { locationX: 200 } });
+    expect(screen.getByText('Current selection: 200%')).toBeTruthy();
+    expect(setTextScale).not.toHaveBeenCalled();
+
+    fireEvent(slider, 'responderRelease', { nativeEvent: { locationX: 200 } });
+    expect(setTextScale).toHaveBeenCalledTimes(1);
+    expect(setTextScale).toHaveBeenCalledWith(2);
+  });
+
+  it('resets a smaller selection to the 125% default at once', () => {
+    const setTextScale = jest.fn().mockResolvedValue(undefined);
+    const screen = renderWithPreferences(
+      createElement(TextSizeDialog, { onDismiss: jest.fn(), visible: true }),
+      { setTextScale, textScale: 1 },
     );
 
     fireEvent.press(screen.getByRole('button', { name: 'Reset to 125%' }));
 
     expect(screen.getByText('Current selection: 125%')).toBeTruthy();
+    expect(setTextScale).toHaveBeenCalledWith(1.25);
   });
 
-  it('announces a localized failure and succeeds through the explicit retry', async () => {
+  it('announces a localized failure and clears it when the next size saves', async () => {
     const onDismiss = jest.fn();
     const setTextScale = jest
       .fn()
@@ -173,19 +173,16 @@ describe('TextSizeDialog', () => {
     );
 
     fireEvent.press(screen.getByLabelText('将字体大小增加百分之五'));
-    fireEvent.press(screen.getByRole('button', { name: '应用' }));
-
     await waitFor(() => {
       expect(
         screen.getByText('无法保存字体大小。请再试一次。'),
       ).toBeTruthy();
     });
-    expect(onDismiss).not.toHaveBeenCalled();
 
-    fireEvent.press(screen.getByRole('button', { name: '重试' }));
-    await waitFor(() => {
-      expect(setTextScale).toHaveBeenCalledTimes(2);
-      expect(onDismiss).toHaveBeenCalledTimes(1);
-    });
+    fireEvent.press(screen.getByLabelText('将字体大小增加百分之五'));
+    expect(setTextScale).toHaveBeenCalledTimes(2);
+    expect(setTextScale).toHaveBeenLastCalledWith(1.35);
+    expect(screen.queryByText('无法保存字体大小。请再试一次。')).toBeNull();
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 });

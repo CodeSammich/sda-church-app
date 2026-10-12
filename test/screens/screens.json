@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the shots to upload, in order. Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the shots to upload, in order. Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -19,10 +19,10 @@
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give.",
-    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, and text scrolled under the status bar.",
+    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, and the popup a tapped verse opens.",
     "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
     "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
-    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its legal page."
+    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its legal page and its Text size and Language dialogs."
   },
   "screens": [
     {
@@ -129,6 +129,16 @@
       "variants": ["default", "large", "dark"],
       "checks": ["statusBarClear"],
       "mustShowLines": ["^14\\b", "^15\\b", "^16\\b", "^John\\b"]
+    },
+    {
+      "name": "bible-verse-popup",
+      "group": "bible-reading",
+      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The original-language text comes from the network, so it isn't required. Vision reads the share icon before Share Verse as <.",
+      "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=16&verseEnd=16&popup=verse",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^John 3:16$", "\\bShare Verse$"],
+      "mustNotShowLines": ["^Close$"]
     },
     {
       "name": "bible-long-chapter",
@@ -302,6 +312,24 @@
       "group": "worship-and-you",
       "path": "you",
       "variants": ["default", "dark", "large", "zh"]
+    },
+    {
+      "name": "text-size",
+      "group": "worship-and-you",
+      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% it's at its tallest, held to 85% of the height between the safe areas, with its text scrolling. Its title is also on the You screen behind it, so the rules require lines only the dialog shows.",
+      "path": "you?popup=text-size",
+      "variants": ["default", "xl"],
+      "mustShowLines": ["^Current selection", "^Reset to 125%"],
+      "mustNotShowLines": ["^Apply$", "^Close$"]
+    },
+    {
+      "name": "language",
+      "group": "worship-and-you",
+      "$comment": "The Language dialog, opened by popup=language (#372): an X beside its title and no Close button (#464). Its title is also on the You screen behind it, so the rules require the options' descriptions, which only the dialog shows.",
+      "path": "you?popup=language",
+      "variants": ["default"],
+      "mustShowLines": ["^Traditional Chinese", "^Simplified Chinese"],
+      "mustNotShowLines": ["^Close$"]
     },
     {
       "name": "legal",

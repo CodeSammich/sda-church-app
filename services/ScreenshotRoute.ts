@@ -42,3 +42,18 @@ export const takeScreenshotRoute = async (): Promise<string | null> => {
   await AsyncStorage.removeItem(SCREENSHOT_ROUTE_KEY);
   return parseScreenshotRoute(value);
 };
+
+/**
+ * The popup a key-screen path asks for with `popup=`, such as
+ * `bible?…&verseStart=16&popup=verse`, if it's one the screen can open. The
+ * capture can't tap, so this is how it shows a popup or dialog (#372).
+ * Outside the Simulator preview build it's always null, so a real link can't
+ * open one.
+ */
+export const getScreenshotPopup = <T extends string>(
+  value: string | string[] | undefined,
+  popups: readonly T[],
+): T | null =>
+  isKeyScreensBuild() && typeof value === 'string' && (popups as readonly string[]).includes(value)
+    ? (value as T)
+    : null;

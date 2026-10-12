@@ -57,7 +57,7 @@ jobs:
       matrix:
         # One runner per key-screen group in test/screens/screens.json, each
         # of related screens, so the release PR waits for the slowest group
-        # rather than all 81 shots (#453). A test keeps this list and
+        # rather than all 85 shots (#453). A test keeps this list and
         # screens.json in step. GitHub's free plan runs five Mac jobs at once.
         # Three Simulators on one runner were slower: its 3 processors couldn't
         # keep up with them.
@@ -67,7 +67,7 @@ jobs:
         # separate compiles made the run wait for the slowest of five. A test
         # checks that exactly one group builds and that the others wait for it.
         include:
-          - group: worship-and-you
+          - group: bible-text
             builds: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -229,7 +229,7 @@ jobs:
           retention-days: 1
 
       - name: Wait for the shared app
-        # The worship-and-you runner uploads it when its compile finishes.
+        # The bible-text runner uploads it when its compile finishes.
         # Gives up as soon as that runner ends without it, rather than waiting
         # out the timeout.
         if: ${{ !matrix.builds }}
@@ -245,9 +245,9 @@ jobs:
           until gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' |
             grep -qx "ios-simulator-app-$RUN_ID"; do
             builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "Key screens (worship-and-you)") | .conclusion // ""')"
+              --jq '.jobs[] | select(.name == "Key screens (bible-text)") | .conclusion // ""')"
             if [ -n "$builder" ]; then
-              echo "::error::The worship-and-you runner ended ($builder) without sharing the app." >&2
+              echo "::error::The bible-text runner ended ($builder) without sharing the app." >&2
               exit 1
             fi
             sleep 15
