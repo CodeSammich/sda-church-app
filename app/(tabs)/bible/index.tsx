@@ -3304,6 +3304,27 @@ export default function BibleScreen() {
 
   const closeModal = () => setModalType(null);
 
+  // A popup's title, with an X that closes it. The empty side matches the X,
+  // so the title stays centered.
+  const renderPopupHeader = (title: string, onClose: () => void) => (
+    <View style={styles.popupHeader}>
+      <View style={styles.popupCloseButton} />
+      <Text
+        variant="titleLarge"
+        style={[styles.popupTitle, { color: theme.colors.onSurface }]}
+      >
+        {title}
+      </Text>
+      <IconButton
+        icon="close"
+        size={scaleTypographyMetric(24, bibleUiTextScale)}
+        onPress={onClose}
+        accessibilityLabel={labels.closeAction}
+        style={styles.popupCloseButton}
+      />
+    </View>
+  );
+
   // The hymns on the verse whose details are open, the main translation's
   // hymnal first: the reverse of a hymn's verse chip.
   const verseHymns = useMemo(
@@ -4070,12 +4091,7 @@ export default function BibleScreen() {
           ]}
         >
           <View style={ReaderStyles.modalInner}>
-            <Text
-              variant="titleLarge"
-              style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-            >
-              {labels.audioSettings}
-            </Text>
+            {renderPopupHeader(labels.audioSettings, () => setAudioSettingsVisible(false))}
             <Divider />
             <ScrollView>
               <Text
@@ -4329,12 +4345,7 @@ export default function BibleScreen() {
           ]}
         >
           <View style={ReaderStyles.modalInner}>
-            <Text
-              variant="titleLarge"
-              style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-            >
-              {labels.sleepTimer}
-            </Text>
+            {renderPopupHeader(labels.sleepTimer, () => setSleepTimerVisible(false))}
             <Divider />
             <ScrollView>
               {(
@@ -4410,12 +4421,7 @@ export default function BibleScreen() {
           <View style={ReaderStyles.modalInner}>
             {lastActiveType === 'verse-hymns' ? (
               <>
-                <Text
-                  variant="titleLarge"
-                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-                >
-                  {labels.verseHymnsTitle}
-                </Text>
+                {renderPopupHeader(labels.verseHymnsTitle, closeModal)}
                 <Divider />
                 <ScrollView contentContainerStyle={{ paddingVertical: 4 }}>
                   {verseHymns.map((hymn) => (
@@ -4463,12 +4469,7 @@ export default function BibleScreen() {
               </>
             ) : lastActiveType === 'saved' ? (
               <>
-                <Text
-                  variant="titleLarge"
-                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-                >
-                  {labels.savedVerses}
-                </Text>
+                {renderPopupHeader(labels.savedVerses, closeModal)}
                 <Text
                   variant="bodySmall"
                   style={{
@@ -4610,23 +4611,10 @@ export default function BibleScreen() {
               </>
             ) : lastActiveType === 'verse-detail' ? (
               <>
-                {/* The empty side matches the X, so the title stays centered. */}
-                <View style={styles.verseDetailHeader}>
-                  <View style={styles.verseDetailCloseButton} />
-                  <Text
-                    variant="titleLarge"
-                    style={[styles.verseDetailTitle, { color: theme.colors.onSurface }]}
-                  >
-                    {book?.name} {chapterNum}:{selectedVerseNum}
-                  </Text>
-                  <IconButton
-                    icon="close"
-                    size={scaleTypographyMetric(24, bibleUiTextScale)}
-                    onPress={closeModal}
-                    accessibilityLabel={labels.closeAction}
-                    style={styles.verseDetailCloseButton}
-                  />
-                </View>
+                {renderPopupHeader(
+                  `${book?.name ?? ''} ${chapterNum}:${selectedVerseNum}`,
+                  closeModal,
+                )}
                 <Divider />
                 <ScrollView style={ReaderStyles.modalScroll}>
                   <View style={ReaderStyles.detailSection}>
@@ -4932,18 +4920,16 @@ export default function BibleScreen() {
               </>
             ) : (
               <>
-                <Text
-                  variant="titleLarge"
-                  style={[ReaderStyles.modalTitle, { color: theme.colors.onSurface }]}
-                >
-                  {lastActiveType === 'translation'
+                {renderPopupHeader(
+                  lastActiveType === 'translation'
                     ? labels.translation
                     : lastActiveType === 'book'
                       ? labels.book
                       : lastActiveType === 'verse'
                         ? labels.verse
-                        : labels.chapter}
-                </Text>
+                        : labels.chapter,
+                  closeModal,
+                )}
                 <Divider />
                 <FlatList<
                   | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
@@ -5257,19 +5243,19 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     controlDockScrollContent: {
       flexGrow: 1,
     },
-    verseDetailHeader: {
+    popupHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       marginTop: -8,
       marginBottom: 4,
       paddingHorizontal: 4,
     },
-    verseDetailTitle: {
+    popupTitle: {
       flex: 1,
       textAlign: 'center',
     },
     // Fits the icon at the reader's largest control size (1.3×).
-    verseDetailCloseButton: {
+    popupCloseButton: {
       margin: 0,
       width: 48,
       height: 48,
