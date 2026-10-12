@@ -133,11 +133,11 @@
     {
       "name": "bible-verse-popup",
       "group": "bible-reading",
-      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The original-language text comes from the network, so it isn't required.",
+      "$comment": "The popup a tapped verse opens, opened by popup=verse in the preview build (#372): the reference as its title beside an X, with no Close button (#464). A popup covers or dims the tab bar and chapter controls, so those aren't checked. The original-language text comes from the network, so it isn't required. Vision reads the share icon before Share Verse as <.",
       "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=16&verseEnd=16&popup=verse",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
-      "mustShowLines": ["^John 3:16$", "^Share Verse$"],
+      "mustShowLines": ["^John 3:16$", "\\bShare Verse$"],
       "mustNotShowLines": ["^Close$"]
     },
     {

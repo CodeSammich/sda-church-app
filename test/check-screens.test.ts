@@ -44,18 +44,18 @@ describe('key-screen text checks on real screenshots', () => {
 });
 
 describe('popup shots (#372)', () => {
-  const verse = [line('John 3:16', 0.2), line('For God so loved the world', 0.25), line('Share Verse', 0.75)];
+  const verse = samples.clean['bible-verse-popup-default'] as Line[];
+  const textSize = samples.clean['text-size-xl'] as Line[];
 
   it("don't need the tab bar or the verse button, which the popup covers or dims", () => {
     expect(checkShot(shot('bible-verse-popup-default'), verse)).toEqual([]);
+    expect(checkShot(shot('text-size-xl'), textSize)).toEqual([]);
   });
 
-  it('catch a Close button coming back', () => {
+  it('catch a Close or Apply button coming back', () => {
     expect(checkShot(shot('bible-verse-popup-default'), [...verse, line('Close', 0.8)])).toEqual([
       '"Close" matches /^Close$/, which must not show',
     ]);
-    const textSize = [line('Text size', 0.2), line('Current selection: 200%', 0.3), line('Reset to 125%', 0.85)];
-    expect(checkShot(shot('text-size-xl'), textSize)).toEqual([]);
     expect(checkShot(shot('text-size-xl'), [...textSize, line('Apply', 0.9)])).toEqual([
       '"Apply" matches /^Apply$/, which must not show',
     ]);

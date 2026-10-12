@@ -1,5 +1,5 @@
 {
- "$comment": "Text Apple Vision read from real key-screen screenshots (#331), unedited, for testing scripts/check-screens.cjs against what Vision really returns. clean: a good run; openPrompt: a run where iOS covered each screen with its Open in prompt. Vision garbles some text that is fine on screen, such as small print in images and superscript footnote numbers: in library-zh, ANDKPW MUKKA is ANDREW MURRAY on the Humility cover image (the app's own caption below it reads Andrew Murray), and in bible-scrolled-default, eternal life4. is John 3:15 with the BSB's footnote 4. The checks look only for particular labels in particular places, so text like this can't pass or fail them.",
+ "$comment": "Text Apple Vision read from real key-screen screenshots (#331), unedited, for testing scripts/check-screens.cjs against what Vision really returns. clean: a good run (bible-verse-popup-default and text-size-xl from the first popup shots, #372, where Vision read the share icon as <); openPrompt: a run where iOS covered each screen with its Open in prompt. Vision garbles some text that is fine on screen, such as small print in images and superscript footnote numbers: in library-zh, ANDKPW MUKKA is ANDREW MURRAY on the Humility cover image (the app's own caption below it reads Andrew Murray), and in bible-scrolled-default, eternal life4. is John 3:15 with the BSB's footnote 4. The checks look only for particular labels in particular places, so text like this can't pass or fail them.",
  "clean": {
   "bible-dual-default": [
    {
@@ -1185,6 +1185,451 @@
      0.927,
      0.132,
      0.015
+    ]
+   }
+  ],
+  "bible-verse-popup-default": [
+   {
+    "text": "9:41",
+    "box": [
+     0.145,
+     0.026,
+     0.088,
+     0.019
+    ]
+   },
+   {
+    "text": "16 For God so loved the world that He gave His",
+    "box": [
+     0.019,
+     0.109,
+     0.858,
+     0.018
+    ]
+   },
+   {
+    "text": "one and only® Son, that everyone who believes",
+    "box": [
+     0.075,
+     0.134,
+     0.849,
+     0.029
+    ]
+   },
+   {
+    "text": "in Him shall not perish but have eternal life.",
+    "box": [
+     0.069,
+     0.167,
+     0.792,
+     0.019
+    ]
+   },
+   {
+    "text": "John 3:16",
+    "box": [
+     0.388,
+     0.222,
+     0.221,
+     0.022
+    ]
+   },
+   {
+    "text": "11",
+    "box": [
+     0.019,
+     0.311,
+     0.032,
+     0.013
+    ]
+   },
+   {
+    "text": "For God so loved the world that He gave His one",
+    "box": [
+     0.079,
+     0.285,
+     0.817,
+     0.017
+    ]
+   },
+   {
+    "text": "and only® Son, that everyone who believes in Him",
+    "box": [
+     0.079,
+     0.31,
+     0.83,
+     0.02
+    ]
+   },
+   {
+    "text": "shall not perish but have eternal life.",
+    "box": [
+     0.079,
+     0.336,
+     0.618,
+     0.017
+    ]
+   },
+   {
+    "text": "1!",
+    "box": [
+     0.019,
+     0.458,
+     0.032,
+     0.013
+    ]
+   },
+   {
+    "text": "2",
+    "box": [
+     0.019,
+     0.56,
+     0.022,
+     0.012
+    ]
+   },
+   {
+    "text": "Koine Greek (Original)",
+    "box": [
+     0.082,
+     0.397,
+     0.287,
+     0.012
+    ]
+   },
+   {
+    "text": "Dts yàp nyátnoev ô Đòg tòv kóouov,",
+    "box": [
+     0.079,
+     0.422,
+     0.776,
+     0.026
+    ]
+   },
+   {
+    "text": "COTE TOV YiOV TOV HOvOyEvñ ĚwKEv, íva nãC",
+    "box": [
+     0.082,
+     0.458,
+     0.833,
+     0.023
+    ]
+   },
+   {
+    "text": "ti cn đà cư o tn ó1na, 2xn",
+    "box": [
+     0.079,
+     0.49,
+     0.817,
+     0.025
+    ]
+   },
+   {
+    "text": "Swnv aiwviov.",
+    "box": [
+     0.079,
+     0.526,
+     0.278,
+     0.021
+    ]
+   },
+   {
+    "text": "Source: Statistical Restoration Greek New Testament. Edited by",
+    "box": [
+     0.082,
+     0.564,
+     0.823,
+     0.013
+    ]
+   },
+   {
+    "text": "Alan Bunning for the Center for New Testament Restoration.",
+    "box": [
+     0.082,
+     0.581,
+     0.77,
+     0.012
+    ]
+   },
+   {
+    "text": "Licensed CC BY 4.0.",
+    "box": [
+     0.082,
+     0.599,
+     0.268,
+     0.012
+    ]
+   },
+   {
+    "text": "2",
+    "box": [
+     0.019,
+     0.66,
+     0.022,
+     0.013
+    ]
+   },
+   {
+    "text": "Footnote 5",
+    "box": [
+     0.072,
+     0.651,
+     0.152,
+     0.014
+    ]
+   },
+   {
+    "text": "Or only begotten or unique; also in verse 18",
+    "box": [
+     0.082,
+     0.676,
+     0.713,
+     0.019
+    ]
+   },
+   {
+    "text": "Save",
+    "box": [
+     0.265,
+     0.767,
+     0.095,
+     0.015
+    ]
+   },
+   {
+    "text": "< Share Verse",
+    "box": [
+     0.577,
+     0.761,
+     0.268,
+     0.027
+    ]
+   },
+   {
+    "text": "2)",
+    "box": [
+     0.054,
+     0.833,
+     0.057,
+     0.023
+    ]
+   },
+   {
+    "text": "0:00 0",
+    "box": [
+     0.025,
+     0.881,
+     0.101,
+     0.015
+    ]
+   },
+   {
+    "text": "30",
+    "box": [
+     0.593,
+     0.844,
+     0.044,
+     0.013
+    ]
+   },
+   {
+    "text": "0:00",
+    "box": [
+     0.915,
+     0.882,
+     0.057,
+     0.012
+    ]
+   },
+   {
+    "text": "John v",
+    "box": [
+     0.268,
+     0.927,
+     0.12,
+     0.015
+    ]
+   },
+   {
+    "text": "3 v",
+    "box": [
+     0.587,
+     0.929,
+     0.06,
+     0.013
+    ]
+   },
+   {
+    "text": "Verse v",
+    "box": [
+     0.716,
+     0.926,
+     0.133,
+     0.016
+    ]
+   }
+  ],
+  "text-size-xl": [
+   {
+    "text": "9:41",
+    "box": [
+     0.145,
+     0.027,
+     0.083,
+     0.017
+    ]
+   },
+   {
+    "text": "Text size",
+    "box": [
+     0.098,
+     0.184,
+     0.461,
+     0.043
+    ]
+   },
+   {
+    "text": "X",
+    "box": [
+     0.814,
+     0.189,
+     0.069,
+     0.032
+    ]
+   },
+   {
+    "text": "Adjust persistent app text",
+    "box": [
+     0.104,
+     0.266,
+     0.785,
+     0.029
+    ]
+   },
+   {
+    "text": "from 100% to 200%.",
+    "box": [
+     0.098,
+     0.307,
+     0.656,
+     0.031
+    ]
+   },
+   {
+    "text": "Current selection:",
+    "box": [
+     0.186,
+     0.373,
+     0.631,
+     0.029
+    ]
+   },
+   {
+    "text": "200%",
+    "box": [
+     0.385,
+     0.422,
+     0.224,
+     0.031
+    ]
+   },
+   {
+    "text": "100%",
+    "box": [
+     0.104,
+     0.522,
+     0.17,
+     0.025
+    ]
+   },
+   {
+    "text": "200%",
+    "box": [
+     0.71,
+     0.52,
+     0.18,
+     0.028
+    ]
+   },
+   {
+    "text": "-5%",
+    "box": [
+     0.211,
+     0.58,
+     0.155,
+     0.028
+    ]
+   },
+   {
+    "text": "+5%",
+    "box": [
+     0.621,
+     0.578,
+     0.155,
+     0.033
+    ]
+   },
+   {
+    "text": "\"I was blind, but now",
+    "box": [
+     0.132,
+     0.663,
+     0.703,
+     0.055
+    ]
+   },
+   {
+    "text": "Isee.\" - John 9:25",
+    "box": [
+     0.136,
+     0.719,
+     0.628,
+     0.037
+    ]
+   },
+   {
+    "text": "Reset to 125%",
+    "box": [
+     0.284,
+     0.812,
+     0.432,
+     0.028
+    ]
+   },
+   {
+    "text": "Home",
+    "box": [
+     0.082,
+     0.942,
+     0.085,
+     0.012
+    ]
+   },
+   {
+    "text": "Bible",
+    "box": [
+     0.338,
+     0.942,
+     0.076,
+     0.013
+    ]
+   },
+   {
+    "text": "Explore",
+    "box": [
+     0.571,
+     0.942,
+     0.107,
+     0.013
+    ]
+   },
+   {
+    "text": "You",
+    "box": [
+     0.845,
+     0.942,
+     0.054,
+     0.012
     ]
    }
   ]
