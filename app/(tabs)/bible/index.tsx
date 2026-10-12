@@ -1,6 +1,7 @@
 import { AppIcon } from '@/components/AppIcon';
 import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
+import { PopupHeader } from '@/components/PopupHeader';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setIsAudioActiveAsync } from 'expo-audio';
@@ -3304,25 +3305,15 @@ export default function BibleScreen() {
 
   const closeModal = () => setModalType(null);
 
-  // A popup's title, with an X that closes it. The empty side matches the X,
-  // so the title stays centered.
   const renderPopupHeader = (title: string, onClose: () => void) => (
-    <View style={styles.popupHeader}>
-      <View style={styles.popupCloseButton} />
-      <Text
-        variant="titleLarge"
-        style={[styles.popupTitle, { color: theme.colors.onSurface }]}
-      >
-        {title}
-      </Text>
-      <IconButton
-        icon="close"
-        size={scaleTypographyMetric(24, bibleUiTextScale)}
-        onPress={onClose}
-        accessibilityLabel={labels.closeAction}
-        style={styles.popupCloseButton}
-      />
-    </View>
+    <PopupHeader
+      centered
+      closeLabel={labels.closeAction}
+      onClose={onClose}
+      style={styles.popupHeader}
+      textScale={bibleUiTextScale}
+      title={title}
+    />
   );
 
   // The hymns on the verse whose details are open, the main translation's
@@ -5244,22 +5235,9 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
       flexGrow: 1,
     },
     popupHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
       marginTop: -8,
       marginBottom: 4,
       paddingHorizontal: 4,
-    },
-    popupTitle: {
-      flex: 1,
-      textAlign: 'center',
-    },
-    // Fits the icon at the reader's largest control size (1.3×).
-    popupCloseButton: {
-      margin: 0,
-      width: 48,
-      height: 48,
-      borderRadius: 24,
     },
     selectionBarInner: {
       flexDirection: 'row',
