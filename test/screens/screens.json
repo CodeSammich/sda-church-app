@@ -316,7 +316,7 @@
     {
       "name": "text-size",
       "group": "worship-and-you",
-      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% it's at its tallest, held to 85% of the height between the safe areas, with its text scrolling. Its title is also on the You screen behind it, so the rules require lines only the dialog shows.",
+      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% its text runs past the popups' height limit (POPUP_MAX_HEIGHT_FRACTION in styles/PopupStyles.ts), so the dialog stops there and its text scrolls, leaving room around it to tap. Its title is also on the You screen behind it, so the rules require lines only the dialog shows.",
       "path": "you?popup=text-size",
       "variants": ["default", "xl"],
       "mustShowLines": ["^Current selection", "^Reset to 125%"],

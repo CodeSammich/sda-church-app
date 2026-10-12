@@ -653,10 +653,7 @@ export default function BibleScreen() {
     }[translation.lang];
     return `${translation.name} (${translationLanguageLabel})`;
   };
-  const popupMaxHeight = usePopupMaxHeight(0.8);
-  const audioSettingsMaxHeight = usePopupMaxHeight(0.82);
-  // Short enough to leave room above and below for a tap that closes it.
-  const verseDetailMaxHeight = usePopupMaxHeight(0.85);
+  const popupMaxHeight = usePopupMaxHeight();
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
@@ -4095,7 +4092,7 @@ export default function BibleScreen() {
           onDismiss={() => setAudioSettingsVisible(false)}
           contentContainerStyle={[
             ReaderStyles.audioSettingsContent,
-            { marginBottom: bottomDockInset + 12, maxHeight: audioSettingsMaxHeight },
+            { marginBottom: bottomDockInset + 12, maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
         >
@@ -4423,7 +4420,6 @@ export default function BibleScreen() {
           contentContainerStyle={[
             ReaderStyles.modalContent,
             { maxHeight: popupMaxHeight },
-            lastActiveType === 'verse-detail' && { maxHeight: verseDetailMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
         >

@@ -92,7 +92,7 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
   const { themeMode, setThemeMode } = useContext(ThemeContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight(0.85);
+  const popupMaxHeight = usePopupMaxHeight();
   const optionLanguage = language in copy ? language : 'en';
 
   return (

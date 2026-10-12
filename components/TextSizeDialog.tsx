@@ -182,7 +182,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
   const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight(0.85);
+  const popupMaxHeight = usePopupMaxHeight();
   const labels = labelsByLanguage[language] ?? labelsByLanguage.en;
   // The size the slider shows. While a finger drags the slider, it runs ahead
   // of the app's size, which changes when the finger lifts.

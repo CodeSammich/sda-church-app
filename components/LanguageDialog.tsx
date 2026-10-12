@@ -50,7 +50,7 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
   const { language, setLanguage } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight(0.85);
+  const popupMaxHeight = usePopupMaxHeight();
 
   return (
     <Portal>
