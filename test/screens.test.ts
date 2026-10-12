@@ -71,6 +71,24 @@ describe('key screen list (test/screens/screens.json)', () => {
       'sdachurchapp://explore',
     );
   });
+
+  it('opens only popups the screen can open from its path (#372)', () => {
+    const screenFiles: Record<string, string> = {
+      bible: 'app/(tabs)/bible/index.tsx',
+      you: 'app/(tabs)/you/index.tsx',
+    };
+    const popups = config.screens.filter((screen: { path: string }) => /[?&]popup=/.test(screen.path));
+    expect(popups.length).toBeGreaterThan(0);
+    for (const screen of popups) {
+      const [route, query] = screen.path.split('?');
+      const popup = new URLSearchParams(query).get('popup');
+      const source = repoFile(screenFiles[route]);
+      expect({ path: screen.path, opens: new RegExp(`getScreenshotPopup\\([^)]*'${popup}'`).test(source) }).toEqual({
+        path: screen.path,
+        opens: true,
+      });
+    }
+  });
 });
 
 describe('App Store shots', () => {

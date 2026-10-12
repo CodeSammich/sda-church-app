@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   SCREENSHOT_ROUTE_KEY,
+  getScreenshotPopup,
   parseScreenshotRoute,
   takeScreenshotRoute,
 } from '@/services/ScreenshotRoute';
@@ -54,6 +55,20 @@ describe('saved screen for the key-screen capture', () => {
       expect(await AsyncStorage.getItem(SCREENSHOT_ROUTE_KEY)).toBe('explore');
     }
     await AsyncStorage.removeItem(SCREENSHOT_ROUTE_KEY);
+  });
+
+  it('opens a popup the screen knows, from the path (#372)', () => {
+    expect(getScreenshotPopup('text-size', ['language', 'text-size'])).toBe('text-size');
+    for (const value of [undefined, '', 'settings', ['text-size']]) {
+      expect(getScreenshotPopup(value, ['language', 'text-size'])).toBeNull();
+    }
+  });
+
+  it('never opens a popup from a link outside the Simulator preview build', () => {
+    for (const value of [undefined, '', '0', 'true']) {
+      withKeyScreensBuild(value);
+      expect(getScreenshotPopup('verse', ['verse'])).toBeNull();
+    }
   });
 });
 

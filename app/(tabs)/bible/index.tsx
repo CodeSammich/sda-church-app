@@ -120,6 +120,7 @@ import {
   SavedVerseSort,
   storeSavedVerses,
 } from '@/services/SavedVersesService';
+import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
 import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
@@ -603,6 +604,7 @@ export default function BibleScreen() {
     verseEnd: paramVerseEnd,
     referenceRequest: paramReferenceRequest,
     backTo: paramBackTo,
+    popup: paramPopup,
   } = useLocalSearchParams<{
     bookId?: string;
     chapter?: string;
@@ -611,6 +613,7 @@ export default function BibleScreen() {
     verseEnd?: string;
     referenceRequest?: string;
     backTo?: string;
+    popup?: string;
   }>();
 
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
@@ -2832,6 +2835,21 @@ export default function BibleScreen() {
     setSelectedVerseNum(num);
     setModalType('verse-detail');
   };
+
+  // The key-screen capture can't tap a verse, so its build opens the popup
+  // from the path (popup=verse, for verseStart), once the linked chapter has
+  // loaded (#372). A chapter change clears chapterData first, so a loaded
+  // chapter that matches the link is the linked one.
+  const screenshotPopupOpened = useRef(false);
+  useEffect(() => {
+    if (screenshotPopupOpened.current || !chapterData) return;
+    if (getScreenshotPopup(paramPopup, ['verse']) !== 'verse') return;
+    if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
+    const verse = Number(paramVerseStart);
+    if (!Number.isInteger(verse) || verse < 1) return;
+    screenshotPopupOpened.current = true;
+    openVerseDetails(verse);
+  }, [book?.id, chapterData, chapterNum, paramBookId, paramChapter, paramPopup, paramVerseStart]);
 
   const supportingVerses = useMemo(
     () => indexChapterVerses(supportingChapterData),

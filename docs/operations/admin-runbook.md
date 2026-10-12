@@ -633,7 +633,7 @@ into `main`, and can be run manually on any branch.
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(81 screenshots of 29 screens in all), and checks their text with
+(85 screenshots of 32 screens in all), and checks their text with
 `scripts/check-screens.cjs`. Another job then joins the groups,
 before the review comment and **Screenshots reviewed**. The run takes 15 to 25 minutes, depending on how much of the compile cache it reuses. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
