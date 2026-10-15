@@ -268,6 +268,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
   const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
+  // Setup can't be closed, so it needs no room around it for a tap outside.
   const popupMaxHeight = usePopupMaxHeight(0.9);
   const { width: viewportWidth } = useWindowDimensions();
   const [isSavingTextScale, setIsSavingTextScale] = useState(false);

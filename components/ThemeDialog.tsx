@@ -1,3 +1,4 @@
+import { PopupHeader } from '@/components/PopupHeader';
 import { LanguageContext } from '@/constants/LanguageContext';
 import {
   THEME_DARK,
@@ -91,7 +92,7 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
   const { themeMode, setThemeMode } = useContext(ThemeContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight(0.9);
+  const popupMaxHeight = usePopupMaxHeight();
   const optionLanguage = language in copy ? language : 'en';
 
   return (
@@ -101,7 +102,13 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
         onDismiss={onDismiss}
         style={[styles.dialog, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
       >
-        <Dialog.Title>{labels.title}</Dialog.Title>
+        <PopupHeader
+          closeLabel={labels.close}
+          onClose={onDismiss}
+          style={styles.header}
+          title={labels.title}
+          variant="headlineSmall"
+        />
         <Dialog.ScrollArea style={styles.scrollArea}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <Text
@@ -164,46 +171,12 @@ export function ThemeDialog({ onDismiss, visible }: ThemeDialogProps) {
             </View>
           </ScrollView>
         </Dialog.ScrollArea>
-        <View style={styles.actions}>
-          <Pressable
-            accessibilityLabel={labels.close}
-            accessibilityRole="button"
-            onPress={onDismiss}
-            style={({ pressed }) => [
-              styles.close,
-              { borderColor: theme.colors.outline, opacity: pressed ? 0.78 : 1 },
-            ]}
-          >
-            <Text variant="labelLarge" style={[styles.closeLabel, { color: theme.colors.primary }]}>
-              {labels.close}
-            </Text>
-          </Pressable>
-        </View>
       </Dialog>
     </Portal>
   );
 }
 
 const styles = StyleSheet.create({
-  actions: {
-    alignItems: 'stretch',
-    paddingBottom: 16,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-  },
-  close: {
-    alignItems: 'center',
-    borderRadius: 22,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  closeLabel: {
-    fontWeight: '700',
-    textAlign: 'center',
-  },
   description: {
     marginBottom: 16,
   },
@@ -211,6 +184,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     maxWidth: 560,
     width: '90%',
+  },
+  // Paper gives a dialog's first child a 24-point top margin; with the X's
+  // 48-point row, 16 keeps the title where Paper's own title sits.
+  header: {
+    marginBottom: 8,
+    marginTop: 16,
+    paddingLeft: 24,
+    paddingRight: 12,
   },
   option: {
     alignItems: 'center',
@@ -236,7 +217,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   scrollContent: {
+    paddingBottom: 24,
     paddingHorizontal: 24,
-    paddingVertical: 4,
+    paddingTop: 4,
   },
 });

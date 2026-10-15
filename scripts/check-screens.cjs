@@ -92,10 +92,15 @@ const showsLabel = (lines, label, region) => {
 // "V", and the other labels still show the language, so these aren't required.
 const required = (labels) => labels.filter((label) => [...label].length > 1);
 
-/** The labels a shot must show, by region. */
+/**
+ * The labels a shot must show, by region. A popup (popup= in its path, #372)
+ * covers or dims the tab bar and the chapter controls, so its own
+ * mustShowLines check it instead.
+ */
 const expectedLabels = (shot) => {
   const language = shot.settings.language;
   const expected = [];
+  if (/[?&]popup=/.test(shot.route)) return expected;
   if (shot.tabs !== false) expected.push(['tabs', required(TAB_LABELS[language])]);
   if (shot.route.startsWith('bible')) {
     const controls = shot.tabs === false ? 'chapterControlsReading' : 'chapterControls';

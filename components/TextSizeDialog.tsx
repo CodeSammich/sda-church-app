@@ -8,11 +8,12 @@ import {
   TEXT_SCALE_STEP,
   type TextScale,
 } from '@/constants/AppPreferences';
+import { PopupHeader } from '@/components/PopupHeader';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
-import { createElement, useContext, useEffect, useState } from 'react';
+import { createElement, useContext, useEffect, useRef, useState } from 'react';
 import {
   type GestureResponderEvent,
   type LayoutChangeEvent,
@@ -44,8 +45,6 @@ const labelsByLanguage = {
     saveError: 'Text size could not be saved. Please try again.',
     close: 'Close',
     reset: 'Reset to 125%',
-    apply: 'Apply',
-    retry: 'Retry',
   },
   zh: {
     title: '字體大小',
@@ -60,8 +59,6 @@ const labelsByLanguage = {
     saveError: '無法儲存字體大小。請再試一次。',
     close: '關閉',
     reset: '重設為 125%',
-    apply: '套用',
-    retry: '重試',
   },
   'zh-cn': {
     title: '字体大小',
@@ -76,8 +73,6 @@ const labelsByLanguage = {
     saveError: '无法保存字体大小。请再试一次。',
     close: '关闭',
     reset: '重置为 125%',
-    apply: '应用',
-    retry: '重试',
   },
   es: {
     title: 'Tamaño del texto',
@@ -94,58 +89,36 @@ const labelsByLanguage = {
     saveError: 'No se pudo guardar el tamaño del texto. Inténtalo de nuevo.',
     close: 'Cerrar',
     reset: 'Restablecer al 125%',
-    apply: 'Aplicar',
-    retry: 'Reintentar',
   },
 } as const;
 
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value));
 
-export const shouldStackTextSizeDialogControls = (
-  windowWidth: number,
-  effectiveTextScale: number,
-) => {
-  const safeWidth = Number.isFinite(windowWidth) ? Math.max(0, windowWidth) : 0;
-  const safeScale = Number.isFinite(effectiveTextScale)
-    ? Math.max(1, effectiveTextScale)
-    : 1;
-  return safeScale >= 1.5 || safeWidth < 280;
-};
-
 interface TextDialogActionProps {
-  busy?: boolean;
   disabled?: boolean;
-  kind?: 'contained' | 'plain';
   label: string;
   onPress: () => void;
-  stacked: boolean;
 }
 
 const TextDialogAction = ({
-  busy = false,
   disabled = false,
-  kind = 'plain',
   label,
   onPress,
-  stacked,
 }: TextDialogActionProps) => {
   const theme = useAppTheme();
-  const contained = kind === 'contained';
 
   return (
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
-      accessibilityState={{ busy, disabled }}
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.dialogAction,
-        stacked && styles.stackedDialogAction,
         {
-          backgroundColor: contained ? theme.colors.primary : 'transparent',
-          borderColor: contained ? theme.colors.primary : theme.colors.outline,
+          borderColor: theme.colors.outline,
           opacity: disabled ? 0.5 : pressed ? 0.78 : 1,
         },
       ]}
@@ -153,14 +126,7 @@ const TextDialogAction = ({
       <Text
         numberOfLines={1}
         ellipsizeMode="tail"
-        style={[
-          styles.dialogActionText,
-          {
-            color: contained
-              ? theme.colors.onPrimary
-              : theme.colors.primary,
-          },
-        ]}
+        style={[styles.dialogActionText, { color: theme.colors.primary }]}
         variant="labelLarge"
       >
         {label}
@@ -216,77 +182,78 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
   const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
-  const popupMaxHeight = usePopupMaxHeight(0.9);
+  const popupMaxHeight = usePopupMaxHeight();
   const labels = labelsByLanguage[language] ?? labelsByLanguage.en;
+  // The size the slider shows. While a finger drags the slider, it runs ahead
+  // of the app's size, which changes when the finger lifts.
   const [draftScale, setDraftScale] = useState<TextScale>(textScale);
-  const [isApplying, setIsApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [trackWidth, setTrackWidth] = useState(0);
-  // Keep the three dialog actions on one row. Their labels are allowed to
-  // shrink inside the dialog so Apply cannot be pushed off-screen at 165%.
-  const stackControls = false;
+  const appliedScale = useRef<TextScale | null>(textScale);
 
+  // Only on opening: while it's open, a save that finishes late mustn't move
+  // the slider back.
   useEffect(() => {
     if (visible) {
       setDraftScale(textScale);
       setApplyError(null);
+      appliedScale.current = textScale;
     }
-  }, [textScale, visible]);
+  }, [visible]);
 
   const currentPercent = Math.round(draftScale * 100);
   const stepPercent = Math.round(TEXT_SCALE_STEP * 100);
   const progress =
     (draftScale - TEXT_SCALE_MIN) / (TEXT_SCALE_MAX - TEXT_SCALE_MIN);
 
-  const setPercent = (percent: number) => {
+  // There's no Apply button: a new size takes effect for the whole app at
+  // once, so the app behind the dialog shows it.
+  const applyScale = (scale: TextScale) => {
+    setDraftScale(scale);
+    if (scale === appliedScale.current) return;
+    appliedScale.current = scale;
+    setApplyError(null);
+    setTextScale(scale).catch(() => {
+      // Let the same size be tried again.
+      appliedScale.current = null;
+      setApplyError(labels.saveError);
+    });
+  };
+
+  const setPercent = (percent: number, apply = true) => {
     const snappedPercent = clamp(
       Math.round(percent / stepPercent) * stepPercent,
       TEXT_SCALE_MIN * 100,
       TEXT_SCALE_MAX * 100,
     );
     const nextScale = Number((snappedPercent / 100).toFixed(2));
-    if (isTextScale(nextScale)) {
-      setApplyError(null);
-      setDraftScale(normalizeTextScale(nextScale));
+    if (!isTextScale(nextScale)) return;
+    const scale = normalizeTextScale(nextScale);
+    if (apply) {
+      applyScale(scale);
+    } else {
+      setDraftScale(scale);
     }
   };
 
   const adjustBySteps = (steps: number) =>
     setPercent(currentPercent + steps * stepPercent);
 
-  const updateFromTouch = (event: GestureResponderEvent) => {
-    if (isApplying || trackWidth <= 0) return;
+  // Resizing the whole app on every step of a drag would be slow, so a drag
+  // moves only the slider and the preview until the finger lifts.
+  const updateFromTouch = (event: GestureResponderEvent, apply = false) => {
+    if (trackWidth <= 0) return;
     setPercent(
       (TEXT_SCALE_MIN +
         clamp(event.nativeEvent.locationX / trackWidth, 0, 1) *
           (TEXT_SCALE_MAX - TEXT_SCALE_MIN)) *
         100,
+      apply,
     );
   };
 
   const handleTrackLayout = (event: LayoutChangeEvent) =>
     setTrackWidth(event.nativeEvent.layout.width);
-
-  const dismissWithoutApplying = () => {
-    if (isApplying) return;
-    setDraftScale(textScale);
-    setApplyError(null);
-    onDismiss();
-  };
-
-  const applyDraft = async () => {
-    if (isApplying || !isTextScale(draftScale)) return;
-    setIsApplying(true);
-    setApplyError(null);
-    try {
-      await setTextScale(draftScale);
-      onDismiss();
-    } catch {
-      setApplyError(labels.saveError);
-    } finally {
-      setIsApplying(false);
-    }
-  };
 
   const handleWebSliderKeyDown = (event: {
     key: string;
@@ -309,16 +276,20 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
     <Portal>
       <Dialog
         visible={visible}
-        onDismiss={dismissWithoutApplying}
-        dismissable={!isApplying}
-        dismissableBackButton={!isApplying}
+        onDismiss={onDismiss}
         style={[
           styles.dialog,
           { maxHeight: popupMaxHeight },
           getPopupSurfaceStyle(theme),
         ]}
       >
-        <Dialog.Title>{labels.title}</Dialog.Title>
+        <PopupHeader
+          closeLabel={labels.close}
+          onClose={onDismiss}
+          style={styles.header}
+          title={labels.title}
+          variant="headlineSmall"
+        />
         <Dialog.ScrollArea style={styles.scrollArea}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <Text variant="bodyMedium">{labels.description}</Text>
@@ -339,7 +310,6 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
                     'aria-valuemin': TEXT_SCALE_MIN * 100,
                     'aria-valuenow': currentPercent,
                     'aria-valuetext': labels.percent(currentPercent),
-                    disabled: isApplying,
                     max: TEXT_SCALE_MAX * 100,
                     min: TEXT_SCALE_MIN * 100,
                     onInput: (event: { currentTarget: { value: string } }) =>
@@ -348,7 +318,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
                     step: stepPercent,
                     style: {
                       accentColor: theme.colors.primary,
-                      cursor: isApplying ? 'default' : 'pointer',
+                      cursor: 'pointer',
                       height: 44,
                       width: '100%',
                     },
@@ -375,7 +345,6 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
                   }}
                   focusable
                   onAccessibilityAction={(event) => {
-                    if (isApplying) return;
                     if (event.nativeEvent.actionName === 'increment') {
                       adjustBySteps(1);
                     } else if (event.nativeEvent.actionName === 'decrement') {
@@ -383,10 +352,15 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
                     }
                   }}
                   onLayout={handleTrackLayout}
-                  onMoveShouldSetResponder={() => !isApplying}
-                  onResponderGrant={updateFromTouch}
-                  onResponderMove={updateFromTouch}
-                  onStartShouldSetResponder={() => !isApplying}
+                  onMoveShouldSetResponder={() => true}
+                  onResponderGrant={(event) => updateFromTouch(event)}
+                  onResponderMove={(event) => updateFromTouch(event)}
+                  onResponderRelease={(event) => updateFromTouch(event, true)}
+                  // Keep the drag from the dialog's scrolling, and apply the
+                  // size if the system takes the touch anyway.
+                  onResponderTerminationRequest={() => false}
+                  onResponderTerminate={() => applyScale(draftScale)}
+                  onStartShouldSetResponder={() => true}
                   style={styles.nativeSlider}
                 >
                   <View
@@ -431,13 +405,13 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
             <View style={styles.stepActionsRow}>
               <TextScaleStepAction
                 accessibilityLabel={labels.decrease}
-                disabled={isApplying || draftScale === TEXT_SCALE_MIN}
+                disabled={draftScale === TEXT_SCALE_MIN}
                 label="−5%"
                 onPress={() => adjustBySteps(-1)}
               />
               <TextScaleStepAction
                 accessibilityLabel={labels.increase}
-                disabled={isApplying || draftScale === TEXT_SCALE_MAX}
+                disabled={draftScale === TEXT_SCALE_MAX}
                 label="+5%"
                 onPress={() => adjustBySteps(1)}
               />
@@ -476,27 +450,10 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
           </ScrollView>
         </Dialog.ScrollArea>
         <View style={styles.actions}>
-          <View style={styles.secondaryActionsRow}>
-            <TextDialogAction
-              disabled={isApplying}
-              label={labels.close}
-              onPress={dismissWithoutApplying}
-              stacked={false}
-            />
-            <TextDialogAction
-              disabled={isApplying || draftScale === DEFAULT_TEXT_SCALE}
-              label={labels.reset}
-              onPress={() => setDraftScale(DEFAULT_TEXT_SCALE)}
-              stacked={false}
-            />
-          </View>
           <TextDialogAction
-            busy={isApplying}
-            kind="contained"
-            disabled={isApplying || draftScale === textScale}
-            label={applyError ? labels.retry : labels.apply}
-            onPress={() => void applyDraft()}
-            stacked
+            disabled={draftScale === DEFAULT_TEXT_SCALE}
+            label={labels.reset}
+            onPress={() => applyScale(DEFAULT_TEXT_SCALE)}
           />
         </View>
       </Dialog>
@@ -506,9 +463,6 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
 
 const styles = StyleSheet.create({
   actions: {
-    alignItems: 'stretch',
-    flexDirection: 'column',
-    gap: 8,
     paddingBottom: 16,
     paddingHorizontal: 24,
     paddingTop: 8,
@@ -526,13 +480,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 22,
     borderWidth: 1,
-    flexBasis: 0,
-    flexGrow: 1,
-    flexShrink: 1,
-    gap: 8,
     justifyContent: 'center',
     minHeight: 48,
-    minWidth: 0,
     paddingHorizontal: 8,
     paddingVertical: 10,
   },
@@ -544,6 +493,14 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 12,
   },
+  // Paper gives a dialog's first child a 24-point top margin; with the X's
+  // 48-point row, 16 keeps the title where Paper's own title sits.
+  header: {
+    marginBottom: 8,
+    marginTop: 16,
+    paddingLeft: 24,
+    paddingRight: 12,
+  },
   nativeSlider: {
     flex: 1,
     height: 44,
@@ -554,14 +511,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     marginTop: 8,
-  },
-  secondaryActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  stackedDialogAction: {
-    alignSelf: 'stretch',
-    width: '100%',
   },
   webSlider: {
     flex: 1,
