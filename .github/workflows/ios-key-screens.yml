@@ -1,9 +1,9 @@
-name: iOS PR preview
+name: iOS key screens
 
-# The iOS counterpart of android-pr-preview.yml: an unsigned iOS Simulator
-# build of a release before it merges into main, for an Apple Silicon Mac. A
-# Simulator build needs no Apple signing,
-# so this workflow reads no secrets and can safely run on pull requests.
+# The iOS counterpart of android-preview-apk.yml and android-key-screens.yml:
+# an unsigned iOS Simulator build of a release before it merges into main, for
+# an Apple Silicon Mac. A Simulator build needs no Apple signing, so this
+# workflow reads no secrets and can safely run on pull requests.
 # Download the app from the run's artifacts to test it in the Simulator on a
 # Mac; docs/operations/native-builds.md explains how.
 #
@@ -30,7 +30,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ios-pr-preview-${{ github.event.pull_request.number || github.ref }}
+  group: ios-key-screens-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -446,7 +446,7 @@ jobs:
             [ -n "$id" ] && gh api -X DELETE "repos/$REPO/issues/comments/$id" >/dev/null
           done <<<"$comments"
           # Encode any slash in the branch name for the progress link.
-          progress="https://github.com/$REPO/actions/workflows/ios-pr-preview.yml?query=branch%3A${HEAD_REF//\//%2F}"
+          progress="https://github.com/$REPO/actions/workflows/ios-key-screens.yml?query=branch%3A${HEAD_REF//\//%2F}"
           body=$(cat <<BODY
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way

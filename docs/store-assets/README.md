@@ -28,7 +28,7 @@ are captured, their sizes, and what they may show are in
   [Foreground service](../operations/play-console-answers.md#foreground-service).
 
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The App Store
-screenshots here are from the 0.43.0 release PR's **iOS PR preview** run on September
+screenshots here are from the 0.43.0 release PR's **iOS key screens** run on September
 30, 2026, before the audio button showed the audio language.
 
 Each run also saves numbered App Store copies in its artifact's `screens/app-store/`,

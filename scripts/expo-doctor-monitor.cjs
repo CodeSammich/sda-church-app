@@ -70,7 +70,7 @@ const buildExpoDoctorAlert = (report, runUrl) => {
       'To fix it, on a branch from `release-candidate`:',
       '',
       '1. Run `npx expo install --fix`, and update `expo-template-bare-minimum@…` everywhere it is pinned if `npm view expo-template-bare-minimum dist-tags.sdk-<SDK>` is newer.',
-      '2. Run `npm run doctor`, `npm run check`, an Android build on the emulator, and a hand-started **iOS PR preview**.',
+      '2. Run `npm run doctor`, `npm run check`, an Android build on the emulator, and a hand-started **iOS key screens**.',
       '3. Open the pull request. This issue closes on the next passing weekly run.',
       '',
       'See **Expo doctor monitor alerts** in `docs/operations/admin-runbook.md`.',

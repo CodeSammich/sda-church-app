@@ -393,7 +393,7 @@ transparency both stores reject. Replace them there whenever the stores get new 
   (`supportsTablet: false` in `app.json`), so App Store Connect asks for no iPad
   screenshots once the version uses a build made with that setting; iPads still install
   it and run it in iPhone mode. The current set comes from the key screens of the
-  **iOS PR preview** run on a release PR, which are 1320 × 2868 with a clean status bar
+  **iOS key screens** run on a release PR, which are 1320 × 2868 with a clean status bar
   (9:41, full battery and signal); see [Key screens](native-builds.md#key-screens).
   Screenshots from a real iPhone work too. A Plus or Pro Max already takes the 6.9-inch
   size (1290 × 2796 or 1320 × 2868); a smaller iPhone's screenshots need resizing to

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Captures the app's key screens (test/screens/screens.json) from a Simulator
- * build, for the iOS PR preview (#331). The images are named
+ * build, for the iOS key screens workflow (#331). The images are named
  * ios/<screen>-<variant>.png, and a later change can compare them with
  * known-good copies. The App Store shots are also copied, numbered in upload
  * order, to app-store/<language>/.

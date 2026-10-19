@@ -73,9 +73,9 @@ npm run build:ios:simulator -- --debug   # Debug build that loads JavaScript fro
 ```
 
 The script builds without signing, installs the app on the Simulator, and opens it. You
-can also download a release pull request's Simulator build from the **iOS PR preview**
+can also download a release pull request's Simulator build from the **iOS key screens**
 run instead of building it. Both are in
-[iOS PR preview](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+[iOS key screens](operations/native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
 ## Testing
 
@@ -109,7 +109,7 @@ down rather than because of your change.
 
 ### Key screens on iPhone and Android
 
-The **iOS PR preview** workflow, on the release pull request into `main`, takes 87
+The **iOS key screens** workflow, on the release pull request into `main`, takes 87
 screenshots of the 33 screens listed in `test/screens/screens.json` on a simulated
 iPhone, and 87 on an Android emulator, in light and dark, at larger text sizes, and in
 Chinese and Spanish. `scripts/capture-ios-screens.cjs` and

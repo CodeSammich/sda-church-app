@@ -17,7 +17,7 @@ can't reach the `production` Environment and its signing secrets. That guard is 
 the credential boundary and must stay. Every merge into `main` starts **Native Android
 build** and **Native iOS build**, which wait for `production` approval. Pull requests
 get only unsigned builds that read no signing secrets: on the release pull request into
-`main`, **Android PR preview** builds a debug APK for ARM phones and **iOS PR preview**
+`main`, **Android preview APK** builds a debug APK for ARM phones and **iOS key screens**
 builds the app for the iOS Simulator on Apple Silicon Macs. Fork pull requests
 get no native builds. Signed builds upload to TestFlight and Google Play internal testing
 only; nothing is released to the public automatically (see
@@ -43,8 +43,8 @@ on every push to `main`, is kept for browser testing and previews; see
   [Android setup](#android-setup-github-hosted-direct-builds)
 - [External account cleanup](#external-account-cleanup)
 - [Build commands](#build-commands)
-  - [Android PR preview and Drive upload](#android-pr-preview-and-drive-upload)
-  - [iOS PR preview](#ios-pr-preview-unsigned-simulator-builds), including the
+  - [Android preview APK and Drive upload](#android-preview-apk-and-drive-upload)
+  - [iOS key screens](#ios-key-screens-unsigned-simulator-builds), including the
     [key screens](#key-screens) on the iPhone and
     [on Android](#android-key-screens)
   - [Android audio test on release PRs](#android-audio-test-on-release-prs)
@@ -238,7 +238,7 @@ GOOGLE_PLAY_SERVICE_ACCOUNT
 The two Google Play values aren't keys: the upload signs in without one. Setting up
 `store-upload` is under [Automatic store uploads](#automatic-store-uploads).
 `production` also holds the other workflows' secrets: `CLASPRC_JSON` (the Apps Script
-deploy, the QR code upload, and the Android PR preview's Drive upload),
+deploy, the QR code upload, and the Android preview APK's Drive upload),
 `APPS_SCRIPT_PROJECT_ID` and `APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy), and the
 optional `GOOGLE_DRIVE_FOLDER_ID` (the Drive upload). A third environment,
 `screenshot-review`, holds no secrets; it only holds the
@@ -248,7 +248,7 @@ To set up `production`, open **Settings → Environments** in the upstream repos
 create or select `production`. Require at least one reviewer, and restrict deployment
 branches to `main` and `release-candidate`, so a manual QR code run from
 `release-candidate` can reach its approval step (the Apps Script deploy skips on any
-branch but `main`). The Android PR preview runs in `main`'s
+branch but `main`). The Android preview APK workflow runs in `main`'s
 context, and the signing jobs themselves run only on `main`. Then:
 
 - **Store binary files base64-encoded.** The keystore, `.p12`, and provisioning profile
@@ -458,7 +458,7 @@ project's default. The `:arm` and `:intel` versions pass `--architectures arm`
 (`armeabi-v7a` and `arm64-v8a`, for phones and other ARM devices) or
 `--architectures intel` (`x86` and `x86_64`, for emulators on Intel and AMD computers)
 to `scripts/build-android-native.mjs`, which builds only those, so the build is faster
-and the APK smaller. **Android PR preview** uses `:arm`; **Android audio e2e** uses
+and the APK smaller. **Android preview APK** uses `:arm`; **Android audio e2e** uses
 `:intel` for its emulator. Without `--output`, the file name ends in `-arm` or
 `-intel`.
 
@@ -511,9 +511,9 @@ On `main`, a manual Android run builds both the AAB and the APK whichever boxes 
 ticked; the AAB box only decides whether the AAB is also uploaded to Google Play
 internal testing. Native failures do not block the website deployment.
 
-### Android PR preview and Drive upload
+### Android preview APK and Drive upload
 
-**Android PR preview** builds with no signing credentials: it makes a debug APK, signed
+**Android preview APK** builds with no signing credentials: it makes a debug APK, signed
 only with Gradle's local debug key, for ARM phones and tablets
 (`npm run build:android:apk:debug:arm`). It runs automatically for release pull requests
 into `main`, from `release-candidate` in this repository, and skips fork PRs. It does
@@ -533,12 +533,12 @@ helper.
 The Drive upload job must remain separate from the build job, and the upload helper must
 be checked out from the trusted base commit rather than the PR head.
 
-### iOS PR preview (unsigned Simulator builds)
+### iOS key screens (unsigned Simulator builds)
 
-The iOS counterpart of the Android PR preview. A Simulator build runs the app on a
-simulated iPhone on a Mac. It needs no Apple
-signing, certificate, developer account, or iPhone, but it can't be installed on a
-real iPhone; use the signed **Native iOS build** and TestFlight for that. Only GitHub
+The iOS counterpart of the Android preview APK and Android key screens. A Simulator
+build runs the app on a simulated iPhone on a Mac. It needs no Apple signing,
+certificate, developer account, or iPhone, but it can't be installed on a real iPhone;
+use the signed **Native iOS build** and TestFlight for that. Only GitHub
 Actions and a local Mac are used; no other build service.
 
 **On a Mac.** Install Xcode 26.6 or later and CocoaPods, then:
@@ -558,7 +558,7 @@ Simulator, and opens it. Xcode builds for the Mac's own processor, so the same c
 works on Intel and Apple Silicon Macs. On Windows or Linux, the command explains that it
 needs a Mac.
 
-**In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
+**In GitHub Actions.** The **iOS key screens** workflow (`ios-key-screens.yml`) builds
 each release PR into `main` without signing, on Apple Silicon runners (`macos-26`,
 arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
 once, one per key-screen group, numbered in the groups' order: **iOS key screens batch
@@ -720,7 +720,7 @@ it took 25–49 minutes and only served the Simulator on an Intel Mac. On an Int
 build the app yourself with `npm run build:ios:simulator` (**On a Mac**, above), which
 builds for the Mac's own processor. To build it in the workflow again:
 
-1. Add a job to `.github/workflows/ios-pr-preview.yml` modelled on `capture`'s compiling
+1. Add a job to `.github/workflows/ios-key-screens.yml` modelled on `capture`'s compiling
    runner, without its matrix, sharing, or key-screen steps, that runs on
    `macos-26-intel` and builds with `ARCH: x86_64`. It should zip the app and take the
    first screenshot, name them `…-x86_64`, and upload them as an artifact ending in
@@ -751,7 +751,7 @@ limit is a reminder to prune, not a rule:
 2. Spend the time saved on what the key screens miss: screens, popups, and states no
    shot covers yet (#456).
 3. Then rebalance: move some related screens to a lighter group, or split one,
-   and update the `group` list in `ios-pr-preview.yml`, which a test keeps in step with
+   and update the `group` list in `ios-key-screens.yml`, which a test keeps in step with
    `screens.json`. GitHub's free plan runs five Mac jobs at once, so keep to five
    groups.
 4. If a group is still over after that, raise the limit in `test/screens.test.ts`
@@ -1031,8 +1031,8 @@ testers need it.
 Why a separate environment instead of `production`:
 
 - **`production` is shared.** The signed builds, the Apps Script deploy, the QR code
-  upload, and the Android PR preview's Drive upload all use it, and the preview runs
-  for pull requests. Any job that names an environment can read every secret in it.
+  upload, and the Android preview APK's Drive upload all use it, and that workflow
+  runs for pull requests. Any job that names an environment can read every secret in it.
   In `store-upload`, only the two upload jobs can reach the store credentials.
 - **One approval instead of two.** `production` requires a reviewer for every job.
   The upload jobs start after the builds finish, so in `production` each release would

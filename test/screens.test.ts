@@ -210,8 +210,8 @@ describe('saved settings', () => {
   });
 });
 
-describe('iOS PR preview', () => {
-  const workflow = repoFile('.github/workflows/ios-pr-preview.yml');
+describe('iOS key screens', () => {
+  const workflow = repoFile('.github/workflows/ios-key-screens.yml');
 
   it('runs one runner per group, each capturing and checking only its group', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(workflow)![1].split(', ');
@@ -474,7 +474,7 @@ describe('App Store copies', () => {
 });
 
 describe('Screenshot review', () => {
-  const preview = repoFile('.github/workflows/ios-pr-preview.yml');
+  const preview = repoFile('.github/workflows/ios-key-screens.yml');
   /** One job of the iOS preview, up to the next job. */
   const job = (id: string) => {
     const start = preview.indexOf(`\n  ${id}:\n`);
@@ -796,7 +796,7 @@ describe('Android key screens (#372)', () => {
 
 describe('Android key screens workflow (#372)', () => {
   const workflow = repoFile('.github/workflows/android-key-screens.yml');
-  const preview = repoFile('.github/workflows/ios-pr-preview.yml');
+  const preview = repoFile('.github/workflows/ios-key-screens.yml');
   const jobOf = (text: string, id: string) => {
     const start = text.indexOf(`\n  ${id}:\n`);
     expect(start).toBeGreaterThan(-1);
@@ -830,7 +830,7 @@ describe('Android key screens workflow (#372)', () => {
   });
 
   it("numbers each platform's batches 1 to 5 in the groups' order, and names jobs by them", () => {
-    const ios = repoFile('.github/workflows/ios-pr-preview.yml');
+    const ios = repoFile('.github/workflows/ios-key-screens.yml');
     for (const text of [ios, workflow]) {
       Object.keys(config.groups).forEach((group, index) => {
         expect(text).toMatch(new RegExp(`- \\{ group: ${group}, batch: ${index + 1}[,} ]`));

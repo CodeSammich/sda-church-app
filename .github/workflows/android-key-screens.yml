@@ -1,14 +1,14 @@
 name: Android key screens
 
-# The Android counterpart of the iPhone key screens in ios-pr-preview.yml
+# The Android counterpart of the iPhone key screens in ios-key-screens.yml
 # (#372): screenshots of the screens in test/screens/screens.json on an
 # Android emulator, from a preview APK built for it, with their text checked.
 # Every job runs on standard Linux runners; Mac runners are few, so only the
-# iPhone uses them. One review covers both platforms: ios-pr-preview.yml's
+# iPhone uses them. One review covers both platforms: ios-key-screens.yml's
 # review comment waits for this workflow's run on the same commit and links
 # its screenshots, and its Screenshots reviewed approval covers both.
 #
-# It runs on pull_request, not in android-pr-preview.yml, which runs in the
+# It runs on pull_request, not in android-preview-apk.yml, which runs in the
 # base branch's context for its Drive upload, so the emulator runs pull request
 # code only with this workflow's read-only token. It reads no secret.
 # docs/operations/native-builds.md ("Android key screens") explains it.
@@ -37,7 +37,7 @@ concurrency:
 jobs:
   android-build:
     # The key screens' app: a debug-signed preview APK, like the one
-    # android-pr-preview.yml publishes, from the same source and settings,
+    # android-preview-apk.yml publishes, from the same source and settings,
     # but for the emulator's x86_64 processor and with the key-screen route
     # (EXPO_PUBLIC_KEY_SCREENS, services/ScreenshotRoute.ts) turned on. The
     # published APK and the store builds never set that.
@@ -304,7 +304,7 @@ jobs:
           retention-days: 1
 
   screens:
-    # Joins the groups into the one artifact ios-pr-preview.yml's review
+    # Joins the groups into the one artifact ios-key-screens.yml's review
     # comment links, with the Google Play copies. It fails if any group failed,
     # so a failed group can't pass as skipped. The "Main protection" ruleset
     # requires this job's name.

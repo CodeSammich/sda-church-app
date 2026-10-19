@@ -74,16 +74,16 @@ describe('native Android build safety gates', () => {
 
 const readRepoFile = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
-describe('Android PR preview', () => {
+describe('Android preview APK', () => {
   it('keeps the job name the Main protection ruleset requires', () => {
     // Required check: "Build Android debug APK (ARM)". Renaming the job without
     // updating the ruleset blocks every release PR.
-    expect(readRepoFile('.github/workflows/android-pr-preview.yml'))
+    expect(readRepoFile('.github/workflows/android-preview-apk.yml'))
       .toContain('name: Build Android debug APK (ARM)');
   });
 
   it('builds only release PRs, not Dependabot PRs into main', () => {
-    expect(readRepoFile('.github/workflows/android-pr-preview.yml'))
+    expect(readRepoFile('.github/workflows/android-preview-apk.yml'))
       .toContain("github.event.pull_request.head.ref == 'release-candidate'");
   });
 });
@@ -95,7 +95,7 @@ describe('Android PR preview', () => {
 describe.each([
   ['android-audio-e2e.yml', 'e2e'],
   ['bulletin-integration.yml', 'verify-bulletin-api'],
-  ['ios-pr-preview.yml', 'simulator'],
+  ['ios-key-screens.yml', 'simulator'],
   ['android-key-screens.yml', 'screens'],
 ])('%s runs only on release PRs into main', (file, job) => {
   const workflow = readRepoFile(`.github/workflows/${file}`);
@@ -216,12 +216,12 @@ describe('Apple signing reminders', () => {
   });
 });
 
-// The iOS PR preview reuses compiled native code that only main saves (#455).
+// iOS key screens reuses compiled native code that only main saves (#455).
 // A pull request must never be able to write that cache, and the signed store
 // builds must never read it.
 describe('iOS compile cache', () => {
   const saver = readRepoFile('.github/workflows/ios-compile-cache.yml');
-  const preview = readRepoFile('.github/workflows/ios-pr-preview.yml');
+  const preview = readRepoFile('.github/workflows/ios-key-screens.yml');
   // A step's run script, from its `run:` line to the next step or job.
   const runOf = (workflow: string, name: string) => {
     const start = workflow.indexOf(`- name: ${name}\n`);
@@ -261,7 +261,7 @@ describe('iOS compile cache', () => {
     expect(saver).toContain('actions/cache/save@');
   });
 
-  it('is only read by the iOS PR preview, which stores nothing', () => {
+  it('is only read by iOS key screens, which stores nothing', () => {
     expect(preview).toContain('actions/cache/restore@');
     expect(preview).not.toMatch(/actions\/cache(\/save)?@/);
     // ccache's read-only mode: hits come from the cache; misses are compiled
@@ -327,7 +327,7 @@ describe('pull_request_target', () => {
       .filter((file: string) => withoutComments(readRepoFile(`.github/workflows/${file}`)).includes('pull_request_target'))
       .sort();
     expect(users).toEqual([
-      'android-pr-preview.yml',
+      'android-preview-apk.yml',
       'main-release-source-gate.yml',
       'pending-release-label.yml',
     ]);
@@ -345,13 +345,13 @@ describe('pull_request_target', () => {
   });
 
   it('builds only the release-candidate branch of this repository in the Android preview, never a fork', () => {
-    const workflow = readRepoFile('.github/workflows/android-pr-preview.yml');
+    const workflow = readRepoFile('.github/workflows/android-preview-apk.yml');
     expect(workflow).toContain('github.event.pull_request.head.repo.full_name == github.repository');
     expect(workflow).toContain('test "$HEAD_REPOSITORY" = "$GITHUB_REPOSITORY"');
   });
 
   it('keeps pull request code away from secrets in the Android preview', () => {
-    const workflow = readRepoFile('.github/workflows/android-pr-preview.yml');
+    const workflow = readRepoFile('.github/workflows/android-preview-apk.yml');
     const build = workflow.slice(workflow.indexOf('\n  build:\n'), workflow.indexOf('\n  upload:\n'));
     const upload = workflow.slice(workflow.indexOf('\n  upload:\n'));
     // The build job runs the pull request's code, so it gets no secrets, no
@@ -370,7 +370,7 @@ describe('pull_request_target', () => {
   it('passes pull request text to scripts only through environment variables', () => {
     // A title, body, or branch name pasted into a script as ${{ … }} becomes
     // part of the script, so a pull request could inject commands.
-    for (const file of ['android-pr-preview.yml', 'main-release-source-gate.yml', 'pending-release-label.yml']) {
+    for (const file of ['android-preview-apk.yml', 'main-release-source-gate.yml', 'pending-release-label.yml']) {
       const lines = readRepoFile(`.github/workflows/${file}`).split('\n');
       lines.forEach((line, index) => {
         const key = /^(\s*(?:-\s+)?)(?:run|script):(.*)$/.exec(line);
@@ -388,7 +388,7 @@ describe('pull_request_target', () => {
   it('grants write access only to label issues, and no secret but the workflow token to the gate or labels', () => {
     const writes = (file: string) => (readRepoFile(`.github/workflows/${file}`).match(/^\s+[a-z-]+:\s*write\b/gm) ?? [])
       .map((line) => line.trim());
-    expect(writes('android-pr-preview.yml')).toEqual([]);
+    expect(writes('android-preview-apk.yml')).toEqual([]);
     expect(writes('main-release-source-gate.yml')).toEqual([]);
     expect(writes('pending-release-label.yml')).toEqual(['issues: write']);
     for (const file of ['main-release-source-gate.yml', 'pending-release-label.yml']) {
@@ -480,8 +480,8 @@ describe('Android audio e2e', () => {
   });
 });
 
-describe('iOS PR preview', () => {
-  const workflow = readRepoFile('.github/workflows/ios-pr-preview.yml');
+describe('iOS key screens', () => {
+  const workflow = readRepoFile('.github/workflows/ios-key-screens.yml');
 
   it('builds unsigned and never reads secrets, so pull requests can run it', () => {
     expect(workflow).toContain('CODE_SIGNING_ALLOWED=NO');
@@ -535,7 +535,7 @@ describe('Expo template pin', () => {
       'scripts/build-android-native.mjs',
       'scripts/build-ios-simulator.mjs',
       '.github/workflows/native-ios-build.yml',
-      '.github/workflows/ios-pr-preview.yml',
+      '.github/workflows/ios-key-screens.yml',
       '.github/workflows/ios-compile-cache.yml',
       'docs/operations/native-builds.md',
     ];
