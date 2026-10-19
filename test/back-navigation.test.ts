@@ -40,7 +40,7 @@ describe('global header back navigation', () => {
 
   it('goes to the explicit return route first', () => {
     expect(getBackTarget('/bible', '/home/bulletin')).toBe('/home/bulletin');
-    expect(getBackTarget('/you/legal', '/explore/library')).toBe('/explore/library');
+    expect(getBackTarget('/you/licenses', '/explore/library')).toBe('/explore/library');
     expect(getBackTarget('/bible', ['/home/discover', '/'])).toBe('/home/discover');
     // A nested return route keeps its own query, such as a hymnal's hymn.
     expect(
@@ -52,7 +52,7 @@ describe('global header back navigation', () => {
     expect(getBackTarget('/bible', 'https://example.com/')).toBe('/');
     expect(getBackTarget('/home/about-sda', '//example.com')).toBe('/home/discover');
     expect(getBackTarget('/home/about-sda', '/\\example.com')).toBe('/home/discover');
-    expect(getBackTarget('/you/legal', 'javascript:alert(1)')).toBe('/you');
+    expect(getBackTarget('/you/licenses', 'javascript:alert(1)')).toBe('/you');
   });
 
   it('returns the Home entry to Sabbath School to Home', () => {
@@ -83,7 +83,7 @@ describe('global header back navigation', () => {
     ['/explore', '/'],
     ['/explore/library', '/explore'],
     ['/explore/library/egw', '/explore/library'],
-    ['/you/legal', '/you'],
+    ['/you/licenses', '/you'],
     ['/bible', '/'],
   ])('sends %s back to %s when nothing else is given', (route, parent) => {
     expect(getBackTarget(route)).toBe(parent);
@@ -117,7 +117,7 @@ describe('global header back navigation', () => {
     expect(getBackAction('/(tabs)/home/bulletin', '/')).toBe('replace');
     // The Bible opened from another tab goes back to its caller by replacing.
     expect(getBackAction('/bible', '/home/english-hymnal?hymnNum=12')).toBe('replace');
-    expect(getBackAction('/you/legal', '/explore/library')).toBe('replace');
+    expect(getBackAction('/you/licenses', '/explore/library')).toBe('replace');
   });
 
   it("replaces under the Android web app's back guard, which history.go() would trip", () => {

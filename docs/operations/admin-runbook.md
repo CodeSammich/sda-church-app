@@ -337,6 +337,7 @@ stop working.
 | Address | File in the repository | Used by |
 | --- | --- | --- |
 | `https://app.nyccsda.org/privacy-policy.html` | `public/privacy-policy.html` | Both store listings |
+| `https://app.nyccsda.org/legal.html` | `public/legal.html` | The app's **Legal Disclaimer** row |
 | `https://app.nyccsda.org/support.html` | `public/support.html` | The App Store's Support URL |
 | `https://app.nyccsda.org/download` | `public/download.html` | QR codes and download links (#237) |
 | `https://app.nyccsda.org/library/sabbath_encouragement.pdf` | `public/library/sabbath_encouragement.pdf` | The app's Library |
@@ -360,7 +361,7 @@ accept a redirect. Two similar addresses are not the app website:
 **Rules:**
 
 - **Keep these pages as static HTML in `public/`,** not as app screens. App screens, such
-  as `/you/legal`, are blank until JavaScript runs, and the stores' checkers may not
+  as `/you/licenses`, are blank until JavaScript runs, and the stores' checkers may not
   run it.
 - **Never rename or remove them.** The store listings and printed QR codes point at
   them. Add new pages beside them instead.

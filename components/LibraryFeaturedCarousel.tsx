@@ -2,7 +2,6 @@ import { AppIcon } from '@/components/AppIcon';
 import { LibraryCoverImage } from '@/components/LibraryCoverImage';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
-import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -70,7 +69,6 @@ export function LibraryFeaturedCarousel({
   previousLabel,
   readLabel,
 }: LibraryFeaturedCarouselProps) {
-  const theme = useAppTheme();
   const { textScale } = useTextSize();
   const headerHeight = useGlobalHeaderHeight();
   const styles = useMemo(() => createStyles(textScale), [textScale]);
@@ -107,6 +105,11 @@ export function LibraryFeaturedCarousel({
 
   if (!books.length) return null;
 
+  // The dots sit inside the banner, along its bottom edge, so the page's
+  // content and arrows stop above them.
+  const hasDots = books.length > 1;
+  const contentBottom = hasDots ? DOTS_BOTTOM + DOT_SIZE + 20 : 24;
+
   // A little arrow in the banner's side margin, beside the page's content, so
   // it covers neither the cover nor the title. None points past the first or
   // last page. Only the arrow itself is tappable: a swipe that starts
@@ -121,7 +124,7 @@ export function LibraryFeaturedCarousel({
           styles.arrowColumn,
           step < 0 ? styles.arrowColumnStart : styles.arrowColumnEnd,
           // The same box as the page's content, which starts under the header.
-          { top: headerHeight + 12, bottom: 24 },
+          { top: headerHeight + 12, bottom: contentBottom },
         ]}
       >
         <TouchableOpacity
@@ -172,7 +175,10 @@ export function LibraryFeaturedCarousel({
                 accessibilityLabel={`${book.eyebrow ?? featuredLabel}: ${book.title}. ${book.author}`}
                 onPress={book.onPress}
                 // The page starts under the floating header, like TitleHero.
-                style={[styles.content, { paddingTop: headerHeight + 12 }]}
+                style={[
+                  styles.content,
+                  { paddingTop: headerHeight + 12, paddingBottom: contentBottom },
+                ]}
                 webPressableStyle={styles.webPressable}
               >
                 <View pointerEvents="none" style={styles.coverFrame}>
@@ -197,8 +203,9 @@ export function LibraryFeaturedCarousel({
         {renderArrow(1)}
         </View>
       ) : null}
-      {books.length > 1 ? (
-        <View style={styles.dots}>
+      {hasDots ? (
+        // Hidden until the banner is laid out, since they sit on top of it.
+        <View style={[styles.dots, pageWidth ? null : styles.hidden]}>
           {books.map((book, index) => (
             <TouchableOpacity
               key={book.key}
@@ -209,14 +216,7 @@ export function LibraryFeaturedCarousel({
               onPress={() => showPage(index)}
               style={Platform.OS === 'web' ? styles.webPressable : null}
             >
-              <View
-                style={[
-                  styles.dot,
-                  index === page
-                    ? [styles.activeDot, { backgroundColor: theme.colors.primary }]
-                    : { backgroundColor: theme.colors.outlineVariant },
-                ]}
-              />
+              <View style={[styles.dot, index === page ? styles.activeDot : null]} />
             </TouchableOpacity>
           ))}
         </View>
@@ -264,6 +264,10 @@ function PageContent({
 // The arrows fit the page content's 20pt side margin at every text size, so
 // they don't grow with the text.
 const ARROW_SIZE = 20;
+
+// The page dots, above the banner's bottom edge.
+const DOT_SIZE = 8;
+const DOTS_BOTTOM = 16;
 
 // The page sits on a darkened, blurred cover in both themes, so its text is
 // always light.
@@ -359,17 +363,26 @@ const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
     },
     dots: {
       alignItems: 'center',
+      bottom: DOTS_BOTTOM,
       flexDirection: 'row',
       gap: 8,
       justifyContent: 'center',
-      marginTop: 12,
+      left: 0,
+      position: 'absolute',
+      right: 0,
     },
+    hidden: {
+      opacity: 0,
+    },
+    // Light on the banner's darkened cover in both themes, like its text.
     dot: {
-      borderRadius: 4,
-      height: 8,
-      width: 8,
+      backgroundColor: 'rgba(255, 255, 255, 0.45)',
+      borderRadius: DOT_SIZE / 2,
+      height: DOT_SIZE,
+      width: DOT_SIZE,
     },
     activeDot: {
+      backgroundColor: '#ffffff',
       width: 20,
     },
     webPressable: {

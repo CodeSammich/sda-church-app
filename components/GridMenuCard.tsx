@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/constants/Themes';
-import { scaleTypographyMetric } from '@/constants/AppPreferences';
+import { scaleTypographyMetric, type TextScale } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import React, { useMemo, useRef } from 'react';
@@ -51,6 +51,28 @@ export const getGridMenuCardTitleBlockMinHeight = (
   return Math.ceil(unscaledHeight * safeScale);
 };
 
+/**
+ * The largest a card's title and subtitle get, with the app's text size and the
+ * phone's multiplied together: the size they have at the app's default 125%.
+ * Two cards share a row at every size, so past this a long word breaks
+ * mid-word (#387). On a Pixel 9a (412 points wide), Spanish "Compañerismo"
+ * already fills its card at 125%, and English "Livestream" and "Denomination"
+ * broke from about 1.4×. The rest of the page still grows to the 3.2× limit.
+ */
+export const GRID_MENU_CARD_TEXT_MAX_SCALE = 1.25;
+
+/**
+ * The card text's scale: the app's text size times the phone's, up to the cap.
+ * The card applies it itself, with the phone's scaling turned off on its Text,
+ * because Android scales lineHeight with the phone's full text size even where
+ * React Native's font-size multiplier cap holds fontSize down, which spread
+ * capped titles' lines apart.
+ */
+export const getGridMenuCardTextScale = (textScale: TextScale, fontScale: number) => {
+  const phoneScale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
+  return Math.min(textScale * phoneScale, GRID_MENU_CARD_TEXT_MAX_SCALE) as TextScale;
+};
+
 export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   title,
   subtitle,
@@ -71,7 +93,7 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   const styles = useMemo(
     () => createStyles(
       textScale,
-      Math.max(1, fontScale * textScale),
+      getGridMenuCardTextScale(textScale, fontScale),
       titleBlockLines,
     ),
     [fontScale, textScale, titleBlockLines],
@@ -116,8 +138,20 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
       >
         {/* Title block — top left */}
         <View pointerEvents="none" style={styles.titleBlock}>
-            <Text style={[styles.title, { color: theme.colors.onSurface }]}>{title}</Text>
-            {subtitle ? <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>{subtitle}</Text> : null}
+            <Text
+              allowFontScaling={false}
+              style={[styles.title, { color: theme.colors.onSurface }]}
+            >
+              {title}
+            </Text>
+            {subtitle ? (
+              <Text
+                allowFontScaling={false}
+                style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}
+              >
+                {subtitle}
+              </Text>
+            ) : null}
         </View>
 
         {/* Illustration + arrow row — bottom */}
@@ -171,15 +205,15 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
 };
 
 const createStyles = (
-  textScale: Parameters<typeof scaleTypographyMetric>[1],
-  effectiveScale: number,
+  textScale: TextScale,
+  cardTextScale: TextScale,
   titleBlockLines: 2 | 3,
 ) => StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
     padding: 18,
-    minHeight: 148 + Math.round(Math.max(0, effectiveScale - 1) * 64),
+    minHeight: 148 + Math.round(Math.max(0, cardTextScale - 1) * 64),
     justifyContent: 'space-between',
     overflow: 'hidden',
   },
@@ -188,18 +222,18 @@ const createStyles = (
   },
   titleBlock: {
     flex: 0,
-    minHeight: getGridMenuCardTitleBlockMinHeight(effectiveScale, titleBlockLines),
+    minHeight: getGridMenuCardTitleBlockMinHeight(cardTextScale, titleBlockLines),
   },
   title: {
-    fontSize: scaleTypographyMetric(15, textScale),
+    fontSize: scaleTypographyMetric(15, cardTextScale),
     fontWeight: '700',
     // color will be set via theme (onSurface) in component
-    lineHeight: scaleTypographyMetric(20, textScale),
+    lineHeight: scaleTypographyMetric(20, cardTextScale),
     maxWidth: '90%',
   },
   subtitle: {
-    fontSize: scaleTypographyMetric(12, textScale),
-    lineHeight: scaleTypographyMetric(18, textScale),
+    fontSize: scaleTypographyMetric(12, cardTextScale),
+    lineHeight: scaleTypographyMetric(18, cardTextScale),
     // color will be set via theme (onSurfaceVariant) in component
     marginTop: 3,
   },

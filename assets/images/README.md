@@ -15,5 +15,5 @@ the `public/` root are intentionally kept there because the PWA manifest and HTM
 use stable web-root URLs for them. The HTML links include the configured
 `/sda-church-app/` base path so they continue to work on nested GitHub Pages routes.
 Web-only files such as `manifest.json`, `sw.js`, `robots.txt`, and the
-`privacy-policy.html`, `support.html`, and `download.html` pages also remain at the
-`public/` root, and `public/library/` holds the Sabbath Encouragement PDF.
+`privacy-policy.html`, `legal.html`, `support.html`, and `download.html` pages also
+remain at the `public/` root, and `public/library/` holds the Sabbath Encouragement PDF.

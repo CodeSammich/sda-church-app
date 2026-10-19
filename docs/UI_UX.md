@@ -237,9 +237,11 @@ are on Home, not here.
 
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
 **Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
-**About & Support** has the **Privacy Policy** and **Legal Disclaimer** (both English
-only), followed by the app version. **Privacy Policy** opens the website's copy in the
-in-app browser; the app keeps no copy of its own (#403). On web, tapping the version checks for an update.
+**About & Support** has the **Privacy Policy**, **Legal Disclaimer**, and
+**Open-Source Licenses** (all English only), followed by the app version. **Privacy
+Policy** and **Legal Disclaimer** open the website's copies in the in-app browser; the
+app keeps no copy of its own (#403, #412). **Open-Source Licenses** is an app screen,
+because those notices must ship with the app. On web, tapping the version checks for an update.
 There is no giving, history, or staff contact here: **Tithe & Offering** and **Meet Our
 Team** are on Home, and the app has no history feature.
 

@@ -22,7 +22,7 @@
     "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, and the popup a tapped verse opens.",
     "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
     "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
-    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its legal page and its Text size and Language dialogs."
+    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs."
   },
   "screens": [
     {
@@ -284,8 +284,12 @@
     {
       "name": "discover",
       "group": "home",
+      "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\".",
       "path": "home/discover",
-      "variants": ["default", "zh"]
+      "variants": ["default", "zh", "xl-ios-large-text"],
+      "variantRules": {
+        "xl-ios-large-text": { "mustShowLines": ["\\bDenomination$"] }
+      }
     },
     {
       "name": "about-sda",
@@ -332,10 +336,12 @@
       "mustNotShowLines": ["^Close$"]
     },
     {
-      "name": "legal",
+      "name": "licenses",
       "group": "worship-and-you",
-      "path": "you/legal",
-      "variants": ["default"]
+      "$comment": "The legal disclaimer moved to the website (#412); the open-source notices stay in the app, on this screen.",
+      "path": "you/licenses",
+      "variants": ["default"],
+      "mustShowLines": ["^Open-Source Licenses$", "^SunCalc\\b"]
     }
   ],
   "appStore": {

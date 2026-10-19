@@ -572,45 +572,27 @@ whenever the app starts using a new one.
 
 ## Legal Disclaimer
 
-The app shows this disclaimer, in English only, under **You → Legal Disclaimer**
-(`app/(tabs)/you/legal.tsx`). The in-app version also summarizes where Library books
-are read and how to change the text size in EGW Writings' reader.
+The legal disclaimer is kept in one place, the website:
+[`public/legal.html`](../public/legal.html), served at
+<https://app.nyccsda.org/legal.html>. The app's **You → Legal Disclaimer** row opens it
+in the in-app browser, as **Privacy Policy** does (#412). It's English only, for the
+same reason as the privacy policy. Change the wording there, and a website deploy
+publishes it with no new app build.
 
-### 1. Usage of External Resources
+It covers the app's links to external resources, such as the hymn sites and EGW
+Writings, and the copyright caution that goes with them; how to change the text size
+in EGW Writings' reader; what the app shows from other sources, such as cover
+thumbnails, and where each Library book is hosted; and the external platforms the app
+links to, such as YouTube and Spotify.
 
-This app links to HymnsForWorship.org and zgaxr.com for hymn resources and to EGW Writings
-(egwwritings.org) for externally hosted religious books. Some linked material may be
-copyrighted. When you follow these links, you are subject to the destination provider’s
-terms and conditions. Please respect copyright laws and do not attempt to bypass access
-requirements.
+### Open-source software notices
 
-### 2. Data Attribution
-
-This application provides searchable hymn metadata and a curated index of book titles and
-language editions to facilitate navigation. It displays small current cover thumbnails
-served by EGW Writings and, for Chinese app languages, the Chinese Union Mission; bundled
-original artwork remains the fallback. We do not copy these covers into the app or host or
-reproduce the externally linked EGW book text, protected musical notation, or lyrics.
-External content is accessed through third-party providers; a link, thumbnail, or the
-public availability of a destination is not a representation that this project has
-independently verified every provider's copyright permissions.
-
-### 3. External Platforms & Services
-
-This application provides links to external platforms and third-party services (e.g.,
-YouTube, Spotify, HymnsForWorship.org, zgaxr.com, and EGW Writings at egwwritings.org) to
-assist users in locating books, musical performances, recordings, or sheet music. These
-are external platforms, and use of them is subject to their respective terms and
-conditions. We do not host, curate, or endorse the specific content or search results
-returned by these services. Users are responsible for ensuring their use complies with
-applicable copyright and performance licensing requirements; linking does not constitute
-legal authorization for public performance or reuse.
-
-### 4. Open-Source Software
-
-This application includes the following open-source software, whose licenses require
-these notices. The in-app Legal Disclaimer screen shows the same text from
-[`constants/OpenSourceNotices.ts`](../constants/OpenSourceNotices.ts).
+The app includes the following open-source software, whose licenses require these
+notices. Unlike the disclaimer, they stay in the app, under **You → Open-Source
+Licenses** (`app/(tabs)/you/licenses.tsx`), which shows the same text from
+[`constants/OpenSourceNotices.ts`](../constants/OpenSourceNotices.ts). SunCalc's BSD
+license asks that binary copies reproduce its notice in materials provided with them,
+and a web page the app links to is a weaker fit for that than the app itself.
 
 **[SunCalc](https://github.com/mourner/suncalc)**, which calculates the Sabbath sunset
 times and the sunrise/sunset theme:

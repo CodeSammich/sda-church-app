@@ -122,8 +122,8 @@ one place. Church admins can start at [Operate](#operate).
 ### Legal, licensing, and privacy
 
 - [Legal, Licensing, and Privacy](docs/LEGAL.md): licensing records, third-party source
-  reviews, the privacy policy, and the disclaimer the app shows under
-  **You → Legal Disclaimer**, which also says where each Library book is hosted
+  reviews, the privacy policy, the legal disclaimer, and the open-source notices the
+  app shows under **You → Open-Source Licenses**
 - [Branding and trademark policy](docs/LEGAL_BRANDING.md): the logos, trademarks, and
   branding that the open-source license doesn't cover
 - [Sabbath Encouragement attribution and copyright](docs/operations/sabbath-encouragement-copyright.md):
