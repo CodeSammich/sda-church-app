@@ -45,11 +45,15 @@ here:
 For a new App Store set, take the matching shots from the run's `screens/ios/` and
 number them in the uploaded order, or change `appStore` first.
 
+Each run saves numbered Google Play copies too, in `screens/google-play/en-US/` and
+`screens/google-play/zh-TW/`, from the `googlePlay` lists: the same shots as the App
+Store's, from the Android emulator, at 1080 × 1920 and without transparency (#372).
+
 **No transparency.** Both stores reject screenshots with an alpha channel: Google Play
 takes JPEG or 24-bit PNG, and App Store Connect refuses images with transparency. The
 Simulator and the Android emulator both save PNGs with one, so every screenshot here has
 had it removed. Every pixel was opaque already, so nothing changed visibly. The iOS
-preview's App Store copies come without it. For a new screenshot, remove it with
+preview's App Store and Google Play copies come without it. For a new screenshot, remove it with
 `sharp` (`removeAlpha()`), then check with `sharp(file).metadata()` that `hasAlpha` is
 false.
 

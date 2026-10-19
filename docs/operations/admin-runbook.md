@@ -113,7 +113,7 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
+| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` and `Android key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
 | `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -641,7 +641,8 @@ upload by hand are in
 
 The automatic checks don't use a real phone. **Android audio e2e** runs on an emulator
 (host failover, one chapter change with the screen off, recovery after the connection
-drops), and **iOS PR preview** checks the key screens on a simulated iPhone. So before
+drops), and **iOS PR preview** checks the key screens on a simulated iPhone and an
+Android emulator. So before
 releasing a build to the public, check it by hand on one iPhone and one Android phone,
 installed from TestFlight and from the Play Store's internal testing link. Copy this
 list into a comment on the release pull request, tick it for each phone, and add the
@@ -734,9 +735,13 @@ into `main`, and can be run manually on any branch.
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(85 screenshots of 32 screens in all), and checks their text with
-`scripts/check-screens.cjs`. Another job then joins the groups,
-before the review comment and **Screenshots reviewed**. The run takes 15 to 25 minutes, depending on how much of the compile cache it reuses. On a release pull request, a comment
+(86 screenshots of 33 screens in all), and checks their text with
+`scripts/check-screens.cjs`. Five more runners take the same screens on an Android
+emulator, from a preview APK built for it
+([Android key screens](native-builds.md#android-key-screens)). Another job then checks
+the Android shots' text and joins both platforms' groups, before the review comment and
+**Screenshots reviewed**, which covers both. The run takes 30 to 40 minutes, most of it
+the Android build. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
 The build needs no `production` approval, because it reads no secrets. Download the

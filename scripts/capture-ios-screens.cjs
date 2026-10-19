@@ -22,6 +22,9 @@
  *
  * The app must already be installed on that iPhone. The Simulator only runs on
  * macOS with Xcode.
+ *
+ * It also plans each platform's shots from the list, for
+ * capture-android-screens.cjs, check-screens.cjs, and merge-key-screens.cjs.
  */
 const { execFileSync, spawnSync } = require('node:child_process');
 const { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');

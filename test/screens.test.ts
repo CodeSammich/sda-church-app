@@ -715,6 +715,30 @@ describe('Android key screens (#372)', () => {
     );
   });
 
+  it("catches text behind Android's status bar, but not its clock and icons", async () => {
+    const sharp = require('sharp');
+    const { STATUS_BAR_REGIONS } = require('../scripts/capture-android-screens.cjs');
+    const dir = mkdtempSync(join(tmpdir(), 'android-status-'));
+    const box = (left: number, top: number, width: number, height: number) => ({
+      input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#222"/></svg>`),
+      left,
+      top,
+    });
+    // At Android's largest font: the clock to x 180 and the icons from 670.
+    const statusBar = [box(40, 4, 140, 56), box(670, 4, 360, 56)];
+    const shot = async (name: string, extra: object[]) => {
+      const file = join(dir, `${name}.png`);
+      await sharp({ create: { width: 1080, height: 1920, channels: 3, background: '#f3e6df' } })
+        .composite([...statusBar, ...extra])
+        .png()
+        .toFile(file);
+      return file;
+    };
+    expect(await statusBarClear(await shot('clear', []), STATUS_BAR_REGIONS)).toBe(true);
+    const words = [300, 420, 540].map((left) => box(left, 30, 90, 30));
+    expect(await statusBarClear(await shot('text', words), STATUS_BAR_REGIONS)).toBe(false);
+  });
+
   it("joins both platforms' results, telling a shot's two copies apart", () => {
     const iosShot = shots.find((shot: { name: string }) => shot.name === 'home-default');
     const androidShot = android.find((shot: { name: string }) => shot.name === 'home-default');

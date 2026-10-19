@@ -15,14 +15,14 @@ Closes #
 
 <!--
 If this changes what a screen shows or how it's laid out, update the key screens in
-test/screens/screens.json, for every platform that captures them (the iPhone today,
-and Android once it has key screens too), so each release PR's screenshots and
-text checks cover it (see "Key screens" in docs/operations/native-builds.md):
+test/screens/screens.json, which the iPhone and Android both capture, so each
+release PR's screenshots and text checks cover it (see "Key screens" in
+docs/operations/native-builds.md):
 - add the screen, or the variant that shows the change: dark, a larger text size, the
-  iPhone's own largest text, or another language;
+  iPhone's or Android's own largest text, or another language;
 - add text checks that fail if it breaks: mustShowLines, mustNotShowLines, or
   variantRules for one variant;
-- update appStore if the App Store screenshots should change.
+- update appStore or googlePlay if the store screenshots should change.
 Give a new screen the group for its part of the app (group in screens.json). Prefer a
 check on an existing shot to a new shot, since each shot lengthens its group's runner
 and the release PR waits for the slowest group, and replace checks that no longer earn

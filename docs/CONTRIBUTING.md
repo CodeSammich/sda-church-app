@@ -69,8 +69,8 @@ Write the description however suits the change, but every feature and release PR
 - Say what was tested, with the command and result. Only claim an Android or iOS build
   that was actually run.
 - If the change affects what a screen shows or how it's laid out, update the key screens
-  in `test/screens/screens.json`, for every platform that captures them: the iPhone today,
-  and Android once #372 adds its screenshots. Add the screen or variant that shows the
+  in `test/screens/screens.json`, which both the iPhone and Android capture, so check that
+  the change holds on both. Add the screen or variant that shows the
   change, and text checks (`mustShowLines`, `mustNotShowLines`, `variantRules`) that fail
   if it breaks. Give a new screen the `group` for its part of the app. Each shot
   lengthens its group's runner, and the release PR waits for the slowest group, so
@@ -233,8 +233,11 @@ GitHub's code scanning default setup and have no workflow file.
   the release PR into `main`, and by hand on any branch.
 - Builds the app for the iOS Simulator once, without signing, and shares it with one
   runner per key-screen group (`Key screens (<group>)`). Each launches it, screenshots
-  its group of the key screens in `test/screens/screens.json`, and checks their text;
-  `Build iOS Simulator app (Apple Silicon Mac)` joins the groups and fails if any failed.
+  its group of the key screens in `test/screens/screens.json`, and checks their text.
+- Builds the Android preview APK for an emulator too, and shares it with one emulator
+  runner per group (`Android key screens (<group>)`), which takes the same screens.
+  `Build iOS Simulator app (Apple Silicon Mac)` checks the Android shots' text, joins
+  both platforms' groups, and fails if any failed.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).

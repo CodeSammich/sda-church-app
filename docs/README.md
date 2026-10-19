@@ -107,13 +107,14 @@ down rather than because of your change.
 - `test:integration:external` writes `external-dependency-report.json`. See
   [External dependency monitor](operations/external-dependency-monitor.md).
 
-### Key screens on iPhone
+### Key screens on iPhone and Android
 
-The **iOS PR preview** workflow, on the release pull request into `main`, takes 85
-screenshots of the 32 screens listed in `test/screens/screens.json`, in light and dark,
-at larger text sizes, and in Chinese and Spanish. `scripts/capture-ios-screens.cjs`
-takes them, and `scripts/check-screens.cjs` reads their text with Apple's Vision
-framework and checks what each screen must show. The release then waits on the
+The **iOS PR preview** workflow, on the release pull request into `main`, takes 86
+screenshots of the 33 screens listed in `test/screens/screens.json` on a simulated
+iPhone, and 86 on an Android emulator, in light and dark, at larger text sizes, and in
+Chinese and Spanish. `scripts/capture-ios-screens.cjs` and
+`scripts/capture-android-screens.cjs` take them, and `scripts/check-screens.cjs` reads
+their text with Apple's Vision framework and checks what each screen must show. The release then waits on the
 **Screenshots reviewed** check until a release approver has looked at them.
 `npm test` includes `test/screens.test.ts`, which checks the screen list itself.
 

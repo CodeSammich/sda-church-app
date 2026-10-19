@@ -147,8 +147,8 @@ and may not be possible, so protect them above everything else.
     [Android preview APK](operations/admin-runbook.md#android-pr-preview-apks)
     uploaded to Google Drive,
     [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-pr-preview-builds)
-    with screenshots of the key screens that an approver reviews (**Screenshots
-    reviewed**), and a
+    with screenshots of the key screens, on the iPhone and an Android emulator, that an
+    approver reviews (**Screenshots reviewed**), and a
     [Bible audio test](operations/admin-runbook.md#bible-audio-emulator-test) on an
     Android emulator;
   - native iOS and Android builds after each merge to `main`, uploaded automatically

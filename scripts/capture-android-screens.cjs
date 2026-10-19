@@ -59,9 +59,10 @@ const PLAY_SIZE = { width: 1080, height: 1920 };
 /**
  * The status bar's empty middle, between the clock and the icons, as fractions
  * of the width, measured on the emulator in screens.json. Text scrolled up
- * under the status bar shows there.
+ * under the status bar shows there. At Android's largest font the clock and
+ * icons grow to about 0.17 and from 0.62, so this stays inside the gap.
  */
-const STATUS_BAR_REGIONS = [{ x: [0.22, 0.72], y: [0.012, 0.05] }];
+const STATUS_BAR_REGIONS = [{ x: [0.25, 0.58], y: [0.012, 0.05] }];
 
 const CHECKS = { statusBarClear: (file) => statusBarClear(file, STATUS_BAR_REGIONS) };
 
@@ -141,30 +142,41 @@ const deviceSettings = (settings, physicalDensity) => ({
   density: settings.displayScale === 1 ? 'reset' : String(Math.round(physicalDensity * settings.displayScale)),
 });
 
+/**
+ * A fixed status bar: 9:41, full Wi-Fi and battery, no mobile signal or
+ * notifications. System UI leaves demo mode when the font or display size
+ * changes, so this runs again after either.
+ */
+const fixStatusBar = () => {
+  const demo = (command) => shell(`am broadcast -a com.android.systemui.demo -e command ${command} >/dev/null`);
+  demo('exit');
+  demo('enter');
+  demo('clock -e hhmm 0941');
+  demo('battery -e level 100 -e plugged false');
+  demo('network -e wifi show -e level 4');
+  demo('network -e mobile hide');
+  demo('notifications -e visible false');
+};
+
 /** Changes the emulator settings that differ from the last shot's. */
 const applyDeviceSettings = (wanted, current) => {
   if (wanted.night !== current.night) shell(`cmd uimode night ${wanted.night}`);
   if (wanted.fontScale !== current.fontScale) shell(`settings put system font_scale ${wanted.fontScale}`);
   if (wanted.density !== current.density) shell(`wm density ${wanted.density}`);
+  if (wanted.fontScale !== current.fontScale || wanted.density !== current.density) fixStatusBar();
   return wanted;
 };
 
 /**
- * A steady screen for every shot: no animations, a fixed status bar (9:41,
- * full Wi-Fi and battery, no notifications), gesture navigation as on current
- * Pixels, and the screen kept awake and unlocked.
+ * A steady screen for every shot: no animations, a fixed status bar, gesture
+ * navigation as on current Pixels, and the screen kept awake and unlocked.
  */
 const prepareEmulator = () => {
   for (const name of ['window_animation_scale', 'transition_animation_scale', 'animator_duration_scale']) {
     shell(`settings put global ${name} 0`);
   }
   shell('settings put global sysui_demo_allowed 1');
-  const demo = (command) => shell(`am broadcast -a com.android.systemui.demo -e command ${command} >/dev/null`);
-  demo('enter');
-  demo('clock -e hhmm 0941');
-  demo('battery -e level 100 -e plugged false');
-  demo('network -e wifi show -e level 4 -e mobile show -e datatype none -e level 4');
-  demo('notifications -e visible false');
+  fixStatusBar();
   spawnSync(ADB, ['shell', 'cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural']);
   shell('svc power stayon true');
   shell('input keyevent KEYCODE_WAKEUP');

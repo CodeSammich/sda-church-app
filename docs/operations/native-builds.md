@@ -45,7 +45,8 @@ on every push to `main`, is kept for browser testing and previews; see
 - [Build commands](#build-commands)
   - [Android PR preview and Drive upload](#android-pr-preview-and-drive-upload)
   - [iOS PR preview](#ios-pr-preview-unsigned-simulator-builds), including the
-    [key screens](#key-screens)
+    [key screens](#key-screens) on the iPhone and
+    [on Android](#android-key-screens)
   - [Android audio test on release PRs](#android-audio-test-on-release-prs)
 - [Automatic store uploads](#automatic-store-uploads)
 - [Versions and maintenance](#versions-and-maintenance), including
@@ -731,7 +732,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 32 screens listed in `test/screens/screens.json`, 85
+The five runners screenshot the 33 screens listed in `test/screens/screens.json`, 86
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner takes one group (`--group <name>`) of related
 screens, such as the Bible reader's layout or the library, listed under `groups` in
@@ -768,10 +769,11 @@ limit is a reminder to prune, not a rule:
    a saved screen. A test checks that no other workflow sets it.
 
    Nothing can tap a popup or dialog open either, so a screen's path can ask for one
-   with `popup=`, such as `you?popup=text-size` or the Bible's `popup=verse`, which
-   opens the popup for `verseStart` once the chapter loads (#372). Only this build
-   reads it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens just
-   the screen.
+   with `popup=`, such as `you?popup=text-size`, the Bible's `popup=verse`, which
+   opens the popup for `verseStart` once the chapter loads, or its
+   `popup=audio-settings`, once the chapter has audio (#372). Only the key-screen
+   builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens
+   just the screen.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
    wait (9 for the Bible, which measured settles within 6), so a group's 14 to 22 shots
@@ -834,8 +836,9 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the run takes 15 to 25 minutes) and removes the comment with the
-earlier, now out-of-date screenshots. When the run finishes, it replaces the notice with a
+opens or gets a push (the run, with the [Android key screens](#android-key-screens),
+takes 30 to 40 minutes) and removes the comment with the earlier, now out-of-date
+screenshots. One review covers both platforms' screenshots. When the run finishes, it replaces the notice with a
 comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.
 Each push needs a new approval, and the job fails if the environment doesn't require
@@ -857,6 +860,70 @@ setting also needs its storage key in the script's `SETTING_KEYS`, and the test 
 the app still reads that key. A screen whose content changes every day, such as Home
 with its verse of the day and countdown, is marked `changesDaily`, for when these images
 are compared with known-good copies.
+
+#### Android key screens
+
+The same workflow takes the key screens on an Android emulator too, from the same list
+and groups, so the release PR's one screenshot review covers both platforms (#372). They
+run here rather than in the Android PR preview, which runs in `main`'s context for its
+Drive upload: this workflow runs pull request code only with a read-only token.
+
+- **Build the Android key-screens app** builds the debug-signed preview APK, from the
+  same source and settings as the APK the Android preview publishes, but for the
+  emulator's x86_64 processor (`npm run build:android:apk:debug:intel`) and with
+  `EXPO_PUBLIC_KEY_SCREENS=1`, so it reads the saved screen and `popup=`. The published
+  APK and the store builds don't.
+- **Android key screens (`<group>`)**, one per group, boots the emulator that `android`
+  in `screens.json` names while the app builds: Google's `pixel` profile, 1080 × 1920 at
+  420 dpi, on Android 16 (API 36). It then installs the app and runs
+  `scripts/capture-android-screens.cjs --group <group>`, which saves
+  `screens/android/<screen>-<variant>.png`.
+- **Build iOS Simulator app (Apple Silicon Mac)** reads the Android shots' text with the
+  same Vision checks as the iPhone's (`check-screens.cjs --platform android`), joins
+  both platforms, and fails if any group on either failed.
+
+**Settings before each shot.** Android keeps the app's storage in a SQLite database,
+`databases/RKStorage` in the app's private folder, not in a file the runner can write.
+So the capture writes a fresh database with the shot's settings and screen to open, and
+copies it in as root, owned by the app and with its folder's SELinux label. That needs
+an emulator image that allows `adb root`: `google_apis`, not `google_apis_playstore`.
+Nothing in the app changes, so a store build has no way in. The theme, font size
+(`font_scale`), and display size (`wm density`) are set on the emulator; the status bar
+is fixed with System UI's demo mode (9:41, full battery and Wi-Fi, no notifications),
+entered again after each font or display size change, which drops it;
+and navigation is by gestures, as on current Pixels.
+
+**Variants.** A variant that changes one platform's own settings is taken only there:
+`iosTextSize` on the iPhone, and `fontScale` and `displayScale` on Android.
+`android-font-max` is Android's largest font (200%); `xl-android-font-max` and
+`es-xl-android-font-max` add the app's 200%, where the tab labels once wrapped (#380),
+with the same rules as their iPhone counterparts; and `android-display-large` is
+Android's largest display size on this screen, 125% (a larger one would leave the
+screen under the 320 dp Android keeps it to). A screen with `"platforms": ["ios"]` or
+`["android"]` is taken only there.
+
+**Checks.** The same as the iPhone's: the app is running, it opened the saved screen
+(read back from its database), no screenshot is blank or still shows the splash,
+`statusBarClear` screens show nothing in the status bar's empty middle, and the text
+checks, with the tab bar and chapter controls where the emulator's shorter screen puts
+them (`REGIONS_BY_PLATFORM`). On Android they also fail on the system's "isn't
+responding" and "keeps stopping" dialogs. Vision reads the text from the image, as on
+the iPhone, rather than `uiautomator dump`'s exact text, so a word cut short or a verse
+number split across lines fails the same way on both.
+
+**Google Play screenshots.** The shots listed under `googlePlay` (`en-US` and `zh-TW`,
+at most 8 each) are copied, numbered in upload order, to
+`screens/google-play/<language>/`, at 1080 × 1920 and without transparency. The
+emulator's screen is that size, so a copy is the shot itself; a shot of another size
+fails rather than being stretched.
+
+**On your own emulator.** With a `google_apis` image (Android Studio's "Google APIs",
+not "Google Play"), build with `EXPO_PUBLIC_KEY_SCREENS=1 npm run
+build:android:apk:debug:intel`, install it, and run `node
+scripts/capture-android-screens.cjs --out <folder> [--group <group>]`. `ADB` names the
+adb to use, such as `adb.exe` from WSL. On a reused `android/` folder, delete
+`android/app/build/generated/assets/react/release` first: Gradle doesn't notice a
+changed `EXPO_PUBLIC_*` value and keeps the old JavaScript.
 
 ### Android audio test on release PRs
 
