@@ -280,8 +280,30 @@ describe('iOS key screens', () => {
     expect(merge).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
     expect(merge).toContain("needs.capture.result != 'success'");
     expect(merge).toContain('node scripts/merge-key-screens.cjs --platform ios --out');
-    // The review comment and earlier-run checks look for this artifact name.
+    // Two downloads: the screenshots alone, which the review comment links,
+    // and the Simulator app. Chrome's Safe Browsing blocked the screenshots
+    // while they shared a zip with the unsigned app.
+    expect(merge).toContain(
+      "name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}\n",
+    );
     expect(merge).toMatch(/name: ios-pr-preview-.*-arm64\n/);
+    expect(merge).toContain('--out "$SCREENS_OUT/screens"');
+    expect(merge).toMatch(/-name '\*-simulator\.zip' .*\n\s+-exec cp \{\} "\$APP_OUT\/"/);
+  });
+
+  it('links only the screenshots in the review comment, and offers the app separately', () => {
+    const comment = workflow.slice(workflow.indexOf('\n  review-comment:\n'), workflow.indexOf('\n  screenshots-reviewed:\n'));
+    expect(comment).toContain(
+      `download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"`,
+    );
+    expect(comment).toContain(`app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"`);
+  });
+
+  it('re-checks an earlier run from its screenshots, or from the app download of runs before the split', () => {
+    const earlier = workflow.slice(workflow.indexOf('\n  earlier-screens:\n'));
+    expect(earlier).toMatch(
+      /--pattern 'ios-key-screens-\*' --dir "\$RUNNER_TEMP\/earlier" \|\|\n\s+gh run download [^\n]+--pattern 'ios-pr-preview-\*-arm64'/,
+    );
   });
 
   it('reads no secrets and keeps a read-only token', () => {

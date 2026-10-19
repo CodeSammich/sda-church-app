@@ -579,13 +579,19 @@ once, one per key-screen group, numbered in the groups' order: **iOS key screens
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
   running 45 seconds after launch, and takes its group's key screens.
 
-**iOS key screens join** then joins the batches, on Linux, and uploads the
-app and a screenshot of its first screen (14-day retention), named like the Android
-preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
+**iOS key screens join** then joins the batches, on Linux, and uploads two downloads
+(14-day retention):
 
-- `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`: the app;
-- `sda-church-app-pr-<number>-<run>-arm64-first-screen.png`: the screenshot;
-- `screens/ios/<screen>-<variant>.png`: the key screens, described below.
+- `ios-key-screens-<number>-<run>`, which the review comment links: the key screens in
+  `screens/ios/<screen>-<variant>.png` (described below), the App Store copies, and the
+  text checks.
+- The download ending in `-arm64`: the app, `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`,
+  and a screenshot of its first screen, `…-arm64-first-screen.png`, named like the
+  Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`.
+
+They're separate because Chrome's Safe Browsing blocks a download with an unsigned app
+zipped inside it, so a shared download kept reviewers from the screenshots. Chrome may
+still block the app's download; `gh run download <run> --pattern '*-arm64'` gets it.
 
 Pull requests into `release-candidate` don't run it, and neither do other pull
 requests into `main`, such as Dependabot's. To test a change to the workflow,
@@ -709,7 +715,7 @@ caching, which also covers Swift, hasn't been tried. The cache is empty until th
 push to `main` after it was added, so that release's own PR compiles everything.
 
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
-artifact ending in `-arm64`, and unzip the download and then the `.zip` inside it to get
+artifact ending in `-arm64` (or use `gh run download`, if Chrome blocks it), and unzip the download and then the `.zip` inside it to get
 the `.app`. It runs on an Apple Silicon Mac; for an Intel Mac, see below. Open the Simulator
 (Xcode > Open Developer Tool > Simulator) and drag the `.app` onto the simulated
 iPhone, or run:

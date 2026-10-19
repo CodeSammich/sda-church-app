@@ -31,7 +31,7 @@ The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The App
 screenshots here are from the 0.43.0 release PR's **iOS key screens** run on September
 30, 2026, before the audio button showed the audio language.
 
-Each run also saves numbered App Store copies in its artifact's `screens/app-store/`,
+Each run also saves numbered App Store copies in its screenshots download's `screens/app-store/`,
 from the `appStore` lists in `test/screens/screens.json`. They aren't the set uploaded
 here:
 
