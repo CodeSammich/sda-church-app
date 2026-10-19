@@ -611,7 +611,11 @@ describe('Android key screens (#372)', () => {
 
   it('gives the Android-only variants the rules of their iPhone counterparts', () => {
     const home = config.screens.find((screen: { name: string }) => screen.name === 'home');
-    expect(home.variantRules['xl-android-font-max']).toEqual(home.variantRules['xl-ios-large-text']);
+    // Except that the phone's narrower screen may wrap the heading between its words.
+    expect(home.variantRules['xl-android-font-max'].mustNotShowLines).toEqual(
+      home.variantRules['xl-ios-large-text'].mustNotShowLines,
+    );
+    expect(home.variantRules['xl-android-font-max'].mustShowLines).toEqual(['^Today.s( Verse)?$']);
     expect(home.variantRules['es-xl-android-font-max']).toEqual(home.variantRules['es-xl-ios-large-text']);
   });
 

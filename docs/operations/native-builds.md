@@ -803,7 +803,8 @@ every screen must show:
 
 - the tab labels, in the shot's language, in the tab bar;
 - on Bible screens, the verse button's whole label in the chapter controls, so a
-  cut-off "V" fails;
+  cut-off "V" fails. Its short label, "Vs." ("Vers." in Spanish), which the app shows
+  when the controls are tight, as on Android's largest font, passes too;
 - a screen's `mustShowLines`, regular expressions some line must start with, so a verse
   number split across two lines fails, and its `mustNotShowLines`, which no line may
   match. A `mustShowLines` rule can also be `{ "line": …, "minLeft": 0.5 }`, for a

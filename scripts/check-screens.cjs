@@ -59,6 +59,11 @@ const TAB_LABELS = {
 // The Bible's verse button, from app/(tabs)/bible/index.tsx.
 const VERSE_BUTTON = { en: 'Verse', zh: '節', 'zh-cn': '节', es: 'Versículo' };
 
+// Its short label, which it shows instead when the chapter controls are tight,
+// as on Android's largest font (verseShort in app/(tabs)/bible/index.tsx). A
+// whole short label passes; a cut-off one, such as "V", still fails.
+const VERSE_BUTTON_SHORT = { en: 'Vs.', es: 'Vers.' };
+
 // Where each label belongs, as fractions of the screenshot's height from the
 // top, measured on each platform's phone in screens.json. A label elsewhere,
 // such as "Read Verse" on Home, doesn't count.
@@ -96,6 +101,8 @@ const isChinese = (text) => /\p{Script=Han}/u.test(text);
  * so any occurrence counts there.
  */
 const showsLabel = (lines, label, region) => {
+  // A label given as a list shows if any of its forms does.
+  if (Array.isArray(label)) return label.some((form) => showsLabel(lines, form, region));
   const pattern = isChinese(label)
     ? new RegExp(escape(label), 'u')
     : new RegExp(`(^|[^\\p{L}])${escape(label)}($|[^\\p{L}])`, 'u');
@@ -107,9 +114,14 @@ const showsLabel = (lines, label, region) => {
 };
 
 // Vision often misses a lone Chinese character, such as 您 or 節, even on a
-// closer look. A one-character label can't be cut short the way "Verse" became
+// closer look, and RapidOCR a two-letter one, such as Spanish's Tú under its
+// icon on Android. A label that short can't be cut short the way "Verse" became
 // "V", and the other labels still show the language, so these aren't required.
-const required = (labels) => labels.filter((label) => [...label].length > 1);
+const required = (labels) =>
+  labels.filter((label) => {
+    const text = Array.isArray(label) ? label[0] : label;
+    return [...text].length > (isChinese(text) ? 1 : 2);
+  });
 
 /**
  * The labels a shot must show, by region. A popup (popup= in its path, #372)
@@ -123,7 +135,8 @@ const expectedLabels = (shot) => {
   if (shot.tabs !== false) expected.push(['tabs', required(TAB_LABELS[language])]);
   if (shot.route.startsWith('bible')) {
     const controls = shot.tabs === false ? 'chapterControlsReading' : 'chapterControls';
-    const labels = required([VERSE_BUTTON[language]]);
+    const short = VERSE_BUTTON_SHORT[language];
+    const labels = required([short ? [VERSE_BUTTON[language], short] : VERSE_BUTTON[language]]);
     if (labels.length) expected.push([controls, labels]);
   }
   return expected;
@@ -146,7 +159,7 @@ const checkShot = (shot, lines) => {
     problems.push(
       region === 'tabs'
         ? `tab labels missing: ${missing.join(', ')}`
-        : `the verse button doesn't show "${missing[0]}"`,
+        : `the verse button doesn't show "${[missing[0]].flat()[0]}"`,
     );
   }
   for (const text of NEVER_SHOWN_BY_PLATFORM[shot.platform]) {
@@ -349,6 +362,7 @@ module.exports = {
   OCR_LANGUAGES,
   TAB_LABELS,
   VERSE_BUTTON,
+  VERSE_BUTTON_SHORT,
   REGIONS,
   REGIONS_BY_PLATFORM,
   NEVER_SHOWN,

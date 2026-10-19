@@ -38,7 +38,7 @@
     {
       "name": "home",
       "group": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
       "variantRules": {
@@ -48,7 +48,7 @@
         },
         "es-xl-ios-large-text": { "mustShowLines": ["^Vers[ií]culo\\b"] },
         "xl-android-font-max": {
-          "mustShowLines": ["^Today.s Verse$"],
+          "mustShowLines": ["^Today.s( Verse)?$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
         "es-xl-android-font-max": { "mustShowLines": ["^Vers[ií]culo\\b"] }
@@ -66,11 +66,11 @@
     {
       "name": "bible-dual",
       "group": "bible-reading",
-      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A), the EN badge, and both names, not cut to B… or C… (#376).",
+      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376).",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max"],
-      "mustShowLines": ["^(XA|文A)\\b", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
+      "mustShowLines": ["^(XA\\b|文A|A EN\\b)", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
     },
     {
       "name": "bible-dual-back",
@@ -81,7 +81,7 @@
       "variants": ["default", "large", "xl"],
       "mustShowLines": ["\\bEN\\b", "BSB", "CUV", "^Psalms\\b"],
       "variantRules": {
-        "default": { "mustShowLines": ["^(XA|文A)\\b"] },
+        "default": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)"] },
         "large": { "mustNotShowLines": ["(\\bXA|文A)\\b"] },
         "xl": { "mustNotShowLines": ["(\\bXA|文A)\\b"] }
       }
@@ -138,17 +138,12 @@
       "name": "bible-scrolled",
       "group": "bible-reading",
       "tabs": false,
-      "$comment": "Opens at John 3:14, so earlier verses sit under the status bar; checks it stays clear. At 150% the Android phone's screen leaves verse 16 below the fold.",
+      "$comment": "Opens at John 3:14, so earlier verses sit under the status bar; checks it stays clear.",
       "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=14&verseEnd=16",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": true },
       "variants": ["default", "large", "dark"],
       "checks": ["statusBarClear"],
-      "mustShowLines": ["^14\\b", "^15\\b", "^John\\b"],
-      "variantRules": {
-        "default": { "mustShowLines": ["^16\\b"] },
-        "dark": { "mustShowLines": ["^16\\b"] },
-        "large": { "mustShowLines": [{ "line": "^16\\b", "platforms": ["ios"] }] }
-      }
+      "mustShowLines": ["^14\\b", "^15\\b", "^16\\b", "^John\\b"]
     },
     {
       "name": "bible-verse-popup",
@@ -174,12 +169,12 @@
       "name": "bible-long-chapter",
       "group": "bible-text",
       "tabs": false,
-      "$comment": "Psalm 119 from verse 100, for three-digit verse numbers at large text sizes.",
+      "$comment": "Psalm 119 from verse 100, for three-digit verse numbers at large text sizes. RapidOCR may read a verse number without the space after it, as 102I, so the rules only require no further digit.",
       "path": "bible?bookId=PSA&chapter=119&translationId=BSB&verseStart=100&verseEnd=100",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default", "xl", "ios-large-text", "android-font-max"],
       "checks": ["statusBarClear"],
-      "mustShowLines": ["^100\\b", "^101\\b", "^102\\b", "^Psalms\\b"]
+      "mustShowLines": ["^100(?!\\d)", "^101(?!\\d)", "^102(?!\\d)", "^Psalms\\b"]
     },
     {
       "name": "bible-higgaion-selah",
@@ -250,7 +245,7 @@
     {
       "name": "library-youth",
       "group": "library",
-      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391). Its English and Spanish titles wrap, so only their first lines are checked.",
+      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391). Its English and Spanish titles wrap, differently on each phone, so only their first words are checked.",
       "path": "explore/library/youth",
       "variants": ["default", "zh", "zh-cn", "es"],
       "mustShowLines": ["^Pastor Hsi"],
@@ -258,7 +253,7 @@
         "default": { "mustShowLines": ["^The Pilgrim.s\\b"] },
         "zh": { "mustShowLines": ["天路歷程"] },
         "zh-cn": { "mustShowLines": ["天路历程"] },
-        "es": { "mustShowLines": ["^El progreso del\\b"] }
+        "es": { "mustShowLines": ["^El progreso\\b"] }
       }
     },
     {
@@ -298,7 +293,7 @@
       "mustNotShowLines": ["\\b1\\. Praise to the Lord", "\\b13\\. New Songs"],
       "variantRules": {
         "default": {
-          "mustShowLines": ["^SDA Hymnal\\b", "\\b12\\. Joyful, Joyful", "\\bWith singing\\b", "\\bPiano only\\b", { "line": "^Show all hymns$", "platforms": ["ios"] }, "\\b505\\W+16$"]
+          "mustShowLines": ["^SDA Hymnal\\b", "\\b12\\. Joyful, Joyful", "\\bWith singing\\b", "\\bPiano only\\b", "^Show all hymns$", "\\b505\\W+16$"]
         },
         "xl": { "mustShowLines": ["^SDA\\b", "^12\\. Joyful\\b"] }
       }
@@ -309,7 +304,7 @@
       "$comment": "An older hymnal route with an old search, highlight=平安夜, opens the hymnal page with that hymnal picked: the 506, not the 505 a Chinese interface would show first, its cover photo cropped to the carousel's 2:3 frame. Its one match, 82, comes first, with its recording labeled 演唱 (With singing) although the 506 has no piano videos yet, then the heading over the matches in the other hymnals, each under its hymnal's name, the 505's 66 first, and no longer the hymnal's short name on each result's own line (\"505\", \"1985\", \"707 新編簡譜\"). Vision may read \"82. 平安夜\" without the space, may read the dash in a hymnal's name as 一, and reads the YouTube logo before 演唱 as a character.",
       "path": "home/chinese-506-hymnal?highlight=%E5%B9%B3%E5%AE%89%E5%A4%9C",
       "variants": ["zh"],
-      "mustShowLines": ["^中文讚美詩$", "^506 ?版$", "\\b82\\. ?平安夜", "演唱", "^其他詩歌本$", { "line": "讚美詩\\W*505 ?版$", "platforms": ["ios"] }, { "line": "\\b66\\. ?平安夜", "platforms": ["ios"] }],
+      "mustShowLines": ["^中文讚美詩$", "^506 ?版$", "\\b82\\. ?平安夜", "演唱", "^其他詩歌本$", "讚美詩\\W*505 ?版$", "\\b66\\. ?平安夜"],
       "mustNotShowLines": ["YouTube", "^505$", "^1985$", "^707 新編簡譜$"]
     },
     {

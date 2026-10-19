@@ -112,7 +112,7 @@ describe('screen rules', () => {
   it('uses each screen’s own rules, even when names share a start', () => {
     // "bible-dual-default" starts with "bible-", but belongs to bible-dual.
     expect(shot('bible-scrolled-default').tabs).toBe(false);
-    expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^John\\b', '^16\\b']);
+    expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^16\\b', '^John\\b']);
     expect(shot('explore-default').mustShowLines).toBeUndefined();
     expect(shot('bible-default').tabs).toBeUndefined();
   });
@@ -133,7 +133,7 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-default'), dual)).toEqual([]);
     const withoutHeader = dual.filter((each) => each.box[1] > 0.12);
     expect(checkShot(shot('bible-dual-default'), withoutHeader)).toEqual([
-      'no line matches /^(XA|文A)\\b/',
+      'no line matches /^(XA\\b|文A|A EN\\b)/',
       'no line matches /\\bEN\\b/',
       'no line matches /BSB/',
       'no line matches /CUV/',
@@ -151,7 +151,7 @@ describe('screen rules', () => {
       '"XA EN B... +* C..." matches /(\\bXA|文A)\\b/, which must not show',
     ]);
     // At the default size the icon must still show.
-    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^(XA|文A)\\b/']);
+    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^(XA\\b|文A|A EN\\b)/']);
   });
 
   it('catches tab labels that wrap, or rise out of an overgrown tab bar, at about 4× text (#380)', () => {
@@ -163,7 +163,8 @@ describe('screen rules', () => {
     ).toEqual(['tab labels missing: Explore']);
     // An overgrown tab bar: the labels sit above the tab bar's area.
     expect(checkShot(shot('explore-es-xl-ios-large-text'), tabs(['Inicio', 'Biblia', 'Explorar', 'Tú'], 0.86))).toEqual([
-      'tab labels missing: Inicio, Biblia, Explorar, Tú',
+      // Tú is too short to require: OCR misses it alone under its icon.
+      'tab labels missing: Inicio, Biblia, Explorar',
     ]);
   });
 
@@ -248,9 +249,10 @@ describe('Android shots (#372)', () => {
       file: 'android/bible-scrolled-default.png',
       platform: 'android',
       tabs: false,
-      mustShowLines: ['^14\\b', '^15\\b', '^John\\b', '^16\\b'],
+      mustShowLines: ['^14\\b', '^15\\b', '^16\\b', '^John\\b'],
     });
-    expect(androidShot('home-xl-android-font-max').mustShowLines).toEqual(['^Today.s Verse$']);
+    // The phone's narrower screen may wrap the heading between its words.
+    expect(androidShot('home-xl-android-font-max').mustShowLines).toEqual(['^Today.s( Verse)?$']);
   });
 
   it("look for the tab bar where the Android phone's screen puts it", () => {
@@ -286,5 +288,22 @@ describe('rules for one platform (#372)', () => {
     expect(checkShot(androidShot('bible-dual-back-large'), [...tabs, ...header('文A')])).toEqual([
       '"文A EN BSB + 繁 CUV" matches /(\\bXA|文A)\\b/, which must not show',
     ]);
+  });
+});
+
+describe('the verse button’s short label (#372)', () => {
+  const androidShots = planChecks(loadConfig(), 'android');
+  const longChapter = androidShots.find((candidate: { name: string }) => candidate.name === 'bible-long-chapter-android-font-max');
+  const verses = ['100 I discern', '101 I have kept', '102I have not departed', 'Psalms'].map((text, index) => line(text, 0.1 + index * 0.2));
+
+  it('passes "Vs.", which the app shows when the chapter controls are tight, but not a cut-off "V"', () => {
+    expect(checkShot(longChapter, [...verses, line('Vs.', 0.92)])).toEqual([]);
+    expect(checkShot(longChapter, [...verses, line('V', 0.92)])).toEqual(["the verse button doesn't show \"Verse\""]);
+  });
+
+  it('accepts a verse number read without the space after it, but not a longer number', () => {
+    expect(checkShot(longChapter, [...verses, line('Vs.', 0.92)])).toEqual([]);
+    const split = verses.map((each) => (each.text.startsWith('102') ? { ...each, text: '1020 have not departed' } : each));
+    expect(checkShot(longChapter, [...split, line('Vs.', 0.92)])).toEqual(['no line matches /^102(?!\\d)/']);
   });
 });
