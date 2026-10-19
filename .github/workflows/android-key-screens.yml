@@ -58,7 +58,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
@@ -145,7 +145,7 @@ jobs:
 
       # For sharp, which the capture uses.
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
@@ -328,7 +328,7 @@ jobs:
 
       # For sharp, which writes the Google Play copies.
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Download the groups
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -383,7 +383,7 @@ jobs:
 
       # For sharp, which crops strips for a closer look.
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Install the text reader
         run: |
