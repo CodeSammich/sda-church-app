@@ -23,6 +23,13 @@ const prohibitedPatterns = [
     pattern: /\bmaxFontSizeMultiplier\b(?!=\{HEADER_MAX_FONT_SCALE\})/g,
   },
   {
+    // Text that turns off the phone's text size must apply it itself. Only the
+    // grid cards do, to hold their two-column titles at 1.25× (#387).
+    reason: 'phone text size turned off',
+    pattern: /\ballowFontScaling\b/g,
+    allowedFiles: ['components/GridMenuCard.tsx'],
+  },
+  {
     reason: 'compact Bible-reader scale cap',
     pattern:
       /\b(?:compactDockScaleCap|compactDockTextScale|compactDockMaxFontSizeMultiplier|compactReaderStyles)\b/g,
@@ -43,7 +50,9 @@ const violations = [];
 for (const root of sourceRoots) {
   for (const filePath of walk(path.join(repoRoot, root))) {
     const source = fs.readFileSync(filePath, 'utf8');
-    for (const { pattern, reason } of prohibitedPatterns) {
+    const relativePath = path.relative(repoRoot, filePath).split(path.sep).join('/');
+    for (const { allowedFiles = [], pattern, reason } of prohibitedPatterns) {
+      if (allowedFiles.includes(relativePath)) continue;
       for (const match of source.matchAll(pattern)) {
         const line = source.slice(0, match.index).split(/\r?\n/).length;
         violations.push(
