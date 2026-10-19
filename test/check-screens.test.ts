@@ -237,3 +237,33 @@ describe('screen rules', () => {
     for (const each of shots) expect(OCR_LANGUAGES[each.settings.language]).toBeDefined();
   });
 });
+
+describe('Android shots (#372)', () => {
+  const androidShots = planChecks(loadConfig(), 'android');
+  const androidShot = (name: string) => androidShots.find((candidate: { name: string }) => candidate.name === name);
+  const tabs = (y: number) => ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, y));
+
+  it("get the same screen's rules, under android/", () => {
+    expect(androidShot('bible-scrolled-default')).toMatchObject({
+      file: 'android/bible-scrolled-default.png',
+      platform: 'android',
+      tabs: false,
+      mustShowLines: ['^14\\b', '^15\\b', '^16\\b', '^John\\b'],
+    });
+    expect(androidShot('home-xl-android-font-max').mustShowLines).toEqual(['^Today.s Verse$']);
+  });
+
+  it("look for the tab bar where the emulator's shorter screen puts it", () => {
+    expect(checkShot(androidShot('explore-default'), tabs(0.95))).toEqual([]);
+    expect(checkShot(androidShot('explore-default'), tabs(0.8))).toEqual(['tab labels missing: Home, Bible, Explore, You']);
+  });
+
+  it("catch Android's crash and not-responding dialogs", () => {
+    expect(checkShot(androidShot('explore-default'), [...tabs(0.95), line("NYCCSDA Preview isn't responding", 0.5)])).toEqual([
+      'shows "isn\'t responding"',
+    ]);
+    expect(checkShot(androidShot('explore-default'), [...tabs(0.95), line('NYCCSDA Preview keeps stopping', 0.5)])).toEqual([
+      'shows "keeps stopping"',
+    ]);
+  });
+});

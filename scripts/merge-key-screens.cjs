@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
  * Joins the key-screen groups that several runners captured and checked
- * (capture-ios-screens.cjs and check-screens.cjs with --group) into the one
- * folder a single runner used to make, for the screenshot review (#453):
- * every ios/*.png, ocr.json, checks.json, and settle-times.json in list order,
- * and the App Store copies, which need shots from every part.
+ * (capture-ios-screens.cjs, capture-android-screens.cjs, and check-screens.cjs
+ * with --group) into the one folder a single runner used to make, for the
+ * screenshot review (#453, #372): every ios/*.png and android/*.png, ocr.json,
+ * checks.json, and settle-times.json in list order, iPhone first, and the App
+ * Store and Google Play copies, which need shots from every part.
  *
  *   node scripts/merge-key-screens.cjs --out <screens folder> <part screens folder>...
  *
@@ -13,7 +14,8 @@
  */
 const { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
 const { dirname, join, resolve } = require('node:path');
-const { loadConfig, planAppStore, planCaptures, writeAppStoreCopy } = require('./capture-ios-screens.cjs');
+const { writePlayCopy } = require('./capture-android-screens.cjs');
+const { PLATFORMS, loadConfig, planCaptures, planStoreCopies, writeAppStoreCopy } = require('./capture-ios-screens.cjs');
 
 const readJson = (file, empty) => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : empty);
 
@@ -24,28 +26,33 @@ const readJson = (file, empty) => (existsSync(file) ? JSON.parse(readFileSync(fi
 const mergeResults = (shots, parts) => {
   const byFile = (entries, key) => new Map(entries.flatMap((entry) => entry).map((entry) => [entry[key], entry]));
   const checks = byFile(parts.map((part) => part.checks), 'file');
-  const timings = byFile(parts.map((part) => part.timings), 'shot');
+  // Both platforms have a shot of each name, so timings go by file.
+  const timings = byFile(parts.map((part) => part.timings), 'file');
   // ocr.json is keyed by each runner's path to the screenshot; keep only the
-  // part from ios/ on, since the runners' folders all look alike.
+  // part from ios/ or android/ on, since the runners' folders all look alike.
   const ocr = {};
   for (const part of parts) {
-    for (const [file, lines] of Object.entries(part.ocr)) ocr[file.slice(file.lastIndexOf('/ios/') + 1)] = lines;
+    for (const [file, lines] of Object.entries(part.ocr)) {
+      ocr[file.replace(new RegExp(`^.*/(?=(${PLATFORMS.join('|')})/[^/]+$)`), '')] = lines;
+    }
   }
   return {
     checks: shots.map((shot) => checks.get(shot.file) || { file: shot.file, problems: ['no group checked it'] }),
-    timings: shots.map((shot) => timings.get(shot.name)).filter(Boolean),
+    timings: shots.map((shot) => timings.get(shot.file)).filter(Boolean),
     ocr,
   };
 };
 
 const merge = async (outDir, partDirs) => {
   const config = loadConfig();
-  const shots = planCaptures(config);
-  mkdirSync(join(outDir, 'ios'), { recursive: true });
+  const shots = PLATFORMS.flatMap((platform) => planCaptures(config, platform));
   for (const partDir of partDirs) {
-    const iosDir = join(partDir, 'ios');
-    if (!existsSync(iosDir)) continue;
-    for (const name of readdirSync(iosDir)) copyFileSync(join(iosDir, name), join(outDir, 'ios', name));
+    for (const platform of PLATFORMS) {
+      const shotDir = join(partDir, platform);
+      if (!existsSync(shotDir)) continue;
+      mkdirSync(join(outDir, platform), { recursive: true });
+      for (const name of readdirSync(shotDir)) copyFileSync(join(shotDir, name), join(outDir, platform, name));
+    }
   }
 
   const parts = partDirs.map((partDir) => ({
@@ -62,12 +69,16 @@ const merge = async (outDir, partDirs) => {
   for (const shot of shots) {
     if (!existsSync(join(outDir, shot.file))) problems.push(`${shot.file}: no group captured it`);
   }
-  for (const copy of planAppStore(config)) {
-    const source = join(outDir, `ios/${copy.name}.png`);
+  for (const copy of planStoreCopies(config)) {
+    const source = join(outDir, copy.source);
     if (!existsSync(source)) continue;
     const file = join(outDir, copy.file);
     mkdirSync(dirname(file), { recursive: true });
-    await writeAppStoreCopy(source, file);
+    try {
+      await (copy.platform === 'android' ? writePlayCopy : writeAppStoreCopy)(source, file);
+    } catch (error) {
+      problems.push(`${copy.file}: ${error.message}`);
+    }
   }
 
   const failed = checks.filter((check) => check.problems.length);
@@ -80,7 +91,7 @@ const merge = async (outDir, partDirs) => {
     ...failed.map((check) => `- ❌ ${check.file}: ${check.problems.join('; ')}`),
     '',
     `Settled within 5 seconds: ${timings.filter((timing) => timing.settledAfter <= 5).length} of ${timings.length}. ` +
-      `Slowest: ${slowest.map((timing) => `${timing.shot} ${timing.settledAfter}s`).join(', ')}.`,
+      `Slowest: ${slowest.map((timing) => `${timing.file || timing.shot} ${timing.settledAfter}s`).join(', ')}.`,
     '',
   ].join('\n');
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);

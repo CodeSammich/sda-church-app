@@ -11,6 +11,7 @@ const {
   planCaptures,
   buildManifest,
   planAppStore,
+  planStoreCopies,
   writeAppStoreCopy,
   manifestPath,
   statusBarClear,
@@ -96,7 +97,12 @@ describe('App Store shots', () => {
 
   it('numbers each language’s shots in upload order', () => {
     // Home first: the first three show on the App Store's install sheets.
-    expect(copies[0]).toEqual({ name: 'home-default', file: 'app-store/en-US/01-home-default.png' });
+    expect(copies[0]).toEqual({
+      name: 'home-default',
+      platform: 'ios',
+      source: 'ios/home-default.png',
+      file: 'app-store/en-US/01-home-default.png',
+    });
     expect(copies.map((copy: { file: string }) => copy.file)).toContain('app-store/zh-Hant/01-home-zh.png');
     // Chinese hears Cantonese right after Home, with pinyin still in the first three,
     // then Mandarin in Simplified characters and its own dark-mode shot.
@@ -267,11 +273,12 @@ describe('iOS PR preview', () => {
   it('joins the groups in the required job, which fails rather than skips when a group fails', () => {
     const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
     expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');
-    expect(merge).toContain('needs: capture');
+    expect(merge).toContain('needs: [capture, android-capture]');
     // A skipped required check counts as passed, so this job must still run
     // after a failed part, and then fail.
     expect(merge).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
     expect(merge).toContain("needs.capture.result != 'success'");
+    expect(merge).toContain("needs.android-capture.result != 'success'");
     expect(merge).toContain('node scripts/merge-key-screens.cjs --out');
     // The review comment and earlier-run checks look for this artifact name.
     expect(merge).toMatch(/name: ios-pr-preview-.*-arm64\n/);
@@ -327,10 +334,10 @@ describe('key-screen groups', () => {
       [
         {
           checks: [{ file: c.file, problems: [] }, { file: a.file, problems: ['x'] }],
-          timings: [{ shot: c.name, settledAfter: 4 }],
+          timings: [{ shot: c.name, file: c.file, settledAfter: 4 }],
           ocr: { [`/Users/runner/work/_temp/ios-pr-preview/screens/${a.file}`]: [{ text: 'A' }] },
         },
-        { checks: [], timings: [{ shot: a.name, settledAfter: 2 }], ocr: {} },
+        { checks: [], timings: [{ shot: a.name, file: a.file, settledAfter: 2 }], ocr: {} },
       ],
     );
     expect(merged.checks).toEqual([
@@ -516,7 +523,7 @@ describe('Screenshot review', () => {
     expect(announce).toContain('github.run_attempt == 1');
     expect(announce).toContain('<!-- key-screens-review pending sha=$SHA -->');
     expect(announce).toContain('gh api -X DELETE "repos/$REPO/issues/comments/$id"');
-    expect(announce).toContain('takes 15 to 25 minutes');
+    expect(announce).toContain('takes 30 to 40 minutes');
   });
 
   it.each([
@@ -562,5 +569,229 @@ describe('blank screen check', () => {
       .png()
       .toFile(file);
     expect(await looksBlank(file)).toBe(false);
+  });
+});
+
+describe('Android key screens (#372)', () => {
+  const android = planCaptures(config, 'android');
+  const names = (list: { name: string }[]) => list.map((shot) => shot.name);
+  const {
+    writeStorage,
+    readStorageValue,
+    installStorageCommands,
+    deviceSettings,
+    writePlayCopy,
+    previewPackage,
+    STORAGE_DATABASE,
+  } = require('../scripts/capture-android-screens.cjs');
+  const { mkdtempSync } = require('node:fs');
+  const { tmpdir } = require('node:os');
+  const { join } = require('node:path');
+
+  it('takes the same screens, named android/<screen>-<variant>.png', () => {
+    expect(new Set(android.map((shot: { screen: string }) => shot.screen))).toEqual(
+      new Set(config.screens.map((screen: { name: string }) => screen.name)),
+    );
+    for (const shot of android) expect(shot.file).toBe(`android/${shot.name}.png`);
+    expect(names(android)).toEqual(expect.arrayContaining(['home-default', 'home-dark', 'home-large', 'bible-dual-xl']));
+  });
+
+  it("leaves each platform's own variants to that platform", () => {
+    expect(names(android)).not.toContain('home-ios-large-text');
+    expect(names(android)).not.toContain('explore-max');
+    expect(names(android)).toEqual(
+      expect.arrayContaining(['home-xl-android-font-max', 'bible-dual-android-font-max', 'home-android-display-large']),
+    );
+    expect(names(shots)).not.toContain('home-xl-android-font-max');
+    expect(names(shots)).toContain('home-ios-large-text');
+    for (const shot of android) expect(shot.settings).not.toHaveProperty('iosTextSize');
+    for (const shot of shots) expect(shot.settings).not.toHaveProperty('fontScale');
+  });
+
+  it('gives the Android-only variants the rules of their iPhone counterparts', () => {
+    const home = config.screens.find((screen: { name: string }) => screen.name === 'home');
+    expect(home.variantRules['xl-android-font-max']).toEqual(home.variantRules['xl-ios-large-text']);
+    expect(home.variantRules['es-xl-android-font-max']).toEqual(home.variantRules['es-xl-ios-large-text']);
+  });
+
+  it("keeps Android's font and display size out of the app's storage", () => {
+    const shot = android.find((candidate: { name: string }) => candidate.name === 'home-xl-android-font-max');
+    expect(shot.settings).toMatchObject({ fontScale: 2, textScale: 2, displayScale: 1 });
+    expect(buildManifest(shot.settings)).toEqual({
+      'has-completed-setup': 'true',
+      'user-language': 'en',
+      'user-theme': 'light',
+      'user-text-scale': '2',
+    });
+  });
+
+  it('takes a screen with platforms only there', () => {
+    const only = { ...config, screens: [{ ...config.screens[0], platforms: ['ios'] }] };
+    expect(planCaptures(only, 'android')).toEqual([]);
+    expect(planCaptures(only, 'ios').length).toBeGreaterThan(0);
+    expect(() => planCaptures(config, 'windows')).toThrow('No platform "windows"');
+  });
+
+  it('keeps every Android group within the same reminder to prune', () => {
+    for (const group of Object.keys(config.groups)) {
+      const seconds = takeGroup(android, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
+      expect({ group, over: seconds > 360 }).toEqual({ group, over: false });
+    }
+  });
+
+  it('runs on an emulator image that allows adb root, at Google Play’s screenshot size', () => {
+    expect(config.android.systemImage).toMatch(/;google_apis;x86_64$/);
+    expect(config.android.device).toBe('pixel');
+  });
+
+  it('saves settings where the Android app reads them, and reads them back', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'android-storage-'));
+    const explore = android.find((shot: { name: string }) => shot.name === 'explore-default');
+    writeStorage(join(dir, STORAGE_DATABASE), buildManifest(explore.settings, explore.route));
+    expect(readStorageValue(dir, 'screenshot-route')).toBe('explore');
+    expect(readStorageValue(dir, 'has-completed-setup')).toBe('true');
+    expect(readStorageValue(dir, 'user-bible-translation')).toBeNull();
+    // ReactDatabaseSupplier opens version 1 and wipes any other.
+    const { DatabaseSync } = require('node:sqlite');
+    const database = new DatabaseSync(join(dir, STORAGE_DATABASE));
+    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: 1 });
+    database.close();
+    const source = repoFile(
+      'node_modules/@react-native-async-storage/async-storage/android/src/main/java/com/reactnativecommunity/asyncstorage/ReactDatabaseSupplier.java',
+    );
+    expect(source).toContain('DATABASE_NAME = "RKStorage"');
+    expect(source).toContain('DATABASE_VERSION = 1');
+    expect(source).toContain('TABLE_CATALYST = "catalystLocalStorage"');
+  });
+
+  it("puts the database in the preview app's folder, owned and labelled like the folder", () => {
+    expect(previewPackage()).toBe(`${JSON.parse(repoFile('app.json')).expo.android.package}.preview`);
+    const commands = installStorageCommands('org.example.preview', '/data/local/tmp/storage');
+    expect(commands).toContain('cp /data/local/tmp/storage /data/data/org.example.preview/databases/RKStorage');
+    // An old write-ahead log would replay the last shot's settings.
+    expect(commands).toContain('rm -f /data/data/org.example.preview/databases/RKStorage /data/data/org.example.preview/databases/RKStorage-*');
+    expect(commands).toContain('chown "$(stat -c %u:%g /data/data/org.example.preview)"');
+    expect(commands).toContain('chcon "$(stat -c %C /data/data/org.example.preview)"');
+  });
+
+  it('sets the theme, font size, and display size on the emulator', () => {
+    expect(deviceSettings({ theme: 'dark', fontScale: 2, displayScale: 1 }, 420)).toEqual({
+      night: 'yes',
+      fontScale: '2',
+      density: 'reset',
+    });
+    expect(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1.25 }, 420).density).toBe('525');
+    // Android's largest display size keeps the screen at least 320 dp wide.
+    const display = config.variants['android-display-large'].displayScale;
+    expect(1080 / ((420 * display) / 160)).toBeGreaterThanOrEqual(320);
+  });
+
+  it('lists Google Play shots in both store languages, at most 8 each, all captured on Android', () => {
+    const copies = planStoreCopies(config, 'android');
+    expect(Object.keys(config.googlePlay)).toEqual(['en-US', 'zh-TW']);
+    for (const list of Object.values(config.googlePlay) as string[][]) expect(list.length).toBeLessThanOrEqual(8);
+    for (const copy of copies) {
+      expect(names(android)).toContain(copy.name);
+      expect(copy.source).toBe(`android/${copy.name}.png`);
+      expect(copy.file).toMatch(/^google-play\/(en-US|zh-TW)\/\d{2}-/);
+    }
+    expect(copies[0].file).toBe('google-play/en-US/01-home-default.png');
+  });
+
+  it('saves Play copies at 1080 × 1920 without transparency, and refuses another size', async () => {
+    const sharp = require('sharp');
+    const dir = mkdtempSync(join(tmpdir(), 'google-play-'));
+    const make = async (name: string, width: number, height: number) => {
+      const file = join(dir, name);
+      await sharp({ create: { width, height, channels: 4, background: { r: 10, g: 20, b: 30, alpha: 1 } } })
+        .png()
+        .toFile(file);
+      return file;
+    };
+    await writePlayCopy(await make('right.png', 1080, 1920), join(dir, 'copy.png'));
+    expect(await sharp(join(dir, 'copy.png')).metadata()).toMatchObject({ width: 1080, height: 1920, hasAlpha: false });
+    await expect(writePlayCopy(await make('tall.png', 1080, 2400), join(dir, 'no.png'))).rejects.toThrow(
+      "not Google Play's 1080 × 1920",
+    );
+  });
+
+  it("joins both platforms' results, telling a shot's two copies apart", () => {
+    const iosShot = shots.find((shot: { name: string }) => shot.name === 'home-default');
+    const androidShot = android.find((shot: { name: string }) => shot.name === 'home-default');
+    const merged = mergeResults(
+      [iosShot, androidShot],
+      [
+        {
+          checks: [{ file: iosShot.file, problems: [] }],
+          timings: [{ shot: 'home-default', file: iosShot.file, settledAfter: 3 }],
+          ocr: { [`/Users/runner/work/_temp/parts/key-screens-1-home/screens/${iosShot.file}`]: [{ text: 'A' }] },
+        },
+        {
+          checks: [{ file: androidShot.file, problems: ['x'] }],
+          timings: [{ shot: 'home-default', file: androidShot.file, settledAfter: 7 }],
+          ocr: { [`/Users/runner/work/_temp/parts/key-screens-1-android-home/screens/${androidShot.file}`]: [{ text: 'B' }] },
+        },
+      ],
+    );
+    expect(merged.checks).toEqual([
+      { file: 'ios/home-default.png', problems: [] },
+      { file: 'android/home-default.png', problems: ['x'] },
+    ]);
+    expect(merged.timings.map((timing: { settledAfter: number }) => timing.settledAfter)).toEqual([3, 7]);
+    expect(merged.ocr).toEqual({ 'ios/home-default.png': [{ text: 'A' }], 'android/home-default.png': [{ text: 'B' }] });
+  });
+});
+
+describe('Android key screens in the preview workflow (#372)', () => {
+  const workflow = repoFile('.github/workflows/ios-pr-preview.yml');
+  const job = (id: string) => {
+    const start = workflow.indexOf(`\n  ${id}:\n`);
+    expect(start).toBeGreaterThan(-1);
+    const next = workflow.slice(start + 1).search(/\n {2}[a-z-]+:\n/);
+    return next === -1 ? workflow.slice(start) : workflow.slice(start, start + 1 + next);
+  };
+  const build = job('android-build');
+  const capture = job('android-capture');
+  const join = job('simulator');
+
+  it('runs where the iPhone capture runs: the release PR, or by hand', () => {
+    for (const text of [build, capture]) {
+      expect(text).toContain("github.head_ref == 'release-candidate'");
+      expect(text).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+      expect(text).toContain("github.event_name != 'pull_request' && inputs.screens_from_run == ''");
+    }
+  });
+
+  it('builds the preview APK for the emulator with the key-screen route, and shares it once', () => {
+    expect(build).toContain('npm run build:android:apk:debug:intel');
+    expect(build).toMatch(/env:\n(?:\s+#.*\n)*\s+EXPO_PUBLIC_KEY_SCREENS: '1'\n/);
+    expect(build).toContain('name: android-key-screens-app-${{ github.run_id }}');
+    expect(capture).toContain('name: android-key-screens-app-${{ github.run_id }}');
+    expect(capture).toContain('select(.name == "Build the Android key-screens app")');
+  });
+
+  it('captures each group on its own emulator, from the list in screens.json', () => {
+    const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(capture)![1].split(', ');
+    expect(groups).toEqual(Object.keys(config.groups));
+    expect(capture).toMatch(/capture-android-screens\.cjs --out [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
+    expect(capture).toContain("require('./test/screens/screens.json').android.systemImage");
+    expect(capture).toContain("require('./test/screens/screens.json').android.device");
+    // The join finds the groups by this prefix.
+    expect(capture).toContain('name: key-screens-${{ github.run_id }}-android-${{ matrix.group }}');
+  });
+
+  it("checks the Android shots' text with the iPhone's reader before joining", () => {
+    expect(join).toContain('runs-on: macos-26');
+    expect(join).toContain('prefix="key-screens-$GITHUB_RUN_ID-android-"');
+    expect(join).toContain('check-screens.cjs --dir "$part/screens" --platform android --group');
+    expect(join.indexOf('--platform android')).toBeLessThan(join.indexOf('merge-key-screens.cjs'));
+    expect(workflow).toContain('check-screens.cjs --dir "$SCREENS" --platform all');
+  });
+
+  it('keeps pull request code away from credentials', () => {
+    for (const text of [build, capture]) {
+      expect(text).toContain('persist-credentials: false');
+      expect(text).not.toMatch(/secrets\.|environment:|: write\b/);
+    }
   });
 });

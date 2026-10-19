@@ -1,0 +1,350 @@
+#!/usr/bin/env node
+/**
+ * Captures the app's key screens (test/screens/screens.json) on an Android
+ * emulator, for the release PR's screenshot review (#372): the Android
+ * counterpart of capture-ios-screens.cjs, from the same list. The images are
+ * named android/<screen>-<variant>.png, and the Google Play shots are also
+ * copied, numbered in upload order, to google-play/<language>/.
+ *
+ * Like the iPhone capture, it saves the settings the app reads at startup, and
+ * the screen to open (services/ScreenshotRoute.ts), before each launch. Android
+ * keeps AsyncStorage in a SQLite database in the app's private folder, so this
+ * writes a fresh database and copies it in as root. That needs an emulator
+ * image that allows `adb root` (google_apis, not google_apis_playstore), and
+ * nothing in the app: the store builds have no way in. The shot's theme, font
+ * size, and display size are set on the emulator itself.
+ *
+ *   node scripts/capture-android-screens.cjs --out <dir>                  Captures every Android shot into <dir>
+ *   node scripts/capture-android-screens.cjs --out <dir> --group library  Only that group's shots, for one of
+ *                                                                         several runners
+ *
+ * The key-screens preview build (EXPO_PUBLIC_KEY_SCREENS=1) must already be
+ * installed on the only connected emulator. ADB names the adb to use (default
+ * adb). Needs Node 22.5 or later, for node:sqlite.
+ */
+const { execFileSync, spawnSync } = require('node:child_process');
+const { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } = require('node:fs');
+const { tmpdir } = require('node:os');
+const { dirname, join, resolve } = require('node:path');
+const {
+  BLANK_RETRIES,
+  ROUTE_KEY,
+  SAMPLE_EVERY,
+  buildManifest,
+  compareSamples,
+  loadConfig,
+  looksBlank,
+  looksLikeSplash,
+  planCaptures,
+  planStoreCopies,
+  settledAfter,
+  statusBarClear,
+  takeGroup,
+  writeAppStoreCopy,
+} = require('./capture-ios-screens.cjs');
+
+const ADB = process.env.ADB || 'adb';
+
+// Where @react-native-async-storage/async-storage keeps its values on Android
+// (ReactDatabaseSupplier.java): the RKStorage database's catalystLocalStorage
+// table, at database version 1. A database at another version is wiped.
+const STORAGE_DATABASE = 'RKStorage';
+const STORAGE_TABLE = 'catalystLocalStorage';
+const STORAGE_VERSION = 1;
+
+// The size Google Play's phone screenshots are saved at, which the emulator
+// in screens.json also has, so a copy is the shot itself.
+const PLAY_SIZE = { width: 1080, height: 1920 };
+
+/**
+ * The status bar's empty middle, between the clock and the icons, as fractions
+ * of the width, measured on the emulator in screens.json. Text scrolled up
+ * under the status bar shows there.
+ */
+const STATUS_BAR_REGIONS = [{ x: [0.22, 0.72], y: [0.012, 0.05] }];
+
+const CHECKS = { statusBarClear: (file) => statusBarClear(file, STATUS_BAR_REGIONS) };
+
+const adb = (...args) => execFileSync(ADB, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).replace(/\r/g, '').trim();
+const shell = (command) => adb('shell', command);
+
+/** The preview build's app ID: the store's, plus .preview (app.config.js). */
+const previewPackage = () => {
+  const previous = process.env.APP_VARIANT;
+  process.env.APP_VARIANT = 'preview';
+  try {
+    const appJson = require('../app.json');
+    return require('../app.config.js')({ config: appJson.expo }).android.package;
+  } finally {
+    if (previous === undefined) delete process.env.APP_VARIANT;
+    else process.env.APP_VARIANT = previous;
+  }
+};
+
+/** Writes the settings into a new AsyncStorage database file. */
+const writeStorage = (file, manifest) => {
+  const { DatabaseSync } = require('node:sqlite');
+  rmSync(file, { force: true });
+  const database = new DatabaseSync(file);
+  database.exec(`CREATE TABLE ${STORAGE_TABLE} (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+  database.exec(`PRAGMA user_version = ${STORAGE_VERSION}`);
+  const insert = database.prepare(`INSERT INTO ${STORAGE_TABLE} (key, value) VALUES (?, ?)`);
+  for (const [key, value] of Object.entries(manifest)) insert.run(key, value);
+  database.close();
+};
+
+/** Reads one value from a copy of the app's database, with its write-ahead log. */
+const readStorageValue = (dir, key) => {
+  const { DatabaseSync } = require('node:sqlite');
+  const database = new DatabaseSync(join(dir, STORAGE_DATABASE));
+  try {
+    const row = database.prepare(`SELECT value FROM ${STORAGE_TABLE} WHERE key = ?`).get(key);
+    return row ? row.value : null;
+  } finally {
+    database.close();
+  }
+};
+
+/**
+ * The shell commands that put the new database in the app's folder, owned by
+ * the app and with its folder's SELinux label, so the app can open it. The app
+ * must be stopped.
+ */
+const installStorageCommands = (pkg, pushed) => {
+  const folder = `/data/data/${pkg}`;
+  const databases = `${folder}/databases`;
+  return [
+    'set -e',
+    `mkdir -p ${databases}`,
+    `rm -f ${databases}/${STORAGE_DATABASE} ${databases}/${STORAGE_DATABASE}-*`,
+    `cp ${pushed} ${databases}/${STORAGE_DATABASE}`,
+    `chown "$(stat -c %u:%g ${folder})" ${databases} ${databases}/${STORAGE_DATABASE}`,
+    `chmod 771 ${databases}`,
+    `chmod 660 ${databases}/${STORAGE_DATABASE}`,
+    `chcon "$(stat -c %C ${folder})" ${databases} ${databases}/${STORAGE_DATABASE}`,
+  ].join('; ');
+};
+
+/** Copies the app's database, and its write-ahead log if any, into a folder. */
+const pullStorage = (pkg, dir) => {
+  for (const suffix of ['', '-wal', '-shm']) {
+    const remote = `/data/data/${pkg}/databases/${STORAGE_DATABASE}${suffix}`;
+    const result = spawnSync(ADB, ['exec-out', `cat ${remote} 2>/dev/null`], { maxBuffer: 64 * 1024 * 1024 });
+    if (result.status === 0 && result.stdout.length) writeFileSync(join(dir, `${STORAGE_DATABASE}${suffix}`), result.stdout);
+  }
+};
+
+/** The emulator settings a shot needs: night mode, font scale, and density. */
+const deviceSettings = (settings, physicalDensity) => ({
+  night: settings.theme === 'dark' ? 'yes' : 'no',
+  fontScale: String(settings.fontScale),
+  density: settings.displayScale === 1 ? 'reset' : String(Math.round(physicalDensity * settings.displayScale)),
+});
+
+/** Changes the emulator settings that differ from the last shot's. */
+const applyDeviceSettings = (wanted, current) => {
+  if (wanted.night !== current.night) shell(`cmd uimode night ${wanted.night}`);
+  if (wanted.fontScale !== current.fontScale) shell(`settings put system font_scale ${wanted.fontScale}`);
+  if (wanted.density !== current.density) shell(`wm density ${wanted.density}`);
+  return wanted;
+};
+
+/**
+ * A steady screen for every shot: no animations, a fixed status bar (9:41,
+ * full Wi-Fi and battery, no notifications), gesture navigation as on current
+ * Pixels, and the screen kept awake and unlocked.
+ */
+const prepareEmulator = () => {
+  for (const name of ['window_animation_scale', 'transition_animation_scale', 'animator_duration_scale']) {
+    shell(`settings put global ${name} 0`);
+  }
+  shell('settings put global sysui_demo_allowed 1');
+  const demo = (command) => shell(`am broadcast -a com.android.systemui.demo -e command ${command} >/dev/null`);
+  demo('enter');
+  demo('clock -e hhmm 0941');
+  demo('battery -e level 100 -e plugged false');
+  demo('network -e wifi show -e level 4 -e mobile show -e datatype none -e level 4');
+  demo('notifications -e visible false');
+  spawnSync(ADB, ['shell', 'cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural']);
+  shell('svc power stayon true');
+  shell('input keyevent KEYCODE_WAKEUP');
+  shell('wm dismiss-keyguard');
+};
+
+const sleep = (seconds) => new Promise((done) => setTimeout(done, seconds * 1000));
+const sleepUntil = (time) => new Promise((done) => setTimeout(done, Math.max(0, time - Date.now())));
+
+const screenshot = (file) => {
+  const result = spawnSync(ADB, ['exec-out', 'screencap -p'], { maxBuffer: 64 * 1024 * 1024 });
+  if (result.status !== 0 || !result.stdout.length) throw new Error(`screencap failed: ${result.stderr}`);
+  writeFileSync(file, result.stdout);
+};
+
+const isRunning = (pkg) => spawnSync(ADB, ['shell', `pidof ${pkg}`], { encoding: 'utf8' }).stdout.trim() !== '';
+
+const capture = async (outDir, group) => {
+  const config = loadConfig();
+  const pkg = previewPackage();
+  // Root, to write into the app's private folder. adbd restarts as root.
+  adb('root');
+  adb('wait-for-device');
+  prepareEmulator();
+  const activity = shell(`cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${pkg}`)
+    .split('\n')
+    .pop();
+  if (!activity.includes('/')) throw new Error(`${pkg} isn't installed, or has no launcher activity.`);
+  // A first launch can ask for notifications; grant them so no prompt covers a shot.
+  spawnSync(ADB, ['shell', `pm grant ${pkg} android.permission.POST_NOTIFICATIONS`]);
+  const physicalDensity = Number(/Physical density: (\d+)/.exec(shell('wm density'))[1]);
+  const size = shell('wm size');
+  let current = applyDeviceSettings(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1 }, physicalDensity), {});
+
+  const workDir = mkdtempSync(join(tmpdir(), 'android-key-screens-'));
+  const failures = [];
+  const captured = new Set();
+  const timings = [];
+  const started = Date.now();
+
+  for (const shot of takeGroup(planCaptures(config, 'android'), group, config)) {
+    shell(`am force-stop ${pkg}`);
+    const database = join(workDir, STORAGE_DATABASE);
+    writeStorage(database, buildManifest(shot.settings, shot.route));
+    const pushed = '/data/local/tmp/key-screens-storage';
+    adb('push', database, pushed);
+    shell(installStorageCommands(pkg, pushed));
+    current = applyDeviceSettings(deviceSettings(shot.settings, physicalDensity), current);
+    shell(`am start -W -n ${activity} >/dev/null`);
+    const launched = Date.now();
+    const samples = [];
+    for (let seconds = SAMPLE_EVERY; seconds < shot.wait; seconds += SAMPLE_EVERY) {
+      await sleepUntil(launched + seconds * 1000);
+      const sample = join(workDir, `sample-${seconds}.png`);
+      screenshot(sample);
+      samples.push({ seconds, file: sample });
+    }
+    await sleepUntil(launched + shot.wait * 1000);
+
+    const file = join(outDir, shot.file);
+    mkdirSync(dirname(file), { recursive: true });
+    // Taken even when something went wrong, so the artifact shows what was on
+    // screen. If the app hasn't drawn yet, or still shows its splash, it tries
+    // again for a while.
+    const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
+    screenshot(file);
+    for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
+      await sleep(2);
+      screenshot(file);
+    }
+    const finalSeconds = Math.round((Date.now() - launched) / 1000);
+    await compareSamples(samples, file);
+    const settled = settledAfter(samples, finalSeconds);
+    timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
+
+    const problems = [];
+    if (!isRunning(pkg)) problems.push(`the app wasn't running after opening ${shot.url}`);
+    // The app removes the saved screen once it has opened it.
+    if (shot.route) {
+      const pulled = mkdtempSync(join(workDir, 'pulled-'));
+      pullStorage(pkg, pulled);
+      try {
+        if (readStorageValue(pulled, ROUTE_KEY) !== null) problems.push("the app didn't open the saved screen");
+      } catch (error) {
+        problems.push(`couldn't read the app's storage back (${error.message})`);
+      }
+    }
+    if (await looksBlank(file)) problems.push('the screen is blank');
+    else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
+    for (const check of shot.checks) {
+      if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
+      else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
+    }
+    if (problems.length) failures.push(`${shot.file}: ${problems.join(', ')}`);
+    else captured.add(shot.name);
+    console.log(
+      `${shot.file} <- ${shot.url}  (settled after ${settled}s of ${finalSeconds}s)` +
+        (problems.length ? `  (${problems.join(', ')})` : ''),
+    );
+  }
+  shell(`am force-stop ${pkg}`);
+  applyDeviceSettings(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1 }, physicalDensity), current);
+  rmSync(workDir, { recursive: true, force: true });
+  writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
+
+  // A group has only some of the shots; merge-key-screens.cjs makes these
+  // once the groups are joined.
+  for (const copy of group ? [] : planStoreCopies(config, 'android')) {
+    if (!captured.has(copy.name)) {
+      failures.push(`${copy.file}: its shot "${copy.name}" wasn't captured`);
+      continue;
+    }
+    const file = join(outDir, copy.file);
+    mkdirSync(dirname(file), { recursive: true });
+    await writePlayCopy(join(outDir, copy.source), file);
+  }
+
+  const minutes = ((Date.now() - started) / 60000).toFixed(1);
+  const part = group ? `, group ${group}` : '';
+  const summary = [
+    `### Android key screens (${config.android.device}, ${size.replace(/^Physical size: /, '')}${part})`,
+    '',
+    group
+      ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
+      : `${captured.size} captured in ${minutes} minutes, in \`screens/\`, with the Google Play shots in \`screens/google-play/\`.`,
+    ...failures.map((failure) => `- ❌ ${failure}`),
+    '',
+    `Settled within 5 seconds: ${timings.filter((timing) => timing.settledAfter <= 5).length} of ${timings.length}. ` +
+      `Slowest: ${[...timings]
+        .sort((a, b) => b.settledAfter - a.settledAfter)
+        .slice(0, 5)
+        .map((timing) => `${timing.shot} ${timing.settledAfter}s`)
+        .join(', ')} (every shot is in \`settle-times.json\`).`,
+    '',
+  ].join('\n');
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+  console.log(summary);
+  if (failures.length) process.exitCode = 1;
+};
+
+/**
+ * Writes a Google Play copy of a screenshot: 1080 × 1920 with no alpha
+ * channel, which Play rejects. The emulator's screen is that size already, so
+ * a shot of any other size is an error rather than something to stretch.
+ */
+const writePlayCopy = async (source, destination) => {
+  const sharp = require('sharp');
+  const { width, height } = await sharp(source).metadata();
+  if (width !== PLAY_SIZE.width || height !== PLAY_SIZE.height) {
+    throw new Error(`${source} is ${width} × ${height}, not Google Play's ${PLAY_SIZE.width} × ${PLAY_SIZE.height}; check android.device in test/screens/screens.json.`);
+  }
+  await writeAppStoreCopy(source, destination);
+};
+
+if (require.main === module) {
+  const argument = (name) => {
+    const index = process.argv.indexOf(name);
+    return index === -1 ? undefined : process.argv[index + 1];
+  };
+  const outDir = argument('--out');
+  if (!outDir) {
+    console.error('Usage: node scripts/capture-android-screens.cjs --out <dir> [--group <group>]');
+    process.exit(2);
+  }
+  capture(resolve(outDir), argument('--group')).catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  STORAGE_DATABASE,
+  STORAGE_TABLE,
+  STORAGE_VERSION,
+  PLAY_SIZE,
+  STATUS_BAR_REGIONS,
+  previewPackage,
+  writeStorage,
+  readStorageValue,
+  installStorageCommands,
+  deviceSettings,
+  writePlayCopy,
+};
