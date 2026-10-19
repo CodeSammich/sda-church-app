@@ -152,7 +152,7 @@ if (!existsSync(androidRoot) || forcePrebuild || packageChanged) {
     'expo',
     'prebuild',
     '--template',
-    'expo-template-bare-minimum@58.0.9',
+    'expo-template-bare-minimum@58.0.25',
     '--platform',
     'android',
     '--clean',

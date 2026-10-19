@@ -15,7 +15,7 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
 });
 
 describe('wrapping text action button', () => {
-  it('keeps its full label and one hit target at 200% app and OS text', () => {
+  it('keeps its full label and one hit target at 200% app and OS text', async () => {
     jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
       fontScale: 2,
       height: 568,
@@ -23,7 +23,7 @@ describe('wrapping text action button', () => {
       width: 320,
     });
     const onPress = jest.fn();
-    const view = render(
+    const view = await render(
       React.createElement(
         TextSizeContext.Provider,
         {
@@ -46,7 +46,7 @@ describe('wrapping text action button', () => {
     const button = view.getByLabelText('Share Verse Without Truncation');
     expect(view.getByText('Share Verse Without Truncation').props.numberOfLines).toBeUndefined();
     expect(StyleSheet.flatten(button.props.style).minHeight).toBe(116);
-    fireEvent.press(button);
+    await fireEvent.press(button);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

@@ -213,7 +213,7 @@ describe('store toolchain alert text', () => {
 });
 
 describe('monitor workflow wiring', () => {
-  it.each(['external-dependency-monitor.yml', 'store-toolchain-monitor.yml'])(
+  it.each(['external-dependency-monitor.yml', 'store-toolchain-monitor.yml', 'expo-doctor-monitor.yml'])(
     '%s uses the shared module and the assignee variable',
     (file) => {
       const workflow = readFileSync(join(process.cwd(), '.github/workflows', file), 'utf8');

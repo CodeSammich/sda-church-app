@@ -35,7 +35,7 @@ jobs:
           node-version: 22
 
       - name: Install QR generator
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Generate JPGs
         run: |

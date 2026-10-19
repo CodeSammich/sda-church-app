@@ -1,4 +1,3 @@
-import '@/services/animationFramePolyfill';
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import {
@@ -95,7 +94,7 @@ LogBox.ignoreAllLogs();
 
 export const unstable_settings = {
   // Ensure that reloading on `/language` keeps a back button present.
-  initialRouteName: '(tabs)',
+  anchor: '(tabs)',
 };
 
 type BeforeInstallPromptEvent = Event & {

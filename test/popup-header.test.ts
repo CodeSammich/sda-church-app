@@ -11,16 +11,16 @@ describe('popup close buttons', () => {
     { name: 'Language', dialog: LanguageDialog, close: 'Close', language: 'en' as const },
     { name: 'Theme', dialog: ThemeDialog, close: '關閉', language: 'zh' as const },
     { name: 'Text size', dialog: TextSizeDialog, close: 'Cerrar', language: 'es' as const },
-  ])('the $name dialog closes with an X, not a Close button', ({ dialog, close, language }) => {
+  ])('the $name dialog closes with an X, not a Close button', async ({ dialog, close, language }) => {
     const onDismiss = jest.fn();
-    const screen = renderWithPreferences(
+    const screen = await renderWithPreferences(
       createElement(dialog, { onDismiss, visible: true }),
       { language },
     );
 
     // The X is an icon, so the word appears only as its screen-reader label.
     expect(screen.queryByText(close)).toBeNull();
-    fireEvent.press(screen.getByRole('button', { name: close }));
+    await fireEvent.press(screen.getByRole('button', { name: close }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 

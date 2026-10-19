@@ -172,6 +172,11 @@ GitHub's code scanning default setup and have no workflow file.
 - Check: `Jest unit tests`. Runs on every pull request.
 - Runs `npm test -- --ci`, then `npm run check:text-scale`. It doesn't typecheck or build
   the web app; run `npm run check` for those.
+- Check: `Expo Doctor (config)`, a separate job that isn't required, so a failure shows on
+  the pull request without blocking the merge. It runs `npm run doctor` (`expo-doctor`)
+  without its dependency version check, which the weekly **Expo Doctor Monitor** runs
+  instead: each new Expo patch release would otherwise fail it on unrelated pull
+  requests.
 
 ### `Release - PR Version Sync` (`.github/workflows/release-validation.yml`)
 
@@ -290,8 +295,8 @@ GitHub's code scanning default setup and have no workflow file.
   [Native mobile binary builds](operations/native-builds.md).
 
 The other workflows never run on pull requests. **External Dependency Monitor**, **Store
-Toolchain Monitor**, **Apple Signing Monitor**, **Yearly Checkup**, **Workspace Backup
-Reminder**, and **Due-Date Reminders** run on a schedule;
+Toolchain Monitor**, **Expo Doctor Monitor**, **Apple Signing Monitor**, **Yearly
+Checkup**, **Workspace Backup Reminder**, and **Due-Date Reminders** run on a schedule;
 **Deploy Bulletin Apps Script** starts on every merge into `main` and waits for
 `production` approval; and **Generate physical bulletin QR codes**
 runs when a merge into `main` changes the QR code list or its script. The

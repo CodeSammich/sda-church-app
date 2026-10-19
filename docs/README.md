@@ -23,12 +23,8 @@ the store build numbers is in [Version numbers](operations/version-numbers.md).
 Install the dependencies:
 
 ```bash
-npm install --force
+npm install
 ```
-
-`--force` is needed because React Native is a release candidate (`0.88.0-rc.3`), which
-some packages' peer-dependency ranges don't include, so a plain `npm install` stops
-with an `ERESOLVE` error. CI installs the same way, with `npm ci --force`.
 
 A fork for another church changes the church-specific details in
 [`constants/`](../constants/), such as `ChurchData.ts`, `TeamData.ts`, and
@@ -90,11 +86,17 @@ run instead of building it. Both are in
 | `npm run check:text-scale` | That no text style bypasses the app's text-size setting (`scripts/check-text-scale-coverage.mjs`) | **PR Unit Tests**, after Jest |
 | `npm run build:web` | That the web build exports, into `build/web` | Not on pull requests; the website deploy builds it again after a merge |
 | `npm run check` | All four of the above: typecheck, then tests, text size, and web build | Not in CI; run it before opening a pull request |
+| `npm run doctor` | `expo-doctor`: the Expo config, native modules, and that every package the SDK pins is the version it expects | **PR Unit Tests** without the version check, not required; **Expo Doctor Monitor**, weekly, in full |
 | `npm run test:integration:bulletin` | The response shape of the production bulletin API | **Bulletin API Integration**, on the release pull request into `main` |
 | `npm run test:integration:external` | Every outside service the app uses: APIs, media hosts, hymn sites, and the website's pages | **External Dependency Monitor**, daily |
 
 CI doesn't typecheck or build the web app on pull requests, so `npm run check` is the
 way to catch those before review.
+
+`npm test` runs two Jest projects from `package.json`. Most tests run in `native`, with
+React Native's test setup. Tests named `*.web.test.ts` run in `web` instead, with React
+Native for Web in a browser-like page, for code that runs only in the web app, such as
+`services/BibleAudioPlayer.web.ts`.
 
 The two integration tests call live services, so they can fail because a service is
 down rather than because of your change.

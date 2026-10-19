@@ -534,6 +534,7 @@ describe('Expo template pin', () => {
       'scripts/build-ios-simulator.mjs',
       '.github/workflows/native-ios-build.yml',
       '.github/workflows/ios-pr-preview.yml',
+      '.github/workflows/ios-compile-cache.yml',
       'docs/operations/native-builds.md',
     ];
     const versions = new Set(
@@ -544,6 +545,25 @@ describe('Expo template pin', () => {
       ),
     );
     expect([...versions]).toHaveLength(1);
+  });
+});
+
+describe('Dependency installs', () => {
+  // #211: the app is on stable Expo and React Native, whose peer ranges agree,
+  // so installs no longer need to override npm's peer-dependency checks.
+  it('never forces past peer-dependency conflicts', () => {
+    const { readdirSync } = require('node:fs');
+    const files = [
+      ...readdirSync(resolve(process.cwd(), '.github/workflows')).map(
+        (file: string) => `.github/workflows/${file}`,
+      ),
+      'README.md',
+      'docs/README.md',
+      'docs/operations/native-builds.md',
+    ];
+    for (const file of files) {
+      expect(readRepoFile(file)).not.toMatch(/npm (ci|install)\b[^\n]*--(force|legacy-peer-deps)/);
+    }
   });
 });
 

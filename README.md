@@ -9,7 +9,7 @@ build remains a useful preview and fallback surface.
 You need Node.js 22 (22.13 or later) or 24 (24.3 or later), and npm.
 
 ```bash
-npm install --force   # --force is needed while React Native is a release candidate
+npm install           # install the dependencies
 npm run web           # start the app in a browser
 npm test              # run the Jest unit tests
 npm run check         # typecheck, tests, text-size check, and web build
@@ -148,8 +148,5 @@ Android and iOS builds, which wait for a maintainer's approval and then upload t
 Google Play internal testing and TestFlight. Nothing reaches the public until a
 maintainer submits it in each store.
 
-The app uses one Expo source for the native apps and the web/PWA build. It has used the
-stable Expo SDK 58 (`expo ~58.0.0`) since 0.42.0. React Native is still a release
-candidate (`0.88.0-rc.3`); moving to a stable React Native release is tracked in
-[issue #211](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/211),
-which doesn't block the launch.
+The app uses one Expo source for the native apps and the web/PWA build: Expo SDK 58
+(`expo ~58.0.16`) with React Native 0.88.0.

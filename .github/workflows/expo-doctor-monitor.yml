@@ -1,0 +1,129 @@
+name: Expo Doctor Monitor
+
+# Expo publishes SDK patch releases often, and a package can fall out of step
+# with the SDK after a hand edit or a Dependabot update. Every Monday this runs
+# the full expo-doctor, including its check that each Expo package is the
+# version the SDK expects, and opens an alert issue when it fails. Pull requests
+# run it without that check (Expo Doctor (config) in PR Unit Tests), since each
+# new Expo release would otherwise turn unrelated pull requests red. While Expo
+# or React Native is a pre-release, the run is skipped and passes.
+
+on:
+  schedule:
+    # Mondays, twenty minutes after the Store Toolchain Monitor.
+    - cron: "43 16 * * 1"
+      timezone: "America/New_York"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: expo-doctor-monitor
+  cancel-in-progress: false
+
+jobs:
+  # Installs the dependencies and runs expo-doctor with a read-only token, so no
+  # dependency code runs where the token can write issues.
+  doctor:
+    # Forks commonly disable Issues, while this monitor opens and updates an
+    # alert issue. Keep scheduled/manual monitoring scoped to the canonical repo.
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      outcome: ${{ steps.doctor.outcome }}
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run the full expo-doctor
+        id: doctor
+        continue-on-error: true
+        run: node scripts/expo-doctor-monitor.cjs --report expo-doctor-report.json
+
+      - name: Keep the report for the alert
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: expo-doctor-report
+          path: expo-doctor-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  alert:
+    needs: doctor
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # Only for scripts/; nothing is installed here.
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Get the report
+        if: needs.doctor.outputs.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: expo-doctor-report
+
+      # The issue handling lives in scripts/monitor-alert-issue.cjs and the
+      # alert text in scripts/expo-doctor-monitor.cjs, both unit tested.
+      - name: Open or update the alert issue
+        if: needs.doctor.outputs.outcome == 'failure'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          # Comma-separated GitHub usernames. Assigning the alert sends them a
+          # notification even when they don't watch the repository.
+          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const { buildExpoDoctorAlert } = require(`${process.env.GITHUB_WORKSPACE}/scripts/expo-doctor-monitor.cjs`);
+            const report = alerts.readReport('expo-doctor-report.json', core);
+            const alert = buildExpoDoctorAlert(report, alerts.getRunUrl(context));
+            const result = await alerts.openOrUpdateAlert({
+              github,
+              context,
+              core,
+              ...alert,
+              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
+            });
+            core.info(`Alert issue ${result.action}: #${result.number}`);
+
+      - name: Close the alert issue after recovery
+        if: needs.doctor.outputs.outcome == 'success'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          script: |
+            const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
+            const { ALERT_TITLE } = require(`${process.env.GITHUB_WORKSPACE}/scripts/expo-doctor-monitor.cjs`);
+            const result = await alerts.closeAlert({
+              github,
+              context,
+              title: ALERT_TITLE,
+              body: `expo-doctor passed again in ${alerts.getRunUrl(context)}.`,
+            });
+            core.info(`Alert issue: ${result.action}`);
+
+      - name: Mark the workflow unhealthy
+        if: needs.doctor.outputs.outcome == 'failure'
+        run: |
+          echo "expo-doctor found problems. See the alert issue."
+          exit 1

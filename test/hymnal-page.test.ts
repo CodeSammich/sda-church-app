@@ -74,12 +74,20 @@ const hymnTitle = (hymnalId: HymnalBookId, number: number | string) => {
 
 // The carousel's dots name each hymnal in order, and mark the one showing.
 // The carousel draws its pages, and the arrows on them, once it knows its width.
-const layOutCarousel = (view: ReturnType<typeof renderPage>) => {
-  const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
-  act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+const layOutCarousel = async (view: Awaited<ReturnType<typeof renderPage>>) => {
+  const root = view.getByTestId('library-featured-carousel');
+  await act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
 };
 
-const dotLabels = (view: ReturnType<typeof renderPage>) =>
+// Test Renderer keeps only host elements, so a FlatList is found as the scroll
+// view it renders, which keeps the list's props, such as data and renderItem.
+const hostList = (view: Awaited<ReturnType<typeof renderPage>>) => {
+  const lists = view.container.queryAll((node) => node.type === 'RCTScrollView' && 'data' in node.props);
+  expect(lists).toHaveLength(1);
+  return lists[0];
+};
+
+const dotLabels = (view: Awaited<ReturnType<typeof renderPage>>) =>
   view.getAllByLabelText(/(, hymnal \d+ of|，第 \d+\/\d+ 本)/).map((dot) => ({
     label: dot.props.accessibilityLabel as string,
     selected: Boolean(dot.props.accessibilityState?.selected),
@@ -100,8 +108,8 @@ describe('hymnal order', () => {
     expect(getHymnalOrder('zh-cn')).toEqual([...chinese, 'sdah-1985-en']);
   });
 
-  it('shows the carousel in that order, picking the first hymnal', () => {
-    const english = renderPage(HymnalSelectionScreen);
+  it('shows the carousel in that order, picking the first hymnal', async () => {
+    const english = await renderPage(HymnalSelectionScreen);
     expect(dotLabels(english).map(({ label }) => label)).toEqual([
       'SDA Hymnal — 1985 Edition, hymnal 1 of 6',
       'Chinese Hymnal — 505 Edition, hymnal 2 of 6',
@@ -112,9 +120,9 @@ describe('hymnal order', () => {
     ]);
     expect(dotLabels(english)[0].selected).toBe(true);
     expect(english.getByText(hymnTitle('sdah-1985-en', 1))).toBeTruthy();
-    english.unmount();
+    await english.unmount();
 
-    const chinese = renderPage(HymnalSelectionScreen, {}, 'zh');
+    const chinese = await renderPage(HymnalSelectionScreen, {}, 'zh');
     expect(dotLabels(chinese).map(({ label }) => label)).toEqual([
       '中文讚美詩 — 505 版，第 1/6 本',
       '中文讚美詩 — 506 版，第 2/6 本',
@@ -128,9 +136,9 @@ describe('hymnal order', () => {
 });
 
 describe('the hymnal page', () => {
-  it('shows the hymns of the hymnal picked in the carousel', () => {
-    const view = renderPage(HymnalSelectionScreen);
-    fireEvent.press(view.getByLabelText('Chinese Hymnal — 506 Edition, hymnal 3 of 6'));
+  it('shows the hymns of the hymnal picked in the carousel', async () => {
+    const view = await renderPage(HymnalSelectionScreen);
+    await fireEvent.press(view.getByLabelText('Chinese Hymnal — 506 Edition, hymnal 3 of 6'));
 
     expect(dotLabels(view)[2].selected).toBe(true);
     expect(view.getByText(hymnTitle('chinese-hymnal-506', 1))).toBeTruthy();
@@ -138,74 +146,74 @@ describe('the hymnal page', () => {
     expect(view.getByPlaceholderText('Search by number or title...')).toBeTruthy();
   });
 
-  it('picks the next or previous hymnal with the carousel arrows, in each language (#447)', () => {
-    const view = renderPage(HymnalSelectionScreen);
-    layOutCarousel(view);
+  it('picks the next or previous hymnal with the carousel arrows, in each language (#447)', async () => {
+    const view = await renderPage(HymnalSelectionScreen);
+    await layOutCarousel(view);
     // The first hymnal has no previous one.
     expect(view.queryByLabelText('Previous hymnal')).toBeNull();
-    fireEvent.press(view.getByLabelText('Next hymnal'));
+    await fireEvent.press(view.getByLabelText('Next hymnal'));
     expect(dotLabels(view)[1].selected).toBe(true);
     expect(view.getByText(hymnTitle('chinese-hymnal-505', 1))).toBeTruthy();
-    fireEvent.press(view.getByLabelText('Previous hymnal'));
+    await fireEvent.press(view.getByLabelText('Previous hymnal'));
     expect(dotLabels(view)[0].selected).toBe(true);
     expect(view.getByText(hymnTitle('sdah-1985-en', 1))).toBeTruthy();
-    view.unmount();
+    await view.unmount();
 
     // The last hymnal has no next one.
-    const chinese = renderPage(routes[0][1], {}, 'zh');
-    layOutCarousel(chinese);
+    const chinese = await renderPage(routes[0][1], {}, 'zh');
+    await layOutCarousel(chinese);
     expect(dotLabels(chinese)[5].selected).toBe(true);
     expect(chinese.queryByLabelText('下一本詩歌本')).toBeNull();
     expect(chinese.getByLabelText('上一本詩歌本')).toBeTruthy();
-    chinese.unmount();
+    await chinese.unmount();
 
     for (const [language, label] of [['zh-cn', '下一本诗歌本'], ['es', 'Himnario siguiente']] as const) {
-      const translated = renderPage(HymnalSelectionScreen, {}, language);
-      layOutCarousel(translated);
+      const translated = await renderPage(HymnalSelectionScreen, {}, language);
+      await layOutCarousel(translated);
       expect(translated.getByLabelText(label)).toBeTruthy();
-      translated.unmount();
+      await translated.unmount();
     }
   });
 
-  it("keeps each hymnal's own search when another hymnal is picked", () => {
-    const view = renderPage(HymnalSelectionScreen);
-    fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'Joyful');
+  it("keeps each hymnal's own search when another hymnal is picked", async () => {
+    const view = await renderPage(HymnalSelectionScreen);
+    await fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'Joyful');
     expect(view.getByText(hymnTitle('sdah-1985-en', 12))).toBeTruthy();
     expect(view.queryByText(hymnTitle('sdah-1985-en', 1))).toBeNull();
 
     // The 505 hymnal has no search of its own yet, so it shows every hymn.
-    fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymnal 2 of 6'));
+    await fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymnal 2 of 6'));
     expect(view.getByPlaceholderText('Search by number or title...').props.value).toBe('');
     expect(view.getByText(hymnTitle('chinese-hymnal-505', 1))).toBeTruthy();
 
-    fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymnal 1 of 6'));
+    await fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymnal 1 of 6'));
     expect(view.getByPlaceholderText('Search by number, title, or scripture...').props.value).toBe('Joyful');
     expect(view.getByText(hymnTitle('sdah-1985-en', 12))).toBeTruthy();
   });
 
-  it('sends the old hymn lookup to the hymnal page, on the hymn it had picked', () => {
+  it('sends the old hymn lookup to the hymnal page, on the hymn it had picked', async () => {
     const HymnLookup: ComponentType = require('@/app/(tabs)/home/hymn-lookup').default;
-    renderPage(HymnLookup, { sourceHymnalId: 'chinese-hymnal-505', sourceNumber: '23' });
+    await renderPage(HymnLookup, { sourceHymnalId: 'chinese-hymnal-505', sourceNumber: '23' });
     expect(mockRedirect).toBe('/home/hymnal-selection?hymnal=chinese-hymnal-505&hymnNum=23');
-    renderPage(HymnLookup);
+    await renderPage(HymnLookup);
     expect(mockRedirect).toBe('/home/hymnal-selection');
-    renderPage(HymnLookup, { sourceHymnalId: 'not-a-hymnal', sourceNumber: '23' });
+    await renderPage(HymnLookup, { sourceHymnalId: 'not-a-hymnal', sourceNumber: '23' });
     expect(mockRedirect).toBe('/home/hymnal-selection');
 
     // The page itself has no lookup button now; its search does that job.
-    expect(renderPage(HymnalSelectionScreen).queryByText(/1985 ↔ 505/)).toBeNull();
+    expect((await renderPage(HymnalSelectionScreen)).queryByText(/1985 ↔ 505/)).toBeNull();
   });
 
-  it("shows the hymnal's name and a search button in the header once the carousel scrolls away", () => {
-    const view = renderPage(HymnalSelectionScreen);
+  it("shows the hymnal's name and a search button in the header once the carousel scrolls away", async () => {
+    const view = await renderPage(HymnalSelectionScreen);
     expect(mockScreenOptions).toMatchObject({ title: 'Hymnals', showTitleChip: false, heroUnderStatusBar: true });
     expect(mockScreenOptions.headerSearchButton).toBeUndefined();
 
     // The carousel is 400 tall; the layout mock gives the safe area a 0 top.
-    const list = view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>);
-    const carousel = view.UNSAFE_getByType(LibraryFeaturedCarousel).parent!;
-    act(() => carousel.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 400 } } }));
-    act(() => list.props.onScroll({ nativeEvent: { contentOffset: { x: 0, y: 500 } } }));
+    const list = hostList(view);
+    const carousel = view.getByTestId('library-featured-carousel').parent!;
+    await act(() => carousel.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 400 } } }));
+    await fireEvent.scroll(list, { nativeEvent: { contentOffset: { x: 0, y: 500 } } });
 
     expect(mockScreenOptions).toMatchObject({
       title: 'SDA Hymnal — 1985 Edition',
@@ -217,9 +225,9 @@ describe('the hymnal page', () => {
 });
 
 describe("each hymnal's own route", () => {
-  it.each(routes)('/home/%s opens the hymnal page with its hymnal and hymn', (_route, page, hymnalId) => {
+  it.each(routes)('/home/%s opens the hymnal page with its hymnal and hymn', async (_route, page, hymnalId) => {
     const hymnNumber = HYMNALS[hymnalId].getHymns()[9].number.toString();
-    const view = renderPage(page, { hymnNum: hymnNumber, backTo: '/home/bulletin' });
+    const view = await renderPage(page, { hymnNum: hymnNumber, backTo: '/home/bulletin' });
     const order = getHymnalOrder('en');
 
     expect(dotLabels(view)[order.indexOf(hymnalId)].selected).toBe(true);
@@ -232,20 +240,20 @@ describe("each hymnal's own route", () => {
     expect(view.getByText('Show all hymns')).toBeTruthy();
     expect(mockScreenOptions.backTo).toBe('/home/bulletin');
 
-    fireEvent.press(view.getByText('Show all hymns'));
+    await fireEvent.press(view.getByText('Show all hymns'));
     expect(view.getByText(hymnTitle(hymnalId, HYMNALS[hymnalId].getHymns()[0].number))).toBeTruthy();
   });
 
-  it('lets the hymnal param pick another hymnal and applies an old search', () => {
-    const view = renderPage(routes[0][1], { hymnal: 'chinese-hymnal-505', highlight: '主' });
+  it('lets the hymnal param pick another hymnal and applies an old search', async () => {
+    const view = await renderPage(routes[0][1], { hymnal: 'chinese-hymnal-505', highlight: '主' });
     expect(dotLabels(view)[1].selected).toBe(true);
     expect(view.getByPlaceholderText('Search by number or title...').props.value).toBe('主');
   });
 
-  it("shows a 505 hymn its 1985 equivalent's verse, and opens it in the Chinese Bible", () => {
+  it("shows a 505 hymn its 1985 equivalent's verse, and opens it in the Chinese Bible", async () => {
     // 505's 5 is SDAH 1, on Psalm 103:2-5.
-    const view = renderPage(routes[1][1], { hymnNum: '5' }, 'zh');
-    fireEvent.press(view.getByText('詩篇 103:2-5'));
+    const view = await renderPage(routes[1][1], { hymnNum: '5' }, 'zh');
+    await fireEvent.press(view.getByText('詩篇 103:2-5'));
     expect(mockPush).toHaveBeenLastCalledWith({
       pathname: '/bible',
       params: expect.objectContaining({
@@ -255,19 +263,19 @@ describe("each hymnal's own route", () => {
         backTo: '/home/chinese-505-hymnal?hymnNum=5',
       }),
     });
-    view.unmount();
+    await view.unmount();
 
     // In Simplified Chinese, the Simplified Bible. The 506 has no verses yet.
-    const simplified = renderPage(routes[1][1], { hymnNum: '5' }, 'zh-cn');
-    fireEvent.press(simplified.getByText('诗篇 103:2-5'));
+    const simplified = await renderPage(routes[1][1], { hymnNum: '5' }, 'zh-cn');
+    await fireEvent.press(simplified.getByText('诗篇 103:2-5'));
     expect(mockPush).toHaveBeenLastCalledWith(
       expect.objectContaining({ params: expect.objectContaining({ translationId: 'cmn_cu1' }) }),
     );
   });
 
-  it('brings the Bible back to the same hymnal, hymn, and return route', () => {
-    const view = renderPage(routes[0][1], { hymnNum: '1', backTo: '/home/bulletin' });
-    fireEvent.press(view.getByText('Psalm 103:2-5'));
+  it('brings the Bible back to the same hymnal, hymn, and return route', async () => {
+    const view = await renderPage(routes[0][1], { hymnNum: '1', backTo: '/home/bulletin' });
+    await fireEvent.press(view.getByText('Psalm 103:2-5'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/bible',
       params: expect.objectContaining({
@@ -282,15 +290,15 @@ describe("each hymnal's own route", () => {
 describe('recordings and piano accompaniments', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('offers an English hymn with singing or piano only, and its verse as a chip', () => {
-    const view = renderPage(routes[0][1], { hymnNum: '1' });
+  it('offers an English hymn with singing or piano only, and its verse as a chip', async () => {
+    const view = await renderPage(routes[0][1], { hymnNum: '1' });
     expect(view.queryByText('YouTube')).toBeNull();
     expect(view.getByText('Psalm 103:2-5')).toBeTruthy();
 
-    fireEvent.press(view.getByText('With singing'));
+    await fireEvent.press(view.getByText('With singing'));
     expect(openYouTubeSearch).toHaveBeenCalledWith('SDA Hymnal 1985 Praise to the Lord');
 
-    fireEvent.press(view.getByText('Piano only'));
+    await fireEvent.press(view.getByText('Piano only'));
     expect(openURL).toHaveBeenCalledWith(
       'https://www.youtube.com/watch?v=Uoi3zhcXZrM',
       'Error',
@@ -298,19 +306,19 @@ describe('recordings and piano accompaniments', () => {
     );
   });
 
-  it('leaves out the piano button when a hymn has no accompaniment', () => {
+  it('leaves out the piano button when a hymn has no accompaniment', async () => {
     // Not in the playlist; see scripts/map-english-hymnal-piano-youtube.mjs.
-    const view = renderPage(routes[0][1], { hymnNum: '30' });
+    const view = await renderPage(routes[0][1], { hymnNum: '30' });
     expect(view.getByText('With singing')).toBeTruthy();
     expect(view.queryByText('Piano only')).toBeNull();
   });
 
-  it('offers a 505 hymn with singing or piano only too', () => {
-    const view = renderPage(routes[1][1], { hymnNum: '1' }, 'zh');
-    fireEvent.press(view.getByText('演唱'));
+  it('offers a 505 hymn with singing or piano only too', async () => {
+    const view = await renderPage(routes[1][1], { hymnNum: '1' }, 'zh');
+    await fireEvent.press(view.getByText('演唱'));
     expect(openYouTubeSearch).toHaveBeenCalledWith('505版赞美诗 1 在主宝座前');
 
-    fireEvent.press(view.getByText('鋼琴伴奏'));
+    await fireEvent.press(view.getByText('鋼琴伴奏'));
     expect(openURL).toHaveBeenCalledWith(
       'https://www.youtube.com/watch?v=JxR9rqNut-s',
       'Error',
@@ -318,16 +326,16 @@ describe('recordings and piano accompaniments', () => {
     );
   });
 
-  it.each(routes.slice(2))('offers only With singing on /home/%s, which has no accompaniments yet', (_route, page, hymnalId) => {
-    const view = renderPage(page, { hymnNum: HYMNALS[hymnalId].getHymns()[0].number.toString() });
+  it.each(routes.slice(2))('offers only With singing on /home/%s, which has no accompaniments yet', async (_route, page, hymnalId) => {
+    const view = await renderPage(page, { hymnNum: HYMNALS[hymnalId].getHymns()[0].number.toString() });
     expect(view.getByText('With singing')).toBeTruthy();
     expect(view.getByA11yHint('Opens the video on YouTube')).toBeTruthy();
     expect(view.queryByText('YouTube')).toBeNull();
     expect(view.queryByText('Piano only')).toBeNull();
   });
 
-  it('labels the buttons in the app language', () => {
-    const view = renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
+  it('labels the buttons in the app language', async () => {
+    const view = await renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
     expect(view.getByText('演唱')).toBeTruthy();
     expect(view.getByText('鋼琴伴奏')).toBeTruthy();
     expect(view.getAllByA11yHint('在 YouTube 開啟影片')).toHaveLength(2);
@@ -351,10 +359,10 @@ describe('1985 ↔ 505 cross-references', () => {
     expect(getHymnCrossReferences('chinese-hymnal-506', 1)).toEqual([]);
   });
 
-  it('shows the 505 hymn from its chip on a 1985 hymn, and back', () => {
-    const view = renderPage(HymnalSelectionScreen);
+  it('shows the 505 hymn from its chip on a 1985 hymn, and back', async () => {
+    const view = await renderPage(HymnalSelectionScreen);
     // SDAH 1 is 505's hymn 5.
-    fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymn 5'));
+    await fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymn 5'));
 
     expect(dotLabels(view)[1].selected).toBe(true);
     expect(view.getAllByText(/^\d+\. /).map((text) => text.props.children.join(''))).toEqual([
@@ -362,19 +370,19 @@ describe('1985 ↔ 505 cross-references', () => {
     ]);
     expect(view.getByText('English · 1')).toBeTruthy();
 
-    fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 1'));
+    await fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 1'));
     expect(dotLabels(view)[0].selected).toBe(true);
     expect(view.getByText(hymnTitle('sdah-1985-en', 1))).toBeTruthy();
     expect(view.getByText('Show all hymns')).toBeTruthy();
   });
 
-  it('labels the chip in the app language', () => {
-    const view = renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
+  it('labels the chip in the app language', async () => {
+    const view = await renderPage(routes[0][1], { hymnNum: '1' }, 'zh');
     expect(view.getByText('中文 505 · 5')).toBeTruthy();
     expect(view.getByLabelText('中文讚美詩 — 505 版第 5 首')).toBeTruthy();
-    view.unmount();
+    await view.unmount();
 
-    const english = renderPage(routes[1][1], { hymnNum: '5' });
+    const english = await renderPage(routes[1][1], { hymnNum: '5' });
     expect(english.getByText('English · 1')).toBeTruthy();
   });
 });
@@ -383,8 +391,8 @@ describe('searching every hymnal from the page', () => {
   // What the one list holds: the picked hymnal's hymns, then the heading and
   // the other hymnals' matches, as "hymnal:number" under each "hymnal" name,
   // with "more hymnal" for a Show all button.
-  const listedHymns = (view: ReturnType<typeof renderPage>) =>
-    (view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>).props.data as any[]).map(
+  const listedHymns = (view: Awaited<ReturnType<typeof renderPage>>) =>
+    (hostList(view).props.data as any[]).map(
       (item) =>
         item.kind === 'heading'
           ? 'heading'
@@ -397,9 +405,9 @@ describe('searching every hymnal from the page', () => {
                 : `${item.number}`,
     );
 
-  it('lists matches in the other Chinese hymnals under their own heading', () => {
-    const view = renderPage(HymnalSelectionScreen, {}, 'zh');
-    fireEvent.changeText(view.getByPlaceholderText('按編號或標題搜尋...'), '平安夜');
+  it('lists matches in the other Chinese hymnals under their own heading', async () => {
+    const view = await renderPage(HymnalSelectionScreen, {}, 'zh');
+    await fireEvent.changeText(view.getByPlaceholderText('按編號或標題搜尋...'), '平安夜');
 
     expect(listedHymns(view)).toEqual([
       '66',
@@ -423,9 +431,9 @@ describe('searching every hymnal from the page', () => {
     expect(result.props.accessibilityRole).toBe('button');
   });
 
-  it("shows the other hymnals' hymns with the same number", () => {
-    const view = renderPage(HymnalSelectionScreen);
-    fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), '100');
+  it("shows the other hymnals' hymns with the same number", async () => {
+    const view = await renderPage(HymnalSelectionScreen);
+    await fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), '100');
 
     const listed = listedHymns(view);
     expect(listed[0]).toBe('100');
@@ -447,29 +455,29 @@ describe('searching every hymnal from the page', () => {
     expect(view.getByLabelText(`Chinese Hymnal — 505 Edition, hymn 100, ${hymnTitle('chinese-hymnal-505', 100).replace('100. ', '')}`)).toBeTruthy();
   });
 
-  it('leads with the 505 equivalent of a 1985 match, and shows it when tapped', () => {
-    const view = renderPage(HymnalSelectionScreen);
-    fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'Praise God, From Whom');
+  it('leads with the 505 equivalent of a 1985 match, and shows it when tapped', async () => {
+    const view = await renderPage(HymnalSelectionScreen);
+    await fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'Praise God, From Whom');
     // The doxology in two settings; the cross-reference table pairs only 694 with 505.
     expect(listedHymns(view)).toEqual(['694', '695', 'heading', 'chinese-hymnal-505', 'chinese-hymnal-505:497']);
 
-    fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymn 497, 赞美上帝'));
+    await fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymn 497, 赞美上帝'));
     expect(dotLabels(view)[1].selected).toBe(true);
     expect(listedHymns(view)).toEqual(['497']);
     expect(view.getByText('Show all hymns')).toBeTruthy();
     expect(view.queryByText('In other hymnals')).toBeNull();
 
     // The 1985 hymnal still has its search.
-    fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymnal 1 of 6'));
+    await fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymnal 1 of 6'));
     expect(listedHymns(view)).toEqual(['694', '695', 'heading', 'chinese-hymnal-505', 'chinese-hymnal-505:497']);
   });
 
-  it("shows another hymnal's first 10 matches, and the rest with Show all", () => {
-    const view = renderPage(HymnalSelectionScreen);
+  it("shows another hymnal's first 10 matches, and the rest with Show all", async () => {
+    const view = await renderPage(HymnalSelectionScreen);
     const searchbar = view.getByPlaceholderText('Search by number, title, or scripture...');
-    fireEvent.changeText(searchbar, '耶穌');
+    await fireEvent.changeText(searchbar, '耶穌');
     const more = () =>
-      (view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>).props.data as any[]).find(
+      (hostList(view).props.data as any[]).find(
         (item) => item.kind === 'more' && item.hymnalId === 'chinese-hymnal-505',
       );
     const count = more().count;
@@ -483,25 +491,25 @@ describe('searching every hymnal from the page', () => {
 
     // The list renders rows this far down only once it's laid out, so render
     // the button from the list's own renderItem and press it.
-    const list = view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>);
+    const list = hostList(view);
     const button = list.props.renderItem({ item: more() });
     expect(button.props.accessibilityLabel).toBe(`Show all ${count}, Chinese Hymnal — 505 Edition`);
-    act(() => button.props.onPress());
+    await act(() => button.props.onPress());
     const expanded = listedHymns(view);
     expect(expanded.filter((key) => key.startsWith('chinese-hymnal-505:'))).toHaveLength(count);
     expect(expanded).not.toContain('more chinese-hymnal-505');
     expect(expanded).toContain('more chinese-hymnal-506');
 
     // Another search shows 10 again.
-    fireEvent.changeText(searchbar, '主');
+    await fireEvent.changeText(searchbar, '主');
     expect(more()).toBeTruthy();
   });
 
-  it('answers "hymn 100, English or Chinese?" from any hymnal', () => {
+  it('answers "hymn 100, English or Chinese?" from any hymnal', async () => {
     // Each hymn listed, wherever it is: the picked hymnal's own rows, or the
     // other hymnals' results, as "hymnal:number title".
-    const listedTitles = (view: ReturnType<typeof renderPage>, hymnalId: HymnalBookId) =>
-      (view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>).props.data as any[])
+    const listedTitles = (view: Awaited<ReturnType<typeof renderPage>>, hymnalId: HymnalBookId) =>
+      (hostList(view).props.data as any[])
         .filter((item) => item.kind !== 'heading')
         .map((item) =>
           item.kind === 'other'
@@ -511,26 +519,26 @@ describe('searching every hymnal from the page', () => {
     const english100 = `sdah-1985-en:${hymnTitle('sdah-1985-en', 100)}`;
     const chinese100 = `chinese-hymnal-505:${hymnTitle('chinese-hymnal-505', 100)}`;
 
-    getHymnalOrder('en').forEach((hymnalId, index) => {
-      const view = renderPage(HymnalSelectionScreen);
-      fireEvent.press(view.getByLabelText(new RegExp(`, hymnal ${index + 1} of 6$`)));
-      fireEvent.changeText(view.getByPlaceholderText(/^Search by number/), '100');
+    for (const [index, hymnalId] of getHymnalOrder('en').entries()) {
+      const view = await renderPage(HymnalSelectionScreen);
+      await fireEvent.press(view.getByLabelText(new RegExp(`, hymnal ${index + 1} of 6$`)));
+      await fireEvent.changeText(view.getByPlaceholderText(/^Search by number/), '100');
 
       const listed = listedTitles(view, hymnalId);
       expect(listed[0]).toBe(`${hymnalId}:${hymnTitle(hymnalId, 100)}`);
       expect(listed).toEqual(expect.arrayContaining([english100, chinese100]));
-      view.unmount();
-    });
+      await view.unmount();
+    }
   });
 
-  it('says nothing matches only when no hymnal has a match', () => {
-    const view = renderPage(HymnalSelectionScreen);
-    fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'zzqqx');
+  it('says nothing matches only when no hymnal has a match', async () => {
+    const view = await renderPage(HymnalSelectionScreen);
+    await fireEvent.changeText(view.getByPlaceholderText('Search by number, title, or scripture...'), 'zzqqx');
     expect(view.getByText('No hymns match your search.')).toBeTruthy();
     expect(view.queryByText('In other hymnals')).toBeNull();
 
-    fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymnal 2 of 6'));
-    fireEvent.changeText(view.getByPlaceholderText('Search by number or title...'), 'Praise God');
+    await fireEvent.press(view.getByLabelText('Chinese Hymnal — 505 Edition, hymnal 2 of 6'));
+    await fireEvent.changeText(view.getByPlaceholderText('Search by number or title...'), 'Praise God');
     expect(view.queryByText('No hymns match your search.')).toBeNull();
     expect(view.getByText('In other hymnals')).toBeTruthy();
     expect(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 694, Praise God, From Whom All Blessings')).toBeTruthy();
@@ -563,9 +571,9 @@ describe('hymnal search', () => {
 });
 
 describe('Library featured carousel', () => {
-  it('still shows each book as a button with the featured label and its pill', () => {
+  it('still shows each book as a button with the featured label and its pill', async () => {
     const onPress = jest.fn();
-    const view = renderWithPreferences(
+    const view = await renderWithPreferences(
       createElement(LibraryFeaturedCarousel, {
         books: [
           { key: 'a', title: 'Example Book', author: 'A. Writer', accessibilityHint: 'Opens the book', onPress },
@@ -582,21 +590,21 @@ describe('Library featured carousel', () => {
     expect(view.getByLabelText('Featured book 1 of 2').props.accessibilityState).toEqual({ selected: true });
 
     // Pages draw once the carousel knows its width.
-    const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
-    act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+    const root = view.getByTestId('library-featured-carousel');
+    await act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
     const page = view.getByLabelText('Featured: Example Book. A. Writer');
     expect(page.props.accessibilityRole).toBe('button');
     expect(view.getAllByText('Featured').length).toBeGreaterThan(0);
     expect(view.getAllByText('Read').length).toBeGreaterThan(0);
-    fireEvent.press(page);
+    await fireEvent.press(page);
     expect(onPress).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(view.getByLabelText('Featured book 2 of 2'));
+    await fireEvent.press(view.getByLabelText('Featured book 2 of 2'));
     expect(view.getByLabelText('Featured book 2 of 2').props.accessibilityState).toEqual({ selected: true });
   });
 
-  it('shows a hymnal page with its own label and no pill or button', () => {
-    const view = renderWithPreferences(
+  it('shows a hymnal page with its own label and no pill or button', async () => {
+    const view = await renderWithPreferences(
       createElement(LibraryFeaturedCarousel, {
         books: [{ key: 'h', title: 'SDA Hymnal', author: '1985 Edition', eyebrow: 'English' }],
         nextLabel: 'Next hymnal',
@@ -605,8 +613,8 @@ describe('Library featured carousel', () => {
       }),
       { theme: customLightTheme },
     );
-    const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
-    act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+    const root = view.getByTestId('library-featured-carousel');
+    await act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
     const page = view.getByLabelText('English: SDA Hymnal. 1985 Edition');
     expect(page.props.accessibilityRole).toBeUndefined();
     expect(view.queryByText('Read')).toBeNull();
@@ -615,8 +623,8 @@ describe('Library featured carousel', () => {
     expect(view.queryByLabelText('Next hymnal')).toBeNull();
   });
 
-  it('has little arrows that turn the page, with none past the first or last page (#447)', () => {
-    const view = renderWithPreferences(
+  it('has little arrows that turn the page, with none past the first or last page (#447)', async () => {
+    const view = await renderWithPreferences(
       createElement(LibraryFeaturedCarousel, {
         books: ['a', 'b', 'c'].map((key) => ({ key, title: `Book ${key}`, author: 'A. Writer' })),
         nextLabel: 'Next featured book',
@@ -625,10 +633,10 @@ describe('Library featured carousel', () => {
       }),
       { theme: customLightTheme },
     );
-    const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
-    act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
-    const list = view.UNSAFE_getByType(require('react-native').FlatList as ComponentType<any>);
-    const scrollToOffset = jest.spyOn(list.instance, 'scrollToOffset');
+    const root = view.getByTestId('library-featured-carousel');
+    await act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+    const list = hostList(view);
+    const scrollToOffset = jest.spyOn(require('react-native').FlatList.prototype, 'scrollToOffset');
     const arrow = (label: string) => view.queryByLabelText(label);
     const selectedPage = () =>
       [1, 2, 3].find((page) => view.getByLabelText(`Featured book ${page} of 3`).props.accessibilityState.selected);
@@ -636,30 +644,30 @@ describe('Library featured carousel', () => {
     expect(arrow('Previous featured book')).toBeNull();
     expect(arrow('Next featured book')!.props.accessibilityRole).toBe('button');
 
-    fireEvent.press(arrow('Next featured book')!);
+    await fireEvent.press(arrow('Next featured book')!);
     expect(selectedPage()).toBe(2);
     expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 400 });
     expect(arrow('Previous featured book')).toBeTruthy();
 
-    fireEvent.press(arrow('Next featured book')!);
+    await fireEvent.press(arrow('Next featured book')!);
     expect(selectedPage()).toBe(3);
     expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 800 });
     expect(arrow('Next featured book')).toBeNull();
 
-    fireEvent.press(arrow('Previous featured book')!);
+    await fireEvent.press(arrow('Previous featured book')!);
     expect(selectedPage()).toBe(2);
     expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: true, offset: 400 });
 
     // A swipe moves the arrows along with the dots.
-    act(() => list.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 800, y: 0 } } }));
+    await fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 800, y: 0 } } });
     expect(selectedPage()).toBe(3);
     expect(arrow('Next featured book')).toBeNull();
   });
 
-  it('keeps its arrows small, in the banner\'s 20pt side margin, at every text size', () => {
+  it('keeps its arrows small, in the banner\'s 20pt side margin, at every text size', async () => {
     const { StyleSheet } = require('react-native');
     for (const textScale of [1, 2] as const) {
-      const view = renderWithPreferences(
+      const view = await renderWithPreferences(
         createElement(LibraryFeaturedCarousel, {
           books: ['a', 'b'].map((key) => ({ key, title: `Book ${key}`, author: 'A. Writer' })),
           nextLabel: 'Next featured book',
@@ -668,25 +676,25 @@ describe('Library featured carousel', () => {
         }),
         { textScale, theme: customLightTheme },
       );
-      const root = view.UNSAFE_getByType(LibraryFeaturedCarousel).children[0] as any;
-      act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
+      const root = view.getByTestId('library-featured-carousel');
+      await act(() => root.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 500 } } }));
       let column: any = view.getByLabelText('Next featured book');
       expect(StyleSheet.flatten(column.props.style).width).toBe(20);
       while (StyleSheet.flatten(column.props.style)?.position !== 'absolute') column = column.parent;
       expect(StyleSheet.flatten(column.props.style)).toMatchObject({ position: 'absolute', right: 0, width: 20 });
-      view.unmount();
+      await view.unmount();
     }
   });
 
-  it('has its arrows on the library page, labeled in the app language', () => {
+  it('has its arrows on the library page, labeled in the app language', async () => {
     const LibraryScreen: ComponentType = require('@/app/(tabs)/explore/library').default;
-    const english = renderPage(LibraryScreen);
-    layOutCarousel(english);
+    const english = await renderPage(LibraryScreen);
+    await layOutCarousel(english);
     expect(english.queryByLabelText('Previous featured book')).toBeNull();
     expect(english.getByLabelText('Next featured book')).toBeTruthy();
-    english.unmount();
-    const spanish = renderPage(LibraryScreen, {}, 'es');
-    layOutCarousel(spanish);
+    await english.unmount();
+    const spanish = await renderPage(LibraryScreen, {}, 'es');
+    await layOutCarousel(spanish);
     expect(spanish.getByLabelText('Libro destacado siguiente')).toBeTruthy();
   });
 });

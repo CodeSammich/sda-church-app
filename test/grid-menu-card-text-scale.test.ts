@@ -34,14 +34,14 @@ describe('grid menu card text size', () => {
     );
   });
 
-  it('holds the title and subtitle to the cap at 200% app and 200% phone text', () => {
+  it('holds the title and subtitle to the cap at 200% app and 200% phone text', async () => {
     jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
       fontScale: 2,
       height: 915,
       scale: 2.625,
       width: 412,
     });
-    const view = render(
+    const view = await render(
       React.createElement(
         TextSizeContext.Provider,
         { value: { setTextScale: jest.fn(async () => {}), textScale: 2 } },

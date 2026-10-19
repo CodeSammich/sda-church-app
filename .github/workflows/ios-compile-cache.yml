@@ -71,12 +71,12 @@ jobs:
           echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"
 
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Generate iOS project
         run: >-
           npx expo prebuild
-          --template expo-template-bare-minimum@58.0.9
+          --template expo-template-bare-minimum@58.0.25
           --platform ios --clean --no-install
 
       - name: Install CocoaPods dependencies
