@@ -7,9 +7,11 @@
  * When a doc gains a yearly task, add it here too; test/yearly-checkup.test.ts
  * checks that every link still points at a real heading.
  *
- * Called from actions/github-script, which passes its `github` and `context` in:
+ * Called from actions/github-script, which passes its `github`, `context`, and
+ * `core` objects in:
  *   const checkup = require(`${process.env.GITHUB_WORKSPACE}/scripts/yearly-checkup.cjs`);
  */
+const { openIssueOnce } = require('./monitor-alert-issue.cjs');
 
 const yearlyCheckupTitle = (year) => `Yearly checkup, ${year}`;
 
@@ -104,7 +106,7 @@ const CHECKLIST = [
         'upkeep-calendar',
       ],
       [
-        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Apple Signing Monitor, Yearly Checkup, and Due-Date Reminders. GitHub turns schedules off after 60 days without activity in the repository.',
+        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, and iOS compile cache. GitHub turns schedules off after 60 days without activity in the repository.',
         'docs/operations/external-dependency-monitor.md',
         'alerts-and-recovery',
       ],
@@ -141,34 +143,13 @@ const buildYearlyCheckup = (year, repoUrl) => {
  * the later Mondays in January do nothing. With no assignees, or when GitHub
  * rejects one, it @mentions the run's actor instead.
  */
-const openYearlyCheckup = async ({ github, context, year, assignees = [] }) => {
-  const repo = { owner: context.repo.owner, repo: context.repo.repo };
-  const { title, body } = buildYearlyCheckup(
-    year,
-    `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`,
-  );
-  const issues = await github.paginate(github.rest.issues.listForRepo, {
-    ...repo,
-    state: 'all',
-    per_page: 100,
+const openYearlyCheckup = ({ github, context, core, year, assignees = [] }) =>
+  openIssueOnce({
+    github,
+    context,
+    core,
+    ...buildYearlyCheckup(year, `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`),
+    assignees,
   });
-  const existing = issues.find((issue) => issue.title === title && !issue.pull_request);
-  if (existing) return { action: 'exists', number: existing.number };
-
-  const mention = `@${context.actor}\n\n${body}`;
-  try {
-    const created = await github.rest.issues.create({
-      ...repo,
-      title,
-      body: assignees.length ? body : mention,
-      assignees,
-    });
-    return { action: 'created', number: created.data.number };
-  } catch (error) {
-    if (!assignees.length) throw error;
-    const created = await github.rest.issues.create({ ...repo, title, body: mention });
-    return { action: 'created without assignees', number: created.data.number };
-  }
-};
 
 module.exports = { CHECKLIST, buildYearlyCheckup, openYearlyCheckup, yearlyCheckupTitle };

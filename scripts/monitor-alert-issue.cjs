@@ -1,8 +1,9 @@
 /**
- * Shared alert-issue handling for the scheduled monitors (External Dependency
- * Monitor and Store Toolchain Monitor). Each monitor keeps one open issue,
+ * Shared alert-issue handling for the scheduled workflows. Each monitor
+ * (External Dependency, Store Toolchain, Apple Signing) keeps one open issue,
  * found by its exact title: a failing run opens it or comments on it, and a
- * passing run closes it.
+ * passing run closes it. The dated reminders (Yearly Checkup, Workspace Backup
+ * Reminder) instead open each title once, with openIssueOnce.
  *
  * Alerts are assigned to the usernames in the MONITOR_ALERT_ASSIGNEES Actions
  * variable so they notify a maintainer without anyone watching the repository.
@@ -110,10 +111,47 @@ const closeAlert = async ({ github, context, title, body }) => {
   return { action: 'closed', number: existing.number };
 };
 
+/**
+ * Opens an issue unless one with this exact title already exists, open or
+ * closed, so a dated reminder opens once however often its workflow runs.
+ * With no assignees, or when GitHub rejects one, it @mentions the run's actor
+ * instead. Returns what happened, for logging and tests.
+ */
+const openIssueOnce = async ({ github, context, core, title, body, assignees = [] }) => {
+  const repo = { owner: context.repo.owner, repo: context.repo.repo };
+  const issues = await github.paginate(github.rest.issues.listForRepo, {
+    ...repo,
+    state: 'all',
+    per_page: 100,
+  });
+  const existing = issues.find((issue) => issue.title === title && !issue.pull_request);
+  if (existing) {
+    return { action: 'exists', number: existing.number };
+  }
+
+  try {
+    const created = await github.rest.issues.create({
+      ...repo,
+      title,
+      body: assignees.length ? body : mentionActor(context, body),
+      assignees,
+    });
+    return { action: 'created', number: created.data.number };
+  } catch (error) {
+    if (!assignees.length) {
+      throw error;
+    }
+    core?.warning(`Could not assign ${assignees.join(', ')}: ${error.message}`);
+    const created = await github.rest.issues.create({ ...repo, title, body: mentionActor(context, body) });
+    return { action: 'created-without-assignees', number: created.data.number };
+  }
+};
+
 module.exports = {
   closeAlert,
   findOpenAlert,
   getRunUrl,
+  openIssueOnce,
   openOrUpdateAlert,
   parseAssignees,
   readReport,
