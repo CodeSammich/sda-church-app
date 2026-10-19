@@ -46,13 +46,6 @@
         "android.permission.ACCESS_WIFI_STATE"
       ]
     },
-    "autolinking": {
-      "android": {
-        "buildFromSource": [
-          "expo-audio"
-        ]
-      }
-    },
     "plugins": [
       "expo-router",
       "expo-localization",
