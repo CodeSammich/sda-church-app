@@ -804,12 +804,22 @@ describe('Android key screens in the preview workflow (#372)', () => {
     expect(capture).toContain('name: key-screens-${{ github.run_id }}-android-${{ matrix.group }}');
   });
 
-  it("checks the Android shots' text with the iPhone's reader before joining", () => {
-    expect(join).toContain('runs-on: macos-26');
-    expect(join).toContain('prefix="key-screens-$GITHUB_RUN_ID-android-"');
-    expect(join).toContain('check-screens.cjs --dir "$part/screens" --platform android --group');
-    expect(join.indexOf('--platform android')).toBeLessThan(join.indexOf('merge-key-screens.cjs'));
-    expect(workflow).toContain('check-screens.cjs --dir "$SCREENS" --platform all');
+  it("checks each group's text on its own Linux runner, never on a Mac", () => {
+    expect(capture).toContain('runs-on: ubuntu-24.04');
+    expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--platform android --group \$\{\{ matrix\.group \}\}\n/);
+    expect(capture).toContain('pip" install --quiet -r scripts/ocr-requirements.txt');
+    expect(capture.indexOf('capture-android-screens.cjs')).toBeLessThan(capture.indexOf('--platform android'));
+    // The join only merges, so it needs no Mac either.
+    expect(join).toContain('runs-on: ubuntu-latest');
+    expect(join).not.toContain('check-screens.cjs');
+    expect(repoFile('scripts/ocr-requirements.txt')).toMatch(/^rapidocr==\d+\.\d+\.\d+$/m);
+  });
+
+  it('re-checks an earlier run on each platform’s own reader', () => {
+    const earlier = job('earlier-screens');
+    expect(earlier).toMatch(/- platform: ios\n\s+runner: macos-26\n/);
+    expect(earlier).toMatch(/- platform: android\n\s+runner: ubuntu-24.04\n/);
+    expect(earlier).toContain('--platform "$PLATFORM"');
   });
 
   it('keeps pull request code away from credentials', () => {

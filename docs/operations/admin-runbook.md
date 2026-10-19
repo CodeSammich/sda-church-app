@@ -736,10 +736,10 @@ It builds the app once, without signing, for an Apple Silicon Mac, and shares it
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
 (86 screenshots of 33 screens in all), and checks their text with
-`scripts/check-screens.cjs`. Five more runners take the same screens on an Android
-emulator, from a preview APK built for it
-([Android key screens](native-builds.md#android-key-screens)). Another job then checks
-the Android shots' text and joins both platforms' groups, before the review comment and
+`scripts/check-screens.cjs`. Five Linux runners take and check the same screens on an
+Android emulator, from a preview APK built for it
+([Android key screens](native-builds.md#android-key-screens)). Another job then joins
+both platforms' groups, before the review comment and
 **Screenshots reviewed**, which covers both. The run takes 30 to 40 minutes, most of it
 the Android build. On a release pull request, a comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver

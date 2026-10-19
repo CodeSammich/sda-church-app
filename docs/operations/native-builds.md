@@ -877,10 +877,11 @@ Drive upload: this workflow runs pull request code only with a read-only token.
   in `screens.json` names while the app builds: Google's `pixel` profile, 1080 × 1920 at
   420 dpi, on Android 16 (API 36). It then installs the app and runs
   `scripts/capture-android-screens.cjs --group <group>`, which saves
-  `screens/android/<screen>-<variant>.png`.
-- **Build iOS Simulator app (Apple Silicon Mac)** reads the Android shots' text with the
-  same Vision checks as the iPhone's (`check-screens.cjs --platform android`), joins
-  both platforms, and fails if any group on either failed.
+  `screens/android/<screen>-<variant>.png`, and then checks their text
+  (`check-screens.cjs --platform android`). All of this runs on standard Linux
+  runners; no Android job needs a Mac.
+- **Build iOS Simulator app (Apple Silicon Mac)**, on Linux despite its name, joins both
+  platforms and fails if any group on either failed.
 
 **Settings before each shot.** Android keeps the app's storage in a SQLite database,
 `databases/RKStorage` in the app's private folder, not in a file the runner can write.
@@ -907,9 +908,22 @@ screen under the 320 dp Android keeps it to). A screen with `"platforms": ["ios"
 `statusBarClear` screens show nothing in the status bar's empty middle, and the text
 checks, with the tab bar and chapter controls where the emulator's shorter screen puts
 them (`REGIONS_BY_PLATFORM`). On Android they also fail on the system's "isn't
-responding" and "keeps stopping" dialogs. Vision reads the text from the image, as on
-the iPhone, rather than `uiautomator dump`'s exact text, so a word cut short or a verse
-number split across lines fails the same way on both.
+responding" and "keeps stopping" dialogs.
+
+The text is read from the image, as on the iPhone, so a word cut short or a verse number
+split across lines fails the same way on both. Apple's Vision runs only on a Mac, so
+Android uses [RapidOCR](https://github.com/RapidAI/RapidOCR), whose PaddleOCR models
+read Chinese, English, and Spanish together (`scripts/ocr-screens.py`, at the version
+`scripts/ocr-requirements.txt` pins; it checks each model it downloads against a pinned
+SHA-256). Tesseract was tried and missed small Chinese tab labels, "Tú", and white text
+on buttons. `uiautomator dump`, which reads the text exactly, can't run on Home: its
+countdown keeps the screen from ever going idle, which the dump waits for. It also sees
+a label's whole text even when the screen cuts it short. RapidOCR reads the 文A icon as
+文A where Vision reads XA, so those rules accept either.
+
+The emulator's 16:9 screen is shorter than the iPhone's, so a few lines fall below the
+fold there, such as the Sabbath School age groups. A rule written
+`{ "line": …, "platforms": ["ios"] }` applies on those platforms only.
 
 **Google Play screenshots.** The shots listed under `googlePlay` (`en-US` and `zh-TW`,
 at most 8 each) are copied, numbered in upload order, to

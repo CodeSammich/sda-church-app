@@ -235,9 +235,9 @@ GitHub's code scanning default setup and have no workflow file.
   runner per key-screen group (`Key screens (<group>)`). Each launches it, screenshots
   its group of the key screens in `test/screens/screens.json`, and checks their text.
 - Builds the Android preview APK for an emulator too, and shares it with one emulator
-  runner per group (`Android key screens (<group>)`), which takes the same screens.
-  `Build iOS Simulator app (Apple Silicon Mac)` checks the Android shots' text, joins
-  both platforms' groups, and fails if any failed.
+  Linux runner per group (`Android key screens (<group>)`), which takes the same
+  screens and checks their text. `Build iOS Simulator app (Apple Silicon Mac)` joins
+  both platforms' groups and fails if any failed.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).

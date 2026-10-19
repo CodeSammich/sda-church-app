@@ -2,8 +2,8 @@
 /**
  * Checks the key-screen screenshots for things every screen must show, by
  * reading their text with Apple's Vision framework (scripts/ocr-screens.swift,
- * macOS only) and applying rules (#331). The Android shots get the same rules
- * from the same reader on a Mac, so a rule means the same on both (#372):
+ * macOS only) and applying rules (#331). The Android shots get the same rules,
+ * read on Linux by RapidOCR (scripts/ocr-screens.py, #372):
  *
  * - every screen with a tab bar shows the four tab labels, in the shot's
  *   language, in the tab bar;
@@ -129,6 +129,13 @@ const expectedLabels = (shot) => {
   return expected;
 };
 
+/**
+ * The rules for one platform: every plain rule, and those whose `platforms`
+ * name it, such as a line the emulator's shorter screen leaves below the fold.
+ */
+const forPlatform = (rules, platform) =>
+  (rules || []).filter((rule) => typeof rule === 'string' || !rule.platforms || rule.platforms.includes(platform));
+
 /** Returns what's wrong with one shot, given the lines of text read from it. */
 const checkShot = (shot, lines) => {
   const problems = [];
@@ -145,7 +152,7 @@ const checkShot = (shot, lines) => {
   for (const text of NEVER_SHOWN_BY_PLATFORM[shot.platform]) {
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
-  for (const rule of shot.mustShowLines || []) {
+  for (const rule of forPlatform(shot.mustShowLines, shot.platform)) {
     // A rule is a regular expression, or { line, minLeft } for a line that must
     // also start at least minLeft of the way across, such as right-aligned text.
     const { line: pattern, minLeft } = typeof rule === 'string' ? { line: rule } : rule;
@@ -159,9 +166,10 @@ const checkShot = (shot, lines) => {
       );
     }
   }
-  for (const rule of shot.mustNotShowLines || []) {
-    const shown = lines.find((line) => new RegExp(rule, 'u').test(line.text.trim()));
-    if (shown) problems.push(`"${shown.text.trim()}" matches /${rule}/, which must not show`);
+  for (const rule of forPlatform(shot.mustNotShowLines, shot.platform)) {
+    const pattern = typeof rule === 'string' ? rule : rule.line;
+    const shown = lines.find((line) => new RegExp(pattern, 'u').test(line.text.trim()));
+    if (shown) problems.push(`"${shown.text.trim()}" matches /${pattern}/, which must not show`);
   }
   return problems;
 };
@@ -187,7 +195,7 @@ const planChecks = (config, platform = 'ios') =>
   });
 
 /** Runs Vision on images, one call per language set: { [file]: lines }. */
-const ocr = (jobs) => {
+const ocrVision = (jobs) => {
   const groups = new Map();
   for (const { file, languages } of jobs) {
     const key = languages.join(',');
@@ -204,6 +212,32 @@ const ocr = (jobs) => {
     Object.assign(text, JSON.parse(output));
   }
   return text;
+};
+
+/**
+ * Runs RapidOCR on images, for the Android shots, which are read on Linux
+ * (scripts/ocr-screens.py, #372): Vision runs only on a Mac. Its models read
+ * every app language at once. OCR_PYTHON names the Python that has it
+ * installed (default python3).
+ */
+const ocrRapid = (jobs) => {
+  if (!jobs.length) return {};
+  const output = execFileSync(
+    process.env.OCR_PYTHON || 'python3',
+    ['-I', join(__dirname, 'ocr-screens.py'), ...jobs.map((job) => job.file)],
+    { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  );
+  return JSON.parse(output);
+};
+
+/**
+ * Reads each image's text with its platform's reader: Vision for the iPhone,
+ * on a Mac, and RapidOCR for Android, on Linux.
+ */
+const ocr = (jobs) => {
+  const android = jobs.filter((job) => job.platform === 'android');
+  const iphone = jobs.filter((job) => job.platform !== 'android');
+  return { ...(iphone.length ? ocrVision(iphone) : {}), ...ocrRapid(android) };
 };
 
 /**
@@ -242,6 +276,7 @@ const readText = async (dir, shots) => {
   const present = shots.filter((shot) => existsSync(join(dir, shot.file)));
   const text = ocr(present.map((shot) => ({
     file: join(dir, shot.file),
+    platform: shot.platform,
     languages: OCR_LANGUAGES[shot.settings.language],
   })));
 
@@ -254,11 +289,11 @@ const readText = async (dir, shots) => {
       if (labels.every((label) => showsLabel(text[file] || [], label, region))) continue;
       const strip = join(workDir, `${shot.name}-${regionName}.png`);
       await cropStrip(file, region, strip);
-      strips.push({ file, strip, region, languages: OCR_LANGUAGES[shot.settings.language] });
+      strips.push({ file, strip, region, platform: shot.platform, languages: OCR_LANGUAGES[shot.settings.language] });
     }
   }
   if (strips.length) {
-    const stripText = ocr(strips.map(({ strip, languages }) => ({ file: strip, languages })));
+    const stripText = ocr(strips.map(({ strip, platform, languages }) => ({ file: strip, platform, languages })));
     for (const { file, strip, region } of strips) {
       const lines = (stripText[strip] || []).map((line) => fromStrip(line, region));
       text[file] = [...(text[file] || []), ...lines];

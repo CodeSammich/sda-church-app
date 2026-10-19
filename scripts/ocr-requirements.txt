@@ -1,0 +1,5 @@
+# For scripts/ocr-screens.py, which reads the Android key screens' text (#372).
+# rapidocr checks each model it downloads against the SHA-256 in its release,
+# so pinning it pins the models too.
+rapidocr==3.10.0
+onnxruntime==1.31.0

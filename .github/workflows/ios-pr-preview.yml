@@ -248,10 +248,12 @@ jobs:
           RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          until gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' |
+          # A failed API call, such as GitHub's occasional 502, just means
+          # asking again.
+          until { gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' || true; } |
             grep -qx "ios-simulator-app-$RUN_ID"; do
             builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "Key screens (bible-text)") | .conclusion // ""')"
+              --jq '.jobs[] | select(.name == "Key screens (bible-text)") | .conclusion // ""' || true)"
             if [ -n "$builder" ]; then
               echo "::error::The bible-text runner ended ($builder) without sharing the app." >&2
               exit 1
@@ -416,8 +418,8 @@ jobs:
 
   android-capture:
     # The Android key screens (#372): the same list and groups as the iPhone's,
-    # each group on its own emulator runner, which boots while the app builds.
-    # Their text is checked on a Mac, by the job that joins every group.
+    # each group on its own Linux emulator runner, which boots while the app
+    # builds and then checks its own shots' text, as the iPhone groups do.
     if: >-
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (github.head_ref == 'release-candidate' &&
@@ -522,10 +524,12 @@ jobs:
           RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          until gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' |
+          # A failed API call, such as GitHub's occasional 502, just means
+          # asking again.
+          until { gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' || true; } |
             grep -qx "android-key-screens-app-$RUN_ID"; do
             builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "Build the Android key-screens app") | .conclusion // ""')"
+              --jq '.jobs[] | select(.name == "Build the Android key-screens app") | .conclusion // ""' || true)"
             if [ -n "$builder" ]; then
               echo "::error::The Android build ended ($builder) without sharing the app." >&2
               exit 1
@@ -550,6 +554,27 @@ jobs:
           node scripts/capture-android-screens.cjs --out "$RUNNER_TEMP/android-key-screens/screens"
           --group ${{ matrix.group }}
 
+      - name: Install the text reader
+        # RapidOCR (scripts/ocr-screens.py), at the version
+        # scripts/ocr-requirements.txt pins. Apple's Vision, which reads the
+        # iPhone shots, runs only on a Mac.
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/ocr"
+          "$RUNNER_TEMP/ocr/bin/pip" install --quiet -r scripts/ocr-requirements.txt
+          echo "OCR_PYTHON=$RUNNER_TEMP/ocr/bin/python" >> "$GITHUB_ENV"
+
+      - name: Check the text on the key screens
+        # The iPhone's checks, with the tab bar and chapter controls where the
+        # emulator puts them. Runs even if a capture failed, to report on the
+        # rest.
+        if: ${{ !cancelled() }}
+        timeout-minutes: 15
+        run: >-
+          node scripts/check-screens.cjs --dir "$RUNNER_TEMP/android-key-screens/screens"
+          --platform android --group ${{ matrix.group }}
+
       - name: Collect the emulator's logs
         if: failure() || cancelled()
         run: |
@@ -570,10 +595,8 @@ jobs:
   simulator:
     # Joins the groups into the one artifact the review comment links: the
     # app and its first screen from the runner that compiled it, and every
-    # group's screenshots and checks, iPhone and Android. It reads the Android
-    # shots' text first, with the same Vision checks as the iPhone's, so it
-    # runs on a Mac; by then the iPhone groups have freed theirs. It fails if
-    # any group failed, on either platform, so a failed group can't pass as
+    # group's screenshots and checks, iPhone and Android. It fails if any
+    # group failed, on either platform, so a failed group can't pass as
     # skipped. The "Main protection" ruleset requires this job's name.
     needs: [capture, android-capture]
     if: >-
@@ -582,8 +605,8 @@ jobs:
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository))
     name: Build iOS Simulator app (Apple Silicon Mac)
-    runs-on: macos-26
-    timeout-minutes: 25
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -591,7 +614,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      # For sharp, which writes the store copies and crops strips for a closer look.
+      # For sharp, which writes the store copies.
       - name: Install dependencies
         run: npm ci
 
@@ -600,19 +623,6 @@ jobs:
         with:
           pattern: key-screens-${{ github.run_id }}-*
           path: ${{ runner.temp }}/parts
-
-      - name: Check the text on the Android key screens
-        # The same checks as the iPhone groups', with the same reader, one
-        # group at a time. Runs even if one fails, to report on the rest; the
-        # join below reports every failure.
-        timeout-minutes: 15
-        run: |
-          set -uo pipefail
-          prefix="key-screens-$GITHUB_RUN_ID-android-"
-          for part in "$RUNNER_TEMP"/parts/"$prefix"*; do
-            [ -d "$part/screens" ] || continue
-            node scripts/check-screens.cjs --dir "$part/screens" --platform android --group "${part##*/$prefix}" || true
-          done
 
       - name: Join the key screens
         run: |
@@ -810,11 +820,20 @@ jobs:
 
   earlier-screens:
     # Re-checks an earlier run's screenshots in a few minutes, instead of a
-    # full build, while tuning the text checks.
+    # full build, while tuning the text checks: the iPhone's with Vision on a
+    # Mac, and Android's with RapidOCR on Linux.
     if: github.event_name == 'workflow_dispatch' && inputs.screens_from_run != ''
-    name: Check the key screens of an earlier run
-    runs-on: macos-26
+    name: Check the ${{ matrix.platform }} key screens of an earlier run
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ios
+            runner: macos-26
+          - platform: android
+            runner: ubuntu-24.04
     permissions:
       contents: read
       # To download the earlier run's screenshots.
@@ -843,14 +862,24 @@ jobs:
           test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
           echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
 
+      - name: Install the text reader
+        if: ${{ matrix.platform == 'android' }}
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/ocr"
+          "$RUNNER_TEMP/ocr/bin/pip" install --quiet -r scripts/ocr-requirements.txt
+          echo "OCR_PYTHON=$RUNNER_TEMP/ocr/bin/python" >> "$GITHUB_ENV"
+
       - name: Check the text on the key screens
-        run: node scripts/check-screens.cjs --dir "$SCREENS" --platform all
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: node scripts/check-screens.cjs --dir "$SCREENS" --platform "$PLATFORM"
 
       - name: Upload the text that was read
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: key-screen-checks-${{ inputs.screens_from_run }}
+          name: key-screen-checks-${{ inputs.screens_from_run }}-${{ matrix.platform }}
           path: |
             ${{ env.SCREENS }}/ocr.json
             ${{ env.SCREENS }}/checks.json

@@ -112,7 +112,7 @@ describe('screen rules', () => {
   it('uses each screen’s own rules, even when names share a start', () => {
     // "bible-dual-default" starts with "bible-", but belongs to bible-dual.
     expect(shot('bible-scrolled-default').tabs).toBe(false);
-    expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^16\\b', '^John\\b']);
+    expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^John\\b', '^16\\b']);
     expect(shot('explore-default').mustShowLines).toBeUndefined();
     expect(shot('bible-default').tabs).toBeUndefined();
   });
@@ -133,7 +133,7 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-default'), dual)).toEqual([]);
     const withoutHeader = dual.filter((each) => each.box[1] > 0.12);
     expect(checkShot(shot('bible-dual-default'), withoutHeader)).toEqual([
-      'no line matches /^XA\\b/',
+      'no line matches /^(XA|文A)\\b/',
       'no line matches /\\bEN\\b/',
       'no line matches /BSB/',
       'no line matches /CUV/',
@@ -148,10 +148,10 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual([
       'no line matches /BSB/',
       'no line matches /CUV/',
-      '"XA EN B... +* C..." matches /\\bXA\\b/, which must not show',
+      '"XA EN B... +* C..." matches /(\\bXA|文A)\\b/, which must not show',
     ]);
     // At the default size the icon must still show.
-    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^XA\\b/']);
+    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^(XA|文A)\\b/']);
   });
 
   it('catches tab labels that wrap, or rise out of an overgrown tab bar, at about 4× text (#380)', () => {
@@ -248,7 +248,7 @@ describe('Android shots (#372)', () => {
       file: 'android/bible-scrolled-default.png',
       platform: 'android',
       tabs: false,
-      mustShowLines: ['^14\\b', '^15\\b', '^16\\b', '^John\\b'],
+      mustShowLines: ['^14\\b', '^15\\b', '^John\\b', '^16\\b'],
     });
     expect(androidShot('home-xl-android-font-max').mustShowLines).toEqual(['^Today.s Verse$']);
   });
@@ -264,6 +264,27 @@ describe('Android shots (#372)', () => {
     ]);
     expect(checkShot(androidShot('explore-default'), [...tabs(0.95), line('NYCCSDA Preview keeps stopping', 0.5)])).toEqual([
       'shows "keeps stopping"',
+    ]);
+  });
+});
+
+describe('rules for one platform (#372)', () => {
+  const androidShots = planChecks(loadConfig(), 'android');
+  const androidShot = (name: string) => androidShots.find((candidate: { name: string }) => candidate.name === name);
+  const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.95));
+
+  it("skip a line the emulator's shorter screen leaves below the fold, and keep it on the iPhone", () => {
+    expect(checkShot(androidShot('sabbath-school-default'), tabs)).toEqual([]);
+    expect(checkShot(shot('sabbath-school-default'), tabs.map((each) => ({ ...each, box: [0.1, 0.944, 0.3, 0.02] })))).toEqual([
+      'no line matches /^Beginner \\(ages 1-3\\)/',
+    ]);
+  });
+
+  it('accept the 文A icon as either reader reads it', () => {
+    const header = (icon: string) => [line(`${icon} EN BSB + 繁 CUV`, 0.05), line('Psalms', 0.86), line('Verse', 0.86)];
+    expect(checkShot(androidShot('bible-dual-default'), [...tabs, ...header('文A')])).toEqual([]);
+    expect(checkShot(androidShot('bible-dual-back-large'), [...tabs, ...header('文A')])).toEqual([
+      '"文A EN BSB + 繁 CUV" matches /(\\bXA|文A)\\b/, which must not show',
     ]);
   });
 });

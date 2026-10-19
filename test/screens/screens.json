@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the emulator's shorter 16:9 screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -65,11 +65,11 @@
     {
       "name": "bible-dual",
       "group": "bible-reading",
-      "$comment": "The header's translation button in full: the 文A icon (read as XA), the EN badge, and both names, not cut to B… or C… (#376).",
+      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A), the EN badge, and both names, not cut to B… or C… (#376).",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max"],
-      "mustShowLines": ["^XA\\b", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
+      "mustShowLines": ["^(XA|文A)\\b", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
     },
     {
       "name": "bible-dual-back",
@@ -80,9 +80,9 @@
       "variants": ["default", "large", "xl"],
       "mustShowLines": ["\\bEN\\b", "BSB", "CUV", "^Psalms\\b"],
       "variantRules": {
-        "default": { "mustShowLines": ["^XA\\b"] },
-        "large": { "mustNotShowLines": ["\\bXA\\b"] },
-        "xl": { "mustNotShowLines": ["\\bXA\\b"] }
+        "default": { "mustShowLines": ["^(XA|文A)\\b"] },
+        "large": { "mustNotShowLines": ["(\\bXA|文A)\\b"] },
+        "xl": { "mustNotShowLines": ["(\\bXA|文A)\\b"] }
       }
     },
     {
@@ -137,12 +137,17 @@
       "name": "bible-scrolled",
       "group": "bible-reading",
       "tabs": false,
-      "$comment": "Opens at John 3:14, so earlier verses sit under the status bar; checks it stays clear.",
+      "$comment": "Opens at John 3:14, so earlier verses sit under the status bar; checks it stays clear. At 150% the emulator's shorter screen leaves verse 16 below the fold.",
       "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=14&verseEnd=16",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": true },
       "variants": ["default", "large", "dark"],
       "checks": ["statusBarClear"],
-      "mustShowLines": ["^14\\b", "^15\\b", "^16\\b", "^John\\b"]
+      "mustShowLines": ["^14\\b", "^15\\b", "^John\\b"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^16\\b"] },
+        "dark": { "mustShowLines": ["^16\\b"] },
+        "large": { "mustShowLines": [{ "line": "^16\\b", "platforms": ["ios"] }] }
+      }
     },
     {
       "name": "bible-verse-popup",
@@ -258,13 +263,13 @@
     {
       "name": "sabbath-school",
       "group": "worship-and-you",
-      "$comment": "The first children's age group shows every week, in each language (#338).",
+      "$comment": "The first children's age group shows every week, in each language (#338). The emulator's shorter screen leaves it below the fold.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Beginner \\(ages 1-3\\)"] },
-        "zh": { "mustShowLines": ["幼兒級（1-3歲）"] },
-        "es": { "mustShowLines": ["^Principiantes \\(1-3 años\\)"] }
+        "default": { "mustShowLines": [{ "line": "^Beginner \\(ages 1-3\\)", "platforms": ["ios"] }] },
+        "zh": { "mustShowLines": [{ "line": "幼兒級（1-3歲）", "platforms": ["ios"] }] },
+        "es": { "mustShowLines": [{ "line": "^Principiantes \\(1-3 años\\)", "platforms": ["ios"] }] }
       }
     },
     {
@@ -288,11 +293,11 @@
       "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, its Chinese 505 number, its With singing and Piano only videos (#424), and Show all hymns. At the app's 200% text size the Chinese 505 · 16 chip must still show its whole number (a long label wraps inside the chip), and the buttons stack, so they and Show all hymns may fall below the shot. The hymnal's name and the hymn's title wrap at 200% too, so there only their first words are required.",
       "path": "home/english-hymnal?hymnNum=12",
       "variants": ["default", "xl"],
-      "mustShowLines": ["\\b505\\W+16$"],
+      "mustShowLines": [{ "line": "\\b505\\W+16$", "platforms": ["ios"] }],
       "mustNotShowLines": ["\\b1\\. Praise to the Lord", "\\b13\\. New Songs"],
       "variantRules": {
         "default": {
-          "mustShowLines": ["^SDA Hymnal\\b", "\\b12\\. Joyful, Joyful", "\\bWith singing\\b", "\\bPiano only\\b", "^Show all hymns$"]
+          "mustShowLines": ["^SDA Hymnal\\b", "\\b12\\. Joyful, Joyful", "\\bWith singing\\b", "\\bPiano only\\b", { "line": "^Show all hymns$", "platforms": ["ios"] }, "\\b505\\W+16$"]
         },
         "xl": { "mustShowLines": ["^SDA\\b", "^12\\. Joyful\\b"] }
       }
@@ -303,7 +308,7 @@
       "$comment": "An older hymnal route with an old search, highlight=平安夜, opens the hymnal page with that hymnal picked: the 506, not the 505 a Chinese interface would show first, its cover photo cropped to the carousel's 2:3 frame. Its one match, 82, comes first, with its recording labeled 演唱 (With singing) although the 506 has no piano videos yet, then the heading over the matches in the other hymnals, each under its hymnal's name, the 505's 66 first, and no longer the hymnal's short name on each result's own line (\"505\", \"1985\", \"707 新編簡譜\"). Vision may read \"82. 平安夜\" without the space, may read the dash in a hymnal's name as 一, and reads the YouTube logo before 演唱 as a character.",
       "path": "home/chinese-506-hymnal?highlight=%E5%B9%B3%E5%AE%89%E5%A4%9C",
       "variants": ["zh"],
-      "mustShowLines": ["^中文讚美詩$", "^506 ?版$", "\\b82\\. ?平安夜", "演唱", "^其他詩歌本$", "讚美詩\\W*505 ?版$", "\\b66\\. ?平安夜"],
+      "mustShowLines": ["^中文讚美詩$", "^506 ?版$", "\\b82\\. ?平安夜", "演唱", "^其他詩歌本$", { "line": "讚美詩\\W*505 ?版$", "platforms": ["ios"] }, { "line": "\\b66\\. ?平安夜", "platforms": ["ios"] }],
       "mustNotShowLines": ["YouTube", "^505$", "^1985$", "^707 新編簡譜$"]
     },
     {
