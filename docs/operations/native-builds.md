@@ -715,8 +715,9 @@ caching, which also covers Swift, hasn't been tried. The cache is empty until th
 push to `main` after it was added, so that release's own PR compiles everything.
 
 **Install a downloaded build on a Mac.** From the run's Artifacts section, download the
-artifact ending in `-arm64` (or use `gh run download`, if Chrome blocks it), and unzip the download and then the `.zip` inside it to get
-the `.app`. It runs on an Apple Silicon Mac; for an Intel Mac, see below. Open the Simulator
+artifact ending in `-arm64` and unzip it, or, if Chrome blocks it, get it with
+`gh run download <run> --pattern '*-arm64'`, which unzips it for you. Then unzip the
+`.zip` inside to get the `.app`. It runs on an Apple Silicon Mac; for an Intel Mac, see below. Open the Simulator
 (Xcode > Open Developer Tool > Simulator) and drag the `.app` onto the simulated
 iPhone, or run:
 
