@@ -569,7 +569,12 @@ once, one per key-screen group, numbered in the groups' order: **iOS key screens
   an artifact. It boots its own simulated iPhone after the compile when it restored a
   compile cache, and during the compile when there was none.
 - The other four install packages, start booting their iPhones, and wait for the shared
-  app, giving up at once if the compiling runner fails.
+  app, giving up at once if the compiling runner's job ends without it. As a defense
+  against GitHub's degraded availability, when its Mac runners are in short supply,
+  they wait as long as the compiling runner is compiling, and up to 45 minutes while
+  it's still queued for a Mac. Their job limit is 90 minutes, against the compiling
+  runner's 40. A fixed 25-minute wait used to fail runs whose compiling runner merely
+  got its Mac late.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
   running 45 seconds after launch, and takes its group's key screens.
