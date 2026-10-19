@@ -877,13 +877,13 @@ request code only with a read-only token and reads no secret.
   emulator's x86_64 processor (`npm run build:android:apk:debug:intel`) and with
   `EXPO_PUBLIC_KEY_SCREENS=1`, so it reads the saved screen and `popup=`. The published
   APK and the store builds don't.
-- **Android key screens (`<group>`)**, one per group, boots the emulator that `android`
-  in `screens.json` names while the app builds: Google's `pixel` profile, 1080 × 1920 at
-  420 dpi, on Android 16 (API 36). It then installs the app and runs
-  `scripts/capture-android-screens.cjs --group <group>`, which saves
+- **Android key screens (`<group>`)**, one per group, boots an emulator the size of
+  the phone below while the app builds, on Android 16 (API 36). It then installs the
+  app and runs `scripts/capture-android-screens.cjs --group <group>`, which saves
   `screens/android/<screen>-<variant>.png`, and then checks their text
-  (`check-screens.cjs --platform android`). All of this runs on standard Linux
-  runners; no Android job needs a Mac.
+  (`check-screens.cjs --platform android`).
+- **Android key screens (google-play)**, a sixth runner, takes only the Google Play
+  shots, on an emulator of Play's size (below).
 - **Android key screens** joins the groups into one artifact,
   `android-key-screens-<pr>-<run>`, with the Google Play copies, and fails if any group
   failed.
@@ -893,6 +893,33 @@ workflow's run on the same commit, then links both downloads and says whether bo
 passed, and its **Screenshots reviewed** approval covers both. To recheck an earlier
 run's Android screenshots with new rules, start this workflow by hand with
 **screens_from_run**, as for the iPhone.
+
+**The phone.** The emulator is the size of the best-selling Android phone where most
+Adventists live, set under `android.phone` in `screens.json`. Of the church's 24.4
+million members at the end of 2025, about 6.0 million were in East-Central Africa, 3.7
+million in Inter-America, 2.7 million in South America, and 1.2 million in Southern Asia
+([Adventist Atlas](https://adventistatlas.org/)). The best-selling Android phone of Q1
+2026 was the Samsung Galaxy A07 4G, with strong demand in the Middle East, Africa, and
+Latin America
+([Counterpoint](https://counterpointresearch.com/en/insights/iphone-17-global-best-selling-smartphone-in-q1-2026-top-10-take-25-percent-share)),
+and Samsung ships about a fifth of Africa's phones, led by the A07 and A17, behind
+Transsion's Tecno, Infinix, and itel
+([Omdia](https://omdia.tech.informa.com/pr/2026/aug/africa-smartphone-market-expected-to-decline-26percent-in-2026-following-first-contraction-in-three-years)).
+Its screen is 6.7 inches, 720 × 1600
+([GSMArena](https://m.gsmarena.com/samsung_galaxy_a07-14066.php)), which Samsung shows
+at about 384 × 853 dp (300 dpi), the most common Android width
+([DeviceAtlas](https://deviceatlas.com/blog/viewport-resolution-diagonal-screen-size-and-dpi-most-popular-smartphones)).
+The US's best-selling Androids, the Galaxy A16 and A17
+([Counterpoint](https://counterpointresearch.com/en/insights/top-5-smartphone-model-share-8-countries)),
+are 384 dp wide too, so the same emulator stands in for this church's own members.
+That's narrower than a Pixel's 411 dp, so text has less room. Recheck the sales figures
+when choosing a new phone; the shots follow `android.phone`, and a test checks its
+numbers.
+
+**Google Play's size.** Google Play takes no phone screenshot taller than 2:1, and the
+phone's is 2.22:1. So the Play shots listed under `googlePlay` are taken on a second
+emulator, 1080 × 1920 at 420 dpi (`android.googlePlay`), by
+`capture-android-screens.cjs --store`.
 
 **Settings before each shot.** Android keeps the app's storage in a SQLite database,
 `databases/RKStorage` in the app's private folder, not in a file the runner can write.
@@ -917,7 +944,7 @@ screen under the 320 dp Android keeps it to). A screen with `"platforms": ["ios"
 **Checks.** The same as the iPhone's: the app is running, it opened the saved screen
 (read back from its database), no screenshot is blank or still shows the splash,
 `statusBarClear` screens show nothing in the status bar's empty middle, and the text
-checks, with the tab bar and chapter controls where the emulator's shorter screen puts
+checks, with the tab bar and chapter controls where the phone's screen puts
 them (`REGIONS_BY_PLATFORM`). On Android they also fail on the system's "isn't
 responding" and "keeps stopping" dialogs.
 
@@ -932,20 +959,22 @@ countdown keeps the screen from ever going idle, which the dump waits for. It al
 a label's whole text even when the screen cuts it short. RapidOCR reads the 文A icon as
 文A where Vision reads XA, so those rules accept either.
 
-The emulator's 16:9 screen is shorter than the iPhone's, so a few lines fall below the
-fold there, such as the Sabbath School age groups. A rule written
+The phone's screen holds less than the iPhone's, so a few lines fall below the fold
+there, such as the Sabbath School age groups. A rule written
 `{ "line": …, "platforms": ["ios"] }` applies on those platforms only.
 
 **Google Play screenshots.** The shots listed under `googlePlay` (`en-US` and `zh-TW`,
-at most 8 each) are copied, numbered in upload order, to
-`screens/google-play/<language>/`, at 1080 × 1920 and without transparency. The
+at most 8 each) are saved, numbered in upload order, to
+`screens/google-play/<language>/`, at 1080 × 1920 and without transparency. Their
 emulator's screen is that size, so a copy is the shot itself; a shot of another size
 fails rather than being stretched.
 
 **On your own emulator.** With a `google_apis` image (Android Studio's "Google APIs",
-not "Google Play"), build with `EXPO_PUBLIC_KEY_SCREENS=1 npm run
+not "Google Play") and the phone's screen size and density (the capture refuses any
+other size), build with `EXPO_PUBLIC_KEY_SCREENS=1 npm run
 build:android:apk:debug:intel`, install it, and run `node
-scripts/capture-android-screens.cjs --out <folder> [--group <group>]`. `ADB` names the
+scripts/capture-android-screens.cjs --out <folder> [--group <group>]`, or `--store` on a
+1080 × 1920 emulator for the Google Play shots. `ADB` names the
 adb to use, such as `adb.exe` from WSL. On a reused `android/` folder, delete
 `android/app/build/generated/assets/react/release` first: Gradle doesn't notice a
 changed `EXPO_PUBLIC_*` value and keeps the old JavaScript.

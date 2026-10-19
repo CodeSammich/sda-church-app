@@ -123,6 +123,12 @@ jobs:
       matrix:
         # The groups in test/screens/screens.json, as for the iPhone.
         group: [home, bible-reading, bible-text, library, worship-and-you]
+        # One more runner takes the Google Play shots, on an emulator of
+        # Play's size: Play takes no screenshot taller than 2:1, and the
+        # phone's screen is 2.22:1.
+        include:
+          - group: google-play
+            store: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -175,14 +181,26 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Start the emulator
+        env:
+          STORE: ${{ matrix.store && 'true' || 'false' }}
         run: |
           set -euo pipefail
           avdmanager_bin="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/avdmanager | sort -V | tail -1)"
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
           echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
-          DEVICE="$(node -p "require('./test/screens/screens.json').android.device")"
-          echo no | "$avdmanager_bin" create avd --force -n key-screens -k "$SYSTEM_IMAGE" -d "$DEVICE"
+          # The phone in test/screens/screens.json, or Google Play's size for
+          # its shots. avdmanager has no profile for the phone, so this starts
+          # from a generic one and sets the screen.
+          read -r WIDTH HEIGHT DENSITY < <(node -p \
+            "const { phone, googlePlay } = require('./test/screens/screens.json').android;
+             const device = process.env.STORE === 'true' ? googlePlay : phone;
+             [device.width, device.height, device.density].join(' ')")
+          echo no | "$avdmanager_bin" create avd --force -n key-screens -k "$SYSTEM_IMAGE" -d pixel
+          AVD_CONFIG="$ANDROID_AVD_HOME/key-screens.avd/config.ini"
+          sed -i '/^hw\.lcd\.\(width\|height\|density\)=/d; /^skin\./d' "$AVD_CONFIG"
+          printf 'hw.lcd.width=%s\nhw.lcd.height=%s\nhw.lcd.density=%s\nskin.name=%sx%s\nskin.dynamic=yes\n' \
+            "$WIDTH" "$HEIGHT" "$DENSITY" "$WIDTH" "$HEIGHT" >> "$AVD_CONFIG"
           # swiftshader draws the screen in software, so screencap works
           # without a display.
           nohup "$ANDROID_HOME/emulator/emulator" -avd key-screens -no-window -no-snapshot \
@@ -235,17 +253,18 @@ jobs:
 
       - name: Capture the key screens
         # Screenshots of this group's screens in test/screens/screens.json,
-        # named android/<screen>-<variant>.png.
+        # named android/<screen>-<variant>.png, or the Google Play copies.
         timeout-minutes: 20
+        env:
+          PART: ${{ matrix.store && '--store' || format('--group {0}', matrix.group) }}
         run: >-
-          node scripts/capture-android-screens.cjs --out "$RUNNER_TEMP/android-key-screens/screens"
-          --group ${{ matrix.group }}
+          node scripts/capture-android-screens.cjs --out "$RUNNER_TEMP/android-key-screens/screens" $PART
 
       - name: Install the text reader
         # RapidOCR (scripts/ocr-screens.py), at the version
         # scripts/ocr-requirements.txt pins. Apple's Vision, which reads the
         # iPhone shots, runs only on a Mac.
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && !matrix.store }}
         run: |
           set -euo pipefail
           python3 -m venv "$RUNNER_TEMP/ocr"
@@ -256,7 +275,7 @@ jobs:
         # The iPhone's checks, with the tab bar and chapter controls where the
         # emulator puts them. Runs even if a capture failed, to report on the
         # rest.
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && !matrix.store }}
         timeout-minutes: 15
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/android-key-screens/screens"

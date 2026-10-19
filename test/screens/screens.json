@@ -1,12 +1,13 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the emulator's shorter 16:9 screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
   "android": {
-    "$comment": "The emulator's device profile (avdmanager's pixel: 1080 × 1920 at 420 dpi, the size Google Play's screenshots are saved at) and system image. google_apis, not google_apis_playstore, because the capture writes the app's settings as root.",
-    "device": "pixel",
-    "systemImage": "system-images;android-36;google_apis;x86_64"
+    "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
+    "systemImage": "system-images;android-36;google_apis;x86_64",
+    "phone": { "name": "Samsung Galaxy A07 4G", "width": 720, "height": 1600, "density": 300 },
+    "googlePlay": { "name": "Google Play screenshot size", "width": 1080, "height": 1920, "density": 420 }
   },
   "variants": {
     "default": {},
@@ -24,7 +25,7 @@
     "android-font-max": { "fontScale": 2 },
     "xl-android-font-max": { "textScale": 2, "fontScale": 2 },
     "es-xl-android-font-max": { "language": "es", "textScale": 2, "fontScale": 2 },
-    "android-display-large": { "displayScale": 1.25 }
+    "android-display-large": { "displayScale": 1.2 }
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give.",
@@ -137,7 +138,7 @@
       "name": "bible-scrolled",
       "group": "bible-reading",
       "tabs": false,
-      "$comment": "Opens at John 3:14, so earlier verses sit under the status bar; checks it stays clear. At 150% the emulator's shorter screen leaves verse 16 below the fold.",
+      "$comment": "Opens at John 3:14, so earlier verses sit under the status bar; checks it stays clear. At 150% the Android phone's screen leaves verse 16 below the fold.",
       "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=14&verseEnd=16",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": true },
       "variants": ["default", "large", "dark"],
@@ -263,7 +264,7 @@
     {
       "name": "sabbath-school",
       "group": "worship-and-you",
-      "$comment": "The first children's age group shows every week, in each language (#338). The emulator's shorter screen leaves it below the fold.",
+      "$comment": "The first children's age group shows every week, in each language (#338). The Android phone's screen leaves it below the fold.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
       "variantRules": {

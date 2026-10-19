@@ -3,8 +3,11 @@
  * Captures the app's key screens (test/screens/screens.json) on an Android
  * emulator, for the release PR's screenshot review (#372): the Android
  * counterpart of capture-ios-screens.cjs, from the same list. The images are
- * named android/<screen>-<variant>.png, and the Google Play shots are also
- * copied, numbered in upload order, to google-play/<language>/.
+ * named android/<screen>-<variant>.png. The emulator is the size of the phone
+ * android.phone in screens.json names, the best-selling Android phone where
+ * most Adventists live. Google Play takes no screenshot taller than 2:1, so its
+ * shots are taken separately (--store), on an emulator of android.googlePlay's
+ * size, and saved, numbered in upload order, to google-play/<language>/.
  *
  * Like the iPhone capture, it saves the settings the app reads at startup, and
  * the screen to open (services/ScreenshotRoute.ts), before each launch. Android
@@ -17,6 +20,8 @@
  *   node scripts/capture-android-screens.cjs --out <dir>                  Captures every Android shot into <dir>
  *   node scripts/capture-android-screens.cjs --out <dir> --group library  Only that group's shots, for one of
  *                                                                         several runners
+ *   node scripts/capture-android-screens.cjs --out <dir> --store          The Google Play shots, on an emulator
+ *                                                                         of Google Play's size
  *
  * The key-screens preview build (EXPO_PUBLIC_KEY_SCREENS=1) must already be
  * installed on the only connected emulator. ADB names the adb to use (default
@@ -51,10 +56,6 @@ const ADB = process.env.ADB || 'adb';
 const STORAGE_DATABASE = 'RKStorage';
 const STORAGE_TABLE = 'catalystLocalStorage';
 const STORAGE_VERSION = 1;
-
-// The size Google Play's phone screenshots are saved at, which the emulator
-// in screens.json also has, so a copy is the shot itself.
-const PLAY_SIZE = { width: 1080, height: 1920 };
 
 /**
  * The status bar's empty middle, between the clock and the icons, as fractions
@@ -135,12 +136,26 @@ const pullStorage = (pkg, dir) => {
   }
 };
 
-/** The emulator settings a shot needs: night mode, font scale, and density. */
-const deviceSettings = (settings, physicalDensity) => ({
+/**
+ * The emulator settings a shot needs: night mode, font scale, and density, the
+ * phone's own times the shot's display size. The density is always set, so the
+ * phone's holds even where the emulator rounded its own.
+ */
+const deviceSettings = (settings, phoneDensity) => ({
   night: settings.theme === 'dark' ? 'yes' : 'no',
   fontScale: String(settings.fontScale),
-  density: settings.displayScale === 1 ? 'reset' : String(Math.round(physicalDensity * settings.displayScale)),
+  density: String(Math.round(phoneDensity * settings.displayScale)),
 });
+
+/** Throws unless the emulator's screen is the size the device in screens.json gives. */
+const checkScreenSize = (device, reported) => {
+  const [width, height] = (/Physical size: (\d+)x(\d+)/.exec(reported) || []).slice(1).map(Number);
+  if (width !== device.width || height !== device.height) {
+    throw new Error(
+      `The emulator's screen is ${width} × ${height}, not ${device.width} × ${device.height} as test/screens/screens.json gives; start it with that size.`,
+    );
+  }
+};
 
 /**
  * A fixed status bar: 9:41, full Wi-Fi and battery, no mobile signal or
@@ -194,8 +209,17 @@ const screenshot = (file) => {
 
 const isRunning = (pkg) => spawnSync(ADB, ['shell', `pidof ${pkg}`], { encoding: 'utf8' }).stdout.trim() !== '';
 
-const capture = async (outDir, group) => {
+/** The shots to take: a group's, every one, or each Google Play shot once. */
+const planShots = (config, { group, store }) => {
+  const shots = planCaptures(config, 'android');
+  if (!store) return takeGroup(shots, group, config);
+  const names = new Set(planStoreCopies(config, 'android').map((copy) => copy.name));
+  return shots.filter((shot) => names.has(shot.name));
+};
+
+const capture = async (outDir, { group, store }) => {
   const config = loadConfig();
+  const device = store ? config.android.googlePlay : config.android.phone;
   const pkg = previewPackage();
   // Root, to write into the app's private folder. adbd restarts as root.
   adb('root');
@@ -207,24 +231,25 @@ const capture = async (outDir, group) => {
   if (!activity.includes('/')) throw new Error(`${pkg} isn't installed, or has no launcher activity.`);
   // A first launch can ask for notifications; grant them so no prompt covers a shot.
   spawnSync(ADB, ['shell', `pm grant ${pkg} android.permission.POST_NOTIFICATIONS`]);
-  const physicalDensity = Number(/Physical density: (\d+)/.exec(shell('wm density'))[1]);
-  const size = shell('wm size');
-  let current = applyDeviceSettings(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1 }, physicalDensity), {});
+  checkScreenSize(device, shell('wm size'));
+  let current = applyDeviceSettings(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1 }, device.density), {});
 
   const workDir = mkdtempSync(join(tmpdir(), 'android-key-screens-'));
+  // The Google Play shots are kept only as their copies.
+  const shotDir = store ? join(workDir, 'shots') : outDir;
   const failures = [];
   const captured = new Set();
   const timings = [];
   const started = Date.now();
 
-  for (const shot of takeGroup(planCaptures(config, 'android'), group, config)) {
+  for (const shot of planShots(config, { group, store })) {
     shell(`am force-stop ${pkg}`);
     const database = join(workDir, STORAGE_DATABASE);
     writeStorage(database, buildManifest(shot.settings, shot.route));
     const pushed = '/data/local/tmp/key-screens-storage';
     adb('push', database, pushed);
     shell(installStorageCommands(pkg, pushed));
-    current = applyDeviceSettings(deviceSettings(shot.settings, physicalDensity), current);
+    current = applyDeviceSettings(deviceSettings(shot.settings, device.density), current);
     shell(`am start -W -n ${activity} >/dev/null`);
     const launched = Date.now();
     const samples = [];
@@ -236,7 +261,7 @@ const capture = async (outDir, group) => {
     }
     await sleepUntil(launched + shot.wait * 1000);
 
-    const file = join(outDir, shot.file);
+    const file = join(shotDir, shot.file);
     mkdirSync(dirname(file), { recursive: true });
     // Taken even when something went wrong, so the artifact shows what was on
     // screen. If the app hasn't drawn yet, or still shows its splash, it tries
@@ -278,30 +303,31 @@ const capture = async (outDir, group) => {
     );
   }
   shell(`am force-stop ${pkg}`);
-  applyDeviceSettings(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1 }, physicalDensity), current);
-  rmSync(workDir, { recursive: true, force: true });
-  writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
+  applyDeviceSettings({ ...current, night: 'no', fontScale: '1' }, current);
+  shell('wm density reset');
 
-  // A group has only some of the shots; merge-key-screens.cjs makes these
-  // once the groups are joined.
-  for (const copy of group ? [] : planStoreCopies(config, 'android')) {
+  for (const copy of store ? planStoreCopies(config, 'android') : []) {
     if (!captured.has(copy.name)) {
       failures.push(`${copy.file}: its shot "${copy.name}" wasn't captured`);
       continue;
     }
     const file = join(outDir, copy.file);
     mkdirSync(dirname(file), { recursive: true });
-    await writePlayCopy(join(outDir, copy.source), file);
+    await writePlayCopy(join(shotDir, copy.source), file, config.android.googlePlay);
   }
+  rmSync(workDir, { recursive: true, force: true });
+  if (!store) writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
-  const part = group ? `, group ${group}` : '';
+  const part = store ? ', Google Play shots' : group ? `, group ${group}` : '';
   const summary = [
-    `### Android key screens (${config.android.device}, ${size.replace(/^Physical size: /, '')}${part})`,
+    `### Android key screens (${device.name}, ${device.width} × ${device.height} at ${device.density} dpi${part})`,
     '',
-    group
-      ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
-      : `${captured.size} captured in ${minutes} minutes, in \`screens/\`, with the Google Play shots in \`screens/google-play/\`.`,
+    store
+      ? `${captured.size} captured in ${minutes} minutes, and copied into \`screens/google-play/\`.`
+      : group
+        ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
+        : `${captured.size} captured in ${minutes} minutes, in \`screens/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
     '',
     `Settled within 5 seconds: ${timings.filter((timing) => timing.settledAfter <= 5).length} of ${timings.length}. ` +
@@ -318,15 +344,16 @@ const capture = async (outDir, group) => {
 };
 
 /**
- * Writes a Google Play copy of a screenshot: 1080 × 1920 with no alpha
- * channel, which Play rejects. The emulator's screen is that size already, so
- * a shot of any other size is an error rather than something to stretch.
+ * Writes a Google Play copy of a screenshot, at the size android.googlePlay
+ * gives and with no alpha channel, which Play rejects. The emulator's screen is
+ * that size already, so a shot of any other size is an error rather than
+ * something to stretch.
  */
-const writePlayCopy = async (source, destination) => {
+const writePlayCopy = async (source, destination, size) => {
   const sharp = require('sharp');
   const { width, height } = await sharp(source).metadata();
-  if (width !== PLAY_SIZE.width || height !== PLAY_SIZE.height) {
-    throw new Error(`${source} is ${width} × ${height}, not Google Play's ${PLAY_SIZE.width} × ${PLAY_SIZE.height}; check android.device in test/screens/screens.json.`);
+  if (width !== size.width || height !== size.height) {
+    throw new Error(`${source} is ${width} × ${height}, not Google Play's ${size.width} × ${size.height}; check android.googlePlay in test/screens/screens.json.`);
   }
   await writeAppStoreCopy(source, destination);
 };
@@ -338,10 +365,10 @@ if (require.main === module) {
   };
   const outDir = argument('--out');
   if (!outDir) {
-    console.error('Usage: node scripts/capture-android-screens.cjs --out <dir> [--group <group>]');
+    console.error('Usage: node scripts/capture-android-screens.cjs --out <dir> [--group <group> | --store]');
     process.exit(2);
   }
-  capture(resolve(outDir), argument('--group')).catch((error) => {
+  capture(resolve(outDir), { group: argument('--group'), store: process.argv.includes('--store') }).catch((error) => {
     console.error(error);
     process.exit(1);
   });
@@ -351,8 +378,9 @@ module.exports = {
   STORAGE_DATABASE,
   STORAGE_TABLE,
   STORAGE_VERSION,
-  PLAY_SIZE,
   STATUS_BAR_REGIONS,
+  planShots,
+  checkScreenSize,
   previewPackage,
   writeStorage,
   readStorageValue,

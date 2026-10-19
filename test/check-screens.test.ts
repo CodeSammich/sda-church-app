@@ -253,7 +253,7 @@ describe('Android shots (#372)', () => {
     expect(androidShot('home-xl-android-font-max').mustShowLines).toEqual(['^Today.s Verse$']);
   });
 
-  it("look for the tab bar where the emulator's shorter screen puts it", () => {
+  it("look for the tab bar where the Android phone's screen puts it", () => {
     expect(checkShot(androidShot('explore-default'), tabs(0.95))).toEqual([]);
     expect(checkShot(androidShot('explore-default'), tabs(0.8))).toEqual(['tab labels missing: Home, Bible, Explore, You']);
   });

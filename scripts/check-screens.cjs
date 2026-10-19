@@ -69,11 +69,11 @@ const REGIONS_BY_PLATFORM = {
     // While reading, the tab bar hides and the chapter controls move down.
     chapterControlsReading: [0.88, 0.99],
   },
-  // The emulator's 16:9 screen is shorter, so the bars take more of it.
+  // The Galaxy A07's screen, 20:9, with Android's gesture bar below the tabs.
   android: {
     tabs: [0.88, 0.99],
-    chapterControls: [0.77, 0.9],
-    chapterControlsReading: [0.85, 0.99],
+    chapterControls: [0.79, 0.92],
+    chapterControlsReading: [0.86, 0.99],
   },
 };
 const REGIONS = REGIONS_BY_PLATFORM.ios;
@@ -131,7 +131,7 @@ const expectedLabels = (shot) => {
 
 /**
  * The rules for one platform: every plain rule, and those whose `platforms`
- * name it, such as a line the emulator's shorter screen leaves below the fold.
+ * name it, such as a line the Android phone's screen leaves below the fold.
  */
 const forPlatform = (rules, platform) =>
   (rules || []).filter((rule) => typeof rule === 'string' || !rule.platforms || rule.platforms.includes(platform));

@@ -4,17 +4,18 @@
  * checked (capture-ios-screens.cjs or capture-android-screens.cjs, and
  * check-screens.cjs, with --group) into the one folder a single runner used to
  * make, for the screenshot review (#453, #372): every <platform>/*.png,
- * ocr.json, checks.json, and settle-times.json in list order, and the App
- * Store or Google Play copies, which need shots from every part.
+ * ocr.json, checks.json, and settle-times.json in list order, and the store
+ * copies: the App Store's, made here from the iPhone shots of every part, and
+ * Google Play's, which a part of their own took on an emulator of Play's size
+ * (capture-android-screens.cjs --store).
  *
  *   node scripts/merge-key-screens.cjs --platform ios|android --out <screens folder> <part screens folder>...
  *
  * Writes a summary to the step summary. Exits 1 if a shot is missing or any
  * part's checks failed.
  */
-const { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
+const { appendFileSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
 const { dirname, join, resolve } = require('node:path');
-const { writePlayCopy } = require('./capture-android-screens.cjs');
 const { PLATFORMS, loadConfig, planCaptures, planStoreCopies, writeAppStoreCopy } = require('./capture-ios-screens.cjs');
 
 const readJson = (file, empty) => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : empty);
@@ -49,8 +50,12 @@ const merge = async (outDir, partDirs, platform = 'ios') => {
   mkdirSync(join(outDir, platform), { recursive: true });
   for (const partDir of partDirs) {
     const shotDir = join(partDir, platform);
-    if (!existsSync(shotDir)) continue;
-    for (const name of readdirSync(shotDir)) copyFileSync(join(shotDir, name), join(outDir, platform, name));
+    if (existsSync(shotDir)) {
+      for (const name of readdirSync(shotDir)) copyFileSync(join(shotDir, name), join(outDir, platform, name));
+    }
+    if (platform === 'android' && existsSync(join(partDir, 'google-play'))) {
+      cpSync(join(partDir, 'google-play'), join(outDir, 'google-play'), { recursive: true });
+    }
   }
 
   const parts = partDirs.map((partDir) => ({
@@ -68,15 +73,15 @@ const merge = async (outDir, partDirs, platform = 'ios') => {
     if (!existsSync(join(outDir, shot.file))) problems.push(`${shot.file}: no group captured it`);
   }
   for (const copy of planStoreCopies(config, platform)) {
+    const file = join(outDir, copy.file);
+    if (copy.platform === 'android') {
+      if (!existsSync(file)) problems.push(`${copy.file}: the Google Play runner didn't make it`);
+      continue;
+    }
     const source = join(outDir, copy.source);
     if (!existsSync(source)) continue;
-    const file = join(outDir, copy.file);
     mkdirSync(dirname(file), { recursive: true });
-    try {
-      await (copy.platform === 'android' ? writePlayCopy : writeAppStoreCopy)(source, file);
-    } catch (error) {
-      problems.push(`${copy.file}: ${error.message}`);
-    }
+    await writeAppStoreCopy(source, file);
   }
 
   const failed = checks.filter((check) => check.problems.length);

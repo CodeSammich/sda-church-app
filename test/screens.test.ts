@@ -581,6 +581,8 @@ describe('Android key screens (#372)', () => {
     deviceSettings,
     writePlayCopy,
     previewPackage,
+    planShots,
+    checkScreenSize,
     STORAGE_DATABASE,
   } = require('../scripts/capture-android-screens.cjs');
   const { mkdtempSync } = require('node:fs');
@@ -638,9 +640,28 @@ describe('Android key screens (#372)', () => {
     }
   });
 
-  it('runs on an emulator image that allows adb root, at Google Play’s screenshot size', () => {
+  it('runs on an emulator image that allows adb root, the size of the best-selling Android phone', () => {
     expect(config.android.systemImage).toMatch(/;google_apis;x86_64$/);
-    expect(config.android.device).toBe('pixel');
+    // The Galaxy A07 4G: 720 × 1600 at 300 dpi, 384 dp wide like most Samsung phones.
+    expect(config.android.phone).toMatchObject({ width: 720, height: 1600, density: 300 });
+    expect((config.android.phone.width * 160) / config.android.phone.density).toBe(384);
+    // Google Play takes no screenshot taller than 2:1, which the phone's is, so
+    // its shots get an emulator of their own.
+    expect(config.android.phone.height / config.android.phone.width).toBeGreaterThan(2);
+    expect(config.android.googlePlay.height / config.android.googlePlay.width).toBeLessThanOrEqual(2);
+  });
+
+  it("refuses to capture on an emulator that isn't the phone's size", () => {
+    const { phone } = config.android;
+    expect(() => checkScreenSize(phone, 'Physical size: 720x1600')).not.toThrow();
+    expect(() => checkScreenSize(phone, 'Physical size: 1080x1920')).toThrow('not 720 × 1600');
+  });
+
+  it('takes each Google Play shot once, on its own runner, and no group shot there', () => {
+    const store = planShots(config, { store: true });
+    const names = [...new Set(planStoreCopies(config, 'android').map((copy: { name: string }) => copy.name))];
+    expect(store.map((shot: { name: string }) => shot.name).sort()).toEqual(names.sort());
+    expect(planShots(config, { group: 'library' })).toEqual(takeGroup(android, 'library', config));
   });
 
   it('saves settings where the Android app reads them, and reads them back', () => {
@@ -673,16 +694,17 @@ describe('Android key screens (#372)', () => {
     expect(commands).toContain('chcon "$(stat -c %C /data/data/org.example.preview)"');
   });
 
-  it('sets the theme, font size, and display size on the emulator', () => {
-    expect(deviceSettings({ theme: 'dark', fontScale: 2, displayScale: 1 }, 420)).toEqual({
+  it("sets the theme, font size, and display size on the emulator, from the phone's density", () => {
+    expect(deviceSettings({ theme: 'dark', fontScale: 2, displayScale: 1 }, 300)).toEqual({
       night: 'yes',
       fontScale: '2',
-      density: 'reset',
+      density: '300',
     });
-    expect(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1.25 }, 420).density).toBe('525');
+    expect(deviceSettings({ theme: 'light', fontScale: 1, displayScale: 1.2 }, 300).density).toBe('360');
     // Android's largest display size keeps the screen at least 320 dp wide.
+    const { phone } = config.android;
     const display = config.variants['android-display-large'].displayScale;
-    expect(1080 / ((420 * display) / 160)).toBeGreaterThanOrEqual(320);
+    expect(phone.width / ((phone.density * display) / 160)).toBeGreaterThanOrEqual(320);
   });
 
   it('lists Google Play shots in both store languages, at most 8 each, all captured on Android', () => {
@@ -697,7 +719,7 @@ describe('Android key screens (#372)', () => {
     expect(copies[0].file).toBe('google-play/en-US/01-home-default.png');
   });
 
-  it('saves Play copies at 1080 × 1920 without transparency, and refuses another size', async () => {
+  it("saves Play copies at Google Play's size without transparency, and refuses another size", async () => {
     const sharp = require('sharp');
     const dir = mkdtempSync(join(tmpdir(), 'google-play-'));
     const make = async (name: string, width: number, height: number) => {
@@ -707,9 +729,11 @@ describe('Android key screens (#372)', () => {
         .toFile(file);
       return file;
     };
-    await writePlayCopy(await make('right.png', 1080, 1920), join(dir, 'copy.png'));
+    const size = config.android.googlePlay;
+    expect(size).toMatchObject({ width: 1080, height: 1920 });
+    await writePlayCopy(await make('right.png', 1080, 1920), join(dir, 'copy.png'), size);
     expect(await sharp(join(dir, 'copy.png')).metadata()).toMatchObject({ width: 1080, height: 1920, hasAlpha: false });
-    await expect(writePlayCopy(await make('tall.png', 1080, 2400), join(dir, 'no.png'))).rejects.toThrow(
+    await expect(writePlayCopy(await make('tall.png', 720, 1600), join(dir, 'no.png'), size)).rejects.toThrow(
       "not Google Play's 1080 × 1920",
     );
   });
@@ -803,7 +827,12 @@ describe('Android key screens workflow (#372)', () => {
   it('captures and checks each group on its own emulator runner, from the list in screens.json', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(capture)![1].split(', ');
     expect(groups).toEqual(Object.keys(config.groups));
-    expect(capture).toMatch(/capture-android-screens\.cjs --out [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
+    expect(capture).toContain("PART: ${{ matrix.store && '--store' || format('--group {0}', matrix.group) }}");
+    expect(capture).toMatch(/capture-android-screens\.cjs --out [^\n]+ \$PART\n/);
+    // The sixth runner takes the Google Play shots, and has no group to check.
+    expect(capture).toMatch(/include:\n\s+- group: google-play\n\s+store: true\n/);
+    expect(capture.match(/if: \$\{\{ !cancelled\(\) && !matrix\.store \}\}/g)).toHaveLength(2);
+    expect(capture).toContain("process.env.STORE === 'true' ? googlePlay : phone");
     expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--platform android --group \$\{\{ matrix\.group \}\}\n/);
     expect(capture).toContain('pip" install --quiet -r scripts/ocr-requirements.txt');
     expect(capture.indexOf('capture-android-screens.cjs')).toBeLessThan(capture.indexOf('--platform android'));
