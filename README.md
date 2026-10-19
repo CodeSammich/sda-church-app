@@ -149,4 +149,4 @@ Google Play internal testing and TestFlight. Nothing reaches the public until a
 maintainer submits it in each store.
 
 The app uses one Expo source for the native apps and the web/PWA build: Expo SDK 58
-(`expo ~58.0.14`) with React Native 0.88.0.
+(`expo ~58.0.16`) with React Native 0.88.0.
