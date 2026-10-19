@@ -836,10 +836,11 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the run, with the [Android key screens](#android-key-screens),
-takes 30 to 40 minutes) and removes the comment with the earlier, now out-of-date
-screenshots. One review covers both platforms' screenshots. When the run finishes, it replaces the notice with a
-comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
+opens or gets a push (the screenshots take 30 to 40 minutes, most of it the
+[Android key screens](#android-key-screens)' build) and removes the comment with the
+earlier, now out-of-date screenshots. When the iPhone run and the Android run for that
+commit have both finished, it replaces the notice with a comment linking both
+platforms' screenshots, so one review covers both. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.
 Each push needs a new approval, and the job fails if the environment doesn't require
 one. [Approving the screenshots](admin-runbook.md#approving-the-screenshots) has the
@@ -863,10 +864,13 @@ are compared with known-good copies.
 
 #### Android key screens
 
-The same workflow takes the key screens on an Android emulator too, from the same list
-and groups, so the release PR's one screenshot review covers both platforms (#372). They
-run here rather than in the Android PR preview, which runs in `main`'s context for its
-Drive upload: this workflow runs pull request code only with a read-only token.
+The **Android key screens** workflow (`android-key-screens.yml`) takes the same key
+screens on an Android emulator, from the same list and groups (#372). Every job in it
+runs on standard Linux runners, so the few Mac runners stay for the iPhone. Like the iOS
+preview, it runs on each release pull request into `main`, where its job **Android key
+screens** is a required check, and by hand on any branch. It isn't part of the Android
+PR preview, which runs in `main`'s context for its Drive upload: this workflow runs pull
+request code only with a read-only token and reads no secret.
 
 - **Build the Android key-screens app** builds the debug-signed preview APK, from the
   same source and settings as the APK the Android preview publishes, but for the
@@ -880,8 +884,15 @@ Drive upload: this workflow runs pull request code only with a read-only token.
   `screens/android/<screen>-<variant>.png`, and then checks their text
   (`check-screens.cjs --platform android`). All of this runs on standard Linux
   runners; no Android job needs a Mac.
-- **Build iOS Simulator app (Apple Silicon Mac)**, on Linux despite its name, joins both
-  platforms and fails if any group on either failed.
+- **Android key screens** joins the groups into one artifact,
+  `android-key-screens-<pr>-<run>`, with the Google Play copies, and fails if any group
+  failed.
+
+One review still covers both platforms. The iOS preview's review comment waits for this
+workflow's run on the same commit, then links both downloads and says whether both
+passed, and its **Screenshots reviewed** approval covers both. To recheck an earlier
+run's Android screenshots with new rules, start this workflow by hand with
+**screens_from_run**, as for the iPhone.
 
 **Settings before each shot.** Android keeps the app's storage in a SQLite database,
 `databases/RKStorage` in the app's private folder, not in a file the runner can write.

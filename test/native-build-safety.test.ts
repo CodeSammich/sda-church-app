@@ -96,6 +96,7 @@ describe.each([
   ['android-audio-e2e.yml', 'e2e'],
   ['bulletin-integration.yml', 'verify-bulletin-api'],
   ['ios-pr-preview.yml', 'simulator'],
+  ['android-key-screens.yml', 'screens'],
 ])('%s runs only on release PRs into main', (file, job) => {
   const workflow = readRepoFile(`.github/workflows/${file}`);
 

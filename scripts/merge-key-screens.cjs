@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Joins the key-screen groups that several runners captured and checked
- * (capture-ios-screens.cjs, capture-android-screens.cjs, and check-screens.cjs
- * with --group) into the one folder a single runner used to make, for the
- * screenshot review (#453, #372): every ios/*.png and android/*.png, ocr.json,
- * checks.json, and settle-times.json in list order, iPhone first, and the App
- * Store and Google Play copies, which need shots from every part.
+ * Joins one platform's key-screen groups that several runners captured and
+ * checked (capture-ios-screens.cjs or capture-android-screens.cjs, and
+ * check-screens.cjs, with --group) into the one folder a single runner used to
+ * make, for the screenshot review (#453, #372): every <platform>/*.png,
+ * ocr.json, checks.json, and settle-times.json in list order, and the App
+ * Store or Google Play copies, which need shots from every part.
  *
- *   node scripts/merge-key-screens.cjs --out <screens folder> <part screens folder>...
+ *   node scripts/merge-key-screens.cjs --platform ios|android --out <screens folder> <part screens folder>...
  *
  * Writes a summary to the step summary. Exits 1 if a shot is missing or any
  * part's checks failed.
@@ -43,16 +43,14 @@ const mergeResults = (shots, parts) => {
   };
 };
 
-const merge = async (outDir, partDirs) => {
+const merge = async (outDir, partDirs, platform = 'ios') => {
   const config = loadConfig();
-  const shots = PLATFORMS.flatMap((platform) => planCaptures(config, platform));
+  const shots = planCaptures(config, platform);
+  mkdirSync(join(outDir, platform), { recursive: true });
   for (const partDir of partDirs) {
-    for (const platform of PLATFORMS) {
-      const shotDir = join(partDir, platform);
-      if (!existsSync(shotDir)) continue;
-      mkdirSync(join(outDir, platform), { recursive: true });
-      for (const name of readdirSync(shotDir)) copyFileSync(join(shotDir, name), join(outDir, platform, name));
-    }
+    const shotDir = join(partDir, platform);
+    if (!existsSync(shotDir)) continue;
+    for (const name of readdirSync(shotDir)) copyFileSync(join(shotDir, name), join(outDir, platform, name));
   }
 
   const parts = partDirs.map((partDir) => ({
@@ -69,7 +67,7 @@ const merge = async (outDir, partDirs) => {
   for (const shot of shots) {
     if (!existsSync(join(outDir, shot.file))) problems.push(`${shot.file}: no group captured it`);
   }
-  for (const copy of planStoreCopies(config)) {
+  for (const copy of planStoreCopies(config, platform)) {
     const source = join(outDir, copy.source);
     if (!existsSync(source)) continue;
     const file = join(outDir, copy.file);
@@ -84,7 +82,7 @@ const merge = async (outDir, partDirs) => {
   const failed = checks.filter((check) => check.problems.length);
   const slowest = [...timings].sort((a, b) => b.settledAfter - a.settledAfter).slice(0, 5);
   const summary = [
-    `### Key screens, ${partDirs.length} groups joined`,
+    `### ${platform === 'ios' ? 'iPhone' : 'Android'} key screens, ${partDirs.length} groups joined`,
     '',
     `${shots.length - problems.length} of ${shots.length} captured; ${checks.length - failed.length} of ${checks.length} pass the text checks.`,
     ...problems.map((problem) => `- ❌ ${problem}`),
@@ -100,13 +98,21 @@ const merge = async (outDir, partDirs) => {
 };
 
 if (require.main === module) {
-  const [flag, out, ...partDirs] = process.argv.slice(2);
-  const outDir = flag === '--out' && out ? resolve(out) : undefined;
-  if (!outDir || !partDirs.length) {
-    console.error('Usage: node scripts/merge-key-screens.cjs --out <screens folder> <part screens folder>...');
+  const args = process.argv.slice(2);
+  const option = (name) => {
+    const index = args.indexOf(name);
+    if (index === -1) return undefined;
+    const [value] = args.splice(index, 2).slice(1);
+    return value;
+  };
+  const platform = option('--platform') || 'ios';
+  const out = option('--out');
+  const outDir = out ? resolve(out) : undefined;
+  if (!outDir || !args.length || !PLATFORMS.includes(platform)) {
+    console.error('Usage: node scripts/merge-key-screens.cjs --platform ios|android --out <screens folder> <part screens folder>...');
     process.exit(2);
   }
-  merge(outDir, partDirs.map((partDir) => resolve(partDir))).catch((error) => {
+  merge(outDir, args.map((partDir) => resolve(partDir)), platform).catch((error) => {
     console.error(error);
     process.exit(1);
   });

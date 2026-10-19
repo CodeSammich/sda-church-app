@@ -113,7 +113,8 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` and `Android key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
+| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
+| `Android key screens`, which joins the `Android key screens (<group>)` jobs and fails if the build or any of them failed | `android-key-screens.yml` | `main` |
 | `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -736,12 +737,12 @@ It builds the app once, without signing, for an Apple Silicon Mac, and shares it
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
 (87 screenshots of 33 screens in all), and checks their text with
-`scripts/check-screens.cjs`. Five Linux runners take and check the same screens on an
-Android emulator, from a preview APK built for it
-([Android key screens](native-builds.md#android-key-screens)). Another job then joins
-both platforms' groups, before the review comment and
-**Screenshots reviewed**, which covers both. The run takes 30 to 40 minutes, most of it
-the Android build. On a release pull request, a comment
+`scripts/check-screens.cjs`. Another job then joins the groups. The **Android key
+screens** workflow takes and checks the same screens on an Android emulator, on Linux
+runners ([Android key screens](native-builds.md#android-key-screens)). The review
+comment waits for it and links both platforms' screenshots, before
+**Screenshots reviewed**, which covers both. Both take 30 to 40 minutes, most of it the
+Android build. On a release pull request, the comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
 The build needs no `production` approval, because it reads no secrets. Download the

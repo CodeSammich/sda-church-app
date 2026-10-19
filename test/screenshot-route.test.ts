@@ -78,17 +78,19 @@ describe('which builds can open a saved screen', () => {
     .filter((name: string) => readFileSync(join(workflows, name), 'utf8').includes('EXPO_PUBLIC_KEY_SCREENS'));
 
   it('is only the key-screen builds: the iOS Simulator app and the Android emulator APK', () => {
-    expect(setters).toEqual(['ios-pr-preview.yml']);
-    const preview = readFileSync(join(workflows, 'ios-pr-preview.yml'), 'utf8');
-    const steps = ['Build for the Simulator without signing', 'Build the emulator APK'];
-    for (const name of steps) {
-      const step = preview.slice(preview.indexOf(`- name: ${name}`));
-      expect({ name, sets: step.slice(0, step.indexOf('run: |')).includes("EXPO_PUBLIC_KEY_SCREENS: '1'") }).toEqual({
-        name,
+    expect(setters).toEqual(['android-key-screens.yml', 'ios-pr-preview.yml']);
+    for (const [file, name] of [
+      ['ios-pr-preview.yml', 'Build for the Simulator without signing'],
+      ['android-key-screens.yml', 'Build the emulator APK'],
+    ]) {
+      const workflow = readFileSync(join(workflows, file), 'utf8');
+      const step = workflow.slice(workflow.indexOf(`- name: ${name}`));
+      expect({ file, sets: step.slice(0, step.indexOf('run: |')).includes("EXPO_PUBLIC_KEY_SCREENS: '1'") }).toEqual({
+        file,
         sets: true,
       });
+      expect(workflow.match(/EXPO_PUBLIC_KEY_SCREENS: '1'/g)).toHaveLength(1);
     }
-    expect(preview.match(/EXPO_PUBLIC_KEY_SCREENS: '1'/g)).toHaveLength(steps.length);
     // The APK the Android preview publishes is a different build, without it.
     expect(readFileSync(join(workflows, 'android-pr-preview.yml'), 'utf8')).not.toContain('KEY_SCREENS');
   });

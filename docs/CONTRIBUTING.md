@@ -234,15 +234,27 @@ GitHub's code scanning default setup and have no workflow file.
 - Builds the app for the iOS Simulator once, without signing, and shares it with one
   runner per key-screen group (`Key screens (<group>)`). Each launches it, screenshots
   its group of the key screens in `test/screens/screens.json`, and checks their text.
-- Builds the Android preview APK for an emulator too, and shares it with one emulator
-  Linux runner per group (`Android key screens (<group>)`), which takes the same
-  screens and checks their text. `Build iOS Simulator app (Apple Silicon Mac)` joins
-  both platforms' groups and fails if any failed.
+- `Build iOS Simulator app (Apple Silicon Mac)` joins the groups and fails if any
+  failed. It only copies files, so it runs on Linux; the name is from when it built the
+  app.
+- Its review comment links both platforms' screenshots, once `Android key screens`
+  (below) has finished for the same commit.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
-  screenshots in the `screenshot-review` environment; see
+  iPhone and Android screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
 - The compiling runner reuses the compiled native code that `iOS compile cache` saved on
   `main`, read-only.
+
+### `Android key screens` (`.github/workflows/android-key-screens.yml`)
+
+- Check: `Android key screens`. Runs on the release PR into `main`, and by hand on any
+  branch. Every job runs on Linux.
+- Builds the Android preview APK for an emulator, with the key-screen route, and shares
+  it with one emulator runner per key-screen group (`Android key screens (<group>)`).
+  Each takes its group of the key screens and checks their text with RapidOCR.
+- `Android key screens` joins the groups, with the Google Play copies, and fails if any
+  failed. The iOS preview's review comment links its screenshots. See
+  [Android key screens](operations/native-builds.md#android-key-screens).
 
 ### `iOS compile cache` (`.github/workflows/ios-compile-cache.yml`)
 

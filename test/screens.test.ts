@@ -273,13 +273,12 @@ describe('iOS PR preview', () => {
   it('joins the groups in the required job, which fails rather than skips when a group fails', () => {
     const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
     expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');
-    expect(merge).toContain('needs: [capture, android-capture]');
+    expect(merge).toContain('needs: capture');
     // A skipped required check counts as passed, so this job must still run
     // after a failed part, and then fail.
     expect(merge).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
     expect(merge).toContain("needs.capture.result != 'success'");
-    expect(merge).toContain("needs.android-capture.result != 'success'");
-    expect(merge).toContain('node scripts/merge-key-screens.cjs --out');
+    expect(merge).toContain('node scripts/merge-key-screens.cjs --platform ios --out');
     // The review comment and earlier-run checks look for this artifact name.
     expect(merge).toMatch(/name: ios-pr-preview-.*-arm64\n/);
   });
@@ -766,20 +765,27 @@ describe('Android key screens (#372)', () => {
   });
 });
 
-describe('Android key screens in the preview workflow (#372)', () => {
-  const workflow = repoFile('.github/workflows/ios-pr-preview.yml');
-  const job = (id: string) => {
-    const start = workflow.indexOf(`\n  ${id}:\n`);
+describe('Android key screens workflow (#372)', () => {
+  const workflow = repoFile('.github/workflows/android-key-screens.yml');
+  const preview = repoFile('.github/workflows/ios-pr-preview.yml');
+  const jobOf = (text: string, id: string) => {
+    const start = text.indexOf(`\n  ${id}:\n`);
     expect(start).toBeGreaterThan(-1);
-    const next = workflow.slice(start + 1).search(/\n {2}[a-z-]+:\n/);
-    return next === -1 ? workflow.slice(start) : workflow.slice(start, start + 1 + next);
+    const next = text.slice(start + 1).search(/\n {2}[a-z-]+:\n/);
+    return next === -1 ? text.slice(start) : text.slice(start, start + 1 + next);
   };
-  const build = job('android-build');
-  const capture = job('android-capture');
-  const join = job('simulator');
+  const build = jobOf(workflow, 'android-build');
+  const capture = jobOf(workflow, 'android-capture');
+  const join = jobOf(workflow, 'screens');
+
+  it('runs every Android job on Linux, apart from the iPhone workflow and its Macs', () => {
+    expect(workflow).not.toMatch(/runs-on: macos/);
+    expect(workflow.match(/runs-on: ubuntu-24\.04/g)!.length).toBe(4);
+    expect(preview).not.toMatch(/android-build|android-capture|capture-android-screens/);
+  });
 
   it('runs where the iPhone capture runs: the release PR, or by hand', () => {
-    for (const text of [build, capture]) {
+    for (const text of [build, capture, join]) {
       expect(text).toContain("github.head_ref == 'release-candidate'");
       expect(text).toContain('github.event.pull_request.head.repo.full_name == github.repository');
       expect(text).toContain("github.event_name != 'pull_request' && inputs.screens_from_run == ''");
@@ -789,43 +795,50 @@ describe('Android key screens in the preview workflow (#372)', () => {
   it('builds the preview APK for the emulator with the key-screen route, and shares it once', () => {
     expect(build).toContain('npm run build:android:apk:debug:intel');
     expect(build).toMatch(/env:\n(?:\s+#.*\n)*\s+EXPO_PUBLIC_KEY_SCREENS: '1'\n/);
-    expect(build).toContain('name: android-key-screens-app-${{ github.run_id }}');
-    expect(capture).toContain('name: android-key-screens-app-${{ github.run_id }}');
+    expect(build).toContain('name: android-emulator-app-${{ github.run_id }}');
+    expect(capture).toContain('name: android-emulator-app-${{ github.run_id }}');
     expect(capture).toContain('select(.name == "Build the Android key-screens app")');
   });
 
-  it('captures each group on its own emulator, from the list in screens.json', () => {
+  it('captures and checks each group on its own emulator runner, from the list in screens.json', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(capture)![1].split(', ');
     expect(groups).toEqual(Object.keys(config.groups));
     expect(capture).toMatch(/capture-android-screens\.cjs --out [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
-    expect(capture).toContain("require('./test/screens/screens.json').android.systemImage");
-    expect(capture).toContain("require('./test/screens/screens.json').android.device");
-    // The join finds the groups by this prefix.
-    expect(capture).toContain('name: key-screens-${{ github.run_id }}-android-${{ matrix.group }}');
-  });
-
-  it("checks each group's text on its own Linux runner, never on a Mac", () => {
-    expect(capture).toContain('runs-on: ubuntu-24.04');
     expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--platform android --group \$\{\{ matrix\.group \}\}\n/);
     expect(capture).toContain('pip" install --quiet -r scripts/ocr-requirements.txt');
     expect(capture.indexOf('capture-android-screens.cjs')).toBeLessThan(capture.indexOf('--platform android'));
-    // The join only merges, so it needs no Mac either.
-    expect(join).toContain('runs-on: ubuntu-latest');
-    expect(join).not.toContain('check-screens.cjs');
+    expect(capture).toContain('name: android-key-screens-${{ github.run_id }}-${{ matrix.group }}');
     expect(repoFile('scripts/ocr-requirements.txt')).toMatch(/^rapidocr==\d+\.\d+\.\d+$/m);
   });
 
-  it('re-checks an earlier run on each platform’s own reader', () => {
-    const earlier = job('earlier-screens');
-    expect(earlier).toMatch(/- platform: ios\n\s+runner: macos-26\n/);
-    expect(earlier).toMatch(/- platform: android\n\s+runner: ubuntu-24.04\n/);
-    expect(earlier).toContain('--platform "$PLATFORM"');
+  it('joins the groups in a required job that fails rather than skips when one fails', () => {
+    // The "Main protection" ruleset requires this name.
+    expect(join).toContain('\n    name: Android key screens\n');
+    expect(join).toContain('needs: [android-build, android-capture]');
+    expect(join).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
+    expect(join).toContain("needs.android-capture.result != 'success'");
+    expect(join).toContain('merge-key-screens.cjs --platform android --out');
+    // The iPhone workflow's review comment finds the joined artifact by this name.
+    expect(join).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}");
+  });
+
+  it("links the Android run's screenshots in the one review comment, before the one approval", () => {
+    const comment = jobOf(preview, 'review-comment');
+    expect(comment).toContain('actions/workflows/android-key-screens.yml/runs?head_sha=$SHA&event=pull_request');
+    expect(comment).toContain('test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")');
+    expect(comment).toContain('ANDROID_CHECKS: ${{ steps.android.outputs.conclusion }}');
+    expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
+  });
+
+  it('re-checks an earlier run on Linux', () => {
+    const earlier = jobOf(workflow, 'earlier-screens');
+    expect(earlier).toContain('runs-on: ubuntu-24.04');
+    expect(earlier).toContain('check-screens.cjs --dir "$SCREENS" --platform android');
   });
 
   it('keeps pull request code away from credentials', () => {
-    for (const text of [build, capture]) {
-      expect(text).toContain('persist-credentials: false');
-      expect(text).not.toMatch(/secrets\.|environment:|: write\b/);
-    }
+    expect(workflow).not.toMatch(/secrets\.|environment:|pull_request_target/);
+    expect(workflow.match(/^\s+[a-z-]+:\s*write\b/gm)).toBeNull();
+    for (const text of [build, capture, join]) expect(text).toContain('persist-credentials: false');
   });
 });

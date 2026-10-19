@@ -7,11 +7,9 @@ name: iOS PR preview
 # Download the app from the run's artifacts to test it in the Simulator on a
 # Mac; docs/operations/native-builds.md explains how.
 #
-# It also takes the release's key screens, on the iPhone and on an Android
-# emulator (#331, #372), for the one screenshot review. The Android shots are
-# taken here rather than in android-pr-preview.yml, which runs in the base
-# branch's context for its Drive upload, so the emulator runs pull request
-# code only with this workflow's read-only token.
+# It also takes the release's iPhone key screens (#331). The Android ones are
+# taken on Linux by android-key-screens.yml (#372); this workflow's review
+# comment waits for that run and links both, so one approval covers both.
 on:
   # Only the release PR into main. Feature PRs into release-candidate skip the
   # Mac builds; start it by hand on a branch to test a change to this workflow
@@ -348,257 +346,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 1
 
-  android-build:
-    # The Android key screens' app (#372): a debug-signed preview APK, like the
-    # one android-pr-preview.yml publishes, from the same source and settings,
-    # but for the emulator's x86_64 processor and with the key-screen route
-    # (EXPO_PUBLIC_KEY_SCREENS, services/ScreenshotRoute.ts) turned on. The
-    # published APK and the store builds never set that.
-    if: >-
-      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
-      (github.head_ref == 'release-candidate' &&
-        github.event.pull_request.head.repo.full_name == github.repository)
-    name: Build the Android key-screens app
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci --force
-
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
-        with:
-          accept-android-sdk-licenses: false
-          log-accepted-android-sdk-licenses: false
-          packages: ''
-
-      - name: Accept Android SDK licenses
-        run: |
-          set -euo pipefail
-          license_status=0
-          set +o pipefail
-          yes | sdkmanager --licenses >/dev/null 2>&1 || license_status=$?
-          set -o pipefail
-          test "$license_status" -eq 0
-
-      - name: Install Android SDK tools
-        run: |
-          set -euo pipefail
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
-
-      - name: Build the emulator APK
-        env:
-          # Lets the capture open each screen from a saved setting
-          # (services/ScreenshotRoute.ts). Expo writes it into this build only.
-          EXPO_PUBLIC_KEY_SCREENS: '1'
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/android-key-screens-app"
-          npm run build:android:apk:debug:intel -- --output "$RUNNER_TEMP/android-key-screens-app/app.apk"
-
-      - name: Share the app with the emulator runners
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: android-key-screens-app-${{ github.run_id }}
-          path: ${{ runner.temp }}/android-key-screens-app/app.apk
-          if-no-files-found: error
-          retention-days: 1
-
-  android-capture:
-    # The Android key screens (#372): the same list and groups as the iPhone's,
-    # each group on its own Linux emulator runner, which boots while the app
-    # builds and then checks its own shots' text, as the iPhone groups do.
-    if: >-
-      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
-      (github.head_ref == 'release-candidate' &&
-        github.event.pull_request.head.repo.full_name == github.repository)
-    name: Android key screens (${{ matrix.group }})
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    permissions:
-      contents: read
-      # To see when the app is ready, and whether its build failed.
-      actions: read
-    strategy:
-      fail-fast: false
-      matrix:
-        # The groups in test/screens/screens.json, as for the iPhone.
-        group: [home, bible-reading, bible-text, library, worship-and-you]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-          cache: npm
-
-      # For sharp, which the capture uses.
-      - name: Install dependencies
-        run: npm ci --force
-
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
-        with:
-          accept-android-sdk-licenses: false
-          log-accepted-android-sdk-licenses: false
-          packages: ''
-
-      - name: Accept Android SDK licenses
-        run: |
-          set -euo pipefail
-          license_status=0
-          set +o pipefail
-          yes | sdkmanager --licenses >/dev/null 2>&1 || license_status=$?
-          set -o pipefail
-          test "$license_status" -eq 0
-
-      - name: Install the emulator
-        run: |
-          set -euo pipefail
-          # The system image test/screens/screens.json names. The runner's
-          # preinstalled command-line tools are too old for it, so avdmanager
-          # comes from the latest ones, as in android-audio-e2e.yml.
-          SYSTEM_IMAGE="$(node -p "require('./test/screens/screens.json').android.systemImage")"
-          echo "SYSTEM_IMAGE=$SYSTEM_IMAGE" >> "$GITHUB_ENV"
-          sdkmanager "cmdline-tools;latest" "emulator" "platform-tools" "$SYSTEM_IMAGE"
-
-      - name: Enable hardware acceleration for the emulator
-        run: |
-          set -euo pipefail
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
-            sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Start the emulator
-        run: |
-          set -euo pipefail
-          avdmanager_bin="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/avdmanager | sort -V | tail -1)"
-          export ANDROID_AVD_HOME="$HOME/.android/avd"
-          mkdir -p "$ANDROID_AVD_HOME"
-          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
-          DEVICE="$(node -p "require('./test/screens/screens.json').android.device")"
-          echo no | "$avdmanager_bin" create avd --force -n key-screens -k "$SYSTEM_IMAGE" -d "$DEVICE"
-          # swiftshader draws the screen in software, so screencap works
-          # without a display.
-          nohup "$ANDROID_HOME/emulator/emulator" -avd key-screens -no-window -no-snapshot \
-            -no-boot-anim -no-audio -memory 4096 -gpu swiftshader_indirect \
-            > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          booted() {
-            timeout 300 adb wait-for-device &&
-            timeout 600 bash -c \
-              'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 5; done'
-          }
-          if ! booted; then
-            echo 'The emulator did not boot. Its log:' >&2
-            tail -n 80 "$RUNNER_TEMP/emulator.log" >&2
-            exit 1
-          fi
-          adb shell wm size
-          adb shell wm density
-
-      - name: Wait for the app
-        # Gives up as soon as the build ends without it, rather than waiting
-        # out the timeout.
-        timeout-minutes: 45
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          # A failed API call, such as GitHub's occasional 502, just means
-          # asking again.
-          until { gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' || true; } |
-            grep -qx "android-key-screens-app-$RUN_ID"; do
-            builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "Build the Android key-screens app") | .conclusion // ""' || true)"
-            if [ -n "$builder" ]; then
-              echo "::error::The Android build ended ($builder) without sharing the app." >&2
-              exit 1
-            fi
-            sleep 15
-          done
-
-      - name: Download the app
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: android-key-screens-app-${{ github.run_id }}
-          path: ${{ runner.temp }}/android-key-screens-app
-
-      - name: Install the app
-        run: adb install -r "$RUNNER_TEMP/android-key-screens-app/app.apk"
-
-      - name: Capture the key screens
-        # Screenshots of this group's screens in test/screens/screens.json,
-        # named android/<screen>-<variant>.png.
-        timeout-minutes: 20
-        run: >-
-          node scripts/capture-android-screens.cjs --out "$RUNNER_TEMP/android-key-screens/screens"
-          --group ${{ matrix.group }}
-
-      - name: Install the text reader
-        # RapidOCR (scripts/ocr-screens.py), at the version
-        # scripts/ocr-requirements.txt pins. Apple's Vision, which reads the
-        # iPhone shots, runs only on a Mac.
-        if: ${{ !cancelled() }}
-        run: |
-          set -euo pipefail
-          python3 -m venv "$RUNNER_TEMP/ocr"
-          "$RUNNER_TEMP/ocr/bin/pip" install --quiet -r scripts/ocr-requirements.txt
-          echo "OCR_PYTHON=$RUNNER_TEMP/ocr/bin/python" >> "$GITHUB_ENV"
-
-      - name: Check the text on the key screens
-        # The iPhone's checks, with the tab bar and chapter controls where the
-        # emulator puts them. Runs even if a capture failed, to report on the
-        # rest.
-        if: ${{ !cancelled() }}
-        timeout-minutes: 15
-        run: >-
-          node scripts/check-screens.cjs --dir "$RUNNER_TEMP/android-key-screens/screens"
-          --platform android --group ${{ matrix.group }}
-
-      - name: Collect the emulator's logs
-        if: failure() || cancelled()
-        run: |
-          mkdir -p "$RUNNER_TEMP/android-key-screens/logs"
-          cp "$RUNNER_TEMP/emulator.log" "$RUNNER_TEMP/android-key-screens/logs/" 2>/dev/null || true
-          # adb waits forever for a device, so bound it.
-          timeout 60 adb logcat -d -v time > "$RUNNER_TEMP/android-key-screens/logs/logcat.txt" 2>/dev/null || true
-
-      - name: Upload this group
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: key-screens-${{ github.run_id }}-android-${{ matrix.group }}
-          path: ${{ runner.temp }}/android-key-screens/
-          if-no-files-found: warn
-          retention-days: 1
-
   simulator:
     # Joins the groups into the one artifact the review comment links: the
     # app and its first screen from the runner that compiled it, and every
-    # group's screenshots and checks, iPhone and Android. It fails if any
-    # group failed, on either platform, so a failed group can't pass as
-    # skipped. The "Main protection" ruleset requires this job's name.
-    needs: [capture, android-capture]
+    # group's screenshots and checks. It only copies files, so it runs on
+    # Linux; the name is from when this job built the app. It fails if any
+    # group failed, so a failed group can't pass as skipped. The "Main
+    # protection" ruleset requires this job's name.
+    needs: capture
     if: >-
       !cancelled() && (
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
@@ -614,7 +369,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      # For sharp, which writes the store copies.
+      # For sharp, which writes the App Store copies.
       - name: Install dependencies
         run: npm ci
 
@@ -631,7 +386,7 @@ jobs:
           mkdir -p "$OUT"
           find "$RUNNER_TEMP/parts" -maxdepth 2 -type f \( -name '*-simulator.zip' -o -name '*-first-screen.png' \) \
             -exec cp {} "$OUT/" \;
-          node scripts/merge-key-screens.cjs --out "$OUT/screens" "$RUNNER_TEMP"/parts/*/screens
+          node scripts/merge-key-screens.cjs --platform ios --out "$OUT/screens" "$RUNNER_TEMP"/parts/*/screens
 
       - name: Upload the Simulator app and screenshots
         if: always()
@@ -643,12 +398,11 @@ jobs:
           retention-days: 14
 
       - name: Fail if a group failed
-        if: ${{ !cancelled() && (needs.capture.result != 'success' || needs.android-capture.result != 'success') }}
+        if: ${{ !cancelled() && needs.capture.result != 'success' }}
         env:
-          IOS_RESULT: ${{ needs.capture.result }}
-          ANDROID_RESULT: ${{ needs.android-capture.result }}
+          RESULT: ${{ needs.capture.result }}
         run: |
-          echo "::error::The key-screen groups ended as $IOS_RESULT (iPhone) and $ANDROID_RESULT (Android); their jobs' logs say why."
+          echo "::error::A key-screen group ended as $RESULT; its job's log says why."
           exit 1
 
   announce:
@@ -700,9 +454,10 @@ jobs:
           gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
 
   review-comment:
-    # Tells the release PR's reviewer where this commit's screenshots are and
-    # how to approve them, for the "Screenshots reviewed" check (#331). Each run
-    # replaces the previous comment, so the one on the PR is always current.
+    # Tells the release PR's reviewer where this commit's screenshots are, the
+    # iPhone's and Android's, and how to approve them, for the "Screenshots
+    # reviewed" check (#331, #372). Each run replaces the previous comment, so
+    # the one on the PR is always current.
     needs: simulator
     if: >-
       !cancelled() &&
@@ -711,15 +466,39 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     name: Post the screenshot review comment
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Most of it is waiting for the Android run, which usually finishes first.
+    timeout-minutes: 60
     permissions:
-      # To find this run's artifact.
+      # To find this run's artifact, and the Android run's.
       actions: read
       contents: read
       # Only to replace the review comment. The job never checks out or runs
       # the pull request's code.
       pull-requests: write
     steps:
+      - name: Wait for the Android key screens
+        # android-key-screens.yml's newest run for this commit. Gives up after
+        # 50 minutes, and the comment then says the Android shots are missing.
+        id: android
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          for _ in $(seq 1 100); do
+            run=$(gh api "repos/$REPO/actions/workflows/android-key-screens.yml/runs?head_sha=$SHA&event=pull_request" \
+              --jq '.workflow_runs[0] // empty | "\(.id) \(.status) \(.conclusion)"' || true)
+            read -r id status conclusion <<<"$run"
+            if [ "${status:-}" = completed ]; then
+              echo "run_id=$id" >> "$GITHUB_OUTPUT"
+              echo "conclusion=$conclusion" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::warning::The Android key screens for $SHA didn't finish in time."
+
       - name: Post the review comment
         env:
           GH_TOKEN: ${{ github.token }}
@@ -728,21 +507,33 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
           RUN_ID: ${{ github.run_id }}
           CHECKS: ${{ needs.simulator.result }}
+          ANDROID_RUN_ID: ${{ steps.android.outputs.run_id }}
+          ANDROID_CHECKS: ${{ steps.android.outputs.conclusion }}
         run: |
           set -euo pipefail
+          # A link to a run's screenshots, given its run ID and the jq test for its artifact.
+          screenshots() {
+            local url="https://github.com/$REPO/actions/runs/$1" found id bytes
+            found=$(gh api "repos/$REPO/actions/runs/$1/artifacts" \
+              --jq "[.artifacts[] | select($2)][0] // empty | \"\\(.id) \\(.size_in_bytes)\"")
+            if [ -n "$found" ]; then
+              read -r id bytes <<<"$found"
+              echo "[$3]($url/artifacts/$id) (a zip of about $((bytes / 1000000)) MB)"
+            else
+              echo "$3 from [its run]($url), which uploaded none; it says why"
+            fi
+          }
           run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
-          artifact=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" \
-            --jq '[.artifacts[] | select(.name | endswith("-arm64"))][0] // empty | "\(.id) \(.size_in_bytes)"')
-          if [ -n "$artifact" ]; then
-            read -r artifact_id artifact_bytes <<<"$artifact"
-            download="[the screenshots]($run_url/artifacts/$artifact_id) (a zip of about $((artifact_bytes / 1000000)) MB)"
+          download="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone screenshots')"
+          if [ -n "$ANDROID_RUN_ID" ]; then
+            android="$(screenshots "$ANDROID_RUN_ID" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
           else
-            download="the screenshots from [the run]($run_url), which uploaded none; it says why"
+            android="the Android screenshots, which aren't ready: [their runs](https://github.com/$REPO/actions/workflows/android-key-screens.yml) say why"
           fi
-          if [ "$CHECKS" = success ]; then
+          if [ "$CHECKS" = success ] && [ "$ANDROID_CHECKS" = success ]; then
             checks="✅ The automatic checks passed on both platforms: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
           else
-            checks="⚠️ **The automatic checks failed or didn't finish.** Start with [the run]($run_url) to see why."
+            checks="⚠️ **The automatic checks failed or didn't finish** (iPhone: ${CHECKS:-unknown}, Android: ${ANDROID_CHECKS:-not finished}). Start with the runs linked below to see why."
           fi
           approve="an approver in the release-approvers team opens [this run]($run_url), clicks **Review deployments**, ticks **screenshot-review**, and approves. The **Screenshots reviewed** check then passes."
 
@@ -754,7 +545,7 @@ jobs:
 
           $checks
 
-          1. **Download** $download and open \`screens/ios/\` and \`screens/android/\`. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), and \`zh\`, \`zh-cn\`, and \`es\`.
+          1. **Download** $download and $android, and open their \`screens/ios/\` and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:
              - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
              - a verse number split from its verse, or a button label cut short;
@@ -764,7 +555,7 @@ jobs:
              The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
           3. **Approve:** $approve
 
-          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in \`screens/app-store/\`, and the Google Play copies in \`screens/google-play/\`.
+          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
           BODY
           )
 
@@ -820,20 +611,11 @@ jobs:
 
   earlier-screens:
     # Re-checks an earlier run's screenshots in a few minutes, instead of a
-    # full build, while tuning the text checks: the iPhone's with Vision on a
-    # Mac, and Android's with RapidOCR on Linux.
+    # full build, while tuning the text checks.
     if: github.event_name == 'workflow_dispatch' && inputs.screens_from_run != ''
-    name: Check the ${{ matrix.platform }} key screens of an earlier run
-    runs-on: ${{ matrix.runner }}
+    name: Check the key screens of an earlier run
+    runs-on: macos-26
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: ios
-            runner: macos-26
-          - platform: android
-            runner: ubuntu-24.04
     permissions:
       contents: read
       # To download the earlier run's screenshots.
@@ -862,24 +644,14 @@ jobs:
           test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
           echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
 
-      - name: Install the text reader
-        if: ${{ matrix.platform == 'android' }}
-        run: |
-          set -euo pipefail
-          python3 -m venv "$RUNNER_TEMP/ocr"
-          "$RUNNER_TEMP/ocr/bin/pip" install --quiet -r scripts/ocr-requirements.txt
-          echo "OCR_PYTHON=$RUNNER_TEMP/ocr/bin/python" >> "$GITHUB_ENV"
-
       - name: Check the text on the key screens
-        env:
-          PLATFORM: ${{ matrix.platform }}
-        run: node scripts/check-screens.cjs --dir "$SCREENS" --platform "$PLATFORM"
+        run: node scripts/check-screens.cjs --dir "$SCREENS"
 
       - name: Upload the text that was read
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: key-screen-checks-${{ inputs.screens_from_run }}-${{ matrix.platform }}
+          name: key-screen-checks-${{ inputs.screens_from_run }}
           path: |
             ${{ env.SCREENS }}/ocr.json
             ${{ env.SCREENS }}/checks.json
