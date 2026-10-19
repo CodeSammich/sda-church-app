@@ -27,6 +27,7 @@ does and what still needs a person.
 - [Dependabot pull requests](#dependabot-pull-requests)
 - [External dependency monitor alerts](#external-dependency-monitor-alerts)
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
+- [Expo doctor monitor alerts](#expo-doctor-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
 - [Due-date reminders](#due-date-reminders)
 - [Updating pastors and elders](#updating-pastors-and-elders)
@@ -60,7 +61,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A pull request to review | Watch the repository with **Watch → Custom → Pull requests** (and **Issues** for new issues). With **No additional events**, that emails each new PR or issue but not its comments or pushes. |
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
-| A monitor alert (external dependencies, store toolchain) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. Both monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
+| A monitor alert (external dependencies, store toolchain, Expo doctor) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. The three monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
 | A yearly checkup or Workspace backup issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
 | An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
@@ -809,6 +810,36 @@ The issue closes itself on the next passing run. The job summary also notes when
 Apple recommends a newer Xcode than the build uses; that note alone does not open an
 issue. What to update and test is under
 [Store toolchain requirements](#store-toolchain-requirements).
+
+## Expo doctor monitor alerts
+
+**Workflow:** **Expo Doctor Monitor**, which runs every Monday and can be run manually.
+
+It runs every check of [`expo-doctor`](https://docs.expo.dev/develop/tools/#expo-doctor),
+the same as `npm run doctor`, including the one that every package the installed SDK
+pins (Expo's own, React Native, and some native libraries) is the version it expects.
+Pull requests run the same tool without that check, as `Expo Doctor (config)`, which
+isn't required; see [Automated checks](../CONTRIBUTING.md#automated-checks).
+
+When any check fails, it opens or updates the issue **[monitor] Expo doctor found
+problems**, with `expo-doctor`'s output. A new alert is assigned to the users in
+`MONITOR_ALERT_ASSIGNEES`; see
+[Getting notified only when action is needed](#getting-notified-only-when-action-is-needed).
+The issue closes itself on the next passing run. Usually Expo has published SDK patch
+releases. On a branch from `release-candidate`:
+
+1. Run `npx expo install --fix`.
+2. If `npm view expo-template-bare-minimum dist-tags.sdk-<SDK>` is newer than the pinned
+   `expo-template-bare-minimum@…`, update every pin; `test/native-build-safety.test.ts`
+   checks that they match.
+3. Run `npm run doctor` and `npm run check`, build the Android APK on the emulator, and
+   start **iOS PR preview** by hand, since patch releases can change native code.
+
+While Expo or React Native is a pre-release, as during the Expo 58 canary, it skips the
+run and passes, because the versions can't match a released SDK.
+`scripts/expo-doctor-monitor.cjs` runs it and writes the alert text. It runs
+`expo-doctor` in a job with a read-only token, and only a second job, which installs
+nothing, can write issues.
 
 ## Apple signing reminders
 

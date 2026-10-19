@@ -86,6 +86,7 @@ run instead of building it. Both are in
 | `npm run check:text-scale` | That no text style bypasses the app's text-size setting (`scripts/check-text-scale-coverage.mjs`) | **PR Unit Tests**, after Jest |
 | `npm run build:web` | That the web build exports, into `build/web` | Not on pull requests; the website deploy builds it again after a merge |
 | `npm run check` | All four of the above: typecheck, then tests, text size, and web build | Not in CI; run it before opening a pull request |
+| `npm run doctor` | `expo-doctor`: the Expo config, native modules, and that every package the SDK pins is the version it expects | **PR Unit Tests** without the version check, not required; **Expo Doctor Monitor**, weekly, in full |
 | `npm run test:integration:bulletin` | The response shape of the production bulletin API | **Bulletin API Integration**, on the release pull request into `main` |
 | `npm run test:integration:external` | Every outside service the app uses: APIs, media hosts, hymn sites, and the website's pages | **External Dependency Monitor**, daily |
 

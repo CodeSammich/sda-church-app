@@ -36,3 +36,31 @@ jobs:
 
       - name: Check that text follows the app's text size
         run: npm run check:text-scale
+
+  # Not a required check: a failure shows on the pull request but doesn't block
+  # merging. The dependency version check is off here, since each new Expo
+  # patch release would otherwise fail it on unrelated pull requests; the
+  # weekly Expo Doctor Monitor runs it instead.
+  expo-doctor:
+    name: Expo Doctor (config)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check the Expo project
+        env:
+          EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK: 1
+          # An Expo API outage warns instead of failing the check.
+          EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: 1
+        run: npm run doctor

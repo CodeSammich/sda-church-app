@@ -1175,7 +1175,7 @@ ignores orientation locks on screens 600dp or wider for apps that target API 36,
 Console flags apps that set one (#426). Whether to support iPad is a separate decision
 (#324).
 
-Before release, run `npx expo install --check`, `npx expo-doctor`, and `npm run check`.
+Before release, run `npx expo install --check`, `npm run doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices, with the
 [device checks before release](admin-runbook.md#device-checks-before-release) in the
 admin runbook. On Android, the [Android audio test](#android-audio-test-on-release-prs)

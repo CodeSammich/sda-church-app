@@ -165,6 +165,9 @@ and may not be possible, so protect them above everything else.
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by;
+  - a weekly [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts)
+    that opens an issue when `expo-doctor` finds problems, usually SDK patch releases
+    the app hasn't taken yet;
   - a weekly [Apple signing monitor](operations/admin-runbook.md#apple-signing-reminders)
     that opens an issue 60 days before an Apple certificate, profile, or membership
     expires;
@@ -498,6 +501,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
+| Weekly (automated) | [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts): take Expo's SDK patch releases | Bug fixes are missed, and a later update has to take many releases at once |
 | Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 
 ## Governance principles
