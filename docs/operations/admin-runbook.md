@@ -745,9 +745,10 @@ comment waits for it and links both platforms' screenshots, before
 Android build. On a release pull request, the comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
-The build needs no `production` approval, because it reads no secrets. Download the
-artifact ending in `-arm64` from the run's Artifacts section (kept 14 days) to test the release on an Apple Silicon
-Mac before merging; you don't need an iPhone. See
+The build needs no `production` approval, because it reads no secrets. To test the
+release on an Apple Silicon Mac before merging, download the app, the artifact ending in
+`-arm64`, from the run's Artifacts section (kept 14 days); you don't need an iPhone.
+The screenshots are a separate download, `ios-key-screens-<number>-<run>`. See
 [iOS key screens](native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
 ## Dependabot pull requests

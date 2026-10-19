@@ -376,9 +376,9 @@ jobs:
           retention-days: 1
 
   simulator:
-    # Joins the groups into the one artifact the review comment links: the
-    # app and its first screen from the runner that compiled it, and every
-    # group's screenshots and checks. It only copies files, so it runs on
+    # Joins the groups into two artifacts: the screenshots and checks from
+    # every group, which the review comment links, and the app with its first
+    # screen from the runner that compiled it. It only copies files, so it runs on
     # Linux. It fails if any group failed, so a failed group can't pass as
     # skipped. The "Main protection" ruleset requires this job's name. Before
     # #372 it was "Build iOS Simulator app (Apple Silicon Mac)", from when one
@@ -409,16 +409,29 @@ jobs:
           pattern: key-screens-${{ github.run_id }}-*
           path: ${{ runner.temp }}/parts
 
+      # The screenshots and the app are separate downloads: Chrome's Safe
+      # Browsing blocks a download with an unsigned app zipped inside it, which
+      # kept reviewers from the screenshots when they shared one.
       - name: Join the key screens
         run: |
           set -euo pipefail
-          OUT="$RUNNER_TEMP/ios-pr-preview"
-          mkdir -p "$OUT"
+          SCREENS_OUT="$RUNNER_TEMP/ios-key-screens"
+          APP_OUT="$RUNNER_TEMP/ios-pr-preview"
+          mkdir -p "$SCREENS_OUT" "$APP_OUT"
           find "$RUNNER_TEMP/parts" -maxdepth 2 -type f \( -name '*-simulator.zip' -o -name '*-first-screen.png' \) \
-            -exec cp {} "$OUT/" \;
-          node scripts/merge-key-screens.cjs --platform ios --out "$OUT/screens" "$RUNNER_TEMP"/parts/*/screens
+            -exec cp {} "$APP_OUT/" \;
+          node scripts/merge-key-screens.cjs --platform ios --out "$SCREENS_OUT/screens" "$RUNNER_TEMP"/parts/*/screens
 
-      - name: Upload the Simulator app and screenshots
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/ios-key-screens/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload the Simulator app
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -554,7 +567,8 @@ jobs:
             fi
           }
           run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
-          download="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone screenshots')"
+          download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"
+          app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
           if [ -n "$ANDROID_RUN_ID" ]; then
             android="$(screenshots "$ANDROID_RUN_ID" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
           else
@@ -586,6 +600,8 @@ jobs:
           3. **Approve:** $approve
 
           A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
+
+          To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
           BODY
           )
 
@@ -669,7 +685,10 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo 'screens_from_run must be a run ID.' >&2; exit 1; }
-          gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-pr-preview-*-arm64' --dir "$RUNNER_TEMP/earlier"
+          # Runs from before the screenshots got their own download kept them in
+          # the app's download.
+          gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-key-screens-*' --dir "$RUNNER_TEMP/earlier" ||
+            gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-pr-preview-*-arm64' --dir "$RUNNER_TEMP/earlier"
           SCREENS="$(find "$RUNNER_TEMP/earlier" -type d -name screens -print -quit)"
           test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
           echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
