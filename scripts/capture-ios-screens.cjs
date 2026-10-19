@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Captures the app's key screens (test/screens/screens.json) from a Simulator
- * build, for the iOS PR preview (#331). The images are named
+ * build, for the iOS key screens workflow (#331). The images are named
  * ios/<screen>-<variant>.png, and a later change can compare them with
  * known-good copies. The App Store shots are also copied, numbered in upload
  * order, to app-store/<language>/.
@@ -22,6 +22,9 @@
  *
  * The app must already be installed on that iPhone. The Simulator only runs on
  * macOS with Xcode.
+ *
+ * It also plans each platform's shots from the list, for
+ * capture-android-screens.cjs, check-screens.cjs, and merge-key-screens.cjs.
  */
 const { execFileSync, spawnSync } = require('node:child_process');
 const { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
@@ -47,17 +50,29 @@ const SETTING_KEYS = {
   audioReaders: 'user-bible-audio-readers',
 };
 
-// Settings of the simulated iPhone rather than the app.
-const DEVICE_SETTINGS = ['iosTextSize'];
+// Settings of the simulated phone rather than the app, by platform. A variant
+// that sets another platform's, such as the iPhone's text size, isn't taken on
+// this one (#372).
+const DEVICE_SETTINGS = {
+  ios: ['iosTextSize'],
+  // Android's font size (font_scale) and display size, as a multiple of the
+  // emulator's own density.
+  android: ['fontScale', 'displayScale'],
+};
+const PLATFORMS = Object.keys(DEVICE_SETTINGS);
+const ALL_DEVICE_SETTINGS = Object.values(DEVICE_SETTINGS).flat();
 
 // Every shot starts from these, so nothing depends on the time of day (the
-// Sunrise/Sunset theme) or on the Simulator's own language and text size.
-const BASE_SETTINGS = {
+// Sunrise/Sunset theme) or on the phone's own language and text size.
+const APP_BASE_SETTINGS = {
   setupDone: true,
   language: 'en',
   theme: 'light',
   textScale: 1,
-  iosTextSize: 'large',
+};
+const BASE_SETTINGS = {
+  ios: { ...APP_BASE_SETTINGS, iosTextSize: 'large' },
+  android: { ...APP_BASE_SETTINGS, fontScale: 1, displayScale: 1 },
 };
 
 // Seconds to wait after launching, before the screenshot. Measured over three
@@ -98,25 +113,44 @@ const takeGroup = (shots, group, config) => {
   return shots.filter((shot) => shot.group === group);
 };
 
-/** Lists every shot: its name, file, deep link, settings, and checks. */
-const planCaptures = (config) =>
-  config.screens.flatMap((screen) =>
-    screen.variants.map((variant) => {
-      const overrides = config.variants[variant];
-      if (!overrides) throw new Error(`Screen "${screen.name}" uses unknown variant "${variant}".`);
-      return {
-        screen: screen.name,
-        group: screen.group,
-        name: `${screen.name}-${variant}`,
-        file: `ios/${screen.name}-${variant}.png`,
-        route: screen.path,
-        url: `${SCHEME}://${screen.path}`,
-        settings: { ...BASE_SETTINGS, ...(screen.settings || {}), ...overrides },
-        checks: screen.checks || [],
-        wait: screen.wait || (screen.path.startsWith('bible') ? BIBLE_WAIT : WAIT),
-      };
-    }),
+/**
+ * Whether a variant's settings suit the platform: it sets no other platform's
+ * device settings.
+ */
+const variantSuits = (overrides, platform) =>
+  Object.keys(overrides).every(
+    (name) => !ALL_DEVICE_SETTINGS.includes(name) || DEVICE_SETTINGS[platform].includes(name),
   );
+
+/**
+ * Lists every shot on one platform: its name, file, deep link, settings, and
+ * checks. A screen with `platforms` is taken only on those, and a variant only
+ * on the platform whose device settings it changes, if any.
+ */
+const planCaptures = (config, platform = 'ios') => {
+  if (!PLATFORMS.includes(platform)) throw new Error(`No platform "${platform}"; use ${PLATFORMS.join(' or ')}.`);
+  return config.screens
+    .filter((screen) => !screen.platforms || screen.platforms.includes(platform))
+    .flatMap((screen) =>
+      screen.variants.flatMap((variant) => {
+        const overrides = config.variants[variant];
+        if (!overrides) throw new Error(`Screen "${screen.name}" uses unknown variant "${variant}".`);
+        if (!variantSuits(overrides, platform)) return [];
+        return [{
+          platform,
+          screen: screen.name,
+          group: screen.group,
+          name: `${screen.name}-${variant}`,
+          file: `${platform}/${screen.name}-${variant}.png`,
+          route: screen.path,
+          url: `${SCHEME}://${screen.path}`,
+          settings: { ...BASE_SETTINGS[platform], ...(screen.settings || {}), ...overrides },
+          checks: screen.checks || [],
+          wait: screen.wait || (screen.path.startsWith('bible') ? BIBLE_WAIT : WAIT),
+        }];
+      }),
+    );
+};
 
 /**
  * The AsyncStorage manifest: every value is a string, keyed by its storage key,
@@ -125,7 +159,7 @@ const planCaptures = (config) =>
 const buildManifest = (settings, route = '') => ({
   ...Object.fromEntries(
     Object.entries(settings)
-      .filter(([name]) => !DEVICE_SETTINGS.includes(name))
+      .filter(([name]) => !ALL_DEVICE_SETTINGS.includes(name))
       .map(([name, value]) => {
         const key = SETTING_KEYS[name];
         if (!key) throw new Error(`Unknown setting "${name}".`);
@@ -145,14 +179,27 @@ const writeAppStoreCopy = async (source, destination) => {
   await sharp(source).removeAlpha().png().toFile(destination);
 };
 
-/** The App Store copies: app-store/<language>/<NN>-<shot>.png, in upload order. */
-const planAppStore = (config) =>
-  Object.entries(config.appStore || {}).flatMap(([language, names]) =>
-    names.map((name, index) => ({
-      name,
-      file: `app-store/${language}/${String(index + 1).padStart(2, '0')}-${name}.png`,
-    })),
+/**
+ * The store copies, in upload order: the App Store's from the iPhone shots, as
+ * app-store/<language>/<NN>-<shot>.png, and Google Play's from the Android
+ * ones, as google-play/<language>/<NN>-<shot>.png (#372).
+ */
+const STORES = [
+  { list: 'appStore', folder: 'app-store', platform: 'ios' },
+  { list: 'googlePlay', folder: 'google-play', platform: 'android' },
+];
+const planStoreCopies = (config, platform) =>
+  STORES.filter((store) => !platform || store.platform === platform).flatMap((store) =>
+    Object.entries(config[store.list] || {}).flatMap(([language, names]) =>
+      names.map((name, index) => ({
+        name,
+        platform: store.platform,
+        source: `${store.platform}/${name}.png`,
+        file: `${store.folder}/${language}/${String(index + 1).padStart(2, '0')}-${name}.png`,
+      })),
+    ),
   );
+const planAppStore = (config) => planStoreCopies(config, 'ios');
 
 // AsyncStorage keeps short values inline in this file (see RNCAsyncStorage.mm).
 const manifestPath = (dataContainer, bundleId) =>
@@ -276,10 +323,10 @@ const STATUS_BAR_REGIONS = [
   { x: [0.917, 0.985], y: [0.032, 0.114] }, // right of the icons
 ];
 
-const statusBarClear = async (file) => {
+const statusBarClear = async (file, regions = STATUS_BAR_REGIONS) => {
   const sharp = require('sharp');
   const { width } = await sharp(file).metadata();
-  for (const { x, y } of STATUS_BAR_REGIONS) {
+  for (const { x, y } of regions) {
     const region = {
       left: Math.round(width * x[0]),
       top: Math.round(width * y[0]),
@@ -348,7 +395,7 @@ const capture = async (outDir, group) => {
     const finalSeconds = Math.round((Date.now() - launched) / 1000);
     await compareSamples(samples, file);
     const settled = settledAfter(samples, finalSeconds);
-    timings.push({ shot: shot.name, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
+    timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
     const problems = [];
     if (!isRunning(udid, bundleId)) problems.push(`the app wasn't running after opening ${shot.url}`);
     // The app removes the saved screen once it has opened it.
@@ -379,7 +426,7 @@ const capture = async (outDir, group) => {
     }
     const file = join(outDir, copy.file);
     mkdirSync(dirname(file), { recursive: true });
-    await writeAppStoreCopy(join(outDir, `ios/${copy.name}.png`), file);
+    await writeAppStoreCopy(join(outDir, copy.source), file);
   }
 
   const minutes = ((Date.now() - started) / 60000).toFixed(1);
@@ -429,14 +476,21 @@ module.exports = {
   shotCost,
   takeGroup,
   settledAfter,
+  compareSamples,
   looksBlank,
   looksLikeSplash,
   SETTING_KEYS,
   BASE_SETTINGS,
+  DEVICE_SETTINGS,
+  PLATFORMS,
+  ROUTE_KEY,
+  SAMPLE_EVERY,
+  BLANK_RETRIES,
   loadConfig,
   planCaptures,
   buildManifest,
   planAppStore,
+  planStoreCopies,
   writeAppStoreCopy,
   manifestPath,
   statusBarClear,

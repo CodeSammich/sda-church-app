@@ -133,7 +133,7 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-default'), dual)).toEqual([]);
     const withoutHeader = dual.filter((each) => each.box[1] > 0.12);
     expect(checkShot(shot('bible-dual-default'), withoutHeader)).toEqual([
-      'no line matches /^XA\\b/',
+      'no line matches /^(XA\\b|文A|A EN\\b)/',
       'no line matches /\\bEN\\b/',
       'no line matches /BSB/',
       'no line matches /CUV/',
@@ -148,10 +148,10 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual([
       'no line matches /BSB/',
       'no line matches /CUV/',
-      '"XA EN B... +* C..." matches /\\bXA\\b/, which must not show',
+      '"XA EN B... +* C..." matches /(\\bXA|文A)\\b/, which must not show',
     ]);
     // At the default size the icon must still show.
-    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^XA\\b/']);
+    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^(XA\\b|文A|A EN\\b)/']);
   });
 
   it('catches tab labels that wrap, or rise out of an overgrown tab bar, at about 4× text (#380)', () => {
@@ -163,7 +163,8 @@ describe('screen rules', () => {
     ).toEqual(['tab labels missing: Explore']);
     // An overgrown tab bar: the labels sit above the tab bar's area.
     expect(checkShot(shot('explore-es-xl-ios-large-text'), tabs(['Inicio', 'Biblia', 'Explorar', 'Tú'], 0.86))).toEqual([
-      'tab labels missing: Inicio, Biblia, Explorar, Tú',
+      // Tú is too short to require: OCR misses it alone under its icon.
+      'tab labels missing: Inicio, Biblia, Explorar',
     ]);
   });
 
@@ -235,5 +236,74 @@ describe('screen rules', () => {
   it('reads each shot in its language', () => {
     const { OCR_LANGUAGES } = require('../scripts/check-screens.cjs');
     for (const each of shots) expect(OCR_LANGUAGES[each.settings.language]).toBeDefined();
+  });
+});
+
+describe('Android shots (#372)', () => {
+  const androidShots = planChecks(loadConfig(), 'android');
+  const androidShot = (name: string) => androidShots.find((candidate: { name: string }) => candidate.name === name);
+  const tabs = (y: number) => ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, y));
+
+  it("get the same screen's rules, under android/", () => {
+    expect(androidShot('bible-scrolled-default')).toMatchObject({
+      file: 'android/bible-scrolled-default.png',
+      platform: 'android',
+      tabs: false,
+      mustShowLines: ['^14\\b', '^15\\b', '^16\\b', '^John\\b'],
+    });
+    // The phone's narrower screen may wrap the heading between its words.
+    expect(androidShot('home-xl-android-font-max').mustShowLines).toEqual(['^Today.s( Verse)?$']);
+  });
+
+  it("look for the tab bar where the Android phone's screen puts it", () => {
+    expect(checkShot(androidShot('explore-default'), tabs(0.95))).toEqual([]);
+    expect(checkShot(androidShot('explore-default'), tabs(0.8))).toEqual(['tab labels missing: Home, Bible, Explore, You']);
+  });
+
+  it("catch Android's crash and not-responding dialogs", () => {
+    expect(checkShot(androidShot('explore-default'), [...tabs(0.95), line("NYCCSDA Preview isn't responding", 0.5)])).toEqual([
+      'shows "isn\'t responding"',
+    ]);
+    expect(checkShot(androidShot('explore-default'), [...tabs(0.95), line('NYCCSDA Preview keeps stopping', 0.5)])).toEqual([
+      'shows "keeps stopping"',
+    ]);
+  });
+});
+
+describe('rules for one platform (#372)', () => {
+  const androidShots = planChecks(loadConfig(), 'android');
+  const androidShot = (name: string) => androidShots.find((candidate: { name: string }) => candidate.name === name);
+  const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.95));
+
+  it("skip a line the emulator's shorter screen leaves below the fold, and keep it on the iPhone", () => {
+    expect(checkShot(androidShot('sabbath-school-default'), tabs)).toEqual([]);
+    expect(checkShot(shot('sabbath-school-default'), tabs.map((each) => ({ ...each, box: [0.1, 0.944, 0.3, 0.02] })))).toEqual([
+      'no line matches /^Beginner \\(ages 1-3\\)/',
+    ]);
+  });
+
+  it('accept the 文A icon as either reader reads it', () => {
+    const header = (icon: string) => [line(`${icon} EN BSB + 繁 CUV`, 0.05), line('Psalms', 0.86), line('Verse', 0.86)];
+    expect(checkShot(androidShot('bible-dual-default'), [...tabs, ...header('文A')])).toEqual([]);
+    expect(checkShot(androidShot('bible-dual-back-large'), [...tabs, ...header('文A')])).toEqual([
+      '"文A EN BSB + 繁 CUV" matches /(\\bXA|文A)\\b/, which must not show',
+    ]);
+  });
+});
+
+describe('the verse button’s short label (#372)', () => {
+  const androidShots = planChecks(loadConfig(), 'android');
+  const longChapter = androidShots.find((candidate: { name: string }) => candidate.name === 'bible-long-chapter-android-font-max');
+  const verses = ['100 I discern', '101 I have kept', '102I have not departed', 'Psalms'].map((text, index) => line(text, 0.1 + index * 0.2));
+
+  it('passes "Vs.", which the app shows when the chapter controls are tight, but not a cut-off "V"', () => {
+    expect(checkShot(longChapter, [...verses, line('Vs.', 0.92)])).toEqual([]);
+    expect(checkShot(longChapter, [...verses, line('V', 0.92)])).toEqual(["the verse button doesn't show \"Verse\""]);
+  });
+
+  it('accepts a verse number read without the space after it, but not a longer number', () => {
+    expect(checkShot(longChapter, [...verses, line('Vs.', 0.92)])).toEqual([]);
+    const split = verses.map((each) => (each.text.startsWith('102') ? { ...each, text: '1020 have not departed' } : each));
+    expect(checkShot(longChapter, [...split, line('Vs.', 0.92)])).toEqual(['no line matches /^102(?!\\d)/']);
   });
 });

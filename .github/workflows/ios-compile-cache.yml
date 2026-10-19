@@ -1,6 +1,6 @@
 name: iOS compile cache
 
-# Saves the compiled native code that the iOS PR preview reuses (#455), so its
+# Saves the compiled native code that iOS key screens reuses (#455), so its
 # compiling runner compiles only the C, C++, and Objective-C that changed
 # since main last built.
 #
@@ -8,7 +8,7 @@ name: iOS compile cache
 # requests can read main's caches but never write them, so a pull request
 # can't change what a later run gets. This workflow reads no secrets, and the
 # signed store builds never use the cache. It must compile the way
-# ios-pr-preview.yml does, or the cache wouldn't match; a test compares the
+# ios-key-screens.yml does, or the cache wouldn't match; a test compares the
 # two workflows' install and build commands.
 on:
   push:
@@ -50,7 +50,7 @@ jobs:
       - name: Select and verify Xcode tools
         run: |
           set -euo pipefail
-          # Keep this in step with ios-pr-preview.yml and the cache keys below.
+          # Keep this in step with ios-key-screens.yml and the cache keys below.
           XCODE_DEVELOPER_DIR='/Applications/Xcode_26.6.app/Contents/Developer'
           test -d "$XCODE_DEVELOPER_DIR" || {
             echo "Expected Xcode at $XCODE_DEVELOPER_DIR; update this workflow when the runner image changes." >&2
@@ -71,12 +71,12 @@ jobs:
           echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"
 
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Generate iOS project
         run: >-
           npx expo prebuild
-          --template expo-template-bare-minimum@58.0.9
+          --template expo-template-bare-minimum@58.0.25
           --platform ios --clean --no-install
 
       - name: Install CocoaPods dependencies

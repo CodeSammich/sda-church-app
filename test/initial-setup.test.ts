@@ -46,22 +46,22 @@ describe('InitialSetup', () => {
 
   it('offers and persists the 200% onboarding text-size preset', async () => {
     const setTextScale = jest.fn().mockResolvedValue(undefined);
-    const screen = renderWithPreferences(
+    const screen = await renderWithPreferences(
       createElement(InitialSetup, { onComplete: jest.fn() }),
       { setTextScale },
     );
 
-    fireEvent.press(screen.getByLabelText('200 percent text size'));
+    await fireEvent.press(screen.getByLabelText('200 percent text size'));
 
     await waitFor(() => {
       expect(setTextScale).toHaveBeenCalledWith(2);
     });
   });
 
-  it('exposes every wrapping preset as an independent radio control', () => {
+  it('exposes every wrapping preset as an independent radio control', async () => {
     const setLanguage = jest.fn();
     const setThemeMode = jest.fn();
-    const screen = renderWithPreferences(
+    const screen = await renderWithPreferences(
       createElement(InitialSetup, { onComplete: jest.fn() }),
       { setLanguage, setThemeMode },
     );
@@ -74,16 +74,16 @@ describe('InitialSetup', () => {
         .accessibilityState,
     ).toMatchObject({ checked: true, disabled: false });
 
-    fireEvent.press(screen.getByRole('radio', { name: '繁體' }));
-    fireEvent.press(screen.getByRole('radio', { name: 'Dark' }));
+    await fireEvent.press(screen.getByRole('radio', { name: '繁體' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'Dark' }));
 
     expect(setLanguage).toHaveBeenCalledWith('zh');
     expect(setThemeMode).toHaveBeenCalledWith('dark');
     expect(screen.queryByRole('radio', { name: 'Automatic' })).toBeNull();
   });
 
-  it('exposes the four explicit appearance choices', () => {
-    const screen = renderWithPreferences(
+  it('exposes the four explicit appearance choices', async () => {
+    const screen = await renderWithPreferences(
       createElement(InitialSetup, { onComplete: jest.fn() }),
     );
 
@@ -103,7 +103,7 @@ describe('InitialSetup', () => {
             resolvePersistence = resolve;
           }),
       );
-      const screen = renderWithPreferences(
+      const screen = await renderWithPreferences(
         createElement(InitialSetup, { onComplete: jest.fn() }),
         { language, setTextScale },
       );
@@ -115,7 +115,7 @@ describe('InitialSetup', () => {
       expect(screen.getByText('150%')).toBeTruthy();
       expect(screen.getByText('200%')).toBeTruthy();
 
-      fireEvent.press(screen.getByLabelText(option));
+      await fireEvent.press(screen.getByLabelText(option));
       expect(screen.getByText(saving)).toBeTruthy();
       expect(setTextScale).toHaveBeenCalledWith(1.25);
 
@@ -134,12 +134,12 @@ describe('InitialSetup', () => {
       .fn()
       .mockRejectedValueOnce(new Error('storage unavailable'))
       .mockResolvedValueOnce(undefined);
-    const screen = renderWithPreferences(
+    const screen = await renderWithPreferences(
       createElement(InitialSetup, { onComplete }),
       { language: 'es', setTextScale },
     );
 
-    fireEvent.press(
+    await fireEvent.press(
       screen.getByLabelText('Tamaño del texto al 150 por ciento'),
     );
     await waitFor(() => {
@@ -150,10 +150,10 @@ describe('InitialSetup', () => {
       ).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByRole('button', { name: 'Comenzar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Comenzar' }));
     expect(onComplete).not.toHaveBeenCalled();
 
-    fireEvent.press(
+    await fireEvent.press(
       screen.getByLabelText(
         'Reintentar guardar el tamaño del texto al 150 por ciento',
       ),
@@ -167,7 +167,7 @@ describe('InitialSetup', () => {
       ).toBeNull();
     });
 
-    fireEvent.press(screen.getByRole('button', { name: 'Comenzar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Comenzar' }));
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 });

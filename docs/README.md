@@ -23,12 +23,8 @@ the store build numbers is in [Version numbers](operations/version-numbers.md).
 Install the dependencies:
 
 ```bash
-npm install --force
+npm install
 ```
-
-`--force` is needed because React Native is a release candidate (`0.88.0-rc.3`), which
-some packages' peer-dependency ranges don't include, so a plain `npm install` stops
-with an `ERESOLVE` error. CI installs the same way, with `npm ci --force`.
 
 A fork for another church changes the church-specific details in
 [`constants/`](../constants/), such as `ChurchData.ts`, `TeamData.ts`, and
@@ -77,9 +73,9 @@ npm run build:ios:simulator -- --debug   # Debug build that loads JavaScript fro
 ```
 
 The script builds without signing, installs the app on the Simulator, and opens it. You
-can also download a release pull request's Simulator build from the **iOS PR preview**
+can also download a release pull request's Simulator build from the **iOS key screens**
 run instead of building it. Both are in
-[iOS PR preview](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+[iOS key screens](operations/native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
 ## Testing
 
@@ -90,11 +86,17 @@ run instead of building it. Both are in
 | `npm run check:text-scale` | That no text style bypasses the app's text-size setting (`scripts/check-text-scale-coverage.mjs`) | **PR Unit Tests**, after Jest |
 | `npm run build:web` | That the web build exports, into `build/web` | Not on pull requests; the website deploy builds it again after a merge |
 | `npm run check` | All four of the above: typecheck, then tests, text size, and web build | Not in CI; run it before opening a pull request |
+| `npm run doctor` | `expo-doctor`: the Expo config, native modules, and that every package the SDK pins is the version it expects | **PR Unit Tests** without the version check, not required; **Expo Doctor Monitor**, weekly, in full |
 | `npm run test:integration:bulletin` | The response shape of the production bulletin API | **Bulletin API Integration**, on the release pull request into `main` |
 | `npm run test:integration:external` | Every outside service the app uses: APIs, media hosts, hymn sites, and the website's pages | **External Dependency Monitor**, daily |
 
 CI doesn't typecheck or build the web app on pull requests, so `npm run check` is the
 way to catch those before review.
+
+`npm test` runs two Jest projects from `package.json`. Most tests run in `native`, with
+React Native's test setup. Tests named `*.web.test.ts` run in `web` instead, with React
+Native for Web in a browser-like page, for code that runs only in the web app, such as
+`services/BibleAudioPlayer.web.ts`.
 
 The two integration tests call live services, so they can fail because a service is
 down rather than because of your change.
@@ -105,13 +107,14 @@ down rather than because of your change.
 - `test:integration:external` writes `external-dependency-report.json`. See
   [External dependency monitor](operations/external-dependency-monitor.md).
 
-### Key screens on iPhone
+### Key screens on iPhone and Android
 
-The **iOS PR preview** workflow, on the release pull request into `main`, takes 85
-screenshots of the 32 screens listed in `test/screens/screens.json`, in light and dark,
-at larger text sizes, and in Chinese and Spanish. `scripts/capture-ios-screens.cjs`
-takes them, and `scripts/check-screens.cjs` reads their text with Apple's Vision
-framework and checks what each screen must show. The release then waits on the
+The **iOS key screens** workflow, on the release pull request into `main`, takes 87
+screenshots of the 33 screens listed in `test/screens/screens.json` on a simulated
+iPhone, and 87 on an Android emulator, in light and dark, at larger text sizes, and in
+Chinese and Spanish. `scripts/capture-ios-screens.cjs` and
+`scripts/capture-android-screens.cjs` take them, and `scripts/check-screens.cjs` reads
+their text with Apple's Vision framework and checks what each screen must show. The release then waits on the
 **Screenshots reviewed** check until a release approver has looked at them.
 `npm test` includes `test/screens.test.ts`, which checks the screen list itself.
 

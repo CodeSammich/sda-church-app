@@ -26,7 +26,7 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
 });
 
 describe('wrapping replacement for Paper buttons', () => {
-  it('renders a complete localized label at 4x effective text', () => {
+  it('renders a complete localized label at 4x effective text', async () => {
     jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
       fontScale: 2,
       height: 568,
@@ -34,7 +34,7 @@ describe('wrapping replacement for Paper buttons', () => {
       width: 320,
     });
     const onPress = jest.fn();
-    const view = render(
+    const view = await render(
       React.createElement(
         TextSizeContext.Provider,
         {
@@ -63,12 +63,12 @@ describe('wrapping replacement for Paper buttons', () => {
       view.getByText('View Latest Bulletin Without Truncation').props
         .numberOfLines,
     ).toBeUndefined();
-    fireEvent.press(button);
+    await fireEvent.press(button);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('supports selected tab semantics for in-page navigation', () => {
-    const view = render(
+  it('supports selected tab semantics for in-page navigation', async () => {
+    const view = await render(
       React.createElement(WrappingButton, {
         accessibilityRole: 'tab',
         accessibilityState: { selected: true },

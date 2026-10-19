@@ -270,6 +270,16 @@ preview APKs the Android PR workflow uploads. Those APKs accumulate over time, s
 clear old ones out occasionally; this is housekeeping, not a cost risk. Exceeding an
 API quota returns an error.
 
+The [Workspace data export](admin-runbook.md#google-workspace-backups) is free to
+download, too. Google keeps it in a Cloud Storage bucket that Google owns, and Cloud
+Storage bills a download to the bucket's owner, unless the request names a billing
+project: then that project pays, and a **Requester Pays** bucket refuses a download
+that names none
+([Requester Pays](https://docs.cloud.google.com/storage/docs/requester-pays)). `gcloud`
+names its default project on every request once one is set, so the runbook keeps it
+unset. With no project named, nothing is billed to the church, and the download needs
+no billing account. None should be added for it.
+
 ### Google Cloud (Play upload service account)
 
 The [automatic Google Play upload](native-builds.md#automatic-store-uploads) signs in as

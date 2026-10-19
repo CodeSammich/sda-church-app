@@ -1,4 +1,3 @@
-/** @jest-environment jsdom */
 
 import { act, renderHook } from '@testing-library/react-native';
 jest.mock('expo-audio', () => ({
@@ -37,8 +36,8 @@ describe('Bible audio web player', () => {
 
   afterEach(() => jest.useRealTimers());
 
-  it('keeps document-attached audio elements and loads only on demand', () => {
-    const { result, unmount } = renderHook(() => {
+  it('keeps document-attached audio elements and loads only on demand', async () => {
+    const { result, unmount } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -50,7 +49,7 @@ describe('Bible audio web player', () => {
     expect(media?.hasAttribute('src')).toBe(false);
     expect(result.current.status.playing).toBe(false);
 
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://audio.example/chapter.mp3' });
       result.current.player.setActiveForLockScreen(true, {
         title: 'Genesis 1 · BSB (HelloAO)',
@@ -79,29 +78,29 @@ describe('Bible audio web player', () => {
     // iOS may replace the custom metadata while promoting the remote source
     // into Now Playing. Readiness and playback events must restore it.
     navigator.mediaSession.metadata = null;
-    act(() => media?.dispatchEvent(new Event('loadedmetadata')));
+    await act(() => media?.dispatchEvent(new Event('loadedmetadata')));
     expect((navigator.mediaSession.metadata as any).metadata.title).toBe(
       'Genesis 1 · BSB (HelloAO)',
     );
     navigator.mediaSession.metadata = null;
-    act(() => media?.dispatchEvent(new Event('playing')));
+    await act(() => media?.dispatchEvent(new Event('playing')));
     expect((navigator.mediaSession.metadata as any).metadata.title).toBe(
       'Genesis 1 · BSB (HelloAO)',
     );
 
-    unmount();
+    await unmount();
     expect(document.querySelector('audio[data-bible-audio-player]')).toBeNull();
   });
 
-  it('maps headset next/previous gestures to chapter navigation', () => {
+  it('maps headset next/previous gestures to chapter navigation', async () => {
     const onNext = jest.fn();
     const onPrevious = jest.fn();
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
 
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://audio.example/1.mp3' });
       result.current.player.setRemoteChapterHandlers({ onNext, onPrevious });
       result.current.player.setActiveForLockScreen(true, {
@@ -125,7 +124,7 @@ describe('Bible audio web player', () => {
         | (() => void)
         | undefined;
 
-    act(() => getHandler('nexttrack')?.());
+    await act(() => getHandler('nexttrack')?.());
     expect(result.current.status.activeChapter).toEqual({
       translationId: 'BSB',
       bookId: 'GEN',
@@ -133,7 +132,7 @@ describe('Bible audio web player', () => {
     });
     expect(onNext).not.toHaveBeenCalled();
 
-    act(() => getHandler('previoustrack')?.());
+    await act(() => getHandler('previoustrack')?.());
     expect(onPrevious).toHaveBeenCalledWith({
       translationId: 'BSB',
       bookId: 'GEN',
@@ -141,7 +140,7 @@ describe('Bible audio web player', () => {
     });
 
     // At the end of the prepared queue, let the reader navigate normally.
-    act(() => getHandler('nexttrack')?.());
+    await act(() => getHandler('nexttrack')?.());
     expect(onNext).toHaveBeenCalledWith({
       translationId: 'BSB',
       bookId: 'GEN',
@@ -149,8 +148,8 @@ describe('Bible audio web player', () => {
     });
   });
 
-  it('plays multiple queued chapters and preloads only the immediate next one', () => {
-    const { result } = renderHook(() => {
+  it('plays multiple queued chapters and preloads only the immediate next one', async () => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -160,7 +159,7 @@ describe('Bible audio web player', () => {
       ),
     );
 
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://audio.example/1.mp3' });
       result.current.player.setActiveForLockScreen(true, {
         title: 'Genesis 1 · BSB (HelloAO)',
@@ -187,7 +186,7 @@ describe('Bible audio web player', () => {
     expect(media[0].src).toBe('https://audio.example/1.mp3');
     expect(media[1].src).toBe('https://audio.example/2.mp3');
 
-    act(() => media[0].dispatchEvent(new Event('ended')));
+    await act(() => media[0].dispatchEvent(new Event('ended')));
     expect(result.current.status.activeChapter).toEqual({
       translationId: 'BSB',
       bookId: 'GEN',
@@ -198,7 +197,7 @@ describe('Bible audio web player', () => {
     );
     expect(media[0].src).toBe('https://audio.example/3.mp3');
 
-    act(() => media[1].dispatchEvent(new Event('ended')));
+    await act(() => media[1].dispatchEvent(new Event('ended')));
     expect(result.current.status.activeChapter).toEqual({
       translationId: 'BSB',
       bookId: 'GEN',
@@ -210,15 +209,15 @@ describe('Bible audio web player', () => {
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(3);
   });
 
-  it('continues through a book without queue refills and stops before the next book', () => {
-    const { result } = renderHook(() => {
+  it('continues through a book without queue refills and stops before the next book', async () => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
     const media = Array.from(document.querySelectorAll<HTMLAudioElement>(
       'audio[data-bible-audio-player]',
     ));
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://bible.helloao.org/api/BSB/GEN/1/audio/souer.mp3' });
       result.current.player.setQueue(buildBibleAudioQueue({
         albumTitle: 'Bible audio', artist: 'Souer',
@@ -234,19 +233,19 @@ describe('Bible audio web player', () => {
     });
     // No screen effect replenishes the queue between these chapters.
     for (let chapter = 2; chapter <= 4; chapter += 1) {
-      act(() => media[(chapter - 2) % 2].dispatchEvent(new Event('ended')));
+      await act(() => media[(chapter - 2) % 2].dispatchEvent(new Event('ended')));
       expect(result.current.status.activeChapter).toMatchObject({ bookId: 'GEN', chapter });
       expect(result.current.status.didJustFinish).toBe(false);
     }
-    act(() => media[1].dispatchEvent(new Event('ended')));
+    await act(() => media[1].dispatchEvent(new Event('ended')));
     expect(result.current.status.didJustFinish).toBe(true);
     expect(result.current.status.playing).toBe(false);
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(4);
     expect(media.some((element) => element.src.includes('/EXO/'))).toBe(false);
   });
 
-  it('falls back when Android rejects the standby chapter preload', () => {
-    const { result } = renderHook(() => {
+  it('falls back when Android rejects the standby chapter preload', async () => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -256,7 +255,7 @@ describe('Bible audio web player', () => {
       ),
     );
 
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://audio.example/1.mp3' });
       result.current.player.setQueue([
         {
@@ -276,10 +275,10 @@ describe('Bible audio web player', () => {
     });
 
     expect(media[1].src).toBe('https://primary.example/2.mp3');
-    act(() => media[1].dispatchEvent(new Event('error')));
+    await act(() => media[1].dispatchEvent(new Event('error')));
     expect(media[1].src).toBe('https://fallback.example/2.mp3');
 
-    act(() => media[0].dispatchEvent(new Event('ended')));
+    await act(() => media[0].dispatchEvent(new Event('ended')));
     expect(result.current.status.activeChapter).toEqual({
       translationId: 'cmn_cuv',
       bookId: 'GEN',
@@ -290,8 +289,8 @@ describe('Bible audio web player', () => {
     );
   });
 
-  it('reloads an unready promoted chapter when Play is pressed again', () => {
-    const { result } = renderHook(() => {
+  it('reloads an unready promoted chapter when Play is pressed again', async () => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -301,7 +300,7 @@ describe('Bible audio web player', () => {
       ),
     );
 
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://audio.example/1.mp3' });
       result.current.player.setQueue([
         {
@@ -316,18 +315,18 @@ describe('Bible audio web player', () => {
     });
 
     (HTMLMediaElement.prototype.load as jest.Mock).mockClear();
-    act(() => result.current.player.play());
+    await act(() => result.current.player.play());
 
     expect(media[1].src).toBe('https://audio.example/2.mp3');
     expect(HTMLMediaElement.prototype.load).toHaveBeenCalledTimes(1);
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
   });
 
-  it('keeps the user-authorized media element across Android chapters', () => {
+  it('keeps the user-authorized media element across Android chapters', async () => {
     jest
       .spyOn(navigator, 'userAgent', 'get')
       .mockReturnValue('Mozilla/5.0 (Linux; Android 16; Pixel 9a) Chrome/140');
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -337,7 +336,7 @@ describe('Bible audio web player', () => {
       ),
     );
 
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://audio.example/1.mp3' });
       result.current.player.setQueue([
         {
@@ -366,7 +365,7 @@ describe('Bible audio web player', () => {
       configurable: true,
       value: HTMLMediaElement.HAVE_FUTURE_DATA,
     });
-    act(() => media[0].dispatchEvent(new Event('canplay')));
+    await act(() => media[0].dispatchEvent(new Event('canplay')));
     expect(media[1].src).toBe('https://audio.example/3.mp3');
     expect(result.current.status.activeChapter).toEqual({
       translationId: 'BSB',
@@ -379,7 +378,7 @@ describe('Bible audio web player', () => {
     jest
       .spyOn(navigator, 'userAgent', 'get')
       .mockReturnValue('Mozilla/5.0 (Linux; Android 16; Pixel 9a) Chrome/140');
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -389,7 +388,7 @@ describe('Bible audio web player', () => {
       ),
     );
 
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://audio.example/1.mp3' });
       result.current.player.setQueue([
         {
@@ -423,7 +422,7 @@ describe('Bible audio web player', () => {
     jest
       .spyOn(navigator, 'userAgent', 'get')
       .mockReturnValue('Mozilla/5.0 (Linux; Android 16; Pixel 9a) Chrome/140');
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -437,7 +436,7 @@ describe('Bible audio web player', () => {
       value: HTMLMediaElement.HAVE_FUTURE_DATA,
     });
 
-    act(() => {
+    await act(() => {
       result.current.player.replace({ uri: 'https://audio.example/1.mp3' });
       result.current.player.setQueue([
         {
@@ -468,7 +467,7 @@ describe('Bible audio web player', () => {
     jest
       .spyOn(navigator, 'userAgent', 'get')
       .mockReturnValue('Mozilla/5.0 (Linux; Android 16; Pixel 9a) Chrome/140');
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -480,7 +479,7 @@ describe('Bible audio web player', () => {
       value: HTMLMediaElement.HAVE_FUTURE_DATA,
     });
 
-    act(() => {
+    await act(() => {
       result.current.player.play();
       media.dispatchEvent(new Event('playing'));
       media.dispatchEvent(new Event('waiting'));
@@ -490,11 +489,11 @@ describe('Bible audio web player', () => {
     await act(async () => jest.advanceTimersByTimeAsync(5_000));
 
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
-    act(() => result.current.player.pause());
+    await act(() => result.current.player.pause());
   });
 
-  it('never allows the standby element to become a second audible player', () => {
-    const { result } = renderHook(() => {
+  it('never allows the standby element to become a second audible player', async () => {
+    const { result } = await renderHook(() => {
       const player = useBibleAudioPlayer();
       return { player, status: useBibleAudioPlayerStatus(player) };
     });
@@ -506,17 +505,17 @@ describe('Bible audio web player', () => {
     const activePause = jest.spyOn(media[0], 'pause');
     const standbyPause = jest.spyOn(media[1], 'pause');
 
-    act(() => result.current.player.play());
+    await act(() => result.current.player.play());
     expect(standbyPause).toHaveBeenCalledTimes(1);
     activePause.mockClear();
     standbyPause.mockClear();
 
-    act(() => media[1].dispatchEvent(new Event('play')));
+    await act(() => media[1].dispatchEvent(new Event('play')));
     expect(standbyPause).toHaveBeenCalledTimes(1);
 
     activePause.mockClear();
     standbyPause.mockClear();
-    act(() => result.current.player.pause());
+    await act(() => result.current.player.pause());
     expect(activePause).toHaveBeenCalled();
     expect(standbyPause).toHaveBeenCalled();
   });

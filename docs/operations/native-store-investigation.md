@@ -26,8 +26,8 @@
 >   church as a nonprofit; [App Store and Google Play setup](app-store-setup.md#yearly-apple-renewals)
 >   records this and the yearly reconfirmation, and `.github/apple-signing-expiry.json`
 >   holds the membership renewal date that the Apple signing monitor watches.
-> - **Expo SDK 58 is stable** (`expo ~58.0.0`). React Native 0.88 is still a release
->   candidate (#211).
+> - **Expo SDK 58 and React Native 0.88.0 are stable releases** (`expo ~58.0.16`,
+>   #211).
 > - **The acceptance gate's device checks moved to the admin runbook,** as
 >   [Device checks before release](admin-runbook.md#device-checks-before-release). Its
 >   OTA item was dropped: OTA updates are still intentionally not configured (the app

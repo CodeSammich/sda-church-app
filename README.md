@@ -9,7 +9,7 @@ build remains a useful preview and fallback surface.
 You need Node.js 22 (22.13 or later) or 24 (24.3 or later), and npm.
 
 ```bash
-npm install --force   # --force is needed while React Native is a release candidate
+npm install           # install the dependencies
 npm run web           # start the app in a browser
 npm test              # run the Jest unit tests
 npm run check         # typecheck, tests, text-size check, and web build
@@ -28,7 +28,8 @@ one place. Church admins can start at [Operate](#operate).
 - [Project tenets](docs/project-tenets.md): the seven principles, in priority order,
   behind every design decision
 - [Architecture and external dependencies](docs/architecture.md): diagrams of every
-  service the app and the printed bulletin use, account ownership, and yearly upkeep
+  service the app and the printed bulletin use, account ownership, and the upkeep
+  calendar
 
 ### Set up and contribute
 
@@ -85,7 +86,10 @@ one place. Church admins can start at [Operate](#operate).
 ### Maintenance
 
 - [Upkeep calendar](docs/architecture.md#upkeep-calendar): what to renew or check each
-  year, and what breaks if it's missed
+  quarter or year, and what breaks if it's missed
+- [Google Workspace backups](docs/operations/admin-runbook.md#google-workspace-backups):
+  every three months, export all of the church's email and files and keep a copy off
+  Google
 - [Payment methods](docs/architecture.md#payment-methods): which service has a card
   on file (only Cloudflare, for the domain), and why no other may
 - [Credentials that need attention](docs/operations/admin-runbook.md#credentials-that-need-attention):
@@ -118,8 +122,8 @@ one place. Church admins can start at [Operate](#operate).
 ### Legal, licensing, and privacy
 
 - [Legal, Licensing, and Privacy](docs/LEGAL.md): licensing records, third-party source
-  reviews, the privacy policy, and the disclaimer the app shows under
-  **You → Legal Disclaimer**, which also says where each Library book is hosted
+  reviews, the privacy policy, the legal disclaimer, and the open-source notices the
+  app shows under **You → Open-Source Licenses**
 - [Branding and trademark policy](docs/LEGAL_BRANDING.md): the logos, trademarks, and
   branding that the open-source license doesn't cover
 - [Sabbath Encouragement attribution and copyright](docs/operations/sabbath-encouragement-copyright.md):
@@ -144,8 +148,5 @@ Android and iOS builds, which wait for a maintainer's approval and then upload t
 Google Play internal testing and TestFlight. Nothing reaches the public until a
 maintainer submits it in each store.
 
-The app uses one Expo source for the native apps and the web/PWA build. It has used the
-stable Expo SDK 58 (`expo ~58.0.0`) since 0.42.0. React Native is still a release
-candidate (`0.88.0-rc.3`); moving to a stable React Native release is tracked in
-[issue #211](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/211),
-which doesn't block the launch.
+The app uses one Expo source for the native apps and the web/PWA build: Expo SDK 58
+(`expo ~58.0.16`) with React Native 0.88.0.

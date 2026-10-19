@@ -2,18 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * The screen to open at the next launch, saved by the key-screen capture
- * (scripts/capture-ios-screens.cjs, #331). The iOS Simulator asks "Open in …?"
- * before following a deep link, and nothing on a build runner can tap that, so
- * the capture saves the screen here and launches the app instead. The app opens
- * it once and forgets it.
+ * (scripts/capture-ios-screens.cjs, #331, and capture-android-screens.cjs,
+ * #372). The iOS Simulator asks "Open in …?" before following a deep link, and
+ * nothing on a build runner can tap that, so the capture saves the screen here
+ * with the other settings and launches the app instead. Android uses the same
+ * way in. The app opens it once and forgets it.
  */
 export const SCREENSHOT_ROUTE_KEY = 'screenshot-route';
 
 /**
- * Whether this is the iOS PR preview's Simulator build, the only one the
- * capture runs on. That build sets EXPO_PUBLIC_KEY_SCREENS=1, which Expo writes
- * into the app when it's built; the store builds don't, so on a real phone the
- * app never even looks for a saved screen.
+ * Whether this is a key-screens build: the iOS Simulator build or the Android
+ * emulator build the capture runs on. Those set EXPO_PUBLIC_KEY_SCREENS=1,
+ * which Expo writes into the app when it's built; the store builds and the
+ * APK the Android preview publishes don't, so on a real phone the app never
+ * even looks for a saved screen.
  */
 export const isKeyScreensBuild = () => process.env.EXPO_PUBLIC_KEY_SCREENS === '1';
 
@@ -33,7 +35,7 @@ export const parseScreenshotRoute = (value: string | null): string | null => {
 
 /**
  * Reads and removes the saved screen, returning its route if there was one.
- * Outside the Simulator preview build, it returns null without reading storage.
+ * Outside a key-screens build, it returns null without reading storage.
  */
 export const takeScreenshotRoute = async (): Promise<string | null> => {
   if (!isKeyScreensBuild()) return null;
@@ -47,8 +49,8 @@ export const takeScreenshotRoute = async (): Promise<string | null> => {
  * The popup a key-screen path asks for with `popup=`, such as
  * `bible?…&verseStart=16&popup=verse`, if it's one the screen can open. The
  * capture can't tap, so this is how it shows a popup or dialog (#372).
- * Outside the Simulator preview build it's always null, so a real link can't
- * open one.
+ * Outside a key-screens build it's always null, so a real link can't open
+ * one.
  */
 export const getScreenshotPopup = <T extends string>(
   value: string | string[] | undefined,

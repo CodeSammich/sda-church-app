@@ -8,19 +8,19 @@ const scrollEvent = (y: number) =>
   }) as NativeSyntheticEvent<NativeScrollEvent>;
 
 describe('hero header title visibility', () => {
-  it('uses separate show and hide thresholds to prevent boundary flicker', () => {
-    const { result } = renderHook(() => useHeroHeaderTitle());
+  it('uses separate show and hide thresholds to prevent boundary flicker', async () => {
+    const { result } = await renderHook(() => useHeroHeaderTitle());
 
-    act(() => result.current.handleHeroScroll(scrollEvent(149)));
+    await act(() => result.current.handleHeroScroll(scrollEvent(149)));
     expect(result.current.showHeaderTitle).toBe(false);
 
-    act(() => result.current.handleHeroScroll(scrollEvent(150)));
+    await act(() => result.current.handleHeroScroll(scrollEvent(150)));
     expect(result.current.showHeaderTitle).toBe(true);
 
-    act(() => result.current.handleHeroScroll(scrollEvent(121)));
+    await act(() => result.current.handleHeroScroll(scrollEvent(121)));
     expect(result.current.showHeaderTitle).toBe(true);
 
-    act(() => result.current.handleHeroScroll(scrollEvent(120)));
+    await act(() => result.current.handleHeroScroll(scrollEvent(120)));
     expect(result.current.showHeaderTitle).toBe(false);
   });
 });

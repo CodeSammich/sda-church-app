@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const {
@@ -89,6 +89,18 @@ describe('yearly checkup checklist', () => {
     );
   });
 
+  it('names every scheduled workflow, so one GitHub turned off gets noticed', () => {
+    const scheduled = readdirSync(resolve(__dirname, '..', '.github/workflows'))
+      .map((file) => repoFile(`.github/workflows/${file}`))
+      .filter((workflow) => /^\s+schedule:\s*$/m.test(workflow))
+      .map((workflow) => /^name:\s*["']?(.+?)["']?\s*$/m.exec(workflow)![1]);
+    expect(scheduled).toContain('Workspace Backup Reminder');
+    const { body } = buildYearlyCheckup(2027, 'https://github.com/church/app');
+    for (const name of scheduled) {
+      expect(body).toContain(name);
+    }
+  });
+
   it('is due at the end of February, so the due-date reminders follow it up', () => {
     const { parseDueDate } = require('../scripts/due-date-reminders.cjs');
     expect(parseDueDate(buildYearlyCheckup(2027, 'https://github.com/church/app').body)).toBe('2027-02-28');
@@ -135,7 +147,7 @@ describe('opening the yearly checkup', () => {
     const rejected = fakeGithub([], { rejectAssignees: true });
     await expect(
       openYearlyCheckup({ github: rejected, context, year: 2027, assignees: ['gone'] }),
-    ).resolves.toMatchObject({ action: 'created without assignees' });
+    ).resolves.toMatchObject({ action: 'created-without-assignees' });
     expect(rejected.created[0].body).toMatch(/^@someone\n/);
   });
 });

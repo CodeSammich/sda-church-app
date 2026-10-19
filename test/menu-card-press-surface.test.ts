@@ -36,8 +36,8 @@ jest.mock('@expo/vector-icons', () => {
   return { Ionicons: MockIcon, MaterialCommunityIcons: MockIcon };
 });
 
-const renderAtScale = (element: React.ReactElement, textScale: 1 | 2) =>
-  render(
+const renderAtScale = async (element: React.ReactElement, textScale: 1 | 2) =>
+  await render(
     React.createElement(
       TextSizeContext.Provider,
       {
@@ -69,9 +69,9 @@ describe('menu card press surfaces', () => {
     });
   });
 
-  it('routes title and icon presses through one MenuCard hit target', () => {
+  it('routes title and icon presses through one MenuCard hit target', async () => {
     const onPress = jest.fn();
-    const view = renderAtScale(
+    const view = await renderAtScale(
       React.createElement(MenuCard, {
         description: 'A private request',
         icon: 'hands-pray',
@@ -90,7 +90,7 @@ describe('menu card press surfaces', () => {
 
     const card = view.getByLabelText('Prayer. A private request');
     expect(card.props.accessibilityRole).toBe('button');
-    fireEvent.press(card);
+    await fireEvent.press(card);
     expect(onPress).toHaveBeenCalledTimes(1);
 
     const titleStyle = StyleSheet.flatten(view.getByText('Prayer').props.style);
@@ -98,9 +98,9 @@ describe('menu card press surfaces', () => {
     expect(titleStyle.lineHeight).toBe(48);
   });
 
-  it('announces and ignores a disabled MenuCard', () => {
+  it('announces and ignores a disabled MenuCard', async () => {
     const onPress = jest.fn();
-    const view = renderAtScale(
+    const view = await renderAtScale(
       React.createElement(MenuCard, {
         description: 'Not available in this language',
         disabled: true,
@@ -116,12 +116,12 @@ describe('menu card press surfaces', () => {
       expect.objectContaining({ disabled: true }),
     );
     expect(StyleSheet.flatten(card.props.style).opacity).toBe(0.5);
-    fireEvent.press(card);
+    await fireEvent.press(card);
     expect(onPress).not.toHaveBeenCalled();
   });
 
-  it('allows reader UI icons to use a capped text scale', () => {
-    const view = renderAtScale(
+  it('allows reader UI icons to use a capped text scale', async () => {
+    const view = await renderAtScale(
       React.createElement(AppIcon, {
         name: 'play',
         size: 20,
@@ -133,8 +133,8 @@ describe('menu card press surfaces', () => {
     expect(view.getByTestId('icon-play').props.size).toBe(26);
   });
 
-  it('renders padded YouTube artwork larger inside a fixed visual frame', () => {
-    const view = renderAtScale(
+  it('renders padded YouTube artwork larger inside a fixed visual frame', async () => {
+    const view = await renderAtScale(
       React.createElement(ExternalBrandIcon, {
         contentScale: EXTERNAL_BRAND_ICON_CONTENT_SCALE.youtube,
         size: 68,
@@ -143,7 +143,7 @@ describe('menu card press surfaces', () => {
       1,
     );
 
-    const image = view.UNSAFE_getByType(ReactNative.Image);
+    const [image] = view.container.queryAll((node) => node.type === 'Image');
     const imageStyle = StyleSheet.flatten(image.props.style);
     const frameStyle = StyleSheet.flatten(image.parent?.props.style);
 
@@ -166,9 +166,9 @@ describe('menu card press surfaces', () => {
     );
   });
 
-  it('announces a switch card description and checked state', () => {
+  it('announces a switch card description and checked state', async () => {
     const onPress = jest.fn();
-    const view = renderAtScale(
+    const view = await renderAtScale(
       React.createElement(MenuCard, {
         accessibilityRole: 'switch',
         accessibilityState: { checked: true },
@@ -200,13 +200,13 @@ describe('menu card press surfaces', () => {
         includeHiddenElements: true,
       }).props.accessible,
     ).toBe(false);
-    fireEvent.press(card);
+    await fireEvent.press(card);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps GridMenuCard content decorative while enlarging its layout', () => {
+  it('keeps GridMenuCard content decorative while enlarging its layout', async () => {
     const onPress = jest.fn();
-    const view = renderAtScale(
+    const view = await renderAtScale(
       React.createElement(GridMenuCard, {
         color: '#eeeeee',
         icon: 'calendar',
@@ -229,7 +229,7 @@ describe('menu card press surfaces', () => {
 
     const card = view.getByLabelText('Upcoming Events. Church calendar');
     expect(card.props.accessibilityLabel).toContain('Church calendar');
-    fireEvent.press(card);
+    await fireEvent.press(card);
     expect(onPress).toHaveBeenCalledTimes(1);
 
     const buttonStyle = StyleSheet.flatten(
@@ -238,14 +238,14 @@ describe('menu card press surfaces', () => {
     expect(buttonStyle.minHeight).toBeGreaterThan(148);
   });
 
-  it('keeps one uncapped GridMenuCard target at 200% app and 200% OS text', () => {
+  it('keeps one uncapped GridMenuCard target at 200% app and 200% OS text', async () => {
     jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
       fontScale: 2,
       height: 568,
       scale: 1,
       width: 320,
     });
-    const view = renderAtScale(
+    const view = await renderAtScale(
       React.createElement(GridMenuCard, {
         color: '#eeeeee',
         icon: 'video',
@@ -260,7 +260,8 @@ describe('menu card press surfaces', () => {
     const card = view.getByLabelText(
       'Watch Livestream. Livestream status remains fully announced',
     );
-    expect(StyleSheet.flatten(card.props.style).minHeight).toBe(340);
+    // The title stops at 1.25× (#387), so the card grows only that far too.
+    expect(StyleSheet.flatten(card.props.style).minHeight).toBe(164);
     expect(view.getByText('Watch Livestream').props.numberOfLines).toBeUndefined();
   });
 });

@@ -1,14 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { render } from '@testing-library/react-native';
 import { createElement } from 'react';
-import { Image, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 
 describe('ImageBackground', () => {
-  it('draws the image behind its children and fills the whole view', () => {
+  it('draws the image behind its children and fills the whole view', async () => {
     const onLayout = jest.fn();
     const style = { paddingTop: 80, borderBottomLeftRadius: 28, overflow: 'hidden' as const };
-    const screen = render(
+    const screen = await render(
       createElement(
         ImageBackground,
         { source: { uri: 'hero.jpg' }, style, onLayout },
@@ -16,7 +16,7 @@ describe('ImageBackground', () => {
       ),
     );
 
-    const image = screen.UNSAFE_getByType(Image);
+    const [image] = screen.container.queryAll((node) => node.type === 'Image');
     expect(image.props.source).toEqual({ uri: 'hero.jpg' });
     expect(image.props.resizeMode).toBe('cover');
     const imageStyle = StyleSheet.flatten(image.props.style);

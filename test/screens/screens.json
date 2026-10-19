@@ -1,7 +1,13 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build (#331). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant, and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the shots to upload, in order. Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
+  },
+  "android": {
+    "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
+    "systemImage": "system-images;android-36;google_apis;x86_64",
+    "phone": { "name": "Samsung Galaxy A07 4G", "width": 720, "height": 1600, "density": 300 },
+    "googlePlay": { "name": "Google Play screenshot size", "width": 1080, "height": 1920, "density": 420 }
   },
   "variants": {
     "default": {},
@@ -15,28 +21,37 @@
     "zh-dark": { "language": "zh", "theme": "dark" },
     "xl-ios-large-text": { "textScale": 2, "iosTextSize": "accessibility-large" },
     "es-xl-ios-large-text": { "language": "es", "textScale": 2, "iosTextSize": "accessibility-large" },
-    "max": { "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" }
+    "max": { "textScale": 2, "iosTextSize": "accessibility-extra-extra-extra-large" },
+    "android-font-max": { "fontScale": 2 },
+    "xl-android-font-max": { "textScale": 2, "fontScale": 2 },
+    "es-xl-android-font-max": { "language": "es", "textScale": 2, "fontScale": 2 },
+    "android-display-large": { "displayScale": 1.2 }
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give.",
     "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, and the popup a tapped verse opens.",
     "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
     "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
-    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its legal page and its Text size and Language dialogs."
+    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs."
   },
   "screens": [
     {
       "name": "home",
       "group": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380). Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
       "path": "",
-      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text"],
+      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
       "variantRules": {
         "xl-ios-large-text": {
           "mustShowLines": ["^Today.s Verse$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
-        "es-xl-ios-large-text": { "mustShowLines": ["^Vers[ií]culo\\b"] }
+        "es-xl-ios-large-text": { "mustShowLines": ["^Vers[ií]culo\\b"] },
+        "xl-android-font-max": {
+          "mustShowLines": ["^Today.s( Verse)?$"],
+          "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
+        },
+        "es-xl-android-font-max": { "mustShowLines": ["^Vers[ií]culo\\b"] }
       },
       "changesDaily": true
     },
@@ -51,24 +66,30 @@
     {
       "name": "bible-dual",
       "group": "bible-reading",
-      "$comment": "The header's translation button in full: the 文A icon (read as XA), the EN badge, and both names, not cut to B… or C… (#376).",
+      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376).",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
-      "variants": ["default", "dark", "large", "xl", "ios-large-text"],
-      "mustShowLines": ["^XA\\b", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
+      "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max"],
+      "mustShowLines": ["^(XA\\b|文A|A EN\\b)", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
     },
     {
       "name": "bible-dual-back",
       "group": "bible-reading",
-      "$comment": "Opened from Home, so the header also has a back arrow and less room. When it's tight, the translation button gives up its 文A icon first, then the length of its names, then its badges (#376). At 150% and 200% only the icon goes: the EN badge and both full names stay.",
+      "$comment": "Opened from Home, so the header also has a back arrow and less room. When it's tight, the translation button gives up its 文A icon first, then its names, cut short and then dropped, then its badges (#376). On the iPhone at 150% and 200% only the icon goes: the EN badge and both full names stay. The Android phone's narrower screen drops the names too, leaving EN + 繁, so there only the badge is required.",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB&backTo=%2F",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "large", "xl"],
-      "mustShowLines": ["\\bEN\\b", "BSB", "CUV", "^Psalms\\b"],
+      "mustShowLines": ["\\bEN\\b", "^Psalms\\b"],
       "variantRules": {
-        "default": { "mustShowLines": ["^XA\\b"] },
-        "large": { "mustNotShowLines": ["\\bXA\\b"] },
-        "xl": { "mustNotShowLines": ["\\bXA\\b"] }
+        "default": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)", "BSB", "CUV"] },
+        "large": {
+          "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }],
+          "mustNotShowLines": ["(\\bXA|文A)\\b"]
+        },
+        "xl": {
+          "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }],
+          "mustNotShowLines": ["(\\bXA|文A)\\b"]
+        }
       }
     },
     {
@@ -141,15 +162,25 @@
       "mustNotShowLines": ["^Close$"]
     },
     {
+      "name": "bible-audio-settings",
+      "group": "bible-reading",
+      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=audio-settings",
+      "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
+      "variants": ["zh"],
+      "mustShowLines": ["^有聲書設定$", "^朗讀語言$", "^WordProject$"],
+      "mustNotShowLines": ["^關閉$"]
+    },
+    {
       "name": "bible-long-chapter",
       "group": "bible-text",
       "tabs": false,
-      "$comment": "Psalm 119 from verse 100, for three-digit verse numbers at large text sizes.",
+      "$comment": "Psalm 119 from verse 100, for three-digit verse numbers at large text sizes. RapidOCR may read a verse number without the space after it, as 102I, so the rules only require no further digit.",
       "path": "bible?bookId=PSA&chapter=119&translationId=BSB&verseStart=100&verseEnd=100",
       "settings": { "dualLanguage": false, "pinyin": false },
-      "variants": ["default", "xl", "ios-large-text"],
+      "variants": ["default", "xl", "ios-large-text", "android-font-max"],
       "checks": ["statusBarClear"],
-      "mustShowLines": ["^100\\b", "^101\\b", "^102\\b", "^Psalms\\b"]
+      "mustShowLines": ["^100(?!\\d)", "^101(?!\\d)", "^102(?!\\d)", "^Psalms\\b"]
     },
     {
       "name": "bible-higgaion-selah",
@@ -182,11 +213,12 @@
     {
       "name": "explore",
       "group": "library",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380). max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\".",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380), and their Android counterparts at Android's largest font. xl-android-font-max is also the Android counterpart of max. max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\".",
       "path": "explore",
-      "variants": ["default", "dark", "zh", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max"],
+      "variants": ["default", "dark", "zh", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max", "xl-android-font-max", "es-xl-android-font-max"],
       "variantRules": {
-        "max": { "mustShowLines": ["^Library\\b"] }
+        "max": { "mustShowLines": ["^Library\\b"] },
+        "xl-android-font-max": { "mustShowLines": ["^Library\\b"] }
       }
     },
     {
@@ -219,7 +251,7 @@
     {
       "name": "library-youth",
       "group": "library",
-      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391). Its English and Spanish titles wrap, so only their first lines are checked.",
+      "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391). Its English and Spanish titles wrap, differently on each phone, so only their first words are checked.",
       "path": "explore/library/youth",
       "variants": ["default", "zh", "zh-cn", "es"],
       "mustShowLines": ["^Pastor Hsi"],
@@ -227,19 +259,19 @@
         "default": { "mustShowLines": ["^The Pilgrim.s\\b"] },
         "zh": { "mustShowLines": ["天路歷程"] },
         "zh-cn": { "mustShowLines": ["天路历程"] },
-        "es": { "mustShowLines": ["^El progreso del\\b"] }
+        "es": { "mustShowLines": ["^El progreso\\b"] }
       }
     },
     {
       "name": "sabbath-school",
       "group": "worship-and-you",
-      "$comment": "The first children's age group shows every week, in each language (#338).",
+      "$comment": "The first children's age group shows every week, in each language (#338). The Android phone's screen leaves it below the fold.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Beginner \\(ages 1-3\\)"] },
-        "zh": { "mustShowLines": ["幼兒級（1-3歲）"] },
-        "es": { "mustShowLines": ["^Principiantes \\(1-3 años\\)"] }
+        "default": { "mustShowLines": [{ "line": "^Beginner \\(ages 1-3\\)", "platforms": ["ios"] }] },
+        "zh": { "mustShowLines": [{ "line": "幼兒級（1-3歲）", "platforms": ["ios"] }] },
+        "es": { "mustShowLines": [{ "line": "^Principiantes \\(1-3 años\\)", "platforms": ["ios"] }] }
       }
     },
     {
@@ -263,11 +295,11 @@
       "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, its Chinese 505 number, its With singing and Piano only videos (#424), and Show all hymns. At the app's 200% text size the Chinese 505 · 16 chip must still show its whole number (a long label wraps inside the chip), and the buttons stack, so they and Show all hymns may fall below the shot. The hymnal's name and the hymn's title wrap at 200% too, so there only their first words are required.",
       "path": "home/english-hymnal?hymnNum=12",
       "variants": ["default", "xl"],
-      "mustShowLines": ["\\b505\\W+16$"],
+      "mustShowLines": [{ "line": "\\b505\\W+16$", "platforms": ["ios"] }],
       "mustNotShowLines": ["\\b1\\. Praise to the Lord", "\\b13\\. New Songs"],
       "variantRules": {
         "default": {
-          "mustShowLines": ["^SDA Hymnal\\b", "\\b12\\. Joyful, Joyful", "\\bWith singing\\b", "\\bPiano only\\b", "^Show all hymns$"]
+          "mustShowLines": ["^SDA Hymnal\\b", "\\b12\\. Joyful, Joyful", "\\bWith singing\\b", "\\bPiano only\\b", "^Show all hymns$", "\\b505\\W+16$"]
         },
         "xl": { "mustShowLines": ["^SDA\\b", "^12\\. Joyful\\b"] }
       }
@@ -284,8 +316,13 @@
     {
       "name": "discover",
       "group": "home",
+      "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\". xl-android-font-max is the same case on Android, at its largest font.",
       "path": "home/discover",
-      "variants": ["default", "zh"]
+      "variants": ["default", "zh", "xl-ios-large-text", "xl-android-font-max"],
+      "variantRules": {
+        "xl-ios-large-text": { "mustShowLines": ["\\bDenomination$"] },
+        "xl-android-font-max": { "mustShowLines": ["\\bDenomination$"] }
+      }
     },
     {
       "name": "about-sda",
@@ -311,7 +348,7 @@
       "name": "you",
       "group": "worship-and-you",
       "path": "you",
-      "variants": ["default", "dark", "large", "zh"]
+      "variants": ["default", "dark", "large", "zh", "android-display-large"]
     },
     {
       "name": "text-size",
@@ -332,14 +369,20 @@
       "mustNotShowLines": ["^Close$"]
     },
     {
-      "name": "legal",
+      "name": "licenses",
       "group": "worship-and-you",
-      "path": "you/legal",
-      "variants": ["default"]
+      "$comment": "The legal disclaimer moved to the website (#412); the open-source notices stay in the app, on this screen.",
+      "path": "you/licenses",
+      "variants": ["default"],
+      "mustShowLines": ["^Open-Source Licenses$", "^SunCalc\\b"]
     }
   ],
   "appStore": {
     "en-US": ["home-default", "bible-dual-default", "bible-pinyin-default", "explore-default", "library-default", "bible-dual-dark"],
     "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark"]
+  },
+  "googlePlay": {
+    "en-US": ["home-default", "bible-dual-default", "bible-pinyin-default", "explore-default", "library-default", "bible-dual-dark"],
+    "zh-TW": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark"]
   }
 }

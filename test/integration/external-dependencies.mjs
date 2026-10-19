@@ -747,11 +747,12 @@ await record('English children\'s quarterlies this quarter', 'Children Sabbath S
   return expected.join(', ');
 }));
 
-// The store listings and printed QR codes point at these pages, so they must
-// keep working through the church's own domain. See
+// The store listings, the app, and printed QR codes point at these pages, so
+// they must keep working through the church's own domain. See
 // docs/operations/admin-runbook.md#the-app-website-appnyccsdaorg.
 const websitePages = [
   ['privacy policy page', 'https://app.nyccsda.org/privacy-policy.html', 'Privacy Policy'],
+  ['legal disclaimer page', 'https://app.nyccsda.org/legal.html', 'Legal Disclaimer'],
   ['app support page', 'https://app.nyccsda.org/support.html', 'App Support'],
   ['app download page', 'https://app.nyccsda.org/download', 'play.google.com/store/apps/details?id=org.nyccsda.app'],
 ];

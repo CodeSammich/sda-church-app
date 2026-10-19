@@ -20,12 +20,14 @@ does and what still needs a person.
 - [The app website (`app.nyccsda.org`)](#the-app-website-appnyccsdaorg)
 - [The Cloudflare account and domain](#the-cloudflare-account-and-domain)
 - [Yearly checkup](#yearly-checkup)
+- [Google Workspace backups](#google-workspace-backups)
 - [Native app binaries](#native-app-binaries)
-- [Android PR preview APKs](#android-pr-preview-apks)
-- [iOS PR preview builds](#ios-pr-preview-builds)
+- [Android preview APKs](#android-preview-apks)
+- [iOS key screens builds](#ios-key-screens-builds)
 - [Dependabot pull requests](#dependabot-pull-requests)
 - [External dependency monitor alerts](#external-dependency-monitor-alerts)
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
+- [Expo doctor monitor alerts](#expo-doctor-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
 - [Due-date reminders](#due-date-reminders)
 - [Updating pastors and elders](#updating-pastors-and-elders)
@@ -59,7 +61,8 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A pull request to review | Watch the repository with **Watch → Custom → Pull requests** (and **Issues** for new issues). With **No additional events**, that emails each new PR or issue but not its comments or pushes. |
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
-| A monitor alert (external dependencies, store toolchain) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. Both monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
+| A monitor alert (external dependencies, store toolchain, Expo doctor) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. The three monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
+| A yearly checkup or Workspace backup issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
 | An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
 The monitors can't read `release-approvers` membership or reliably @mention the
@@ -108,10 +111,11 @@ Review rules for both pull-request rulesets:
 | `sync` | `release-validation.yml` | `main` |
 | `ensure_pr_to_main_from_release_branch` | `main-release-source-gate.yml` | `main` |
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
-| `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
+| `Build Android debug APK (ARM)` | `android-preview-apk.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
-| `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
+| `iOS key screens join`, which joins the `iOS key screens batch <n> (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change. Before #372 it was named `Build iOS Simulator app (Apple Silicon Mac)` | `ios-key-screens.yml` | `main` |
+| `Android key screens join`, which joins the `Android key screens batch <n> (<group>)` jobs and fails if the build or any of them failed | `android-key-screens.yml` | `main` |
+| `Screenshots reviewed` | `ios-key-screens.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
 
@@ -128,14 +132,14 @@ from merging there anyway.
   workflow must first be in `release-candidate`, because that branch is the head of the
   release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
-  job's name includes the matrix values, such as `Key screens (bible-reading)`.
+  job's name includes the matrix values, such as `iOS key screens batch 2 (bible-reading)`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
   otherwise merges block on the old name.
-- **`android-pr-preview.yml` runs from `main`'s copy of the workflow**, because it uses
+- **`android-preview-apk.yml` runs from `main`'s copy of the workflow**, because it uses
   `pull_request_target`. A release PR reports the job name `main` has, so after
   renaming that job, keep the old name required until the release with the rename
   reaches `main`, then swap it. Workflows triggered by `pull_request`, such as
-  `ios-pr-preview.yml`, report the names in `release-candidate` right away.
+  `ios-key-screens.yml`, report the names in `release-candidate` right away.
 
 ## Approving a production deployment
 
@@ -196,7 +200,7 @@ The admin-only steps are:
    title. Write the part after the colon for testers: it becomes the "What's new" text in Google Play
    internal testing. Copy the `Closes #…` lines from the included feature pull requests
    into its description.
-5. **Merge it** once its checks and review pass. **iOS PR preview** takes 15 to 25
+5. **Merge it** once its checks and review pass. **iOS key screens** takes 15 to 25
    minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate` and moves any open feature pull requests
@@ -214,7 +218,7 @@ What runs after the merge to `main`:
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 | Deploy Bulletin Apps Script | Waits for `production` approval | Approve it when nobody is making a bulletin, then check the live bulletin. Reject it to skip this deploy. See [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script). |
 
-Workflows that run from `main`'s copy (Android PR preview, and the upload step of the
+Workflows that run from `main`'s copy (Android preview APK, and the upload step of the
 QR workflow) keep their old behavior until the release that changes them is merged.
 A failure on a release pull request caused by a bug the release itself fixes is
 expected.
@@ -334,6 +338,7 @@ stop working.
 | Address | File in the repository | Used by |
 | --- | --- | --- |
 | `https://app.nyccsda.org/privacy-policy.html` | `public/privacy-policy.html` | Both store listings |
+| `https://app.nyccsda.org/legal.html` | `public/legal.html` | The app's **Legal Disclaimer** row |
 | `https://app.nyccsda.org/support.html` | `public/support.html` | The App Store's Support URL |
 | `https://app.nyccsda.org/download` | `public/download.html` | QR codes and download links (#237) |
 | `https://app.nyccsda.org/library/sabbath_encouragement.pdf` | `public/library/sabbath_encouragement.pdf` | The app's Library |
@@ -357,7 +362,7 @@ accept a redirect. Two similar addresses are not the app website:
 **Rules:**
 
 - **Keep these pages as static HTML in `public/`,** not as app screens. App screens, such
-  as `/you/legal`, are blank until JavaScript runs, and the stores' checkers may not
+  as `/you/licenses`, are blank until JavaScript runs, and the stores' checkers may not
   run it.
 - **Never rename or remove them.** The store listings and printed QR codes point at
   them. Add new pages beside them instead.
@@ -470,10 +475,107 @@ Monday in January, but only the first opens an issue; the others find it and sto
 Start it by hand from the Actions tab to open one early.
 
 The Apple renewals have their own reminder, 60 days before each date; see
-[Apple signing reminders](#apple-signing-reminders). To add a yearly task, add it to
+[Apple signing reminders](#apple-signing-reminders). The Workspace backup has its own
+issue every three months; see [Google Workspace backups](#google-workspace-backups).
+To add a yearly task, add it to
 `scripts/yearly-checkup.cjs` and to the
 [upkeep calendar](../architecture.md#upkeep-calendar);
 `test/yearly-checkup.test.ts` checks that every link in the checklist still works.
+
+## Google Workspace backups
+
+Every three months, a super administrator exports all of the church's Google Workspace
+data (every account's email, Drive files, calendars, and the rest) and keeps a copy off
+Google. Google's own copies protect the data from failed hardware, but not from losing
+the account itself: suspended by mistake, taken over, or emptied by someone with access.
+This copy survives that.
+
+On the first Monday of January, April, July, and October, **Workspace Backup Reminder**
+(`workspace-backup-reminder.yml`) opens an issue titled **Google Workspace backup,
+*month year***, assigned to the usernames in `MONITOR_ALERT_ASSIGNEES`, with the steps
+below as a checklist. It's due at the end of the next month, so the
+[due-date reminders](#due-date-reminders) follow it up. It runs every Monday in those
+months, but only the first opens an issue. To open one for the current month, for
+example after a missed quarter, run it by hand from the Actions tab; the next scheduled
+one still opens.
+
+**Why every three months:** Google allows a full export at most once every 30 days
+([Choose the Workspace data you want to export](https://knowledge.workspace.google.com/admin/migrate/choose-the-workspace-data-you-want-to-export)).
+Every three months, losing the account would cost about three months of email and files
+(up to five when an export is done near its due date), for four exports a year.
+
+### Starting the export
+
+You need a super administrator account that is at least 30 days old and has 2-Step
+Verification on.
+
+1. In the [Google Admin console](https://admin.google.com), go to **Menu → Data → Data
+   import & export → Data export**.
+2. Click **Set up new export**, name it (the date works), and under **Scope** choose
+   **Export all user data for the entire organization**.
+3. Click **Start export**. It can't be canceled from the console.
+
+The export is ready no sooner than 48 hours later. It usually takes about 72 hours,
+and up to 14 days. Google emails the super administrator who started it when it's done
+([Export all your organization's data](https://knowledge.workspace.google.com/admin/migrate/export-all-your-organizations-data)).
+
+### Downloading it
+
+Google deletes the export 60 days after it started, so download it soon after the email
+arrives. Downloading it is free and needs no billing account
+([why](service-limits-and-costs.md#google-workspace-and-drive)). If a Google Cloud
+screen offers a free trial or asks for billing, close it: the download needs neither.
+
+1. **Check that it finished cleanly.** In the **Data export** table, the export must not
+   show **Errors**. An export with errors is missing some data. For 20 days after it
+   finishes, Google can fetch what's missing into a second archive, which you download
+   the same way
+   ([Troubleshoot a data export](https://knowledge.workspace.google.com/admin/migrate/troubleshoot-a-data-export)).
+2. **Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)**
+   (`gcloud`). On Windows, untick **Run 'gcloud init'** on the installer's last screen;
+   elsewhere, skip the install page's `gcloud init` step. `gcloud init` and
+   `gcloud config set project` give `gcloud` a default project, and it bills downloads
+   to that project, so don't run either, and don't add `--billing-project`.
+   `gcloud config get project` should print `(unset)`.
+3. **Sign in.** In a terminal (on Windows, **Google Cloud SDK Shell** from the Start
+   menu), run `gcloud auth login`, and in the browser it opens, choose the super
+   administrator's `nyccsda.org` account. Google Cloud must be turned on for that
+   account, or the next step can't open the export.
+4. **Find the export.** In the **Data export** table, click the export's name, then
+   **Actions → View Archive**. Note the bucket's name (the part after `gs://`) and the
+   export's folder, named for when it started, such as `20270104T153000Z`.
+   `Status Report.html` sits next to the folder.
+5. **Make a folder for it** on the backup drive, named for the export date, such as
+   `Backups/Church Google Workspace for Nonprofits/Jan 4 2027 export backup`. Use a
+   drive other than the computer's system drive, so the backup outlives it, and not a
+   folder that syncs to a cloud account. The October 2026 export was about 19 GB;
+   leave room for at least three. The export holds every account's email and files,
+   so guard the drive as you would the accounts themselves.
+6. **Download** the export's folder and its status report into it, with the command
+   below on one line. Replace `BUCKET` and `EXPORT_FOLDER`, and replace
+   `BACKUP_FOLDER` with the full path of the folder from step 5, written with forward
+   slashes, such as `D:/Backups/…/Jan 4 2027 export backup` (from WSL,
+   `/mnt/d/Backups/…`).
+
+   ```
+   gcloud storage cp --recursive --no-clobber "gs://BUCKET/EXPORT_FOLDER" "gs://BUCKET/Status Report.html" "BACKUP_FOLDER/"
+   ```
+
+   `gcloud` checks each file against Google's copy as it saves it. If the download
+   stops, run the same command again: `--no-clobber` skips the files already saved.
+
+### Checking the copy
+
+- `gcloud storage du --summarize "gs://BUCKET/EXPORT_FOLDER"` prints the export's size
+  in bytes. The `EXPORT_FOLDER` inside your backup folder (not the backup folder itself,
+  which also holds `Status Report.html`) must be exactly that many bytes. In Windows,
+  that's its **Properties → Size**, not **Size on disk**.
+- No file in the folder ends in `_.gstmp`. Those are downloads that didn't finish; run
+  the download again.
+
+Then comment on the issue with the export's date and size, and close it. Keep the older
+exports while the drive has room. When it runs low, delete the oldest, but keep the
+two newest.
 
 ## Native app binaries
 
@@ -540,7 +642,8 @@ upload by hand are in
 
 The automatic checks don't use a real phone. **Android audio e2e** runs on an emulator
 (host failover, one chapter change with the screen off, recovery after the connection
-drops), and **iOS PR preview** checks the key screens on a simulated iPhone. So before
+drops), and **iOS key screens** checks the key screens on a simulated iPhone and an
+Android emulator. So before
 releasing a build to the public, check it by hand on one iPhone and one Android phone,
 installed from TestFlight and from the Play Store's internal testing link. Copy this
 list into a comment on the release pull request, tick it for each phone, and add the
@@ -614,34 +717,39 @@ store announces a change, check that:
 - Any intentional lag behind the newest versions is written down in
   [native-builds.md](native-builds.md).
 
-## Android PR preview APKs
+## Android preview APKs
 
-**Workflow:** **Android PR preview**, which runs automatically on release pull requests
+**Workflow:** **Android preview APK**, which runs automatically on release pull requests
 into `main` (from `release-candidate` in this repository).
 
 It builds a debug APK, signed only with Gradle's local debug key, never the church's
 release key. After you approve `production`, it uploads the APK
 to Google Drive as `sda-church-app-pr-<number>-<run>-arm-debug.apk`, and the run
 summary links to it. Fork pull requests are skipped. See
-[Android PR preview and Drive upload](native-builds.md#android-pr-preview-and-drive-upload).
+[Android preview APK and Drive upload](native-builds.md#android-preview-apk-and-drive-upload).
 
-## iOS PR preview builds
+## iOS key screens builds
 
-**Workflow:** **iOS PR preview**, which runs automatically on release pull requests
+**Workflow:** **iOS key screens**, which runs automatically on release pull requests
 into `main`, and can be run manually on any branch.
 
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(85 screenshots of 32 screens in all), and checks their text with
-`scripts/check-screens.cjs`. Another job then joins the groups,
-before the review comment and **Screenshots reviewed**. The run takes 15 to 25 minutes, depending on how much of the compile cache it reuses. On a release pull request, a comment
+(87 screenshots of 33 screens in all), and checks their text with
+`scripts/check-screens.cjs`. Another job then joins the groups. The **Android key
+screens** workflow takes and checks the same screens on an Android emulator, on Linux
+runners ([Android key screens](native-builds.md#android-key-screens)). The review
+comment waits for it and links both platforms' screenshots, before
+**Screenshots reviewed**, which covers both. Both take 30 to 40 minutes, most of it the
+Android build. On a release pull request, the comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
-The build needs no `production` approval, because it reads no secrets. Download the
-artifact ending in `-arm64` from the run's Artifacts section (kept 14 days) to test the release on an Apple Silicon
-Mac before merging; you don't need an iPhone. See
-[iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+The build needs no `production` approval, because it reads no secrets. To test the
+release on an Apple Silicon Mac before merging, download the app, the artifact ending in
+`-arm64`, from the run's Artifacts section (kept 14 days); you don't need an iPhone.
+The screenshots are a separate download, `ios-key-screens-<number>-<run>`. See
+[iOS key screens](native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
 ## Dependabot pull requests
 
@@ -665,23 +773,6 @@ The slow builds and tests run on the release pull request that includes the upda
 When Dependabot reports `security_update_not_possible`, there's no fix Dependabot can
 apply yet, usually because another package pins the old version. Recheck after that
 package updates.
-
-### Bundled copy of decode-uri-component
-
-Expo Router's `query-string` 7 uses `decode-uri-component` 0.2.2, which slows to a
-crawl on malformed percent-encoding in a URL
-([GHSA-vcc3-ghjq-m6fr](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr)). The fix,
-0.5.0, ships only as an ES module, which `query-string` 7 can't load. So
-[`vendor/decode-uri-component`](../../vendor/decode-uri-component) holds 0.5.0
-converted to CommonJS, unchanged otherwise and under its MIT license. `package.json`
-installs it as a dependency, and its `overrides` entry
-(`"decode-uri-component": "$decode-uri-component"`) makes every package use it.
-`test/decode-uri-component.test.ts` checks that `query-string` loads it and that the
-lockfile holds no other copy.
-
-Remove the folder, the dependency, and the override once Expo Router depends on a
-`query-string` that uses `decode-uri-component` 0.5.0 or later (`query-string` 8 and
-up). Check with `npm view expo-router@next dependencies.query-string`.
 
 ## External dependency monitor alerts
 
@@ -727,6 +818,36 @@ The issue closes itself on the next passing run. The job summary also notes when
 Apple recommends a newer Xcode than the build uses; that note alone does not open an
 issue. What to update and test is under
 [Store toolchain requirements](#store-toolchain-requirements).
+
+## Expo doctor monitor alerts
+
+**Workflow:** **Expo Doctor Monitor**, which runs every Monday and can be run manually.
+
+It runs every check of [`expo-doctor`](https://docs.expo.dev/develop/tools/#expo-doctor),
+the same as `npm run doctor`, including the one that every package the installed SDK
+pins (Expo's own, React Native, and some native libraries) is the version it expects.
+Pull requests run the same tool without that check, as `Expo Doctor (config)`, which
+isn't required; see [Automated checks](../CONTRIBUTING.md#automated-checks).
+
+When any check fails, it opens or updates the issue **[monitor] Expo doctor found
+problems**, with `expo-doctor`'s output. A new alert is assigned to the users in
+`MONITOR_ALERT_ASSIGNEES`; see
+[Getting notified only when action is needed](#getting-notified-only-when-action-is-needed).
+The issue closes itself on the next passing run. Usually Expo has published SDK patch
+releases. On a branch from `release-candidate`:
+
+1. Run `npx expo install --fix`.
+2. If `npm view expo-template-bare-minimum dist-tags.sdk-<SDK>` is newer than the pinned
+   `expo-template-bare-minimum@…`, update every pin; `test/native-build-safety.test.ts`
+   checks that they match.
+3. Run `npm run doctor` and `npm run check`, build the Android APK on the emulator, and
+   start **iOS key screens** by hand, since patch releases can change native code.
+
+While Expo or React Native is a pre-release, as during the Expo 58 canary, it skips the
+run and passes, because the versions can't match a released SDK.
+`scripts/expo-doctor-monitor.cjs` runs it and writes the alert text. It runs
+`expo-doctor` in a job with a read-only token, and only a second job, which installs
+nothing, can write issues.
 
 ## Apple signing reminders
 
@@ -788,7 +909,7 @@ reminder is posted once. Editing the date starts them over, and removing the lin
 closing the issue stops them.
 
 Only issues opened by someone who can triage or manage the repository, or by its own
-workflows such as the yearly checkup, count, so someone else's issue can't make it
+workflows such as the yearly checkup and the Workspace backup reminder, count, so someone else's issue can't make it
 notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.
@@ -821,7 +942,7 @@ so a release can't merge until it passes. Feature pull requests into `release-ca
 don't run it; to test an audio change before the release, run it manually on your
 branch.
 
-It takes about 20 minutes, and runs alongside **iOS PR preview**, which takes 15 to 25
+It takes about 20 minutes, and runs alongside **iOS key screens**, which takes 15 to 25
 minutes.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
@@ -889,7 +1010,7 @@ the policy, no release can merge into `main`**:
 | Workflow | Why it uses `pull_request_target` | Required on `main` |
 | --- | --- | --- |
 | `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
-| `.github/workflows/android-pr-preview.yml` | The Drive upload needs the `production` environment, which a pull request run can reach only in `main`'s context. It builds only this repository's `release-candidate` branch, never fork code. | Yes: `Build Android debug APK (ARM)` |
+| `.github/workflows/android-preview-apk.yml` | The Drive upload needs the `production` environment, which a pull request run can reach only in `main`'s context. It builds only this repository's `release-candidate` branch, never fork code. | Yes: `Build Android debug APK (ARM)` |
 | `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
 
 None of them runs code from a fork with secrets or a write token, which is what makes
@@ -925,7 +1046,7 @@ GitHub adds its own limits: a `pull_request_target` run can read `main`'s cache 
 not write to it, so it can't poison the cache the signing builds use. The iOS compile
 cache follows the same rule: only `ios-compile-cache.yml`, on `main`, saves it; the iOS
 PR preview only reads it; and the signed builds never use it (see
-[Compile cache](native-builds.md#ios-pr-preview-unsigned-simulator-builds)).
+[Compile cache](native-builds.md#ios-key-screens-unsigned-simulator-builds)).
 Elsewhere:
 
 - `pull_request` workflows for a fork's pull request get no secrets and a read-only

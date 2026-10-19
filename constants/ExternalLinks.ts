@@ -114,6 +114,16 @@ export const openPrivacyPolicy = () =>
   openInSystemBrowser(PRIVACY_POLICY_URL, 'Error', 'Could not open the privacy policy.');
 
 /**
+ * The legal disclaimer is kept only on the website too (#412), beside the
+ * privacy policy. The open-source notices stay in the app, under You →
+ * Open-Source Licenses. Keep public/legal.html at this path.
+ */
+export const LEGAL_DISCLAIMER_URL = 'https://app.nyccsda.org/legal.html';
+
+export const openLegalDisclaimer = () =>
+  openInSystemBrowser(LEGAL_DISCLAIMER_URL, 'Error', 'Could not open the legal disclaimer.');
+
+/**
  * Whether the Tithe & Offering page shows the church's Zelle section. Off until
  * the address can receive gifts (#384, #392); turning it on needs a new release.
  */

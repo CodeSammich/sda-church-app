@@ -3,7 +3,11 @@ import { MenuCard } from '@/components/MenuCard';
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
-import { CHURCH_BUILDING_IMAGE_URL, openPrivacyPolicy } from '@/constants/ExternalLinks';
+import {
+  CHURCH_BUILDING_IMAGE_URL,
+  openLegalDisclaimer,
+  openPrivacyPolicy,
+} from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { getTextSizeMenuCopy } from '@/constants/TextSizeCopy';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -38,6 +42,8 @@ const allLabels = {
     privacySub: 'Legal information (English only)',
     legal: 'Legal Disclaimer',
     legalSub: 'Terms of use and data attribution (English only)',
+    licenses: 'Open-Source Licenses',
+    licensesSub: 'Notices for software in the app (English only)',
   },
   zh: {
     title: '您',
@@ -53,6 +59,8 @@ const allLabels = {
     privacySub: '法律資訊 (僅限英文)',
     legal: '法律聲明',
     legalSub: '使用條款與資料歸屬 (僅限英文)',
+    licenses: '開放原始碼授權',
+    licensesSub: '應用程式所含軟體的聲明 (僅限英文)',
   },
   'zh-cn': {
     title: '您',
@@ -68,6 +76,8 @@ const allLabels = {
     privacySub: '法律信息 (仅限英文)',
     legal: '法律声明',
     legalSub: '使用条款与数据归属 (仅限英文)',
+    licenses: '开源许可',
+    licensesSub: '应用所含软件的声明 (仅限英文)',
   },
   es: {
     title: 'Tú',
@@ -83,6 +93,8 @@ const allLabels = {
     privacySub: 'Información legal (solo en inglés)',
     legal: 'Aviso Legal',
     legalSub: 'Términos de uso y atribución de datos (solo en inglés)',
+    licenses: 'Licencias de Código Abierto',
+    licensesSub: 'Avisos del software de la aplicación (solo en inglés)',
   },
 };
 
@@ -210,9 +222,16 @@ export default function YouScreen() {
               description={labels.legalSub}
               icon="file-document-outline"
               iconColor={theme.colors.secondary}
+              onPress={openLegalDisclaimer}
+            />
+            <MenuCard
+              title={labels.licenses}
+              description={labels.licensesSub}
+              icon="open-source-initiative"
+              iconColor={theme.colors.secondary}
               onPress={() =>
                 router.push({
-                  pathname: '/you/legal',
+                  pathname: '/you/licenses',
                   params: { backTo: '/you' },
                 } as any)
               }

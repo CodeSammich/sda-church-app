@@ -23,8 +23,8 @@ Code, Codex, Gemini, and others). The full contributor guide is
 - Say what you tested, with the command and result (for example `npm test`,
   1039 passing). Mention any Android or iOS build you ran.
 - If the change affects what a screen shows or how it's laid out, update the
-  key screens in `test/screens/screens.json`, for every platform that captures
-  them: the iPhone today, and Android once #372 adds its screenshots. Add the
+  key screens in `test/screens/screens.json`, which the iPhone and Android
+  both capture, so check that the change holds on both. Add the
   screen or variant that shows the change, and text checks (`mustShowLines`,
   `mustNotShowLines`, `variantRules`) that fail if it breaks, and give a new
   screen the `group` for its part of the app. Don't overdo it: each shot

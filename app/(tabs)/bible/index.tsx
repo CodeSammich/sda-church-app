@@ -2833,20 +2833,37 @@ export default function BibleScreen() {
     setModalType('verse-detail');
   };
 
-  // The key-screen capture can't tap a verse, so its build opens the popup
-  // from the path (popup=verse, for verseStart), once the linked chapter has
-  // loaded (#372). A chapter change clears chapterData first, so a loaded
-  // chapter that matches the link is the linked one.
+  // The key-screen capture can't tap, so its build opens a popup from the
+  // path once the linked chapter has loaded (#372): popup=verse for
+  // verseStart's details, or popup=audio-settings once the chapter has audio.
+  // A chapter change clears chapterData first, so a loaded chapter that
+  // matches the link is the linked one.
   const screenshotPopupOpened = useRef(false);
   useEffect(() => {
     if (screenshotPopupOpened.current || !chapterData) return;
-    if (getScreenshotPopup(paramPopup, ['verse']) !== 'verse') return;
+    const screenshotPopup = getScreenshotPopup(paramPopup, ['verse', 'audio-settings']);
+    if (!screenshotPopup) return;
     if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
+    if (screenshotPopup === 'audio-settings') {
+      if (audioReaderEntries.length === 0) return;
+      screenshotPopupOpened.current = true;
+      setAudioSettingsVisible(true);
+      return;
+    }
     const verse = Number(paramVerseStart);
     if (!Number.isInteger(verse) || verse < 1) return;
     screenshotPopupOpened.current = true;
     openVerseDetails(verse);
-  }, [book?.id, chapterData, chapterNum, paramBookId, paramChapter, paramPopup, paramVerseStart]);
+  }, [
+    audioReaderEntries.length,
+    book?.id,
+    chapterData,
+    chapterNum,
+    paramBookId,
+    paramChapter,
+    paramPopup,
+    paramVerseStart,
+  ]);
 
   const supportingVerses = useMemo(
     () => indexChapterVerses(supportingChapterData),

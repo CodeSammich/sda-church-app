@@ -1,4 +1,4 @@
-name: Android PR preview
+name: Android preview APK
 
 # Uses pull_request_target so the Drive upload can use the production
 # environment: the job runs in the base branch's context, which the
@@ -21,7 +21,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: android-pr-preview-${{ github.event.pull_request.number || github.ref }}
+  group: android-preview-apk-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -106,7 +106,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:

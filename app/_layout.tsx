@@ -1,4 +1,3 @@
-import '@/services/animationFramePolyfill';
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import {
@@ -95,7 +94,7 @@ LogBox.ignoreAllLogs();
 
 export const unstable_settings = {
   // Ensure that reloading on `/language` keeps a back button present.
-  initialRouteName: '(tabs)',
+  anchor: '(tabs)',
 };
 
 type BeforeInstallPromptEvent = Event & {
@@ -909,7 +908,7 @@ function RootLayoutNav({
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
 
   // Opens the screen the key-screen capture saved before launching the app
-  // (#331). Only the iOS PR preview's Simulator build does this; see
+  // (#331). Only the iOS key screens workflow's Simulator build does this; see
   // isKeyScreensBuild.
   useEffect(() => {
     if (Platform.OS === 'web' || !isKeyScreensBuild()) return;

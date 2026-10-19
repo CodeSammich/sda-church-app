@@ -1,11 +1,15 @@
-name: iOS PR preview
+name: iOS key screens
 
-# The iOS counterpart of android-pr-preview.yml: an unsigned iOS Simulator
-# build of a release before it merges into main, for an Apple Silicon Mac. A
-# Simulator build needs no Apple signing,
-# so this workflow reads no secrets and can safely run on pull requests.
+# The iOS counterpart of android-preview-apk.yml and android-key-screens.yml:
+# an unsigned iOS Simulator build of a release before it merges into main, for
+# an Apple Silicon Mac. A Simulator build needs no Apple signing, so this
+# workflow reads no secrets and can safely run on pull requests.
 # Download the app from the run's artifacts to test it in the Simulator on a
 # Mac; docs/operations/native-builds.md explains how.
+#
+# It also takes the release's iPhone key screens (#331). The Android ones are
+# taken on Linux by android-key-screens.yml (#372); this workflow's review
+# comment waits for that run and links both, so one approval covers both.
 on:
   # Only the release PR into main. Feature PRs into release-candidate skip the
   # Mac builds; start it by hand on a branch to test a change to this workflow
@@ -26,7 +30,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ios-pr-preview-${{ github.event.pull_request.number || github.ref }}
+  group: ios-key-screens-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -40,14 +44,16 @@ jobs:
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
-    name: Key screens (${{ matrix.group }})
+    name: iOS key screens batch ${{ matrix.batch }} (${{ matrix.group }})
     # Apple Silicon only. The Intel Mac build was dropped in 1.2.1;
     # docs/operations/native-builds.md ("On an Intel Mac") says how to build one.
     runs-on: macos-26
     # The longest of these jobs took 21.5 to 27.2 minutes per run in October
     # 2026. 40 leaves room for a slow compile or the one 11-minute app install
-    # seen, without a stuck job holding a Mac for an hour.
-    timeout-minutes: 40
+    # seen, without a stuck job holding a Mac for an hour. The other batches get
+    # 90, since their time includes waiting for the compiling runner to get a
+    # Mac, which GitHub can delay when its Mac runners are in short supply.
+    timeout-minutes: ${{ matrix.builds && 40 || 90 }}
     permissions:
       contents: read
       # To see when the shared app is ready, and whether its runner failed.
@@ -66,9 +72,13 @@ jobs:
         # shared with the others, which boot their iPhones meanwhile; five
         # separate compiles made the run wait for the slowest of five. A test
         # checks that exactly one group builds and that the others wait for it.
+        # Each group's batch number, 1 to 5 in list order, names its job.
         include:
-          - group: bible-text
-            builds: true
+          - { group: home, batch: 1 }
+          - { group: bible-reading, batch: 2 }
+          - { group: bible-text, batch: 3, builds: true }
+          - { group: library, batch: 4 }
+          - { group: worship-and-you, batch: 5 }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -110,13 +120,13 @@ jobs:
 
       # Every runner needs sharp, which the key-screen scripts use.
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Generate iOS project
         if: ${{ matrix.builds }}
         run: >-
           npx expo prebuild
-          --template expo-template-bare-minimum@58.0.9
+          --template expo-template-bare-minimum@58.0.25
           --platform ios --clean --no-install
 
       - name: Install CocoaPods dependencies
@@ -230,26 +240,51 @@ jobs:
 
       - name: Wait for the shared app
         # The bible-text runner uploads it when its compile finishes.
-        # Gives up as soon as that runner ends without it, rather than waiting
-        # out the timeout.
+        #
+        # A defense against GitHub's degraded availability: when its Mac
+        # runners are in short supply, the compiling runner can get its Mac
+        # long after this one did. So this waits as long as that runner is
+        # compiling, and up to 45 minutes while it's still queued for a Mac,
+        # rather than a fixed time from when this runner started. A 25-minute
+        # wait used to fail runs whose compile was merely late.
+        #
+        # It gives up as soon as that runner's job ends without the app, which
+        # is also how a job GitHub never manages to start ends.
         if: ${{ !matrix.builds }}
-        # The app was ready 13 to 17 minutes into the job; this leaves the rest of the
-        # job's 40 minutes for the key screens.
-        timeout-minutes: 25
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
+          MAX_QUEUED_SECONDS: 2700
         run: |
           set -euo pipefail
-          until gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' |
+          queued_since=""
+          # A failed API call, such as GitHub's occasional 502, just means
+          # asking again.
+          until { gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' || true; } |
             grep -qx "ios-simulator-app-$RUN_ID"; do
             builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "Key screens (bible-text)") | .conclusion // ""')"
-            if [ -n "$builder" ]; then
-              echo "::error::The bible-text runner ended ($builder) without sharing the app." >&2
+              --jq '.jobs[] | select(.name == "iOS key screens batch 3 (bible-text)") | "\(.status) \(.conclusion // "")"' || true)"
+            status="${builder%% *}"
+            conclusion="${builder#* }"
+            if [ "$status" = completed ]; then
+              echo "::error::The bible-text runner ended (${conclusion:-without a result}) without sharing the app." >&2
               exit 1
             fi
+            case "$status" in
+              queued | waiting | pending)
+                now="$(date +%s)"
+                if [ -z "$queued_since" ]; then
+                  queued_since="$now"
+                  echo "The bible-text runner is still waiting for a Mac; waiting for it."
+                fi
+                if [ $((now - queued_since)) -gt "$MAX_QUEUED_SECONDS" ]; then
+                  echo "::error::The bible-text runner waited $((MAX_QUEUED_SECONDS / 60)) minutes for a Mac without getting one. GitHub's Mac runners are likely in short supply; rerun when they're free." >&2
+                  exit 1
+                fi
+                ;;
+              *) queued_since="" ;;
+            esac
             sleep 15
           done
 
@@ -341,18 +376,20 @@ jobs:
           retention-days: 1
 
   simulator:
-    # Joins the groups into the one artifact the review comment links: the
-    # app and its first screen from the runner that compiled it, and every group's
-    # screenshots and checks. It fails if any group failed, so a failed
-    # group can't pass as skipped. The "Main protection" ruleset requires
-    # this job's name.
+    # Joins the groups into two artifacts: the screenshots and checks from
+    # every group, which the review comment links, and the app with its first
+    # screen from the runner that compiled it. It only copies files, so it runs on
+    # Linux. It fails if any group failed, so a failed group can't pass as
+    # skipped. The "Main protection" ruleset requires this job's name. Before
+    # #372 it was "Build iOS Simulator app (Apple Silicon Mac)", from when one
+    # job built the app and took every shot.
     needs: capture
     if: >-
       !cancelled() && (
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository))
-    name: Build iOS Simulator app (Apple Silicon Mac)
+    name: iOS key screens join
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -364,7 +401,7 @@ jobs:
 
       # For sharp, which writes the App Store copies.
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Download the groups
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -372,16 +409,29 @@ jobs:
           pattern: key-screens-${{ github.run_id }}-*
           path: ${{ runner.temp }}/parts
 
+      # The screenshots and the app are separate downloads: Chrome's Safe
+      # Browsing blocks a download with an unsigned app zipped inside it, which
+      # kept reviewers from the screenshots when they shared one.
       - name: Join the key screens
         run: |
           set -euo pipefail
-          OUT="$RUNNER_TEMP/ios-pr-preview"
-          mkdir -p "$OUT"
+          SCREENS_OUT="$RUNNER_TEMP/ios-key-screens"
+          APP_OUT="$RUNNER_TEMP/ios-pr-preview"
+          mkdir -p "$SCREENS_OUT" "$APP_OUT"
           find "$RUNNER_TEMP/parts" -maxdepth 2 -type f \( -name '*-simulator.zip' -o -name '*-first-screen.png' \) \
-            -exec cp {} "$OUT/" \;
-          node scripts/merge-key-screens.cjs --out "$OUT/screens" "$RUNNER_TEMP"/parts/*/screens
+            -exec cp {} "$APP_OUT/" \;
+          node scripts/merge-key-screens.cjs --platform ios --out "$SCREENS_OUT/screens" "$RUNNER_TEMP"/parts/*/screens
 
-      - name: Upload the Simulator app and screenshots
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/ios-key-screens/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload the Simulator app
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -400,7 +450,7 @@ jobs:
 
   announce:
     # Says the screenshots are on the way as soon as a release PR opens or gets
-    # a new push, since they take 15 to 25 minutes, and removes the screenshots
+    # a new push, since they take 30 to 40 minutes, and removes the screenshots
     # from before the push, which are out of date (#331). The review-comment
     # job replaces the notice with the screenshots.
     if: >-
@@ -434,12 +484,12 @@ jobs:
             [ -n "$id" ] && gh api -X DELETE "repos/$REPO/issues/comments/$id" >/dev/null
           done <<<"$comments"
           # Encode any slash in the branch name for the progress link.
-          progress="https://github.com/$REPO/actions/workflows/ios-pr-preview.yml?query=branch%3A${HEAD_REF//\//%2F}"
+          progress="https://github.com/$REPO/actions/workflows/ios-key-screens.yml?query=branch%3A${HEAD_REF//\//%2F}"
           body=$(cat <<BODY
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The iPhone preview is taking the screenshots for commit \`${SHA:0:7}\`. That takes 15 to 25 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The preview is taking the iPhone and Android screenshots for commit \`${SHA:0:7}\`. That takes 30 to 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY
@@ -447,9 +497,10 @@ jobs:
           gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
 
   review-comment:
-    # Tells the release PR's reviewer where this commit's screenshots are and
-    # how to approve them, for the "Screenshots reviewed" check (#331). Each run
-    # replaces the previous comment, so the one on the PR is always current.
+    # Tells the release PR's reviewer where this commit's screenshots are, the
+    # iPhone's and Android's, and how to approve them, for the "Screenshots
+    # reviewed" check (#331, #372). Each run replaces the previous comment, so
+    # the one on the PR is always current.
     needs: simulator
     if: >-
       !cancelled() &&
@@ -458,15 +509,39 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     name: Post the screenshot review comment
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Most of it is waiting for the Android run, which usually finishes first.
+    timeout-minutes: 60
     permissions:
-      # To find this run's artifact.
+      # To find this run's artifact, and the Android run's.
       actions: read
       contents: read
       # Only to replace the review comment. The job never checks out or runs
       # the pull request's code.
       pull-requests: write
     steps:
+      - name: Wait for the Android key screens
+        # android-key-screens.yml's newest run for this commit. Gives up after
+        # 50 minutes, and the comment then says the Android shots are missing.
+        id: android
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          for _ in $(seq 1 100); do
+            run=$(gh api "repos/$REPO/actions/workflows/android-key-screens.yml/runs?head_sha=$SHA&event=pull_request" \
+              --jq '.workflow_runs[0] // empty | "\(.id) \(.status) \(.conclusion)"' || true)
+            read -r id status conclusion <<<"$run"
+            if [ "${status:-}" = completed ]; then
+              echo "run_id=$id" >> "$GITHUB_OUTPUT"
+              echo "conclusion=$conclusion" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::warning::The Android key screens for $SHA didn't finish in time."
+
       - name: Post the review comment
         env:
           GH_TOKEN: ${{ github.token }}
@@ -475,21 +550,34 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
           RUN_ID: ${{ github.run_id }}
           CHECKS: ${{ needs.simulator.result }}
+          ANDROID_RUN_ID: ${{ steps.android.outputs.run_id }}
+          ANDROID_CHECKS: ${{ steps.android.outputs.conclusion }}
         run: |
           set -euo pipefail
+          # A link to a run's screenshots, given its run ID and the jq test for its artifact.
+          screenshots() {
+            local url="https://github.com/$REPO/actions/runs/$1" found id bytes
+            found=$(gh api "repos/$REPO/actions/runs/$1/artifacts" \
+              --jq "[.artifacts[] | select($2)][0] // empty | \"\\(.id) \\(.size_in_bytes)\"")
+            if [ -n "$found" ]; then
+              read -r id bytes <<<"$found"
+              echo "[$3]($url/artifacts/$id) (a zip of about $((bytes / 1000000)) MB)"
+            else
+              echo "$3 from [its run]($url), which uploaded none; it says why"
+            fi
+          }
           run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
-          artifact=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" \
-            --jq '[.artifacts[] | select(.name | endswith("-arm64"))][0] // empty | "\(.id) \(.size_in_bytes)"')
-          if [ -n "$artifact" ]; then
-            read -r artifact_id artifact_bytes <<<"$artifact"
-            download="[the screenshots]($run_url/artifacts/$artifact_id) (a zip of about $((artifact_bytes / 1000000)) MB)"
+          download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"
+          app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
+          if [ -n "$ANDROID_RUN_ID" ]; then
+            android="$(screenshots "$ANDROID_RUN_ID" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
           else
-            download="the screenshots from [the run]($run_url), which uploaded none; it says why"
+            android="the Android screenshots, which aren't ready: [their runs](https://github.com/$REPO/actions/workflows/android-key-screens.yml) say why"
           fi
-          if [ "$CHECKS" = success ]; then
-            checks="✅ The automatic checks passed: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
+          if [ "$CHECKS" = success ] && [ "$ANDROID_CHECKS" = success ]; then
+            checks="✅ The automatic checks passed on both platforms: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
           else
-            checks="⚠️ **The automatic checks failed or didn't finish.** Start with [the run]($run_url) to see why."
+            checks="⚠️ **The automatic checks failed or didn't finish** (iPhone: ${CHECKS:-unknown}, Android: ${ANDROID_CHECKS:-not finished}). Start with the runs linked below to see why."
           fi
           approve="an approver in the release-approvers team opens [this run]($run_url), clicks **Review deployments**, ticks **screenshot-review**, and approves. The **Screenshots reviewed** check then passes."
 
@@ -497,13 +585,13 @@ jobs:
           <!-- key-screens-review sha=$SHA -->
           ### 📸 Screenshots to review
 
-          The iPhone screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
+          The iPhone and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
 
           $checks
 
-          1. **Download** $download and open \`screens/ios/\`. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), and \`zh\`, \`zh-cn\`, and \`es\`.
+          1. **Download** $download and $android, and open their \`screens/ios/\` and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:
-             - text cut off, overlapping, or behind the clock, battery, or Dynamic Island;
+             - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
              - a verse number split from its verse, or a button label cut short;
              - the wrong language, a blank or half-drawn screen, or a popup covering the page;
              - dark mode or large text that's hard to read.
@@ -511,7 +599,9 @@ jobs:
              The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
           3. **Approve:** $approve
 
-          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in \`screens/app-store/\`.
+          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
+
+          To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
           BODY
           )
 
@@ -585,7 +675,7 @@ jobs:
 
       # For sharp, which crops strips for a closer look.
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Download that run's screenshots
         env:
@@ -595,7 +685,10 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo 'screens_from_run must be a run ID.' >&2; exit 1; }
-          gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-pr-preview-*-arm64' --dir "$RUNNER_TEMP/earlier"
+          # Runs from before the screenshots got their own download kept them in
+          # the app's download.
+          gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-key-screens-*' --dir "$RUNNER_TEMP/earlier" ||
+            gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-pr-preview-*-arm64' --dir "$RUNNER_TEMP/earlier"
           SCREENS="$(find "$RUNNER_TEMP/earlier" -type d -name screens -print -quit)"
           test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
           echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"

@@ -113,6 +113,9 @@ and may not be possible, so protect them above everything else.
 - Where a service still signs in with an account outside the Workspace, move access
   to a `nyccsda.org` account or the `technology@nyccsda.org` group wherever the
   service allows it.
+- A super administrator regularly exports all of the Workspace's data and keeps a
+  copy off Google, in case the account itself is ever lost; see
+  [Google Workspace backups](operations/admin-runbook.md#google-workspace-backups).
 
 > [!IMPORTANT]
 > **Get Workspace permissions right, with least-privilege access.** Each church
@@ -141,11 +144,11 @@ and may not be possible, so protect them above everything else.
     issue;
   - extra checks on each release pull request into `main`: that it comes from
     `release-candidate`, a bulletin API integration test, an
-    [Android preview APK](operations/admin-runbook.md#android-pr-preview-apks)
+    [Android preview APK](operations/admin-runbook.md#android-preview-apks)
     uploaded to Google Drive,
-    [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-pr-preview-builds)
-    with screenshots of the key screens that an approver reviews (**Screenshots
-    reviewed**), and a
+    [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-key-screens-builds)
+    with screenshots of the key screens, on the iPhone and an Android emulator, that an
+    approver reviews (**Screenshots reviewed**), and a
     [Bible audio test](operations/admin-runbook.md#bible-audio-emulator-test) on an
     Android emulator;
   - native iOS and Android builds after each merge to `main`, uploaded automatically
@@ -162,11 +165,16 @@ and may not be possible, so protect them above everything else.
   - a daily [external dependency monitor](operations/admin-runbook.md#external-dependency-monitor-alerts);
   - a weekly [store toolchain monitor](operations/admin-runbook.md#store-toolchain-monitor-alerts)
     that warns before Google Play or App Store Connect requirements pass the app by;
+  - a weekly [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts)
+    that opens an issue when `expo-doctor` finds problems, usually SDK patch releases
+    the app hasn't taken yet;
   - a weekly [Apple signing monitor](operations/admin-runbook.md#apple-signing-reminders)
     that opens an issue 60 days before an Apple certificate, profile, or membership
     expires;
   - the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, opened
-    on the first Monday of January.
+    on the first Monday of January;
+  - the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups)
+    issue, opened every three months.
 - Releasing to the public stays manual: after testing, an administrator submits
   the iOS build for review in App Store Connect and promotes the Android release in
   Play Console. See
@@ -361,6 +369,10 @@ submitted for review before they appear on the App Store.
 - **Every IT administrator is an Owner** of the project, under **IAM & Admin → IAM**,
   so it doesn't depend on one account. When an administrator joins or leaves, update
   that list too.
+- The [Workspace data export](operations/admin-runbook.md#downloading-it) is also
+  downloaded with a Google Cloud tool, `gcloud`, from a bucket Google owns, with no
+  project or billing account
+  ([why](operations/service-limits-and-costs.md#google-workspace-and-drive)).
 
 | What | Name | Notes |
 | --- | --- | --- |
@@ -385,11 +397,13 @@ names the step, and
 The app website is served by GitHub Pages from this repository's `gh-pages` branch,
 which **Deploy Website and Tag** publishes after each merge to `main`. A Cloudflare
 redirect rule sends `app.nyccsda.org` to it, keeping the path. Its real jobs are
-three static pages in [`public/`](../public/):
+four static pages in [`public/`](../public/):
 
 - **Privacy policy** at `app.nyccsda.org/privacy-policy.html`, which both app stores
   require for the listings. It's the only copy: the app's **Privacy Policy** row opens
   it (#403), so a wording fix needs only a website deploy.
+- **Legal disclaimer** at `app.nyccsda.org/legal.html`, the only copy too: the app's
+  **Legal Disclaimer** row opens it (#412). The open-source notices stay in the app.
 - **Support page** at `app.nyccsda.org/support.html`, the App Store's Support URL.
 - **App download page** at `app.nyccsda.org/download`. The printed bulletin's mobile
   app QR code points here, and the page sends each phone to the right store link
@@ -485,9 +499,11 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
 | Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
+| First Monday of January, April, July, and October (GitHub opens the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups) issue, due at the end of the next month) | Export all of the church's Workspace data and keep a copy off Google | If the account is suspended or taken over, its email and files are gone |
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
+| Weekly (automated) | [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts): take Expo's SDK patch releases | Bug fixes are missed, and a later update has to take many releases at once |
 | Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 
 ## Governance principles
