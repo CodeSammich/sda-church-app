@@ -43,8 +43,9 @@ since they're the fallback.
 See `features/sabbath-school/ChildrenLessons.ts` and
 [Children's Sabbath School Lessons](../feature_designs/sabbath_school_lessons.md).
 
-It also checks the church's own website: the privacy policy, support, and download
-pages at `app.nyccsda.org`, which the store listings and QR codes depend on. Each must
+It also checks the church's own website: the privacy policy, legal disclaimer,
+support, and download pages at `app.nyccsda.org`, which the store listings, the app,
+and QR codes depend on. Each must
 load through the custom domain and still contain its expected text. See
 [The app website](admin-runbook.md#the-app-website-appnyccsdaorg).
 
