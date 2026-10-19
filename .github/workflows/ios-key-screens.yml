@@ -50,8 +50,10 @@ jobs:
     runs-on: macos-26
     # The longest of these jobs took 21.5 to 27.2 minutes per run in October
     # 2026. 40 leaves room for a slow compile or the one 11-minute app install
-    # seen, without a stuck job holding a Mac for an hour.
-    timeout-minutes: 40
+    # seen, without a stuck job holding a Mac for an hour. The other batches get
+    # 90, since their time includes waiting for the compiling runner to get a
+    # Mac, which GitHub can delay when its Mac runners are in short supply.
+    timeout-minutes: ${{ matrix.builds && 40 || 90 }}
     permissions:
       contents: read
       # To see when the shared app is ready, and whether its runner failed.
@@ -238,28 +240,51 @@ jobs:
 
       - name: Wait for the shared app
         # The bible-text runner uploads it when its compile finishes.
-        # Gives up as soon as that runner ends without it, rather than waiting
-        # out the timeout.
+        #
+        # A defense against GitHub's degraded availability: when its Mac
+        # runners are in short supply, the compiling runner can get its Mac
+        # long after this one did. So this waits as long as that runner is
+        # compiling, and up to 45 minutes while it's still queued for a Mac,
+        # rather than a fixed time from when this runner started. A 25-minute
+        # wait used to fail runs whose compile was merely late.
+        #
+        # It gives up as soon as that runner's job ends without the app, which
+        # is also how a job GitHub never manages to start ends.
         if: ${{ !matrix.builds }}
-        # The app was ready 13 to 17 minutes into the job; this leaves the rest of the
-        # job's 40 minutes for the key screens.
-        timeout-minutes: 25
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
+          MAX_QUEUED_SECONDS: 2700
         run: |
           set -euo pipefail
+          queued_since=""
           # A failed API call, such as GitHub's occasional 502, just means
           # asking again.
           until { gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' || true; } |
             grep -qx "ios-simulator-app-$RUN_ID"; do
             builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "iOS key screens batch 3 (bible-text)") | .conclusion // ""' || true)"
-            if [ -n "$builder" ]; then
-              echo "::error::The bible-text runner ended ($builder) without sharing the app." >&2
+              --jq '.jobs[] | select(.name == "iOS key screens batch 3 (bible-text)") | "\(.status) \(.conclusion // "")"' || true)"
+            status="${builder%% *}"
+            conclusion="${builder#* }"
+            if [ "$status" = completed ]; then
+              echo "::error::The bible-text runner ended (${conclusion:-without a result}) without sharing the app." >&2
               exit 1
             fi
+            case "$status" in
+              queued | waiting | pending)
+                now="$(date +%s)"
+                if [ -z "$queued_since" ]; then
+                  queued_since="$now"
+                  echo "The bible-text runner is still waiting for a Mac; waiting for it."
+                fi
+                if [ $((now - queued_since)) -gt "$MAX_QUEUED_SECONDS" ]; then
+                  echo "::error::The bible-text runner waited $((MAX_QUEUED_SECONDS / 60)) minutes for a Mac without getting one. GitHub's Mac runners are likely in short supply; rerun when they're free." >&2
+                  exit 1
+                fi
+                ;;
+              *) queued_since="" ;;
+            esac
             sleep 15
           done
 
