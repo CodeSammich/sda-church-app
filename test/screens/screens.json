@@ -284,8 +284,12 @@
     {
       "name": "discover",
       "group": "home",
+      "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\".",
       "path": "home/discover",
-      "variants": ["default", "zh"]
+      "variants": ["default", "zh", "xl-ios-large-text"],
+      "variantRules": {
+        "xl-ios-large-text": { "mustShowLines": ["\\bDenomination$"] }
+      }
     },
     {
       "name": "about-sda",

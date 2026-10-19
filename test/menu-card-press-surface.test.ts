@@ -260,7 +260,8 @@ describe('menu card press surfaces', () => {
     const card = view.getByLabelText(
       'Watch Livestream. Livestream status remains fully announced',
     );
-    expect(StyleSheet.flatten(card.props.style).minHeight).toBe(340);
+    // The title stops at 1.25× (#387), so the card grows only that far too.
+    expect(StyleSheet.flatten(card.props.style).minHeight).toBe(164);
     expect(view.getByText('Watch Livestream').props.numberOfLines).toBeUndefined();
   });
 });

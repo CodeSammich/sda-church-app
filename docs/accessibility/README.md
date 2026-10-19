@@ -37,9 +37,16 @@ also follows the phone's text size. The two multiply:
   sizes enlarge page content but not these bars. The app's own setting still applies
   to them: in full to the header, and up to 130% to the tab bar and the Bible
   reader's controls.
+- The titles of the two-column cards on Home and New Member & Visitor stay at the
+  default 1.25×, with both settings together (`GRID_MENU_CARD_TEXT_MAX_SCALE` in
+  `components/GridMenuCard.tsx`). Past that, a long word breaks mid-word, since two
+  cards share a row at every size (#387): on a 412-point Pixel 9a, Spanish
+  "Compañerismo" already fills its card at 1.25×, and English "Livestream" and
+  "Denomination" broke from about 1.4×.
 - `npm run check:text-scale` (`scripts/check-text-scale-coverage.mjs`) fails on raw
   `fontSize` or `lineHeight` numbers in `app/`, `components/`, and `styles/`, and on
-  any `maxFontSizeMultiplier` cap other than the header's. The **PR Unit Tests**
+  any `maxFontSizeMultiplier` cap other than the header's, and on `allowFontScaling`
+  outside the grid cards, which apply the phone's text size themselves. The **PR Unit Tests**
   workflow runs it.
 
 ## Screen readers (VoiceOver and TalkBack)
