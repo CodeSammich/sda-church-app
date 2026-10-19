@@ -20,6 +20,7 @@ does and what still needs a person.
 - [The app website (`app.nyccsda.org`)](#the-app-website-appnyccsdaorg)
 - [The Cloudflare account and domain](#the-cloudflare-account-and-domain)
 - [Yearly checkup](#yearly-checkup)
+- [Google Workspace backups](#google-workspace-backups)
 - [Native app binaries](#native-app-binaries)
 - [Android PR preview APKs](#android-pr-preview-apks)
 - [iOS PR preview builds](#ios-pr-preview-builds)
@@ -60,6 +61,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. Both monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
+| A yearly checkup or Workspace backup issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
 | An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
 The monitors can't read `release-approvers` membership or reliably @mention the
@@ -470,10 +472,107 @@ Monday in January, but only the first opens an issue; the others find it and sto
 Start it by hand from the Actions tab to open one early.
 
 The Apple renewals have their own reminder, 60 days before each date; see
-[Apple signing reminders](#apple-signing-reminders). To add a yearly task, add it to
+[Apple signing reminders](#apple-signing-reminders). The Workspace backup has its own
+issue every three months; see [Google Workspace backups](#google-workspace-backups).
+To add a yearly task, add it to
 `scripts/yearly-checkup.cjs` and to the
 [upkeep calendar](../architecture.md#upkeep-calendar);
 `test/yearly-checkup.test.ts` checks that every link in the checklist still works.
+
+## Google Workspace backups
+
+Every three months, a super administrator exports all of the church's Google Workspace
+data (every account's email, Drive files, calendars, and the rest) and keeps a copy off
+Google. Google's own copies protect the data from failed hardware, but not from losing
+the account itself: suspended by mistake, taken over, or emptied by someone with access.
+This copy survives that.
+
+On the first Monday of January, April, July, and October, **Workspace Backup Reminder**
+(`workspace-backup-reminder.yml`) opens an issue titled **Google Workspace backup,
+*month year***, assigned to the usernames in `MONITOR_ALERT_ASSIGNEES`, with the steps
+below as a checklist. It's due at the end of the next month, so the
+[due-date reminders](#due-date-reminders) follow it up. It runs every Monday in those
+months, but only the first opens an issue. To open one for the current month, for
+example after a missed quarter, run it by hand from the Actions tab; the next scheduled
+one still opens.
+
+**Why every three months:** Google allows a full export at most once every 30 days
+([Choose the Workspace data you want to export](https://knowledge.workspace.google.com/admin/migrate/choose-the-workspace-data-you-want-to-export)).
+Every three months, losing the account would cost about three months of email and files
+(up to five when an export is done near its due date), for four exports a year.
+
+### Starting the export
+
+You need a super administrator account that is at least 30 days old and has 2-Step
+Verification on.
+
+1. In the [Google Admin console](https://admin.google.com), go to **Menu → Data → Data
+   import & export → Data export**.
+2. Click **Set up new export**, name it (the date works), and under **Scope** choose
+   **Export all user data for the entire organization**.
+3. Click **Start export**. It can't be canceled from the console.
+
+The export is ready no sooner than 48 hours later. It usually takes about 72 hours,
+and up to 14 days. Google emails the super administrator who started it when it's done
+([Export all your organization's data](https://knowledge.workspace.google.com/admin/migrate/export-all-your-organizations-data)).
+
+### Downloading it
+
+Google deletes the export 60 days after it started, so download it soon after the email
+arrives. Downloading it is free and needs no billing account
+([why](service-limits-and-costs.md#google-workspace-and-drive)). If a Google Cloud
+screen offers a free trial or asks for billing, close it: the download needs neither.
+
+1. **Check that it finished cleanly.** In the **Data export** table, the export must not
+   show **Errors**. An export with errors is missing some data. For 20 days after it
+   finishes, Google can fetch what's missing into a second archive, which you download
+   the same way
+   ([Troubleshoot a data export](https://knowledge.workspace.google.com/admin/migrate/troubleshoot-a-data-export)).
+2. **Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)**
+   (`gcloud`). On Windows, untick **Run 'gcloud init'** on the installer's last screen;
+   elsewhere, skip the install page's `gcloud init` step. `gcloud init` and
+   `gcloud config set project` give `gcloud` a default project, and it bills downloads
+   to that project, so don't run either, and don't add `--billing-project`.
+   `gcloud config get project` should print `(unset)`.
+3. **Sign in.** In a terminal (on Windows, **Google Cloud SDK Shell** from the Start
+   menu), run `gcloud auth login`, and in the browser it opens, choose the super
+   administrator's `nyccsda.org` account. Google Cloud must be turned on for that
+   account, or the next step can't open the export.
+4. **Find the export.** In the **Data export** table, click the export's name, then
+   **Actions → View Archive**. Note the bucket's name (the part after `gs://`) and the
+   export's folder, named for when it started, such as `20270104T153000Z`.
+   `Status Report.html` sits next to the folder.
+5. **Make a folder for it** on the backup drive, named for the export date, such as
+   `Backups/Church Google Workspace for Nonprofits/Jan 4 2027 export backup`. Use a
+   drive other than the computer's system drive, so the backup outlives it, and not a
+   folder that syncs to a cloud account. The October 2026 export was about 19 GB;
+   leave room for at least three. The export holds every account's email and files,
+   so guard the drive as you would the accounts themselves.
+6. **Download** the export's folder and its status report into it, with the command
+   below on one line. Replace `BUCKET` and `EXPORT_FOLDER`, and replace
+   `BACKUP_FOLDER` with the full path of the folder from step 5, written with forward
+   slashes, such as `D:/Backups/…/Jan 4 2027 export backup` (from WSL,
+   `/mnt/d/Backups/…`).
+
+   ```
+   gcloud storage cp --recursive --no-clobber "gs://BUCKET/EXPORT_FOLDER" "gs://BUCKET/Status Report.html" "BACKUP_FOLDER/"
+   ```
+
+   `gcloud` checks each file against Google's copy as it saves it. If the download
+   stops, run the same command again: `--no-clobber` skips the files already saved.
+
+### Checking the copy
+
+- `gcloud storage du --summarize "gs://BUCKET/EXPORT_FOLDER"` prints the export's size
+  in bytes. The `EXPORT_FOLDER` inside your backup folder (not the backup folder itself,
+  which also holds `Status Report.html`) must be exactly that many bytes. In Windows,
+  that's its **Properties → Size**, not **Size on disk**.
+- No file in the folder ends in `_.gstmp`. Those are downloads that didn't finish; run
+  the download again.
+
+Then comment on the issue with the export's date and size, and close it. Keep the older
+exports while the drive has room. When it runs low, delete the oldest, but keep the
+two newest.
 
 ## Native app binaries
 
@@ -788,7 +887,7 @@ reminder is posted once. Editing the date starts them over, and removing the lin
 closing the issue stops them.
 
 Only issues opened by someone who can triage or manage the repository, or by its own
-workflows such as the yearly checkup, count, so someone else's issue can't make it
+workflows such as the yearly checkup and the Workspace backup reminder, count, so someone else's issue can't make it
 notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.

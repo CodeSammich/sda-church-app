@@ -113,6 +113,9 @@ and may not be possible, so protect them above everything else.
 - Where a service still signs in with an account outside the Workspace, move access
   to a `nyccsda.org` account or the `technology@nyccsda.org` group wherever the
   service allows it.
+- A super administrator regularly exports all of the Workspace's data and keeps a
+  copy off Google, in case the account itself is ever lost; see
+  [Google Workspace backups](operations/admin-runbook.md#google-workspace-backups).
 
 > [!IMPORTANT]
 > **Get Workspace permissions right, with least-privilege access.** Each church
@@ -166,7 +169,9 @@ and may not be possible, so protect them above everything else.
     that opens an issue 60 days before an Apple certificate, profile, or membership
     expires;
   - the [yearly checkup](operations/admin-runbook.md#yearly-checkup) issue, opened
-    on the first Monday of January.
+    on the first Monday of January;
+  - the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups)
+    issue, opened every three months.
 - Releasing to the public stays manual: after testing, an administrator submits
   the iOS build for review in App Store Connect and promotes the Android release in
   Play Console. See
@@ -361,6 +366,10 @@ submitted for review before they appear on the App Store.
 - **Every IT administrator is an Owner** of the project, under **IAM & Admin → IAM**,
   so it doesn't depend on one account. When an administrator joins or leaves, update
   that list too.
+- The [Workspace data export](operations/admin-runbook.md#downloading-it) is also
+  downloaded with a Google Cloud tool, `gcloud`, from a bucket Google owns, with no
+  project or billing account
+  ([why](operations/service-limits-and-costs.md#google-workspace-and-drive)).
 
 | What | Name | Notes |
 | --- | --- | --- |
@@ -485,6 +494,7 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Yearly (in the checkup) | Check the Cloudflare payment method hasn't expired and the domain's paid-through date, and that billing lists only the domain | Domain renewal fails, or a charge appears |
 | Yearly (in the checkup) | Confirm the Google Cloud project for Play uploads (`sda-church-app-play`) still has no billing account | A billing account added by mistake would let Google charge the church |
 | Yearly (in the checkup), and whenever an administrator joins or leaves | Review administrator access and recovery details on every system, including the GitHub alert assignees (`APPLE_SIGNING_ALERT_ASSIGNEES`, `MONITOR_ALERT_ASSIGNEES`) | An account can't be recovered, or reminders go to someone who left |
+| First Monday of January, April, July, and October (GitHub opens the [Google Workspace backup](operations/admin-runbook.md#google-workspace-backups) issue, due at the end of the next month) | Export all of the church's Workspace data and keep a copy off Google | If the account is suspended or taken over, its email and files are gone |
 | After each church officer election, and whenever a pastor or elder starts or leaves | [Update the `Leadership` tab](operations/admin-runbook.md#updating-pastors-and-elders) of the bulletin spreadsheet | The printed bulletin titles the wrong people, or the wrong pastor leads Communion |
 | Weekly (automated; GitHub opens an issue 120 days ahead) | Store toolchain monitor: raise the Android target API level or the Xcode version when Google Play or App Store Connect requires it | The store rejects uploads, so the app can't be updated |
 | Daily (automated) | External dependency monitor | Opens an issue; see the runbook |
