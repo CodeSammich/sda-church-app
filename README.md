@@ -28,7 +28,8 @@ one place. Church admins can start at [Operate](#operate).
 - [Project tenets](docs/project-tenets.md): the seven principles, in priority order,
   behind every design decision
 - [Architecture and external dependencies](docs/architecture.md): diagrams of every
-  service the app and the printed bulletin use, account ownership, and yearly upkeep
+  service the app and the printed bulletin use, account ownership, and the upkeep
+  calendar
 
 ### Set up and contribute
 
@@ -85,7 +86,10 @@ one place. Church admins can start at [Operate](#operate).
 ### Maintenance
 
 - [Upkeep calendar](docs/architecture.md#upkeep-calendar): what to renew or check each
-  year, and what breaks if it's missed
+  quarter or year, and what breaks if it's missed
+- [Google Workspace backups](docs/operations/admin-runbook.md#google-workspace-backups):
+  every three months, export all of the church's email and files and keep a copy off
+  Google
 - [Payment methods](docs/architecture.md#payment-methods): which service has a card
   on file (only Cloudflare, for the domain), and why no other may
 - [Credentials that need attention](docs/operations/admin-runbook.md#credentials-that-need-attention):
