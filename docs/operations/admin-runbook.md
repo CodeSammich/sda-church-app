@@ -22,8 +22,8 @@ does and what still needs a person.
 - [Yearly checkup](#yearly-checkup)
 - [Google Workspace backups](#google-workspace-backups)
 - [Native app binaries](#native-app-binaries)
-- [Android PR preview APKs](#android-pr-preview-apks)
-- [iOS PR preview builds](#ios-pr-preview-builds)
+- [Android preview APKs](#android-preview-apks)
+- [iOS key screens builds](#ios-key-screens-builds)
 - [Dependabot pull requests](#dependabot-pull-requests)
 - [External dependency monitor alerts](#external-dependency-monitor-alerts)
 - [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)
@@ -111,10 +111,11 @@ Review rules for both pull-request rulesets:
 | `sync` | `release-validation.yml` | `main` |
 | `ensure_pr_to_main_from_release_branch` | `main-release-source-gate.yml` | `main` |
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
-| `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
+| `Build Android debug APK (ARM)` | `android-preview-apk.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
-| `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
+| `iOS key screens join`, which joins the `iOS key screens batch <n> (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change. Before #372 it was named `Build iOS Simulator app (Apple Silicon Mac)` | `ios-key-screens.yml` | `main` |
+| `Android key screens join`, which joins the `Android key screens batch <n> (<group>)` jobs and fails if the build or any of them failed | `android-key-screens.yml` | `main` |
+| `Screenshots reviewed` | `ios-key-screens.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
 
@@ -131,14 +132,14 @@ from merging there anyway.
   workflow must first be in `release-candidate`, because that branch is the head of the
   release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
-  job's name includes the matrix values, such as `Key screens (bible-reading)`.
+  job's name includes the matrix values, such as `iOS key screens batch 2 (bible-reading)`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
   otherwise merges block on the old name.
-- **`android-pr-preview.yml` runs from `main`'s copy of the workflow**, because it uses
+- **`android-preview-apk.yml` runs from `main`'s copy of the workflow**, because it uses
   `pull_request_target`. A release PR reports the job name `main` has, so after
   renaming that job, keep the old name required until the release with the rename
   reaches `main`, then swap it. Workflows triggered by `pull_request`, such as
-  `ios-pr-preview.yml`, report the names in `release-candidate` right away.
+  `ios-key-screens.yml`, report the names in `release-candidate` right away.
 
 ## Approving a production deployment
 
@@ -199,7 +200,7 @@ The admin-only steps are:
    title. Write the part after the colon for testers: it becomes the "What's new" text in Google Play
    internal testing. Copy the `Closes #…` lines from the included feature pull requests
    into its description.
-5. **Merge it** once its checks and review pass. **iOS PR preview** takes 15 to 25
+5. **Merge it** once its checks and review pass. **iOS key screens** takes 15 to 25
    minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate` and moves any open feature pull requests
@@ -217,7 +218,7 @@ What runs after the merge to `main`:
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 | Deploy Bulletin Apps Script | Waits for `production` approval | Approve it when nobody is making a bulletin, then check the live bulletin. Reject it to skip this deploy. See [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script). |
 
-Workflows that run from `main`'s copy (Android PR preview, and the upload step of the
+Workflows that run from `main`'s copy (Android preview APK, and the upload step of the
 QR workflow) keep their old behavior until the release that changes them is merged.
 A failure on a release pull request caused by a bug the release itself fixes is
 expected.
@@ -641,7 +642,8 @@ upload by hand are in
 
 The automatic checks don't use a real phone. **Android audio e2e** runs on an emulator
 (host failover, one chapter change with the screen off, recovery after the connection
-drops), and **iOS PR preview** checks the key screens on a simulated iPhone. So before
+drops), and **iOS key screens** checks the key screens on a simulated iPhone and an
+Android emulator. So before
 releasing a build to the public, check it by hand on one iPhone and one Android phone,
 installed from TestFlight and from the Play Store's internal testing link. Copy this
 list into a comment on the release pull request, tick it for each phone, and add the
@@ -715,34 +717,38 @@ store announces a change, check that:
 - Any intentional lag behind the newest versions is written down in
   [native-builds.md](native-builds.md).
 
-## Android PR preview APKs
+## Android preview APKs
 
-**Workflow:** **Android PR preview**, which runs automatically on release pull requests
+**Workflow:** **Android preview APK**, which runs automatically on release pull requests
 into `main` (from `release-candidate` in this repository).
 
 It builds a debug APK, signed only with Gradle's local debug key, never the church's
 release key. After you approve `production`, it uploads the APK
 to Google Drive as `sda-church-app-pr-<number>-<run>-arm-debug.apk`, and the run
 summary links to it. Fork pull requests are skipped. See
-[Android PR preview and Drive upload](native-builds.md#android-pr-preview-and-drive-upload).
+[Android preview APK and Drive upload](native-builds.md#android-preview-apk-and-drive-upload).
 
-## iOS PR preview builds
+## iOS key screens builds
 
-**Workflow:** **iOS PR preview**, which runs automatically on release pull requests
+**Workflow:** **iOS key screens**, which runs automatically on release pull requests
 into `main`, and can be run manually on any branch.
 
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(85 screenshots of 32 screens in all), and checks their text with
-`scripts/check-screens.cjs`. Another job then joins the groups,
-before the review comment and **Screenshots reviewed**. The run takes 15 to 25 minutes, depending on how much of the compile cache it reuses. On a release pull request, a comment
+(87 screenshots of 33 screens in all), and checks their text with
+`scripts/check-screens.cjs`. Another job then joins the groups. The **Android key
+screens** workflow takes and checks the same screens on an Android emulator, on Linux
+runners ([Android key screens](native-builds.md#android-key-screens)). The review
+comment waits for it and links both platforms' screenshots, before
+**Screenshots reviewed**, which covers both. Both take 30 to 40 minutes, most of it the
+Android build. On a release pull request, the comment
 links the screenshots, and the **Screenshots reviewed** check waits until an approver
 has looked at them; see [Approving the screenshots](#approving-the-screenshots).
 The build needs no `production` approval, because it reads no secrets. Download the
 artifact ending in `-arm64` from the run's Artifacts section (kept 14 days) to test the release on an Apple Silicon
 Mac before merging; you don't need an iPhone. See
-[iOS PR preview](native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+[iOS key screens](native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
 ## Dependabot pull requests
 
@@ -834,7 +840,7 @@ releases. On a branch from `release-candidate`:
    `expo-template-bare-minimum@…`, update every pin; `test/native-build-safety.test.ts`
    checks that they match.
 3. Run `npm run doctor` and `npm run check`, build the Android APK on the emulator, and
-   start **iOS PR preview** by hand, since patch releases can change native code.
+   start **iOS key screens** by hand, since patch releases can change native code.
 
 While Expo or React Native is a pre-release, as during the Expo 58 canary, it skips the
 run and passes, because the versions can't match a released SDK.
@@ -935,7 +941,7 @@ so a release can't merge until it passes. Feature pull requests into `release-ca
 don't run it; to test an audio change before the release, run it manually on your
 branch.
 
-It takes about 20 minutes, and runs alongside **iOS PR preview**, which takes 15 to 25
+It takes about 20 minutes, and runs alongside **iOS key screens**, which takes 15 to 25
 minutes.
 
 It builds the debug APK, boots an Android emulator on the runner, and plays real
@@ -1003,7 +1009,7 @@ the policy, no release can merge into `main`**:
 | Workflow | Why it uses `pull_request_target` | Required on `main` |
 | --- | --- | --- |
 | `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
-| `.github/workflows/android-pr-preview.yml` | The Drive upload needs the `production` environment, which a pull request run can reach only in `main`'s context. It builds only this repository's `release-candidate` branch, never fork code. | Yes: `Build Android debug APK (ARM)` |
+| `.github/workflows/android-preview-apk.yml` | The Drive upload needs the `production` environment, which a pull request run can reach only in `main`'s context. It builds only this repository's `release-candidate` branch, never fork code. | Yes: `Build Android debug APK (ARM)` |
 | `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
 
 None of them runs code from a fork with secrets or a write token, which is what makes
@@ -1039,7 +1045,7 @@ GitHub adds its own limits: a `pull_request_target` run can read `main`'s cache 
 not write to it, so it can't poison the cache the signing builds use. The iOS compile
 cache follows the same rule: only `ios-compile-cache.yml`, on `main`, saves it; the iOS
 PR preview only reads it; and the signed builds never use it (see
-[Compile cache](native-builds.md#ios-pr-preview-unsigned-simulator-builds)).
+[Compile cache](native-builds.md#ios-key-screens-unsigned-simulator-builds)).
 Elsewhere:
 
 - `pull_request` workflows for a fork's pull request get no secrets and a read-only

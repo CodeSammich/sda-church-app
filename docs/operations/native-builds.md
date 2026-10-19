@@ -17,7 +17,7 @@ can't reach the `production` Environment and its signing secrets. That guard is 
 the credential boundary and must stay. Every merge into `main` starts **Native Android
 build** and **Native iOS build**, which wait for `production` approval. Pull requests
 get only unsigned builds that read no signing secrets: on the release pull request into
-`main`, **Android PR preview** builds a debug APK for ARM phones and **iOS PR preview**
+`main`, **Android preview APK** builds a debug APK for ARM phones and **iOS key screens**
 builds the app for the iOS Simulator on Apple Silicon Macs. Fork pull requests
 get no native builds. Signed builds upload to TestFlight and Google Play internal testing
 only; nothing is released to the public automatically (see
@@ -43,9 +43,10 @@ on every push to `main`, is kept for browser testing and previews; see
   [Android setup](#android-setup-github-hosted-direct-builds)
 - [External account cleanup](#external-account-cleanup)
 - [Build commands](#build-commands)
-  - [Android PR preview and Drive upload](#android-pr-preview-and-drive-upload)
-  - [iOS PR preview](#ios-pr-preview-unsigned-simulator-builds), including the
-    [key screens](#key-screens)
+  - [Android preview APK and Drive upload](#android-preview-apk-and-drive-upload)
+  - [iOS key screens](#ios-key-screens-unsigned-simulator-builds), including the
+    [key screens](#key-screens) on the iPhone and
+    [on Android](#android-key-screens)
   - [Android audio test on release PRs](#android-audio-test-on-release-prs)
 - [Automatic store uploads](#automatic-store-uploads)
 - [Versions and maintenance](#versions-and-maintenance), including
@@ -237,7 +238,7 @@ GOOGLE_PLAY_SERVICE_ACCOUNT
 The two Google Play values aren't keys: the upload signs in without one. Setting up
 `store-upload` is under [Automatic store uploads](#automatic-store-uploads).
 `production` also holds the other workflows' secrets: `CLASPRC_JSON` (the Apps Script
-deploy, the QR code upload, and the Android PR preview's Drive upload),
+deploy, the QR code upload, and the Android preview APK's Drive upload),
 `APPS_SCRIPT_PROJECT_ID` and `APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy), and the
 optional `GOOGLE_DRIVE_FOLDER_ID` (the Drive upload). A third environment,
 `screenshot-review`, holds no secrets; it only holds the
@@ -247,7 +248,7 @@ To set up `production`, open **Settings → Environments** in the upstream repos
 create or select `production`. Require at least one reviewer, and restrict deployment
 branches to `main` and `release-candidate`, so a manual QR code run from
 `release-candidate` can reach its approval step (the Apps Script deploy skips on any
-branch but `main`). The Android PR preview runs in `main`'s
+branch but `main`). The Android preview APK workflow runs in `main`'s
 context, and the signing jobs themselves run only on `main`. Then:
 
 - **Store binary files base64-encoded.** The keystore, `.p12`, and provisioning profile
@@ -457,7 +458,7 @@ project's default. The `:arm` and `:intel` versions pass `--architectures arm`
 (`armeabi-v7a` and `arm64-v8a`, for phones and other ARM devices) or
 `--architectures intel` (`x86` and `x86_64`, for emulators on Intel and AMD computers)
 to `scripts/build-android-native.mjs`, which builds only those, so the build is faster
-and the APK smaller. **Android PR preview** uses `:arm`; **Android audio e2e** uses
+and the APK smaller. **Android preview APK** uses `:arm`; **Android audio e2e** uses
 `:intel` for its emulator. Without `--output`, the file name ends in `-arm` or
 `-intel`.
 
@@ -510,9 +511,9 @@ On `main`, a manual Android run builds both the AAB and the APK whichever boxes 
 ticked; the AAB box only decides whether the AAB is also uploaded to Google Play
 internal testing. Native failures do not block the website deployment.
 
-### Android PR preview and Drive upload
+### Android preview APK and Drive upload
 
-**Android PR preview** builds with no signing credentials: it makes a debug APK, signed
+**Android preview APK** builds with no signing credentials: it makes a debug APK, signed
 only with Gradle's local debug key, for ARM phones and tablets
 (`npm run build:android:apk:debug:arm`). It runs automatically for release pull requests
 into `main`, from `release-candidate` in this repository, and skips fork PRs. It does
@@ -532,12 +533,12 @@ helper.
 The Drive upload job must remain separate from the build job, and the upload helper must
 be checked out from the trusted base commit rather than the PR head.
 
-### iOS PR preview (unsigned Simulator builds)
+### iOS key screens (unsigned Simulator builds)
 
-The iOS counterpart of the Android PR preview. A Simulator build runs the app on a
-simulated iPhone on a Mac. It needs no Apple
-signing, certificate, developer account, or iPhone, but it can't be installed on a
-real iPhone; use the signed **Native iOS build** and TestFlight for that. Only GitHub
+The iOS counterpart of the Android preview APK and Android key screens. A Simulator
+build runs the app on a simulated iPhone on a Mac. It needs no Apple signing,
+certificate, developer account, or iPhone, but it can't be installed on a real iPhone;
+use the signed **Native iOS build** and TestFlight for that. Only GitHub
 Actions and a local Mac are used; no other build service.
 
 **On a Mac.** Install Xcode 26.6 or later and CocoaPods, then:
@@ -557,12 +558,13 @@ Simulator, and opens it. Xcode builds for the Mac's own processor, so the same c
 works on Intel and Apple Silicon Macs. On Windows or Linux, the command explains that it
 needs a Mac.
 
-**In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
+**In GitHub Actions.** The **iOS key screens** workflow (`ios-key-screens.yml`) builds
 each release PR into `main` without signing, on Apple Silicon runners (`macos-26`,
 arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
-once, **Key screens (`<group>`)**, one per key-screen group:
+once, one per key-screen group, numbered in the groups' order: **iOS key screens batch
+1 (home)** to **batch 5 (worship-and-you)**:
 
-- The `bible-text` runner, which has the lightest group, compiles the app once,
+- The `bible-text` runner (batch 3), which has the lightest group, compiles the app once,
   reusing what it can from the compile cache (below), and shares it with the others as
   an artifact. It boots its own simulated iPhone after the compile when it restored a
   compile cache, and during the compile when there was none.
@@ -572,7 +574,7 @@ once, **Key screens (`<group>`)**, one per key-screen group:
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
   running 45 seconds after launch, and takes its group's key screens.
 
-**Build iOS Simulator app (Apple Silicon Mac)** then joins the groups and uploads the
+**iOS key screens join** then joins the batches, on Linux, and uploads the
 app and a screenshot of its first screen (14-day retention), named like the Android
 preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
 
@@ -718,7 +720,7 @@ it took 25–49 minutes and only served the Simulator on an Intel Mac. On an Int
 build the app yourself with `npm run build:ios:simulator` (**On a Mac**, above), which
 builds for the Mac's own processor. To build it in the workflow again:
 
-1. Add a job to `.github/workflows/ios-pr-preview.yml` modelled on `capture`'s compiling
+1. Add a job to `.github/workflows/ios-key-screens.yml` modelled on `capture`'s compiling
    runner, without its matrix, sharing, or key-screen steps, that runs on
    `macos-26-intel` and builds with `ARCH: x86_64`. It should zip the app and take the
    first screenshot, name them `…-x86_64`, and upload them as an artifact ending in
@@ -731,7 +733,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 32 screens listed in `test/screens/screens.json`, 85
+The five runners screenshot the 33 screens listed in `test/screens/screens.json`, 87
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner takes one group (`--group <name>`) of related
 screens, such as the Bible reader's layout or the library, listed under `groups` in
@@ -749,7 +751,7 @@ limit is a reminder to prune, not a rule:
 2. Spend the time saved on what the key screens miss: screens, popups, and states no
    shot covers yet (#456).
 3. Then rebalance: move some related screens to a lighter group, or split one,
-   and update the `group` list in `ios-pr-preview.yml`, which a test keeps in step with
+   and update the `group` list in `ios-key-screens.yml`, which a test keeps in step with
    `screens.json`. GitHub's free plan runs five Mac jobs at once, so keep to five
    groups.
 4. If a group is still over after that, raise the limit in `test/screens.test.ts`
@@ -768,10 +770,11 @@ limit is a reminder to prune, not a rule:
    a saved screen. A test checks that no other workflow sets it.
 
    Nothing can tap a popup or dialog open either, so a screen's path can ask for one
-   with `popup=`, such as `you?popup=text-size` or the Bible's `popup=verse`, which
-   opens the popup for `verseStart` once the chapter loads (#372). Only this build
-   reads it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens just
-   the screen.
+   with `popup=`, such as `you?popup=text-size`, the Bible's `popup=verse`, which
+   opens the popup for `verseStart` once the chapter loads, or its
+   `popup=audio-settings`, once the chapter has audio (#372). Only the key-screen
+   builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens
+   just the screen.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
    wait (9 for the Bible, which measured settles within 6), so a group's 14 to 22 shots
@@ -801,7 +804,8 @@ every screen must show:
 
 - the tab labels, in the shot's language, in the tab bar;
 - on Bible screens, the verse button's whole label in the chapter controls, so a
-  cut-off "V" fails;
+  cut-off "V" fails. Its short label, "Vs." ("Vers." in Spanish), which the app shows
+  when the controls are tight, as on Android's largest font, passes too;
 - a screen's `mustShowLines`, regular expressions some line must start with, so a verse
   number split across two lines fails, and its `mustNotShowLines`, which no line may
   match. A `mustShowLines` rule can also be `{ "line": …, "minLeft": 0.5 }`, for a
@@ -834,9 +838,11 @@ pass or fail them, and a test makes sure of it.
 
 **Human review.** Other layout problems, such as a cut-off label, need a person. On the
 release pull request into `main`, the iOS preview posts a notice when the pull request
-opens or gets a push (the run takes 15 to 25 minutes) and removes the comment with the
-earlier, now out-of-date screenshots. When the run finishes, it replaces the notice with a
-comment linking that commit's screenshots. Its last job, **Screenshots reviewed**, waits
+opens or gets a push (the screenshots take 30 to 40 minutes, most of it the
+[Android key screens](#android-key-screens)' build) and removes the comment with the
+earlier, now out-of-date screenshots. When the iPhone run and the Android run for that
+commit have both finished, it replaces the notice with a comment linking both
+platforms' screenshots, so one review covers both. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.
 Each push needs a new approval, and the job fails if the environment doesn't require
 one. [Approving the screenshots](admin-runbook.md#approving-the-screenshots) has the
@@ -857,6 +863,123 @@ setting also needs its storage key in the script's `SETTING_KEYS`, and the test 
 the app still reads that key. A screen whose content changes every day, such as Home
 with its verse of the day and countdown, is marked `changesDaily`, for when these images
 are compared with known-good copies.
+
+#### Android key screens
+
+The **Android key screens** workflow (`android-key-screens.yml`) takes the same key
+screens on an Android emulator, from the same list and groups (#372). Every job in it
+runs on standard Linux runners, so the few Mac runners stay for the iPhone. Like the iOS
+preview, it runs on each release pull request into `main`, where its job **Android key
+screens join** is a required check, and by hand on any branch. It isn't part of the Android
+PR preview, which runs in `main`'s context for its Drive upload: this workflow runs pull
+request code only with a read-only token and reads no secret.
+
+- **Build the Android key-screens app** builds the debug-signed preview APK, from the
+  same source and settings as the APK the Android preview publishes, but for the
+  emulator's x86_64 processor (`npm run build:android:apk:debug:intel`) and with
+  `EXPO_PUBLIC_KEY_SCREENS=1`, so it reads the saved screen and `popup=`. The published
+  APK and the store builds don't.
+- **Android key screens batch 1 (home)** to **batch 5 (worship-and-you)**, one per group, each boots an emulator the size of
+  the phone below while the app builds, on Android 16 (API 36). It then installs the
+  app and runs `scripts/capture-android-screens.cjs --group <group>`, which saves
+  `screens/android/<screen>-<variant>.png`, and then checks their text
+  (`check-screens.cjs --platform android`).
+- **Android key screens batch 6 (google-play)** takes only the Google Play
+  shots, on an emulator of Play's size (below).
+- **Android key screens join** joins the batches into one artifact,
+  `android-key-screens-<pr>-<run>`, with the Google Play copies, and fails if any group
+  failed.
+
+One review still covers both platforms. The iOS preview's review comment waits for this
+workflow's run on the same commit, then links both downloads and says whether both
+passed, and its **Screenshots reviewed** approval covers both. To recheck an earlier
+run's Android screenshots with new rules, start this workflow by hand with
+**screens_from_run**, as for the iPhone.
+
+**The phone.** The emulator is the size of the best-selling Android phone where most
+Adventists live, set under `android.phone` in `screens.json`. Of the church's 24.4
+million members at the end of 2025, about 6.0 million were in East-Central Africa, 3.7
+million in Inter-America, 2.7 million in South America, and 1.2 million in Southern Asia
+([Adventist Atlas](https://adventistatlas.org/)). The best-selling Android phone of Q1
+2026 was the Samsung Galaxy A07 4G, with strong demand in the Middle East, Africa, and
+Latin America
+([Counterpoint](https://counterpointresearch.com/en/insights/iphone-17-global-best-selling-smartphone-in-q1-2026-top-10-take-25-percent-share)),
+and Samsung ships about a fifth of Africa's phones, led by the A07 and A17, behind
+Transsion's Tecno, Infinix, and itel
+([Omdia](https://omdia.tech.informa.com/pr/2026/aug/africa-smartphone-market-expected-to-decline-26percent-in-2026-following-first-contraction-in-three-years)).
+Its screen is 6.7 inches, 720 × 1600
+([GSMArena](https://m.gsmarena.com/samsung_galaxy_a07-14066.php)), which Samsung shows
+at about 384 × 853 dp (300 dpi), the most common Android width
+([DeviceAtlas](https://deviceatlas.com/blog/viewport-resolution-diagonal-screen-size-and-dpi-most-popular-smartphones)).
+The US's best-selling Androids, the Galaxy A16 and A17
+([Counterpoint](https://counterpointresearch.com/en/insights/top-5-smartphone-model-share-8-countries)),
+are 384 dp wide too, so the same emulator stands in for this church's own members.
+That's narrower than a Pixel's 411 dp, so text has less room. Recheck the sales figures
+when choosing a new phone; the shots follow `android.phone`, and a test checks its
+numbers.
+
+**Google Play's size.** Google Play takes no phone screenshot taller than 2:1, and the
+phone's is 2.22:1. So the Play shots listed under `googlePlay` are taken on a second
+emulator, 1080 × 1920 at 420 dpi (`android.googlePlay`), by
+`capture-android-screens.cjs --store`.
+
+**Settings before each shot.** Android keeps the app's storage in a SQLite database,
+`databases/RKStorage` in the app's private folder, not in a file the runner can write.
+So the capture writes a fresh database with the shot's settings and screen to open, and
+copies it in as root, owned by the app and with its folder's SELinux label. That needs
+an emulator image that allows `adb root`: `google_apis`, not `google_apis_playstore`.
+Nothing in the app changes, so a store build has no way in. The theme, font size
+(`font_scale`), and display size (`wm density`) are set on the emulator; the status bar
+is fixed with System UI's demo mode (9:41, full battery and Wi-Fi, no notifications),
+entered again after each font or display size change, which drops it;
+and navigation is by gestures, as on current Pixels.
+
+**Variants.** A variant that changes one platform's own settings is taken only there:
+`iosTextSize` on the iPhone, and `fontScale` and `displayScale` on Android.
+`android-font-max` is Android's largest font (200%); `xl-android-font-max` and
+`es-xl-android-font-max` add the app's 200%, where the tab labels once wrapped (#380),
+with the same rules as their iPhone counterparts; and `android-display-large` is
+Android's largest display size on this screen, 125% (a larger one would leave the
+screen under the 320 dp Android keeps it to). A screen with `"platforms": ["ios"]` or
+`["android"]` is taken only there.
+
+**Checks.** The same as the iPhone's: the app is running, it opened the saved screen
+(read back from its database), no screenshot is blank or still shows the splash,
+`statusBarClear` screens show nothing in the status bar's empty middle, and the text
+checks, with the tab bar and chapter controls where the phone's screen puts
+them (`REGIONS_BY_PLATFORM`). On Android they also fail on the system's "isn't
+responding" and "keeps stopping" dialogs.
+
+The text is read from the image, as on the iPhone, so a word cut short or a verse number
+split across lines fails the same way on both. Apple's Vision runs only on a Mac, so
+Android uses [RapidOCR](https://github.com/RapidAI/RapidOCR), whose PaddleOCR models
+read Chinese, English, and Spanish together (`scripts/ocr-screens.py`, at the version
+`scripts/ocr-requirements.txt` pins; it checks each model it downloads against a pinned
+SHA-256). Tesseract was tried and missed small Chinese tab labels, "Tú", and white text
+on buttons. `uiautomator dump`, which reads the text exactly, can't run on Home: its
+countdown keeps the screen from ever going idle, which the dump waits for. It also sees
+a label's whole text even when the screen cuts it short. RapidOCR reads the 文A icon as
+文A where Vision reads XA, so those rules accept either.
+
+The phone's screen holds less than the iPhone's, so a few lines fall below the fold
+there, such as the Sabbath School age groups. A rule written
+`{ "line": …, "platforms": ["ios"] }` applies on those platforms only.
+
+**Google Play screenshots.** The shots listed under `googlePlay` (`en-US` and `zh-TW`,
+at most 8 each) are saved, numbered in upload order, to
+`screens/google-play/<language>/`, at 1080 × 1920 and without transparency. Their
+emulator's screen is that size, so a copy is the shot itself; a shot of another size
+fails rather than being stretched.
+
+**On your own emulator.** With a `google_apis` image (Android Studio's "Google APIs",
+not "Google Play") and the phone's screen size and density (the capture refuses any
+other size), build with `EXPO_PUBLIC_KEY_SCREENS=1 npm run
+build:android:apk:debug:intel`, install it, and run `node
+scripts/capture-android-screens.cjs --out <folder> [--group <group>]`, or `--store` on a
+1080 × 1920 emulator for the Google Play shots. `ADB` names the
+adb to use, such as `adb.exe` from WSL. On a reused `android/` folder, delete
+`android/app/build/generated/assets/react/release` first: Gradle doesn't notice a
+changed `EXPO_PUBLIC_*` value and keeps the old JavaScript.
 
 ### Android audio test on release PRs
 
@@ -908,8 +1031,8 @@ testers need it.
 Why a separate environment instead of `production`:
 
 - **`production` is shared.** The signed builds, the Apps Script deploy, the QR code
-  upload, and the Android PR preview's Drive upload all use it, and the preview runs
-  for pull requests. Any job that names an environment can read every secret in it.
+  upload, and the Android preview APK's Drive upload all use it, and that workflow
+  runs for pull requests. Any job that names an environment can read every secret in it.
   In `store-upload`, only the two upload jobs can reach the store credentials.
 - **One approval instead of two.** `production` requires a reviewer for every job.
   The upload jobs start after the builds finish, so in `production` each release would

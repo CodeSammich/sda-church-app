@@ -29,7 +29,7 @@ if (deviceIndex !== -1 && !device) {
 if (process.platform !== 'darwin') {
   console.error(
     'The iOS Simulator only runs on macOS with Xcode. On Windows or Linux, use the ' +
-      'iOS PR preview workflow in GitHub Actions; see docs/operations/native-builds.md.',
+      'iOS key screens workflow in GitHub Actions; see docs/operations/native-builds.md.',
   );
   process.exit(1);
 }

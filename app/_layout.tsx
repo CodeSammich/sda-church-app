@@ -908,7 +908,7 @@ function RootLayoutNav({
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
 
   // Opens the screen the key-screen capture saved before launching the app
-  // (#331). Only the iOS PR preview's Simulator build does this; see
+  // (#331). Only the iOS key screens workflow's Simulator build does this; see
   // isKeyScreensBuild.
   useEffect(() => {
     if (Platform.OS === 'web' || !isKeyScreensBuild()) return;

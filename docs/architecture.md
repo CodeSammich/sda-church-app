@@ -144,11 +144,11 @@ and may not be possible, so protect them above everything else.
     issue;
   - extra checks on each release pull request into `main`: that it comes from
     `release-candidate`, a bulletin API integration test, an
-    [Android preview APK](operations/admin-runbook.md#android-pr-preview-apks)
+    [Android preview APK](operations/admin-runbook.md#android-preview-apks)
     uploaded to Google Drive,
-    [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-pr-preview-builds)
-    with screenshots of the key screens that an approver reviews (**Screenshots
-    reviewed**), and a
+    [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-key-screens-builds)
+    with screenshots of the key screens, on the iPhone and an Android emulator, that an
+    approver reviews (**Screenshots reviewed**), and a
     [Bible audio test](operations/admin-runbook.md#bible-audio-emulator-test) on an
     Android emulator;
   - native iOS and Android builds after each merge to `main`, uploaded automatically

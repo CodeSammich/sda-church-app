@@ -69,8 +69,8 @@ Write the description however suits the change, but every feature and release PR
 - Say what was tested, with the command and result. Only claim an Android or iOS build
   that was actually run.
 - If the change affects what a screen shows or how it's laid out, update the key screens
-  in `test/screens/screens.json`, for every platform that captures them: the iPhone today,
-  and Android once #372 adds its screenshots. Add the screen or variant that shows the
+  in `test/screens/screens.json`, which both the iPhone and Android capture, so check that
+  the change holds on both. Add the screen or variant that shows the
   change, and text checks (`mustShowLines`, `mustNotShowLines`, `variantRules`) that fail
   if it breaks. Give a new screen the `group` for its part of the app. Each shot
   lengthens its group's runner, and the release PR waits for the slowest group, so
@@ -129,7 +129,7 @@ clear whether the release is a patch, minor, or major. The click-by-click steps 
    included feature PRs into its description. This is the code maintainer's
    responsibility, not the fork contributor's. Do not rely on a reviewer to repair the
    merge commit message at the last moment.
-4. The release PR runs the slow checks below (**iOS PR preview** takes 15 to 25
+4. The release PR runs the slow checks below (**iOS key screens** takes 15 to 25
    minutes, and **Android audio e2e** about 20), and **Screenshots reviewed** waits for a `release-approvers`
    member to approve the screenshots. Merge it once every check and the review pass.
    Merging it into `main` closes the issues and deletes `release-candidate`, and
@@ -220,36 +220,51 @@ GitHub's code scanning default setup and have no workflow file.
 - Runs `npm run test:integration:bulletin` against the production bulletin API. It calls
   the deployed Apps Script, not the PR's code.
 
-### `Android PR preview` (`.github/workflows/android-pr-preview.yml`)
+### `Android preview APK` (`.github/workflows/android-preview-apk.yml`)
 
 - Check: `Build Android debug APK (ARM)`. Runs on the release PR into `main`.
 - Builds a debug-signed APK. After a `release-approvers` member approves `production`,
   it uploads the APK to Google Drive. See
-  [Android PR preview APKs](operations/admin-runbook.md#android-pr-preview-apks).
+  [Android preview APKs](operations/admin-runbook.md#android-preview-apks).
 
-### `iOS PR preview` (`.github/workflows/ios-pr-preview.yml`)
+### `iOS key screens` (`.github/workflows/ios-key-screens.yml`)
 
-- Checks: `Build iOS Simulator app (Apple Silicon Mac)` and `Screenshots reviewed`. Runs on
+- Checks: `iOS key screens join` and `Screenshots reviewed`. Runs on
   the release PR into `main`, and by hand on any branch.
 - Builds the app for the iOS Simulator once, without signing, and shares it with one
-  runner per key-screen group (`Key screens (<group>)`). Each launches it, screenshots
-  its group of the key screens in `test/screens/screens.json`, and checks their text;
-  `Build iOS Simulator app (Apple Silicon Mac)` joins the groups and fails if any failed.
+  runner per key-screen group, numbered (`iOS key screens batch <n> (<group>)`). Each launches it, screenshots
+  its group of the key screens in `test/screens/screens.json`, and checks their text.
+- `iOS key screens join` joins the batches and fails if any failed. It only copies
+  files, so it runs on Linux.
+- Its review comment links both platforms' screenshots, once `Android key screens`
+  (below) has finished for the same commit.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
-  screenshots in the `screenshot-review` environment; see
+  iPhone and Android screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
 - The compiling runner reuses the compiled native code that `iOS compile cache` saved on
   `main`, read-only.
+
+### `Android key screens` (`.github/workflows/android-key-screens.yml`)
+
+- Check: `Android key screens join`. Runs on the release PR into `main`, and by hand on any
+  branch. Every job runs on Linux.
+- Builds the Android preview APK for an emulator, with the key-screen route, and shares
+  it with one emulator runner per key-screen group, numbered
+  (`Android key screens batch <n> (<group>)`), and a sixth for the Google Play shots.
+  Each takes its group of the key screens and checks their text with RapidOCR.
+- `Android key screens join` joins the batches, with the Google Play copies, and fails
+  if any failed. The iOS preview's review comment links its screenshots. See
+  [Android key screens](operations/native-builds.md#android-key-screens).
 
 ### `iOS compile cache` (`.github/workflows/ios-compile-cache.yml`)
 
 - No check. Runs on every push to `main` in this repository, twice a week, and by hand on
   `main`.
 - On a push, builds the iOS Simulator app with ccache and saves the compiled C, C++, and
-  Objective-C, which **iOS PR preview** reuses. Twice a week it only restores the cache,
+  Objective-C, which **iOS key screens** reuses. Twice a week it only restores the cache,
   because GitHub deletes a cache unused for 7 days. Only this workflow saves the cache,
   and the signed store builds never use it; see
-  [Compile cache](operations/native-builds.md#ios-pr-preview-unsigned-simulator-builds).
+  [Compile cache](operations/native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
 ### `Android audio e2e` (`.github/workflows/android-audio-e2e.yml`)
 
