@@ -163,11 +163,11 @@
     {
       "name": "bible-audio-settings",
       "group": "bible-reading",
-      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages. The audio button behind it shows 國語, so the rules require lines only the popup shows.",
+      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=audio-settings",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh"],
-      "mustShowLines": ["^有聲書設定$", "^朗讀語言$", "粵語"],
+      "mustShowLines": ["^有聲書設定$", "^朗讀語言$", "^WordProject$"],
       "mustNotShowLines": ["^關閉$"]
     },
     {
