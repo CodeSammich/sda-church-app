@@ -113,8 +113,8 @@ Review rules for both pull-request rulesets:
 | `CodeQL`, `Analyze (actions)`, `Analyze (javascript-typescript)` | GitHub code scanning default setup (no workflow file) | `main` |
 | `Build Android debug APK (ARM)` | `android-pr-preview.yml` | `main` |
 | `Bible audio on an Android emulator` | `android-audio-e2e.yml` | `main` |
-| `Build iOS Simulator app (Apple Silicon Mac)`, which joins the `Key screens (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change | `ios-pr-preview.yml` | `main` |
-| `Android key screens`, which joins the `Android key screens (<group>)` jobs and fails if the build or any of them failed | `android-key-screens.yml` | `main` |
+| `iOS key screens join`, which joins the `iOS key screens batch <n> (<group>)` jobs and fails if any of them failed, so they need no entries of their own and a new group needs no ruleset change. Before #372 it was named `Build iOS Simulator app (Apple Silicon Mac)` | `ios-pr-preview.yml` | `main` |
+| `Android key screens join`, which joins the `Android key screens batch <n> (<group>)` jobs and fails if the build or any of them failed | `android-key-screens.yml` | `main` |
 | `Screenshots reviewed` | `ios-pr-preview.yml`: waits until someone in **release-approvers** approves the screenshots in the `screenshot-review` environment; see [Approving the screenshots](#approving-the-screenshots) | `main` |
 
 A skipped check counts as passed; for example, `sync` usually shows as skipped.
@@ -132,7 +132,7 @@ from merging there anyway.
   workflow must first be in `release-candidate`, because that branch is the head of the
   release PR.
 - **A check's name is its job's `name`,** or the job ID when there is no name. A matrix
-  job's name includes the matrix values, such as `Key screens (bible-reading)`.
+  job's name includes the matrix values, such as `iOS key screens batch 2 (bible-reading)`.
 - **Renaming or removing a job needs a matching ruleset change** in the same release;
   otherwise merges block on the old name.
 - **`android-pr-preview.yml` runs from `main`'s copy of the workflow**, because it uses

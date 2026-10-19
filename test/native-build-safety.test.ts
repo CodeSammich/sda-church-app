@@ -499,10 +499,11 @@ describe('iOS PR preview', () => {
   });
 
   it('keeps the job name the Main protection ruleset requires', () => {
-    // Required check: "Build iOS Simulator app (Apple Silicon Mac)", the job
-    // that joins the parts. Renaming it without updating the ruleset blocks
-    // every release PR.
-    expect(workflow).toContain('\n    name: Build iOS Simulator app (Apple Silicon Mac)\n');
+    // Required check: "iOS key screens join", the job that joins the batches,
+    // and "Android key screens join" in android-key-screens.yml. Renaming
+    // either without updating the ruleset blocks every release PR.
+    expect(workflow).toContain('\n    name: iOS key screens join\n');
+    expect(readRepoFile('.github/workflows/android-key-screens.yml')).toContain('\n    name: Android key screens join\n');
   });
 
   it('uses the same Xcode as the signed iOS build', () => {

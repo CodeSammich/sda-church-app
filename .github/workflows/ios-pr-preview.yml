@@ -44,7 +44,7 @@ jobs:
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
-    name: Key screens (${{ matrix.group }})
+    name: iOS key screens batch ${{ matrix.batch }} (${{ matrix.group }})
     # Apple Silicon only. The Intel Mac build was dropped in 1.2.1;
     # docs/operations/native-builds.md ("On an Intel Mac") says how to build one.
     runs-on: macos-26
@@ -70,9 +70,13 @@ jobs:
         # shared with the others, which boot their iPhones meanwhile; five
         # separate compiles made the run wait for the slowest of five. A test
         # checks that exactly one group builds and that the others wait for it.
+        # Each group's batch number, 1 to 5 in list order, names its job.
         include:
-          - group: bible-text
-            builds: true
+          - { group: home, batch: 1 }
+          - { group: bible-reading, batch: 2 }
+          - { group: bible-text, batch: 3, builds: true }
+          - { group: library, batch: 4 }
+          - { group: worship-and-you, batch: 5 }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -251,7 +255,7 @@ jobs:
           until { gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' || true; } |
             grep -qx "ios-simulator-app-$RUN_ID"; do
             builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "Key screens (bible-text)") | .conclusion // ""' || true)"
+              --jq '.jobs[] | select(.name == "iOS key screens batch 3 (bible-text)") | .conclusion // ""' || true)"
             if [ -n "$builder" ]; then
               echo "::error::The bible-text runner ended ($builder) without sharing the app." >&2
               exit 1
@@ -350,16 +354,17 @@ jobs:
     # Joins the groups into the one artifact the review comment links: the
     # app and its first screen from the runner that compiled it, and every
     # group's screenshots and checks. It only copies files, so it runs on
-    # Linux; the name is from when this job built the app. It fails if any
-    # group failed, so a failed group can't pass as skipped. The "Main
-    # protection" ruleset requires this job's name.
+    # Linux. It fails if any group failed, so a failed group can't pass as
+    # skipped. The "Main protection" ruleset requires this job's name. Before
+    # #372 it was "Build iOS Simulator app (Apple Silicon Mac)", from when one
+    # job built the app and took every shot.
     needs: capture
     if: >-
       !cancelled() && (
       (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository))
-    name: Build iOS Simulator app (Apple Silicon Mac)
+    name: iOS key screens join
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

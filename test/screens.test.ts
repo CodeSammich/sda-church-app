@@ -221,7 +221,7 @@ describe('iOS PR preview', () => {
   });
 
   it('compiles the app once, on the lightest group\'s runner, and the others wait for it', () => {
-    const builder = /include:\n\s+- group: ([a-z-]+)\n\s+builds: true\n/.exec(workflow)![1];
+    const builder = /- \{ group: ([a-z-]+), batch: \d+, builds: true \}\n/.exec(workflow)![1];
     expect(workflow.match(/builds: true/g)).toHaveLength(1);
     // The builder also takes its own shots after compiling, so it gets the
     // lightest group.
@@ -245,7 +245,8 @@ describe('iOS PR preview', () => {
       expect({ step, guard: guard(step) }).toEqual({ step, guard: '${{ !matrix.builds }}' });
     }
     // The others stop waiting as soon as the builder's job ends without the app.
-    expect(workflow).toContain(`select(.name == "Key screens (${builder})")`);
+    const batch = Object.keys(config.groups).indexOf(builder) + 1;
+    expect(workflow).toContain(`select(.name == "iOS key screens batch ${batch} (${builder})")`);
     expect(workflow.match(/ios-simulator-app-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
   });
 
@@ -272,7 +273,7 @@ describe('iOS PR preview', () => {
 
   it('joins the groups in the required job, which fails rather than skips when a group fails', () => {
     const merge = workflow.slice(workflow.indexOf('\n  simulator:\n'), workflow.indexOf('\n  announce:\n'));
-    expect(merge).toContain('name: Build iOS Simulator app (Apple Silicon Mac)');
+    expect(merge).toContain('name: iOS key screens join');
     expect(merge).toContain('needs: capture');
     // A skipped required check counts as passed, so this job must still run
     // after a failed part, and then fail.
@@ -828,13 +829,24 @@ describe('Android key screens workflow (#372)', () => {
     expect(capture).toContain('select(.name == "Build the Android key-screens app")');
   });
 
+  it("numbers each platform's batches 1 to 5 in the groups' order, and names jobs by them", () => {
+    const ios = repoFile('.github/workflows/ios-pr-preview.yml');
+    for (const text of [ios, workflow]) {
+      Object.keys(config.groups).forEach((group, index) => {
+        expect(text).toMatch(new RegExp(`- \\{ group: ${group}, batch: ${index + 1}[,} ]`));
+      });
+    }
+    expect(ios).toContain('name: iOS key screens batch ${{ matrix.batch }} (${{ matrix.group }})');
+    expect(workflow).toContain('name: Android key screens batch ${{ matrix.batch }} (${{ matrix.group }})');
+  });
+
   it('captures and checks each group on its own emulator runner, from the list in screens.json', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(capture)![1].split(', ');
     expect(groups).toEqual(Object.keys(config.groups));
     expect(capture).toContain("PART: ${{ matrix.store && '--store' || format('--group {0}', matrix.group) }}");
     expect(capture).toMatch(/capture-android-screens\.cjs --out [^\n]+ \$PART\n/);
     // The sixth runner takes the Google Play shots, and has no group to check.
-    expect(capture).toMatch(/include:\n\s+- group: google-play\n\s+store: true\n/);
+    expect(capture).toContain('- { group: google-play, batch: 6, store: true }');
     expect(capture.match(/if: \$\{\{ !cancelled\(\) && !matrix\.store \}\}/g)).toHaveLength(2);
     expect(capture).toContain("process.env.STORE === 'true' ? googlePlay : phone");
     expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--platform android --group \$\{\{ matrix\.group \}\}\n/);
@@ -846,7 +858,7 @@ describe('Android key screens workflow (#372)', () => {
 
   it('joins the groups in a required job that fails rather than skips when one fails', () => {
     // The "Main protection" ruleset requires this name.
-    expect(join).toContain('\n    name: Android key screens\n');
+    expect(join).toContain('\n    name: Android key screens join\n');
     expect(join).toContain('needs: [android-build, android-capture]');
     expect(join).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
     expect(join).toContain("needs.android-capture.result != 'success'");

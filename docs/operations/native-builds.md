@@ -561,9 +561,10 @@ needs a Mac.
 **In GitHub Actions.** The **iOS PR preview** workflow (`ios-pr-preview.yml`) builds
 each release PR into `main` without signing, on Apple Silicon runners (`macos-26`,
 arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
-once, **Key screens (`<group>`)**, one per key-screen group:
+once, one per key-screen group, numbered in the groups' order: **iOS key screens batch
+1 (home)** to **batch 5 (worship-and-you)**:
 
-- The `bible-text` runner, which has the lightest group, compiles the app once,
+- The `bible-text` runner (batch 3), which has the lightest group, compiles the app once,
   reusing what it can from the compile cache (below), and shares it with the others as
   an artifact. It boots its own simulated iPhone after the compile when it restored a
   compile cache, and during the compile when there was none.
@@ -573,7 +574,7 @@ once, **Key screens (`<group>`)**, one per key-screen group:
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
   running 45 seconds after launch, and takes its group's key screens.
 
-**Build iOS Simulator app (Apple Silicon Mac)** then joins the groups and uploads the
+**iOS key screens join** then joins the batches, on Linux, and uploads the
 app and a screenshot of its first screen (14-day retention), named like the Android
 preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`:
 
@@ -869,7 +870,7 @@ The **Android key screens** workflow (`android-key-screens.yml`) takes the same 
 screens on an Android emulator, from the same list and groups (#372). Every job in it
 runs on standard Linux runners, so the few Mac runners stay for the iPhone. Like the iOS
 preview, it runs on each release pull request into `main`, where its job **Android key
-screens** is a required check, and by hand on any branch. It isn't part of the Android
+screens join** is a required check, and by hand on any branch. It isn't part of the Android
 PR preview, which runs in `main`'s context for its Drive upload: this workflow runs pull
 request code only with a read-only token and reads no secret.
 
@@ -878,14 +879,14 @@ request code only with a read-only token and reads no secret.
   emulator's x86_64 processor (`npm run build:android:apk:debug:intel`) and with
   `EXPO_PUBLIC_KEY_SCREENS=1`, so it reads the saved screen and `popup=`. The published
   APK and the store builds don't.
-- **Android key screens (`<group>`)**, one per group, boots an emulator the size of
+- **Android key screens batch 1 (home)** to **batch 5 (worship-and-you)**, one per group, each boots an emulator the size of
   the phone below while the app builds, on Android 16 (API 36). It then installs the
   app and runs `scripts/capture-android-screens.cjs --group <group>`, which saves
   `screens/android/<screen>-<variant>.png`, and then checks their text
   (`check-screens.cjs --platform android`).
-- **Android key screens (google-play)**, a sixth runner, takes only the Google Play
+- **Android key screens batch 6 (google-play)** takes only the Google Play
   shots, on an emulator of Play's size (below).
-- **Android key screens** joins the groups into one artifact,
+- **Android key screens join** joins the batches into one artifact,
   `android-key-screens-<pr>-<run>`, with the Google Play copies, and fails if any group
   failed.
 

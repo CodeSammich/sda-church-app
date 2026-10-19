@@ -229,14 +229,13 @@ GitHub's code scanning default setup and have no workflow file.
 
 ### `iOS PR preview` (`.github/workflows/ios-pr-preview.yml`)
 
-- Checks: `Build iOS Simulator app (Apple Silicon Mac)` and `Screenshots reviewed`. Runs on
+- Checks: `iOS key screens join` and `Screenshots reviewed`. Runs on
   the release PR into `main`, and by hand on any branch.
 - Builds the app for the iOS Simulator once, without signing, and shares it with one
-  runner per key-screen group (`Key screens (<group>)`). Each launches it, screenshots
+  runner per key-screen group, numbered (`iOS key screens batch <n> (<group>)`). Each launches it, screenshots
   its group of the key screens in `test/screens/screens.json`, and checks their text.
-- `Build iOS Simulator app (Apple Silicon Mac)` joins the groups and fails if any
-  failed. It only copies files, so it runs on Linux; the name is from when it built the
-  app.
+- `iOS key screens join` joins the batches and fails if any failed. It only copies
+  files, so it runs on Linux.
 - Its review comment links both platforms' screenshots, once `Android key screens`
   (below) has finished for the same commit.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
@@ -247,13 +246,14 @@ GitHub's code scanning default setup and have no workflow file.
 
 ### `Android key screens` (`.github/workflows/android-key-screens.yml`)
 
-- Check: `Android key screens`. Runs on the release PR into `main`, and by hand on any
+- Check: `Android key screens join`. Runs on the release PR into `main`, and by hand on any
   branch. Every job runs on Linux.
 - Builds the Android preview APK for an emulator, with the key-screen route, and shares
-  it with one emulator runner per key-screen group (`Android key screens (<group>)`).
+  it with one emulator runner per key-screen group, numbered
+  (`Android key screens batch <n> (<group>)`), and a sixth for the Google Play shots.
   Each takes its group of the key screens and checks their text with RapidOCR.
-- `Android key screens` joins the groups, with the Google Play copies, and fails if any
-  failed. The iOS preview's review comment links its screenshots. See
+- `Android key screens join` joins the batches, with the Google Play copies, and fails
+  if any failed. The iOS preview's review comment links its screenshots. See
   [Android key screens](operations/native-builds.md#android-key-screens).
 
 ### `iOS compile cache` (`.github/workflows/ios-compile-cache.yml`)
