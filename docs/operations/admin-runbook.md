@@ -735,7 +735,7 @@ into `main`, and can be run manually on any branch.
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(86 screenshots of 33 screens in all), and checks their text with
+(87 screenshots of 33 screens in all), and checks their text with
 `scripts/check-screens.cjs`. Five Linux runners take and check the same screens on an
 Android emulator, from a preview APK built for it
 ([Android key screens](native-builds.md#android-key-screens)). Another job then joins

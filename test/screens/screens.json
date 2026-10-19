@@ -314,11 +314,12 @@
     {
       "name": "discover",
       "group": "home",
-      "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\".",
+      "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\". xl-android-font-max is the same case on Android, at its largest font.",
       "path": "home/discover",
-      "variants": ["default", "zh", "xl-ios-large-text"],
+      "variants": ["default", "zh", "xl-ios-large-text", "xl-android-font-max"],
       "variantRules": {
-        "xl-ios-large-text": { "mustShowLines": ["\\bDenomination$"] }
+        "xl-ios-large-text": { "mustShowLines": ["\\bDenomination$"] },
+        "xl-android-font-max": { "mustShowLines": ["\\bDenomination$"] }
       }
     },
     {

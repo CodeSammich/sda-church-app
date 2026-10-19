@@ -732,7 +732,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 33 screens listed in `test/screens/screens.json`, 86
+The five runners screenshot the 33 screens listed in `test/screens/screens.json`, 87
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner takes one group (`--group <name>`) of related
 screens, such as the Bible reader's layout or the library, listed under `groups` in

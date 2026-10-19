@@ -109,9 +109,9 @@ down rather than because of your change.
 
 ### Key screens on iPhone and Android
 
-The **iOS PR preview** workflow, on the release pull request into `main`, takes 86
+The **iOS PR preview** workflow, on the release pull request into `main`, takes 87
 screenshots of the 33 screens listed in `test/screens/screens.json` on a simulated
-iPhone, and 86 on an Android emulator, in light and dark, at larger text sizes, and in
+iPhone, and 87 on an Android emulator, in light and dark, at larger text sizes, and in
 Chinese and Spanish. `scripts/capture-ios-screens.cjs` and
 `scripts/capture-android-screens.cjs` take them, and `scripts/check-screens.cjs` reads
 their text with Apple's Vision framework and checks what each screen must show. The release then waits on the
