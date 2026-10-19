@@ -143,7 +143,7 @@ export function LibraryFeaturedCarousel({
   };
 
   return (
-    <View onLayout={onLayout} style={styles.carousel}>
+    <View onLayout={onLayout} style={styles.carousel} testID="library-featured-carousel">
       {pageWidth > 0 ? (
         <View style={styles.frame}>
         <FlatList

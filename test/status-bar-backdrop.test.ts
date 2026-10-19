@@ -42,19 +42,19 @@ describe('status bar backdrop', () => {
     expect(isHeroUnderStatusBar({ ...page, heroUnderStatusBar: false })).toBe(false);
   });
 
-  it('tracks whether a measured hero is still under the status bar', () => {
-    const { result } = renderHook(() => useHeroUnderStatusBar());
+  it('tracks whether a measured hero is still under the status bar', async () => {
+    const { result } = await renderHook(() => useHeroUnderStatusBar());
     expect(result.current.heroUnderStatusBar).toBe(true);
 
-    act(() => result.current.onHeroLayout(layout(300)));
-    act(() => result.current.onScroll(scroll(259)));
+    await act(() => result.current.onHeroLayout(layout(300)));
+    await act(() => result.current.onScroll(scroll(259)));
     expect(result.current.heroUnderStatusBar).toBe(true);
 
     // The hero's bottom edge reaches the 40pt status bar at 260.
-    act(() => result.current.onScroll(scroll(260)));
+    await act(() => result.current.onScroll(scroll(260)));
     expect(result.current.heroUnderStatusBar).toBe(false);
 
-    act(() => result.current.onScroll(scroll(0)));
+    await act(() => result.current.onScroll(scroll(0)));
     expect(result.current.heroUnderStatusBar).toBe(true);
   });
 

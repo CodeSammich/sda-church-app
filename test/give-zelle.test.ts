@@ -22,8 +22,8 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
   return MockIcon;
 });
 
-const renderGive = (language: SupportedLanguage) =>
-  render(
+const renderGive = async (language: SupportedLanguage) =>
+  await render(
     React.createElement(
       LanguageContext.Provider,
       { value: { language, languageSelectionRevision: 0, setLanguage: () => {} } },
@@ -41,8 +41,8 @@ describe('Zelle on the Tithe & Offering page (#392)', () => {
     ['zh', '網上平台'],
     ['zh-cn', '网上平台'],
     ['es', 'Portal en Línea'],
-  ])('shows no Zelle section in %s', (language, onlineSection) => {
-    const view = renderGive(language);
+  ])('shows no Zelle section in %s', async (language, onlineSection) => {
+    const view = await renderGive(language);
     expect(view.getByText(onlineSection)).toBeTruthy();
     expect(view.queryByText(/Zelle|@nyccsda\.org/)).toBeNull();
   });

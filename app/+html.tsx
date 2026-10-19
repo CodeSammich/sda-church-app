@@ -1,5 +1,5 @@
 import { customDarkTheme, customLightTheme } from '@/constants/Themes';
-import { ScrollViewStyleReset } from 'expo-router/html';
+import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html';
 
 const WEB_BASE_PATH = '/sda-church-app';
 
@@ -8,8 +8,14 @@ const WEB_BASE_PATH = '/sda-church-app';
 // The contents of this function only run in Node.js environments and
 // do not have access to the DOM or browser APIs.
 export default function Root({ children }: { children: React.ReactNode }) {
+  // Expo Router 58 hands the page its generated metadata, styles, and
+  // JavaScript bundles here. Without headNodes and bodyNodes, the exported
+  // pages are empty and never load the app.
+  const { bodyAttributes, bodyNodes, headNodes, htmlAttributes } =
+    useServerDocumentContext();
+
   return (
-    <html lang="en">
+    <html {...htmlAttributes} lang="en">
       <head>
         <meta charSet="utf-8" />
 
@@ -49,8 +55,15 @@ export default function Root({ children }: { children: React.ReactNode }) {
         {/* Using raw CSS styles as an escape-hatch to ensure the background color never flickers in dark-mode. */}
         <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
         {/* Add any additional <head> elements that you want globally available on web... */}
+        {headNodes}
       </head>
-      <body style={{ backgroundColor: 'transparent' }}>{children}</body>
+      <body
+        {...bodyAttributes}
+        style={{ ...bodyAttributes?.style, backgroundColor: 'transparent' }}
+      >
+        {children}
+        {bodyNodes}
+      </body>
     </html>
   );
 }

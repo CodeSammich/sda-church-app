@@ -18,8 +18,8 @@ describe.each<[SupportedLanguage, EgwEditionLanguage]>([
   ['zh-cn', 'zh'],
   ['es', 'es'],
 ])('Ellen G. White books with the app in %s', (language, editionLanguage) => {
-  it(`open the ${editionLanguage} edition directly`, () => {
-    const { result } = renderHook(() => useLibraryShelfBooks(language, { loadEgwCovers: false }));
+  it(`open the ${editionLanguage} edition directly`, async () => {
+    const { result } = await renderHook(() => useLibraryShelfBooks(language, { loadEgwCovers: false }));
     const books = result.current.getShelfBooks('egw').filter(({ key }) => key.startsWith('egw:'));
     expect(books).toHaveLength(EGW_BOOKS.length);
 

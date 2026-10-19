@@ -6,8 +6,8 @@ const renderWithPaper = (element: React.ReactElement) =>
   render(React.createElement(PaperProvider, null, element));
 
 describe('uncapped Paper list text', () => {
-  it('allows a localized section heading to use every required line', () => {
-    const view = renderWithPaper(
+  it('allows a localized section heading to use every required line', async () => {
+    const view = await renderWithPaper(
       React.createElement(
         List.Subheader,
         {
@@ -23,8 +23,8 @@ describe('uncapped Paper list text', () => {
     ).toBe(0);
   });
 
-  it('allows both item titles and descriptions to wrap without a line cap', () => {
-    const view = renderWithPaper(
+  it('allows both item titles and descriptions to wrap without a line cap', async () => {
+    const view = await renderWithPaper(
       React.createElement(List.Item, {
         description:
           'A complete multilingual description that remains available at large text sizes.',

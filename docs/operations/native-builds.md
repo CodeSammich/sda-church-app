@@ -109,7 +109,7 @@ upkeep, such as yearly Apple renewals and runner image retirements, is under
 
 `scripts/build-android-native.mjs` reuses an existing generated `android/` project
 for repeat local builds. This avoids an unnecessary npm registry metadata lookup for
-`expo-template-bare-minimum@58.0.9`, including when `--no-install` is used. A clean
+`expo-template-bare-minimum@58.0.23`, including when `--no-install` is used. A clean
 GitHub Actions checkout still runs Expo prebuild. When `app.json`, a native config
 plugin, or another native setting changes, force regeneration with either:
 
@@ -154,17 +154,14 @@ orchestration visible in this repository and avoid another credential boundary.
 
 ## Expo 58 Android prebuild
 
-The app uses Expo SDK 58 (`expo ~58.0.0`) with a React Native 0.88 release
-candidate, and the matching template package. Use Node 22, the version the native
-workflows use. The install commands keep `--force` until the app moves to a stable
-React Native release (#211); [Development setup](../README.md#prerequisites) explains
-why. Generate the Android project with the exact template version used by the build
-script:
+The app uses Expo SDK 58 (`expo ~58.0.14`) with React Native 0.88.0, and the matching
+template package. Use Node 22, the version the native workflows use. Generate the
+Android project with the exact template version used by the build script:
 
 ```sh
-npm install --force
+npm install
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.9 \
+  --template expo-template-bare-minimum@58.0.23 \
   --platform android
 ```
 
@@ -177,7 +174,7 @@ Do not hand-edit `android/`; put durable changes in
 
 ```sh
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.9 \
+  --template expo-template-bare-minimum@58.0.23 \
   --platform android \
   --no-install
 ```
@@ -359,7 +356,7 @@ For ordinary local smoke testing, use the debug-signed APK. It does not need
 the production upload keystore or any signing secrets:
 
 ```sh
-npm ci --force
+npm ci
 npm run build:android:apk:debug -- --output /tmp/nyccsda-local-preview.apk
 ```
 
@@ -387,7 +384,7 @@ export ANDROID_KEYSTORE_PASSWORD='paste-only-in-your-terminal'
 export ANDROID_KEY_ALIAS='nyccsda-upload'
 export ANDROID_KEY_PASSWORD='paste-only-in-your-terminal'
 
-npm ci --force
+npm ci
 npm run build:android:apk -- --output /tmp/nyccsda-preview.apk
 npm run build:android -- --output /tmp/nyccsda-release.aab
 
@@ -546,7 +543,7 @@ Actions and a local Mac are used; no other build service.
 **On a Mac.** Install Xcode 26.6 or later and CocoaPods, then:
 
 ```sh
-npm install --force
+npm install
 npm run build:ios:simulator                          # Release build, JavaScript bundled in
 npm run build:ios:simulator -- --debug               # Debug build that loads JavaScript from Metro
 npm run build:ios:simulator -- --device "iPhone 17"  # Choose the simulated iPhone

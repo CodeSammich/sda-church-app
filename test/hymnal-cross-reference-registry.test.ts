@@ -67,17 +67,17 @@ describe('a new cross-reference table', () => {
     ]);
   });
 
-  it('shows chips on both hymnals’ rows with no change to the page', () => {
-    const view = renderWithPreferences(createElement(HymnalSelectionScreen), {
+  it('shows chips on both hymnals’ rows with no change to the page', async () => {
+    const view = await renderWithPreferences(createElement(HymnalSelectionScreen), {
       theme: customLightTheme,
     });
-    fireEvent.press(view.getByLabelText('Chinese Hymnal — 506 Edition, hymnal 3 of 6'));
+    await fireEvent.press(view.getByLabelText('Chinese Hymnal — 506 Edition, hymnal 3 of 6'));
     expect(view.getByText('English · 73')).toBeTruthy();
     // A hymn that maps to two numbers gets a chip for each.
     expect(view.getByText('English · 4')).toBeTruthy();
     expect(view.getByText('English · 5')).toBeTruthy();
 
-    fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 73'));
+    await fireEvent.press(view.getByLabelText('SDA Hymnal — 1985 Edition, hymn 73'));
     expect(view.getByText('Chinese 505 · 2')).toBeTruthy();
     expect(view.getByLabelText('Chinese Hymnal — 506 Edition, hymn 1')).toBeTruthy();
     expect(view.getByText('Show all hymns')).toBeTruthy();

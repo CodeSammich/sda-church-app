@@ -23,12 +23,8 @@ the store build numbers is in [Version numbers](operations/version-numbers.md).
 Install the dependencies:
 
 ```bash
-npm install --force
+npm install
 ```
-
-`--force` is needed because React Native is a release candidate (`0.88.0-rc.3`), which
-some packages' peer-dependency ranges don't include, so a plain `npm install` stops
-with an `ERESOLVE` error. CI installs the same way, with `npm ci --force`.
 
 A fork for another church changes the church-specific details in
 [`constants/`](../constants/), such as `ChurchData.ts`, `TeamData.ts`, and
@@ -95,6 +91,11 @@ run instead of building it. Both are in
 
 CI doesn't typecheck or build the web app on pull requests, so `npm run check` is the
 way to catch those before review.
+
+`npm test` runs two Jest projects from `package.json`. Most tests run in `native`, with
+React Native's test setup. Tests named `*.web.test.ts` run in `web` instead, with React
+Native for Web in a browser-like page, for code that runs only in the web app, such as
+`services/BibleAudioPlayer.web.ts`.
 
 The two integration tests call live services, so they can fail because a service is
 down rather than because of your change.

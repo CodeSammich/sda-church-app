@@ -48,7 +48,7 @@ jobs:
       # before the credentials are written, and skip install scripts, so no
       # dependency code runs while they're on disk.
       - name: Install dependencies
-        run: npm ci --force --ignore-scripts
+        run: npm ci --ignore-scripts
 
       # Pinned: this runs on every release, in a job that can read the deploy
       # credentials. Update it on purpose.

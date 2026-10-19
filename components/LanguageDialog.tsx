@@ -55,6 +55,7 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
   return (
     <Portal>
       <Dialog
+        testID="language-dialog"
         visible={visible}
         onDismiss={onDismiss}
         style={[
@@ -70,7 +71,10 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
           title={labels.title}
           variant="headlineSmall"
         />
-        <Dialog.ScrollArea style={styles.scrollArea}>
+        <Dialog.ScrollArea
+          style={styles.scrollArea}
+          testID="language-dialog-scroll-area"
+        >
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <Text
               variant="bodyMedium"

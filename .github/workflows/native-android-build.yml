@@ -57,7 +57,7 @@ jobs:
           cache: npm
       - name: Install dependencies
         if: github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main'
-        run: npm ci --force
+        run: npm ci
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         if: (github.event_name == 'workflow_dispatch' && inputs[matrix.target.input] || github.ref == 'refs/heads/main') && matrix.target.platform == 'android'
         with:

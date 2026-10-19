@@ -275,6 +275,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   return (
     <Portal>
       <Dialog
+        testID="text-size-dialog"
         visible={visible}
         onDismiss={onDismiss}
         style={[
@@ -290,7 +291,10 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
           title={labels.title}
           variant="headlineSmall"
         />
-        <Dialog.ScrollArea style={styles.scrollArea}>
+        <Dialog.ScrollArea
+          style={styles.scrollArea}
+          testID="text-size-dialog-scroll-area"
+        >
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <Text variant="bodyMedium">{labels.description}</Text>
             <Text

@@ -38,7 +38,7 @@ describe('Chinese 506 hymnal recordings', () => {
     expect(getChinese506YouTubeUrl(506)).toBeUndefined();
   });
 
-  it('opens the recording when there is one and searches YouTube otherwise', () => {
+  it('opens the recording when there is one and searches YouTube otherwise', async () => {
     const row = (hymn: { number: number; title: string }) =>
       createElement(HymnRow, {
         key: hymn.number,
@@ -59,7 +59,7 @@ describe('Chinese 506 hymnal recordings', () => {
         onOpenScripture: jest.fn(),
         onOpenCrossReference: jest.fn(),
       });
-    const screen = renderWithPreferences(
+    const screen = await renderWithPreferences(
       createElement(
         'View',
         null,
@@ -71,7 +71,7 @@ describe('Chinese 506 hymnal recordings', () => {
     expect(screen.queryByText('Piano only')).toBeNull();
     const [first, last] = screen.getAllByText('With singing');
 
-    fireEvent.press(first);
+    await fireEvent.press(first);
     expect(openURL).toHaveBeenCalledWith(
       'https://www.youtube.com/watch?v=wKCtkPLdAYM',
       'Error',
@@ -79,7 +79,7 @@ describe('Chinese 506 hymnal recordings', () => {
     );
     expect(openYouTubeSearch).not.toHaveBeenCalled();
 
-    fireEvent.press(last);
+    await fireEvent.press(last);
     expect(openYouTubeSearch).toHaveBeenCalledWith('506版赞美诗 506 阿门');
   });
 });
