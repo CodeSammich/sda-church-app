@@ -3,7 +3,7 @@
  * links, own route, and the cross-references between their rows.
  */
 
-import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
+import { openYouTubeSearch, openYouTubeVideo } from '@/constants/ExternalLinks';
 import type { ImageSourcePropType } from 'react-native';
 import {
   getChinese505PianoUrl,
@@ -61,7 +61,7 @@ const chineseRecording =
   (hymn: HymnalHymn) => {
     const youtubeUrl = getYouTubeUrl?.(Number(hymn.number));
     if (youtubeUrl) {
-      openURL(youtubeUrl, 'Error', 'Could not open the YouTube video.');
+      openYouTubeVideo(youtubeUrl);
     } else {
       openYouTubeSearch(`${edition}版赞美诗 ${hymn.number} ${hymn.title}`);
     }

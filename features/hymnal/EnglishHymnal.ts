@@ -21,7 +21,7 @@
  * architecture should not be described as blanket immunity from copyright liability.
  *
  * IMPLEMENTATION CONSTRAINTS (DEVELOPER DISCLOSURE):
- * - All external links MUST open in the system browser: openInSystemBrowser in
+ * - All external links MUST open in the system browser: openURL in
  *   constants/ExternalLinks.ts, which on iOS and Android shows the system's in-app
  *   browser sheet (SFSafariViewController or Chrome Custom Tabs).
  *   Do NOT embed sheets via internal webviews, frames, or inline scrapers.
@@ -40,7 +40,7 @@
  */
 
 import pianoData from './EnglishHymnalPianoYouTube.json';
-import { openInSystemBrowser } from '@/constants/ExternalLinks';
+import { openURL } from '@/constants/ExternalLinks';
 
 export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
   const hId =
@@ -54,7 +54,7 @@ export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
 };
 
 export const openHymnal = (hymnNumber?: string | number) => {
-  return openInSystemBrowser(
+  return openURL(
     getEnglishHymnUrl(hymnNumber),
     'Error',
     'Could not open the English hymnal page.',
