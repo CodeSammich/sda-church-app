@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fireEvent } from '@testing-library/react-native';
 import { createElement } from 'react';
-import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
+import { openYouTubeSearch, openYouTubeVideo } from '@/constants/ExternalLinks';
 import {
   getChinese506YouTubeUrl,
   getSortedChinese506Hymns,
@@ -15,8 +15,8 @@ import { renderWithPreferences } from './helpers/render-preferences';
 
 jest.mock('@/constants/ExternalLinks', () => ({
   ...jest.requireActual('@/constants/ExternalLinks'),
-  openURL: jest.fn(),
   openYouTubeSearch: jest.fn(),
+  openYouTubeVideo: jest.fn(),
 }));
 
 describe('Chinese 506 hymnal recordings', () => {
@@ -72,11 +72,7 @@ describe('Chinese 506 hymnal recordings', () => {
     const [first, last] = screen.getAllByText('With singing');
 
     await fireEvent.press(first);
-    expect(openURL).toHaveBeenCalledWith(
-      'https://www.youtube.com/watch?v=wKCtkPLdAYM',
-      'Error',
-      'Could not open the YouTube video.',
-    );
+    expect(openYouTubeVideo).toHaveBeenCalledWith('https://www.youtube.com/watch?v=wKCtkPLdAYM');
     expect(openYouTubeSearch).not.toHaveBeenCalled();
 
     await fireEvent.press(last);

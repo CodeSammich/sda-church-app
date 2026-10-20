@@ -1,7 +1,7 @@
 import { act, fireEvent } from '@testing-library/react-native';
 import { createElement, type ComponentType } from 'react';
 import { LibraryFeaturedCarousel } from '@/components/LibraryFeaturedCarousel';
-import { openURL, openYouTubeSearch } from '@/constants/ExternalLinks';
+import { openYouTubeSearch, openYouTubeVideo } from '@/constants/ExternalLinks';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { customLightTheme } from '@/constants/Themes';
 import type { HymnalBookId } from '@/features/hymnal/HymnalLabels';
@@ -36,8 +36,8 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/constants/ExternalLinks', () => ({
   ...jest.requireActual('@/constants/ExternalLinks'),
-  openURL: jest.fn(),
   openYouTubeSearch: jest.fn(),
+  openYouTubeVideo: jest.fn(),
 }));
 
 jest.mock('react-native-safe-area-context', () =>
@@ -299,11 +299,7 @@ describe('recordings and piano accompaniments', () => {
     expect(openYouTubeSearch).toHaveBeenCalledWith('SDA Hymnal 1985 Praise to the Lord');
 
     await fireEvent.press(view.getByText('Piano only'));
-    expect(openURL).toHaveBeenCalledWith(
-      'https://www.youtube.com/watch?v=Uoi3zhcXZrM',
-      'Error',
-      'Could not open the YouTube video.',
-    );
+    expect(openYouTubeVideo).toHaveBeenCalledWith('https://www.youtube.com/watch?v=Uoi3zhcXZrM');
   });
 
   it('leaves out the piano button when a hymn has no accompaniment', async () => {
@@ -319,11 +315,7 @@ describe('recordings and piano accompaniments', () => {
     expect(openYouTubeSearch).toHaveBeenCalledWith('505版赞美诗 1 在主宝座前');
 
     await fireEvent.press(view.getByText('鋼琴伴奏'));
-    expect(openURL).toHaveBeenCalledWith(
-      'https://www.youtube.com/watch?v=JxR9rqNut-s',
-      'Error',
-      'Could not open the YouTube video.',
-    );
+    expect(openYouTubeVideo).toHaveBeenCalledWith('https://www.youtube.com/watch?v=JxR9rqNut-s');
   });
 
   it.each(routes.slice(2))('offers only With singing on /home/%s, which has no accompaniments yet', async (_route, page, hymnalId) => {
