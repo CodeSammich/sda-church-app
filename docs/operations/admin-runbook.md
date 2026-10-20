@@ -189,7 +189,8 @@ The admin-only steps are:
 
 1. **Check that `release-candidate` exists.** **Release - After Merge** creates it from
    `main` after each release merges. If it's missing, create it: **Code → branch menu →
-   View all branches → New branch**, named `release-candidate`, from `main`.
+   View all branches → New branch**, named `release-candidate`, from `main`. Then change
+   the base of any open feature pull request into `main` back to it.
 2. **Merge feature pull requests** into it.
 3. **Set the version** once the contents are settled: pick a patch, minor, or major
    version for what the release contains, higher than `main`'s, and merge a pull request
@@ -204,16 +205,17 @@ The admin-only steps are:
    minutes, and **Screenshots reviewed** waits until a
    `release-approvers` member [approves the screenshots](#approving-the-screenshots).
    GitHub then deletes `release-candidate` and moves any open feature pull requests
-   into it to `main`. **Release - After Merge** creates it again from `main` and comments
-   on the release pull request with links to the runs below that wait for approval.
-   Move those feature pull requests back to `release-candidate`.
+   into it to `main`. **Release - After Merge** creates it again from `main`, moves those
+   pull requests back to it, and comments on the release pull request with links to the
+   runs below that wait for approval. The comment names any pull request it couldn't
+   move; change that one's base to `release-candidate` by hand.
 
 What runs after the merge to `main`:
 
 | Workflow | Automatic? | What you do |
 | --- | --- | --- |
 | Deploy Website and Tag | Yes | Nothing. It tags `vx.y.z` and publishes [the app website](#the-app-website-appnyccsdaorg). |
-| Release - After Merge | Yes | Nothing, unless its comment on the release pull request says `release-candidate` couldn't be created. Its links open the three runs below. |
+| Release - After Merge | Yes | Nothing, unless its comment on the release pull request says `release-candidate` couldn't be created or a pull request couldn't be moved back to it. Its links open the three runs below. |
 | Native Android build | Waits for `production` approval | Approve it to build the signed AAB and APK, upload the AAB to Google Play internal testing, and publish a GitHub Release. See [Native app binaries](#native-app-binaries). |
 | Native iOS build | Waits for `production` approval | Approve it to build the signed IPA and upload it to TestFlight. |
 | Deploy Bulletin Apps Script | Waits for `production` approval | Approve it when nobody is making a bulletin, then check the live bulletin. Reject it to skip this deploy. See [Deploying the bulletin Apps Script](#deploying-the-bulletin-apps-script). |
@@ -766,6 +768,10 @@ each one:
 Or copy the `package.json` and `package-lock.json` changes from several of them into
 one pull request into `release-candidate`, and close the Dependabot pull requests with a
 link to it.
+
+A release moves a Dependabot pull request that's still open on `release-candidate` back
+to `main`. **Release - After Merge** leaves bots' pull requests there and names them in
+its comment, so move it again.
 
 While a Dependabot pull request still targets `main`, it runs only the quick checks.
 The slow builds and tests run on the release pull request that includes the update.
