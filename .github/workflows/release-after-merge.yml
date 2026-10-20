@@ -1,9 +1,10 @@
 name: Release - After Merge
 
 # After a merge into main, creates release-candidate again for the next release
-# (GitHub deletes it when the release pull request merges) and comments on the
-# merged pull request with links to the runs that wait for production
-# approval. It checks out no code.
+# (GitHub deletes it when the release pull request merges), moves the feature
+# pull requests GitHub moved to main back to it, and comments on the merged
+# pull request with links to the runs that wait for production approval. It
+# checks out no code.
 on:
   push:
     branches:
@@ -88,11 +89,54 @@ jobs:
             echo "result=failed" >> "$GITHUB_OUTPUT"
           fi
 
+      # When GitHub deletes release-candidate after the release merges, it
+      # moves the pull requests open against it to main. Only release-candidate
+      # may merge into main, so every other open pull request into main belongs
+      # on release-candidate. Bots' pull requests, such as Dependabot's, target
+      # main by their own settings, so they stay, and the comment names them in
+      # case one had been moved to release-candidate by hand.
+      - name: Move feature pull requests back to release-candidate
+        id: moved
+        if: >-
+          steps.pr.outputs.head_ref == 'release-candidate' &&
+          steps.branch.outputs.result == 'created'
+        run: |
+          set -euo pipefail
+          declare -A seen=()
+          moved=()
+          failed=()
+          bots=()
+          # GitHub may still be moving them, so look three times.
+          for try in 1 2 3; do
+            pulls=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&per_page=100" \
+              --jq '.[] | "\(.number) \(.user.type)"') || pulls=''
+            while read -r number type; do
+              [[ -n "$number" && -z "${seen[$number]:-}" ]] || continue
+              seen[$number]=1
+              if [[ "$type" == "Bot" ]]; then
+                bots+=("$number")
+              elif gh api --method PATCH "repos/$GITHUB_REPOSITORY/pulls/$number" -f base=release-candidate --silent < /dev/null; then
+                echo "Moved #$number back to release-candidate."
+                moved+=("$number")
+              else
+                echo "::warning title=Pull request not moved::Change #$number's base to release-candidate."
+                failed+=("$number")
+              fi
+            done <<< "$pulls"
+            if [[ "$try" -lt 3 ]]; then sleep 10; fi
+          done
+          echo "moved=${moved[*]}" >> "$GITHUB_OUTPUT"
+          echo "failed=${failed[*]}" >> "$GITHUB_OUTPUT"
+          echo "bots=${bots[*]}" >> "$GITHUB_OUTPUT"
+
       - name: Comment the next steps on the pull request
         if: steps.pr.outputs.number != ''
         env:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           BRANCH_RESULT: ${{ steps.branch.outputs.result }}
+          MOVED: ${{ steps.moved.outputs.moved }}
+          FAILED: ${{ steps.moved.outputs.failed }}
+          BOTS: ${{ steps.moved.outputs.bots }}
         run: |
           set -euo pipefail
           # The same push starts each of these workflows. Link this merge's run,
@@ -108,16 +152,24 @@ jobs:
             echo "- [$name](${url:-$REPO_URL/actions/workflows/$file}) ([all runs]($REPO_URL/actions/workflows/$file))$3"
           }
 
+          # "12 34" becomes "#12, #34".
+          numbers() {
+            local out='' n
+            for n in $1; do out+="${out:+, }#$n"; done
+            echo "$out"
+          }
+
           branches="[branches page]($REPO_URL/branches)"
+          on_main="[open pull requests into \`main\`]($REPO_URL/pulls?q=is%3Apr+is%3Aopen+base%3Amain)"
           case "$BRANCH_RESULT" in
             created)
-              branch_line="Created \`release-candidate\` from this merge for the next release ($branches). GitHub moves open feature pull requests to \`main\` when it deletes the old branch; [move them back]($REPO_URL/pulls?q=is%3Apr+is%3Aopen+base%3Amain) to \`release-candidate\`." ;;
+              branch_line="Created \`release-candidate\` from this merge for the next release ($branches)." ;;
             stale)
-              branch_line="\`release-candidate\` wasn't deleted, so it still holds this release's commits. Delete it on the $branches, then create it again from \`main\`." ;;
+              branch_line="\`release-candidate\` wasn't deleted, so it still holds this release's commits. Delete it on the $branches, then create it again from \`main\`. Deleting it moves its open pull requests to \`main\`, so then change their base back to \`release-candidate\` ($on_main)." ;;
             exists)
               branch_line="\`release-candidate\` already exists ($branches)." ;;
             *)
-              branch_line="Couldn't create \`release-candidate\`. Create it from \`main\` on the $branches." ;;
+              branch_line="Couldn't create \`release-candidate\`. Create it from \`main\` on the $branches, then change the base of the pull requests GitHub moved to \`main\` back to it ($on_main)." ;;
           esac
 
           {
@@ -128,6 +180,18 @@ jobs:
             run_link apps-script-deploy.yml 'Deploy Bulletin Apps Script' ': approve when nobody is making a bulletin, or reject it to skip this deploy.'
             echo
             echo "$branch_line"
+            if [[ -n "${MOVED:-}" ]]; then
+              echo
+              echo "Moved $(numbers "$MOVED") from \`main\` to \`release-candidate\`, where feature pull requests belong."
+            fi
+            if [[ -n "${FAILED:-}" ]]; then
+              echo
+              echo "Couldn't move $(numbers "$FAILED") back to \`release-candidate\`. Change each one's base on its page."
+            fi
+            if [[ -n "${BOTS:-}" ]]; then
+              echo
+              echo "Left $(numbers "$BOTS") on \`main\`, since bots such as Dependabot open their pull requests there. Change each one's base to \`release-candidate\` when it should go into a release."
+            fi
           } > comment.md
 
           gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
