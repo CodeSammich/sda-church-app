@@ -5,7 +5,7 @@ import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
 } from '@/constants/ExternalBrandAssets';
-import { openURL } from '@/constants/ExternalLinks';
+import { openYouTubeVideo } from '@/constants/ExternalLinks';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { memo } from 'react';
@@ -213,9 +213,7 @@ export const HymnRow = memo(function HymnRow({
               />
               <TouchableRipple
                 accessibilityHint={labels.youtubeHint}
-                onPress={() =>
-                  openURL(accompanimentUrl, 'Error', 'Could not open the YouTube video.')
-                }
+                onPress={() => openYouTubeVideo(accompanimentUrl)}
                 style={styles.flexButton}
               >
                 <View style={styles.buttonContent}>

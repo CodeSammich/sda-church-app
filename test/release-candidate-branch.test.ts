@@ -46,7 +46,11 @@ describe('release-candidate branch', () => {
     expect(workflow).toMatch(/\non:\n  push:\n    branches:\n      - main\n\n/);
     // Creating a ref that exists fails, so an existing branch is left alone.
     expect(workflow).toContain('-f ref=refs/heads/release-candidate -f sha="$GITHUB_SHA"');
-    expect(workflow).not.toMatch(/--method (PATCH|DELETE)|force/);
+    expect(workflow).not.toMatch(/--method DELETE|force/);
+    // Its only edit is moving feature pull requests back to release-candidate.
+    expect(workflow.match(/--method PATCH[^\n]*/g)).toEqual([
+      '--method PATCH "repos/$GITHUB_REPOSITORY/pulls/$number" -f base=release-candidate --silent < /dev/null; then',
+    ]);
     expect(workflow).not.toContain('actions/checkout');
   });
 

@@ -79,7 +79,7 @@ jobs:
           set -euo pipefail
           # The runner's preinstalled command-line tools are too old for the
           # Android 16 system image, so avdmanager comes from the latest ones.
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006" \
+          scripts/sdkmanager-install.sh "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006" \
             "cmdline-tools;latest" "emulator" "system-images;android-36;google_apis;x86_64"
 
       - name: Enable hardware acceleration for the emulator

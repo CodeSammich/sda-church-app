@@ -45,8 +45,9 @@ checks a pull request must pass, are under
 4. Open the feature PR from the fork's feature branch into the primary repository's
    `release-candidate`, following the format below, and wait for all checks and
    reviews. Don't retarget it to `main`. If a release merges first, GitHub moves the PR
-   to `main`; change it back to `release-candidate` once that is created again, then
-   update the branch (**Update branch**, or merge `upstream/release-candidate` into it).
+   to `main`, and it's moved back to `release-candidate` once that is created again.
+   Then update the branch (**Update branch**, or merge `upstream/release-candidate`
+   into it).
 5. A maintainer merges it once its checks and review pass. Its issues stay open until
    the release reaches `main`.
 
@@ -119,7 +120,8 @@ clear whether the release is a patch, minor, or major. The click-by-click steps 
 1. Feature PRs merge into `release-candidate`. **Release - After Merge** creates it from
    `main` after each release merges. If it's missing, a maintainer creates it from the
    primary repository's `main` (for example `git fetch upstream` then
-   `git push upstream upstream/main:refs/heads/release-candidate`).
+   `git push upstream upstream/main:refs/heads/release-candidate`), and moves the feature
+   PRs GitHub moved to `main` back to it.
 2. Once the release's contents are settled, a maintainer picks the version and merges a
    version PR into `release-candidate` that runs `npm run sync-version -- --version x.y.z`
    and commits the generated files. Like any PR, it needs a `Part of #…` line or the
@@ -296,10 +298,14 @@ GitHub's code scanning default setup and have no workflow file.
 - Runs on every merge into `main`. When the release PR's merge deletes
   `release-candidate`, creates it again from the merge commit. It never changes a branch
   that already exists.
+- After the release PR's merge, moves every open PR into `main` back to
+  `release-candidate`: GitHub moves feature PRs to `main` when it deletes the branch, and
+  only `release-candidate` may merge into `main`. Bots' PRs, such as Dependabot's, stay,
+  and the comment names them.
 - Comments on the merged PR with links to that merge's **Native iOS build**, **Native
   Android build**, and **Deploy Bulletin Apps Script** runs, which wait for `production`
-  approval, and to the branches page. The comment says if `release-candidate` couldn't
-  be created.
+  approval, and to the branches page. The comment names the PRs it moved, and says if
+  `release-candidate` couldn't be created or a PR couldn't be moved, and what to do.
 
 ### `Native Android build` and `Native iOS build` (`native-android-build.yml`, `native-ios-build.yml`)
 

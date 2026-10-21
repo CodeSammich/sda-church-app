@@ -107,7 +107,7 @@ import {
 } from '@/services/BibleReaderPosition';
 import {
   openBibleRequestEmail,
-  openInSystemBrowser,
+  openURL,
   TECHNOLOGY_EMAIL,
 } from '@/constants/ExternalLinks';
 import * as BibleService from '@/services/BibleService';
@@ -3740,7 +3740,7 @@ export default function BibleScreen() {
               <Text
                 variant="labelSmall"
                 accessibilityRole="link"
-                onPress={() => openInSystemBrowser(wordProjectCredit.url)}
+                onPress={() => openURL(wordProjectCredit.url)}
                 style={{
                   textAlign: 'center',
                   marginTop: chapterData?.translation.attribution ? 0 : 24,
@@ -4108,8 +4108,8 @@ export default function BibleScreen() {
           visible={audioSettingsVisible}
           onDismiss={() => setAudioSettingsVisible(false)}
           contentContainerStyle={[
-            ReaderStyles.audioSettingsContent,
-            { marginBottom: bottomDockInset + 12, maxHeight: popupMaxHeight },
+            ReaderStyles.modalContent,
+            { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
         >

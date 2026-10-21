@@ -56,8 +56,9 @@ export const getBulletinApiUrl = (date: string) =>
 export const QUARTERLY_SCHEDULE_URL =
   'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit?usp=sharing';
 
+// Staff are signed in to the Google Sheets app, so the schedule opens there.
 export const openQuarterlySchedule = () =>
-  openURL(
+  openInItsApp(
     QUARTERLY_SCHEDULE_URL,
     'Access unavailable',
     'Could not open the staff schedule.',
@@ -69,7 +70,37 @@ export const openQuarterlySchedule = () =>
  * a single source of truth for the app's external touchpoints.
  */
 
+/**
+ * Opens a website in the in-app browser, which slides up over the app and
+ * closes back to it: Safari View Controller on iOS, a Custom Tab on Android.
+ * On web it opens a new tab. Every website link uses this, so they all open the
+ * same way; a link that belongs to another app uses openInItsApp instead.
+ */
 export const openURL = async (
+  url: string,
+  errorTitle = 'Error',
+  errorMessage = 'Could not open the link.',
+) => {
+  try {
+    if (Platform.OS === 'web') {
+      await Linking.openURL(url);
+    } else {
+      await WebBrowser.openBrowserAsync(url);
+    }
+  } catch (error) {
+    Alert.alert(errorTitle, errorMessage);
+    console.error('In-app browser error:', error);
+  }
+};
+
+/**
+ * Hands a link to the app it belongs to: phone numbers to the phone, email
+ * addresses to the mail app, and YouTube, Spotify, Zoom, Google Maps, Google
+ * Sheets, App Store and Google Play links to those apps, where people are signed
+ * in and can watch, join, get directions, or install. A phone without that app
+ * opens the link in its own browser.
+ */
+export const openInItsApp = async (
   url: string,
   errorTitle = 'Error',
   errorMessage = 'Could not open the link.',
@@ -83,27 +114,6 @@ export const openURL = async (
 };
 
 /**
- * Keeps external documents outside the app's rendering surface. Native builds
- * use the system browser sheet/custom tab; web builds use a separate tab.
- */
-export const openInSystemBrowser = async (
-  url: string,
-  errorTitle = 'Error',
-  errorMessage = 'Could not open the link.',
-) => {
-  try {
-    if (Platform.OS === 'web') {
-      await Linking.openURL(url);
-    } else {
-      await WebBrowser.openBrowserAsync(url);
-    }
-  } catch (error) {
-    Alert.alert(errorTitle, errorMessage);
-    console.error('External browser error:', error);
-  }
-};
-
-/**
  * The privacy policy is kept only on the website, which both store listings
  * link to (#403), so a wording fix needs a website deploy, not a new app build.
  * Keep public/privacy-policy.html at this path.
@@ -111,7 +121,7 @@ export const openInSystemBrowser = async (
 export const PRIVACY_POLICY_URL = 'https://app.nyccsda.org/privacy-policy.html';
 
 export const openPrivacyPolicy = () =>
-  openInSystemBrowser(PRIVACY_POLICY_URL, 'Error', 'Could not open the privacy policy.');
+  openURL(PRIVACY_POLICY_URL, 'Error', 'Could not open the privacy policy.');
 
 /**
  * The legal disclaimer is kept only on the website too (#412), beside the
@@ -121,7 +131,7 @@ export const openPrivacyPolicy = () =>
 export const LEGAL_DISCLAIMER_URL = 'https://app.nyccsda.org/legal.html';
 
 export const openLegalDisclaimer = () =>
-  openInSystemBrowser(LEGAL_DISCLAIMER_URL, 'Error', 'Could not open the legal disclaimer.');
+  openURL(LEGAL_DISCLAIMER_URL, 'Error', 'Could not open the legal disclaimer.');
 
 /**
  * Whether the Tithe & Offering page shows the church's Zelle section. Off until
@@ -138,7 +148,7 @@ export const openAdventistGiving = async () => {
 };
 
 export const openSpotifyPodcast = async () => {
-  return openURL(
+  return openInItsApp(
     'https://open.spotify.com/show/6Ig7RqU3A5vivl4x3FJFLV',
     'Error',
     'Could not open the Spotify podcast.',
@@ -146,7 +156,7 @@ export const openSpotifyPodcast = async () => {
 };
 
 export const openZoomClass = async () => {
-  return openURL(
+  return openInItsApp(
     'https://us06web.zoom.us/j/2541879535?pwd=Rmhsa0pFK3hQVTRHMzVqQ2swZlBodz09',
     'Error',
     'Could not open the Zoom class link.',
@@ -154,7 +164,7 @@ export const openZoomClass = async () => {
 };
 
 export const openSermonArchive = async () => {
-  return openURL(
+  return openInItsApp(
     'https://www.youtube.com/playlist?list=PLX85oBoVF4TKC4p0hJ6EK6X_2zXOB53eW',
     'Error',
     'Could not open the YouTube sermon archive.',
@@ -162,7 +172,7 @@ export const openSermonArchive = async () => {
 };
 
 export const openSabbathStream = async () => {
-  return openURL(
+  return openInItsApp(
     'https://www.youtube.com/@newyorkchinesesdachurch1334/streams',
     'Error',
     'Could not open the YouTube livestream.',
@@ -170,15 +180,18 @@ export const openSabbathStream = async () => {
 };
 
 export const openYouTubeSearch = (query: string) => {
-  return openURL(
+  return openInItsApp(
     `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
     'Error',
     'Could not open the YouTube search results.',
   );
 };
 
+export const openYouTubeVideo = (url: string) =>
+  openInItsApp(url, 'Error', 'Could not open the YouTube video.');
+
 export const openIosPwaInstallGuide = () =>
-  openURL(
+  openInItsApp(
     IOS_PWA_INSTALL_GUIDE_URL,
     'Error',
     'Could not open the PWA installation guide.',
@@ -272,7 +285,7 @@ export const openCurrentChildrenSabbathSchool = (
         }
         externalWindow.location.replace(url);
       } else {
-        await openInSystemBrowser(
+        await openURL(
           url,
           'Error',
           "Could not open the children's Sabbath School lesson.",
@@ -307,21 +320,21 @@ export const openBabiesSabbathSchool = (language: SupportedLanguage = 'en') =>
   );
 
 export const openChineseHymnalIos = () =>
-  openURL(
+  openInItsApp(
     'https://apps.apple.com/us/app/506%E8%AE%9A%E7%BE%8E%E8%A9%A9-traditional-chinese/id6498894032',
     'Error',
     'Could not open the App Store link.',
   );
 
 export const openChineseHymnalAndroid = () =>
-  openURL(
+  openInItsApp(
     'https://play.google.com/store/apps/details?id=org.chumadventist.hymnal506.next',
     'Error',
     'Could not open the Google Play link.',
   );
 
 /**
- * Opens a given address in the Google Maps app or browser.
+ * Opens a given address in the Google Maps app, or the browser without it.
  * @param address The formatted address string to search for.
  */
 export const openInMaps = async (address: string) => {
@@ -329,7 +342,7 @@ export const openInMaps = async (address: string) => {
   const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     address,
   )}`;
-  return openURL(url, 'Error', 'Could not open Google Maps.');
+  return openInItsApp(url, 'Error', 'Could not open Google Maps.');
 };
 
 export const openBeliefs = () =>
@@ -339,7 +352,7 @@ export const openAtlanticUnion = () => openURL('https://atlantic-union.org/');
 
 export const openPhone = (phone: string) => {
   const cleanedPhone = phone.replace(/[^\d+]/g, '');
-  return openURL(
+  return openInItsApp(
     `tel:${cleanedPhone}`,
     'Error',
     'Phone calls are not supported on this device or emulator.',
@@ -347,7 +360,7 @@ export const openPhone = (phone: string) => {
 };
 
 export const openEmail = (email: string) =>
-  openURL(
+  openInItsApp(
     `mailto:${email}`,
     'Error',
     'Email is not configured on this device or emulator.',
@@ -366,7 +379,7 @@ export const getBibleRequestEmailUrl = (prompt: string) =>
   `&body=${encodeURIComponent(prompt)}`;
 
 export const openBibleRequestEmail = (prompt: string) =>
-  openURL(
+  openInItsApp(
     getBibleRequestEmailUrl(prompt),
     'Error',
     'Email is not configured on this device or emulator.',

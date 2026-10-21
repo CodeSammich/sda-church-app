@@ -256,14 +256,20 @@ describe('Bible reader text scaling', () => {
   it('places the audio dock breathing room above its controls', () => {
     const reader = createReaderStyles(2);
     const audioDock = StyleSheet.flatten(reader.audioDock);
-    const audioSettings = StyleSheet.flatten(reader.audioSettingsContent);
 
     expect(audioDock?.paddingTop).toBe(8);
     expect(audioDock).not.toHaveProperty('paddingBottom');
-    expect(audioSettings).toMatchObject({
-      borderRadius: 24,
-      marginTop: 'auto',
-    });
+  });
+
+  it('centres every Bible popup the same way, the audio settings included', () => {
+    // Until 1.3.2 the audio settings popup sat at the bottom of the screen.
+    const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    const modals = bible.split('<Modal').slice(1);
+    expect(modals).toHaveLength(4);
+    for (const modal of modals) {
+      expect(modal).toMatch(/^\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}\s+contentContainerStyle=\{\[\s+ReaderStyles\.modalContent,\s+\{ maxHeight: popupMaxHeight \},/);
+    }
+    expect(createReaderStyles(2)).not.toHaveProperty('audioSettingsContent');
   });
 
   it('widens the verse-number column for larger system text and three-digit verses', () => {

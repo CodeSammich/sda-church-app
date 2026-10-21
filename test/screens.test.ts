@@ -17,6 +17,12 @@ const {
   statusBarClear,
   looksBlank,
   looksLikeSplash,
+  takeFinalShot,
+  differingFraction,
+  relaunchLines,
+  LAUNCHES,
+  STILL_FRACTION,
+  STILL_RETRIES,
 } = require('../scripts/capture-ios-screens.cjs');
 
 const repoFile = (path: string) => readFileSync(resolve(__dirname, '..', path), 'utf8');
@@ -591,6 +597,109 @@ describe('blank screen check', () => {
       .png()
       .toFile(file);
     expect(await looksBlank(file)).toBe(false);
+  });
+});
+
+describe('waiting for a screen to finish loading', () => {
+  const sharp = require('sharp');
+  const { copyFileSync, mkdtempSync } = require('node:fs');
+  const { tmpdir } = require('node:os');
+  const { join } = require('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'still-'));
+  const box = (left: number, top: number, width: number, height: number, fill: string) => ({
+    input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${fill}"/></svg>`),
+    left,
+    top,
+  });
+  // A 1320 × 2868 screen: the status bar, plus boxes of "text".
+  const screen = async (name: string, boxes: ReturnType<typeof box>[] = []) => {
+    const file = join(dir, `${name}.png`);
+    await sharp({ create: { width: 1320, height: 2868, channels: 3, background: '#f3e6df' } })
+      .composite([box(196, 60, 104, 60, '#222'), ...boxes])
+      .png()
+      .toFile(file);
+    return file;
+  };
+  let blank: string, verseOne: string, scrolled: string, countdownA: string, countdownB: string;
+  beforeAll(async () => {
+    blank = await screen('blank');
+    // One translation at the top of the chapter, then both, scrolled down.
+    verseOne = await screen('verse-one', [box(80, 500, 1160, 1400, '#333')]);
+    scrolled = await screen('scrolled', [box(80, 300, 1160, 600, '#333'), box(80, 1000, 1160, 600, '#666')]);
+    // Home with its countdown on two different seconds.
+    countdownA = await screen('countdown-a', [box(80, 500, 1160, 800, '#333'), box(1100, 1100, 40, 50, '#000')]);
+    countdownB = await screen('countdown-b', [box(80, 500, 1160, 800, '#333'), box(1150, 1100, 40, 50, '#000')]);
+  });
+
+  // takeFinalShot with a screenshot() that shows these screens in turn, the last one from then on.
+  const take = async (screens: string[], lastSample?: string) => {
+    const file = join(dir, 'final.png');
+    let next = 0;
+    const screenshot = () => copyFileSync(screens[Math.min(next++, screens.length - 1)], file);
+    const taken = await takeFinalShot(screenshot, file, { lastSample, pause: 0 });
+    return { taken, same: (await differingFraction(file, screens[Math.min(taken, screens.length) - 1])) === 0 };
+  };
+
+  it('measures how much of the screen changed', async () => {
+    expect(await differingFraction(verseOne, verseOne)).toBe(0);
+    expect(await differingFraction(countdownA, countdownB)).toBeLessThan(STILL_FRACTION);
+    expect(await differingFraction(verseOne, scrolled)).toBeGreaterThan(0.2);
+  });
+
+  it('takes one shot of a screen that had already stopped changing', async () => {
+    expect((await take([scrolled], scrolled)).taken).toBe(1);
+  });
+
+  it("doesn't wait for Home's countdown", async () => {
+    expect((await take([countdownB], countdownA)).taken).toBe(1);
+  });
+
+  it('waits for a screen still loading at the end of its wait, as on 2026-10-20', async () => {
+    // The sample before showed the screen still blank; the shot caught verse 1,
+    // and the next two show the chapter scrolled to the verse.
+    const result = await take([verseOne, scrolled, scrolled], blank);
+    expect(result).toEqual({ taken: 3, same: true });
+  });
+
+  it('waits for a blank screen to draw, then to finish loading', async () => {
+    expect(await take([blank, blank, verseOne, scrolled, scrolled], blank)).toEqual({ taken: 5, same: true });
+  });
+
+  it('gives up on a screen that never stops changing', async () => {
+    const flicker = Array.from({ length: 20 }, (_, i) => (i % 2 ? verseOne : scrolled));
+    expect((await take(flicker, verseOne)).taken).toBe(1 + STILL_RETRIES);
+  });
+
+  it('only waits for a blank screen when there was no sample to compare with', async () => {
+    expect((await take([blank, verseOne, scrolled])).taken).toBe(2);
+  });
+});
+
+describe('launching again after a stuck launch', () => {
+  it('launches a shot once more, on the iPhone and Android, before it counts as failed', () => {
+    // On 2026-10-21 one Home launch stayed on the splash for 41 seconds.
+    expect(LAUNCHES).toBe(2);
+    for (const script of ['scripts/capture-ios-screens.cjs', 'scripts/capture-android-screens.cjs']) {
+      const source = repoFile(script);
+      expect([script, source]).toEqual([script, expect.stringContaining('for (let launch = 1; launch <= LAUNCHES; launch++) {')]);
+      // Only launch problems relaunch; the shot's own checks, such as statusBarClear, come after.
+      const relaunch = source.indexOf('if (problems.length && launch < LAUNCHES) {');
+      expect(relaunch).toBeGreaterThan(source.indexOf("problems.push('the app still shows its splash screen')"));
+      expect(relaunch).toBeLessThan(source.indexOf('for (const check of shot.checks) {'));
+    }
+  });
+
+  it('lists each relaunch in the summary, and warns on the run', () => {
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+    expect(relaunchLines([])).toEqual([]);
+    expect(relaunchLines(['ios/home-dark.png: the app still shows its splash screen, after 41s'])).toEqual([
+      '',
+      'Launched again after a stuck launch (1):',
+      '- ⚠️ ios/home-dark.png: the app still shows its splash screen, after 41s',
+    ]);
+    expect(log).toHaveBeenCalledWith(
+      '::warning::Launched again: ios/home-dark.png: the app still shows its splash screen, after 41s',
+    );
   });
 });
 

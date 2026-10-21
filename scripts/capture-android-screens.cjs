@@ -32,7 +32,7 @@ const { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } = requir
 const { tmpdir } = require('node:os');
 const { dirname, join, resolve } = require('node:path');
 const {
-  BLANK_RETRIES,
+  LAUNCHES,
   ROUTE_KEY,
   SAMPLE_EVERY,
   buildManifest,
@@ -42,8 +42,10 @@ const {
   looksLikeSplash,
   planCaptures,
   planStoreCopies,
+  relaunchLines,
   settledAfter,
   statusBarClear,
+  takeFinalShot,
   takeGroup,
   writeAppStoreCopy,
 } = require('./capture-ios-screens.cjs');
@@ -198,7 +200,6 @@ const prepareEmulator = () => {
   shell('wm dismiss-keyguard');
 };
 
-const sleep = (seconds) => new Promise((done) => setTimeout(done, seconds * 1000));
 const sleepUntil = (time) => new Promise((done) => setTimeout(done, Math.max(0, time - Date.now())));
 
 const screenshot = (file) => {
@@ -238,69 +239,74 @@ const capture = async (outDir, { group, store }) => {
   // The Google Play shots are kept only as their copies.
   const shotDir = store ? join(workDir, 'shots') : outDir;
   const failures = [];
+  const relaunched = [];
   const captured = new Set();
   const timings = [];
   const started = Date.now();
 
   for (const shot of planShots(config, { group, store })) {
-    shell(`am force-stop ${pkg}`);
-    const database = join(workDir, STORAGE_DATABASE);
-    writeStorage(database, buildManifest(shot.settings, shot.route));
-    const pushed = '/data/local/tmp/key-screens-storage';
-    adb('push', database, pushed);
-    shell(installStorageCommands(pkg, pushed));
-    current = applyDeviceSettings(deviceSettings(shot.settings, device.density), current);
-    shell(`am start -W -n ${activity} >/dev/null`);
-    const launched = Date.now();
-    const samples = [];
-    for (let seconds = SAMPLE_EVERY; seconds < shot.wait; seconds += SAMPLE_EVERY) {
-      await sleepUntil(launched + seconds * 1000);
-      const sample = join(workDir, `sample-${seconds}.png`);
-      screenshot(sample);
-      samples.push({ seconds, file: sample });
-    }
-    await sleepUntil(launched + shot.wait * 1000);
-
-    const file = join(shotDir, shot.file);
-    mkdirSync(dirname(file), { recursive: true });
-    // Taken even when something went wrong, so the artifact shows what was on
-    // screen. If the app hasn't drawn yet, or still shows its splash, it tries
-    // again for a while.
-    const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
-    screenshot(file);
-    for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
-      await sleep(2);
-      screenshot(file);
-    }
-    const finalSeconds = Math.round((Date.now() - launched) / 1000);
-    await compareSamples(samples, file);
-    const settled = settledAfter(samples, finalSeconds);
-    timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
-
-    const problems = [];
-    if (!isRunning(pkg)) problems.push(`the app wasn't running after opening ${shot.url}`);
-    // The app removes the saved screen once it has opened it.
-    if (shot.route) {
-      const pulled = mkdtempSync(join(workDir, 'pulled-'));
-      pullStorage(pkg, pulled);
-      try {
-        if (readStorageValue(pulled, ROUTE_KEY) !== null) problems.push("the app didn't open the saved screen");
-      } catch (error) {
-        problems.push(`couldn't read the app's storage back (${error.message})`);
+    // A stuck launch gets another (LAUNCHES in capture-ios-screens.cjs).
+    for (let launch = 1; launch <= LAUNCHES; launch++) {
+      shell(`am force-stop ${pkg}`);
+      const database = join(workDir, STORAGE_DATABASE);
+      writeStorage(database, buildManifest(shot.settings, shot.route));
+      const pushed = '/data/local/tmp/key-screens-storage';
+      adb('push', database, pushed);
+      shell(installStorageCommands(pkg, pushed));
+      current = applyDeviceSettings(deviceSettings(shot.settings, device.density), current);
+      shell(`am start -W -n ${activity} >/dev/null`);
+      const launched = Date.now();
+      const samples = [];
+      for (let seconds = SAMPLE_EVERY; seconds < shot.wait; seconds += SAMPLE_EVERY) {
+        await sleepUntil(launched + seconds * 1000);
+        const sample = join(workDir, `sample-${seconds}.png`);
+        screenshot(sample);
+        samples.push({ seconds, file: sample });
       }
+      await sleepUntil(launched + shot.wait * 1000);
+
+      const file = join(shotDir, shot.file);
+      mkdirSync(dirname(file), { recursive: true });
+      // Taken even when something went wrong, so the artifact shows what was on
+      // screen. It waits for a screen that's still blank, or still loading
+      // (takeFinalShot in capture-ios-screens.cjs).
+      await takeFinalShot(() => screenshot(file), file, { lastSample: samples.at(-1)?.file });
+      const finalSeconds = Math.round((Date.now() - launched) / 1000);
+      await compareSamples(samples, file);
+      const settled = settledAfter(samples, finalSeconds);
+
+      const problems = [];
+      if (!isRunning(pkg)) problems.push(`the app wasn't running after opening ${shot.url}`);
+      // The app removes the saved screen once it has opened it.
+      if (shot.route) {
+        const pulled = mkdtempSync(join(workDir, 'pulled-'));
+        pullStorage(pkg, pulled);
+        try {
+          if (readStorageValue(pulled, ROUTE_KEY) !== null) problems.push("the app didn't open the saved screen");
+        } catch (error) {
+          problems.push(`couldn't read the app's storage back (${error.message})`);
+        }
+      }
+      if (await looksBlank(file)) problems.push('the screen is blank');
+      else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
+      if (problems.length && launch < LAUNCHES) {
+        relaunched.push(`${shot.file}: ${problems.join(', ')}, after ${finalSeconds}s`);
+        console.log(`${shot.file} <- ${shot.url}  (${problems.join(', ')} after ${finalSeconds}s; launching again)`);
+        continue;
+      }
+      timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
+      for (const check of shot.checks) {
+        if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
+        else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
+      }
+      if (problems.length) failures.push(`${shot.file}: ${problems.join(', ')}`);
+      else captured.add(shot.name);
+      console.log(
+        `${shot.file} <- ${shot.url}  (settled after ${settled}s of ${finalSeconds}s)` +
+          (problems.length ? `  (${problems.join(', ')})` : ''),
+      );
+      break;
     }
-    if (await looksBlank(file)) problems.push('the screen is blank');
-    else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
-    for (const check of shot.checks) {
-      if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
-      else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
-    }
-    if (problems.length) failures.push(`${shot.file}: ${problems.join(', ')}`);
-    else captured.add(shot.name);
-    console.log(
-      `${shot.file} <- ${shot.url}  (settled after ${settled}s of ${finalSeconds}s)` +
-        (problems.length ? `  (${problems.join(', ')})` : ''),
-    );
   }
   shell(`am force-stop ${pkg}`);
   applyDeviceSettings({ ...current, night: 'no', fontScale: '1' }, current);
@@ -329,6 +335,7 @@ const capture = async (outDir, { group, store }) => {
         ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
         : `${captured.size} captured in ${minutes} minutes, in \`screens/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
+    ...relaunchLines(relaunched),
     '',
     `Settled within 5 seconds: ${timings.filter((timing) => timing.settledAfter <= 5).length} of ${timings.length}. ` +
       `Slowest: ${[...timings]

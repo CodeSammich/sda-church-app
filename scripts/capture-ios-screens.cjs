@@ -86,6 +86,22 @@ const BIBLE_WAIT = 9;
 // still shows the launch splash.
 const BLANK_RETRIES = 10;
 
+// A screen still changing at the end of its wait is usually still loading: on
+// 2026-10-20, on a slow runner, a Bible shot caught John 3 at verse 1 with one
+// translation's text, before the other's arrived and it scrolled to verse 14.
+// So while the final shot differs from the screenshot before it by more than
+// STILL_FRACTION of its pixels, it's taken again 2 seconds later, up to
+// STILL_RETRIES times. Home's countdown changes a few digits, far less than that.
+const STILL_FRACTION = 0.01;
+const STILL_RETRIES = 6;
+
+// Launches for a shot whose launch went wrong: the app not running, the saved
+// screen not opened, or a blank or splash screen after every retake. On
+// 2026-10-21 a busy runner left one Home shot on the splash for 41 seconds,
+// while the 18 around it loaded. The run lists each relaunch, so a launch
+// problem that keeps coming back still shows, and fails if it happens twice.
+const LAUNCHES = 2;
+
 // While waiting, a sample screenshot every this many seconds. Comparing them
 // with the final shot records when each screen stopped changing, so the waits
 // above can be shortened from measurements rather than guesses (#453).
@@ -309,6 +325,62 @@ const looksLikeSplash = async (file, color = SPLASH_COLOR) => {
   return true;
 };
 
+/** The fraction of pixels that differ between two screenshots (files or PNG buffers). */
+const differingFraction = async (a, b) => {
+  const sharp = require('sharp');
+  const [x, y] = await Promise.all(
+    [a, b].map((image) => sharp(image).removeAlpha().raw().toBuffer({ resolveWithObject: true })),
+  );
+  if (x.info.width !== y.info.width || x.info.height !== y.info.height) return 1;
+  let differing = 0;
+  for (let i = 0; i < x.data.length; i += 3) {
+    if (x.data[i] !== y.data[i] || x.data[i + 1] !== y.data[i + 1] || x.data[i + 2] !== y.data[i + 2]) differing++;
+  }
+  return differing / (x.info.width * x.info.height);
+};
+
+/**
+ * The summary's lines for shots launched again (LAUNCHES), each also a warning
+ * on the run, so a launch problem that keeps coming back is noticed.
+ */
+const relaunchLines = (relaunched) => {
+  for (const shot of relaunched) console.log(`::warning::Launched again: ${shot}`);
+  return relaunched.length
+    ? ['', `Launched again after a stuck launch (${relaunched.length}):`, ...relaunched.map((shot) => `- ⚠️ ${shot}`)]
+    : [];
+};
+
+/**
+ * Takes the shot into `file` with `screenshot()`: again while the screen is
+ * blank or still shows the splash, then again while it's still changing,
+ * compared with `lastSample` (the screenshot taken just before) and then with
+ * each retake. Returns how many screenshots that took.
+ */
+const takeFinalShot = async (screenshot, file, { lastSample, pause = 2 } = {}) => {
+  const drawn = async () => !(await looksBlank(file)) && !(await looksLikeSplash(file));
+  let taken = 1;
+  screenshot();
+  let ready = await drawn();
+  for (let retry = 0; retry < BLANK_RETRIES && !ready; retry++) {
+    await sleep(pause);
+    screenshot();
+    taken++;
+    ready = await drawn();
+  }
+  let previous = lastSample;
+  for (
+    let retry = 0;
+    retry < STILL_RETRIES && ready && previous && (await differingFraction(previous, file)) > STILL_FRACTION;
+    retry++
+  ) {
+    previous = readFileSync(file);
+    await sleep(pause);
+    screenshot();
+    taken++;
+  }
+  return taken;
+};
+
 /**
  * Whether nothing shows through behind the status bar. Text scrolled up under it
  * would reach the plain strip below the clock and icons, or the gaps beside
@@ -355,64 +427,69 @@ const capture = async (outDir, group) => {
     '--batteryLevel', '100');
   const dataContainer = simctl('get_app_container', udid, bundleId, 'data');
   const failures = [];
+  const relaunched = [];
   const captured = new Set();
   const timings = [];
   const sampleDir = mkdtempSync(join(tmpdir(), 'key-screen-samples-'));
   const started = Date.now();
 
   for (const shot of takeGroup(planCaptures(config), group, config)) {
-    spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
-    const manifest = manifestPath(dataContainer, bundleId);
-    mkdirSync(dirname(manifest), { recursive: true });
-    writeFileSync(manifest, JSON.stringify(buildManifest(shot.settings, shot.route)));
-    simctl('ui', udid, 'appearance', shot.settings.theme === 'dark' ? 'dark' : 'light');
-    simctl('ui', udid, 'content_size', shot.settings.iosTextSize);
-    simctl('launch', udid, bundleId);
-    const launched = Date.now();
-    const samples = [];
-    for (let seconds = SAMPLE_EVERY; seconds < shot.wait; seconds += SAMPLE_EVERY) {
-      await sleepUntil(launched + seconds * 1000);
-      const sample = join(sampleDir, `${seconds}.png`);
-      simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', sample);
-      samples.push({ seconds, file: sample });
-    }
-    await sleepUntil(launched + shot.wait * 1000);
+    // A stuck launch gets another (LAUNCHES).
+    for (let launch = 1; launch <= LAUNCHES; launch++) {
+      spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
+      const manifest = manifestPath(dataContainer, bundleId);
+      mkdirSync(dirname(manifest), { recursive: true });
+      writeFileSync(manifest, JSON.stringify(buildManifest(shot.settings, shot.route)));
+      simctl('ui', udid, 'appearance', shot.settings.theme === 'dark' ? 'dark' : 'light');
+      simctl('ui', udid, 'content_size', shot.settings.iosTextSize);
+      simctl('launch', udid, bundleId);
+      const launched = Date.now();
+      const samples = [];
+      for (let seconds = SAMPLE_EVERY; seconds < shot.wait; seconds += SAMPLE_EVERY) {
+        await sleepUntil(launched + seconds * 1000);
+        const sample = join(sampleDir, `${seconds}.png`);
+        simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', sample);
+        samples.push({ seconds, file: sample });
+      }
+      await sleepUntil(launched + shot.wait * 1000);
 
-    const file = join(outDir, shot.file);
-    mkdirSync(dirname(file), { recursive: true });
-    // The whole rectangular screen, without the rounded corners. (The iOS 26
-    // Simulator still draws the Dynamic Island.) Taken even when something went
-    // wrong, so the artifact shows what was on screen. If the app hasn't drawn
-    // yet, or still shows its splash, as happens on some slow launches, it
-    // tries again for a while.
-    const screenshot = () => simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', file);
-    const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
-    screenshot();
-    for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
-      await sleep(2);
-      screenshot();
+      const file = join(outDir, shot.file);
+      mkdirSync(dirname(file), { recursive: true });
+      // The whole rectangular screen, without the rounded corners. (The iOS 26
+      // Simulator still draws the Dynamic Island.) Taken even when something went
+      // wrong, so the artifact shows what was on screen. It waits for a screen
+      // that's still blank, or still loading (takeFinalShot).
+      await takeFinalShot(() => simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', file), file, {
+        lastSample: samples.at(-1)?.file,
+      });
+      const finalSeconds = Math.round((Date.now() - launched) / 1000);
+      await compareSamples(samples, file);
+      const settled = settledAfter(samples, finalSeconds);
+      const problems = [];
+      if (!isRunning(udid, bundleId)) problems.push(`the app wasn't running after opening ${shot.url}`);
+      // The app removes the saved screen once it has opened it.
+      const left = JSON.parse(readFileSync(manifest, 'utf8'));
+      if (shot.route && left[ROUTE_KEY]) problems.push("the app didn't open the saved screen");
+      if (await looksBlank(file)) problems.push('the screen is blank');
+      else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
+      if (problems.length && launch < LAUNCHES) {
+        relaunched.push(`${shot.file}: ${problems.join(', ')}, after ${finalSeconds}s`);
+        console.log(`${shot.file} <- ${shot.url}  (${problems.join(', ')} after ${finalSeconds}s; launching again)`);
+        continue;
+      }
+      timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
+      for (const check of shot.checks) {
+        if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
+        else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
+      }
+      if (problems.length) failures.push(`${shot.file}: ${problems.join(', ')}`);
+      else captured.add(shot.name);
+      console.log(
+        `${shot.file} <- ${shot.url}  (settled after ${settled}s of ${finalSeconds}s)` +
+          (problems.length ? `  (${problems.join(', ')})` : ''),
+      );
+      break;
     }
-    const finalSeconds = Math.round((Date.now() - launched) / 1000);
-    await compareSamples(samples, file);
-    const settled = settledAfter(samples, finalSeconds);
-    timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
-    const problems = [];
-    if (!isRunning(udid, bundleId)) problems.push(`the app wasn't running after opening ${shot.url}`);
-    // The app removes the saved screen once it has opened it.
-    const left = JSON.parse(readFileSync(manifest, 'utf8'));
-    if (shot.route && left[ROUTE_KEY]) problems.push("the app didn't open the saved screen");
-    if (await looksBlank(file)) problems.push('the screen is blank');
-    else if (await looksLikeSplash(file)) problems.push('the app still shows its splash screen');
-    for (const check of shot.checks) {
-      if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
-      else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
-    }
-    if (problems.length) failures.push(`${shot.file}: ${problems.join(', ')}`);
-    else captured.add(shot.name);
-    console.log(
-      `${shot.file} <- ${shot.url}  (settled after ${settled}s of ${finalSeconds}s)` +
-        (problems.length ? `  (${problems.join(', ')})` : ''),
-    );
   }
   rmSync(sampleDir, { recursive: true, force: true });
   writeFileSync(join(outDir, 'settle-times.json'), `${JSON.stringify(timings, null, 2)}\n`);
@@ -438,6 +515,7 @@ const capture = async (outDir, group) => {
       ? `${captured.size} captured in ${minutes} minutes; the joined artifact's \`screens/\` folder has every group's.`
       : `${captured.size} captured in ${minutes} minutes, in \`screens/\`, with the App Store shots in \`screens/app-store/\`.`,
     ...failures.map((failure) => `- ❌ ${failure}`),
+    ...relaunchLines(relaunched),
     '',
     `Settled within 5 seconds: ${timings.filter((timing) => timing.settledAfter <= 5).length} of ${timings.length}. ` +
       `Slowest: ${[...timings]
@@ -485,7 +563,12 @@ module.exports = {
   PLATFORMS,
   ROUTE_KEY,
   SAMPLE_EVERY,
-  BLANK_RETRIES,
+  takeFinalShot,
+  relaunchLines,
+  LAUNCHES,
+  differingFraction,
+  STILL_FRACTION,
+  STILL_RETRIES,
   loadConfig,
   planCaptures,
   buildManifest,

@@ -131,7 +131,11 @@ jobs:
       - name: Install Android SDK tools
         run: |
           set -euo pipefail
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
+          # This runs main's copy of the workflow on the pull request's
+          # checkout, which may predate the retrying install script.
+          install=scripts/sdkmanager-install.sh
+          [ -x "$install" ] || install=sdkmanager
+          "$install" "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
           test -d "$ANDROID_HOME/platforms/android-37.0"
           test -d "$ANDROID_HOME/build-tools/37.0.0"
 

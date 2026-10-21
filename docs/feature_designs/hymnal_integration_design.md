@@ -166,7 +166,7 @@ browser. It:
 2. appends `#hymn-score` for a selected hymn; and
 3. returns the official directory when no number is supplied.
 
-`openHymnal` passes that URL to `openInSystemBrowser` in `constants/ExternalLinks.ts`,
+`openHymnal` passes that URL to `openURL` in `constants/ExternalLinks.ts`,
 which uses `WebBrowser.openBrowserAsync` on iOS and Android and a new tab on web. Links
 must continue to open in the system browser. Do not replace this handoff with an iframe,
 WebView, remote `Image`, server-side proxy, service-worker cache, or downloaded local

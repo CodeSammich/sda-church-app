@@ -1,5 +1,5 @@
 {
- "$comment": "Text Apple Vision read from real key-screen screenshots (#331), unedited, for testing scripts/check-screens.cjs against what Vision really returns. clean: a good run (bible-verse-popup-default and text-size-xl from the first popup shots, #372, where Vision read the share icon as <); openPrompt: a run where iOS covered each screen with its Open in prompt. Vision garbles some text that is fine on screen, such as small print in images and superscript footnote numbers: in library-zh, ANDKPW MUKKA is ANDREW MURRAY on the Humility cover image (the app's own caption below it reads Andrew Murray), and in bible-scrolled-default, eternal life4. is John 3:15 with the BSB's footnote 4. The checks look only for particular labels in particular places, so text like this can't pass or fail them.",
+ "$comment": "Text Apple Vision read from real key-screen screenshots (#331), unedited, for testing scripts/check-screens.cjs against what Vision really returns. clean: a good run (bible-verse-popup-default and text-size-xl from the first popup shots, #372, where Vision read the share icon as <); openPrompt: a run where iOS covered each screen with its Open in prompt; bottomSheet: the 1.3.2 release PR's audio settings popup, which still sat at the bottom of the screen. Vision garbles some text that is fine on screen, such as small print in images and superscript footnote numbers: in library-zh, ANDKPW MUKKA is ANDREW MURRAY on the Humility cover image (the app's own caption below it reads Andrew Murray), and in bible-scrolled-default, eternal life4. is John 3:15 with the BSB's footnote 4. The checks look only for particular labels in particular places, so text like this can't pass or fail them.",
  "clean": {
   "bible-dual-default": [
    {
@@ -1886,6 +1886,289 @@
      0.945,
      0.044,
      0.009
+    ]
+   }
+  ]
+ },
+ "bottomSheet": {
+  "bible-audio-settings-zh": [
+   {
+    "text": "9:41",
+    "box": [
+     0.142,
+     0.025,
+     0.091,
+     0.02
+    ]
+   },
+   {
+    "text": "文A繁 CUV+ EN BSBY",
+    "box": [
+     0.306,
+     0.09,
+     0.385,
+     0.018
+    ]
+   },
+   {
+    "text": "Q",
+    "box": [
+     0.893,
+     0.089,
+     0.038,
+     0.017
+    ]
+   },
+   {
+    "text": "耶和華是我牧者",
+    "box": [
+     0.044,
+     0.177,
+     0.306,
+     0.02
+    ]
+   },
+   {
+    "text": "The LORD Is My Shepherd",
+    "box": [
+     0.044,
+     0.209,
+     0.479,
+     0.021
+    ]
+   },
+   {
+    "text": "大衛的詩。",
+    "box": [
+     0.044,
+     0.273,
+     0.202,
+     0.025
+    ]
+   },
+   {
+    "text": "A Psalm of David.",
+    "box": [
+     0.044,
+     0.307,
+     0.328,
+     0.018
+    ]
+   },
+   {
+    "text": "1 耶和華是我的牧者，",
+    "box": [
+     0.038,
+     0.342,
+     0.382,
+     0.025
+    ]
+   },
+   {
+    "text": "我必不致缺乏。",
+    "box": [
+     0.076,
+     0.37,
+     0.268,
+     0.024
+    ]
+   },
+   {
+    "text": "The LORD is my shepherd；",
+    "box": [
+     0.076,
+     0.406,
+     0.442,
+     0.017
+    ]
+   },
+   {
+    "text": "Ishall not want.",
+    "box": [
+     0.073,
+     0.432,
+     0.265,
+     0.016
+    ]
+   },
+   {
+    "text": "有聲書設定",
+    "box": [
+     0.378,
+     0.466,
+     0.24,
+     0.024
+    ]
+   },
+   {
+    "text": "×",
+    "box": [
+     0.883,
+     0.467,
+     0.05,
+     0.025
+    ]
+   },
+   {
+    "text": "朗讀語言",
+    "box": [
+     0.063,
+     0.527,
+     0.148,
+     0.019
+    ]
+   },
+   {
+    "text": "國語",
+    "box": [
+     0.145,
+     0.571,
+     0.076,
+     0.018
+    ]
+   },
+   {
+    "text": "基督徒团契 （Audio Power）",
+    "box": [
+     0.145,
+     0.594,
+     0.353,
+     0.015
+    ]
+   },
+   {
+    "text": "<",
+    "box": [
+     0.877,
+     0.577,
+     0.063,
+     0.026
+    ]
+   },
+   {
+    "text": "WordProject",
+    "box": [
+     0.142,
+     0.663,
+     0.18,
+     0.015
+    ]
+   },
+   {
+    "text": "優先音源",
+    "box": [
+     0.06,
+     0.719,
+     0.151,
+     0.019
+    ]
+   },
+   {
+    "text": "NYCCSDA.org",
+    "box": [
+     0.132,
+     0.767,
+     0.265,
+     0.017
+    ]
+   },
+   {
+    "text": "Internet Archive",
+    "box": [
+     0.139,
+     0.817,
+     0.271,
+     0.016
+    ]
+   },
+   {
+    "text": "Audio Power",
+    "box": [
+     0.132,
+     0.868,
+     0.224,
+     0.016
+    ]
+   },
+   {
+    "text": "介",
+    "box": [
+     0.098,
+     0.916,
+     0.054,
+     0.023
+    ]
+   },
+   {
+    "text": "首頁",
+    "box": [
+     0.101,
+     0.943,
+     0.047,
+     0.013
+    ]
+   },
+   {
+    "text": "†",
+    "box": [
+     0.35,
+     0.916,
+     0.047,
+     0.025
+    ]
+   },
+   {
+    "text": "聖經",
+    "box": [
+     0.35,
+     0.943,
+     0.047,
+     0.013
+    ]
+   },
+   {
+    "text": "<",
+    "box": [
+     0.877,
+     0.763,
+     0.06,
+     0.025
+    ]
+   },
+   {
+    "text": "◎",
+    "box": [
+     0.593,
+     0.917,
+     0.06,
+     0.022
+    ]
+   },
+   {
+    "text": "探索",
+    "box": [
+     0.596,
+     0.945,
+     0.05,
+     0.012
+    ]
+   },
+   {
+    "text": "0e",
+    "box": [
+     0.842,
+     0.917,
+     0.057,
+     0.022
+    ]
+   },
+   {
+    "text": "您",
+    "box": [
+     0.858,
+     0.945,
+     0.028,
+     0.01
     ]
    }
   ]

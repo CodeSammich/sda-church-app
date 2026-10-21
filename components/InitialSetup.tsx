@@ -443,7 +443,6 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
 const styles = StyleSheet.create({
   modal: {
     alignSelf: 'center',
-    borderRadius: 16,
     marginVertical: 20,
     maxWidth: 500,
     width: '90%',

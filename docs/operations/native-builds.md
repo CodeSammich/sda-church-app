@@ -483,8 +483,9 @@ internal iOS distribution is not TestFlight.
 Local iOS builds require macOS, Xcode with command-line tools, and CocoaPods. Local
 Android builds require macOS or Linux, Node 22 or 24, Java 17, the Android SDK and NDK, and
 accepted SDK licenses. The workflows install `platforms;android-37.0`,
-`build-tools;37.0.0`, and `ndk;27.1.12297006`; install the same with Android Studio or
-`sdkmanager`. Configure `ANDROID_HOME` and the Android
+`build-tools;37.0.0`, and `ndk;27.1.12297006` through `scripts/sdkmanager-install.sh`,
+which downloads again, up to three tries, when a download arrives broken; install the
+same with Android Studio or `sdkmanager`. Configure `ANDROID_HOME` and the Android
 command-line tools on PATH.
 Direct Android and iOS compilation require network access for npm dependencies,
 the Expo template, and CocoaPods, but not Expo authentication. They are not
@@ -808,7 +809,15 @@ under the status bar, and the Bible header with two translations and a back arro
 running after launch, if it didn't open the saved screen, if a screenshot is blank or
 still shows the launch splash, or if a screen marked `statusBarClear` shows anything
 behind the status bar. A blank or splash screenshot is retaken every 2 seconds, up to 10
-times, before it counts.
+times, before it counts. So is a screen still changing at the end of its wait, where more
+than 1% of the screenshot differs from the one before it, up to 6 times, until it
+stops: on a slow runner, a Bible shot was once taken before it scrolled to its verse.
+Home's countdown changes far less than that, so it doesn't hold up a shot. A shot whose
+launch goes wrong (the app not running, the saved screen not opened, or still blank or
+on the splash after its retakes) is launched once more, as when a busy runner once left
+Home on the splash for 41 seconds. The step summary lists each such shot, and the run
+shows it as a warning, so a launch problem that keeps coming back is noticed; failing
+twice fails the run.
 
 **Text checks.** `scripts/check-screens.cjs` then reads each screenshot's text with
 Apple's Vision framework (`scripts/ocr-screens.swift`, built into macOS) and checks what
@@ -822,7 +831,8 @@ every screen must show:
   number split across two lines fails, and its `mustNotShowLines`, which no line may
   match. A `mustShowLines` rule can also be `{ "line": …, "minLeft": 0.5 }`, for a
   line that must start at least that far across, such as Psalm 9's right-aligned
-  "Selah". `variantRules` adds either for one variant. The Bible header uses them: the
+  "Selah", or `{ "line": …, "maxTop": 0.4 }`, for one that must start no farther
+  down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header uses them: the
   translation button shows its 文A icon (which Vision reads as "XA"), the EN badge, and
   both full names, and at 150% and 200% with a back arrow it shows them without the icon;
 - no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
