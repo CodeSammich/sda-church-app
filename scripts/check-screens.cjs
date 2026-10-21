@@ -14,7 +14,8 @@
  * - a screen's own `mustShowLines` in test/screens/screens.json match the start
  *   of some line, which catches a verse number split across two lines (a rule
  *   with `minLeft` also needs the line to start that far across, for
- *   right-aligned text), and its
+ *   right-aligned text, and one with `maxTop` no farther down than that, such
+ *   as a popup's title), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
  *   such as the Bible header without its 文A icon at a large text size.
  *
@@ -166,9 +167,11 @@ const checkShot = (shot, lines) => {
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
   for (const rule of forPlatform(shot.mustShowLines, shot.platform)) {
-    // A rule is a regular expression, or { line, minLeft } for a line that must
-    // also start at least minLeft of the way across, such as right-aligned text.
-    const { line: pattern, minLeft } = typeof rule === 'string' ? { line: rule } : rule;
+    // A rule is a regular expression, or { line, minLeft, maxTop } for a line
+    // that must also start at least minLeft of the way across, such as
+    // right-aligned text, or have its top no more than maxTop of the way down,
+    // such as a popup's title, which sits high when the popup is centred.
+    const { line: pattern, minLeft, maxTop } = typeof rule === 'string' ? { line: rule } : rule;
     const matches = lines.filter((line) => new RegExp(pattern, 'u').test(line.text.trim()));
     if (!matches.length) {
       problems.push(`no line matches /${pattern}/`);
@@ -176,6 +179,11 @@ const checkShot = (shot, lines) => {
       const farthest = Math.max(...matches.map((line) => line.box[0]));
       problems.push(
         `/${pattern}/ starts ${Math.round(farthest * 100)}% of the way across, not at least ${Math.round(minLeft * 100)}%`,
+      );
+    } else if (maxTop !== undefined && !matches.some((line) => line.box[1] <= maxTop)) {
+      const highest = Math.min(...matches.map((line) => line.box[1]));
+      problems.push(
+        `/${pattern}/ is ${Math.round(highest * 100)}% of the way down, not at most ${Math.round(maxTop * 100)}%`,
       );
     }
   }

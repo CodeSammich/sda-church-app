@@ -52,6 +52,18 @@ describe('popup shots (#372)', () => {
     expect(checkShot(shot('text-size-xl'), textSize)).toEqual([]);
   });
 
+  it('catch the audio settings popup back at the bottom of the screen', () => {
+    // What Vision read on the 1.3.2 release PR, where the popup still sat at
+    // the bottom, its title 47% of the way down.
+    const atBottom = samples.bottomSheet['bible-audio-settings-zh'] as Line[];
+    expect(checkShot(shot('bible-audio-settings-zh'), atBottom)).toEqual([
+      '/^有聲書設定$/ is 47% of the way down, not at most 40%',
+    ]);
+    // Centred like the others: everything about 20% higher.
+    const centred = atBottom.map(({ text, box }) => ({ text, box: [box[0], box[1] - 0.2, box[2], box[3]] }));
+    expect(checkShot(shot('bible-audio-settings-zh'), centred)).toEqual([]);
+  });
+
   it('catch a Close or Apply button coming back', () => {
     expect(checkShot(shot('bible-verse-popup-default'), [...verse, line('Close', 0.8)])).toEqual([
       '"Close" matches /^Close$/, which must not show',

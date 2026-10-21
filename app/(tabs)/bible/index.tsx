@@ -4108,8 +4108,8 @@ export default function BibleScreen() {
           visible={audioSettingsVisible}
           onDismiss={() => setAudioSettingsVisible(false)}
           contentContainerStyle={[
-            ReaderStyles.audioSettingsContent,
-            { marginBottom: bottomDockInset + 12, maxHeight: popupMaxHeight },
+            ReaderStyles.modalContent,
+            { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
         >

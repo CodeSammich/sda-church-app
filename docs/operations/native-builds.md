@@ -831,7 +831,8 @@ every screen must show:
   number split across two lines fails, and its `mustNotShowLines`, which no line may
   match. A `mustShowLines` rule can also be `{ "line": …, "minLeft": 0.5 }`, for a
   line that must start at least that far across, such as Psalm 9's right-aligned
-  "Selah". `variantRules` adds either for one variant. The Bible header uses them: the
+  "Selah", or `{ "line": …, "maxTop": 0.4 }`, for one that must start no farther
+  down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header uses them: the
   translation button shows its 文A icon (which Vision reads as "XA"), the EN badge, and
   both full names, and at 150% and 200% with a back arrow it shows them without the icon;
 - no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
