@@ -2,9 +2,15 @@ import type { AppTheme } from '@/constants/Themes';
 import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/** Keeps every Paper dialog/modal flush with the app canvas in both themes. */
+/**
+ * Every popup's surface: the app canvas in both themes, and the corners Paper's
+ * Material 3 Dialog gives itself (7 × the theme's roundness), so the Bible
+ * screen's popups, the first-launch setup, and the install prompt, which are
+ * Paper Modals, have the same shape as the You tab's dialogs.
+ */
 export const getPopupSurfaceStyle = (theme: AppTheme) => ({
   backgroundColor: theme.colors.background,
+  borderRadius: 7 * theme.roundness,
 });
 
 /**
