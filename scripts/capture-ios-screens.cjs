@@ -86,6 +86,15 @@ const BIBLE_WAIT = 9;
 // still shows the launch splash.
 const BLANK_RETRIES = 10;
 
+// A screen still changing at the end of its wait is usually still loading: on
+// 2026-10-20, on a slow runner, a Bible shot caught John 3 at verse 1 with one
+// translation's text, before the other's arrived and it scrolled to verse 14.
+// So while the final shot differs from the screenshot before it by more than
+// STILL_FRACTION of its pixels, it's taken again 2 seconds later, up to
+// STILL_RETRIES times. Home's countdown changes a few digits, far less than that.
+const STILL_FRACTION = 0.01;
+const STILL_RETRIES = 6;
+
 // While waiting, a sample screenshot every this many seconds. Comparing them
 // with the final shot records when each screen stopped changing, so the waits
 // above can be shortened from measurements rather than guesses (#453).
@@ -309,6 +318,50 @@ const looksLikeSplash = async (file, color = SPLASH_COLOR) => {
   return true;
 };
 
+/** The fraction of pixels that differ between two screenshots (files or PNG buffers). */
+const differingFraction = async (a, b) => {
+  const sharp = require('sharp');
+  const [x, y] = await Promise.all(
+    [a, b].map((image) => sharp(image).removeAlpha().raw().toBuffer({ resolveWithObject: true })),
+  );
+  if (x.info.width !== y.info.width || x.info.height !== y.info.height) return 1;
+  let differing = 0;
+  for (let i = 0; i < x.data.length; i += 3) {
+    if (x.data[i] !== y.data[i] || x.data[i + 1] !== y.data[i + 1] || x.data[i + 2] !== y.data[i + 2]) differing++;
+  }
+  return differing / (x.info.width * x.info.height);
+};
+
+/**
+ * Takes the shot into `file` with `screenshot()`: again while the screen is
+ * blank or still shows the splash, then again while it's still changing,
+ * compared with `lastSample` (the screenshot taken just before) and then with
+ * each retake. Returns how many screenshots that took.
+ */
+const takeFinalShot = async (screenshot, file, { lastSample, pause = 2 } = {}) => {
+  const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
+  let taken = 1;
+  screenshot();
+  for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
+    await sleep(pause);
+    screenshot();
+    taken++;
+  }
+  let previous = lastSample;
+  for (
+    let retry = 0;
+    retry < STILL_RETRIES && previous && !(await notReady()) &&
+    (await differingFraction(previous, file)) > STILL_FRACTION;
+    retry++
+  ) {
+    previous = readFileSync(file);
+    await sleep(pause);
+    screenshot();
+    taken++;
+  }
+  return taken;
+};
+
 /**
  * Whether nothing shows through behind the status bar. Text scrolled up under it
  * would reach the plain strip below the clock and icons, or the gaps beside
@@ -382,16 +435,11 @@ const capture = async (outDir, group) => {
     mkdirSync(dirname(file), { recursive: true });
     // The whole rectangular screen, without the rounded corners. (The iOS 26
     // Simulator still draws the Dynamic Island.) Taken even when something went
-    // wrong, so the artifact shows what was on screen. If the app hasn't drawn
-    // yet, or still shows its splash, as happens on some slow launches, it
-    // tries again for a while.
-    const screenshot = () => simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', file);
-    const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
-    screenshot();
-    for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
-      await sleep(2);
-      screenshot();
-    }
+    // wrong, so the artifact shows what was on screen. It waits for a screen
+    // that's still blank, or still loading (takeFinalShot).
+    await takeFinalShot(() => simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', file), file, {
+      lastSample: samples.at(-1)?.file,
+    });
     const finalSeconds = Math.round((Date.now() - launched) / 1000);
     await compareSamples(samples, file);
     const settled = settledAfter(samples, finalSeconds);
@@ -485,7 +533,10 @@ module.exports = {
   PLATFORMS,
   ROUTE_KEY,
   SAMPLE_EVERY,
-  BLANK_RETRIES,
+  takeFinalShot,
+  differingFraction,
+  STILL_FRACTION,
+  STILL_RETRIES,
   loadConfig,
   planCaptures,
   buildManifest,
