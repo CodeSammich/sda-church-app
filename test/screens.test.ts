@@ -19,6 +19,8 @@ const {
   looksLikeSplash,
   takeFinalShot,
   differingFraction,
+  relaunchLines,
+  LAUNCHES,
   STILL_FRACTION,
   STILL_RETRIES,
 } = require('../scripts/capture-ios-screens.cjs');
@@ -670,6 +672,34 @@ describe('waiting for a screen to finish loading', () => {
 
   it('only waits for a blank screen when there was no sample to compare with', async () => {
     expect((await take([blank, verseOne, scrolled])).taken).toBe(2);
+  });
+});
+
+describe('launching again after a stuck launch', () => {
+  it('launches a shot once more, on the iPhone and Android, before it counts as failed', () => {
+    // On 2026-10-21 one Home launch stayed on the splash for 41 seconds.
+    expect(LAUNCHES).toBe(2);
+    for (const script of ['scripts/capture-ios-screens.cjs', 'scripts/capture-android-screens.cjs']) {
+      const source = repoFile(script);
+      expect([script, source]).toEqual([script, expect.stringContaining('for (let launch = 1; launch <= LAUNCHES; launch++) {')]);
+      // Only launch problems relaunch; the shot's own checks, such as statusBarClear, come after.
+      const relaunch = source.indexOf('if (problems.length && launch < LAUNCHES) {');
+      expect(relaunch).toBeGreaterThan(source.indexOf("problems.push('the app still shows its splash screen')"));
+      expect(relaunch).toBeLessThan(source.indexOf('for (const check of shot.checks) {'));
+    }
+  });
+
+  it('lists each relaunch in the summary, and warns on the run', () => {
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+    expect(relaunchLines([])).toEqual([]);
+    expect(relaunchLines(['ios/home-dark.png: the app still shows its splash screen, after 41s'])).toEqual([
+      '',
+      'Launched again after a stuck launch (1):',
+      '- ⚠️ ios/home-dark.png: the app still shows its splash screen, after 41s',
+    ]);
+    expect(log).toHaveBeenCalledWith(
+      '::warning::Launched again: ios/home-dark.png: the app still shows its splash screen, after 41s',
+    );
   });
 });
 

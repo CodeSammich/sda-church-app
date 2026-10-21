@@ -812,7 +812,12 @@ behind the status bar. A blank or splash screenshot is retaken every 2 seconds, 
 times, before it counts. So is a screen still changing at the end of its wait, where more
 than 1% of the screenshot differs from the one before it, up to 6 times, until it
 stops: on a slow runner, a Bible shot was once taken before it scrolled to its verse.
-Home's countdown changes far less than that, so it doesn't hold up a shot.
+Home's countdown changes far less than that, so it doesn't hold up a shot. A shot whose
+launch goes wrong (the app not running, the saved screen not opened, or still blank or
+on the splash after its retakes) is launched once more, as when a busy runner once left
+Home on the splash for 41 seconds. The step summary lists each such shot, and the run
+shows it as a warning, so a launch problem that keeps coming back is noticed; failing
+twice fails the run.
 
 **Text checks.** `scripts/check-screens.cjs` then reads each screenshot's text with
 Apple's Vision framework (`scripts/ocr-screens.swift`, built into macOS) and checks what
