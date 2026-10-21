@@ -83,7 +83,7 @@ jobs:
       - name: Install Android SDK tools
         run: |
           set -euo pipefail
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
+          scripts/sdkmanager-install.sh "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
 
       - name: Build the emulator APK
         env:
@@ -175,7 +175,7 @@ jobs:
           # comes from the latest ones, as in android-audio-e2e.yml.
           SYSTEM_IMAGE="$(node -p "require('./test/screens/screens.json').android.systemImage")"
           echo "SYSTEM_IMAGE=$SYSTEM_IMAGE" >> "$GITHUB_ENV"
-          sdkmanager "cmdline-tools;latest" "emulator" "platform-tools" "$SYSTEM_IMAGE"
+          scripts/sdkmanager-install.sh "cmdline-tools;latest" "emulator" "platform-tools" "$SYSTEM_IMAGE"
 
       - name: Enable hardware acceleration for the emulator
         run: |

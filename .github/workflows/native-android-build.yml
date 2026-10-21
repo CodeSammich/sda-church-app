@@ -87,7 +87,7 @@ jobs:
         run: |
           # Android 37 uses the versioned 37.0 platform package name.
           set -euo pipefail
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
+          scripts/sdkmanager-install.sh "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
           test -d "$ANDROID_HOME/platforms/android-37.0" || {
             echo 'Android SDK platform android-37.0 is unavailable on this runner.' >&2
             exit 1

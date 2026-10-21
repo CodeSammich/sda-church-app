@@ -32,7 +32,6 @@ const { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } = requir
 const { tmpdir } = require('node:os');
 const { dirname, join, resolve } = require('node:path');
 const {
-  BLANK_RETRIES,
   ROUTE_KEY,
   SAMPLE_EVERY,
   buildManifest,
@@ -44,6 +43,7 @@ const {
   planStoreCopies,
   settledAfter,
   statusBarClear,
+  takeFinalShot,
   takeGroup,
   writeAppStoreCopy,
 } = require('./capture-ios-screens.cjs');
@@ -198,7 +198,6 @@ const prepareEmulator = () => {
   shell('wm dismiss-keyguard');
 };
 
-const sleep = (seconds) => new Promise((done) => setTimeout(done, seconds * 1000));
 const sleepUntil = (time) => new Promise((done) => setTimeout(done, Math.max(0, time - Date.now())));
 
 const screenshot = (file) => {
@@ -264,14 +263,9 @@ const capture = async (outDir, { group, store }) => {
     const file = join(shotDir, shot.file);
     mkdirSync(dirname(file), { recursive: true });
     // Taken even when something went wrong, so the artifact shows what was on
-    // screen. If the app hasn't drawn yet, or still shows its splash, it tries
-    // again for a while.
-    const notReady = async () => (await looksBlank(file)) || (await looksLikeSplash(file));
-    screenshot(file);
-    for (let retry = 0; retry < BLANK_RETRIES && (await notReady()); retry++) {
-      await sleep(2);
-      screenshot(file);
-    }
+    // screen. It waits for a screen that's still blank, or still loading
+    // (takeFinalShot in capture-ios-screens.cjs).
+    await takeFinalShot(() => screenshot(file), file, { lastSample: samples.at(-1)?.file });
     const finalSeconds = Math.round((Date.now() - launched) / 1000);
     await compareSamples(samples, file);
     const settled = settledAfter(samples, finalSeconds);
