@@ -12,20 +12,21 @@ Nothing on the device is sent anywhere, and the app doesn't use iCloud. This pag
 
 ## Bible texts shipped with the app
 
-Every reader translation ships with the app, so the Bible text opens with no network:
+Every Bible text ships with the app, so it opens with no network:
 
 - the 1919 Chinese Union Version, in Traditional and Simplified;
 - the BSB;
-- the Reina-Valera 1909.
+- the Reina-Valera 1909;
+- the verse popup's Hebrew Old Testament and Greek New Testament.
 
-That's 66 books in each, about 19 MB in all (about 5.4 MB compressed). Audio still streams, and the original-language verse popup loads over the network.
+That's 66 books in each translation, and 39 in the Hebrew and 27 in the Greek: about 26 MB in all (about 6.8 MB compressed). Only audio streams.
 
-**The files.** The texts are in `assets/bible/<collection>/<book>.biblejson`, such as `assets/bible/cuv1919/hant/gen.biblejson` or `assets/bible/bsb/jhn.biblejson`. The collections are `cuv1919/hant`, `cuv1919/hans`, `bsb`, and `rv1909`, and each also has a `books.biblejson` with every book's name and size.
+**The files.** The texts are in `assets/bible/<collection>/<book>.biblejson`, such as `assets/bible/cuv1919/hant/gen.biblejson` or `assets/bible/bsb/jhn.biblejson`. The translations are `cuv1919/hant`, `cuv1919/hans`, `bsb`, and `rv1909`, and each also has a `books.biblejson` with every book's name and size. The Hebrew and Greek are `original/hbo_sr` and `original/grc_sr`, with no book list: the popup finds a verse by book, chapter, and verse.
 
-- The CUV and the Reina-Valera use fetch(bible)'s plain-text book format. The BSB holds each chapter as HelloAO's chapter API returns it, with its narrator links. `services/BibleService.ts` already read both formats when the text came from the network, and now reads only these files: a translation without them can't open.
+- The CUV, the Reina-Valera, and the Hebrew and Greek use fetch(bible)'s plain-text book format. The BSB holds each chapter as HelloAO's chapter API returns it, with its narrator links. `services/BibleService.ts` already read both formats when the text came from the network, and now reads only these files: a translation without them can't open.
 - `metro.config.js` treats `.biblejson` as an asset type, so Metro bundles the files with the app.
 - `assets/bible/index.ts` maps each file to its asset. `scripts/write-bible-asset-index.mjs` writes it, and the build scripts run it.
-- `scripts/build-cuv-1919.mjs` builds the CUV, and `scripts/build-bundled-bibles.mjs` the other two. [LEGAL.md](../LEGAL.md) says why each text may ship with the app, and the [CUV's rights record](../rights-records/cuv-1919-2026-10-27/README.md) how its text was checked.
+- `scripts/build-cuv-1919.mjs` builds the CUV, and `scripts/build-bundled-bibles.mjs` the rest. [LEGAL.md](../LEGAL.md) says why each text may ship with the app, and the [CUV's rights record](../rights-records/cuv-1919-2026-10-27/README.md) how its text was checked.
 
 **How the app reads them.** `services/BundledBible.ts` reads a book the first time it opens and keeps the parsed book in memory for the rest of the session. How it reaches the file depends on the platform:
 
@@ -102,6 +103,7 @@ So a member who sets up a new iPhone from a backup starts with fresh settings an
 
 - `test/bundled-bible.test.ts`: the loader on a phone and on the web, retrying after a failed read, and that `assets/bible/index.ts` lists exactly the files in `assets/bible`.
 - `test/bundled-bibles.test.ts`: the BSB and Reina-Valera files, with all 66 books and the right number of verses, chapters that open with no network request, the BSB's narrator links, and that every translation the reader offers ships with the app.
+- `test/original-language-texts.test.ts`: the Hebrew and Greek files, a verse of each with its credit and license and no network request, and that every BSB verse has an original-language entry.
 - `test/cuv-1919-text.test.ts`: the 1919 text's verses, footnotes, and pinyin, and that chapters and book lists open with no network request.
 - `test/cuv-1919-witnesses.test.ts`: every verse's wording and punctuation against two other copies of the 1919 text, and that the Simplified text is the Traditional converted.
 - `test/setup.ts` replaces `services/BundledBible.ts` for the other tests with a reader of the files on disk.

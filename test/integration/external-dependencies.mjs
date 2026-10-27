@@ -630,8 +630,8 @@ for (const language of ['en', 'zh', 'es']) {
   });
 }
 
-// The reader translations ship with the app (assets/bible), so their text isn't
-// fetched at run time. The BSB's narrator links are inside those files, so check
+// Every Bible text ships with the app (assets/bible), the verse popup's Hebrew
+// and Greek included, so none is fetched at run time. The BSB's narrator links are inside those files, so check
 // that they still play. scripts/build-bundled-bibles.mjs rebuilds them if not.
 const bsbNarratorLinks = [];
 for (const { id } of JSON.parse(await readFile('assets/bible/bsb/books.biblejson', 'utf8'))) {
@@ -647,15 +647,6 @@ await record('daily BSB narrator samples from the app', 'HelloAO', (warn) =>
   spotCheck(bsbNarratorLinks, 37, ({ url }) => probe(url, { binary: true }), warn, {
     label: ({ label }) => label,
   }));
-
-for (const resource of ['hbo_sr', 'grc_sr']) {
-  await record(`${resource} Genesis book contract`, 'fetch(bible)', async () => {
-    const book = resource === 'grc_sr' ? 'mat' : 'gen';
-    const data = await getJson(`https://v1.fetch.bible/bibles/${resource}/txt/${book}.json`);
-    if (!data.book || !Array.isArray(data.contents)) throw new Error('book or contents field is missing');
-    return `${data.book} with ${data.contents.length} content entries`;
-  });
-}
 
 const navigationLinks = [
   ['church building image', 'https://assets.adventistconnect.org/newyork2/2026/07/13221703/church_building.jpg', true],

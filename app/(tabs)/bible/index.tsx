@@ -1899,7 +1899,8 @@ export default function BibleScreen() {
 
   // The original-language source is selected by canonical book id, not by the
   // displayed translation. This keeps the same Hebrew/Greek lookup available
-  // in every application language.
+  // in every application language. The translation is passed only for where it
+  // numbers a verse differently from the original.
   useEffect(() => {
     if (modalType !== 'verse-detail' || !book || !selectedVerseNum) return;
 
@@ -1908,7 +1909,12 @@ export default function BibleScreen() {
     setOriginalVerseError(false);
     setOriginalVerseLoading(true);
 
-    BibleService.fetchOriginalLanguageVerse(book.id, chapterNum, selectedVerseNum)
+    BibleService.fetchOriginalLanguageVerse(
+      book.id,
+      chapterNum,
+      selectedVerseNum,
+      supportedTranslation.id,
+    )
       .then((verse) => {
         if (!cancelled) setOriginalVerse(verse);
       })
@@ -1925,7 +1931,7 @@ export default function BibleScreen() {
     return () => {
       cancelled = true;
     };
-  }, [modalType, book?.id, chapterNum, selectedVerseNum]);
+  }, [modalType, book?.id, chapterNum, selectedVerseNum, supportedTranslation.id]);
 
   // Initial load: Fetch books for default translation
   // This effect loads the books for the selected translation and sets the current book.
@@ -4724,6 +4730,8 @@ export default function BibleScreen() {
                         {originalVerse.textDirection === 'rtl'
                           ? labels.hebrewAramaicOriginal
                           : labels.greekOriginal}
+                        {/* Where the original numbers the verse differently. */}
+                        {originalVerse.reference ? ` · ${originalVerse.reference}` : ''}
                       </Text>
                       <Text
                         selectable
@@ -4745,9 +4753,10 @@ export default function BibleScreen() {
                       </Text>
                       {/*
                         Required CC BY 4.0 attribution for the original-language
-                        edition. fetch(bible's free CDN access does not waive the
-                        source edition's license. Do not remove this notice when
-                        changing the popup; see README.md and the Bible design doc.
+                        edition, which ships with the app: the edition, its
+                        editor, and links to its source and the license. Do not
+                        remove this notice when changing the popup; see
+                        docs/LEGAL.md and the Bible design doc.
                       */}
                       <Text
                         variant="labelSmall"
@@ -4756,8 +4765,23 @@ export default function BibleScreen() {
                           { color: theme.colors.onSurfaceVariant },
                         ]}
                       >
-                        {labels.source}: {originalVerse.edition}.{' '}
-                        {originalVerse.attribution}
+                        {labels.source}:{' '}
+                        <Text
+                          accessibilityRole="link"
+                          onPress={() => openURL(originalVerse.sourceUrl)}
+                          style={styles.originalVerseLink}
+                        >
+                          {originalVerse.edition}
+                        </Text>
+                        . {originalVerse.attribution} Licensed{' '}
+                        <Text
+                          accessibilityRole="link"
+                          onPress={() => openURL(originalVerse.licenseUrl)}
+                          style={styles.originalVerseLink}
+                        >
+                          {originalVerse.license}
+                        </Text>
+                        .
                       </Text>
                     </View>
                   ) : originalVerseError ? (
@@ -5585,6 +5609,9 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     originalVerseAttribution: {
       fontSize: scaleTypographyMetric(11, textScale),
       lineHeight: scaleTypographyMetric(16, textScale),
+    },
+    originalVerseLink: {
+      textDecorationLine: 'underline',
     },
     savedEmptyState: {
       minHeight: 180,

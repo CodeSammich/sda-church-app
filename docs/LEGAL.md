@@ -34,9 +34,9 @@ translation's text from either:
   HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
 - [fetch(bible)](https://fetch.bible/) is the source of Reina-Valera 1909, bundled the
   same way from its public-domain `spa_rv`, whose normalized resource keeps the
-  edition's translation footnotes. Separately, the app fetches from it the
-  original-language critical editions shown in the verse-detail popup, the one Bible
-  text that still loads over the network.
+  edition's translation footnotes. It's also the source of the original-language
+  critical editions shown in the verse-detail popup, which ship with the app too, so
+  no Bible text loads over the network.
 - **The Chinese Union Version ships with the app**: the public-domain 1919 text,
   in Traditional and Simplified characters, read with no network. See
   [Chinese Union Version text](#chinese-union-version-text-1919).
@@ -333,7 +333,8 @@ above. Others carry their own licenses or claims: the critical editions below ar
 4.0, and the publisher of the 1988 CUV that fetch(bible) labels public domain claims
 copyright (see [Chinese Union Version text](#chinese-union-version-text-1919)).
 
-The app currently requests these open critical editions:
+The app ships these open critical editions in `assets/bible/original`, built by
+`scripts/build-bundled-bibles.mjs`:
 
 | Testament | fetch(bible) ID | Edition | License and source |
 | --- | --- | --- | --- |
@@ -351,8 +352,11 @@ not the same as a public-domain dedication. Users of the material must:
 4. avoid imposing legal or technological restrictions that prevent recipients
    from exercising the rights granted by the license.
 
-The app preserves an edition-and-editor attribution in the verse-detail popup.
-For display, `BibleService.fetchOriginalLanguageVerse` omits the separate note
+Because the app ships copies, the church distributes these works and must meet those
+conditions. The verse-detail popup shows each verse with its edition, linked to the
+edition's source, its editor, and the license, linked to CC BY 4.0. The bundled files
+are fetch(bible)'s books with their text and notes unchanged; only its book-name field
+is left out. For display, `BibleService.fetchOriginalLanguageVerse` omits the separate note
 objects in fetch(bible's plain-text payload and collapses source layout
 whitespace; the returned biblical character strings and textual sigla are
 otherwise displayed as provided. This formatting disclosure, the attribution,

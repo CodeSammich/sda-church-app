@@ -140,17 +140,14 @@ parse keeps its entered text. Its **Read now** button opens the current app lang
 default translation at that reference, or at Genesis 1:1, and scrolls to the first
 requested verse without selecting it. Blank and `TBD` fields have no button.
 
-- **No Auth:** The build scripts download the BSB and Reina-Valera, and the app the
-  original-language texts, with no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
+- **No Auth:** The build scripts download the BSB, Reina-Valera, and original-language
+  texts with no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
   or developer credentials.
 - **Format:** Both services return structured JSON that is adapted into the app's native
   chapter, verse, heading, and footnote model.
-- **CORS:** fetch(bible) supports direct requests from the web/PWA preview without proxy
-  overhead, for the original-language texts; native clients use the same adapter without
-  browser CORS limits.
 - **Performance Optimization:** Each bundled book is read once, cached as an in-memory
-  promise, and sliced into chapters. fetch(bible)'s original-language texts are delivered
-  by book and cached the same way.
+  promise, and sliced into chapters. The original-language texts are bundled by book and
+  cached the same way.
 - **Rate Limiting:** The selected static resources do not require a metered commercial API
   tier. Their CDN-oriented delivery aligns with **Tenet 1 (Sustainable)**.
 
@@ -185,12 +182,40 @@ the Selah marker.
 
 #### 2.2.2 Original-Language Reference Lookup
 
-The lookup is independent of the displayed translation. `BibleService` sends the canonical
-USFM book ID, chapter number, and verse number to fetch(bible's normalized plain-text
-collection. fetch(bible uses lowercase USFM book IDs and standardizes its distributed
-formats to the common KJV-style versification. Therefore an English, Chinese, or Spanish
-translation can resolve the same original-language verse without attempting a fragile
-one-to-one text match.
+The lookup is independent of the displayed translation. `BibleService` looks up the
+canonical USFM book ID, chapter number, and verse number in fetch(bible)'s normalized
+plain-text books, which ship with the app in `assets/bible/original/{hbo_sr,grc_sr}`.
+fetch(bible) uses lowercase USFM book IDs and mostly standardizes its distributed formats
+to the common KJV-style versification, so an English, Chinese, or Spanish translation can
+usually resolve the same original-language verse by its number, without attempting a
+fragile one-to-one text match.
+
+Where a translation numbers a verse differently, `ORIGINAL_VERSE_NUMBERING` in
+`BibleService` names the original verses that hold it, and the popup shows the original's
+reference beside its language, such as "Koine Greek (Original) · 13:12". The cases differ
+by translation:
+
+- **All three:** Isaiah 64:1 is the end of the Hebrew's 63:19, and Nehemiah 7:68's horses
+  and mules are in its 7:69.
+- **BSB and CUV:** Acts 19:41 is in the Greek's 19:40. The Greek puts "All the saints
+  greet you" in 2 Corinthians 13:12, so their 13:13 is its 13:12, and their 13:14 its
+  13:13.
+- **BSB only:** it joins the Greek's Revelation 12:17–18 and 3 John 1:14–15.
+- **Reina-Valera 1909 only:** it folds 2 Samuel 20:26, 2 Chronicles 33:25, Job 35:16,
+  Hosea 14:9, and Zechariah 11:17 into the verse before, and opens Revelation 13:1 with
+  the Greek's 12:18.
+
+Some passages are left out of these critical editions, because the oldest manuscripts
+lack them, and for those the popup says the original-language text is unavailable:
+
+- in every translation: Ezekiel 40:30, Matthew 16:3, Mark 16:9–20, Luke 22:43–44, and
+  John 7:53–8:11;
+- in the CUV and Reina-Valera, 16 more verses that the BSB also leaves out, such as
+  Matthew 18:11, John 5:4, and Acts 8:37.
+
+`test/original-language-texts.test.ts` checks every verse of every translation: each
+gets its original verse, or is one of those left out, and no original verse goes
+unshown.
 
 The original-language book promise uses the same book-level caching strategy and extracts
 the requested 1-based chapter and verse array. This keeps repeat popup views responsive.
@@ -216,8 +241,9 @@ left-to-right with Gentium. Font sources and their separate licenses are documen
 fetch(bible) is free to access, but that doesn't make every work on it public domain: the
 two original-language editions are CC BY 4.0, with conditions. The required attribution,
 links, and review before changing an edition are in
-[LEGAL.md](../LEGAL.md#free-to-access-doesnt-necessarily-mean-public-domain). If the app
-later makes the attribution clickable, link both the edition source and its license.
+[LEGAL.md](../LEGAL.md#free-to-access-doesnt-necessarily-mean-public-domain). Both
+editions ship with the app (`assets/bible/original`), so the church distributes them: the
+popup's credit links the edition's source and the license.
 
 ### 2.3 Longevity
 
@@ -425,9 +451,9 @@ fails. Explicit persistence in `IndexedDB` is planned for that browser target. `
 is preferred there over `AsyncStorage` due to the large payload size of full Bible chapters
 and better performance with structured data queries. On iOS and Android, the app caches
 a book's file in memory once it opens. Every reader translation ships with the app
-(`assets/bible`), so the text opens with no network. Audio streams, and the
-original-language verse popup loads over the network. `scripts/build-bundled-bibles.mjs`
-(BSB, RV1909) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
+(`assets/bible`), and so do the verse popup's Hebrew and Greek, so the text opens with no
+network; only audio streams. `scripts/build-bundled-bibles.mjs`
+(BSB, RV1909, and the Hebrew and Greek) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
 holds each chapter as HelloAO's chapter API returns it, without the audio timings the app
 doesn't use. [What the app keeps on the phone](on_device_storage.md)
 says where the bundled texts and the app's other saved data live on each platform, what's

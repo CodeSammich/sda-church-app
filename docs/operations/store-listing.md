@@ -425,9 +425,8 @@ transparency both stores reject. Replace them there whenever the stores get new 
 
 ## What not to claim
 
-- **Offline audio:** all four translations' text ships with the app and opens with no
-  connection, but audio streams, and the original-language verse popup needs a
-  connection.
+- **Offline audio:** all four translations' text, and the verse popup's Hebrew and
+  Greek, ship with the app and open with no connection, but audio streams.
 - **Whole-Bible search:** search covers the current chapter only.
 - **Languages beyond Spanish:** the descriptions' "other languages" means Spanish for now.
 - **Hymn lyrics, sheet music, books, or lessons in the app:** they open on their

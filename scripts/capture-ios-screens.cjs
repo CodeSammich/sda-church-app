@@ -76,9 +76,9 @@ const BASE_SETTINGS = {
 };
 
 // Seconds to wait after launching, before the screenshot. Measured over three
-// runs in October 2026 (settle-times.json): Bible screens, which load their
-// text over the network, were done changing within 6 seconds every time, so
-// 9 leaves a margin; Explore and the EGW shelf took up to 8 of their 10.
+// runs in October 2026 (settle-times.json): Bible screens, which then loaded
+// their text over the network, were done changing within 6 seconds every time,
+// so 9 leaves a margin; Explore and the EGW shelf took up to 8 of their 10.
 const WAIT = 10;
 const BIBLE_WAIT = 9;
 

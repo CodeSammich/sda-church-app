@@ -35,7 +35,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [Internet Archive](#internet-archive) | CUV audio, 2nd source | Free | None published | Throttling possible | Low: built for bulk downloads |
 | [Audio Power](#audio-power) | CUV audio, 3rd source | Free (permission) | None published | Unknown | Low: reached only if two sources fail |
 | [HelloAO](#helloao) | English BSB audio, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN |
-| [fetch(bible)](#fetchbible) | Original-language text in the verse popup, the app's only Bible-text request; the build script's source for RV1909 | Free | "No limits from us" | n/a | Low: CDN |
+| [fetch(bible)](#fetchbible) | The build script's source for RV1909 and the original-language texts; the app makes no request | Free | "No limits from us" | n/a | None at run time |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
@@ -68,8 +68,7 @@ Per-use costs, *measured*:
 | Cantonese CUV audio, one hour | ~7.2 MB | Mostly 16 kbps mono; whole Bible 792 MB / ~100 hours |
 | Spanish RV1909 audio, one hour | ~11 MB | Mostly 24 kbps mono; whole Bible 861 MB / ~77 hours |
 | BSB English audio, one chapter | ~4.4 MB (John 3, Souer) | Much larger than the Chinese recordings |
-| fetch(bible) original-language book | ~30 KB | One request per book, kept in memory for the session |
-| Bible text in the app | ~19 MB, about 5.4 MB compressed, for all four translations | No request: it ships with the app |
+| Bible text in the app | ~26 MB, about 6.8 MB compressed: the four translations and the Hebrew and Greek | No request: it ships with the app |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
 | Adventech quarterly index | ~124 KB | CDN-cached; only when a children's age group is tapped |
@@ -84,8 +83,8 @@ These choices exist to keep the app free and within every provider's limits:
 
 - **Bible text from static files, not metered APIs.** HelloAO and fetch(bible) serve
   pre-built files from AWS CloudFront with no API key and no quota. The reader's
-  translations are built from them and ship with the app, so reading costs no request;
-  only the original-language popup fetches fetch(bible)'s files. Metered options
+  translations and the verse popup's Hebrew and Greek are built from them and ship with
+  the app, so reading costs no request. Metered options
   were rejected: api.bible's free tier allows 5,000 calls a month, and
   bible-api.com throttles at 15 requests per 30 seconds
   ([Bible integration design](../feature_designs/bible_integration_design.md)).
@@ -165,15 +164,6 @@ directly from HelloAO, with no church copy. That is fine at every scenario becau
 is served from CloudFront, but it is the largest dependency with no fallback other
 than choosing another narrator.
 
-### fetch(bible)
-
-`v1.fetch.bible`, static files on S3 and CloudFront (*measured*). The app uses it only for
-the original-language texts in the verse popup. The RV1909 text ships with the app, so the
-app never requests it here; `scripts/build-bundled-bibles.mjs` downloads it when it runs. Its
-[access policy](https://fetch.bible/access/#no-limits-from-us) offers the CDN with
-"no API key, usage fee, request quota, or provider-imposed caching limit." The app
-loads a whole book once (about 30 KB) and keeps it in memory for the session.
-
 ### Bulletin API (Apps Script)
 
 The church's own Apps Script web app. Free under Google Workspace for Nonprofits.
@@ -246,6 +236,14 @@ in the app or page where you show the data", so that script should either credit
 or calculate the times itself.
 
 ## Build, hosting, and admin services
+
+### fetch(bible)
+
+`v1.fetch.bible`, static files on S3 and CloudFront (*measured*). The RV1909 text and the
+verse popup's Hebrew and Greek ship with the app, so the app never requests anything here;
+`scripts/build-bundled-bibles.mjs` downloads them when it runs. Its
+[access policy](https://fetch.bible/access/#no-limits-from-us) offers the CDN with
+"no API key, usage fee, request quota, or provider-imposed caching limit."
 
 ### GitHub Actions
 
