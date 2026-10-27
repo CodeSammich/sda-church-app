@@ -412,7 +412,9 @@ and better performance with structured data queries. On iOS and Android, the app
 chapter data only in memory while it runs, such as the whole fetch(bible) books behind
 RVR09; there is no saved chapter cache or Bible download yet (see the TODOs in
 `fetchCompleteTranslation` in `services/BibleService.ts`). The CUV and CUVS ship with the
-app, so they open with no network.
+app, so they open with no network. [What the app keeps on the phone](on_device_storage.md)
+says where the bundled texts and the app's other saved data live on each platform, what's
+backed up, and what the store policies say.
 
 ### 4.2 Bible Sharing Feature (done)
 

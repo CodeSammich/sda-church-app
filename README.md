@@ -62,6 +62,9 @@ one place. Church admins can start at [Operate](#operate).
     hymnal index and why it links to externally hosted sheet music
   - [Offline bulletin translation: Bergamot feasibility](docs/feature_designs/offline_bulletin_translation.md):
     why on-device translation is deferred, and what the app does instead
+  - [What the app keeps on the phone](docs/feature_designs/on_device_storage.md): the
+    bundled Bible texts, settings, and caches on each platform, what's backed up, and what
+    the store policies say
   - [Children's Sabbath School lessons](docs/feature_designs/sabbath_school_lessons.md):
     where each age group's weekly lesson comes from
 - [Bundled font sources and licenses](assets/fonts/README.md): each font, its source,
