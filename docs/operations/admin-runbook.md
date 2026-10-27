@@ -813,10 +813,11 @@ attention** in three cases:
   check the page by hand and update the patterns in
   `scripts/check-store-toolchain.cjs`.
 
-When the app is below a requirement or one starts within 120 days, the issue is
-labeled **critical**. An unreadable page alone does not add the
-label, because it usually means the page wording changed, not that uploads will be
-rejected.
+When the app is below a requirement or one starts within 120 days, the issue's
+**Priority** is set to **Urgent**, unless someone already gave it a priority. An
+unreadable page alone doesn't set one, because it usually means the page wording
+changed, not that uploads will be rejected. If GitHub won't let the workflow set the
+field, the issue still opens and the run logs a warning; set the priority by hand.
 
 A new alert is assigned to the users in `MONITOR_ALERT_ASSIGNEES`; see
 [Getting notified only when action is needed](#getting-notified-only-when-action-is-needed).
