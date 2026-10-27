@@ -410,7 +410,8 @@ transparency both stores reject. Replace them there whenever the stores get new 
   **Asset Library**, which submits it for review without a new version, so a rejected
   header holds up nothing else. Leave **Search
   Results** empty, so search results keep showing the screenshots. Apple's rules for
-  both: no prices, website addresses, copyright symbols, or other platforms' logos, and
+  both: no prices, website addresses, copyright symbols, or other mobile platforms or app
+  stores (guideline 2.3.10: no Android or Google Play), and
   any text translated into each listing's language. See Apple's
   [asset best practices](https://developer.apple.com/app-store/asset-best-practices/).
 - **Adding iPad later:** a later version can add iPad support, with iPad screenshots;

@@ -32,9 +32,10 @@ are captured, their sizes, and what they may show are in
   `scripts/make-app-store-headers.cjs` builds them from `app-store/en-US/`, so run it
   again when those screenshots change. They leave out the logo, because the app icon
   shows just below the header. Home and Explore show the YouTube, Spotify, and Zoom
-  icons, and Apple's header rules ask for no other platforms' logos. Apple accepted
-  those screens as screenshots, but if it rejects a header for them, swap Explore for
-  the Library screenshot and Home for the other Bible screenshot.
+  icons. That's allowed: Apple's rule against other platforms' logos (guideline 2.3.10)
+  means other mobile platforms and app stores, such as Android or Google Play. If a
+  header is ever rejected for them, swap Explore for the Library screenshot and Home
+  for the other Bible screenshot.
 - `google-play/foreground-service-demo.mp4`: the original of the unlisted YouTube video
   that Play Console's foreground service declaration links to. If the YouTube video is
   ever deleted, upload this file again and update the link; see
