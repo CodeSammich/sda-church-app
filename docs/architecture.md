@@ -32,9 +32,11 @@ links.
 ### Overview
 
 Who does what: the congregation gets and uses the app, staff produce the digital and
-printed bulletins, and IT administrators develop, release, and maintain it.
+printed bulletins, and IT administrators develop, release, and maintain it. What the apps
+keep on each phone, and what's backed up, is in
+[What the app keeps on the phone](feature_designs/on_device_storage.md).
 
-![Overview diagram: the congregation scans a QR code to reach the download page and installs the app from Google Play or the Apple App Store; staff edit the scheduling roster, which feeds the digital bulletin in the apps and the printed Queens, Queens Communion, and Brooklyn bulletins; IT administrators own the GitHub organization, develop on forks, merge feature PRs into the release-candidate branch and release PRs into main; GitHub Actions uploads the signed AAB to Google Play internal testing through a keyless sign-in in the church's Google Cloud project, which the administrators own and which has no billing account and must never get one, and uploads the IPA to TestFlight; an administrator releases each one after testing; the QR code workflow regenerates the bulletin QR codes in Drive when a change to them merges into main, or when an administrator runs it, and an administrator approves each upload; the apps rely on media and third-party services shown in the app dependencies diagram](diagrams/architecture.svg)
+![Overview diagram: the congregation scans a QR code to reach the download page and installs the app from Google Play or the Apple App Store; staff edit the scheduling roster, which feeds the digital bulletin in the apps and the printed Queens, Queens Communion, and Brooklyn bulletins; IT administrators own the GitHub organization, develop on forks, merge feature PRs into the release-candidate branch and release PRs into main; GitHub Actions uploads the signed AAB to Google Play internal testing through a keyless sign-in in the church's Google Cloud project, which the administrators own and which has no billing account and must never get one, and uploads the IPA to TestFlight; an administrator releases each one after testing; the QR code workflow regenerates the bulletin QR codes in Drive when a change to them merges into main, or when an administrator runs it, and an administrator approves each upload; the apps keep the Bible text they ship with, and members' settings, saved verses, and a cached bulletin, on each phone, with nothing in iCloud; the apps rely on media and third-party services shown in the app dependencies diagram](diagrams/architecture.svg)
 
 ### Build, deploy, and accounts
 
@@ -427,8 +429,8 @@ checks nearly all of them daily.
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
-| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English Bible text (BSB, KJV), each translation's book list, and English BSB audio; Bible verses on the printed bulletin | In app and Apps Script |
-| Bible | fetch(bible) | `v1.fetch.bible` | Chinese Union Version and Reina-Valera 1909 text, and original-language critical texts | In app |
+| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English Bible text (BSB, KJV), their and RV1909's book lists, and English BSB audio; Bible verses on the printed bulletin | In app and Apps Script |
+| Bible | fetch(bible) | `v1.fetch.bible` | Reina-Valera 1909 text and original-language critical texts | In app |
 | Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin CUV, tried first, and Cantonese CUV and Spanish RV1909, their only source | In app |
 | Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |
 | Bible audio | Audio Power | `theaudiopower.com` | CUV audio, third source; also where the church's Mandarin copies came from, with its owner's permission | In app |

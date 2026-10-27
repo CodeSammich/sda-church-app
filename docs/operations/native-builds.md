@@ -980,7 +980,9 @@ read Chinese, English, and Spanish together (`scripts/ocr-screens.py`, at the ve
 SHA-256). Tesseract was tried and missed small Chinese tab labels, "Tú", and white text
 on buttons. `uiautomator dump`, which reads the text exactly, can't run on Home: its
 countdown keeps the screen from ever going idle, which the dump waits for. It also sees
-a label's whole text even when the screen cuts it short. RapidOCR reads the 文A icon as
+a label's whole text even when the screen cuts it short. The script turns off RapidOCR's
+check for upside-down text, which the app never shows: it turned some short words over,
+so the EN badge read as N3. RapidOCR reads the 文A icon as
 文A where Vision reads XA, so those rules accept either.
 
 The phone's screen holds less than the iPhone's, so a few lines fall below the fold

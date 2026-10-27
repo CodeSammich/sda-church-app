@@ -35,7 +35,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [Internet Archive](#internet-archive) | CUV audio, 2nd source | Free | None published | Throttling possible | Low: built for bulk downloads |
 | [Audio Power](#audio-power) | CUV audio, 3rd source | Free (permission) | None published | Unknown | Low: reached only if two sources fail |
 | [HelloAO](#helloao) | English Bible text, English BSB audio, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN |
-| [fetch(bible)](#fetchbible) | Original-language, CUV, RV1909 text | Free | "No limits from us" | n/a | Low: CDN |
+| [fetch(bible)](#fetchbible) | Original-language and RV1909 text | Free | "No limits from us" | n/a | Low: CDN |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
@@ -69,7 +69,8 @@ Per-use costs, *measured*:
 | Spanish RV1909 audio, one hour | ~11 MB | Mostly 24 kbps mono; whole Bible 861 MB / ~77 hours |
 | BSB English audio, one chapter | ~4.4 MB (John 3, Souer) | Much larger than the Chinese recordings |
 | HelloAO chapter | ~3 KB (gzip) | One request per BSB or KJV chapter viewed |
-| fetch(bible) book | ~30 KB (CUV John) | One request per book, kept in memory for the session |
+| fetch(bible) book | ~30 KB (RV1909 John) | One request per book, kept in memory for the session |
+| Chinese Union Version | ~3.4 MB per script, in the app | No request: it ships with the app |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
 | Adventech quarterly index | ~124 KB | CDN-cached; only when a children's age group is tapped |
@@ -155,7 +156,8 @@ files on AWS S3 behind CloudFront with a one-day cache (*measured*). Its
 documentation says: "No usage limits, no API Keys required, and no copyright
 restrictions whatsoever." The app requests one small JSON file per chapter of the
 English translations (BSB and KJV), and one book list per translation, kept in memory
-for the session; the Chinese and Spanish text comes from [fetch(bible)](#fetchbible).
+for the session; the Spanish text comes from [fetch(bible)](#fetchbible), and the Chinese
+Union Version ships with the app.
 The printed bulletin's Apps Script also fetches its Bible verses here, caching each
 chapter.
 
@@ -167,7 +169,7 @@ than choosing another narrator.
 ### fetch(bible)
 
 `v1.fetch.bible`, static files on S3 and CloudFront (*measured*), used for the
-original-language texts and the CUV and RV1909 reader text. Its
+original-language texts and the RV1909 reader text. Its
 [access policy](https://fetch.bible/access/#no-limits-from-us) offers the CDN with
 "no API key, usage fee, request quota, or provider-imposed caching limit." The app
 loads a whole book once (about 30 KB) and keeps it in memory for the session.

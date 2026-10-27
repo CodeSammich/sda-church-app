@@ -2,8 +2,16 @@ import OpenCC from 'opencc-js/t2cn';
 import { customPinyin, pinyin } from 'pinyin-pro';
 
 import { SUPPORTED_TRANSLATIONS } from './BibleService';
+import simplifiedFixes from './BibleSimplifiedFixes.json';
 
-const traditionalToSimplified = OpenCC.Converter({ from: 'tw', to: 'cn' });
+const opencc = OpenCC.Converter({ from: 'tw', to: 'cn' });
+// With the phrases opencc-js gets wrong fixed, such as 按著名 (by name) read as
+// 著名 (famous), so 著 reads zhe, not zhù. The Simplified text has the same fixes.
+const traditionalToSimplified = (text: string) =>
+  simplifiedFixes.phrases.reduce(
+    (converted, [from, to]) => converted.split(from).join(to),
+    opencc(text),
+  );
 const pinyinCache = new Map<string, string>();
 const PINYIN_CACHE_LIMIT = 1_000;
 
@@ -26,6 +34,11 @@ const PUNCTUATION = /^\p{P}$/u;
 // dictionary does not recognize.
 customPinyin({
   参孙: 'shēn sūn',
+  // Two rare characters in the 1919 Chinese Union Version that pinyin-pro doesn't
+  // know, in the simplified forms the reading is looked up by: 𫈟 (茵蔯, wormwood)
+  // and 䍁 (繸子, tassels).
+  '𫈟': 'chén',
+  '䍁': 'suì',
 });
 
 export const isChineseBibleTranslation = (translationId: string) =>

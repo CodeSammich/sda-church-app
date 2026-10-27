@@ -30,6 +30,20 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+// The Bible texts that ship with the app (assets/bible) are assets Metro
+// bundles, which Jest can't load. Tests read the same files from disk, so any
+// test that opens the Chinese Bible reads the real 1919 text.
+// test/bundled-bible.test.ts tests the real loader.
+jest.mock('@/services/BundledBible', () => {
+  const { readFileSync } = require('node:fs');
+  const { join } = require('node:path');
+  return {
+    hasBundledBibleFile: () => true,
+    readBundledBibleFile: async (collection: string, name: string) =>
+      JSON.parse(readFileSync(join(process.cwd(), 'assets/bible', collection, `${name}.biblejson`), 'utf8')),
+  };
+});
+
 // This intentional TypeScript setup expression verifies that Jest transforms
 // root test/ support files before the behavioral suites execute.
 void createElement;

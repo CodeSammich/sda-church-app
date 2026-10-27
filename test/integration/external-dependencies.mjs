@@ -633,7 +633,8 @@ for (const language of ['en', 'zh', 'es']) {
 await record('translation and audio catalog contract', 'HelloAO', async () => {
   const data = await getJson('https://bible.helloao.org/api/available_translations.json');
   const serialized = JSON.stringify(data);
-  for (const id of ['BSB', 'eng_kjv', 'cmn_cuv', 'cmn_cu1', 'spa_r09']) {
+  // The Chinese Union Version and its book lists ship with the app (assets/bible).
+  for (const id of ['BSB', 'eng_kjv', 'spa_r09']) {
     if (!serialized.includes(id)) throw new Error(`translation ${id} is missing`);
   }
   return 'all configured translation IDs present';
@@ -645,7 +646,7 @@ await record('English chapter contract including audio', 'HelloAO', async () => 
   return 'chapter and audio fields present';
 });
 
-for (const resource of ['cmn_cut', 'cmn_cus', 'spa_rv', 'hbo_sr', 'grc_sr']) {
+for (const resource of ['spa_rv', 'hbo_sr', 'grc_sr']) {
   await record(`${resource} Genesis book contract`, 'fetch(bible)', async () => {
     const book = resource === 'grc_sr' ? 'mat' : 'gen';
     const data = await getJson(`https://v1.fetch.bible/bibles/${resource}/txt/${book}.json`);

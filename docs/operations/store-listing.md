@@ -86,7 +86,7 @@ bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio,nyc,mandarin,quee
 The official app of the New York Chinese Seventh-day Adventist Church. Read the Bible in the languages our church family speaks, follow each week's bulletin, and stay connected with church life in Queens and Brooklyn.
 
 BIBLE IN YOUR LANGUAGES
-• Five translations: the Berean Standard Bible (BSB), the King James Version (KJV), the Chinese Union Version in Traditional (CUV) and Simplified (CUVS) characters, and the Spanish Reina-Valera 1909.
+• Five translations: the Berean Standard Bible (BSB), the King James Version (KJV), the 1919 Chinese Union Version in Traditional (CUV) and Simplified (CUVS) characters, and the Spanish Reina-Valera 1909.
 • Dual-language reading shows a second translation under every verse, so you can read Chinese and English side by side.
 • Pinyin with tone marks above Chinese text, for learners and for reading aloud.
 • Audio Bible in Mandarin & Cantonese (CUV and CUVS), English (BSB), and other languages, with background playback, lock-screen controls, and a sleep timer.
@@ -156,7 +156,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 紐約華人基督復臨安息日會的官方應用程式。以教會家人熟悉的語言閱讀聖經，查看每週週報，隨時掌握皇后區與布魯克林的教會生活。
 
 多語言聖經
-• 五種譯本：新標點和合本繁體版（CUV）與簡體版（CUVS）、Berean Standard Bible（BSB）、英王欽定本（KJV），以及西班牙文 Reina-Valera 1909。
+• 五種譯本：1919年版和合本繁體版（CUV）與簡體版（CUVS）、Berean Standard Bible（BSB）、英王欽定本（KJV），以及西班牙文 Reina-Valera 1909。
 • 雙語閱讀：每節經文下方顯示第二種譯本，中英對照一目了然。
 • 可在中文經文上方顯示帶聲調的拼音，方便學習與朗讀。
 • 有聲聖經：國語與粵語（和合本繁體、簡體）、英文（BSB）及其他語言，支援背景播放、鎖定畫面控制與睡眠定時器。
@@ -226,7 +226,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 纽约华人基督复临安息日会的官方应用程序。以教会家人熟悉的语言阅读圣经，查看每周周报，随时掌握皇后区与布鲁克林的教会生活。
 
 多语言圣经
-• 五种译本：新标点和合本繁体版（CUV）与简体版（CUVS）、Berean Standard Bible（BSB）、英王钦定本（KJV），以及西班牙文 Reina-Valera 1909。
+• 五种译本：1919年版和合本繁体版（CUV）与简体版（CUVS）、Berean Standard Bible（BSB）、英王钦定本（KJV），以及西班牙文 Reina-Valera 1909。
 • 双语阅读：每节经文下方显示第二种译本，中英对照一目了然。
 • 可在中文经文上方显示带声调的拼音，方便学习与朗读。
 • 有声圣经：普通话与粤语（和合本繁体、简体）、英文（BSB）及其他语言，支持背景播放、锁屏控制与睡眠定时器。
@@ -301,7 +301,7 @@ biblia,himnario,himnos,sábado,escuela sabática,boletín,audio,reina valera,pin
 La aplicación oficial de la Iglesia Adventista del Séptimo Día China de Nueva York. Lee la Biblia en los idiomas que habla nuestra familia de la iglesia, sigue el boletín de cada semana y mantente en contacto con la vida de la iglesia en Queens y Brooklyn.
 
 LA BIBLIA EN TUS IDIOMAS
-• Cinco traducciones: la Berean Standard Bible (BSB), la versión King James (KJV), la Versión Unión China en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
+• Cinco traducciones: la Berean Standard Bible (BSB), la versión King James (KJV), la Versión Unión China de 1919 en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
 • La lectura bilingüe muestra una segunda traducción debajo de cada versículo, para leer en chino y en inglés lado a lado.
 • Pinyin con marcas de tono sobre el texto chino, para quienes aprenden el idioma y para leer en voz alta.
 • Biblia en audio en mandarín y cantonés (CUV y CUVS), en inglés (BSB) y en otros idiomas, con reproducción en segundo plano, controles en la pantalla de bloqueo y temporizador de apagado.
@@ -425,7 +425,9 @@ transparency both stores reject. Replace them there whenever the stores get new 
 
 ## What not to claim
 
-- **Offline reading:** the Bible needs a connection; chapters load over the network.
+- **Offline reading, except the Chinese Bible:** the CUV and CUVS ship with the app and
+  open with no connection. The other translations load over the network, and all
+  audio streams.
 - **Whole-Bible search:** search covers the current chapter only.
 - **Audio for every translation:** audio is available for CUV, CUVS, BSB, and RVR 1909,
   not KJV. The descriptions' "other languages" means Spanish for now.
