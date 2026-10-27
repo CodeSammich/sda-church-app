@@ -51,10 +51,11 @@ App Store: English (U.S.). Google Play: English (United States), `en-US`.
 New York Chinese SDA Church
 ```
 
-**Subtitle** (App Store, up to 30). The bulletin is left out on purpose.
+**Subtitle** (App Store, up to 30). "Official" tells members which app is their church's,
+since App Store search lists other Chinese SDA church apps next to it.
 
 ```text
-Bible & church life
+Official church app
 ```
 
 **Short description** (Google Play, up to 80)
@@ -127,7 +128,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Subtitle** (App Store, up to 30)
 
 ```text
-雙語聖經與教會生活
+教會官方應用程式
 ```
 
 **Short description** (Google Play, up to 80)
@@ -197,7 +198,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Subtitle** (App Store, up to 30)
 
 ```text
-双语圣经与教会生活
+教会官方应用程序
 ```
 
 **Short description** (Google Play, up to 80)
@@ -272,7 +273,7 @@ Iglesia Adventista China NY
 **Subtitle** (App Store, up to 30)
 
 ```text
-Biblia y vida de iglesia
+App oficial de la iglesia
 ```
 
 **Short description** (Google Play, up to 80)
