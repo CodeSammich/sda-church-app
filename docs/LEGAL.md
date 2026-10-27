@@ -21,21 +21,29 @@ terms, ownership, or permissions will remain unchanged.
 
 ## Bible Sources and Licensing
 
-The Bible reader uses two content services, plus one text that ships with the app:
+Every reader translation ships with the app, so the Bible opens with no network. The
+text comes from two content services:
 
-- [HelloAO](https://bible.helloao.org/) supplies the English reader text and the
-  shared translated-edition book catalog. It also supplies the BSB's English audio:
+- [HelloAO](https://bible.helloao.org/) is the source of the English reader text (BSB,
+  KJV) and every translation's book list. `scripts/build-bundled-bibles.mjs` builds
+  them from HelloAO's complete translations. HelloAO also supplies the BSB's English
+  audio:
   each BSB chapter comes with HelloAO's narrator links, and the app offers each one
   as a narrator. As of October 2026, HelloAO lists four narrators: three play from
   HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
   The app has no KJV audio.
-- [fetch(bible)](https://fetch.bible/) supplies Reina-Valera 1909 and the
-  original-language critical editions shown in the verse-detail popup. Its
-  normalized Spanish resource exposes the edition's translation footnotes directly.
-  The translated resource is the public-domain `spa_rv` (Reina-Valera 1909).
+- [fetch(bible)](https://fetch.bible/) is the source of Reina-Valera 1909, bundled the
+  same way from its public-domain `spa_rv`, whose normalized resource keeps the
+  edition's translation footnotes. It also supplies the original-language critical
+  editions shown in the verse-detail popup, which still load over the network.
 - **The Chinese Union Version ships with the app**: the public-domain 1919 text,
   in Traditional and Simplified characters, read with no network. See
   [Chinese Union Version text](#chinese-union-version-text-1919).
+
+The BSB is public domain (HelloAO lists it so, and Berean dedicated it in 2023), and so
+is Reina-Valera 1909 (published 1909). The KJV is public domain everywhere except the
+United Kingdom, where a royal patent restricts printing it. The app has shown the KJV in
+the UK since launch; shipping its text in the app doesn't change that.
 
 Chinese Union Version audio is streamed chapter by chapter from
 [Audio Power](https://theaudiopower.org/translations/cuv/#nar1), which credits the

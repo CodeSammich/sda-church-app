@@ -17,11 +17,11 @@ translation IDs remain stable even when their chapter provider differs:
 
 | App translation               | Chapter source | Provider resource | Reason                                                                                                                       |
 | ----------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| BSB (`BSB`)                   | HelloAO        | `BSB`             | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
-| KJV (`eng_kjv`)               | HelloAO        | `eng_kjv`         | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
+| BSB (`BSB`)                   | The app, from HelloAO | `bsb` | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure. Its chapters, narrator links included, ship with the app |
+| KJV (`eng_kjv`)               | The app, from HelloAO | `kjv` | The same, without audio                                                                                                    |
 | Traditional CUV (`cmn_cuv`)   | The app        | `cuv1919/hant`    | The public-domain 1919 text, in fetch(bible)'s book format, readable offline; see [LEGAL.md](../LEGAL.md#chinese-union-version-text-1919) |
 | Simplified CUV (`cmn_cu1`)    | The app        | `cuv1919/hans`    | The same text, converted to Simplified characters                                                                            |
-| Reina-Valera 1909 (`spa_r09`) | fetch(bible)   | `spa_rv`          | HelloAO omits the edition's translation notes; fetch(bible retains them                                                      |
+| Reina-Valera 1909 (`spa_r09`) | The app, from fetch(bible) | `rv1909` | HelloAO omits the edition's translation notes; fetch(bible retains them. Its books ship with the app                   |
 
 The English routing was audited against Genesis 1, 4, 12, 22, 37, and 49. BSB and KJV had
 identical note counts between providers in every sampled chapter, and the Genesis 1 note
@@ -409,10 +409,12 @@ response to every GET request, including Bible chapters, and serves the cached c
 fails. Explicit persistence in `IndexedDB` is planned for that browser target. `IndexedDB`
 is preferred there over `AsyncStorage` due to the large payload size of full Bible chapters
 and better performance with structured data queries. On iOS and Android, the app caches
-chapter data only in memory while it runs, such as the whole fetch(bible) books behind
-RVR09; there is no saved chapter cache or Bible download yet (see the TODOs in
-`fetchCompleteTranslation` in `services/BibleService.ts`). The CUV and CUVS ship with the
-app, so they open with no network. [What the app keeps on the phone](on_device_storage.md)
+a book's file in memory once it opens. Every reader translation ships with the app
+(`assets/bible`), so the text opens with no network. Audio streams, and the
+original-language verse popup loads over the network. `scripts/build-bundled-bibles.mjs`
+(BSB, KJV, RV1909) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
+holds each chapter as HelloAO's chapter API returns it, without the audio timings the app
+doesn't use. [What the app keeps on the phone](on_device_storage.md)
 says where the bundled texts and the app's other saved data live on each platform, what's
 backed up, and what the store policies say.
 

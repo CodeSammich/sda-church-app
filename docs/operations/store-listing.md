@@ -425,9 +425,9 @@ transparency both stores reject. Replace them there whenever the stores get new 
 
 ## What not to claim
 
-- **Offline reading, except the Chinese Bible:** the CUV and CUVS ship with the app and
-  open with no connection. The other translations load over the network, and all
-  audio streams.
+- **Offline audio:** all five translations' text ships with the app and opens with no
+  connection, but audio streams, and the original-language verse popup needs a
+  connection.
 - **Whole-Bible search:** search covers the current chapter only.
 - **Audio for every translation:** audio is available for CUV, CUVS, BSB, and RVR 1909,
   not KJV. The descriptions' "other languages" means Spanish for now.
