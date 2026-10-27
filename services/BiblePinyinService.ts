@@ -26,6 +26,11 @@ const PUNCTUATION = /^\p{P}$/u;
 // dictionary does not recognize.
 customPinyin({
   参孙: 'shēn sūn',
+  // Two rare characters in the 1919 Chinese Union Version that pinyin-pro doesn't
+  // know, in the simplified forms the reading is looked up by: 𫈟 (茵蔯, wormwood)
+  // and 䍁 (繸子, tassels).
+  '𫈟': 'chén',
+  '䍁': 'suì',
 });
 
 export const isChineseBibleTranslation = (translationId: string) =>

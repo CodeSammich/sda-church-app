@@ -62,34 +62,8 @@ describe('Audio Power CUV chapter links', () => {
   it.each(['cmn_cuv', 'cmn_cu1'])(
     'attaches chapter and adjacent links to %s chapter data',
     async (translationId) => {
-      jest.spyOn(global, 'fetch').mockImplementation(async (input) => {
-        const url = String(input);
-        if (url.endsWith(`/${translationId}/books.json`)) {
-          return {
-            ok: true,
-            json: async () => ({
-              books: [
-                {
-                  id: 'GEN',
-                  name: '创世记',
-                  commonName: '创世记',
-                  title: null,
-                  numberOfChapters: 50,
-                  totalNumberOfVerses: 1533,
-                },
-              ],
-            }),
-          } as Response;
-        }
-
-        return {
-          ok: true,
-          json: async () => ({
-            book: 'GEN',
-            contents: [[], [], [[], ['2:1 天地万物都造齐了。']]],
-          }),
-        } as Response;
-      });
+      // The Chinese Union Version ships with the app, so no request is made.
+      const fetchSpy = jest.spyOn(global, 'fetch');
 
       const chapter = await fetchChapter(translationId, 'GEN', 2);
 
@@ -102,6 +76,7 @@ describe('Audio Power CUV chapter links', () => {
       expect(audioPowerUrl(chapter.nextChapterAudioLinks!)).toContain(
         '%E5%88%9B%E4%B8%96%E8%AE%B0%203.mp3',
       );
+      expect(fetchSpy).not.toHaveBeenCalled();
     },
   );
 });

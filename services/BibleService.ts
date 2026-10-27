@@ -16,6 +16,7 @@ import {
   hasChurchHostedAudio,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
+import { readBundledBibleFile, type BundledBibleCollection } from './BundledBible';
 
 export const API_BASE = 'https://bible.helloao.org/api';
 
@@ -24,8 +25,9 @@ export const BIBLE_TRANSLATION_STORAGE_KEY = 'user-bible-translation';
 
 /**
  * fetch(bible) supplies the original-language critical editions and the
- * Chinese Union Version / Reina-Valera 1909 reader text. Other translated
- * editions continue to use HelloAO.
+ * Reina-Valera 1909 reader text. The Chinese Union Version ships with the app
+ * (assets/bible/cuv1919, built by scripts/build-cuv-1919.mjs) in the same book
+ * format. Other translated editions continue to use HelloAO.
  *
  * IMPORTANT LICENSING DISTINCTION:
  * - fetch(bible offers its CDN without an API key, usage fee, request quota, or
@@ -216,8 +218,9 @@ export const SELAH_PATTERNS: Record<string, RegExp> = {
     /^\s*[\uff08(]?\s*(Higgaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
   spa_r09:
     /^\s*[\uff08(]?\s*(Higaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
-  cmn_cuv: /^\s*[\uff08(]?\s*(細拉)\s*[\uff09)]?[.,;!?]?\s*$/,
-  cmn_cu1: /^\s*[\uff08(]?\s*(细拉)\s*[\uff09)]?[.,;!?]?\s*$/,
+  // The 1919 text writes 〔細拉〕; （細拉） is the 1988 text's form.
+  cmn_cuv: /^\s*[\uff08(\u3014]?\s*(細拉)\s*[\uff09)\u3015]?[.,;!?]?\s*$/,
+  cmn_cu1: /^\s*[\uff08(\u3014]?\s*(细拉)\s*[\uff09)\u3015]?[.,;!?]?\s*$/,
   default:
     /^\s*[\uff08(]?\s*(Higgaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
 };
@@ -639,30 +642,39 @@ interface FetchBibleTranslatedEdition {
   englishName: string;
   language: string;
   attribution: string;
+  /** Set when the text ships with the app, so it opens with no network. */
+  bundled?: BundledBibleCollection;
 }
 
 /**
- * These are the same public-domain editions previously loaded from HelloAO.
- * fetch(bible's normalized resources are authoritative for their source text
- * and translation-footnote metadata.
+ * Translated editions in fetch(bible)'s plain-text book format.
+ *
+ * The Chinese Union Version is the public-domain 1919 text (官話和合譯本, 神
+ * edition), bundled with the app. The 1988 New Punctuation edition (新標點和合本)
+ * it replaced is © United Bible Societies, and the Hong Kong Bible Society
+ * didn't grant permission (#517). The 1919 text comes from WordProject and was
+ * checked against Wikisource; see docs/LEGAL.md. Its 〔〕 notes are part of the
+ * 1919 text, so they stay in the verse.
  */
 const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
   string,
   FetchBibleTranslatedEdition
 > = {
   cmn_cuv: {
-    resourceId: 'cmn_cut',
-    name: '新標點和合本',
-    englishName: 'Chinese Union Version (traditional)',
+    resourceId: 'cuv1919-hant',
+    name: '和合本（1919）',
+    englishName: 'Chinese Union Version, 1919 (traditional)',
     language: 'cmn',
-    attribution: 'Public domain. Text provided by fetch(bible).',
+    attribution: 'Public domain (1919). Text adapted from WordProject.',
+    bundled: 'cuv1919/hant',
   },
   cmn_cu1: {
-    resourceId: 'cmn_cus',
-    name: '新标点和合本',
-    englishName: 'Chinese Union Version (simplified)',
+    resourceId: 'cuv1919-hans',
+    name: '和合本（1919）',
+    englishName: 'Chinese Union Version, 1919 (simplified)',
     language: 'cmn',
-    attribution: 'Public domain. Text provided by fetch(bible).',
+    attribution: 'Public domain (1919). Text adapted from WordProject.',
+    bundled: 'cuv1919/hans',
   },
   spa_r09: {
     resourceId: 'spa_rv',
@@ -726,6 +738,12 @@ export async function fetchAvailableTranslations() {
  */
 export async function fetchBooks(translation: string): Promise<TranslationBook[]> {
   let request = translationBookListCache.get(translation);
+  const bundled = FETCH_BIBLE_TRANSLATED_EDITIONS[translation]?.bundled;
+  if (!request && bundled) {
+    request = readBundledBibleFile<TranslationBook[]>(bundled, 'books');
+    translationBookListCache.set(translation, request);
+    request.catch(() => translationBookListCache.delete(translation));
+  }
   if (!request) {
     request = fetch(`${API_BASE}/${translation}/books.json`).then(async (res) => {
       if (!res.ok) {
@@ -993,8 +1011,8 @@ const fetchBibleMetadataText = (contents: unknown): string => {
 export const normalizeFetchBibleText = (text: string): string =>
   text
     .replace(/\r\n?/g, '\n')
-    // fetch(bible)'s CUV resources use U+3000 honorific spacing before 神.
-    // Preserve the separation without rendering a full Han-cell-sized hole.
+    // The 1919 CUV puts a full-width space (U+3000) before each 神 that means
+    // God. Keep the separation without rendering a full Han-cell-sized hole.
     .replace(/\u3000/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/^\n+|\n+$/g, '');
@@ -1012,10 +1030,11 @@ const stripFetchBibleNoteReference = (
 };
 
 async function fetchTranslatedBibleBook(
-  resourceId: string,
+  edition: FetchBibleTranslatedEdition,
   book: string,
   signal?: AbortSignal,
 ): Promise<FetchBiblePlainTextBook> {
+  const { resourceId } = edition;
   const abortError = () => {
     const error = new Error('Aborted');
     error.name = 'AbortError';
@@ -1025,6 +1044,15 @@ async function fetchTranslatedBibleBook(
   const cacheKey = `${resourceId}:${normalizedBook}`;
   let request = translatedBibleBookCache.get(cacheKey);
 
+  if (!request && edition.bundled) {
+    request = readBundledBibleFile<FetchBiblePlainTextBook>(edition.bundled, normalizedBook);
+    translatedBibleBookCache.set(cacheKey, request);
+    request.catch(() => {
+      if (translatedBibleBookCache.get(cacheKey) === request) {
+        translatedBibleBookCache.delete(cacheKey);
+      }
+    });
+  }
   if (!request) {
     request = fetch(
       `${FETCH_BIBLE_BASE}/${resourceId}/txt/${normalizedBook}.json`,
@@ -1077,7 +1105,7 @@ async function fetchChapterFromFetchBible(
   signal?: AbortSignal,
 ): Promise<TranslationBookChapter> {
   const [sourceBook, books] = await Promise.all([
-    fetchTranslatedBibleBook(edition.resourceId, bookId, signal),
+    fetchTranslatedBibleBook(edition, bookId, signal),
     fetchBooks(translationId),
   ]);
   const book = books.find((candidate) => candidate.id === bookId.toUpperCase());
@@ -1147,7 +1175,9 @@ async function fetchChapterFromFetchBible(
     textDirection: 'ltr',
     attribution: edition.attribution,
   };
-  const thisChapterLink = `${FETCH_BIBLE_BASE}/${edition.resourceId}/txt/${bookId.toLowerCase()}.json`;
+  const thisChapterLink = edition.bundled
+    ? `bundled:${edition.bundled}/${bookId.toLowerCase()}`
+    : `${FETCH_BIBLE_BASE}/${edition.resourceId}/txt/${bookId.toLowerCase()}.json`;
   const hasChurchAudio = hasChurchHostedAudio(translationId);
   const getAudioLinks = (audioChapter: number) =>
     getChurchHostedAudioLinks(translationId, book.id, audioChapter);
