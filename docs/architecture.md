@@ -429,7 +429,7 @@ checks nearly all of them daily.
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
-| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English BSB audio and Bible verses on the printed bulletin; the source of the English text (BSB, KJV) and book lists the app ships with | In app and Apps Script |
+| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English BSB audio and Bible verses on the printed bulletin; the source of the English text (the BSB) and book lists the app ships with | In app and Apps Script |
 | Bible | fetch(bible) | `v1.fetch.bible` | Original-language critical texts; the source of the Reina-Valera 1909 text the app ships with | In app |
 | Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin CUV, tried first, and Cantonese CUV and Spanish RV1909, their only source | In app |
 | Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |

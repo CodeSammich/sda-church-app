@@ -18,12 +18,11 @@ translation IDs remain stable even when their chapter provider differs:
 | App translation               | Chapter source | Provider resource | Reason                                                                                                                       |
 | ----------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | BSB (`BSB`)                   | The app, from HelloAO | `bsb` | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure. Its chapters, narrator links included, ship with the app |
-| KJV (`eng_kjv`)               | The app, from HelloAO | `kjv` | The same, without audio                                                                                                    |
 | Traditional CUV (`cmn_cuv`)   | The app        | `cuv1919/hant`    | The public-domain 1919 text, in fetch(bible)'s book format, readable offline; see [LEGAL.md](../LEGAL.md#chinese-union-version-text-1919) |
 | Simplified CUV (`cmn_cu1`)    | The app        | `cuv1919/hans`    | The same text, converted to Simplified characters                                                                            |
 | Reina-Valera 1909 (`spa_r09`) | The app, from fetch(bible) | `rv1909` | HelloAO omits the edition's translation notes; fetch(bible retains them. Its books ship with the app                   |
 
-The English routing was audited against Genesis 1, 4, 12, 22, 37, and 49. BSB and KJV had
+The English routing was audited against Genesis 1, 4, 12, 22, 37, and 49. The BSB had
 identical note counts between providers in every sampled chapter, and the Genesis 1 note
 contents matched after normalizing reference prefixes. Re-run this comparison if either
 provider revises its underlying resource.
@@ -31,13 +30,12 @@ provider revises its underlying resource.
 HelloAO remains the shared source of translated-edition book names and chapter counts.
 `BibleService.fetchChapter` routes chapter content according to the table above.
 
-BSB and KJV chapters come straight from HelloAO, audio links included. HelloAO's BSB
+BSB chapters come straight from HelloAO, audio links included. HelloAO's BSB
 chapters carry links to its narrator recordings, which the app plays from the hosts
 HelloAO links to (as of October 2026, three on HelloAO's audio host and one on
 `openbible.com`; see [LEGAL.md](../LEGAL.md#bible-sources-and-licensing)) and lists
 Souer first, then Hays, then David, then any others (`getOrderedBibleAudioReaders` in
-`services/BibleAudioService.ts`). HelloAO has no KJV audio, so KJV chapters show no audio
-bar.
+`services/BibleAudioService.ts`).
 
 Traditional and simplified CUV chapters use the chapter-level Mandarin recordings
 published by [Audio Power](https://theaudiopower.org/translations/cuv/#nar1). The
@@ -133,7 +131,7 @@ parse keeps its entered text. Its **Read now** button opens the current app lang
 default translation at that reference, or at Genesis 1:1, and scrolls to the first
 requested verse without selecting it. Blank and `TBD` fields have no button.
 
-- **No Auth:** Open access to the selected BSB, KJV, CUV, and Reina-Valera resources
+- **No Auth:** Open access to the selected BSB, CUV, and Reina-Valera resources
   requires no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
   or developer credentials.
 - **Format:** Both services return structured JSON that is adapted into the app's native
@@ -387,16 +385,19 @@ _Focus: Sentence structure and "natural" flow._
 | **Modern English?**   | **YES**        | YES       | YES         | YES                | NO           |
 | **Legal Risk?**       | **ZERO (CC0)** | **ZERO**  | **ZERO**    | LOW (Needs Credit) | ZERO (in US) |
 
-KJV will be maintained for reference purposes, while modern translations like BSB will
-serve as the default.
+The KJV was kept for reference at first, with the BSB as the default English. It was dropped
+in 1.4.0: in the United Kingdom the Crown's patent restricts publishing it, and the church
+prefers a modern, scholarly English text. The BSB is that: it translates the critical
+Greek text and footnotes where later manuscripts differ (for example 1 John 5:7 and the
+end of the Lord's Prayer, Matthew 6:13). A member who had chosen the KJV now reads the BSB,
+the default for English.
 
 **Supported Translations** (`SUPPORTED_TRANSLATIONS` in `services/BibleService.ts`):
 
 1. BSB - Modern Public Domain English
-2. KJV - English Traditional
-3. CUV (Traditional) - 1919 edition (Public Domain).
-4. CUVS (Simplified) - Public Domain.
-5. RVR09 (Reina-Valera 1909, Spanish Traditional) - Public Domain.
+2. CUV (Traditional) - 1919 edition (Public Domain).
+3. CUVS (Simplified) - Public Domain.
+4. RVR09 (Reina-Valera 1909, Spanish Traditional) - Public Domain.
 
 There is no modern Spanish translation in the app.
 
@@ -412,7 +413,7 @@ and better performance with structured data queries. On iOS and Android, the app
 a book's file in memory once it opens. Every reader translation ships with the app
 (`assets/bible`), so the text opens with no network. Audio streams, and the
 original-language verse popup loads over the network. `scripts/build-bundled-bibles.mjs`
-(BSB, KJV, RV1909) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
+(BSB, RV1909) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
 holds each chapter as HelloAO's chapter API returns it, without the audio timings the app
 doesn't use. [What the app keeps on the phone](on_device_storage.md)
 says where the bundled texts and the app's other saved data live on each platform, what's

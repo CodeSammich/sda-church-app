@@ -2,18 +2,18 @@
  * Builds the English and Spanish Bible texts that ship with the app, so they open
  * with no network, like the Chinese Union Version (scripts/build-cuv-1919.mjs):
  *
- * - BSB and KJV from HelloAO's complete translations, one file per book holding
+ * - The BSB from HelloAO's complete translation, one file per book holding
  *   each chapter as HelloAO's chapter API returns it (text, footnotes, verse
  *   count, and the BSB's narrator links). The audio timings, which the app
  *   doesn't use, are left out.
  * - Reina-Valera 1909 from fetch(bible) (`spa_rv`), book by book in its
  *   plain-text format, with its translation notes.
  *
- * All three are public domain; see docs/LEGAL.md. Book names and sizes come from
+ * Both are public domain; see docs/LEGAL.md. Book names and sizes come from
  * HelloAO's book lists. It downloads everything, so it needs the network:
  *   node scripts/build-bundled-bibles.mjs
  *
- * It writes assets/bible/{bsb,kjv,rv1909}/<book>.biblejson and books.biblejson,
+ * It writes assets/bible/{bsb,rv1909}/<book>.biblejson and books.biblejson,
  * then rewrites assets/bible/index.ts.
  */
 import { createHash } from 'node:crypto';
@@ -85,7 +85,6 @@ const buildFetchBible = async (resourceId, collection, booksFrom) => {
 const main = async () => {
   const log = [
     await buildHelloao('BSB', 'bsb'),
-    await buildHelloao('eng_kjv', 'kjv'),
     await buildFetchBible('spa_rv', 'rv1909', 'spa_r09'),
   ];
   writeBibleAssetIndex();

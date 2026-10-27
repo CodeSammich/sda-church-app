@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { fetchBooks, fetchChapter } from '@/services/BibleService';
+import { fetchBooks, fetchChapter, SUPPORTED_TRANSLATIONS } from '@/services/BibleService';
 
-// The BSB, KJV, and Reina-Valera 1909 ship with the app, built by
+// The BSB and the Reina-Valera 1909 ship with the app, built by
 // scripts/build-bundled-bibles.mjs, like the Chinese Union Version.
 const readJson = (collection: string, name: string) =>
   JSON.parse(readFileSync(join(process.cwd(), 'assets/bible', collection, `${name}.biblejson`), 'utf8'));
@@ -20,7 +20,6 @@ const verseText = (chapter: Awaited<ReturnType<typeof fetchChapter>>, number: nu
 describe('bundled English and Spanish Bibles', () => {
   it.each([
     ['bsb', 31086],
-    ['kjv', 31102],
     ['rv1909', 31102],
   ])('%s has all 66 books, and its book list matches them', (collection, verses) => {
     const books = readJson(collection, 'books');
@@ -47,19 +46,22 @@ describe('bundled English and Spanish Bibles', () => {
     expect(chapter.previousChapterAudioLinks).toBeNull();
   });
 
-  it('opens KJV and Reina-Valera chapters with no network request', async () => {
+  it('opens Reina-Valera chapters with no network request', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch');
-    const kjv = await fetchChapter('eng_kjv', 'JHN', 3);
     const rv = await fetchChapter('spa_r09', 'JHN', 3);
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(verseText(kjv, 16)).toContain('For God so loved the world');
     expect(verseText(rv, 16)).toContain('Porque de tal manera amó Dios al mundo');
+  });
+
+  it('no longer has the KJV, which the church dropped', () => {
+    expect(SUPPORTED_TRANSLATIONS.map(({ id }) => id)).not.toContain('eng_kjv');
+    expect(readdirSync(join(process.cwd(), 'assets/bible'))).not.toContain('kjv');
   });
 
   it('lists the books from the app', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch');
-    for (const translation of ['BSB', 'eng_kjv', 'spa_r09']) {
+    for (const translation of ['BSB', 'spa_r09']) {
       await expect(fetchBooks(translation)).resolves.toHaveLength(66);
     }
     expect(fetchSpy).not.toHaveBeenCalled();
