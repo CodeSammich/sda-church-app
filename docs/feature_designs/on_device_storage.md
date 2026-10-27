@@ -117,7 +117,7 @@ The other copies:
 
 - `test/bundled-bible.test.ts`: the loader on a phone and on the web, retrying after a failed read, and that `assets/bible/index.ts` lists exactly the files in `assets/bible`.
 - `test/bundled-bibles.test.ts`: the BSB and Reina-Valera files, with all 66 books and the right number of verses, chapters that open with no network request, the BSB's narrator links, and that every translation the reader offers ships with the app.
-- `test/original-language-texts.test.ts`: the Hebrew and Greek files, a verse of each with its credit and license and no network request, and that every BSB verse has an original-language entry.
+- `test/original-language-texts.test.ts`: the Hebrew and Greek files, a verse of each with its credit and license and no network request, and that every verse of every translation gets its original-language verse, except the passages the editions leave out.
 - `test/cuv-1919-text.test.ts`: the 1919 text's verses, footnotes, and pinyin, and that chapters and book lists open with no network request.
 - `test/cuv-1919-witnesses.test.ts`: every verse's wording and punctuation against two other copies of the 1919 text, and that the Simplified text is the Traditional converted.
 - `test/cache-store.test.ts` and `test/cache-store.web.test.ts`: that a phone keeps the copies in the cache directory and deletes the ones AsyncStorage kept before #524, and that the web keeps them in AsyncStorage without touching the file system.
