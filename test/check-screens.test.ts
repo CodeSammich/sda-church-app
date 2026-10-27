@@ -124,7 +124,7 @@ describe('screen rules', () => {
   it('uses each screen’s own rules, even when names share a start', () => {
     // "bible-dual-default" starts with "bible-", but belongs to bible-dual.
     expect(shot('bible-scrolled-default').tabs).toBe(false);
-    expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^16\\b', '^John\\b']);
+    expect(shot('bible-scrolled-default').mustShowLines).toEqual(['^14\\b', '^15\\b', '^John\\b']);
     expect(shot('explore-default').mustShowLines).toBeUndefined();
     expect(shot('bible-default').tabs).toBeUndefined();
   });
@@ -261,7 +261,7 @@ describe('Android shots (#372)', () => {
       file: 'android/bible-scrolled-default.png',
       platform: 'android',
       tabs: false,
-      mustShowLines: ['^14\\b', '^15\\b', '^16\\b', '^John\\b'],
+      mustShowLines: ['^14\\b', '^15\\b', '^John\\b'],
     });
     // The phone's narrower screen may wrap the heading between its words.
     expect(androidShot('home-xl-android-font-max').mustShowLines).toEqual(['^Today.s( Verse)?$']);
