@@ -89,11 +89,22 @@ prepare_app() {
   # second, so its screen never goes idle.
   open_chapter GEN 2
   local point
-  if point=$(ATTR=text TRIES=15 element_center 'Get Started'); then
+  # First-launch setup is three steps (#523): Next, Next, then Get Started.
+  if point=$(ATTR=text TRIES=15 element_center 'Next'); then
     # shellcheck disable=SC2086
     sh_ input tap $point >/dev/null
-    sleep 2
-    log 'Dismissed the Welcome dialog.'
+    sleep 1
+    if point=$(ATTR=text TRIES=5 element_center 'Next'); then
+      # shellcheck disable=SC2086
+      sh_ input tap $point >/dev/null
+      sleep 1
+    fi
+    if point=$(ATTR=text TRIES=5 element_center 'Get Started'); then
+      # shellcheck disable=SC2086
+      sh_ input tap $point >/dev/null
+      sleep 2
+      log 'Finished first-launch setup.'
+    fi
   fi
   sh_ am force-stop "$PKG" >/dev/null
 }
