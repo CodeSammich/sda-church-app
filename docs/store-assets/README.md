@@ -22,6 +22,21 @@ are captured, their sizes, and what they may show are in
   English with the Chinese interface, the Bible in the dark theme, Explore, and the
   Library. Home comes first: the first three appear on the App Store's install sheets,
   and Home shows what the app is. The other languages' listings show these too.
+- `app-store/header/`: the App Store product page headers, one per listing language:
+  `en-US.png`, `zh-Hant.png`, `zh-Hans.png`, and `es.png` for both Spanish listings.
+  Each is a 3840 × 1646 (21:9) PNG with no transparency. App Store Connect's header
+  upload takes PNG only. A tagline ("Church life,
+  all week long") and a line of features (Bible, livestream, classes, library) sit over
+  three iPhone screenshots: the Bible, Home, and Explore. Behind them is the church
+  building photo that Home and Explore show, tinted brand blue (`#00405C`). The tagline
+  and phones sit in the middle, because the App Store crops the edges on some devices.
+  `scripts/make-app-store-headers.cjs` builds them from `app-store/en-US/`, so run it
+  again when those screenshots change. They leave out the logo, because the app icon
+  shows just below the header. Home and Explore show the YouTube, Spotify, and Zoom
+  icons. That's allowed: Apple's rule against other platforms' logos (guideline 2.3.10)
+  means other mobile platforms and app stores, such as Android or Google Play. If a
+  header is ever rejected for them, swap Explore for the Library screenshot and Home
+  for the other Bible screenshot.
 - `google-play/foreground-service-demo.mp4`: the original of the unlisted YouTube video
   that Play Console's foreground service declaration links to. If the YouTube video is
   ever deleted, upload this file again and update the link; see

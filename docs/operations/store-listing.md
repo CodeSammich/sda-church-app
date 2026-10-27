@@ -30,6 +30,7 @@ before adding anything. Each field below fits its store's limit.
 | Keywords | Version page → Keywords | (none) | 100 |
 | Description | Version page → Description | Main store listing → Full description | 4,000 |
 | What's new | Version page → What's New | Set automatically from the release PR's title | 4,000 / 500 |
+| Product page header | Version page → Header and Search Results → Header, or Asset Library | (none) | 3840 × 1646 PNG |
 
 In App Store Connect, add each language under **App Information → Localizable
 Information**. In Play Console, use **Main store listing → Manage translations**.
@@ -51,10 +52,11 @@ App Store: English (U.S.). Google Play: English (United States), `en-US`.
 New York Chinese SDA Church
 ```
 
-**Subtitle** (App Store, up to 30). The bulletin is left out on purpose.
+**Subtitle** (App Store, up to 30). "Official" tells members which app is their church's,
+since App Store search lists other Chinese SDA church apps next to it.
 
 ```text
-Bible & church life
+Official church app
 ```
 
 **Short description** (Google Play, up to 80)
@@ -69,10 +71,13 @@ Bilingual Bible with pinyin and audio, plus our weekly bulletin and church life.
 Read the Bible in English, Chinese, or Spanish, side by side, with pinyin and audio. Check this week's bulletin, hymns, and Sabbath School lesson.
 ```
 
-**Keywords** (App Store, up to 100, commas without spaces)
+**Keywords** (App Store, up to 100, commas without spaces). Apple also searches the name
+and subtitle, so their words aren't repeated here. It combines separate keywords too, so
+`audio` and `bible` match "audio bible". `nyc` is for people who search "NYC Chinese SDA".
+Keywords change only with a new version, so edit them before submitting it.
 
 ```text
-bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio bible,mandarin,queens,brooklyn,sermon
+bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio,nyc,mandarin,queens,brooklyn,sermon
 ```
 
 **Description** (both stores, up to 4,000)
@@ -124,7 +129,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Subtitle** (App Store, up to 30)
 
 ```text
-雙語聖經與教會生活
+教會官方應用程式
 ```
 
 **Short description** (Google Play, up to 80)
@@ -194,7 +199,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Subtitle** (App Store, up to 30)
 
 ```text
-双语圣经与教会生活
+教会官方应用程序
 ```
 
 **Short description** (Google Play, up to 80)
@@ -269,7 +274,7 @@ Iglesia Adventista China NY
 **Subtitle** (App Store, up to 30)
 
 ```text
-Biblia y vida de iglesia
+App oficial de la iglesia
 ```
 
 **Short description** (Google Play, up to 80)
@@ -351,15 +356,15 @@ access** (Google Play, choosing that all functionality is available without spec
 access):
 
 ```text
-No sign-in is required; every feature works without an account.
+No sign-in is required, and every feature works without an account. The one exception is the Schedule sheet (staff only) button on the bulletin page, which opens the church's internal Google Sheet. Only church staff can open it, and nothing else in the app depends on it.
 
 This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server, and reads Bible text and audio from public Bible services.
 
 Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
 
-The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the browser. The app takes no payments, and giving unlocks nothing in the app.
+The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the in-app browser (Safari View Controller on iOS). The app itself collects no payment details, takes no payments, and giving unlocks nothing in the app.
 
-Hymn lyrics and sheet music, library books, Sabbath School lessons, and videos open on their publishers' websites.
+Hymn lyrics and sheet music, library books, and Sabbath School lessons open on their publishers' websites in the in-app browser. YouTube, Spotify, Zoom, and Google Maps links open in their own apps.
 
 The app plays Bible audio in the background, which is why it uses the audio background mode on iOS and a media playback service on Android.
 
@@ -380,7 +385,7 @@ blocker still open in the [store policy audit](store-policy-audit.md#status-sept
 
 ## Screenshots
 
-Copies of the uploaded screenshots and the feature graphic are in
+Copies of the uploaded screenshots, the feature graphic, and the App Store headers are in
 [`docs/store-assets/`](../store-assets/README.md), which also explains removing the
 transparency both stores reject. Replace them there whenever the stores get new ones.
 
@@ -399,6 +404,16 @@ transparency both stores reject. Replace them there whenever the stores get new 
   size (1290 × 2796 or 1320 × 2868); a smaller iPhone's screenshots need resizing to
   1290 × 2796, which crops only a few pixels. The first three screenshots also show on
   the install sheet, so lead with the strongest.
+- **App Store header:** one per language, in
+  [`docs/store-assets/app-store/header/`](../store-assets/README.md). Upload each under
+  **Header and Search Results → Header** with that language selected, or through the
+  **Asset Library**, which submits it for review without a new version, so a rejected
+  header holds up nothing else. Leave **Search
+  Results** empty, so search results keep showing the screenshots. Apple's rules for
+  both: no prices, website addresses, copyright symbols, or other mobile platforms or app
+  stores (guideline 2.3.10: no Android or Google Play), and
+  any text translated into each listing's language. See Apple's
+  [asset best practices](https://developer.apple.com/app-store/asset-best-practices/).
 - **Adding iPad later:** a later version can add iPad support, with iPad screenshots;
   see #324.
   Apple doesn't let an update remove a device family once released, so test on an iPad
