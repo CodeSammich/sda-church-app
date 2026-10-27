@@ -39,12 +39,15 @@
       "name": "setup",
       "group": "home",
       "tabs": false,
-      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of three (#523), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits.",
+      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of three (#523), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
       "path": "",
       "settings": { "setupDone": false },
       "variants": ["default", "large"],
-      "mustShowLines": ["^Welcome$", "^Language$", "^Next$"],
-      "mustNotShowLines": ["^Appearance$", "^Text size$"]
+      "mustShowLines": ["^Welcome$", "^Language$", { "line": "^Next$", "platforms": ["ios"] }],
+      "mustNotShowLines": ["^Appearance$", "^Text size$"],
+      "variantRules": {
+        "large": { "mustShowLines": ["^Next$"] }
+      }
     },
     {
       "name": "home",
