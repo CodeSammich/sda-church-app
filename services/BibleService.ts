@@ -653,8 +653,9 @@ interface FetchBibleTranslatedEdition {
  * edition), bundled with the app. The 1988 New Punctuation edition (新標點和合本)
  * it replaced is © United Bible Societies, and the Hong Kong Bible Society
  * didn't grant permission (#517). The 1919 text comes from WordProject and was
- * checked against Wikisource; see docs/LEGAL.md. Its 〔〕 notes are part of the
- * 1919 text, so they stay in the verse.
+ * checked against Wikisource; see docs/LEGAL.md. Its 〔〕 notes are footnotes in
+ * the bundled files (scripts/build-cuv-1919.mjs), so they show as the 1988
+ * text's did.
  */
 const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
   string,
@@ -787,6 +788,19 @@ export function isSelahMarker(translationId: string, text: string): boolean {
 export function startsWithPunctuationOrSpace(text: string): boolean {
   const pattern = /^[\s\n.,;!?:'\"\uff1b\uff1f\u3002\uff0c\uff1a\uff09)]/;
   return pattern.test(text);
+}
+
+/**
+ * Whether text that follows a footnote marker needs a space before it, so words
+ * don't weld together. Chinese never does: it has no spaces between words, and
+ * the 1919 CUV's notes sit mid-verse, before a character, \u3001, \uff0e, or a quote mark.
+ */
+export function needsSpaceAfterFootnote(text: string): boolean {
+  return (
+    text.length > 0 &&
+    !startsWithPunctuationOrSpace(text) &&
+    !/^[\p{Script=Han}\u3001\uff0e\u300c-\u300f]/u.test(text)
+  );
 }
 
 /**
@@ -970,8 +984,7 @@ export function renderVerseToPlainText(
       !(isPoetic && !isLineContinuation && i > 0) &&
       !willAddPoeticNewLine &&
       !willAddSelahNewLine &&
-      contentText.length > 0 &&
-      !startsWithPunctuationOrSpace(contentText)
+      needsSpaceAfterFootnote(contentText)
     ) {
       contentText = ' ' + contentText;
     }
@@ -1135,7 +1148,9 @@ async function fetchChapterFromFetchBible(
         continue;
       }
 
-      const metadataText = fetchBibleMetadataText(part.contents).trim();
+      // Headings and notes get the verse text's spacing too: some 1919 notes
+      // have the full-width space before 神.
+      const metadataText = normalizeFetchBibleText(fetchBibleMetadataText(part.contents)).trim();
       if (part.type === 'heading') {
         if (metadataText) content.push({ type: 'heading', content: [metadataText] });
         continue;

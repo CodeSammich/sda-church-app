@@ -24,7 +24,7 @@
  *        node scripts/build-cuv-1919.mjs <path to the big5_new folder>
  *
  * It writes assets/bible/cuv1919/{hant,hans}/<book>.biblejson in fetch(bible)'s
- * plain-text book format, { book, contents[chapter][verse] = [text or heading] },
+ * plain-text book format, { book, contents[chapter][verse] = [text, heading, or note] },
  * which services/BibleService.ts already reads, and books.biblejson, each book's
  * name and size. The names come from HelloAO's CUV book lists (facts, not text),
  * so the build needs the network. Then it rewrites assets/bible/index.ts.
@@ -156,6 +156,25 @@ export const applyCorrections = (books, corrections) => {
 const SELAH_AT_END = /(〔細拉〕|〔细拉〕)$/u;
 export const placeSelah = (text) => text.replace(SELAH_AT_END, '\n$1').replace(/^\n/, '');
 
+// The 1919 text's notes in 〔〕 (another reading, the original's wording, what a
+// name means) become footnotes, as the 1988 text's were, each marked where the
+// note stood. A Selah stays in the text. So does a verse that is all in 〔〕: a
+// verse the oldest manuscripts lack, which 1919 prints in brackets (Matthew
+// 18:11), or Exodus 16:36's note on the omer.
+const NOTE = /〔(?!細拉〕|细拉〕)([^〕]*)〕/gu;
+export const splitNotes = (text) => {
+  if (!/\p{Script=Han}/u.test(text.replace(NOTE, ''))) return [text];
+  const parts = [];
+  let last = 0;
+  for (const match of text.matchAll(NOTE)) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    parts.push({ type: 'note', contents: match[1] });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+};
+
 /** fetch(bible)'s plain-text book: contents[chapter][verse], index 0 empty. */
 export const toBookJson = (book, chapters, convert = (text) => text) => ({
   book,
@@ -167,7 +186,7 @@ export const toBookJson = (book, chapters, convert = (text) => text) => ({
         ...(index === 0 && superscription
           ? [{ type: 'heading', contents: convert(superscription), level: 3 }]
           : []),
-        placeSelah(convert(text)),
+        ...splitNotes(placeSelah(convert(text))),
       ]),
     ]),
   ],

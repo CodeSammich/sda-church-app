@@ -170,8 +170,10 @@ list (`books.biblejson`). Metro bundles them as assets (`metro.config.js`), and
 `services/BundledBible.ts` reads a book's file the first time it opens: a local file on a
 phone, a file on the website on the web. `scripts/build-cuv-1919.mjs` builds them from
 WordProject's 1919 text and the reviewed corrections in `scripts/cuv-1919-corrections.json`.
-The 1919 text's 〔〕 notes stay in the verse, and a 〔細拉〕 ending a verse goes on its own
-line for the Selah marker.
+The 1919 text's 〔〕 notes become footnotes, marked where each note stood, as the 1988
+text's were. A verse printed wholly in 〔〕, one the oldest manuscripts lack (Matthew
+18:11), stays as the verse's text, and a 〔細拉〕 ending a verse goes on its own line for
+the Selah marker.
 
 #### 2.2.2 Original-Language Reference Lookup
 

@@ -64,6 +64,24 @@ describe('scripts/build-cuv-1919.mjs', () => {
     ]);
   });
 
+  it('makes the notes inside a verse footnotes, but keeps Selah and a verse all in 〔〕', () => {
+    expect(
+      run(`console.log(JSON.stringify([
+        build.splitNotes('生了該隱、〔就是得的意思〕便說、'),
+        build.splitNotes('都得永生。〔或作在他裡面得永生〕'),
+        build.splitNotes('〔細拉〕他的榮光〔或作威榮〕遮蔽諸天'),
+        build.splitNotes('〔人子來為要拯救失喪的人〕'),
+        build.splitNotes('〔俄梅珥乃伊法十分之一〕。'),
+      ]))`),
+    ).toEqual([
+      ['生了該隱、', { type: 'note', contents: '就是得的意思' }, '便說、'],
+      ['都得永生。', { type: 'note', contents: '或作在他裡面得永生' }],
+      ['〔細拉〕他的榮光', { type: 'note', contents: '或作威榮' }, '遮蔽諸天'],
+      ['〔人子來為要拯救失喪的人〕'],
+      ['〔俄梅珥乃伊法十分之一〕。'],
+    ]);
+  });
+
   it('keeps a reviewed reason and the original text in every correction', () => {
     const corrections = JSON.parse(readFileSync(join(process.cwd(), 'scripts/cuv-1919-corrections.json'), 'utf8'));
     const reasons = new Set(['wording', 'rare-character', 'punctuation', 'verse-division', 'title']);

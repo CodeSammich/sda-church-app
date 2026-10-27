@@ -26,8 +26,9 @@ so it isn't used. The Simplified text is the Traditional text converted with
    (記/紀, 畫/劃, 穀/榖, 克/剋) were not folded.
 2. **Every verse compared.** Of 31,102 verses, 30,069 were the same in both copies.
    - **Punctuation only:** WordProject's characters with Wikisource's punctuation, which
-     fixed stray 、, 。、, and modern commas.
-   - **Wording:** the copy closer to the 1988 text won. Wikisource won 338 verses. They
+     fixed stray 、, 。、, and modern commas. One more was found later: a note in
+     Jeremiah 46:20 closed with ） instead of 〕.
+   - **Wording:** the copy closer to the 1988 text won. Wikisource won 337 verses. They
      were real WordProject errors, such as 亞撒都該利雅 for 亞撒利雅, 撒拉篾 for 耶拉篾, a
      missing 神 or 們, and 麈土 for 塵土. WordProject won 306. Those are almost all
      variant spellings that weren't folded (叙/敘, 删/刪, 喇/啦), so WordProject's stayed.
@@ -47,7 +48,10 @@ so it isn't used. The Simplified text is the Traditional text converted with
    used （） and [ instead of 〔〕, and 1 Chronicles 22 had a "(21:31)" marker as a title.
 6. **Verse division.** 3 John 1:14–15 and Revelation 12:17–18 are split as in the 1988
    text and the BSB, so every chapter has the same number of verses as before. The
-   1919 words don't change.
+   1919 words don't change. Wikisource's copy has no John 7:53 and starts 8:1 with its
+   words (於是各人都回家去了), so the vote at first copied them into 8:1 too. John
+   keeps WordProject's division, which the 1988 text and the BSB share, and a test
+   checks that no verse starts by repeating the verse before it.
 
 All 481 fixes are in `scripts/cuv-1919-corrections.json`, each with its reason
 (`wording`, `punctuation`, `rare-character`, `title`, or `verse-division`) and the exact
@@ -60,7 +64,9 @@ WordProject text it replaces. The build fails if WordProject's copy changes unde
 - every verse of both scripts is numbered the same;
 - there are no private-use or rare characters, no stray markers, and the full-width
   space appears only before 神;
-- none of the errors above come back;
+- none of the errors above come back, and no verse starts by repeating the one before;
+- each 〔〕 note inside a verse is a footnote, and the verses printed wholly in 〔〕
+  stay as text;
 - every Han character in both scripts gets exactly one pinyin syllable, without
   shifting, as the reader shows it. Two rare characters needed readings added
   (`services/BiblePinyinService.ts`).

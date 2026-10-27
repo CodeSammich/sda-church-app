@@ -5,6 +5,7 @@ import {
   fetchBooks,
   fetchChapter,
   isSelahMarker,
+  needsSpaceAfterFootnote,
   normalizeFetchBibleText,
 } from '@/services/BibleService';
 import { getBiblePinyinLines } from '@/services/BiblePinyinService';
@@ -32,11 +33,14 @@ const versesOf = (script: string) =>
     );
   });
 const textOf = (parts: Part[]) => parts.filter((part): part is string => typeof part === 'string').join('');
-const verse = (script: string, ref: string) => {
+const notesOf = (parts: Part[]) =>
+  parts.flatMap((part) => (typeof part !== 'string' && part.type === 'note' ? [part.contents] : []));
+const partsOf = (script: string, ref: string) => {
   const [book, cv] = ref.split(' ');
   const [c, v] = cv.split(':').map(Number);
-  return textOf((readJson(script, book) as Book).contents[c][v]);
+  return (readJson(script, book) as Book).contents[c][v];
 };
+const verse = (script: string, ref: string) => textOf(partsOf(script, ref));
 
 const ALL = { hant: versesOf('hant'), hans: versesOf('hans') };
 
@@ -78,7 +82,7 @@ describe('1919 Chinese Union Version text', () => {
 
   it('keeps the 1919 respectful space only before 神', () => {
     for (const { ref, parts } of ALL.hant) {
-      for (const match of textOf(parts).matchAll(/　(.)/gu)) {
+      for (const match of [textOf(parts), ...notesOf(parts)].join('').matchAll(/　(.)/gu)) {
         expect([ref, match[1]]).toEqual([ref, '神']);
       }
     }
@@ -86,15 +90,48 @@ describe('1919 Chinese Union Version text', () => {
 
   it('keeps the fixes made to WordProject’s copy', () => {
     expect(verse('hant', 'gen 1:10').startsWith('神稱旱地為地')).toBe(true);
-    expect(verse('hant', 'gen 33:20').endsWith('〔就是　神以色列　神的意思〕')).toBe(true);
+    expect(notesOf(partsOf('hant', 'gen 33:20'))).toEqual(['就是　神以色列　神的意思']);
+    expect(verse('hant', 'gen 33:20')).toBe('在那裡築了一座壇、起名叫伊利伊羅伊以色列。');
     expect(verse('hant', 'neh 10:12')).toBe('撒刻、示利比、示巴尼、');
     expect(verse('hant', '1ch 2:8')).toBe('以探的兒子是亞撒利雅。');
     expect(verse('hant', 'job 3:2')).toBe('說、');
     expect(verse('hant', 'rev 12:18')).toBe('那時龍就站在海邊的沙上。');
+    expect(notesOf(partsOf('hant', 'jer 46:20'))).toEqual(['毀滅或作牛虻']);
     // WordProject wrote 撒都該 (Sadducees) into Old Testament names 220 times.
     for (const { ref, book, parts } of ALL.hant) {
       if (OLD_TESTAMENT.includes(book)) expect([ref, textOf(parts).includes('撒都該')]).toEqual([ref, false]);
     }
+  });
+
+  it('never starts a verse by repeating the one before', () => {
+    // Wikisource's copy starts John 8:1 with 7:53's words; the app keeps them in 7:53.
+    expect(verse('hant', 'jhn 7:53')).toBe('於是各人都回家去了．');
+    expect(verse('hant', 'jhn 8:1')).toBe('耶穌卻往橄欖山去。');
+    const bare = (parts: Part[]) => textOf(parts).replace(/[\s。．、，；：！？]/gu, '');
+    ALL.hant.forEach(({ ref, book, parts }, index) => {
+      const before = ALL.hant[index - 1];
+      if (!before || before.book !== book || bare(before.parts).length < 4) return;
+      expect([ref, bare(parts).startsWith(bare(before.parts))]).toEqual([ref, false]);
+    });
+  });
+
+  it('makes each note inside a verse a footnote, and keeps the verses printed in 〔〕', () => {
+    for (const script of SCRIPTS) {
+      const notes = ALL[script].flatMap(({ parts }) => notesOf(parts));
+      expect(notes).toHaveLength(1011);
+      expect(notes.every((note) => note && !/[〔〕]/u.test(note))).toBe(true);
+    }
+    expect(ALL.hans.map(({ parts }) => notesOf(parts).length)).toEqual(ALL.hant.map(({ parts }) => notesOf(parts).length));
+    expect(partsOf('hant', 'gen 4:1')).toEqual([
+      '有一日、那人和他妻子夏娃同房、夏娃就懷孕、生了該隱、',
+      { type: 'note', contents: '就是得的意思' },
+      '便說、耶和華使我得了一個男子。',
+    ]);
+    // Left in the text: Selah, and the 12 verses that are all in 〔〕.
+    const bracketed = ALL.hant.filter(({ parts }) => /〔(?!細拉〕)/u.test(textOf(parts))).map(({ ref }) => ref);
+    expect(bracketed).toHaveLength(12);
+    expect(bracketed).toEqual(expect.arrayContaining(['exo 16:36', 'mat 18:11', 'jhn 5:4', 'act 8:37']));
+    expect(verse('hant', 'mat 18:11')).toBe('〔人子來為要拯救失喪的人〕');
   });
 
   it('shows Psalm titles as headings and puts a Selah ending a verse on its own line', () => {
@@ -136,6 +173,28 @@ describe('reading the bundled text', () => {
     expect(chapter.chapter.content[0]).toEqual({ type: 'heading', content: ['〔大衛的詩。〕'] });
     expect(chapter.chapter.content[1]).toMatchObject({ type: 'verse', number: 1, content: ['耶和華是我的牧者．我必不至缺乏。'] });
     expect(chapter.numberOfVerses).toBe(6);
+  });
+
+  it('shows the 1919 notes as footnotes where they stood', async () => {
+    const chapter = await fetchChapter('cmn_cuv', 'JHN', 3);
+    const verse15 = chapter.chapter.content.find((item) => item.type === 'verse' && item.number === 15);
+    const noteId = chapter.chapter.footnotes.find((note) => note.reference?.verse === 15)?.noteId;
+
+    expect(chapter.chapter.footnotes).toContainEqual(
+      expect.objectContaining({ text: '或作叫一切信的人在他裡面得永生', reference: { chapter: 3, verse: 15 } }),
+    );
+    expect(verse15).toMatchObject({ content: ['叫一切信他的都得永生。', { noteId }] });
+
+    // The respectful space before 神 shows as it does in the verse text.
+    const genesis = await fetchChapter('cmn_cuv', 'GEN', 33);
+    expect(genesis.chapter.footnotes.map((note) => note.text)).toContain('就是 神以色列 神的意思');
+  });
+
+  it('puts no space after a footnote marker in Chinese, as it does in English', () => {
+    expect(needsSpaceAfterFootnote('with the')).toBe(true);
+    for (const text of ['便說、', '、雅各', '．', '『他', '. And', '']) {
+      expect([text, needsSpaceAfterFootnote(text)]).toEqual([text, false]);
+    }
   });
 
   it('lists the books of the Simplified text from the app', async () => {

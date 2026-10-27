@@ -2647,8 +2647,7 @@ export default function BibleScreen() {
       !(isPoetic && !isLineContinuation && i > 0) &&
       !willAddPoeticNewLine &&
       !willAddSelahNewLine &&
-      contentText.length > 0 &&
-      !BibleService.startsWithPunctuationOrSpace(contentText)
+      BibleService.needsSpaceAfterFootnote(contentText)
     ) {
       contentText = ' ' + contentText;
     }
