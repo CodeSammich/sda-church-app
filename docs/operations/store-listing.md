@@ -68,7 +68,7 @@ Bilingual Bible with pinyin and audio, plus our weekly bulletin and church life.
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-Read the Bible in English, Chinese, or Spanish, side by side, with pinyin and audio. Check this week's bulletin, hymns, and Sabbath School lesson.
+Your church, all week: read and listen to the Bible side by side in English, Chinese, or Spanish, check the bulletin, watch the livestream, and join Bible classes.
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces). Apple also searches the name
@@ -141,7 +141,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-以中文、英文或西班牙文對照閱讀聖經，附拼音與有聲朗讀。隨時查看本週週報、詩歌與安息日學課程。
+教會生活，天天同行：中英對照閱讀和聆聽聖經，查看本週週報、觀看直播、參加查經班。
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces)
@@ -211,7 +211,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-以中文、英文或西班牙文对照阅读圣经，附拼音与有声朗读。随时查看本周周报、诗歌与安息日学课程。
+教会生活，天天同行：中英对照阅读和聆听圣经，查看本周周报、观看直播、参加查经班。
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces)
@@ -286,7 +286,7 @@ Biblia bilingüe con pinyin y audio, más el boletín semanal y la vida de igles
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-Lee la Biblia en inglés, chino o español, lado a lado, con pinyin y audio. Consulta el boletín, los himnos y la lección de Escuela Sabática de esta semana.
+Tu iglesia, toda la semana: lee y escucha la Biblia lado a lado en español, inglés o chino, consulta el boletín, mira la transmisión y únete a las clases bíblicas.
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces)
