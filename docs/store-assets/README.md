@@ -23,8 +23,9 @@ are captured, their sizes, and what they may show are in
   Library. Home comes first: the first three appear on the App Store's install sheets,
   and Home shows what the app is. The other languages' listings show these too.
 - `app-store/header/`: the App Store product page headers, one per listing language:
-  `en-US.jpg`, `zh-Hant.jpg`, `zh-Hans.jpg`, and `es.jpg` for both Spanish listings.
-  Each is a 3840 × 1646 (21:9) JPEG, which has no transparency. A tagline ("Church life,
+  `en-US.png`, `zh-Hant.png`, `zh-Hans.png`, and `es.png` for both Spanish listings.
+  Each is a 3840 × 1646 (21:9) PNG with no transparency. App Store Connect's header
+  upload takes PNG only. A tagline ("Church life,
   all week long") and a line of features (Bible, livestream, classes, library) sit over
   three iPhone screenshots: the Bible, Home, and Explore. Behind them is the church
   building photo that Home and Explore show, tinted brand blue (`#00405C`). The tagline

@@ -30,7 +30,7 @@ before adding anything. Each field below fits its store's limit.
 | Keywords | Version page → Keywords | (none) | 100 |
 | Description | Version page → Description | Main store listing → Full description | 4,000 |
 | What's new | Version page → What's New | Set automatically from the release PR's title | 4,000 / 500 |
-| Product page header | Version page → Header and Search Results → Header, or Asset Library | (none) | 3840 × 1646 JPEG or PNG |
+| Product page header | Version page → Header and Search Results → Header, or Asset Library | (none) | 3840 × 1646 PNG |
 
 In App Store Connect, add each language under **App Information → Localizable
 Information**. In Play Console, use **Main store listing → Manage translations**.

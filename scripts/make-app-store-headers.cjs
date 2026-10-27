@@ -3,8 +3,8 @@
  * a line of features over three iPhone store screenshots (Bible, Home, Explore) from
  * docs/store-assets/app-store/en-US/, on the church building photo tinted brand blue.
  *
- * Each header is a 3840 x 1646 (21:9) JPEG, which has no transparency, as App Store
- * Connect requires. JPEG keeps the photo background to about a megabyte. The tagline and the phones sit in the middle, because the App Store crops
+ * Each header is a 3840 x 1646 (21:9) PNG with no transparency. App Store Connect's
+ * header upload takes PNG only, though Apple's spec page also lists JPEG. The tagline and the phones sit in the middle, because the App Store crops
  * the edges on some devices. See docs/store-assets/README.md.
  *
  * The Chinese taglines need Noto Sans TC Bold and Noto Sans SC Bold, which the repo
@@ -15,7 +15,7 @@
  *
  * The photo is the one Home and Explore show (CHURCH_BUILDING_IMAGE_URL in
  * constants/ExternalLinks.ts), downloaded each run.
- *   node scripts/strip-image-metadata.cjs docs/store-assets/app-store/header/*.jpg
+ *   node scripts/strip-image-metadata.cjs docs/store-assets/app-store/header/*.png
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -178,13 +178,12 @@ async function build(listing, photo) {
   const left = Math.round((W - width) / 2);
   const top = Math.round((PHONES[1].top - height) / 2) - 6;
 
-  const out = path.join(outDir, `${listing.id}.jpg`);
+  const out = path.join(outDir, `${listing.id}.png`);
   await sharp(Buffer.from(background), { density: 72 })
     .composite([{ input: tagline, left, top }])
     .flatten({ background: '#00405C' })
     .removeAlpha()
-    // Full-resolution colour keeps the small text sharp.
-    .jpeg({ quality: 92, chromaSubsampling: '4:4:4', mozjpeg: true })
+    .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toFile(out);
   console.log(path.relative(root, out));
 }
