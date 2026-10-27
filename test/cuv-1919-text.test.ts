@@ -208,6 +208,18 @@ describe('reading the bundled text', () => {
     }
   });
 
+  it('gives a Selah ending a verse its own item, which the reader right-aligns', async () => {
+    const psalm = await fetchChapter('cmn_cuv', 'PSA', 3);
+    expect(psalm.chapter.content.find((item) => item.type === 'verse' && item.number === 2)).toMatchObject({
+      content: ['有許多人議論我說、他得不著 神的幫助。', '\n〔細拉〕'],
+    });
+    // One inside a verse stays where 1919 prints it.
+    const habakkuk = await fetchChapter('cmn_cu1', 'HAB', 3);
+    expect(habakkuk.chapter.content.find((item) => item.type === 'verse' && item.number === 3)).toMatchObject({
+      content: ['神从提幔而来、圣者从巴兰山临到。〔细拉〕他的荣光遮蔽诸天、颂赞充满大地。'],
+    });
+  });
+
   it('lists the books of the Simplified text from the app', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch');
     const books = await fetchBooks('cmn_cu1');

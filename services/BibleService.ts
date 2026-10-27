@@ -1144,7 +1144,14 @@ async function fetchChapterFromFetchBible(
     for (const part of sourceVerse) {
       if (typeof part === 'string') {
         const text = normalizeFetchBibleText(part);
-        if (text) verseContent.push(text);
+        // A Selah on the verse's last line, as the 1919 CUV puts 〔細拉〕, is its
+        // own item, so the reader right-aligns it as it does the BSB's.
+        const lastLine = text.lastIndexOf('\n');
+        if (lastLine > 0 && isSelahMarker(translationId, text.slice(lastLine + 1))) {
+          verseContent.push(text.slice(0, lastLine), text.slice(lastLine));
+        } else if (text) {
+          verseContent.push(text);
+        }
         continue;
       }
 
