@@ -4805,31 +4805,45 @@ export default function BibleScreen() {
                           </View>
                         )}
 
-                        {chapterData?.chapter.footnotes
-                          .filter((f) => {
-                            if (f.reference?.verse !== selectedVerseNum) return false;
-                            // Filter duplicates
-                            if (subtitleText && f.text.trim() === subtitleText)
-                              return false;
-                            return true;
-                          })
-                          .map((f, i) => (
-                            <View key={`fn-${i}`} style={ReaderStyles.detailSection}>
-                              <Text
-                                variant="labelSmall"
-                                style={{ color: theme.colors.primary, marginBottom: 4 }}
-                              >
-                                {labels.footnote}{' '}
-                                {BibleService.toSuperscript(
-                                  BibleService.getChapterFootnoteNumber(
-                                    chapterData.chapter.footnotes,
-                                    f.noteId,
-                                  ),
-                                )}
-                              </Text>
-                              <Text style={ReaderStyles.detailText}>{f.text}</Text>
-                            </View>
-                          ))}
+                        {/*
+                          Both translations' footnotes, so a note marked in the
+                          supporting text (such as the 1919 CUV's) opens here too,
+                          as the main translation's do. With two, each names its
+                          translation, since both number theirs from 1.
+                        */}
+                        {[
+                          { translation: supportedTranslation, data: chapterData },
+                          ...(supportingTranslation && selectedVerseTexts?.supportingText
+                            ? [{ translation: supportingTranslation, data: supportingChapterData }]
+                            : []),
+                        ].flatMap(({ translation, data }, source, sources) =>
+                          (data?.chapter.footnotes ?? [])
+                            .filter((f) => {
+                              if (f.reference?.verse !== selectedVerseNum) return false;
+                              // Filter duplicates
+                              if (subtitleText && f.text.trim() === subtitleText)
+                                return false;
+                              return true;
+                            })
+                            .map((f, i) => (
+                              <View key={`fn-${source}-${i}`} style={ReaderStyles.detailSection}>
+                                <Text
+                                  variant="labelSmall"
+                                  style={{ color: theme.colors.primary, marginBottom: 4 }}
+                                >
+                                  {labels.footnote}{' '}
+                                  {BibleService.toSuperscript(
+                                    BibleService.getChapterFootnoteNumber(
+                                      data?.chapter.footnotes ?? [],
+                                      f.noteId,
+                                    ),
+                                  )}
+                                  {sources.length > 1 ? ` · ${getTranslationLabel(translation)}` : ''}
+                                </Text>
+                                <Text style={ReaderStyles.detailText}>{f.text}</Text>
+                              </View>
+                            )),
+                        )}
                       </>
                     );
                   })()}
