@@ -28,13 +28,24 @@
     "android-display-large": { "displayScale": 1.2 }
   },
   "groups": {
-    "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give.",
+    "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give, and first-launch setup over it.",
     "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, and the popup a tapped verse opens.",
     "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
     "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
     "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs."
   },
   "screens": [
+    {
+      "name": "setup",
+      "group": "home",
+      "tabs": false,
+      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of three (#523), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits.",
+      "path": "",
+      "settings": { "setupDone": false },
+      "variants": ["default", "large"],
+      "mustShowLines": ["^Welcome$", "^Language$", "^Next$"],
+      "mustNotShowLines": ["^Appearance$", "^Text size$"]
+    },
     {
       "name": "home",
       "group": "home",

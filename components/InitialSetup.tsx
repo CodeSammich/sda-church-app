@@ -53,6 +53,9 @@ const setupLabels = {
     retryLabel: (percent: number) =>
       `Retry saving ${percent} percent text size`,
     start: 'Get Started',
+    next: 'Next',
+    back: 'Back',
+    step: (step: number, steps: number) => `Step ${step} of ${steps}`,
   },
   zh: {
     title: '歡迎',
@@ -73,6 +76,9 @@ const setupLabels = {
     retryLabel: (percent: number) =>
       `重新嘗試儲存 ${percent}% 字體大小`,
     start: '開始使用',
+    next: '下一步',
+    back: '上一步',
+    step: (step: number, steps: number) => `第 ${step} 步，共 ${steps} 步`,
   },
   'zh-cn': {
     title: '欢迎',
@@ -93,6 +99,9 @@ const setupLabels = {
     retryLabel: (percent: number) =>
       `重新尝试保存 ${percent}% 字体大小`,
     start: '开始使用',
+    next: '下一步',
+    back: '上一步',
+    step: (step: number, steps: number) => `第 ${step} 步，共 ${steps} 步`,
   },
   es: {
     title: 'Bienvenido',
@@ -114,6 +123,9 @@ const setupLabels = {
     retryLabel: (percent: number) =>
       `Reintentar guardar el tamaño del texto al ${percent} por ciento`,
     start: 'Comenzar',
+    next: 'Siguiente',
+    back: 'Atrás',
+    step: (step: number, steps: number) => `Paso ${step} de ${steps}`,
   },
 } as const;
 
@@ -213,7 +225,8 @@ interface SetupActionProps {
   kind?: 'contained' | 'outlined';
   label: string;
   onPress: () => void;
-  placement?: 'start' | 'stretch';
+  /** stretch: the popup's width; fill: a share of a row of buttons. */
+  placement?: 'start' | 'stretch' | 'fill';
 }
 
 const SetupAction = ({
@@ -237,6 +250,7 @@ const SetupAction = ({
       style={({ pressed }) => [
         styles.actionButton,
         placement === 'start' && styles.actionButtonAtStart,
+        placement === 'fill' && styles.actionButtonFill,
         {
           backgroundColor: contained ? theme.colors.primary : 'transparent',
           borderColor: contained ? theme.colors.primary : theme.colors.outline,
@@ -261,6 +275,11 @@ const SetupAction = ({
   );
 };
 
+// One question per step (#523), so each fits on a phone and the button to go
+// on is always in view: the language first, so the rest shows in it, then the
+// text size, so the last step shows at that size.
+export const SETUP_STEPS = ['language', 'textSize', 'appearance'] as const;
+
 export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const { language, setLanguage } = useContext(LanguageContext);
   const { setThemeMode, themeMode } = useContext(ThemeContext);
@@ -276,6 +295,14 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const textScaleWritePendingRef = useRef(false);
   const failedTextScaleRef = useRef<TextScale | null>(null);
   const labels = setupLabels[language] ?? setupLabels.en;
+  const [step, setStep] = useState(0);
+  const currentStep = SETUP_STEPS[step];
+  const lastStep = step === SETUP_STEPS.length - 1;
+  // A text size that's saving, or failed to save, has to settle first.
+  const textScaleUnsettled = isSavingTextScale || failedTextScale !== null;
+  // The tallest step so far, which the shorter ones keep, so Next stays where
+  // the last tap was.
+  const [tallestStep, setTallestStep] = useState(0);
 
   const persistTextScale = async (nextScale: TextScale) => {
     if (textScaleWritePendingRef.current) return;
@@ -302,6 +329,11 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
     onComplete();
   };
 
+  const goOn = () => {
+    if (lastStep) completeSetup();
+    else if (!textScaleWritePendingRef.current && failedTextScaleRef.current === null) setStep(step + 1);
+  };
+
   return (
     <Portal>
       <Modal
@@ -313,128 +345,176 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
           getPopupSurfaceStyle(theme),
         ]}
       >
-        <PopupScrollView contentContainerStyle={styles.modalContent}>
-          <Text variant="headlineMedium" style={styles.title}>
-            {labels.title}
-          </Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
-            {labels.subtitle}
-          </Text>
-
-          <View style={styles.section}>
-            <Text variant="labelLarge" style={styles.label}>
-              {labels.language}
-            </Text>
-            <SetupChoiceGroup
-              value={language}
-              disabled={isSavingTextScale}
-              twoColumn={shouldUseTwoColumnOnboardingChoices(viewportWidth)}
-              onValueChange={(value) => {
-                if (!textScaleWritePendingRef.current) {
-                  setLanguage(value as SupportedLanguage);
-                }
-              }}
-              options={[
-                { value: 'en', label: 'EN' },
-                { value: 'zh', label: '繁體' },
-                { value: 'zh-cn', label: '简体' },
-                { value: 'es', label: 'ES' },
-              ]}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text variant="labelLarge" style={styles.label}>
-              {labels.appearance}
-            </Text>
-            <SetupChoiceGroup
-              value={themeMode}
-              disabled={isSavingTextScale}
-              twoColumn
-              onValueChange={(value) => {
-                if (!textScaleWritePendingRef.current) {
-                  void setThemeMode(value as ThemeMode);
-                }
-              }}
-              options={[
-                {
-                  value: THEME_SYSTEM,
-                  label: labels.system,
-                  icon: 'monitor-cellphone',
-                },
-                {
-                  value: THEME_SUNSET,
-                  label: labels.sunset,
-                  icon: 'weather-sunset-down',
-                },
-                { value: THEME_LIGHT, label: labels.light, icon: 'weather-sunny' },
-                { value: THEME_DARK, label: labels.dark, icon: 'weather-night' },
-              ]}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text variant="labelLarge" style={styles.label}>
-              {labels.textSize}
-            </Text>
-            <Text variant="bodySmall" style={styles.textSizeHelp}>
-              {labels.textSizeHelp}
-            </Text>
-            <SetupChoiceGroup
-              value={String(textScale)}
-              disabled={isSavingTextScale}
-              twoColumn={shouldUseTwoColumnOnboardingChoices(viewportWidth)}
-              onValueChange={(value) => {
-                const nextScale = Number(value);
-                if (isTextScale(nextScale)) void persistTextScale(nextScale);
-              }}
-              options={TEXT_SCALE_OPTIONS.map((scale) => {
-                const percent = Math.round(scale * 100);
-                return {
-                  accessibilityLabel: labels.percentLabel(percent),
-                  label: `${percent}%`,
-                  value: String(scale),
-                };
-              })}
-            />
-            {isSavingTextScale && (
-              <Text
-                accessibilityLiveRegion="polite"
-                style={styles.textScaleStatus}
-                variant="bodyMedium"
-              >
-                {labels.saving}
-              </Text>
-            )}
-            {failedTextScale !== null && !isSavingTextScale && (
-              <View style={styles.textScaleError}>
-                <Text
-                  accessibilityLiveRegion="assertive"
-                  role="alert"
-                  style={{ color: theme.colors.error }}
-                  variant="bodyMedium"
-                >
-                  {labels.saveError(Math.round(failedTextScale * 100))}
+        <View
+          onLayout={(event) => {
+            const { height } = event.nativeEvent.layout;
+            setTallestStep((tallest) => Math.max(tallest, Math.ceil(height)));
+          }}
+          style={[styles.steps, { minHeight: Math.min(tallestStep, popupMaxHeight) }]}
+        >
+          {/* Keyed by step, so each step opens at its top. */}
+          <PopupScrollView key={currentStep} contentContainerStyle={styles.modalContent}>
+            {currentStep === 'language' && (
+              <>
+                <Text variant="headlineMedium" style={styles.title}>
+                  {labels.title}
                 </Text>
-                <SetupAction
-                  accessibilityLabel={labels.retryLabel(
-                    Math.round(failedTextScale * 100),
-                  )}
-                  kind="outlined"
-                  label={labels.retry}
-                  onPress={() => void persistTextScale(failedTextScale)}
-                  placement="start"
+                <Text variant="bodyMedium" style={styles.subtitle}>
+                  {labels.subtitle}
+                </Text>
+                <Text variant="labelLarge" style={styles.label}>
+                  {labels.language}
+                </Text>
+                <SetupChoiceGroup
+                  value={language}
+                  disabled={isSavingTextScale}
+                  twoColumn={shouldUseTwoColumnOnboardingChoices(viewportWidth)}
+                  onValueChange={(value) => {
+                    if (!textScaleWritePendingRef.current) {
+                      setLanguage(value as SupportedLanguage);
+                    }
+                  }}
+                  options={[
+                    { value: 'en', label: 'EN' },
+                    { value: 'zh', label: '繁體' },
+                    { value: 'zh-cn', label: '简体' },
+                    { value: 'es', label: 'ES' },
+                  ]}
                 />
-              </View>
+              </>
             )}
-          </View>
 
-          <SetupAction
-            disabled={isSavingTextScale || failedTextScale !== null}
-            label={labels.start}
-            onPress={completeSetup}
-          />
-        </PopupScrollView>
+            {currentStep === 'textSize' && (
+              <>
+                <Text variant="headlineMedium" style={styles.title}>
+                  {labels.textSize}
+                </Text>
+                <Text variant="bodyMedium" style={styles.subtitle}>
+                  {labels.textSizeHelp}
+                </Text>
+                <SetupChoiceGroup
+                  value={String(textScale)}
+                  disabled={isSavingTextScale}
+                  twoColumn={shouldUseTwoColumnOnboardingChoices(viewportWidth)}
+                  onValueChange={(value) => {
+                    const nextScale = Number(value);
+                    if (isTextScale(nextScale)) void persistTextScale(nextScale);
+                  }}
+                  options={TEXT_SCALE_OPTIONS.map((scale) => {
+                    const percent = Math.round(scale * 100);
+                    return {
+                      accessibilityLabel: labels.percentLabel(percent),
+                      label: `${percent}%`,
+                      value: String(scale),
+                    };
+                  })}
+                />
+                {isSavingTextScale && (
+                  <Text
+                    accessibilityLiveRegion="polite"
+                    style={styles.textScaleStatus}
+                    variant="bodyMedium"
+                  >
+                    {labels.saving}
+                  </Text>
+                )}
+                {failedTextScale !== null && !isSavingTextScale && (
+                  <View style={styles.textScaleError}>
+                    <Text
+                      accessibilityLiveRegion="assertive"
+                      role="alert"
+                      style={{ color: theme.colors.error }}
+                      variant="bodyMedium"
+                    >
+                      {labels.saveError(Math.round(failedTextScale * 100))}
+                    </Text>
+                    <SetupAction
+                      accessibilityLabel={labels.retryLabel(
+                        Math.round(failedTextScale * 100),
+                      )}
+                      kind="outlined"
+                      label={labels.retry}
+                      onPress={() => void persistTextScale(failedTextScale)}
+                      placement="start"
+                    />
+                  </View>
+                )}
+              </>
+            )}
+
+            {currentStep === 'appearance' && (
+              <>
+                <Text variant="headlineMedium" style={styles.title}>
+                  {labels.appearance}
+                </Text>
+                <SetupChoiceGroup
+                  value={themeMode}
+                  disabled={isSavingTextScale}
+                  twoColumn
+                  onValueChange={(value) => {
+                    if (!textScaleWritePendingRef.current) {
+                      void setThemeMode(value as ThemeMode);
+                    }
+                  }}
+                  options={[
+                    {
+                      value: THEME_SYSTEM,
+                      label: labels.system,
+                      icon: 'monitor-cellphone',
+                    },
+                    {
+                      value: THEME_SUNSET,
+                      label: labels.sunset,
+                      icon: 'weather-sunset-down',
+                    },
+                    { value: THEME_LIGHT, label: labels.light, icon: 'weather-sunny' },
+                    { value: THEME_DARK, label: labels.dark, icon: 'weather-night' },
+                  ]}
+                />
+              </>
+            )}
+          </PopupScrollView>
+
+          {/* Outside the scrolling part, so the way on is always in view. */}
+          <View style={styles.footer}>
+            <View
+              accessible
+              accessibilityLabel={labels.step(step + 1, SETUP_STEPS.length)}
+              style={styles.dots}
+            >
+              {SETUP_STEPS.map((name, index) => (
+                <View
+                  key={name}
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor:
+                        index === step ? theme.colors.primary : theme.colors.outlineVariant,
+                      width: index === step ? 20 : 8,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+            <View style={styles.actions}>
+              {step > 0 && (
+                <SetupAction
+                  disabled={isSavingTextScale}
+                  kind="outlined"
+                  label={labels.back}
+                  onPress={() => setStep(step - 1)}
+                  placement="fill"
+                />
+              )}
+              <SetupAction
+                disabled={textScaleUnsettled}
+                label={lastStep ? labels.start : labels.next}
+                onPress={goOn}
+                placement="fill"
+              />
+            </View>
+          </View>
+        </View>
       </Modal>
     </Portal>
   );
@@ -456,20 +536,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    marginBottom: 32,
+    marginBottom: 24,
     opacity: 0.7,
     textAlign: 'center',
-  },
-  section: {
-    marginBottom: 24,
   },
   label: {
     fontWeight: '600',
     marginBottom: 8,
   },
-  textSizeHelp: {
-    marginBottom: 12,
-    opacity: 0.75,
+  steps: {
+    flexShrink: 1,
+    justifyContent: 'space-between',
+    minHeight: 0,
+  },
+  footer: {
+    gap: 12,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    paddingTop: 4,
+  },
+  dots: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  dot: {
+    borderRadius: 4,
+    height: 8,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
   },
   actionButton: {
     alignItems: 'center',
@@ -484,6 +581,10 @@ const styles = StyleSheet.create({
   },
   actionButtonAtStart: {
     alignSelf: 'flex-start',
+  },
+  actionButtonFill: {
+    flex: 1,
+    marginTop: 0,
   },
   actionButtonText: {
     flexShrink: 1,
