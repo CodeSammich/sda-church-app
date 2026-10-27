@@ -69,14 +69,15 @@ so it isn't used. The Simplified text is the Traditional text converted with
      notes nested inside another template, so the two seemed to agree on no note.
      The tests now read Wikisource with the nesting handled.
 
-   Another 17 verses differ only in an older form of the same character (餬/糊, 蹧/糟,
-   挂/掛, 啞吧/啞巴), so they stay as WordProject has them, as in step 1.
+   Where the two copies agree only on an older form of the same character (餬/糊,
+   蹧/糟, 挂/掛, 啞吧/啞巴), the app keeps WordProject's form, as in step 1.
 8. **The Simplified conversion.** The Simplified text is exactly the Traditional text
    converted, so it has the same words. Compared character by character with
    open-bibles' Simplified copy, where the two Traditional copies agree, the converter
    was wrong in 13 verses: Traditional writes 著 for both zhe (穿著, wearing) and zhù
-   (著名, famous), and it read 按著名 (by name), 得著稱讚 (receive praise), and 穿著白衣
-   as the zhù words. `services/BibleSimplifiedFixes.json` fixes them, for the text and
+   (著名, famous), and it left 著 in phrases such as 穿著白衣 (wearing white), and in
+   按著名 (by name), 得著稱讚 (receive praise), and 遵著書, which it reads as the zhù
+   words 著名, 著稱, and 著書. `services/BibleSimplifiedFixes.json` fixes them, for the text and
    for the pinyin, which had the same mistake with the 1988 text. Everything else
    that differs is open-bibles keeping older forms (毘, 邱, 彀, 窰), and five verses
    where it writes 着 for the 著 of 著名 and 著書.
@@ -105,7 +106,7 @@ checks that:
 - every verse has the wording of Wikisource or open-bibles. A copying error in the app's
   text would have to be the same error, in the same verse, in a copy made separately;
 - wherever the two copies agree with each other, the app agrees too, apart from merged
-  verses;
+  verses and the places they divide verses differently;
 - across each place the copies divide verses differently, the words match a copy, in
   order;
 - the Simplified text is exactly the Traditional text converted, and each converted
