@@ -1,0 +1,53 @@
+name: Needs Priority Label
+
+# GitHub Mobile can't set the Priority issue field yet, so an issue opened there
+# gets the red "needs priority" label until someone gives it a Priority on
+# desktop. The daily run also labels issues the monitors open, because their
+# built-in token doesn't trigger this workflow, and takes the label off once an
+# issue has a Priority. The rules are in scripts/needs-priority-label.cjs. It
+# uses no credentials beyond labeling issues.
+
+on:
+  issues:
+    types: [opened, reopened]
+  schedule:
+    # Daily, away from the top of the hour, when scheduled Actions are busiest.
+    - cron: "41 6 * * *"
+      timezone: "America/New_York"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: needs-priority-label
+  cancel-in-progress: false
+
+jobs:
+  label:
+    # Forks commonly disable Issues. Keep it to the canonical repository.
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Label a new issue, or sweep every open issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          script: |
+            const priorities = require(`${process.env.GITHUB_WORKSPACE}/scripts/needs-priority-label.cjs`);
+            if (context.eventName === 'issues') {
+              const result = await priorities.labelNewIssue({
+                github,
+                context,
+                core,
+                number: context.payload.issue.number,
+              });
+              core.info(`#${result.number}: ${result.action}`);
+            } else {
+              const { labeled, unlabeled } = await priorities.sweep({ github, context });
+              core.info(`Labeled: ${labeled.join(', ') || 'none'}. Unlabeled: ${unlabeled.join(', ') || 'none'}.`);
+            }

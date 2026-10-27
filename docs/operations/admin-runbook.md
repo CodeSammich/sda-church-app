@@ -30,6 +30,7 @@ does and what still needs a person.
 - [Expo doctor monitor alerts](#expo-doctor-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
 - [Due-date reminders](#due-date-reminders)
+- [Issue priorities](#issue-priorities)
 - [Updating pastors and elders](#updating-pastors-and-elders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
@@ -813,10 +814,11 @@ attention** in three cases:
   check the page by hand and update the patterns in
   `scripts/check-store-toolchain.cjs`.
 
-When the app is below a requirement or one starts within 120 days, the issue is
-labeled **critical**. An unreadable page alone does not add the
-label, because it usually means the page wording changed, not that uploads will be
-rejected.
+When the app is below a requirement or one starts within 120 days, the issue's
+**Priority** is set to **Urgent**, unless someone already gave it a priority. An
+unreadable page alone doesn't set one, because it usually means the page wording
+changed, not that uploads will be rejected. If GitHub won't let the workflow set the
+field, the issue still opens and the run logs a warning; set the priority by hand.
 
 A new alert is assigned to the users in `MONITOR_ALERT_ASSIGNEES`; see
 [Getting notified only when action is needed](#getting-notified-only-when-action-is-needed).
@@ -919,6 +921,28 @@ workflows such as the yearly checkup and the Workspace backup reminder, count, s
 notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.
+
+## Issue priorities
+
+Each issue's importance is the organization's **Priority** issue field: Urgent, High,
+Medium, or Low. Urgent means it goes into the next release. The old `critical` label was
+retired in October 2026; no label stands for a priority.
+
+GitHub Mobile can't set issue fields yet. So **Needs Priority Label**
+(`needs-priority-label.yml`) adds the red **needs priority** label to an issue opened or
+reopened without a Priority. Once a day it also labels any other open issue without one,
+such as a monitor's alert, because issues the built-in Actions token opens don't trigger
+workflows. Give the issue a Priority on desktop, and the next daily run removes the label.
+Store toolchain alerts get Urgent automatically; see
+[Store toolchain monitor alerts](#store-toolchain-monitor-alerts).
+
+To groom, search
+`is:issue state:open (label:"needs priority" OR field.priority:urgent,high)`.
+
+If the daily run fails with "can't see the Priority issue field", the Actions token has
+lost access to issue fields. It changes no labels then, so it can't mislabel every issue.
+The rules are in `scripts/needs-priority-label.cjs`, covered by
+`test/needs-priority-label.test.ts`.
 
 ## Updating pastors and elders
 
