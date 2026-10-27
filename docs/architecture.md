@@ -427,8 +427,8 @@ checks nearly all of them daily.
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
-| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English Bible text (BSB, KJV), each translation's book list, and English BSB audio; Bible verses on the printed bulletin | In app and Apps Script |
-| Bible | fetch(bible) | `v1.fetch.bible` | Chinese Union Version and Reina-Valera 1909 text, and original-language critical texts | In app |
+| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English Bible text (BSB, KJV), their and RV1909's book lists, and English BSB audio; Bible verses on the printed bulletin | In app and Apps Script |
+| Bible | fetch(bible) | `v1.fetch.bible` | Reina-Valera 1909 text and original-language critical texts | In app |
 | Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin CUV, tried first, and Cantonese CUV and Spanish RV1909, their only source | In app |
 | Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |
 | Bible audio | Audio Power | `theaudiopower.com` | CUV audio, third source; also where the church's Mandarin copies came from, with its owner's permission | In app |

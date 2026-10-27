@@ -11,15 +11,16 @@ credentials across every supported target.
 
 ### 2.1 Translated Bible Source Routing
 
-Instead of proprietary embeds, the app consumes raw JSON from HelloAO and fetch(bible).
-The public app translation IDs remain stable even when their chapter provider differs:
+Instead of proprietary embeds, the app consumes raw JSON from HelloAO and fetch(bible), and
+reads the Chinese Union Version from files that ship with the app. The public app
+translation IDs remain stable even when their chapter provider differs:
 
 | App translation               | Chapter source | Provider resource | Reason                                                                                                                       |
 | ----------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | BSB (`BSB`)                   | HelloAO        | `BSB`             | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
 | KJV (`eng_kjv`)               | HelloAO        | `eng_kjv`         | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure and chapter-sized requests |
-| Traditional CUV (`cmn_cuv`)   | fetch(bible)   | `cmn_cut`         | Use fetch(bible's normalized source text and translation-note metadata                                                       |
-| Simplified CUV (`cmn_cu1`)    | fetch(bible)   | `cmn_cus`         | Use fetch(bible's normalized source text and translation-note metadata                                                       |
+| Traditional CUV (`cmn_cuv`)   | The app        | `cuv1919/hant`    | The public-domain 1919 text, in fetch(bible)'s book format, readable offline; see [LEGAL.md](../LEGAL.md#chinese-union-version-text-1919) |
+| Simplified CUV (`cmn_cu1`)    | The app        | `cuv1919/hans`    | The same text, converted to Simplified characters                                                                            |
 | Reina-Valera 1909 (`spa_r09`) | fetch(bible)   | `spa_rv`          | HelloAO omits the edition's translation notes; fetch(bible retains them                                                      |
 
 The English routing was audited against Genesis 1, 4, 12, 22, 37, and 49. BSB and KJV had
@@ -162,6 +163,15 @@ allowing the richer provider resource to be authoritative.
 
 The translated book promise is cached by fetch(bible resource ID and canonical lowercase
 USFM book ID. Failed promises are evicted so a later request can retry.
+
+The Chinese Union Version uses the same adapter, but its books are files in
+`assets/bible/cuv1919/{hant,hans}` that ship with the app, along with each script's book
+list (`books.biblejson`). Metro bundles them as assets (`metro.config.js`), and
+`services/BundledBible.ts` reads a book's file the first time it opens: a local file on a
+phone, a file on the website on the web. `scripts/build-cuv-1919.mjs` builds them from
+WordProject's 1919 text and the reviewed corrections in `scripts/cuv-1919-corrections.json`.
+The 1919 text's 〔〕 notes stay in the verse, and a 〔細拉〕 ending a verse goes on its own
+line for the Selah marker.
 
 #### 2.2.2 Original-Language Reference Lookup
 
@@ -398,8 +408,9 @@ fails. Explicit persistence in `IndexedDB` is planned for that browser target. `
 is preferred there over `AsyncStorage` due to the large payload size of full Bible chapters
 and better performance with structured data queries. On iOS and Android, the app caches
 chapter data only in memory while it runs, such as the whole fetch(bible) books behind
-CUV, CUVS, and RVR09; there is no saved chapter cache or Bible download
-yet (see the TODOs in `fetchCompleteTranslation` in `services/BibleService.ts`).
+RVR09; there is no saved chapter cache or Bible download yet (see the TODOs in
+`fetchCompleteTranslation` in `services/BibleService.ts`). The CUV and CUVS ship with the
+app, so they open with no network.
 
 ### 4.2 Bible Sharing Feature (done)
 

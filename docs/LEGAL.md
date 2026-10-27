@@ -21,7 +21,7 @@ terms, ownership, or permissions will remain unchanged.
 
 ## Bible Sources and Licensing
 
-The Bible reader uses two separate content services with different roles:
+The Bible reader uses two content services, plus one text that ships with the app:
 
 - [HelloAO](https://bible.helloao.org/) supplies the English reader text and the
   shared translated-edition book catalog. It also supplies the BSB's English audio:
@@ -29,13 +29,13 @@ The Bible reader uses two separate content services with different roles:
   as a narrator. As of October 2026, HelloAO lists four narrators: three play from
   HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
   The app has no KJV audio.
-- [fetch(bible)](https://fetch.bible/) supplies the Chinese Union Version,
-  Reina-Valera 1909, and the original-language critical editions shown in the
-  verse-detail popup. Its normalized Chinese and Spanish resources expose the
-  source editions' translation footnotes directly.
-
-The translated fetch(bible) resources are the public-domain `cmn_cut` (traditional
-CUV), `cmn_cus` (simplified CUV), and `spa_rv` (Reina-Valera 1909) editions.
+- [fetch(bible)](https://fetch.bible/) supplies Reina-Valera 1909 and the
+  original-language critical editions shown in the verse-detail popup. Its
+  normalized Spanish resource exposes the edition's translation footnotes directly.
+  The translated resource is the public-domain `spa_rv` (Reina-Valera 1909).
+- **The Chinese Union Version ships with the app**: the public-domain 1919 text,
+  in Traditional and Simplified characters, read with no network. See
+  [Chinese Union Version text](#chinese-union-version-text-1919).
 
 Chinese Union Version audio is streamed chapter by chapter from
 [Audio Power](https://theaudiopower.org/translations/cuv/#nar1), which credits the
@@ -50,6 +50,50 @@ church's copies on Adventist Connect; see
 [WordProject Cantonese audio](#wordproject-cantonese-audio). So does the Reina-Valera
 1909 audio; see
 [WordProject Spanish audio](#wordproject-spanish-audio-reina-valera-1909).
+
+### Chinese Union Version text (1919)
+
+The app's Chinese Union Version is the **1919 text** (官話和合譯本), in its 神
+edition. It's in the public domain: it was published in 1919, before 1929, so its US
+copyright has expired. Wikisource marks its transcription `{{Pd/1923}}`.
+
+**Why not the 1988 edition.** Until 1.4.0 the app showed the 1988 New Punctuation
+edition (新標點和合本) from fetch(bible), which labels it public domain after
+eBible.org. That edition adds modern punctuation, paragraphs, section headings, and
+updated names to the 1919 text, and its publisher claims it: "© 1988, 1989, 1996
+United Bible Societies", with the Hong Kong Bible Society as copyright agent. The
+church asked the Hong Kong Bible Society for permission on October 26, 2026. It
+replied the next day, pointing members to the Adventist Chinese Union Mission's
+licensed app and the Society's online Bible, without granting permission, so the
+app switched to the 1919 text. The full history is in
+[#517](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/517),
+and the reply is in the church's IT Admin shared drive.
+
+**Source.** The text is [WordProject's](https://www.wordproject.org/download/bibles/index.htm)
+Traditional Chinese download (`big5_new.zip`). It is the 1919 text: the 1919
+names (流便, 希底結), punctuation (、 ．), notes in 〔〕, spellings (他 for every
+gender, 喫, 阿, 麼), no section headings, and the full-width space before each 神 that
+means God. WordProject's [Disclaimer](https://www.wordproject.org/contact/new/disclaim.htm)
+allows this: "you are allowed to adapt the data (text format only!) for your
+purposes" (copies of its terms are in
+[`docs/rights-records/wordproject-2026-09-30/`](rights-records/wordproject-2026-09-30/)).
+Its Simplified Chinese download is a later edition (modern punctuation, 她), so the
+app's Simplified text is converted from the Traditional with `opencc-js`.
+
+**How it was checked.** WordProject's copy has copying errors: for example 撒都該
+written into Old Testament names about 220 times, missing words, a verse of the next
+chapter pasted onto Genesis 33:20, and private-use characters where its font lacked a
+glyph. Every verse was compared with [Wikisource's transcription of the 1919
+text](https://zh.wikisource.org/wiki/聖經_(和合本)). Where the two disagreed on
+wording, the 1988 text, which keeps the 1919 wording almost everywhere, decided which
+copy had the error; none of its text is used. The 481 reviewed fixes are in
+`scripts/cuv-1919-corrections.json`, and the method and results are in
+[`docs/rights-records/cuv-1919-2026-10-27/`](rights-records/cuv-1919-2026-10-27/README.md).
+Verse divisions follow the 1988 text and the BSB (3 John 1:15, Revelation 12:18),
+with the 1919 words unchanged.
+
+The reader credits it as "Public domain (1919). Text adapted from WordProject."
+`scripts/build-cuv-1919.mjs` rebuilds it.
 
 ### Audio Power permission scope
 
@@ -271,8 +315,10 @@ fetch(bible) service; it does **not** erase or replace the license of each work
 distributed through the service. fetch(bible explicitly states that consumers
 must follow the terms of each individual Bible resource. See its
 [official access and licensing explanation](https://fetch.bible/access/#no-limits-from-us).
-Some of those works are in the public domain, such as the CUV and Reina-Valera 1909
-texts above. Others, such as the critical editions below, carry their own licenses.
+Some of those works are in the public domain, such as the Reina-Valera 1909 text
+above. Others carry their own licenses or claims: the critical editions below are CC BY
+4.0, and the publisher of the 1988 CUV that fetch(bible) labels public domain claims
+copyright (see [Chinese Union Version text](#chinese-union-version-text-1919)).
 
 The app currently requests these open critical editions:
 
