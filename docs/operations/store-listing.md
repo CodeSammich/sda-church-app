@@ -69,10 +69,13 @@ Bilingual Bible with pinyin and audio, plus our weekly bulletin and church life.
 Read the Bible in English, Chinese, or Spanish, side by side, with pinyin and audio. Check this week's bulletin, hymns, and Sabbath School lesson.
 ```
 
-**Keywords** (App Store, up to 100, commas without spaces)
+**Keywords** (App Store, up to 100, commas without spaces). Apple also searches the name
+and subtitle, so their words aren't repeated here. It combines separate keywords too, so
+`audio` and `bible` match "audio bible". `nyc` is for people who search "NYC Chinese SDA".
+Keywords change only with a new version, so edit them before submitting it.
 
 ```text
-bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio bible,mandarin,queens,brooklyn,sermon
+bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio,nyc,mandarin,queens,brooklyn,sermon
 ```
 
 **Description** (both stores, up to 4,000)
