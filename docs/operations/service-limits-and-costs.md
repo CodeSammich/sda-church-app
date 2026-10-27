@@ -69,7 +69,7 @@ Per-use costs, *measured*:
 | Spanish RV1909 audio, one hour | ~11 MB | Mostly 24 kbps mono; whole Bible 861 MB / ~77 hours |
 | BSB English audio, one chapter | ~4.4 MB (John 3, Souer) | Much larger than the Chinese recordings |
 | fetch(bible) original-language book | ~30 KB | One request per book, kept in memory for the session |
-| Bible text in the app | ~25 MB, about 6.8 MB compressed, for all five translations | No request: it ships with the app |
+| Bible text in the app | ~19 MB, about 5.4 MB compressed, for all four translations | No request: it ships with the app |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
 | Adventech quarterly index | ~124 KB | CDN-cached; only when a children's age group is tapped |

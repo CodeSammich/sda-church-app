@@ -222,36 +222,25 @@ describe('screen rules', () => {
     ]);
   });
 
-  it("checks Psalm 9's Higgaion Selah, in the ASV, and Selah, in the BSB, sit on the right", () => {
+  it("checks Psalm 9's Higgaion Selah and Selah sit on the right, in the BSB", () => {
     const at16 = shot('bible-higgaion-selah-default');
     const at20 = shot('bible-selah-default');
     const verse = line('Verse v', 0.95);
     // A line at a given left edge, as a fraction of the screen's width.
     const at = (text: string, y: number, left: number): Line => ({ text, box: [left, y, 0.3, 0.02] });
-    // What both phones' OCR read in the first run.
-    const verse16 = at('16 Jehovah hath made himself known, he hath', 0.2, 0.05);
+    const verse16 = at('16 The LORD is known by the justice', 0.2, 0.05);
     const verse20 = at('20 Lay terror upon them, O LORD;', 0.2, 0.05);
     // Right-aligned, as the reader shows them at the default text size.
-    expect(checkShot(at16, [verse16, at('Higgaion. Selah', 0.3, 0.68), verse])).toEqual([]);
-    expect(checkShot(at16, [verse16, at('Higgaion.Selah', 0.3, 0.68), verse])).toEqual([]);
+    expect(checkShot(at16, [verse16, at('Higgaion Selah2', 0.3, 0.68), verse])).toEqual([]);
     expect(checkShot(at20, [verse20, at('Selah', 0.3, 0.86), verse])).toEqual([]);
     // Left-aligned, or missing.
-    expect(checkShot(at16, [verse16, at('Higgaion. Selah', 0.3, 0.1), verse])).toEqual([
-      '/^Higgaion\\W*Selah\\b/ starts 10% of the way across, not at least 50%',
+    expect(checkShot(at16, [verse16, at('Higgaion Selah2', 0.3, 0.1), verse])).toEqual([
+      '/\\bHiggaion Selah/ starts 10% of the way across, not at least 50%',
     ]);
     expect(checkShot(at20, [verse20, at('Selah', 0.3, 0.12), verse])).toEqual([
       '/^Selah\\b/ starts 12% of the way across, not at least 50%',
     ]);
-    expect(checkShot(at16, [verse16, verse])).toEqual(['no line matches /^Higgaion\\W*Selah\\b/']);
-    // Left on the verse's last line, with its bracket, as HelloAO's ASV has it.
-    expect(checkShot(at16, [verse16, at('The wicked is snared in the work of his own hands. [Higgaion. Selah', 0.3, 0.05), verse])).toEqual([
-      'no line matches /^Higgaion\\W*Selah\\b/',
-      '"The wicked is snared in the work of his own hands. [Higgaion. Selah" matches /\\[(Higgaion|Selah)/, which must not show',
-    ]);
-    // Another translation open: the BSB's 9:16.
-    expect(checkShot(at16, [at('16 The LORD is known by the justice', 0.2, 0.05), at('Higgaion. Selah', 0.3, 0.68), verse])).toEqual([
-      'no line matches /^16 Jehovah hath made himself known\\b/',
-    ]);
+    expect(checkShot(at16, [verse16, verse])).toEqual(['no line matches /\\bHiggaion Selah/']);
     // 9:16's line can't stand in for 9:20's lone Selah.
     expect(checkShot(at20, [verse20, at('Higgaion Selah', 0.1, 0.68), verse])).toEqual(['no line matches /^Selah\\b/']);
   });

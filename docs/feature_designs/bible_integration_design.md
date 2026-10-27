@@ -18,7 +18,6 @@ remain stable even when their chapter provider differs:
 | App translation               | Chapter source | Provider resource | Reason                                                                                                                       |
 | ----------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | BSB (`BSB`)                   | The app, from HelloAO | `bsb` | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure. Its chapters, narrator links included, ship with the app |
-| ASV (`eng_asv`)               | The app, from HelloAO | `asv` | The American Standard Version (1901), from eBible.org's public-domain text. It has no audio, and its 16 notes are the verses some manuscripts add (Acts 8:37) |
 | Traditional CUV (`cmn_cuv`)   | The app        | `cuv1919/hant`    | The public-domain 1919 text, in fetch(bible)'s book format, readable offline; see [LEGAL.md](../LEGAL.md#chinese-union-version-text-1919) |
 | Simplified CUV (`cmn_cu1`)    | The app        | `cuv1919/hans`    | The same text, converted to Simplified characters                                                                            |
 | Reina-Valera 1909 (`spa_r09`) | The app, from fetch(bible) | `rv1909` | HelloAO omits the edition's translation notes; fetch(bible retains them. Its books ship with the app                   |
@@ -29,7 +28,7 @@ contents matched after normalizing reference prefixes. Re-run this comparison if
 provider revises its underlying resource.
 
 HelloAO remains the shared source of translated-edition book names, which the build scripts
-copy into each translation's `books.biblejson`. The BSB, ASV, and RV1909 take their chapter and
+copy into each translation's `books.biblejson`. The BSB and RV1909 take their chapter and
 verse counts from HelloAO too; the CUV's are counted from the 1919 text.
 `BibleService.fetchChapter` routes chapter content according to the table above, and a
 translation without bundled files can't open: nothing falls back to the network.
@@ -135,7 +134,7 @@ parse keeps its entered text. Its **Read now** button opens the current app lang
 default translation at that reference, or at Genesis 1:1, and scrolls to the first
 requested verse without selecting it. Blank and `TBD` fields have no button.
 
-- **No Auth:** The build scripts download the BSB, ASV, and Reina-Valera, and the app the
+- **No Auth:** The build scripts download the BSB and Reina-Valera, and the app the
   original-language texts, with no API keys. This aligns with Tenet 1, 2, and 3 by avoiding user-tracked tokens
   or developer credentials.
 - **Format:** Both services return structured JSON that is adapted into the app's native
@@ -397,23 +396,16 @@ Greek text and footnotes where later manuscripts differ (for example 1 John 5:7 
 end of the Lord's Prayer, Matthew 6:13). A member who had chosen the KJV now reads the BSB,
 the default for English.
 
-The American Standard Version (1901) took the KJV's place as the second English choice in
-1.4.0 (#526). It's public domain everywhere, and it's the American edition of the Revised
-Version: the RSV revised it, and the NRSV revised the RSV. Ellen White quoted it in *The Ministry of Healing*.
-It also keeps readings Adventist teaching quotes that the BSB words differently, such as
-"then shall the sanctuary be cleansed" (Daniel 8:14). Its English is archaic ("Jehovah",
-"goeth") and it has no audio, so the BSB stays the default. It writes Selah after a bracket
-at the end of a line ("There is no help for him in God. [Selah"), as eBible.org's text
-writes it, and `fetchChapter` makes the Selah its own item so the reader right-aligns it
-as it does the BSB's.
+The American Standard Version (1901) was tried as a second English translation in its place
+and left out (#526): it's public domain everywhere, but its archaic English ("Jehovah hath
+made himself known") is hard to read, and it has no audio.
 
 **Supported Translations** (`SUPPORTED_TRANSLATIONS` in `services/BibleService.ts`):
 
 1. BSB - Modern Public Domain English
-2. ASV (American Standard Version, 1901) - Public Domain English.
-3. CUV (Traditional) - 1919 edition (Public Domain).
-4. CUVS (Simplified) - Public Domain.
-5. RVR09 (Reina-Valera 1909, Spanish Traditional) - Public Domain.
+2. CUV (Traditional) - 1919 edition (Public Domain).
+3. CUVS (Simplified) - Public Domain.
+4. RVR09 (Reina-Valera 1909, Spanish Traditional) - Public Domain.
 
 There is no modern Spanish translation in the app.
 
@@ -429,8 +421,8 @@ and better performance with structured data queries. On iOS and Android, the app
 a book's file in memory once it opens. Every reader translation ships with the app
 (`assets/bible`), so the text opens with no network. Audio streams, and the
 original-language verse popup loads over the network. `scripts/build-bundled-bibles.mjs`
-(BSB, ASV, RV1909) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB or ASV
-file holds each chapter as HelloAO's chapter API returns it, without the audio timings the app
+(BSB, RV1909) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
+holds each chapter as HelloAO's chapter API returns it, without the audio timings the app
 doesn't use. [What the app keeps on the phone](on_device_storage.md)
 says where the bundled texts and the app's other saved data live on each platform, what's
 backed up, and what the store policies say.

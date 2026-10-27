@@ -26,9 +26,9 @@ export const BIBLE_TRANSLATION_STORAGE_KEY = 'user-bible-translation';
 /**
  * fetch(bible) supplies the original-language critical editions. The reader
  * translations ship with the app (assets/bible), so they open with no network:
- * the Chinese Union Version (scripts/build-cuv-1919.mjs), and the BSB, the
- * American Standard Version (1901), and Reina-Valera 1909
- * (scripts/build-bundled-bibles.mjs), from HelloAO and fetch(bible).
+ * the Chinese Union Version (scripts/build-cuv-1919.mjs), and the BSB and
+ * Reina-Valera 1909 (scripts/build-bundled-bibles.mjs), from HelloAO and
+ * fetch(bible).
  *
  * IMPORTANT LICENSING DISTINCTION:
  * - fetch(bible offers its CDN without an API key, usage fee, request quota, or
@@ -171,7 +171,6 @@ const originalLanguageBookCache = new Map<
 
 export const SUPPORTED_TRANSLATIONS = [
   { id: 'BSB', name: 'BSB', shortName: 'BSB', lang: 'en' },
-  { id: 'eng_asv', name: 'ASV', shortName: 'ASV', lang: 'en' },
   { id: 'cmn_cuv', name: 'CUV', shortName: 'CUV', lang: 'zh' },
   { id: 'cmn_cu1', name: 'CUVS', shortName: 'CUVS', lang: 'zh-cn' },
   { id: 'spa_r09', name: 'RVR09', shortName: 'RVR09', lang: 'es' },
@@ -215,8 +214,6 @@ export const getDefaultSupportingTranslationId = (
  */
 export const SELAH_PATTERNS: Record<string, RegExp> = {
   BSB: /^\s*[\uff08(]?\s*(Higgaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
-  eng_asv:
-    /^\s*[\uff08(]?\s*(Higgaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
   spa_r09:
     /^\s*[\uff08(]?\s*(Higaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
   // The 1919 text writes 〔細拉〕; （細拉） is the 1988 text's form.
@@ -691,7 +688,6 @@ const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
  */
 const BUNDLED_HELLOAO_TRANSLATIONS: Record<string, BundledBibleCollection> = {
   BSB: 'bsb',
-  eng_asv: 'asv',
 };
 
 interface BundledHelloaoBook {
@@ -1206,24 +1202,6 @@ async function fetchChapterFromFetchBible(
 }
 
 /**
- * The ASV ends a line with its Selah after a bracket, as eBible.org's text
- * writes it: "There is no help for him in God. [Selah". The Selah becomes its
- * own item, so the reader right-aligns it as it does the BSB's.
- */
-function splitBracketedSelah(
-  translationId: string,
-  content: ChapterVerse['content'],
-): ChapterVerse['content'] {
-  return content.flatMap((part) => {
-    const text = typeof part === 'string' ? part : 'text' in part ? part.text : '';
-    const bracket = text.lastIndexOf(' [');
-    if (bracket < 0 || !isSelahMarker(translationId, text.slice(bracket + 2))) return [part];
-    const line = text.slice(0, bracket);
-    return [typeof part === 'string' ? line : { ...part, text: line }, text.slice(bracket + 2)];
-  });
-}
-
-/**
  * Fetches the verses for a specific chapter in a specific translation and book.
  *
  * @param {string} translation - The ID of the translation. Standard: Uppercase ID.
@@ -1261,13 +1239,7 @@ export async function fetchChapter(
     // meaningful whitespace and newlines for poetic formatting.
     if (data.chapter?.content) {
       data.chapter.content = data.chapter.content.map((item) => {
-        if (item.type === 'verse') {
-          return {
-            ...item,
-            content: normalizeContentSequence(splitBracketedSelah(translation, item.content)),
-          };
-        }
-        if (item.type === 'hebrew_subtitle') {
+        if (item.type === 'verse' || item.type === 'hebrew_subtitle') {
           return {
             ...item,
             content: normalizeContentSequence(item.content),

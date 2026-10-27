@@ -52,7 +52,7 @@ only open in the browser. It also shows the Bible audio's fallbacks and where th
 church's copies came from; the [Church media](#church-media) and
 [Third-party APIs and websites](#third-party-apis-and-websites) tables give the details.
 
-![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese and Spanish Bible audio played only from the church's copies, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; the BSB, ASV, Reina-Valera 1909, and 1919 Chinese Union Version bundled in the app, English Bible audio from HelloAO, and original-language Bible text from fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
+![App dependencies diagram: inside the app, church photos, hymnal charts, and Bible audio from the Adventist Connect media library, which is stored on Wasabi and can be restored from a Google Drive backup, with Mandarin Bible audio falling back to the Internet Archive and then Audio Power and Cantonese and Spanish Bible audio played only from the church's copies, and an admin having copied the Mandarin recordings from Audio Power and the Cantonese and Spanish recordings from WordProject into the library; the BSB, Reina-Valera 1909, and 1919 Chinese Union Version bundled in the app, English Bible audio from HelloAO, and original-language Bible text from fetch(bible); the church's bulletin API and the Adventech, Chinese Union Mission, and EGW Writings APIs; opened in the browser, YouTube, Spotify, Zoom, hymns on zgaxr and Hymns for Worship, Sabbath School readers, library reading, giving, and other links, including WordProject from the Bible audio credits](diagrams/app-dependencies.svg)
 
 ### Google Play upload sign-in
 
@@ -429,7 +429,7 @@ checks nearly all of them daily.
 
 | Area | Provider | Host | Used for | How |
 | --- | --- | --- | --- | --- |
-| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English BSB audio and Bible verses on the printed bulletin; the source of the English text (the BSB and the ASV) and book lists the app ships with | In app and Apps Script |
+| Bible | HelloAO | `bible.helloao.org`, `audio.bible.helloao.org` | English BSB audio and Bible verses on the printed bulletin; the source of the English text (the BSB) and book lists the app ships with | In app and Apps Script |
 | Bible | fetch(bible) | `v1.fetch.bible` | Original-language critical texts; the source of the Reina-Valera 1909 text the app ships with | In app |
 | Bible audio | Adventist Connect | `assets.adventistconnect.org` | The church's copies of the Bible audio: Mandarin CUV, tried first, and Cantonese CUV and Spanish RV1909, their only source | In app |
 | Bible audio | Internet Archive | `archive.org` | CUV audio, second source | In app |
