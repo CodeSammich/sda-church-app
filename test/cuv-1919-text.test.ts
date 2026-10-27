@@ -108,6 +108,21 @@ describe('1919 Chinese Union Version text', () => {
     }
   });
 
+  it('keeps every Sadducee in the New Testament, where both other 1919 copies have them', () => {
+    // The fixes took 撒都該 out of Old Testament names, such as 亞撒都該利雅 for
+    // 亞撒利雅, so check none of the real Sadducees went with them.
+    const sadducees = [
+      'mat 3:7', 'mat 16:1', 'mat 16:6', 'mat 16:11', 'mat 16:12', 'mat 22:23', 'mat 22:34',
+      'mrk 12:18', 'luk 20:27', 'act 4:1', 'act 5:17', 'act 23:6', 'act 23:7', 'act 23:8',
+    ];
+    for (const [script, word] of [['hant', '撒都該'], ['hans', '撒都该']] as const) {
+      const found = ALL[script].filter(({ parts }) =>
+        [textOf(parts), ...notesOf(parts)].join('').includes(word),
+      );
+      expect([script, found.map(({ ref }) => ref)]).toEqual([script, sadducees]);
+    }
+  });
+
   it('never starts a verse by repeating the one before', () => {
     // Wikisource's copy starts John 8:1 with 7:53's words; the app keeps them in 7:53.
     expect(verse('hant', 'jhn 7:53')).toBe('於是各人都回家去了．');
