@@ -72,8 +72,8 @@ export const BIBLE_SEARCH_LABELS = {
 
 /**
  * The query as a reference to open, if it reads as one with a chapter number,
- * such as "Jn 3:16" or "Sal 23". A book name alone, like 可 or 路, is an
- * ordinary word in Chinese, so it stays a word search.
+ * such as "Jn 3:16" or "Sal 23". A book's abbreviation alone, like 可 or 路,
+ * is an ordinary word in Chinese, so it stays a word search.
  */
 const referenceIn = (query: string, books: BibleSearchOptions['books']) => {
   if (!/\d/.test(query.normalize('NFKC'))) return null;

@@ -805,9 +805,10 @@ const helloaoVerseText = (content: ChapterVerse['content']) =>
 
 /**
  * Every verse's words in a translation, read straight from its bundled book
- * files, for search (services/BibleSearch.ts). Headings, footnotes, and poetry
- * lines are left out, so this is much quicker than opening each chapter with
- * fetchChapter: under a quarter of a second for a translation in Node.
+ * files, for search (services/BibleSearch.ts). Headings and footnotes are left
+ * out and line breaks become spaces, so this is much quicker than opening each
+ * chapter with fetchChapter: well under half a second for a translation in
+ * Node, against over two seconds for the BSB's 1,189 chapters.
  */
 export async function readTranslationVerseTexts(translationId: string): Promise<BibleVerseText[]> {
   const edition = FETCH_BIBLE_TRANSLATED_EDITIONS[translationId];

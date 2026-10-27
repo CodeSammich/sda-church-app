@@ -178,7 +178,7 @@
     {
       "name": "bible-search",
       "group": "bible-reading",
-      "$comment": "Whole-Bible search (#516), opened by search= in the preview build, as the capture can't type. Genesis 22 is open, so its match for Moriah comes first, then the whole Bible's two by book, with counts. OCR may read the · between a heading and its count as another mark, so the rules allow any.",
+      "$comment": "Whole-Bible search (#516), opened by search= in the key-screens build, as the capture can't type. Genesis 22 is open, so its match for Moriah comes first, then the whole Bible's two by book, with counts. OCR may read the · between a heading and its count as another mark, so the rules allow any.",
       "path": "bible?bookId=GEN&chapter=22&translationId=BSB&search=Moriah",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],

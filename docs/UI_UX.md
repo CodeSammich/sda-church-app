@@ -211,7 +211,7 @@ opens the same page with that hymnal picked and just that hymn showing, marked, 
 Bible audio.
 
 **UI:** Immersive reader with whole-Bible search and persistent audio controls. The
-search box looks through every verse of the translations on screen, offline, and lists the
+search box looks through every verse of the translations on screen, offline on a phone, and lists the
 open chapter's matches first, then the whole Bible's by book with a count for each. A
 reference typed in a short form, such as "Jn 3:16", "Sal 23", or 約3：16, is offered first,
 to jump to (`hooks/useBibleSearch.ts`, `services/BibleSearch.ts`).

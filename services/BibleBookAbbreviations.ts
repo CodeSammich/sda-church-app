@@ -3,8 +3,9 @@
  * services/BibleService.ts reads what people type, such as "Jn 3:16",
  * "1 Cor 13:4", "Sal 23" or "約3:16". The parser already knows each book's
  * full name in every app language (BIBLE_BOOK_NAMES) and its USFM code (GEN,
- * JHN, 1CO). Every form here comes from one of the lists below; don't add one
- * that isn't in a published list.
+ * JHN, 1CO). Every form here comes from one of the lists below, or writes one
+ * of its characters in a common form (參 for 叄); don't add one that isn't in a
+ * published list.
  *
  * Case, accents, dots, the space after a book's number, and a Roman numeral
  * for it don't matter, so "1co", "1 Co." and "I Co" are the same.
@@ -14,8 +15,8 @@ type AbbreviationList = Record<string, readonly string[]>;
 
 /**
  * The SBL Handbook of Style (2nd ed., 2014), §8.3, the abbreviations
- * scholarly writing uses. As reproduced in Duke Divinity School's style guide:
- * https://divinity.libguides.com/styleguide/bible
+ * scholarly writing uses. As reproduced in the University of Divinity
+ * Library's style guide: https://divinity.libguides.com/styleguide/bible
  */
 const SBL: AbbreviationList = {
   GEN: ['Gen'], EXO: ['Exod'], LEV: ['Lev'], NUM: ['Num'], DEU: ['Deut'], JOS: ['Josh'],
@@ -82,7 +83,8 @@ const REINA_VALERA: AbbreviationList = {
  * Traditional and Simplified characters. The epistles of John are 約壹, 約貳,
  * 約叄 there; FHL (信望愛) writes 約一, 約二, 約三
  * (https://springbible.fhl.net/Bible2/cgic201/Doc/abbreviation.html), and 參 is
- * the common form of 叄.
+ * the common form of 叄. (The CUV's 壹, 貳, 叄 keep 約二3 from reading as 2 John
+ * 3; with FHL's 約二, the parser reads it so, as for any one-chapter book.)
  */
 const CHINESE_UNION_VERSION: AbbreviationList = {
   GEN: ['創', '创'], EXO: ['出'], LEV: ['利'], NUM: ['民'], DEU: ['申'], JOS: ['書', '书'],

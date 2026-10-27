@@ -1,7 +1,7 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { buildBibleSearchRows, type BibleSearchOptions } from '@/hooks/useBibleSearch';
 import { foldChineseText, parseSearchTerms, searchBible } from '@/services/BibleSearch';
-import { fetchBooks } from '@/services/BibleService';
+import { fetchBooks, readTranslationVerseTexts } from '@/services/BibleService';
 
 // Whole-Bible search (#516) over the texts that ship with the app.
 const refs = (hits: { bookId: string; chapter: number; verse: number }[]) =>
@@ -25,8 +25,10 @@ describe('whole-Bible search', () => {
     // "love" doesn't find "beloved" or "unloved" unless the verse has love too.
     expect(love.every(({ text }) => /(^|[^\p{L}])love/iu.test(text))).toBe(true);
 
-    expect(refs(await searchBible('sabado', ['spa_r09']))).toContain('EXO 16:23');
-    expect(refs(await searchBible('sábado', ['spa_r09']))).toContain('EXO 16:23');
+    const sabado = refs(await searchBible('sabado', ['spa_r09']));
+    expect(sabado).toHaveLength(137);
+    expect(sabado).toContain('EXO 16:23');
+    expect(refs(await searchBible('sábado', ['spa_r09']))).toEqual(sabado);
   });
 
   it('finds every word of a search, in any order', async () => {
@@ -42,7 +44,19 @@ describe('whole-Bible search', () => {
   it('matches Chinese in either script, across the space before 神 and punctuation', async () => {
     // Traditional in the Simplified text, and Simplified in the Traditional.
     expect(refs(await searchBible('愛', ['cmn_cu1']))).toContain('JHN 3:16');
-    expect(refs(await searchBible('爱', ['cmn_cuv']))).toContain('JHN 3:16');
+    const love = refs(await searchBible('爱', ['cmn_cuv']));
+    expect(love).toHaveLength(822);
+    expect(love).toContain('JHN 3:16');
+    expect(refs(await searchBible('愛', ['cmn_cuv']))).toEqual(love);
+    // Typed in Simplified, which the Traditional converter would change again
+    // (么 alone to 幺); 1919 writes "what" 甚麼.
+    expect(refs(await searchBible('甚么', ['cmn_cu1'])).length).toBeGreaterThan(100);
+    expect(refs(await searchBible('甚么', ['cmn_cuv']))).toEqual(refs(await searchBible('甚麼', ['cmn_cuv'])));
+    expect(refs(await searchBible('果子么', ['cmn_cu1']))).toEqual(['GEN 3:1', 'GEN 3:11']);
+    // The CUV's own spelling of a rare character, as the CUVS has it (陈).
+    const wormwood = refs(await searchBible('茵蔯', ['cmn_cuv']));
+    expect(wormwood).toHaveLength(9);
+    expect(wormwood).toEqual(refs(await searchBible('茵陈', ['cmn_cuv'])));
     // 1919 puts a full-width space before 神: 耶和華你的　神.
     expect(refs(await searchBible('你的神', ['cmn_cu1']))).toContain('GEN 27:20');
     // And 、 between phrases: 我兒、你如何.
@@ -50,7 +64,21 @@ describe('whole-Bible search', () => {
     expect(refs(await searchBible('安息日', ['cmn_cuv']))).toContain('EXO 20:8');
   });
 
+  it('converts a Chinese query as the CUVS was converted, so every CUV verse folds to its CUVS verse', async () => {
+    const simplified = new Map(
+      (await readTranslationVerseTexts('cmn_cu1')).map((verse) => [`${verse.bookId} ${verse.chapter}:${verse.verse}`, verse.text]),
+    );
+    const differ = (await readTranslationVerseTexts('cmn_cuv'))
+      .filter((verse) => {
+        const copy = simplified.get(`${verse.bookId} ${verse.chapter}:${verse.verse}`) ?? '';
+        return foldChineseText(verse.text) !== copy.replace(/[^\p{Script=Han}\p{L}\p{N}]/gu, '');
+      })
+      .map(({ bookId, chapter, verse }) => `${bookId} ${chapter}:${verse}`);
+    expect(differ).toEqual([]);
+  });
+
   it('searches both translations in dual-language reading, showing both', async () => {
+    expect(await searchBible('love neighbor', ['cmn_cuv', 'BSB'])).toHaveLength(14);
     const hits = await searchBible('Moriah', ['cmn_cuv', 'BSB']);
     expect(refs(hits)).toEqual(['GEN 22:2', '2CH 3:1']);
     expect(hits[0].text).toContain('摩利亞');
@@ -60,6 +88,10 @@ describe('whole-Bible search', () => {
   it('finds nothing for an empty search', async () => {
     expect(await searchBible('  ', ['BSB'])).toEqual([]);
     expect(parseSearchTerms(' , ')).toEqual([]);
+    expect(parseSearchTerms('果子么 愛')).toEqual([
+      { kind: 'han', forms: ['果子么', '果子幺'] },
+      { kind: 'han', forms: ['愛', '爱'] },
+    ]);
     expect(foldChineseText('起初　神創造天地。')).toBe('起初神创造天地');
   });
 });

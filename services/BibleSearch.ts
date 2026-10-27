@@ -4,8 +4,8 @@ import { readTranslationVerseTexts, type BibleVerseText } from './BibleService';
 /**
  * Whole-Bible search (#516), on the phone, over the texts that ship with the
  * app, so it works offline. A translation's verses are read once, the first
- * time it's searched, and kept in memory; a search is then a scan of about
- * 31,000 verses, a few milliseconds.
+ * time it's searched, and kept in memory (well under half a second in Node); a
+ * search is then a scan of about 31,000 verses, a few to about 20 ms.
  *
  * Matching, from #516's measurements:
  * - Chinese is matched as a substring, ignoring Traditional or Simplified,
@@ -36,7 +36,10 @@ interface SearchableTranslation {
   indexOf: Map<string, number>;
 }
 
-type SearchTerm = { kind: 'han' | 'word'; text: string };
+// A Chinese term has two forms: as typed, and converted to Simplified. The
+// converter is for Traditional text and changes some Simplified characters
+// again (么 to 幺), so a query typed in Simplified matches as it is.
+type SearchTerm = { kind: 'han'; forms: readonly string[] } | { kind: 'word'; text: string };
 
 const HAN = /\p{Script=Han}/u;
 const WORD_CHARACTER = /[\p{L}\p{N}]/u;
@@ -55,8 +58,14 @@ export const foldLatinText = (text: string) =>
 const foldSimplifiedText = (text: string) =>
   text.normalize('NFKC').replace(/[^\p{Script=Han}\p{L}\p{N}]/gu, '').toLocaleLowerCase();
 
-/** Chinese in either script: Traditional or Simplified doesn't matter either. */
-export const foldChineseText = (text: string) => foldSimplifiedText(traditionalToSimplified(text));
+/**
+ * Chinese in either script: Traditional or Simplified doesn't matter either. A
+ * query is converted as scripts/cuv-1919-simplified.cjs converted the CUVS:
+ * with the phrase fixes, and with 蔯 (茵蔯, wormwood) as 陈 and 鐏 kept, not
+ * the rare 𫈟 and 𨱔, which the pinyin keeps for its lookups.
+ */
+export const foldChineseText = (text: string) =>
+  foldSimplifiedText(traditionalToSimplified(text).replace(/𫈟/gu, '陈').replace(/𨱔/gu, '鐏'));
 
 const searchable = new Map<string, Promise<SearchableTranslation>>();
 
@@ -101,10 +110,10 @@ export const parseSearchTerms = (query: string): SearchTerm[] =>
     .split(/\s+/u)
     .map((raw): SearchTerm =>
       HAN.test(raw)
-        ? { kind: 'han', text: foldChineseText(raw) }
+        ? { kind: 'han', forms: [...new Set([foldSimplifiedText(raw), foldChineseText(raw)])].filter(Boolean) }
         : { kind: 'word', text: foldLatinText(raw).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '') },
     )
-    .filter((term) => term.text);
+    .filter((term) => (term.kind === 'han' ? term.forms.length > 0 : term.text));
 
 const hasWordStartingWith = (text: string, word: string) => {
   for (let at = text.indexOf(word); at !== -1; at = text.indexOf(word, at + 1)) {
@@ -115,7 +124,9 @@ const hasWordStartingWith = (text: string, word: string) => {
 
 const matchesEvery = (folded: string, terms: readonly SearchTerm[]) =>
   terms.every((term) =>
-    term.kind === 'han' ? folded.includes(term.text) : hasWordStartingWith(folded, term.text),
+    term.kind === 'han'
+      ? term.forms.some((form) => folded.includes(form))
+      : hasWordStartingWith(folded, term.text),
   );
 
 /**

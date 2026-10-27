@@ -121,8 +121,10 @@ rules.
 `BibleService.parseScriptureReference` converts a bulletin's Bible entry into canonical
 USFM coordinates: a book, a chapter, and an optional verse range within that chapter.
 Its localized 66-book table accepts and formats English, Traditional Chinese, Simplified
-Chinese, and Spanish book names, and a trailing translation in parentheses, such as
-`(KJV)`, is ignored. It reads only the first passage:
+Chinese, and Spanish book names. It also reads each book's USFM code and published short
+forms (`services/BibleBookAbbreviations.ts`; see [4.6](#46-whole-bible-search-done)),
+full-width digits and colons, and "3.16" or "3 16" for 3:16. A trailing translation in
+parentheses, such as `(KJV)`, is ignored. It reads only the first passage:
 
 - An entry with several passages is cut at the first semicolon or comma (either width),
   or line break, so `John 3:16; Romans 8:1` and `John 3:16, 18, 20` both give John 3:16.
@@ -470,38 +472,6 @@ backed up, and what the store policies say.
   reference lists their ranges (for example `John 3:1-4, 16`). The text has no link back to
   the app.
 
-### 4.2.1 Whole-Bible Search (done)
-
-The Bible's search box (#516) looks through every verse of the translations on screen, on
-the phone, over the texts that ship with the app, so it works offline. It once searched only
-the open chapter.
-
-- **Reading the text:** `BibleService.readTranslationVerseTexts` reads a translation's book
-  files and keeps each verse's words, without headings, footnotes, or poetry lines.
-  `services/BibleSearch.ts` does this once, the first time a translation is searched or the
-  search box opens, and keeps the result in memory. That took under a fifth of a second per
-  translation in Node, and a search then took 1 to 10 ms.
-- **Chinese:** matched as a substring, ignoring Traditional or Simplified, spaces (the 1919
-  text's space before 神), and punctuation. The CUV is searched through the CUVS, its
-  Simplified copy verse for verse, so only the query is converted, with the same phrase
-  fixes as the Simplified text (`services/BibleSimplifiedFixes.json`).
-- **English and Spanish:** each word matches from the start of a word, ignoring case and
-  accents: "love" finds "loved" but not "beloved", and "sabado" finds "sábado". Several
-  words find verses with every word, in any order.
-- **Dual-language reading:** both translations are searched, and a result shows both.
-- **Results:** the open chapter's matches first, then the whole Bible's, by book, with a
-  count for each (`hooks/useBibleSearch.ts`). Tapping one opens it in the reader, keeping
-  its translations, as a verse link does.
-- **References:** text that reads as a reference with a chapter number is offered first, to
-  jump to. `parseScriptureReference` reads each book's full name in every app language, its
-  USFM code, and the short forms in `services/BibleBookAbbreviations.ts`: the SBL Handbook's,
-  Bible Gateway's, the Reina-Valera's own, and the Chinese Union Version's (創, 約, 林前,
-  約壹), each with its source. It reads full-width digits and colons (約３：１６), Roman
-  numerals ("I Cor"), and "3.16" or "3 16" for 3:16. A book's abbreviation alone, such as
-  可 or 路, stays a word search, since it's also an everyday word.
-- **Not searched:** pinyin, which the old chapter search also matched when it was shown.
-- The `bible-search` key screen opens the search with `search=` in the preview build.
-
 ### 4.3 Additional Language Support
 
 Indonesian, German, Japanese also have free public bibles. Can consider later.
@@ -527,3 +497,39 @@ verse text sets a Georgia / Times New Roman serif stack (`styles/ReaderStyles.ts
 original-language popup uses Ezra SIL for Hebrew and Aramaic and Gentium for Greek.
 AdventSans is not bundled; `constants/Themes.ts` notes it is for physical signage and
 branding.
+
+### 4.6 Whole-Bible Search (done)
+
+The Bible's search box (#516) looks through every verse of the translations on screen, on
+the phone, over the texts that ship with the app, so it works offline. It once searched only
+the open chapter.
+
+- **Reading the text:** `BibleService.readTranslationVerseTexts` reads a translation's book
+  files and keeps each verse's words, without headings or footnotes, and with line breaks as
+  spaces. `services/BibleSearch.ts` does this once, the first time a translation is searched
+  or the search box opens, and keeps the result in memory. That took well under half a
+  second per translation in Node, and a search then took a few to about 20 ms.
+- **Chinese:** matched as a substring, ignoring Traditional or Simplified, spaces (the 1919
+  text's space before 神), and punctuation. The CUV is searched through the CUVS, its
+  Simplified copy verse for verse, so only the query is converted, as the Simplified text
+  was: with its phrase fixes (`services/BibleSimplifiedFixes.json`) and its two rare
+  characters' usual forms (蔯 as 陈, and 鐏 kept). A test checks that converting every CUV
+  verse that way gives the CUVS.
+- **English and Spanish:** each word matches from the start of a word, ignoring case and
+  accents: "love" finds "loved" but not "beloved", and "sabado" finds "sábado". Several
+  words find verses with every word, in any order.
+- **Dual-language reading:** both translations are searched, and a result shows both.
+- **Results:** the open chapter's matches first, then the whole Bible's, by book, with a
+  count for each (`hooks/useBibleSearch.ts`). Tapping one opens it in the reader, keeping
+  its translations, as a verse link does.
+- **References:** text that reads as a reference with a chapter number is offered first, to
+  jump to. `parseScriptureReference` reads each book's full name in every app language, its
+  USFM code, and the short forms in `services/BibleBookAbbreviations.ts`: the SBL Handbook's,
+  Bible Gateway's, the Reina-Valera's own, and the Chinese Union Version's (創, 約, 林前,
+  約壹), each with its source. It reads full-width digits and colons (約３：１６), Roman
+  numerals ("I Cor"), and "3.16" or "3 16" for 3:16. A book's abbreviation alone, such as
+  可 or 路, stays a word search, since it's also an everyday word. The bulletin uses the same
+  parser, so a short form there opens too.
+- **Not searched:** pinyin, which the old chapter search also matched when it was shown.
+- The `bible-search` key screen opens the search with `search=`, which only a key-screens
+  build reads.

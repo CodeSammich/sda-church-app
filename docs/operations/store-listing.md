@@ -307,7 +307,7 @@ LA BIBLIA EN TUS IDIOMAS
 • Cuatro traducciones: la Berean Standard Bible (BSB), la Versión Unión China de 1919 en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
 • La lectura bilingüe muestra una segunda traducción debajo de cada versículo, para leer en chino y en inglés lado a lado.
 • Pinyin con marcas de tono sobre el texto chino, para quienes aprenden el idioma y para leer en voz alta.
-• Busca en toda la Biblia, incluso sin conexión, o escribe una cita como Juan 3:16 para ir directamente.
+• Busca en toda la Biblia, incluso sin conexión, o escribe una cita como Juan 3:16 para ir directamente allí.
 • Biblia en audio en mandarín y cantonés (CUV y CUVS), en inglés (BSB) y en otros idiomas, con reproducción en segundo plano, controles en la pantalla de bloqueo y temporizador de apagado.
 • Guarda y comparte versículos, y toca un versículo para ver sus notas y el texto original en hebreo o griego.
 • Un versículo del día para comenzar cada día.

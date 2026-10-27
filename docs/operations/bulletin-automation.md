@@ -473,7 +473,8 @@ preview surface, not the canonical release channel.
 
 ### Bible references
 
-The app recognizes book names in every app language and same-chapter ranges. When it
+The app recognizes book names in every app language, their published short forms
+(such as `Jn`, `Sal`, or 約), and same-chapter ranges. When it
 can read an entry, it shows that reference in the app's language and its **Read now**
 button opens it. For several passages, it shows and opens only the first one; for a
 range across chapters, it shows and opens only its first verse; and a bare book name
