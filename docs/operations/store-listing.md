@@ -356,15 +356,15 @@ access** (Google Play, choosing that all functionality is available without spec
 access):
 
 ```text
-No sign-in is required; every feature works without an account.
+No sign-in is required, and every feature works without an account. The one exception is the Schedule sheet (staff only) button on the bulletin page, which opens the church's internal Google Sheet. Only church staff can open it, and nothing else in the app depends on it.
 
 This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server, and reads Bible text and audio from public Bible services.
 
 Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
 
-The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the browser. The app takes no payments, and giving unlocks nothing in the app.
+The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the in-app browser (Safari View Controller on iOS). The app itself collects no payment details, takes no payments, and giving unlocks nothing in the app.
 
-Hymn lyrics and sheet music, library books, Sabbath School lessons, and videos open on their publishers' websites.
+Hymn lyrics and sheet music, library books, and Sabbath School lessons open on their publishers' websites in the in-app browser. YouTube, Spotify, Zoom, and Google Maps links open in their own apps.
 
 The app plays Bible audio in the background, which is why it uses the audio background mode on iOS and a media playback service on Android.
 
