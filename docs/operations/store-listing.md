@@ -30,6 +30,7 @@ before adding anything. Each field below fits its store's limit.
 | Keywords | Version page → Keywords | (none) | 100 |
 | Description | Version page → Description | Main store listing → Full description | 4,000 |
 | What's new | Version page → What's New | Set automatically from the release PR's title | 4,000 / 500 |
+| Product page header | Version page → Header and Search Results → Header, or Asset Library | (none) | 3840 × 1646 image |
 
 In App Store Connect, add each language under **App Information → Localizable
 Information**. In Play Console, use **Main store listing → Manage translations**.
@@ -384,7 +385,7 @@ blocker still open in the [store policy audit](store-policy-audit.md#status-sept
 
 ## Screenshots
 
-Copies of the uploaded screenshots and the feature graphic are in
+Copies of the uploaded screenshots, the feature graphic, and the App Store headers are in
 [`docs/store-assets/`](../store-assets/README.md), which also explains removing the
 transparency both stores reject. Replace them there whenever the stores get new ones.
 
@@ -403,6 +404,14 @@ transparency both stores reject. Replace them there whenever the stores get new 
   size (1290 × 2796 or 1320 × 2868); a smaller iPhone's screenshots need resizing to
   1290 × 2796, which crops only a few pixels. The first three screenshots also show on
   the install sheet, so lead with the strongest.
+- **App Store header:** one per language, in
+  [`docs/store-assets/app-store/header/`](../store-assets/README.md). Upload each under
+  **Header and Search Results → Header** with that language selected, or through the
+  **Asset Library**, which submits it for review without a new version. Leave **Search
+  Results** empty, so search results keep showing the screenshots. Apple's rules for
+  both: no prices, website addresses, copyright symbols, or other platforms' logos, and
+  any text translated into each listing's language. See Apple's
+  [asset best practices](https://developer.apple.com/app-store/asset-best-practices/).
 - **Adding iPad later:** a later version can add iPad support, with iPad screenshots;
   see #324.
   Apple doesn't let an update remove a device family once released, so test on an iPad
