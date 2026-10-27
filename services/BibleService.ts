@@ -24,10 +24,11 @@ export const API_BASE = 'https://bible.helloao.org/api';
 export const BIBLE_TRANSLATION_STORAGE_KEY = 'user-bible-translation';
 
 /**
- * fetch(bible) supplies the original-language critical editions and the
- * Reina-Valera 1909 reader text. The Chinese Union Version ships with the app
- * (assets/bible/cuv1919, built by scripts/build-cuv-1919.mjs) in the same book
- * format. Other translated editions continue to use HelloAO.
+ * fetch(bible) supplies the original-language critical editions. The reader
+ * translations ship with the app (assets/bible), so they open with no network:
+ * the Chinese Union Version (scripts/build-cuv-1919.mjs), and the BSB, KJV, and
+ * Reina-Valera 1909 (scripts/build-bundled-bibles.mjs), from HelloAO and
+ * fetch(bible).
  *
  * IMPORTANT LICENSING DISTINCTION:
  * - fetch(bible offers its CDN without an API key, usage fee, request quota, or
@@ -683,8 +684,57 @@ const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
     englishName: 'Reina-Valera 1909',
     language: 'spa',
     attribution: 'Public domain. Text provided by fetch(bible).',
+    bundled: 'rv1909',
   },
 };
+
+/**
+ * HelloAO translations that ship with the app, built by
+ * scripts/build-bundled-bibles.mjs: one file per book holding each chapter as
+ * HelloAO's chapter API returns it, so they open with no network.
+ */
+const BUNDLED_HELLOAO_TRANSLATIONS: Record<string, BundledBibleCollection> = {
+  BSB: 'bsb',
+  eng_kjv: 'kjv',
+};
+
+interface BundledHelloaoBook {
+  translation: Translation;
+  book: TranslationBook;
+  chapters: (Pick<TranslationBookChapter, 'numberOfVerses' | 'chapter'> & {
+    thisChapterAudioLinks?: TranslationBookChapterAudioLinks;
+  } | null)[];
+}
+
+const bundledCollectionFor = (translation: string) =>
+  FETCH_BIBLE_TRANSLATED_EDITIONS[translation]?.bundled ?? BUNDLED_HELLOAO_TRANSLATIONS[translation];
+
+/** A HelloAO chapter from the bundled book, shaped like the API's response. */
+async function readBundledHelloaoChapter(
+  collection: BundledBibleCollection,
+  bookId: string,
+  chapterNumber: number,
+): Promise<TranslationBookChapter> {
+  const source = await readBundledBibleFile<BundledHelloaoBook>(collection, bookId.toLowerCase());
+  const entry = source.chapters[chapterNumber];
+  if (!entry) {
+    throw new Error(`Chapter ${bookId} ${chapterNumber} is unavailable`);
+  }
+  const audioLinksOf = (number: number) => source.chapters[number]?.thisChapterAudioLinks ?? null;
+  return {
+    translation: source.translation,
+    book: source.book,
+    thisChapterLink: `bundled:${collection}/${bookId.toLowerCase()}/${chapterNumber}`,
+    thisChapterAudioLinks: entry.thisChapterAudioLinks ?? {},
+    nextChapterApiLink: null,
+    nextChapterAudioLinks: audioLinksOf(chapterNumber + 1),
+    previousChapterApiLink: null,
+    previousChapterAudioLinks: chapterNumber > 1 ? audioLinksOf(chapterNumber - 1) : null,
+    numberOfVerses: entry.numberOfVerses,
+    // A copy, so normalizing it below leaves the cached book as it was.
+    chapter: { ...entry.chapter },
+  };
+}
 
 const translatedBibleBookCache = new Map<
   string,
@@ -739,7 +789,7 @@ export async function fetchAvailableTranslations() {
  */
 export async function fetchBooks(translation: string): Promise<TranslationBook[]> {
   let request = translationBookListCache.get(translation);
-  const bundled = FETCH_BIBLE_TRANSLATED_EDITIONS[translation]?.bundled;
+  const bundled = bundledCollectionFor(translation);
   if (!request && bundled) {
     request = readBundledBibleFile<TranslationBook[]>(bundled, 'books');
     translationBookListCache.set(translation, request);
@@ -1251,13 +1301,19 @@ export async function fetchChapter(
       );
     }
 
-    const res = await fetch(`${API_BASE}/${translation}/${book}/${chapter}.json`, {
-      signal: options.signal,
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch chapter: ${res.status}`);
+    const bundled = BUNDLED_HELLOAO_TRANSLATIONS[translation];
+    let data: TranslationBookChapter;
+    if (bundled) {
+      data = await readBundledHelloaoChapter(bundled, book, chapter);
+    } else {
+      const res = await fetch(`${API_BASE}/${translation}/${book}/${chapter}.json`, {
+        signal: options.signal,
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch chapter: ${res.status}`);
+      }
+      data = await res.json();
     }
-    const data: TranslationBookChapter = await res.json();
 
     // Normalize content sequences to ensure punctuation stays anchored to words
     // even when separated by metadata objects (like footnotes), and to preserve
