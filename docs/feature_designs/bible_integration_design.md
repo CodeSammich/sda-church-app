@@ -11,16 +11,22 @@ credentials across every supported target.
 
 ### 2.1 Translated Bible Source Routing
 
-Instead of proprietary embeds, the app ships raw JSON from HelloAO and fetch(bible), and the
-1919 Chinese Union Version, as files read with no network. The public app translation IDs
-remain stable even when their chapter provider differs:
+Instead of proprietary embeds, every reader translation ships with the app as raw JSON files,
+read with no network. HelloAO and fetch(bible) are only where the build scripts get the text:
+the app never requests a translation's text from them, so reading works fully offline. The
+public app translation IDs remain stable even though the texts come from different sources:
 
-| App translation               | Chapter source | Provider resource | Reason                                                                                                                       |
-| ----------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| BSB (`BSB`)                   | The app, from HelloAO | `bsb` | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure. Its chapters, narrator links included, ship with the app |
-| Traditional CUV (`cmn_cuv`)   | The app        | `cuv1919/hant`    | The public-domain 1919 text, in fetch(bible)'s book format, readable offline; see [LEGAL.md](../LEGAL.md#chinese-union-version-text-1919) |
-| Simplified CUV (`cmn_cu1`)    | The app        | `cuv1919/hans`    | The same text, converted to Simplified characters                                                                            |
-| Reina-Valera 1909 (`spa_r09`) | The app, from fetch(bible) | `rv1909` | HelloAO omits the edition's translation notes; fetch(bible retains them. Its books ship with the app                   |
+| App translation               | Files in the app (`assets/bible/`) | Built from | Reason                                                                                                                       |
+| ----------------------------- | ---------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| BSB (`BSB`)                   | `bsb`          | HelloAO's complete translation | Genesis sampling found the same notes on both providers; HelloAO retains richer chapter structure, narrator links included |
+| Traditional CUV (`cmn_cuv`)   | `cuv1919/hant` | WordProject's 1919 text, with reviewed corrections | The public-domain 1919 text, in fetch(bible)'s book format; see [LEGAL.md](../LEGAL.md#chinese-union-version-text-1919) |
+| Simplified CUV (`cmn_cu1`)    | `cuv1919/hans` | The Traditional text, converted | The same text, converted to Simplified characters                                                                            |
+| Reina-Valera 1909 (`spa_r09`) | `rv1909`       | fetch(bible)'s `spa_rv` | HelloAO omits the edition's translation notes; fetch(bible) retains them                   |
+
+Reading the text online instead would have one advantage, a corrected text reaching
+members without an app update, and it isn't worth the cost: the Bible would stop working
+offline, and every chapter would depend on two outside services. A correction ships with
+the next release instead, by re-running the build script.
 
 The English routing was audited against Genesis 1, 4, 12, 22, 37, and 49. The BSB had
 identical note counts between providers in every sampled chapter, and the Genesis 1 note

@@ -35,7 +35,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [Internet Archive](#internet-archive) | CUV audio, 2nd source | Free | None published | Throttling possible | Low: built for bulk downloads |
 | [Audio Power](#audio-power) | CUV audio, 3rd source | Free (permission) | None published | Unknown | Low: reached only if two sources fail |
 | [HelloAO](#helloao) | English BSB audio, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN |
-| [fetch(bible)](#fetchbible) | Original-language text in the app; the RV1909 text the app ships with | Free | "No limits from us" | n/a | Low: CDN |
+| [fetch(bible)](#fetchbible) | Original-language text in the verse popup, the app's only Bible-text request; the build script's source for RV1909 | Free | "No limits from us" | n/a | Low: CDN |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
@@ -167,8 +167,9 @@ than choosing another narrator.
 
 ### fetch(bible)
 
-`v1.fetch.bible`, static files on S3 and CloudFront (*measured*), used for the
-original-language texts (and the source of the RV1909 text the app ships with). Its
+`v1.fetch.bible`, static files on S3 and CloudFront (*measured*). The app uses it only for
+the original-language texts in the verse popup. The RV1909 text ships with the app, so the
+app never requests it here; `scripts/build-bundled-bibles.mjs` downloads it when it runs. Its
 [access policy](https://fetch.bible/access/#no-limits-from-us) offers the CDN with
 "no API key, usage fee, request quota, or provider-imposed caching limit." The app
 loads a whole book once (about 30 KB) and keeps it in memory for the session.

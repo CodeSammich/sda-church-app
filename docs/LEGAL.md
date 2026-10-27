@@ -22,7 +22,8 @@ terms, ownership, or permissions will remain unchanged.
 ## Bible Sources and Licensing
 
 Every reader translation ships with the app, so the Bible opens with no network. The
-text comes from two content services:
+build scripts got the text from two content services; the app doesn't request a
+translation's text from either:
 
 - [HelloAO](https://bible.helloao.org/) is the source of the English reader text (the
   BSB) and every translation's book list. `scripts/build-bundled-bibles.mjs` builds
@@ -33,8 +34,9 @@ text comes from two content services:
   HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
 - [fetch(bible)](https://fetch.bible/) is the source of Reina-Valera 1909, bundled the
   same way from its public-domain `spa_rv`, whose normalized resource keeps the
-  edition's translation footnotes. It also supplies the original-language critical
-  editions shown in the verse-detail popup, which still load over the network.
+  edition's translation footnotes. Separately, the app fetches from it the
+  original-language critical editions shown in the verse-detail popup, the one Bible
+  text that still loads over the network.
 - **The Chinese Union Version ships with the app**: the public-domain 1919 text,
   in Traditional and Simplified characters, read with no network. See
   [Chinese Union Version text](#chinese-union-version-text-1919).
