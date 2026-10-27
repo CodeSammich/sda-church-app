@@ -97,6 +97,11 @@ describe('1919 Chinese Union Version text', () => {
     expect(verse('hant', 'job 3:2')).toBe('說、');
     expect(verse('hant', 'rev 12:18')).toBe('那時龍就站在海邊的沙上。');
     expect(notesOf(partsOf('hant', 'jer 46:20'))).toEqual(['毀滅或作牛虻']);
+    // Found by the last check against open-bibles (test/cuv-1919-witnesses.test.ts).
+    expect(verse('hant', 'num 13:8')).toBe('屬以法蓮支派的、有嫩的兒子何西阿．');
+    expect(notesOf(partsOf('hant', 'pro 31:8'))).toEqual(['或作不能自辯的']);
+    expect(verse('hant', 'job 39:19')).toContain('挓挲的騌');
+    expect(verse('hant', 'exo 20:20').endsWith('不至犯罪。')).toBe(true);
     // WordProject wrote 撒都該 (Sadducees) into Old Testament names 220 times.
     for (const { ref, book, parts } of ALL.hant) {
       if (OLD_TESTAMENT.includes(book)) expect([ref, textOf(parts).includes('撒都該')]).toEqual([ref, false]);
@@ -118,7 +123,7 @@ describe('1919 Chinese Union Version text', () => {
   it('makes each note inside a verse a footnote, and keeps the verses printed in 〔〕', () => {
     for (const script of SCRIPTS) {
       const notes = ALL[script].flatMap(({ parts }) => notesOf(parts));
-      expect(notes).toHaveLength(1011);
+      expect(notes).toHaveLength(1012);
       expect(notes.every((note) => note && !/[〔〕]/u.test(note))).toBe(true);
     }
     expect(ALL.hans.map(({ parts }) => notesOf(parts).length)).toEqual(ALL.hant.map(({ parts }) => notesOf(parts).length));
@@ -145,6 +150,9 @@ describe('1919 Chinese Union Version text', () => {
   });
 
   it('pairs every Han character with one pinyin syllable, as the reader shows it', () => {
+    // 著 is zhù only where it means famous (著名) or writing (著書); elsewhere it's
+    // zhe, as in 穿著 and 按著名 (by name), which the converter misreads.
+    const zhu: string[] = [];
     for (const script of SCRIPTS) {
       for (const { ref, parts } of ALL[script]) {
         for (const part of parts) {
@@ -155,9 +163,12 @@ describe('1919 Chinese Union Version text', () => {
           );
           expect([ref, problems]).toEqual([ref, []]);
           expect(tokens.map((t) => `${t.prefix ?? ''}${t.text}${t.suffix ?? ''}`).join('')).toBe(shown.replace(/\n/g, ''));
+          if (tokens.some((t) => t.text === '著' && t.pinyin === 'zhù')) zhu.push(`${script} ${ref}`);
         }
       }
     }
+    const famousOrWriting = ['1ch 8:28', '1ch 9:34', '1ch 12:30', 'ecc 12:12', 'amo 6:1'];
+    expect(zhu.sort()).toEqual(SCRIPTS.flatMap((script) => famousOrWriting.map((ref) => `${script} ${ref}`)).sort());
   });
 });
 

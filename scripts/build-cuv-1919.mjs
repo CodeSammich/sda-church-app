@@ -32,9 +32,10 @@
 import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import OpenCC from 'opencc-js/t2cn';
-
+import simplified from './cuv-1919-simplified.cjs';
 import { writeBibleAssetIndex } from './write-bible-asset-index.mjs';
+
+const { toSimplified } = simplified;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -246,17 +247,6 @@ const main = async () => {
   const corrections = JSON.parse(readFileSync(join(root, 'scripts/cuv-1919-corrections.json'), 'utf8'));
   applyCorrections(books, corrections);
 
-  const converter = OpenCC.Converter({ from: 'tw', to: 'cn' });
-  // OpenCC simplifies two rare characters to forms outside the Basic Multilingual
-  // Plane, which many phones can't display: 蔯 (茵蔯, wormwood) to 𫈟, where 茵陈 is
-  // the usual simplified spelling, and 鐏 (the butt of a spear) to 𨱔, where the
-  // traditional form is kept.
-  const toSimplified = (text) => {
-    const simplified = converter(text).replace(/𫈟/gu, '陈').replace(/𨱔/gu, '鐏');
-    const rare = simplified.match(/[\u{10000}-\u{10ffff}]/u);
-    if (rare) throw new Error(`Simplified text has ${rare[0]}, which many phones can't display: ${text}`);
-    return simplified;
-  };
   let verses = 0;
   for (const [script, convert] of [['hant', undefined], ['hans', toSimplified]]) {
     const folder = join(root, 'assets/bible/cuv1919', script);
