@@ -88,7 +88,7 @@ glyph. Every verse was compared with [Wikisource's transcription of the 1919
 text](https://zh.wikisource.org/wiki/聖經_(和合本)). Where the two disagreed on
 wording, the 1988 text, which keeps the 1919 wording almost everywhere, decided which
 copy had the error; none of its text is used. A fourth copy, open-bibles', then checked
-the result. The 501 reviewed fixes are in `scripts/cuv-1919-corrections.json`, and
+the result. The 502 reviewed fixes are in `scripts/cuv-1919-corrections.json`, and
 `test/cuv-1919-witnesses.test.ts` checks every verse against Wikisource and open-bibles
 on every test run. The method and results are in
 [`docs/rights-records/cuv-1919-2026-10-27/`](rights-records/cuv-1919-2026-10-27/README.md).

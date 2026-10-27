@@ -54,9 +54,18 @@ const position = (ref: string) => {
   return { book, at: chapter * 1000 + verse };
 };
 
-// The words of the verses from one reference to another, in order, without
-// the notes saying a verse is joined to the one before (見上節).
-const wordsAcross = (verses: [string, string][], from: string, to: string) => {
+// A verse's wording, without the notes saying a verse is joined to the one
+// before (見上節), and its punctuation: everything but Han characters and
+// spaces, in order, with the 〔〕 of notes and Selah.
+const words = (text: string) => {
+  const folded = foldTraditional(text);
+  return folded === '見上節' ? '' : folded;
+};
+const punctuation = (text: string) => [...text].filter((ch) => !/[\p{Script=Han}\s\u3000]/u.test(ch)).join('');
+
+// What the verses from one reference to another say, in order, as `read`
+// reads each one.
+const across = (verses: [string, string][], from: string, to: string, read: (text: string) => string) => {
   const start = position(from);
   const end = position(to);
   return verses
@@ -65,12 +74,13 @@ const wordsAcross = (verses: [string, string][], from: string, to: string) => {
       return book === start.book && at >= start.at && at <= end.at;
     })
     .sort(([a], [b]) => position(a).at - position(b).at)
-    .map(([, text]) => foldTraditional(text))
-    .filter((words) => words !== '見上節')
+    .map(([, text]) => read(text))
     .join('');
 };
-const appAcross = (from: string, to: string) => wordsAcross(TRADITIONAL.map(({ ref, text }) => [ref, text]), from, to);
-const copyAcross = (copy: Copy, from: string, to: string) => wordsAcross(Object.entries(copy), from, to);
+const appAcross = (from: string, to: string, read = words) =>
+  across(TRADITIONAL.map(({ ref, text }) => [ref, text]), from, to, read);
+const copyAcross = (copy: Copy, from: string, to: string, read = words) =>
+  across(Object.entries(copy), from, to, read);
 
 // Verses the copies divide differently from the app, which divides them as the
 // 1988 text and the BSB do, so verses pair with the BSB. Across each range, the
@@ -140,6 +150,47 @@ describe('the 1919 Chinese Union Version against other copies of the 1919 text',
     });
     // Apart from merged verses, where the app puts the words in the other verse.
     expect(outvoted).toEqual([]);
+  });
+});
+
+describe('the 1919 punctuation', () => {
+  // Wikisource keeps the 1919 punctuation (、 ．), and open-bibles modernizes it
+  // (，；「」), so only Wikisource can vouch for it.
+  const wikisource = COPIES.Wikisource;
+
+  it("matches Wikisource's in every verse", () => {
+    const differences = TRADITIONAL.flatMap((verse, index) => {
+      if (punctuation(wikisource[verse.ref] ?? '') === punctuation(verse.text)) return [];
+      // Merged verses and the places the copies divide verses differently, as
+      // for the wording.
+      const range = DIVIDED_DIFFERENTLY.find(([from, to]) => {
+        const { book, at } = position(verse.ref);
+        return book === position(from).book && at >= position(from).at && at <= position(to).at;
+      });
+      const spans = range
+        ? [[range[0], range[1]]]
+        : // Up to three verses translated as one, as in Psalm 8:6–8.
+          [
+            [-1, 0],
+            [0, 1],
+            [-2, 0],
+            [-1, 1],
+            [0, 2],
+          ]
+            .map(([a, b]) => [TRADITIONAL[index + a], TRADITIONAL[index + b]])
+            .filter(([a, b]) => a && b && a.book === b.book)
+            .map(([a, b]) => [a.ref, b.ref]);
+      if (spans.some(([from, to]) => appAcross(from, to, punctuation) === copyAcross(wikisource, from, to, punctuation))) {
+        return [];
+      }
+      return [{ ref: verse.ref, app: verse.text, Wikisource: wikisource[verse.ref] ?? null }];
+    });
+    expect(differences).toEqual([]);
+  });
+
+  it('is the same in the Simplified text', () => {
+    const different = TRADITIONAL.filter((verse, index) => punctuation(verse.text) !== punctuation(SIMPLIFIED[index].text));
+    expect(different.map(({ ref }) => ref)).toEqual([]);
   });
 });
 

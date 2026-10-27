@@ -88,7 +88,7 @@ open-bibles alone (mostly where Wikisource has a slip of its own, such as 但 fo
 Joshua 17:14 or an extra 所 in John 8:5). The other 33 are merged verses and the verse
 divisions above, whose words match a copy across the verses involved.
 
-All 501 fixes are in `scripts/cuv-1919-corrections.json`, each with its reason
+All 502 fixes are in `scripts/cuv-1919-corrections.json`, each with its reason
 (`wording`, `punctuation`, `rare-character`, `title`, or `verse-division`) and the exact
 WordProject text it replaces. The build fails if WordProject's copy changes under one.
 
@@ -110,7 +110,13 @@ checks that:
 - across each place the copies divide verses differently, the words match a copy, in
   order;
 - the Simplified text is exactly the Traditional text converted, and each converted
-  character matches open-bibles' Simplified copy where the Traditional copies agree.
+  character matches open-bibles' Simplified copy where the Traditional copies agree;
+- every verse's punctuation matches Wikisource's, and the Simplified text has the same
+  punctuation as the Traditional. Only Wikisource can check it, since open-bibles
+  modernizes the punctuation (，；「」). This check added one fix: Psalm 116:18 ends
+  with 、, as Wikisource has it across 116:18–19, where WordProject had nothing.
+- the 14 New Testament verses with Sadducees (撒都該) still have them, in both scripts
+  (`test/cuv-1919-text.test.ts`), since the fixes took 撒都該 out of Old Testament names.
 
 `test/cuv-1919-text.test.ts` checks the built text on its own:
 
