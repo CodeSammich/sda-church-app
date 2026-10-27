@@ -89,6 +89,7 @@ BIBLE IN YOUR LANGUAGES
 • Four translations: the Berean Standard Bible (BSB), the 1919 Chinese Union Version in Traditional (CUV) and Simplified (CUVS) characters, and the Spanish Reina-Valera 1909.
 • Dual-language reading shows a second translation under every verse, so you can read Chinese and English side by side.
 • Pinyin with tone marks above Chinese text, for learners and for reading aloud.
+• Search the whole Bible, even offline, or type a reference such as John 3:16 to go straight there.
 • Audio Bible in Mandarin & Cantonese (CUV and CUVS), English (BSB), and other languages, with background playback, lock-screen controls, and a sleep timer.
 • Save and share verses, and tap a verse to see its notes and the original Hebrew or Greek.
 • A verse of the day to start each day.
@@ -159,6 +160,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 • 四種譯本：1919年版和合本繁體版（CUV）與簡體版（CUVS）、Berean Standard Bible（BSB），以及西班牙文 Reina-Valera 1909。
 • 雙語閱讀：每節經文下方顯示第二種譯本，中英對照一目了然。
 • 可在中文經文上方顯示帶聲調的拼音，方便學習與朗讀。
+• 搜尋整本聖經，離線也能用；也可輸入經文出處（如「約3:16」）直接前往。
 • 有聲聖經：國語與粵語（和合本繁體、簡體）、英文（BSB）及其他語言，支援背景播放、鎖定畫面控制與睡眠定時器。
 • 收藏與分享經文；點選經文即可查看註解，以及希伯來文或希臘文原文。
 • 每日一節經文。
@@ -229,6 +231,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 • 四种译本：1919年版和合本繁体版（CUV）与简体版（CUVS）、Berean Standard Bible（BSB），以及西班牙文 Reina-Valera 1909。
 • 双语阅读：每节经文下方显示第二种译本，中英对照一目了然。
 • 可在中文经文上方显示带声调的拼音，方便学习与朗读。
+• 搜索整本圣经，离线也能用；也可输入经文出处（如“约3:16”）直接前往。
 • 有声圣经：普通话与粤语（和合本繁体、简体）、英文（BSB）及其他语言，支持背景播放、锁屏控制与睡眠定时器。
 • 收藏与分享经文；点击经文即可查看注解，以及希伯来文或希腊文原文。
 • 每日一节经文。
@@ -304,6 +307,7 @@ LA BIBLIA EN TUS IDIOMAS
 • Cuatro traducciones: la Berean Standard Bible (BSB), la Versión Unión China de 1919 en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
 • La lectura bilingüe muestra una segunda traducción debajo de cada versículo, para leer en chino y en inglés lado a lado.
 • Pinyin con marcas de tono sobre el texto chino, para quienes aprenden el idioma y para leer en voz alta.
+• Busca en toda la Biblia, incluso sin conexión, o escribe una cita como Juan 3:16 para ir directamente.
 • Biblia en audio en mandarín y cantonés (CUV y CUVS), en inglés (BSB) y en otros idiomas, con reproducción en segundo plano, controles en la pantalla de bloqueo y temporizador de apagado.
 • Guarda y comparte versículos, y toca un versículo para ver sus notas y el texto original en hebreo o griego.
 • Un versículo del día para comenzar cada día.
@@ -427,7 +431,6 @@ transparency both stores reject. Replace them there whenever the stores get new 
 
 - **Offline audio:** all four translations' text, and the verse popup's Hebrew and
   Greek, ship with the app and open with no connection, but audio streams.
-- **Whole-Bible search:** search covers the current chapter only.
 - **Languages beyond Spanish:** the descriptions' "other languages" means Spanish for now.
 - **Hymn lyrics, sheet music, books, or lessons in the app:** they open on their
   publishers' websites.

@@ -46,6 +46,9 @@ export const takeScreenshotRoute = async (): Promise<string | null> => {
 };
 
 /**
+ * A key-screen path can also open the Bible's search with `search=`, which
+ * components/GlobalHeader.tsx reads in a key-screens build only (#516).
+ *
  * The popup a key-screen path asks for with `popup=`, such as
  * `bible?…&verseStart=16&popup=verse`, if it's one the screen can open. The
  * capture can't tap, so this is how it shows a popup or dialog (#372).

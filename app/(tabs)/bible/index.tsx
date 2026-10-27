@@ -96,7 +96,6 @@ import {
   indexChapterVerses,
 } from '@/services/BibleDualLanguage';
 import {
-  getBibleVersePinyin,
   isChineseBibleTranslation,
 } from '@/services/BiblePinyinService';
 import {
@@ -112,6 +111,7 @@ import {
   TECHNOLOGY_EMAIL,
 } from '@/constants/ExternalLinks';
 import * as BibleService from '@/services/BibleService';
+import type { BibleSearchOptions } from '@/hooks/useBibleSearch';
 import {
   getSavedVerseKey,
   groupSavedVerses,
@@ -3380,40 +3380,6 @@ export default function BibleScreen() {
     } as any);
   };
 
-  const bibleChapterVerses = (chapterData?.chapter.content || [])
-    .filter((content): content is BibleService.ChapterVerse => content.type === 'verse')
-    .map((verse) => ({
-      number: verse.number,
-      title: `${book?.name || labels.bible} ${chapterNum}:${verse.number}`,
-      text: [
-        BibleService.renderVerseToPlainText(supportedTranslation.id, verse),
-        showPinyin && isChineseBibleTranslation(supportedTranslation.id)
-          ? getBibleVersePinyin(
-              BibleService.renderVerseToPlainText(supportedTranslation.id, verse),
-            )
-          : '',
-        supportingTranslation && supportingVerses.get(verse.number)
-          ? BibleService.renderVerseToPlainText(
-              supportingTranslation.id,
-              supportingVerses.get(verse.number)!,
-            )
-          : '',
-        showPinyin &&
-        supportingTranslation &&
-        isChineseBibleTranslation(supportingTranslation.id) &&
-        supportingVerses.get(verse.number)
-          ? getBibleVersePinyin(
-              BibleService.renderVerseToPlainText(
-                supportingTranslation.id,
-                supportingVerses.get(verse.number)!,
-              ),
-            )
-          : '',
-      ]
-        .filter(Boolean)
-        .join(' · '),
-    }));
-
   const handleBibleVerseSearchPress = (verseNumber: number) => {
     forgetPendingScrolls();
     const verseY = versePositions.current[verseNumber];
@@ -3421,6 +3387,38 @@ export default function BibleScreen() {
       scrollRef.current?.scrollTo({ y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET), animated: true });
     }
   };
+
+  // Whole-Bible search (#516). The header searches the translations on screen,
+  // and a result opens here: in this chapter it scrolls to the verse, and
+  // elsewhere it opens like a verse link, keeping the reader's translations.
+  const openSearchReference = (reference: BibleService.ParsedScriptureReference) => {
+    if (reference.bookId === book?.id && reference.chapter === chapterNum) {
+      if (reference.verseStart) handleBibleVerseSearchPress(reference.verseStart);
+      return;
+    }
+    forgetPendingScrolls();
+    const verseStart = reference.verseStart ? String(reference.verseStart) : '';
+    router.setParams({
+      translationId: supportedTranslation.id,
+      bookId: reference.bookId,
+      chapter: String(reference.chapter),
+      verseStart,
+      verseEnd: verseStart ? String(reference.verseEnd || reference.verseStart) : '',
+      referenceRequest: BibleService.createScriptureReferenceRequest(),
+    } as any);
+  };
+  const openSearchReferenceRef = useRef(openSearchReference);
+  openSearchReferenceRef.current = openSearchReference;
+  const bibleSearch = useMemo<BibleSearchOptions>(
+    () => ({
+      translationIds: [supportedTranslation.id, ...(supportingTranslation ? [supportingTranslation.id] : [])],
+      books: books.map(({ id, name, numberOfChapters }) => ({ id, name, numberOfChapters })),
+      bookId: book?.id,
+      chapter: chapterNum,
+      onOpen: (reference) => openSearchReferenceRef.current(reference),
+    }),
+    [supportedTranslation.id, supportingTranslation?.id, books, book?.id, chapterNum],
+  );
 
   const hasChapterAudio = audioReaderEntries.length > 0;
   const dockExtraHeight =
@@ -3703,8 +3701,7 @@ export default function BibleScreen() {
             onBibleSavedVersesPress: () => setModalType('saved'),
             bibleSavedVerseCount: savedVerses.length,
             bibleSavedVersesLabel: labels.savedVerses,
-            bibleChapterVerses,
-            onBibleVerseSearchPress: handleBibleVerseSearchPress,
+            bibleSearch,
           } as any
         }
       />

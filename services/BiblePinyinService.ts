@@ -6,8 +6,9 @@ import simplifiedFixes from './BibleSimplifiedFixes.json';
 
 const opencc = OpenCC.Converter({ from: 'tw', to: 'cn' });
 // With the phrases opencc-js gets wrong fixed, such as 按著名 (by name) read as
-// 著名 (famous), so 著 reads zhe, not zhù. The Simplified text has the same fixes.
-const traditionalToSimplified = (text: string) =>
+// 著名 (famous), so 著 reads zhe, not zhù. The Simplified text has the same fixes,
+// so search converts a query with this too (services/BibleSearch.ts).
+export const traditionalToSimplified = (text: string) =>
   simplifiedFixes.phrases.reduce(
     (converted, [from, to]) => converted.split(from).join(to),
     opencc(text),

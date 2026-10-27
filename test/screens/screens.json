@@ -176,6 +176,15 @@
       "mustNotShowLines": ["^Close$"]
     },
     {
+      "name": "bible-search",
+      "group": "bible-reading",
+      "$comment": "Whole-Bible search (#516), opened by search= in the preview build, as the capture can't type. Genesis 22 is open, so its match for Moriah comes first, then the whole Bible's two by book, with counts. OCR may read the · between a heading and its count as another mark, so the rules allow any.",
+      "path": "bible?bookId=GEN&chapter=22&translationId=BSB&search=Moriah",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^This chapter\\W+1 verse$", "^Whole Bible\\W+2 verses$", "^Genesis\\W+1$", "^Genesis 22:2$"]
+    },
+    {
       "name": "bible-audio-settings",
       "group": "bible-reading",
       "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. It's centred like the other popups: until 1.3.2 it sat at the bottom, its title 47% of the way down where theirs are at 25 to 32%, so the title must be no farther down than 40%.",
