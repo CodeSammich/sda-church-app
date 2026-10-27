@@ -30,7 +30,7 @@ before adding anything. Each field below fits its store's limit.
 | Keywords | Version page → Keywords | (none) | 100 |
 | Description | Version page → Description | Main store listing → Full description | 4,000 |
 | What's new | Version page → What's New | Set automatically from the release PR's title | 4,000 / 500 |
-| Product page header | Version page → Header and Search Results → Header, or Asset Library | (none) | 3840 × 1646 image |
+| Product page header | Version page → Header and Search Results → Header, or Asset Library | (none) | 3840 × 1646 JPEG or PNG |
 
 In App Store Connect, add each language under **App Information → Localizable
 Information**. In Play Console, use **Main store listing → Manage translations**.
@@ -407,7 +407,8 @@ transparency both stores reject. Replace them there whenever the stores get new 
 - **App Store header:** one per language, in
   [`docs/store-assets/app-store/header/`](../store-assets/README.md). Upload each under
   **Header and Search Results → Header** with that language selected, or through the
-  **Asset Library**, which submits it for review without a new version. Leave **Search
+  **Asset Library**, which submits it for review without a new version, so a rejected
+  header holds up nothing else. Leave **Search
   Results** empty, so search results keep showing the screenshots. Apple's rules for
   both: no prices, website addresses, copyright symbols, or other platforms' logos, and
   any text translated into each listing's language. See Apple's
