@@ -158,10 +158,12 @@ describe('saved settings', () => {
     expect(repoFile('app/_layout.tsx')).toContain('takeScreenshotRoute()');
   });
 
-  it('skips setup and fixes the language, theme, and text size for every shot', () => {
+  it('skips setup, except on its own shots, and fixes the language, theme, and text size for every shot', () => {
     for (const shot of shots) {
       const manifest = buildManifest(shot.settings);
-      expect(manifest['has-completed-setup']).toBe('true');
+      // First-launch setup's own shots (#523) leave it to show.
+      const setupShot = /\/setup-[^/]+\.png$/.test(shot.file);
+      expect([shot.file, manifest['has-completed-setup']]).toEqual([shot.file, setupShot ? 'false' : 'true']);
       expect(manifest['user-language']).toMatch(/^(en|zh|zh-cn|es)$/);
       expect(manifest['user-theme']).toMatch(/^(light|dark)$/);
       expect(Number(manifest['user-text-scale'])).toBeGreaterThanOrEqual(1);

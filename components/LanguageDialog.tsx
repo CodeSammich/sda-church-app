@@ -1,9 +1,10 @@
 import { PopupHeader } from '@/components/PopupHeader';
+import { PopupScrollView } from '@/components/PopupScrollView';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { useContext } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Dialog, Portal, RadioButton, Text } from 'react-native-paper';
 
 type LanguageDialogProps = Readonly<{ onDismiss: () => void; visible: boolean }>;
@@ -75,7 +76,7 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
           style={styles.scrollArea}
           testID="language-dialog-scroll-area"
         >
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <PopupScrollView contentContainerStyle={styles.scrollContent}>
             <Text
               variant="bodyMedium"
               style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
@@ -141,7 +142,7 @@ export function LanguageDialog({ onDismiss, visible }: LanguageDialogProps) {
                 );
               })}
             </View>
-          </ScrollView>
+          </PopupScrollView>
         </Dialog.ScrollArea>
       </Dialog>
     </Portal>
