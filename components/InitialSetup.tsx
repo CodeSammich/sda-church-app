@@ -19,10 +19,10 @@ import {
 } from '@/constants/Themes';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { AppIcon } from '@/components/AppIcon';
+import { PopupScrollView } from '@/components/PopupScrollView';
 import { useContext, useRef, useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -313,7 +313,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
           getPopupSurfaceStyle(theme),
         ]}
       >
-        <ScrollView contentContainerStyle={styles.modalContent}>
+        <PopupScrollView contentContainerStyle={styles.modalContent}>
           <Text variant="headlineMedium" style={styles.title}>
             {labels.title}
           </Text>
@@ -434,7 +434,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
             label={labels.start}
             onPress={completeSetup}
           />
-        </ScrollView>
+        </PopupScrollView>
       </Modal>
     </Portal>
   );

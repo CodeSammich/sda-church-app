@@ -3,6 +3,7 @@ import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { PopupHeader } from '@/components/PopupHeader';
 import { WrappingButton as Button } from '@/components/WrappingButton';
+import { PopupFlatList, PopupScrollView } from '@/components/PopupScrollView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setIsAudioActiveAsync } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -4116,7 +4117,7 @@ export default function BibleScreen() {
           <View style={ReaderStyles.modalInner}>
             {renderPopupHeader(labels.audioSettings, () => setAudioSettingsVisible(false))}
             <Divider />
-            <ScrollView>
+            <PopupScrollView>
               <Text
                 variant="titleMedium"
                 style={[
@@ -4284,7 +4285,7 @@ export default function BibleScreen() {
                   </TouchableOpacity>
                 </>
               )}
-            </ScrollView>
+            </PopupScrollView>
           </View>
         </Modal>
       </Portal>
@@ -4307,7 +4308,7 @@ export default function BibleScreen() {
               {labels.backgroundAudioTitle}
             </Text>
             <Divider />
-            <ScrollView contentContainerStyle={styles.backgroundAudioGuidanceBody}>
+            <PopupScrollView contentContainerStyle={styles.backgroundAudioGuidanceBody}>
               <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
                 {labels.backgroundAudioBody.replace(
                   '{browser}',
@@ -4335,7 +4336,7 @@ export default function BibleScreen() {
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                 {labels.settingsFallback}
               </Text>
-            </ScrollView>
+            </PopupScrollView>
             <View style={styles.backgroundAudioGuidanceActions}>
               <Button
                 mode="outlined"
@@ -4370,7 +4371,7 @@ export default function BibleScreen() {
           <View style={ReaderStyles.modalInner}>
             {renderPopupHeader(labels.sleepTimer, () => setSleepTimerVisible(false))}
             <Divider />
-            <ScrollView>
+            <PopupScrollView>
               {(
                 [
                   { value: null, label: labels.timerOff },
@@ -4424,7 +4425,7 @@ export default function BibleScreen() {
                   )}
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </PopupScrollView>
           </View>
         </Modal>
       </Portal>
@@ -4445,7 +4446,7 @@ export default function BibleScreen() {
               <>
                 {renderPopupHeader(labels.verseHymnsTitle, closeModal)}
                 <Divider />
-                <ScrollView contentContainerStyle={{ paddingVertical: 4 }}>
+                <PopupScrollView contentContainerStyle={{ paddingVertical: 4 }}>
                   {verseHymns.map((hymn) => (
                     <TouchableOpacity
                       key={`${hymn.hymnalId}:${hymn.number}`}
@@ -4487,7 +4488,7 @@ export default function BibleScreen() {
                       </View>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </PopupScrollView>
               </>
             ) : lastActiveType === 'saved' ? (
               <>
@@ -4573,7 +4574,7 @@ export default function BibleScreen() {
                     )}
                   </View>
                 ) : (
-                  <FlatList
+                  <PopupFlatList
                     data={savedVerseDisplays}
                     keyExtractor={(item) =>
                       `${item.bookId}:${item.chapter}:${item.verseStart}-${item.verseEnd}`
@@ -4638,7 +4639,7 @@ export default function BibleScreen() {
                   closeModal,
                 )}
                 <Divider />
-                <ScrollView style={ReaderStyles.modalScroll}>
+                <PopupScrollView style={ReaderStyles.modalScroll}>
                   <View style={ReaderStyles.detailSection}>
                     {supportingTranslation && selectedVerseTexts?.supportingText && (
                       <Text
@@ -4834,7 +4835,7 @@ export default function BibleScreen() {
                       </>
                     );
                   })()}
-                </ScrollView>
+                </PopupScrollView>
                 <View
                   style={[
                     styles.detailActions,
@@ -4953,7 +4954,7 @@ export default function BibleScreen() {
                   closeModal,
                 )}
                 <Divider />
-                <FlatList<
+                <PopupFlatList<
                   | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
                   | BibleService.TranslationBook
                   | number

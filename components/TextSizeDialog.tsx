@@ -9,6 +9,7 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { PopupHeader } from '@/components/PopupHeader';
+import { PopupScrollView } from '@/components/PopupScrollView';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
@@ -19,7 +20,6 @@ import {
   type LayoutChangeEvent,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
@@ -295,7 +295,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
           style={styles.scrollArea}
           testID="text-size-dialog-scroll-area"
         >
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <PopupScrollView contentContainerStyle={styles.scrollContent}>
             <Text variant="bodyMedium">{labels.description}</Text>
             <Text
               variant="titleMedium"
@@ -451,7 +451,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
                 {applyError}
               </Text>
             )}
-          </ScrollView>
+          </PopupScrollView>
         </Dialog.ScrollArea>
         <View style={styles.actions}>
           <TextDialogAction
