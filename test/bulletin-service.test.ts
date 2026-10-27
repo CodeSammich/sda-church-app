@@ -1,15 +1,25 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { mockFiles } from './helpers/file-system-mock';
+
 import {
   Bulletin,
   BulletinLocation,
   cacheBulletin,
   fetchBulletin,
   getCachedBulletin,
+  getRefreshAvailableAt,
+  setRefreshAvailableAt,
   getNextBulletinRolloverAt,
   getUpcomingSabbathDates,
   hasBulletinValue,
   isBulletinCacheFresh,
   isBulletinLocationEmpty,
 } from '@/services/BulletinService';
+
+beforeEach(async () => {
+  await AsyncStorage.clear();
+});
 
 const emptyLocation = (): BulletinLocation => ({
   hymnOfPraise: { english: '', chinese: '' },
@@ -77,6 +87,48 @@ describe('bulletin service', () => {
     expect(
       await getCachedBulletin('2026-08-08', sabbathMorning, { allowStale: true }),
     ).toEqual(bulletin);
+  });
+
+  const bulletinFor = (date: string) =>
+    ({ date, queens: emptyLocation(), brooklyn: emptyLocation() }) as Bulletin;
+
+  it('keeps the copies in the cache directory on a phone, out of AsyncStorage and its backups', async () => {
+    await cacheBulletin(bulletinFor('2026-08-08'), new Date(2026, 7, 7, 20).getTime());
+    await setRefreshAvailableAt('2026-08-08', 1234);
+
+    expect([...mockFiles.keys()].sort()).toEqual(['cache/bulletins/2026-08-08.json', 'cache/bulletins/2026-08-08.refresh']);
+    expect(await AsyncStorage.getAllKeys()).toEqual([]);
+    expect(await getCachedBulletin('2026-08-08', 0, { allowStale: true })).toEqual(bulletinFor('2026-08-08'));
+    expect(await getRefreshAvailableAt('2026-08-08')).toBe(1234);
+  });
+
+  it('drops the copies AsyncStorage kept before #524, once a new one is saved', async () => {
+    const old = JSON.stringify({ bulletin: bulletinFor('2026-08-08'), fetchedAt: 1 });
+    await AsyncStorage.multiSet([
+      ['bulletin-cache-v2:2026-08-08', old],
+      ['bulletin-refresh-v1:2026-08-08', '5'],
+      ['user-language', 'en'],
+    ]);
+    // Until then, it still shows the old copy.
+    expect(await getCachedBulletin('2026-08-08', 0, { allowStale: true })).toEqual(bulletinFor('2026-08-08'));
+
+    await cacheBulletin(bulletinFor('2026-08-15'));
+    expect(await AsyncStorage.getAllKeys()).toEqual(['user-language']);
+  });
+
+  it('keeps only the copies from the last two weeks', async () => {
+    for (const date of ['2026-07-18', '2026-07-25', '2026-08-01', '2026-08-08']) {
+      await setRefreshAvailableAt(date, 1);
+      await cacheBulletin(bulletinFor(date));
+    }
+    const kept = async (date: string) =>
+      (await getCachedBulletin(date, 0, { allowStale: true })) !== undefined && (await getRefreshAvailableAt(date)) === 1;
+
+    // Two weeks before the newest, 2026-08-08, is 2026-07-25.
+    expect(await kept('2026-07-18')).toBe(false);
+    expect(await kept('2026-07-25')).toBe(true);
+    expect(await kept('2026-08-01')).toBe(true);
+    expect(await kept('2026-08-08')).toBe(true);
   });
 
   it('recognizes a location where every field is blank or TBD', () => {

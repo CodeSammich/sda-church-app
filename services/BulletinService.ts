@@ -1,5 +1,5 @@
 import { getBulletinApiUrl } from '@/constants/ExternalLinks';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { type CachedText, pruneCachedTexts, readCachedText, writeCachedText } from '@/services/CacheStore';
 
 export type BilingualBulletinText = {
   english: string;
@@ -67,6 +67,26 @@ type CachedBulletin = {
 
 const BULLETIN_CACHE_PREFIX = 'bulletin-cache-v2:';
 const BULLETIN_REFRESH_PREFIX = 'bulletin-refresh-v1:';
+
+// Each Sabbath's bulletin, and when it may next be refreshed, are copies the
+// app can download again, so they're kept out of the phone's backup (#524).
+type StoredKind = 'bulletin' | 'refresh';
+const stored = (kind: StoredKind, date: string): CachedText => ({
+  folder: 'bulletins',
+  name: `${date}.${kind === 'bulletin' ? 'json' : 'refresh'}`,
+  key: `${kind === 'bulletin' ? BULLETIN_CACHE_PREFIX : BULLETIN_REFRESH_PREFIX}${date}`,
+});
+
+// The app only shows this Sabbath's bulletin and the next, so copies dated more
+// than two weeks before the newest go, rather than piling up week after week.
+const KEEP_DAYS = 14;
+const pruneStored = (newestDate: string) => {
+  const cutoff = toLocalIsoDate(new Date(sabbathStart(newestDate) - KEEP_DAYS * 24 * 60 * 60 * 1000));
+  return pruneCachedTexts('bulletins', [BULLETIN_CACHE_PREFIX, BULLETIN_REFRESH_PREFIX], (name) => {
+    const date = name.replace(/\.(json|refresh)$/, '');
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) && date < cutoff;
+  });
+};
 
 const toLocalIsoDate = (date: Date) => {
   const year = date.getFullYear();
@@ -155,10 +175,10 @@ export const getCachedBulletin = async (
   { allowStale = false } = {},
 ): Promise<Bulletin | undefined> => {
   try {
-    const stored = await AsyncStorage.getItem(`${BULLETIN_CACHE_PREFIX}${date}`);
-    if (!stored) return undefined;
+    const text = await readCachedText(stored('bulletin', date));
+    if (!text) return undefined;
 
-    const cached = JSON.parse(stored) as CachedBulletin;
+    const cached = JSON.parse(text) as CachedBulletin;
     if (
       !cached?.bulletin ||
       cached.bulletin.date !== date ||
@@ -174,16 +194,16 @@ export const getCachedBulletin = async (
 };
 
 export const cacheBulletin = async (bulletin: Bulletin, fetchedAt = Date.now()) => {
-  await AsyncStorage.setItem(
-    `${BULLETIN_CACHE_PREFIX}${bulletin.date}`,
+  await writeCachedText(
+    stored('bulletin', bulletin.date),
     JSON.stringify({ bulletin, fetchedAt } satisfies CachedBulletin),
   );
+  await pruneStored(bulletin.date).catch(() => undefined);
 };
 
 export const getRefreshAvailableAt = async (date: string) => {
   try {
-    const stored = await AsyncStorage.getItem(`${BULLETIN_REFRESH_PREFIX}${date}`);
-    const value = Number(stored);
+    const value = Number(await readCachedText(stored('refresh', date)));
     return Number.isFinite(value) ? value : 0;
   } catch {
     return 0;
@@ -191,7 +211,7 @@ export const getRefreshAvailableAt = async (date: string) => {
 };
 
 export const setRefreshAvailableAt = (date: string, value: number) =>
-  AsyncStorage.setItem(`${BULLETIN_REFRESH_PREFIX}${date}`, String(value));
+  writeCachedText(stored('refresh', date), String(value));
 
 export const fetchBulletin = async (
   date: string,

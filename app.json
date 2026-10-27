@@ -25,6 +25,9 @@
       "bundleIdentifier": "org.nyccsda.app",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "RCTAsyncStorageExcludeFromBackup": false
       }
     },
     "android": {
