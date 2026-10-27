@@ -25,6 +25,9 @@
       "bundleIdentifier": "org.nyccsda.app",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "RCTAsyncStorageExcludeFromBackup": false
       }
     },
     "android": {
@@ -34,6 +37,7 @@
       },
       "predictiveBackGestureEnabled": true,
       "package": "org.nyccsda.app",
+      "allowBackup": true,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",

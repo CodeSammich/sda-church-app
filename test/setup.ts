@@ -44,6 +44,12 @@ jest.mock('@/services/BundledBible', () => {
   };
 });
 
+// The cache directory, for the copies services/CacheStore.ts keeps on a phone.
+jest.mock('expo-file-system', () => require('./helpers/file-system-mock').fileSystemMock);
+beforeEach(() => {
+  require('./helpers/file-system-mock').mockFiles.clear();
+});
+
 // This intentional TypeScript setup expression verifies that Jest transforms
 // root test/ support files before the behavioral suites execute.
 void createElement;
