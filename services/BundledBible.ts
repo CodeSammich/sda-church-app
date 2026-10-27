@@ -12,7 +12,13 @@ export type { BundledBibleCollection };
  * size. Metro bundles the files as assets (metro.config.js). On a phone the
  * asset is a local file; on the web it is a file on the website.
  *
- * Each file is parsed once and kept, like a book fetched from the network.
+ * Each file is parsed once and kept in memory, like a book fetched from the
+ * network.
+ *
+ * Nothing is written where iCloud or Android backs it up. On iOS expo-asset
+ * reads the file from the app bundle as it is. On Android, where it's inside the
+ * APK, expo-asset copies it once into the cache directory, which the system may
+ * clear and doesn't back up; the next read copies it again.
  */
 const cache = new Map<string, Promise<unknown>>();
 
