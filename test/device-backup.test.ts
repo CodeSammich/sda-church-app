@@ -12,8 +12,8 @@ describe('device backups', () => {
     expect(app.ios.infoPlist.RCTAsyncStorageExcludeFromBackup).toBe(false);
   });
 
-  it("keep Android's Auto Backup on, as Expo has it by default", () => {
-    expect(app.android.allowBackup).not.toBe(false);
+  it("keep Android's Auto Backup on, set explicitly as Google recommends", () => {
+    expect(app.android.allowBackup).toBe(true);
   });
 
   it('leave out the copies the app can download again, which go through services/CacheStore.ts', () => {
