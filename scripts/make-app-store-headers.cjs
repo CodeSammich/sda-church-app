@@ -2,19 +2,19 @@
  * Builds the App Store product page headers, one per listing language: a tagline and
  * a line of features over three iPhone store screenshots (Bible, Home, Explore) from
  * docs/store-assets/app-store/en-US/, on the church building photo tinted brand blue.
+ * The photo is the one Home and Explore show (CHURCH_BUILDING_IMAGE_URL in
+ * constants/ExternalLinks.ts), downloaded each run.
  *
  * Each header is a 3840 x 1646 (21:9) PNG with no transparency. App Store Connect's
- * header upload takes PNG only, though Apple's spec page also lists JPEG. The tagline and the phones sit in the middle, because the App Store crops
- * the edges on some devices. See docs/store-assets/README.md.
+ * header upload takes PNG only, though Apple's spec page also lists JPEG. The tagline
+ * and the phones sit in the middle, because the App Store crops the edges on some
+ * devices. See docs/store-assets/README.md.
  *
  * The Chinese taglines need Noto Sans TC Bold and Noto Sans SC Bold, which the repo
  * doesn't bundle. Download NotoSansTC-Bold.otf and NotoSansSC-Bold.otf from
  * https://github.com/notofonts/noto-cjk (Sans/SubsetOTF/TC and SC) into one folder:
  *
  *   node scripts/make-app-store-headers.cjs <fonts-folder> [output-folder]
- *
- * The photo is the one Home and Explore show (CHURCH_BUILDING_IMAGE_URL in
- * constants/ExternalLinks.ts), downloaded each run.
  *   node scripts/strip-image-metadata.cjs docs/store-assets/app-store/header/*.png
  */
 const fs = require('node:fs');
