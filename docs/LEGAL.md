@@ -78,7 +78,8 @@ allows this: "you are allowed to adapt the data (text format only!) for your
 purposes" (copies of its terms are in
 [`docs/rights-records/wordproject-2026-09-30/`](rights-records/wordproject-2026-09-30/)).
 Its Simplified Chinese download is a later edition (modern punctuation, 她), so the
-app's Simplified text is converted from the Traditional with `opencc-js`.
+app's Simplified text is converted from the Traditional with `opencc-js`, with the
+few phrases it misreads fixed (`services/BibleSimplifiedFixes.json`).
 
 **How it was checked.** WordProject's copy has copying errors: for example 撒都該
 written into Old Testament names about 220 times, missing words, a verse of the next
@@ -86,8 +87,10 @@ chapter pasted onto Genesis 33:20, and private-use characters where its font lac
 glyph. Every verse was compared with [Wikisource's transcription of the 1919
 text](https://zh.wikisource.org/wiki/聖經_(和合本)). Where the two disagreed on
 wording, the 1988 text, which keeps the 1919 wording almost everywhere, decided which
-copy had the error; none of its text is used. The 481 reviewed fixes are in
-`scripts/cuv-1919-corrections.json`, and the method and results are in
+copy had the error; none of its text is used. A fourth copy, open-bibles', then checked
+the result. The 501 reviewed fixes are in `scripts/cuv-1919-corrections.json`, and
+`test/cuv-1919-witnesses.test.ts` checks every verse against Wikisource and open-bibles
+on every test run. The method and results are in
 [`docs/rights-records/cuv-1919-2026-10-27/`](rights-records/cuv-1919-2026-10-27/README.md).
 Verse divisions follow the 1988 text and the BSB (3 John 1:15, Revelation 12:18),
 with the 1919 words unchanged.

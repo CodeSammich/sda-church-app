@@ -82,6 +82,32 @@ describe('scripts/build-cuv-1919.mjs', () => {
     ]);
   });
 
+  it("reads Wikisource's wikitext as plain verses for the copies the tests compare with", () => {
+    const wikitext = [
+      '{{verse|30|16}}又說、我們要騎飛快的{{udots|牲{{!|𤘘|牛口}}}}．',
+      '{{verse|9|29}}又如以賽亞先前說過、『<sup>[[#9j|〡十]]</sup>若不是萬軍之主』',
+      ':{{Anchor|9j}}<sup>〡</sup>[[../以賽亞書#1:9|賽一　九]]',
+      '{{verse|3|2}}{{-|大衛的詩。}}他得不著{{*|或作救}}　神的幫助。{{-|細拉}}',
+    ].join('\n');
+    const result = JSON.parse(
+      execFileSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `import { wikisourceBook } from ${JSON.stringify(resolve('scripts/cuv-1919-witnesses.mjs'))};
+           console.log(JSON.stringify(wikisourceBook('isa', ${JSON.stringify(wikitext)})));`,
+        ],
+        { encoding: 'utf8' },
+      ),
+    );
+    expect(result).toEqual({
+      'isa 30:16': '又說、我們要騎飛快的牲𤘘．',
+      'isa 9:29': '又如以賽亞先前說過、『若不是萬軍之主』',
+      'isa 3:2': '他得不著〔或作救〕　神的幫助。〔細拉〕',
+    });
+  });
+
   it('keeps a reviewed reason and the original text in every correction', () => {
     const corrections = JSON.parse(readFileSync(join(process.cwd(), 'scripts/cuv-1919-corrections.json'), 'utf8'));
     const reasons = new Set(['wording', 'rare-character', 'punctuation', 'verse-division', 'title']);

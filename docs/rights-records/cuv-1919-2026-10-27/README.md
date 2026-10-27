@@ -11,6 +11,7 @@ text came from and how it was checked, so it can be rebuilt or re-checked later.
 | --- | --- | --- |
 | [WordProject](https://www.wordproject.org/download/bibles/index.htm), `https://www.wordpocket.org/bibles/download_zip/big5_new.zip`, downloaded October 26, 2026 (SHA-256 `6ea298435a41e9737ca73b8952f2ffbe3495b11cd5412d69fc8a51ab8c6de849`) | The 1919 text in Traditional characters, one page per chapter | The app's text, through `scripts/build-cuv-1919.mjs` |
 | [Wikisource, 聖經 (和合本)](https://zh.wikisource.org/wiki/聖經_(和合本)), read through its API on October 27, 2026; the revision of each book is in [`wikisource-revisions.json`](wikisource-revisions.json) | An independent transcription of the 1919 text, marked public domain (`{{Pd/1923}}`) | Finding WordProject's copying errors |
+| [open-bibles](https://github.com/seven1m/open-bibles) `chi-cuv.usfx.xml` (SHA-256 `049e36ec3ee1b5c9bc2c8bfd2ca07f9f1f30398838f692d12ea38a092d41fe4b`) and `chi-cuv-simp.usfx.xml` (SHA-256 `bea9f6e4fd35b70a67e3978ce8b9dc0ad853078e67472653cf1b34f357ae3abf`), downloaded October 26 and 27, 2026 | A 1919-based copy in both scripts, marked public domain, with some spellings modernized (她, 吃, 啊) and speaker labels in the Song of Songs | A last check after the vote below, and the tests |
 | The 1988 New Punctuation edition, from fetch(bible) (`cmn_cut`) | The text the app showed before | Only to break ties on wording, since it keeps the 1919 wording almost everywhere. None of its text is used. |
 
 WordProject's Simplified Chinese download is a later edition (modern punctuation, 她),
@@ -53,13 +54,64 @@ so it isn't used. The Simplified text is the Traditional text converted with
    keeps WordProject's division, which the 1988 text and the BSB share, and a test
    checks that no verse starts by repeating the verse before it.
 
-All 481 fixes are in `scripts/cuv-1919-corrections.json`, each with its reason
+7. **A fourth copy, checked last.** The vote above never used open-bibles. Wherever
+   it and Wikisource agree on a word and WordProject differs, two 1919 copies outvote
+   WordProject. That found 17 verses where the 1988 tiebreaker had kept WordProject's
+   later wording: 記念 for 紀念 (9 verses), 不至 for 不致 (4), 何西阿 for 何希阿 (Numbers
+   13:8), 貪慾 (Numbers 11:34), 甚麼 for 什麼 (a note in Matthew 19:17), and 自辯 for
+   自辨 (Proverbs 31:8). It also fixed:
+   - 珉雅珉 in 2 Chronicles 31:15, where WordProject's 玟雅玟 matches no copy:
+     open-bibles and the 1988 text have 珉, and Wikisource 泯;
+   - 挓挲 (spread out) in Job 39:19 and Jeremiah 4:31, where WordProject has 莎, a
+     different character: Wikisource has 挱, an older form of 挲, and open-bibles 挲;
+   - the note in Isaiah 11:1, 〔原文作墩〕, which the vote had dropped. WordProject has
+     it with a private-use placeholder for 𣎴, and the first reading of Wikisource lost
+     notes nested inside another template, so the two seemed to agree on no note.
+     The tests now read Wikisource with the nesting handled.
+
+   Another 17 verses differ only in an older form of the same character (餬/糊, 蹧/糟,
+   挂/掛, 啞吧/啞巴), so they stay as WordProject has them, as in step 1.
+8. **The Simplified conversion.** The Simplified text is exactly the Traditional text
+   converted, so it has the same words. Compared character by character with
+   open-bibles' Simplified copy, where the two Traditional copies agree, the converter
+   was wrong in 13 verses: Traditional writes 著 for both zhe (穿著, wearing) and zhù
+   (著名, famous), and it read 按著名 (by name), 得著稱讚 (receive praise), and 穿著白衣
+   as the zhù words. `services/BibleSimplifiedFixes.json` fixes them, for the text and
+   for the pinyin, which had the same mistake with the 1988 text. Everything else
+   that differs is open-bibles keeping older forms (毘, 邱, 彀, 窰), and five verses
+   where it writes 着 for the 著 of 著名 and 著書.
+
+After all this, of the 31,104 verses, 30,171 match both copies word for word, 720
+match Wikisource alone (mostly where open-bibles modernizes a spelling), and 180 match
+open-bibles alone (mostly where Wikisource has a slip of its own, such as 但 for 僅 in
+Joshua 17:14 or an extra 所 in John 8:5). The other 33 are merged verses and the verse
+divisions above, whose words match a copy across the verses involved.
+
+All 501 fixes are in `scripts/cuv-1919-corrections.json`, each with its reason
 (`wording`, `punctuation`, `rare-character`, `title`, or `verse-division`) and the exact
 WordProject text it replaces. The build fails if WordProject's copy changes under one.
 
 ## Checks that run with the tests
 
-`test/cuv-1919-text.test.ts` checks the built text on every run:
+`test/cuv-1919-witnesses.test.ts` checks the built text against the other copies on
+every run. Wikisource's and open-bibles' text, verse by verse, is in
+`test/fixtures/cuv-1919-witnesses`, as `scripts/cuv-1919-witnesses.mjs` downloads it:
+Wikisource at the revisions in [`wikisource-revisions.json`](wikisource-revisions.json),
+and open-bibles checked against the SHA-256 above. It compares wording only, by the rules
+in `scripts/cuv-1919-fold.cjs`: Han characters, with older and newer forms of a character
+counted as one, and the merged-verse notes 見上節 and 併於上節 counted as the same. It
+checks that:
+
+- every verse has the wording of Wikisource or open-bibles. A copying error in the app's
+  text would have to be the same error, in the same verse, in a copy made separately;
+- wherever the two copies agree with each other, the app agrees too, apart from merged
+  verses;
+- across each place the copies divide verses differently, the words match a copy, in
+  order;
+- the Simplified text is exactly the Traditional text converted, and each converted
+  character matches open-bibles' Simplified copy where the Traditional copies agree.
+
+`test/cuv-1919-text.test.ts` checks the built text on its own:
 
 - every verse of both scripts is numbered the same;
 - there are no private-use or rare characters, no stray markers, and the full-width
@@ -69,7 +121,8 @@ WordProject text it replaces. The build fails if WordProject's copy changes unde
   stay as text;
 - every Han character in both scripts gets exactly one pinyin syllable, without
   shifting, as the reader shows it. Two rare characters needed readings added
-  (`services/BiblePinyinService.ts`).
+  (`services/BiblePinyinService.ts`), and 著 reads zhù only where it means famous or
+  writing.
 
 ## Known differences left as they are
 
