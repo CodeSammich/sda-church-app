@@ -30,6 +30,7 @@ does and what still needs a person.
 - [Expo doctor monitor alerts](#expo-doctor-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
 - [Due-date reminders](#due-date-reminders)
+- [Issue priorities](#issue-priorities)
 - [Updating pastors and elders](#updating-pastors-and-elders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
 - [Credentials that need attention](#credentials-that-need-attention)
@@ -920,6 +921,28 @@ workflows such as the yearly checkup and the Workspace backup reminder, count, s
 notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.
+
+## Issue priorities
+
+Each issue's importance is the organization's **Priority** issue field: Urgent, High,
+Medium, or Low. Urgent means it goes into the next release. The old `critical` label was
+retired in October 2026; no label stands for a priority.
+
+GitHub Mobile can't set issue fields yet. So **Needs Priority Label**
+(`needs-priority-label.yml`) adds the red **needs priority** label to an issue opened or
+reopened without a Priority. Once a day it also labels any other open issue without one,
+such as a monitor's alert, because issues the built-in Actions token opens don't trigger
+workflows. Give the issue a Priority on desktop, and the next daily run removes the label.
+Store toolchain alerts get Urgent automatically; see
+[Store toolchain monitor alerts](#store-toolchain-monitor-alerts).
+
+To groom, search
+`is:issue state:open (label:"needs priority" OR field.priority:urgent,high)`.
+
+If the daily run fails with "can't see the Priority issue field", the Actions token has
+lost access to issue fields. It changes no labels then, so it can't mislabel every issue.
+The rules are in `scripts/needs-priority-label.cjs`, covered by
+`test/needs-priority-label.test.ts`.
 
 ## Updating pastors and elders
 
