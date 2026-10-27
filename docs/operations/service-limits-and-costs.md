@@ -35,7 +35,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [Internet Archive](#internet-archive) | CUV audio, 2nd source | Free | None published | Throttling possible | Low: built for bulk downloads |
 | [Audio Power](#audio-power) | CUV audio, 3rd source | Free (permission) | None published | Unknown | Low: reached only if two sources fail |
 | [HelloAO](#helloao) | English BSB audio, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN |
-| [fetch(bible)](#fetchbible) | Original-language and RV1909 text | Free | "No limits from us" | n/a | Low: CDN |
+| [fetch(bible)](#fetchbible) | Original-language text in the app; the RV1909 text the app ships with | Free | "No limits from us" | n/a | Low: CDN |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
@@ -69,7 +69,7 @@ Per-use costs, *measured*:
 | Spanish RV1909 audio, one hour | ~11 MB | Mostly 24 kbps mono; whole Bible 861 MB / ~77 hours |
 | BSB English audio, one chapter | ~4.4 MB (John 3, Souer) | Much larger than the Chinese recordings |
 | fetch(bible) original-language book | ~30 KB | One request per book, kept in memory for the session |
-| Bible text in the app | ~19 MB, about 5.4 MB compressed, for all four translations | No request: it ships with the app |
+| Bible text in the app | ~25 MB, about 6.8 MB compressed, for all five translations | No request: it ships with the app |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
 | Adventech quarterly index | ~124 KB | CDN-cached; only when a children's age group is tapped |
@@ -82,13 +82,15 @@ it when Adventist Connect can't. See [Internet Archive](#internet-archive).
 
 These choices exist to keep the app free and within every provider's limits:
 
-- **Bible text from static CDNs, not metered APIs.** HelloAO and fetch(bible) serve
-  pre-built files from AWS CloudFront with no API key and no quota. Metered options
+- **Bible text from static files, not metered APIs.** HelloAO and fetch(bible) serve
+  pre-built files from AWS CloudFront with no API key and no quota. The reader's
+  translations are built from them and ship with the app, so reading costs no request;
+  only the original-language popup fetches fetch(bible)'s files. Metered options
   were rejected: api.bible's free tier allows 5,000 calls a month, and
   bible-api.com throttles at 15 requests per 30 seconds
   ([Bible integration design](../feature_designs/bible_integration_design.md)).
-  Choosing public-domain and openly licensed translations also means text can be
-  cached and downloaded without login or licence limits.
+  Choosing public-domain and openly licensed translations is also what lets the text
+  ship with the app, with no login or licence limits.
 - **No API keys in the app.** A shipped key can be extracted and abused, which could
   exhaust a quota or bill an account. Every runtime service the app calls works
   without a key, and the bulletin data goes through the church's own Apps Script

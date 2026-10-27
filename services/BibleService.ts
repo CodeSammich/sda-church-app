@@ -1,5 +1,7 @@
 /**
- * Service for interacting with the HelloAO and fetch(bible) Bible collections.
+ * Reads the Bible translations that ship with the app (assets/bible), in
+ * HelloAO's and fetch(bible)'s formats, and fetch(bible)'s original-language
+ * texts, the one Bible text it loads over the network.
  * Follows the design specs for multi-language, native-first rendering.
  *
  * Note: The `SupportedLanguage` type is imported from the global LanguageContext
@@ -18,17 +20,15 @@ import {
 } from './BibleAudioSources';
 import { readBundledBibleFile, type BundledBibleCollection } from './BundledBible';
 
-export const API_BASE = 'https://bible.helloao.org/api';
-
 /** Persisted Bible translation selected by the app language or the user. */
 export const BIBLE_TRANSLATION_STORAGE_KEY = 'user-bible-translation';
 
 /**
  * fetch(bible) supplies the original-language critical editions. The reader
  * translations ship with the app (assets/bible), so they open with no network:
- * the Chinese Union Version (scripts/build-cuv-1919.mjs), and the BSB and
- * Reina-Valera 1909 (scripts/build-bundled-bibles.mjs), from HelloAO and
- * fetch(bible).
+ * the Chinese Union Version (scripts/build-cuv-1919.mjs), and the BSB, the
+ * American Standard Version (1901), and Reina-Valera 1909
+ * (scripts/build-bundled-bibles.mjs), from HelloAO and fetch(bible).
  *
  * IMPORTANT LICENSING DISTINCTION:
  * - fetch(bible offers its CDN without an API key, usage fee, request quota, or
@@ -171,6 +171,7 @@ const originalLanguageBookCache = new Map<
 
 export const SUPPORTED_TRANSLATIONS = [
   { id: 'BSB', name: 'BSB', shortName: 'BSB', lang: 'en' },
+  { id: 'eng_asv', name: 'ASV', shortName: 'ASV', lang: 'en' },
   { id: 'cmn_cuv', name: 'CUV', shortName: 'CUV', lang: 'zh' },
   { id: 'cmn_cu1', name: 'CUVS', shortName: 'CUVS', lang: 'zh-cn' },
   { id: 'spa_r09', name: 'RVR09', shortName: 'RVR09', lang: 'es' },
@@ -214,6 +215,8 @@ export const getDefaultSupportingTranslationId = (
  */
 export const SELAH_PATTERNS: Record<string, RegExp> = {
   BSB: /^\s*[\uff08(]?\s*(Higgaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
+  eng_asv:
+    /^\s*[\uff08(]?\s*(Higgaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
   spa_r09:
     /^\s*[\uff08(]?\s*(Higaion(?:[.,;!?]?\s+Selah)?|Selah)\s*[.,;!?]?\s*[\uff09)]?\s*[.,;!?]?\s*$/i,
   // The 1919 text writes 〔細拉〕; （細拉） is the 1988 text's form.
@@ -635,13 +638,12 @@ export interface TranslationBookChapter {
 }
 
 interface FetchBibleTranslatedEdition {
-  resourceId: string;
   name: string;
   englishName: string;
   language: string;
   attribution: string;
-  /** Set when the text ships with the app, so it opens with no network. */
-  bundled?: BundledBibleCollection;
+  /** The text ships with the app, so it opens with no network. */
+  bundled: BundledBibleCollection;
 }
 
 /**
@@ -660,7 +662,6 @@ const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
   FetchBibleTranslatedEdition
 > = {
   cmn_cuv: {
-    resourceId: 'cuv1919-hant',
     name: '和合本（1919）',
     englishName: 'Chinese Union Version, 1919 (traditional)',
     language: 'cmn',
@@ -668,7 +669,6 @@ const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
     bundled: 'cuv1919/hant',
   },
   cmn_cu1: {
-    resourceId: 'cuv1919-hans',
     name: '和合本（1919）',
     englishName: 'Chinese Union Version, 1919 (simplified)',
     language: 'cmn',
@@ -676,7 +676,6 @@ const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
     bundled: 'cuv1919/hans',
   },
   spa_r09: {
-    resourceId: 'spa_rv',
     name: 'Reina Valera',
     englishName: 'Reina-Valera 1909',
     language: 'spa',
@@ -692,6 +691,7 @@ const FETCH_BIBLE_TRANSLATED_EDITIONS: Record<
  */
 const BUNDLED_HELLOAO_TRANSLATIONS: Record<string, BundledBibleCollection> = {
   BSB: 'bsb',
+  eng_asv: 'asv',
 };
 
 interface BundledHelloaoBook {
@@ -742,41 +742,6 @@ const translationBookListCache = new Map<
 >();
 
 /**
- * Dataset (Cross-Reference) Types
- */
-export interface DatasetReference {
-  book: string;
-  chapter: number;
-  verse: number;
-  endVerse?: number;
-  score?: number;
-}
-
-export interface DatasetVerse {
-  verse: number;
-  references: DatasetReference[];
-}
-
-/**
- * Fetches all available translations.
- *
- * @returns {Promise<Translation[]>} A list of available Bible translations.
- */
-export async function fetchAvailableTranslations() {
-  try {
-    const res = await fetch(`${API_BASE}/available_translations.json`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch translations: ${res.status}`);
-    }
-    const data = await res.json();
-    return data.translations;
-  } catch (e) {
-    console.error('Failed to load available translations', e);
-    throw e;
-  }
-}
-
-/**
  * Fetches the list of books available for a specific translation.
  *
  * @param {string} translation - The ID of the translation. Standard: Uppercase ID.
@@ -785,20 +750,11 @@ export async function fetchAvailableTranslations() {
  */
 export async function fetchBooks(translation: string): Promise<TranslationBook[]> {
   let request = translationBookListCache.get(translation);
-  const bundled = bundledCollectionFor(translation);
-  if (!request && bundled) {
-    request = readBundledBibleFile<TranslationBook[]>(bundled, 'books');
-    translationBookListCache.set(translation, request);
-    request.catch(() => translationBookListCache.delete(translation));
-  }
   if (!request) {
-    request = fetch(`${API_BASE}/${translation}/books.json`).then(async (res) => {
-      if (!res.ok) {
-        throw new Error(`Failed to fetch books for ${translation}: ${res.status}`);
-      }
-      const data = await res.json();
-      return data.books as TranslationBook[];
-    });
+    const bundled = bundledCollectionFor(translation);
+    request = bundled
+      ? readBundledBibleFile<TranslationBook[]>(bundled, 'books')
+      : Promise.reject(new Error(`No Bible text ships with the app for ${translation}`));
     translationBookListCache.set(translation, request);
     request.catch(() => translationBookListCache.delete(translation));
   }
@@ -1093,36 +1049,17 @@ async function fetchTranslatedBibleBook(
   book: string,
   signal?: AbortSignal,
 ): Promise<FetchBiblePlainTextBook> {
-  const { resourceId } = edition;
   const abortError = () => {
     const error = new Error('Aborted');
     error.name = 'AbortError';
     return error;
   };
   const normalizedBook = book.toLowerCase();
-  const cacheKey = `${resourceId}:${normalizedBook}`;
+  const cacheKey = `${edition.bundled}:${normalizedBook}`;
   let request = translatedBibleBookCache.get(cacheKey);
 
-  if (!request && edition.bundled) {
-    request = readBundledBibleFile<FetchBiblePlainTextBook>(edition.bundled, normalizedBook);
-    translatedBibleBookCache.set(cacheKey, request);
-    request.catch(() => {
-      if (translatedBibleBookCache.get(cacheKey) === request) {
-        translatedBibleBookCache.delete(cacheKey);
-      }
-    });
-  }
   if (!request) {
-    request = fetch(
-      `${FETCH_BIBLE_BASE}/${resourceId}/txt/${normalizedBook}.json`,
-    ).then(async (response) => {
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch ${resourceId} book ${book}: ${response.status}`,
-        );
-      }
-      return (await response.json()) as FetchBiblePlainTextBook;
-    });
+    request = readBundledBibleFile<FetchBiblePlainTextBook>(edition.bundled, normalizedBook);
     translatedBibleBookCache.set(cacheKey, request);
     request.catch(() => {
       if (translatedBibleBookCache.get(cacheKey) === request) {
@@ -1139,9 +1076,9 @@ async function fetchTranslatedBibleBook(
     throw abortError();
   }
 
-  // Do not attach one consumer's AbortSignal to a shared cached fetch. Stop
-  // waiting and evict a stuck promise so the retry can create a fresh request;
-  // other consumers may still receive the original response if it recovers.
+  // Do not attach one consumer's AbortSignal to a shared cached read. Stop
+  // waiting and evict a stuck promise so the retry can start a fresh read;
+  // other consumers may still receive the original book if it recovers.
   return new Promise((resolve, reject) => {
     const abort = () => {
       if (translatedBibleBookCache.get(cacheKey) === request) {
@@ -1243,9 +1180,7 @@ async function fetchChapterFromFetchBible(
     textDirection: 'ltr',
     attribution: edition.attribution,
   };
-  const thisChapterLink = edition.bundled
-    ? `bundled:${edition.bundled}/${bookId.toLowerCase()}`
-    : `${FETCH_BIBLE_BASE}/${edition.resourceId}/txt/${bookId.toLowerCase()}.json`;
+  const thisChapterLink = `bundled:${edition.bundled}/${bookId.toLowerCase()}`;
   const hasChurchAudio = hasChurchHostedAudio(translationId);
   const getAudioLinks = (audioChapter: number) =>
     getChurchHostedAudioLinks(translationId, book.id, audioChapter);
@@ -1268,6 +1203,24 @@ async function fetchChapterFromFetchBible(
     numberOfVerses,
     chapter: { number: chapterNumber, content, footnotes },
   };
+}
+
+/**
+ * The ASV ends a line with its Selah after a bracket, as eBible.org's text
+ * writes it: "There is no help for him in God. [Selah". The Selah becomes its
+ * own item, so the reader right-aligns it as it does the BSB's.
+ */
+function splitBracketedSelah(
+  translationId: string,
+  content: ChapterVerse['content'],
+): ChapterVerse['content'] {
+  return content.flatMap((part) => {
+    const text = typeof part === 'string' ? part : 'text' in part ? part.text : '';
+    const bracket = text.lastIndexOf(' [');
+    if (bracket < 0 || !isSelahMarker(translationId, text.slice(bracket + 2))) return [part];
+    const line = text.slice(0, bracket);
+    return [typeof part === 'string' ? line : { ...part, text: line }, text.slice(bracket + 2)];
+  });
 }
 
 /**
@@ -1298,25 +1251,23 @@ export async function fetchChapter(
     }
 
     const bundled = BUNDLED_HELLOAO_TRANSLATIONS[translation];
-    let data: TranslationBookChapter;
-    if (bundled) {
-      data = await readBundledHelloaoChapter(bundled, book, chapter);
-    } else {
-      const res = await fetch(`${API_BASE}/${translation}/${book}/${chapter}.json`, {
-        signal: options.signal,
-      });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch chapter: ${res.status}`);
-      }
-      data = await res.json();
+    if (!bundled) {
+      throw new Error(`No Bible text ships with the app for ${translation}`);
     }
+    const data = await readBundledHelloaoChapter(bundled, book, chapter);
 
     // Normalize content sequences to ensure punctuation stays anchored to words
     // even when separated by metadata objects (like footnotes), and to preserve
     // meaningful whitespace and newlines for poetic formatting.
     if (data.chapter?.content) {
       data.chapter.content = data.chapter.content.map((item) => {
-        if (item.type === 'verse' || item.type === 'hebrew_subtitle') {
+        if (item.type === 'verse') {
+          return {
+            ...item,
+            content: normalizeContentSequence(splitBracketedSelah(translation, item.content)),
+          };
+        }
+        if (item.type === 'hebrew_subtitle') {
           return {
             ...item,
             content: normalizeContentSequence(item.content),
@@ -1488,183 +1439,4 @@ function normalizeContentSequence(content: any[]): any[] {
   }
 
   return result;
-}
-
-/**
- * Fetches the entire translation (Large Payload).
- *
- * @param {string} translation - The ID of the translation. Standard: Uppercase ID.
- * @example fetchCompleteTranslation('BSB')
- * @returns {Promise<TranslationComplete>}
- */
-export async function fetchCompleteTranslation(translation: string) {
-  try {
-    // TODO: Implement "Download Feature" logic.
-    // 1. Fetch this large JSON.
-    // 2. Normalize and split into individual chapters.
-    // 3. Store in local storage for full offline availability.
-
-    // TODO: Implement offline fallback logic.
-    // 1. Check local storage (IndexedDB/LocalForage) for cached chapter data.
-    // 2. If found, return cached data immediately to fulfill "Frictionless Access".
-
-    // TODO: Implement fallback even in weak wifi situations where network is up but times out
-    // This is notable for situations like underground subway or parking where TCP ACK is received
-    // but data transfer is very slow. We can set a reasonable timeout (e.g., 5 seconds) and fallback
-    // to cached data if the fetch doesn't complete in time.
-
-    const res = await fetch(`${API_BASE}/${translation}/complete.json`);
-    return await res.json();
-  } catch (e) {
-    console.error(`Failed to load complete translation for ${translation}`, e);
-    throw e;
-  }
-}
-
-/**
- * COMMENTARY APIS
- */
-
-export async function fetchAvailableCommentaries() {
-  try {
-    const res = await fetch(`${API_BASE}/available_commentaries.json`);
-    const data = await res.json();
-    return data.commentaries;
-  } catch (e) {
-    console.error('Failed to load available commentaries', e);
-    throw e;
-  }
-}
-
-/**
- * Fetches the list of books available for a specific commentary.
- *
- * @param {string} commentary - The ID of the commentary. Standard: kebab-case.
- * @example fetchCommentaryBooks('adam-clarke')
- */
-export async function fetchCommentaryBooks(commentary: string) {
-  try {
-    const res = await fetch(`${API_BASE}/c/${commentary}/books.json`);
-    const data = await res.json();
-    return data.books;
-  } catch (e) {
-    console.error(`Failed to load commentary books for ${commentary}`, e);
-    throw e;
-  }
-}
-
-/**
- * Fetches the content of a single chapter for a given book and commentary.
- *
- * @param {string} commentary - The ID of the commentary.
- * @param {string} book - The USFM book ID.
- * @param {number} chapter - The 1-based chapter number.
- * @example fetchCommentaryChapter('adam-clarke', 'GEN', 1)
- */
-export async function fetchCommentaryChapter(
-  commentary: string,
-  book: string,
-  chapter: number,
-) {
-  try {
-    const res = await fetch(`${API_BASE}/c/${commentary}/${book}/${chapter}.json`);
-    const data = await res.json();
-    return data.chapter;
-  } catch (e) {
-    console.error(
-      `Failed to load commentary chapter for ${commentary} ${book} ${chapter}`,
-      e,
-    );
-    throw e;
-  }
-}
-
-/**
- * Gets the list of profiles (overviews of people/groups) for a given commentary.
- *
- * @param {string} commentary - The ID of the commentary (e.g., 'tyndale').
- * @example fetchCommentaryProfiles('tyndale')
- */
-export async function fetchCommentaryProfiles(commentary: string) {
-  try {
-    const res = await fetch(`${API_BASE}/c/${commentary}/profiles.json`);
-    const data = await res.json();
-    return data.profiles;
-  } catch (e) {
-    console.error(`Failed to load commentary profiles for ${commentary}`, e);
-    throw e;
-  }
-}
-
-/**
- * Gets a specific profile from a commentary.
- *
- * @param {string} commentary - The ID of the commentary.
- * @param {string} profile - The ID of the profile. Standard: lowercase name/id.
- * @example fetchCommentaryProfileContent('tyndale', 'aaron')
- */
-export async function fetchCommentaryProfileContent(commentary: string, profile: string) {
-  try {
-    const res = await fetch(`${API_BASE}/c/${commentary}/profiles/${profile}.json`);
-    return await res.json();
-  } catch (e) {
-    console.error(`Failed to load profile content for ${profile} in ${commentary}`, e);
-    throw e;
-  }
-}
-
-/**
- * DATASET APIS (e.g., Cross-References)
- */
-
-/** Fetches all available Bible datasets. */
-export async function fetchAvailableDatasets() {
-  try {
-    const res = await fetch(`${API_BASE}/available_datasets.json`);
-    const data = await res.json();
-    return data.datasets;
-  } catch (e) {
-    console.error('Failed to load available datasets', e);
-    throw e;
-  }
-}
-
-/**
- * Gets the list of books available for a given dataset.
- *
- * @param {string} dataset - The ID of the dataset (e.g., 'open-cross-ref').
- */
-export async function fetchDatasetBooks(dataset: string) {
-  try {
-    const res = await fetch(`${API_BASE}/d/${dataset}/books.json`);
-    const data = await res.json();
-    return data.books;
-  } catch (e) {
-    console.error(`Failed to load dataset books for ${dataset}`, e);
-    throw e;
-  }
-}
-
-/**
- * Fetches a specific chapter from a dataset (e.g., open-cross-ref).
- *
- * @param {string} dataset - The ID of the dataset.
- * @param {string} book - The USFM book ID.
- * @param {number} chapter - The 1-based chapter number.
- * @example fetchDatasetChapter('open-cross-ref', 'GEN', 1)
- * @returns {Promise<DatasetChapterData>}
- */
-export async function fetchDatasetChapter(
-  dataset: string,
-  book: string,
-  chapter: number,
-) {
-  try {
-    const res = await fetch(`${API_BASE}/d/${dataset}/${book}/${chapter}.json`);
-    const data = await res.json();
-    return data.chapter;
-  } catch (e) {
-    console.error(`Failed to load dataset chapter for ${dataset} ${book} ${chapter}`, e);
-    throw e;
-  }
 }

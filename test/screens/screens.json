@@ -186,11 +186,12 @@
       "name": "bible-higgaion-selah",
       "group": "bible-text",
       "tabs": false,
-      "$comment": "Psalm 9:16 in the BSB ends with \"Higgaion Selah\", plain text after the verse's poetry lines in the HelloAO data. At the default text size the reader shows it right-aligned under the verse, so it must start in the right half of the screen.",
-      "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=16&verseEnd=16",
+      "$comment": "Psalm 9:16 in the ASV ends its last line with \"[Higgaion. Selah\", as eBible.org's text writes it. The reader makes it its own item, without the bracket, and right-aligns it under the verse as it does the BSB's Selah (bible-selah), so it must start in the right half of the screen. The header's button names the ASV.",
+      "path": "bible?bookId=PSA&chapter=9&translationId=eng_asv&verseStart=16&verseEnd=16",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
-      "mustShowLines": ["^16\\b", { "line": "\\bHiggaion Selah", "minLeft": 0.5 }]
+      "mustShowLines": ["^16\\b", "\\bASV\\b", { "line": "^Higgaion\\W*Selah\\b", "minLeft": 0.5 }],
+      "mustNotShowLines": ["\\[(Higgaion|Selah)"]
     },
     {
       "name": "bible-selah",

@@ -28,9 +28,9 @@ the lowest rating (ESRB Everyone, PEGI 3).
 
 | Question | Answer | Why |
 | --- | --- | --- |
-| Downloaded App: ratings-relevant content in the app package | No | The package holds only the app's interface, images, and fonts. Bible text and audio, the bulletin, and library content all load over the network. |
+| Downloaded App: ratings-relevant content in the app package | No | The package holds the app's interface, images, fonts, and Bible text. Scripture is plain religious text (see Violence). Bible audio, the bulletin, and library content load over the network. |
 | User Content Sharing | No | There's no chat, posting, or accounts. Sharing a verse uses the phone's share sheet and hands off to another app, so it isn't native interaction. |
-| Online Content | Yes | The bulletin, Bible text and audio, Sabbath School lessons, and library covers load after install. |
+| Online Content | Yes | The bulletin, Bible audio, the original-language verse text, Sabbath School lessons, and library covers load after install. |
 | Violence | No | Scripture describes violent events, but only as plain religious text, with no graphic images or video. Bible apps answer this way. |
 | Sexuality | No | Same reasoning as Violence. |
 | Language | No | |
@@ -42,9 +42,9 @@ the lowest rating (ESRB Everyone, PEGI 3).
 | Web browser or search engine | No | External pages open in the phone's browser; the app has no WebView browser. |
 | Primarily news or educational | No | It's a church community app. |
 
-If the app ever downloads Bible text for offline reading, that's still online content,
-and the answers don't change. Bundling the Bible inside the app package moves it under
-**Downloaded App**; the same reasoning as Violence keeps that answer No.
+Since 1.4.0 the Bible text ships inside the app package, which moves it under
+**Downloaded App**; the same reasoning as Violence keeps that answer No, so no answer
+changed.
 
 ## Target audience
 
