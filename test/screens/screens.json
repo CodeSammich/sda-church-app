@@ -186,11 +186,11 @@
       "name": "bible-higgaion-selah",
       "group": "bible-text",
       "tabs": false,
-      "$comment": "Psalm 9:16 in the ASV ends its last line with \"[Higgaion. Selah\", as eBible.org's text writes it. The reader makes it its own item, without the bracket, and right-aligns it under the verse as it does the BSB's Selah (bible-selah), so it must start in the right half of the screen. The header's button names the ASV.",
+      "$comment": "Psalm 9:16 in the ASV ends its last line with \"[Higgaion. Selah\", as eBible.org's text writes it. The reader makes it its own item, without the bracket, and right-aligns it under the verse as it does the BSB's Selah (bible-selah), so it must start in the right half of the screen. Verse 16 must be the ASV's wording: scrolled to it, the reader hides its header, so the translation button isn't in the shot.",
       "path": "bible?bookId=PSA&chapter=9&translationId=eng_asv&verseStart=16&verseEnd=16",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
-      "mustShowLines": ["^16\\b", "\\bASV\\b", { "line": "^Higgaion\\W*Selah\\b", "minLeft": 0.5 }],
+      "mustShowLines": ["^16 Jehovah hath made himself known\\b", { "line": "^Higgaion\\W*Selah\\b", "minLeft": 0.5 }],
       "mustNotShowLines": ["\\[(Higgaion|Selah)"]
     },
     {
