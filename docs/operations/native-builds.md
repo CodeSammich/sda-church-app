@@ -998,7 +998,9 @@ emulator, 1080 × 1920 at 420 dpi (`android.googlePlay`), by
 So the capture writes a fresh database with the shot's settings and screen to open, and
 copies it in as root, owned by the app and with its folder's SELinux label. That needs
 an emulator image that allows `adb root`: `google_apis`, not `google_apis_playstore`.
-Nothing in the app changes, so a store build has no way in. The theme, font size
+Just after the install, adb sometimes drops the connection to root ("unable to connect
+for root: closed"), so the capture waits for the device and tries again, up to five
+times. Nothing in the app changes, so a store build has no way in. The theme, font size
 (`font_scale`), and display size (`wm density`) are set on the emulator; the status bar
 is fixed with System UI's demo mode (9:41, full battery and Wi-Fi, no notifications),
 entered again after each font or display size change, which drops it;

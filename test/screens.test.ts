@@ -719,6 +719,7 @@ describe('Android key screens (#372)', () => {
     planShots,
     checkScreenSize,
     STORAGE_DATABASE,
+    becomeRoot,
   } = require('../scripts/capture-android-screens.cjs');
   const { mkdtempSync } = require('node:fs');
   const { tmpdir } = require('node:os');
@@ -776,6 +777,26 @@ describe('Android key screens (#372)', () => {
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(android, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
       expect({ group, over: seconds > 360 }).toEqual({ group, over: false });
+    }
+  });
+
+  it('tries adb root again when the connection drops, as it did on release PRs', async () => {
+    const calls: string[] = [];
+    let roots = 0;
+    const run = (command: string) => {
+      calls.push(command);
+      if (command === 'root' && (roots += 1) < 3) throw new Error('adb: unable to connect for root: closed');
+      return '';
+    };
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await expect(becomeRoot({ run, pause: async () => {} })).resolves.toBe(3);
+      expect(calls).toEqual(['root', 'wait-for-device', 'root', 'wait-for-device', 'root', 'wait-for-device']);
+      // It gives up after five tries, with adb's own error.
+      await expect(becomeRoot({ run: () => { throw new Error('adb: device offline'); }, pause: async () => {} }))
+        .rejects.toThrow('adb: device offline');
+    } finally {
+      warn.mockRestore();
     }
   });
 
