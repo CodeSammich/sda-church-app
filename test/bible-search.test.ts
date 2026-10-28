@@ -1,6 +1,6 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { buildBibleSearchRows, type BibleSearchOptions } from '@/hooks/useBibleSearch';
-import { foldChineseText, parseSearchTerms, searchBible } from '@/services/BibleSearch';
+import { foldChineseText, loadSearchableTranslation, parseSearchTerms, searchBible } from '@/services/BibleSearch';
 import { fetchBooks, readTranslationVerseTexts } from '@/services/BibleService';
 
 // Whole-Bible search (#516) over the texts that ship with the app.
@@ -75,6 +75,38 @@ describe('whole-Bible search', () => {
       })
       .map(({ bookId, chapter, verse }) => `${bookId} ${chapter}:${verse}`);
     expect(differ).toEqual([]);
+  });
+
+  it('finds a verse from any of its characters, as the CUV or the CUVS prints it, in either reader', async () => {
+    // The CUVS converted these in context, unlike one typed alone: 藉著 借着,
+    // 彷彿 仿佛, 鍊子 链子, 回覆 回复, 甦醒 苏醒, 籌畫 筹划.
+    for (const [typed, ref] of [
+      ['藉', 'GEN 23:20'], ['彷', 'EXO 20:4'], ['鍊', 'GEN 41:42'],
+      ['覆', 'EXO 19:8'], ['甦', 'GEN 45:27'], ['畫', '1SA 25:17'],
+    ]) {
+      expect(refs(await searchBible(typed, ['cmn_cuv']))).toContain(ref);
+      expect(refs(await searchBible(typed, ['cmn_cu1']))).toContain(ref);
+    }
+    const translations = await Promise.all(['cmn_cuv', 'cmn_cu1'].map(loadSearchableTranslation));
+    const formsOf = new Map<string, readonly string[]>();
+    const missed: string[] = [];
+    for (const { verses } of translations) {
+      for (const searched of translations) {
+        verses.forEach((verse) => {
+          const folded = searched.folded[searched.indexOf.get(`${verse.bookId} ${verse.chapter}:${verse.verse}`) ?? -1] ?? '';
+          for (const character of new Set(verse.text.match(/\p{Script=Han}/gu))) {
+            if (!formsOf.has(character)) {
+              const [term] = parseSearchTerms(character);
+              formsOf.set(character, term?.kind === 'han' ? term.forms : []);
+            }
+            if (!formsOf.get(character)?.some((form) => folded.includes(form))) {
+              missed.push(`${verse.bookId} ${verse.chapter}:${verse.verse} ${character}`);
+            }
+          }
+        });
+      }
+    }
+    expect(missed).toEqual([]);
   });
 
   it('searches both translations in dual-language reading, showing both', async () => {

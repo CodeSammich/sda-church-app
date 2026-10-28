@@ -510,11 +510,14 @@ the open chapter.
   or the search box opens, and keeps the result in memory. That took well under half a
   second per translation in Node, and a search then took a few to about 20 ms.
 - **Chinese:** matched as a substring, ignoring Traditional or Simplified, spaces (the 1919
-  text's space before 神), and punctuation. The CUV is searched through the CUVS, its
-  Simplified copy verse for verse, so only the query is converted, as the Simplified text
-  was: with its phrase fixes (`services/BibleSimplifiedFixes.json`) and its two rare
-  characters' usual forms (蔯 as 陈, and 鐏 kept). A test checks that converting every CUV
-  verse that way gives the CUVS.
+  text's space before 神), and punctuation. The CUV and the CUVS are the same text, verse
+  for verse, so each verse is searched as both print it. That matters because the CUVS
+  converted some characters in context (藉著 to 借着), while 藉 typed alone stays 藉. A query
+  is also converted, as the Simplified text was: with its phrase fixes
+  (`services/BibleSimplifiedFixes.json`) and its two rare characters' usual forms (蔯 as 陈,
+  and 鐏 kept). So 茵蔯 finds 茵陈, and a variant such as 裏 finds the CUV's 裡. Tests check
+  that converting every CUV verse that way gives the CUVS, and that every character of
+  every verse, in either script, finds that verse in either reader.
 - **English and Spanish:** each word matches from the start of a word, ignoring case and
   accents: "love" finds "loved" but not "beloved", and "sabado" finds "sábado". Several
   words find verses with every word, in any order.

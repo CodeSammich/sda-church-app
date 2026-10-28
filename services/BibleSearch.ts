@@ -9,9 +9,9 @@ import { readTranslationVerseTexts, type BibleVerseText } from './BibleService';
  *
  * Matching, from #516's measurements:
  * - Chinese is matched as a substring, ignoring Traditional or Simplified,
- *   spaces (the 1919 text's space before 神), and punctuation. The CUV is
- *   searched through the CUVS, its Simplified copy verse for verse, so only
- *   the query needs converting.
+ *   spaces (the 1919 text's space before 神), and punctuation. The CUV and the
+ *   CUVS are the same text, verse for verse, so each verse is searched in both
+ *   scripts, and only the query needs converting.
  * - English and Spanish words match from the start of a word ("love" finds
  *   "loved" but not "beloved"), ignoring case and accents ("sabado" finds
  *   "sábado"). A search of several words finds verses with every word, in any
@@ -30,7 +30,7 @@ export interface BibleSearchHit {
 
 interface SearchableTranslation {
   verses: BibleVerseText[];
-  /** Each verse folded for matching. */
+  /** Each verse folded for matching; a Chinese verse in both scripts, one per line. */
   folded: string[];
   /** A verse's index, by `BOOK chapter:verse`. */
   indexOf: Map<string, number>;
@@ -43,9 +43,10 @@ type SearchTerm = { kind: 'han'; forms: readonly string[] } | { kind: 'word'; te
 
 const HAN = /\p{Script=Han}/u;
 const WORD_CHARACTER = /[\p{L}\p{N}]/u;
-// The CUV is searched through its Simplified copy, verse for verse.
-const SIMPLIFIED_COPY: Record<string, string> = { cmn_cuv: 'cmn_cu1' };
-const CHINESE_TRANSLATIONS = new Set(['cmn_cuv', 'cmn_cu1']);
+// The CUV and the CUVS, each the other's copy in the other script. Each verse
+// is searched as both print it: the CUVS converted some characters in context,
+// unlike a query typed alone (藉著 to 借着, but 藉 alone stays 藉).
+const SCRIPT_COPY: Record<string, string> = { cmn_cuv: 'cmn_cu1', cmn_cu1: 'cmn_cuv' };
 
 const keyOf = ({ bookId, chapter, verse }: Pick<BibleVerseText, 'bookId' | 'chapter' | 'verse'>) =>
   `${bookId} ${chapter}:${verse}`;
@@ -70,18 +71,22 @@ export const foldChineseText = (text: string) =>
 const searchable = new Map<string, Promise<SearchableTranslation>>();
 
 const buildSearchable = async (translationId: string): Promise<SearchableTranslation> => {
-  const verses = await readTranslationVerseTexts(translationId);
+  const copyId = SCRIPT_COPY[translationId];
+  const [verses, copy] = await Promise.all([
+    readTranslationVerseTexts(translationId),
+    copyId ? readTranslationVerseTexts(copyId) : undefined,
+  ]);
   const indexOf = new Map(verses.map((verse, index) => [keyOf(verse), index]));
   let folded: string[];
-  const copyId = SIMPLIFIED_COPY[translationId];
-  if (copyId) {
-    const copy = await loadSearchableTranslation(copyId);
-    folded = verses.map((verse) => {
-      const index = copy.indexOf.get(keyOf(verse));
-      return index === undefined ? foldChineseText(verse.text) : copy.folded[index];
-    });
-  } else if (CHINESE_TRANSLATIONS.has(translationId)) {
-    folded = verses.map((verse) => foldSimplifiedText(verse.text));
+  if (copy) {
+    const copyText = new Map(copy.map((verse) => [keyOf(verse), verse.text]));
+    // A query's forms have no line breaks, so a match can't run from one script into the other.
+    folded = verses.map((verse) =>
+      [verse.text, copyText.get(keyOf(verse))]
+        .filter((text): text is string => Boolean(text))
+        .map(foldSimplifiedText)
+        .join('\n'),
+    );
   } else {
     folded = verses.map((verse) => foldLatinText(verse.text));
   }
