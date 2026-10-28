@@ -10,8 +10,8 @@
  * With no assignees, or when GitHub rejects one, the alert @mentions the run's
  * actor instead, so an alert is never lost.
  *
- * Every issue opened here gets the maintenance label, which Dependabot's pull
- * requests also get (.github/dependabot.yml), so one label search lists all the
+ * Every issue opened here gets the maintenance label, which Dependabot's version
+ * updates also get (.github/dependabot.yml), so one label search lists all the
  * upkeep. Each caller passes the Priority its issue starts with.
  *
  * Called from actions/github-script, which passes its `github`, `context`, and
@@ -53,7 +53,7 @@ const findOpenAlert = async ({ github, context, title }) => {
 const mentionActor = (context, body) => [`@${context.actor}`, '', body].join('\n');
 
 // Marks upkeep: renewals, reminders, monitor alerts, and dependency updates.
-// .github/dependabot.yml names the same label for Dependabot's pull requests.
+// .github/dependabot.yml names the same label for Dependabot's version updates.
 const MAINTENANCE_LABEL = 'maintenance';
 
 /** The caller's labels plus the maintenance label, once each. */

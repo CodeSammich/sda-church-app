@@ -92,9 +92,9 @@ jobs:
       # When GitHub deletes release-candidate after the release merges, it
       # moves the pull requests open against it to main. Only release-candidate
       # may merge into main, so every other open pull request into main belongs
-      # on release-candidate. Bots' pull requests, such as Dependabot's, target
-      # main by their own settings, so they stay, and the comment names them in
-      # case one had been moved to release-candidate by hand.
+      # on release-candidate, Dependabot's too: its version updates target
+      # release-candidate (.github/dependabot.yml), and its security updates,
+      # which GitHub always opens against main, go into a release the same way.
       - name: Move feature pull requests back to release-candidate
         id: moved
         if: >-
@@ -105,17 +105,14 @@ jobs:
           declare -A seen=()
           moved=()
           failed=()
-          bots=()
           # GitHub may still be moving them, so look three times.
           for try in 1 2 3; do
             pulls=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&per_page=100" \
-              --jq '.[] | "\(.number) \(.user.type)"') || pulls=''
-            while read -r number type; do
+              --jq '.[].number') || pulls=''
+            while read -r number; do
               [[ -n "$number" && -z "${seen[$number]:-}" ]] || continue
               seen[$number]=1
-              if [[ "$type" == "Bot" ]]; then
-                bots+=("$number")
-              elif gh api --method PATCH "repos/$GITHUB_REPOSITORY/pulls/$number" -f base=release-candidate --silent < /dev/null; then
+              if gh api --method PATCH "repos/$GITHUB_REPOSITORY/pulls/$number" -f base=release-candidate --silent < /dev/null; then
                 echo "Moved #$number back to release-candidate."
                 moved+=("$number")
               else
@@ -127,7 +124,6 @@ jobs:
           done
           echo "moved=${moved[*]}" >> "$GITHUB_OUTPUT"
           echo "failed=${failed[*]}" >> "$GITHUB_OUTPUT"
-          echo "bots=${bots[*]}" >> "$GITHUB_OUTPUT"
 
       - name: Comment the next steps on the pull request
         if: steps.pr.outputs.number != ''
@@ -136,7 +132,6 @@ jobs:
           BRANCH_RESULT: ${{ steps.branch.outputs.result }}
           MOVED: ${{ steps.moved.outputs.moved }}
           FAILED: ${{ steps.moved.outputs.failed }}
-          BOTS: ${{ steps.moved.outputs.bots }}
         run: |
           set -euo pipefail
           # The same push starts each of these workflows. Link this merge's run,
@@ -182,15 +177,11 @@ jobs:
             echo "$branch_line"
             if [[ -n "${MOVED:-}" ]]; then
               echo
-              echo "Moved $(numbers "$MOVED") from \`main\` to \`release-candidate\`, where feature pull requests belong."
+              echo "Moved $(numbers "$MOVED") from \`main\` to \`release-candidate\`, where feature and Dependabot pull requests belong."
             fi
             if [[ -n "${FAILED:-}" ]]; then
               echo
               echo "Couldn't move $(numbers "$FAILED") back to \`release-candidate\`. Change each one's base on its page."
-            fi
-            if [[ -n "${BOTS:-}" ]]; then
-              echo
-              echo "Left $(numbers "$BOTS") on \`main\`, since bots such as Dependabot open their pull requests there. Change each one's base to \`release-candidate\` when it should go into a release."
             fi
           } > comment.md
 

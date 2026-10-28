@@ -164,8 +164,8 @@ names. Which checks are required on `main` and on `release-candidate` is in
 [Required checks](operations/admin-runbook.md#required-checks). A feature PR into
 `release-candidate` runs only the first three workflows below (and **Issues - Pending
 Release Label** when it merges); the slower ones run once per release, on the release PR
-into `main`. Other PRs into `main`, such as Dependabot's, skip the slow ones, because the
-source gate stops them from merging anyway. `main` also requires the `CodeQL`,
+into `main`. Other PRs into `main`, such as Dependabot's security updates, skip the slow
+ones, because the source gate stops them from merging anyway. `main` also requires the `CodeQL`,
 `Analyze (actions)`, and `Analyze (javascript-typescript)` checks, which come from
 GitHub's code scanning default setup and have no workflow file.
 
@@ -300,8 +300,7 @@ GitHub's code scanning default setup and have no workflow file.
   that already exists.
 - After the release PR's merge, moves every open PR into `main` back to
   `release-candidate`: GitHub moves feature PRs to `main` when it deletes the branch, and
-  only `release-candidate` may merge into `main`. Bots' PRs, such as Dependabot's, stay,
-  and the comment names them.
+  only `release-candidate` may merge into `main`. Dependabot's PRs move too.
 - Comments on the merged PR with links to that merge's **Native iOS build**, **Native
   Android build**, and **Deploy Bulletin Apps Script** runs, which wait for `production`
   approval, and to the branches page. The comment names the PRs it moved, and says if

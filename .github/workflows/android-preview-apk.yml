@@ -24,7 +24,8 @@ concurrency:
 jobs:
   resolve-pr:
     # Only release PRs, from this repository's release-candidate branch, are
-    # eligible; other PRs into main, such as Dependabot's, can't merge there.
+    # eligible; other PRs into main, such as Dependabot's security updates,
+    # can't merge there.
     # The build checks out the PR head without credentials.
     if: >-
       github.event.repository.fork == false &&

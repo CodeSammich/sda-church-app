@@ -22,8 +22,8 @@ env:
 jobs:
   verify-bulletin-api:
     # A release PR comes from this repository's release-candidate branch.
-    # Other PRs into main, such as Dependabot's, can't merge there, so they
-    # skip it.
+    # Other PRs into main, such as Dependabot's security updates, can't
+    # merge there, so they skip it.
     if: >-
       github.event_name != 'pull_request' ||
       (github.head_ref == 'release-candidate' &&

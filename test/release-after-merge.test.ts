@@ -93,7 +93,7 @@ describe('finding the merged pull request', () => {
 
 describe('moving feature pull requests back to release-candidate', () => {
   // Each look's open pull requests into main, as the step's --jq filter
-  // prints them ("12 User", "56 Bot"), and the pull requests whose move fails.
+  // prints their numbers, and the pull requests whose move fails.
   const movePulls = (looks: string[], failing: number[] = []) =>
     runStep(
       'Move feature pull requests back to release-candidate',
@@ -114,32 +114,33 @@ esac`,
   });
 
   it('moves each one once, including those GitHub moves a little later', () => {
-    const { code, calls, output } = movePulls(['12 User', '12 User\n34 User', '34 User']);
+    const { code, calls, output } = movePulls(['12', '12\n34', '34']);
     expect(code).toBe(0);
     expect(moves(calls)).toEqual(['12', '34']);
     expect(calls).toContain('api --method PATCH repos/org/repo/pulls/12 -f base=release-candidate --silent');
-    expect(output).toBe('moved=12 34\nfailed=\nbots=\n');
+    expect(output).toBe('moved=12 34\nfailed=\n');
   });
 
-  it('leaves bots\' pull requests, such as Dependabot\'s, on main, and lists them', () => {
-    const { code, calls, output } = movePulls(['12 User\n56 Bot']);
+  it('moves Dependabot\'s pull requests too, since they target release-candidate', () => {
+    expect(stepText('Move feature pull requests back to release-candidate')).not.toMatch(/user\.type|Bot/);
+    const { code, calls, output } = movePulls(['12\n56']);
     expect(code).toBe(0);
-    expect(moves(calls)).toEqual(['12']);
-    expect(output).toBe('moved=12\nfailed=\nbots=56\n');
+    expect(moves(calls)).toEqual(['12', '56']);
+    expect(output).toBe('moved=12 56\nfailed=\n');
   });
 
   it('reports one it couldn\'t move, and still moves the rest', () => {
-    const { code, out, output } = movePulls(['12 User\n34 User'], [12]);
+    const { code, out, output } = movePulls(['12\n34'], [12]);
     expect(code).toBe(0);
     expect(out).toContain("::warning title=Pull request not moved::Change #12's base to release-candidate.");
-    expect(output).toBe('moved=34\nfailed=12\nbots=\n');
+    expect(output).toBe('moved=34\nfailed=12\n');
   });
 
   it('moves nothing when nothing is on main', () => {
     const { code, calls, output } = movePulls(['']);
     expect(code).toBe(0);
     expect(moves(calls)).toEqual([]);
-    expect(output).toBe('moved=\nfailed=\nbots=\n');
+    expect(output).toBe('moved=\nfailed=\n');
   });
 });
 
@@ -157,17 +158,16 @@ esac`,
 
   const onMain = '[open pull requests into `main`](https://github.com/org/repo/pulls?q=is%3Apr+is%3Aopen+base%3Amain)';
 
-  it('names the pull requests it moved, any it couldn\'t, and bots\' it left', () => {
-    const { code, comment: body } = comment({ MOVED: '12 34', FAILED: '56', BOTS: '78' });
+  it('names the pull requests it moved, and any it couldn\'t', () => {
+    const { code, comment: body } = comment({ MOVED: '12 34', FAILED: '56' });
     expect(code).toBe(0);
     expect(body).toContain('Created `release-candidate` from this merge for the next release');
-    expect(body).toContain('Moved #12, #34 from `main` to `release-candidate`, where feature pull requests belong.');
+    expect(body).toContain('Moved #12, #34 from `main` to `release-candidate`, where feature and Dependabot pull requests belong.');
     expect(body).toContain("Couldn't move #56 back to `release-candidate`. Change each one's base on its page.");
-    expect(body).toContain('Left #78 on `main`, since bots such as Dependabot open their pull requests there.');
   });
 
   it('says nothing about moving pull requests when none were on main', () => {
-    const { code, comment: body } = comment({ MOVED: '', FAILED: '', BOTS: '' });
+    const { code, comment: body } = comment({ MOVED: '', FAILED: '' });
     expect(code).toBe(0);
     expect(body).toContain('Created `release-candidate` from this merge for the next release');
     expect(body).not.toMatch(/[Mm]ove|Left/);

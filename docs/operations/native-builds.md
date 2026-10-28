@@ -608,9 +608,9 @@ zipped inside it, so a shared download kept reviewers from the screenshots. Chro
 still block the app's download; `gh run download <run> --pattern '*-arm64'` gets it.
 
 Pull requests into `release-candidate` don't run it, and neither do other pull
-requests into `main`, such as Dependabot's. To test a change to the workflow,
-`scripts/build-ios-simulator.mjs`, or the key screens before the release PR, start it by
-hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
+requests into `main`, such as Dependabot's security updates. To test a change to the
+workflow, `scripts/build-ios-simulator.mjs`, or the key screens before the release PR,
+start it by hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
 **How long it takes, and why it varies.** A run finishes when its slowest runner does.
 Measured in October 2026:

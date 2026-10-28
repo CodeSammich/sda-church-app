@@ -36,8 +36,8 @@ concurrency:
 jobs:
   capture:
     # A release PR comes from this repository's release-candidate branch.
-    # Other PRs into main, such as Dependabot's, can't merge there, so they
-    # skip it.
+    # Other PRs into main, such as Dependabot's security updates, can't
+    # merge there, so they skip it.
     # Started by hand, it builds unless it was asked only to re-check an
     # earlier run's screenshots.
     if: >-
