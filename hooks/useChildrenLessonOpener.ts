@@ -12,6 +12,8 @@ import { Alert, Platform } from 'react-native';
 export type ChildrenLessonDialogState = Readonly<{
   title: string;
   progress: LessonDownloadProgress | null;
+  /** Offline with no copy: the popup stays up and says so. */
+  offline?: boolean;
 }>;
 
 const ERROR_MESSAGE = "Could not open the children's Sabbath School lesson.";
@@ -21,8 +23,8 @@ const ERROR_MESSAGE = "Could not open the children's Sabbath School lesson.";
  * popup shows at once while the app finds the lesson and downloads its PDF,
  * and the copy then opens in the phone's own viewer. The browser opens it
  * instead where the phone has no PDF viewer, where the download fails, and
- * when there's no PDF yet (the age group's website). The web opens it in the
- * browser, as before.
+ * when there's no PDF yet (the age group's website). Offline with no copy, the
+ * popup says there's no connection. The web opens it in the browser, as before.
  */
 export function useChildrenLessonOpener(language: SupportedLanguage) {
   const [dialog, setDialog] = useState<ChildrenLessonDialogState | null>(null);
@@ -59,6 +61,10 @@ export function useChildrenLessonOpener(language: SupportedLanguage) {
           },
         );
         if (signal.aborted) return;
+        if ('offline' in lesson) {
+          setDialog({ title, progress: null, offline: true });
+          return;
+        }
         setDialog(null);
         if ('file' in lesson) {
           try {

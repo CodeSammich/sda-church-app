@@ -12,6 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
+import { getNetworkStateAsync } from 'expo-network';
 import { createElement } from 'react';
 import { mockFiles } from './helpers/file-system-mock';
 import { renderWithPreferences } from './helpers/render-preferences';
@@ -20,6 +21,9 @@ import { renderWithPreferences } from './helpers/render-preferences';
 jest.mock('@/features/sabbath-school/ChildrenLessons', () => ({
   ...jest.requireActual('@/features/sabbath-school/ChildrenLessons'),
   findChildrenLessonUrl: jest.fn(),
+}));
+jest.mock('expo-network', () => ({
+  getNetworkStateAsync: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })),
 }));
 
 const find = findChildrenLessonUrl as jest.MockedFunction<typeof findChildrenLessonUrl>;
@@ -94,6 +98,24 @@ describe("children's lesson downloads", () => {
     await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
     expect(find).toHaveBeenCalledTimes(2);
     expect(download).not.toHaveBeenCalled();
+  });
+
+  it("say there's no connection, instead of opening a page that can't load, when offline with no copy", async () => {
+    jest.mocked(getNetworkStateAsync).mockResolvedValue({ isConnected: false, isInternetReachable: false } as never);
+    // The lookup finds nothing offline, and gives the website.
+    find.mockResolvedValue(WEBSITE);
+    expect(await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY })).toEqual({ offline: true });
+
+    // A lesson looked up before, but never downloaded.
+    find.mockResolvedValue(PDF);
+    jest.mocked(getNetworkStateAsync).mockResolvedValue({ isConnected: true, isInternetReachable: true } as never);
+    mockDownloads(async () => {
+      throw new Error('stopped');
+    });
+    await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
+    jest.mocked(getNetworkStateAsync).mockResolvedValue({ isConnected: true, isInternetReachable: false } as never);
+    expect(await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY })).toEqual({ offline: true });
+    jest.mocked(getNetworkStateAsync).mockResolvedValue({ isConnected: true, isInternetReachable: true } as never);
   });
 
   it("open the PDF in the browser when it can't be downloaded, keeping no partial copy", async () => {
@@ -184,6 +206,26 @@ describe("children's lesson downloads", () => {
     expect(download).not.toHaveBeenCalled();
   });
 
+  it("look up this week's lesson ahead too, so a lesson opened on Sabbath opens offline on Monday", async () => {
+    // A quarterly lesson runs Sabbath to Friday, but the lookups change on Sunday too.
+    find.mockResolvedValue(PDF);
+    const download = mockDownloads();
+    await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: SABBATH });
+    const monday = day('2026-11-02');
+    find.mockImplementation(async (_curriculum, _language, date) => (date?.getDay() === 6 ? OTHER_PDF : PDF));
+
+    await fetchChildrenLessonsAhead(monday);
+    expect(find.mock.calls.slice(1).map(([, , date]) => date && lessonPeriodOf(date))).toEqual(['2026-11-01', '2026-11-07']);
+    expect(download.mock.calls.map(([url]) => url)).toEqual([PDF, OTHER_PDF]);
+
+    // Offline on Monday: no lookup, and the copy from Sabbath.
+    find.mockRejectedValue(new Error('offline'));
+    expect(await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: monday })).toMatchObject({
+      url: PDF,
+      file: expect.any(File),
+    });
+  });
+
   it('delete the copies a week after their period, keeping the current ones', async () => {
     find.mockResolvedValueOnce(PDF).mockResolvedValueOnce(OTHER_PDF);
     mockDownloads();
@@ -255,6 +297,21 @@ describe("the children's lesson popup", () => {
       text: '下载中 · 16.4 / 32.9 MB',
       fraction: 0.5,
     });
+  });
+
+  it('say when there is no connection, with only the X', async () => {
+    const screen = await renderWithPreferences(
+      createElement(ChildrenLessonDialog, {
+        offline: true,
+        onCancel: jest.fn(),
+        progress: null,
+        title: '少年級（10–12 歲）',
+        visible: true,
+      }),
+      { language: 'zh' },
+    );
+    expect(screen.getByText('沒有網路連線。請連上網路以下載本週課程。')).toBeTruthy();
+    expect(screen.queryByText('正在尋找本週課程…')).toBeNull();
   });
 
   it('close with an X, which stops the download', async () => {

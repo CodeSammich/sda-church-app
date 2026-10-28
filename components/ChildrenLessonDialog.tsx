@@ -19,6 +19,7 @@ const copy = {
     downloading: (done: string, total?: string) =>
       total ? `Downloading · ${done} of ${total} MB` : `Downloading · ${done} MB`,
     note: 'It stays on this phone for the week, so next time it opens at once.',
+    offline: 'No connection. Connect to the internet to download this week’s lesson.',
     close: 'Close',
   },
   zh: {
@@ -27,6 +28,7 @@ const copy = {
     downloading: (done: string, total?: string) =>
       total ? `下載中 · ${done} / ${total} MB` : `下載中 · ${done} MB`,
     note: '課程會在這部手機保留一週，下次可立即開啟。',
+    offline: '沒有網路連線。請連上網路以下載本週課程。',
     close: '關閉',
   },
   'zh-cn': {
@@ -35,6 +37,7 @@ const copy = {
     downloading: (done: string, total?: string) =>
       total ? `下载中 · ${done} / ${total} MB` : `下载中 · ${done} MB`,
     note: '课程会在这部手机保留一周，下次可立即打开。',
+    offline: '没有网络连接。请连接网络以下载本周课程。',
     close: '关闭',
   },
   es: {
@@ -43,6 +46,7 @@ const copy = {
     downloading: (done: string, total?: string) =>
       total ? `Descargando · ${done} de ${total} MB` : `Descargando · ${done} MB`,
     note: 'Se queda en este teléfono durante la semana, así que la próxima vez se abre al instante.',
+    offline: 'Sin conexión. Conéctate a internet para descargar la lección de esta semana.',
     close: 'Cerrar',
   },
 } as const;
@@ -71,6 +75,8 @@ type ChildrenLessonDialogProps = Readonly<{
   title: string;
   /** Null while the app looks up this week's lesson. */
   progress: LessonDownloadProgress | null;
+  /** Offline with no copy on the phone: says so, with only the X. */
+  offline?: boolean;
   visible: boolean;
   /** The X, or a tap outside: stops the lookup and the download. */
   onCancel: () => void;
@@ -80,7 +86,7 @@ type ChildrenLessonDialogProps = Readonly<{
  * Shown from the tap on a children's lesson until it opens (#529): the lookup,
  * then the PDF's download, which can take a minute on a phone connection.
  */
-export function ChildrenLessonDialog({ onCancel, progress, title, visible }: ChildrenLessonDialogProps) {
+export function ChildrenLessonDialog({ offline = false, onCancel, progress, title, visible }: ChildrenLessonDialogProps) {
   const { language } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
@@ -97,19 +103,27 @@ export function ChildrenLessonDialog({ onCancel, progress, title, visible }: Chi
       >
         <PopupHeader closeLabel={labels.close} onClose={onCancel} style={styles.header} title={title} />
         <Dialog.Content style={styles.content}>
-          <Text accessibilityLiveRegion="polite" variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
-            {status.text}
-          </Text>
-          <ProgressBar
-            accessibilityLabel={status.text}
-            color={theme.colors.primary}
-            indeterminate={status.fraction === null}
-            progress={status.fraction ?? 0}
-            style={styles.progress}
-          />
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            {labels.note}
-          </Text>
+          {offline ? (
+            <Text accessibilityLiveRegion="polite" variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+              {labels.offline}
+            </Text>
+          ) : (
+            <>
+              <Text accessibilityLiveRegion="polite" variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                {status.text}
+              </Text>
+              <ProgressBar
+                accessibilityLabel={status.text}
+                color={theme.colors.primary}
+                indeterminate={status.fraction === null}
+                progress={status.fraction ?? 0}
+                style={styles.progress}
+              />
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                {labels.note}
+              </Text>
+            </>
+          )}
         </Dialog.Content>
       </Dialog>
     </Portal>

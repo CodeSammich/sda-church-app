@@ -212,6 +212,7 @@ export default function SabbathSchoolScreen() {
         </View>
       </ScrollView>
       <ChildrenLessonDialog
+        offline={childrenLesson.dialog?.offline}
         onCancel={childrenLesson.cancel}
         progress={childrenLesson.dialog?.progress ?? null}
         title={childrenLesson.dialog?.title ?? ''}

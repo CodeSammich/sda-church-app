@@ -7,6 +7,7 @@ import {
 import { getCacheFolder, readCachedText, writeCachedText } from '@/services/CacheStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File } from 'expo-file-system';
+import { getNetworkStateAsync } from 'expo-network';
 
 /**
  * Children's lesson PDFs kept on the phone for the week (#529).
@@ -263,13 +264,29 @@ export const pruneChildrenLessons = async (today = new Date()) => {
   }
 };
 
-export type ChildrenLessonToOpen = Readonly<{ file: File; url: string } | { url: string }>;
+export type ChildrenLessonToOpen = Readonly<
+  { file: File; url: string } | { url: string } | { offline: true }
+>;
+
+const OFFLINE = { offline: true } as const;
+
+// Asked only after a lookup or a download fails, so a network that wrongly
+// reports no internet can't stop one that would have worked.
+const isOffline = async () => {
+  try {
+    const network = await getNetworkStateAsync();
+    return network.isConnected === false || network.isInternetReachable === false;
+  } catch {
+    return false;
+  }
+};
 
 /**
  * This week's lesson for an age group: the phone's copy, downloaded first if
  * needed, or else an address to open in the browser. That's the age group's
  * website when there's no PDF yet, or the PDF when it couldn't be downloaded.
- * Rejects only when `signal` is aborted.
+ * When the phone is offline and has no copy, it says so instead, since neither
+ * page would load. Rejects only when `signal` is aborted.
  */
 export const getChildrenLesson = async (
   lesson: ChildrenLesson,
@@ -285,14 +302,14 @@ export const getChildrenLesson = async (
 ): Promise<ChildrenLessonToOpen> => {
   void rememberLesson(lesson);
   const found = await findLesson(lesson, date);
-  if ('website' in found) return { url: found.website };
+  if ('website' in found) return (await isOffline()) ? OFFLINE : { url: found.website };
   try {
     const file = await downloadLesson(lesson, found.pdf, onProgress, signal);
     void pruneChildrenLessons(date);
     return { file, url: found.pdf };
   } catch (error) {
     if (signal?.aborted) throw error;
-    return { url: found.pdf };
+    return (await isOffline()) ? OFFLINE : { url: found.pdf };
   }
 };
 
@@ -311,19 +328,25 @@ let fetchingAhead = false;
 /**
  * Fetches the coming Sabbath's lesson for the age groups opened most recently,
  * so they open at once on Sabbath. Quarterly lessons change on Sabbath, so on a
- * weekday that's the next lesson, not this week's. The caller checks for Wi-Fi.
+ * weekday that's the next lesson, not this week's. It looks up this period's
+ * lesson too, usually the copy already on the phone, so that opens offline
+ * later in the week. The caller checks for Wi-Fi.
  */
 export const fetchChildrenLessonsAhead = async (date = new Date()) => {
   if (fetchingAhead) return;
   fetchingAhead = true;
   try {
-    const sabbath = comingSabbathOf(date);
+    const dates = [date, comingSabbathOf(date)].filter(
+      (each, index, all) => all.findIndex((other) => lessonPeriodOf(other) === lessonPeriodOf(each)) === index,
+    );
     for (const lesson of await readRecentLessons()) {
-      try {
-        const found = await findLesson(lesson, sabbath);
-        if ('pdf' in found) await downloadLesson(lesson, found.pdf);
-      } catch {
-        // Offline, or the download failed: the next time the app opens tries again.
+      for (const each of dates) {
+        try {
+          const found = await findLesson(lesson, each);
+          if ('pdf' in found) await downloadLesson(lesson, found.pdf);
+        } catch {
+          // Offline, or the download failed: the next time the app opens tries again.
+        }
       }
     }
     await pruneChildrenLessons(date);
