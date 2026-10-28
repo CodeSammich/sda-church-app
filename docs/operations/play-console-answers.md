@@ -154,15 +154,17 @@ News & magazines, Events (which means ticket sales), and Music & audio.
   [Store listings](store-listing.md#english).
 - **App icon:** `public/icon-512x512.png`, the same logo as the app's launcher icon.
 - **Feature graphic:** 1024 × 500. It shows the logo, the church's name in English and
-  Chinese, "Bilingual Bible · Audio · Weekly bulletin · Hymns", and the pinyin and
-  audio screenshots in phone frames on the brand blue (`#00405C`).
+  Chinese, "Bilingual Bible · Audio · Weekly bulletin · Hymns", and two of the phone
+  screenshots in phone frames on the brand blue (`#00405C`): the Bible in the dark theme
+  behind the Bible in English and Chinese. `scripts/make-play-feature-graphic.cjs`
+  builds it from the phone screenshots, so run it again when they change.
 - **Phone screenshots:** one set of six, which every listing language shows, captured
   as [Store listings](store-listing.md#screenshots) describes. The first submission had
   eight in English and four in Traditional Chinese; this set replaced them on
   September 30, 2026.
 - **AI-generated declaration:** Play Console asks, for each image, whether AI generated
-  or edited it. The feature graphic: yes, because an AI assistant laid it out, though no
-  image generator made any of its pixels. The icon and screenshots: no; they're the
+  or edited it. The feature graphic: yes, because an AI assistant designed its layout and
+  wrote the script that builds it, though no image generator made any of its pixels. The icon and screenshots: no; they're the
   official logo and real captures of the app.
 
 Copies of the feature graphic and screenshots are in
