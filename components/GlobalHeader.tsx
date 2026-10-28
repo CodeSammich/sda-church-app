@@ -20,6 +20,14 @@ import {
   shortestTranslationLabel,
 } from '@/hooks/useGlobalHeaderHeight';
 import { filterHeaderSearchItems } from '@/features/hymnal/HymnalSearch';
+import {
+  BIBLE_SEARCH_LABELS,
+  useBibleSearchRows,
+  type BibleSearchOptions,
+  type BibleSearchRow,
+} from '@/hooks/useBibleSearch';
+import { prepareBibleSearch } from '@/services/BibleSearch';
+import { isKeyScreensBuild } from '@/services/ScreenshotRoute';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
 import { router, useGlobalSearchParams, usePathname, useSegments } from 'expo-router';
@@ -72,30 +80,8 @@ const HERO_UNDER_STATUS_BAR_ROUTES = new Set([
   'sabbath-school',
 ]);
 
-const READER_SEARCH_LABELS = {
-  en: {
-    searchBiblePlaceholder: 'Search this chapter...',
-  },
-  zh: {
-    searchBiblePlaceholder: '搜尋本章...',
-  },
-  'zh-cn': {
-    searchBiblePlaceholder: '搜索本章...',
-  },
-  es: {
-    searchBiblePlaceholder: 'Buscar en este capítulo...',
-  },
-} as const;
-
 export { UIStateContext };
 
-type BibleVerseSearchResult = {
-  icon: 'format-quote-close';
-  number: number;
-  subtitle: string;
-  text: string;
-  title: string;
-};
 type CustomHeaderSearchItem = {
   icon?: string;
   key: string;
@@ -114,7 +100,7 @@ type HeaderSearchButton = {
   label: string;
   onPress: () => void;
 };
-type HeaderSearchResult = BibleVerseSearchResult | CustomHeaderSearchItem;
+type HeaderSearchResult = BibleSearchRow | CustomHeaderSearchItem;
 
 type BibleTranslationChipItem = Readonly<{
   badge: string;
@@ -125,7 +111,7 @@ export const GlobalHeader = (props: any) => {
   const { language } = useContext(LanguageContext);
   const segments = useSegments();
   const pathname = usePathname();
-  const globalParams = useGlobalSearchParams<{ backTo?: string | string[] }>();
+  const globalParams = useGlobalSearchParams<{ backTo?: string | string[]; search?: string | string[] }>();
   // Expo typed routes expose segments as a tuple union. Widen it for generic
   // route membership checks while preserving the runtime values.
   const routeSegments: readonly string[] = segments;
@@ -149,7 +135,7 @@ export const GlobalHeader = (props: any) => {
   const searchRef = useRef<any>(null);
   const headerRef = useRef<ComponentRef<typeof View>>(null);
   const insets = useSafeAreaInsets();
-  const { fontScale, width: windowWidth } = useWindowDimensions();
+  const { fontScale, width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [measuredHeaderContentHeight, setMeasuredHeaderContentHeight] = useState(0);
   const headerTextScale = isBiblePage
     ? getBibleReaderUiTextScale(textScale)
@@ -210,14 +196,8 @@ export const GlobalHeader = (props: any) => {
   const bibleSavedVerseCount = (props.options?.bibleSavedVerseCount || 0) as number;
   const bibleSavedVersesLabel =
     (props.options?.bibleSavedVersesLabel as string | undefined) || 'Saved verses';
-  const bibleChapterVerses = (props.options?.bibleChapterVerses || []) as Array<{
-    number: number;
-    text: string;
-    title: string;
-  }>;
-  const onBibleVerseSearchPress = props.options?.onBibleVerseSearchPress as
-    | ((verseNumber: number) => void)
-    | undefined;
+  // Whole-Bible search (#516), from the Bible screen.
+  const bibleSearch = props.options?.bibleSearch as BibleSearchOptions | undefined;
   // The translation button shares a row with the icon buttons. When the row
   // is tight it gives up its 文A icon first, then its translation names, cut
   // short with "…" and then dropped, and last its language badges: it takes a
@@ -295,8 +275,8 @@ export const GlobalHeader = (props: any) => {
   }, [heroUnderStatusBar, statusBarBackdropAnim]);
 
   const searchLabels =
-    READER_SEARCH_LABELS[language as keyof typeof READER_SEARCH_LABELS] ||
-    READER_SEARCH_LABELS.en;
+    BIBLE_SEARCH_LABELS[language as keyof typeof BIBLE_SEARCH_LABELS] ||
+    BIBLE_SEARCH_LABELS.en;
 
   const customResults = useMemo(
     () => customHeaderSearch
@@ -308,26 +288,34 @@ export const GlobalHeader = (props: any) => {
     [customHeaderSearch, deferredSearchQuery],
   );
 
-  const normalizedBibleQuery = searchQuery.trim().toLocaleLowerCase();
-  const bibleResults: BibleVerseSearchResult[] = normalizedBibleQuery
-    ? bibleChapterVerses
-        .filter((verse) =>
-          verse.text.toLocaleLowerCase().includes(normalizedBibleQuery),
-        )
-        .map((verse) => ({
-          ...verse,
-          icon: 'format-quote-close' as const,
-          subtitle: verse.text,
-        }))
-    : [];
+  const bibleRows = useBibleSearchRows(
+    isBiblePage ? deferredSearchQuery : '',
+    bibleSearch,
+    language as keyof typeof BIBLE_SEARCH_LABELS,
+  );
 
-  const results: HeaderSearchResult[] = isBiblePage
-    ? bibleResults
-    : customResults;
+  const results: HeaderSearchResult[] = isBiblePage ? bibleRows : customResults;
 
-  const handleSelectBibleVerse = (verseNumber: number) => {
+  // A key-screen path's `search=` opens the Bible's search with that query,
+  // such as `bible?…&search=Moriah`, since the capture can't type (#516).
+  // Outside a key-screens build a link can't open it.
+  const screenshotSearch =
+    isKeyScreensBuild() && isBiblePage && typeof globalParams.search === 'string'
+      ? globalParams.search
+      : null;
+  const screenshotSearchOpened = useRef(false);
+  useEffect(() => {
+    if (!screenshotSearch || screenshotSearchOpened.current || !bibleSearch?.books.length) return;
+    screenshotSearchOpened.current = true;
+    setIsBibleSearchExpanded(true);
+    searchExpansion.setValue(1);
+    setSearchQuery(screenshotSearch);
+  }, [screenshotSearch, bibleSearch?.books.length, searchExpansion]);
+
+  const handleSelectBibleRow = (row: BibleSearchRow) => {
+    if (row.kind !== 'reference' && row.kind !== 'verse') return;
     collapseBibleSearch();
-    onBibleVerseSearchPress?.(verseNumber);
+    bibleSearch?.onOpen(row.reference);
   };
 
   const handleSelectCustomResult = (item: CustomHeaderSearchItem) => {
@@ -345,6 +333,8 @@ export const GlobalHeader = (props: any) => {
   };
 
   const expandBibleSearch = () => {
+    // Reads the translations now, so the first search is quick.
+    if (bibleSearch) prepareBibleSearch(bibleSearch.translationIds).catch(() => undefined);
     setIsBibleSearchExpanded(true);
     searchExpansion.setValue(0);
     Animated.timing(searchExpansion, {
@@ -378,7 +368,7 @@ export const GlobalHeader = (props: any) => {
       maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
       placeholder={
         isBiblePage
-          ? searchLabels.searchBiblePlaceholder
+          ? searchLabels.placeholder
           : customHeaderSearch?.placeholder
       }
       onChangeText={setSearchQuery}
@@ -388,12 +378,11 @@ export const GlobalHeader = (props: any) => {
       blurOnSubmit={false}
       returnKeyType="search"
       onSubmitEditing={() => {
-        if (results.length > 0) {
-          if (isBiblePage) {
-            handleSelectBibleVerse((results[0] as (typeof bibleResults)[number]).number);
-          } else {
-            handleSelectCustomResult(results[0] as CustomHeaderSearchItem);
-          }
+        if (isBiblePage) {
+          const first = bibleRows.find((row) => row.kind === 'reference' || row.kind === 'verse');
+          if (first) handleSelectBibleRow(first);
+        } else if (results.length > 0) {
+          handleSelectCustomResult(results[0] as CustomHeaderSearchItem);
         }
       }}
       onBlur={() =>
@@ -797,7 +786,7 @@ export const GlobalHeader = (props: any) => {
                     <Pressable
                       onPress={expandBibleSearch}
                       accessibilityRole="button"
-                      accessibilityLabel={searchLabels.searchBiblePlaceholder}
+                      accessibilityLabel={searchLabels.placeholder}
                       style={({ pressed }) => [
                         styles.collapsedSearchButton,
                         { height: compactControlHeight, width: compactControlHeight },
@@ -843,46 +832,69 @@ export const GlobalHeader = (props: any) => {
           </Pressable>
         )}
       </Appbar.Header>
-      {isSearching && searchQuery.length > 0 && results.length > 0 && (
+      {/*
+        The Bible's results stay up while its search is open, even with the
+        keyboard put away, so a long list can be read and scrolled.
+      */}
+      {(isBiblePage ? isBibleSearchExpanded || isSearching : isSearching) &&
+        searchQuery.length > 0 &&
+        results.length > 0 && (
         <FlatList
           data={results}
-          initialNumToRender={8}
+          initialNumToRender={10}
           keyboardShouldPersistTaps="handled"
-          keyExtractor={(item) =>
-            isBiblePage
-              ? `verse-${(item as any).number}`
-              : (item as CustomHeaderSearchItem).key
-          }
-          maxToRenderPerBatch={8}
-          renderItem={({ item }) => (
-            <List.Item
-              title={item.title}
-              titleNumberOfLines={0}
-              titleStyle={{
-                fontSize: scaleTypographyMetric(16, textScale),
-                lineHeight: scaleTypographyMetric(22, textScale),
-                fontWeight: '700',
-              }}
-              description={item.subtitle}
-              descriptionNumberOfLines={0}
-              descriptionStyle={{
-                fontSize: scaleTypographyMetric(14, textScale),
-                lineHeight: scaleTypographyMetric(20, textScale),
-              }}
-              left={(p) => (
-                <List.Icon
-                  {...p}
-                  icon={item.icon || 'book-open-page-variant'}
-                  color={theme.colors.tertiary}
-                />
-              )}
-              onPress={() =>
-                isBiblePage
-                  ? handleSelectBibleVerse((item as any).number)
-                  : handleSelectCustomResult(item as CustomHeaderSearchItem)
-              }
-            />
-          )}
+          keyExtractor={(item) => item.key}
+          maxToRenderPerBatch={10}
+          renderItem={({ item }) => {
+            if (isBiblePage && ((item as BibleSearchRow).kind === 'header' || (item as BibleSearchRow).kind === 'status')) {
+              const row = item as BibleSearchRow;
+              return (
+                <Text
+                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+                  accessibilityRole={row.kind === 'header' ? 'header' : undefined}
+                  style={[
+                    row.kind === 'header' ? styles.bibleSearchHeader : styles.bibleSearchStatus,
+                    {
+                      color: row.kind === 'header' ? theme.colors.primary : theme.colors.onSurfaceVariant,
+                      fontSize: scaleTypographyMetric(row.kind === 'header' ? 13 : 15, textScale),
+                      lineHeight: scaleTypographyMetric(row.kind === 'header' ? 18 : 21, textScale),
+                    },
+                  ]}
+                >
+                  {row.title}
+                </Text>
+              );
+            }
+            const row = item as Extract<BibleSearchRow, { kind: 'reference' | 'verse' }> | CustomHeaderSearchItem;
+            const icon = !isBiblePage
+              ? (row as CustomHeaderSearchItem).icon || 'book-open-page-variant'
+              : (row as BibleSearchRow).kind === 'reference'
+                ? 'arrow-right-circle-outline'
+                : 'format-quote-close';
+            return (
+              <List.Item
+                title={row.title}
+                titleNumberOfLines={0}
+                titleStyle={{
+                  fontSize: scaleTypographyMetric(16, textScale),
+                  lineHeight: scaleTypographyMetric(22, textScale),
+                  fontWeight: '700',
+                }}
+                description={'subtitle' in row ? row.subtitle : undefined}
+                descriptionNumberOfLines={0}
+                descriptionStyle={{
+                  fontSize: scaleTypographyMetric(14, textScale),
+                  lineHeight: scaleTypographyMetric(20, textScale),
+                }}
+                left={(p) => <List.Icon {...p} icon={icon} color={theme.colors.tertiary} />}
+                onPress={() =>
+                  isBiblePage
+                    ? handleSelectBibleRow(row as BibleSearchRow)
+                    : handleSelectCustomResult(row as CustomHeaderSearchItem)
+                }
+              />
+            );
+          }}
           style={[
             styles.resultsOverlay,
             {
@@ -890,10 +902,17 @@ export const GlobalHeader = (props: any) => {
                 Math.max(headerHeight, insets.top + appBarHeight) + 8,
               backgroundColor: theme.colors.background,
             },
+            // The whole Bible's results can be long, so they take the screen's height.
+            isBiblePage && {
+              maxHeight: Math.max(
+                420,
+                windowHeight - Math.max(headerHeight, insets.top + appBarHeight) - insets.bottom - 24,
+              ),
+            },
           ]}
-          windowSize={5}
+          windowSize={7}
         />
-      )}
+            )}
     </Animated.View>
   );
 };
@@ -1054,6 +1073,16 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bibleSearchHeader: {
+    fontWeight: '700',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
+  bibleSearchStatus: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   resultsOverlay: {
     position: 'absolute',

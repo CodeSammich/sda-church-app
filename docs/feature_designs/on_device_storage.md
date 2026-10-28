@@ -28,7 +28,7 @@ That's 66 books in each translation, and 39 in the Hebrew and 27 in the Greek: a
 - `assets/bible/index.ts` maps each file to its asset. `scripts/write-bible-asset-index.mjs` writes it, and the build scripts run it.
 - `scripts/build-cuv-1919.mjs` builds the CUV, and `scripts/build-bundled-bibles.mjs` the rest. [LEGAL.md](../LEGAL.md) says why each text may ship with the app, and the [CUV's rights record](../rights-records/cuv-1919-2026-10-27/README.md) how its text was checked.
 
-**How the app reads them.** `services/BundledBible.ts` reads a book the first time it opens and keeps the parsed book in memory for the rest of the session. How it reaches the file depends on the platform:
+**How the app reads them.** `services/BundledBible.ts` reads a book the first time it opens and keeps the parsed book in memory for the rest of the session. Whole-Bible search reads every book of the translations on screen the first time it's used (with the CUV, the CUVS's too, which it searches through), so those books stay in memory like any opened book, along with each verse's words prepared for matching (`services/BibleSearch.ts`). It saves nothing. How it reaches the file depends on the platform:
 
 | Platform | Where the file is | What the app does |
 | --- | --- | --- |

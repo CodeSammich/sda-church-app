@@ -18,6 +18,7 @@ import {
   hasChurchHostedAudio,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
+import { BIBLE_BOOK_ABBREVIATIONS } from './BibleBookAbbreviations';
 import { readBundledBibleFile, type BundledBibleCollection } from './BundledBible';
 
 /** Persisted Bible translation selected by the app language or the user. */
@@ -448,6 +449,8 @@ export const DEFAULT_SCRIPTURE_REFERENCE: ParsedScriptureReference = Object.free
 /** Books where a bare number conventionally identifies a verse, not a chapter. */
 const SINGLE_CHAPTER_BOOK_IDS = new Set(['OBA', 'PHM', '2JN', '3JN', 'JUD']);
 
+// Case, accents, dots, the space after a book's number, and a Roman numeral
+// for it don't matter, so "1 Co.", "1co" and "I Co" are the same.
 const normalizeBookName = (name: string) =>
   name
     .normalize('NFD')
@@ -455,11 +458,14 @@ const normalizeBookName = (name: string) =>
     .replace(/[.]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .toLocaleLowerCase('en');
+    .toLocaleLowerCase('en')
+    .replace(/^(iii|ii|i) (?=\p{L})/u, (_, numeral: string) => `${numeral.length} `)
+    .replace(/^([1-3]) ?(?=\p{L})/u, '$1 ');
 
 const BOOK_ALIAS_TO_ID = Object.entries(BIBLE_BOOK_NAMES).reduce<Record<string, string>>(
   (aliases, [bookId, names]) => {
-    Object.values(names).forEach((name) => {
+    // Its names in every app language, its USFM code, and its published short forms.
+    [...Object.values(names), bookId, ...(BIBLE_BOOK_ABBREVIATIONS[bookId] ?? [])].forEach((name) => {
       aliases[normalizeBookName(name)] = bookId;
     });
     return aliases;
@@ -488,7 +494,8 @@ export const parseScriptureReference = (
 ): ParsedScriptureReference | null => {
   if (!ref) return null;
 
-  const withoutTranslation = ref.trim().replace(/\s*\([^)]*\)\s*$/, '');
+  // Full-width digits and colons, as in 約３：１６, become ASCII ones.
+  const withoutTranslation = ref.normalize('NFKC').trim().replace(/\s*\([^)]*\)\s*$/, '');
   // Bulletin entries occasionally contain alternatives or non-contiguous
   // selections. The reader opens the first passage and leaves the remainder as
   // display-only text rather than falling all the way back to Genesis 1:1.
@@ -498,9 +505,10 @@ export const parseScriptureReference = (
   );
   const candidate = (crossChapterStart?.[1] || firstSelection).trim();
 
-  const explicitVerse = candidate.match(
-    /^(.+?)\s*(\d+)\s*[:：]\s*(\d+)(?:\s*[-–—]\s*(\d+))?$/u,
-  );
+  // "John 3:16", "Jn 3.16" (as Spanish Bibles write it), or "John 3 16".
+  const explicitVerse =
+    candidate.match(/^(.+?)\s*(\d+)\s*[:：.]\s*(\d+)(?:\s*[-–—]\s*(\d+))?$/u) ||
+    candidate.match(/^(.*?\D)\s*(\d+)\s+(\d+)(?:\s*[-–—]\s*(\d+))?$/u);
 
   if (explicitVerse) {
     const bookId = BOOK_ALIAS_TO_ID[normalizeBookName(explicitVerse[1])];
@@ -765,6 +773,78 @@ interface BundledHelloaoBook {
 
 const bundledCollectionFor = (translation: string) =>
   FETCH_BIBLE_TRANSLATED_EDITIONS[translation]?.bundled ?? BUNDLED_HELLOAO_TRANSLATIONS[translation];
+
+/** One verse's words, for search. */
+export interface BibleVerseText {
+  bookId: string;
+  chapter: number;
+  verse: number;
+  text: string;
+}
+
+/**
+ * A HelloAO verse's words, on one line, with no footnote markers. A footnote
+ * between two phrases becomes a space, as the reader shows it ("as yourself.
+ * I am the LORD"), and a space left before punctuation goes.
+ */
+const helloaoVerseText = (content: ChapterVerse['content']) =>
+  content
+    .map((part) =>
+      typeof part === 'string'
+        ? part
+        : 'text' in part
+          ? ` ${part.text} `
+          : 'lineBreak' in part || 'noteId' in part
+            ? ' '
+            : '',
+    )
+    .join('')
+    .replace(/\s+/g, ' ')
+    .replace(/ ([,.;:!?’”)])/g, '$1')
+    .trim();
+
+/**
+ * Every verse's words in a translation, read straight from its bundled book
+ * files, for search (services/BibleSearch.ts). Headings and footnotes are left
+ * out and line breaks become spaces, so this is much quicker than opening each
+ * chapter with fetchChapter: well under half a second for a translation in
+ * Node, against over two seconds for the BSB's 1,189 chapters.
+ */
+export async function readTranslationVerseTexts(translationId: string): Promise<BibleVerseText[]> {
+  const edition = FETCH_BIBLE_TRANSLATED_EDITIONS[translationId];
+  const helloao = BUNDLED_HELLOAO_TRANSLATIONS[translationId];
+  if (!edition && !helloao) {
+    throw new Error(`No Bible text ships with the app for ${translationId}`);
+  }
+  const verses: BibleVerseText[] = [];
+  for (const { id: bookId } of await fetchBooks(translationId)) {
+    if (edition) {
+      const source = await readBundledBibleFile<FetchBiblePlainTextBook>(edition.bundled, bookId.toLowerCase());
+      source.contents.forEach((chapter, chapterNumber) => {
+        if (!chapterNumber || !Array.isArray(chapter)) return;
+        chapter.forEach((parts, verse) => {
+          if (!verse || !Array.isArray(parts)) return;
+          const text = normalizeFetchBibleText(
+            parts.filter((part): part is string => typeof part === 'string').join(''),
+          )
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (text) verses.push({ bookId, chapter: chapterNumber, verse, text });
+        });
+      });
+    } else {
+      const source = await readBundledBibleFile<BundledHelloaoBook>(helloao, bookId.toLowerCase());
+      source.chapters.forEach((entry, chapterNumber) => {
+        for (const item of entry?.chapter.content ?? []) {
+          if (item.type !== 'verse') continue;
+          const text = helloaoVerseText(item.content);
+          if (text) verses.push({ bookId, chapter: chapterNumber, verse: item.number, text });
+        }
+      });
+    }
+  }
+  return verses;
+}
 
 /** A HelloAO chapter from the bundled book, shaped like the API's response. */
 async function readBundledHelloaoChapter(
