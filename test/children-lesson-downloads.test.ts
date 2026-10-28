@@ -14,6 +14,7 @@ import { fireEvent } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
 import { getNetworkStateAsync } from 'expo-network';
 import { createElement } from 'react';
+import { PDF as CATALOG_PDF, everything, fakeFetch } from './helpers/adventech-catalog';
 import { mockFiles } from './helpers/file-system-mock';
 import { renderWithPreferences } from './helpers/render-preferences';
 
@@ -58,7 +59,35 @@ beforeEach(async () => {
   await AsyncStorage.clear();
 });
 
+// Most tests here give the lookup's answer directly, with fixed dates, so they
+// test only downloading, keeping, and deleting, and don't change with today's
+// date. test/children-lessons.test.ts tests the lookup itself, including each
+// new quarter's; the first test below runs the two together.
 describe("children's lesson downloads", () => {
+  it("follow the real lookup into a new quarter: keep a lesson for its days, then switch to the new quarter's", async () => {
+    const { findChildrenLesson: lookUp } = jest.requireActual('@/features/sabbath-school/ChildrenLessons');
+    const catalog = fakeFetch(everything);
+    find.mockImplementation((curriculum, language, date) => lookUp(curriculum, language, date, catalog));
+    const download = mockDownloads();
+    const junior = { curriculum: 'junior', language: 'en' } as const;
+
+    // Sabbath, 19 September: the third quarter's last lesson, Sabbath to Friday.
+    const lastLesson = `${CATALOG_PDF}/en/2026-03-pp/13-student.pdf`;
+    expect(await getChildrenLesson(junior, { date: day('2026-09-19') })).toMatchObject({ url: lastLesson, file: expect.any(File) });
+    // Wednesday: no lookup and no download; it would open offline.
+    catalog.mockClear();
+    expect(await getChildrenLesson(junior, { date: day('2026-09-23') })).toMatchObject({ url: lastLesson, file: expect.any(File) });
+    expect(catalog).not.toHaveBeenCalled();
+
+    // Sabbath, 26 September: a new quarter, found without any change to the app.
+    const firstLesson = `${CATALOG_PDF}/en/2026-04-pp/01-student.pdf`;
+    expect(await getChildrenLesson(junior, { date: day('2026-09-26') })).toMatchObject({ url: firstLesson, file: expect.any(File) });
+    expect(download.mock.calls.map(([url]) => url)).toEqual([lastLesson, firstLesson]);
+    // And the last quarter's copy is gone.
+    await pruneChildrenLessons(day('2026-09-26'));
+    expect(lessonFiles()).toEqual([`cache/children-lessons/${lessonFileName('junior', firstLesson)}`]);
+  });
+
   it('download a lesson once, then open the copy without looking it up or downloading it again', async () => {
     find.mockResolvedValue({ url: PDF });
     const download = mockDownloads();
