@@ -785,7 +785,9 @@ limit is a reminder to prune, not a rule:
    Nothing can tap a popup or dialog open either, so a screen's path can ask for one
    with `popup=`, such as `you?popup=text-size`, the Bible's `popup=verse`, which
    opens the popup for `verseStart` once the chapter loads, or its
-   `popup=audio-settings`, once the chapter has audio (#372). Only the key-screen
+   `popup=audio-settings`, once the chapter has audio (#372), or Sabbath School's
+   `popup=lesson-download` and `popup=lesson-offline`, the children's lesson popup with
+   a fixed download or offline (#529). Only the key-screen
    builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens
    just the screen.
 2. It launches the app, waits for the screen to load, and saves

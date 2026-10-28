@@ -82,6 +82,7 @@ describe('key screen list (test/screens/screens.json)', () => {
   it('opens only popups the screen can open from its path (#372)', () => {
     const screenFiles: Record<string, string> = {
       bible: 'app/(tabs)/bible/index.tsx',
+      'sabbath-school': 'app/(tabs)/explore/sabbath-school.tsx',
       you: 'app/(tabs)/you/index.tsx',
     };
     const popups = config.screens.filter((screen: { path: string }) => /[?&]popup=/.test(screen.path));
