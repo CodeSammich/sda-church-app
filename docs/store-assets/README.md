@@ -46,23 +46,21 @@ The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The App
 screenshots here are from the 0.43.0 release PR's **iOS key screens** run on September
 30, 2026, before the audio button showed the audio language.
 
-Each run also saves numbered App Store copies in its screenshots download's `screens/app-store/`,
-from the `appStore` lists in `test/screens/screens.json`. They aren't the set uploaded
-here:
+Each run also saves numbered App Store copies in its screenshots download's
+`screens/app-store/`, from the `appStore` lists in `test/screens/screens.json`:
 
-- `screens/app-store/en-US/`: Home, the Bible in English and Chinese, the Bible with
-  pinyin, Explore, the Library, and the Bible in the dark theme. The uploaded set has
-  the Chinese-interface Bible (`bible-cuv-zh`) in place of the pinyin one, and the dark
-  Bible fourth.
+- `screens/app-store/en-US/`: the uploaded set, in upload order: Home, the Bible in
+  English and Chinese, the Bible with the Chinese interface (`bible-cuv-zh`), the Bible
+  in the dark theme, Explore, and the Library.
 - `screens/app-store/zh-Hant/`: seven shots with the Chinese interface, which aren't
   uploaded.
 
-For a new App Store set, take the matching shots from the run's `screens/ios/` and
-number them in the uploaded order, or change `appStore` first.
-
 Each run saves numbered Google Play copies too, in `screens/google-play/en-US/` and
-`screens/google-play/zh-TW/`, from the `googlePlay` lists: the same shots as the App
-Store's, from the Android emulator, at 1080 × 1920 and without transparency (#372).
+`screens/google-play/zh-TW/`, from the `googlePlay` lists, on an emulator of Google
+Play's size (1080 × 1920), without transparency (#372). `en-US` is the uploaded set, in
+upload order: Home, the Bible in English and Chinese, the audio settings with the CUV's
+audio languages (`bible-audio-settings-default`), the Bible in the dark theme, Explore,
+and the Library. So for a new set, copy a run's two `en-US` folders here.
 
 **No transparency.** Both stores reject screenshots with an alpha channel: Google Play
 takes JPEG or 24-bit PNG, and App Store Connect refuses images with transparency. The
