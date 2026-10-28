@@ -96,16 +96,31 @@ describe('Android preview APK', () => {
     expect(workflow).toContain('group: android-preview-apk-${{ github.event_name }}-');
     expect(workflow).toContain('<!-- android-test-apk sha=$SHA -->');
     // The comment trusts nothing from the build job, which runs pull request
-    // code: it finds this run's APK, and its run's commit, through GitHub's API.
+    // code: it finds each run's APK, and its run's commit, through GitHub's API.
     const comment = workflow.slice(workflow.indexOf('\n  comment:\n'));
     expect(comment).not.toContain('needs.build.outputs');
-    expect(comment).toContain('gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts"');
-    expect(comment).toContain('.workflow_run.head_sha == env.SHA');
+    expect(comment).toContain('gh api "repos/$REPO/actions/runs/$1/artifacts"');
+    expect(comment).toContain('.workflow_run.head_sha == env.APK_SHA');
+    expect(comment).toContain('APK_NAME="sda-church-app-pr-$PR-$1-arm-debug.apk"');
+    expect(comment).toContain('found=$(apk "$RUN_ID" "$SHA")');
     expect(comment).toContain('SHA: ${{ github.event.pull_request.head.sha }}');
-    expect(comment).toContain('The upload recorded its SHA-256');
+    expect(comment).toContain('Each SHA-256 is the one its upload recorded with GitHub');
     expect(workflow).toContain(
       'select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- android-test-apk")))',
     );
+  });
+
+  it("lists the pull request's earlier builds under the newest, each checked the same way", () => {
+    const comment = readRepoFile('.github/workflows/android-preview-apk.yml');
+    expect(comment).toContain('**Newest: commit \\`${SHA:0:7}\\`, built $(built "$created").**');
+    // Only this workflow's own pull_request runs, and only an APK named for this
+    // pull request and stored for that run's commit.
+    expect(comment).toContain('actions/workflows/android-preview-apk.yml/runs?event=pull_request&branch=$HEAD_REF');
+    expect(comment).toContain('old=$(apk "$id" "$sha") || old=""');
+    // A commit message is shown as plain text, without links or HTML.
+    expect(comment).toContain('gsub("[<>\\\\[\\\\]]"; "")');
+    // The newest APK's comment posts even if the earlier ones can't be listed.
+    expect(comment).toMatch(/runs=\$\(gh api [^\n]+\n[^\n]+\) \|\| runs=""/);
   });
 });
 

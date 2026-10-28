@@ -733,7 +733,9 @@ release key, and comments on the release PR with a link that downloads it,
 GitHub can download it, with nothing to approve. On a phone, sign in to GitHub in the
 browser first. The comment job reads the link from GitHub's API, never from the
 build job, which runs the pull request's code, and gives the SHA-256 the upload
-recorded with GitHub, so a download can be checked. It installs beside the Play version as **NYCCSDA Preview**. Fork pull
+recorded with GitHub, so a download can be checked. The newest build is in bold, with
+its commit, build time, and commit message, and the PR's earlier builds are listed
+under it. It installs beside the Play version as **NYCCSDA Preview**. Fork pull
 requests are skipped. See [Android preview APK](native-builds.md#android-preview-apk).
 
 ## iOS key screens builds

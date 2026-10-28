@@ -22,6 +22,7 @@ import {
   openSabbathStream,
   openSermonArchive,
   openSpotifyPodcast,
+  openSupportEmail,
   openURL,
   openYouTubeSearch,
   openYouTubeVideo,
@@ -77,6 +78,7 @@ describe('where links open', () => {
     ['a phone number', () => openPhone('(718) 205-8618'), 'tel:'],
     ['an email address', () => openEmail('technology@nyccsda.org'), 'mailto:'],
     ['a Bible request', () => openBibleRequestEmail('Please add'), 'mailto:'],
+    ['a support email', () => openSupportEmail('Tell us', '1.4.0'), 'mailto:'],
   ])('hands %s to its app', async (_name, open, prefix) => {
     await open();
     expect(Linking.openURL).toHaveBeenCalledWith(expect.stringMatching(`^${prefix}`));

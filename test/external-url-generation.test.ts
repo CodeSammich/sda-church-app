@@ -1,8 +1,10 @@
 import { CUV_ADVENTIST_AUDIO_URLS } from '@/constants/CuvAdventistAudioManifest';
 import {
+  getAppAndSystemLine,
   getBibleRequestEmailUrl,
   getBabiesSabbathSchoolUrl,
   getCurrentSabbathSchoolUrl,
+  getSupportEmailUrl,
 } from '@/constants/ExternalLinks';
 import { getAudioPowerCuvChapterLinks } from '@/services/BibleAudioSources';
 import { getEnglishHymnUrl, getSortedHymns } from '@/features/hymnal/EnglishHymnal';
@@ -58,6 +60,21 @@ describe('Bible translation requests', () => {
     const params = new URLSearchParams(url.slice(url.indexOf('?') + 1));
     expect(params.get('subject')).toBe('Bible translation request');
     expect(params.get('body')).toBe('您希望 App 加入哪個聖經譯本或語言？\n\n');
+  });
+});
+
+describe('Help & Feedback emails (#541)', () => {
+  it('emails the technology team with an English subject, a prompt in the reader\'s language, and the app version', () => {
+    const url = getSupportEmailUrl('請告訴我們遇到了什麼問題：', getAppAndSystemLine('1.4.0', 'ios', '18.2'));
+    expect(url.startsWith('mailto:technology@nyccsda.org?subject=App%20help%20or%20feature%20request&body=')).toBe(true);
+    const params = new URLSearchParams(url.slice(url.indexOf('?') + 1));
+    expect(params.get('subject')).toBe('App help or feature request');
+    expect(params.get('body')).toBe('請告訴我們遇到了什麼問題：\n\n\n\nApp 1.4.0 · iOS 18.2');
+  });
+
+  it('names the phone system, and the API level on Android', () => {
+    expect(getAppAndSystemLine('1.4.0', 'android', 36)).toBe('App 1.4.0 · Android, API level 36');
+    expect(getAppAndSystemLine('1.4.0', 'web', '')).toBe('App 1.4.0 · web app');
   });
 });
 
