@@ -5,6 +5,7 @@ const alerts = require('../scripts/monitor-alert-issue.cjs');
 const { buildStoreToolchainAlert } = require('../scripts/check-store-toolchain.cjs');
 
 const TITLE = '[monitor] Example alert';
+const MAINTENANCE = alerts.MAINTENANCE_LABEL;
 const context = {
   serverUrl: 'https://github.com',
   repo: { owner: 'org', repo: 'repo' },
@@ -103,8 +104,21 @@ describe('monitor alert issues', () => {
 
     expect(result).toEqual({ action: 'created', number: 101 });
     expect(of('create')).toEqual([
-      { owner: 'org', repo: 'repo', title: TITLE, body: 'Body', labels: ['needs-attention'], assignees: ['alice'] },
+      {
+        owner: 'org', repo: 'repo', title: TITLE, body: 'Body', labels: ['needs-attention', MAINTENANCE], assignees: ['alice'],
+      },
     ]);
+  });
+
+  it('labels every alert as maintenance, once', async () => {
+    const { github, core, of } = createGitHub();
+
+    await alerts.openOrUpdateAlert({ github, context, core, title: TITLE, body: 'Body', assignees: ['alice'] });
+    await alerts.openOrUpdateAlert({
+      github, context, core, title: TITLE, body: 'Body', labels: [MAINTENANCE], assignees: ['alice'],
+    });
+
+    expect(of('create').map((args) => args.labels)).toEqual([[MAINTENANCE], [MAINTENANCE]]);
   });
 
   it('@mentions the run actor when no one is assigned', async () => {
@@ -124,7 +138,7 @@ describe('monitor alert issues', () => {
 
     expect(result.action).toBe('created-without-assignees');
     expect(of('create')[1]).toEqual({
-      owner: 'org', repo: 'repo', title: TITLE, body: '@workflow-actor\n\nBody', labels: ['needs-attention'],
+      owner: 'org', repo: 'repo', title: TITLE, body: '@workflow-actor\n\nBody', labels: ['needs-attention', MAINTENANCE],
     });
     expect(of('warning')[0].message).toContain('Could not assign no-access');
   });
@@ -141,15 +155,17 @@ describe('monitor alert issues', () => {
     expect(result).toEqual({ action: 'commented', number: 7 });
     expect(of('create')).toEqual([]);
     expect(of('comment')).toEqual([{ owner: 'org', repo: 'repo', issue_number: 7, body: 'Body' }]);
-    expect(of('addLabels')).toEqual([{ owner: 'org', repo: 'repo', issue_number: 7, labels: ['needs-attention'] }]);
+    expect(of('addLabels')).toEqual([
+      { owner: 'org', repo: 'repo', issue_number: 7, labels: ['needs-attention', MAINTENANCE] },
+    ]);
   });
 
-  it('adds no labels to the open alert when there are none to add', async () => {
+  it('adds only the maintenance label to the open alert when given none', async () => {
     const { github, core, of } = createGitHub({ openIssues: [{ number: 7, title: TITLE }] });
 
     await alerts.openOrUpdateAlert({ github, context, core, title: TITLE, body: 'Body', assignees: ['alice'] });
 
-    expect(of('addLabels')).toEqual([]);
+    expect(of('addLabels')).toEqual([{ owner: 'org', repo: 'repo', issue_number: 7, labels: [MAINTENANCE] }]);
   });
 
   it('sets the Priority of a new alert', async () => {
@@ -226,13 +242,36 @@ describe('monitor alert issues', () => {
 });
 
 describe('dated reminder issues', () => {
-  it('opens the issue assigned, without an @mention', async () => {
+  it('opens the issue assigned and labeled, without an @mention', async () => {
     const { github, core, of } = createGitHub();
 
     const result = await alerts.openIssueOnce({ github, context, core, title: TITLE, body: 'Body', assignees: ['alice'] });
 
     expect(result).toEqual({ action: 'created', number: 101 });
-    expect(of('create')).toEqual([{ owner: 'org', repo: 'repo', title: TITLE, body: 'Body', assignees: ['alice'] }]);
+    expect(of('create')).toEqual([
+      { owner: 'org', repo: 'repo', title: TITLE, body: 'Body', labels: [MAINTENANCE], assignees: ['alice'] },
+    ]);
+    expect(of('setPriority')).toEqual([]);
+  });
+
+  it('sets the Priority of a new issue, but not of one that already exists', async () => {
+    const fresh = createGitHub();
+    await alerts.openIssueOnce({
+      ...fresh, context, title: TITLE, body: 'Body', priority: 'Urgent', assignees: ['alice'],
+    });
+    expect(fresh.of('setPriority')).toEqual([{ issueId: 'ISSUE-101', fieldId: 'FIELD', optionId: 'OPT-Urgent' }]);
+
+    const existing = createGitHub({ openIssues: [{ number: 7, title: TITLE }] });
+    await alerts.openIssueOnce({ ...existing, context, title: TITLE, body: 'Body', priority: 'Urgent' });
+    expect(existing.calls).toEqual([]);
+  });
+
+  it('still opens the issue, with a warning, when the Priority cannot be set', async () => {
+    const refused = createGitHub({ rejectGraphql: true });
+    await expect(
+      alerts.openIssueOnce({ ...refused, context, title: TITLE, body: 'Body', priority: 'Urgent', assignees: ['alice'] }),
+    ).resolves.toEqual({ action: 'created', number: 101 });
+    expect(refused.of('warning')[0].message).toContain('Could not set #101');
   });
 
   it('does nothing when the title already exists, even closed, but ignores a pull request', async () => {
@@ -259,7 +298,9 @@ describe('dated reminder issues', () => {
     expect(
       await alerts.openIssueOnce({ ...rejected, context, title: TITLE, body: 'Body', assignees: ['no-access'] }),
     ).toEqual({ action: 'created-without-assignees', number: 101 });
-    expect(rejected.of('create')[1]).toEqual({ owner: 'org', repo: 'repo', title: TITLE, body: '@workflow-actor\n\nBody' });
+    expect(rejected.of('create')[1]).toEqual({
+      owner: 'org', repo: 'repo', title: TITLE, body: '@workflow-actor\n\nBody', labels: [MAINTENANCE],
+    });
     expect(rejected.of('warning')[0].message).toContain('Could not assign no-access');
   });
 });
@@ -312,4 +353,16 @@ describe('monitor workflow wiring', () => {
       expect(workflow).toContain('alerts.closeAlert(');
     },
   );
+
+  it('gives the external dependency alert a Priority', () => {
+    const workflow = readFileSync(join(process.cwd(), '.github/workflows/external-dependency-monitor.yml'), 'utf8');
+
+    expect(workflow).toContain("priority: 'Medium',");
+  });
+
+  it('gives Dependabot pull requests the same label as the alerts', () => {
+    const config = readFileSync(join(process.cwd(), '.github/dependabot.yml'), 'utf8');
+
+    expect(config).toContain(`labels: ["${MAINTENANCE}"]`);
+  });
 });

@@ -91,6 +91,7 @@ const openWorkspaceBackup = ({ github, context, core, year, month, assignees = [
     context,
     core,
     ...buildWorkspaceBackup(year, month, `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`),
+    priority: 'Urgent',
     assignees,
   });
 

@@ -509,6 +509,9 @@ there must stay on a free plan that fails at its limits instead of billing.
 | Weekly (automated) | [Expo doctor monitor](operations/admin-runbook.md#expo-doctor-monitor-alerts): take Expo's SDK patch releases | Bug fixes are missed, and a later update has to take many releases at once |
 | Daily (automated; GitHub comments 30 and 7 days ahead, and once overdue) | [Due-date reminders](operations/admin-runbook.md#due-date-reminders) on issues with a `Due:` line | A deadline in an issue passes unnoticed |
 
+Each issue these workflows open has the **maintenance** label and starts with a
+Priority; see [Maintenance issues](operations/admin-runbook.md#maintenance-issues).
+
 ## Governance principles
 
 - **Apply for nonprofit status** wherever a provider offers it, using the church's

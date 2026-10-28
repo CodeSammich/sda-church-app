@@ -26,6 +26,9 @@ const path = require('node:path');
 
 const DATES_FILE = path.resolve(__dirname, '..', '.github', 'apple-signing-expiry.json');
 const ALERT_TITLE = '[monitor] Apple signing needs renewal';
+// A lapse stops iOS updates or removes the app, so the renewal is Urgent: it
+// goes into the current release.
+const ALERT_PRIORITY = 'Urgent';
 const RENEWAL_DOCS = 'docs/operations/app-store-setup.md#yearly-apple-renewals';
 // Two months: enough time to reach a Mac, renew, and test a signed build.
 const WARNING_DAYS = 60;
@@ -76,6 +79,7 @@ const formatReport = (result) => result.items.map((item) => `- ${describe(item)}
 /** The alert issue text, from the --report JSON, or from null when it's missing. */
 const buildAppleSigningAlert = (report, runUrl) => ({
   title: ALERT_TITLE,
+  priority: ALERT_PRIORITY,
   body: [
     'Apple signing needs attention. When the certificate or profile expires, new iOS builds can\'t be signed or uploaded; when the membership lapses, the app is removed from the App Store.',
     '',

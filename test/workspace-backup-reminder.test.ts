@@ -83,8 +83,21 @@ describe('Google Workspace backup issue', () => {
 
   it('opens once a month, assigned to the maintainers', async () => {
     const created: Array<Record<string, unknown>> = [];
+    const priorities: string[] = [];
     const github = (issues: Array<{ number: number; title: string }>) => ({
       paginate: async () => issues,
+      graphql: async (query: string, variables: Record<string, unknown>) => {
+        if (query.startsWith('mutation')) {
+          priorities.push(variables.optionId as string);
+          return {};
+        }
+        return {
+          repository: {
+            issueFields: { nodes: [{ id: 'FIELD', name: 'Priority', options: [{ id: 'Urgent', name: 'Urgent' }] }] },
+            issue: { id: 'ISSUE', issueFieldValues: { nodes: [] } },
+          },
+        };
+      },
       rest: {
         issues: {
           listForRepo: jest.fn(),
@@ -99,7 +112,12 @@ describe('Google Workspace backup issue', () => {
     await expect(
       openWorkspaceBackup({ github: github([]), context, year: 2027, month: 4, assignees: ['maintainer'] }),
     ).resolves.toEqual({ action: 'created', number: 100 });
-    expect(created[0]).toMatchObject({ title: 'Google Workspace backup, April 2027', assignees: ['maintainer'] });
+    expect(created[0]).toMatchObject({
+      title: 'Google Workspace backup, April 2027',
+      labels: ['maintenance'],
+      assignees: ['maintainer'],
+    });
+    expect(priorities).toEqual(['Urgent']);
 
     await expect(
       openWorkspaceBackup({
