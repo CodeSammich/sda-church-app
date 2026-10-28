@@ -80,10 +80,6 @@ jobs:
     name: Build Android debug APK (ARM)
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    outputs:
-      apk_name: ${{ steps.apk.outputs.name }}
-      apk_mb: ${{ steps.apk.outputs.mb }}
-      apk_url: ${{ steps.upload.outputs.artifact-url }}
     steps:
       - name: Check out pull request head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -134,12 +130,10 @@ jobs:
           set -euo pipefail
           npm run build:android:apk:debug:arm -- --output "$RUNNER_TEMP/$APK_NAME"
           echo "name=$APK_NAME" >> "$GITHUB_OUTPUT"
-          echo "mb=$(( $(stat -c %s "$RUNNER_TEMP/$APK_NAME") / 1000000 ))" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK as a workflow artifact
         # Not zipped, so the link downloads the APK itself. The artifact takes
         # the file's name.
-        id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           path: ${{ runner.temp }}/${{ steps.apk.outputs.name }}
@@ -154,22 +148,37 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      # Only to replace the test APK comment. The job never checks out or runs
-      # the pull request's code.
+      # To find this run's APK, and to replace the test APK comment. The job
+      # never checks out or runs the pull request's code.
+      actions: read
       pull-requests: write
     steps:
       - name: Post the test APK link
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          PR: ${{ needs.resolve-pr.outputs.pr_number }}
-          SHA: ${{ needs.resolve-pr.outputs.head_sha }}
-          APK_NAME: ${{ needs.build.outputs.apk_name }}
-          APK_MB: ${{ needs.build.outputs.apk_mb }}
-          APK_URL: ${{ needs.build.outputs.apk_url }}
+          RUN_ID: ${{ github.run_id }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          test -n "$APK_URL" || { echo 'The APK upload gave no download link.' >&2; exit 1; }
+          # The build job runs the pull request's code, so this job takes nothing
+          # from it, not even the link. It finds the APK in GitHub's list of this
+          # run's artifacts, for a run of the pull request's head commit, so the
+          # comment can only link this run's own APK on github.com. The SHA-256
+          # is the one the upload step recorded with GitHub.
+          export APK_NAME="sda-church-app-pr-$PR-$RUN_ID-arm-debug.apk"
+          found=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '
+            [.artifacts[] | select(.name == env.APK_NAME and .expired == false and .workflow_run.head_sha == env.SHA)]
+            | if length == 1 then .[0] | "\(.id) \(.size_in_bytes) \(.digest // "")" else empty end')
+          test -n "$found" || { echo "::error::This run stored no single $APK_NAME from $SHA." >&2; exit 1; }
+          read -r apk_id apk_bytes digest <<<"$found"
+          case "$digest" in
+            sha256:?*) sha256="${digest#sha256:}" ;;
+            *) echo "::error::GitHub gave no SHA-256 for $APK_NAME." >&2; exit 1 ;;
+          esac
+          APK_URL="https://github.com/$REPO/actions/runs/$RUN_ID/artifacts/$apk_id"
+          APK_MB=$((apk_bytes / 1000000))
           body=$(cat <<BODY
           <!-- android-test-apk sha=$SHA -->
           ### 📱 Android test APK
@@ -177,6 +186,8 @@ jobs:
           To try commit \`${SHA:0:7}\` on an Android phone, download [\`$APK_NAME\`]($APK_URL) (about $APK_MB MB) and open it. Sign in to GitHub in the phone's browser first, since GitHub only gives downloads to signed-in users. The link works for 14 days.
 
           It's a test build named **NYCCSDA Preview**, which installs beside the Play version rather than replacing it. Android asks once to allow installs from the browser.
+
+          The upload recorded its SHA-256 as \`$sha256\`. To check a download on a computer, compare it with \`sha256sum\` (\`shasum -a 256\` on a Mac).
           BODY
           )
 

@@ -94,8 +94,15 @@ describe('Android preview APK', () => {
     // Concurrency groups span the repository, so main's pull_request_target copy,
     // which still runs on the 1.4.0 release PR, mustn't share this group.
     expect(workflow).toContain('group: android-preview-apk-${{ github.event_name }}-');
-    expect(workflow).toContain('apk_url: ${{ steps.upload.outputs.artifact-url }}');
     expect(workflow).toContain('<!-- android-test-apk sha=$SHA -->');
+    // The comment trusts nothing from the build job, which runs pull request
+    // code: it finds this run's APK, and its run's commit, through GitHub's API.
+    const comment = workflow.slice(workflow.indexOf('\n  comment:\n'));
+    expect(comment).not.toContain('needs.build.outputs');
+    expect(comment).toContain('gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts"');
+    expect(comment).toContain('.workflow_run.head_sha == env.SHA');
+    expect(comment).toContain('SHA: ${{ github.event.pull_request.head.sha }}');
+    expect(comment).toContain('The upload recorded its SHA-256');
     expect(workflow).toContain(
       'select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- android-test-apk")))',
     );

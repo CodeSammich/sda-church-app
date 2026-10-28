@@ -529,6 +529,17 @@ comments on the release PR with a link that downloads the APK itself, and replac
 earlier comments, so only the newest APK is offered. GitHub gives artifact downloads
 only to signed-in users, so on a phone, sign in to GitHub in the browser first.
 
+The comment job takes nothing from the build job, which runs the pull request's code,
+not even the link. It asks GitHub's API for this run's artifacts and requires exactly
+one with the expected name that hasn't expired, in a run of the pull request's head
+commit. It links that one, so the link can't be swapped for another file or site. It
+also gives the SHA-256 the upload step recorded with GitHub, which matches `sha256sum`
+of the download. That shows a download is the file the run uploaded, not that the
+build was clean: the upload step computes it inside the build job. A compromised
+dependency could still change the APK during the build, as it could change any build.
+`npm ci` installs exactly the npm packages in the reviewed lockfile, and Dependabot
+alerts flag npm packages with known vulnerabilities.
+
 The workflow reads no secrets and uses no environment, so nothing waits for approval.
 The build job checks out the pull request without saved credentials and with a
 read-only token. Only the comment job can write, to pull requests, and it never checks
