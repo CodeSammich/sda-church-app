@@ -728,7 +728,8 @@ into `main` (from `release-candidate` in this repository).
 It builds a debug APK, signed only with Gradle's local debug key, never the church's
 release key. After you approve `production`, it uploads the APK
 to Google Drive as `sda-church-app-pr-<number>-<run>-arm-debug.apk`, and the run
-summary links to it. Fork pull requests are skipped. See
+summary links to it. Before that, the APK is a download on the run. The release PR's
+screenshot review comment links the download and the run. Fork pull requests are skipped. See
 [Android preview APK and Drive upload](native-builds.md#android-preview-apk-and-drive-upload).
 
 ## iOS key screens builds

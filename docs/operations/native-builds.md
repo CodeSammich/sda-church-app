@@ -531,6 +531,10 @@ retain the `drive.file` scope. To upload into a folder instead, add a
 helper.
 
 `production` requires a reviewer, so the Drive upload waits for someone to approve it.
+Meanwhile, the build job has already saved the APK as a download on the run
+(`android-pr-preview-<number>-<run>`, kept 14 days). The release PR's screenshot review
+comment links that download and the run, whose summary links the Drive copy once it's
+uploaded.
 The Drive upload job must remain separate from the build job, and the upload helper must
 be checked out from the trusted base commit rather than the PR head.
 
@@ -916,7 +920,8 @@ request code only with a read-only token and reads no secret.
 
 One review still covers both platforms. The iOS preview's review comment waits for this
 workflow's run on the same commit, then links both downloads and says whether both
-passed, and its **Screenshots reviewed** approval covers both. To recheck an earlier
+passed, and its **Screenshots reviewed** approval covers both. The comment also links the
+[Android preview APK](#android-preview-apk-and-drive-upload) download and that workflow's run. To recheck an earlier
 run's Android screenshots with new rules, start this workflow by hand with
 **screens_from_run**, as for the iPhone.
 
