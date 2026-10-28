@@ -298,6 +298,23 @@
       }
     },
     {
+      "name": "sabbath-school-lesson-download",
+      "group": "worship-and-you",
+      "$comment": "The popup a tap on a children's lesson opens while its PDF downloads (#529). Key screens can't tap, so a key-screens build opens it from popup=, with a fixed 5.1 of 14.2 MB.",
+      "path": "sabbath-school?popup=lesson-download",
+      "variants": ["default"],
+      "mustShowLines": ["^Junior \\(ages 10.12\\)", "^Downloading\\W+5\\.1 of 14\\.2 MB$", "^It stays on this phone"]
+    },
+    {
+      "name": "sabbath-school-lesson-offline",
+      "group": "worship-and-you",
+      "$comment": "The same popup offline with no copy of the lesson (#529, part of #533): it says so, with only the X, in Chinese.",
+      "path": "sabbath-school?popup=lesson-offline",
+      "variants": ["zh"],
+      "mustShowLines": ["^少年級", "沒有網路連線"],
+      "mustNotShowLines": ["下載中"]
+    },
+    {
       "name": "hymnal-selection",
       "group": "worship-and-you",
       "$comment": "The hymnal page (#413): a carousel of the hymnals, the app language's first, then the picked hymnal's search and its hymns, each 1985 or 505 hymn with the other hymnal's number, a verse chip beside it (an English hymn's own, and a 505 hymn's 1985 equivalent's in Chinese, such as 詩篇 100 on 505's 1), and the 1985 and 505 hymns' Piano only videos (#424). Vision reads the 文A icon in a chip as XA and a row's treble clef as a character, so those lines are matched anywhere.",
