@@ -7,8 +7,8 @@ import { AppState, Platform } from 'react-native';
 const DELAY_MS = 5_000;
 
 /**
- * On Wi-Fi, fetches the coming Sabbath's lesson for the children's age groups
- * opened most recently, when the app opens or comes back (#529). Never on a
+ * On Wi-Fi, keeps this week's and the coming Sabbath's lessons for the
+ * children's lessons opened most recently, when the app opens or comes back (#529). Never on a
  * phone connection, where it only deletes old copies, and not on the web, where
  * the browser opens the PDFs.
  */

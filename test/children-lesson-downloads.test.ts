@@ -1,11 +1,11 @@
 import { ChildrenLessonDialog, getChildrenLessonStatus } from '@/components/ChildrenLessonDialog';
-import { findChildrenLessonUrl } from '@/features/sabbath-school/ChildrenLessons';
+import { findChildrenLesson } from '@/features/sabbath-school/ChildrenLessons';
 import {
   comingSabbathOf,
   fetchChildrenLessonsAhead,
   getChildrenLesson,
+  lessonDaysOf,
   lessonFileName,
-  lessonPeriodOf,
   previewChildrenLesson,
   pruneChildrenLessons,
 } from '@/features/sabbath-school/LessonDownloads';
@@ -20,13 +20,13 @@ import { renderWithPreferences } from './helpers/render-preferences';
 // Children's lesson PDFs kept on the phone for the week (#529).
 jest.mock('@/features/sabbath-school/ChildrenLessons', () => ({
   ...jest.requireActual('@/features/sabbath-school/ChildrenLessons'),
-  findChildrenLessonUrl: jest.fn(),
+  findChildrenLesson: jest.fn(),
 }));
 jest.mock('expo-network', () => ({
   getNetworkStateAsync: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })),
 }));
 
-const find = findChildrenLessonUrl as jest.MockedFunction<typeof findChildrenLessonUrl>;
+const find = findChildrenLesson as jest.MockedFunction<typeof findChildrenLesson>;
 const PDF = 'https://sabbath-school-pdf.adventech.io/pdf/en/2026-04-pp/05/student.pdf';
 const OTHER_PDF = 'https://sabbath-school-pdf.adventech.io/pdf/en/2026-04-pp/06/student.pdf';
 const WEBSITE = 'https://junior.aliveinjesus.info/';
@@ -36,6 +36,7 @@ const day = (text: string) => {
 };
 const WEDNESDAY = day('2026-10-28');
 const SABBATH = day('2026-10-31');
+const ymd = (date?: Date) => date && lessonDaysOf(date, date, date).from;
 
 const lessonFiles = () =>
   [...mockFiles.keys()].filter((path) => path.startsWith('cache/children-lessons/') && path.endsWith('.pdf'));
@@ -59,7 +60,7 @@ beforeEach(async () => {
 
 describe("children's lesson downloads", () => {
   it('download a lesson once, then open the copy without looking it up or downloading it again', async () => {
-    find.mockResolvedValue(PDF);
+    find.mockResolvedValue({ url: PDF });
     const download = mockDownloads();
     const progress = jest.fn();
 
@@ -78,8 +79,8 @@ describe("children's lesson downloads", () => {
     expect(download).toHaveBeenCalledTimes(1);
   });
 
-  it('look the lesson up again when a Sabbath or a Sunday begins, and in another language', async () => {
-    find.mockResolvedValue(PDF);
+  it("look the lesson up again on a day the saved one doesn't cover, and in another language", async () => {
+    find.mockResolvedValue({ url: PDF });
     mockDownloads();
     await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
     await getChildrenLesson({ curriculum: 'junior', language: 'zh' }, { date: WEDNESDAY });
@@ -92,7 +93,7 @@ describe("children's lesson downloads", () => {
   });
 
   it("open the age group's website when there's no PDF yet, and look again next time", async () => {
-    find.mockResolvedValue(WEBSITE);
+    find.mockResolvedValue({ url: WEBSITE });
     const download = mockDownloads();
     expect(await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY })).toEqual({ url: WEBSITE });
     await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
@@ -103,11 +104,11 @@ describe("children's lesson downloads", () => {
   it("say there's no connection, instead of opening a page that can't load, when offline with no copy", async () => {
     jest.mocked(getNetworkStateAsync).mockResolvedValue({ isConnected: false, isInternetReachable: false } as never);
     // The lookup finds nothing offline, and gives the website.
-    find.mockResolvedValue(WEBSITE);
+    find.mockResolvedValue({ url: WEBSITE });
     expect(await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY })).toEqual({ offline: true });
 
     // A lesson looked up before, but never downloaded.
-    find.mockResolvedValue(PDF);
+    find.mockResolvedValue({ url: PDF });
     jest.mocked(getNetworkStateAsync).mockResolvedValue({ isConnected: true, isInternetReachable: true } as never);
     mockDownloads(async () => {
       throw new Error('stopped');
@@ -119,7 +120,7 @@ describe("children's lesson downloads", () => {
   });
 
   it("open the PDF in the browser when it can't be downloaded, keeping no partial copy", async () => {
-    find.mockResolvedValue(PDF);
+    find.mockResolvedValue({ url: PDF });
     mockDownloads(async (_url, destination) => {
       mockFiles.set(destination.uri, 'half a PDF');
       throw new Error('The network connection was lost.');
@@ -129,7 +130,7 @@ describe("children's lesson downloads", () => {
   });
 
   it('stop the download when the popup closes', async () => {
-    find.mockResolvedValue(PDF);
+    find.mockResolvedValue({ url: PDF });
     mockDownloads(
       (_url, _destination, options) =>
         new Promise((_resolve, reject) =>
@@ -145,7 +146,7 @@ describe("children's lesson downloads", () => {
   });
 
   it('start the download again when the popup closes and the lesson is tapped again', async () => {
-    find.mockResolvedValue(PDF);
+    find.mockResolvedValue({ url: PDF });
     let calls = 0;
     const download = mockDownloads(async (url, destination, options) => {
       if (++calls === 1) {
@@ -167,7 +168,7 @@ describe("children's lesson downloads", () => {
   });
 
   it('share a download already under way, as when a tap comes during a Wi-Fi fetch', async () => {
-    find.mockResolvedValue(PDF);
+    find.mockResolvedValue({ url: PDF });
     const download = mockDownloads();
     const [one, two] = await Promise.all([
       getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY }),
@@ -178,9 +179,9 @@ describe("children's lesson downloads", () => {
   });
 
   it('fetch the coming Sabbath’s lesson ahead for the two age groups opened most recently', async () => {
-    find.mockImplementation(async (curriculum, _language, date) =>
-      date?.getDay() === 6 ? `${OTHER_PDF}?${curriculum}` : `${PDF}?${curriculum}`,
-    );
+    find.mockImplementation(async (curriculum, _language, date) => ({
+      url: date?.getDay() === 6 ? `${OTHER_PDF}?${curriculum}` : `${PDF}?${curriculum}`,
+    }));
     const download = mockDownloads();
     for (const curriculum of ['beginner-student', 'primary-student', 'junior'] as const) {
       await getChildrenLesson({ curriculum, language: 'en' }, { date: WEDNESDAY });
@@ -189,7 +190,7 @@ describe("children's lesson downloads", () => {
     download.mockClear();
 
     await fetchChildrenLessonsAhead(WEDNESDAY);
-    expect(find.mock.calls.map(([curriculum, , date]) => [curriculum, date && lessonPeriodOf(date)])).toEqual([
+    expect(find.mock.calls.map(([curriculum, , date]) => [curriculum, ymd(date)])).toEqual([
       ['junior', '2026-10-31'],
       ['primary-student', '2026-10-31'],
     ]);
@@ -206,16 +207,16 @@ describe("children's lesson downloads", () => {
     expect(download).not.toHaveBeenCalled();
   });
 
-  it("look up this week's lesson ahead too, so a lesson opened on Sabbath opens offline on Monday", async () => {
-    // A quarterly lesson runs Sabbath to Friday, but the lookups change on Sunday too.
-    find.mockResolvedValue(PDF);
+  it("look up this week's lesson ahead too, when the catalog gave no dates", async () => {
+    // Without dates, a lesson found on Sabbath is saved for that day only.
+    find.mockResolvedValue({ url: PDF });
     const download = mockDownloads();
     await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: SABBATH });
     const monday = day('2026-11-02');
-    find.mockImplementation(async (_curriculum, _language, date) => (date?.getDay() === 6 ? OTHER_PDF : PDF));
+    find.mockImplementation(async (_curriculum, _language, date) => ({ url: date?.getDay() === 6 ? OTHER_PDF : PDF }));
 
     await fetchChildrenLessonsAhead(monday);
-    expect(find.mock.calls.slice(1).map(([, , date]) => date && lessonPeriodOf(date))).toEqual(['2026-11-01', '2026-11-07']);
+    expect(find.mock.calls.slice(1).map(([, , date]) => ymd(date))).toEqual(['2026-11-02', '2026-11-07']);
     expect(download.mock.calls.map(([url]) => url)).toEqual([PDF, OTHER_PDF]);
 
     // Offline on Monday: no lookup, and the copy from Sabbath.
@@ -226,8 +227,28 @@ describe("children's lesson downloads", () => {
     });
   });
 
-  it('delete the copies a week after their period, keeping the current ones', async () => {
-    find.mockResolvedValueOnce(PDF).mockResolvedValueOnce(OTHER_PDF);
+  it("open a copy offline on any day its lesson's dates cover, and delete it the day after its last day", async () => {
+    // A quarterly lesson, Sabbath to Friday.
+    find.mockResolvedValue({ url: PDF, startsOn: SABBATH, endsOn: day('2026-11-06') });
+    const download = mockDownloads();
+    await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: SABBATH });
+
+    find.mockRejectedValue(new Error('offline'));
+    expect(await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: day('2026-11-02') })).toMatchObject({
+      url: PDF,
+      file: expect.any(File),
+    });
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(download).toHaveBeenCalledTimes(1);
+
+    await pruneChildrenLessons(day('2026-11-06'));
+    expect(lessonFiles()).toHaveLength(1);
+    await pruneChildrenLessons(day('2026-11-07'));
+    expect(lessonFiles()).toEqual([]);
+  });
+
+  it('delete the copies whose days are over, keeping the current ones', async () => {
+    find.mockResolvedValueOnce({ url: PDF }).mockResolvedValueOnce({ url: OTHER_PDF });
     mockDownloads();
     await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: day('2026-10-14') });
     await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
@@ -238,15 +259,14 @@ describe("children's lesson downloads", () => {
     expect(mockFiles.has('cache/children-lessons/index.json')).toBe(true);
   });
 
-  it('name the periods by the Sabbath or Sunday that begins them', () => {
-    expect(['2026-10-31', '2026-11-01', '2026-11-06', '2026-11-07'].map((each) => lessonPeriodOf(day(each)))).toEqual([
-      '2026-10-31',
-      '2026-11-01',
-      '2026-11-01',
-      '2026-11-07',
-    ]);
-    expect(lessonPeriodOf(comingSabbathOf(WEDNESDAY))).toBe('2026-10-31');
-    expect(lessonPeriodOf(comingSabbathOf(SABBATH))).toBe('2026-10-31');
+  it("save a lesson for the catalog's days, or else the days both kinds of week share", () => {
+    expect(lessonDaysOf(WEDNESDAY, SABBATH, day('2026-11-06'))).toEqual({ from: '2026-10-31', until: '2026-11-06' });
+    // Without dates: Sunday to Friday, or the Sabbath alone.
+    expect(lessonDaysOf(WEDNESDAY)).toEqual({ from: '2026-10-25', until: '2026-10-30' });
+    expect(lessonDaysOf(day('2026-11-01'))).toEqual({ from: '2026-11-01', until: '2026-11-06' });
+    expect(lessonDaysOf(SABBATH)).toEqual({ from: '2026-10-31', until: '2026-10-31' });
+    expect(ymd(comingSabbathOf(WEDNESDAY))).toBe('2026-10-31');
+    expect(ymd(comingSabbathOf(SABBATH))).toBe('2026-10-31');
   });
 
   it('name each copy for its age group and guide, which the viewer shows, and its address', () => {
@@ -256,7 +276,7 @@ describe("children's lesson downloads", () => {
   });
 
   it('remember the lessons opened most recently when a full phone clears the cache', async () => {
-    find.mockResolvedValue(PDF);
+    find.mockResolvedValue({ url: PDF });
     const download = mockDownloads();
     await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
     for (const path of [...mockFiles.keys()]) mockFiles.delete(path);
@@ -268,7 +288,7 @@ describe("children's lesson downloads", () => {
   });
 
   it("open in the phone's PDF viewer, or report that there's none", async () => {
-    find.mockResolvedValue(PDF);
+    find.mockResolvedValue({ url: PDF });
     mockDownloads();
     const lesson = await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
     if (!('file' in lesson)) throw new Error('No copy');

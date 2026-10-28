@@ -1,6 +1,6 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import {
-  findChildrenLessonUrl,
+  findChildrenLesson,
   isChildrenLessonPdf,
   type ChildrenSabbathSchoolCurriculum,
 } from '@/features/sabbath-school/ChildrenLessons';
@@ -21,9 +21,9 @@ import { getNetworkStateAsync } from 'expo-network';
  * viewer. Opening it again that week needs no download, and no catalog lookup
  * either.
  *
- * On Wi-Fi, the app also fetches the coming Sabbath's lesson for the two
- * lessons (age group and guide) opened most recently, so they open at once on
- * Sabbath.
+ * On Wi-Fi, the app also keeps this week's and the coming Sabbath's lessons
+ * for the two lessons (age group and guide) opened most recently, so they open
+ * at once, even offline.
  *
  * Phones only: the web opens the PDF in the browser, as before. See
  * docs/feature_designs/sabbath_school_lessons.md.
@@ -36,8 +36,6 @@ const INDEX = { folder: FOLDER, name: 'index.json', key: 'childrenLessonsIndex' 
 // phone's cache clearing doesn't touch.
 const RECENT_KEY = 'children-lessons-recent-v1';
 const PDF_TYPE = 'application/pdf';
-// Lookups, and the copies they name, are kept this long after their period begins.
-const KEEP_DAYS = 7;
 const RECENT_LESSONS = 2;
 const PROGRESS_INTERVAL_MS = 100;
 
@@ -49,9 +47,16 @@ export type ChildrenLesson = Readonly<{
 /** `totalBytes` is -1 until the server says how big the file is. */
 export type LessonDownloadProgress = Readonly<{ bytesWritten: number; totalBytes: number }>;
 
+type SavedLesson = ChildrenLesson & {
+  url: string;
+  /** The first and last days it's the lesson for, as YYYY-MM-DD. */
+  from: string;
+  until: string;
+};
+
 type LessonIndex = {
-  /** Each lesson PDF found, by period, age group, and app language. */
-  lookups: Record<string, string>;
+  /** Each lesson PDF found, with the days it's the lesson for. */
+  lessons: SavedLesson[];
 };
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -60,15 +65,19 @@ const dateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 /**
- * The lesson for a date changes only when a Sabbath or a Sunday begins:
- * quarterly lessons start on Sabbath, and Alive in Jesus weeks on Sunday. So a
- * lookup holds from one of those days until the next, and this names that period
- * by its first day.
+ * The days a lesson found for `date` is the lesson for: the catalog's dates
+ * where it gives them (a quarterly lesson runs Sabbath to Friday, an Alive in
+ * Jesus week Sunday to Sabbath). A lesson picked by its number has none, so
+ * then it's only the days both kinds of week containing `date` share: the
+ * Sabbath alone, or Sunday to Friday.
  */
-export const lessonPeriodOf = (date: Date) => {
+export const lessonDaysOf = (date: Date, startsOn?: Date, endsOn?: Date) => {
+  if (startsOn && endsOn) return { from: dateKey(startsOn), until: dateKey(endsOn) };
   const day = startOfDay(date);
-  if (day.getDay() !== 6) day.setDate(day.getDate() - day.getDay());
-  return dateKey(day);
+  if (day.getDay() === 6) return { from: dateKey(day), until: dateKey(day) };
+  const sunday = new Date(day.getFullYear(), day.getMonth(), day.getDate() - day.getDay());
+  const friday = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 5);
+  return { from: dateKey(sunday), until: dateKey(friday) };
 };
 
 /** The Sabbath on or after a date. */
@@ -77,11 +86,6 @@ export const comingSabbathOf = (date: Date) => {
   day.setDate(day.getDate() + 6 - day.getDay());
   return day;
 };
-
-const lookupKey = (period: string, { curriculum, language }: ChildrenLesson) =>
-  `${period}|${curriculum}|${language}`;
-
-const curriculumOf = (key: string) => key.split('|')[1] as ChildrenSabbathSchoolCurriculum;
 
 // FNV-1a, so each address gets its own file.
 const hashOf = (text: string) => {
@@ -105,9 +109,9 @@ const lessonFile = (curriculum: ChildrenSabbathSchoolCurriculum, url: string) =>
 const readIndex = async (): Promise<LessonIndex> => {
   try {
     const saved = JSON.parse((await readCachedText(INDEX)) ?? '{}');
-    return { lookups: saved.lookups && typeof saved.lookups === 'object' ? saved.lookups : {} };
+    return { lessons: Array.isArray(saved.lessons) ? saved.lessons : [] };
   } catch {
-    return { lookups: {} };
+    return { lessons: [] };
   }
 };
 
@@ -147,22 +151,28 @@ const rememberLesson = async (lesson: ChildrenLesson) => {
   }
 };
 
+const isSameLesson = (saved: ChildrenLesson, lesson: ChildrenLesson) =>
+  saved.curriculum === lesson.curriculum && saved.language === lesson.language;
+
 /**
- * The lesson PDF for a date, from this period's earlier lookup where there was
- * one. When there's no PDF yet, findChildrenLessonUrl gives the age group's
- * website, which isn't kept, so the next tap looks again.
+ * The lesson PDF for a date: a saved one whose days include it, without using
+ * the network, or else a new lookup, saved with its days. When there's no PDF yet,
+ * findChildrenLesson gives the age group's website, which isn't saved, so the
+ * next tap looks again.
  */
 const findLesson = async (
   lesson: ChildrenLesson,
   date: Date,
 ): Promise<{ pdf: string } | { website: string }> => {
-  const key = lookupKey(lessonPeriodOf(date), lesson);
-  const known = (await readIndex()).lookups[key];
-  if (known && isChildrenLessonPdf(known)) return { pdf: known };
-  const url = await findChildrenLessonUrl(lesson.curriculum, lesson.language, date);
+  const day = dateKey(date);
+  const known = (await readIndex()).lessons.find(
+    (saved) => isSameLesson(saved, lesson) && saved.from <= day && day <= saved.until,
+  );
+  if (known && isChildrenLessonPdf(known.url)) return { pdf: known.url };
+  const { url, startsOn, endsOn } = await findChildrenLesson(lesson.curriculum, lesson.language, date);
   if (!isChildrenLessonPdf(url)) return { website: url };
   await changeIndex((index) => {
-    index.lookups[key] = url;
+    index.lessons.push({ ...lesson, url, ...lessonDaysOf(date, startsOn, endsOn) });
   });
   return { pdf: url };
 };
@@ -240,21 +250,20 @@ const downloadLesson = (
 };
 
 /**
- * Forgets the lookups whose period began more than a week before `today`, and
- * deletes the copies no remaining lookup names.
+ * Forgets the lessons whose last day is before `today`, and deletes the copies
+ * no remaining lesson names. So, with the catalog's dates, a quarterly lesson
+ * goes from the next Sabbath, and an Alive in Jesus lesson from the Sunday
+ * after its Sabbath, the first time the app checks.
  */
 export const pruneChildrenLessons = async (today = new Date()) => {
-  const oldest = startOfDay(today);
-  oldest.setDate(oldest.getDate() - KEEP_DAYS);
+  const day = dateKey(today);
   const kept = new Set<string>([INDEX.name]);
   const saved = await changeIndex((index) => {
-    index.lookups = Object.fromEntries(
-      Object.entries(index.lookups).filter(([key]) => key.split('|')[0] >= dateKey(oldest)),
-    );
-    Object.entries(index.lookups).forEach(([key, url]) => kept.add(lessonFileName(curriculumOf(key), url)));
+    index.lessons = index.lessons.filter((lesson) => lesson.until >= day);
+    index.lessons.forEach((lesson) => kept.add(lessonFileName(lesson.curriculum, lesson.url)));
   });
   const folder = getCacheFolder(FOLDER);
-  // Unless the lookups were saved, `kept` may be missing some.
+  // Unless the change was saved, `kept` may be missing some.
   if (!saved || !folder.exists) return;
   for (const entry of folder.list()) {
     if (!(entry instanceof File) || kept.has(entry.name)) continue;
@@ -270,8 +279,8 @@ export type ChildrenLessonToOpen = Readonly<
 
 const OFFLINE = { offline: true } as const;
 
-// Asked only after a lookup or a download fails, so a network that wrongly
-// reports no internet can't stop one that would have worked.
+// Asked only after a lookup finds no PDF or a download fails, so a network that
+// wrongly reports no internet can't stop one that would have worked.
 const isOffline = async () => {
   try {
     const network = await getNetworkStateAsync();
@@ -326,19 +335,20 @@ export const previewChildrenLesson = async (file: File, title: string) => {
 let fetchingAhead = false;
 
 /**
- * Fetches the coming Sabbath's lesson for the age groups opened most recently,
- * so they open at once on Sabbath. Quarterly lessons change on Sabbath, so on a
- * weekday that's the next lesson, not this week's. It looks up this period's
- * lesson too, usually the copy already on the phone, so that opens offline
- * later in the week. The caller checks for Wi-Fi.
+ * Keeps this week's and the coming Sabbath's lessons on the phone for the age
+ * groups opened most recently, so they open at once, even offline. Quarterly
+ * lessons change on Sabbath, so on a weekday the coming Sabbath's is the next
+ * lesson; this week's is usually the copy already there, and a saved lesson
+ * covering the day needs no lookup. The caller checks for Wi-Fi.
  */
 export const fetchChildrenLessonsAhead = async (date = new Date()) => {
   if (fetchingAhead) return;
   fetchingAhead = true;
   try {
-    const dates = [date, comingSabbathOf(date)].filter(
-      (each, index, all) => all.findIndex((other) => lessonPeriodOf(other) === lessonPeriodOf(each)) === index,
-    );
+    const sabbath = comingSabbathOf(date);
+    // On a Sabbath, that's today: one lookup, since one that finds no PDF
+    // yet can take a while.
+    const dates = dateKey(sabbath) === dateKey(date) ? [date] : [date, sabbath];
     for (const lesson of await readRecentLessons()) {
       for (const each of dates) {
         try {

@@ -4,7 +4,7 @@ Issue: [#336](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-chur
 
 The Sabbath School page lists every children's age group, every week, in every app language. The age groups are Beginner, Kindergarten, Primary, Junior, Teen, and Youth, each with a student guide and a teacher guide on the Students and Teachers tabs. A separate Babies entry opens Alive in Jesus's resources for parents and teachers.
 
-Tapping an age group opens this week's lesson. The app stores no lesson links: it looks the lesson up when it's needed, in `features/sabbath-school/ChildrenLessons.ts`, and a phone keeps the answer only until the week changes ([below](#opening-a-lesson-on-a-phone)). So a new week or a new quarter needs no update.
+Tapping an age group opens this week's lesson. The app stores no lesson links: it looks the lesson up when it's needed, in `features/sabbath-school/ChildrenLessons.ts`, and a phone keeps the answer only for that lesson's days ([below](#opening-a-lesson-on-a-phone)). So a new week or a new quarter needs no update.
 
 ## What a tap opens
 
@@ -64,13 +64,13 @@ So on a phone (`features/sabbath-school/LessonDownloads.ts`, `hooks/useChildrenL
 1. **A popup shows at once** (`components/ChildrenLessonDialog.tsx`): "Finding this week's lesson…", then "Downloading · 4.2 of 9.3 MB" with a progress bar. Its X, or a tap outside, stops the download.
 2. **The app downloads the PDF itself**, into `children-lessons/` in the cache directory (see [What the app keeps on the phone](on_device_storage.md)), named for its age group and guide (`junior-<hash>.pdf`), which the phone's viewer shows as its title. It writes a `.part` file first and renames it when the download finishes, so a failed download never looks like a lesson.
 3. **The copy opens in the phone's own viewer**, through `expo-file-system`'s `File.preview()`: Quick Look on iPhone, and on Android the app that opens PDFs, usually Google Drive's viewer. If the phone has none, or the download fails, the PDF opens in the in-app browser, as before. The website fallback is unchanged.
-4. **Opening it again that week is instant.** The lookup is kept too, so a second tap downloads neither the lesson nor the catalog (the English quarterly one is 1 MB). A lookup holds until the next Sabbath or Sunday, when quarterly or Alive in Jesus weeks change (`lessonPeriodOf`). A website result isn't kept, so the next tap looks again for a late lesson.
-5. **On Wi-Fi, the coming Sabbath's lesson is fetched ahead** for the two lessons (age group and guide) opened most recently (`useChildrenLessonsAhead`, a few seconds after the app opens or comes back). Quarterly lessons change on Sabbath, so on a weekday that's the next lesson, not this week's. It looks up this period's lesson too, usually the copy already on the phone, so a lesson opened on Sabbath also opens offline on Monday, when the lookups change. It never runs on a phone connection, and there's no background task: it happens only while the app is open. Opening a lesson puts the app in the background, so the fetch usually runs right after the first lesson of the week, when the person comes back. The two lessons are kept with the settings, not in the cache, so a nearly full phone clearing its cache doesn't stop the fetch.
-6. **Old copies are deleted.** Lookups are kept for a week after their period begins, and each copy only while a lookup names it. The app checks after each lesson it opens, and a few seconds after the app opens or comes back.
+4. **Opening it again that week is instant, and works offline.** The lookup is kept with the days the lesson is for, from the catalog: Sabbath to Friday for a quarterly lesson, and Sunday to Sabbath for an Alive in Jesus week (`findChildrenLesson`, `lessonDaysOf`). So a tap on any of those days downloads neither the lesson nor the catalog (the English quarterly one is 1 MB). A lesson picked by its number, when the catalog's dates don't cover the day, is kept only for the days both kinds of week share: the Sabbath alone, or Sunday to Friday. A website result isn't kept, so the next tap looks again for a late lesson. Offline with no copy, the popup says there's no connection instead of opening a page that can't load.
+5. **On Wi-Fi, this week's and the coming Sabbath's lessons are kept on the phone** for the two lessons (age group and guide) opened most recently (`useChildrenLessonsAhead`, a few seconds after the app opens or comes back). Quarterly lessons change on Sabbath, so on a weekday that's the next lesson, not this week's. It makes sure of this week's lesson too, which is usually the copy already there. So a phone keeps this week's and the coming Sabbath's lessons. It never runs on a phone connection, and there's no background task: it happens only while the app is open. Opening a lesson puts the app in the background, so the fetch usually runs right after the first lesson of the week, when the person comes back. The two lessons are kept with the settings, not in the cache, so a nearly full phone clearing its cache doesn't stop the fetch.
+6. **A copy is deleted the first time the app checks after its lesson's last day:** from the next Sabbath for a quarterly lesson, and from the Sunday after its Sabbath for an Alive in Jesus lesson (a lesson picked by its number, from the day after the Friday or Sabbath it was kept for). The app checks after each lesson it opens, and a few seconds after the app opens or comes back.
 
 The web is unchanged: the browser opens the PDF in a new tab and keeps its own cache.
 
-Keeping a copy on the person's own phone is assessed in [LEGAL.md](../LEGAL.md#sabbath-school-lessons). It's the official file, unmodified, kept only in the cache and only for about a week. The app adds no way to share or export it; the phone's viewer has its own share options, as a browser does.
+Keeping a copy on the person's own phone is assessed in [LEGAL.md](../LEGAL.md#sabbath-school-lessons). It's the official file, unmodified, kept only in the cache and only until its lesson's week is over. The app adds no way to share or export it; the phone's viewer has its own share options, as a browser does.
 
 ## Safety
 
@@ -105,8 +105,8 @@ The app keeps working by opening the websites, and the monitor fails. To fix it:
 - next year's first quarter starting in late December.
 
 `test/children-lesson-downloads.test.ts` covers opening a lesson on a phone:
-- one download and one lookup a period, and a new lookup when a Sabbath or a Sunday begins;
-- the website and failed-download fallbacks, with a failed download never taken for the lesson;
+- one download and one lookup for a lesson's days, opening offline on any of them, and a new lookup on a day the saved lesson doesn't cover;
+- the website and failed-download fallbacks, with a failed download never taken for the lesson, and "No connection" offline with no copy;
 - the X stopping the download, a tap right after it starting again, and two requests sharing one download;
-- fetching the coming Sabbath's lesson ahead, which then opens with no lookup or download;
+- keeping this week's and the coming Sabbath's lessons on Wi-Fi, which then open with no lookup or download, and the recent lessons surviving a cleared cache;
 - deleting old copies, and the popup's text in each language.

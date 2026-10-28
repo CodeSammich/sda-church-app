@@ -71,7 +71,7 @@ Per-use costs, *measured*:
 | Bible text in the app | ~26 MB, about 6.8 MB compressed: the four translations and the Hebrew and Greek | No request: it ships with the app |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
-| Adventech quarterly index | ~1 MB, about 235 KB compressed (English) | CDN-cached; on a phone, at most twice a week per lesson (Sunday to Friday, and the Sabbath), when it's tapped or fetched ahead on Wi-Fi |
+| Adventech quarterly index | ~1 MB, about 235 KB compressed (English) | CDN-cached; on a phone, about once a week per quarterly lesson, when it's tapped or fetched ahead on Wi-Fi: twice when the catalog's dates are off, and at each tap or Wi-Fi app open while a new quarter's lessons are late |
 
 The conclusion: **text APIs are negligible at every scenario, and audio is the only
 real load.** Adventist Connect carries it, and the fallback chain decides who carries
@@ -204,9 +204,9 @@ from S3 and CloudFront with a warm cache (*measured*). Free, no key, no publishe
 limits.
 
 On a phone, the app then downloads the PDF itself (5–14 MB for the English student
-lessons, 33 MB for one Chinese lesson) and keeps it, and the lookup, for the week. On
-Wi-Fi it also fetches the coming Sabbath's lesson ahead for the two lessons opened most
-recently. So each phone downloads each lesson at most once (#529; see
+lessons, 33 MB for one Chinese lesson) and keeps it, and the lookup, for the lesson's
+week. On Wi-Fi it also keeps this week's and the coming Sabbath's lessons for the two
+lessons opened most recently. So each phone downloads each lesson at most once (#529; see
 [Children's Sabbath School Lessons](../feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone)).
 
 ### Chinese Union Mission library

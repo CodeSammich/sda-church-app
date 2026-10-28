@@ -907,7 +907,7 @@ function RootLayoutNav({
     : '/';
   const androidBackTarget = backTarget;
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
-  // On Wi-Fi, the coming Sabbath's children's lessons (#529).
+  // On Wi-Fi, this week's and the coming Sabbath's children's lessons (#529).
   useChildrenLessonsAhead();
 
   // Opens the screen the key-screen capture saved before launching the app

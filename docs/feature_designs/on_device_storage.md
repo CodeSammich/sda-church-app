@@ -82,7 +82,7 @@ So a member who sets up a new phone from a backup keeps their settings and saved
 
 The app only shows this Sabbath's bulletin and the next, so saving one deletes the copies dated more than two weeks before it. Today's verse has one copy per language, replaced each day.
 
-A lookup is kept for a week after its period (a Sabbath, or Sunday to Friday) begins, and a PDF only while a lookup names it. So a copy is deleted the first time the app checks more than a week after the last period it was opened in or fetched for. On Wi-Fi, the app also fetches the coming Sabbath's lesson for the two lessons opened most recently. Those two are the member's own choice, not a copy, so they're in AsyncStorage (`children-lessons-recent-v1`, above): a nearly full phone clears every app's cache, and the fetch ahead then downloads the lessons again. See [Children's Sabbath School Lessons](sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
+Each lesson in the index has the days it's the lesson for: from the catalog, a quarterly lesson runs Sabbath to Friday and an Alive in Jesus week Sunday to Sabbath; a lesson picked by its number gets only the Sabbath, or Sunday to Friday. A copy is kept until its lesson's last day, and deleted the first time the app checks after that. On Wi-Fi, the app keeps this week's and the coming Sabbath's lessons for the two lessons opened most recently. Those two are the member's own choice, not a copy, so they're in AsyncStorage (`children-lessons-recent-v1`, above): a nearly full phone clears every app's cache, and the fetch ahead then downloads the lessons again. See [Children's Sabbath School Lessons](sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
 
 The other copies:
 
@@ -126,6 +126,6 @@ The other copies:
 - `test/cuv-1919-witnesses.test.ts`: every verse's wording and punctuation against two other copies of the 1919 text, and that the Simplified text is the Traditional converted.
 - `test/cache-store.test.ts` and `test/cache-store.web.test.ts`: that a phone keeps the copies in the cache directory and deletes the ones AsyncStorage kept before #524, and that the web keeps them in AsyncStorage without touching the file system.
 - `test/bulletin-service.test.ts`: that the bulletin copies are in the cache directory on a phone, and only the last two weeks' are kept.
-- `test/children-lesson-downloads.test.ts`: that a lesson PDF is downloaded once into the cache directory, that a failed download is never taken for the lesson, and that a copy is deleted a week after its period begins.
+- `test/children-lesson-downloads.test.ts`: that a lesson PDF is downloaded once into the cache directory, that a failed download is never taken for the lesson, and that a copy opens offline on its lesson's days and is deleted after its last day.
 - `test/device-backup.test.ts`: the backup settings in `app.json`, on iOS and Android.
 - `test/setup.ts` replaces `services/BundledBible.ts` for the other tests with a reader of the files on disk.

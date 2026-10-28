@@ -1,5 +1,6 @@
 import {
   CHILDREN_AGE_GROUPS,
+  findChildrenLesson,
   findChildrenLessonUrl,
   getChildrenQuarter,
   type ChildrenSabbathSchoolCurriculum,
@@ -166,6 +167,26 @@ describe('children’s Sabbath School lessons', () => {
     await expect(
       findChildrenLessonUrl('junior', 'en', day('2026-09-19'), fakeFetch(everything)),
     ).resolves.toBe(`${PDF}/en/2026-03-pp/13-student.pdf`);
+  });
+
+  it('gives the days a lesson is for, from the catalog, but none for one picked by its number (#529)', async () => {
+    const fetch = fakeFetch(everything);
+    // An Alive in Jesus week runs Sunday to Sabbath.
+    await expect(findChildrenLesson('beginner-student', 'en', wednesday, fetch)).resolves.toMatchObject({
+      startsOn: day('2026-09-27'),
+      endsOn: day('2026-10-03'),
+    });
+    // A quarterly lesson, Sabbath to Friday.
+    await expect(findChildrenLesson('junior', 'en', day('2026-09-19'), fetch)).resolves.toMatchObject({
+      url: `${PDF}/en/2026-03-pp/13-student.pdf`,
+      startsOn: day('2026-09-19'),
+      endsOn: day('2026-09-25'),
+    });
+    // The misdated quarter's lesson, picked by its number, and the website have no days.
+    expect(await findChildrenLesson('junior', 'en', wednesday, fetch)).toEqual({ url: `${PDF}/en/2026-04-pp/01-student.pdf` });
+    expect(await findChildrenLesson('junior', 'en', wednesday, fakeFetch({}))).toEqual({
+      url: CHILDREN_AGE_GROUPS.junior.website,
+    });
   });
 
   it('opens this week’s Alive in Jesus PDF from the newer catalog', async () => {

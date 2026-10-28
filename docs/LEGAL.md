@@ -471,7 +471,7 @@ Jesus website when it finds none
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
-| **Adventech** (`sabbath-school.adventech.io`; PDFs from `sabbath-school-pdf.adventech.io` and `sabbath-school-resources-media.adventech.io`) | A link to the adult lesson reader. For children, the public catalog, to find this week's lesson, and the official lesson PDF. On a phone, the person's own phone downloads the PDF, keeps it in the app's cache for that week, and opens it in the phone's own PDF viewer, so opening it again is instant ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529)). On Wi-Fi, the phone may also fetch the coming Sabbath's lesson ahead, for the two lessons (age group and guide) the person opened most recently. | The lessons are © General Conference of Seventh-day Adventists®, all rights reserved. [Adventech's lesson repository](https://github.com/Adventech/sabbath-school-lessons#copyright) says that no part of the adult guide may be "edited, altered, modified, adapted, translated, re-produced, or published" without the General Conference's prior written authorization. We found no separate public statement for the children's lessons, so they're treated the same way. The app doesn't alter, translate, or republish any lesson. The phone downloads the official, unmodified file from Adventech's own hosts, as a browser would, and keeps it only in its cache. This is an engineering assessment, not an express license. |
+| **Adventech** (`sabbath-school.adventech.io`; PDFs from `sabbath-school-pdf.adventech.io` and `sabbath-school-resources-media.adventech.io`) | A link to the adult lesson reader. For children, the public catalog, to find this week's lesson, and the official lesson PDF. On a phone, the person's own phone downloads the PDF, keeps it in the app's cache for that week, and opens it in the phone's own PDF viewer, so opening it again is instant ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529)). On Wi-Fi, the phone may also fetch this week's and the coming Sabbath's lessons ahead, for the two lessons (age group and guide) the person opened most recently. | The lessons are © General Conference of Seventh-day Adventists®, all rights reserved. [Adventech's lesson repository](https://github.com/Adventech/sabbath-school-lessons#copyright) says that no part of the adult guide may be "edited, altered, modified, adapted, translated, re-produced, or published" without the General Conference's prior written authorization. We found no separate public statement for the children's lessons, so they're treated the same way. The app doesn't alter, translate, or republish any lesson. The phone downloads the official, unmodified file from Adventech's own hosts, as a browser would, and keeps it only in its cache. This is an engineering assessment, not an express license. |
 
 Rules for this feature:
 
@@ -480,7 +480,7 @@ Rules for this feature:
 - Keep the file exactly as downloaded: no compression, re-encoding, cropping, or text
   extraction.
 - Store it only in the cache directory, which isn't backed up and which the system may
-  clear, and delete it about a week after its week begins
+  clear, and delete it once its lesson's week is over
   (`features/sabbath-school/LessonDownloads.ts`).
 - Don't add a way to share or export the file from the app, and never host a copy on
   church storage. Opening it in the phone's own PDF viewer is fine; that viewer's own

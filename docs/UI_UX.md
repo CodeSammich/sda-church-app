@@ -125,20 +125,23 @@ them itself instead:
 - a popup appears as soon as the person taps, and shows the download's progress
   ("Downloading · 5.1 of 14.2 MB"), with an X that stops it;
 - the file is kept in the cache directory while it's current, so it opens at once the
-  next time. A lesson opens offline too, once the app has looked up that week's lesson,
-  which it does ahead of time on Wi-Fi;
+  next time. A lesson opens offline too, once its copy is on the phone; on Wi-Fi the
+  app downloads this week's and the coming Sabbath's ahead of time, for the two lessons
+  opened most recently;
 - it opens in the phone's own viewer, through `expo-file-system`'s `File.preview()`:
   Quick Look on iPhone, and the app that opens PDFs on Android. That opens the
   downloaded copy, not a link, so it's outside `constants/ExternalLinks.ts`.
 
 If the phone has no viewer, or the download fails, the file's address opens in the
-in-app browser as before. The web keeps opening files in a new tab. Anything new that
+in-app browser as before; if it fails because the phone is offline, the popup says
+there's no connection instead. The web keeps opening files in a new tab. Anything new that
 opens a big file should work the same way. The children's Sabbath School lessons came
 first ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529));
 see [Opening a lesson on a phone](feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
 Their code (`features/sabbath-school/LessonDownloads.ts`,
-`hooks/useChildrenLessonOpener.ts`, `components/ChildrenLessonDialog.tsx`) is written for lessons, so the second use should
-move its download, progress, and viewer parts somewhere shared rather than copy them.
+`hooks/useChildrenLessonOpener.ts`, `components/ChildrenLessonDialog.tsx`) is written
+for lessons, so the second use should move its download, progress, and viewer parts
+somewhere shared rather than copy them.
 
 ### Key Principles & Exceptions:
 
