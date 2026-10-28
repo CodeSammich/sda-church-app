@@ -15,6 +15,7 @@ const megabytes = (bytes: number, language: SupportedLanguage) => {
 const copy = {
   en: {
     finding: 'Finding this week’s lesson…',
+    starting: 'Downloading…',
     downloading: (done: string, total?: string) =>
       total ? `Downloading · ${done} of ${total} MB` : `Downloading · ${done} MB`,
     note: 'It stays on this phone for the week, so next time it opens at once.',
@@ -22,6 +23,7 @@ const copy = {
   },
   zh: {
     finding: '正在尋找本週課程…',
+    starting: '下載中…',
     downloading: (done: string, total?: string) =>
       total ? `下載中 · ${done} / ${total} MB` : `下載中 · ${done} MB`,
     note: '課程會在這部手機保留一週，下次可立即開啟。',
@@ -29,6 +31,7 @@ const copy = {
   },
   'zh-cn': {
     finding: '正在查找本周课程…',
+    starting: '下载中…',
     downloading: (done: string, total?: string) =>
       total ? `下载中 · ${done} / ${total} MB` : `下载中 · ${done} MB`,
     note: '课程会在这部手机保留一周，下次可立即打开。',
@@ -36,6 +39,7 @@ const copy = {
   },
   es: {
     finding: 'Buscando la lección de esta semana…',
+    starting: 'Descargando…',
     downloading: (done: string, total?: string) =>
       total ? `Descargando · ${done} de ${total} MB` : `Descargando · ${done} MB`,
     note: 'Se queda en este teléfono durante la semana, así que la próxima vez se abre al instante.',
@@ -51,6 +55,8 @@ export const getChildrenLessonStatus = (
   const labels = copy[language] || copy.en;
   if (!progress) return { text: labels.finding, fraction: null };
   const known = progress.totalBytes > 0;
+  // Until the first progress event, which can take a second or two.
+  if (!known && progress.bytesWritten <= 0) return { text: labels.starting, fraction: null };
   return {
     text: labels.downloading(
       megabytes(progress.bytesWritten, language),

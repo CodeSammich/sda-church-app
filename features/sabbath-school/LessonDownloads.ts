@@ -5,6 +5,7 @@ import {
   type ChildrenSabbathSchoolCurriculum,
 } from '@/features/sabbath-school/ChildrenLessons';
 import { getCacheFolder, readCachedText, writeCachedText } from '@/services/CacheStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File } from 'expo-file-system';
 
 /**
@@ -29,6 +30,10 @@ import { File } from 'expo-file-system';
 
 const FOLDER = 'children-lessons';
 const INDEX = { folder: FOLDER, name: 'index.json', key: 'childrenLessonsIndex' } as const;
+// The lessons opened most recently are the person's own choice, not a copy the
+// app can download again, so they're kept with the settings, which a full
+// phone's cache clearing doesn't touch.
+const RECENT_KEY = 'children-lessons-recent-v1';
 const PDF_TYPE = 'application/pdf';
 // Lookups, and the copies they name, are kept this long after their period begins.
 const KEEP_DAYS = 7;
@@ -46,8 +51,6 @@ export type LessonDownloadProgress = Readonly<{ bytesWritten: number; totalBytes
 type LessonIndex = {
   /** Each lesson PDF found, by period, age group, and app language. */
   lookups: Record<string, string>;
-  /** The lessons opened most recently, newest first, to fetch ahead on Wi-Fi. */
-  recent: ChildrenLesson[];
 };
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -77,8 +80,9 @@ export const comingSabbathOf = (date: Date) => {
 const lookupKey = (period: string, { curriculum, language }: ChildrenLesson) =>
   `${period}|${curriculum}|${language}`;
 
-// FNV-1a, so two addresses that differ only in characters the name drops get
-// different files.
+const curriculumOf = (key: string) => key.split('|')[1] as ChildrenSabbathSchoolCurriculum;
+
+// FNV-1a, so each address gets its own file.
 const hashOf = (text: string) => {
   let hash = 0x811c9dc5;
   for (let index = 0; index < text.length; index++) {
@@ -87,27 +91,22 @@ const hashOf = (text: string) => {
   return (hash >>> 0).toString(16).padStart(8, '0');
 };
 
-/** A copy's file name: the end of the PDF's path, and a hash of its address. */
-export const lessonFileName = (url: string) => {
-  const readable = new URL(url).pathname
-    .replace(/\.pdf$/i, '')
-    .replace(/[^A-Za-z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(-80);
-  return `${readable}-${hashOf(url)}.pdf`;
-};
+/**
+ * A copy's file name: the age group and guide, which the phone's viewer shows
+ * as its title, and a hash of the PDF's address, whose own name is a hash.
+ */
+export const lessonFileName = (curriculum: ChildrenSabbathSchoolCurriculum, url: string) =>
+  `${curriculum}-${hashOf(url)}.pdf`;
 
-const lessonFile = (url: string) => new File(getCacheFolder(FOLDER), lessonFileName(url));
+const lessonFile = (curriculum: ChildrenSabbathSchoolCurriculum, url: string) =>
+  new File(getCacheFolder(FOLDER), lessonFileName(curriculum, url));
 
 const readIndex = async (): Promise<LessonIndex> => {
   try {
     const saved = JSON.parse((await readCachedText(INDEX)) ?? '{}');
-    return {
-      lookups: saved.lookups && typeof saved.lookups === 'object' ? saved.lookups : {},
-      recent: Array.isArray(saved.recent) ? saved.recent : [],
-    };
+    return { lookups: saved.lookups && typeof saved.lookups === 'object' ? saved.lookups : {} };
   } catch {
-    return { lookups: {}, recent: [] };
+    return { lookups: {} };
   }
 };
 
@@ -127,13 +126,25 @@ const changeIndex = (change: (index: LessonIndex) => void) =>
     }
   }));
 
-const rememberLesson = (lesson: ChildrenLesson) =>
-  changeIndex((index) => {
-    const others = index.recent.filter(
+const readRecentLessons = async (): Promise<ChildrenLesson[]> => {
+  try {
+    const saved = JSON.parse((await AsyncStorage.getItem(RECENT_KEY)) ?? '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+};
+
+const rememberLesson = async (lesson: ChildrenLesson) => {
+  try {
+    const others = (await readRecentLessons()).filter(
       (each) => each.curriculum !== lesson.curriculum || each.language !== lesson.language,
     );
-    index.recent = [lesson, ...others].slice(0, RECENT_LESSONS);
-  });
+    await AsyncStorage.setItem(RECENT_KEY, JSON.stringify([lesson, ...others].slice(0, RECENT_LESSONS)));
+  } catch {
+    // Only the Wi-Fi fetch ahead uses it.
+  }
+};
 
 /**
  * The lesson PDF for a date, from this period's earlier lookup where there was
@@ -189,7 +200,7 @@ const startDownload = (
       },
     });
     partial.rename(file.name);
-    return lessonFile(url);
+    return new File(folder, file.name);
   })().finally(() => {
     if (downloads.get(url)?.controller === controller) downloads.delete(url);
   });
@@ -201,11 +212,12 @@ const startDownload = (
  * `signal` stops the download, even one a Wi-Fi fetch began.
  */
 const downloadLesson = (
+  { curriculum }: ChildrenLesson,
   url: string,
   onProgress?: (progress: LessonDownloadProgress) => void,
   signal?: AbortSignal,
 ): Promise<File> => {
-  const file = lessonFile(url);
+  const file = lessonFile(curriculum, url);
   if (file.exists) return Promise.resolve(file);
   onProgress?.({ bytesWritten: 0, totalBytes: -1 });
   let download = downloads.get(url);
@@ -238,7 +250,7 @@ export const pruneChildrenLessons = async (today = new Date()) => {
     index.lookups = Object.fromEntries(
       Object.entries(index.lookups).filter(([key]) => key.split('|')[0] >= dateKey(oldest)),
     );
-    Object.values(index.lookups).forEach((url) => kept.add(lessonFileName(url)));
+    Object.entries(index.lookups).forEach(([key, url]) => kept.add(lessonFileName(curriculumOf(key), url)));
   });
   const folder = getCacheFolder(FOLDER);
   // Unless the lookups were saved, `kept` may be missing some.
@@ -275,7 +287,7 @@ export const getChildrenLesson = async (
   const found = await findLesson(lesson, date);
   if ('website' in found) return { url: found.website };
   try {
-    const file = await downloadLesson(found.pdf, onProgress, signal);
+    const file = await downloadLesson(lesson, found.pdf, onProgress, signal);
     void pruneChildrenLessons(date);
     return { file, url: found.pdf };
   } catch (error) {
@@ -306,10 +318,10 @@ export const fetchChildrenLessonsAhead = async (date = new Date()) => {
   fetchingAhead = true;
   try {
     const sabbath = comingSabbathOf(date);
-    for (const lesson of (await readIndex()).recent) {
+    for (const lesson of await readRecentLessons()) {
       try {
         const found = await findLesson(lesson, sabbath);
-        if ('pdf' in found) await downloadLesson(found.pdf);
+        if ('pdf' in found) await downloadLesson(lesson, found.pdf);
       } catch {
         // Offline, or the download failed: the next time the app opens tries again.
       }

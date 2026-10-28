@@ -52,6 +52,7 @@ The app saves its settings and the member's saved verses with [AsyncStorage](htt
 | `user-bible-translation`, `user-bible-supporting-translation`, `user-bible-dual-language`, `user-bible-show-pinyin`, `user-bible-book`, `user-bible-chapter`, `user-bible-audio-readers`, `user-bible-audio-sources` | The Bible reader's choices and the place last read | `app/(tabs)/bible/index.tsx`; `app/_layout.tsx` also resets the translation to the new language's when the app language changes |
 | `saved-bible-verses-v1` | Saved verses | `services/SavedVersesService.ts` |
 | `preferred-bulletin-location` | Which congregation's bulletin to show | `app/(tabs)/home/bulletin.tsx` |
+| `children-lessons-recent-v1` | The two children's lessons (age group, guide, and app language) opened most recently, to fetch ahead on Wi-Fi (phones only) | `features/sabbath-school/LessonDownloads.ts` |
 | `pwa-update-last-check-v1` | When the web app last checked for an update (web only, in `localStorage` directly) | `app/_layout.tsx` |
 | `screenshot-route` | The screen to open, in key-screen builds only | The key-screen capture scripts; `services/ScreenshotRoute.ts` reads it, then deletes it |
 
@@ -77,11 +78,11 @@ So a member who sets up a new phone from a backup keeps their settings and saved
 | --- | --- | --- | --- |
 | Each Sabbath's bulletin, already privacy-filtered by the Bulletin API, and when the page may next refresh it | `bulletins/<date>.json` and `bulletins/<date>.refresh` | `bulletin-cache-v2:<date>` and `bulletin-refresh-v1:<date>` | `services/BulletinService.ts` |
 | Today's verse, so Home shows it straight away, even offline | `verse-of-the-day/<language>.json` | `votd_cache_<language>` | `app/(tabs)/index.tsx` |
-| Children's lesson PDFs, so a lesson opened once opens at once for the rest of its week, and which lesson each age group has this week (#529) | `children-lessons/<name>.pdf` and `children-lessons/index.json` | None: the browser opens the PDF | `features/sabbath-school/LessonDownloads.ts` |
+| Children's lesson PDFs, so a lesson opened once opens at once for the rest of its week, and which lesson each age group has this week (#529) | `children-lessons/<age group>-<hash>.pdf` and `children-lessons/index.json` | None: the browser opens the PDF | `features/sabbath-school/LessonDownloads.ts` |
 
 The app only shows this Sabbath's bulletin and the next, so saving one deletes the copies dated more than two weeks before it. Today's verse has one copy per language, replaced each day.
 
-A lookup is kept for a week after its period (a Sabbath, or Sunday to Friday) begins, and a PDF only while a lookup names it. So a copy is deleted the first time the app checks more than a week after the last period it was opened in or fetched for. On Wi-Fi, the app also fetches the coming Sabbath's lesson for the two lessons opened most recently. The index remembers those two, by age group, guide, and app language. See [Children's Sabbath School Lessons](sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
+A lookup is kept for a week after its period (a Sabbath, or Sunday to Friday) begins, and a PDF only while a lookup names it. So a copy is deleted the first time the app checks more than a week after the last period it was opened in or fetched for. On Wi-Fi, the app also fetches the coming Sabbath's lesson for the two lessons opened most recently. Those two are the member's own choice, not a copy, so they're in AsyncStorage (`children-lessons-recent-v1`, above): a nearly full phone clears every app's cache, and the fetch ahead then downloads the lessons again. See [Children's Sabbath School Lessons](sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
 
 The other copies:
 

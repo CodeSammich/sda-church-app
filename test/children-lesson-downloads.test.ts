@@ -9,6 +9,7 @@ import {
   previewChildrenLesson,
   pruneChildrenLessons,
 } from '@/features/sabbath-school/LessonDownloads';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
 import { createElement } from 'react';
@@ -46,9 +47,10 @@ const mockDownloads = (download?: Download) =>
       })) as typeof File.downloadFileAsync,
   );
 
-beforeEach(() => {
+beforeEach(async () => {
   find.mockReset();
   jest.restoreAllMocks();
+  await AsyncStorage.clear();
 });
 
 describe("children's lesson downloads", () => {
@@ -190,7 +192,7 @@ describe("children's lesson downloads", () => {
     expect(lessonFiles()).toHaveLength(2);
 
     await pruneChildrenLessons(WEDNESDAY);
-    expect(lessonFiles()).toEqual([`cache/children-lessons/${lessonFileName(OTHER_PDF)}`]);
+    expect(lessonFiles()).toEqual([`cache/children-lessons/${lessonFileName('junior', OTHER_PDF)}`]);
     expect(mockFiles.has('cache/children-lessons/index.json')).toBe(true);
   });
 
@@ -205,11 +207,22 @@ describe("children's lesson downloads", () => {
     expect(lessonPeriodOf(comingSabbathOf(SABBATH))).toBe('2026-10-31');
   });
 
-  it('give each PDF its own file name, even when only Chinese characters differ', () => {
-    const student = 'https://sabbath-school-resources-media.adventech.io/pdf/zh/學生.pdf';
-    const teacher = 'https://sabbath-school-resources-media.adventech.io/pdf/zh/教師.pdf';
-    expect(lessonFileName(student)).not.toBe(lessonFileName(teacher));
-    expect(lessonFileName(PDF)).toMatch(/^pdf-en-2026-04-pp-05-student-[0-9a-f]{8}\.pdf$/);
+  it('name each copy for its age group and guide, which the viewer shows, and its address', () => {
+    expect(lessonFileName('junior', PDF)).toMatch(/^junior-[0-9a-f]{8}\.pdf$/);
+    expect(lessonFileName('junior', PDF)).not.toBe(lessonFileName('junior', OTHER_PDF));
+    expect(lessonFileName('primary-teacher', PDF)).toMatch(/^primary-teacher-/);
+  });
+
+  it('remember the lessons opened most recently when a full phone clears the cache', async () => {
+    find.mockResolvedValue(PDF);
+    const download = mockDownloads();
+    await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
+    for (const path of [...mockFiles.keys()]) mockFiles.delete(path);
+    download.mockClear();
+
+    await fetchChildrenLessonsAhead(WEDNESDAY);
+    expect(find).toHaveBeenLastCalledWith('junior', 'en', comingSabbathOf(WEDNESDAY));
+    expect(download).toHaveBeenCalledTimes(1);
   });
 
   it("open in the phone's PDF viewer, or report that there's none", async () => {
@@ -229,7 +242,12 @@ describe("children's lesson downloads", () => {
 describe("the children's lesson popup", () => {
   it('say it is finding the lesson, then how much has downloaded, in each language', () => {
     expect(getChildrenLessonStatus(null, 'en')).toEqual({ text: 'Finding this week’s lesson…', fraction: null });
-    expect(getChildrenLessonStatus({ bytesWritten: 0, totalBytes: -1 }, 'zh')).toEqual({ text: '下載中 · 0.0 MB', fraction: null });
+    // Until the first progress event, and then without a size if the server gives none.
+    expect(getChildrenLessonStatus({ bytesWritten: 0, totalBytes: -1 }, 'zh')).toEqual({ text: '下載中…', fraction: null });
+    expect(getChildrenLessonStatus({ bytesWritten: 1_200_000, totalBytes: -1 }, 'en')).toEqual({
+      text: 'Downloading · 1.2 MB',
+      fraction: null,
+    });
     expect(getChildrenLessonStatus({ bytesWritten: 4_200_000, totalBytes: 9_300_000 }, 'es')).toMatchObject({
       text: 'Descargando · 4,2 de 9,3 MB',
     });
