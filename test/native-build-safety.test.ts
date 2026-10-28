@@ -363,6 +363,7 @@ describe('pull_request_target', () => {
       .filter((file: string) => withoutComments(readRepoFile(`.github/workflows/${file}`)).includes('pull_request_target'))
       .sort();
     expect(users).toEqual([
+      'android-preview-apk-drive.yml',
       'main-release-source-gate.yml',
       'pending-release-label.yml',
     ]);
@@ -377,6 +378,29 @@ describe('pull_request_target', () => {
     for (const file of ['main-release-source-gate.yml', 'pending-release-label.yml']) {
       expect(readRepoFile(`.github/workflows/${file}`)).not.toContain('actions/checkout');
     }
+  });
+
+  it("uploads the Android preview's APK to Drive without ever checking out pull request code", () => {
+    const workflow = readRepoFile('.github/workflows/android-preview-apk-drive.yml');
+    const find = workflow.slice(workflow.indexOf('\n  find:\n'), workflow.indexOf('\n  upload:\n'));
+    const upload = workflow.slice(workflow.indexOf('\n  upload:\n'));
+    // Only this repository's release-candidate, as the APK workflow builds.
+    expect(find).toContain("github.event.pull_request.head.ref == 'release-candidate'");
+    expect(find).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+    // It finds the APK through GitHub's API, as the APK comment does, and
+    // checks the download against the SHA-256 the upload recorded.
+    expect(find).toContain('APK_NAME="sda-church-app-pr-$PR-$id-arm-debug.apk"');
+    expect(find).toContain('.workflow_run.head_sha == env.SHA');
+    expect(upload).toContain('sha256sum -c -');
+    // Its one checkout is main's helper; it runs nothing else.
+    expect(workflow.match(/actions\/checkout@/g)).toHaveLength(1);
+    expect(upload).toContain('ref: ${{ github.sha }}');
+    expect(workflow).not.toMatch(/ref:\s*\$\{\{\s*github\.event\.pull_request\.head/);
+    expect(workflow).not.toMatch(/\bnpm |\bnpx /);
+    // Only the upload reads secrets, after approval in production.
+    expect(find).not.toMatch(/secrets\.|environment:/);
+    expect(upload).toContain('environment: production');
+    expect(workflow).not.toMatch(/:\s*write\b/);
   });
 
   it('builds only the release-candidate branch of this repository in the Android preview, never a fork', () => {
@@ -404,7 +428,7 @@ describe('pull_request_target', () => {
   it('passes pull request text to scripts only through environment variables', () => {
     // A title, body, or branch name pasted into a script as ${{ … }} becomes
     // part of the script, so a pull request could inject commands.
-    for (const file of ['android-preview-apk.yml', 'main-release-source-gate.yml', 'pending-release-label.yml']) {
+    for (const file of ['android-preview-apk.yml', 'android-preview-apk-drive.yml', 'main-release-source-gate.yml', 'pending-release-label.yml']) {
       const lines = readRepoFile(`.github/workflows/${file}`).split('\n');
       lines.forEach((line, index) => {
         const key = /^(\s*(?:-\s+)?)(?:run|script):(.*)$/.exec(line);

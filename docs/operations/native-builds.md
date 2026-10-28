@@ -238,8 +238,9 @@ GOOGLE_PLAY_SERVICE_ACCOUNT
 The two Google Play values aren't keys: the upload signs in without one. Setting up
 `store-upload` is under [Automatic store uploads](#automatic-store-uploads).
 `production` also holds the other workflows' secrets: `CLASPRC_JSON` (the Apps Script
-deploy and the QR code upload), and `APPS_SCRIPT_PROJECT_ID` and
-`APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy). A third environment,
+deploy, the QR code upload, and the optional test APK upload to Drive),
+`GOOGLE_DRIVE_FOLDER_ID` (the Drive folder for test APKs), and `APPS_SCRIPT_PROJECT_ID`
+and `APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy). A third environment,
 `screenshot-review`, holds no secrets; it only holds the
 [Screenshots reviewed](#key-screens) check for approval.
 
@@ -258,9 +259,8 @@ branch but `main`). The signing jobs themselves run only on `main`. Then:
   value wins, but a Repository-secret copy is readable by every workflow and weakens the
   boundary. To move one, add the value to `production`, check that the protected
   workflow uses it, then delete the repository copy. No workflow reads `EXPO_TOKEN`; if
-  one is still set anywhere, delete it. From 1.4.0, nothing reads a
-  `GOOGLE_DRIVE_FOLDER_ID` secret either (the QR workflow names its folder in the
-  file), so delete it if it's set.
+  one is still set anywhere, delete it. Keep `GOOGLE_DRIVE_FOLDER_ID`: the optional
+  test APK upload reads it (the QR workflow names its own folder in the file).
 - **Review before approving.** The build jobs have read-only repository permissions and
   pin their third-party Actions, but anyone who can change a trusted workflow and get it
   approved can use its secrets. Review workflow changes before approving a signing run.
@@ -554,6 +554,22 @@ read-only token. Only the comment job can write, to pull requests, and it never 
 out or runs code. Until 1.4.0 it used `pull_request_target` to upload the APK to Google
 Drive through `production`; a download link reaches more testers, and needs neither
 (#537).
+
+**On Google Drive, optionally.** A phone's Drive app installs an APK without a GitHub
+sign-in, so `.github/workflows/android-preview-apk-drive.yml` can put the release PR's
+APK in Drive too. It needs `production`, whose branch rule accepts only `main`'s context,
+so it uses `pull_request_target`, and it never checks out or runs the pull request's
+code:
+
+- **Find the preview APK** waits for this workflow's run of the PR's head commit and
+  finds its APK through GitHub's API, with the same checks as the comment: the name with
+  the PR and run numbers, not expired, stored for that commit, and with the SHA-256 the
+  upload recorded.
+- **Upload APK to Google Drive** waits for approval in `production`. Approved, it
+  downloads that APK, checks its SHA-256, and uploads it to the `GOOGLE_DRIVE_FOLDER_ID`
+  folder with `main`'s `scripts/upload-google-drive.mjs` and `CLASPRC_JSON`, under the
+  same file name. The run's summary links the file. Leave it waiting, or reject it, and
+  nothing is uploaded; it isn't a required check.
 
 ### iOS key screens (unsigned Simulator builds)
 
