@@ -38,9 +38,13 @@ describe('Bible audio playback', () => {
 
     activateBibleAudioLockScreen(player as any, metadata);
 
+    // The intervals must be given: expo-audio 58.0.10 on Android leaves a
+    // missing one at 0, so a lock-screen skip moved 0.1 seconds.
     expect(player.setActiveForLockScreen).toHaveBeenCalledWith(true, metadata, {
       showSeekBackward: true,
       showSeekForward: true,
+      seekBackwardIntervalSeconds: 10,
+      seekForwardIntervalSeconds: 30,
     });
   });
 

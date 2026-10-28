@@ -42,13 +42,14 @@ import {
 } from 'react';
 import {
   Animated,
+  BackHandler,
   FlatList,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Appbar, List, Searchbar, Text } from 'react-native-paper';
+import { Appbar, List, Portal, Searchbar, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const HERO_HEADER_ROUTES = new Set([
@@ -135,7 +136,7 @@ export const GlobalHeader = (props: any) => {
   const searchRef = useRef<any>(null);
   const headerRef = useRef<ComponentRef<typeof View>>(null);
   const insets = useSafeAreaInsets();
-  const { fontScale, width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { fontScale, width: windowWidth } = useWindowDimensions();
   const [measuredHeaderContentHeight, setMeasuredHeaderContentHeight] = useState(0);
   const headerTextScale = isBiblePage
     ? getBibleReaderUiTextScale(textScale)
@@ -353,6 +354,18 @@ export const GlobalHeader = (props: any) => {
     searchRef.current?.blur();
   };
 
+  // Android's Back closes the Bible's search, as it would leave a page.
+  const collapseBibleSearchRef = useRef(collapseBibleSearch);
+  collapseBibleSearchRef.current = collapseBibleSearch;
+  useEffect(() => {
+    if (!isBibleSearchExpanded) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      collapseBibleSearchRef.current();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [isBibleSearchExpanded]);
+
   const expandedBibleSearchWidth = Math.min(
     windowWidth - (isSubPage ? 82 : 24),
     520,
@@ -540,12 +553,87 @@ export const GlobalHeader = (props: any) => {
     </>
   );
 
+  const showResults =
+    (isBiblePage ? isBibleSearchExpanded || isSearching : isSearching) &&
+    searchQuery.length > 0 &&
+    results.length > 0;
+  const headerBottom = Math.max(headerHeight, insets.top + appBarHeight);
+  const resultsList = showResults ? (
+    <FlatList
+      data={results}
+      initialNumToRender={10}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={isBiblePage ? 'on-drag' : 'none'}
+      // iOS draws its keyboard over the app, so the last results scroll above it.
+      automaticallyAdjustKeyboardInsets={isBiblePage}
+      contentContainerStyle={isBiblePage ? { paddingTop: 8, paddingBottom: insets.bottom + 16 } : undefined}
+      keyExtractor={(item) => item.key}
+      maxToRenderPerBatch={10}
+      renderItem={({ item }) => {
+        if (isBiblePage && ((item as BibleSearchRow).kind === 'header' || (item as BibleSearchRow).kind === 'status')) {
+          const row = item as BibleSearchRow;
+          return (
+            <Text
+              maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
+              accessibilityRole={row.kind === 'header' ? 'header' : undefined}
+              style={[
+                row.kind === 'header' ? styles.bibleSearchHeader : styles.bibleSearchStatus,
+                {
+                  color: row.kind === 'header' ? theme.colors.primary : theme.colors.onSurfaceVariant,
+                  fontSize: scaleTypographyMetric(row.kind === 'header' ? 13 : 15, textScale),
+                  lineHeight: scaleTypographyMetric(row.kind === 'header' ? 18 : 21, textScale),
+                },
+              ]}
+            >
+              {row.title}
+            </Text>
+          );
+        }
+        const row = item as Extract<BibleSearchRow, { kind: 'reference' | 'verse' }> | CustomHeaderSearchItem;
+        const icon = !isBiblePage
+          ? (row as CustomHeaderSearchItem).icon || 'book-open-page-variant'
+          : (row as BibleSearchRow).kind === 'reference'
+            ? 'arrow-right-circle-outline'
+            : 'format-quote-open';
+        return (
+          <List.Item
+            title={row.title}
+            titleNumberOfLines={0}
+            titleStyle={{
+              fontSize: scaleTypographyMetric(16, textScale),
+              lineHeight: scaleTypographyMetric(22, textScale),
+              fontWeight: '700',
+            }}
+            description={'subtitle' in row ? row.subtitle : undefined}
+            descriptionNumberOfLines={0}
+            descriptionStyle={{
+              fontSize: scaleTypographyMetric(14, textScale),
+              lineHeight: scaleTypographyMetric(20, textScale),
+            }}
+            left={(p) => <List.Icon {...p} icon={icon} color={theme.colors.tertiary} />}
+            onPress={() =>
+              isBiblePage
+                ? handleSelectBibleRow(row as BibleSearchRow)
+                : handleSelectCustomResult(row as CustomHeaderSearchItem)
+            }
+          />
+        );
+      }}
+      style={
+        isBiblePage
+          ? styles.bibleResultsList
+          : [styles.resultsOverlay, { top: headerBottom + 8, backgroundColor: theme.colors.background }]
+      }
+      windowSize={7}
+    />
+  ) : null;
+
   return (
     <Animated.View
       style={[
         styles.headerWrapper,
         {
-          backgroundColor: 'transparent',
+          backgroundColor: isBiblePage && isBibleSearchExpanded ? theme.colors.background : 'transparent',
           paddingTop: insets.top,
           opacity: menuAnim,
           transform: [{ translateY: headerTranslateY }],
@@ -834,85 +922,28 @@ export const GlobalHeader = (props: any) => {
       </Appbar.Header>
       {/*
         The Bible's results stay up while its search is open, even with the
-        keyboard put away, so a long list can be read and scrolled.
+        keyboard put away, so a long list can be read and scrolled. They're a
+        page of their own, from the foot of the header down, over the chapter,
+        its audio controls, and the tab bar. Inside the header, whose box has
+        no height, Android sent swipes on them to the chapter behind, which
+        hid the header and the results with it, and the audio controls were
+        drawn over them.
       */}
-      {(isBiblePage ? isBibleSearchExpanded || isSearching : isSearching) &&
-        searchQuery.length > 0 &&
-        results.length > 0 && (
-        <FlatList
-          data={results}
-          initialNumToRender={10}
-          keyboardShouldPersistTaps="handled"
-          keyExtractor={(item) => item.key}
-          maxToRenderPerBatch={10}
-          renderItem={({ item }) => {
-            if (isBiblePage && ((item as BibleSearchRow).kind === 'header' || (item as BibleSearchRow).kind === 'status')) {
-              const row = item as BibleSearchRow;
-              return (
-                <Text
-                  maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
-                  accessibilityRole={row.kind === 'header' ? 'header' : undefined}
-                  style={[
-                    row.kind === 'header' ? styles.bibleSearchHeader : styles.bibleSearchStatus,
-                    {
-                      color: row.kind === 'header' ? theme.colors.primary : theme.colors.onSurfaceVariant,
-                      fontSize: scaleTypographyMetric(row.kind === 'header' ? 13 : 15, textScale),
-                      lineHeight: scaleTypographyMetric(row.kind === 'header' ? 18 : 21, textScale),
-                    },
-                  ]}
-                >
-                  {row.title}
-                </Text>
-              );
-            }
-            const row = item as Extract<BibleSearchRow, { kind: 'reference' | 'verse' }> | CustomHeaderSearchItem;
-            const icon = !isBiblePage
-              ? (row as CustomHeaderSearchItem).icon || 'book-open-page-variant'
-              : (row as BibleSearchRow).kind === 'reference'
-                ? 'arrow-right-circle-outline'
-                : 'format-quote-open';
-            return (
-              <List.Item
-                title={row.title}
-                titleNumberOfLines={0}
-                titleStyle={{
-                  fontSize: scaleTypographyMetric(16, textScale),
-                  lineHeight: scaleTypographyMetric(22, textScale),
-                  fontWeight: '700',
-                }}
-                description={'subtitle' in row ? row.subtitle : undefined}
-                descriptionNumberOfLines={0}
-                descriptionStyle={{
-                  fontSize: scaleTypographyMetric(14, textScale),
-                  lineHeight: scaleTypographyMetric(20, textScale),
-                }}
-                left={(p) => <List.Icon {...p} icon={icon} color={theme.colors.tertiary} />}
-                onPress={() =>
-                  isBiblePage
-                    ? handleSelectBibleRow(row as BibleSearchRow)
-                    : handleSelectCustomResult(row as CustomHeaderSearchItem)
-                }
-              />
-            );
-          }}
-          style={[
-            styles.resultsOverlay,
-            {
-              top:
-                Math.max(headerHeight, insets.top + appBarHeight) + 8,
-              backgroundColor: theme.colors.background,
-            },
-            // The whole Bible's results can be long, so they take the screen's height.
-            isBiblePage && {
-              maxHeight: Math.max(
-                420,
-                windowHeight - Math.max(headerHeight, insets.top + appBarHeight) - insets.bottom - 24,
-              ),
-            },
-          ]}
-          windowSize={7}
-        />
-            )}
+      {showResults &&
+        (isBiblePage ? (
+          <Portal>
+            <View
+              style={[
+                styles.bibleResultsPage,
+                { top: headerBottom, backgroundColor: theme.colors.background },
+              ]}
+            >
+              {resultsList}
+            </View>
+          </Portal>
+        ) : (
+          resultsList
+        ))}
     </Animated.View>
   );
 };
@@ -1083,6 +1114,15 @@ const styles = StyleSheet.create({
   bibleSearchStatus: {
     paddingHorizontal: 16,
     paddingVertical: 16,
+  },
+  bibleResultsPage: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  bibleResultsList: {
+    flex: 1,
   },
   resultsOverlay: {
     position: 'absolute',

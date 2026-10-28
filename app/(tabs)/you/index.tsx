@@ -35,7 +35,8 @@ const allLabels = {
     aboutSupport: 'About & Support',
     support: 'Help & Feedback',
     supportSub: 'Ask for help or suggest a feature, by email',
-    supportPrompt: 'Tell us what went wrong, or what you would like the app to do:',
+    supportPrompt:
+      'Is this a problem or an idea?\n\n\nWhat happened, or what would you like the app to do?\n\n\nIf something went wrong, what were you doing just before? A screenshot helps.',
     darkMode: 'Theme',
     darkModeSub: 'Choose a color theme',
     language: 'Language',
@@ -55,7 +56,8 @@ const allLabels = {
     aboutSupport: '關於與支援',
     support: '幫助與意見回饋',
     supportSub: '透過電子郵件尋求協助或建議新功能',
-    supportPrompt: '請告訴我們遇到了什麼問題，或您希望 App 增加什麼功能：',
+    supportPrompt:
+      '這是問題回報，還是功能建議？\n\n\n發生了什麼事？或您希望 App 增加什麼功能？\n\n\n如果是問題：發生前您正在做什麼？附上截圖會很有幫助。',
     darkMode: '主題',
     darkModeSub: '選擇顏色主題',
     language: '語言',
@@ -75,7 +77,8 @@ const allLabels = {
     aboutSupport: '关于与支持',
     support: '帮助与反馈',
     supportSub: '通过电子邮件寻求帮助或建议新功能',
-    supportPrompt: '请告诉我们遇到了什么问题，或您希望 App 增加什么功能：',
+    supportPrompt:
+      '这是问题反馈，还是功能建议？\n\n\n发生了什么？或您希望 App 增加什么功能？\n\n\n如果是问题：发生前您正在做什么？附上截图会很有帮助。',
     darkMode: '主题',
     darkModeSub: '选择颜色主题',
     language: '语言',
@@ -95,7 +98,8 @@ const allLabels = {
     aboutSupport: 'Información y Ayuda',
     support: 'Ayuda y Sugerencias',
     supportSub: 'Pida ayuda o sugiera una función, por correo',
-    supportPrompt: 'Cuéntenos qué falló o qué le gustaría que hiciera la app:',
+    supportPrompt:
+      '¿Es un problema o una idea?\n\n\n¿Qué pasó, o qué le gustaría que hiciera la app?\n\n\nSi algo falló, ¿qué estaba haciendo justo antes? Una captura de pantalla ayuda.',
     darkMode: 'Tema',
     darkModeSub: 'Elegir un tema de color',
     language: 'Idioma',
