@@ -21,7 +21,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { BOOK_IDS } from './build-cuv-1919.mjs';
+import { BOOK_IDS, stripTags } from './build-cuv-1919.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'test/fixtures/cuv-1919-witnesses');
@@ -94,9 +94,7 @@ export const wikisourceVerse = (wikitext) => {
     previous = text;
     text = text.replace(/\{\{[^{}]*\}\}/g, '');
   }
-  return text
-    .replace(/\[\[(?:[^|\]]*\|)?([^\]]*)\]\]/g, '$1')
-    .replace(/<[^>]+>/g, '')
+  return stripTags(text.replace(/\[\[(?:[^|\]]*\|)?([^\]]*)\]\]/g, '$1'))
     .replace(/'''|''/g, '')
     .replace(/[ \t\r\n ]+/g, '')
     .replace(/^　+|　+$/g, '');
@@ -120,7 +118,7 @@ export const usfxVerses = (xml) => {
     let chapter = 0;
     for (const [, c, v, text] of body.matchAll(/<c id="(\d+)"\/>|<v id="(\d+)"\/>([\s\S]*?)<ve\/>/g)) {
       if (c) chapter = Number(c);
-      else verses[`${BOOK_IDS[index]} ${chapter}:${Number(v)}`] = text.replace(/<[^>]+>/g, '').trim();
+      else verses[`${BOOK_IDS[index]} ${chapter}:${Number(v)}`] = stripTags(text).trim();
     }
   });
   return verses;

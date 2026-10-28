@@ -225,8 +225,8 @@ GitHub's code scanning default setup and have no workflow file.
 ### `Android preview APK` (`.github/workflows/android-preview-apk.yml`)
 
 - Check: `Build Android debug APK (ARM)`. Runs on the release PR into `main`.
-- Builds a debug-signed APK. After a `release-approvers` member approves `production`,
-  it uploads the APK to Google Drive. See
+- Builds a debug-signed APK and comments on the release PR with a link that downloads
+  it, for anyone signed in to GitHub. It reads no secrets. See
   [Android preview APKs](operations/admin-runbook.md#android-preview-apks).
 
 ### `iOS key screens` (`.github/workflows/ios-key-screens.yml`)

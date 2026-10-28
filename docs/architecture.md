@@ -43,7 +43,7 @@ keep on each phone, and what's backed up, is in
 How code reaches the stores, the bulletin backend, and the website, which secrets
 each step uses, and how the domain ties the accounts together.
 
-![Build and deploy diagram: GitHub Actions uses the Android, Apple, and Apps Script secrets from the production environment and the store upload settings from the store-upload environment to upload builds to Google Play internal testing and TestFlight, signing in to Google Play without a key through a Google Cloud project that has no billing account, deploy the bulletin Apps Script, upload QR codes and preview APKs to Google Drive, and build the GitHub Pages site; Cloudflare, which runs DNS for nyccsda.org, redirects app.nyccsda.org to GitHub Pages, points the domain's email at Google Workspace, and holds the TXT record that verifies the domain in Google Search Console, which Google Play uses to verify the organization's website](diagrams/operations.svg)
+![Build and deploy diagram: GitHub Actions uses the Android, Apple, and Apps Script secrets from the production environment and the store upload settings from the store-upload environment to upload builds to Google Play internal testing and TestFlight, signing in to Google Play without a key through a Google Cloud project that has no billing account, deploy the bulletin Apps Script, upload QR codes to Google Drive, and build the GitHub Pages site; Cloudflare, which runs DNS for nyccsda.org, redirects app.nyccsda.org to GitHub Pages, points the domain's email at Google Workspace, and holds the TXT record that verifies the domain in Google Search Console, which Google Play uses to verify the organization's website](diagrams/operations.svg)
 
 ### App dependencies
 
@@ -147,7 +147,7 @@ and may not be possible, so protect them above everything else.
   - extra checks on each release pull request into `main`: that it comes from
     `release-candidate`, a bulletin API integration test, an
     [Android preview APK](operations/admin-runbook.md#android-preview-apks)
-    uploaded to Google Drive,
+    with a download link on the pull request,
     [unsigned iOS Simulator builds](operations/admin-runbook.md#ios-key-screens-builds)
     with screenshots of the key screens, on the iPhone and an Android emulator, that an
     approver reviews (**Screenshots reviewed**), and a
@@ -188,7 +188,7 @@ and may not be possible, so protect them above everything else.
     Android upload keystore (keep an encrypted backup), the Apple distribution
     certificate and provisioning profile (both **expire every 12 months**), and
     `CLASPRC_JSON`, a saved `clasp` login that deploys the bulletin Apps Script and
-    uploads the QR codes and preview APKs to Drive.
+    uploads the QR codes to Drive.
   - **`store-upload`**, only for the jobs that upload approved builds to testers: the
     App Store Connect API key, and which Google Play service account in the
     [Google Cloud project](#google-cloud-free-only) to sign in as, without a key.

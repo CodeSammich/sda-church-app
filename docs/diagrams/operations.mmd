@@ -26,7 +26,7 @@ flowchart TB
   subgraph Google["Google Workspace for Nonprofits"]
     group@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-gmail.svg", label: "Google Group<br/>technology@nyccsda.org", pos: "b", w: 48, h: 36, constraint: "on" }
     script@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Bulletin Apps Script project", pos: "b", w: 44, h: 44, constraint: "on" }
-    drive@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-drive.svg", label: "Google Drive<br/>QR codes, preview APKs", pos: "b", w: 48, h: 42, constraint: "on" }
+    drive@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/google-drive.svg", label: "Google Drive<br/>QR codes", pos: "b", w: 48, h: 42, constraint: "on" }
   end
 
   subgraph Domain
@@ -45,7 +45,7 @@ flowchart TB
   actions -- "automatic upload: signed AAB<br/>to internal testing" --> play
   actions -- "automatic upload: signed IPA<br/>to TestFlight" --> appstore
   actions -- uploads bulletin code --> script
-  actions -- QR codes, preview APKs --> drive
+  actions -- QR codes --> drive
   actions -- web build --> pages
   abm -.-> appstore
   dns -. "redirects app.nyccsda.org" .-> pages

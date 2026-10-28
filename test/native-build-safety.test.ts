@@ -86,6 +86,27 @@ describe('Android preview APK', () => {
     expect(readRepoFile('.github/workflows/android-preview-apk.yml'))
       .toContain("github.event.pull_request.head.ref == 'release-candidate'");
   });
+
+  it('comments a link that downloads the APK itself, replacing only its own earlier links', () => {
+    const workflow = readRepoFile('.github/workflows/android-preview-apk.yml');
+    // Unzipped, so a phone's browser downloads the .apk (#537).
+    expect(workflow).toContain('archive: false');
+    // Concurrency groups span the repository, so main's pull_request_target copy,
+    // which still runs on the 1.4.0 release PR, mustn't share this group.
+    expect(workflow).toContain('group: android-preview-apk-${{ github.event_name }}-');
+    expect(workflow).toContain('<!-- android-test-apk sha=$SHA -->');
+    // The comment trusts nothing from the build job, which runs pull request
+    // code: it finds this run's APK, and its run's commit, through GitHub's API.
+    const comment = workflow.slice(workflow.indexOf('\n  comment:\n'));
+    expect(comment).not.toContain('needs.build.outputs');
+    expect(comment).toContain('gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts"');
+    expect(comment).toContain('.workflow_run.head_sha == env.SHA');
+    expect(comment).toContain('SHA: ${{ github.event.pull_request.head.sha }}');
+    expect(comment).toContain('The upload recorded its SHA-256');
+    expect(workflow).toContain(
+      'select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- android-test-apk")))',
+    );
+  });
 });
 
 // The slow checks run once per release, on the release PR into main, where
@@ -314,7 +335,7 @@ describe('iOS compile cache', () => {
 });
 
 describe('pull_request_target', () => {
-  it('is used only by the three workflows the Actions event policy allows', () => {
+  it('is used only by the two workflows the Actions event policy allows', () => {
     // The repository's Actions event policy allows every event, so this test is
     // the safeguard against a "pwn request": a new pull_request_target workflow
     // must be reviewed (it must never run pull request code while it can read
@@ -327,7 +348,6 @@ describe('pull_request_target', () => {
       .filter((file: string) => withoutComments(readRepoFile(`.github/workflows/${file}`)).includes('pull_request_target'))
       .sort();
     expect(users).toEqual([
-      'android-preview-apk.yml',
       'main-release-source-gate.yml',
       'pending-release-label.yml',
     ]);
@@ -350,21 +370,20 @@ describe('pull_request_target', () => {
     expect(workflow).toContain('test "$HEAD_REPOSITORY" = "$GITHUB_REPOSITORY"');
   });
 
-  it('keeps pull request code away from secrets in the Android preview', () => {
+  it('keeps the Android preview away from secrets, and its pull request code away from write access', () => {
     const workflow = readRepoFile('.github/workflows/android-preview-apk.yml');
-    const build = workflow.slice(workflow.indexOf('\n  build:\n'), workflow.indexOf('\n  upload:\n'));
-    const upload = workflow.slice(workflow.indexOf('\n  upload:\n'));
-    // The build job runs the pull request's code, so it gets no secrets, no
-    // environment, and no saved credentials.
+    const build = workflow.slice(workflow.indexOf('\n  build:\n'), workflow.indexOf('\n  comment:\n'));
+    const comment = workflow.slice(workflow.indexOf('\n  comment:\n'));
+    // It reads no secret and no environment, so it has none to leak (#537).
+    expect(workflow).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
+    // The build job runs the pull request's code with read-only access and no
+    // saved credentials.
     expect(build).toContain('ref: ${{ needs.resolve-pr.outputs.head_sha }}');
     expect(build).toContain('persist-credentials: false');
-    expect(build).not.toMatch(/\$\{\{\s*secrets\.|^\s+environment:/m);
-    // The upload job has the Drive secret, so it runs only main's upload
-    // script on the finished APK.
-    expect(upload).toContain('environment: production');
-    expect(upload.match(/actions\/checkout@/g)).toHaveLength(1);
-    expect(upload).toContain('ref: ${{ needs.resolve-pr.outputs.trusted_sha }}');
-    expect(upload).not.toMatch(/head_sha|\bnpm |\bnpx /);
+    expect(build).not.toMatch(/:\s*write\b/);
+    // Only the comment job can write, and it never checks out or runs code.
+    expect(comment).toContain('pull-requests: write');
+    expect(comment).not.toMatch(/actions\/checkout@|\bnpm |\bnpx /);
   });
 
   it('passes pull request text to scripts only through environment variables', () => {
@@ -385,10 +404,10 @@ describe('pull_request_target', () => {
     }
   });
 
-  it('grants write access only to label issues, and no secret but the workflow token to the gate or labels', () => {
+  it('grants write access only to label issues and post the test APK link, and no secret but the workflow token to the gate or labels', () => {
     const writes = (file: string) => (readRepoFile(`.github/workflows/${file}`).match(/^\s+[a-z-]+:\s*write\b/gm) ?? [])
       .map((line) => line.trim());
-    expect(writes('android-preview-apk.yml')).toEqual([]);
+    expect(writes('android-preview-apk.yml')).toEqual(['pull-requests: write']);
     expect(writes('main-release-source-gate.yml')).toEqual([]);
     expect(writes('pending-release-label.yml')).toEqual(['issues: write']);
     for (const file of ['main-release-source-gate.yml', 'pending-release-label.yml']) {

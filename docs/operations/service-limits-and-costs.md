@@ -270,10 +270,10 @@ that matter are tiny.
 ### Google Workspace and Drive
 
 Free under Google Workspace for Nonprofits, with 100 TB of storage pooled across the
-organization. It holds the roster, the bulletin files, the media backup copy, and the
-preview APKs the Android PR workflow uploads. Those APKs accumulate over time, so
-clear old ones out occasionally; this is housekeeping, not a cost risk. Exceeding an
-API quota returns an error.
+organization. It holds the roster, the bulletin files, and the media backup copy. The
+Android PR workflow uploaded its preview APKs there until 1.4.0, and those stay until
+someone clears them out; this is housekeeping, not a cost risk. Exceeding an API quota
+returns an error.
 
 The [Workspace data export](admin-runbook.md#google-workspace-backups) is free to
 download, too. Google keeps it in a Cloud Storage bucket that Google owns, and Cloud
