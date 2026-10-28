@@ -241,8 +241,8 @@ open chapter's matches first, then the whole Bible's by book with a count for ea
 reference typed in a short form, such as "Jn 3:16", "Sal 23", or 約3：16, is offered first,
 to jump to (`hooks/useBibleSearch.ts`, `services/BibleSearch.ts`). The results are a
 page of their own under the search box, over the chapter, the audio controls, and the
-tab bar. They stay up with the keyboard put away, and the X or Android's Back closes
-them.
+tab bar. They stay up with the keyboard put away. The X closes them, and so does
+Android's Back, whose first press puts the keyboard away if it's up.
 Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
 includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as
 "Psalm 23 · English"): the English hymns and the same hymns in the 505, with the 505 first
