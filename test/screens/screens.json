@@ -303,10 +303,10 @@
     {
       "name": "sabbath-school-lesson-download",
       "group": "worship-and-you",
-      "$comment": "The popup a tap on a children's lesson opens while its PDF downloads (#529). Key screens can't tap, so a key-screens build opens it from popup=, with a fixed 5.1 of 14.2 MB.",
+      "$comment": "The popup a tap on a children's lesson opens while its PDF downloads (#529). Key screens can't tap, so a key-screens build opens it from popup=, with a fixed 5.1 of 14.2 MB. The iPhone's text recognition reads \"14.2MB\", without the space.",
       "path": "sabbath-school?popup=lesson-download",
       "variants": ["default"],
-      "mustShowLines": ["^Junior \\(ages 10.12\\)", "^Downloading\\W+5\\.1 of 14\\.2 MB$", "^It stays on this phone"]
+      "mustShowLines": ["^Junior \\(ages 10.12\\)", "^Downloading\\W+5\\.1 of 14\\.2 ?MB$", "^It stays on this phone"]
     },
     {
       "name": "sabbath-school-lesson-offline",
