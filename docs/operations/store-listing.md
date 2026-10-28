@@ -395,7 +395,9 @@ transparency both stores reject. Replace them there whenever the stores get new 
 
 - **Google Play:** 2 to 8 phone screenshots. The long side can be at most twice the short
   side, so capture at 1080 × 1920: on an emulator, run `adb shell wm size 1080x1920`, and
-  turn on Android's demo mode for a clean status bar. Play also needs a 1024 × 500 feature
+  turn on Android's demo mode for a clean status bar. The current set comes from the
+  **Android key screens** run's Google Play batch (`screens/google-play/en-US/`), which
+  does both. Play also needs a 1024 × 500 feature
   graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
   and the 512 × 512 icon (`public/icon-512x512.png`).
 - **App Store:** iPhone 6.9-inch screenshots only. The app is iPhone-only

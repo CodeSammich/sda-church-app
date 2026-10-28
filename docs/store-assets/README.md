@@ -8,15 +8,16 @@ are captured, their sizes, and what they may show are in
 
 - `google-play/feature-graphic.png`: the 1024 × 500 feature graphic. It shows the app
   icon, the church's name in English and Traditional Chinese, and two English Bible
-  screenshots in phone frames on the brand blue (`#00405C`): one with pinyin, which is no
-  longer a store screenshot (it's in this folder's git history as `02-bible-pinyin.png`),
-  and `02-bible-audio.png`. An AI assistant laid
+  screenshots in phone frames on the brand blue (`#00405C`): one with pinyin and one with
+  audio playing, both from before 1.4.0 (they're in this folder's git history as
+  `02-bible-pinyin.png` and `02-bible-audio.png`), so their tiny Chinese text is the
+  1988 edition the app no longer has. An AI assistant laid
   it out, so declare it as AI-generated in Play Console; see
   [Store listing assets](../operations/play-console-answers.md#store-listing-assets).
-- `google-play/phone/en-US/`: the six phone screenshots, in upload order: Home, the
-  Bible with audio playing, the audio-language choice with 粵語 (Cantonese) selected,
-  the Bible in the dark theme, Explore, and the Library. The other languages' listings
-  show these too.
+- `google-play/phone/en-US/`: the six phone screenshots, in upload order, at 1080 × 1920:
+  Home, the Bible in English and Chinese, the audio settings with the CUV's audio
+  languages, the Bible in the dark theme, Explore, and the Library. The other languages'
+  listings show these too.
 - `app-store/en-US/`: the six iPhone screenshots, in upload order, at the 6.9-inch size
   (1320 × 2868): Home, the Bible in English and Chinese, the Bible in Chinese and
   English with the Chinese interface, the Bible in the dark theme, Explore, and the
@@ -42,9 +43,12 @@ are captured, their sizes, and what they may show are in
   ever deleted, upload this file again and update the link; see
   [Foreground service](../operations/play-console-answers.md#foreground-service).
 
-The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The App Store
-screenshots here are from the 0.43.0 release PR's **iOS key screens** run on September
-30, 2026, before the audio button showed the audio language.
+The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The screenshots
+and headers here are from the key-screen runs for 1.4.0 on October 28, 2026, the first
+with the 1919 Chinese Union Version: [iOS](https://github.com/CodeSammich/sda-church-app/actions/runs/40628414994)
+and [Android](https://github.com/CodeSammich/sda-church-app/actions/runs/40628417415). The
+Android emulator's status bar shows Wi-Fi with a "!"; that's the test emulator's network,
+not the app.
 
 Each run also saves numbered App Store copies in its screenshots download's
 `screens/app-store/`, from the `appStore` lists in `test/screens/screens.json`:
