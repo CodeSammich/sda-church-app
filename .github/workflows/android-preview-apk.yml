@@ -81,7 +81,9 @@ jobs:
     # that release PR is open.
     name: Build Android debug APK (ARM)
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    # Builds take 12 to 19 minutes (17 runs in October 2026), so 40 is about
+    # twice the slowest.
+    timeout-minutes: 40
     steps:
       - name: Check out pull request head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -152,7 +154,7 @@ jobs:
     name: Post the test APK link
     runs-on: ubuntu-24.04
     # The build's own limit, and a few minutes to post.
-    timeout-minutes: 100
+    timeout-minutes: 45
     permissions:
       # To find this pull request's APKs and this run's build, and to replace
       # the test APK comment. The job never checks out or runs the pull
@@ -255,7 +257,7 @@ jobs:
 
           # 2. Wait for this run's build, the latest attempt's when it's rerun.
           build=""
-          for _ in $(seq 1 190); do
+          for _ in $(seq 1 84); do
             build=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
               --jq '[.jobs[] | select(.name == "Build Android debug APK (ARM)")][0] // empty | "\(.status) \(.conclusion)"' || true)
             case "$build" in "completed "*) break ;; esac
