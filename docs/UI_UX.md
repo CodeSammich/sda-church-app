@@ -239,7 +239,10 @@ Bible audio.
 search box looks through every verse of the translations on screen, offline on a phone, and lists the
 open chapter's matches first, then the whole Bible's by book with a count for each. A
 reference typed in a short form, such as "Jn 3:16", "Sal 23", or 約3：16, is offered first,
-to jump to (`hooks/useBibleSearch.ts`, `services/BibleSearch.ts`).
+to jump to (`hooks/useBibleSearch.ts`, `services/BibleSearch.ts`). The results are a
+page of their own under the search box, over the chapter, the audio controls, and the
+tab bar. They stay up with the keyboard put away, and the X or Android's Back closes
+them.
 Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
 includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as
 "Psalm 23 · English"): the English hymns and the same hymns in the 505, with the 505 first
@@ -277,9 +280,12 @@ are on Home, not here.
 **Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
 **About & Support** starts with **Help & Feedback**, which opens a draft email to
 `technology@nyccsda.org` in the device's email app, for help or a feature request
-(#541). Its subject is always English; the body starts with a prompt in the reader's
-language and ends with the app version and system (the iOS version, Android's API
-level, or "web app"). Then come the **Privacy Policy**, **Legal Disclaimer**, and
+(#541). Its subject is always English, `[NYCCSDA App] Help or feature request`, with
+the same prefix as the Bible translation request's, so the emails are easy to filter.
+The body asks, in the reader's language and more simply than the issue templates,
+whether it's a problem or an idea, what happened or what they'd like, and what they
+were doing just before, and ends with the app version and system (the iOS version,
+Android's API level, or "web app"). Then come the **Privacy Policy**, **Legal Disclaimer**, and
 **Open-Source Licenses** (all English only), followed by the app version. **Privacy
 Policy** and **Legal Disclaimer** open the website's copies in the in-app browser; the
 app keeps no copy of its own (#403, #412). **Open-Source Licenses** is an app screen,

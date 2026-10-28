@@ -56,9 +56,9 @@ const assertHttpsUrls = (values: string[], expectedHost: string) => {
 describe('Bible translation requests', () => {
   it('emails the technology team with an English subject and a prompt in the reader\'s language', () => {
     const url = getBibleRequestEmailUrl('您希望 App 加入哪個聖經譯本或語言？\n\n');
-    expect(url.startsWith('mailto:technology@nyccsda.org?subject=Bible%20translation%20request&body=')).toBe(true);
+    expect(url.startsWith('mailto:technology@nyccsda.org?subject=%5BNYCCSDA%20App%5D%20Bible%20translation%20request&body=')).toBe(true);
     const params = new URLSearchParams(url.slice(url.indexOf('?') + 1));
-    expect(params.get('subject')).toBe('Bible translation request');
+    expect(params.get('subject')).toBe('[NYCCSDA App] Bible translation request');
     expect(params.get('body')).toBe('您希望 App 加入哪個聖經譯本或語言？\n\n');
   });
 });
@@ -66,9 +66,10 @@ describe('Bible translation requests', () => {
 describe('Help & Feedback emails (#541)', () => {
   it('emails the technology team with an English subject, a prompt in the reader\'s language, and the app version', () => {
     const url = getSupportEmailUrl('請告訴我們遇到了什麼問題：', getAppAndSystemLine('1.4.0', 'ios', '18.2'));
-    expect(url.startsWith('mailto:technology@nyccsda.org?subject=App%20help%20or%20feature%20request&body=')).toBe(true);
+    expect(url.startsWith('mailto:technology@nyccsda.org?subject=%5BNYCCSDA%20App%5D%20Help%20or%20feature%20request&body=')).toBe(true);
     const params = new URLSearchParams(url.slice(url.indexOf('?') + 1));
-    expect(params.get('subject')).toBe('App help or feature request');
+    // The same prefix on every email the app drafts, to spot, filter, and label them.
+    expect(params.get('subject')).toBe('[NYCCSDA App] Help or feature request');
     expect(params.get('body')).toBe('請告訴我們遇到了什麼問題：\n\n\n\nApp 1.4.0 · iOS 18.2');
   });
 
