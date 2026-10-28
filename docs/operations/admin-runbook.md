@@ -933,8 +933,29 @@ GitHub Mobile can't set issue fields yet. So **Needs Priority Label**
 reopened without a Priority. Once a day it also labels any other open issue without one,
 such as a monitor's alert, because issues the built-in Actions token opens don't trigger
 workflows. Give the issue a Priority on desktop, and the next daily run removes the label.
-Store toolchain alerts get Urgent automatically; see
-[Store toolchain monitor alerts](#store-toolchain-monitor-alerts).
+
+### Maintenance issues
+
+Every issue a scheduled workflow opens gets the green **maintenance** label, and so does
+every Dependabot pull request (`.github/dependabot.yml`), so
+`is:open label:maintenance` lists all the upkeep that's waiting. Each new issue also
+starts with a Priority:
+
+| Issue | Priority |
+| --- | --- |
+| Apple signing needs renewal | Urgent |
+| Yearly checkup | Urgent |
+| Google Workspace backup | Urgent |
+| Store toolchain requirements | Urgent; none when only a page couldn't be read (see [Store toolchain monitor alerts](#store-toolchain-monitor-alerts)) |
+| Expo doctor found problems | High, as routine dependency updates |
+| External dependency health check | Medium, because most failures recover by the next run |
+
+A Priority someone already set is kept. Pull requests can't have a Priority, so
+Dependabot's have only the label. Add the label by hand to other upkeep, such as a
+store requirement you file yourself. The label and the starting priorities are set in
+`scripts/monitor-alert-issue.cjs` and the scripts and workflows that call it. If GitHub
+won't let a workflow set the Priority, the issue still opens and the run logs a
+warning, and the daily run gives it the **needs priority** label.
 
 To groom, search
 `is:issue state:open (label:"needs priority" OR field.priority:urgent,high)`.

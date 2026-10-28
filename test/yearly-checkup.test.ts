@@ -33,9 +33,23 @@ const context = {
 /** A fake GitHub client with some existing issues. */
 const fakeGithub = (issues: Array<{ number: number; title: string; pull_request?: object }>, { rejectAssignees = false } = {}) => {
   const created: Array<Record<string, unknown>> = [];
+  const priorities: string[] = [];
   return {
     created,
+    priorities,
     paginate: async () => issues,
+    graphql: async (query: string, variables: Record<string, unknown>) => {
+      if (query.startsWith('mutation')) {
+        priorities.push(variables.optionId as string);
+        return {};
+      }
+      return {
+        repository: {
+          issueFields: { nodes: [{ id: 'FIELD', name: 'Priority', options: [{ id: 'Urgent', name: 'Urgent' }] }] },
+          issue: { id: 'ISSUE', issueFieldValues: { nodes: [] } },
+        },
+      };
+    },
     rest: {
       issues: {
         listForRepo: jest.fn(),
@@ -122,7 +136,12 @@ describe('opening the yearly checkup', () => {
       action: 'created',
       number: 100,
     });
-    expect(github.created[0]).toMatchObject({ title: 'Yearly checkup, 2027', assignees: ['maintainer'] });
+    expect(github.created[0]).toMatchObject({
+      title: 'Yearly checkup, 2027',
+      labels: ['maintenance'],
+      assignees: ['maintainer'],
+    });
+    expect(github.priorities).toEqual(['Urgent']);
   });
 
   it('does nothing on the later Mondays, even after the issue is closed', async () => {

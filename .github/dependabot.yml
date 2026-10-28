@@ -10,7 +10,10 @@ updates:
     schedule:
       interval: "weekly"        # Checks for new framework versions once a week
     open-pull-requests-limit: 3 # Prevents getting flooded with too many open PRs at once
-    labels: ["dependencies"]    # Skip the default "javascript" language label
+    # The label every upkeep issue and pull request shares, set in place of the
+    # default "dependencies" and "javascript" labels. The monitors' issues get
+    # it too (scripts/monitor-alert-issue.cjs).
+    labels: ["maintenance"]
     # One pull request a week for every minor and patch update, instead of one
     # per package; each pull request has to be moved to the release branch by
     # hand, and each push starts CI. Major updates still get their own.

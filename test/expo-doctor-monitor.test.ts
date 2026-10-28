@@ -41,7 +41,7 @@ describe('Expo doctor monitor', () => {
       'https://github.com/org/repo/actions/runs/42',
     );
     expect(alert.title).toBe(ALERT_TITLE);
-    expect(alert.labels).toEqual([]);
+    expect(alert.priority).toBe('High');
     expect(alert.body).toContain(
       '```\n✖ Check that packages match versions required by installed Expo SDK\n```',
     );

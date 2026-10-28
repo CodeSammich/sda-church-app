@@ -149,6 +149,7 @@ const openYearlyCheckup = ({ github, context, core, year, assignees = [] }) =>
     context,
     core,
     ...buildYearlyCheckup(year, `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`),
+    priority: 'Urgent',
     assignees,
   });
 
