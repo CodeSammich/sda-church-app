@@ -62,7 +62,7 @@ Official church app
 **Short description** (Google Play, up to 80)
 
 ```text
-Bilingual Bible with pinyin and audio, plus our weekly bulletin and church life.
+Multilingual Bible with pinyin and audio, our weekly bulletin, and church life.
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -136,7 +136,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Short description** (Google Play, up to 80)
 
 ```text
-中英雙語聖經，附拼音與有聲朗讀，並提供每週週報與教會生活資訊。
+多語言聖經（中文、英文、西班牙文），附拼音與有聲朗讀，並提供每週週報與教會生活資訊。
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -207,7 +207,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Short description** (Google Play, up to 80)
 
 ```text
-中英双语圣经，附拼音与有声朗读，并提供每周周报与教会生活信息。
+多语言圣经（中文、英文、西班牙文），附拼音与有声朗读，并提供每周周报与教会生活信息。
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -283,7 +283,7 @@ App oficial de la iglesia
 **Short description** (Google Play, up to 80)
 
 ```text
-Biblia bilingüe con pinyin y audio, más el boletín semanal y la vida de iglesia.
+Biblia multilingüe con pinyin y audio, el boletín semanal y la vida de iglesia.
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
