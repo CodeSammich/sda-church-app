@@ -126,13 +126,14 @@ const required = (labels) =>
 
 /**
  * The labels a shot must show, by region. A popup (popup= in its path, #372)
- * covers or dims the tab bar and the chapter controls, so its own
- * mustShowLines check it instead.
+ * covers or dims the tab bar and the chapter controls, and so does the Bible's
+ * search results page (search=, #544), so their own mustShowLines check them
+ * instead.
  */
 const expectedLabels = (shot) => {
   const language = shot.settings.language;
   const expected = [];
-  if (/[?&]popup=/.test(shot.route)) return expected;
+  if (/[?&](?:popup|search)=/.test(shot.route)) return expected;
   if (shot.tabs !== false) expected.push(['tabs', required(TAB_LABELS[language])]);
   if (shot.route.startsWith('bible')) {
     const controls = shot.tabs === false ? 'chapterControlsReading' : 'chapterControls';

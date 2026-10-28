@@ -865,9 +865,10 @@ Each label counts only where it belongs, so "Read Verse" on Home isn't the verse
 A missing label gets a second read of its strip, enlarged and with its contrast
 stretched. One-character labels, such as 您 and 節, aren't required: Vision often misses
 a lone Chinese character, and it can't be cut short anyway. A screen without the tab bar,
-such as the Bible while reading, sets `"tabs": false`. A popup's shot skips the tab
-labels and the verse button, which the popup covers or dims, and relies on its own
-`mustShowLines` and `mustNotShowLines`. What Vision read is saved as
+such as the Bible while reading, sets `"tabs": false`. A popup's shot (`popup=` in its
+path) skips the tab labels and the verse button, which the popup covers or dims, and
+relies on its own `mustShowLines` and `mustNotShowLines`, and so does the Bible's search
+results page (`search=`), which covers them. What Vision read is saved as
 `ocr.json` beside the screenshots, and the results as `checks.json`.
 
 The first real runs showed what this catches. Every screen covered by iOS's "Open in"

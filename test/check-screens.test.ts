@@ -74,6 +74,28 @@ describe('popup shots (#372)', () => {
   });
 });
 
+describe("the Bible's search results page (#544)", () => {
+  // What the page shows for Moriah with Genesis 22 open: the results, over
+  // the tab bar and the chapter controls.
+  const results = [
+    line('This chapter · 1 verse', 0.15),
+    line('Genesis 22:2', 0.2),
+    line('Whole Bible · 2 verses', 0.4),
+    line('Genesis · 1', 0.45),
+  ];
+
+  it("doesn't need the tab bar or the verse button, which the page covers", () => {
+    expect(checkShot(shot('bible-search-default'), results)).toEqual([]);
+  });
+
+  it('catches the chapter controls or tab bar showing through again', () => {
+    expect(checkShot(shot('bible-search-default'), [...results, line('Verse', 0.86), line('Explore', 0.95)])).toEqual([
+      '"Verse" matches /^Verse$/, which must not show',
+      '"Explore" matches /^Explore$/, which must not show',
+    ]);
+  });
+});
+
 describe('the bugs fixed in 0.42.0', () => {
   const bible = samples.clean['bible-dual-default'] as Line[];
 
