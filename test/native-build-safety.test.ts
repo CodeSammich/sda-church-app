@@ -110,6 +110,22 @@ describe('Android preview APK', () => {
     );
   });
 
+  it('says at once that a newer build is on the way, then replaces that with its link', () => {
+    const workflow = readRepoFile('.github/workflows/android-preview-apk.yml');
+    const comment = workflow.slice(workflow.indexOf('\n  comment:\n'));
+    // It starts with the build rather than after it, so the PR's comment never
+    // offers the previous build as the newest while this one builds.
+    expect(comment).toContain('    needs: resolve-pr\n');
+    expect(comment.indexOf('<!-- android-test-apk pending sha=$SHA -->')).toBeLessThan(
+      comment.indexOf('<!-- android-test-apk sha=$SHA -->'),
+    );
+    // It waits for this run's build by the required check's name, and says so
+    // if the build doesn't finish, failing too so a rerun of the failed jobs
+    // reruns it.
+    expect(comment).toContain('select(.name == "Build Android debug APK (ARM)")');
+    expect(comment).toMatch(/<!-- android-test-apk failed sha=\$SHA -->[\s\S]+post "\$body"[\s\S]+exit 1\n/);
+  });
+
   it("lists the pull request's earlier builds under the newest, each checked the same way", () => {
     const comment = readRepoFile('.github/workflows/android-preview-apk.yml');
     expect(comment).toContain('**Newest: commit \\`${SHA:0:7}\\`, built $(built "$created").**');

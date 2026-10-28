@@ -524,9 +524,16 @@ in this repository, and skips fork PRs. It does not accept manual commit or pull
 SHA inputs.
 
 The build uploads the APK unzipped (`archive: false`) as
-`sda-church-app-pr-<number>-<run>-arm-debug.apk`, kept 14 days. A separate job then
-comments on the release PR with a link that downloads the APK itself, and replaces its
-earlier comment, so there's one test APK comment. It shows the newest build in bold,
+`sda-church-app-pr-<number>-<run>-arm-debug.apk`, kept 14 days. A separate job starts
+with the build and keeps one test APK comment on the release PR, about its newest
+commit. First it replaces the comment with a notice that this commit's build is on the
+way, with a progress link, so nobody tests the previous build by mistake; the earlier
+builds stay listed under it. When the build finishes, it replaces the notice with a link
+that downloads the APK itself. If the build fails or times out, or its APK can't be
+found, the comment says so and links the run, and the job fails too, so rerunning the
+failed jobs reruns it. A newer push cancels the run, and the newer run replaces the
+notice; a run cancelled by hand leaves it up. The finished comment shows the newest
+build in bold,
 with its commit, the time it was built in New York time, and the commit message's
 first line. Under it, a collapsed list links the PR's earlier builds that haven't
 expired, newest first: the last build of each other commit, up to ten. GitHub gives

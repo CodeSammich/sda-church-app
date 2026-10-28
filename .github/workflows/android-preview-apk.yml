@@ -144,14 +144,19 @@ jobs:
           retention-days: 14
 
   comment:
-    needs: [resolve-pr, build]
-    if: needs.build.result == 'success'
+    # Starts with the build, so the PR's test APK comment says at once that a
+    # newer build is on the way, as the screenshot review's notice does. The
+    # earlier builds stay offered under it, marked as earlier. When the build
+    # finishes, the comment is replaced with its link, or with why it failed.
+    needs: resolve-pr
     name: Post the test APK link
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    # The build's own limit, and a few minutes to post.
+    timeout-minutes: 100
     permissions:
-      # To find this pull request's APKs, and to replace the test APK comment.
-      # The job never checks out or runs the pull request's code.
+      # To find this pull request's APKs and this run's build, and to replace
+      # the test APK comment. The job never checks out or runs the pull
+      # request's code.
       actions: read
       pull-requests: write
     steps:
@@ -184,17 +189,16 @@ jobs:
           # HTML, and cut at a word past 120 characters.
           first_line='.head_commit.message // "" | split("\n")[0] | gsub("\t"; " ") | gsub("[<>\\[\\]]"; "")
             | if length > 120 then (.[0:120] | sub(" [^ ]*$"; "")) + "…" else . end'
+          # Replaces this pull request's test APK comments with the given one,
+          # so it has one, about its newest commit.
+          post() {
+            gh api "repos/$REPO/issues/$PR/comments" --paginate \
+              --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- android-test-apk"))) | .id' |
+              while read -r old; do gh api -X DELETE "repos/$REPO/issues/comments/$old" >/dev/null; done
+            gh api "repos/$REPO/issues/$PR/comments" -f body="$1" >/dev/null
+          }
 
-          export APK_NAME="sda-church-app-pr-$PR-$RUN_ID-arm-debug.apk"
-          found=$(apk "$RUN_ID" "$SHA")
-          test -n "$found" || { echo "::error::This run stored no single $APK_NAME from $SHA." >&2; exit 1; }
-          read -r apk_id apk_bytes created digest <<<"$found"
-          case "$digest" in
-            sha256:?*) sha256="${digest#sha256:}" ;;
-            *) echo "::error::GitHub gave no SHA-256 for $APK_NAME." >&2; exit 1 ;;
-          esac
-          APK_URL="https://github.com/$REPO/actions/runs/$RUN_ID/artifacts/$apk_id"
-          APK_MB=$((apk_bytes / 1000000))
+          run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
           message=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq "$first_line") || message=""
 
           # Earlier builds of this pull request, newest first: the last one of
@@ -219,6 +223,62 @@ jobs:
             earlier=$(printf '<details><summary>Earlier builds of this pull request (%s)</summary>\n\n%s\n</details>' "$count" "$earlier")
           fi
 
+          # Says this commit has no APK, and why, and fails, so rerunning the
+          # failed jobs reruns this one.
+          fail() {
+            body=$(cat <<BODY
+          <!-- android-test-apk failed sha=$SHA -->
+          ### 📱 Android test APK
+
+          ❌ **No APK of commit \`${SHA:0:7}\`** ($1): ${message:-no commit message}. [Its run]($run_url) says why. Rerun its failed jobs to try again.
+
+          $earlier
+          BODY
+            )
+            post "$body"
+            echo "::error::$2" >&2
+            exit 1
+          }
+
+          # 1. Say this commit's build is on the way, so nobody tests an
+          # earlier build by mistake. The earlier ones are still offered.
+          body=$(cat <<BODY
+          <!-- android-test-apk pending sha=$SHA -->
+          ### 📱 Android test APK
+
+          ⏳ **Building commit \`${SHA:0:7}\`:** ${message:-no commit message}. It takes about 15 minutes ([progress]($run_url)). When it's ready, this comment is replaced with its download link.
+
+          $earlier
+          BODY
+          )
+          post "$body"
+
+          # 2. Wait for this run's build, the latest attempt's when it's rerun.
+          build=""
+          for _ in $(seq 1 190); do
+            build=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name == "Build Android debug APK (ARM)")][0] // empty | "\(.status) \(.conclusion)"' || true)
+            case "$build" in "completed "*) break ;; esac
+            sleep 30
+          done
+          case "$build" in
+            "completed success") ;;
+            "completed "*) fail "the build ended as ${build#completed }" "The build ended as ${build#completed }." ;;
+            *) fail "the build didn't finish in time" "The build didn't finish in time." ;;
+          esac
+
+          # 3. Replace the notice with this build's link.
+          export APK_NAME="sda-church-app-pr-$PR-$RUN_ID-arm-debug.apk"
+          found=$(apk "$RUN_ID" "$SHA") || found=""
+          test -n "$found" || fail "its APK wasn't found" "This run stored no single $APK_NAME from $SHA."
+          read -r apk_id apk_bytes created digest <<<"$found"
+          case "$digest" in
+            sha256:?*) sha256="${digest#sha256:}" ;;
+            *) fail "GitHub recorded no SHA-256 for it" "GitHub gave no SHA-256 for $APK_NAME." ;;
+          esac
+          APK_URL="https://github.com/$REPO/actions/runs/$RUN_ID/artifacts/$apk_id"
+          APK_MB=$((apk_bytes / 1000000))
+
           body=$(cat <<BODY
           <!-- android-test-apk sha=$SHA -->
           ### 📱 Android test APK
@@ -236,10 +296,5 @@ jobs:
           Each SHA-256 is the one its upload recorded with GitHub. To check a download on a computer, compare it with \`sha256sum\` (\`shasum -a 256\` on a Mac).
           BODY
           )
-
-          # Replace earlier ones, so this is the one test APK comment, newest build first.
-          gh api "repos/$REPO/issues/$PR/comments" --paginate \
-            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- android-test-apk"))) | .id' |
-            while read -r old; do gh api -X DELETE "repos/$REPO/issues/comments/$old" >/dev/null; done
-          gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
+          post "$body"
           echo "Posted the test APK link for $SHA, with $count earlier builds."

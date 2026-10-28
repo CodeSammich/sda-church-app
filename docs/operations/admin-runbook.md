@@ -728,7 +728,8 @@ store announces a change, check that:
 into `main` (from `release-candidate` in this repository).
 
 It builds a debug APK, signed only with Gradle's local debug key, never the church's
-release key, and comments on the release PR with a link that downloads it,
+release key, and comments on the release PR with a link that downloads it (while it
+builds, the comment says a newer build is on the way),
 `sda-church-app-pr-<number>-<run>-arm-debug.apk`, for 14 days. Anyone signed in to
 GitHub can download it, with nothing to approve. On a phone, sign in to GitHub in the
 browser first. The comment job reads the link from GitHub's API, never from the
