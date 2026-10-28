@@ -1,6 +1,6 @@
 # Legal, Licensing, and Privacy
 
-Last legal review: 2026-08-09. Facts about the app updated: 2026-10-07.
+Last legal review: 2026-08-09. Facts about the app updated: 2026-10-27.
 
 This document centralizes the project's licensing records, third-party source reviews,
 privacy disclosures, branding restrictions, and legal disclaimer. It records engineering
@@ -11,6 +11,7 @@ terms, ownership, or permissions will remain unchanged.
 
 - [Bible Sources and Licensing](#bible-sources-and-licensing)
 - [Library Sources and Licensing](#library-sources-and-licensing)
+- [Sabbath School Lessons](#sabbath-school-lessons)
 - [English Hymnal Integration and Link Safety](#english-hymnal-integration-and-link-safety)
 - [Chinese Hymnal Source and Link Safety](#chinese-hymnal-source-and-link-safety-rationale)
 - [Branding & Trademarks](#branding--trademarks)
@@ -459,6 +460,36 @@ offline reading, needs more care:
 
 ---
 
+## Sabbath School Lessons
+
+The Sabbath School screen opens this week's lessons from Adventech, which publishes the
+Sabbath School app and its lesson catalog (`sabbath-school.adventech.io`). The adult
+lesson opens in Adventech's web reader. For each children's age group, the app looks up
+this week's lesson PDF in Adventech's public catalog, and opens the age group's Alive in
+Jesus website when it finds none
+([design](feature_designs/sabbath_school_lessons.md)).
+
+| Source | What the app uses | Rights basis |
+| --- | --- | --- |
+| **Adventech** (`sabbath-school.adventech.io`; PDFs from `sabbath-school-pdf.adventech.io` and `sabbath-school-resources-media.adventech.io`) | A link to the adult lesson reader. For children, the public catalog, to find this week's lesson, and the official lesson PDF. On a phone, the person's own phone downloads the PDF, keeps it in the app's cache for that week, and opens it in the phone's own PDF viewer, so opening it again is instant ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529)). A lesson downloads only when the person taps it. | The lessons are © General Conference of Seventh-day Adventists®, all rights reserved. [Adventech's lesson repository](https://github.com/Adventech/sabbath-school-lessons#copyright) says that no part of the adult guide may be "edited, altered, modified, adapted, translated, re-produced, or published" without the General Conference's prior written authorization. We found no separate public statement for the children's lessons, so they're treated the same way. The app doesn't alter, translate, or republish any lesson. The phone downloads the official, unmodified file from Adventech's own hosts, as a browser would, and keeps it only in its cache. This is an engineering assessment, not an express license. |
+
+Rules for this feature:
+
+- Download only from the two official PDF hosts, over HTTPS. `officialPdf()` in
+  `features/sabbath-school/ChildrenLessons.ts` enforces this.
+- Keep the file exactly as downloaded: no compression, re-encoding, cropping, or text
+  extraction.
+- Store it only in the cache directory, which isn't backed up and which the system may
+  clear, and delete it once its lesson's week is over
+  (`features/sabbath-school/LessonDownloads.ts`).
+- Don't add a way to share or export the file from the app, and never host a copy on
+  church storage. Opening it in the phone's own PDF viewer is fine; that viewer's own
+  save or share options are the person's choice, as in a browser.
+- Smaller or re-encoded copies hosted by the church are ruled out. Ask Adventech for
+  lighter files instead (#529).
+
+---
+
 ## English Hymnal Integration and Link Safety
 
 The English hymnal stores searchable metadata but does not host, proxy, cache, or embed
@@ -642,8 +673,9 @@ in the in-app browser, as **Privacy Policy** does (#412). It's English only, for
 same reason as the privacy policy. Change the wording there, and a website deploy
 publishes it with no new app build.
 
-It covers the app's links to external resources, such as the hymn sites and EGW
-Writings, and the copyright caution that goes with them; how to change the text size
+It covers the app's links to external resources, such as the hymn sites, EGW
+Writings, and Adventech's Sabbath School lessons, and the copyright caution that goes
+with them; the children's lessons a phone keeps for their week; how to change the text size
 in EGW Writings' reader; what the app shows from other sources, such as cover
 thumbnails, and where each Library book is hosted; and the external platforms the app
 links to, such as YouTube and Spotify.

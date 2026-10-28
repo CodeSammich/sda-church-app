@@ -117,6 +117,31 @@ link goes through `openURL` (websites) or `openInItsApp` (other apps) in
 `constants/ExternalLinks.ts`; `test/link-opening.test.ts` checks where each one opens,
 and that no screen opens a link itself.
 
+Large files, such as lesson PDFs of more than a few megabytes, don't open straight in
+the in-app browser. There, a phone can show a blank page until the whole file has arrived,
+which can take a minute on a slow connection. On iOS and Android, the app downloads
+them itself instead:
+
+- a popup appears as soon as the person taps, and shows the download's progress
+  ("Downloading · 5.1 of 14.2 MB"), with an X that stops it;
+- the file is kept in the cache directory while it's current, so it opens at once the
+  next time, even offline. Nothing downloads without a tap, so people who don't use
+  a feature never download its files;
+- it opens in the phone's own viewer, through `expo-file-system`'s `File.preview()`:
+  Quick Look on iPhone, and the app that opens PDFs on Android. That opens the
+  downloaded copy, not a link, so it's outside `constants/ExternalLinks.ts`.
+
+If the phone has no viewer, or the download fails, the file's address opens in the
+in-app browser as before; if it fails because the phone is offline, the popup says
+there's no connection instead. The web keeps opening files in a new tab. Anything new that
+opens a big file should work the same way. The children's Sabbath School lessons came
+first ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529));
+see [Opening a lesson on a phone](feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
+Their code (`features/sabbath-school/LessonDownloads.ts`,
+`hooks/useChildrenLessonOpener.ts`, `components/ChildrenLessonDialog.tsx`) is written
+for lessons, so the second use should move its download, progress, and viewer parts
+somewhere shared rather than copy them.
+
 ### Key Principles & Exceptions:
 
 1.  **Brand Neutrality:** External service destinations use official provider assets

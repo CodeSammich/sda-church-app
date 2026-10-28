@@ -19,7 +19,7 @@ describe('device backups', () => {
   it('leave out the copies the app can download again, which go through services/CacheStore.ts', () => {
     const source = (file: string) => readFileSync(join(process.cwd(), file), 'utf8');
     expect(source('services/CacheStore.ts')).toContain('new Directory(Paths.cache, folder)');
-    for (const file of ['services/BulletinService.ts', 'app/(tabs)/index.tsx']) {
+    for (const file of ['services/BulletinService.ts', 'app/(tabs)/index.tsx', 'features/sabbath-school/LessonDownloads.ts']) {
       expect([file, source(file).includes("from '@/services/CacheStore'"), /\bAsyncStorage\b/.test(source(file))]).toEqual([file, true, false]);
     }
   });

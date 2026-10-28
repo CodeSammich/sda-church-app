@@ -4,7 +4,7 @@ Issue: [#336](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-chur
 
 The Sabbath School page lists every children's age group, every week, in every app language. The age groups are Beginner, Kindergarten, Primary, Junior, Teen, and Youth, each with a student guide and a teacher guide on the Students and Teachers tabs. A separate Babies entry opens Alive in Jesus's resources for parents and teachers.
 
-Tapping an age group opens this week's lesson. The app stores no lesson links: it looks the lesson up at the moment of the tap, in `features/sabbath-school/ChildrenLessons.ts`. So a new week or a new quarter needs no update.
+Tapping an age group opens this week's lesson. The app stores no lesson links: it looks the lesson up when it's needed, in `features/sabbath-school/ChildrenLessons.ts`, and a phone keeps the answer only for that lesson's days ([below](#opening-a-lesson-on-a-phone)). So a new week or a new quarter needs no update.
 
 ## What a tap opens
 
@@ -55,6 +55,23 @@ The catalogs have been wrong before, so the lookup doesn't rely on a single fiel
 
 A new quarter's issues can appear late. Until they do, the age group opens its website.
 
+## Opening a lesson on a phone
+
+Issue: [#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529). The lesson PDFs are big: 5–14 MB for the English student lessons, and the Chinese Beginner lesson was 33 MB. The English ones aren't built for fast web view, so a viewer has to download the whole file before it shows page 1. A tap used to show nothing for a few seconds while the app looked the lesson up, then the in-app browser's gray page until the download finished: 6–9 s on fast Wi-Fi, and a minute or two on a phone connection. Adventech's CDN isn't the slow part: even an uncached file arrives in about a second near New York.
+
+So on a phone (`features/sabbath-school/LessonDownloads.ts`, `hooks/useChildrenLessonOpener.ts`):
+
+1. **A popup shows at once** (`components/ChildrenLessonDialog.tsx`): "Finding this week's lesson…", then "Downloading · 4.2 of 9.3 MB" with a progress bar. Its X, or a tap outside, stops the download.
+2. **The app downloads the PDF itself**, into `children-lessons/` in the cache directory (see [What the app keeps on the phone](on_device_storage.md)), named for its age group and guide (`junior-<hash>.pdf`), which the phone's viewer shows as its title. It writes a `.part` file first and renames it when the download finishes, so a failed download never looks like a lesson.
+3. **The copy opens in the phone's own viewer**, through `expo-file-system`'s `File.preview()`: Quick Look on iPhone, and on Android the app that opens PDFs, usually Google Drive's viewer. If the phone has none, or the download fails, the PDF opens in the in-app browser, as before. The website fallback is unchanged.
+4. **Opening it again that week is instant, and works offline.** The lookup is kept with the days the lesson is for, from the catalog: Sabbath to Friday for a quarterly lesson, and Sunday to Sabbath for an Alive in Jesus week (`findChildrenLesson`, `lessonDaysOf`). So a tap on any of those days downloads neither the lesson nor the catalog (the English quarterly one is 1 MB). A lesson picked by its number, when the catalog's dates don't cover the day, is kept only for the days both kinds of week share: the Sabbath alone, or Sunday to Friday. A website result isn't kept, so the next tap looks again for a late lesson. Offline with no copy, the popup says there's no connection instead of opening a page that can't load.
+5. **Nothing downloads without a tap.** A lesson downloads only when someone taps it, so people who don't use Sabbath School never download one, and a phone keeps only the lessons its owner opened. A draft also fetched lessons ahead on Wi-Fi; at review, downloading only on a tap was chosen as the simplest to understand.
+6. **A copy is deleted the first time the app checks after its lesson's last day:** from the next Sabbath for a quarterly lesson, and from the Sunday after its Sabbath for an Alive in Jesus lesson (a lesson picked by its number, from the day after the Friday or Sabbath it was kept for). The app checks after each lesson it opens, and a few seconds after the app opens or comes back (`hooks/useChildrenLessonCleanup.ts`, with no network).
+
+The web is unchanged: the browser opens the PDF in a new tab and keeps its own cache.
+
+Keeping a copy on the person's own phone is assessed in [LEGAL.md](../LEGAL.md#sabbath-school-lessons). It's the official file, unmodified, kept only in the cache and only until its lesson's week is over. The app adds no way to share or export it; the phone's viewer has its own share options, as a browser does.
+
 ## Safety
 
 A PDF opens only if its address is HTTPS on one of Adventech's two PDF hosts, `sabbath-school-pdf.adventech.io` and `sabbath-school-resources-media.adventech.io` (`officialPdf`). So a changed or broken catalog can't send children to another site.
@@ -86,3 +103,10 @@ The app keeps working by opening the websites, and the monitor fails. To fix it:
 - the fall back to the website when there's no lesson, or when the lookup takes too long;
 - the official-host check;
 - next year's first quarter starting in late December.
+
+`test/children-lesson-downloads.test.ts` covers opening a lesson on a phone:
+- one download and one lookup for a lesson's days, opening offline on any of them, and a new lookup on a day the saved lesson doesn't cover;
+- the website and failed-download fallbacks, with a failed download never taken for the lesson, and "No connection" offline with no copy;
+- the X stopping the download, a tap right after it starting again, and two requests sharing one download;
+- the real lookup into a new quarter: the old quarter's lesson kept for its days, then the new quarter's found and the old copy deleted;
+- deleting old copies, and the popup's text in each language.

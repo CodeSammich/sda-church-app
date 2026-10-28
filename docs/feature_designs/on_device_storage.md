@@ -6,7 +6,7 @@ The app keeps three kinds of data on the device:
 
 - **The Bible texts, which ship inside the app.** They're read-only, and the same on every phone.
 - **A small store of settings and saved verses**, kept with AsyncStorage, which the phone's own backup includes.
-- **Copies the app can download again:** the bulletin and today's verse, and on Android the copies of the bundled Bible files. On a phone they're kept where the backup leaves them out. The web app also keeps an offline copy of itself.
+- **Copies the app can download again:** the bulletin, today's verse, the children's lesson PDFs, and on Android the copies of the bundled Bible files. On a phone they're kept where the backup leaves them out. The web app also keeps an offline copy of itself.
 
 Nothing on the device is sent anywhere, and the app doesn't use iCloud Drive or CloudKit. This page explains where each kind lives on iOS, Android, and the web, what's backed up, and what the store policies say about it.
 
@@ -63,7 +63,7 @@ Where AsyncStorage keeps them, and whether they're backed up:
 | Android | A SQLite database, `RKStorage`, in the app's databases directory | **Yes, if the member has Google backup on.** `app.json` sets `android.allowBackup` to `true`, which is also Expo's default; Google recommends setting it explicitly. So Android's Auto Backup includes the database in the member's Google Drive backup. |
 | Web | The browser's `localStorage` for `app.nyccsda.org` | It's kept by the browser, on that device only. |
 
-So a member who sets up a new phone from a backup keeps their settings and saved verses, on iOS and Android alike. They're the member's own choices and verses, which the app can't get back any other way. Apple's [File System Programming Guide](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html) also says "Any file that can be re-created or downloaded must be excluded from the backup", so the bulletin and today's verse, which the app can download again, stay out of AsyncStorage on a phone (below). `test/device-backup.test.ts` checks both settings, and that those copies go through `services/CacheStore.ts`.
+So a member who sets up a new phone from a backup keeps their settings and saved verses, on iOS and Android alike. They're the member's own choices and verses, which the app can't get back any other way. Apple's [File System Programming Guide](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html) also says "Any file that can be re-created or downloaded must be excluded from the backup", so the bulletin, today's verse, and the children's lessons, which the app can download again, stay out of AsyncStorage on a phone (below). `test/device-backup.test.ts` checks both settings, and that those copies go through `services/CacheStore.ts`.
 
 ## Copies the app can download again
 
@@ -77,8 +77,11 @@ So a member who sets up a new phone from a backup keeps their settings and saved
 | --- | --- | --- | --- |
 | Each Sabbath's bulletin, already privacy-filtered by the Bulletin API, and when the page may next refresh it | `bulletins/<date>.json` and `bulletins/<date>.refresh` | `bulletin-cache-v2:<date>` and `bulletin-refresh-v1:<date>` | `services/BulletinService.ts` |
 | Today's verse, so Home shows it straight away, even offline | `verse-of-the-day/<language>.json` | `votd_cache_<language>` | `app/(tabs)/index.tsx` |
+| Children's lesson PDFs, so a lesson opened once opens at once for the rest of its week, and which lesson each age group has this week (#529) | `children-lessons/<age group>-<hash>.pdf` and `children-lessons/index.json` | None: the browser opens the PDF | `features/sabbath-school/LessonDownloads.ts` |
 
 The app only shows this Sabbath's bulletin and the next, so saving one deletes the copies dated more than two weeks before it. Today's verse has one copy per language, replaced each day.
+
+Each lesson in the index has the days it's the lesson for: from the catalog, a quarterly lesson runs Sabbath to Friday and an Alive in Jesus week Sunday to Sabbath; a lesson picked by its number gets only the Sabbath, or Sunday to Friday. A copy is kept until its lesson's last day, and deleted the first time the app checks after that. A lesson downloads only when someone taps it, so a phone keeps only the lessons its owner opened. The app checks after each lesson it opens, and a few seconds after it opens or comes back, with no network, so old copies go even if the person doesn't open another lesson. See [Children's Sabbath School Lessons](sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
 
 The other copies:
 
@@ -102,7 +105,7 @@ The other copies:
   - the app bundle: "The contents of this directory are not backed up by iTunes or iCloud";
   - `Library/Caches`: "the contents of this directory are not backed up by iTunes or iCloud";
   - `Library/Application Support`: "backed up by iTunes and iCloud". AsyncStorage's folder is there, with the settings and saved verses, so the app lets it be backed up.
-  - and, on what may not go in the backup: "Any file that can be re-created or downloaded must be excluded from the backup." The bulletin and today's verse go in `Library/Caches`.
+  - and, on what may not go in the backup: "Any file that can be re-created or downloaded must be excluded from the backup." The bulletin, today's verse, and the children's lesson PDFs go in `Library/Caches`.
 - [App privacy details](https://developer.apple.com/app-store/app-privacy-details/): "Data that is processed only on device is not “collected” and does not need to be disclosed". "Collect" means "transmitting data off the device". So nothing on this page changes the App Store privacy answers.
 - [Privacy manifests and required-reason APIs](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api): `expo-file-system`, which reads the Bible files, ships its own `PrivacyInfo.xcprivacy`, declaring the file timestamp and disk space APIs it uses. It was already installed with `expo`, which depends on it; the Bible files are the first code to use it.
 
@@ -110,7 +113,7 @@ The other copies:
 
 - [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469): "Collect" means "transmitting data from your app off a user's device", and data "only processed locally on the user's device and not sent off device" doesn't need to be disclosed. So the Data safety form doesn't change either.
   - Android's own backup to Google Drive is Google's service, which the member turns on. It isn't the app sending data.
-- [Back up user data with Auto Backup](https://developer.android.com/identity/data/autobackup): by default, Auto Backup includes the app's "Shared preferences files", its internal files, and "Files in the directory returned by `getDatabasePath(String)`", stored "in a private folder in the user's Google Drive account". It "excludes files in directories returned by `getCacheDir()`", where the Bible file copies, the bulletin, and today's verse are. "The default value is `true`, but we recommend explicitly setting the attribute in your manifest", so `app.json` sets `allowBackup` to `true`; setting it to `false` would turn Auto Backup off.
+- [Back up user data with Auto Backup](https://developer.android.com/identity/data/autobackup): by default, Auto Backup includes the app's "Shared preferences files", its internal files, and "Files in the directory returned by `getDatabasePath(String)`", stored "in a private folder in the user's Google Drive account". It "excludes files in directories returned by `getCacheDir()`", where the Bible file copies, the bulletin, today's verse, and the children's lesson PDFs are. "The default value is `true`, but we recommend explicitly setting the attribute in your manifest", so `app.json` sets `allowBackup` to `true`; setting it to `false` would turn Auto Backup off.
 - [Access app-specific files](https://developer.android.com/training/data-storage/app-specific): "When the device is low on internal storage space, Android may delete these cache files to recover space". The app copies a Bible file again if that happens.
 
 ## Tests
@@ -122,5 +125,6 @@ The other copies:
 - `test/cuv-1919-witnesses.test.ts`: every verse's wording and punctuation against two other copies of the 1919 text, and that the Simplified text is the Traditional converted.
 - `test/cache-store.test.ts` and `test/cache-store.web.test.ts`: that a phone keeps the copies in the cache directory and deletes the ones AsyncStorage kept before #524, and that the web keeps them in AsyncStorage without touching the file system.
 - `test/bulletin-service.test.ts`: that the bulletin copies are in the cache directory on a phone, and only the last two weeks' are kept.
-- `test/device-backup.test.ts`: the backup settings in `app.json`, on iOS and Android.
+- `test/children-lesson-downloads.test.ts`: that a lesson PDF is downloaded once into the cache directory, that a failed download is never taken for the lesson, and that a copy opens offline on its lesson's days and is deleted after its last day.
+- `test/device-backup.test.ts`: the backup settings in `app.json`, on iOS and Android, and that the copies the app can download again go through `services/CacheStore.ts`.
 - `test/setup.ts` replaces `services/BundledBible.ts` for the other tests with a reader of the files on disk.
