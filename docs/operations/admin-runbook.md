@@ -741,7 +741,8 @@ requests are skipped. See [Android preview APK](native-builds.md#android-preview
 **On Google Drive, optionally:** the release PR's checks also list **Upload APK to
 Google Drive**, waiting for `production` approval. Approve it to put the same APK in the
 `GOOGLE_DRIVE_FOLDER_ID` folder, where a phone's Drive app installs it without a GitHub
-sign-in; the run's summary links the file. Otherwise leave it, or reject it.
+sign-in; the run's summary links the file. Otherwise leave it, or reject it. A new push
+replaces a waiting one with one for the new commit.
 
 ## iOS key screens builds
 
