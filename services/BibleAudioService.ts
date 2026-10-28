@@ -40,6 +40,14 @@ export const configureBibleAudioPlayback = () =>
     shouldPlayInBackground: true,
   });
 
+/**
+ * The lock screen's and the earbuds' skips match the reader's own −10 and +30
+ * buttons. They must be given: expo-audio 58.0.10 on Android leaves an
+ * interval it isn't given at 0, so each press moved 0.1 seconds.
+ */
+export const BIBLE_AUDIO_SKIP_BACK_SECONDS = 10;
+export const BIBLE_AUDIO_SKIP_FORWARD_SECONDS = 30;
+
 /** Publishes playback to native system controls and the web Media Session API. */
 export const activateBibleAudioLockScreen = (
   player: Pick<AudioPlayer, 'setActiveForLockScreen'>,
@@ -48,6 +56,8 @@ export const activateBibleAudioLockScreen = (
   player.setActiveForLockScreen(true, metadata, {
     showSeekBackward: true,
     showSeekForward: true,
+    seekBackwardIntervalSeconds: BIBLE_AUDIO_SKIP_BACK_SECONDS,
+    seekForwardIntervalSeconds: BIBLE_AUDIO_SKIP_FORWARD_SECONDS,
   });
 
 type BibleAudioInitialQueuePlayer = Pick<
