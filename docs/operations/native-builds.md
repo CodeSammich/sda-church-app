@@ -526,15 +526,23 @@ SHA inputs.
 The build uploads the APK unzipped (`archive: false`) as
 `sda-church-app-pr-<number>-<run>-arm-debug.apk`, kept 14 days. A separate job then
 comments on the release PR with a link that downloads the APK itself, and replaces its
-earlier comments, so only the newest APK is offered. GitHub gives artifact downloads
-only to signed-in users, so on a phone, sign in to GitHub in the browser first.
+earlier comment, so there's one test APK comment. It shows the newest build in bold,
+with its commit, the time it was built in New York time, and the commit message's
+first line. Under it, a collapsed list links the PR's earlier builds that haven't
+expired, newest first: the last build of each other commit, up to ten. GitHub gives
+artifact downloads only to signed-in users, so on a phone, sign in to GitHub in the
+browser first.
 
 The comment job takes nothing from the build job, which runs the pull request's code,
-not even the link. It asks GitHub's API for this run's artifacts and requires exactly
-one with the expected name that hasn't expired, in a run of the pull request's head
-commit. It links that one, so the link can't be swapped for another file or site. It
-also gives the SHA-256 the upload step recorded with GitHub, which matches `sha256sum`
-of the download. That shows a download is the file the run uploaded, not that the
+not even the link. It asks GitHub's API for each run's artifacts and requires exactly
+one with the expected name, which includes the PR and run numbers, that hasn't expired
+and was stored for that run's commit. The earlier builds come from GitHub's list of
+this workflow's `pull_request` runs for the branch, each checked the same way. It links
+only those, so a link can't be swapped for another file or site. Commit messages are
+cut to their first line, at most 120 characters, with angle and square brackets
+removed, so they can't carry HTML or markdown links. It also gives each APK's SHA-256
+as the upload step recorded it with GitHub (an earlier build may lack one), which matches
+`sha256sum` of the download. That shows a download is the file the run uploaded, not that the
 build was clean: the upload step computes it inside the build job. A compromised
 dependency could still change the APK during the build, as it could change any build.
 `npm ci` installs exactly the npm packages in the reviewed lockfile, and Dependabot

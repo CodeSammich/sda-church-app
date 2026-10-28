@@ -7,6 +7,7 @@ import {
   CHURCH_BUILDING_IMAGE_URL,
   openLegalDisclaimer,
   openPrivacyPolicy,
+  openSupportEmail,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { getTextSizeMenuCopy } from '@/constants/TextSizeCopy';
@@ -32,6 +33,9 @@ const allLabels = {
     title: 'You',
     settings: 'Settings',
     aboutSupport: 'About & Support',
+    support: 'Help & Feedback',
+    supportSub: 'Ask for help or suggest a feature, by email',
+    supportPrompt: 'Tell us what went wrong, or what you would like the app to do:',
     darkMode: 'Theme',
     darkModeSub: 'Choose a color theme',
     language: 'Language',
@@ -49,6 +53,9 @@ const allLabels = {
     title: '您',
     settings: '設定',
     aboutSupport: '關於與支援',
+    support: '幫助與意見回饋',
+    supportSub: '透過電子郵件尋求協助或建議新功能',
+    supportPrompt: '請告訴我們遇到了什麼問題，或您希望 App 增加什麼功能：',
     darkMode: '主題',
     darkModeSub: '選擇顏色主題',
     language: '語言',
@@ -66,6 +73,9 @@ const allLabels = {
     title: '您',
     settings: '设置',
     aboutSupport: '关于与支持',
+    support: '帮助与反馈',
+    supportSub: '通过电子邮件寻求帮助或建议新功能',
+    supportPrompt: '请告诉我们遇到了什么问题，或您希望 App 增加什么功能：',
     darkMode: '主题',
     darkModeSub: '选择颜色主题',
     language: '语言',
@@ -83,6 +93,9 @@ const allLabels = {
     title: 'Tú',
     settings: 'Ajustes',
     aboutSupport: 'Información y Ayuda',
+    support: 'Ayuda y Sugerencias',
+    supportSub: 'Pida ayuda o sugiera una función, por correo',
+    supportPrompt: 'Cuéntenos qué falló o qué le gustaría que hiciera la app:',
     darkMode: 'Tema',
     darkModeSub: 'Elegir un tema de color',
     language: 'Idioma',
@@ -210,6 +223,13 @@ export default function YouScreen() {
             >
               {labels.aboutSupport}
             </Text>
+            <MenuCard
+              title={labels.support}
+              description={labels.supportSub}
+              icon="email-outline"
+              iconColor={theme.colors.secondary}
+              onPress={() => openSupportEmail(labels.supportPrompt, packageJson.version)}
+            />
             <MenuCard
               title={labels.privacy}
               description={labels.privacySub}

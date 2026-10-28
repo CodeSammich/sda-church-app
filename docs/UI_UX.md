@@ -275,8 +275,12 @@ are on Home, not here.
 
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
 **Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
-**About & Support** has the **Privacy Policy**, **Legal Disclaimer**, and
-**Open-Source Licenses** (all English only), followed by the app version. **Privacy
+**About & Support** starts with **Help & Feedback**, which opens a draft email to
+`technology@nyccsda.org` in the phone's email app, for help or a feature request
+(#541). Its subject is always English; the body starts with a prompt in the reader's
+language and ends with the app version and phone system. Then come the **Privacy
+Policy**, **Legal Disclaimer**, and **Open-Source Licenses** (all English only),
+followed by the app version. **Privacy
 Policy** and **Legal Disclaimer** open the website's copies in the in-app browser; the
 app keeps no copy of its own (#403, #412). **Open-Source Licenses** is an app screen,
 because those notices must ship with the app. On web, tapping the version checks for an update.

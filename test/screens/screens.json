@@ -390,8 +390,13 @@
     {
       "name": "you",
       "group": "worship-and-you",
+      "$comment": "Help & Feedback, the first item under About & Support, emails the technology team (#541).",
       "path": "you",
-      "variants": ["default", "dark", "large", "zh", "android-display-large"]
+      "variants": ["default", "dark", "large", "zh", "android-display-large"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Help\\b.*Feedback"] },
+        "zh": { "mustShowLines": ["幫助與意見回饋"] }
+      }
     },
     {
       "name": "text-size",

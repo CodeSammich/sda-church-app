@@ -389,3 +389,32 @@ export const openBibleRequestEmail = (prompt: string) =>
     'Error',
     'Email is not configured on this device or emulator.',
   );
+
+/** The app version and phone system, the first things support asks. */
+export const getAppAndSystemLine = (
+  version: string,
+  os: string = Platform.OS,
+  osVersion: string | number | undefined = Platform.Version,
+) => {
+  const system =
+    os === 'ios' ? `iOS ${osVersion}` : os === 'android' ? `Android, API level ${osVersion}` : 'web app';
+  return `App ${version} · ${system}`;
+};
+
+/**
+ * An email asking for help with the app or suggesting a feature, from You →
+ * About & Support (#541). As with the Bible request, the subject is always
+ * English and the prompt is in the reader's language. The last line gives the
+ * app version and phone system. The draft opens in the phone's email app, so
+ * the person sees all of it, and nothing is sent unless they send it.
+ */
+export const getSupportEmailUrl = (prompt: string, appAndSystem: string) =>
+  `mailto:${TECHNOLOGY_EMAIL}?subject=${encodeURIComponent('App help or feature request')}` +
+  `&body=${encodeURIComponent(`${prompt}\n\n\n\n${appAndSystem}`)}`;
+
+export const openSupportEmail = (prompt: string, version: string) =>
+  openInItsApp(
+    getSupportEmailUrl(prompt, getAppAndSystemLine(version)),
+    'Error',
+    'Email is not configured on this device or emulator.',
+  );
