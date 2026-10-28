@@ -392,8 +392,12 @@ export const GlobalHeader = (props: any) => {
       returnKeyType="search"
       onSubmitEditing={() => {
         if (isBiblePage) {
+          // A reference, such as Jn 3:16, is offered first and goes there.
+          // Words leave their results showing with the keyboard put away,
+          // to read and pick from: the first match is only a guess.
           const first = bibleRows.find((row) => row.kind === 'reference' || row.kind === 'verse');
-          if (first) handleSelectBibleRow(first);
+          if (first?.kind === 'reference') handleSelectBibleRow(first);
+          else searchRef.current?.blur();
         } else if (results.length > 0) {
           handleSelectCustomResult(results[0] as CustomHeaderSearchItem);
         }

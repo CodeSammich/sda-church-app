@@ -3,8 +3,9 @@ name: Android preview APK
 # Builds a debug APK of the release PR for testing on Android phones, and
 # comments a link to download it. It builds only this repository's
 # release-candidate branch, never fork code, and reads no secrets: the APK is
-# signed only with Gradle's local debug key. It used to upload to Google Drive
-# from main's context; a plain pull_request run needs neither (#537).
+# signed only with Gradle's local debug key. The optional upload to Google
+# Drive, which needs secrets and main's context, is a workflow of its own,
+# android-preview-apk-drive.yml, which only takes this run's APK.
 on:
   pull_request:
     branches:
@@ -228,7 +229,7 @@ jobs:
 
           $earlier
 
-          Sign in to GitHub in the phone's browser first, since GitHub only gives downloads to signed-in users. Each link works for 14 days after its build.
+          Sign in to GitHub in the phone's browser first, since GitHub only gives downloads to signed-in users. Each link works for 14 days after its build. To install the newest from Google Drive instead, without signing in, an approver approves **Upload APK to Google Drive** in this pull request's checks.
 
           It's a test build named **NYCCSDA Preview**, which installs beside the Play version rather than replacing it. Android asks once to allow installs from the browser.
 

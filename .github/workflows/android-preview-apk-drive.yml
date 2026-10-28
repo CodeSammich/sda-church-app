@@ -1,0 +1,138 @@
+name: Android preview APK on Drive
+
+# Optional: puts the release PR's Android preview APK, which
+# android-preview-apk.yml builds, in Google Drive, where a phone's Drive app
+# installs it without signing in to GitHub. The upload waits for approval in
+# the production environment; leave it waiting, or reject it, and nothing is
+# uploaded. The PR's 📱 Android test APK link works either way.
+#
+# Uses pull_request_target so the upload can use the production environment:
+# the job runs in main's context, which the environment's branch rule accepts.
+# It never checks out or runs the pull request's code. It waits for the APK
+# workflow's run of the PR's head commit, takes that run's APK through GitHub's
+# API, as the APK comment does, and uploads it with main's helper.
+# pull_request_target must stay allowed in the repository's Actions event
+# policy (Settings → Actions → Policies). A test keeps the list of workflows
+# that use it reviewed. See
+# docs/operations/admin-runbook.md#actions-event-policy-for-pull_request_target.
+on:
+  pull_request_target:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-preview-apk-drive-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  find:
+    # The APK workflow builds only this repository's release-candidate.
+    if: >-
+      github.event.pull_request.head.ref == 'release-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Find the preview APK
+    runs-on: ubuntu-24.04
+    # The APK's build takes about 15 minutes.
+    timeout-minutes: 50
+    permissions:
+      # To read the APK workflow's runs and their artifacts.
+      actions: read
+    outputs:
+      run_id: ${{ steps.apk.outputs.run_id }}
+      artifact_id: ${{ steps.apk.outputs.artifact_id }}
+      sha256: ${{ steps.apk.outputs.sha256 }}
+      name: ${{ steps.apk.outputs.name }}
+    steps:
+      - name: Wait for the APK of the pull request's head commit
+        id: apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          for _ in $(seq 1 90); do
+            run=$(gh api "repos/$REPO/actions/workflows/android-preview-apk.yml/runs?head_sha=$SHA&event=pull_request" \
+              --jq '.workflow_runs[0] // empty | "\(.id) \(.status)"' || true)
+            read -r id status <<<"$run"
+            if [ "${status:-}" = completed ]; then break; fi
+            sleep 30
+          done
+          test "${status:-}" = completed || { echo "::error::The APK workflow didn't finish for $SHA in time." >&2; exit 1; }
+          # Exactly one unexpired APK, named for this pull request and that
+          # run, stored for this commit, with the SHA-256 its upload recorded.
+          export APK_NAME="sda-church-app-pr-$PR-$id-arm-debug.apk"
+          found=$(gh api "repos/$REPO/actions/runs/$id/artifacts" --jq '
+            [.artifacts[] | select(.name == env.APK_NAME and .expired == false and .workflow_run.head_sha == env.SHA)]
+            | if length == 1 then .[0] | "\(.id) \(.digest // "")" else empty end')
+          test -n "$found" || { echo "::error::Run $id stored no single $APK_NAME from $SHA." >&2; exit 1; }
+          read -r artifact_id digest <<<"$found"
+          case "$digest" in
+            sha256:?*) ;;
+            *) echo "::error::GitHub gave no SHA-256 for $APK_NAME." >&2; exit 1 ;;
+          esac
+          {
+            echo "run_id=$id"
+            echo "artifact_id=$artifact_id"
+            echo "sha256=${digest#sha256:}"
+            echo "name=$APK_NAME"
+          } >> "$GITHUB_OUTPUT"
+          echo "Found $APK_NAME in run $id."
+
+  upload:
+    needs: find
+    name: Upload APK to Google Drive
+    environment: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      # To download the APK from the APK workflow's run.
+      actions: read
+      contents: read
+    steps:
+      - name: Download the APK
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          artifact-ids: ${{ needs.find.outputs.artifact_id }}
+          run-id: ${{ needs.find.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/android-pr-preview
+
+      - name: Check it's the APK that run uploaded
+        id: file
+        env:
+          SHA256: ${{ needs.find.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          mapfile -t apks < <(find "$RUNNER_TEMP/android-pr-preview" -type f -name '*.apk')
+          test "${#apks[@]}" -eq 1 || { echo "::error::Expected one APK, found ${#apks[@]}." >&2; exit 1; }
+          echo "$SHA256  ${apks[0]}" | sha256sum -c -
+          echo "path=${apks[0]}" >> "$GITHUB_OUTPUT"
+
+      # main's helper, never the pull request's.
+      - name: Check out the upload helper
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted-source
+          persist-credentials: false
+
+      - name: Upload APK to Google Drive
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+          GOOGLE_DRIVE_FILE_NAME: ${{ needs.find.outputs.name }}
+          APK: ${{ steps.file.outputs.path }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON" || {
+            echo 'Missing protected production Environment secret CLASPRC_JSON.' >&2
+            exit 1
+          }
+          node trusted-source/scripts/upload-google-drive.mjs "$APK" | tee "$RUNNER_TEMP/google-drive-upload.txt"
+          cat "$RUNNER_TEMP/google-drive-upload.txt" >> "$GITHUB_STEP_SUMMARY"

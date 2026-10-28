@@ -738,6 +738,12 @@ its commit, build time, and commit message, and the PR's earlier builds are list
 under it. It installs beside the Play version as **NYCCSDA Preview**. Fork pull
 requests are skipped. See [Android preview APK](native-builds.md#android-preview-apk).
 
+**On Google Drive, optionally:** the release PR's checks also list **Upload APK to
+Google Drive**, waiting for `production` approval. Approve it to put the same APK in the
+`GOOGLE_DRIVE_FOLDER_ID` folder, where a phone's Drive app installs it without a GitHub
+sign-in; the run's summary links the file. Otherwise leave it, or reject it. A new push
+replaces a waiting one with one for the new commit.
+
 ## iOS key screens builds
 
 **Workflow:** **iOS key screens**, which runs automatically on release pull requests
@@ -1087,18 +1093,21 @@ Never paste credentials into issues, pull requests, or workflow logs.
 From **November 2, 2026**, GitHub blocks the `pull_request_target` trigger in public
 repositories unless an Actions event policy allows it
 ([announcement](https://github.blog/changelog/2026-09-17-workflow-execution-protections-in-github-actions-generally-available/)).
-Two workflows use it, and one of them is a required check on `main`, so **without the
-policy, no release can merge into `main`**:
+Three workflows use it, and one of them is a required check on `main`, so **without
+the policy, no release can merge into `main`**:
 
 | Workflow | Why it uses `pull_request_target` | Required on `main` |
 | --- | --- | --- |
 | `.github/workflows/main-release-source-gate.yml` | Runs from `main`'s copy, so a pull request can't edit the gate to pass. It checks out no code. | Yes: `ensure_pr_to_main_from_release_branch` |
 | `.github/workflows/pending-release-label.yml` | Most pull requests come from forks, whose `pull_request` token can't label issues. It checks out no pull request code. | No |
+| `.github/workflows/android-preview-apk-drive.yml` | The optional Google Drive upload of the release PR's test APK needs the `production` environment, whose branch rule accepts only `main`'s context. It checks out no pull request code: it takes the APK workflow's APK through GitHub's API, checks its SHA-256, and uploads it with `main`'s helper. | No |
 
-Neither runs code from a fork with secrets or a write token, which is what makes
+None runs code from a fork with secrets or a write token, which is what makes
 `pull_request_target` dangerous (a "pwn request"). `android-preview-apk.yml` used it
-too until 1.4.0, for a Google Drive upload; it's now a plain `pull_request` workflow
-with no secrets (#537).
+too until 1.4.0, building the APK and uploading it to Google Drive in one workflow. It's
+now a plain `pull_request` workflow with no secrets (#537), and the Drive upload, which
+needs them, is `android-preview-apk-drive.yml`, which never builds or runs anything
+from the pull request.
 
 **The church's choice: one policy that allows every event for every workflow.** It
 works the way GitHub did before November 2, and nobody has to update it when a
@@ -1109,11 +1118,13 @@ themselves, and tests enforce that:
 - `pull_request_target` always runs the workflow as it is on `main`, never the pull
   request's copy, so an outsider can't add or change one. Only a reviewed release PR
   can.
-- The gate and the label workflow never check out code.
+- The gate and the label workflow never check out code. The Drive upload checks out
+  only `main`'s upload helper, never the pull request's code.
 - Pull request text, such as a title, body, or branch name, reaches a script only
   through an environment variable, never pasted into the script, so it can't inject
   commands.
-- Of the two, only the label workflow can write, and only to issues.
+- Only the label workflow can write, and only to issues. The Drive upload reads
+  secrets only after approval in `production`, and only to upload the one APK file.
 - `test/native-build-safety.test.ts` fails if any of the above changes, if a workflow
   turns off `actions/checkout`'s protection against fork code
   (`allow-unsafe-pr-checkout`), or if any other workflow starts using
@@ -1132,7 +1143,7 @@ Elsewhere:
 - `pull_request` workflows for a fork's pull request get no secrets and a read-only
   token, and none runs until a maintainer approves it (**Settings → Actions → General
   → Require approval for all external contributors**). That approval doesn't cover
-  `pull_request_target`, which is why these two never run fork code.
+  `pull_request_target`, which is why these three never run fork code.
 - The default workflow token is read-only, and workflows can't approve pull requests.
 - The store upload secrets are in the `store-upload` environment, which only `main`
   can use.

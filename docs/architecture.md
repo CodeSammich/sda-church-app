@@ -188,7 +188,7 @@ and may not be possible, so protect them above everything else.
     Android upload keystore (keep an encrypted backup), the Apple distribution
     certificate and provisioning profile (both **expire every 12 months**), and
     `CLASPRC_JSON`, a saved `clasp` login that deploys the bulletin Apps Script and
-    uploads the QR codes to Drive.
+    uploads the QR codes, and test APKs when approved, to Drive.
   - **`store-upload`**, only for the jobs that upload approved builds to testers: the
     App Store Connect API key, and which Google Play service account in the
     [Google Cloud project](#google-cloud-free-only) to sign in as, without a key.

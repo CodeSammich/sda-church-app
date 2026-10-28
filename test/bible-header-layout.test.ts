@@ -113,6 +113,14 @@ describe("the Bible's search results", () => {
     expect(header).toContain("backgroundColor: isBiblePage && isBibleSearchExpanded ? theme.colors.background : 'transparent'");
   });
 
+  it('open a reference on Enter, and otherwise stay up with the keyboard put away', () => {
+    expect(header).toMatch(
+      /if \(first\?\.kind === 'reference'\) handleSelectBibleRow\(first\);\n\s+else searchRef\.current\?\.blur\(\);/,
+    );
+    // Blurring keeps the search open while it has a query, so the results stay.
+    expect(header).toContain('if (isExpandableBible && searchQuery.trim().length === 0) {');
+  });
+
   it("close with Android's Back, as a page would", () => {
     expect(header).toMatch(/if \(!isBibleSearchExpanded\) return undefined;\n\s+const subscription = BackHandler\.addEventListener\('hardwareBackPress', \(\) => \{\n\s+collapseBibleSearchRef\.current\(\);\n\s+return true;/);
   });
