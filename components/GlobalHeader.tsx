@@ -870,7 +870,7 @@ export const GlobalHeader = (props: any) => {
               ? (row as CustomHeaderSearchItem).icon || 'book-open-page-variant'
               : (row as BibleSearchRow).kind === 'reference'
                 ? 'arrow-right-circle-outline'
-                : 'format-quote-close';
+                : 'format-quote-open';
             return (
               <List.Item
                 title={row.title}

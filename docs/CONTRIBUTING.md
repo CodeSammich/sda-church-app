@@ -239,7 +239,7 @@ GitHub's code scanning default setup and have no workflow file.
 - `iOS key screens join` joins the batches and fails if any failed. It only copies
   files, so it runs on Linux.
 - Its review comment links both platforms' screenshots, once `Android key screens`
-  (below) has finished for the same commit.
+  (below) has finished for the same commit, and says how long each run took.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   iPhone and Android screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
