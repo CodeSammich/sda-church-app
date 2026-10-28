@@ -5,7 +5,6 @@ import {
   type ChildrenSabbathSchoolCurriculum,
 } from '@/features/sabbath-school/ChildrenLessons';
 import { getCacheFolder, readCachedText, writeCachedText } from '@/services/CacheStore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File } from 'expo-file-system';
 import { getNetworkStateAsync } from 'expo-network';
 
@@ -19,11 +18,10 @@ import { getNetworkStateAsync } from 'expo-network';
  * PDF itself, with a progress bar, into the cache directory, which isn't backed
  * up and which the phone may clear. It then opens the copy in the phone's own
  * viewer. Opening it again that week needs no download, and no catalog lookup
- * either.
+ * either, so it works offline too.
  *
- * On Wi-Fi, the app also keeps this week's and the coming Sabbath's lessons
- * for the two lessons (age group and guide) opened most recently, so they open
- * at once, even offline.
+ * A lesson downloads only when someone taps it, so people who don't use
+ * Sabbath School never download one.
  *
  * Phones only: the web opens the PDF in the browser, as before. See
  * docs/feature_designs/sabbath_school_lessons.md.
@@ -31,12 +29,7 @@ import { getNetworkStateAsync } from 'expo-network';
 
 const FOLDER = 'children-lessons';
 const INDEX = { folder: FOLDER, name: 'index.json', key: 'childrenLessonsIndex' } as const;
-// The lessons opened most recently are the person's own choice, not a copy the
-// app can download again, so they're kept with the settings, which a full
-// phone's cache clearing doesn't touch.
-const RECENT_KEY = 'children-lessons-recent-v1';
 const PDF_TYPE = 'application/pdf';
-const RECENT_LESSONS = 2;
 const PROGRESS_INTERVAL_MS = 100;
 
 export type ChildrenLesson = Readonly<{
@@ -80,13 +73,6 @@ export const lessonDaysOf = (date: Date, startsOn?: Date, endsOn?: Date) => {
   return { from: dateKey(sunday), until: dateKey(friday) };
 };
 
-/** The Sabbath on or after a date. */
-export const comingSabbathOf = (date: Date) => {
-  const day = startOfDay(date);
-  day.setDate(day.getDate() + 6 - day.getDay());
-  return day;
-};
-
 // FNV-1a, so each address gets its own file.
 const hashOf = (text: string) => {
   let hash = 0x811c9dc5;
@@ -117,7 +103,7 @@ const readIndex = async (): Promise<LessonIndex> => {
 
 let indexChanges: Promise<boolean> = Promise.resolve(true);
 
-// One change at a time, so a tap and a Wi-Fi fetch don't undo each other's.
+// One change at a time, so two taps, or a tap and a cleanup, don't undo each other's.
 // Resolves to whether the change was saved.
 const changeIndex = (change: (index: LessonIndex) => void) =>
   (indexChanges = indexChanges.then(async () => {
@@ -130,26 +116,6 @@ const changeIndex = (change: (index: LessonIndex) => void) =>
       return false;
     }
   }));
-
-const readRecentLessons = async (): Promise<ChildrenLesson[]> => {
-  try {
-    const saved = JSON.parse((await AsyncStorage.getItem(RECENT_KEY)) ?? '[]');
-    return Array.isArray(saved) ? saved : [];
-  } catch {
-    return [];
-  }
-};
-
-const rememberLesson = async (lesson: ChildrenLesson) => {
-  try {
-    const others = (await readRecentLessons()).filter(
-      (each) => each.curriculum !== lesson.curriculum || each.language !== lesson.language,
-    );
-    await AsyncStorage.setItem(RECENT_KEY, JSON.stringify([lesson, ...others].slice(0, RECENT_LESSONS)));
-  } catch {
-    // Only the Wi-Fi fetch ahead uses it.
-  }
-};
 
 const isSameLesson = (saved: ChildrenLesson, lesson: ChildrenLesson) =>
   saved.curriculum === lesson.curriculum && saved.language === lesson.language;
@@ -183,7 +149,7 @@ type Download = Readonly<{
   controller: AbortController;
 }>;
 
-// Downloads under way, by address, so a tap during a Wi-Fi fetch shares it.
+// Downloads under way, by address, so two requests for the same lesson share one.
 const downloads = new Map<string, Download>();
 
 const startDownload = (
@@ -220,7 +186,7 @@ const startDownload = (
 
 /**
  * The phone's copy of a lesson PDF, downloaded first unless it's there. Aborting
- * `signal` stops the download, even one a Wi-Fi fetch began.
+ * `signal` stops the download, even one another request shares.
  */
 const downloadLesson = (
   { curriculum }: ChildrenLesson,
@@ -256,15 +222,17 @@ const downloadLesson = (
  * after its Sabbath, the first time the app checks.
  */
 export const pruneChildrenLessons = async (today = new Date()) => {
+  const folder = getCacheFolder(FOLDER);
+  // Nothing to do on a phone that never opened a lesson.
+  if (!folder.exists) return;
   const day = dateKey(today);
   const kept = new Set<string>([INDEX.name]);
   const saved = await changeIndex((index) => {
     index.lessons = index.lessons.filter((lesson) => lesson.until >= day);
     index.lessons.forEach((lesson) => kept.add(lessonFileName(lesson.curriculum, lesson.url)));
   });
-  const folder = getCacheFolder(FOLDER);
   // Unless the change was saved, `kept` may be missing some.
-  if (!saved || !folder.exists) return;
+  if (!saved) return;
   for (const entry of folder.list()) {
     if (!(entry instanceof File) || kept.has(entry.name)) continue;
     // A download under way writes a .part file.
@@ -309,7 +277,6 @@ export const getChildrenLesson = async (
     signal?: AbortSignal;
   } = {},
 ): Promise<ChildrenLessonToOpen> => {
-  void rememberLesson(lesson);
   const found = await findLesson(lesson, date);
   if ('website' in found) return (await isOffline()) ? OFFLINE : { url: found.website };
   try {
@@ -330,37 +297,4 @@ export const previewChildrenLesson = async (file: File, title: string) => {
   if (!(await file.canPreview({ mimeType: PDF_TYPE }))) return false;
   await file.preview({ mimeType: PDF_TYPE, title });
   return true;
-};
-
-let fetchingAhead = false;
-
-/**
- * Keeps this week's and the coming Sabbath's lessons on the phone for the age
- * groups opened most recently, so they open at once, even offline. Quarterly
- * lessons change on Sabbath, so on a weekday the coming Sabbath's is the next
- * lesson; this week's is usually the copy already there, and a saved lesson
- * covering the day needs no lookup. The caller checks for Wi-Fi.
- */
-export const fetchChildrenLessonsAhead = async (date = new Date()) => {
-  if (fetchingAhead) return;
-  fetchingAhead = true;
-  try {
-    const sabbath = comingSabbathOf(date);
-    // On a Sabbath, that's today: one lookup, since one that finds no PDF
-    // yet can take a while.
-    const dates = dateKey(sabbath) === dateKey(date) ? [date] : [date, sabbath];
-    for (const lesson of await readRecentLessons()) {
-      for (const each of dates) {
-        try {
-          const found = await findLesson(lesson, each);
-          if ('pdf' in found) await downloadLesson(lesson, found.pdf);
-        } catch {
-          // Offline, or the download failed: the next time the app opens tries again.
-        }
-      }
-    }
-    await pruneChildrenLessons(date);
-  } finally {
-    fetchingAhead = false;
-  }
 };

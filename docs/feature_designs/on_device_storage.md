@@ -52,7 +52,6 @@ The app saves its settings and the member's saved verses with [AsyncStorage](htt
 | `user-bible-translation`, `user-bible-supporting-translation`, `user-bible-dual-language`, `user-bible-show-pinyin`, `user-bible-book`, `user-bible-chapter`, `user-bible-audio-readers`, `user-bible-audio-sources` | The Bible reader's choices and the place last read | `app/(tabs)/bible/index.tsx`; `app/_layout.tsx` also resets the translation to the new language's when the app language changes |
 | `saved-bible-verses-v1` | Saved verses | `services/SavedVersesService.ts` |
 | `preferred-bulletin-location` | Which congregation's bulletin to show | `app/(tabs)/home/bulletin.tsx` |
-| `children-lessons-recent-v1` | The two children's lessons (age group, guide, and app language) opened most recently, to fetch ahead on Wi-Fi (phones only) | `features/sabbath-school/LessonDownloads.ts` |
 | `pwa-update-last-check-v1` | When the web app last checked for an update (web only, in `localStorage` directly) | `app/_layout.tsx` |
 | `screenshot-route` | The screen to open, in key-screen builds only | The key-screen capture scripts; `services/ScreenshotRoute.ts` reads it, then deletes it |
 
@@ -64,7 +63,7 @@ Where AsyncStorage keeps them, and whether they're backed up:
 | Android | A SQLite database, `RKStorage`, in the app's databases directory | **Yes, if the member has Google backup on.** `app.json` sets `android.allowBackup` to `true`, which is also Expo's default; Google recommends setting it explicitly. So Android's Auto Backup includes the database in the member's Google Drive backup. |
 | Web | The browser's `localStorage` for `app.nyccsda.org` | It's kept by the browser, on that device only. |
 
-So a member who sets up a new phone from a backup keeps their settings and saved verses, on iOS and Android alike. They're the member's own choices and verses, which the app can't get back any other way. Apple's [File System Programming Guide](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html) also says "Any file that can be re-created or downloaded must be excluded from the backup", so the bulletin and today's verse, which the app can download again, stay out of AsyncStorage on a phone (below). `test/device-backup.test.ts` checks both settings, and that those copies go through `services/CacheStore.ts`.
+So a member who sets up a new phone from a backup keeps their settings and saved verses, on iOS and Android alike. They're the member's own choices and verses, which the app can't get back any other way. Apple's [File System Programming Guide](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html) also says "Any file that can be re-created or downloaded must be excluded from the backup", so the bulletin, today's verse, and the children's lessons, which the app can download again, stay out of AsyncStorage on a phone (below). `test/device-backup.test.ts` checks both settings, and that those copies go through `services/CacheStore.ts`.
 
 ## Copies the app can download again
 
@@ -82,7 +81,7 @@ So a member who sets up a new phone from a backup keeps their settings and saved
 
 The app only shows this Sabbath's bulletin and the next, so saving one deletes the copies dated more than two weeks before it. Today's verse has one copy per language, replaced each day.
 
-Each lesson in the index has the days it's the lesson for: from the catalog, a quarterly lesson runs Sabbath to Friday and an Alive in Jesus week Sunday to Sabbath; a lesson picked by its number gets only the Sabbath, or Sunday to Friday. A copy is kept until its lesson's last day, and deleted the first time the app checks after that. On Wi-Fi, the app keeps this week's and the coming Sabbath's lessons for the two lessons opened most recently. Those two are the member's own choice, not a copy, so they're in AsyncStorage (`children-lessons-recent-v1`, above): a nearly full phone clears every app's cache, and the fetch ahead then downloads the lessons again. See [Children's Sabbath School Lessons](sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
+Each lesson in the index has the days it's the lesson for: from the catalog, a quarterly lesson runs Sabbath to Friday and an Alive in Jesus week Sunday to Sabbath; a lesson picked by its number gets only the Sabbath, or Sunday to Friday. A copy is kept until its lesson's last day, and deleted the first time the app checks after that. A lesson downloads only when someone taps it, so a phone keeps only the lessons its owner opened. The app checks after each lesson it opens, and a few seconds after it opens or comes back, with no network, so old copies go even if the person doesn't open another lesson. See [Children's Sabbath School Lessons](sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
 
 The other copies:
 
@@ -127,5 +126,5 @@ The other copies:
 - `test/cache-store.test.ts` and `test/cache-store.web.test.ts`: that a phone keeps the copies in the cache directory and deletes the ones AsyncStorage kept before #524, and that the web keeps them in AsyncStorage without touching the file system.
 - `test/bulletin-service.test.ts`: that the bulletin copies are in the cache directory on a phone, and only the last two weeks' are kept.
 - `test/children-lesson-downloads.test.ts`: that a lesson PDF is downloaded once into the cache directory, that a failed download is never taken for the lesson, and that a copy opens offline on its lesson's days and is deleted after its last day.
-- `test/device-backup.test.ts`: the backup settings in `app.json`, on iOS and Android.
+- `test/device-backup.test.ts`: the backup settings in `app.json`, on iOS and Android, and that the copies the app can download again go through `services/CacheStore.ts`.
 - `test/setup.ts` replaces `services/BundledBible.ts` for the other tests with a reader of the files on disk.

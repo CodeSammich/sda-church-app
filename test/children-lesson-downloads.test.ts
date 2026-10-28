@@ -1,15 +1,12 @@
 import { ChildrenLessonDialog, getChildrenLessonStatus } from '@/components/ChildrenLessonDialog';
 import { findChildrenLesson } from '@/features/sabbath-school/ChildrenLessons';
 import {
-  comingSabbathOf,
-  fetchChildrenLessonsAhead,
   getChildrenLesson,
   lessonDaysOf,
   lessonFileName,
   previewChildrenLesson,
   pruneChildrenLessons,
 } from '@/features/sabbath-school/LessonDownloads';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
 import { getNetworkStateAsync } from 'expo-network';
@@ -37,7 +34,6 @@ const day = (text: string) => {
 };
 const WEDNESDAY = day('2026-10-28');
 const SABBATH = day('2026-10-31');
-const ymd = (date?: Date) => date && lessonDaysOf(date, date, date).from;
 
 const lessonFiles = () =>
   [...mockFiles.keys()].filter((path) => path.startsWith('cache/children-lessons/') && path.endsWith('.pdf'));
@@ -53,10 +49,9 @@ const mockDownloads = (download?: Download) =>
       })) as typeof File.downloadFileAsync,
   );
 
-beforeEach(async () => {
+beforeEach(() => {
   find.mockReset();
   jest.restoreAllMocks();
-  await AsyncStorage.clear();
 });
 
 // Most tests here give the lookup's answer directly, with fixed dates, so they
@@ -196,7 +191,7 @@ describe("children's lesson downloads", () => {
     expect(download).toHaveBeenCalledTimes(2);
   });
 
-  it('share a download already under way, as when a tap comes during a Wi-Fi fetch', async () => {
+  it('share a download already under way between two requests for the same lesson', async () => {
     find.mockResolvedValue({ url: PDF });
     const download = mockDownloads();
     const [one, two] = await Promise.all([
@@ -205,55 +200,6 @@ describe("children's lesson downloads", () => {
     ]);
     expect(download).toHaveBeenCalledTimes(1);
     expect('file' in one && 'file' in two && one.file.uri === two.file.uri).toBe(true);
-  });
-
-  it('fetch the coming Sabbath’s lesson ahead for the two age groups opened most recently', async () => {
-    find.mockImplementation(async (curriculum, _language, date) => ({
-      url: date?.getDay() === 6 ? `${OTHER_PDF}?${curriculum}` : `${PDF}?${curriculum}`,
-    }));
-    const download = mockDownloads();
-    for (const curriculum of ['beginner-student', 'primary-student', 'junior'] as const) {
-      await getChildrenLesson({ curriculum, language: 'en' }, { date: WEDNESDAY });
-    }
-    find.mockClear();
-    download.mockClear();
-
-    await fetchChildrenLessonsAhead(WEDNESDAY);
-    expect(find.mock.calls.map(([curriculum, , date]) => [curriculum, ymd(date)])).toEqual([
-      ['junior', '2026-10-31'],
-      ['primary-student', '2026-10-31'],
-    ]);
-    expect(download.mock.calls.map(([url]) => url)).toEqual([`${OTHER_PDF}?junior`, `${OTHER_PDF}?primary-student`]);
-
-    // On Sabbath, they open without a lookup or a download.
-    find.mockClear();
-    download.mockClear();
-    expect(await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: SABBATH })).toMatchObject({
-      url: `${OTHER_PDF}?junior`,
-      file: expect.any(File),
-    });
-    expect(find).not.toHaveBeenCalled();
-    expect(download).not.toHaveBeenCalled();
-  });
-
-  it("look up this week's lesson ahead too, when the catalog gave no dates", async () => {
-    // Without dates, a lesson found on Sabbath is saved for that day only.
-    find.mockResolvedValue({ url: PDF });
-    const download = mockDownloads();
-    await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: SABBATH });
-    const monday = day('2026-11-02');
-    find.mockImplementation(async (_curriculum, _language, date) => ({ url: date?.getDay() === 6 ? OTHER_PDF : PDF }));
-
-    await fetchChildrenLessonsAhead(monday);
-    expect(find.mock.calls.slice(1).map(([, , date]) => ymd(date))).toEqual(['2026-11-02', '2026-11-07']);
-    expect(download.mock.calls.map(([url]) => url)).toEqual([PDF, OTHER_PDF]);
-
-    // Offline on Monday: no lookup, and the copy from Sabbath.
-    find.mockRejectedValue(new Error('offline'));
-    expect(await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: monday })).toMatchObject({
-      url: PDF,
-      file: expect.any(File),
-    });
   });
 
   it("open a copy offline on any day its lesson's dates cover, and delete it the day after its last day", async () => {
@@ -294,26 +240,12 @@ describe("children's lesson downloads", () => {
     expect(lessonDaysOf(WEDNESDAY)).toEqual({ from: '2026-10-25', until: '2026-10-30' });
     expect(lessonDaysOf(day('2026-11-01'))).toEqual({ from: '2026-11-01', until: '2026-11-06' });
     expect(lessonDaysOf(SABBATH)).toEqual({ from: '2026-10-31', until: '2026-10-31' });
-    expect(ymd(comingSabbathOf(WEDNESDAY))).toBe('2026-10-31');
-    expect(ymd(comingSabbathOf(SABBATH))).toBe('2026-10-31');
   });
 
   it('name each copy for its age group and guide, which the viewer shows, and its address', () => {
     expect(lessonFileName('junior', PDF)).toMatch(/^junior-[0-9a-f]{8}\.pdf$/);
     expect(lessonFileName('junior', PDF)).not.toBe(lessonFileName('junior', OTHER_PDF));
     expect(lessonFileName('primary-teacher', PDF)).toMatch(/^primary-teacher-/);
-  });
-
-  it('remember the lessons opened most recently when a full phone clears the cache', async () => {
-    find.mockResolvedValue({ url: PDF });
-    const download = mockDownloads();
-    await getChildrenLesson({ curriculum: 'junior', language: 'en' }, { date: WEDNESDAY });
-    for (const path of [...mockFiles.keys()]) mockFiles.delete(path);
-    download.mockClear();
-
-    await fetchChildrenLessonsAhead(WEDNESDAY);
-    expect(find).toHaveBeenLastCalledWith('junior', 'en', comingSabbathOf(WEDNESDAY));
-    expect(download).toHaveBeenCalledTimes(1);
   });
 
   it("open in the phone's PDF viewer, or report that there's none", async () => {

@@ -125,9 +125,8 @@ them itself instead:
 - a popup appears as soon as the person taps, and shows the download's progress
   ("Downloading · 5.1 of 14.2 MB"), with an X that stops it;
 - the file is kept in the cache directory while it's current, so it opens at once the
-  next time. A lesson opens offline too, once its copy is on the phone; on Wi-Fi the
-  app downloads this week's and the coming Sabbath's ahead of time, for the two lessons
-  opened most recently;
+  next time, even offline. Nothing downloads without a tap, so people who don't use
+  a feature never download its files;
 - it opens in the phone's own viewer, through `expo-file-system`'s `File.preview()`:
   Quick Look on iPhone, and the app that opens PDFs on Android. That opens the
   downloaded copy, not a link, so it's outside `constants/ExternalLinks.ts`.
