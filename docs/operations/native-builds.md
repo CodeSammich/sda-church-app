@@ -43,7 +43,7 @@ on every push to `main`, is kept for browser testing and previews; see
   [Android setup](#android-setup-github-hosted-direct-builds)
 - [External account cleanup](#external-account-cleanup)
 - [Build commands](#build-commands)
-  - [Android preview APK and Drive upload](#android-preview-apk-and-drive-upload)
+  - [Android preview APK](#android-preview-apk)
   - [iOS key screens](#ios-key-screens-unsigned-simulator-builds), including the
     [key screens](#key-screens) on the iPhone and
     [on Android](#android-key-screens)
@@ -238,9 +238,8 @@ GOOGLE_PLAY_SERVICE_ACCOUNT
 The two Google Play values aren't keys: the upload signs in without one. Setting up
 `store-upload` is under [Automatic store uploads](#automatic-store-uploads).
 `production` also holds the other workflows' secrets: `CLASPRC_JSON` (the Apps Script
-deploy, the QR code upload, and the Android preview APK's Drive upload),
-`APPS_SCRIPT_PROJECT_ID` and `APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy), and the
-optional `GOOGLE_DRIVE_FOLDER_ID` (the Drive upload). A third environment,
+deploy and the QR code upload), and `APPS_SCRIPT_PROJECT_ID` and
+`APPS_SCRIPT_DEPLOYMENT_ID` (the Apps Script deploy). A third environment,
 `screenshot-review`, holds no secrets; it only holds the
 [Screenshots reviewed](#key-screens) check for approval.
 
@@ -248,8 +247,7 @@ To set up `production`, open **Settings → Environments** in the upstream repos
 create or select `production`. Require at least one reviewer, and restrict deployment
 branches to `main` and `release-candidate`, so a manual QR code run from
 `release-candidate` can reach its approval step (the Apps Script deploy skips on any
-branch but `main`). The Android preview APK workflow runs in `main`'s
-context, and the signing jobs themselves run only on `main`. Then:
+branch but `main`). The signing jobs themselves run only on `main`. Then:
 
 - **Store binary files base64-encoded.** The keystore, `.p12`, and provisioning profile
   are binary, so their secrets hold base64 text. Base64 is only an encoding; the GitHub
@@ -260,7 +258,9 @@ context, and the signing jobs themselves run only on `main`. Then:
   value wins, but a Repository-secret copy is readable by every workflow and weakens the
   boundary. To move one, add the value to `production`, check that the protected
   workflow uses it, then delete the repository copy. No workflow reads `EXPO_TOKEN`; if
-  one is still set anywhere, delete it.
+  one is still set anywhere, delete it. From 1.4.0, nothing reads a
+  `GOOGLE_DRIVE_FOLDER_ID` secret either (the QR workflow names its folder in the
+  file), so delete it if it's set.
 - **Review before approving.** The build jobs have read-only repository permissions and
   pin their third-party Actions, but anyone who can change a trusted workflow and get it
   approved can use its secrets. Review workflow changes before approving a signing run.
@@ -512,31 +512,29 @@ On `main`, a manual Android run builds both the AAB and the APK whichever boxes 
 ticked; the AAB box only decides whether the AAB is also uploaded to Google Play
 internal testing. Native failures do not block the website deployment.
 
-### Android preview APK and Drive upload
+### Android preview APK
 
 **Android preview APK** builds with no signing credentials: it makes a debug APK, signed
 only with Gradle's local debug key, for ARM phones and tablets
-(`npm run build:android:apk:debug:arm`). It runs automatically for release pull requests
-into `main`, from `release-candidate` in this repository, and skips fork PRs. It does
-not accept manual commit or pull-request SHA inputs and does not use dependency caching
-while executing PR code in the `pull_request_target` context.
+(`npm run build:android:apk:debug:arm`), with the JavaScript bundled in. A debug-signed
+APK builds as the preview variant, **NYCCSDA Preview**, with its own app ID
+(`org.nyccsda.app.preview`), so it installs beside the Play version (#378).
+It runs automatically for release pull requests into `main`, from `release-candidate`
+in this repository, and skips fork PRs. It does not accept manual commit or pull-request
+SHA inputs.
 
-For an automatic PR run, a separate protected `production` Environment job downloads only
-the APK artifact and checks out the upload helper from the trusted base commit. It does not
-check out or execute PR code while the Google credential is available. The helper refreshes
-the existing `CLASPRC_JSON` OAuth token and
-uploads a private APK file to the connected user's My Drive root. The OAuth account must
-retain the `drive.file` scope. To upload into a folder instead, add a
-`GOOGLE_DRIVE_FOLDER_ID` secret to `production`; the upload job already passes it to the
-helper.
+The build uploads the APK unzipped (`archive: false`) as
+`sda-church-app-pr-<number>-<run>-arm-debug.apk`, kept 14 days. A separate job then
+comments on the release PR with a link that downloads the APK itself, and replaces its
+earlier comments, so only the newest APK is offered. GitHub gives artifact downloads
+only to signed-in users, so on a phone, sign in to GitHub in the browser first.
 
-`production` requires a reviewer, so the Drive upload waits for someone to approve it.
-Meanwhile, the build job has already saved the APK as a download on the run
-(`android-pr-preview-<number>-<run>`, kept 14 days). The release PR's screenshot review
-comment links that download and the run, whose summary links the Drive copy once it's
-uploaded.
-The Drive upload job must remain separate from the build job, and the upload helper must
-be checked out from the trusted base commit rather than the PR head.
+The workflow reads no secrets and uses no environment, so nothing waits for approval.
+The build job checks out the pull request without saved credentials and with a
+read-only token. Only the comment job can write, to pull requests, and it never checks
+out or runs code. Until 1.4.0 it used `pull_request_target` to upload the APK to Google
+Drive through `production`; a download link reaches more testers, and needs neither
+(#537).
 
 ### iOS key screens (unsigned Simulator builds)
 
@@ -898,9 +896,9 @@ The **Android key screens** workflow (`android-key-screens.yml`) takes the same 
 screens on an Android emulator, from the same list and groups (#372). Every job in it
 runs on standard Linux runners, so the few Mac runners stay for the iPhone. Like the iOS
 preview, it runs on each release pull request into `main`, where its job **Android key
-screens join** is a required check, and by hand on any branch. It isn't part of the Android
-PR preview, which runs in `main`'s context for its Drive upload: this workflow runs pull
-request code only with a read-only token and reads no secret.
+screens join** is a required check, and by hand on any branch. It's separate from the Android
+PR preview, which builds the APK for phones. This workflow, too, runs pull request code
+only with a read-only token and reads no secret.
 
 - **Build the Android key-screens app** builds the debug-signed preview APK, from the
   same source and settings as the APK the Android preview publishes, but for the
@@ -920,8 +918,7 @@ request code only with a read-only token and reads no secret.
 
 One review still covers both platforms. The iOS preview's review comment waits for this
 workflow's run on the same commit, then links both downloads and says whether both
-passed, and its **Screenshots reviewed** approval covers both. The comment also links the
-[Android preview APK](#android-preview-apk-and-drive-upload) download and that workflow's run. To recheck an earlier
+passed, and its **Screenshots reviewed** approval covers both. To recheck an earlier
 run's Android screenshots with new rules, start this workflow by hand with
 **screens_from_run**, as for the iPhone.
 
@@ -1061,9 +1058,9 @@ testers need it.
 
 Why a separate environment instead of `production`:
 
-- **`production` is shared.** The signed builds, the Apps Script deploy, the QR code
-  upload, and the Android preview APK's Drive upload all use it, and that workflow
-  runs for pull requests. Any job that names an environment can read every secret in it.
+- **`production` is shared.** The signed builds, the Apps Script deploy, and the QR code
+  upload all use it, and a QR code run can start from `release-candidate`. Any job that
+  names an environment can read every secret in it.
   In `store-upload`, only the two upload jobs can reach the store credentials.
 - **One approval instead of two.** `production` requires a reviewer for every job.
   The upload jobs start after the builds finish, so in `production` each release would

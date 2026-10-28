@@ -549,19 +549,6 @@ describe('Screenshot review', () => {
     expect(commentJob).toContain('select(.user.login == "github-actions[bot]"');
   });
 
-  it('links the Android test APK and the run that uploads it to Drive', () => {
-    const apkWorkflow = repoFile('.github/workflows/android-preview-apk.yml');
-    expect(commentJob).toContain(
-      'actions/workflows/android-preview-apk.yml/runs?head_sha=$SHA"',
-    );
-    // The artifact and job names it looks for are the APK workflow's.
-    expect(commentJob).toContain('select(.name | startswith("android-pr-preview-"))');
-    expect(apkWorkflow).toContain('name: android-pr-preview-${{ needs.resolve-pr.outputs.pr_number }}');
-    expect(commentJob).toContain('**Upload APK to Google Drive**');
-    expect(apkWorkflow).toContain('name: Upload APK to Google Drive');
-    expect(commentJob).toContain('**To try it on an Android phone:** $apk');
-  });
-
   it('says the screenshots are on the way after each push, and clears out-of-date ones', () => {
     for (const condition of releaseOnly) expect(announce).toContain(condition);
     expect(announce).toContain('github.run_attempt == 1');

@@ -569,24 +569,6 @@ jobs:
           run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
           download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"
           app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
-          # The Android test APK, from android-preview-apk.yml's newest run for this commit.
-          # Its build is usually done by now; its Drive upload waits for production.
-          apk_run=$(gh api "repos/$REPO/actions/workflows/android-preview-apk.yml/runs?head_sha=$SHA" \
-            --jq '.workflow_runs[0].id // empty' || true)
-          if [ -n "$apk_run" ]; then
-            apk_url="https://github.com/$REPO/actions/runs/$apk_run"
-            found=$(gh api "repos/$REPO/actions/runs/$apk_run/artifacts" \
-              --jq '[.artifacts[] | select(.name | startswith("android-pr-preview-"))][0] // empty | "\(.id) \(.size_in_bytes)"' || true)
-            if [ -n "$found" ]; then
-              read -r apk_id apk_bytes <<<"$found"
-              apk="[Download the test APK]($apk_url/artifacts/$apk_id), a zip of about $((apk_bytes / 1000000)) MB with \`app.apk\` inside."
-            else
-              apk="The test APK is still building in [its run]($apk_url)."
-            fi
-            apk="$apk Once someone approves \`production\` on [that run]($apk_url), its **Upload APK to Google Drive** job copies the APK to Google Drive, and the run's summary then links to the Drive copy."
-          else
-            apk="The test APK's workflow hasn't started for this commit; [its runs](https://github.com/$REPO/actions/workflows/android-preview-apk.yml) say why."
-          fi
           if [ -n "$ANDROID_RUN_ID" ]; then
             android="$(screenshots "$ANDROID_RUN_ID" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
           else
@@ -618,8 +600,6 @@ jobs:
           3. **Approve:** $approve
 
           A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
-
-          **To try it on an Android phone:** $apk
 
           To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
           BODY
