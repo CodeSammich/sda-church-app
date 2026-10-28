@@ -71,7 +71,7 @@ Per-use costs, *measured*:
 | Bible text in the app | ~26 MB, about 6.8 MB compressed: the four translations and the Hebrew and Greek | No request: it ships with the app |
 | Bulletin API | < 1 KB to a few KB | 5.7 s cold, 1.5 s warm |
 | Chinese library catalog | ~40 KB | 1.1 s; at most once a day per device |
-| Adventech quarterly index | ~124 KB | CDN-cached; only when a children's age group is tapped |
+| Adventech quarterly index | ~1 MB, about 235 KB compressed (English) | CDN-cached; on a phone, at most twice a week per lesson (Sunday to Friday, and the Sabbath), when it's tapped or fetched ahead on Wi-Fi |
 
 The conclusion: **text APIs are negligible at every scenario, and audio is the only
 real load.** Adventist Connect carries it, and the fallback chain decides who carries
@@ -195,13 +195,19 @@ Translation (`LanguageApp`) only runs on a cache miss, so its quota isn't a conc
 `sabbath-school.adventech.io`. Opening the Sabbath School screen downloads nothing.
 When someone taps a children's age group, the app finds this week's lesson and opens
 its PDF: for Junior, Teen, and Youth, and for the Chinese Beginner, Kindergarten, and
-Primary lessons, a quarterly index (about 124 KB in English) and two small lesson
+Primary lessons, a quarterly index (about 1 MB in English, 235 KB compressed) and two small lesson
 files; for the English Beginner, Kindergarten, and Primary lessons, two Alive in Jesus
 files (about 15 KB each). When the app is in Chinese it tries the Chinese lesson
 first, then English; otherwise it uses English. It opens the age group's Alive in
 Jesus website if it finds no lesson within 12 seconds. All of it comes
 from S3 and CloudFront with a warm cache (*measured*). Free, no key, no published
 limits.
+
+On a phone, the app then downloads the PDF itself (5–14 MB for the English student
+lessons, 33 MB for one Chinese lesson) and keeps it, and the lookup, for the week. On
+Wi-Fi it also fetches the coming Sabbath's lesson ahead for the two lessons opened most
+recently. So each phone downloads each lesson at most once (#529; see
+[Children's Sabbath School Lessons](../feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone)).
 
 ### Chinese Union Mission library
 

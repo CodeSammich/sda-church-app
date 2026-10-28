@@ -26,6 +26,9 @@ export type CachedText = Readonly<{
 const onPhone = () => Platform.OS !== 'web';
 const folderOf = (folder: string) => new Directory(Paths.cache, folder);
 
+/** A folder in the cache directory on a phone, for downloaded files such as lesson PDFs. */
+export const getCacheFolder = folderOf;
+
 export const readCachedText = async ({ folder, name, key }: CachedText): Promise<string | null> => {
   if (onPhone()) {
     const file = new File(folderOf(folder), name);

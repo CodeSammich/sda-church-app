@@ -167,6 +167,9 @@ const officialPdf = (src?: string) => {
   }
 };
 
+/** Whether an address findChildrenLessonUrl gave is a lesson PDF, not a website. */
+export const isChildrenLessonPdf = (url: string) => officialPdf(url) !== null;
+
 // This week's lesson, or else the quarter's lesson for this week by number.
 const pickWeek = <T>(weeks: readonly T[], isThisWeek: (week: T) => boolean, week: number) =>
   weeks.find(isThisWeek) || weeks[Math.min(week, weeks.length) - 1];

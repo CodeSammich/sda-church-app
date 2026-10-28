@@ -27,6 +27,7 @@ import {
 import { hasAndroidWebBackGuard, isInstalledPwa } from '@/constants/InstalledWebApp';
 import { getBottomTabContentHeight } from '@/constants/Layout';
 import { getBottomTabTextScale } from '@/hooks/useGlobalHeaderHeight';
+import { useChildrenLessonsAhead } from '@/hooks/useChildrenLessonsAhead';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
   AppTheme,
@@ -906,6 +907,8 @@ function RootLayoutNav({
     : '/';
   const androidBackTarget = backTarget;
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
+  // On Wi-Fi, the coming Sabbath's children's lessons (#529).
+  useChildrenLessonsAhead();
 
   // Opens the screen the key-screen capture saved before launching the app
   // (#331). Only the iOS key screens workflow's Simulator build does this; see

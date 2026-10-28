@@ -265,6 +265,11 @@ export const openChildrenSabbathSchool = () =>
     "Could not open the children's Sabbath School catalog.",
   );
 
+/**
+ * Opens this week's children's lesson in the browser. The web uses this; a
+ * phone downloads the lesson with a progress popup instead and opens it in the
+ * phone's own viewer (hooks/useChildrenLessonOpener.ts, #529).
+ */
 export const openCurrentChildrenSabbathSchool = (
   curriculum: ChildrenSabbathSchoolCurriculum,
   language: SupportedLanguage = 'en',
