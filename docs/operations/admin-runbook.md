@@ -123,8 +123,8 @@ A skipped check counts as passed; for example, `sync` usually shows as skipped.
 The slow checks (`verify-bulletin-api`, the Android and iOS builds, and the Bible audio
 test) run once per release, on the release pull request into `main`. Feature pull
 requests into `release-candidate` run only the quick checks. Any other pull request into
-`main`, such as Dependabot's, skips the slow checks, because the source gate stops it
-from merging there anyway.
+`main`, such as a Dependabot security update, skips the slow checks, because the source
+gate stops it from merging there anyway.
 
 ### Changing a required check
 
@@ -763,24 +763,47 @@ The screenshots are a separate download, `ios-key-screens-<number>-<run>`. See
 
 Dependabot opens one pull request a week for all minor and patch updates, and a
 separate one for each major update (`.github/dependabot.yml`). It opens them against
-`main`, and they fail the `main` checks by design: **Main Release Source Gate**, **PR
-Version Check**, and **Release - PR Version Sync**. Don't merge them into `main`. For
-each one:
+`release-candidate`, so they merge there like any feature pull request, with only the
+quick checks. The linked-issue check skips them. Dependabot reads its settings from
+`main`, so a change to them takes effect once the release that carries it merges.
 
-1. Select **Edit** next to the title and change the base branch to `release-candidate`.
-2. Comment `@dependabot rebase` so the branch is rebuilt on `release-candidate` and the
-   checks run again.
+**It leaves Expo's packages alone.** It ignores every package Expo's SDK pins
+(`expo/bundledNativeModules.json`), such as `react`, `react-native`, and the `expo-*`
+modules, because a newer one breaks the build until the next SDK. It also skips the
+updates that would break two packages that follow Expo's versions: the Jest preset
+(`@react-native/jest-preset`, which matches `react-native`) and `babel-preset-expo`.
+`test/dependabot-config.test.ts` keeps that list to the pinned packages in
+`package.json`, plus those two.
 
-Or copy the `package.json` and `package-lock.json` changes from several of them into
-one pull request into `release-candidate`, and close the Dependabot pull requests with a
-link to it.
+A Dependabot update to `expo` itself, in a pull request of its own, is the sign to
+update them all. Do that in a pull request of your own with `npx expo install --fix`
+(for a new SDK, `npx expo install expo@^<SDK>.0.0 --fix`), as #528 did. Once it merges,
+Dependabot closes its `expo` pull request by itself. The weekly
+[Expo doctor monitor](#expo-doctor-monitor-alerts) catches patch releases Dependabot
+misses, as it did for #528.
 
-A release moves a Dependabot pull request that's still open on `release-candidate` back
-to `main`. **Release - After Merge** leaves bots' pull requests there and names them in
-its comment, so move it again.
+**A major update we hold back stays open.** For example, TypeScript 7 waits until Expo
+supports it. Leave its pull request open as the reminder, and merge it when it's ready.
+Each one held open takes one of the 10 open pull requests `open-pull-requests-limit`
+allows; at the limit, Dependabot opens no new version update. Closing a single-package
+pull request by hand skips only that exact version: Dependabot opens a new one at the
+next release, such as 7.0.3. Closing the weekly group pull request skips nothing.
 
-While a Dependabot pull request still targets `main`, it runs only the quick checks.
-The slow builds and tests run on the release pull request that includes the update.
+**After each release,** GitHub moves the pull requests open on `release-candidate` to
+`main` when it deletes the branch, and **Release - After Merge** moves them all back,
+Dependabot's included. If one needs rebuilding on the new `release-candidate`, comment
+`@dependabot rebase`.
+
+**Security updates** are the exception. GitHub opens them against `main` whatever
+`dependabot.yml` says, and none of its settings apply to them. They get Dependabot's
+default labels instead of **maintenance**, and the Expo ignore list doesn't hold, so one
+can bump a pinned package; update that one with `npx expo install --fix` instead. Change
+its base to `release-candidate` (**Edit** next to the title), or let the next release
+move it. Dependabot may rebuild a security update from `main`, so if it falls behind
+`release-candidate`, copy its `package.json` and `package-lock.json` changes into a pull
+request of your own rather than relying on `@dependabot rebase`. A pull request into
+`main` fails the `main` checks by design: **Main Release Source Gate**, **PR Version
+Check**, and **Release - PR Version Sync**. Don't merge one into `main`.
 
 When Dependabot reports `security_update_not_possible`, there's no fix Dependabot can
 apply yet, usually because another package pins the old version. Recheck after that
@@ -942,9 +965,11 @@ workflows. Give the issue a Priority on desktop, and the next daily run removes 
 ### Maintenance issues
 
 Every issue a scheduled workflow opens gets the green **maintenance** label, and so does
-every Dependabot pull request (`.github/dependabot.yml`), so
-`is:open label:maintenance` lists all the upkeep that's waiting. Each new issue also
-starts with a Priority:
+every Dependabot version update (`.github/dependabot.yml`), so
+`is:open label:maintenance` lists all the upkeep that's waiting. A Dependabot security
+update gets Dependabot's default `dependencies` and `javascript` labels instead, because
+`dependabot.yml`'s settings don't apply to security updates once it sets
+`target-branch`, so relabel it by hand. Each new issue also starts with a Priority:
 
 | Issue | Priority |
 | --- | --- |
