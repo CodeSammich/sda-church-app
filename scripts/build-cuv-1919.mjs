@@ -62,11 +62,26 @@ const decodeEntities = (text) =>
     .replace(/&amp;/g, '&');
 
 /**
+ * Drops HTML tags. It repeats until nothing changes, the form GitHub's code
+ * scanning accepts for removing tags, though one pass of this pattern already
+ * leaves none. The app shows verses as plain text, never as HTML.
+ */
+export const stripTags = (html) => {
+  let text = html;
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(/<[^>]+>/g, '');
+  } while (text !== previous);
+  return text;
+};
+
+/**
  * Cleans one piece of WordProject's text: drops tags and ASCII whitespace, which
  * is only HTML layout, but keeps U+3000, the 1919 text's space before 神.
  */
 export const cleanText = (html) =>
-  decodeEntities(html.replace(NAME_SPANS, '$1').replace(/<[^>]+>/g, ''))
+  decodeEntities(stripTags(html.replace(NAME_SPANS, '$1')))
     .replace(/[ \t\r\n ]+/g, '')
     .replace(/^　+|　+$/g, '');
 
