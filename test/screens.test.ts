@@ -1009,6 +1009,16 @@ describe('Android key screens workflow (#372)', () => {
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
   });
 
+  it('says how long each run took, until its join job uploaded the screenshots', () => {
+    // took() finds the join job by name, so renaming one would drop its time quietly.
+    expect(jobOf(preview, 'simulator')).toContain('name: iOS key screens join');
+    expect(jobOf(workflow, 'screens')).toContain('name: Android key screens join');
+    const comment = jobOf(preview, 'review-comment');
+    expect(comment).toContain(`ios_took="$(took "$RUN_ID" 'iOS key screens join')" || ios_took=""`);
+    expect(comment).toContain(`android_took="$(took "$ANDROID_RUN_ID" 'Android key screens join')" || android_took=""`);
+    expect(comment).toMatch(/\n\s+\$checks\n\n\s+\$timing\n/);
+  });
+
   it('re-checks an earlier run on Linux', () => {
     const earlier = jobOf(workflow, 'earlier-screens');
     expect(earlier).toContain('runs-on: ubuntu-24.04');

@@ -613,7 +613,7 @@ workflow, `scripts/build-ios-simulator.mjs`, or the key screens before the relea
 start it by hand on your branch from the Actions tab. The workflow reads no secrets, so it is safe on pull requests.
 
 **How long it takes, and why it varies.** A run finishes when its slowest runner does.
-Measured in October 2026:
+Each release's review comment gives its own times. Measured in October 2026:
 
 | Setup | Whole run |
 | --- | --- |
@@ -928,8 +928,9 @@ only with a read-only token and reads no secret.
   failed.
 
 One review still covers both platforms. The iOS preview's review comment waits for this
-workflow's run on the same commit, then links both downloads and says whether both
-passed, and its **Screenshots reviewed** approval covers both. To recheck an earlier
+workflow's run on the same commit. It then links both downloads, says whether both
+passed, and says how long each run took, from its start until its join job finished. Its
+**Screenshots reviewed** approval covers both. To recheck an earlier
 run's Android screenshots with new rules, start this workflow by hand with
 **screens_from_run**, as for the iPhone.
 
