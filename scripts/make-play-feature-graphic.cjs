@@ -99,7 +99,7 @@ const text = async (markup, font, fontfile, size, spacing = 0) =>
     24,
   );
   const features = await text(
-    `<span foreground="${LIGHT_BLUE}">Bilingual Bible · Audio · Weekly bulletin · Hymns</span>`,
+    `<span foreground="${LIGHT_BLUE}">Multilingual Bible · Audio · Weekly bulletin · Hymns</span>`,
     'Plus Jakarta Sans Medium',
     jakartaMedium,
     18,
