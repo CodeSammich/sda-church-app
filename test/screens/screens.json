@@ -187,12 +187,15 @@
     {
       "name": "bible-audio-settings",
       "group": "bible-reading",
-      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. It's centred like the other popups: until 1.3.2 it sat at the bottom, its title 47% of the way down where theirs are at 25 to 32%, so the title must be no farther down than 40%.",
+      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages, in English (the Google Play screenshot) and Chinese. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. It's centred like the other popups: until 1.3.2 it sat at the bottom, its title 47% of the way down where theirs are at 25 to 32%, so the title must be no farther down than 40%.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=audio-settings",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
-      "variants": ["zh"],
-      "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$", "^WordProject$"],
-      "mustNotShowLines": ["^關閉$"]
+      "variants": ["default", "zh"],
+      "mustShowLines": ["^WordProject$"],
+      "variantRules": {
+        "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$"], "mustNotShowLines": ["^Close$"] },
+        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$"], "mustNotShowLines": ["^關閉$"] }
+      }
     },
     {
       "name": "bible-long-chapter",
@@ -300,10 +303,10 @@
     {
       "name": "sabbath-school-lesson-download",
       "group": "worship-and-you",
-      "$comment": "The popup a tap on a children's lesson opens while its PDF downloads (#529). Key screens can't tap, so a key-screens build opens it from popup=, with a fixed 5.1 of 14.2 MB.",
+      "$comment": "The popup a tap on a children's lesson opens while its PDF downloads (#529). Key screens can't tap, so a key-screens build opens it from popup=, with a fixed 5.1 of 14.2 MB. The iPhone's text recognition reads \"14.2MB\", without the space.",
       "path": "sabbath-school?popup=lesson-download",
       "variants": ["default"],
-      "mustShowLines": ["^Junior \\(ages 10.12\\)", "^Downloading\\W+5\\.1 of 14\\.2 MB$", "^It stays on this phone"]
+      "mustShowLines": ["^Junior \\(ages 10.12\\)", "^Downloading\\W+5\\.1 of 14\\.2 ?MB$", "^It stays on this phone"]
     },
     {
       "name": "sabbath-school-lesson-offline",
@@ -418,11 +421,11 @@
     }
   ],
   "appStore": {
-    "en-US": ["home-default", "bible-dual-default", "bible-pinyin-default", "explore-default", "library-default", "bible-dual-dark"],
+    "en-US": ["home-default", "bible-dual-default", "bible-cuv-zh", "bible-dual-dark", "explore-default", "library-default"],
     "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark"]
   },
   "googlePlay": {
-    "en-US": ["home-default", "bible-dual-default", "bible-pinyin-default", "explore-default", "library-default", "bible-dual-dark"],
+    "en-US": ["home-default", "bible-dual-default", "bible-audio-settings-default", "bible-dual-dark", "explore-default", "library-default"],
     "zh-TW": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark"]
   }
 }

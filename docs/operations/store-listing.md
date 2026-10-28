@@ -62,7 +62,7 @@ Official church app
 **Short description** (Google Play, up to 80)
 
 ```text
-Bilingual Bible with pinyin and audio, plus our weekly bulletin and church life.
+Multilingual Bible with pinyin and audio, our weekly bulletin, and church life.
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -136,7 +136,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Short description** (Google Play, up to 80)
 
 ```text
-中英雙語聖經，附拼音與有聲朗讀，並提供每週週報與教會生活資訊。
+多語言聖經（中文、英文、西班牙文），附拼音與有聲朗讀，並提供每週週報與教會生活資訊。
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -207,7 +207,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Short description** (Google Play, up to 80)
 
 ```text
-中英双语圣经，附拼音与有声朗读，并提供每周周报与教会生活信息。
+多语言圣经（中文、英文、西班牙文），附拼音与有声朗读，并提供每周周报与教会生活信息。
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -283,7 +283,7 @@ App oficial de la iglesia
 **Short description** (Google Play, up to 80)
 
 ```text
-Biblia bilingüe con pinyin y audio, más el boletín semanal y la vida de iglesia.
+Biblia multilingüe con pinyin y audio, el boletín semanal y la vida de iglesia.
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -395,7 +395,9 @@ transparency both stores reject. Replace them there whenever the stores get new 
 
 - **Google Play:** 2 to 8 phone screenshots. The long side can be at most twice the short
   side, so capture at 1080 × 1920: on an emulator, run `adb shell wm size 1080x1920`, and
-  turn on Android's demo mode for a clean status bar. Play also needs a 1024 × 500 feature
+  turn on Android's demo mode for a clean status bar. The current set comes from the
+  **Android key screens** run's Google Play batch (`screens/google-play/en-US/`), which
+  does both. Play also needs a 1024 × 500 feature
   graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
   and the 512 × 512 icon (`public/icon-512x512.png`).
 - **App Store:** iPhone 6.9-inch screenshots only. The app is iPhone-only
