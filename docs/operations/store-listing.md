@@ -80,38 +80,34 @@ Keywords change only with a new version, so edit them before submitting it.
 bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio,nyc,mandarin,queens,brooklyn,sermon
 ```
 
-**Description** (both stores, up to 4,000)
+**Description** (both stores, up to 4,000). Kept general on purpose (1.4.1): it names no
+translations, hymnals, or app languages and gives no counts, so adding one changes nothing
+here, and the App Store only lets a description change with a new version. Each version's
+What's New says what's new.
 
 ```text
-The official app of the New York Chinese Seventh-day Adventist Church. Read the Bible in the languages our church family speaks, follow each week's bulletin, and stay connected with church life in Queens and Brooklyn.
+The official app of the New York Chinese Seventh-day Adventist Church: the Bible, the weekly bulletin, and church life in Queens and Brooklyn, in Chinese, English, and more.
 
-BIBLE IN YOUR LANGUAGES
-• Four translations: the Berean Standard Bible (BSB), the 1919 Chinese Union Version in Traditional (CUV) and Simplified (CUVS) characters, and the Spanish Reina-Valera 1909.
-• Dual-language reading shows a second translation under every verse, so you can read Chinese and English side by side.
-• Pinyin with tone marks above Chinese text, for learners and for reading aloud.
-• Search the whole Bible, even offline, or type a reference such as John 3:16 to go straight there.
-• Audio Bible in Mandarin & Cantonese (CUV and CUVS), English (BSB), and other languages, with background playback, lock-screen controls, and a sleep timer.
-• Save and share verses, and tap a verse to see its notes and the original Hebrew or Greek.
-• A verse of the day to start each day.
+BIBLE
+• Read in several translations, one alone or two side by side.
+• Pinyin over Chinese text, for learners and for reading aloud.
+• Search the whole Bible, even offline, and jump to any reference.
+• Listen in Mandarin, Cantonese, and other languages, with background playback and a sleep timer.
+• Save and share verses, with notes and the original Hebrew or Greek.
 
 CHURCH LIFE
-• The weekly bulletin for Queens and Brooklyn: order of worship, Sabbath School, hymns, and Bible readings, for this week and next. Readings open right in the Bible.
-• A countdown to the Sabbath at sunset in New York.
-• Watch the livestream and past sermons on YouTube, listen to the audio archive, and join the Bible study on Zoom.
-• This week's Sabbath School lesson, plus children's lessons by age.
-• Worship times, locations with directions, church history, our ministries, and our pastoral team.
-• For new members and visitors: what Seventh-day Adventists believe and how to join the church.
+• Each week's bulletin: order of worship, Sabbath School, hymns, and readings.
+• The livestream, past sermons, and Bible classes.
+• Sabbath School lessons, including children's lessons by age.
+• Worship times, locations, ministries, and ways to give.
+• For visitors: what Adventists believe and how to join.
 
 HYMNS AND READING
-• Browse and search six hymnals: the Seventh-day Adventist Hymnal (1985) and five Chinese hymnals (505, 506, and three editions of Hymns of Praise 707). Find matching numbers between the English hymnal and the 505 Chinese hymnal.
-• A library of Christian classics, children's books, Ellen G. White's writings, and Adventist pioneer works, opened from their online sources.
+• Browse and search English and Chinese hymnals.
+• A library of Christian classics and Adventist writings.
 
-GIVING
-• See the ways to give, including the church's online giving page on AdventistGiving, which opens in your browser.
-
-MADE FOR EVERYONE
-• English, Traditional Chinese, Simplified Chinese, and Spanish.
-• Text from 100% to 200%, light and dark themes, and screen reader support.
+FOR EVERYONE
+• Large text, light and dark themes, and screen reader support.
 • No account, no ads, and no tracking.
 
 Hymn lyrics and sheet music, library books, lessons, and videos open on their publishers' websites.
@@ -154,35 +150,28 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Description** (both stores, up to 4,000)
 
 ```text
-紐約華人基督復臨安息日會的官方應用程式。以教會家人熟悉的語言閱讀聖經，查看每週週報，隨時掌握皇后區與布魯克林的教會生活。
+紐約華人基督復臨安息日會的官方應用程式：聖經、每週週報，以及皇后區與布魯克林的教會生活，提供中文、英文等多種語言。
 
-多語言聖經
-• 四種譯本：1919年版和合本繁體版（CUV）與簡體版（CUVS）、Berean Standard Bible（BSB），以及西班牙文 Reina-Valera 1909。
-• 雙語閱讀：每節經文下方顯示第二種譯本，中英對照一目了然。
-• 可在中文經文上方顯示帶聲調的拼音，方便學習與朗讀。
-• 搜尋整本聖經，離線也能用；也可輸入經文出處（如「約3:16」）直接前往。
-• 有聲聖經：國語與粵語（和合本繁體、簡體）、英文（BSB）及其他語言，支援背景播放、鎖定畫面控制與睡眠定時器。
-• 收藏與分享經文；點選經文即可查看註解，以及希伯來文或希臘文原文。
-• 每日一節經文。
+聖經
+• 多種譯本，可單獨閱讀，也可兩種對照。
+• 中文經文上方可顯示拼音，方便學習與朗讀。
+• 搜尋整本聖經，離線也能用，並可直接前往任何經文出處。
+• 國語、粵語及其他語言的有聲聖經，支援背景播放與睡眠定時器。
+• 收藏與分享經文，並可查看註解與希伯來文或希臘文原文。
 
 教會生活
-• 皇后區與布魯克林的每週週報：崇拜程序、安息日學、詩歌與讀經，可查看本週與下週。經文可直接在聖經中開啟。
-• 紐約安息日日落倒數。
-• 在 YouTube 觀看直播與講道重播，收聽講道錄音，並透過 Zoom 參加查經班。
-• 本週安息日學課程，以及依年齡分級的兒童課程。
-• 聚會時間、各聚會地點與路線、教會歷史、事工介紹與牧養團隊。
-• 給新朋友與訪客：認識基督復臨安息日會的信仰，以及如何加入教會。
+• 每週週報：崇拜程序、安息日學、詩歌與讀經。
+• 直播、講道重播與查經班。
+• 安息日學課程，以及依年齡分級的兒童課程。
+• 聚會時間、地點、事工介紹與奉獻方式。
+• 給訪客：認識基督復臨安息日會的信仰，以及如何加入教會。
 
 詩歌與閱讀
-• 瀏覽與搜尋六本詩歌：英文 SDA 詩歌本（1985 年版），以及五本中文詩歌（中文讚美詩 505 版、506 版，與三種版本的頌讚詩歌 707）。可查找英文詩歌本與 505 版中文讚美詩的對應編號。
-• 圖書館收錄基督教經典、兒童讀物、懷愛倫著作與復臨先驅作品，從其線上來源開啟。
-
-奉獻
-• 了解各種奉獻方式，包括在瀏覽器中開啟的教會線上奉獻頁面（AdventistGiving）。
+• 瀏覽與搜尋英文與中文詩歌本。
+• 收錄基督教經典與復臨教會著作的圖書館。
 
 人人適用
-• 支援英文、繁體中文、簡體中文與西班牙文。
-• 字體大小 100% 至 200%，淺色與深色主題，並支援螢幕閱讀器。
+• 可放大字體、淺色與深色主題，並支援螢幕閱讀器。
 • 無需帳號、無廣告、不追蹤。
 
 詩歌歌詞與樂譜、圖書館書籍、課程與影片，皆於其出版者網站開啟。
@@ -225,35 +214,28 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Description** (both stores, up to 4,000)
 
 ```text
-纽约华人基督复临安息日会的官方应用程序。以教会家人熟悉的语言阅读圣经，查看每周周报，随时掌握皇后区与布鲁克林的教会生活。
+纽约华人基督复临安息日会的官方应用程序：圣经、每周周报，以及皇后区与布鲁克林的教会生活，提供中文、英文等多种语言。
 
-多语言圣经
-• 四种译本：1919年版和合本繁体版（CUV）与简体版（CUVS）、Berean Standard Bible（BSB），以及西班牙文 Reina-Valera 1909。
-• 双语阅读：每节经文下方显示第二种译本，中英对照一目了然。
-• 可在中文经文上方显示带声调的拼音，方便学习与朗读。
-• 搜索整本圣经，离线也能用；也可输入经文出处（如“约3:16”）直接前往。
-• 有声圣经：普通话与粤语（和合本繁体、简体）、英文（BSB）及其他语言，支持背景播放、锁屏控制与睡眠定时器。
-• 收藏与分享经文；点击经文即可查看注解，以及希伯来文或希腊文原文。
-• 每日一节经文。
+圣经
+• 多种译本，可单独阅读，也可两种对照。
+• 中文经文上方可显示拼音，方便学习与朗读。
+• 搜索整本圣经，离线也能用，并可直接前往任何经文出处。
+• 普通话、粤语及其他语言的有声圣经，支持背景播放与睡眠定时器。
+• 收藏与分享经文，并可查看注解与希伯来文或希腊文原文。
 
 教会生活
-• 皇后区与布鲁克林的每周周报：崇拜程序、安息日学、诗歌与读经，可查看本周与下周。经文可直接在圣经中打开。
-• 纽约安息日日落倒数。
-• 在 YouTube 观看直播与讲道重播，收听讲道录音，并通过 Zoom 参加查经班。
-• 本周安息日学课程，以及按年龄分级的儿童课程。
-• 聚会时间、各聚会地点与路线、教会历史、事工介绍与牧养团队。
-• 给新朋友与访客：认识基督复临安息日会的信仰，以及如何加入教会。
+• 每周周报：崇拜程序、安息日学、诗歌与读经。
+• 直播、讲道重播与查经班。
+• 安息日学课程，以及按年龄分级的儿童课程。
+• 聚会时间、地点、事工介绍与奉献方式。
+• 给访客：认识基督复临安息日会的信仰，以及如何加入教会。
 
 诗歌与阅读
-• 浏览与搜索六本诗歌：英文 SDA 诗歌本（1985 年版），以及五本中文诗歌（中文赞美诗 505 版、506 版，与三种版本的颂赞诗歌 707）。可查找英文诗歌本与 505 版中文赞美诗的对应编号。
-• 图书馆收录基督教经典、儿童读物、怀爱伦著作与复临先驱作品，从其在线来源打开。
-
-奉献
-• 了解各种奉献方式，包括在浏览器中打开的教会在线奉献页面（AdventistGiving）。
+• 浏览与搜索英文与中文诗歌本。
+• 收录基督教经典与复临教会著作的图书馆。
 
 人人适用
-• 支持英文、繁体中文、简体中文与西班牙文。
-• 字体大小 100% 至 200%，浅色与深色主题，并支持屏幕阅读器。
+• 可放大字体、浅色与深色主题，并支持屏幕阅读器。
 • 无需账号、无广告、不追踪。
 
 诗歌歌词与乐谱、图书馆书籍、课程与视频，均在出版方网站打开。
@@ -301,35 +283,28 @@ biblia,himnario,himnos,sábado,escuela sabática,boletín,audio,reina valera,pin
 **Description** (both stores, up to 4,000)
 
 ```text
-La aplicación oficial de la Iglesia Adventista del Séptimo Día China de Nueva York. Lee la Biblia en los idiomas que habla nuestra familia de la iglesia, sigue el boletín de cada semana y mantente en contacto con la vida de la iglesia en Queens y Brooklyn.
+La aplicación oficial de la Iglesia Adventista del Séptimo Día China de Nueva York: la Biblia, el boletín semanal y la vida de la iglesia en Queens y Brooklyn, en varios idiomas, entre ellos el español.
 
-LA BIBLIA EN TUS IDIOMAS
-• Cuatro traducciones: la Berean Standard Bible (BSB), la Versión Unión China de 1919 en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
-• La lectura bilingüe muestra una segunda traducción debajo de cada versículo, para leer en chino y en inglés lado a lado.
-• Pinyin con marcas de tono sobre el texto chino, para quienes aprenden el idioma y para leer en voz alta.
-• Busca en toda la Biblia, incluso sin conexión, o escribe una cita como Juan 3:16 para ir directamente allí.
-• Biblia en audio en mandarín y cantonés (CUV y CUVS), en inglés (BSB) y en otros idiomas, con reproducción en segundo plano, controles en la pantalla de bloqueo y temporizador de apagado.
-• Guarda y comparte versículos, y toca un versículo para ver sus notas y el texto original en hebreo o griego.
-• Un versículo del día para comenzar cada día.
+LA BIBLIA
+• Lee en varias traducciones, una sola o dos lado a lado.
+• Pinyin sobre el texto chino, para quienes aprenden el idioma y para leer en voz alta.
+• Busca en toda la Biblia, incluso sin conexión, y ve directo a cualquier cita.
+• Escucha la Biblia en mandarín, cantonés y otros idiomas, con reproducción en segundo plano y temporizador de apagado.
+• Guarda y comparte versículos, con notas y el texto original en hebreo o griego.
 
 VIDA DE IGLESIA
-• El boletín semanal de Queens y Brooklyn: orden del culto, Escuela Sabática, himnos y lecturas bíblicas, de esta semana y de la próxima. Las lecturas se abren directamente en la Biblia.
-• Una cuenta regresiva hasta el comienzo del sábado, a la puesta del sol en Nueva York.
-• Mira la transmisión en vivo y los sermones anteriores en YouTube, escucha el archivo de audio y únete al estudio bíblico por Zoom.
-• La lección de Escuela Sabática de esta semana, además de lecciones infantiles por edad.
-• Horarios de culto, ubicaciones con indicaciones, la historia de la iglesia, nuestros ministerios y nuestro equipo pastoral.
-• Para nuevos miembros y visitantes: lo que creen los adventistas del séptimo día y cómo unirse a la iglesia.
+• El boletín de cada semana: orden del culto, Escuela Sabática, himnos y lecturas.
+• La transmisión en vivo, sermones anteriores y clases bíblicas.
+• Lecciones de Escuela Sabática, incluidas lecciones infantiles por edad.
+• Horarios de culto, ubicaciones, ministerios y formas de dar.
+• Para visitantes: lo que creen los adventistas del séptimo día y cómo unirse a la iglesia.
 
 HIMNOS Y LECTURA
-• Explora y busca en seis himnarios: el himnario adventista en inglés (Seventh-day Adventist Hymnal, 1985) y cinco himnarios chinos (505, 506 y tres ediciones de Hymns of Praise 707). Encuentra los números equivalentes entre el himnario en inglés y el himnario chino 505.
-• Una biblioteca de clásicos cristianos, libros infantiles, escritos de Elena G. de White y obras de los pioneros adventistas, que se abren desde sus fuentes en línea.
-
-DIEZMOS Y OFRENDAS
-• Consulta las formas de dar, incluida la página de ofrendas en línea de la iglesia en AdventistGiving, que se abre en tu navegador.
+• Explora y busca en himnarios en inglés y en chino.
+• Una biblioteca de clásicos cristianos y escritos adventistas.
 
 PARA TODOS
-• Inglés, chino tradicional, chino simplificado y español.
-• Texto del 100 % al 200 %, temas claro y oscuro, y compatibilidad con lectores de pantalla.
+• Texto ampliable, temas claro y oscuro, y compatibilidad con lectores de pantalla.
 • Sin cuenta, sin anuncios y sin rastreo.
 
 Las letras y partituras de los himnos, los libros de la biblioteca, las lecciones y los videos se abren en los sitios web de sus editores.
