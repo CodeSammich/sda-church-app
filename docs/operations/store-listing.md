@@ -68,7 +68,7 @@ Multilingual Bible with pinyin and audio, our weekly bulletin, and church life.
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-Your church, all week: read and listen to the Bible side by side in English, Chinese, or Spanish, check the bulletin, watch the livestream, and join Bible classes.
+Your church, all week: read and listen to the Bible side by side in several languages, check the bulletin, watch the livestream, and join Bible classes.
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces). Apple also searches the name
@@ -80,10 +80,10 @@ Keywords change only with a new version, so edit them before submitting it.
 bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio,nyc,mandarin,queens,brooklyn,sermon
 ```
 
-**Description** (both stores, up to 4,000). Kept general on purpose (1.4.1): it names no
-translations, hymnals, or app languages and gives no counts, so adding one changes nothing
-here, and the App Store only lets a description change with a new version. Each version's
-What's New says what's new.
+**Description** (both stores, up to 4,000). Kept general on purpose (1.4.1), as are the short
+descriptions and promotional text: they name no translations, hymnals, or app languages and
+give no counts, so adding one changes nothing here, and the App Store only lets a
+description change with a new version. Each version's What's New says what's new.
 
 ```text
 The official app of the New York Chinese Seventh-day Adventist Church: the Bible, the weekly bulletin, and church life in Queens and Brooklyn, in Chinese, English, and more.
@@ -132,7 +132,7 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Short description** (Google Play, up to 80)
 
 ```text
-多語言聖經（中文、英文、西班牙文），附拼音與有聲朗讀，並提供每週週報與教會生活資訊。
+多語言聖經，附拼音與有聲朗讀，並提供每週週報與教會生活資訊。
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -196,7 +196,7 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Short description** (Google Play, up to 80)
 
 ```text
-多语言圣经（中文、英文、西班牙文），附拼音与有声朗读，并提供每周周报与教会生活信息。
+多语言圣经，附拼音与有声朗读，并提供每周周报与教会生活信息。
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
@@ -271,7 +271,7 @@ Biblia multilingüe con pinyin y audio, el boletín semanal y la vida de iglesia
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-Tu iglesia, toda la semana: lee y escucha la Biblia lado a lado en español, inglés o chino, consulta el boletín, mira la transmisión y únete a las clases bíblicas.
+Tu iglesia, toda la semana: lee y escucha la Biblia lado a lado en varios idiomas, consulta el boletín, mira la transmisión y únete a las clases bíblicas.
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces)
