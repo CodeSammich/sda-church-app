@@ -47,7 +47,7 @@ const {
   statusBarClear,
   takeFinalShot,
   takeGroup,
-  writeAppStoreCopy,
+  writeOpaqueCopy,
 } = require('./capture-ios-screens.cjs');
 
 const ADB = process.env.ADB || 'adb';
@@ -387,7 +387,8 @@ const writePlayCopy = async (source, destination, size) => {
   if (width !== size.width || height !== size.height) {
     throw new Error(`${source} is ${width} × ${height}, not Google Play's ${size.width} × ${size.height}; check android.googlePlay in test/screens/screens.json.`);
   }
-  await writeAppStoreCopy(source, destination);
+  // Already Google Play's size, so only the transparency goes.
+  await writeOpaqueCopy(source, destination);
 };
 
 if (require.main === module) {

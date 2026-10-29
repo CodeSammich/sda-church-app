@@ -186,14 +186,31 @@ const buildManifest = (settings, route = '') => ({
 });
 
 /**
- * Writes an App Store copy of a screenshot without its alpha channel: the
- * Simulator's PNGs have one, and App Store Connect rejects screenshots with
- * transparency. Every pixel is opaque already, so the image looks the same.
+ * The App Store's iPhone screenshot size. Since the 1.4.0 submission, App
+ * Store Connect's iPhone slot, "iPhone with Dynamic Island (medium display)",
+ * takes only the 6.1- and 6.3-inch sizes (1179 × 2556 or 1206 × 2622), and
+ * rejects the Simulator's 1320 × 2868.
  */
-const writeAppStoreCopy = async (source, destination) => {
+const APP_STORE_SIZE = { width: 1206, height: 2622 };
+
+/**
+ * Writes a store copy of a screenshot without its alpha channel, scaled to
+ * `size` if given: the screenshots' PNGs have one, and both stores reject
+ * screenshots with transparency. Every pixel is opaque already, so the image
+ * looks the same.
+ */
+const writeOpaqueCopy = async (source, destination, size) => {
   const sharp = require('sharp');
-  await sharp(source).removeAlpha().png().toFile(destination);
+  let image = sharp(source);
+  if (size) image = image.resize(size.width, size.height, { fit: 'cover', position: 'centre' });
+  await image.removeAlpha().png().toFile(destination);
 };
+
+/**
+ * Writes an App Store copy at APP_STORE_SIZE. 1320 × 2868 and 1206 × 2622 are
+ * the same shape to within a pixel, so scaling to cover crops at most that.
+ */
+const writeAppStoreCopy = (source, destination) => writeOpaqueCopy(source, destination, APP_STORE_SIZE);
 
 /**
  * The store copies, in upload order: the App Store's from the iPhone shots, as
@@ -575,6 +592,8 @@ module.exports = {
   planAppStore,
   planStoreCopies,
   writeAppStoreCopy,
+  writeOpaqueCopy,
+  APP_STORE_SIZE,
   manifestPath,
   statusBarClear,
 };

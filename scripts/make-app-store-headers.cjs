@@ -79,7 +79,7 @@ const LISTINGS = [
 const phonesFor = (listing) => [listing.bible, '01-home-default.png', '05-explore-default.png'];
 
 // Three phones: the centre one larger and higher, all running off the bottom edge.
-const SHOT_RATIO = 2868 / 1320;
+const SHOT_RATIO = 2622 / 1206;
 const BEZEL = 22;
 const GAP = 56;
 const PHONES = [
