@@ -82,6 +82,7 @@ describe('key screen list (test/screens/screens.json)', () => {
   it('opens only popups the screen can open from its path (#372)', () => {
     const screenFiles: Record<string, string> = {
       bible: 'app/(tabs)/bible/index.tsx',
+      'sabbath-school': 'app/(tabs)/explore/sabbath-school.tsx',
       you: 'app/(tabs)/you/index.tsx',
     };
     const popups = config.screens.filter((screen: { path: string }) => /[?&]popup=/.test(screen.path));
@@ -158,10 +159,12 @@ describe('saved settings', () => {
     expect(repoFile('app/_layout.tsx')).toContain('takeScreenshotRoute()');
   });
 
-  it('skips setup and fixes the language, theme, and text size for every shot', () => {
+  it('skips setup, except on its own shots, and fixes the language, theme, and text size for every shot', () => {
     for (const shot of shots) {
       const manifest = buildManifest(shot.settings);
-      expect(manifest['has-completed-setup']).toBe('true');
+      // First-launch setup's own shots (#523) leave it to show.
+      const setupShot = /\/setup-[^/]+\.png$/.test(shot.file);
+      expect([shot.file, manifest['has-completed-setup']]).toEqual([shot.file, setupShot ? 'false' : 'true']);
       expect(manifest['user-language']).toMatch(/^(en|zh|zh-cn|es)$/);
       expect(manifest['user-theme']).toMatch(/^(light|dark)$/);
       expect(Number(manifest['user-text-scale'])).toBeGreaterThanOrEqual(1);
@@ -716,6 +719,7 @@ describe('Android key screens (#372)', () => {
     planShots,
     checkScreenSize,
     STORAGE_DATABASE,
+    becomeRoot,
   } = require('../scripts/capture-android-screens.cjs');
   const { mkdtempSync } = require('node:fs');
   const { tmpdir } = require('node:os');
@@ -773,6 +777,26 @@ describe('Android key screens (#372)', () => {
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(android, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
       expect({ group, over: seconds > 360 }).toEqual({ group, over: false });
+    }
+  });
+
+  it('tries adb root again when the connection drops, as it did on release PRs', async () => {
+    const calls: string[] = [];
+    let roots = 0;
+    const run = (command: string) => {
+      calls.push(command);
+      if (command === 'root' && (roots += 1) < 3) throw new Error('adb: unable to connect for root: closed');
+      return '';
+    };
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await expect(becomeRoot({ run, pause: async () => {} })).resolves.toBe(3);
+      expect(calls).toEqual(['root', 'wait-for-device', 'root', 'wait-for-device', 'root', 'wait-for-device']);
+      // It gives up after five tries, with adb's own error.
+      await expect(becomeRoot({ run: () => { throw new Error('adb: device offline'); }, pause: async () => {} }))
+        .rejects.toThrow('adb: device offline');
+    } finally {
+      warn.mockRestore();
     }
   });
 
@@ -1004,6 +1028,16 @@ describe('Android key screens workflow (#372)', () => {
     expect(comment).toContain('test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")');
     expect(comment).toContain('ANDROID_CHECKS: ${{ steps.android.outputs.conclusion }}');
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
+  });
+
+  it('says how long each run took, until its join job uploaded the screenshots', () => {
+    // took() finds the join job by name, so renaming one would drop its time quietly.
+    expect(jobOf(preview, 'simulator')).toContain('name: iOS key screens join');
+    expect(jobOf(workflow, 'screens')).toContain('name: Android key screens join');
+    const comment = jobOf(preview, 'review-comment');
+    expect(comment).toContain(`ios_took="$(took "$RUN_ID" 'iOS key screens join')" || ios_took=""`);
+    expect(comment).toContain(`android_took="$(took "$ANDROID_RUN_ID" 'Android key screens join')" || android_took=""`);
+    expect(comment).toMatch(/\n\s+\$checks\n\n\s+\$timing\n/);
   });
 
   it('re-checks an earlier run on Linux', () => {

@@ -22,10 +22,10 @@ import {
   getVerseOfTheDayDateKey,
 } from '@/services/VerseOfTheDay';
 import { getSunTimes } from '@/services/SunTimesService';
+import { readCachedText, writeCachedText } from '@/services/CacheStore';
 import { createNavigationStyles } from '@/styles/NavigationStyles';
 import { HEADER_MAX_FONT_SCALE } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
 import { useContext, useEffect, useMemo, useState } from 'react';
@@ -166,7 +166,8 @@ export default function HomeScreen() {
     sat: null,
   });
 
-  const VOTD_CACHE_KEY = `votd_cache_${language}`;
+  // A copy the app can download again, kept out of the phone's backup (#524).
+  const VOTD_CACHE = { folder: 'verse-of-the-day', name: `${language}.json`, key: `votd_cache_${language}` };
 
   // Sabbath Countdown Logic
   // NOTE: There is nothing wrong with this logic itself, but after user testing it looks like most people turn off
@@ -308,7 +309,7 @@ export default function HomeScreen() {
 
       // Show today's verse from the cache straight away, even offline, then
       // refresh its text from the chapter.
-      const cached = await AsyncStorage.getItem(VOTD_CACHE_KEY);
+      const cached = await readCachedText(VOTD_CACHE);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (
@@ -343,7 +344,7 @@ export default function HomeScreen() {
         dateKey,
       };
       setVerseOfTheDay(verse);
-      await AsyncStorage.setItem(VOTD_CACHE_KEY, JSON.stringify(verse));
+      await writeCachedText(VOTD_CACHE, JSON.stringify(verse));
     } catch (e) {
       console.warn('Failed to load the verse of the day:', e);
     }

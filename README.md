@@ -1,6 +1,8 @@
 # SDA Church App
 
-[![Download on the App Store](https://img.shields.io/badge/App_Store-get_the_app-0369A1?logo=appstore&logoColor=white)](https://apps.apple.com/app/id6816789535) [![Get it on Google Play](https://img.shields.io/badge/Google_Play-get_the_app-0369A1?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=org.nyccsda.app) [![Open the web app](https://img.shields.io/badge/web_app-app.nyccsda.org-0369A1?logo=pwa&logoColor=white)](https://app.nyccsda.org) [![Version](https://img.shields.io/github/package-json/v/New-York-Chinese-Seventh-day-Adventist/sda-church-app?label=version&color=D2B258)](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/releases) [![Website deploy](https://img.shields.io/github/actions/workflow/status/New-York-Chinese-Seventh-day-Adventist/sda-church-app/deploy.yml?branch=main&label=website&logo=githubactions&logoColor=white)](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/workflows/deploy.yml) [![License](https://img.shields.io/github/license/New-York-Chinese-Seventh-day-Adventist/sda-church-app?color=D2B258)](LICENSE)
+[![Download on the App Store](https://img.shields.io/badge/App_Store-get_the_app-0369A1?logo=appstore&logoColor=white)](https://apps.apple.com/app/id6816789535) [![Get it on Google Play](https://img.shields.io/badge/Google_Play-get_the_app-0369A1?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=org.nyccsda.app) [![Open the web app](https://img.shields.io/badge/web_app-app.nyccsda.org-0369A1?logo=pwa&logoColor=white)](https://app.nyccsda.org)
+
+[![Version](https://img.shields.io/github/package-json/v/New-York-Chinese-Seventh-day-Adventist/sda-church-app?label=version&color=D2B258)](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/releases) [![Website deploy](https://img.shields.io/github/actions/workflow/status/New-York-Chinese-Seventh-day-Adventist/sda-church-app/deploy.yml?branch=main&label=website&logo=githubactions&logoColor=white)](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/actions/workflows/deploy.yml) [![License](https://img.shields.io/github/license/New-York-Chinese-Seventh-day-Adventist/sda-church-app?color=D2B258)](LICENSE)
 
 [![Expo](https://img.shields.io/github/package-json/dependency-version/New-York-Chinese-Seventh-day-Adventist/sda-church-app/expo?label=Expo&logo=expo&logoColor=white&color=000020)](https://expo.dev) [![React Native](https://img.shields.io/github/package-json/dependency-version/New-York-Chinese-Seventh-day-Adventist/sda-church-app/react-native?label=React%20Native&logo=react&logoColor=61DAFB&color=20232A)](https://reactnative.dev) [![TypeScript](https://img.shields.io/github/package-json/dependency-version/New-York-Chinese-Seventh-day-Adventist/sda-church-app/dev/typescript?label=TypeScript&logo=typescript&logoColor=white&color=3178C6)](https://www.typescriptlang.org)
 
@@ -60,6 +62,9 @@ one place. Church admins can start at [Operate](#operate).
     hymnal index and why it links to externally hosted sheet music
   - [Offline bulletin translation: Bergamot feasibility](docs/feature_designs/offline_bulletin_translation.md):
     why on-device translation is deferred, and what the app does instead
+  - [What the app keeps on the phone](docs/feature_designs/on_device_storage.md): the
+    bundled Bible texts, settings, and caches on each platform, what's backed up, and what
+    the store policies say
   - [Children's Sabbath School lessons](docs/feature_designs/sabbath_school_lessons.md):
     where each age group's weekly lesson comes from
 - [Bundled font sources and licenses](assets/fonts/README.md): each font, its source,

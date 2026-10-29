@@ -28,9 +28,9 @@ the lowest rating (ESRB Everyone, PEGI 3).
 
 | Question | Answer | Why |
 | --- | --- | --- |
-| Downloaded App: ratings-relevant content in the app package | No | The package holds only the app's interface, images, and fonts. Bible text and audio, the bulletin, and library content all load over the network. |
+| Downloaded App: ratings-relevant content in the app package | No | The package holds the app's interface, images, fonts, and Bible text. Scripture is plain religious text (see Violence). Bible audio, the bulletin, and library content load over the network. |
 | User Content Sharing | No | There's no chat, posting, or accounts. Sharing a verse uses the phone's share sheet and hands off to another app, so it isn't native interaction. |
-| Online Content | Yes | The bulletin, Bible text and audio, Sabbath School lessons, and library covers load after install. |
+| Online Content | Yes | The bulletin, Bible audio, Sabbath School lessons, and library covers load after install. |
 | Violence | No | Scripture describes violent events, but only as plain religious text, with no graphic images or video. Bible apps answer this way. |
 | Sexuality | No | Same reasoning as Violence. |
 | Language | No | |
@@ -42,9 +42,9 @@ the lowest rating (ESRB Everyone, PEGI 3).
 | Web browser or search engine | No | External pages open in the phone's browser; the app has no WebView browser. |
 | Primarily news or educational | No | It's a church community app. |
 
-If the app ever downloads Bible text for offline reading, that's still online content,
-and the answers don't change. Bundling the Bible inside the app package moves it under
-**Downloaded App**; the same reasoning as Violence keeps that answer No.
+Since 1.4.0 the Bible text ships inside the app package, which moves it under
+**Downloaded App**; the same reasoning as Violence keeps that answer No, so no answer
+changed.
 
 ## Target audience
 
@@ -154,15 +154,17 @@ News & magazines, Events (which means ticket sales), and Music & audio.
   [Store listings](store-listing.md#english).
 - **App icon:** `public/icon-512x512.png`, the same logo as the app's launcher icon.
 - **Feature graphic:** 1024 × 500. It shows the logo, the church's name in English and
-  Chinese, "Bilingual Bible · Audio · Weekly bulletin · Hymns", and the pinyin and
-  audio screenshots in phone frames on the brand blue (`#00405C`).
+  Chinese, "Multilingual Bible · Audio · Weekly bulletin · Hymns", and two of the phone
+  screenshots in phone frames on the brand blue (`#00405C`): the Bible in the dark theme
+  behind the Bible in English and Chinese. `scripts/make-play-feature-graphic.cjs`
+  builds it from the phone screenshots, so run it again when they change.
 - **Phone screenshots:** one set of six, which every listing language shows, captured
   as [Store listings](store-listing.md#screenshots) describes. The first submission had
   eight in English and four in Traditional Chinese; this set replaced them on
   September 30, 2026.
 - **AI-generated declaration:** Play Console asks, for each image, whether AI generated
-  or edited it. The feature graphic: yes, because an AI assistant laid it out, though no
-  image generator made any of its pixels. The icon and screenshots: no; they're the
+  or edited it. The feature graphic: yes, because an AI assistant designed its layout and
+  wrote the script that builds it, though no image generator made any of its pixels. The icon and screenshots: no; they're the
   official logo and real captures of the app.
 
 Copies of the feature graphic and screenshots are in

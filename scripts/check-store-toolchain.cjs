@@ -19,9 +19,10 @@ const SOURCES = Object.freeze({
 });
 
 const ALERT_TITLE = '[monitor] Store toolchain requirements need attention';
-// Applied only when the app misses a store requirement, not when a page just
-// can't be read, so the label keeps meaning "uploads will be rejected".
-const CRITICAL_LABEL = 'critical';
+// The alert's Priority when the app misses a store requirement. A page that
+// just can't be read gets none, so Urgent keeps meaning "uploads will be
+// rejected".
+const URGENT_PRIORITY = 'Urgent';
 
 // Requirements taking effect within this many days count as needing action
 // now, so there is time to update and test before the store deadline.
@@ -119,8 +120,8 @@ const formatDate = (date) => date.toISOString().slice(0, 10);
 /**
  * Splits parsed requirements into the one in force today and the next one
  * starting within LEAD_DAYS, and checks the app against both. A failed check
- * has kind 'requirement' when the app falls short, which the workflow labels
- * critical, or 'unreadable' when the page could not be parsed.
+ * has kind 'requirement' when the app falls short, which makes the alert
+ * Urgent, or 'unreadable' when the page could not be parsed.
  */
 const getDaysUntil = (date, today) => Math.ceil((date - today) / 86400000);
 
@@ -253,16 +254,16 @@ const formatReport = ({ checks, notes }) =>
   ].join('\n');
 
 /**
- * Builds the alert issue text and labels from the --report JSON, or from null
+ * Builds the alert issue text and priority from the --report JSON, or from null
  * when the report is missing. Used by the Store Toolchain Monitor workflow.
  */
 const buildStoreToolchainAlert = (report, runUrl) => {
-  const critical = Boolean(
+  const urgent = Boolean(
     report && report.checks.some((check) => check.kind === 'requirement'),
   );
   return {
     title: ALERT_TITLE,
-    labels: critical ? [CRITICAL_LABEL] : [],
+    priority: urgent ? URGENT_PRIORITY : null,
     body: [
       'The weekly store toolchain check needs attention. Google Play or App Store Connect uploads may be rejected if the Android target API or Xcode version is not updated.',
       '',
@@ -325,8 +326,8 @@ if (require.main === module) {
 
 module.exports = {
   ALERT_TITLE,
-  CRITICAL_LABEL,
   LEAD_DAYS,
+  URGENT_PRIORITY,
   buildStoreToolchainAlert,
   SOURCES,
   evaluateStoreToolchain,

@@ -19,6 +19,9 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const ALERT_TITLE = '[monitor] Expo doctor found problems';
+// SDK patch releases are routine dependency updates, like Dependabot's, so the
+// alert starts at High rather than Urgent.
+const ALERT_PRIORITY = 'High';
 
 // Long enough for every failed check; GitHub issues hold 65,536 characters.
 const MAX_OUTPUT_LENGTH = 12000;
@@ -61,7 +64,7 @@ const buildExpoDoctorAlert = (report, runUrl) => {
     : 'The report was missing. See the run for expo-doctor\'s output.';
   return {
     title: ALERT_TITLE,
-    labels: [],
+    priority: ALERT_PRIORITY,
     body: [
       'The weekly full `expo-doctor` run found problems. Usually Expo has published SDK patch releases, and `npx expo install --check` lists them.',
       '',

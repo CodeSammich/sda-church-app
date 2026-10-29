@@ -117,6 +117,31 @@ link goes through `openURL` (websites) or `openInItsApp` (other apps) in
 `constants/ExternalLinks.ts`; `test/link-opening.test.ts` checks where each one opens,
 and that no screen opens a link itself.
 
+Large files, such as lesson PDFs of more than a few megabytes, don't open straight in
+the in-app browser. There, a phone can show a blank page until the whole file has arrived,
+which can take a minute on a slow connection. On iOS and Android, the app downloads
+them itself instead:
+
+- a popup appears as soon as the person taps, and shows the download's progress
+  ("Downloading · 5.1 of 14.2 MB"), with an X that stops it;
+- the file is kept in the cache directory while it's current, so it opens at once the
+  next time, even offline. Nothing downloads without a tap, so people who don't use
+  a feature never download its files;
+- it opens in the phone's own viewer, through `expo-file-system`'s `File.preview()`:
+  Quick Look on iPhone, and the app that opens PDFs on Android. That opens the
+  downloaded copy, not a link, so it's outside `constants/ExternalLinks.ts`.
+
+If the phone has no viewer, or the download fails, the file's address opens in the
+in-app browser as before; if it fails because the phone is offline, the popup says
+there's no connection instead. The web keeps opening files in a new tab. Anything new that
+opens a big file should work the same way. The children's Sabbath School lessons came
+first ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529));
+see [Opening a lesson on a phone](feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
+Their code (`features/sabbath-school/LessonDownloads.ts`,
+`hooks/useChildrenLessonOpener.ts`, `components/ChildrenLessonDialog.tsx`) is written
+for lessons, so the second use should move its download, progress, and viewer parts
+somewhere shared rather than copy them.
+
 ### Key Principles & Exceptions:
 
 1.  **Brand Neutrality:** External service destinations use official provider assets
@@ -210,7 +235,16 @@ opens the same page with that hymnal picked and just that hymn showing, marked, 
 **Purpose:** Focused Scripture reading, saved verses, translation selection, and on-demand
 Bible audio.
 
-**UI:** Immersive reader with chapter-local search and persistent audio controls.
+**UI:** Immersive reader with whole-Bible search and persistent audio controls. The
+search box looks through every verse of the translations on screen, offline on a phone, and lists the
+open chapter's matches first, then the whole Bible's by book with a count for each. A
+reference typed in a short form, such as "Jn 3:16", "Sal 23", or 約3：16, is offered first,
+to jump to (`hooks/useBibleSearch.ts`, `services/BibleSearch.ts`). The results are a
+page of their own under the search box, over the chapter, the audio controls, and the
+tab bar. They stay up with the keyboard put away. The keyboard's Search key opens a
+reference, but for words it only puts the keyboard away, since the first match is only
+a guess. The X closes them, and so does Android's Back, whose first press puts the
+keyboard away if it's up.
 Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
 includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as
 "Psalm 23 · English"): the English hymns and the same hymns in the 505, with the 505 first
@@ -246,7 +280,14 @@ are on Home, not here.
 
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
 **Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
-**About & Support** has the **Privacy Policy**, **Legal Disclaimer**, and
+**About & Support** starts with **Help & Feedback**, which opens a draft email to
+`technology@nyccsda.org` in the device's email app, for help or a feature request
+(#541). Its subject is always English, `[NYCCSDA App] Help or feature request`, with
+the same prefix as the Bible translation request's, so the emails are easy to filter.
+The body asks, in the reader's language and more simply than the issue templates,
+whether it's a problem or an idea, what happened or what they'd like, and what they
+were doing just before, and ends with the app version and system (the iOS version,
+Android's API level, or "web app"). Then come the **Privacy Policy**, **Legal Disclaimer**, and
 **Open-Source Licenses** (all English only), followed by the app version. **Privacy
 Policy** and **Legal Disclaimer** open the website's copies in the in-app browser; the
 app keeps no copy of its own (#403, #412). **Open-Source Licenses** is an app screen,

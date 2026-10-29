@@ -1,19 +1,77 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot version updates. Dependabot reads this file from main, so a change
+# takes effect once the release that carries it merges. Options:
+# https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "npm"
+    directory: "/"
+    # Feature pull requests go into release-candidate, never main, and so do
+    # Dependabot's, where they can merge like any other. GitHub opens security
+    # updates against main whatever this says; Release - After Merge moves them
+    # to release-candidate at the next release.
+    target-branch: "release-candidate"
     schedule:
       interval: "weekly"        # Checks for new framework versions once a week
-    open-pull-requests-limit: 3 # Prevents getting flooded with too many open PRs at once
-    labels: ["dependencies"]    # Skip the default "javascript" language label
+    # Enough for the weekly group, `expo`, and the majors we hold back, each of
+    # which stays open and takes one: at the limit, Dependabot opens no new
+    # version update until one merges or closes.
+    open-pull-requests-limit: 10
+    # The label every upkeep issue and pull request shares, set in place of the
+    # default "dependencies" and "javascript" labels. The monitors' issues get
+    # it too (scripts/monitor-alert-issue.cjs).
+    labels: ["maintenance"]
     # One pull request a week for every minor and patch update, instead of one
-    # per package; each pull request has to be moved to the release branch by
-    # hand, and each push starts CI. Major updates still get their own.
+    # per package, since each push starts CI. Major updates still get their own.
+    # A major update we hold back, such as one Expo doesn't support yet, stays
+    # open as the reminder. Closing it skips only that exact version.
+    # `expo` gets its own pull request too, so its update can't hold up the
+    # group's (see below).
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+        exclude-patterns: ["expo"]
+    # Expo's SDK pins these packages (expo/bundledNativeModules.json), so
+    # Dependabot's newer versions break the build until the next SDK. An update
+    # to `expo` itself, which isn't ignored, is the sign of a new SDK or patch
+    # release: then `npx expo install --fix` (for a new SDK,
+    # `npx expo install expo@^<SDK>.0.0 --fix`) updates them all together, and
+    # the weekly Expo doctor monitor catches any that fall behind. The last two
+    # aren't on Expo's list but follow it: the Jest preset matches react-native's
+    # version, whose 0.x minor updates are breaking, and babel-preset-expo
+    # matches the SDK. test/dependabot-config.test.ts keeps this list to the
+    # pinned packages in package.json, plus those two.
+    ignore:
+      - dependency-name: "@expo/metro-runtime"
+      - dependency-name: "@expo/vector-icons"
+      - dependency-name: "@react-native-async-storage/async-storage"
+      - dependency-name: "expo-asset"
+      - dependency-name: "expo-audio"
+      - dependency-name: "expo-blur"
+      - dependency-name: "expo-build-properties"
+      - dependency-name: "expo-constants"
+      - dependency-name: "expo-file-system"
+      - dependency-name: "expo-font"
+      - dependency-name: "expo-linear-gradient"
+      - dependency-name: "expo-linking"
+      - dependency-name: "expo-localization"
+      - dependency-name: "expo-network"
+      - dependency-name: "expo-router"
+      - dependency-name: "expo-splash-screen"
+      - dependency-name: "expo-status-bar"
+      - dependency-name: "expo-system-ui"
+      - dependency-name: "expo-web-browser"
+      - dependency-name: "jest-expo"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-reanimated"
+      - dependency-name: "react-native-safe-area-context"
+      - dependency-name: "react-native-screens"
+      - dependency-name: "react-native-web"
+      - dependency-name: "react-native-webview"
+      - dependency-name: "react-native-worklets"
+      - dependency-name: "@react-native/jest-preset"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "babel-preset-expo"
+        update-types: ["version-update:semver-major"]

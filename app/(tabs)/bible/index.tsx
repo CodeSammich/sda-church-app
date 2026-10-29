@@ -3,6 +3,7 @@ import { UIStateContext } from '@/components/GlobalHeader';
 import { PinyinRubyText } from '@/components/PinyinRubyText';
 import { PopupHeader } from '@/components/PopupHeader';
 import { WrappingButton as Button } from '@/components/WrappingButton';
+import { PopupFlatList, PopupScrollView } from '@/components/PopupScrollView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setIsAudioActiveAsync } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -95,7 +96,6 @@ import {
   indexChapterVerses,
 } from '@/services/BibleDualLanguage';
 import {
-  getBibleVersePinyin,
   isChineseBibleTranslation,
 } from '@/services/BiblePinyinService';
 import {
@@ -111,6 +111,7 @@ import {
   TECHNOLOGY_EMAIL,
 } from '@/constants/ExternalLinks';
 import * as BibleService from '@/services/BibleService';
+import type { BibleSearchOptions } from '@/hooks/useBibleSearch';
 import {
   getSavedVerseKey,
   groupSavedVerses,
@@ -1899,7 +1900,8 @@ export default function BibleScreen() {
 
   // The original-language source is selected by canonical book id, not by the
   // displayed translation. This keeps the same Hebrew/Greek lookup available
-  // in every application language.
+  // in every application language. The translation is passed only for where it
+  // numbers a verse differently from the original.
   useEffect(() => {
     if (modalType !== 'verse-detail' || !book || !selectedVerseNum) return;
 
@@ -1908,7 +1910,12 @@ export default function BibleScreen() {
     setOriginalVerseError(false);
     setOriginalVerseLoading(true);
 
-    BibleService.fetchOriginalLanguageVerse(book.id, chapterNum, selectedVerseNum)
+    BibleService.fetchOriginalLanguageVerse(
+      book.id,
+      chapterNum,
+      selectedVerseNum,
+      supportedTranslation.id,
+    )
       .then((verse) => {
         if (!cancelled) setOriginalVerse(verse);
       })
@@ -1925,7 +1932,7 @@ export default function BibleScreen() {
     return () => {
       cancelled = true;
     };
-  }, [modalType, book?.id, chapterNum, selectedVerseNum]);
+  }, [modalType, book?.id, chapterNum, selectedVerseNum, supportedTranslation.id]);
 
   // Initial load: Fetch books for default translation
   // This effect loads the books for the selected translation and sets the current book.
@@ -2647,8 +2654,7 @@ export default function BibleScreen() {
       !(isPoetic && !isLineContinuation && i > 0) &&
       !willAddPoeticNewLine &&
       !willAddSelahNewLine &&
-      contentText.length > 0 &&
-      !BibleService.startsWithPunctuationOrSpace(contentText)
+      BibleService.needsSpaceAfterFootnote(contentText)
     ) {
       contentText = ' ' + contentText;
     }
@@ -3374,40 +3380,6 @@ export default function BibleScreen() {
     } as any);
   };
 
-  const bibleChapterVerses = (chapterData?.chapter.content || [])
-    .filter((content): content is BibleService.ChapterVerse => content.type === 'verse')
-    .map((verse) => ({
-      number: verse.number,
-      title: `${book?.name || labels.bible} ${chapterNum}:${verse.number}`,
-      text: [
-        BibleService.renderVerseToPlainText(supportedTranslation.id, verse),
-        showPinyin && isChineseBibleTranslation(supportedTranslation.id)
-          ? getBibleVersePinyin(
-              BibleService.renderVerseToPlainText(supportedTranslation.id, verse),
-            )
-          : '',
-        supportingTranslation && supportingVerses.get(verse.number)
-          ? BibleService.renderVerseToPlainText(
-              supportingTranslation.id,
-              supportingVerses.get(verse.number)!,
-            )
-          : '',
-        showPinyin &&
-        supportingTranslation &&
-        isChineseBibleTranslation(supportingTranslation.id) &&
-        supportingVerses.get(verse.number)
-          ? getBibleVersePinyin(
-              BibleService.renderVerseToPlainText(
-                supportingTranslation.id,
-                supportingVerses.get(verse.number)!,
-              ),
-            )
-          : '',
-      ]
-        .filter(Boolean)
-        .join(' · '),
-    }));
-
   const handleBibleVerseSearchPress = (verseNumber: number) => {
     forgetPendingScrolls();
     const verseY = versePositions.current[verseNumber];
@@ -3415,6 +3387,38 @@ export default function BibleScreen() {
       scrollRef.current?.scrollTo({ y: Math.max(0, verseY - VERSE_SCROLL_TOP_OFFSET), animated: true });
     }
   };
+
+  // Whole-Bible search (#516). The header searches the translations on screen,
+  // and a result opens here: in this chapter it scrolls to the verse, and
+  // elsewhere it opens like a verse link, keeping the reader's translations.
+  const openSearchReference = (reference: BibleService.ParsedScriptureReference) => {
+    if (reference.bookId === book?.id && reference.chapter === chapterNum) {
+      if (reference.verseStart) handleBibleVerseSearchPress(reference.verseStart);
+      return;
+    }
+    forgetPendingScrolls();
+    const verseStart = reference.verseStart ? String(reference.verseStart) : '';
+    router.setParams({
+      translationId: supportedTranslation.id,
+      bookId: reference.bookId,
+      chapter: String(reference.chapter),
+      verseStart,
+      verseEnd: verseStart ? String(reference.verseEnd || reference.verseStart) : '',
+      referenceRequest: BibleService.createScriptureReferenceRequest(),
+    } as any);
+  };
+  const openSearchReferenceRef = useRef(openSearchReference);
+  openSearchReferenceRef.current = openSearchReference;
+  const bibleSearch = useMemo<BibleSearchOptions>(
+    () => ({
+      translationIds: [supportedTranslation.id, ...(supportingTranslation ? [supportingTranslation.id] : [])],
+      books: books.map(({ id, name, numberOfChapters }) => ({ id, name, numberOfChapters })),
+      bookId: book?.id,
+      chapter: chapterNum,
+      onOpen: (reference) => openSearchReferenceRef.current(reference),
+    }),
+    [supportedTranslation.id, supportingTranslation?.id, books, book?.id, chapterNum],
+  );
 
   const hasChapterAudio = audioReaderEntries.length > 0;
   const dockExtraHeight =
@@ -3697,8 +3701,7 @@ export default function BibleScreen() {
             onBibleSavedVersesPress: () => setModalType('saved'),
             bibleSavedVerseCount: savedVerses.length,
             bibleSavedVersesLabel: labels.savedVerses,
-            bibleChapterVerses,
-            onBibleVerseSearchPress: handleBibleVerseSearchPress,
+            bibleSearch,
           } as any
         }
       />
@@ -4116,7 +4119,7 @@ export default function BibleScreen() {
           <View style={ReaderStyles.modalInner}>
             {renderPopupHeader(labels.audioSettings, () => setAudioSettingsVisible(false))}
             <Divider />
-            <ScrollView>
+            <PopupScrollView>
               <Text
                 variant="titleMedium"
                 style={[
@@ -4284,7 +4287,7 @@ export default function BibleScreen() {
                   </TouchableOpacity>
                 </>
               )}
-            </ScrollView>
+            </PopupScrollView>
           </View>
         </Modal>
       </Portal>
@@ -4307,7 +4310,7 @@ export default function BibleScreen() {
               {labels.backgroundAudioTitle}
             </Text>
             <Divider />
-            <ScrollView contentContainerStyle={styles.backgroundAudioGuidanceBody}>
+            <PopupScrollView contentContainerStyle={styles.backgroundAudioGuidanceBody}>
               <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
                 {labels.backgroundAudioBody.replace(
                   '{browser}',
@@ -4335,7 +4338,7 @@ export default function BibleScreen() {
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                 {labels.settingsFallback}
               </Text>
-            </ScrollView>
+            </PopupScrollView>
             <View style={styles.backgroundAudioGuidanceActions}>
               <Button
                 mode="outlined"
@@ -4370,7 +4373,7 @@ export default function BibleScreen() {
           <View style={ReaderStyles.modalInner}>
             {renderPopupHeader(labels.sleepTimer, () => setSleepTimerVisible(false))}
             <Divider />
-            <ScrollView>
+            <PopupScrollView>
               {(
                 [
                   { value: null, label: labels.timerOff },
@@ -4424,7 +4427,7 @@ export default function BibleScreen() {
                   )}
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </PopupScrollView>
           </View>
         </Modal>
       </Portal>
@@ -4445,7 +4448,7 @@ export default function BibleScreen() {
               <>
                 {renderPopupHeader(labels.verseHymnsTitle, closeModal)}
                 <Divider />
-                <ScrollView contentContainerStyle={{ paddingVertical: 4 }}>
+                <PopupScrollView contentContainerStyle={{ paddingVertical: 4 }}>
                   {verseHymns.map((hymn) => (
                     <TouchableOpacity
                       key={`${hymn.hymnalId}:${hymn.number}`}
@@ -4487,7 +4490,7 @@ export default function BibleScreen() {
                       </View>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </PopupScrollView>
               </>
             ) : lastActiveType === 'saved' ? (
               <>
@@ -4573,7 +4576,7 @@ export default function BibleScreen() {
                     )}
                   </View>
                 ) : (
-                  <FlatList
+                  <PopupFlatList
                     data={savedVerseDisplays}
                     keyExtractor={(item) =>
                       `${item.bookId}:${item.chapter}:${item.verseStart}-${item.verseEnd}`
@@ -4638,7 +4641,7 @@ export default function BibleScreen() {
                   closeModal,
                 )}
                 <Divider />
-                <ScrollView style={ReaderStyles.modalScroll}>
+                <PopupScrollView style={ReaderStyles.modalScroll}>
                   <View style={ReaderStyles.detailSection}>
                     {supportingTranslation && selectedVerseTexts?.supportingText && (
                       <Text
@@ -4725,6 +4728,8 @@ export default function BibleScreen() {
                         {originalVerse.textDirection === 'rtl'
                           ? labels.hebrewAramaicOriginal
                           : labels.greekOriginal}
+                        {/* Where the original numbers the verse differently. */}
+                        {originalVerse.reference ? ` · ${originalVerse.reference}` : ''}
                       </Text>
                       <Text
                         selectable
@@ -4746,9 +4751,10 @@ export default function BibleScreen() {
                       </Text>
                       {/*
                         Required CC BY 4.0 attribution for the original-language
-                        edition. fetch(bible's free CDN access does not waive the
-                        source edition's license. Do not remove this notice when
-                        changing the popup; see README.md and the Bible design doc.
+                        edition, which ships with the app: the edition, its
+                        editor, and links to its source and the license. Do not
+                        remove this notice when changing the popup; see
+                        docs/LEGAL.md and the Bible design doc.
                       */}
                       <Text
                         variant="labelSmall"
@@ -4757,8 +4763,23 @@ export default function BibleScreen() {
                           { color: theme.colors.onSurfaceVariant },
                         ]}
                       >
-                        {labels.source}: {originalVerse.edition}.{' '}
-                        {originalVerse.attribution}
+                        {labels.source}:{' '}
+                        <Text
+                          accessibilityRole="link"
+                          onPress={() => openURL(originalVerse.sourceUrl)}
+                          style={styles.originalVerseLink}
+                        >
+                          {originalVerse.edition}
+                        </Text>
+                        . {originalVerse.attribution} Licensed{' '}
+                        <Text
+                          accessibilityRole="link"
+                          onPress={() => openURL(originalVerse.licenseUrl)}
+                          style={styles.originalVerseLink}
+                        >
+                          {originalVerse.license}
+                        </Text>
+                        .
                       </Text>
                     </View>
                   ) : originalVerseError ? (
@@ -4806,35 +4827,49 @@ export default function BibleScreen() {
                           </View>
                         )}
 
-                        {chapterData?.chapter.footnotes
-                          .filter((f) => {
-                            if (f.reference?.verse !== selectedVerseNum) return false;
-                            // Filter duplicates
-                            if (subtitleText && f.text.trim() === subtitleText)
-                              return false;
-                            return true;
-                          })
-                          .map((f, i) => (
-                            <View key={`fn-${i}`} style={ReaderStyles.detailSection}>
-                              <Text
-                                variant="labelSmall"
-                                style={{ color: theme.colors.primary, marginBottom: 4 }}
-                              >
-                                {labels.footnote}{' '}
-                                {BibleService.toSuperscript(
-                                  BibleService.getChapterFootnoteNumber(
-                                    chapterData.chapter.footnotes,
-                                    f.noteId,
-                                  ),
-                                )}
-                              </Text>
-                              <Text style={ReaderStyles.detailText}>{f.text}</Text>
-                            </View>
-                          ))}
+                        {/*
+                          Both translations' footnotes, so a note marked in the
+                          supporting text (such as the 1919 CUV's) opens here too,
+                          as the main translation's do. With two, each names its
+                          translation, since both number theirs from 1.
+                        */}
+                        {[
+                          { translation: supportedTranslation, data: chapterData },
+                          ...(supportingTranslation && selectedVerseTexts?.supportingText
+                            ? [{ translation: supportingTranslation, data: supportingChapterData }]
+                            : []),
+                        ].flatMap(({ translation, data }, source, sources) =>
+                          (data?.chapter.footnotes ?? [])
+                            .filter((f) => {
+                              if (f.reference?.verse !== selectedVerseNum) return false;
+                              // Filter duplicates
+                              if (subtitleText && f.text.trim() === subtitleText)
+                                return false;
+                              return true;
+                            })
+                            .map((f, i) => (
+                              <View key={`fn-${source}-${i}`} style={ReaderStyles.detailSection}>
+                                <Text
+                                  variant="labelSmall"
+                                  style={{ color: theme.colors.primary, marginBottom: 4 }}
+                                >
+                                  {labels.footnote}{' '}
+                                  {BibleService.toSuperscript(
+                                    BibleService.getChapterFootnoteNumber(
+                                      data?.chapter.footnotes ?? [],
+                                      f.noteId,
+                                    ),
+                                  )}
+                                  {sources.length > 1 ? ` · ${getTranslationLabel(translation)}` : ''}
+                                </Text>
+                                <Text style={ReaderStyles.detailText}>{f.text}</Text>
+                              </View>
+                            )),
+                        )}
                       </>
                     );
                   })()}
-                </ScrollView>
+                </PopupScrollView>
                 <View
                   style={[
                     styles.detailActions,
@@ -4953,7 +4988,7 @@ export default function BibleScreen() {
                   closeModal,
                 )}
                 <Divider />
-                <FlatList<
+                <PopupFlatList<
                   | (typeof BibleService.SUPPORTED_TRANSLATIONS)[number]
                   | BibleService.TranslationBook
                   | number
@@ -5572,6 +5607,9 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     originalVerseAttribution: {
       fontSize: scaleTypographyMetric(11, textScale),
       lineHeight: scaleTypographyMetric(16, textScale),
+    },
+    originalVerseLink: {
+      textDecorationLine: 'underline',
     },
     savedEmptyState: {
       minHeight: 180,

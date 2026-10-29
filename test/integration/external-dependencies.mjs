@@ -630,29 +630,23 @@ for (const language of ['en', 'zh', 'es']) {
   });
 }
 
-await record('translation and audio catalog contract', 'HelloAO', async () => {
-  const data = await getJson('https://bible.helloao.org/api/available_translations.json');
-  const serialized = JSON.stringify(data);
-  for (const id of ['BSB', 'eng_kjv', 'cmn_cuv', 'cmn_cu1', 'spa_r09']) {
-    if (!serialized.includes(id)) throw new Error(`translation ${id} is missing`);
-  }
-  return 'all configured translation IDs present';
-});
-
-await record('English chapter contract including audio', 'HelloAO', async () => {
-  const data = await getJson('https://bible.helloao.org/api/BSB/GEN/1.json');
-  if (!data.chapter || !data.book || !data.thisChapterAudioLinks) throw new Error('chapter/audio fields are missing');
-  return 'chapter and audio fields present';
-});
-
-for (const resource of ['cmn_cut', 'cmn_cus', 'spa_rv', 'hbo_sr', 'grc_sr']) {
-  await record(`${resource} Genesis book contract`, 'fetch(bible)', async () => {
-    const book = resource === 'grc_sr' ? 'mat' : 'gen';
-    const data = await getJson(`https://v1.fetch.bible/bibles/${resource}/txt/${book}.json`);
-    if (!data.book || !Array.isArray(data.contents)) throw new Error('book or contents field is missing');
-    return `${data.book} with ${data.contents.length} content entries`;
+// Every Bible text ships with the app (assets/bible), the verse popup's Hebrew
+// and Greek included, so none is fetched at run time. The BSB's narrator links are inside those files, so check
+// that they still play. scripts/build-bundled-bibles.mjs rebuilds them if not.
+const bsbNarratorLinks = [];
+for (const { id } of JSON.parse(await readFile('assets/bible/bsb/books.biblejson', 'utf8'))) {
+  const book = JSON.parse(await readFile(`assets/bible/bsb/${id.toLowerCase()}.biblejson`, 'utf8'));
+  book.chapters.forEach((chapter, number) => {
+    for (const [narrator, url] of Object.entries(chapter?.thisChapterAudioLinks ?? {})) {
+      bsbNarratorLinks.push({ label: `${id} ${number} ${narrator}`, url });
+    }
   });
 }
+
+await record('daily BSB narrator samples from the app', 'HelloAO', (warn) =>
+  spotCheck(bsbNarratorLinks, 37, ({ url }) => probe(url, { binary: true }), warn, {
+    label: ({ label }) => label,
+  }));
 
 const navigationLinks = [
   ['church building image', 'https://assets.adventistconnect.org/newyork2/2026/07/13221703/church_building.jpg', true],

@@ -20,12 +20,15 @@ flowchart TB
     end
     subgraph Bible["Bible text and English audio"]
       direction TB
-      helloao["HelloAO<br/>bible.helloao.org<br/>English Bible text and audio"]
-      fetchbible["fetch(bible)<br/>v1.fetch.bible<br/>Chinese and Spanish Bible text,<br/>original-language texts"]
+      bundled["Bundled in the app, read offline<br/>BSB · Reina-Valera 1909<br/>1919 Chinese Union Version (CUV · CUVS),<br/>built from WordProject's text<br/>Hebrew and Greek for the verse popup"]
+      helloao["HelloAO<br/>bible.helloao.org<br/>English Bible audio"]
     end
-    subgraph OtherApis["Other APIs"]
+    subgraph Bulletin["Church bulletin"]
       direction TB
-      bulletinapi@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Bulletin API<br/>church's Apps Script", pos: "b", w: 32, h: 32, constraint: "on" }
+      bulletinapi@{ img: "https://cdn.jsdelivr.net/npm/simple-icons@16.32.0/icons/googleappsscript.svg", label: "Bulletin API<br/>church's Apps Script<br/>the weekly bulletin", pos: "b", w: 32, h: 32, constraint: "on" }
+    end
+    subgraph Lessons["Lessons and book covers"]
+      direction TB
       adventechApi["Adventech Sabbath School API<br/>sabbath-school.adventech.io<br/>children's lesson catalogs:<br/>Adventech quarterlies and<br/>Alive in Jesus books"]
       cum["Chinese Union Mission library<br/>api.sdabible.org · cms.sdabible.site<br/>Chinese EGW cover thumbnails"]
       egwCovers["EGW Writings<br/>a.egwwritings.org<br/>book covers"]

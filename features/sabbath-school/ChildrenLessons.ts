@@ -167,11 +167,27 @@ const officialPdf = (src?: string) => {
   }
 };
 
+/** Whether an address findChildrenLesson gave is a lesson PDF, not a website. */
+export const isChildrenLessonPdf = (url: string) => officialPdf(url) !== null;
+
 // This week's lesson, or else the quarter's lesson for this week by number.
 const pickWeek = <T>(weeks: readonly T[], isThisWeek: (week: T) => boolean, week: number) =>
   weeks.find(isThisWeek) || weeks[Math.min(week, weeks.length) - 1];
 
 type GetJson = (url: string) => Promise<any>;
+
+/**
+ * A lesson PDF or the age group's website, with the days it's the lesson for
+ * when it's a PDF whose catalog dates cover the day asked about. A lesson
+ * picked by its number instead has no dates.
+ */
+export type ChildrenLessonFound = Readonly<{ url: string; startsOn?: Date; endsOn?: Date }>;
+
+const found = (url: string | null, dates: Dated, date: Date): ChildrenLessonFound | null => {
+  if (!url) return null;
+  if (!covers(dates, date)) return { url };
+  return { url, startsOn: parseAdventechDate(dates.start_date)!, endsOn: parseAdventechDate(dates.end_date)! };
+};
 
 const findQuarterlyPdf = async (
   source: Extract<LessonSource, { catalog: 'quarterly' }>,
@@ -202,7 +218,7 @@ const findQuarterlyPdf = async (
   const { pdfs = [] }: { pdfs?: Array<{ src?: string }> } = await getJson(
     `${base}/${issue.id}/lessons/${lesson.id}/index.json`,
   );
-  return officialPdf(pdfs[source.pdfIndex]?.src);
+  return found(officialPdf(pdfs[source.pdfIndex]?.src), lesson, date);
 };
 
 const findAliveInJesusPdf = async (
@@ -232,23 +248,24 @@ const findAliveInJesusPdf = async (
   const pdf = (Array.isArray(pdfs) ? pdfs : []).find(
     ({ target }) => target === `${book}/${document.name}`,
   );
-  return officialPdf(pdf?.src);
+  return found(officialPdf(pdf?.src), { start_date: document.startDate, end_date: document.endDate }, date);
 };
 
 const lessonLanguages = (language: SupportedLanguage): LessonLanguage[] =>
   language === 'zh' || language === 'zh-cn' ? ['zh', 'en'] : ['en'];
 
 /**
- * The address to open for an age group this week: a lesson PDF where one is
- * found, otherwise the age group's website. Never rejects.
+ * What to open for an age group this week: a lesson PDF where one is found,
+ * with the days it's the lesson for where the catalog's dates cover `date`, otherwise
+ * the age group's website. Never rejects.
  */
-export const findChildrenLessonUrl = async (
+export const findChildrenLesson = async (
   curriculum: ChildrenSabbathSchoolCurriculum,
   language: SupportedLanguage = 'en',
   date = new Date(),
   fetchJson: typeof fetch = fetch,
   timeoutMs = LOOKUP_TIMEOUT_MS,
-): Promise<string> => {
+): Promise<ChildrenLessonFound> => {
   const ageGroup = CHILDREN_AGE_GROUPS[curriculum];
   const controller = new AbortController();
   const getJson: GetJson = async (url) => {
@@ -284,8 +301,13 @@ export const findChildrenLessonUrl = async (
     }, timeoutMs);
   });
   try {
-    return (await Promise.race([findPdf(), timeout])) || ageGroup.website;
+    return (await Promise.race([findPdf(), timeout])) || { url: ageGroup.website };
   } finally {
     clearTimeout(timer);
   }
 };
+
+/** The address to open for an age group this week: a lesson PDF, or the website. Never rejects. */
+export const findChildrenLessonUrl = async (
+  ...args: Parameters<typeof findChildrenLesson>
+): Promise<string> => (await findChildrenLesson(...args)).url;

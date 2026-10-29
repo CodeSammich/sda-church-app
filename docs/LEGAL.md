@@ -1,6 +1,6 @@
 # Legal, Licensing, and Privacy
 
-Last legal review: 2026-08-09. Facts about the app updated: 2026-10-07.
+Last legal review: 2026-08-09. Facts about the app updated: 2026-10-27.
 
 This document centralizes the project's licensing records, third-party source reviews,
 privacy disclosures, branding restrictions, and legal disclaimer. It records engineering
@@ -11,6 +11,7 @@ terms, ownership, or permissions will remain unchanged.
 
 - [Bible Sources and Licensing](#bible-sources-and-licensing)
 - [Library Sources and Licensing](#library-sources-and-licensing)
+- [Sabbath School Lessons](#sabbath-school-lessons)
 - [English Hymnal Integration and Link Safety](#english-hymnal-integration-and-link-safety)
 - [Chinese Hymnal Source and Link Safety](#chinese-hymnal-source-and-link-safety-rationale)
 - [Branding & Trademarks](#branding--trademarks)
@@ -21,21 +22,31 @@ terms, ownership, or permissions will remain unchanged.
 
 ## Bible Sources and Licensing
 
-The Bible reader uses two separate content services with different roles:
+Every reader translation ships with the app, so the Bible opens with no network. The
+build scripts got the text from two content services; the app doesn't request a
+translation's text from either:
 
-- [HelloAO](https://bible.helloao.org/) supplies the English reader text and the
-  shared translated-edition book catalog. It also supplies the BSB's English audio:
+- [HelloAO](https://bible.helloao.org/) is the source of the English reader text (the
+  BSB) and every translation's book list. `scripts/build-bundled-bibles.mjs` builds
+  it from HelloAO's complete translation. HelloAO also supplies the BSB's English
+  audio:
   each BSB chapter comes with HelloAO's narrator links, and the app offers each one
   as a narrator. As of October 2026, HelloAO lists four narrators: three play from
   HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
-  The app has no KJV audio.
-- [fetch(bible)](https://fetch.bible/) supplies the Chinese Union Version,
-  Reina-Valera 1909, and the original-language critical editions shown in the
-  verse-detail popup. Its normalized Chinese and Spanish resources expose the
-  source editions' translation footnotes directly.
+- [fetch(bible)](https://fetch.bible/) is the source of Reina-Valera 1909, bundled the
+  same way from its public-domain `spa_rv`, whose normalized resource keeps the
+  edition's translation footnotes. It's also the source of the original-language
+  critical editions shown in the verse-detail popup, which ship with the app too, so
+  no Bible text loads over the network.
+- **The Chinese Union Version ships with the app**: the public-domain 1919 text,
+  in Traditional and Simplified characters, read with no network. See
+  [Chinese Union Version text](#chinese-union-version-text-1919).
 
-The translated fetch(bible) resources are the public-domain `cmn_cut` (traditional
-CUV), `cmn_cus` (simplified CUV), and `spa_rv` (Reina-Valera 1909) editions.
+The BSB is public domain (HelloAO lists it so, and Berean dedicated it in 2023), and so
+is Reina-Valera 1909 (published 1909). The app no longer has the King James Version, which
+it showed until 1.4.0: the KJV is public domain everywhere except the United Kingdom, where
+the Crown's patent restricts publishing it, and the app is in the UK stores. The printed
+bulletin's menu still offers the KJV for its verses, since it's printed in New York.
 
 Chinese Union Version audio is streamed chapter by chapter from
 [Audio Power](https://theaudiopower.org/translations/cuv/#nar1), which credits the
@@ -50,6 +61,53 @@ church's copies on Adventist Connect; see
 [WordProject Cantonese audio](#wordproject-cantonese-audio). So does the Reina-Valera
 1909 audio; see
 [WordProject Spanish audio](#wordproject-spanish-audio-reina-valera-1909).
+
+### Chinese Union Version text (1919)
+
+The app's Chinese Union Version is the **1919 text** (官話和合譯本), in its 神
+edition. It's in the public domain: it was published in 1919, before 1929, so its US
+copyright has expired. Wikisource marks its transcription `{{Pd/1923}}`.
+
+**Why not the 1988 edition.** Until 1.4.0 the app showed the 1988 New Punctuation
+edition (新標點和合本) from fetch(bible), which labels it public domain after
+eBible.org. That edition adds modern punctuation, paragraphs, section headings, and
+updated names to the 1919 text, and its publisher claims it: "© 1988, 1989, 1996
+United Bible Societies", with the Hong Kong Bible Society as copyright agent. The
+church asked the Hong Kong Bible Society for permission on October 26, 2026. It
+replied the next day, pointing members to the Adventist Chinese Union Mission's
+licensed app and the Society's online Bible, without granting permission, so the
+app switched to the 1919 text. The full history is in
+[#517](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/517),
+and the reply is in the church's IT Admin shared drive.
+
+**Source.** The text is [WordProject's](https://www.wordproject.org/download/bibles/index.htm)
+Traditional Chinese download (`big5_new.zip`). It is the 1919 text: the 1919
+names (流便, 希底結), punctuation (、 ．), notes in 〔〕, spellings (他 for every
+gender, 喫, 阿, 麼), no section headings, and the full-width space before each 神 that
+means God. WordProject's [Disclaimer](https://www.wordproject.org/contact/new/disclaim.htm)
+allows this: "you are allowed to adapt the data (text format only!) for your
+purposes" (copies of its terms are in
+[`docs/rights-records/wordproject-2026-09-30/`](rights-records/wordproject-2026-09-30/)).
+Its Simplified Chinese download is a later edition (modern punctuation, 她), so the
+app's Simplified text is converted from the Traditional with `opencc-js`, with the
+few phrases it misreads fixed (`services/BibleSimplifiedFixes.json`).
+
+**How it was checked.** WordProject's copy has copying errors: for example 撒都該
+written into Old Testament names about 220 times, missing words, a verse of the next
+chapter pasted onto Genesis 33:20, and private-use characters where its font lacked a
+glyph. Every verse was compared with [Wikisource's transcription of the 1919
+text](https://zh.wikisource.org/wiki/聖經_(和合本)). Where the two disagreed on
+wording, the 1988 text, which keeps the 1919 wording almost everywhere, decided which
+copy had the error; none of its text is used. A fourth copy, open-bibles', then checked
+the result. The 502 reviewed fixes are in `scripts/cuv-1919-corrections.json`, and
+`test/cuv-1919-witnesses.test.ts` checks every verse against Wikisource and open-bibles
+on every test run. The method and results are in
+[`docs/rights-records/cuv-1919-2026-10-27/`](rights-records/cuv-1919-2026-10-27/README.md).
+Verse divisions follow the 1988 text and the BSB (3 John 1:15, Revelation 12:18),
+with the 1919 words unchanged.
+
+The reader credits it as "Public domain (1919). Text adapted from WordProject."
+`scripts/build-cuv-1919.mjs` rebuilds it.
 
 ### Audio Power permission scope
 
@@ -271,10 +329,13 @@ fetch(bible) service; it does **not** erase or replace the license of each work
 distributed through the service. fetch(bible explicitly states that consumers
 must follow the terms of each individual Bible resource. See its
 [official access and licensing explanation](https://fetch.bible/access/#no-limits-from-us).
-Some of those works are in the public domain, such as the CUV and Reina-Valera 1909
-texts above. Others, such as the critical editions below, carry their own licenses.
+Some of those works are in the public domain, such as the Reina-Valera 1909 text
+above. Others carry their own licenses or claims: the critical editions below are CC BY
+4.0, and the publisher of the 1988 CUV that fetch(bible) labels public domain claims
+copyright (see [Chinese Union Version text](#chinese-union-version-text-1919)).
 
-The app currently requests these open critical editions:
+The app ships these open critical editions in `assets/bible/original`, built by
+`scripts/build-bundled-bibles.mjs`:
 
 | Testament | fetch(bible) ID | Edition | License and source |
 | --- | --- | --- | --- |
@@ -292,8 +353,11 @@ not the same as a public-domain dedication. Users of the material must:
 4. avoid imposing legal or technological restrictions that prevent recipients
    from exercising the rights granted by the license.
 
-The app preserves an edition-and-editor attribution in the verse-detail popup.
-For display, `BibleService.fetchOriginalLanguageVerse` omits the separate note
+Because the app ships copies, the church distributes these works and must meet those
+conditions. The verse-detail popup shows each verse with its edition, linked to the
+edition's source, its editor, and the license, linked to CC BY 4.0. The bundled files
+are fetch(bible)'s books with their text and notes unchanged; only its book-name field
+is left out. For display, `BibleService.fetchOriginalLanguageVerse` omits the separate note
 objects in fetch(bible's plain-text payload and collapses source layout
 whitespace; the returned biblical character strings and textual sigla are
 otherwise displayed as provided. This formatting disclosure, the attribution,
@@ -393,6 +457,36 @@ offline reading, needs more care:
 - **Chinese Adventist authors.** Only pre-1928 editions with a verified record are
   candidates for copying; later works need the publisher's or estate's permission.
   See the research queue in [Christian Library](feature_designs/christian_library.md).
+
+---
+
+## Sabbath School Lessons
+
+The Sabbath School screen opens this week's lessons from Adventech, which publishes the
+Sabbath School app and its lesson catalog (`sabbath-school.adventech.io`). The adult
+lesson opens in Adventech's web reader. For each children's age group, the app looks up
+this week's lesson PDF in Adventech's public catalog, and opens the age group's Alive in
+Jesus website when it finds none
+([design](feature_designs/sabbath_school_lessons.md)).
+
+| Source | What the app uses | Rights basis |
+| --- | --- | --- |
+| **Adventech** (`sabbath-school.adventech.io`; PDFs from `sabbath-school-pdf.adventech.io` and `sabbath-school-resources-media.adventech.io`) | A link to the adult lesson reader. For children, the public catalog, to find this week's lesson, and the official lesson PDF. On a phone, the person's own phone downloads the PDF, keeps it in the app's cache for that week, and opens it in the phone's own PDF viewer, so opening it again is instant ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529)). A lesson downloads only when the person taps it. | The lessons are © General Conference of Seventh-day Adventists®, all rights reserved. [Adventech's lesson repository](https://github.com/Adventech/sabbath-school-lessons#copyright) says that no part of the adult guide may be "edited, altered, modified, adapted, translated, re-produced, or published" without the General Conference's prior written authorization. We found no separate public statement for the children's lessons, so they're treated the same way. The app doesn't alter, translate, or republish any lesson. The phone downloads the official, unmodified file from Adventech's own hosts, as a browser would, and keeps it only in its cache. This is an engineering assessment, not an express license. |
+
+Rules for this feature:
+
+- Download only from the two official PDF hosts, over HTTPS. `officialPdf()` in
+  `features/sabbath-school/ChildrenLessons.ts` enforces this.
+- Keep the file exactly as downloaded: no compression, re-encoding, cropping, or text
+  extraction.
+- Store it only in the cache directory, which isn't backed up and which the system may
+  clear, and delete it once its lesson's week is over
+  (`features/sabbath-school/LessonDownloads.ts`).
+- Don't add a way to share or export the file from the app, and never host a copy on
+  church storage. Opening it in the phone's own PDF viewer is fine; that viewer's own
+  save or share options are the person's choice, as in a browser.
+- Smaller or re-encoded copies hosted by the church are ruled out. Ask Adventech for
+  lighter files instead (#529).
 
 ---
 
@@ -579,8 +673,9 @@ in the in-app browser, as **Privacy Policy** does (#412). It's English only, for
 same reason as the privacy policy. Change the wording there, and a website deploy
 publishes it with no new app build.
 
-It covers the app's links to external resources, such as the hymn sites and EGW
-Writings, and the copyright caution that goes with them; how to change the text size
+It covers the app's links to external resources, such as the hymn sites, EGW
+Writings, and Adventech's Sabbath School lessons, and the copyright caution that goes
+with them; the children's lessons a phone keeps for their week; how to change the text size
 in EGW Writings' reader; what the app shows from other sources, such as cover
 thumbnails, and where each Library book is hosted; and the external platforms the app
 links to, such as YouTube and Spotify.

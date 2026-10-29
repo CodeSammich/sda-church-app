@@ -2,7 +2,7 @@
   "expo": {
     "name": "New York Chinese SDA Church",
     "slug": "sda-church-app",
-    "version": "1.3.2",
+    "version": "1.4.0",
     "orientation": "portrait",
     "icon": "./public/icon-1024x1024.png",
     "scheme": "sdachurchapp",
@@ -25,6 +25,9 @@
       "bundleIdentifier": "org.nyccsda.app",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "RCTAsyncStorageExcludeFromBackup": false
       }
     },
     "android": {
@@ -34,6 +37,7 @@
       },
       "predictiveBackGestureEnabled": true,
       "package": "org.nyccsda.app",
+      "allowBackup": true,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",

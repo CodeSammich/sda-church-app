@@ -120,9 +120,14 @@ The organization must confirm all of the following:
 - The AdventistGiving destination is current, secure, and controlled or authorized by
   the receiving organization.
 
-Current code opens `https://adventistgiving.org/donate/AN48CO` using the operating
-system link handler. It does not collect card or bank information and does not unlock
-content or features in exchange for a contribution.
+Current code opens `https://adventistgiving.org/donate/AN48CO` in the in-app browser
+(Safari View Controller on iOS, a Custom Tab on Android), like every website link since
+1.3.2. That still counts as giving outside the app: App Review's guideline 3.2.2 rejections
+tell developers to "provide a link to your website that launches the default browser or
+SFSafariViewController" for donations ([forum report](https://developer.apple.com/forums/thread/799549)).
+The app doesn't collect card or bank information, or ask for an amount, and doesn't
+unlock content or features in exchange for a contribution. Don't add an amount or email
+form before the link, because that collection is what gets apps rejected.
 
 Google’s [Payments policy](https://support.google.com/googleplay/android-developer/answer/9858738)
 says Google Play Billing must not be used for tax-exempt donations. Apple permits

@@ -1,22 +1,25 @@
+import { ChildrenLessonDialog } from '@/components/ChildrenLessonDialog';
 import { MenuCard } from '@/components/MenuCard';
 import { VerseHero } from '@/components/VerseHero';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openChildrenSabbathSchool,
   openBabiesSabbathSchool,
-  openCurrentChildrenSabbathSchool,
   openCurrentSabbathSchool,
   openSabbathSchool,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { SABBATH_SCHOOL_BACK_TARGET } from '@/constants/BackNavigation';
 import { useAppTheme } from '@/constants/Themes';
+import { useChildrenLessonOpener } from '@/hooks/useChildrenLessonOpener';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import type { ChildrenSabbathSchoolCurriculum } from '@/features/sabbath-school/ChildrenLessons';
+import type { ChildrenLessonDialogState } from '@/hooks/useChildrenLessonOpener';
+import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
-import { Stack } from 'expo-router';
-import { useContext, useState } from 'react';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useContext, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, List, Text } from 'react-native-paper';
 
@@ -86,9 +89,26 @@ export default function SabbathSchoolScreen() {
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
   const [childrenTab, setChildrenTab] = useState<'students' | 'teachers'>('students');
   const showingStudents = childrenTab === 'students';
+  const childrenLesson = useChildrenLessonOpener(language);
+
+  // The key screens can't tap, so a key-screens build opens the lesson popup
+  // from the path: sabbath-school?popup=lesson-download or lesson-offline.
+  const { popup } = useLocalSearchParams<{ popup?: string }>();
+  const [screenshotDialog, setScreenshotDialog] = useState<ChildrenLessonDialogState | null>(null);
+  useEffect(() => {
+    const screenshotPopup = getScreenshotPopup(popup, ['lesson-download', 'lesson-offline']);
+    if (screenshotPopup === 'lesson-download') {
+      setScreenshotDialog({ title: labels.junior, progress: { bytesWritten: 5_100_000, totalBytes: 14_200_000 } });
+    }
+    if (screenshotPopup === 'lesson-offline') {
+      setScreenshotDialog({ title: labels.junior, progress: null, offline: true });
+    }
+  }, [popup, labels.junior]);
+  const lessonDialog = screenshotDialog ?? childrenLesson.dialog;
 
   // Every age group shows every week; tapping one finds this week's lesson
-  // (see features/sabbath-school/ChildrenLessons.ts).
+  // (see features/sabbath-school/ChildrenLessons.ts), and on a phone downloads
+  // it with a progress popup (LessonDownloads.ts).
   const renderChildrenLesson = (
     curriculum: ChildrenSabbathSchoolCurriculum,
     title: string,
@@ -97,7 +117,7 @@ export default function SabbathSchoolScreen() {
     <MenuCard
       description={guide === 'student' ? labels.studentGuide : labels.teacherGuide}
       icon={guide === 'student' ? 'book-open-page-variant' : 'human-male-board'}
-      onPress={() => openCurrentChildrenSabbathSchool(curriculum, language)}
+      onPress={() => childrenLesson.open(curriculum, title)}
       title={title}
     />
   );
@@ -208,6 +228,16 @@ export default function SabbathSchoolScreen() {
         </List.Section>
         </View>
       </ScrollView>
+      <ChildrenLessonDialog
+        offline={lessonDialog?.offline}
+        onCancel={() => {
+          setScreenshotDialog(null);
+          childrenLesson.cancel();
+        }}
+        progress={lessonDialog?.progress ?? null}
+        title={lessonDialog?.title ?? ''}
+        visible={!!lessonDialog}
+      />
     </>
   );
 }

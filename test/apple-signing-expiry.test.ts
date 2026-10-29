@@ -69,6 +69,7 @@ describe('Apple signing expiry', () => {
   it('writes an alert with the dates and the renewal steps', () => {
     const alert = buildAppleSigningAlert(checkExpiry(dates(30, 30, 200), NOW), 'https://example.test/run');
     expect(alert.title).toBe('[monitor] Apple signing needs renewal');
+    expect(alert.priority).toBe('Urgent');
     expect(alert.body).toContain('**Apple Distribution certificate:** expires on October 29, 2026, in 30 days.');
     expect(alert.body).toContain('docs/operations/app-store-setup.md#yearly-apple-renewals');
     expect(alert.body).toContain('IOS_DISTRIBUTION_CERTIFICATE_BASE64');

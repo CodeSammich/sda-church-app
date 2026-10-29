@@ -7,6 +7,7 @@ import {
   CHURCH_BUILDING_IMAGE_URL,
   openLegalDisclaimer,
   openPrivacyPolicy,
+  openSupportEmail,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { getTextSizeMenuCopy } from '@/constants/TextSizeCopy';
@@ -32,6 +33,10 @@ const allLabels = {
     title: 'You',
     settings: 'Settings',
     aboutSupport: 'About & Support',
+    support: 'Help & Feedback',
+    supportSub: 'Ask for help or suggest a feature, by email',
+    supportPrompt:
+      'Is this a problem or an idea?\n\n\nWhat happened, or what would you like the app to do?\n\n\nIf something went wrong, what were you doing just before? A screenshot helps.',
     darkMode: 'Theme',
     darkModeSub: 'Choose a color theme',
     language: 'Language',
@@ -49,6 +54,10 @@ const allLabels = {
     title: '您',
     settings: '設定',
     aboutSupport: '關於與支援',
+    support: '幫助與意見回饋',
+    supportSub: '透過電子郵件尋求協助或建議新功能',
+    supportPrompt:
+      '這是問題回報，還是功能建議？\n\n\n發生了什麼事？或您希望 App 增加什麼功能？\n\n\n如果是問題：發生前您正在做什麼？附上截圖會很有幫助。',
     darkMode: '主題',
     darkModeSub: '選擇顏色主題',
     language: '語言',
@@ -66,6 +75,10 @@ const allLabels = {
     title: '您',
     settings: '设置',
     aboutSupport: '关于与支持',
+    support: '帮助与反馈',
+    supportSub: '通过电子邮件寻求帮助或建议新功能',
+    supportPrompt:
+      '这是问题反馈，还是功能建议？\n\n\n发生了什么？或您希望 App 增加什么功能？\n\n\n如果是问题：发生前您正在做什么？附上截图会很有帮助。',
     darkMode: '主题',
     darkModeSub: '选择颜色主题',
     language: '语言',
@@ -83,6 +96,10 @@ const allLabels = {
     title: 'Tú',
     settings: 'Ajustes',
     aboutSupport: 'Información y Ayuda',
+    support: 'Ayuda y Sugerencias',
+    supportSub: 'Pida ayuda o sugiera una función, por correo',
+    supportPrompt:
+      '¿Es un problema o una idea?\n\n\n¿Qué pasó, o qué le gustaría que hiciera la app?\n\n\nSi algo falló, ¿qué estaba haciendo justo antes? Una captura de pantalla ayuda.',
     darkMode: 'Tema',
     darkModeSub: 'Elegir un tema de color',
     language: 'Idioma',
@@ -210,6 +227,13 @@ export default function YouScreen() {
             >
               {labels.aboutSupport}
             </Text>
+            <MenuCard
+              title={labels.support}
+              description={labels.supportSub}
+              icon="email-outline"
+              iconColor={theme.colors.secondary}
+              onPress={() => openSupportEmail(labels.supportPrompt, packageJson.version)}
+            />
             <MenuCard
               title={labels.privacy}
               description={labels.privacySub}

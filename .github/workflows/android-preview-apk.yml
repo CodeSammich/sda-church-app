@@ -1,36 +1,33 @@
 name: Android preview APK
 
-# Uses pull_request_target so the Drive upload can use the production
-# environment: the job runs in the base branch's context, which the
-# environment's branch rule accepts. It builds only this repository's
-# release-candidate branch, never fork code, and uploads with the trusted base
-# commit's helper.
-# pull_request_target must stay allowed in the repository's Actions event
-# policy (Settings → Actions → Policies); GitHub blocks the trigger in public
-# repositories without one from November 2, 2026. A test keeps the list of
-# workflows that use it reviewed. See
-# docs/operations/admin-runbook.md#actions-event-policy-for-pull_request_target.
+# Builds a debug APK of the release PR for testing on Android phones, and
+# comments a link to download it. It builds only this repository's
+# release-candidate branch, never fork code, and reads no secrets: the APK is
+# signed only with Gradle's local debug key. The optional upload to Google
+# Drive, which needs secrets and main's context, is a workflow of its own,
+# android-preview-apk-drive.yml, which only takes this run's APK.
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - main
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
-  pull-requests: read
 
+# Concurrency groups span the repository. The event in the name keeps this run
+# apart from main's pull_request_target copy, which still runs on the 1.4.0
+# release PR, so neither cancels the other.
 concurrency:
-  group: android-preview-apk-${{ github.event.pull_request.number || github.ref }}
+  group: android-preview-apk-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   resolve-pr:
-    # pull_request_target runs the workflow from the trusted base repository.
     # Only release PRs, from this repository's release-candidate branch, are
-    # eligible; other PRs into main, such as Dependabot's, can't merge there.
-    # The build checks out the PR head without credentials; the Drive upload
-    # checks out only the trusted base commit's upload helper.
+    # eligible; other PRs into main, such as Dependabot's security updates,
+    # can't merge there.
+    # The build checks out the PR head without credentials.
     if: >-
       github.event.repository.fork == false &&
       github.event.pull_request.base.ref == 'main' &&
@@ -42,14 +39,12 @@ jobs:
       pr_number: ${{ steps.pr.outputs.pr_number }}
       head_repository: ${{ steps.pr.outputs.head_repository }}
       head_sha: ${{ steps.pr.outputs.head_sha }}
-      trusted_sha: ${{ steps.pr.outputs.trusted_sha }}
     steps:
       - name: Resolve open pull request head
         id: pr
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -68,31 +63,27 @@ jobs:
           }
           head_repository="$HEAD_REPOSITORY"
           head_sha="$HEAD_SHA"
-          trusted_sha="$BASE_SHA"
 
           test -n "$head_repository" && test -n "$head_sha" || {
             echo 'The pull request has no readable head repository or commit.' >&2
-            exit 1
-          }
-          test -n "$trusted_sha" || {
-            echo 'The trusted base commit could not be resolved.' >&2
             exit 1
           }
 
           printf 'pr_number=%s\n' "$PR_NUMBER" >> "$GITHUB_OUTPUT"
           printf 'head_repository=%s\n' "$head_repository" >> "$GITHUB_OUTPUT"
           printf 'head_sha=%s\n' "$head_sha" >> "$GITHUB_OUTPUT"
-          printf 'trusted_sha=%s\n' "$trusted_sha" >> "$GITHUB_OUTPUT"
 
   build:
     needs: resolve-pr
     if: needs.resolve-pr.result == 'success'
-    # The "Main protection" ruleset requires this job name. This workflow runs
-    # from main's copy (pull_request_target), so update the ruleset only after a
-    # rename reaches main.
+    # The "Main protection" ruleset requires this job name. A release PR reports
+    # the name in release-candidate, so a rename needs the ruleset changed while
+    # that release PR is open.
     name: Build Android debug APK (ARM)
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    # Builds take 12 to 19 minutes (17 runs in October 2026), so 40 is about
+    # twice the slowest.
+    timeout-minutes: 40
     steps:
       - name: Check out pull request head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -131,58 +122,181 @@ jobs:
       - name: Install Android SDK tools
         run: |
           set -euo pipefail
-          # This runs main's copy of the workflow on the pull request's
-          # checkout, which may predate the retrying install script.
-          install=scripts/sdkmanager-install.sh
-          [ -x "$install" ] || install=sdkmanager
-          "$install" "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
+          scripts/sdkmanager-install.sh "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006"
           test -d "$ANDROID_HOME/platforms/android-37.0"
           test -d "$ANDROID_HOME/build-tools/37.0.0"
 
       - name: Build debug ARM APK
-        run: npm run build:android:apk:debug:arm -- --output "$RUNNER_TEMP/app.apk"
+        id: apk
+        env:
+          APK_NAME: sda-church-app-pr-${{ needs.resolve-pr.outputs.pr_number }}-${{ github.run_id }}-arm-debug.apk
+        run: |
+          set -euo pipefail
+          npm run build:android:apk:debug:arm -- --output "$RUNNER_TEMP/$APK_NAME"
+          echo "name=$APK_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK as a workflow artifact
+        # Not zipped, so the link downloads the APK itself. The artifact takes
+        # the file's name.
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: android-pr-preview-${{ needs.resolve-pr.outputs.pr_number }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/app.apk
+          path: ${{ runner.temp }}/${{ steps.apk.outputs.name }}
+          archive: false
           if-no-files-found: error
           retention-days: 14
 
-  upload:
-    needs: [resolve-pr, build]
-    if: needs.build.result == 'success'
-    name: Upload APK to Google Drive
-    environment: production
+  comment:
+    # Starts with the build, so the PR's test APK comment says at once that a
+    # newer build is on the way, as the screenshot review's notice does. The
+    # earlier builds stay offered under it, marked as earlier. When the build
+    # finishes, the comment is replaced with its link, or with why it failed.
+    needs: resolve-pr
+    name: Post the test APK link
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    # The build's own limit, and a few minutes to post.
+    timeout-minutes: 45
+    permissions:
+      # To find this pull request's APKs and this run's build, and to replace
+      # the test APK comment. The job never checks out or runs the pull
+      # request's code.
+      actions: read
+      pull-requests: write
     steps:
-      # This job receives only the APK artifact. It does not check out or run
-      # PR code. The upload helper is checked out from the trusted base commit.
-      - name: Download APK artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: android-pr-preview-${{ needs.resolve-pr.outputs.pr_number }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/android-pr-preview
-
-      - name: Check out trusted upload helper
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ needs.resolve-pr.outputs.trusted_sha }}
-          path: trusted-source
-          persist-credentials: false
-
-      - name: Upload APK to personal Google Drive
+      - name: Post the test APK link
         env:
-          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
-          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
-          GOOGLE_DRIVE_FILE_NAME: sda-church-app-pr-${{ needs.resolve-pr.outputs.pr_number }}-${{ github.run_id }}-arm-debug.apk
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
-          test -n "$CLASPRC_JSON" || {
-            echo 'Missing protected production Environment secret CLASPRC_JSON.' >&2
+          # The build job runs the pull request's code, so this job takes nothing
+          # from it, not even the link. It finds each APK in GitHub's list of a
+          # run's artifacts, for that run's own commit, so the comment can only
+          # link APKs this workflow built for this pull request on github.com.
+          # The SHA-256 is the one the upload step recorded with GitHub.
+          #
+          # A run's APK: "<artifact id> <bytes> <created_at> <digest>", or nothing
+          # if the run stored no single unexpired APK of that commit.
+          apk() {
+            APK_NAME="sda-church-app-pr-$PR-$1-arm-debug.apk" APK_SHA="$2" gh api "repos/$REPO/actions/runs/$1/artifacts" --jq '
+              [.artifacts[] | select(.name == env.APK_NAME and .expired == false and .workflow_run.head_sha == env.APK_SHA)]
+              | if length == 1 then .[0] | "\(.id) \(.size_in_bytes) \(.created_at) \(.digest // "")" else empty end'
+          }
+          # When a build finished, in New York time.
+          built() { TZ=America/New_York date -d "$1" '+%b %-d, %-I:%M %p %Z'; }
+          # A run's commit message, first line only, as plain text: no links or
+          # HTML, and cut at a word past 120 characters.
+          first_line='.head_commit.message // "" | split("\n")[0] | gsub("\t"; " ") | gsub("[<>\\[\\]]"; "")
+            | if length > 120 then (.[0:120] | sub(" [^ ]*$"; "")) + "…" else . end'
+          # Replaces this pull request's test APK comments with the given one,
+          # so it has one, about its newest commit.
+          post() {
+            gh api "repos/$REPO/issues/$PR/comments" --paginate \
+              --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- android-test-apk"))) | .id' |
+              while read -r old; do gh api -X DELETE "repos/$REPO/issues/comments/$old" >/dev/null; done
+            gh api "repos/$REPO/issues/$PR/comments" -f body="$1" >/dev/null
+          }
+
+          run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
+          message=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq "$first_line") || message=""
+
+          # Earlier builds of this pull request, newest first: the last one of
+          # each other commit, up to ten, until their APKs expire. The comment
+          # posts without them if GitHub doesn't list them.
+          runs=$(gh api "repos/$REPO/actions/workflows/android-preview-apk.yml/runs?event=pull_request&branch=$HEAD_REF&per_page=20" \
+            --jq ".workflow_runs[] | select(.status == \"completed\") | [.id, .head_sha, ($first_line)] | @tsv") || runs=""
+          earlier="" count=0 seen="$SHA"
+          while IFS=$'\t' read -r id sha subject; do
+            [ -n "$id" ] && [ "$id" != "$RUN_ID" ] && [ "$count" -lt 10 ] || continue
+            case " $seen " in *" $sha "*) continue ;; esac
+            old=$(apk "$id" "$sha") || old=""
+            [ -n "$old" ] || continue
+            read -r old_id old_bytes old_created old_digest <<<"$old"
+            seen="$seen $sha"
+            count=$((count + 1))
+            details="[download](https://github.com/$REPO/actions/runs/$id/artifacts/$old_id), about $((old_bytes / 1000000)) MB"
+            case "$old_digest" in sha256:?*) details="$details, SHA-256 \`${old_digest#sha256:}\`" ;; esac
+            earlier+="- Commit \`${sha:0:7}\`, built $(built "$old_created") ($details): ${subject:-no commit message}"$'\n'
+          done <<<"$runs"
+          if [ "$count" -gt 0 ]; then
+            earlier=$(printf '<details><summary>Earlier builds of this pull request (%s)</summary>\n\n%s\n</details>' "$count" "$earlier")
+          fi
+
+          # Says this commit has no APK, and why, and fails, so rerunning the
+          # failed jobs reruns this one.
+          fail() {
+            body=$(cat <<BODY
+          <!-- android-test-apk failed sha=$SHA -->
+          ### 📱 Android test APK
+
+          ❌ **No APK of commit \`${SHA:0:7}\`** ($1): ${message:-no commit message}. [Its run]($run_url) says why. Rerun its failed jobs to try again.
+
+          $earlier
+          BODY
+            )
+            post "$body"
+            echo "::error::$2" >&2
             exit 1
           }
-          node trusted-source/scripts/upload-google-drive.mjs "$RUNNER_TEMP/android-pr-preview/app.apk" | tee "$RUNNER_TEMP/google-drive-upload.txt"
-          cat "$RUNNER_TEMP/google-drive-upload.txt" >> "$GITHUB_STEP_SUMMARY"
+
+          # 1. Say this commit's build is on the way, so nobody tests an
+          # earlier build by mistake. The earlier ones are still offered.
+          body=$(cat <<BODY
+          <!-- android-test-apk pending sha=$SHA -->
+          ### 📱 Android test APK
+
+          ⏳ **Building commit \`${SHA:0:7}\`:** ${message:-no commit message}. It takes about 15 minutes ([progress]($run_url)). When it's ready, this comment is replaced with its download link.
+
+          $earlier
+          BODY
+          )
+          post "$body"
+
+          # 2. Wait for this run's build, the latest attempt's when it's rerun.
+          build=""
+          for _ in $(seq 1 84); do
+            build=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name == "Build Android debug APK (ARM)")][0] // empty | "\(.status) \(.conclusion)"' || true)
+            case "$build" in "completed "*) break ;; esac
+            sleep 30
+          done
+          case "$build" in
+            "completed success") ;;
+            "completed "*) fail "the build ended as ${build#completed }" "The build ended as ${build#completed }." ;;
+            *) fail "the build didn't finish in time" "The build didn't finish in time." ;;
+          esac
+
+          # 3. Replace the notice with this build's link.
+          export APK_NAME="sda-church-app-pr-$PR-$RUN_ID-arm-debug.apk"
+          found=$(apk "$RUN_ID" "$SHA") || found=""
+          test -n "$found" || fail "its APK wasn't found" "This run stored no single $APK_NAME from $SHA."
+          read -r apk_id apk_bytes created digest <<<"$found"
+          case "$digest" in
+            sha256:?*) sha256="${digest#sha256:}" ;;
+            *) fail "GitHub recorded no SHA-256 for it" "GitHub gave no SHA-256 for $APK_NAME." ;;
+          esac
+          APK_URL="https://github.com/$REPO/actions/runs/$RUN_ID/artifacts/$apk_id"
+          APK_MB=$((apk_bytes / 1000000))
+
+          body=$(cat <<BODY
+          <!-- android-test-apk sha=$SHA -->
+          ### 📱 Android test APK
+
+          **Newest: commit \`${SHA:0:7}\`, built $(built "$created").** ${message:-No commit message.}
+
+          **[Download \`$APK_NAME\`]($APK_URL)** (about $APK_MB MB). SHA-256: \`$sha256\`
+
+          $earlier
+
+          Sign in to GitHub in the phone's browser first, since GitHub only gives downloads to signed-in users. Each link works for 14 days after its build. To install the newest from Google Drive instead, without signing in, an approver approves **Upload APK to Google Drive** in this pull request's checks.
+
+          It's a test build named **NYCCSDA Preview**, which installs beside the Play version rather than replacing it. Android asks once to allow installs from the browser.
+
+          Each SHA-256 is the one its upload recorded with GitHub. To check a download on a computer, compare it with \`sha256sum\` (\`shasum -a 256\` on a Mac).
+          BODY
+          )
+          post "$body"
+          echo "Posted the test APK link for $SHA, with $count earlier builds."

@@ -8,9 +8,9 @@ name: Android key screens
 # review comment waits for this workflow's run on the same commit and links
 # its screenshots, and its Screenshots reviewed approval covers both.
 #
-# It runs on pull_request, not in android-preview-apk.yml, which runs in the
-# base branch's context for its Drive upload, so the emulator runs pull request
-# code only with this workflow's read-only token. It reads no secret.
+# It's separate from android-preview-apk.yml, which builds the APK for phones.
+# Like that workflow's build, it runs pull request code only with a read-only
+# token. It reads no secret.
 # docs/operations/native-builds.md ("Android key screens") explains it.
 on:
   # Only the release PR into main, which requires it. Start it by hand on a

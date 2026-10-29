@@ -30,6 +30,7 @@ before adding anything. Each field below fits its store's limit.
 | Keywords | Version page → Keywords | (none) | 100 |
 | Description | Version page → Description | Main store listing → Full description | 4,000 |
 | What's new | Version page → What's New | Set automatically from the release PR's title | 4,000 / 500 |
+| Product page header | Version page → Header and Search Results → Header, or Asset Library | (none) | 3840 × 1646 PNG |
 
 In App Store Connect, add each language under **App Information → Localizable
 Information**. In Play Console, use **Main store listing → Manage translations**.
@@ -51,28 +52,32 @@ App Store: English (U.S.). Google Play: English (United States), `en-US`.
 New York Chinese SDA Church
 ```
 
-**Subtitle** (App Store, up to 30). The bulletin is left out on purpose.
+**Subtitle** (App Store, up to 30). "Official" tells members which app is their church's,
+since App Store search lists other Chinese SDA church apps next to it.
 
 ```text
-Bible & church life
+Official church app
 ```
 
 **Short description** (Google Play, up to 80)
 
 ```text
-Bilingual Bible with pinyin and audio, plus our weekly bulletin and church life.
+Multilingual Bible with pinyin and audio, our weekly bulletin, and church life.
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-Read the Bible in English, Chinese, or Spanish, side by side, with pinyin and audio. Check this week's bulletin, hymns, and Sabbath School lesson.
+Your church, all week: read and listen to the Bible side by side in English, Chinese, or Spanish, check the bulletin, watch the livestream, and join Bible classes.
 ```
 
-**Keywords** (App Store, up to 100, commas without spaces)
+**Keywords** (App Store, up to 100, commas without spaces). Apple also searches the name
+and subtitle, so their words aren't repeated here. It combines separate keywords too, so
+`audio` and `bible` match "audio bible". `nyc` is for people who search "NYC Chinese SDA".
+Keywords change only with a new version, so edit them before submitting it.
 
 ```text
-bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio bible,mandarin,queens,brooklyn,sermon
+bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio,nyc,mandarin,queens,brooklyn,sermon
 ```
 
 **Description** (both stores, up to 4,000)
@@ -81,9 +86,10 @@ bible,adventist,pinyin,hymnal,hymns,sabbath,bulletin,cuv,audio bible,mandarin,qu
 The official app of the New York Chinese Seventh-day Adventist Church. Read the Bible in the languages our church family speaks, follow each week's bulletin, and stay connected with church life in Queens and Brooklyn.
 
 BIBLE IN YOUR LANGUAGES
-• Five translations: the Berean Standard Bible (BSB), the King James Version (KJV), the Chinese Union Version in Traditional (CUV) and Simplified (CUVS) characters, and the Spanish Reina-Valera 1909.
+• Four translations: the Berean Standard Bible (BSB), the 1919 Chinese Union Version in Traditional (CUV) and Simplified (CUVS) characters, and the Spanish Reina-Valera 1909.
 • Dual-language reading shows a second translation under every verse, so you can read Chinese and English side by side.
 • Pinyin with tone marks above Chinese text, for learners and for reading aloud.
+• Search the whole Bible, even offline, or type a reference such as John 3:16 to go straight there.
 • Audio Bible in Mandarin & Cantonese (CUV and CUVS), English (BSB), and other languages, with background playback, lock-screen controls, and a sleep timer.
 • Save and share verses, and tap a verse to see its notes and the original Hebrew or Greek.
 • A verse of the day to start each day.
@@ -124,19 +130,19 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 **Subtitle** (App Store, up to 30)
 
 ```text
-雙語聖經與教會生活
+教會官方應用程式
 ```
 
 **Short description** (Google Play, up to 80)
 
 ```text
-中英雙語聖經，附拼音與有聲朗讀，並提供每週週報與教會生活資訊。
+多語言聖經（中文、英文、西班牙文），附拼音與有聲朗讀，並提供每週週報與教會生活資訊。
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-以中文、英文或西班牙文對照閱讀聖經，附拼音與有聲朗讀。隨時查看本週週報、詩歌與安息日學課程。
+教會生活，天天同行：中英對照閱讀和聆聽聖經，查看本週週報、觀看直播、參加查經班。
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces)
@@ -151,9 +157,10 @@ App Store: Chinese (Traditional). Google Play: Chinese (Traditional), `zh-TW`, a
 紐約華人基督復臨安息日會的官方應用程式。以教會家人熟悉的語言閱讀聖經，查看每週週報，隨時掌握皇后區與布魯克林的教會生活。
 
 多語言聖經
-• 五種譯本：新標點和合本繁體版（CUV）與簡體版（CUVS）、Berean Standard Bible（BSB）、英王欽定本（KJV），以及西班牙文 Reina-Valera 1909。
+• 四種譯本：1919年版和合本繁體版（CUV）與簡體版（CUVS）、Berean Standard Bible（BSB），以及西班牙文 Reina-Valera 1909。
 • 雙語閱讀：每節經文下方顯示第二種譯本，中英對照一目了然。
 • 可在中文經文上方顯示帶聲調的拼音，方便學習與朗讀。
+• 搜尋整本聖經，離線也能用；也可輸入經文出處（如「約3:16」）直接前往。
 • 有聲聖經：國語與粵語（和合本繁體、簡體）、英文（BSB）及其他語言，支援背景播放、鎖定畫面控制與睡眠定時器。
 • 收藏與分享經文；點選經文即可查看註解，以及希伯來文或希臘文原文。
 • 每日一節經文。
@@ -194,19 +201,19 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 **Subtitle** (App Store, up to 30)
 
 ```text
-双语圣经与教会生活
+教会官方应用程序
 ```
 
 **Short description** (Google Play, up to 80)
 
 ```text
-中英双语圣经，附拼音与有声朗读，并提供每周周报与教会生活信息。
+多语言圣经（中文、英文、西班牙文），附拼音与有声朗读，并提供每周周报与教会生活信息。
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-以中文、英文或西班牙文对照阅读圣经，附拼音与有声朗读。随时查看本周周报、诗歌与安息日学课程。
+教会生活，天天同行：中英对照阅读和聆听圣经，查看本周周报、观看直播、参加查经班。
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces)
@@ -221,9 +228,10 @@ App Store: Chinese (Simplified). Google Play: Chinese (Simplified), `zh-CN`. Gen
 纽约华人基督复临安息日会的官方应用程序。以教会家人熟悉的语言阅读圣经，查看每周周报，随时掌握皇后区与布鲁克林的教会生活。
 
 多语言圣经
-• 五种译本：新标点和合本繁体版（CUV）与简体版（CUVS）、Berean Standard Bible（BSB）、英王钦定本（KJV），以及西班牙文 Reina-Valera 1909。
+• 四种译本：1919年版和合本繁体版（CUV）与简体版（CUVS）、Berean Standard Bible（BSB），以及西班牙文 Reina-Valera 1909。
 • 双语阅读：每节经文下方显示第二种译本，中英对照一目了然。
 • 可在中文经文上方显示带声调的拼音，方便学习与朗读。
+• 搜索整本圣经，离线也能用；也可输入经文出处（如“约3:16”）直接前往。
 • 有声圣经：普通话与粤语（和合本繁体、简体）、英文（BSB）及其他语言，支持背景播放、锁屏控制与睡眠定时器。
 • 收藏与分享经文；点击经文即可查看注解，以及希伯来文或希腊文原文。
 • 每日一节经文。
@@ -269,19 +277,19 @@ Iglesia Adventista China NY
 **Subtitle** (App Store, up to 30)
 
 ```text
-Biblia y vida de iglesia
+App oficial de la iglesia
 ```
 
 **Short description** (Google Play, up to 80)
 
 ```text
-Biblia bilingüe con pinyin y audio, más el boletín semanal y la vida de iglesia.
+Biblia multilingüe con pinyin y audio, el boletín semanal y la vida de iglesia.
 ```
 
 **Promotional text** (App Store, up to 170; can change without a new version)
 
 ```text
-Lee la Biblia en inglés, chino o español, lado a lado, con pinyin y audio. Consulta el boletín, los himnos y la lección de Escuela Sabática de esta semana.
+Tu iglesia, toda la semana: lee y escucha la Biblia lado a lado en español, inglés o chino, consulta el boletín, mira la transmisión y únete a las clases bíblicas.
 ```
 
 **Keywords** (App Store, up to 100, commas without spaces)
@@ -296,9 +304,10 @@ biblia,himnario,himnos,sábado,escuela sabática,boletín,audio,reina valera,pin
 La aplicación oficial de la Iglesia Adventista del Séptimo Día China de Nueva York. Lee la Biblia en los idiomas que habla nuestra familia de la iglesia, sigue el boletín de cada semana y mantente en contacto con la vida de la iglesia en Queens y Brooklyn.
 
 LA BIBLIA EN TUS IDIOMAS
-• Cinco traducciones: la Berean Standard Bible (BSB), la versión King James (KJV), la Versión Unión China en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
+• Cuatro traducciones: la Berean Standard Bible (BSB), la Versión Unión China de 1919 en caracteres tradicionales (CUV) y simplificados (CUVS), y la Reina-Valera 1909 en español.
 • La lectura bilingüe muestra una segunda traducción debajo de cada versículo, para leer en chino y en inglés lado a lado.
 • Pinyin con marcas de tono sobre el texto chino, para quienes aprenden el idioma y para leer en voz alta.
+• Busca en toda la Biblia, incluso sin conexión, o escribe una cita como Juan 3:16 para ir directamente allí.
 • Biblia en audio en mandarín y cantonés (CUV y CUVS), en inglés (BSB) y en otros idiomas, con reproducción en segundo plano, controles en la pantalla de bloqueo y temporizador de apagado.
 • Guarda y comparte versículos, y toca un versículo para ver sus notas y el texto original en hebreo o griego.
 • Un versículo del día para comenzar cada día.
@@ -351,15 +360,15 @@ access** (Google Play, choosing that all functionality is available without spec
 access):
 
 ```text
-No sign-in is required; every feature works without an account.
+No sign-in is required, and every feature works without an account. The one exception is the Schedule sheet (staff only) button on the bulletin page, which opens the church's internal Google Sheet. Only church staff can open it, and nothing else in the app depends on it.
 
-This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server, and reads Bible text and audio from public Bible services.
+This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services.
 
 Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
 
-The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the browser. The app takes no payments, and giving unlocks nothing in the app.
+The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the in-app browser (Safari View Controller on iOS). The app itself collects no payment details, takes no payments, and giving unlocks nothing in the app.
 
-Hymn lyrics and sheet music, library books, Sabbath School lessons, and videos open on their publishers' websites.
+Hymn lyrics and sheet music, library books, and Sabbath School lessons open on their publishers' websites in the in-app browser. YouTube, Spotify, Zoom, and Google Maps links open in their own apps.
 
 The app plays Bible audio in the background, which is why it uses the audio background mode on iOS and a media playback service on Android.
 
@@ -380,13 +389,15 @@ blocker still open in the [store policy audit](store-policy-audit.md#status-sept
 
 ## Screenshots
 
-Copies of the uploaded screenshots and the feature graphic are in
+Copies of the uploaded screenshots, the feature graphic, and the App Store headers are in
 [`docs/store-assets/`](../store-assets/README.md), which also explains removing the
 transparency both stores reject. Replace them there whenever the stores get new ones.
 
 - **Google Play:** 2 to 8 phone screenshots. The long side can be at most twice the short
   side, so capture at 1080 × 1920: on an emulator, run `adb shell wm size 1080x1920`, and
-  turn on Android's demo mode for a clean status bar. Play also needs a 1024 × 500 feature
+  turn on Android's demo mode for a clean status bar. The current set comes from the
+  **Android key screens** run's Google Play batch (`screens/google-play/en-US/`), which
+  does both. Play also needs a 1024 × 500 feature
   graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
   and the 512 × 512 icon (`public/icon-512x512.png`).
 - **App Store:** iPhone 6.9-inch screenshots only. The app is iPhone-only
@@ -399,6 +410,16 @@ transparency both stores reject. Replace them there whenever the stores get new 
   size (1290 × 2796 or 1320 × 2868); a smaller iPhone's screenshots need resizing to
   1290 × 2796, which crops only a few pixels. The first three screenshots also show on
   the install sheet, so lead with the strongest.
+- **App Store header:** one per language, in
+  [`docs/store-assets/app-store/header/`](../store-assets/README.md). Upload each under
+  **Header and Search Results → Header** with that language selected, or through the
+  **Asset Library**, which submits it for review without a new version, so a rejected
+  header holds up nothing else. Leave **Search
+  Results** empty, so search results keep showing the screenshots. Apple's rules for
+  both: no prices, website addresses, copyright symbols, or other mobile platforms or app
+  stores (guideline 2.3.10: no Android or Google Play), and
+  any text translated into each listing's language. See Apple's
+  [asset best practices](https://developer.apple.com/app-store/asset-best-practices/).
 - **Adding iPad later:** a later version can add iPad support, with iPad screenshots;
   see #324.
   Apple doesn't let an update remove a device family once released, so test on an iPad
@@ -410,10 +431,9 @@ transparency both stores reject. Replace them there whenever the stores get new 
 
 ## What not to claim
 
-- **Offline reading:** the Bible needs a connection; chapters load over the network.
-- **Whole-Bible search:** search covers the current chapter only.
-- **Audio for every translation:** audio is available for CUV, CUVS, BSB, and RVR 1909,
-  not KJV. The descriptions' "other languages" means Spanish for now.
+- **Offline audio:** all four translations' text, and the verse popup's Hebrew and
+  Greek, ship with the app and open with no connection, but audio streams.
+- **Languages beyond Spanish:** the descriptions' "other languages" means Spanish for now.
 - **Hymn lyrics, sheet music, books, or lessons in the app:** they open on their
   publishers' websites.
 - **Notifications or widgets:** the app has neither.

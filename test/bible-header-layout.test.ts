@@ -99,3 +99,29 @@ describe("the header's system text size", () => {
     expect(header).toContain('getHeaderFontScale(fontScale) * headerTextScale');
   });
 });
+
+// The Bible's search results used to sit inside the header, whose box has no
+// height, so Android sent swipes on them to the chapter behind, which hid the
+// header and the results with it, and the audio controls were drawn over them.
+describe("the Bible's search results", () => {
+  const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
+
+  it('are a page of their own, over the chapter, its audio, and the tab bar', () => {
+    expect(header).toMatch(/isBiblePage \? \(\n\s+<Portal>\n\s+<View\n\s+style=\{\[\n\s+styles\.bibleResultsPage,\n\s+\{ top: headerBottom,/);
+    expect(header).toMatch(/bibleResultsPage: \{\n\s+position: 'absolute',\n\s+left: 0,\n\s+right: 0,\n\s+bottom: 0,\n\s+\}/);
+    // The header bar behind the search field is solid while the search is open.
+    expect(header).toContain("backgroundColor: isBiblePage && isBibleSearchExpanded ? theme.colors.background : 'transparent'");
+  });
+
+  it('open a reference on Enter, and otherwise stay up with the keyboard put away', () => {
+    expect(header).toMatch(
+      /if \(first\?\.kind === 'reference'\) handleSelectBibleRow\(first\);\n\s+else searchRef\.current\?\.blur\(\);/,
+    );
+    // Blurring keeps the search open while it has a query, so the results stay.
+    expect(header).toContain('if (isExpandableBible && searchQuery.trim().length === 0) {');
+  });
+
+  it("close with Android's Back, as a page would", () => {
+    expect(header).toMatch(/if \(!isBibleSearchExpanded\) return undefined;\n\s+const subscription = BackHandler\.addEventListener\('hardwareBackPress', \(\) => \{\n\s+collapseBibleSearchRef\.current\(\);\n\s+return true;/);
+  });
+});

@@ -106,7 +106,7 @@ const CHECKLIST = [
         'upkeep-calendar',
       ],
       [
-        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, and iOS compile cache. GitHub turns schedules off after 60 days without activity in the repository.',
+        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, Needs Priority Label, and iOS compile cache. GitHub turns schedules off after 60 days without activity in the repository.',
         'docs/operations/external-dependency-monitor.md',
         'alerts-and-recovery',
       ],
@@ -149,6 +149,7 @@ const openYearlyCheckup = ({ github, context, core, year, assignees = [] }) =>
     context,
     core,
     ...buildYearlyCheckup(year, `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`),
+    priority: 'Urgent',
     assignees,
   });
 

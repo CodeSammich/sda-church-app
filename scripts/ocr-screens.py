@@ -27,7 +27,9 @@ def main(paths):
     for path in paths:
         with Image.open(path) as image:
             width, height = image.size
-        output = engine(path)
+        # The app never shows text upside down, so skip RapidOCR's check for it,
+        # which turned some short words over: the EN badge read as N3.
+        output = engine(path, use_cls=False)
         lines = []
         for points, text, score in zip(output.boxes if output.boxes is not None else [], output.txts or (), output.scores or ()):
             xs = [float(point[0]) for point in points]

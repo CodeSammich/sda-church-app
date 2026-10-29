@@ -5,6 +5,7 @@ const alerts = require('../scripts/monitor-alert-issue.cjs');
 const { buildStoreToolchainAlert } = require('../scripts/check-store-toolchain.cjs');
 
 const TITLE = '[monitor] Example alert';
+const MAINTENANCE = alerts.MAINTENANCE_LABEL;
 const context = {
   serverUrl: 'https://github.com',
   repo: { owner: 'org', repo: 'repo' },
@@ -17,9 +18,20 @@ type Call = [string, Record<string, any>];
 // A stand-in for actions/github-script's `github` and `core` objects that
 // records every call. `rejectAssignees` mimics GitHub refusing an assignee
 // without repository access, which fails the whole create request.
+const PRIORITY_FIELD = {
+  id: 'FIELD',
+  name: 'Priority',
+  options: ['Urgent', 'High', 'Medium', 'Low'].map((name) => ({ id: `OPT-${name}`, name })),
+};
+
 const createGitHub = ({
   openIssues = [] as { number: number; title: string; pull_request?: object }[],
   rejectAssignees = false,
+  // The issue's current Priority, the repository's issue fields, and whether
+  // GitHub refuses the GraphQL request, as with a token that can't set fields.
+  currentPriority = null as string | null,
+  issueFields = [PRIORITY_FIELD, {}] as Record<string, any>[],
+  rejectGraphql = false,
 } = {}) => {
   const calls: Call[] = [];
   // What each list request asked for, kept apart so `calls` holds only writes.
@@ -50,6 +62,27 @@ const createGitHub = ({
         },
       },
     },
+    graphql: async (query: string, variables: Record<string, any>) => {
+      if (query.startsWith('mutation')) {
+        calls.push(['setPriority', variables]);
+        return {};
+      }
+      listed.push(variables);
+      if (rejectGraphql) {
+        throw new Error('Resource not accessible by integration');
+      }
+      return {
+        repository: {
+          issueFields: { nodes: issueFields },
+          issue: {
+            id: `ISSUE-${variables.number}`,
+            issueFieldValues: {
+              nodes: currentPriority ? [{ name: currentPriority, field: { id: 'FIELD' } }] : [],
+            },
+          },
+        },
+      };
+    },
   };
   const core = { warning: (message: string) => calls.push(['warning', { message }]) };
   const of = (name: string) => calls.filter((call) => call[0] === name).map((call) => call[1]);
@@ -66,13 +99,26 @@ describe('monitor alert issues', () => {
     const { github, core, of } = createGitHub();
 
     const result = await alerts.openOrUpdateAlert({
-      github, context, core, title: TITLE, body: 'Body', labels: ['critical'], assignees: ['alice'],
+      github, context, core, title: TITLE, body: 'Body', labels: ['needs-attention'], assignees: ['alice'],
     });
 
     expect(result).toEqual({ action: 'created', number: 101 });
     expect(of('create')).toEqual([
-      { owner: 'org', repo: 'repo', title: TITLE, body: 'Body', labels: ['critical'], assignees: ['alice'] },
+      {
+        owner: 'org', repo: 'repo', title: TITLE, body: 'Body', labels: ['needs-attention', MAINTENANCE], assignees: ['alice'],
+      },
     ]);
+  });
+
+  it('labels every alert as maintenance, once', async () => {
+    const { github, core, of } = createGitHub();
+
+    await alerts.openOrUpdateAlert({ github, context, core, title: TITLE, body: 'Body', assignees: ['alice'] });
+    await alerts.openOrUpdateAlert({
+      github, context, core, title: TITLE, body: 'Body', labels: [MAINTENANCE], assignees: ['alice'],
+    });
+
+    expect(of('create').map((args) => args.labels)).toEqual([[MAINTENANCE], [MAINTENANCE]]);
   });
 
   it('@mentions the run actor when no one is assigned', async () => {
@@ -87,12 +133,12 @@ describe('monitor alert issues', () => {
     const { github, core, of } = createGitHub({ rejectAssignees: true });
 
     const result = await alerts.openOrUpdateAlert({
-      github, context, core, title: TITLE, body: 'Body', labels: ['critical'], assignees: ['no-access'],
+      github, context, core, title: TITLE, body: 'Body', labels: ['needs-attention'], assignees: ['no-access'],
     });
 
     expect(result.action).toBe('created-without-assignees');
     expect(of('create')[1]).toEqual({
-      owner: 'org', repo: 'repo', title: TITLE, body: '@workflow-actor\n\nBody', labels: ['critical'],
+      owner: 'org', repo: 'repo', title: TITLE, body: '@workflow-actor\n\nBody', labels: ['needs-attention', MAINTENANCE],
     });
     expect(of('warning')[0].message).toContain('Could not assign no-access');
   });
@@ -103,21 +149,74 @@ describe('monitor alert issues', () => {
     });
 
     const result = await alerts.openOrUpdateAlert({
-      github, context, core, title: TITLE, body: 'Body', labels: ['critical'], assignees: ['alice'],
+      github, context, core, title: TITLE, body: 'Body', labels: ['needs-attention'], assignees: ['alice'],
     });
 
     expect(result).toEqual({ action: 'commented', number: 7 });
     expect(of('create')).toEqual([]);
     expect(of('comment')).toEqual([{ owner: 'org', repo: 'repo', issue_number: 7, body: 'Body' }]);
-    expect(of('addLabels')).toEqual([{ owner: 'org', repo: 'repo', issue_number: 7, labels: ['critical'] }]);
+    expect(of('addLabels')).toEqual([
+      { owner: 'org', repo: 'repo', issue_number: 7, labels: ['needs-attention', MAINTENANCE] },
+    ]);
   });
 
-  it('adds no labels to the open alert when there are none to add', async () => {
+  it('adds only the maintenance label to the open alert when given none', async () => {
     const { github, core, of } = createGitHub({ openIssues: [{ number: 7, title: TITLE }] });
 
     await alerts.openOrUpdateAlert({ github, context, core, title: TITLE, body: 'Body', assignees: ['alice'] });
 
-    expect(of('addLabels')).toEqual([]);
+    expect(of('addLabels')).toEqual([{ owner: 'org', repo: 'repo', issue_number: 7, labels: [MAINTENANCE] }]);
+  });
+
+  it('sets the Priority of a new alert', async () => {
+    const { github, core, of } = createGitHub();
+
+    await alerts.openOrUpdateAlert({
+      github, context, core, title: TITLE, body: 'Body', priority: 'Urgent', assignees: ['alice'],
+    });
+
+    expect(of('setPriority')).toEqual([{ issueId: 'ISSUE-101', fieldId: 'FIELD', optionId: 'OPT-Urgent' }]);
+    expect(of('warning')).toEqual([]);
+  });
+
+  it('sets the Priority of the open alert, but keeps one a person chose', async () => {
+    const unset = createGitHub({ openIssues: [{ number: 7, title: TITLE }] });
+    await alerts.openOrUpdateAlert({
+      github: unset.github, context, core: unset.core, title: TITLE, body: 'Body', priority: 'Urgent', assignees: ['alice'],
+    });
+    expect(unset.of('setPriority')).toEqual([{ issueId: 'ISSUE-7', fieldId: 'FIELD', optionId: 'OPT-Urgent' }]);
+
+    const chosen = createGitHub({ openIssues: [{ number: 7, title: TITLE }], currentPriority: 'High' });
+    const result = await alerts.setPriority({
+      github: chosen.github, context, core: chosen.core, issueNumber: 7, priority: 'Urgent',
+    });
+    expect(result).toEqual({ action: 'kept', priority: 'High' });
+    expect(chosen.of('setPriority')).toEqual([]);
+  });
+
+  it('still opens the alert, with a warning, when the Priority cannot be set', async () => {
+    const refused = createGitHub({ rejectGraphql: true });
+    const result = await alerts.openOrUpdateAlert({
+      github: refused.github, context, core: refused.core, title: TITLE, body: 'Body', priority: 'Urgent', assignees: ['alice'],
+    });
+    expect(result).toEqual({ action: 'created', number: 101 });
+    expect(refused.of('warning')[0].message).toContain('Could not set #101');
+
+    const noField = createGitHub({ issueFields: [{}] });
+    await alerts.openOrUpdateAlert({
+      github: noField.github, context, core: noField.core, title: TITLE, body: 'Body', priority: 'Urgent', assignees: ['alice'],
+    });
+    expect(noField.of('setPriority')).toEqual([]);
+    expect(noField.of('warning')[0].message).toContain('no Priority field with a Urgent option');
+  });
+
+  it('asks GitHub nothing about the Priority when the alert has none', async () => {
+    const { github, core, of, listed } = createGitHub();
+
+    await alerts.openOrUpdateAlert({ github, context, core, title: TITLE, body: 'Body', assignees: ['alice'] });
+
+    expect(of('setPriority')).toEqual([]);
+    expect(listed.filter((params) => 'number' in params)).toEqual([]);
   });
 
   it('closes the open alert on recovery, and does nothing when none is open', async () => {
@@ -143,13 +242,36 @@ describe('monitor alert issues', () => {
 });
 
 describe('dated reminder issues', () => {
-  it('opens the issue assigned, without an @mention', async () => {
+  it('opens the issue assigned and labeled, without an @mention', async () => {
     const { github, core, of } = createGitHub();
 
     const result = await alerts.openIssueOnce({ github, context, core, title: TITLE, body: 'Body', assignees: ['alice'] });
 
     expect(result).toEqual({ action: 'created', number: 101 });
-    expect(of('create')).toEqual([{ owner: 'org', repo: 'repo', title: TITLE, body: 'Body', assignees: ['alice'] }]);
+    expect(of('create')).toEqual([
+      { owner: 'org', repo: 'repo', title: TITLE, body: 'Body', labels: [MAINTENANCE], assignees: ['alice'] },
+    ]);
+    expect(of('setPriority')).toEqual([]);
+  });
+
+  it('sets the Priority of a new issue, but not of one that already exists', async () => {
+    const fresh = createGitHub();
+    await alerts.openIssueOnce({
+      ...fresh, context, title: TITLE, body: 'Body', priority: 'Urgent', assignees: ['alice'],
+    });
+    expect(fresh.of('setPriority')).toEqual([{ issueId: 'ISSUE-101', fieldId: 'FIELD', optionId: 'OPT-Urgent' }]);
+
+    const existing = createGitHub({ openIssues: [{ number: 7, title: TITLE }] });
+    await alerts.openIssueOnce({ ...existing, context, title: TITLE, body: 'Body', priority: 'Urgent' });
+    expect(existing.calls).toEqual([]);
+  });
+
+  it('still opens the issue, with a warning, when the Priority cannot be set', async () => {
+    const refused = createGitHub({ rejectGraphql: true });
+    await expect(
+      alerts.openIssueOnce({ ...refused, context, title: TITLE, body: 'Body', priority: 'Urgent', assignees: ['alice'] }),
+    ).resolves.toEqual({ action: 'created', number: 101 });
+    expect(refused.of('warning')[0].message).toContain('Could not set #101');
   });
 
   it('does nothing when the title already exists, even closed, but ignores a pull request', async () => {
@@ -176,7 +298,9 @@ describe('dated reminder issues', () => {
     expect(
       await alerts.openIssueOnce({ ...rejected, context, title: TITLE, body: 'Body', assignees: ['no-access'] }),
     ).toEqual({ action: 'created-without-assignees', number: 101 });
-    expect(rejected.of('create')[1]).toEqual({ owner: 'org', repo: 'repo', title: TITLE, body: '@workflow-actor\n\nBody' });
+    expect(rejected.of('create')[1]).toEqual({
+      owner: 'org', repo: 'repo', title: TITLE, body: '@workflow-actor\n\nBody', labels: [MAINTENANCE],
+    });
     expect(rejected.of('warning')[0].message).toContain('Could not assign no-access');
   });
 });
@@ -184,7 +308,7 @@ describe('dated reminder issues', () => {
 describe('store toolchain alert text', () => {
   const runUrl = 'https://github.com/org/repo/actions/runs/42';
 
-  it('labels a missed requirement critical and leads with its deadline', () => {
+  it('makes a missed requirement Urgent and leads with its deadline', () => {
     const alert = buildStoreToolchainAlert(
       {
         checks: [{ status: 'failed', kind: 'requirement' }],
@@ -194,20 +318,21 @@ describe('store toolchain alert text', () => {
     );
 
     expect(alert.title).toBe('[monitor] Store toolchain requirements need attention');
-    expect(alert.labels).toEqual(['critical']);
+    expect(alert.priority).toBe('Urgent');
+    expect(alert).not.toHaveProperty('labels');
     expect(alert.body).toContain('**Deadline passed on 2026-08-31:**');
     expect(alert.body).toContain(`Run: ${runUrl}`);
   });
 
-  it('does not label an unreadable page or a missing report critical', () => {
+  it('gives an unreadable page or a missing report no priority', () => {
     const unreadable = buildStoreToolchainAlert(
       { checks: [{ status: 'failed', kind: 'unreadable' }], markdown: '### …' },
       runUrl,
     );
     const missing = buildStoreToolchainAlert(null, runUrl);
 
-    expect(unreadable.labels).toEqual([]);
-    expect(missing.labels).toEqual([]);
+    expect(unreadable.priority).toBeNull();
+    expect(missing.priority).toBeNull();
     expect(missing.body).toContain('exited before producing a readable report');
   });
 });
@@ -228,4 +353,16 @@ describe('monitor workflow wiring', () => {
       expect(workflow).toContain('alerts.closeAlert(');
     },
   );
+
+  it('gives the external dependency alert a Priority', () => {
+    const workflow = readFileSync(join(process.cwd(), '.github/workflows/external-dependency-monitor.yml'), 'utf8');
+
+    expect(workflow).toContain("priority: 'Medium',");
+  });
+
+  it('gives Dependabot pull requests the same label as the alerts', () => {
+    const config = readFileSync(join(process.cwd(), '.github/dependabot.yml'), 'utf8');
+
+    expect(config).toContain(`labels: ["${MAINTENANCE}"]`);
+  });
 });

@@ -265,6 +265,11 @@ export const openChildrenSabbathSchool = () =>
     "Could not open the children's Sabbath School catalog.",
   );
 
+/**
+ * Opens this week's children's lesson in the browser. The web uses this; a
+ * phone downloads the lesson with a progress popup instead and opens it in the
+ * phone's own viewer (hooks/useChildrenLessonOpener.ts, #529).
+ */
 export const openCurrentChildrenSabbathSchool = (
   curriculum: ChildrenSabbathSchoolCurriculum,
   language: SupportedLanguage = 'en',
@@ -370,17 +375,55 @@ export const openEmail = (email: string) =>
 export const TECHNOLOGY_EMAIL = 'technology@nyccsda.org';
 
 /**
+ * Starts the subject of every email the app drafts, so they're easy to spot
+ * and filter, and to label automatically later.
+ */
+export const APP_EMAIL_SUBJECT_PREFIX = '[NYCCSDA App]';
+
+/**
  * An email asking for another Bible translation or language (#344). The subject
  * is always English, so requests are easy to find and count for #241; the
  * prompt in the body is in the reader's language.
  */
 export const getBibleRequestEmailUrl = (prompt: string) =>
-  `mailto:${TECHNOLOGY_EMAIL}?subject=${encodeURIComponent('Bible translation request')}` +
+  `mailto:${TECHNOLOGY_EMAIL}?subject=${encodeURIComponent(`${APP_EMAIL_SUBJECT_PREFIX} Bible translation request`)}` +
   `&body=${encodeURIComponent(prompt)}`;
 
 export const openBibleRequestEmail = (prompt: string) =>
   openInItsApp(
     getBibleRequestEmailUrl(prompt),
+    'Error',
+    'Email is not configured on this device or emulator.',
+  );
+
+/** The app version and phone system, the first things support asks. */
+export const getAppAndSystemLine = (
+  version: string,
+  os: string = Platform.OS,
+  osVersion: string | number | undefined = Platform.Version,
+) => {
+  const system =
+    os === 'ios' ? `iOS ${osVersion}` : os === 'android' ? `Android, API level ${osVersion}` : 'web app';
+  return `App ${version} · ${system}`;
+};
+
+/**
+ * An email asking for help with the app or suggesting a feature, from You →
+ * About & Support (#541). As with the Bible request, the subject is always
+ * English and the prompt is in the reader's language. The prompt asks, more
+ * simply, what the bug report and feature request issue templates ask:
+ * problem or idea, what happened or what they'd like, and what they were
+ * doing. The last line gives the app version and phone system. The draft
+ * opens in the phone's email app, so the person sees all of it, and nothing
+ * is sent unless they send it.
+ */
+export const getSupportEmailUrl = (prompt: string, appAndSystem: string) =>
+  `mailto:${TECHNOLOGY_EMAIL}?subject=${encodeURIComponent(`${APP_EMAIL_SUBJECT_PREFIX} Help or feature request`)}` +
+  `&body=${encodeURIComponent(`${prompt}\n\n\n\n${appAndSystem}`)}`;
+
+export const openSupportEmail = (prompt: string, version: string) =>
+  openInItsApp(
+    getSupportEmailUrl(prompt, getAppAndSystemLine(version)),
     'Error',
     'Email is not configured on this device or emulator.',
   );

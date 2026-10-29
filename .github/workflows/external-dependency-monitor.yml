@@ -80,6 +80,9 @@ jobs:
                 '',
                 'The complete machine-readable report is attached as the `external-dependency-report` artifact.',
               ].join('\n'),
+              // Most failures are a source that's briefly down and recover by
+              // the next run, so Medium rather than Urgent.
+              priority: 'Medium',
               assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
             });
             core.info(`Alert issue ${result.action}: #${result.number}`);

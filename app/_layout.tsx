@@ -27,6 +27,7 @@ import {
 import { hasAndroidWebBackGuard, isInstalledPwa } from '@/constants/InstalledWebApp';
 import { getBottomTabContentHeight } from '@/constants/Layout';
 import { getBottomTabTextScale } from '@/hooks/useGlobalHeaderHeight';
+import { useChildrenLessonCleanup } from '@/hooks/useChildrenLessonCleanup';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
   AppTheme,
@@ -906,6 +907,8 @@ function RootLayoutNav({
     : '/';
   const androidBackTarget = backTarget;
   const routeKey = `${pathname}:${JSON.stringify(globalParams)}`;
+  // Deletes children's lesson copies whose week is over (#529).
+  useChildrenLessonCleanup();
 
   // Opens the screen the key-screen capture saved before launching the app
   // (#331). Only the iOS key screens workflow's Simulator build does this; see

@@ -36,8 +36,8 @@ concurrency:
 jobs:
   capture:
     # A release PR comes from this repository's release-candidate branch.
-    # Other PRs into main, such as Dependabot's, can't merge there, so they
-    # skip it.
+    # Other PRs into main, such as Dependabot's security updates, can't
+    # merge there, so they skip it.
     # Started by hand, it builds unless it was asked only to re-check an
     # earlier run's screenshots.
     if: >-
@@ -566,6 +566,18 @@ jobs:
               echo "$3 from [its run]($url), which uploaded none; it says why"
             fi
           }
+          # How long a run took, in whole minutes, from its start until the job that
+          # uploads its screenshots finished.
+          took() {
+            local started finished seconds
+            started=$(gh api "repos/$REPO/actions/runs/$1" --jq '.run_started_at // empty') || return 0
+            finished=$(JOB="$2" gh api "repos/$REPO/actions/runs/$1/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name == env.JOB and .completed_at != null) | .completed_at][0] // empty') || return 0
+            if [ -n "$started" ] && [ -n "$finished" ]; then
+              seconds=$(( $(date -d "$finished" +%s) - $(date -d "$started" +%s) ))
+              if [ "$seconds" -gt 0 ]; then echo "about $(( (seconds + 30) / 60 )) minutes"; fi
+            fi
+          }
           run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
           download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"
           app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
@@ -579,6 +591,21 @@ jobs:
           else
             checks="⚠️ **The automatic checks failed or didn't finish** (iPhone: ${CHECKS:-unknown}, Android: ${ANDROID_CHECKS:-not finished}). Start with the runs linked below to see why."
           fi
+          # The comment posts without them if GitHub doesn't say.
+          ios_took="$(took "$RUN_ID" 'iOS key screens join')" || ios_took=""
+          android_took=""
+          if [ -n "$ANDROID_RUN_ID" ]; then
+            android_took="$(took "$ANDROID_RUN_ID" 'Android key screens join')" || android_took=""
+          fi
+          if [ -n "$ios_took" ] && [ -n "$android_took" ]; then
+            timing="⏱️ The iPhone run took $ios_took and the Android run $android_took, each from its start until its screenshots were ready."
+          elif [ -n "$ios_took" ]; then
+            timing="⏱️ The iPhone run took $ios_took, from its start until its screenshots were ready."
+          elif [ -n "$android_took" ]; then
+            timing="⏱️ The Android run took $android_took, from its start until its screenshots were ready."
+          else
+            timing=""
+          fi
           approve="an approver in the release-approvers team opens [this run]($run_url), clicks **Review deployments**, ticks **screenshot-review**, and approves. The **Screenshots reviewed** check then passes."
 
           body=$(cat <<BODY
@@ -588,6 +615,8 @@ jobs:
           The iPhone and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
 
           $checks
+
+          $timing
 
           1. **Download** $download and $android, and open their \`screens/ios/\` and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:

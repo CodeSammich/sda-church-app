@@ -170,7 +170,9 @@ const fixStatusBar = () => {
   demo('enter');
   demo('clock -e hhmm 0941');
   demo('battery -e level 100 -e plugged false');
-  demo('network -e wifi show -e level 4');
+  // Fully connected: without it, Wi-Fi shows a "!" whenever the test
+  // emulator's own network hasn't passed Android's internet check.
+  demo('network -e wifi show -e level 4 -e fully true');
   demo('network -e mobile hide');
   demo('notifications -e visible false');
 };
@@ -202,6 +204,31 @@ const prepareEmulator = () => {
 
 const sleepUntil = (time) => new Promise((done) => setTimeout(done, Math.max(0, time - Date.now())));
 
+/**
+ * Restarts adbd as root, to write into the app's private folder. Just after
+ * the install, adb sometimes drops the connection ("unable to connect for
+ * root: closed"), which failed whole groups on release PRs, so it waits for
+ * the device and tries again, up to five times. Returns the try that worked.
+ */
+const becomeRoot = async ({ run = adb, pause = (ms) => sleepUntil(Date.now() + ms), attempts = 5 } = {}) => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      run('root');
+      run('wait-for-device');
+      return attempt;
+    } catch (error) {
+      if (attempt >= attempts) throw error;
+      console.warn(`adb root failed on try ${attempt}: ${String(error.message).split('\n')[0]}. Trying again.`);
+      await pause(3000);
+      try {
+        run('wait-for-device');
+      } catch {
+        // The next try reports it.
+      }
+    }
+  }
+};
+
 const screenshot = (file) => {
   const result = spawnSync(ADB, ['exec-out', 'screencap -p'], { maxBuffer: 64 * 1024 * 1024 });
   if (result.status !== 0 || !result.stdout.length) throw new Error(`screencap failed: ${result.stderr}`);
@@ -222,9 +249,7 @@ const capture = async (outDir, { group, store }) => {
   const config = loadConfig();
   const device = store ? config.android.googlePlay : config.android.phone;
   const pkg = previewPackage();
-  // Root, to write into the app's private folder. adbd restarts as root.
-  adb('root');
-  adb('wait-for-device');
+  await becomeRoot();
   prepareEmulator();
   const activity = shell(`cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${pkg}`)
     .split('\n')
@@ -382,6 +407,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  becomeRoot,
   STORAGE_DATABASE,
   STORAGE_TABLE,
   STORAGE_VERSION,

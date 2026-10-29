@@ -164,8 +164,8 @@ names. Which checks are required on `main` and on `release-candidate` is in
 [Required checks](operations/admin-runbook.md#required-checks). A feature PR into
 `release-candidate` runs only the first three workflows below (and **Issues - Pending
 Release Label** when it merges); the slower ones run once per release, on the release PR
-into `main`. Other PRs into `main`, such as Dependabot's, skip the slow ones, because the
-source gate stops them from merging anyway. `main` also requires the `CodeQL`,
+into `main`. Other PRs into `main`, such as Dependabot's security updates, skip the slow
+ones, because the source gate stops them from merging anyway. `main` also requires the `CodeQL`,
 `Analyze (actions)`, and `Analyze (javascript-typescript)` checks, which come from
 GitHub's code scanning default setup and have no workflow file.
 
@@ -225,8 +225,8 @@ GitHub's code scanning default setup and have no workflow file.
 ### `Android preview APK` (`.github/workflows/android-preview-apk.yml`)
 
 - Check: `Build Android debug APK (ARM)`. Runs on the release PR into `main`.
-- Builds a debug-signed APK. After a `release-approvers` member approves `production`,
-  it uploads the APK to Google Drive. See
+- Builds a debug-signed APK and comments on the release PR with a link that downloads
+  it, for anyone signed in to GitHub. It reads no secrets. See
   [Android preview APKs](operations/admin-runbook.md#android-preview-apks).
 
 ### `iOS key screens` (`.github/workflows/ios-key-screens.yml`)
@@ -239,7 +239,7 @@ GitHub's code scanning default setup and have no workflow file.
 - `iOS key screens join` joins the batches and fails if any failed. It only copies
   files, so it runs on Linux.
 - Its review comment links both platforms' screenshots, once `Android key screens`
-  (below) has finished for the same commit.
+  (below) has finished for the same commit, and says how long each run took.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   iPhone and Android screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
@@ -300,8 +300,7 @@ GitHub's code scanning default setup and have no workflow file.
   that already exists.
 - After the release PR's merge, moves every open PR into `main` back to
   `release-candidate`: GitHub moves feature PRs to `main` when it deletes the branch, and
-  only `release-candidate` may merge into `main`. Bots' PRs, such as Dependabot's, stay,
-  and the comment names them.
+  only `release-candidate` may merge into `main`. Dependabot's PRs move too.
 - Comments on the merged PR with links to that merge's **Native iOS build**, **Native
   Android build**, and **Deploy Bulletin Apps Script** runs, which wait for `production`
   approval, and to the branches page. The comment names the PRs it moved, and says if
