@@ -18,8 +18,8 @@ are captured, their sizes, and what they may show are in
   Home, the Bible in English and Chinese, the audio settings with the CUV's audio
   languages, the Bible in the dark theme, Explore, and the Library. The other languages'
   listings show these too.
-- `app-store/en-US/`: the six iPhone screenshots, in upload order, at the 6.9-inch size
-  (1320 × 2868): Home, the Bible in English and Chinese, the Bible in Chinese and
+- `app-store/en-US/`: the six iPhone screenshots, in upload order, at 1206 × 2622, the
+  size App Store Connect's iPhone slot takes: Home, the Bible in English and Chinese, the Bible in Chinese and
   English with the Chinese interface, the Bible in the dark theme, Explore, and the
   Library. Home comes first: the first three appear on the App Store's install sheets,
   and Home shows what the app is. The other languages' listings show these too.

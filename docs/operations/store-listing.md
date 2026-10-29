@@ -400,16 +400,19 @@ transparency both stores reject. Replace them there whenever the stores get new 
   does both. Play also needs a 1024 × 500 feature
   graphic, described in [Store listing assets](play-console-answers.md#store-listing-assets),
   and the 512 × 512 icon (`public/icon-512x512.png`).
-- **App Store:** iPhone 6.9-inch screenshots only. The app is iPhone-only
+- **App Store:** iPhone screenshots only, at 1206 × 2622. App Store Connect's iPhone slot,
+  **iPhone with Dynamic Island (medium display)**, takes only the 6.1- and 6.3-inch sizes
+  (1179 × 2556 or 1206 × 2622) and rejects 1320 × 2868, which the 1.3.2 listing used.
+  The app is iPhone-only
   (`supportsTablet: false` in `app.json`), so App Store Connect asks for no iPad
   screenshots once the version uses a build made with that setting; iPads still install
   it and run it in iPhone mode. The current set comes from the key screens of the
-  **iOS key screens** run on a release PR, which are 1320 × 2868 with a clean status bar
-  (9:41, full battery and signal); see [Key screens](native-builds.md#key-screens).
-  Screenshots from a real iPhone work too. A Plus or Pro Max already takes the 6.9-inch
-  size (1290 × 2796 or 1320 × 2868); a smaller iPhone's screenshots need resizing to
-  1290 × 2796, which crops only a few pixels. The first three screenshots also show on
-  the install sheet, so lead with the strongest.
+  **iOS key screens** run on a release PR, whose App Store copies are scaled from the
+  Simulator's 1320 × 2868 to 1206 × 2622, with a clean status bar (9:41, full battery and
+  signal); see [Key screens](native-builds.md#key-screens). Screenshots from a real
+  iPhone work too: a 6.1- or 6.3-inch iPhone takes them at the right size, and a larger
+  one's need scaling to 1206 × 2622, which crops at most a pixel. The first three
+  screenshots also show on the install sheet, so lead with the strongest.
 - **App Store header:** one per language, in
   [`docs/store-assets/app-store/header/`](../store-assets/README.md). Upload each under
   **Header and Search Results → Header** with that language selected, or through the

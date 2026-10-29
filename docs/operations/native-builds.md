@@ -917,10 +917,11 @@ Each push needs a new approval, and the job fails if the environment doesn't req
 one. [Approving the screenshots](admin-runbook.md#approving-the-screenshots) has the
 steps and the setup.
 
-**App Store screenshots.** The images are 1320 × 2868, the App Store's 6.9-inch iPhone
-size. The shots listed under `appStore` in the screen list are also copied, numbered in
-upload order, to `screens/app-store/<language>/`, without the transparency the
-Simulator's PNGs have, which App Store Connect rejects. They're ready to upload; see
+**App Store screenshots.** The Simulator's images are 1320 × 2868. The shots listed under
+`appStore` in the screen list are also copied, numbered in upload order, to
+`screens/app-store/<language>/`, scaled to 1206 × 2622 and without the transparency the
+Simulator's PNGs have: App Store Connect's iPhone slot, **iPhone with Dynamic Island
+(medium display)**, takes only 1179 × 2556 or 1206 × 2622, and rejects transparency. They're ready to upload; see
 [Store assets](../store-assets/README.md). When to refresh the stores' screenshots is in
 step 2 of the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the-stores).
 

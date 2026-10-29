@@ -498,7 +498,8 @@ describe('App Store copies', () => {
 
     await writeAppStoreCopy(source, copy);
     const meta = await sharp(copy).metadata();
-    expect(meta).toMatchObject({ width: 40, height: 80, channels: 3, hasAlpha: false });
+    // At the size App Store Connect's iPhone slot takes (1206 × 2622).
+    expect(meta).toMatchObject({ width: 1206, height: 2622, channels: 3, hasAlpha: false });
     const { data } = await sharp(copy).raw().toBuffer({ resolveWithObject: true });
     expect([...data.subarray(0, 3)]).toEqual([200, 120, 40]);
   });
