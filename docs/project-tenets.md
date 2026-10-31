@@ -74,6 +74,13 @@ The app is a **Digital Home** that protects users from "doomscrolling" and exter
 algorithms. While we leverage infrastructure like YouTube or Spotify, the user experience
 remains internal to maintain spiritual focus.
 
+The app **curates** rather than collects. The Library should be a short list of books the
+church recommends, chosen by people members trust. Large catalogs are linked to, not
+copied in. The app goes deeper only where it can present that depth well, such as a note
+beside the verse being read. For everything else, it points members to the best dedicated
+resources. The Library's rules for what may be copied in are in
+[Christian Library](feature_designs/christian_library.md#content-policy).
+
 > _"Finally, brothers, whatever is true, whatever is honorable, whatever is right,
 > whatever is pure, whatever is lovely, whatever is admirable—if anything is excellent or
 > praiseworthy—think on these things."_ — **Philippians 4:8**
