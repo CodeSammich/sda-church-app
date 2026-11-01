@@ -563,10 +563,14 @@ and keeps following.
   leaves out Leviticus 19 for all three, and one psalm each for two of them. Gilbert has no
   times.
 - **Mandarin, Cantonese, and Spanish:** the church's copies of these recordings have no
-  published times, so they were made by forced alignment: a speech model lines up the
+  published times, so they were made by forced alignment
+  ([Bible audio verse times](../operations/bible-audio-verse-times.md) has the steps, for
+  a new narrator or language too): a speech model lines up the
   bundled text with each recording, and the start of each verse's first word is its time,
-  corrected by the recording's pauses: a start the aligner put at the end of the verse
-  before, or in the pause after it, moves to where speech resumes (`snap.py`).
+  corrected by the recording's pauses (`snap.py`). A start the aligner put at the end of
+  the verse before, or in the pause after it, moves to where speech resumes. Any other
+  start more than half a second from where speech resumes moves to the nearest such place
+  within 1.5 s.
   `scripts/bible-audio-alignment/` holds the steps: `download.py` copies every recording as
   hosted (nothing is changed or re-uploaded), `align.py` aligns each chapter on a GPU
   (torchaudio's MMS_FA, with the Chinese as toneless pinyin or jyutping), `resnap.py`

@@ -174,6 +174,10 @@ For WordProject's recordings, Cantonese and Spanish:
 WordPress puts an upload timestamp in each URL, so re-uploading a file changes its
 URL and the manifest must be regenerated.
 
+The reader's verse times were made from these exact files. A recording replaced with
+a different one, or a new narrator, needs its times made again: see
+[Bible audio verse times](bible-audio-verse-times.md).
+
 ## Scaling limits
 
 Limits and costs for every other service the app uses are in
