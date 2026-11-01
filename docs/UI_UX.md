@@ -184,10 +184,11 @@ simple, blended colors.
 #### Opening the app
 
 The phone's own launch screen is plain brand blue (`#00405C`, from `expo-splash-screen` in
-`app.json`). The app's first screen takes over in the same blue, and the church symbol
-rises into view from the bottom up, at half the screen's width, in under a second
-(`components/LaunchSplash.tsx`, #538). The app loads underneath meanwhile, and the blue
-fades once both are done, so opening takes at most the animation's length. It plays
+`app.json`). The app's first screen takes over in the same blue, and the church symbol is
+drawn as if with a pen, from the bottom up, at half the screen's width, in about a
+second and a half (`components/LaunchSplash.tsx`, `components/LaunchDrawing.ts`, #538).
+It runs on the UI thread with Reanimated and `react-native-svg`, so the app loading
+underneath doesn't make it stutter, and the blue fades once both are done. It plays
 only when the app starts, not when it comes back from the background. With Reduce Motion
 (iOS) or Remove animations (Android) on, the finished symbol shows still. The key-screen
 builds and the web skip it. The brand rules it follows are in

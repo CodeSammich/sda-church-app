@@ -1,5 +1,19 @@
 # External brand assets
 
+`nad-symbol.svg` is the church symbol, and the rest are external services' marks.
+
+## The church symbol
+
+`nad-symbol.svg` is `symbol/symbol_square-RGB.svg` from the NAD's symbol pack
+(<https://assets.adventistconnect.org/nadadven/2025/08/14085452/NAD-symbol.zip>, linked
+from the [NAD brand guidelines](https://www.nadadventist.org/about/brand-guidelines/logo/)),
+downloaded October 31, 2026, unmodified. The app doesn't bundle it:
+`scripts/make-launch-symbol.py` writes its paths into `constants/ChurchSymbol.ts` for the
+launch animation. The rules for using it are in
+[LEGAL_BRANDING.md](../../../docs/LEGAL_BRANDING.md).
+
+## External services
+
 These files are unmodified provider assets used inside clickable controls that open
 the corresponding fixed external service link.
 

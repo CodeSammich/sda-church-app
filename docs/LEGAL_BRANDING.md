@@ -32,20 +32,24 @@ For more information, please visit the
 
 ## The launch animation
 
-When the app opens, the church symbol rises into view from the bottom up: the open
-Bible, then the cross, then the flame, as the symbol's meaning reads (#538). On October
-31, 2026, the church decided to animate the symbol without asking for separate
-permission, since the app already uses the NAD's version of it with the pastor's
-approval (#23, #36). The animation stays within the NAD's logo guidelines as far as an
-animation can:
+When the app opens, the church symbol is drawn as if with a pen, from the bottom up: the
+open Bible and the cross, then the flame's lines, each reaching higher than the last, then
+the ® (#538). That order follows the symbol's meaning: the Word of God as the
+foundation, the cross at its centre, and the flame of the Holy Spirit rising above them.
+On October 31, 2026, the church decided to animate the symbol without asking for
+separate permission, since the app already uses the NAD's version of it with the
+pastor's approval (#23, #36), and chose this pen drawing over a plain bottom-up reveal.
+The animation stays within the NAD's logo guidelines as far as an animation can:
 
-- The whole symbol is uncovered from the bottom up by a soft edge, so it's never broken
-  into separate pieces.
-- It grows evenly as it rises, with no distortion, rotation, change of colour, or added
-  elements, and the ® stays with it.
-- It ends on the exact, unchanged symbol. `assets/images/church-symbol.png` is cut from
-  the app icon by `scripts/make-launch-symbol.cjs`: the icon's own pixels, without the
-  blue square. `test/launch-splash.test.ts` checks that it's still pure white.
+- Every shape is drawn in its own place. Nothing is moved, rotated, stretched, or
+  recoloured, and nothing is added: the pen line is the shape's own outline, and it
+  goes once the shape fills in.
+- The ® is part of the drawing and stays with the symbol.
+- It ends on the exact, unchanged symbol. The shapes are the paths of the NAD's
+  official SVG, kept as `assets/images/brand/nad-symbol.svg`, which
+  `scripts/make-launch-symbol.py` writes into `constants/ChurchSymbol.ts`.
+  `test/launch-splash.test.ts` checks that the finished drawing matches that SVG pixel
+  for pixel.
 
 Changes to the animation should keep to these rules. See
 [Opening the app](UI_UX.md#opening-the-app) for how it plays.

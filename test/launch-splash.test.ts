@@ -1,45 +1,122 @@
 import {
+  getDrawingWindows,
+  getFillAmount,
+  getPenAmount,
+} from '@/components/LaunchDrawing';
+import {
   getLaunchSymbolWidth,
   LAUNCH_BACKGROUND,
-  LAUNCH_SYMBOL_ASPECT,
   LaunchSplash,
 } from '@/components/LaunchSplash';
+import { CHURCH_SYMBOL_SHAPES, CHURCH_SYMBOL_VIEW_BOX } from '@/constants/ChurchSymbol';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
-import { AccessibilityInfo } from 'react-native';
 
 jest.mock('expo-splash-screen', () => ({
   hideAsync: jest.fn(() => Promise.resolve()),
   preventAutoHideAsync: jest.fn(() => Promise.resolve(true)),
   setOptions: jest.fn(),
 }));
+// Every animation finishes at once. Reanimated's own mock can't start in Jest
+// (its CSS animations need the native module), so this covers what
+// LaunchSplash uses.
+jest.mock('react-native-reanimated', () => {
+  const { View } = require('react-native');
+  const run = (worklet: () => unknown) => worklet();
+  return {
+    __esModule: true,
+    default: { View, createAnimatedComponent: (component: unknown) => component },
+    Easing: { linear: (t: number) => t, out: (easing: unknown) => easing, quad: (t: number) => t },
+    useAnimatedProps: run,
+    useAnimatedStyle: run,
+    useReducedMotion: () => false,
+    useSharedValue: (value: number) => ({ value }),
+    withDelay: (_ms: number, animation: number) => animation,
+    withTiming: (value: number, _config: unknown, done?: (finished: boolean) => void) => {
+      done?.(true);
+      return value;
+    },
+  };
+});
+jest.mock('react-native-worklets', () => ({
+  scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
+}));
 
 // The splash is decoration, hidden from screen readers.
 const HIDDEN = { includeHiddenElements: true };
+const LAYOUT = { nativeEvent: { layout: { x: 0, y: 0, width: 393, height: 852 } } };
 
-// Lets the Reduce Motion lookup's promise settle.
-const settle = () => act(async () => {});
+const windows = getDrawingWindows(CHURCH_SYMBOL_SHAPES);
+const shapesWith = (role: string) =>
+  CHURCH_SYMBOL_SHAPES.map((shape, index) => ({ ...shape, window: windows[index] }))
+    .filter((shape) => shape.role === role);
 
-const renderSplash = async (appReady: boolean, reduceMotion = false) => {
-  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(reduceMotion);
-  const onDone = jest.fn();
-  const screen = await render(createElement(LaunchSplash, { appReady, onDone }));
-  await settle();
-  const ready = () => screen.rerender(createElement(LaunchSplash, { appReady: true, onDone }));
-  return { screen, onDone, ready };
-};
-
-const wait = (ms: number) =>
-  act(async () => {
-    jest.advanceTimersByTime(ms);
+describe('the launch drawing', () => {
+  it('draws the open Bible and the cross first', () => {
+    for (const bible of shapesWith('bible')) {
+      expect(bible.window.penStart).toBe(0);
+      for (const flame of shapesWith('flame')) {
+        expect(flame.window.penStart).toBeGreaterThan(bible.window.penStart);
+      }
+    }
   });
 
-describe('the launch animation', () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  it('draws the flame\'s lines one after another, each reaching higher, ending at its tip', () => {
+    const flames = shapesWith('flame').sort((a, b) => a.window.penStart - b.window.penStart);
+    expect(flames).toHaveLength(6);
+    for (let i = 1; i < flames.length; i++) {
+      expect(flames[i].top).toBeLessThan(flames[i - 1].top);
+    }
+    expect(flames.at(-1)!.top).toBe(Math.min(...CHURCH_SYMBOL_SHAPES.map((shape) => shape.top)));
+  });
 
+  it('starts with nothing, and ends with every shape filled and no pen line left', () => {
+    for (const window of windows) {
+      expect(getFillAmount(0, window)).toBe(0);
+      expect(getPenAmount(0, window)).toBe(0);
+      expect(getFillAmount(1, window)).toBe(1);
+      expect(getPenAmount(1, window)).toBe(1);
+    }
+  });
+
+  it('draws each outline from its lowest point up to its highest', () => {
+    const first = (d: string) => Number(d.match(/^M[\d.-]+,([\d.-]+)/)![1]);
+    const last = (d: string) => Number(d.match(/,([\d.-]+)$/)![1]);
+    for (const shape of CHURCH_SYMBOL_SHAPES) {
+      for (const half of shape.pen) {
+        expect(first(half.d)).toBeCloseTo(shape.bottom, 1);
+        expect(last(half.d)).toBeCloseTo(shape.top, 1);
+      }
+    }
+  });
+
+  it('shows the repeated edge only once the page it repeats has filled', () => {
+    const edge = shapesWith('bible').find((shape) => shape.repeatsEdge)!;
+    const page = shapesWith('bible').find((shape) => shape.pen.length && shape.bottom > 285)!;
+    expect(edge.window.fillEnd).toBe(page.window.fillEnd);
+    expect(getFillAmount(page.window.fillEnd - 0.01, edge.window)).toBe(0);
+  });
+
+  it('finishes on the NAD\'s official symbol, pixel for pixel', async () => {
+    const sharp = require('sharp');
+    const [, , width, height] = CHURCH_SYMBOL_VIEW_BOX.split(' ').map(Number);
+    const size = `width="1080" height="${Math.round((1080 * height) / width)}"`;
+    const official = readFileSync('assets/images/brand/nad-symbol.svg', 'utf8')
+      .replace(/viewBox="[^"]*"/, `viewBox="${CHURCH_SYMBOL_VIEW_BOX}" ${size}`);
+    const drawn = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${CHURCH_SYMBOL_VIEW_BOX}" ${size}>
+      <rect width="360" height="360" fill="${LAUNCH_BACKGROUND}"/>
+      ${CHURCH_SYMBOL_SHAPES.map((shape) => `<path d="${shape.d}" fill="#FFFFFF"/>`).join('')}
+    </svg>`;
+    const [a, b] = await Promise.all(
+      [official, drawn].map((svg) => sharp(Buffer.from(svg)).removeAlpha().raw().toBuffer()),
+    );
+    expect(a.equals(b)).toBe(true);
+  });
+});
+
+describe('the launch animation', () => {
   it('draws the symbol at half the screen\'s narrower side, at most 300 points', () => {
     expect(getLaunchSymbolWidth(393, 852)).toBe(197);
     expect(getLaunchSymbolWidth(852, 393)).toBe(197);
@@ -48,83 +125,48 @@ describe('the launch animation', () => {
   });
 
   it('hides the phone\'s launch screen at once when its blue is drawn', async () => {
-    const { screen } = await renderSplash(false);
-    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'layout', {
-      nativeEvent: { layout: { x: 0, y: 0, width: 393, height: 852 } },
-    });
+    const screen = await render(createElement(LaunchSplash, { appReady: false, onDone: jest.fn() }));
+    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'layout', LAYOUT);
     expect(SplashScreen.setOptions).toHaveBeenCalledWith({ duration: 0, fade: false });
-    expect(SplashScreen.hideAsync).toHaveBeenCalled();
+    expect(SplashScreen.hideAsync).toHaveBeenCalledTimes(1);
   });
 
-  it('plays once the symbol has loaded, and waits for the app before fading', async () => {
-    const { screen, onDone, ready } = await renderSplash(false);
-    await fireEvent(screen.getByTestId('launch-symbol', HIDDEN), 'load');
-    await wait(3000);
-    // Finished, but the app underneath hasn't loaded.
+  it('waits for the app to load before fading, then lets taps through', async () => {
+    const onDone = jest.fn();
+    const screen = await render(createElement(LaunchSplash, { appReady: false, onDone }));
+    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'layout', LAYOUT);
+    // Drawn, but the app underneath hasn't loaded.
     expect(onDone).not.toHaveBeenCalled();
     expect(screen.getByTestId('launch-splash', HIDDEN).props.pointerEvents).toBe('auto');
 
-    await ready();
-    await wait(100);
-    // Taps reach the app as soon as it starts to show.
+    await act(async () => {
+      await screen.rerender(createElement(LaunchSplash, { appReady: true, onDone }));
+    });
+    expect(onDone).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('launch-splash', HIDDEN).props.pointerEvents).toBe('none');
-    await wait(400);
-    expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('takes about a second when the app is already loaded', async () => {
-    const { screen, onDone } = await renderSplash(true);
-    await fireEvent(screen.getByTestId('launch-symbol', HIDDEN), 'load');
-    await wait(1000);
-    expect(onDone).not.toHaveBeenCalled();
-    await wait(400);
-    expect(onDone).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows the finished symbol still with Reduce Motion, then fades', async () => {
-    const { screen, onDone } = await renderSplash(true, true);
-    await fireEvent(screen.getByTestId('launch-symbol', HIDDEN), 'load');
-    // Only the short hold and fade, no rise.
-    await wait(400);
-    expect(onDone).toHaveBeenCalledTimes(1);
-  });
-
-  it('starts anyway if the symbol never reports loading', async () => {
-    const { onDone } = await renderSplash(true);
-    // It gives up waiting after half a second, then rises and fades.
-    await wait(500);
-    await wait(1000);
-    expect(onDone).not.toHaveBeenCalled();
-    await wait(400);
+  it('shows the finished symbol still with Reduce Motion', async () => {
+    const Reanimated = require('react-native-reanimated');
+    jest.spyOn(Reanimated, 'useReducedMotion').mockReturnValue(true);
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const onDone = jest.fn();
+    await render(createElement(LaunchSplash, { appReady: true, onDone }));
+    // Only the fade ran, without waiting for the drawing to start.
+    expect(timing).toHaveBeenCalledTimes(1);
+    expect(timing.mock.calls[0][0]).toBe(0);
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 });
 
-describe('the launch screen and symbol', () => {
+describe('the launch screen', () => {
   it('leaves the phone\'s launch screen plain blue, in the animation\'s blue', () => {
     const plugins = JSON.parse(readFileSync('app.json', 'utf8')).expo.plugins;
     const [, splash] = plugins.find(
       (plugin: unknown) => Array.isArray(plugin) && plugin[0] === 'expo-splash-screen',
     );
-    // An image there would show before the animation, then vanish for it to rise.
+    // An image there would show before the drawing, then vanish for it.
     expect(splash).toEqual({ backgroundColor: LAUNCH_BACKGROUND });
-  });
-
-  it('is the icon\'s white symbol unchanged: white everywhere, only its coverage varies', async () => {
-    const sharp = require('sharp');
-    const { data, info } = await sharp('assets/images/church-symbol.png')
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    expect(info.channels).toBe(4);
-    expect(info.width / info.height).toBeCloseTo(LAUNCH_SYMBOL_ASPECT, 6);
-    let coloured = 0;
-    let covered = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) coloured++;
-      if (data[i + 3]) covered++;
-    }
-    expect(coloured).toBe(0);
-    expect(covered).toBeGreaterThan(0);
   });
 
   it('is skipped by the key-screen builds and the web', () => {
