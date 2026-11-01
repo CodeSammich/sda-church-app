@@ -13,26 +13,63 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
+import { StyleSheet } from 'react-native';
 
 jest.mock('expo-splash-screen', () => ({
   hideAsync: jest.fn(() => Promise.resolve()),
   preventAutoHideAsync: jest.fn(() => Promise.resolve(true)),
   setOptions: jest.fn(),
 }));
-// Every animation finishes at once. Reanimated's own mock can't start in Jest
-// (its CSS animations need the native module), so this covers what
+// Every animation finishes at once, and a shared value that changes runs the
+// reactions watching it, as on the UI thread. Reanimated's own mock can't start
+// in Jest (its CSS animations need the native module), so this covers what
 // LaunchSplash uses.
 jest.mock('react-native-reanimated', () => {
+  const { useEffect, useRef } = require('react');
   const { View } = require('react-native');
+  const reactions = new Set<() => void>();
   const run = (worklet: () => unknown) => worklet();
   return {
     __esModule: true,
     default: { View, createAnimatedComponent: (component: unknown) => component },
     Easing: { linear: (t: number) => t, out: (easing: unknown) => easing, quad: (t: number) => t },
     useAnimatedProps: run,
+    useAnimatedReaction: (
+      prepare: () => unknown,
+      react: (now: unknown, before: unknown) => void,
+    ) => {
+      const previous = useRef<unknown>(null);
+      useEffect(() => {
+        const reaction = () => {
+          const before = previous.current;
+          previous.current = prepare();
+          react(previous.current, before);
+        };
+        reactions.add(reaction);
+        reaction();
+        return () => {
+          reactions.delete(reaction);
+        };
+      });
+    },
     useAnimatedStyle: run,
     useReducedMotion: () => false,
-    useSharedValue: (value: number) => ({ value }),
+    useSharedValue: (initial: unknown) => {
+      const shared = useRef<{ value: unknown } | null>(null);
+      if (!shared.current) {
+        let current = initial;
+        shared.current = {
+          get value() {
+            return current;
+          },
+          set value(next: unknown) {
+            current = next;
+            reactions.forEach((reaction) => reaction());
+          },
+        };
+      }
+      return shared.current;
+    },
     withTiming: (value: number, _config: unknown, done?: (finished: boolean) => void) => {
       done?.(true);
       return value;
@@ -46,6 +83,10 @@ jest.mock('react-native-worklets', () => ({
 // The splash is decoration, hidden from screen readers.
 const HIDDEN = { includeHiddenElements: true };
 const LAYOUT = { nativeEvent: { layout: { x: 0, y: 0, width: 393, height: 852 } } };
+type Screen = Awaited<ReturnType<typeof render>>;
+const getSplash = (screen: Screen) => screen.getByTestId('launch-splash', HIDDEN);
+const getPointerEvents = (screen: Screen) =>
+  StyleSheet.flatten(getSplash(screen).props.style).pointerEvents;
 
 const windows = getDrawingWindows(CHURCH_SYMBOL_SHAPES);
 const shapesWith = (role: string) =>
@@ -125,7 +166,7 @@ describe('the launch animation', () => {
 
   it('hides the phone\'s launch screen at once when its blue is drawn', async () => {
     const screen = await render(createElement(LaunchSplash, { appReady: false, onDone: jest.fn() }));
-    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'layout', LAYOUT);
+    await fireEvent(getSplash(screen), 'layout', LAYOUT);
     expect(SplashScreen.setOptions).toHaveBeenCalledWith({ duration: 0, fade: false });
     expect(SplashScreen.hideAsync).toHaveBeenCalledTimes(1);
   });
@@ -133,16 +174,18 @@ describe('the launch animation', () => {
   it('waits for the app to load before fading, then lets taps through', async () => {
     const onDone = jest.fn();
     const screen = await render(createElement(LaunchSplash, { appReady: false, onDone }));
-    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'layout', LAYOUT);
+    await fireEvent(getSplash(screen), 'layout', LAYOUT);
     // Drawn, but the app underneath hasn't loaded.
     expect(onDone).not.toHaveBeenCalled();
-    expect(screen.getByTestId('launch-splash', HIDDEN).props.pointerEvents).toBe('auto');
+    expect(getPointerEvents(screen)).toBe('auto');
 
     await act(async () => {
       await screen.rerender(createElement(LaunchSplash, { appReady: true, onDone }));
     });
     expect(onDone).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('launch-splash', HIDDEN).props.pointerEvents).toBe('none');
+    // Rendered again to read the faded style, which the phone sets by itself.
+    await screen.rerender(createElement(LaunchSplash, { appReady: true, onDone }));
+    expect(getPointerEvents(screen)).toBe('none');
   });
 
   it('skips the drawing on a tap, and shows the app once it has loaded', async () => {
@@ -150,15 +193,16 @@ describe('the launch animation', () => {
     // The drawing never finishes by itself; only the fade does.
     jest.spyOn(Reanimated, 'withTiming').mockImplementation((...args: unknown[]) => {
       const [value, , done] = args as [number, unknown, ((finished: boolean) => void)?];
-      if (value === 0) done?.(true);
+      if (value !== 0) return 0;
+      done?.(true);
       return value;
     });
     const onDone = jest.fn();
     const screen = await render(createElement(LaunchSplash, { appReady: true, onDone }));
-    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'layout', LAYOUT);
+    await fireEvent(getSplash(screen), 'layout', LAYOUT);
     expect(onDone).not.toHaveBeenCalled();
 
-    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'touchEnd');
+    await fireEvent(getSplash(screen), 'touchEnd');
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 

@@ -10,12 +10,13 @@ import {
   type ChurchSymbolShape,
 } from '@/constants/ChurchSymbol';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { StatusBar, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   type SharedValue,
   useAnimatedProps,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -114,9 +115,8 @@ export function LaunchSplash({ appReady, onDone }: LaunchSplashProps) {
   // still. Reanimated reads it without waiting.
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(reduceMotion ? 1 : 0);
+  const ready = useSharedValue(appReady);
   const opacity = useSharedValue(1);
-  const [drawn, setDrawn] = useState(reduceMotion);
-  const [fading, setFading] = useState(false);
   const started = useRef(false);
 
   // The phone's launch screen goes once this blue is drawn in its place, and
@@ -127,44 +127,48 @@ export function LaunchSplash({ appReady, onDone }: LaunchSplashProps) {
     SplashScreen.setOptions({ duration: 0, fade: false });
     SplashScreen.hideAsync().catch(() => {});
     if (reduceMotion) return;
-    progress.value = withTiming(
-      1,
-      { duration: LAUNCH_DRAW_MS, easing: Easing.linear },
-      (finished) => {
-        if (finished) scheduleOnRN(setDrawn, true);
-      },
-    );
+    progress.value = withTiming(1, { duration: LAUNCH_DRAW_MS, easing: Easing.linear });
   };
 
   // A tap finishes the drawing at once, so the app shows as soon as it's ready.
   const skip = () => {
-    if (drawn) return;
     progress.value = 1;
-    setDrawn(true);
   };
 
   useEffect(() => {
-    if (!drawn || !appReady || fading) return;
-    setFading(true);
-    opacity.value = withTiming(
-      0,
-      { duration: LAUNCH_FADE_MS, easing: Easing.out(Easing.quad) },
-      (finished) => {
-        if (finished) scheduleOnRN(onDone);
-      },
-    );
-  }, [appReady, drawn, fading, onDone, opacity]);
+    ready.value = appReady;
+  }, [appReady, ready]);
 
-  const fadeStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  // The blue fades as soon as the drawing is done and the app has loaded. This
+  // runs on the UI thread with the drawing: the app's JavaScript is busy then,
+  // finishing its first screen, and waiting for it held the finished symbol
+  // for half a second on the Pixel 9a emulator.
+  useAnimatedReaction(
+    () => progress.value >= 1 && ready.value,
+    (done, wasDone) => {
+      if (!done || wasDone) return;
+      opacity.value = withTiming(
+        0,
+        { duration: LAUNCH_FADE_MS, easing: Easing.out(Easing.quad) },
+        (finished) => {
+          if (finished) scheduleOnRN(onDone);
+        },
+      );
+    },
+  );
+
+  // Taps go to the app as soon as it starts to show.
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    pointerEvents: opacity.value < 1 ? ('none' as const) : ('auto' as const),
+  }));
 
   return (
     <Animated.View
       style={[styles.container, fadeStyle]}
       onLayout={start}
       onTouchEnd={skip}
-      // Taps skip the drawing, then go to the app once it shows. The symbol is
-      // decoration.
-      pointerEvents={fading ? 'none' : 'auto'}
+      // The symbol is decoration.
       accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
