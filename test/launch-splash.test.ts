@@ -20,7 +20,10 @@ jest.mock('expo-splash-screen', () => ({
   preventAutoHideAsync: jest.fn(() => Promise.resolve(true)),
   setOptions: jest.fn(),
 }));
-// Every animation finishes at once, and a shared value that changes runs the
+// Frames run only when a test calls runFrames.
+const mockFrameCallbacks = new Set<(frame: { timeSincePreviousFrame: number }) => void>();
+
+// Timed animations finish at once, and a shared value that changes runs the
 // reactions watching it, as on the UI thread. Reanimated's own mock can't start
 // in Jest (its CSS animations need the native module), so this covers what
 // LaunchSplash uses.
@@ -32,7 +35,7 @@ jest.mock('react-native-reanimated', () => {
   return {
     __esModule: true,
     default: { View, createAnimatedComponent: (component: unknown) => component },
-    Easing: { linear: (t: number) => t, out: (easing: unknown) => easing, quad: (t: number) => t },
+    Easing: { linear: (t: number) => t },
     useAnimatedProps: run,
     useAnimatedReaction: (
       prepare: () => unknown,
@@ -53,6 +56,14 @@ jest.mock('react-native-reanimated', () => {
       });
     },
     useAnimatedStyle: run,
+    useFrameCallback: (callback: (frame: { timeSincePreviousFrame: number }) => void) => {
+      useEffect(() => {
+        mockFrameCallbacks.add(callback);
+        return () => {
+          mockFrameCallbacks.delete(callback);
+        };
+      });
+    },
     useReducedMotion: () => false,
     useSharedValue: (initial: unknown) => {
       const shared = useRef<{ value: unknown } | null>(null);
@@ -87,6 +98,12 @@ type Screen = Awaited<ReturnType<typeof render>>;
 const getSplash = (screen: Screen) => screen.getByTestId('launch-splash', HIDDEN);
 const getPointerEvents = (screen: Screen) =>
   StyleSheet.flatten(getSplash(screen).props.style).pointerEvents;
+// Runs `count` frames, `ms` apart. A 60 Hz screen draws a frame every 16 ms.
+const runFrames = (count: number, ms = 16) => {
+  for (let i = 0; i < count; i++) {
+    mockFrameCallbacks.forEach((callback) => callback({ timeSincePreviousFrame: ms }));
+  }
+};
 
 const windows = getDrawingWindows(CHURCH_SYMBOL_SHAPES);
 const shapesWith = (role: string) =>
@@ -176,33 +193,48 @@ describe('the launch animation', () => {
     const screen = await render(createElement(LaunchSplash, { appReady: false, onDone }));
     await fireEvent(getSplash(screen), 'layout', LAYOUT);
     // Drawn, but the app underneath hasn't loaded.
+    runFrames(30);
     expect(onDone).not.toHaveBeenCalled();
     expect(getPointerEvents(screen)).toBe('auto');
 
     await act(async () => {
       await screen.rerender(createElement(LaunchSplash, { appReady: true, onDone }));
     });
-    expect(onDone).toHaveBeenCalledTimes(1);
-    // Rendered again to read the faded style, which the phone sets by itself.
+    runFrames(1);
+    // Rendered again to read the fading style, which the phone sets by itself.
     await screen.rerender(createElement(LaunchSplash, { appReady: true, onDone }));
     expect(getPointerEvents(screen)).toBe('none');
+    runFrames(11);
+    expect(onDone).not.toHaveBeenCalled();
+    runFrames(1);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('fades on after a frame the phone takes long to draw, rather than skip to the end', async () => {
+    const onDone = jest.fn();
+    const screen = await render(createElement(LaunchSplash, { appReady: true, onDone }));
+    await fireEvent(getSplash(screen), 'layout', LAYOUT);
+    // The first frame that shows the app, held up for half a second.
+    runFrames(1, 500);
+    expect(onDone).not.toHaveBeenCalled();
+    runFrames(6);
+    expect(onDone).not.toHaveBeenCalled();
+    runFrames(5);
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 
   it('skips the drawing on a tap, and shows the app once it has loaded', async () => {
     const Reanimated = require('react-native-reanimated');
-    // The drawing never finishes by itself; only the fade does.
-    jest.spyOn(Reanimated, 'withTiming').mockImplementation((...args: unknown[]) => {
-      const [value, , done] = args as [number, unknown, ((finished: boolean) => void)?];
-      if (value !== 0) return 0;
-      done?.(true);
-      return value;
-    });
+    // The drawing never finishes by itself.
+    jest.spyOn(Reanimated, 'withTiming').mockReturnValue(0);
     const onDone = jest.fn();
     const screen = await render(createElement(LaunchSplash, { appReady: true, onDone }));
     await fireEvent(getSplash(screen), 'layout', LAYOUT);
+    runFrames(30);
     expect(onDone).not.toHaveBeenCalled();
 
     await fireEvent(getSplash(screen), 'touchEnd');
+    runFrames(13);
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
@@ -212,9 +244,9 @@ describe('the launch animation', () => {
     const timing = jest.spyOn(Reanimated, 'withTiming');
     const onDone = jest.fn();
     await render(createElement(LaunchSplash, { appReady: true, onDone }));
-    // Only the fade ran, without waiting for the drawing to start.
-    expect(timing).toHaveBeenCalledTimes(1);
-    expect(timing.mock.calls[0][0]).toBe(0);
+    runFrames(13);
+    // It faded without drawing, or waiting for the drawing to start.
+    expect(timing).not.toHaveBeenCalled();
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 });

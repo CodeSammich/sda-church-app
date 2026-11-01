@@ -18,6 +18,7 @@ import Animated, {
   useAnimatedProps,
   useAnimatedReaction,
   useAnimatedStyle,
+  useFrameCallback,
   useReducedMotion,
   useSharedValue,
   withTiming,
@@ -49,6 +50,8 @@ const WINDOWS = getDrawingWindows(CHURCH_SYMBOL_SHAPES);
 // when the app is nearly ready: its length is mostly added to the open time.
 export const LAUNCH_DRAW_MS = 800;
 export const LAUNCH_FADE_MS = 200;
+// A frame moves the fade on by at most this much; see the fade below.
+const MAX_FADE_STEP_MS = 32;
 // The pen's width, in the symbol's units: about a point on a phone.
 const PEN_WIDTH = 1.8;
 
@@ -117,6 +120,8 @@ export function LaunchSplash({ appReady, onDone }: LaunchSplashProps) {
   const progress = useSharedValue(reduceMotion ? 1 : 0);
   const ready = useSharedValue(appReady);
   const opacity = useSharedValue(1);
+  // How far the fade has run, in milliseconds, or -1 before it starts.
+  const fadeTime = useSharedValue(-1);
   const started = useRef(false);
 
   // The phone's launch screen goes once this blue is drawn in its place, and
@@ -140,22 +145,30 @@ export function LaunchSplash({ appReady, onDone }: LaunchSplashProps) {
   }, [appReady, ready]);
 
   // The blue fades as soon as the drawing is done and the app has loaded. This
-  // runs on the UI thread with the drawing: the app's JavaScript is busy then,
-  // finishing its first screen, and waiting for it held the finished symbol
-  // for half a second on the Pixel 9a emulator.
+  // runs on the UI thread with the drawing, so it doesn't wait for the app's
+  // JavaScript, which is busy then finishing the app's first screen.
   useAnimatedReaction(
     () => progress.value >= 1 && ready.value,
     (done, wasDone) => {
-      if (!done || wasDone) return;
-      opacity.value = withTiming(
-        0,
-        { duration: LAUNCH_FADE_MS, easing: Easing.out(Easing.quad) },
-        (finished) => {
-          if (finished) scheduleOnRN(onDone);
-        },
-      );
+      if (done && !wasDone) fadeTime.value = 0;
     },
   );
+
+  // The fade adds up its frames' time rather than reading the clock. The
+  // phone draws the app's screen for the first time once the blue lets any
+  // of it through, and that frame can take long (half a second on the Pixel
+  // 9a emulator). A fade timed by the clock would be over by then, and the
+  // app would appear at once instead of fading in.
+  useFrameCallback(({ timeSincePreviousFrame }) => {
+    if (fadeTime.value < 0 || fadeTime.value >= LAUNCH_FADE_MS) return;
+    fadeTime.value = Math.min(
+      LAUNCH_FADE_MS,
+      fadeTime.value + Math.min(timeSincePreviousFrame ?? 0, MAX_FADE_STEP_MS),
+    );
+    // Fast at first, then slowing (an ease-out).
+    opacity.value = (1 - fadeTime.value / LAUNCH_FADE_MS) ** 2;
+    if (fadeTime.value >= LAUNCH_FADE_MS) scheduleOnRN(onDone);
+  });
 
   // Taps go to the app as soon as it starts to show.
   const fadeStyle = useAnimatedStyle(() => ({
