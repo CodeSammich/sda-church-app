@@ -1,5 +1,5 @@
 import {
-  PASTOR_HAO_IMAGE_URL,
+  BIBLE_WORKER_IMAGE_URL,
   PASTOR_IMAGE_URL,
 } from './ExternalLinks';
 
@@ -10,7 +10,14 @@ export interface TeamMember {
     'zh-cn': string;
     es: string;
   };
-  roleKey: 'seniorPastor' | 'pastor' | 'childrensMinistry';
+  roleKey: 'seniorPastor' | 'bibleWorker' | 'childrensMinistry';
+  /** Shown after the role, such as a title held at another church. */
+  roleNote?: {
+    en: string;
+    zh: string;
+    'zh-cn': string;
+    es: string;
+  };
   imageUrl: string;
   description: {
     en: string;
@@ -50,8 +57,15 @@ export const TEAM_MEMBERS: TeamMember[] = [
       'zh-cn': '郝雅君',
       es: 'Sarah Hao',
     },
-    roleKey: 'pastor',
-    imageUrl: PASTOR_HAO_IMAGE_URL,
+    roleKey: 'bibleWorker',
+    // She is an elder at her home church, not at this one (#557).
+    roleNote: {
+      en: 'Elder at her home church',
+      zh: '母會長老',
+      'zh-cn': '母会长老',
+      es: 'Anciana en su iglesia de origen',
+    },
+    imageUrl: BIBLE_WORKER_IMAGE_URL,
     description: {
       en: 'Originally from Shenyang, China, Sarah Hao began her ministry in evangelism and church planting forty years ago. She has devoted much of her life to planting and nurturing churches in rural areas of Northeast China and has been directly or indirectly involved in establishing more than twenty churches.\n\nShe has extensive experience in training lay leaders and church workers and is particularly gifted in leading spiritual formation, Bible study, and discipleship. She is currently pursuing a Master of Divinity (MDiv) degree at the Adventist International Institute of Advanced Studies (AIIAS) in the Philippines.',
       zh: '來自中國瀋陽，四十年前開始投身傳道與植堂事工，長期在中國東北農村地區建立和牧養教會。一生中直接或間接參與建立教會二十餘間，並長期致力於培養平信徒傳道人及教會工人，擅長帶領靈修、聖經學習及門徒培訓。現於菲律賓復臨國際高等研究院（Adventist International Institute of Advanced Studies, AIIAS）攻讀道學碩士（Master of Divinity, MDiv）學位。',

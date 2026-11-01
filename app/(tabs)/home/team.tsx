@@ -42,7 +42,7 @@ export default function MeetOurTeamScreen() {
     en: {
       title: 'Meet Our Team',
       seniorPastor: 'Senior Pastor',
-      pastor: 'Pastor',
+      bibleWorker: 'Bible Worker',
       childrensMinistry: "Children's Ministry",
       call: 'Call',
       email: 'Email',
@@ -50,7 +50,7 @@ export default function MeetOurTeamScreen() {
     zh: {
       title: '認識我們的團隊',
       seniorPastor: '主任牧師',
-      pastor: '牧師',
+      bibleWorker: '聖經助理',
       childrensMinistry: '兒童事工',
       call: '致電',
       email: '電郵',
@@ -58,7 +58,7 @@ export default function MeetOurTeamScreen() {
     'zh-cn': {
       title: '认识我们的团队',
       seniorPastor: '主任牧师',
-      pastor: '牧师',
+      bibleWorker: '圣经助理',
       childrensMinistry: '儿童事工',
       call: '致电',
       email: '电邮',
@@ -66,7 +66,7 @@ export default function MeetOurTeamScreen() {
     es: {
       title: 'Conoce a nuestro equipo',
       seniorPastor: 'Pastor Principal',
-      pastor: 'Pastora',
+      bibleWorker: 'Obrera Bíblica',
       childrensMinistry: 'Ministerio Infantil',
       call: 'Llamar',
       email: 'Correo',
@@ -135,7 +135,12 @@ export default function MeetOurTeamScreen() {
                     { color: theme.colors.tertiary, marginBottom: 8, fontWeight: 'bold' },
                   ]}
                 >
-                  {labels[member.roleKey as keyof typeof labels]}
+                  {[
+                    labels[member.roleKey as keyof typeof labels],
+                    member.roleNote?.[language as keyof typeof allLabels] || member.roleNote?.en,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </Text>
                 <Text
                   variant="bodyMedium"

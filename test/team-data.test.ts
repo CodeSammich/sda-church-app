@@ -12,6 +12,9 @@ describe('team profiles', () => {
       expect(member.name['zh-cn']).toBe(toSimplified(member.name.zh));
       expect(member.description['zh-cn']).toBe(toSimplified(member.description.zh));
       expect(member.description.zh).not.toBe(member.description['zh-cn']);
+      if (member.roleNote) {
+        expect(member.roleNote['zh-cn']).toBe(toSimplified(member.roleNote.zh));
+      }
     },
   );
 });
