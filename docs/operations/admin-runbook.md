@@ -315,15 +315,17 @@ out.
 After a release merges into `main`:
 
 1. Approve the run's `production` deployment when nobody is making a bulletin, so
-   the menu doesn't change under them, and after any sheet change the release
-   needs, such as a new header. A release that didn't change the bulletin code
+   the menu doesn't change under them. A header the release renames, reorders, or
+   removes must be changed in the sheet first; a header it adds is typed after
+   the deploy (see the [Change checklist](bulletin-automation.md#change-checklist)).
+   A release that didn't change the bulletin code
    starts a run too; approving it republishes the current code. Rejecting a run
    skips that deploy. Don't leave a run waiting: later deploys queue behind it
    until it's approved or rejected, and GitHub cancels it after 30 days.
 2. Follow the checks in
    [Deployment and verification](bulletin-automation.md#deployment-and-verification):
    reload the spreadsheet, generate a test bulletin for each changed layout, and check
-   the Doc, the PDF, and the public `/exec` response.
+   the Doc and the public `/exec` response.
 
 To redeploy between releases, select **Run workflow**, choose **`main`** under *Use
 workflow from*, optionally enter a description, and approve it. The description is
@@ -1018,7 +1020,7 @@ officer election, and update it whenever a pastor or elder starts or leaves.
 3. Keep `Head` on the row of the pastor who leads Communion. It is never
    printed.
 4. When you next make the coming Sabbath's bulletin (**Printed Bulletin → Create
-   Google Doc + PDF…**), check the titles of the people scheduled that day. Only
+   Google Doc…**), check the titles of the people scheduled that day. Only
    a Queens Holy Communion bulletin shows the `Head` pastor.
 
 No code change or deploy is needed; the next print reads the tab. The layout

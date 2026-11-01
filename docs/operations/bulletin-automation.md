@@ -2,7 +2,7 @@
 
 This is the operator runbook for the church bulletin system: the master Google
 Spreadsheet, the bound Apps Script project, the public mobile-app API, and the
-printed Google Doc/PDF workflow. It records the behavior to preserve when
+printed Google Doc workflow. It records the behavior to preserve when
 editing the workbook or changing a bulletin layout.
 
 The source is in [`google-apps-script/`](../../google-apps-script/). Its
@@ -48,7 +48,7 @@ Master spreadsheet
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
-        └── Printed*.gs ── authorized full-name render ──> Google Doc + PDF
+        └── Printed*.gs ── authorized full-name render ──> Google Doc
 ```
 
 There is one bound Apps Script project. `BulletinApi.gs`, the printed renderers,
@@ -79,7 +79,7 @@ the church's Workspace terms during annual maintenance.
 | `google-apps-script/BulletinApi.gs` | Public API, sheet contracts, data joins, privacy filtering, and metadata translations |
 | `google-apps-script/BulletinScheduleMaintenance.gs` | Background `onOpen` maintenance, header protection, validation, hiding, and quarter expansion |
 | `google-apps-script/ScheduleAssignmentChecks.gs` | Same-day roster conflict highlights and Name Dictionary unknown-name warnings |
-| `google-apps-script/PrintedBulletin.gs` | Shared printed-bulletin code: Sheet menu and prompts, data preparation, Docs and PDF export, page and table helpers, and the shared cover, giving, announcement, hymn, Bible, and QR helpers |
+| `google-apps-script/PrintedBulletin.gs` | Shared printed-bulletin code: Sheet menu and prompts, data preparation, Google Doc creation, page and table helpers, and the shared cover, giving, announcement, hymn, Bible, and QR helpers |
 | `google-apps-script/PrintedCommunionBulletin.gs` | Communion service content both locations print: fixed Communion/Foot Washing readings, response hymn, and ceremony panels |
 | `google-apps-script/PrintedQueensBulletin.gs` | Queens Regular and Queens Communion page layouts |
 | `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn cover, Zoom, Sabbath School, worship, Communion, and giving footer layouts, and placing the Sabbath Encouragement spread |
@@ -165,14 +165,20 @@ normal sharing permissions.
 
 ### 3. `Sabbath Sermon Data`
 
-This is the reviewed, final-owner intake sheet. Keep one row per Sabbath and
-location. Row 1 must be:
+This is the reviewed, final-owner intake sheet, filled in week by week. Keep
+one row per Sabbath and location. Row 1 must be:
 
 ```text
 Date | Location | English Hymn of Praise | Chinese Hymn of Praise |
 English Sermon Title | Chinese Sermon Title | English Hymn of Response |
-Chinese Hymn of Response | Bible Verses
+Chinese Hymn of Response | Bible Verses |
+Sabbath School Hymn 1 | Sabbath School Hymn 2 | Sabbath School Hymn 3 |
+Special Music Title
 ```
+
+The tab may also be named `Weekly Hymns & Sermon`. The script looks for
+`Sabbath Sermon Data` first, then that name, so the tab can be renamed at any
+time after the #558 deploy (`BULLETIN_SHEET_NAME_ALIASES` in `BulletinApi.gs`).
 
 Rules:
 
@@ -183,6 +189,23 @@ Rules:
 - `Bible Verses` stores the reference used by Church at Study and the digital
   bulletin's Today's Verse. It may be a same-chapter range or supported
   semicolon-separated references.
+- `Sabbath School Hymn 1` to `3` each hold one opening hymn, typed in either
+  language as a number, a title, or both, such as `第12首 讚美上帝大君王`,
+  `AH 73 Holy, Holy, Holy`, or `還要等多久`. Chinese text or a bare number is
+  read as a Chinese hymnal number. Leave unused cells blank. There's no
+  closing-hymn column: the closing repeats every opening hymn, so both
+  bulletins show them once, as the opening and closing hymns.
+- `Special Music Title` is the piece performed. Who performs it stays in the
+  `Sabbath Calendar`'s `Special Music`, which is a Queens column, so Brooklyn's
+  piece shows with `TBD` for its performer.
+- The last four headers may still be blank: the script accepts a blank header
+  there, so its deploy can come before the technology group types them
+  (`BULLETIN_OPTIONAL_TRAILING_HEADER_COUNTS`). Anything typed there must match
+  exactly, as everywhere else in the contract.
+- The week's Sabbath School lesson needs no column. Both bulletins read its
+  title from the Adventech lesson catalog: the adult lesson whose week (Sabbath
+  to Friday) ends the day before that Sabbath, since the class discusses the
+  week just studied.
 - There are intentionally no speaker password, source, last-updated, or
   updated-by columns in this contract.
 - Nonblank cells in this sheet feed both digital and printed bulletins. A blank
@@ -234,7 +257,7 @@ Head | Paul Wen  | Ruth Ho
 
 The bound spreadsheet's simple `onOpen` maintenance path runs for every user who
 can open the workbook. It is intentionally quiet and does not require an email
-allowlist. The visible custom menu exposes only the document/PDF creation action;
+allowlist. The visible custom menu exposes only the Google Doc creation action;
 maintenance and setup operations stay hidden.
 
 On open, the script:
@@ -359,7 +382,7 @@ There are two versions of the popup:
 Google does not let simple triggers open HTML dialogs or create the
 installable trigger that can. So the dialog turns itself on the first time an
 account listed in `PHYSICAL_BULLETIN_ADMIN_EMAILS` uses **Printed Bulletin →
-Create Google Doc + PDF…**, because that click runs with full authorization.
+Create Google Doc…**, because that click runs with full authorization.
 It installs an `onEdit` trigger for `onScheduleNameCheckEdit`, owned by that
 admin, and sets the `SCHEDULE_NAME_CHECK_TRIGGER` script property. After that,
 the plain alert stops, so an edit never shows two popups, and no other admin
@@ -472,10 +495,19 @@ preview surface, not the canonical release channel.
 - Queens has separate Sabbath School and Church at Worship sections.
 - Queens `Flower Offering` appears in the worship program, not under Church at
   Study.
-- Brooklyn's digital Sabbath School section intentionally contains only Prayer,
+- Both Sabbath School sections show the opening and closing hymns on one row,
+  each hymn with its own button, and the week's lesson with a **Read lesson**
+  button that opens it on the Sabbath School website. If the lesson catalog
+  can't be reached, the lesson row shows `TBD`.
+- Brooklyn's digital Sabbath School section otherwise contains only Prayer,
   Sabbath Encouragement, and Sabbath School. Unplanned welcome, song/Bible
-  verse, opening hymn, closing hymn, closing prayer, and Five Minutes Break rows
-  are omitted.
+  verse, closing prayer, and Five Minutes Break rows are omitted.
+- The Special Music row shows the piece under its performer when the weekly
+  sheet names one. Brooklyn, which has no performer column, shows the row only
+  then, with `TBD` for the performer.
+- A hymn links to whichever of the app's hymnals has it, and one that none has
+  gets a **Search YouTube** button instead (see
+  [Bulletin hymn resolution](../feature_designs/bulletin_hymn_resolution.md)).
 - Brooklyn uses the label `Sabbath Encouragement`, not `Sabbath Message`.
 - The centered `Schedule` pill on its own row below the week selector links to the
   master spreadsheet, not to a separate intake link.
@@ -507,8 +539,11 @@ guessing a location (`parseScriptureReference` in `services/BibleService.ts`,
 
 ## Printed bulletin generation
 
-The **Printed Bulletin → Create Google Doc + PDF…** action is the only normal
-manual workflow. It opens a staff dialog that:
+The **Printed Bulletin → Create Google Doc…** action is the only normal
+manual workflow. It makes only a Google Doc, with no PDF: staff edit the Doc
+most weeks (a long sermon title, a change of special music), so a PDF made with
+it would soon be out of date, and Google Docs can download a PDF whenever one is
+needed. It opens a staff dialog that:
 
 1. defaults to the closest upcoming Saturday;
 2. links the operator to `Sabbath Sermon Data`;
@@ -529,17 +564,18 @@ YYYY-MM-DD Bulletin - Regular Worship
 YYYY-MM-DD Bulletin - Holy Communion
 ```
 
-The Google Doc and PDF are stored together in the location-specific output folder:
+The Google Doc is stored in the location-specific output folder:
 
 - Queens: the configured Queens folder;
 - Brooklyn: the configured Brooklyn folder;
 - legacy folder configuration is only a fallback.
 
 If a saved Google Doc ID is valid, the generator updates it. A trashed, deleted,
-or inaccessible saved Doc is treated as missing and a new Doc is created. A
-replacement PDF is created on regeneration and the previous PDF is moved to
-Drive Trash. This is why finding an old Doc in Trash does not cause the next run
-to update that copy.
+or inaccessible saved Doc is treated as missing and a new Doc is created. This is
+why finding an old Doc in Trash does not cause the next run to update that copy.
+Before #558 the generator also made a PDF. If one was made for the same date and
+location, making the Doc again moves that PDF to Drive Trash, so it can't be
+mistaken for the edited Doc.
 
 ### Page and fold order
 
@@ -587,11 +623,23 @@ For each printed hymn:
 - if both language values are supplied, preserve both exactly;
 - if only English is supplied, fill only the missing Chinese hymn number;
 - if only Chinese is supplied, fill only the missing English hymn number; and
-- never copy an English title/reference into the Chinese slot.
+- never copy an English title/reference into the Chinese slot, except on the
+  Sabbath School hymns row (below).
 
 Queens Regular, Queens Communion, and Brooklyn all use this shared path. The
 Communion response hymn remains a fixed bilingual reference and must fit on one
 line in the printed layout.
+
+The Sabbath School hymns print on one **Opening & Closing Hymns** row in each
+Sabbath School panel, one line per language, such as `第413首 · 第205首` over
+`AH 348 · AH 206` (`formatSabbathSchoolHymnsForPrint_`). Each cell has one hymn
+in either language, so it prints as typed, except that a bare number prints as
+`第N首`. The other language is filled in by number where the map has it, and
+otherwise repeats what was typed, English on the Chinese line included, so both
+lines list the same hymns. When the two lines would be the same, one line
+prints. The lesson prints in the Queens `Lesson / Study` row and the Brooklyn
+`Sabbath School` row, and the special music piece beside its performer (`TBD`
+in Brooklyn).
 
 ### Bible readings
 
@@ -709,9 +757,8 @@ After deployment:
 
 1. reload the bound spreadsheet to refresh the menu;
 2. generate a test date for each changed location/format;
-3. verify both the Google Doc and PDF links;
-4. confirm the Doc and PDF are in the correct folder and the old PDF was trashed
-   only when replacing an existing output;
+3. verify the Google Doc link;
+4. confirm the Doc is in the correct folder;
 5. verify the public `/exec?date=YYYY-MM-DD` response does not contain email,
    timestamps, Chinese names, pinyin, or full last names; and
 6. run the opt-in integration test when production verification is appropriate:
@@ -733,15 +780,15 @@ changes the URL and requires a coordinated mobile-app update.
 | A field moved to the wrong location | Header renamed/reordered or repeated header occurrence changed | Restore the exact header contract and deploy matching code |
 | Header says contract violation | A protected header was changed | Update Apps Script/tests/app first; technology group restores the header |
 | A roster cell is pale red | The same name is in another F:Y cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
-| No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Google Doc + PDF…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
+| No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Google Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
 | A red cell shows no hover note | The cell already had a planner's own note, which the script keeps | Read the row to find the other role, or delete the planner's note so the script can add its own |
 | Chinese text appears in Sabbath Calendar | Typed or pasted into A:Y | The onEdit guard should clear it with a popup; if it stays with a red corner, check **Extensions → Apps Script → Executions** for errors. Use Name Dictionary for approved English names |
 | New quarter rows lack validation | Maintenance did not run or append failed | Open the workbook as an editor, inspect Apps Script logs, and rerun maintenance; do not manually limit the rule to X53 |
 | Old rows disappeared | They were hidden, not deleted | Unhide rows when historical planning is needed; maintenance is non-destructive |
 | Google Doc is in Trash or not updated | Saved ID points to a trashed/deleted file | Run generation again; the script treats it as missing and creates a new Doc in the configured folder |
-| PDF has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Restore the renderer's panel/gutter structure; never clip text to fit |
+| The Doc, or its printout, has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Restore the renderer's panel/gutter structure; never clip text to fit |
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
-| Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
+| Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten (on the Sabbath School hymns row, an unmapped English hymn repeats on purpose) | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
 | QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
 | A pastor or elder prints without a title, or Communion rows print `TBD` | The name isn't in the `Leadership` tab, is spelled differently from the schedule or the `Name Dictionary`, or the tab or its `Pastors`/`Elders` header was renamed (a header must hold only the title) | Fix the [`Leadership` tab](#the-leadership-tab); **Extensions → Apps Script → Executions** logs a missing tab or column. No deploy is needed |
 | Brooklyn Communion is unavailable | Intentional safety/layout restriction | Use Queens Holy Communion or Brooklyn Regular; do not re-enable without a dedicated layout review |
@@ -759,10 +806,23 @@ Before changing a bulletin field, sheet column, or layout:
 - run the relevant Apps Script and mobile tests;
 - approve the Apps Script deploy that the release's merge into `main` starts;
 - build/upload an APK only when native app code changes; and
-- verify a generated Doc, PDF, and public API response for the affected location.
+- verify a generated Doc and public API response for the affected location.
 
-For header changes, the order is mandatory: change the repository contract,
-tests, and mobile app first; then have the technology group update the protected
-sheet header; then approve the deploy and verify. The release's merge starts the
-deploy, but it waits for approval, so hold it until the header is updated. Do not solve a contract mismatch by making
-the public API read arbitrary columns.
+For header changes, change the repository contract, tests, and mobile app
+first. The running script rejects any header it doesn't expect, so what comes
+next depends on the change:
+
+- **Adding columns:** add them after the last column, and count them in
+  `BULLETIN_OPTIONAL_TRAILING_HEADER_COUNTS`, so the new script accepts them
+  blank. Approve the deploy first; then have the technology group type the new
+  headers. The bulletin keeps working throughout. The #558 columns were added
+  this way, typed only after the deploy, since the old script rejects the new
+  headers.
+- **Renaming, reordering, or removing columns:** have the technology group
+  update the protected sheet header, then approve the deploy straight away and
+  verify. The release's merge starts the deploy, but it waits for approval, so
+  hold it until the header is updated. Between the two steps the bulletin shows
+  a column error.
+
+Do not solve a contract mismatch by making the public API read arbitrary
+columns.

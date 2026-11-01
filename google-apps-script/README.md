@@ -1,7 +1,7 @@
 # Bulletin Apps Script source
 
 This directory contains the Google Apps Script source for the church bulletin
-API and printed Google Doc/PDF workflow. It is not bundled into the mobile app.
+API and printed Google Doc workflow. It is not bundled into the mobile app.
 
 The consolidated architecture, workbook contract, sheet layouts, privacy rules,
 fallback behavior, printed layouts, QR policy, Sabbath Encouragement handling,

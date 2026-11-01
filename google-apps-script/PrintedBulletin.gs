@@ -1557,10 +1557,11 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
 
 /**
  * The Sabbath School hymns on one line per language, such as
- * "第12首 · 第205首" over "AH 1 · AH 206". Each cell holds one hymn, typed in
- * either language: Chinese text or a bare number is a Chinese hymnal number.
- * What was typed is printed; the other language is filled in by number where
- * the hymnals' number maps have it, and otherwise repeats what was typed.
+ * "第413首 · 第205首" over "AH 348 · AH 206". Each cell holds one hymn, typed in
+ * either language: Chinese text or a bare number is a Chinese hymnal number,
+ * and a bare number prints as 第N首. What was typed is printed; the other
+ * language is filled in by number where the hymnals' number maps have it, and
+ * otherwise repeats what was typed. Two identical lines print as one.
  */
 function formatSabbathSchoolHymnsForPrint_(hymns) {
   var english = [];
