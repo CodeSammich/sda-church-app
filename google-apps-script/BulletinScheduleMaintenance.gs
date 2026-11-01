@@ -209,8 +209,10 @@ function ensureBulletinHeaderContractValidation_() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   assertBulletinHeaderContracts_(spreadsheet);
   Object.keys(BULLETIN_HEADER_CONTRACTS).forEach(function (sheetName) {
-    var sheet = spreadsheet.getSheetByName(sheetName);
-    var headers = BULLETIN_HEADER_CONTRACTS[sheetName];
+    var sheet = getBulletinSheet_(spreadsheet, sheetName);
+    // A tab may not have columns yet for its optional last headers, and
+    // Sheets throws on a range past its last column.
+    var headers = BULLETIN_HEADER_CONTRACTS[sheetName].slice(0, sheet.getMaxColumns());
     headers.forEach(function (header, index) {
       var rule = SpreadsheetApp.newDataValidation()
         .requireValueInList([header], false)

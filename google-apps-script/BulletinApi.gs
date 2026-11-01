@@ -20,7 +20,7 @@ var CONFIG = Object.freeze({
   cacheSeconds: 120,
   // Bump when the public bulletin shape or source contract changes so cached
   // pre-migration responses do not hide newly added roster fields.
-  cacheVersion: 'v7',
+  cacheVersion: 'v8',
   dateHeaders: ['Date', 'Service Date', 'Sabbath Date', 'What date is this Sabbath?'],
 });
 
@@ -94,6 +94,13 @@ var BULLETIN_INTAKE_SCHEMA = Object.freeze([
   { headers: ['English Hymn of Response'], path: ['hymnOfResponse', 'english'] },
   { headers: ['Chinese Hymn of Response'], path: ['hymnOfResponse', 'chinese'] },
   { headers: ['Bible Verses'], path: ['bibleVerses'] },
+  // One hymn per cell, typed in either language. They're sung again as the
+  // closing hymns, so there's no closing-hymn column.
+  { headers: ['Sabbath School Hymn 1'], path: ['sabbathSchoolHymns', 0] },
+  { headers: ['Sabbath School Hymn 2'], path: ['sabbathSchoolHymns', 1] },
+  { headers: ['Sabbath School Hymn 3'], path: ['sabbathSchoolHymns', 2] },
+  // The piece performed. Who performs it is the Sabbath Calendar's Special Music.
+  { headers: ['Special Music Title'], path: ['specialMusicTitle'] },
 ]);
 
 // These first-row headers are a versioned interface between the spreadsheet,
@@ -137,8 +144,37 @@ var BULLETIN_HEADER_CONTRACTS = Object.freeze({
     'English Hymn of Response',
     'Chinese Hymn of Response',
     'Bible Verses',
+    'Sabbath School Hymn 1',
+    'Sabbath School Hymn 2',
+    'Sabbath School Hymn 3',
+    'Special Music Title',
   ]),
 });
+
+// How many of a contract's last headers the sheet may still lack. A blank
+// header in one of those columns passes, so the deploy can go first and the
+// technology group can add the headers afterwards (#558). Anything typed there
+// must still match exactly.
+var BULLETIN_OPTIONAL_TRAILING_HEADER_COUNTS = Object.freeze({
+  'Sabbath Sermon Data': 4,
+});
+
+// Other names a contract's tab may have, so it can be renamed after a deploy
+// without breaking the bulletin. The contract's own name is tried first.
+var BULLETIN_SHEET_NAME_ALIASES = Object.freeze({
+  'Sabbath Sermon Data': Object.freeze(['Weekly Hymns & Sermon']),
+});
+
+function getBulletinSheet_(spreadsheet, sheetName) {
+  var names = [sheetName].concat(BULLETIN_SHEET_NAME_ALIASES[sheetName] || []);
+  for (var index = 0; index < names.length; index += 1) {
+    var sheet = spreadsheet.getSheetByName(names[index]);
+    if (sheet) {
+      return sheet;
+    }
+  }
+  return null;
+}
 
 // Staff-facing text (dialogs, alerts, errors, notes) is in English and
 // Simplified Chinese, because the people who run the bulletin read Simplified.
@@ -150,18 +186,23 @@ var BULLETIN_HEADER_CONTRACT_HELP_TEXT =
 function getBulletinHeaderContractIssues_(spreadsheet) {
   var issues = [];
   Object.keys(BULLETIN_HEADER_CONTRACTS).forEach(function (sheetName) {
-    var sheet = spreadsheet.getSheetByName(sheetName);
+    var sheet = getBulletinSheet_(spreadsheet, sheetName);
     if (!sheet) {
       issues.push('Missing required sheet: ' + sheetName);
       return;
     }
 
     var expected = BULLETIN_HEADER_CONTRACTS[sheetName];
+    var optionalFrom =
+      expected.length - (BULLETIN_OPTIONAL_TRAILING_HEADER_COUNTS[sheetName] || 0);
     var actual = readTable_(sheet).headers;
     var width = Math.max(expected.length, actual.length);
     for (var index = 0; index < width; index += 1) {
       var expectedHeader = expected[index] || '';
       var actualHeader = actual[index] || '';
+      if (index >= optionalFrom && index < expected.length && isBlank_(actualHeader)) {
+        continue;
+      }
       if (normalizeHeader_(actualHeader) !== normalizeHeader_(expectedHeader)) {
         issues.push(
           sheetName + '! column ' + (index + 1) + ' must be "' + expectedHeader +
@@ -419,6 +460,8 @@ function createLocation_() {
     sermonTitle: { english: '', chinese: '' },
     hymnOfResponse: { english: '', chinese: '' },
     bibleVerses: '',
+    sabbathSchoolHymns: [],
+    specialMusicTitle: '',
     announcements: '',
   };
 }
@@ -439,10 +482,18 @@ function populateBulletinIntake_(location, intakeRows) {
       }
     });
   });
+  // Keep the entered hymns in order, without the blank cells between them.
+  var hymns = [];
+  for (var index = 0; index < location.sabbathSchoolHymns.length; index += 1) {
+    if (!isBlank_(location.sabbathSchoolHymns[index])) {
+      hymns.push(location.sabbathSchoolHymns[index]);
+    }
+  }
+  location.sabbathSchoolHymns = hymns;
 }
 
 function getBulletinIntakeRows_(spreadsheet, requestedDate, location) {
-  var sheet = spreadsheet.getSheetByName(CONFIG.intakeSheetName);
+  var sheet = getBulletinSheet_(spreadsheet, CONFIG.intakeSheetName);
   if (!sheet) {
     return null;
   }
