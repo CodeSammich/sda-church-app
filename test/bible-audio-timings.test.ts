@@ -99,15 +99,15 @@ describe('verse start times that ship with the app', () => {
     expect(await fetchVerseStartTimes('cmn_cuv', 'Someone else', 'JHN', 3)).toBeNull();
   });
 
-  it('has the John 3 times checked by ear and by a Cantonese recognizer, for both CUV editions', async () => {
+  it('has the John 3 times that speech recognizers confirmed, for both CUV editions', async () => {
     // John 3:1 and 3:16 (#561). The Cantonese narrator also reads the CUV's notes aloud.
     const mandarin = await fetchVerseStartTimes('cmn_cuv', MANDARIN_READER, 'JHN', 3);
-    expect([mandarin?.length, mandarin?.[0], mandarin?.[15]]).toEqual([36, 6.94, 134.14]);
+    expect([mandarin?.length, mandarin?.[0], mandarin?.[15]]).toEqual([36, 6.96, 134.14]);
     expect(await fetchVerseStartTimes('cmn_cu1', MANDARIN_READER, 'JHN', 3)).toEqual(mandarin);
     const cantonese = await fetchVerseStartTimes('cmn_cu1', CANTONESE_CUV_READER, 'JHN', 3);
     expect([cantonese?.length, cantonese?.[0], cantonese?.[15]]).toEqual([36, 5.74, 138.06]);
     const spanish = await fetchVerseStartTimes('spa_r09', RV1909_READER, 'JHN', 3);
-    expect([spanish?.length, spanish?.[0], spanish?.[15]]).toEqual([36, 2.96, 117.12]);
+    expect([spanish?.length, spanish?.[0], spanish?.[15]]).toEqual([36, 2.96, 117.16]);
   });
 
   it.each(CHURCH_NARRATORS)(

@@ -15,13 +15,16 @@ Text rules (from the John 3 study, #561):
   last verse. The CUV narrators' announcement (约翰福音第三章, 诗篇第二十三篇) follows the first
   star as text; the Spanish narrator's ("Capítulo 3") falls to that star. A psalm's title at the
   start of verse 1 gets its own star, so verse 1 starts with its own words.
-- A verse starts at its first word, and a start more than 0.5 s from the end of a pause moves to
-  the nearest pause end within 1.5 s (see below).
+- A verse starts at its first word, corrected by where speech resumes after the recording's
+  pauses (snap.py).
 """
 import json, os, re, subprocess, sys, time, unicodedata
 import numpy as np
 import torch, torchaudio
 import imageio_ffmpeg
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from snap import find_pauses, snap_starts
 
 repo, full, narrator = sys.argv[1:4]
 only_books = set(sys.argv[4].split(',')) if len(sys.argv) > 4 else None
@@ -185,21 +188,6 @@ for n_src, src in enumerate(todo):
         if transcript[-1] != '*':
             transcript.append('*')
         spans = aligner(em, tokenizer(transcript))
-        # Pauses (20 ms frames under -35 dB for at least 0.2 s), as ffmpeg's silencedetect finds
-        # them. A start more than 0.5 s from the end of a pause moves to the nearest pause end
-        # within 1.5 s, if that stays between its neighbours: the aligner sometimes gives a
-        # verse the last syllable of the one before, or starts it in the pause.
-        frames = len(pcm) // HOP
-        rms = np.sqrt(np.mean(pcm[:frames * HOP].reshape(frames, HOP) ** 2, axis=1) + 1e-12)
-        quiet = 20 * np.log10(rms) < -35
-        pause_ends, run = [], 0
-        for f in range(frames):
-            if quiet[f]:
-                run += 1
-            else:
-                if run >= 10:
-                    pause_ends.append(f * FS)
-                run = 0
         starts, ends, scores, units = [], [], [], []
         for (a, b) in bounds:
             if a == b:
@@ -213,19 +201,8 @@ for n_src, src in enumerate(todo):
             ends.append(round(wsp[-1][-1].end * FS, 2))
             scores.append(round(float(np.mean([t.score for t in real])), 3) if real else None)
             units.append(sum(1 for word in transcript[a:b] if word != '*'))
-        aligned = list(starts)
-        moved = []
-        known = [i for i, t in enumerate(starts) if t is not None]
-        for k, i in enumerate(known):
-            t = starts[i]
-            if not pause_ends:
-                break
-            near = min(pause_ends, key=lambda e: abs(e - t))
-            prev = starts[known[k - 1]] if k else 0
-            nxt = aligned[known[k + 1]] if k + 1 < len(known) else 1e9
-            if 0.5 < abs(near - t) <= 1.5 and prev < near < nxt:
-                starts[i] = round(near, 2)
-                moved.append([i + 1, t, starts[i]])
+        aligned = starts
+        starts, moved = snap_starts(aligned, ends, find_pauses(pcm))
         result.update({'duration': round(len(pcm) / SR, 2), 'starts': starts, 'aligned': aligned,
                        'moved': moved, 'ends': ends, 'scores': scores,
                        'units': units, 'intro_end': round(spans[len(intro)][-1].end * FS, 2) if intro else None,
