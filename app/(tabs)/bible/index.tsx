@@ -1226,10 +1226,14 @@ export default function BibleScreen() {
 
   // `fromChapter` is the chapter being loaded, which can differ from both the
   // reader and the native player's current track during a failover.
-  const buildUpcomingAudioQueue = (fromChapter?: BibleAudioChapterIdentity) => {
+  const buildUpcomingAudioQueue = (
+    fromChapter?: BibleAudioChapterIdentity,
+    direction: 'following' | 'preceding' = 'following',
+  ) => {
     const activeChapter =
       fromChapter ?? (audioPlayer.currentStatus as BibleAudioStatus).activeChapter;
     return buildBibleAudioQueue({
+      direction,
       albumTitle: labels.audioPlayer,
       artist: selectedAudioReader
         ? `${supportedTranslation.name} • ${getAudioReaderLabel(selectedAudioReader)}`
@@ -1522,6 +1526,12 @@ export default function BibleScreen() {
           ? { ...target.chapter, source: entry.source, metadata: entry.metadata }
           : undefined,
         queue: buildUpcomingAudioQueue(target.chapter),
+        // Android's media buttons skip within the native queue; the web uses
+        // the reader's own previous handler.
+        previousQueue:
+          Platform.OS === 'android'
+            ? buildUpcomingAudioQueue(target.chapter, 'preceding')
+            : undefined,
         metadata: entry.metadata,
         onQueueError: (error) => {
           // The current source is already loaded; keep playing if a future-track
@@ -1888,6 +1898,14 @@ export default function BibleScreen() {
         audioPlayer.setQueue?.(buildUpcomingAudioQueue());
       } catch (error) {
         console.warn('Bible audio queue replenishment failed; keeping current queue.', error);
+      }
+    }
+    if (Platform.OS === 'android') {
+      try {
+        // Going back a chapter uses up one queued before it; top them up.
+        audioPlayer.setPreviousQueue?.(buildUpcomingAudioQueue(undefined, 'preceding'));
+      } catch (error) {
+        console.warn('Bible audio previous-chapter queue failed; keeping current queue.', error);
       }
     }
   }, [audioStatus.activeChapter, supportedTranslation.id]);

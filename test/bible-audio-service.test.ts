@@ -10,6 +10,7 @@ import {
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getFollowingBibleChapters,
+  getPrecedingBibleChapters,
   getOrderedBibleAudioReaders,
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
@@ -53,6 +54,7 @@ describe('Bible audio playback', () => {
     const player = {
       setCurrentChapter: jest.fn(() => calls.push('current-chapter')),
       setQueue: jest.fn(() => calls.push('queue')),
+      setPreviousQueue: jest.fn(() => calls.push('previous-queue')),
       setActiveForLockScreen: jest.fn(() => calls.push('lock-screen')),
     };
     const metadata = {
@@ -79,10 +81,11 @@ describe('Bible audio playback', () => {
           metadata,
         },
       ],
+      previousQueue: [],
       metadata,
     });
 
-    expect(calls).toEqual(['current-chapter', 'queue', 'lock-screen']);
+    expect(calls).toEqual(['current-chapter', 'queue', 'previous-queue', 'lock-screen']);
   });
 
   it('prioritizes a chosen source while preserving every fallback', () => {
@@ -164,6 +167,13 @@ describe('Bible audio playback', () => {
       { book: books[1], chapter: 1 },
       { book: books[1], chapter: 2 },
     ]);
+    // Back from Exodus 2: nearest first, into the book before, and no further.
+    expect(getPrecedingBibleChapters(books, 'EXO', 2, 9)).toEqual([
+      { book: books[1], chapter: 1 },
+      { book: books[0], chapter: 2 },
+      { book: books[0], chapter: 1 },
+    ]);
+    expect(getPrecedingBibleChapters(books, 'GEN', 1, 9)).toEqual([]);
   });
 
   it('retargets HelloAO audio without changing the narrator', () => {
@@ -299,6 +309,17 @@ describe('Bible audio sleep timer boundaries', () => {
       .toEqual([['GEN', 49], ['GEN', 50]]);
     expect(buildBibleAudioQueue({ ...options, currentChapter: 50, sleepTimer: 'book' }))
       .toEqual([]);
+  });
+
+  it('applies the same timer rules to the chapters before (#543)', () => {
+    const preceding = { ...options, currentBookId: 'EXO', currentChapter: 2, direction: 'preceding' as const };
+    expect(buildBibleAudioQueue(preceding).slice(0, 3).map(({ bookId, chapter }) => [bookId, chapter]))
+      .toEqual([['EXO', 1], ['GEN', 50], ['GEN', 49]]);
+    expect(buildBibleAudioQueue(preceding)).toHaveLength(24);
+    expect(buildBibleAudioQueue({ ...preceding, sleepTimer: 'book' })
+      .map(({ bookId, chapter }) => [bookId, chapter]))
+      .toEqual([['EXO', 1]]);
+    expect(buildBibleAudioQueue({ ...preceding, sleepTimer: 'chapter' })).toEqual([]);
   });
 
   it('keeps a chapter timer effective when playback is started or the queue is refilled', () => {

@@ -63,6 +63,11 @@ export class BibleAudioNativeQueue {
   // takes over, and destroying the owner would stop that service. They are
   // destroyed once the fresh playlist is playing, or when the reader closes.
   private retiredPlaylists: AudioPlaylist[] = [];
+  // Chapters inserted ahead of the current one renumber the native queue, but
+  // status events sent before the insert can still be on their way, numbered
+  // the old way. Until an event agrees with the playlist's live index, one that
+  // doesn't is read with this shift (#543).
+  private pendingIndexShift = 0;
 
   constructor(private readonly createPlaylist: () => AudioPlaylist) {}
 
@@ -73,8 +78,9 @@ export class BibleAudioNativeQueue {
     this.subscription = playlist.addListener('playlistStatusUpdate', (status) => {
       // An event can already be queued when its listener is removed.
       if (this.playlist !== playlist) return;
-      this.publish(this.status(status));
-      const track = this.tracks[status.currentIndex];
+      const index = this.eventTrackIndex(status);
+      this.publish(this.status(status, index));
+      const track = this.tracks[index];
       if (track && track !== this.lastMetadataTrack) {
         try {
           this.updateMetadata();
@@ -95,7 +101,7 @@ export class BibleAudioNativeQueue {
         const event = {
           error,
           currentTime: status.currentTime,
-          sourceUrl: this.status(status).activeSourceUrl,
+          sourceUrl: this.status(status, index).activeSourceUrl,
           chapter: track,
         };
         this.sourceErrorListeners.forEach(listener => listener(event));
@@ -119,6 +125,7 @@ export class BibleAudioNativeQueue {
     }
     this.subscription = undefined;
     this.tracks = [];
+    this.pendingIndexShift = 0;
     this.lastMetadataTrack = undefined;
     this.snapshot = idleStatus();
     this.destroyRetiredPlaylists();
@@ -183,6 +190,7 @@ export class BibleAudioNativeQueue {
     }
     this.subscription = undefined;
     this.tracks = [];
+    this.pendingIndexShift = 0;
     this.snapshot = idleStatus();
   }
 
@@ -207,8 +215,21 @@ export class BibleAudioNativeQueue {
     return status ? this.status(status) : this.snapshot;
   }
 
-  status(status: AudioPlaylistStatus): BibleAudioStatus {
-    const track = this.tracks[status.currentIndex];
+  // The track a status event is about. See pendingIndexShift.
+  private eventTrackIndex(status: AudioPlaylistStatus) {
+    if (!this.pendingIndexShift) return status.currentIndex;
+    const liveIndex = this.callNative('current index', playlist => playlist.currentIndex);
+    if (liveIndex === undefined) return status.currentIndex;
+    if (status.currentIndex === liveIndex) {
+      // Events from before the insert have all arrived.
+      this.pendingIndexShift = 0;
+      return liveIndex;
+    }
+    return status.currentIndex + this.pendingIndexShift;
+  }
+
+  status(status: AudioPlaylistStatus, index = status.currentIndex): BibleAudioStatus {
+    const track = this.tracks[index];
     const source = track?.source;
     return {
       ...status,
@@ -227,6 +248,7 @@ export class BibleAudioNativeQueue {
     }
     this.callNative('replace', playlist => {
       this.tracks = [];
+      this.pendingIndexShift = 0;
       this.lastMetadataTrack = undefined;
       playlist.clear();
       if (source) {
@@ -261,6 +283,31 @@ export class BibleAudioNativeQueue {
       for (const item of items.slice(tail.length)) {
         this.tracks.push(item);
         playlist.add(item.source);
+      }
+    });
+  }
+
+  // Queue the chapters before the current one, nearest first, so the media
+  // buttons' previous goes back a chapter even from the one that started
+  // playing: Media3 turns it into seekToPrevious, which restarts the first track
+  // (#543). Like setQueue, it only adds chapters missing at the front and never
+  // removes one. Each insert goes ahead of everything, so inserting nearest
+  // first leaves them in reading order.
+  setPreviousQueue(items: BibleAudioQueueItem[]) {
+    this.callNative('set previous queue', playlist => {
+      if (!playlist.trackCount) return;
+      const head = this.tracks.slice(0, playlist.currentIndex).reverse();
+      const sharedLength = Math.min(head.length, items.length);
+      for (let itemIndex = 0; itemIndex < sharedLength; itemIndex += 1) {
+        if (JSON.stringify(head[itemIndex]) !== JSON.stringify(items[itemIndex])) {
+          // A different reader or source; replace() resets the queue for those.
+          return;
+        }
+      }
+      for (const item of items.slice(head.length)) {
+        playlist.insert(item.source, 0);
+        this.tracks.unshift(item);
+        this.pendingIndexShift += 1;
       }
     });
   }

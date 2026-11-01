@@ -1048,6 +1048,9 @@ Bible chapters to check what only a real player shows:
 - **Mid-chapter loss:** go offline and seek past what has loaded. The same host
   reloads where it stopped, and playback resumes there.
 - **Pause and resume** from the same place.
+- **Previous before the start (#543):** started in Leviticus 2, the media key's
+  previous restarts the chapter more than 3 seconds in, goes back to Leviticus 1
+  at the start, and next returns to Leviticus 2.
 
 The failover logic itself is tested on every pull request by
 `test/bible-audio-source-controller.test.ts`.

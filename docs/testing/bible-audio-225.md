@@ -68,7 +68,13 @@ No device was connected during implementation. Use a newly bundled Android build
    confirmed fixed.
 
 The native playlist starts with 24 future chapters, then uses append-only rolling
-replenishment as each active chapter becomes known. During normal playback this
+replenishment as each active chapter becomes known. It also holds up to 24 chapters
+before the one that started, nearest first, with the same sleep-timer limits, so
+earbuds' and the notification's Previous can go back past it (#543): Media3 turns
+Previous into `seekToPrevious`, which restarts the first track of a queue. Those are
+inserted ahead of the current track, which renumbers the queue, so a status event sent
+before an insert is read with the shift until one agrees with the playlist's live index
+(`pendingIndexShift` in `services/BibleAudioNativeQueue.ts`). During normal playback this
 does not pause after chapter 24. If the app is fully suspended before JavaScript
 can append more tracks, the current native buffer can still be exhausted. The
 playback-speed option was removed because the Expo 58 preview's playlist setter had
@@ -90,7 +96,8 @@ To run it on your own emulator, see
 It checks the media session's state and title, not the screen's text, so it doesn't
 cover whether the reader's text matches the active chapter. Of the steps above, it
 covers part of step 1 (one chapter change with the screen off, in CUV only), part of
-step 4 (audio, not text, recovering after a connection loss), part of step 5
+step 2 (the media key's Previous at a chapter's start and later, back past the chapter
+that started playing, and Next), part of step 4 (audio, not text, recovering after a connection loss), part of step 5
 (seeking), and automatic source failover. The rest of steps 1 to 6 stays manual on a
 physical phone, and is in the admin runbook's
 [Device checks before release](../operations/admin-runbook.md#device-checks-before-release).
