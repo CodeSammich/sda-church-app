@@ -1052,6 +1052,21 @@ Bible chapters to check what only a real player shows:
 - **Previous before the start (#543):** started in Leviticus 2, the media key's
   previous restarts the chapter more than 3 seconds in, goes back to Leviticus 1
   at the start, and next returns to Leviticus 2.
+- **The verse being read (#561):** in John 3 the reader marks and follows each verse
+  where the bundled times say, and after a seek it follows the verse at the new place.
+- **Scrolling by hand (#561):** in Psalm 119, a listener drags the page back and holds
+  it while the narrator moves on. The page must not move until they let go, and a few
+  seconds later the reader goes back to the verse being read. A filmstrip of it,
+  `scroll-by-hand-filmstrip.png`, is in the run's artifact.
+- **Scrolling while paused (#561):** the page stays where the listener put it, and play
+  takes it back to the verse being read.
+- **Following after the screen was off (#561):** Psalm 117 plays into Psalm 118 with the
+  screen off; when it comes back on, the reader follows Psalm 118's verse.
+
+These four read what the reader decided from the app's log, which only the workflow's
+build writes (`EXPO_PUBLIC_AUDIO_E2E=1`, `services/AudioE2eLog.ts`), and compare
+screenshots to see whether the page moved, with the helpers in
+`scripts/e2e/android-frames.sh`.
 
 The failover logic itself is tested on every pull request by
 `test/bible-audio-source-controller.test.ts`.
@@ -1065,7 +1080,8 @@ When it fails on a release pull request:
 1. Open the run. The log shows which scenario failed and why.
 2. Download the `android-audio-e2e-*` artifact. For each failed scenario it has a
    screenshot, the app's log, and the media session, whose title names the host
-   that was playing, plus the emulator and DNS logs.
+   that was playing, plus the emulator and DNS logs. The reader scenarios also leave
+   their screenshots, and the scroll-by-hand filmstrip, there.
 3. The test plays real recordings, so check the
    [external dependency monitor](#external-dependency-monitor-alerts) first. A host
    outage fails it too, and isn't an app bug. A one-off emulator hiccup clears on a

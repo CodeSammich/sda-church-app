@@ -55,6 +55,7 @@ import {
   getAndroidAppsSettingsIntent,
   getCurrentAndroidAudioBrowser,
 } from '@/services/AndroidBackgroundAudioGuidance';
+import { logForAudioE2e } from '@/services/AudioE2eLog';
 import {
   useBibleAudioPlayer,
   useBibleAudioPlayerStatus,
@@ -1296,6 +1297,7 @@ export default function BibleScreen() {
     const layout = verse === null ? undefined : verseLayouts.current[verse];
     if (verse === null || !layout || isSelectionActive) return;
     forgetPendingScrolls();
+    logForAudioE2e(`following verse ${verse}`);
     followScrolled.current = true;
     scrollRef.current?.scrollTo({
       y:
@@ -1311,6 +1313,11 @@ export default function BibleScreen() {
     });
   };
   useEffect(() => {
+    if (readingVerse !== null) {
+      logForAudioE2e(
+        `${book?.id} ${chapterNum}:${readingVerse} is being read at ${Math.round(scrubPositionMillis ?? audioPositionMillis)} ms`,
+      );
+    }
     if (followsReadingVerse.current) followReadingVerse(readingVerse);
   }, [readingVerse]);
   // The timer's callback runs after later renders, so it reads this render's
@@ -1318,6 +1325,7 @@ export default function BibleScreen() {
   const resumeFollowingReadingVerse = useRef(() => {});
   resumeFollowingReadingVerse.current = () => {
     followsReadingVerse.current = true;
+    logForAudioE2e(isPlaying ? 'following again after a scroll by hand' : 'paused; following again at play');
     if (isPlaying) followReadingVerse(readingVerse);
   };
   useEffect(() => () => clearTimeout(followResumeTimeout.current), []);
@@ -1775,6 +1783,7 @@ export default function BibleScreen() {
 
     clearTimeout(followResumeTimeout.current);
     followsReadingVerse.current = true;
+    logForAudioE2e('following again: play pressed');
     followReadingVerse(readingVerse);
     await startAudio();
   };
@@ -2524,6 +2533,7 @@ export default function BibleScreen() {
     followScrolled.current = false;
     clearTimeout(followResumeTimeout.current);
     followsReadingVerse.current = false;
+    logForAudioE2e('stopped following: scrolled by hand');
   };
 
   /** Goes back to the verse being read aloud a few seconds after a scroll by hand. */

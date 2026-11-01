@@ -1062,8 +1062,9 @@ changed `EXPO_PUBLIC_*` value and keeps the old JavaScript.
 player, which Jest can't reach. It runs on each release PR into `main`, where its job,
 **Bible audio on an Android emulator**, is a required check, and it can be started by
 hand on any branch. It skips other PRs and forks, and reads no secrets. On an Ubuntu
-runner it builds the debug APK with `npm run build:android:apk:debug:intel`, boots an
-Android 16 (API 36) emulator, and runs `scripts/e2e/android-bible-audio.sh`. The
+runner it builds the debug APK with `npm run build:android:apk:debug:intel` and
+`EXPO_PUBLIC_AUDIO_E2E=1`, so the reader logs what it decides, boots an Android 16
+(API 36) emulator, and runs `scripts/e2e/android-bible-audio.sh`. The
 [admin runbook](admin-runbook.md#bible-audio-emulator-test) describes each scenario, what
 to do when it fails, and how to run the script on your own emulator.
 
