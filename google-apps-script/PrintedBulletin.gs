@@ -301,15 +301,6 @@ var PRINTED_BIBLE_CHAPTER_COUNTS = Object.freeze({
 var PRINTED_OFFERING_TRANSLATION_CACHE = {};
 
 function onOpen() {
-  var headerContractError = null;
-  try {
-    ensureBulletinHeaderContractValidation_();
-  } catch (error) {
-    headerContractError = error;
-    if (typeof Logger !== 'undefined') {
-      Logger.log('Bulletin header contract check failed: ' + error);
-    }
-  }
   try {
     maintainBulletinScheduleOnOpen_();
   } catch (error) {
@@ -317,18 +308,36 @@ function onOpen() {
       Logger.log('Automatic schedule maintenance skipped: ' + error);
     }
   }
+  // After the upkeep, which puts back what it can of Weekly Data.
+  var missingColumns = [];
+  try {
+    missingColumns = getMissingBulletinColumns_(SpreadsheetApp.getActiveSpreadsheet());
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Bulletin column check failed: ' + error);
+    }
+  }
   var ui = SpreadsheetApp.getUi();
   ui
     .createMenu('Printed Bulletin')
     .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
     .addToUi();
-  if (headerContractError && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
+  if (missingColumns.length && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
     ui.alert(
-      'Bulletin columns require an update / 周刊列需要更新',
-      headerContractError.message || String(headerContractError),
+      'Bulletin columns not found / 找不到周刊列',
+      getMissingBulletinColumnsMessage_(missingColumns),
       ui.ButtonSet.OK,
     );
   }
+}
+
+function getMissingBulletinColumnsMessage_(missingColumns) {
+  return (
+    'The app and the printed bulletin leave these blank until a tab or column ' +
+    'with this exact name is back. A column can be in any position.\n' +
+    '在恢复名称完全相同的工作表或列之前，手机应用和纸质周刊中的这些内容会留空。列可以放在任何位置。\n\n' +
+    missingColumns.join('\n')
+  );
 }
 
 /**
@@ -3197,7 +3206,12 @@ function physicalTbdText_(traditionalChinese) {
 
 function formatHymnForPrint_(hymn) {
   hymn = hymn || {};
-  var resolved = resolvePrintedHymnText_(hymn.english, hymn.chinese);
+  // A bare number is a Chinese hymnal number, printed as 第N首.
+  var chineseInput = String(hymn.chinese || '').trim();
+  var resolved = resolvePrintedHymnText_(
+    hymn.english,
+    /^\d+$/.test(chineseInput) ? '第' + chineseInput + '首' : chineseInput,
+  );
   var english = resolved.english;
   var chinese = resolved.chinese;
   if (isPhysicalTbd_(english) || isPhysicalTbd_(chinese)) {

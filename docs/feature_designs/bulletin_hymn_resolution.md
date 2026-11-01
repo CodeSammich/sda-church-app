@@ -51,7 +51,8 @@ The resolver looks in every hymnal on the hymnal page (`HYMNALS` in
 `features/hymnal/Hymnals.ts`), with the church's own two first:
 
 - **Numbers.** A number is looked up in every hymnal that has it. The declared hymnal
-  (the English column's 1985, the Chinese column's 505) gets a bonus, so a bare number
+  (the 1985 for the `english` side, the 505 for the `chinese` side; a one-cell hymn's
+  side is set by how it's written) gets a bonus, so a bare number
   stays in the church's hymnal. A typed title still counts, so `第1首 聖哉真神` opens the
   506's hymn 1, because the 505's hymn 1 has another title.
 - **Titles.** A title-only answer is compared with every hymnal's titles, Traditional and
@@ -69,13 +70,19 @@ The resolver looks in every hymnal on the hymnal page (`HYMNALS` in
 Only the 1985 and the 505 have a cross-reference table, so a 506 or 707 hymn shows in
 Chinese whatever the app's language.
 
-### Sabbath School hymns
+### One-cell hymns
 
 Each Sabbath School hymn has a single cell in the weekly sheet, typed in either
 language. `toBulletinHymnText()` turns it into a `BulletinHymnText`: Chinese text or a
 bare number goes in `chinese` (a Chinese hymnal number), anything else in Latin letters
 in `english`. From there it takes the same path as every other bulletin hymn. The
 printed bulletin reads a cell the same way (`formatSabbathSchoolHymnsForPrint_`).
+
+The hymn of praise and the hymn of response have one cell each too. The Apps Script
+files that cell under `english` or `chinese` by the same rule (`getBulletinHymnLanguage_`
+in `BulletinApi.gs`), so the API still returns both sides, one of them blank, and the
+app needs no change. A tab that still has the older English and Chinese columns is read
+as before.
 
 ## Adding another bulletin hymn field
 

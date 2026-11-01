@@ -132,21 +132,71 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
   });
 
+  it('names the expected columns it cannot find when the sheet opens', () => {
+    const alerts: string[] = [];
+    const menu = { addItem: () => menu, addToUi: () => menu };
+    const tab = (name: string, headers: string[]) => ({
+      getName: () => name,
+      getDataRange: () => ({ getValues: () => [headers], getDisplayValues: () => [headers] }),
+    });
+    const context = loadAppsScript({
+      SpreadsheetApp: {
+        getUi: () => ({
+          createMenu: () => menu,
+          alert: (title: string, message: string) => alerts.push(`${title}\n${message}`),
+          ButtonSet: { OK: 'OK' },
+        }),
+        getActiveSpreadsheet: () => ({
+          getSheetByName: (name: string) =>
+            name === 'Weekly Data'
+              ? tab(name, ['Hymn of Response', 'Date', 'Location', 'Notes'])
+              : null,
+        }),
+      },
+    });
+
+    runInContext(`onOpen()`, context);
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toContain('Bulletin columns not found / 找不到周刊列');
+    expect(alerts[0]).toContain('A column can be in any position.');
+    expect(alerts[0].split('\n\n')[1].split('\n')).toEqual([
+      'Sabbath Calendar (tab)',
+      'Weekly Data: Bible Verses',
+      'Weekly Data: English Sermon Title',
+      'Weekly Data: Chinese Sermon Title',
+      'Weekly Data: Sabbath School Hymn 1',
+      'Weekly Data: Sabbath School Hymn 2',
+      'Weekly Data: Sabbath School Hymn 3',
+      'Weekly Data: Hymn of Praise',
+      'Weekly Data: Special Music Title',
+    ]);
+  });
+
   describe('Weekly Data rows for the next Sabbaths (#558)', () => {
     const HEADERS = [
       'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
       'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
-      'English Hymn of Praise', 'Chinese Hymn of Praise', 'Special Music Title',
-      'English Hymn of Response', 'Chinese Hymn of Response',
+      'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
     ];
     // Dates the script writes come from its own vm context, so instanceof
     // Date doesn't recognize them here.
     const isDate = (value: unknown): value is Date =>
       typeof (value as Date | null)?.getFullYear === 'function';
-    // A sheet whose cells are `values`, with a grid of `maxRows` rows.
-    const weeklySheet = (rows: unknown[][], maxRows = 40) => {
-      const values: unknown[][] = [HEADERS, ...rows.map((row) => [...row, ...Array(13 - row.length).fill('')])];
+    // A sheet whose cells are `values`, with a grid of `maxRows` rows and
+    // `maxColumns` columns. With `headers` null, the tab starts empty.
+    const weeklySheet = (
+      rows: unknown[][],
+      maxRows = 40,
+      headers: string[] | null = HEADERS,
+      maxColumns = headers ? headers.length : 26,
+    ) => {
+      const values: unknown[][] = headers
+        ? [[...headers], ...rows.map((row) => [...row, ...Array(Math.max(0, headers.length - row.length)).fill('')])]
+        : [];
       const formats: string[] = [];
+      const rules: string[] = [];
+      const calls: string[] = [];
       const display = (value: unknown) =>
         isDate(value)
           ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
@@ -154,41 +204,92 @@ describe('printed bulletin Apps Script helpers', () => {
       return {
         values,
         formats,
+        rules,
+        calls,
         getLastRow: () => values.length,
-        getLastColumn: () => 13,
+        getLastColumn: () => Math.max(0, ...values.map((line) => line.length)),
         getMaxRows: () => maxRows,
+        getMaxColumns: () => maxColumns,
         insertRowsAfter: (_after: number, count: number) => {
           maxRows += count;
         },
-        getRange: (row: number, column: number, numRows = 1, numColumns = 1) => ({
-          getValues: () => values.slice(row - 1, row - 1 + numRows).map((line) => line.slice(column - 1, column - 1 + numColumns)),
-          getDisplayValues: () =>
-            values.slice(row - 1, row - 1 + numRows).map((line) => line.slice(column - 1, column - 1 + numColumns).map(display)),
-          setValues: (next: unknown[][]) => {
-            if (row - 1 + numRows > maxRows) throw new Error('Those rows are out of bounds.');
-            next.forEach((line, index) => {
-              values[row - 1 + index] = line;
-            });
-          },
-          setNumberFormat: (format: string) => formats.push(`${row}:${column}:${numRows}:${format}`),
-        }),
+        insertColumnsAfter: (_after: number, count: number) => {
+          maxColumns += count;
+        },
+        setFrozenRows: (count: number) => calls.push(`frozen:${count}`),
+        getRange: (row: number, column: number, numRows = 1, numColumns = 1) => {
+          const read = (format: (value: unknown) => unknown) =>
+            Array.from({ length: numRows }, (_, r) =>
+              Array.from({ length: numColumns }, (_, c) => format(values[row - 1 + r]?.[column - 1 + c] ?? '')),
+            );
+          return {
+            getValues: () => read((value) => value),
+            getDisplayValues: () => read(display),
+            setValues: (next: unknown[][]) => {
+              if (row - 1 + numRows > maxRows || column - 1 + numColumns > maxColumns) {
+                throw new Error('Those cells are out of bounds.');
+              }
+              next.forEach((line, r) => {
+                const target = (values[row - 1 + r] = values[row - 1 + r] ?? []);
+                line.forEach((value, c) => {
+                  while (target.length < column - 1 + c) target.push('');
+                  target[column - 1 + c] = value;
+                });
+              });
+            },
+            setFontWeight: (weight: string) => calls.push(`${weight}:${row}:${column}:${numColumns}`),
+            setNumberFormat: (format: string) => formats.push(`${row}:${column}:${numRows}:${format}`),
+            setDataValidation: (rule: string) => rules.push(`${row}:${column}:${numRows}:${rule}`),
+            getA1Notation: () => `${String.fromCharCode(64 + column)}${row}`,
+          };
+        },
       };
     };
-    const added = (sheet: ReturnType<typeof weeklySheet>, from: number) =>
+    type WeeklySheet = ReturnType<typeof weeklySheet>;
+    // A spreadsheet holding `sheet` as Weekly Data, which can add a tab and
+    // keeps its notices.
+    const book = (sheet: WeeklySheet | null) => {
+      const tabs: Record<string, WeeklySheet> = sheet ? { 'Weekly Data': sheet } : {};
+      const toasts: string[] = [];
+      return {
+        tabs,
+        toasts,
+        getSheetByName: (name: string) => tabs[name] ?? null,
+        insertSheet: (name: string) => (tabs[name] = weeklySheet([], 1000, null)),
+        toast: (message: string) => toasts.push(message),
+      };
+    };
+    const added = (sheet: WeeklySheet, from: number) =>
       sheet.values.slice(from).map((row) => [
         isDate(row[0]) ? row[0].toDateString() : row[0],
         row[1],
       ]);
-    const run = (sheet: ReturnType<typeof weeklySheet> | null, date: string) => {
-      const context = loadAppsScript({});
-      (context as { testSpreadsheet: unknown }).testSpreadsheet = {
-        getSheetByName: (name: string) => (name === 'Weekly Data' ? sheet : null),
+    // A data validation builder that writes the rule out as text.
+    const ruleBuilder = () => {
+      const parts: string[] = [];
+      const builder: Record<string, (...values: unknown[]) => unknown> = {
+        build: () => parts.join(' | '),
       };
+      ['requireValueInList', 'requireFormulaSatisfied', 'setAllowInvalid', 'setHelpText'].forEach((name) => {
+        builder[name] = (...values) => {
+          parts.push(`${name}(${values.map(String).join(', ')})`);
+          return builder;
+        };
+      });
+      return builder;
+    };
+    const run = (target: WeeklySheet | ReturnType<typeof book> | null, date: string) => {
+      const context = loadAppsScript({ SpreadsheetApp: { newDataValidation: ruleBuilder } });
+      (context as { testSpreadsheet: unknown }).testSpreadsheet =
+        target && 'tabs' in target ? target : book(target);
       return runInContext(
         `populateUpcomingWeeklyDataRows_(testSpreadsheet, new Date('${date}T12:00:00'))`,
         context,
       ) as number;
     };
+    const LOCATION_RULE =
+      'requireValueInList(Queens,Brooklyn, true) | setAllowInvalid(false) | ' +
+      'setHelpText(Location must be Queens or Brooklyn. / 地点必须是 Queens 或 Brooklyn。)';
 
     it('adds a Queens and a Brooklyn row for this coming Sabbath and the next', () => {
       const sheet = weeklySheet([['2026-10-31', 'Queens', 'Matthew 6:10']]);
@@ -200,8 +301,28 @@ describe('printed bulletin Apps Script helpers', () => {
         ['Sat Nov 14 2026', 'Queens'],
         ['Sat Nov 14 2026', 'Brooklyn'],
       ]);
-      expect(sheet.formats).toEqual(['3:1:4:yyyy-mm-dd']);
       expect(sheet.values[1][2]).toBe('Matthew 6:10');
+    });
+
+    it('takes only a Saturday in Date, shown as YYYY-MM-DD, on every open', () => {
+      const sheet = weeklySheet([
+        ['2026-11-07', 'Queens'],
+        ['2026-11-07', 'Brooklyn'],
+        ['2026-11-14', 'Queens'],
+        ['2026-11-14', 'Brooklyn'],
+      ]);
+      expect(run(sheet, '2026-11-04')).toBe(0);
+      // From under the header to the bottom of the 40-row grid.
+      expect(sheet.formats).toEqual(['2:1:39:yyyy-mm-dd']);
+      expect(sheet.rules).toEqual([
+        `2:2:39:${LOCATION_RULE}`,
+        '2:1:39:' +
+          'requireFormulaSatisfied(=IF(ISNUMBER(A2),AND(A2>=DATE(2020,1,1),WEEKDAY(A2)=7),' +
+          'OR(A2="",REGEXMATCH(TO_TEXT(A2),"(?i)^example")))) | ' +
+          'setAllowInvalid(false) | ' +
+          'setHelpText(Date must be a Saturday, typed as YYYY-MM-DD, such as 2026-11-07. / ' +
+          '日期必须是星期六，格式为 YYYY-MM-DD，例如 2026-11-07。)',
+      ]);
     });
 
     it("ignores the example rows at the top, whose Date isn't a date", () => {
@@ -226,11 +347,75 @@ describe('printed bulletin Apps Script helpers', () => {
       expect(run(sheet, '2026-11-07')).toBe(0);
     });
 
-    it('adds grid rows when the tab has run out, and skips a missing tab', () => {
+    it('adds grid rows when the tab has run out', () => {
       const sheet = weeklySheet([['2026-10-31', 'Queens']], 2);
       expect(run(sheet, '2026-11-01')).toBe(4);
       expect(sheet.values).toHaveLength(6);
-      expect(run(null, '2026-11-01')).toBe(0);
+      // The rules cover the grown grid too.
+      expect(sheet.rules.map((rule) => rule.split(':').slice(0, 3).join(':'))).toEqual(['2:2:5', '2:1:5']);
+    });
+
+    it('sets a deleted or emptied tab up again, with its headers and examples', () => {
+      for (const spreadsheet of [book(null), book(weeklySheet([], 1000, null))]) {
+        expect(run(spreadsheet, '2026-11-04')).toBe(4);
+        const sheet = spreadsheet.tabs['Weekly Data'];
+        expect(sheet.values[0]).toEqual(HEADERS);
+        expect(added(sheet, 1)).toEqual([
+          ['Example', 'Queens'],
+          ['Example', 'Brooklyn'],
+          ['Sat Nov 07 2026', 'Queens'],
+          ['Sat Nov 07 2026', 'Brooklyn'],
+          ['Sat Nov 14 2026', 'Queens'],
+          ['Sat Nov 14 2026', 'Brooklyn'],
+        ]);
+        expect(sheet.values[2]).toEqual([
+          'Example', 'Brooklyn', 'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',
+          '205', 'Amazing Grace', '', '第5首 讚美上主', '奇異恩典', 'AH 86 How Great Thou Art',
+        ]);
+        expect(sheet.calls).toEqual(['bold:1:1:11', 'frozen:1']);
+        expect(spreadsheet.toasts).toEqual([
+          'Weekly Data was missing, so it was set up again with its columns and two example rows. / ' +
+            'Weekly Data 工作表缺失，已重新建立，含所有列和两行示例。',
+        ]);
+      }
+    });
+
+    it('puts a missing column back at the far right, and leaves the rest alone', () => {
+      const headers = HEADERS.filter((header) => header !== 'Bible Verses' && header !== 'Special Music Title');
+      headers[headers.indexOf('Location')] = 'Campus';
+      const sheet = weeklySheet([['2026-11-07', 'Queens', 'Sermon']], 40, headers);
+      const spreadsheet = book(sheet);
+      run(spreadsheet, '2026-11-04');
+      expect(sheet.values[0]).toEqual([...headers, 'Location', 'Bible Verses', 'Special Music Title']);
+      expect(sheet.values[1].slice(0, 3)).toEqual(['2026-11-07', 'Queens', 'Sermon']);
+      expect(sheet.calls).toEqual(['bold:1:10:3']);
+      expect(spreadsheet.toasts).toEqual([
+        'Weekly Data: added these missing columns at the far right: Location, Bible Verses, Special Music Title. / ' +
+          'Weekly Data：已在最右侧补上缺少的列：Location、Bible Verses、Special Music Title。',
+      ]);
+      // Once they're there, there's nothing to add or say.
+      run(spreadsheet, '2026-11-04');
+      expect(spreadsheet.toasts).toHaveLength(1);
+    });
+
+    it('counts the older English and Chinese hymn columns as present', () => {
+      const headers = [...HEADERS.filter((header) => !header.startsWith('Hymn of')),
+        'English Hymn of Praise', 'Chinese Hymn of Praise', 'English Hymn of Response', 'Chinese Hymn of Response'];
+      const spreadsheet = book(weeklySheet([], 40, headers));
+      run(spreadsheet, '2026-11-04');
+      expect(spreadsheet.toasts).toEqual([]);
+      expect(spreadsheet.tabs['Weekly Data'].values[0]).toEqual(headers);
+    });
+
+    it('has an example cell for every column', () => {
+      const context = loadAppsScript({});
+      const widths = JSON.parse(
+        runInContext(
+          `JSON.stringify(WEEKLY_DATA_EXAMPLE_ROWS.map(function (row) { return row.length; }).concat(BULLETIN_SHEET_COLUMNS['Weekly Data'].length))`,
+          context,
+        ) as string,
+      );
+      expect(widths).toEqual([11, 11, 11]);
     });
   });
 
@@ -299,7 +484,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
     (context as { testSheet: unknown }).testSheet = sheet;
     runInContext(
-      `ensureBulletinHeaderContractProtection_(testSheet, 25); ensureBulletinScheduleFixedColumnProtection_(testSheet);`,
+      `ensureBulletinHeaderProtection_(testSheet, 25); ensureBulletinScheduleFixedColumnProtection_(testSheet);`,
       context,
     );
 
@@ -416,10 +601,9 @@ describe('printed bulletin Apps Script helpers', () => {
     const intakeSheet = makeSheet('Weekly Data', [[
       'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
       'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
-      'English Hymn of Praise', 'Chinese Hymn of Praise', 'Special Music Title',
-      'English Hymn of Response', 'Chinese Hymn of Response',
+      'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
     ], [
-      '2026-09-05', 'brooklyn', 'Luke 7:36-39', '', '', '', '', '', '', '', '', '', '',
+      '2026-09-05', 'brooklyn', 'Luke 7:36-39', '', '', '', '', '', '', '', '',
     ]]);
     const context = loadAppsScript({
       SpreadsheetApp: {
@@ -1884,11 +2068,13 @@ describe('printed bulletin Apps Script helpers', () => {
           englishOnly: formatHymnForPrint_({ english: 'AH 348 The Church Has One Foundation', chinese: '' }),
           chineseOnly: formatHymnForPrint_({ english: '', chinese: '第413首 教會根基' }),
           both: formatHymnForPrint_({ english: 'AH 348 The Church Has One Foundation', chinese: '第413首 教會根基' }),
+          bareNumber: formatHymnForPrint_({ english: '', chinese: '413' }),
         })`,
         context,
       ) as string,
     );
 
+    expect(output.bareNumber).toBe('第413首\nAH 348');
     expect(output.englishOnly).toBe('第413首\nAH 348 The Church Has One Foundation');
     expect(output.chineseOnly).toBe('第413首 教會根基\nAH 348');
     expect(output.both).toBe('第413首 教會根基\nAH 348 The Church Has One Foundation');
@@ -2384,6 +2570,9 @@ describe('Sabbath Calendar year-ahead rows', () => {
           }
         },
         setDataValidation: () => calls.push(`validation:${row}:${numRows}`),
+        // No header rules are left, so there's nothing to clear.
+        getDataValidations: () => read<string | null>([], null),
+        clearDataValidations: () => calls.push(`clearValidation:${row}:${numColumns}`),
         getA1Notation: () => `A${row}:Y${row + numRows - 1}`,
       };
     };
@@ -2393,6 +2582,7 @@ describe('Sabbath Calendar year-ahead rows', () => {
       getLastRow: () => values.length,
       getLastColumn: () => width,
       getMaxRows: () => maxRows,
+      getMaxColumns: () => width,
       insertRowsAfter: (after: number, count: number) => {
         calls.push(`insert:${after}:${count}`);
         maxRows += count;
@@ -2605,16 +2795,22 @@ describe('Sabbath Calendar year-ahead rows', () => {
     const sermonHeaders = [
       'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
       'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
-      'English Hymn of Praise', 'Chinese Hymn of Praise', 'Special Music Title',
-      'English Hymn of Response', 'Chinese Hymn of Response',
+      'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
     ];
+    const sermonCalls: string[] = [];
     const sermonSheet = {
       getName: () => 'Weekly Data',
+      getMaxColumns: () => sermonHeaders.length,
       getDataRange: () => ({
         getValues: () => [sermonHeaders],
         getDisplayValues: () => [sermonHeaders],
       }),
-      getRange: () => ({ setDataValidation: () => undefined }),
+      getRange: (row: number, _column: number, _numRows: number, numColumns: number) => ({
+        setDataValidation: () => undefined,
+        // One fixed-name rule left over from before #558.
+        getDataValidations: () => [['rule', ...Array(numColumns - 1).fill(null)]],
+        clearDataValidations: () => sermonCalls.push(`clearValidation:${row}:${numColumns}`),
+      }),
     };
     const builder: Record<string, unknown> = { build: () => 'rule' };
     ['requireValueInList', 'requireFormulaSatisfied', 'setAllowInvalid', 'setHelpText'].forEach(
@@ -2651,6 +2847,10 @@ describe('Sabbath Calendar year-ahead rows', () => {
     );
 
     expect(result.populated).toBe(39);
+    // A header row loses its old fixed-name rules (#558), and one without
+    // any is left alone.
+    expect(sermonCalls).toEqual(['clearValidation:1:11']);
+    expect(sheet.calls.filter((call) => call.startsWith('clearValidation'))).toEqual([]);
     expect(result.validation).toEqual({
       installed: 'A2:Y14',
       updatedAfterQuarterAppend: 'A2:Y53',

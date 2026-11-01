@@ -23,12 +23,11 @@ const NEW_INTAKE_HEADERS = [
 ];
 
 // The Weekly Data tab's headers since #558: the speaker's columns, then the
-// hymns in the order they're sung.
+// hymns in the order they're sung, with one cell for each hymn.
 const WEEKLY_HEADERS = [
   'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
   'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
-  'English Hymn of Praise', 'Chinese Hymn of Praise', 'Special Music Title',
-  'English Hymn of Response', 'Chinese Hymn of Response',
+  'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
 ];
 
 const createSheet = (name: string, headers: string[], rows: string[][] = []) => ({
@@ -51,13 +50,20 @@ const loadBulletinApi = (globals: Record<string, unknown> = {}) => {
   return context;
 };
 
-// The header problems for a workbook whose Sabbath Calendar matches its
-// contract and whose weekly tab has these headers under this name.
-const getIntakeContractIssues = (headers: string[], tabName = 'Weekly Data') => {
+// The Sabbath Calendar's expected headers, in order.
+const getScheduleHeaders = () =>
+  JSON.parse(
+    runInContext(`JSON.stringify(BULLETIN_SHEET_COLUMNS['Sabbath Calendar'])`, loadBulletinApi()) as string,
+  ) as string[];
+
+// The columns reported missing for a workbook with these Sabbath Calendar
+// headers and a weekly tab with these headers under this name.
+const getMissingColumns = (
+  headers: string[],
+  tabName = 'Weekly Data',
+  scheduleHeaders = getScheduleHeaders(),
+) => {
   const context = loadBulletinApi();
-  const scheduleHeaders = JSON.parse(
-    runInContext(`JSON.stringify(BULLETIN_HEADER_CONTRACTS['Sabbath Calendar'])`, context) as string,
-  );
   context.testSpreadsheet = {
     getSheetByName: (name: string) =>
       name === 'Sabbath Calendar'
@@ -67,8 +73,31 @@ const getIntakeContractIssues = (headers: string[], tabName = 'Weekly Data') => 
           : null,
   };
   return JSON.parse(
-    runInContext('JSON.stringify(getBulletinHeaderContractIssues_(testSpreadsheet))', context) as string,
+    runInContext('JSON.stringify(getMissingBulletinColumns_(testSpreadsheet))', context) as string,
   ) as string[];
+};
+
+// The Weekly Data fields read from one row under these headers.
+const readWeeklyRow = (headers: string[], row: string[]) => {
+  const context = loadBulletinApi({
+    testSpreadsheet: {
+      getSheetByName: (name: string) =>
+        name === 'Weekly Data' ? createSheet(name, headers, [row]) : null,
+    },
+  });
+  return JSON.parse(
+    runInContext(
+      `JSON.stringify((function () {
+        var location = createLocation_();
+        populateBulletinIntake_(
+          location,
+          getBulletinIntakeRows_(testSpreadsheet, '2026-11-07', 'queens')
+        );
+        return location;
+      })())`,
+      context,
+    ) as string,
+  );
 };
 
 describe('Apps Script bulletin response merging', () => {
@@ -278,31 +307,95 @@ describe('Apps Script bulletin response merging', () => {
     expect(location.specialMusicTitle).toBe('It Is Well');
   });
 
-  it('reads only the Weekly Data tab, which needs all thirteen headers in order', () => {
-    expect(getIntakeContractIssues(WEEKLY_HEADERS)).toEqual([]);
-    // The tab before #558, under its old name, is no longer read.
-    expect(getIntakeContractIssues(INTAKE_HEADERS, 'Sabbath Sermon Data')).toEqual([
-      'Missing required sheet: Weekly Data',
-    ]);
-    expect(getIntakeContractIssues(WEEKLY_HEADERS.slice(0, 10))).toEqual([
-      'Weekly Data! column 11 must be "Special Music Title" (found "")',
-      'Weekly Data! column 12 must be "English Hymn of Response" (found "")',
-      'Weekly Data! column 13 must be "Chinese Hymn of Response" (found "")',
-    ]);
-    // The old order, with the new columns at the end, is rejected too.
-    expect(getIntakeContractIssues([...INTAKE_HEADERS, ...NEW_INTAKE_HEADERS])[0]).toBe(
-      'Weekly Data! column 3 must be "Bible Verses" (found "English Hymn of Praise")',
-    );
+  it('files each one-cell hymn under the language it is typed in', () => {
+    const row = ['2026-11-07', 'Queens', '', '', '', '', '', '', 'AH 1 Praise to the Lord', '', '第452首 遵命有福'];
+    expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: 'AH 1 Praise to the Lord', chinese: '' },
+      hymnOfResponse: { english: '', chinese: '第452首 遵命有福' },
+    });
+    // A bare number is a Chinese hymnal number.
+    row[8] = '205';
+    row[10] = 'Cover With His Life 412';
+    expect(readWeeklyRow(WEEKLY_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: '', chinese: '205' },
+      hymnOfResponse: { english: 'Cover With His Life 412', chinese: '' },
+    });
   });
 
-  it('rejects a wrong or extra header on the weekly tab', () => {
-    const wrong = [...WEEKLY_HEADERS];
-    wrong[5] = 'Opening Hymn';
-    expect(getIntakeContractIssues(wrong)).toEqual([
-      'Weekly Data! column 6 must be "Sabbath School Hymn 1" (found "Opening Hymn")',
+  it('reads each column by its name, wherever it is', () => {
+    const shuffled = [...WEEKLY_HEADERS, 'Notes'].reverse();
+    const row = ['2026-11-07', 'Queens', 'John 10:11-16', 'The Good Shepherd', '好牧人',
+      '第12首', '', '', 'AH 1', 'It Is Well', '第452首', 'a note'].reverse();
+    expect(readWeeklyRow(shuffled, row)).toMatchObject({
+      bibleVerses: 'John 10:11-16',
+      sermonTitle: { english: 'The Good Shepherd', chinese: '好牧人' },
+      sabbathSchoolHymns: ['第12首'],
+      hymnOfPraise: { english: 'AH 1', chinese: '' },
+      specialMusicTitle: 'It Is Well',
+      hymnOfResponse: { english: '', chinese: '第452首' },
+    });
+    expect(getMissingColumns(shuffled)).toEqual([]);
+  });
+
+  it('leaves a missing column blank and names it, without failing the rest', () => {
+    const headers = WEEKLY_HEADERS.filter((header) => header !== 'Bible Verses');
+    headers[headers.indexOf('Hymn of Praise')] = 'Opening Hymn';
+    const row = ['2026-11-07', 'Queens', 'The Good Shepherd', '好牧人', '', '', '', 'AH 1', '', ''];
+    expect(readWeeklyRow(headers, row)).toMatchObject({
+      bibleVerses: '',
+      sermonTitle: { english: 'The Good Shepherd', chinese: '好牧人' },
+      hymnOfPraise: { english: '', chinese: '' },
+    });
+    expect(getMissingColumns(headers)).toEqual([
+      'Weekly Data: Bible Verses',
+      'Weekly Data: Hymn of Praise',
     ]);
-    expect(getIntakeContractIssues([...WEEKLY_HEADERS, 'Notes'])).toEqual([
-      'Weekly Data! column 14 must be "" (found "Notes")',
+    // Without Date or Location no row matches, and nothing throws.
+    expect(readWeeklyRow(WEEKLY_HEADERS.slice(1), row.slice(1)).sermonTitle).toEqual({
+      english: '',
+      chinese: '',
+    });
+    expect(getMissingColumns(WEEKLY_HEADERS, 'Sabbath Sermon Data')).toEqual(['Weekly Data (tab)']);
+  });
+
+  it('still reads a tab with the English and Chinese hymn columns from before #558', () => {
+    expect(getMissingColumns(INTAKE_HEADERS)).toEqual([
+      'Weekly Data: Sabbath School Hymn 1',
+      'Weekly Data: Sabbath School Hymn 2',
+      'Weekly Data: Sabbath School Hymn 3',
+      'Weekly Data: Special Music Title',
     ]);
+    const row = ['2026-11-07', 'Queens', 'AH 1', '第5首', 'Sermon', '講題', '', '413', 'John 3:16'];
+    expect(readWeeklyRow(INTAKE_HEADERS, row)).toMatchObject({
+      hymnOfPraise: { english: 'AH 1', chinese: '第5首' },
+      hymnOfResponse: { english: '', chinese: '413' },
+      bibleVerses: 'John 3:16',
+    });
+  });
+
+  it("keeps each location's repeated Sabbath Calendar column on its own side", () => {
+    const scheduleHeaders = getScheduleHeaders();
+    expect(getMissingColumns(WEEKLY_HEADERS, 'Weekly Data', scheduleHeaders)).toEqual([]);
+    // Removing Queens's Offering Prayer leaves Brooklyn's as Brooklyn's.
+    const withoutQueensOffering = scheduleHeaders.filter(
+      (header, index) => !(header === 'Offering Prayer' && index < scheduleHeaders.indexOf('Brooklyn Sermon')),
+    );
+    expect(getMissingColumns(WEEKLY_HEADERS, 'Weekly Data', withoutQueensOffering)).toEqual([
+      'Sabbath Calendar: Queens Offering Prayer',
+    ]);
+    const context = loadBulletinApi();
+    const find = (headers: string[], location: string, occurrence: number) =>
+      runInContext(
+        `findScheduleColumn_(${JSON.stringify(headers)}, 'Offering Prayer', '${location}', ${occurrence})`,
+        context,
+      );
+    expect(find(withoutQueensOffering, 'queens', 0)).toBe(-1);
+    expect(find(withoutQueensOffering, 'brooklyn', 1)).toBe(
+      withoutQueensOffering.indexOf('Offering Prayer'),
+    );
+    // A column added on the Queens side doesn't move Brooklyn's either.
+    const withExtra = ['Notes', ...scheduleHeaders];
+    expect(find(withExtra, 'brooklyn', 1)).toBe(withExtra.lastIndexOf('Offering Prayer'));
+    expect(getMissingColumns(WEEKLY_HEADERS, 'Weekly Data', withExtra)).toEqual([]);
   });
 });

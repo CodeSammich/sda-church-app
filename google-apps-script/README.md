@@ -3,7 +3,7 @@
 This directory contains the Google Apps Script source for the church bulletin
 API and printed Google Doc workflow. It is not bundled into the mobile app.
 
-The consolidated architecture, workbook contract, sheet layouts, privacy rules,
+The consolidated architecture, sheet layouts, privacy rules,
 fallback behavior, printed layouts, QR policy, Sabbath Encouragement handling,
 testing, deployment, GitHub Actions, and troubleshooting runbook now live in:
 

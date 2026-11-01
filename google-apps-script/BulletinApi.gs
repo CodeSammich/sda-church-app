@@ -16,9 +16,7 @@
 
 var CONFIG = Object.freeze({
   scheduleSheetName: 'Sabbath Calendar',
-  // Was 'Sabbath Sermon Data' until #558 added four columns in a new tab, so
-  // the live script could keep reading the old one until this deploy. The old
-  // tab is no longer read.
+  // Replaced the 'Sabbath Sermon Data' tab in #558.
   intakeSheetName: 'Weekly Data',
   cacheSeconds: 120,
   // Bump when the public bulletin shape or source contract changes so cached
@@ -98,18 +96,28 @@ var BULLETIN_INTAKE_SCHEMA = Object.freeze([
   { headers: ['Sabbath School Hymn 1'], path: ['sabbathSchoolHymns', 0] },
   { headers: ['Sabbath School Hymn 2'], path: ['sabbathSchoolHymns', 1] },
   { headers: ['Sabbath School Hymn 3'], path: ['sabbathSchoolHymns', 2] },
-  { headers: ['English Hymn of Praise'], path: ['hymnOfPraise', 'english'] },
-  { headers: ['Chinese Hymn of Praise'], path: ['hymnOfPraise', 'chinese'] },
+  // One cell each, typed in either language like the Sabbath School hymns,
+  // and filed under the language it's written in. The hymnal lookup fills in
+  // the other.
+  { headers: ['Hymn of Praise'], path: ['hymnOfPraise'], hymn: true },
   // The piece performed. Who performs it is the Sabbath Calendar's Special Music.
   { headers: ['Special Music Title'], path: ['specialMusicTitle'] },
+  { headers: ['Hymn of Response'], path: ['hymnOfResponse'], hymn: true },
+  // Until #558 each of those had an English and a Chinese column. A tab that
+  // still has them is read the same way.
+  { headers: ['English Hymn of Praise'], path: ['hymnOfPraise', 'english'] },
+  { headers: ['Chinese Hymn of Praise'], path: ['hymnOfPraise', 'chinese'] },
   { headers: ['English Hymn of Response'], path: ['hymnOfResponse', 'english'] },
   { headers: ['Chinese Hymn of Response'], path: ['hymnOfResponse', 'chinese'] },
 ]);
 
-// These first-row headers are a versioned interface between the spreadsheet,
-// Apps Script, and the mobile app. If a header is added, removed, renamed, or
-// reordered, update all three consumers before changing the sheet.
-var BULLETIN_HEADER_CONTRACTS = Object.freeze({
+// The columns each tab should have. Every column is read by its header name,
+// wherever it is (#558): a column can be moved, and others added, without
+// changing anything here. A missing column leaves only its own field blank,
+// and opening the spreadsheet names it (getMissingBulletinColumns_). The
+// Sabbath Calendar's roster checks still go by this order, and its repeated
+// headers by which side of Brooklyn Sermon they're on (findScheduleColumn_).
+var BULLETIN_SHEET_COLUMNS = Object.freeze({
   'Sabbath Calendar': Object.freeze([
     'Date',
     'Quarter',
@@ -147,56 +155,56 @@ var BULLETIN_HEADER_CONTRACTS = Object.freeze({
     'Sabbath School Hymn 1',
     'Sabbath School Hymn 2',
     'Sabbath School Hymn 3',
-    'English Hymn of Praise',
-    'Chinese Hymn of Praise',
+    'Hymn of Praise',
     'Special Music Title',
-    'English Hymn of Response',
-    'Chinese Hymn of Response',
+    'Hymn of Response',
   ]),
 });
 
-// Staff-facing text (dialogs, alerts, errors, notes) is in English and
-// Simplified Chinese, because the people who run the bulletin read Simplified.
-// Everything printed stays in Traditional Chinese on purpose. Keep the two
-// apart: see "Chinese script" in docs/operations/bulletin-automation.md.
-var BULLETIN_HEADER_CONTRACT_HELP_TEXT =
-  'Fixed bulletin column. Before adding, removing, renaming, or reordering columns, update Apps Script and the mobile app first. / 固定的周刊列。添加、删除、重命名或重新排序列之前，请先更新 Apps Script 和手机应用。';
+// Older names that still count as an expected column.
+var BULLETIN_COLUMN_ALTERNATIVES = Object.freeze({
+  'Hymn of Praise': Object.freeze(['English Hymn of Praise', 'Chinese Hymn of Praise']),
+  'Hymn of Response': Object.freeze(['English Hymn of Response', 'Chinese Hymn of Response']),
+});
 
-function getBulletinHeaderContractIssues_(spreadsheet) {
-  var issues = [];
-  Object.keys(BULLETIN_HEADER_CONTRACTS).forEach(function (sheetName) {
+/**
+ * The expected columns a tab is missing, such as "Weekly Data: Bible Verses",
+ * or the tab itself. Order and extra columns don't matter. A repeated
+ * Sabbath Calendar header is named with its location.
+ */
+function getMissingBulletinColumns_(spreadsheet) {
+  var missing = [];
+  Object.keys(BULLETIN_SHEET_COLUMNS).forEach(function (sheetName) {
     var sheet = spreadsheet.getSheetByName(sheetName);
     if (!sheet) {
-      issues.push('Missing required sheet: ' + sheetName);
+      missing.push(sheetName + ' (tab)');
       return;
     }
-
-    var expected = BULLETIN_HEADER_CONTRACTS[sheetName];
-    var actual = readTable_(sheet).headers;
-    var width = Math.max(expected.length, actual.length);
-    for (var index = 0; index < width; index += 1) {
-      var expectedHeader = expected[index] || '';
-      var actualHeader = actual[index] || '';
-      if (normalizeHeader_(actualHeader) !== normalizeHeader_(expectedHeader)) {
-        issues.push(
-          sheetName + '! column ' + (index + 1) + ' must be "' + expectedHeader +
-            '" (found "' + actualHeader + '")',
-        );
+    var headers = readTable_(sheet).headers;
+    var expected = BULLETIN_SHEET_COLUMNS[sheetName];
+    var isSchedule = sheetName === CONFIG.scheduleSheetName;
+    var brooklynStart = expected.indexOf('Brooklyn Sermon');
+    var seen = {};
+    expected.forEach(function (header, index) {
+      var occurrence = seen[header] || 0;
+      seen[header] = occurrence + 1;
+      var location = '';
+      if (isSchedule && expected.indexOf(header) !== expected.lastIndexOf(header)) {
+        location = index >= brooklynStart ? 'brooklyn' : 'queens';
       }
-    }
+      var found = isSchedule
+        ? findScheduleColumn_(headers, header, location, occurrence) !== -1
+        : findFirstHeaderIndex_(
+            headers,
+            [header].concat(BULLETIN_COLUMN_ALTERNATIVES[header] || []),
+          ) !== -1;
+      if (!found) {
+        var label = location ? (location === 'brooklyn' ? 'Brooklyn ' : 'Queens ') + header : header;
+        missing.push(sheetName + ': ' + label);
+      }
+    });
   });
-  return issues;
-}
-
-function assertBulletinHeaderContracts_(spreadsheet) {
-  var issues = getBulletinHeaderContractIssues_(spreadsheet);
-  if (issues.length) {
-    throw new Error(
-      'Bulletin column contract violation. Update Apps Script and the mobile app before editing these headers. / ' +
-        '周刊列标题与约定不符。编辑这些列标题之前，请先更新 Apps Script 和手机应用。\n' +
-        issues.join('\n'),
-    );
-  }
+  return missing;
 }
 
 function doGet(event) {
@@ -229,7 +237,6 @@ function getBulletin_(requestedDate) {
 
 function buildBulletin_(requestedDate, options) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  assertBulletinHeaderContracts_(spreadsheet);
   var scheduleSheetName = getScheduleSheetName_(requestedDate);
   var scheduleSheet = spreadsheet.getSheetByName(scheduleSheetName);
 
@@ -266,13 +273,13 @@ function buildBulletin_(requestedDate, options) {
       return;
     }
 
-    var scheduleValue = valueForHeader_(
+    var column = findScheduleColumn_(
       scheduleTable.headers,
-      scheduleRow,
       field.header,
+      field.path.length > 1 ? field.path[0] : '',
       occurrence,
     );
-    var value = scheduleValue;
+    var value = column === -1 ? '' : scheduleRow[column];
 
     if (field.person && !(options && options.includeFullNames)) {
       value = redactNameValue_(value);
@@ -451,9 +458,15 @@ function populateBulletinIntake_(location, intakeRows) {
   intakeRows.rows.forEach(function (row) {
     BULLETIN_INTAKE_SCHEMA.forEach(function (field) {
       var value = valueForAliases_(intakeRows.headers, row, field.headers);
-      if (!isBlank_(value)) {
-        setPath_(location, field.path, displayValue_(value));
+      if (isBlank_(value)) {
+        return;
       }
+      var text = displayValue_(value);
+      setPath_(
+        location,
+        field.hymn ? field.path.concat(getBulletinHymnLanguage_(text)) : field.path,
+        text,
+      );
     });
   });
   // Keep the entered hymns in order, without the blank cells between them.
@@ -475,10 +488,10 @@ function getBulletinIntakeRows_(spreadsheet, requestedDate, location) {
   var table = readTable_(sheet);
   var dateColumn = findFirstHeaderIndex_(table.headers, ['Date']);
   var locationColumn = findFirstHeaderIndex_(table.headers, ['Location']);
+  // Without them no row can be matched, so the week's content stays blank;
+  // the rest of the bulletin still loads.
   if (dateColumn === -1 || locationColumn === -1) {
-    throw new Error(
-      CONFIG.intakeSheetName + ' must contain Date and Location columns',
-    );
+    return null;
   }
 
   var matchingRows = [];
@@ -574,21 +587,44 @@ function dateMatches_(rawValue, displayValue, requestedDate) {
   );
 }
 
-function valueForHeader_(headers, row, expectedHeader, occurrence) {
-  var wanted = normalizeHeader_(expectedHeader);
-  var seen = 0;
-
-  for (var index = 0; index < headers.length; index += 1) {
+// Finds a Sabbath Calendar column by its header. Chair/Pastoral Prayer and
+// Offering Prayer appear once for each location, so a location's copy is
+// looked for on its own side of Brooklyn Sermon: a column added, moved or
+// removed on one side can't shift the other's. Without Brooklyn Sermon, the
+// first copy is Queens's and the second Brooklyn's. Other headers are found
+// wherever they are.
+function findScheduleColumn_(headers, header, location, occurrence) {
+  var wanted = normalizeHeader_(header);
+  var expected = BULLETIN_SHEET_COLUMNS[CONFIG.scheduleSheetName];
+  var from = 0;
+  var to = headers.length;
+  var skip = occurrence || 0;
+  var brooklynStart = headers.map(normalizeHeader_).indexOf('brooklyn sermon');
+  if (location && brooklynStart !== -1 && expected.indexOf(header) !== expected.lastIndexOf(header)) {
+    if (location === 'brooklyn') {
+      from = brooklynStart;
+    } else {
+      to = brooklynStart;
+    }
+    skip = 0;
+  }
+  for (var index = from; index < to; index += 1) {
     if (normalizeHeader_(headers[index]) !== wanted) {
       continue;
     }
-    if (seen === occurrence) {
-      return row[index];
+    if (skip === 0) {
+      return index;
     }
-    seen += 1;
+    skip -= 1;
   }
+  return -1;
+}
 
-  return '';
+// Which side of the bulletin a typed hymn belongs on, as the app reads a
+// Sabbath School hymn: Latin letters without Chinese are English; Chinese, or
+// a bare number for the Chinese hymnal, is Chinese.
+function getBulletinHymnLanguage_(text) {
+  return /[A-Za-z]/.test(text) && !/[\u3400-\u9fff]/.test(text) ? 'english' : 'chinese';
 }
 
 function valueForAliases_(headers, row, aliases) {

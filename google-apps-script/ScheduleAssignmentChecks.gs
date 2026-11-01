@@ -45,7 +45,7 @@ var SCHEDULE_NAME_SEPARATOR_PATTERN = /(\s*(?:\/|&|\+|,|;|\n|\band\b)\s*)/i;
 
 function getSchedulePersonColumnBounds_() {
   var headers =
-    BULLETIN_HEADER_CONTRACTS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
+    BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
   var first = headers.indexOf(SCHEDULE_ASSIGNMENT_CHECK_CONFIG.firstPersonHeader) + 1;
   return { first: first, last: headers.length, count: headers.length - first + 1 };
 }
@@ -170,7 +170,7 @@ function findScheduleRowConflicts_(row, lookup) {
  */
 function getSchedulePersonColumnLabel_(columnNumber) {
   var headers =
-    BULLETIN_HEADER_CONTRACTS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
+    BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
   var header = headers[columnNumber - 1];
   if (headers.indexOf(header) === headers.lastIndexOf(header)) {
     return header;
@@ -355,7 +355,7 @@ function findUnknownScheduleNames_(range, lookup) {
   }
   var sheet = range.getSheet();
   var headers =
-    BULLETIN_HEADER_CONTRACTS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
+    BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
   var values = range.getDisplayValues();
   var seen = {};
   var unknown = [];
