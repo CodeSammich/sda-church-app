@@ -315,9 +315,8 @@ out.
 After a release merges into `main`:
 
 1. Approve the run's `production` deployment when nobody is making a bulletin, so
-   the menu doesn't change under them. A header the release renames, reorders, or
-   removes must be changed in the sheet first; a header it adds is typed after
-   the deploy (see the [Change checklist](bulletin-automation.md#change-checklist)).
+   the menu doesn't change under them, and after any sheet change the release
+   needs, such as a new tab (see the [Change checklist](bulletin-automation.md#change-checklist)).
    A release that didn't change the bulletin code
    starts a run too; approving it republishes the current code. Rejecting a run
    skips that deploy. Don't leave a run waiting: later deploys queue behind it

@@ -31,7 +31,7 @@ const createSheet = (name: string, headers: string[], rows: string[][] = []) => 
 });
 
 const createIntakeSheet = (rows: string[][], headers = INTAKE_HEADERS) =>
-  createSheet('Sabbath Sermon Data', headers, rows);
+  createSheet('Weekly Data', headers, rows);
 
 const loadBulletinApi = (globals: Record<string, unknown> = {}) => {
   const context = createContext(globals);
@@ -44,7 +44,7 @@ const loadBulletinApi = (globals: Record<string, unknown> = {}) => {
 
 // The header problems for a workbook whose Sabbath Calendar matches its
 // contract and whose weekly tab has these headers under this name.
-const getIntakeContractIssues = (headers: string[], tabName = 'Sabbath Sermon Data') => {
+const getIntakeContractIssues = (headers: string[], tabName = 'Weekly Data') => {
   const context = loadBulletinApi();
   const scheduleHeaders = JSON.parse(
     runInContext(`JSON.stringify(BULLETIN_HEADER_CONTRACTS['Sabbath Calendar'])`, context) as string,
@@ -185,7 +185,7 @@ describe('Apps Script bulletin response merging', () => {
     ]);
   });
 
-  it('uses the reviewed Sabbath Sermon Data row for bulletin content', () => {
+  it('uses the reviewed Weekly Data row for bulletin content', () => {
     const intakeRows = [
       [
         '2026-08-08',
@@ -201,7 +201,7 @@ describe('Apps Script bulletin response merging', () => {
     ];
     const spreadsheet = {
       getSheetByName: (name: string) =>
-        name === 'Sabbath Sermon Data'
+        name === 'Weekly Data'
           ? createIntakeSheet(intakeRows)
           : null,
     };
@@ -243,8 +243,7 @@ describe('Apps Script bulletin response merging', () => {
     const row = ['2026-10-31', 'Brooklyn', '', '', '', '', '', '', ''];
     const spreadsheet = {
       getSheetByName: (name: string) =>
-        // The tab may already have its new name.
-        name === 'Weekly Hymns & Sermon'
+        name === 'Weekly Data'
           ? createSheet(name, headers, [
               [...row, '第413首 教會根基', '', 'AH 73 Holy, Holy, Holy', 'It Is Well'],
             ])
@@ -270,31 +269,25 @@ describe('Apps Script bulletin response merging', () => {
     expect(location.specialMusicTitle).toBe('It Is Well');
   });
 
-  it('accepts the weekly tab before and after its new headers are added, under either name', () => {
-    expect(getIntakeContractIssues(INTAKE_HEADERS)).toEqual([]);
-    expect(getIntakeContractIssues([...INTAKE_HEADERS, '', '', '', ''])).toEqual([]);
-    expect(getIntakeContractIssues([...INTAKE_HEADERS, 'Sabbath School Hymn 1'])).toEqual([]);
+  it('reads only the Weekly Data tab, which needs all thirteen headers', () => {
     expect(getIntakeContractIssues([...INTAKE_HEADERS, ...NEW_INTAKE_HEADERS])).toEqual([]);
-    expect(
-      getIntakeContractIssues([...INTAKE_HEADERS, ...NEW_INTAKE_HEADERS], 'Weekly Hymns & Sermon'),
-    ).toEqual([]);
+    // The tab before #558, under its old name, is no longer read.
+    expect(getIntakeContractIssues(INTAKE_HEADERS, 'Sabbath Sermon Data')).toEqual([
+      'Missing required sheet: Weekly Data',
+    ]);
+    expect(getIntakeContractIssues([...INTAKE_HEADERS, 'Sabbath School Hymn 1'])).toEqual([
+      'Weekly Data! column 11 must be "Sabbath School Hymn 2" (found "")',
+      'Weekly Data! column 12 must be "Sabbath School Hymn 3" (found "")',
+      'Weekly Data! column 13 must be "Special Music Title" (found "")',
+    ]);
   });
 
-  it('still rejects a wrong, moved, or extra header on the weekly tab', () => {
-    expect(getIntakeContractIssues([...INTAKE_HEADERS, 'Opening Hymn'])).toEqual([
-      'Sabbath Sermon Data! column 10 must be "Sabbath School Hymn 1" (found "Opening Hymn")',
-    ]);
+  it('rejects a wrong, moved, or extra header on the weekly tab', () => {
     expect(
-      getIntakeContractIssues([...INTAKE_HEADERS, '', '', '', 'Special Music', 'Notes']),
-    ).toEqual([
-      'Sabbath Sermon Data! column 13 must be "Special Music Title" (found "Special Music")',
-      'Sabbath Sermon Data! column 14 must be "" (found "Notes")',
-    ]);
-    expect(getIntakeContractIssues(INTAKE_HEADERS.slice(0, 8))).toEqual([
-      'Sabbath Sermon Data! column 9 must be "Bible Verses" (found "")',
-    ]);
-    expect(getIntakeContractIssues(INTAKE_HEADERS, 'Weekly Sermon Data')).toEqual([
-      'Missing required sheet: Sabbath Sermon Data',
+      getIntakeContractIssues([...INTAKE_HEADERS, 'Opening Hymn', ...NEW_INTAKE_HEADERS.slice(1)]),
+    ).toEqual(['Weekly Data! column 10 must be "Sabbath School Hymn 1" (found "Opening Hymn")']);
+    expect(getIntakeContractIssues([...INTAKE_HEADERS, ...NEW_INTAKE_HEADERS, 'Notes'])).toEqual([
+      'Weekly Data! column 14 must be "" (found "Notes")',
     ]);
   });
 });

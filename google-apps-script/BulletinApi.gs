@@ -16,7 +16,10 @@
 
 var CONFIG = Object.freeze({
   scheduleSheetName: 'Sabbath Calendar',
-  intakeSheetName: 'Sabbath Sermon Data',
+  // Was 'Sabbath Sermon Data' until #558 added four columns in a new tab, so
+  // the live script could keep reading the old one until this deploy. The old
+  // tab is no longer read.
+  intakeSheetName: 'Weekly Data',
   cacheSeconds: 120,
   // Bump when the public bulletin shape or source contract changes so cached
   // pre-migration responses do not hide newly added roster fields.
@@ -83,7 +86,7 @@ var SAFE_SINGLE_VALUES = Object.freeze([
 
 var PRIVATE_NAME_PLACEHOLDER = 'Name withheld';
 
-// Sabbath Sermon Data is the reviewed, staff-managed source for sermon content.
+// Weekly Data is the reviewed, staff-managed source for sermon content.
 // These headers are intentionally concise so final owners can correct a week's
 // content directly without an append-only response workflow.
 var BULLETIN_INTAKE_SCHEMA = Object.freeze([
@@ -134,7 +137,7 @@ var BULLETIN_HEADER_CONTRACTS = Object.freeze({
     'Encouragement',
     'Sabbath School',
   ]),
-  'Sabbath Sermon Data': Object.freeze([
+  'Weekly Data': Object.freeze([
     'Date',
     'Location',
     'English Hymn of Praise',
@@ -151,31 +154,6 @@ var BULLETIN_HEADER_CONTRACTS = Object.freeze({
   ]),
 });
 
-// How many of a contract's last headers the sheet may still lack. A blank
-// header in one of those columns passes, so the deploy can go first and the
-// technology group can add the headers afterwards (#558). Anything typed there
-// must still match exactly.
-var BULLETIN_OPTIONAL_TRAILING_HEADER_COUNTS = Object.freeze({
-  'Sabbath Sermon Data': 4,
-});
-
-// Other names a contract's tab may have, so it can be renamed after a deploy
-// without breaking the bulletin. The contract's own name is tried first.
-var BULLETIN_SHEET_NAME_ALIASES = Object.freeze({
-  'Sabbath Sermon Data': Object.freeze(['Weekly Hymns & Sermon']),
-});
-
-function getBulletinSheet_(spreadsheet, sheetName) {
-  var names = [sheetName].concat(BULLETIN_SHEET_NAME_ALIASES[sheetName] || []);
-  for (var index = 0; index < names.length; index += 1) {
-    var sheet = spreadsheet.getSheetByName(names[index]);
-    if (sheet) {
-      return sheet;
-    }
-  }
-  return null;
-}
-
 // Staff-facing text (dialogs, alerts, errors, notes) is in English and
 // Simplified Chinese, because the people who run the bulletin read Simplified.
 // Everything printed stays in Traditional Chinese on purpose. Keep the two
@@ -186,23 +164,18 @@ var BULLETIN_HEADER_CONTRACT_HELP_TEXT =
 function getBulletinHeaderContractIssues_(spreadsheet) {
   var issues = [];
   Object.keys(BULLETIN_HEADER_CONTRACTS).forEach(function (sheetName) {
-    var sheet = getBulletinSheet_(spreadsheet, sheetName);
+    var sheet = spreadsheet.getSheetByName(sheetName);
     if (!sheet) {
       issues.push('Missing required sheet: ' + sheetName);
       return;
     }
 
     var expected = BULLETIN_HEADER_CONTRACTS[sheetName];
-    var optionalFrom =
-      expected.length - (BULLETIN_OPTIONAL_TRAILING_HEADER_COUNTS[sheetName] || 0);
     var actual = readTable_(sheet).headers;
     var width = Math.max(expected.length, actual.length);
     for (var index = 0; index < width; index += 1) {
       var expectedHeader = expected[index] || '';
       var actualHeader = actual[index] || '';
-      if (index >= optionalFrom && index < expected.length && isBlank_(actualHeader)) {
-        continue;
-      }
       if (normalizeHeader_(actualHeader) !== normalizeHeader_(expectedHeader)) {
         issues.push(
           sheetName + '! column ' + (index + 1) + ' must be "' + expectedHeader +
@@ -324,7 +297,7 @@ function buildBulletin_(requestedDate, options) {
     Boolean(options && options.includeFullNames),
   );
 
-  // Sabbath Sermon Data is the sole reviewed content source for both locations.
+  // Weekly Data is the sole reviewed content source for both locations.
   // Nonblank values are applied after the schedule join so a final owner can
   // correct sermon material without changing the roster sheet.
   populateBulletinIntake_(
@@ -493,7 +466,7 @@ function populateBulletinIntake_(location, intakeRows) {
 }
 
 function getBulletinIntakeRows_(spreadsheet, requestedDate, location) {
-  var sheet = getBulletinSheet_(spreadsheet, CONFIG.intakeSheetName);
+  var sheet = spreadsheet.getSheetByName(CONFIG.intakeSheetName);
   if (!sheet) {
     return null;
   }

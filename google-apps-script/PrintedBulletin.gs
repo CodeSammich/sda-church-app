@@ -38,8 +38,10 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   qrImageFolderProperty: 'PRINTED_BULLETIN_QR_FOLDER_ID',
   qrImageFolderId: '11esgvM1uhY5e94A_eL2ITI0iKNLIFEEr',
   legacyBrooklynCoverImageProperty: 'BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID',
+  // The dialog links to the Weekly Data tab itself (getBulletinIntakeSheetUrl_);
+  // this opens the spreadsheet when the tab can't be looked up.
   bulletinIntakeSheetUrl:
-    'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit#gid=1768045043',
+    'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit',
   printedAnnouncementsPropertyPrefix: 'PRINTED_ANNOUNCEMENTS_',
   printedBibleVersePropertyPrefix: 'PRINTED_BIBLE_VERSE_',
   printedAnnouncementsMaxEntries: 12,
@@ -439,11 +441,11 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '</style></head><body>' +
     '<div id="formView">' +
     '<h2 class="section-heading">1. Update the digital bulletin / 第一步：更新手机版周刊</h2>' +
-    '<div class="admin-reminder"><strong>Instructions / 使用说明：</strong> Check the current week in the app, then add or update one row per location in Sabbath Sermon Data. Nonblank values there feed both the digital and printed bulletins; no separate intake workflow is required.' +
-    '<br>请先在应用中查看本周的周刊，然后在“Sabbath Sermon Data”中为每个地点添加或更新一行。该工作表中的非空单元格会同时用于手机版和纸质周刊，无需另外提交。</div>' +
+    '<div class="admin-reminder"><strong>Instructions / 使用说明：</strong> Check the current week in the app, then add or update one row per location in Weekly Data. Nonblank values there feed both the digital and printed bulletins; no separate intake workflow is required.' +
+    '<br>请先在应用中查看本周的周刊，然后在“Weekly Data”中为每个地点添加或更新一行。该工作表中的非空单元格会同时用于手机版和纸质周刊，无需另外提交。</div>' +
     '<div class="form-links"><a class="form-button" href="' +
-    escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.bulletinIntakeSheetUrl) +
-    '">↗ Open Sabbath Sermon Data / 打开安息日讲道数据</a></div></div>' +
+    escapePrintedBulletinHtml_(getBulletinIntakeSheetUrl_()) +
+    '">↗ Open Weekly Data / 打开 Weekly Data</a></div></div>' +
     '<h2 class="section-heading" style="margin-top:20px;">2. Create the printed bulletin / 第二步：创建纸质周刊</h2>' +
     '<form id="bulletinForm">' +
     '<label for="date">Sabbath date <span class="required-mark" aria-hidden="true">*</span><br>安息日日期</label>' +
@@ -476,7 +478,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<option value="">Choose a book first — 请先选择书卷</option></select></div>' +
     '<div><label for="verses">Verse(s) <span class="required-mark" aria-hidden="true">*</span><br>节</label><input id="verses" type="text" placeholder="11 or 11-15" inputmode="text" required></div>' +
     '</div>' +
-    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in Sabbath Sermon Data, it will appear here automatically. Check or edit it before creating.<br>选择书卷和章，然后输入一节或一段经文，例如 11 或 11-15。如果讲员已在“Sabbath Sermon Data”提交圣经经文，系统会自动填入。创建前请确认或修改。</div>' +
+    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in Weekly Data, it will appear here automatically. Check or edit it before creating.<br>选择书卷和章，然后输入一节或一段经文，例如 11 或 11-15。如果讲员已在“Weekly Data”提交圣经经文，系统会自动填入。创建前请确认或修改。</div>' +
     '<label>Printed announcements / 纸质周刊通知</label>' +
     '<div class="help">Optional. Add one entry per card. These entries are printed only; they are not shown in the mobile bulletin.<br>可选。每张卡片输入一条通知。这些通知只打印在纸质周刊上，不会显示在手机版周刊中。</div>' +
     '<div id="announcementList"></div>' +
@@ -733,7 +735,7 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
       });
     }
   }
-  // The reviewed Sabbath Sermon Data row is the source of truth for this
+  // The reviewed Weekly Data row is the source of truth for this
   // prompt. A prior printed-bulletin memory is only a fallback when that
   // managed intake cell is blank, so an old manual selection cannot mask a
   // newly reviewed Bible reference.
@@ -914,6 +916,20 @@ function getPrintedBibleVersePropertyKey_(date, location) {
     '_' +
     date
   );
+}
+
+// A link straight to the Weekly Data tab, or else to the spreadsheet.
+function getBulletinIntakeSheetUrl_() {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = spreadsheet && spreadsheet.getSheetByName(CONFIG.intakeSheetName);
+    if (sheet) {
+      return spreadsheet.getUrl() + '#gid=' + sheet.getSheetId();
+    }
+  } catch (error) {
+    // Outside the bound spreadsheet, such as in tests.
+  }
+  return PRINTED_BULLETIN_CONFIG.bulletinIntakeSheetUrl;
 }
 
 function escapePrintedBulletinHtml_(value) {

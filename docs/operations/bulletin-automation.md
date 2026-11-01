@@ -42,7 +42,7 @@ Contents:
 ```text
 Master spreadsheet
 ├── Sabbath Calendar       roster, service assignments, metadata
-├── Sabbath Sermon Data    reviewed final-owner bulletin content
+├── Weekly Data           reviewed final-owner bulletin content
 ├── Name Dictionary        private physical-print name resolution
 └── Leadership             pastors and elders, for printed titles
         │
@@ -163,7 +163,7 @@ The first-row contract is protected for the technology group
 the schedule. Ordinary schedule cells remain governed by the spreadsheet's
 normal sharing permissions.
 
-### 3. `Sabbath Sermon Data`
+### 3. `Weekly Data`
 
 This is the reviewed, final-owner intake sheet, filled in week by week. Keep
 one row per Sabbath and location. Row 1 must be:
@@ -176,9 +176,16 @@ Sabbath School Hymn 1 | Sabbath School Hymn 2 | Sabbath School Hymn 3 |
 Special Music Title
 ```
 
-The tab may also be named `Weekly Hymns & Sermon`. The script looks for
-`Sabbath Sermon Data` first, then that name, so the tab can be renamed at any
-time after the #558 deploy (`BULLETIN_SHEET_NAME_ALIASES` in `BulletinApi.gs`).
+Until #558 this tab was `Sabbath Sermon Data`, with the first nine columns.
+#558's four columns went into a copy named `Weekly Data`, made before its
+deploy, so the script running then kept reading the old tab and the new one
+read the copy. The old tab is no longer read; delete it once that release is in
+both app stores.
+
+Opening the spreadsheet adds the rows to fill in: a `Queens` and a `Brooklyn`
+row, with the date, for this coming Sabbath and the one after, the two weeks the
+app shows (see [Automatic quarter and visibility
+maintenance](#automatic-quarter-and-visibility-maintenance)).
 
 Rules:
 
@@ -198,10 +205,6 @@ Rules:
 - `Special Music Title` is the piece performed. Who performs it stays in the
   `Sabbath Calendar`'s `Special Music`, which is a Queens column, so Brooklyn's
   piece shows with `TBD` for its performer.
-- The last four headers may still be blank: the script accepts a blank header
-  there, so its deploy can come before the technology group types them
-  (`BULLETIN_OPTIONAL_TRAILING_HEADER_COUNTS`). Anything typed there must match
-  exactly, as everywhere else in the contract.
 - The week's Sabbath School lesson needs no column. Both bulletins read its
   title from the Adventech lesson catalog: the adult lesson whose week (Sabbath
   to Friday) ends the day before that Sabbath, since the class discusses the
@@ -262,7 +265,7 @@ maintenance and setup operations stay hidden.
 
 On open, the script:
 
-1. verifies the exact header contracts for `Sabbath Calendar` and `Sabbath Sermon Data`;
+1. verifies the exact header contracts for `Sabbath Calendar` and `Weekly Data`;
 2. installs or refreshes strict header validation with a bilingual message;
 3. normalizes the header protections and restricts their editors to
    `technology@nyccsda.org`;
@@ -324,6 +327,14 @@ The schedule-maintenance behavior is intentionally non-destructive:
 The operation is idempotent. It compares existing dates before appending, so
 opening the sheet repeatedly does not create duplicates. If rows already exist
 for a future quarter, the script does not delete or rewrite them.
+
+The same run gives `Weekly Data` a `Queens` and a `Brooklyn` row, with the date
+filled in, for this coming Sabbath (today, on a Saturday) and the one after
+(`weeklyDataSabbaths` in `BULLETIN_SCHEDULE_MAINTENANCE_CONFIG`). It adds a row
+only where that date and location has none, however the date is written, so a
+row staff added themselves is never repeated. New rows go at the bottom, with
+the date formatted `yyyy-mm-dd`; nothing is removed, reordered, or hidden. A
+problem here is logged and doesn't stop the `Sabbath Calendar` upkeep.
 
 ### Roster conflict highlights and unknown names
 
@@ -401,14 +412,14 @@ the tab by hand still work.
 For a requested date, the API builds data in this order:
 
 1. `Sabbath Calendar` supplies the canonical date, quarter, metadata, and roster.
-2. Nonblank values from matching `Sabbath Sermon Data` rows are applied by
+2. Nonblank values from matching `Weekly Data` rows are applied by
    location. If duplicate rows exist, the lowest row in the sheet wins for each
    nonblank field (the code would order them by a `Last Updated` or `Timestamp`
    column, but the current contract has neither); a blank later cell does not
    erase an older nonblank value.
 
 The printed prompt has one additional fallback for its manual, print-only verse
-selection. The reviewed `Sabbath Sermon Data → Bible Verses` value takes priority;
+selection. The reviewed `Weekly Data → Bible Verses` value takes priority;
 only when it is blank may a saved printed override or older fallback memory be
 used. This prevents an old manual selection from masking newly reviewed intake.
 
@@ -546,7 +557,7 @@ it would soon be out of date, and Google Docs can download a PDF whenever one is
 needed. It opens a staff dialog that:
 
 1. defaults to the closest upcoming Saturday;
-2. links the operator to `Sabbath Sermon Data`;
+2. links the operator to the `Weekly Data` tab;
 3. lets the operator select Queens or Brooklyn;
 4. supports Queens Regular or Queens Holy Communion; Brooklyn Communion is
    intentionally disabled; and
@@ -774,8 +785,8 @@ changes the URL and requires a coordinated mobile-app update.
 
 | Symptom | Likely cause | Corrective action |
 | --- | --- | --- |
-| App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Sabbath Sermon Data`; allow up to 120 seconds for API cache expiry |
-| New intake verse is ignored by print prompt | Old print memory or override | Check that `Sabbath Sermon Data → Bible Verses` is nonblank; it has priority over old memory |
+| App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`; allow up to 120 seconds for API cache expiry |
+| New intake verse is ignored by print prompt | Old print memory or override | Check that `Weekly Data → Bible Verses` is nonblank; it has priority over old memory |
 | API returns `No schedule found for …` | Missing `Sabbath Calendar` date row (a missing or renamed tab shows as a contract violation instead) | Restore the exact tab name and a matching Date row |
 | A field moved to the wrong location | Header renamed/reordered or repeated header occurrence changed | Restore the exact header contract and deploy matching code |
 | Header says contract violation | A protected header was changed | Update Apps Script/tests/app first; technology group restores the header |
@@ -809,20 +820,22 @@ Before changing a bulletin field, sheet column, or layout:
 - verify a generated Doc and public API response for the affected location.
 
 For header changes, change the repository contract, tests, and mobile app
-first. The running script rejects any header it doesn't expect, so what comes
-next depends on the change:
+first. The running script rejects any header it doesn't expect, so the sheet
+can't simply be edited before or after the deploy without a gap:
 
-- **Adding columns:** add them after the last column, and count them in
-  `BULLETIN_OPTIONAL_TRAILING_HEADER_COUNTS`, so the new script accepts them
-  blank. Approve the deploy first; then have the technology group type the new
-  headers. The bulletin keeps working throughout. The #558 columns were added
-  this way, typed only after the deploy, since the old script rejects the new
-  headers.
-- **Renaming, reordering, or removing columns:** have the technology group
-  update the protected sheet header, then approve the deploy straight away and
-  verify. The release's merge starts the deploy, but it waits for approval, so
-  hold it until the header is updated. Between the two steps the bulletin shows
-  a column error.
+- **For the weekly tab, use a new tab, as #558 did:** point the code at a new
+  tab name (`CONFIG.intakeSheetName`) and give the contract that name. Before
+  the deploy, the technology group copies the current tab under the new name
+  and changes the copy's headers. The running script keeps reading the old tab
+  until the deploy, and the new script reads the copy from then on, so the
+  bulletin keeps working throughout. Rows entered in the old tab after the copy
+  was made don't carry over: make the copy close to the deploy, or copy those
+  rows across before approving it.
+- **For the `Sabbath Calendar`,** whose name other code and staff rely on,
+  have the technology group update the protected header, then approve the
+  deploy straight away and verify. The release's merge starts the deploy, but
+  it waits for approval, so hold it until the header is updated. Between the
+  two steps the bulletin shows a column error.
 
 Do not solve a contract mismatch by making the public API read arbitrary
 columns.
