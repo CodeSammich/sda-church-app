@@ -509,8 +509,8 @@ preview surface, not the canonical release channel.
   gets a **Search YouTube** button instead (see
   [Bulletin hymn resolution](../feature_designs/bulletin_hymn_resolution.md)).
 - Brooklyn uses the label `Sabbath Encouragement`, not `Sabbath Message`.
-- The centered `Schedule` pill on its own row below the week selector links to the
-  master spreadsheet, not to a separate intake link.
+- The bulletin doesn't link to the master spreadsheet, which only church
+  accounts can open (#553).
 - Every blank content field displays `TBD`; a populated field suppresses the
   cautious joint-service fallback note for Brooklyn.
 
