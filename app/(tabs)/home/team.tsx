@@ -66,7 +66,7 @@ export default function MeetOurTeamScreen() {
     es: {
       title: 'Conoce a nuestro equipo',
       seniorPastor: 'Pastor Principal',
-      bibleWorker: 'Obrero Bíblico',
+      bibleWorker: 'Obrera Bíblica',
       childrensMinistry: 'Ministerio Infantil',
       call: 'Llamar',
       email: 'Correo',
@@ -135,7 +135,12 @@ export default function MeetOurTeamScreen() {
                     { color: theme.colors.tertiary, marginBottom: 8, fontWeight: 'bold' },
                   ]}
                 >
-                  {labels[member.roleKey as keyof typeof labels]}
+                  {[
+                    labels[member.roleKey as keyof typeof labels],
+                    member.roleNote?.[language as keyof typeof allLabels] || member.roleNote?.en,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </Text>
                 <Text
                   variant="bodyMedium"
