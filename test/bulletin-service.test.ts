@@ -141,6 +141,12 @@ describe('bulletin service', () => {
     expect(isBulletinLocationEmpty(location)).toBe(false);
   });
 
+  it('counts the Sabbath School hymns and special music piece as location data', () => {
+    expect(isBulletinLocationEmpty({ ...emptyLocation(), sabbathSchoolHymns: ['', 'TBD'] })).toBe(true);
+    expect(isBulletinLocationEmpty({ ...emptyLocation(), sabbathSchoolHymns: ['', '12'] })).toBe(false);
+    expect(isBulletinLocationEmpty({ ...emptyLocation(), specialMusicTitle: 'It Is Well' })).toBe(false);
+  });
+
   it('treats only blank and TBD values as absent optional bulletin data', () => {
     expect(hasBulletinValue('')).toBe(false);
     expect(hasBulletinValue('  TBD  ')).toBe(false);
