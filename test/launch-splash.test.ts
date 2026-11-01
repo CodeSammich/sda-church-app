@@ -25,7 +25,7 @@ jest.mock('expo-splash-screen', () => ({
 // in Jest (its CSS animations need the native module), so this covers what
 // LaunchSplash uses.
 jest.mock('react-native-reanimated', () => {
-  const { useEffect, useRef } = require('react');
+  const { useEffect, useRef } = require('react') as typeof import('react');
   const { View } = require('react-native');
   const reactions = new Set<() => void>();
   const run = (worklet: () => unknown) => worklet();
