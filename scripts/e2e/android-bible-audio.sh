@@ -301,6 +301,31 @@ scenario_pause_and_resume() {
     { echo "resumed at ${resumed_at}ms after pausing at ${paused_at}ms"; return 1; }
 }
 
+# Earbuds' previous and next (#543). Started in Leviticus 2: previous more
+# than 3 seconds in restarts the chapter, as Android does; at its start, it goes
+# back to Leviticus 1, a chapter before the one that started playing; and next
+# returns to Leviticus 2, so the queue's numbering survived the chapters
+# inserted ahead of it. Paused, so the position stays under 3 seconds.
+media_key() { sh_ input keyevent "$1" >/dev/null; }
+position_under() { [ "$(session_field position)" -lt "$1" ] 2>/dev/null; }
+paused_with_title() { is_paused && title_has "$1"; }
+scenario_previous_before_start() {
+  open_chapter LEV 2
+  locate_controls || { echo 'no play button'; return 1; }
+  tap_play_pause
+  wait_until 60 'Leviticus 2 playing' playing_with_title ' 2 ' || return 1
+  sleep 6
+  title_has ' 2 ' || { echo "moved to $(session_field title) by itself"; return 1; }
+  media_key KEYCODE_MEDIA_PREVIOUS
+  media_key KEYCODE_MEDIA_PAUSE
+  wait_until 20 'Leviticus 2 restarted and paused' paused_with_title ' 2 ' || return 1
+  position_under 3000 || { echo "previous left Leviticus 2 at $(session_field position)ms"; return 1; }
+  media_key KEYCODE_MEDIA_PREVIOUS
+  wait_until 20 'Leviticus 1 after previous at the start' title_has ' 1 ' || return 1
+  media_key KEYCODE_MEDIA_NEXT
+  wait_until 20 'Leviticus 2 after next' title_has ' 2 ' || return 1
+}
+
 sh_ cmd media_session volume --stream 3 --set 0 >/dev/null 2>&1
 prepare_app
 if [ "${E2E_PRIMARY_BLOCKED:-0}" = 1 ]; then
@@ -310,6 +335,7 @@ run next-chapter-screen-off scenario_next_chapter_screen_off
 run dead-zone-screen-off scenario_dead_zone_screen_off
 run mid-chapter-offline scenario_mid_chapter_offline
 run pause-and-resume scenario_pause_and_resume
+run previous-before-start scenario_previous_before_start
 wake
 
 if [ "$failures" -gt 0 ]; then

@@ -62,7 +62,7 @@ export const activateBibleAudioLockScreen = (
 
 type BibleAudioInitialQueuePlayer = Pick<
   AudioPlayer & BibleAudioQueueControls,
-  'setActiveForLockScreen' | 'setCurrentChapter' | 'setQueue'
+  'setActiveForLockScreen' | 'setCurrentChapter' | 'setQueue' | 'setPreviousQueue'
 >;
 
 /**
@@ -76,6 +76,7 @@ export const initializeBibleAudioPlayback = ({
   player,
   currentChapter,
   queue,
+  previousQueue,
   metadata,
   onQueueError,
   onLockScreenError,
@@ -83,6 +84,8 @@ export const initializeBibleAudioPlayback = ({
   player: BibleAudioInitialQueuePlayer;
   currentChapter?: BibleAudioQueueItem;
   queue: BibleAudioQueueItem[];
+  /** The chapters before, nearest first, for the media buttons' previous (#543). */
+  previousQueue?: BibleAudioQueueItem[];
   metadata: AudioMetadata;
   onQueueError?: (error: unknown) => void;
   onLockScreenError?: (error: unknown) => void;
@@ -92,6 +95,13 @@ export const initializeBibleAudioPlayback = ({
     player.setQueue?.(queue);
   } catch (error) {
     onQueueError?.(error);
+  }
+  if (previousQueue) {
+    try {
+      player.setPreviousQueue?.(previousQueue);
+    } catch (error) {
+      onQueueError?.(error);
+    }
   }
   try {
     activateBibleAudioLockScreen(player, metadata);
@@ -203,6 +213,30 @@ export const getFollowingBibleChapters = (
   return chapters;
 };
 
+/** The chapters before one, nearest first, across book boundaries. */
+export const getPrecedingBibleChapters = (
+  books: TranslationBook[],
+  bookId: string,
+  chapter: number,
+  limit: number,
+) => {
+  const chapters: Array<{ book: TranslationBook; chapter: number }> = [];
+  let bookIndex = books.findIndex((candidate) => candidate.id === bookId);
+  let previousChapter = chapter - 1;
+
+  while (bookIndex >= 0 && chapters.length < limit) {
+    if (previousChapter >= 1) {
+      chapters.push({ book: books[bookIndex], chapter: previousChapter });
+      previousChapter -= 1;
+    } else {
+      bookIndex -= 1;
+      previousChapter = bookIndex >= 0 ? books[bookIndex].numberOfChapters : 0;
+    }
+  }
+
+  return chapters;
+};
+
 /** Retargets a HelloAO recording URL while preserving its narrator filename. */
 export const retargetHelloAoAudioUrl = (
   sourceUrl: string,
@@ -241,6 +275,8 @@ interface BibleAudioQueueOptions {
   books: TranslationBook[];
   currentBookId: string;
   currentChapter: number;
+  /** The chapters after the current one, or before it, nearest first. */
+  direction?: 'following' | 'preceding';
   limit?: number;
   sleepTimer?: BibleAudioSleepTimerSetting;
   preferredSourceId?: string;
@@ -250,13 +286,18 @@ interface BibleAudioQueueOptions {
   translationLabel: string;
 }
 
-/** Builds future track descriptors without fetching chapter text or audio. */
+/**
+ * Builds track descriptors for the chapters after the current one, or before
+ * it, without fetching chapter text or audio. The sleep timer limits both: a
+ * chapter timer queues none, and a book timer stays in the book.
+ */
 export const buildBibleAudioQueue = ({
   albumTitle,
   artist,
   books,
   currentBookId,
   currentChapter,
+  direction = 'following',
   // Keep descriptors available when background React effects are suspended.
   // The web adapter still preloads only the immediate next recording.
   limit = 24,
@@ -267,7 +308,7 @@ export const buildBibleAudioQueue = ({
   translationId,
   translationLabel,
 }: BibleAudioQueueOptions): BibleAudioQueueItem[] =>
-  getFollowingBibleChapters(
+  (direction === 'preceding' ? getPrecedingBibleChapters : getFollowingBibleChapters)(
     books,
     currentBookId,
     currentChapter,

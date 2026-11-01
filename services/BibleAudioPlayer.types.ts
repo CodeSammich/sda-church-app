@@ -22,6 +22,11 @@ export interface BibleAudioQueueControls {
   // Web and Android adapters own chapter queues; iOS uses the single player.
   setCurrentChapter?: (item: BibleAudioQueueItem) => void;
   setQueue?: (items: BibleAudioQueueItem[]) => void;
+  /**
+   * Android only: the chapters before the current one, nearest first, so the
+   * media buttons' previous can go back past the chapter that started (#543).
+   */
+  setPreviousQueue?: (items: BibleAudioQueueItem[]) => void;
   setRemoteChapterHandlers?: (
     handlers?: {
       onNext?: (activeChapter?: BibleAudioChapterIdentity) => void;
