@@ -1697,6 +1697,69 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(row(rows.worship, 'Special Music')?.slice(1)).toEqual(['It Is Well', 'Ruoxi Tan']);
   });
 
+  it('carries the Weekly Data hymn cells into both printed Sabbath School rows', () => {
+    const makeSheet = (name: string, rows: string[][]) => ({
+      getName: () => name,
+      getDataRange: () => ({ getValues: () => rows, getDisplayValues: () => rows }),
+    });
+    const context = loadAppsScript({ Logger: { log: () => undefined } });
+    const scheduleHeaders = JSON.parse(
+      runInContext(`JSON.stringify(BULLETIN_SHEET_COLUMNS['Sabbath Calendar'])`, context) as string,
+    ) as string[];
+    const weeklyHeaders = JSON.parse(
+      runInContext(`JSON.stringify(BULLETIN_SHEET_COLUMNS['Weekly Data'])`, context) as string,
+    ) as string[];
+    const weeklyRow = (location: string, hymns: string[]) => {
+      const row = weeklyHeaders.map(() => '');
+      row[weeklyHeaders.indexOf('Date')] = '2026-11-07';
+      row[weeklyHeaders.indexOf('Location')] = location;
+      hymns.forEach((hymn, index) => {
+        row[weeklyHeaders.indexOf(`Sabbath School Hymn ${index + 1}`)] = hymn;
+      });
+      return row;
+    };
+    (context as { SpreadsheetApp: unknown }).SpreadsheetApp = {
+      getActiveSpreadsheet: () => ({
+        getSheetByName: (name: string) =>
+          ({
+            'Sabbath Calendar': makeSheet(name, [scheduleHeaders, ['2026-11-07', ...Array(scheduleHeaders.length - 1).fill('')]]),
+            'Weekly Data': makeSheet(name, [
+              weeklyHeaders,
+              weeklyRow('Queens', ['第413首 教會根基', '', 'AH 73 Holy, Holy, Holy']),
+              weeklyRow('Brooklyn', ['205']),
+            ]),
+          } as Record<string, unknown>)[name] ?? null,
+      }),
+    };
+
+    const rows = JSON.parse(
+      runInContext(
+        `var captured = [];
+         appendPanelHeading_ = appendCenteredText_ = appendBibleReadingPanel_ = function () {};
+         appendHalfSpacer_ = appendCompactItalicCenteredText_ = function () {};
+         appendProgramTable_ = appendBrooklynProgramTable_ = function (cell, rows) {
+           captured = captured.concat(rows);
+         };
+         // As the Create Google Doc dialog builds it.
+         var bulletin = preparePrintedBulletinForPrint_(
+           buildBulletin_('2026-11-07', { includeFullNames: true }),
+           {},
+         );
+         appendStudyPanel_('study', bulletin);
+         appendBrooklynStudyPanel_('brooklyn-study', bulletin);
+         JSON.stringify(captured)`,
+        context,
+      ) as string,
+    ) as string[][];
+    const row = (label: string) => rows.find(([first]) => first.includes(label))?.[1];
+
+    // Queens: in order, without the blank middle cell.
+    // AH 73 Holy, Holy, Holy is 505 #2, 聖哉真神.
+    expect(row('開會及結會詩歌')).toBe('第413首 教會根基 · 第2首\nAH 348 · AH 73 Holy, Holy, Holy');
+    // Brooklyn: a bare number is a Chinese hymnal number.
+    expect(row('開會及合班唱詩')).toBe('第205首\nAH 206');
+  });
+
   it('merges adjacent Brooklyn Sabbath School rows with the same assignment', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
