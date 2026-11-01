@@ -34,7 +34,6 @@ jobs:
     # Other PRs into main, such as Dependabot's security updates, can't
     # merge there, so they skip it.
     if: >-
-      github.event.repository.fork == false &&
       (github.event_name != 'pull_request' ||
         (github.head_ref == 'release-candidate' &&
           github.event.pull_request.head.repo.full_name == github.repository))
