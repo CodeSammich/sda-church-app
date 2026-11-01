@@ -1,5 +1,6 @@
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { LaunchSplash } from '@/components/LaunchSplash';
 import {
   DEFAULT_TEXT_SCALE,
   getEffectiveTextScale,
@@ -224,6 +225,10 @@ const needsCjkSystemFont = (language: SupportedLanguage) =>
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// The church symbol rises into view while the app loads (#538). The key-screen
+// builds skip it so their shots don't wait for it, and the web doesn't play it.
+const playsLaunchAnimation = Platform.OS !== 'web' && !isKeyScreensBuild();
+
 /**
  * Context to manage PWA updates across the application.
  */
@@ -259,6 +264,7 @@ export default function RootLayout() {
     getAppTheme(colorScheme === THEME_DARK, false, DEFAULT_TEXT_SCALE),
   );
   const [isReady, setIsReady] = useState(false);
+  const [launchSplashVisible, setLaunchSplashVisible] = useState(playsLaunchAnimation);
   const [showSetup, setShowSetup] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<any>(null);
@@ -810,62 +816,80 @@ export default function RootLayout() {
     }
   }, [loaded, isReady]);
 
+  const launchSplash = launchSplashVisible ? (
+    <LaunchSplash
+      appReady={loaded && isReady}
+      onDone={() => setLaunchSplashVisible(false)}
+    />
+  ) : null;
+
+  // The launch animation keeps its place in the tree when the app appears
+  // under it, so it carries on instead of starting again.
   if (!loaded || !isReady) {
-    return null;
+    return (
+      <>
+        {null}
+        {launchSplash}
+      </>
+    );
   }
 
   return (
-    <SafeAreaProvider>
-      <LanguageContext.Provider
-        value={{
-          language,
-          languageSelectionRevision,
-          setLanguage: handleSetLanguage,
-        }}
-      >
-        <TextSizeContext.Provider
+    <>
+      <SafeAreaProvider>
+        <LanguageContext.Provider
           value={{
-            setTextScale: handleSetTextScale,
-            textScale: effectiveTextScale,
-            preferredTextScale: textScale,
+            language,
+            languageSelectionRevision,
+            setLanguage: handleSetLanguage,
           }}
         >
-          <ThemeContext.Provider
+          <TextSizeContext.Provider
             value={{
-              themeMode,
-              setThemeMode: handleSetThemeMode,
-              toggleTheme: handleToggleTheme,
+              setTextScale: handleSetTextScale,
+              textScale: effectiveTextScale,
+              preferredTextScale: textScale,
             }}
           >
-            <UpdateContext.Provider
+            <ThemeContext.Provider
               value={{
-                updateAvailable,
-                onUpdate: handleUpdate,
-                onManualCheck: handleManualCheck,
-                onPassiveCheck: handlePassiveCheck,
-                updateStatus,
+                themeMode,
+                setThemeMode: handleSetThemeMode,
+                toggleTheme: handleToggleTheme,
               }}
             >
-              <RootLayoutNav
-                theme={theme}
-                showSetup={showSetup}
-                onCompleteSetup={onCompleteSetup}
-                installAvailable={
-                  !installPromptDismissed &&
-                  (installPrompt !== null || isIosSafariBrowser())
-                }
-                onInstall={handleInstall}
-                onDismissInstall={() => setInstallPromptDismissed(true)}
-                updateAvailable={updateAvailable}
-                onUpdate={handleUpdate}
-                updateStatus={updateStatus}
-                onDismissStatus={dismissUpdateStatus}
-              />
-            </UpdateContext.Provider>
-          </ThemeContext.Provider>
-        </TextSizeContext.Provider>
-      </LanguageContext.Provider>
-    </SafeAreaProvider>
+              <UpdateContext.Provider
+                value={{
+                  updateAvailable,
+                  onUpdate: handleUpdate,
+                  onManualCheck: handleManualCheck,
+                  onPassiveCheck: handlePassiveCheck,
+                  updateStatus,
+                }}
+              >
+                <RootLayoutNav
+                  theme={theme}
+                  showSetup={showSetup}
+                  onCompleteSetup={onCompleteSetup}
+                  installAvailable={
+                    !installPromptDismissed &&
+                    (installPrompt !== null || isIosSafariBrowser())
+                  }
+                  onInstall={handleInstall}
+                  onDismissInstall={() => setInstallPromptDismissed(true)}
+                  updateAvailable={updateAvailable}
+                  onUpdate={handleUpdate}
+                  updateStatus={updateStatus}
+                  onDismissStatus={dismissUpdateStatus}
+                  launchSplashVisible={launchSplashVisible}
+                />
+              </UpdateContext.Provider>
+            </ThemeContext.Provider>
+          </TextSizeContext.Provider>
+        </LanguageContext.Provider>
+      </SafeAreaProvider>
+      {launchSplash}
+    </>
   );
 }
 
@@ -880,6 +904,7 @@ function RootLayoutNav({
   onUpdate,
   updateStatus,
   onDismissStatus,
+  launchSplashVisible,
 }: {
   theme: AppTheme;
   showSetup: boolean;
@@ -891,6 +916,7 @@ function RootLayoutNav({
   onUpdate: () => void;
   updateStatus: UpdateStatus;
   onDismissStatus: () => void;
+  launchSplashVisible: boolean;
 }) {
   const { language } = useContext(LanguageContext);
   const { textScale } = useContext(TextSizeContext);
@@ -1010,13 +1036,16 @@ function RootLayoutNav({
     return () => subscription.remove();
   }, [androidBackTarget, globalParams.backTo, pathname, routeKey, segments]);
 
+  // Light status bar icons on the launch animation's blue, then the theme's.
+  const statusBarStyle = launchSplashVisible ? 'light-content' : theme.statusBarScheme;
+
   // Sync system bars and PWA theme-color meta tag
   useEffect(() => {
     if (Platform.OS === 'android') {
       // Keep the native status bar aligned with the active in-app theme. The
       // app theme already accounts for the system setting when that is the
       // selected appearance mode.
-      StatusBar.setBarStyle(theme.statusBarScheme, true);
+      StatusBar.setBarStyle(statusBarStyle, true);
     }
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -1036,7 +1065,7 @@ function RootLayoutNav({
       document.body.style.backgroundColor = bodyBg;
       document.documentElement.style.backgroundColor = bodyBg;
     }
-  }, [theme]);
+  }, [statusBarStyle, theme]);
 
   const snackbarLabels = {
     en: {
@@ -1093,7 +1122,7 @@ function RootLayoutNav({
     <PaperProvider theme={theme as any}>
       <ThemeProvider value={theme as any}>
         <StatusBar
-          barStyle={theme.statusBarScheme}
+          barStyle={statusBarStyle}
         />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
