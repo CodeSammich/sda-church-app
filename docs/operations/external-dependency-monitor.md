@@ -28,9 +28,10 @@ away scripts, so the monitor reads the catalog record instead.
 Fixed app destinations and small API
 contracts receive one request each. HTTP 429 is accepted only for
 navigational websites that commonly rate-limit bots; APIs, catalogs, and media
-remain strict. Two app links also accept a refusal: the staff schedule (401 or
-403, since it needs a sign-in) and Adventist Giving (403, from its bot
-protection).
+remain strict. Two links also accept a refusal: the bulletin's schedule sheet
+(401 or 403, since it needs a sign-in) and Adventist Giving (403, from its bot
+protection). The app no longer opens the sheet (#553), but the bulletin is made
+from it, so the monitor still checks that it's there.
 
 It checks that each children's Sabbath School age group will open this week's
 English lesson: Adventech lists this quarter's Junior, Teen, and Youth issues, and

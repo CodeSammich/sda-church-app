@@ -111,11 +111,10 @@ brand-guideline review before adding it.
 Websites open in the in-app browser, which slides up over the app and closes back to
 it: Safari View Controller on iOS, a Custom Tab on Android, and a new tab on the web.
 Links that belong to another app open that app instead: phone numbers, email addresses,
-YouTube, Spotify, Zoom, Google Maps, the staff schedule in Google Sheets, and the App
-Store and Google Play. A phone without that app opens them in its own browser. Every
-link goes through `openURL` (websites) or `openInItsApp` (other apps) in
-`constants/ExternalLinks.ts`; `test/link-opening.test.ts` checks where each one opens,
-and that no screen opens a link itself.
+YouTube, Spotify, Zoom, Google Maps, and the App Store and Google Play. A phone without
+that app opens them in its own browser. Every link goes through `openURL` (websites) or
+`openInItsApp` (other apps) in `constants/ExternalLinks.ts`; `test/link-opening.test.ts`
+checks where each one opens, and that no screen opens a link itself.
 
 Large files, such as lesson PDFs of more than a few megabytes, don't open straight in
 the in-app browser. There, a phone can show a blank page until the whole file has arrived,
