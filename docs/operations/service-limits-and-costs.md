@@ -341,9 +341,9 @@ cost: YouTube, Spotify, Zoom, AdventistGiving, zgaxr (Chinese hymnals), Hymns fo
 Worship, the Adventech and Alive in Jesus lesson readers, EGW Writings reading,
 Project Gutenberg, the Internet Archive and HathiTrust book scans, Chapel Library,
 WordProject (the Bible audio credits), the Chinese Union Mission 506 hymnal store
-pages, Google Maps, the staff schedule in Google Sheets, and the conference, union,
-and adventist.org sites. Their availability risks, such as zgaxr's, are covered
-in [Architecture](../architecture.md#third-party-apis-and-websites).
+pages, Google Maps, and the conference, union, and adventist.org sites. Their
+availability risks, such as zgaxr's, are covered in
+[Architecture](../architecture.md#third-party-apis-and-websites).
 
 ## Known gaps
 
