@@ -3,6 +3,7 @@ import {
   resolveBulletinHymnDisplayText,
   resolveBulletinHymnDestination,
   resolveBulletinHymnPresentation,
+  toBulletinHymnText,
 } from '@/services/BulletinHymnalService';
 
 describe('bulletin hymnal resolution', () => {
@@ -258,4 +259,98 @@ describe('bulletin hymnal resolution', () => {
       });
     },
   );
+
+  describe('every hymnal (#558)', () => {
+    it('finds a hymn only another hymnal has, and names that hymnal', () => {
+      expect(resolveBulletinHymnPresentation({ english: '', chinese: '奇異恩典' }, 'zh')).toEqual({
+        displayText: '61. 奇异恩典（中文 506）',
+        destination: {
+          hymnalId: 'chinese-hymnal-506',
+          hymnNumber: 61,
+          route: '/home/chinese-506-hymnal',
+        },
+      });
+      expect(resolveBulletinHymnDisplayText({ english: '', chinese: '奇異恩典' }, 'en')).toBe(
+        '61. 奇异恩典 (Chinese 506)',
+      );
+    });
+
+    it('finds a hymn only the 707 hymnals have, in the standard edition first', () => {
+      expect(resolveBulletinHymnPresentation({ english: '', chinese: '榮耀歸至高真神' }, 'zh')).toEqual({
+        displayText: '3. 荣耀归至高真神（707 標準版）',
+        destination: {
+          hymnalId: 'chinese-hymnal-707-v3',
+          hymnNumber: 3,
+          route: '/home/chinese-707-standard-hymnal',
+        },
+      });
+    });
+
+    it("finds a hymn only the 707's four-part or new simplified edition has", () => {
+      expect(resolveBulletinHymnPresentation({ english: '', chinese: '有福的確據' }, 'zh')).toEqual({
+        displayText: '156. 有福的确据（707 四聲部）',
+        destination: {
+          hymnalId: 'chinese-hymnal-707-v2',
+          hymnNumber: 156,
+          route: '/home/chinese-707-four-part-hymnal',
+        },
+      });
+      expect(resolveBulletinHymnPresentation({ english: '', chinese: '頌主造化' }, 'zh')).toEqual({
+        displayText: '10. 颂主造化（707 新編簡譜）',
+        destination: {
+          hymnalId: 'chinese-hymnal-707-v1',
+          hymnNumber: 10,
+          route: '/home/chinese-707-new-simplified-hymnal',
+        },
+      });
+    });
+
+    it("follows the title to another hymnal when the church's hymnal has a different hymn at that number", () => {
+      // 圣哉真神 is 505 #2 but 506 #1.
+      expect(resolveBulletinHymnDestination({ english: '', chinese: '第1首 聖哉真神' }, 'zh')).toEqual({
+        hymnalId: 'chinese-hymnal-506',
+        hymnNumber: 1,
+        route: '/home/chinese-506-hymnal',
+      });
+      expect(resolveBulletinHymnDestination({ english: '', chinese: '第2首 聖哉真神' }, 'zh')).toEqual({
+        hymnalId: 'chinese-hymnal-505',
+        hymnNumber: 2,
+        route: '/home/chinese-505-hymnal',
+      });
+    });
+
+    it("keeps a bare number in the church's own hymnal", () => {
+      expect(resolveBulletinHymnDestination({ english: '', chinese: '12' }, 'zh')).toEqual({
+        hymnalId: 'chinese-hymnal-505',
+        hymnNumber: 12,
+        route: '/home/chinese-505-hymnal',
+      });
+    });
+
+    it('offers a YouTube search for the text as typed when no hymnal has the hymn', () => {
+      expect(
+        resolveBulletinHymnPresentation({ english: 'Zqx Unwritten Song', chinese: '' }, 'en'),
+      ).toEqual({
+        displayText: 'Zqx Unwritten Song',
+        youtubeSearchQuery: 'Zqx Unwritten Song',
+      });
+      expect(resolveBulletinHymnPresentation({ english: '', chinese: '還要等多久' }, 'zh')).toEqual({
+        displayText: '還要等多久',
+        youtubeSearchQuery: '還要等多久',
+      });
+      expect(
+        resolveBulletinHymnPresentation({ english: '73 Holy, Holy, Holy', chinese: '' }, 'en')
+          .youtubeSearchQuery,
+      ).toBeUndefined();
+    });
+  });
+
+  it.each([
+    ['第12首 讚美上帝大君王', { english: '', chinese: '第12首 讚美上帝大君王' }],
+    ['12', { english: '', chinese: '12' }],
+    [' AH 73 Holy, Holy, Holy ', { english: 'AH 73 Holy, Holy, Holy', chinese: '' }],
+    ['Amazing Grace', { english: 'Amazing Grace', chinese: '' }],
+  ])('reads the Sabbath School hymn %j as the right language', (value, expected) => {
+    expect(toBulletinHymnText(value)).toEqual(expected);
+  });
 });

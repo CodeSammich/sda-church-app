@@ -467,7 +467,9 @@ Sabbath School app and its lesson catalog (`sabbath-school.adventech.io`). The a
 lesson opens in Adventech's web reader. For each children's age group, the app looks up
 this week's lesson PDF in Adventech's public catalog, and opens the age group's Alive in
 Jesus website when it finds none
-([design](feature_designs/sabbath_school_lessons.md)).
+([design](feature_designs/sabbath_school_lessons.md)). The weekly bulletin, in the app
+and on paper, names the adult lesson the class discusses, by its number and title from
+the same public catalog, with a link to the reader (#558); no lesson text is copied.
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |

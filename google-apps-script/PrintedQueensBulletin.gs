@@ -100,9 +100,9 @@ function appendStudyPanel_(cell, bulletin) {
   var studyRows = [
     [printedBilingualText_('SS Chair', '安息日學主席'), '', printValue_(location.ssChair)],
     [printedBilingualText_('Opening Prayer', '開會禱告'), '', printValue_(location.ssOpeningPrayer)],
-    [printedBilingualText_('Opening Hymn', '開會詩歌'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Lesson / Study', '課程／學習'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
-    [printedBilingualText_('Closing Hymn', '結會詩歌'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
+    // The closing repeats every opening hymn, so one row names them for both.
+    [printedBilingualText_('Opening & Closing Hymns', '開會及結會詩歌'), formatSabbathSchoolHymnsForPrint_(location.sabbathSchoolHymns), printedBilingualText_('Congregation', '會眾')],
+    [printedBilingualText_('Lesson / Study', '課程／學習'), formatSabbathSchoolLessonForPrint_(bulletin.sabbathSchoolLesson), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Closing Prayer', '結會禱告'), '', printValue_(location.closingPrayer)],
   ];
   appendProgramTable_(cell, studyRows);
@@ -128,7 +128,7 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
     ],
     [printedBilingualText_('Pastoral Prayer', '牧者禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
-    [printedBilingualText_('Special Music', '特別音樂'), '', printValue_(location.specialMusic)],
+    [printedBilingualText_('Special Music', '特別音樂'), String(location.specialMusicTitle || '').trim(), printValue_(location.specialMusic)],
   ];
   var worshipRowsAfterSermon = [
     [printedBilingualText_('Hymn of Response', '回應詩'), formatHymnForPrint_(location.hymnOfResponse), printedBilingualText_('Congregation', '會眾')],

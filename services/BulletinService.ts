@@ -18,6 +18,14 @@ export type BulletinLocation = {
   sermonTitle: BilingualBulletinText;
   hymnOfResponse: BilingualBulletinText;
   bibleVerses: string;
+  /**
+   * The Sabbath School's opening hymns, each as typed in either language.
+   * They're sung again as the closing hymns. Missing from bulletins served
+   * before #558.
+   */
+  sabbathSchoolHymns?: string[];
+  /** The special music piece; specialMusic is who performs it. */
+  specialMusicTitle?: string;
   sermon: string;
   chairPastoralPrayer: string;
   offeringPrayer: string;
@@ -133,6 +141,8 @@ export const isBulletinLocationEmpty = (location: BulletinLocation) =>
     location.hymnOfResponse.english,
     location.hymnOfResponse.chinese,
     location.bibleVerses,
+    ...(location.sabbathSchoolHymns || []),
+    location.specialMusicTitle,
     location.sermon,
     location.chairPastoralPrayer,
     location.offeringPrayer,

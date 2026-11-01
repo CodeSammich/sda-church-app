@@ -31,15 +31,19 @@ var BULLETIN_SCHEDULE_MAINTENANCE_CONFIG = Object.freeze({
   // During a quarter's final days, one more quarter is appended.
   populateLeadDays: 21,
   previousWeekDays: 7,
+  // Weekly Data gets a row per location for this coming Sabbath and the one
+  // after: the two weeks the app shows.
+  weeklyDataSabbaths: 2,
+  weeklyDataLocations: Object.freeze(['Queens', 'Brooklyn']),
 });
 
-// The bulletin contract is maintained by the technology team. Keep the
+// The bulletin's column names are maintained by the technology team. Keep the
 // protected header/column ranges editable by this Google Group only; ordinary
 // sheet sharing still controls who may view or edit the unprotected schedule
 // cells.
 var BULLETIN_HEADER_PROTECTION_EDITOR = 'technology@nyccsda.org';
 var BULLETIN_HEADER_PROTECTION_DESCRIPTION =
-  'Fixed bulletin header/column contract; update Apps Script and the mobile app first.';
+  'Bulletin column names: the app and printed bulletin read each column by its name.';
 
 // Staff-facing text (dialogs, alerts, errors, notes) is in English and
 // Simplified Chinese, because the people who run the bulletin read Simplified.
@@ -55,6 +59,13 @@ function getSabbathCalendarEnglishValidationHelpText_() {
     '手机应用会隐去姓氏，以维持匿名。请使用此主电子表格中的“Name Dictionary”工作表查找核准的英文姓名。'
   );
 }
+
+var WEEKLY_DATA_DATE_HELP_TEXT =
+  'Date must be a Saturday, typed as YYYY-MM-DD, such as 2026-11-07. / ' +
+  '日期必须是星期六，格式为 YYYY-MM-DD，例如 2026-11-07。';
+
+var WEEKLY_DATA_LOCATION_HELP_TEXT =
+  'Location must be Queens or Brooklyn. / 地点必须是 Queens 或 Brooklyn。';
 
 function getSabbathCalendarEnglishValidationToastText_() {
   return (
@@ -179,7 +190,7 @@ function runBulletinScheduleMaintenance_(now) {
 
   try {
     var sheet = getBulletinScheduleMaintenanceSheet_();
-    ensureBulletinHeaderContractValidation_();
+    ensureBulletinHeaderProtections_();
     var validation = {
       installed: installSabbathCalendarEnglishValidation_(sheet),
       updatedAfterQuarterAppend: false,
@@ -190,12 +201,14 @@ function runBulletinScheduleMaintenance_(now) {
         sheet,
       );
     }
+    var weeklyRows = populateUpcomingWeeklyDataRowsSafely_(now);
     var hidden = hideOldBulletinScheduleRows_(sheet, now);
     // Runs after quarter rows are appended so the scan covers every row.
     var conflicts = refreshScheduleRosterChecksSafely_(sheet);
     SpreadsheetApp.flush();
     return {
       populated: populated,
+      weeklyRows: weeklyRows,
       hidden: hidden,
       conflicts: conflicts,
       validation: validation,
@@ -205,29 +218,31 @@ function runBulletinScheduleMaintenance_(now) {
   }
 }
 
-function ensureBulletinHeaderContractValidation_() {
+// Header rows are protected for the technology group, but no longer locked to
+// fixed names: until #558 a rule on each header cell rejected any other name,
+// and the open-time check stopped the bulletin when one changed. Columns are
+// now read by name, so the leftover rules are removed.
+function ensureBulletinHeaderProtections_() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  assertBulletinHeaderContracts_(spreadsheet);
-  Object.keys(BULLETIN_HEADER_CONTRACTS).forEach(function (sheetName) {
+  Object.keys(BULLETIN_SHEET_COLUMNS).forEach(function (sheetName) {
     var sheet = spreadsheet.getSheetByName(sheetName);
-    var headers = BULLETIN_HEADER_CONTRACTS[sheetName];
-    headers.forEach(function (header, index) {
-      var rule = SpreadsheetApp.newDataValidation()
-        .requireValueInList([header], false)
-        .setAllowInvalid(false)
-        .setHelpText(BULLETIN_HEADER_CONTRACT_HELP_TEXT)
-        .build();
-      sheet.getRange(1, index + 1).setDataValidation(rule);
-    });
+    if (!sheet) {
+      return;
+    }
     try {
-      ensureBulletinHeaderContractProtection_(sheet, headers.length);
+      var headerRow = sheet.getRange(1, 1, 1, sheet.getMaxColumns());
+      if (headerRow.getDataValidations()[0].some(Boolean)) {
+        headerRow.clearDataValidations();
+      }
+      ensureBulletinHeaderProtection_(sheet, BULLETIN_SHEET_COLUMNS[sheetName].length);
     } catch (error) {
       // A simple onOpen trigger may run as an ordinary editor who cannot
-      // rewrite a protected range. Keep validation and the rest of maintenance
-      // working; the live contract protections are already group-restricted.
+      // change the protected header row. Keep the rest of maintenance working;
+      // the live header protections are already group-restricted, and the
+      // next technology-group open removes any leftover rules.
       if (typeof Logger !== 'undefined') {
         Logger.log(
-          'Could not normalize header protection for ' + sheetName + ': ' + error,
+          'Could not tidy the header row of ' + sheetName + ': ' + error,
         );
       }
     }
@@ -244,11 +259,11 @@ function ensureBulletinHeaderContractValidation_() {
 }
 
 /**
- * Keeps the managed contract ranges locked without locking ordinary schedule
+ * Keeps the managed header ranges locked without locking ordinary schedule
  * or intake data. This intentionally overwrites the editor list so a former
  * individual editor cannot retain access after the group-only policy lands.
  */
-function ensureBulletinHeaderContractProtection_(sheet, headerCount) {
+function ensureBulletinHeaderProtection_(sheet, headerCount) {
   var headerRange = sheet.getRange('1:1');
   var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.RANGE);
   var matching = protections.filter(function (protection) {
@@ -269,7 +284,7 @@ function ensureBulletinHeaderContractProtection_(sheet, headerCount) {
   protection.setDomainEdit(false);
   protection.setEditors([BULLETIN_HEADER_PROTECTION_EDITOR]);
 
-  // Remove duplicate contract protections left by older manual setup so the
+  // Remove duplicate header protections left by older manual setup so the
   // effective editor list cannot diverge between overlapping locks.
   matching.slice(1).forEach(function (duplicate) {
     duplicate.remove();
@@ -422,6 +437,190 @@ function populateUpcomingBulletinQuarters_(sheet, now) {
       .setNumberFormat(dateFormat);
   }
   return rows.length;
+}
+
+// A new Weekly Data tab's rows after the headers: a worked example for each
+// location, between them showing each way to fill a hymn cell, in the order of
+// BULLETIN_SHEET_COLUMNS. Nothing reads a row whose Date isn't a date, so they
+// never reach a bulletin.
+var WEEKLY_DATA_EXAMPLE_ROWS = Object.freeze([
+  Object.freeze([
+    'Example', 'Queens', 'John 10:11-16', 'The Good Shepherd', '好牧人',
+    '第12首 讚美上帝大君王', 'AH 73 Holy, Holy, Holy', '還要等多久',
+    'AH 1 Praise to the Lord', 'It Is Well with My Soul', '第452首 遵命有福',
+  ]),
+  Object.freeze([
+    'Example', 'Brooklyn', 'Psalms 23:1-6', 'The Lord Is My Shepherd', '耶和華是我的牧者',
+    '205', 'Amazing Grace', '',
+    '第5首 讚美上主', '奇異恩典', 'AH 86 How Great Thou Art',
+  ]),
+]);
+
+// Keeps Weekly Data in shape however it's edited (#558), so nobody has to
+// guard its headers. A deleted or emptied tab comes back with its headers and
+// the example rows, and an expected column that's gone comes back, empty, at
+// the far right. Nothing is renamed, moved or removed: a column someone
+// renamed keeps its data under the new name, and the notice says which
+// columns were added. Runs on open; the API itself never writes.
+function ensureWeeklyDataTab_(spreadsheet) {
+  var name = CONFIG.intakeSheetName;
+  var expected = BULLETIN_SHEET_COLUMNS[name];
+  var sheet = spreadsheet.getSheetByName(name) || spreadsheet.insertSheet(name);
+  if (sheet.getLastRow() === 0) {
+    var rows = [expected.slice()].concat(
+      WEEKLY_DATA_EXAMPLE_ROWS.map(function (row) {
+        return row.slice();
+      }),
+    );
+    sheet.getRange(1, 1, rows.length, expected.length).setValues(rows);
+    sheet.getRange(1, 1, 1, expected.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    showWeeklyDataNotice_(
+      spreadsheet,
+      'Weekly Data was missing, so it was set up again with its columns and two example rows. / ' +
+        'Weekly Data 工作表缺失，已重新建立，含所有列和两行示例。',
+    );
+    return sheet;
+  }
+
+  var lastColumn = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  var missing = expected.filter(function (header) {
+    return (
+      findFirstHeaderIndex_(
+        headers,
+        [header].concat(BULLETIN_COLUMN_ALTERNATIVES[header] || []),
+      ) === -1
+    );
+  });
+  if (missing.length) {
+    var gridColumns = lastColumn + missing.length - sheet.getMaxColumns();
+    if (gridColumns > 0) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), gridColumns);
+    }
+    var added = sheet.getRange(1, lastColumn + 1, 1, missing.length);
+    added.setValues([missing]);
+    added.setFontWeight('bold');
+    showWeeklyDataNotice_(
+      spreadsheet,
+      'Weekly Data: added these missing columns at the far right: ' + missing.join(', ') +
+        '. / Weekly Data：已在最右侧补上缺少的列：' + missing.join('、') + '。',
+    );
+  }
+  return sheet;
+}
+
+function showWeeklyDataNotice_(spreadsheet, message) {
+  if (typeof spreadsheet.toast === 'function') {
+    spreadsheet.toast(message, 'Bulletin / 周刊', 15);
+  }
+}
+
+// Like the Sabbath Calendar's quarters, Weekly Data gets ready-to-fill rows on
+// open: a Queens and a Brooklyn row for each of the next Sabbaths, with the
+// date filled in (#558). A row is added only when that date and location has
+// none, so a row staff added themselves is never repeated, and nothing is ever
+// removed or reordered. New rows go at the bottom.
+function populateUpcomingWeeklyDataRows_(spreadsheet, now) {
+  var sheet = ensureWeeklyDataTab_(spreadsheet);
+  var lastColumn = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  var dateColumn = findFirstHeaderIndex_(headers, ['Date']) + 1;
+  var locationColumn = findFirstHeaderIndex_(headers, ['Location']) + 1;
+  if (!dateColumn || !locationColumn) {
+    return 0;
+  }
+
+  var existing = {};
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    var range = sheet.getRange(2, 1, lastRow - 1, lastColumn);
+    var rawValues = range.getValues();
+    var displayValues = range.getDisplayValues();
+    rawValues.forEach(function (row, index) {
+      var date = parseBulletinMaintenanceDate_(
+        row[dateColumn - 1],
+        displayValues[index][dateColumn - 1],
+      );
+      if (date) {
+        existing[
+          formatBulletinMaintenanceDateKey_(date) + '|' +
+            normalizeLocationKey_(row[locationColumn - 1])
+        ] = true;
+      }
+    });
+  }
+
+  // This coming Sabbath, which is today on a Saturday, and the ones after.
+  var sabbath = getBulletinMaintenanceDateOnly_(now || new Date());
+  sabbath.setDate(sabbath.getDate() + ((6 - sabbath.getDay() + 7) % 7));
+  var rows = [];
+  for (var week = 0; week < BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.weeklyDataSabbaths; week += 1) {
+    var date = new Date(sabbath.getFullYear(), sabbath.getMonth(), sabbath.getDate() + week * 7);
+    BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.weeklyDataLocations.forEach(function (location) {
+      if (existing[formatBulletinMaintenanceDateKey_(date) + '|' + normalizeLocationKey_(location)]) {
+        return;
+      }
+      var row = Array(lastColumn).fill('');
+      row[dateColumn - 1] = date;
+      row[locationColumn - 1] = location;
+      rows.push(row);
+    });
+  }
+  if (rows.length) {
+    var firstNewRow = lastRow + 1;
+    var missingGridRows = firstNewRow + rows.length - 1 - sheet.getMaxRows();
+    if (missingGridRows > 0) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), missingGridRows);
+    }
+    sheet.getRange(firstNewRow, 1, rows.length, lastColumn).setValues(rows);
+  }
+  applyWeeklyDataRules_(sheet, dateColumn, locationColumn);
+  return rows.length;
+}
+
+// Weekly Data's dates show as YYYY-MM-DD, and only a Saturday can be typed in
+// (#558). Sheets turns a typed 2026-11-07 or 11/7/2026 into a date; anything
+// else, or a date that isn't a Saturday, is rejected with the help text, which
+// also shows on a selected date cell as a hint. The Example rows at the top
+// are allowed. Location is a Queens/Brooklyn dropdown. The rules start below
+// the header, and are set again on every open because pasting whole cells
+// replaces them.
+function applyWeeklyDataRules_(sheet, dateColumn, locationColumn) {
+  var rowCount = Math.max(1, sheet.getMaxRows() - 1);
+  sheet.getRange(2, locationColumn, rowCount, 1).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.weeklyDataLocations.slice(), true)
+      .setAllowInvalid(false)
+      .setHelpText(WEEKLY_DATA_LOCATION_HELP_TEXT)
+      .build(),
+  );
+  var range = sheet.getRange(2, dateColumn, rowCount, 1);
+  var cell = sheet.getRange(2, dateColumn).getA1Notation();
+  var rule = SpreadsheetApp.newDataValidation()
+    // IF, not OR: Sheets' OR passes on an error, such as WEEKDAY of a word.
+    .requireFormulaSatisfied(
+      '=IF(ISNUMBER(' + cell + '),' +
+        'AND(' + cell + '>=DATE(2020,1,1),WEEKDAY(' + cell + ')=7),' +
+        'OR(' + cell + '="",REGEXMATCH(TO_TEXT(' + cell + '),"(?i)^example")))',
+    )
+    .setAllowInvalid(false)
+    .setHelpText(WEEKLY_DATA_DATE_HELP_TEXT)
+    .build();
+  range.setDataValidation(rule);
+  range.setNumberFormat('yyyy-mm-dd');
+}
+
+// A Weekly Data problem must not stop the Sabbath Calendar's upkeep.
+function populateUpcomingWeeklyDataRowsSafely_(now) {
+  try {
+    return populateUpcomingWeeklyDataRows_(SpreadsheetApp.getActiveSpreadsheet(), now);
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Could not add Weekly Data rows: ' + error);
+    }
+    return 0;
+  }
 }
 
 function getBulletinQuarterSaturdays_(quarterStart, quarterEnd) {
@@ -616,7 +815,9 @@ function formatBulletinScheduleMaintenanceResult_(result) {
   return (
     'Schedule maintenance complete. Added ' +
     result.populated +
-    ' upcoming Saturday(s) and hid ' +
+    ' upcoming Saturday(s) and ' +
+    (result.weeklyRows || 0) +
+    ' Weekly Data row(s), and hid ' +
     result.hidden +
     ' old row(s).'
   );
