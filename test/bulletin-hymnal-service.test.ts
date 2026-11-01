@@ -286,6 +286,25 @@ describe('bulletin hymnal resolution', () => {
       });
     });
 
+    it("finds a hymn only the 707's four-part or new simplified edition has", () => {
+      expect(resolveBulletinHymnPresentation({ english: '', chinese: '有福的確據' }, 'zh')).toEqual({
+        displayText: '156. 有福的确据（707 四聲部）',
+        destination: {
+          hymnalId: 'chinese-hymnal-707-v2',
+          hymnNumber: 156,
+          route: '/home/chinese-707-four-part-hymnal',
+        },
+      });
+      expect(resolveBulletinHymnPresentation({ english: '', chinese: '頌主造化' }, 'zh')).toEqual({
+        displayText: '10. 颂主造化（707 新編簡譜）',
+        destination: {
+          hymnalId: 'chinese-hymnal-707-v1',
+          hymnNumber: 10,
+          route: '/home/chinese-707-new-simplified-hymnal',
+        },
+      });
+    });
+
     it("follows the title to another hymnal when the church's hymnal has a different hymn at that number", () => {
       // 圣哉真神 is 505 #2 but 506 #1.
       expect(resolveBulletinHymnDestination({ english: '', chinese: '第1首 聖哉真神' }, 'zh')).toEqual({
