@@ -248,7 +248,8 @@ While a chapter's audio plays, or is paused partway, a thin bar in the primary c
 (blue in light mode, gold in dark) beside a verse's number marks the verse being read,
 for each narrator with verse times (`services/BibleAudioTimings.ts`, #561). The reader
 keeps that verse in the middle of the screen, scrolling as the narrator reaches each
-verse. Scrolling by hand pauses this; five seconds after the last touch while the audio
+verse. That scrolling leaves the tab bar and audio controls where they are, so they don't
+move under a finger reaching for them. Scrolling by hand pauses following; five seconds after the last touch while the audio
 plays, or when play is pressed, it scrolls back. Saved and selected verses keep their colors.
 Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
 includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as

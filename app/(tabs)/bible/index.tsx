@@ -674,6 +674,9 @@ export default function BibleScreen() {
   // Whether the reader follows the verse being read aloud (#561), and the
   // timer that starts following again after a scroll by hand.
   const followsReadingVerse = useRef(true);
+  // Whether the reader's own following made the last scroll. That moves the
+  // text, not the tab bar and audio controls, which stay under the finger.
+  const followScrolled = useRef(false);
   const followResumeTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Selection state
@@ -1293,6 +1296,7 @@ export default function BibleScreen() {
     const layout = verse === null ? undefined : verseLayouts.current[verse];
     if (verse === null || !layout || isSelectionActive) return;
     forgetPendingScrolls();
+    followScrolled.current = true;
     scrollRef.current?.scrollTo({
       y:
         verse === 1
@@ -2500,6 +2504,10 @@ export default function BibleScreen() {
     readerScrollY.current = Math.max(0, currentOffset);
     if (isSelectionActive) return;
     if (currentOffset < 0) return;
+    if (followScrolled.current) {
+      lastScrollY.current = currentOffset;
+      return;
+    }
 
     if (Math.abs(currentOffset - lastScrollY.current) > 15) {
       if (currentOffset > lastScrollY.current && currentOffset > 100) {
@@ -2513,6 +2521,7 @@ export default function BibleScreen() {
 
   const handleScrollBeginDrag = () => {
     forgetPendingScrolls();
+    followScrolled.current = false;
     clearTimeout(followResumeTimeout.current);
     followsReadingVerse.current = false;
   };

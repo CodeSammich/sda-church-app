@@ -544,8 +544,9 @@ the open chapter.
 While a chapter's audio plays, or is paused partway, the reader marks the verse being read
 with a thin bar in the primary color and keeps it in the middle of the screen (#561). It
 scrolls when the narrator reaches each verse, and again, without animating, when the
-verse moves because the text size, the window, or the text above it changes. Scrolling by
-hand pauses this. Five seconds after the last touch while the audio plays, or when play
+verse moves because the text size, the window, or the text above it changes. Only a
+scroll by hand shows or hides the tab bar: following leaves it, and the audio controls,
+where they are. Scrolling by hand pauses following. Five seconds after the last touch while the audio plays, or when play
 is pressed, the reader scrolls back. Each move is one native scroll every few seconds, so
 following adds no work between verses. When the audio moves on to the next chapter, the reader opens it
 and keeps following.
