@@ -244,6 +244,12 @@ tab bar. They stay up with the keyboard put away. The keyboard's Search key open
 reference, but for words it only puts the keyboard away, since the first match is only
 a guess. The X closes them, and so does Android's Back, whose first press puts the
 keyboard away if it's up.
+While a chapter's audio plays, or is paused partway, a thin bar in the primary color
+(blue in light mode, gold in dark) beside a verse's number marks the verse being read,
+for each narrator with verse times (`services/BibleAudioTimings.ts`, #561). The reader
+keeps that verse in the middle of the screen, scrolling as the narrator reaches each
+verse. Scrolling by hand pauses this; five seconds after the last touch while the audio
+plays, or when play is pressed, it scrolls back. Saved and selected verses keep their colors.
 Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
 includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as
 "Psalm 23 · English"): the English hymns and the same hymns in the 505, with the 505 first

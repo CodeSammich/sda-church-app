@@ -456,8 +456,10 @@ a book's file in memory once it opens. Every reader translation ships with the a
 (`assets/bible`), and so do the verse popup's Hebrew and Greek, so the text opens with no
 network; only audio streams. `scripts/build-bundled-bibles.mjs`
 (BSB, RV1909, and the Hebrew and Greek) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
-holds each chapter as HelloAO's chapter API returns it, without the audio timings the app
-doesn't use. [What the app keeps on the phone](on_device_storage.md)
+holds each chapter as HelloAO's chapter API returns it, without its audio timings.
+`scripts/build-bible-audio-timings.mjs` keeps those in `assets/bible/audio-timings`, one
+file per narrator and book, so the reader can mark the verse being read (#561).
+[What the app keeps on the phone](on_device_storage.md)
 says where the bundled texts and the app's other saved data live on each platform, what's
 backed up, and what the store policies say.
 
@@ -536,3 +538,49 @@ the open chapter.
 - **Not searched:** pinyin, which the old chapter search also matched when it was shown.
 - The `bible-search` key screen opens the search with `search=`, which only a key-screens
   build reads.
+
+### 4.7 The Verse Being Read Aloud (done)
+
+While a chapter's audio plays, or is paused partway, the reader marks the verse being read
+with a thin bar in the primary color and keeps it in the middle of the screen (#561). It
+scrolls when the narrator reaches each verse, and again, without animating, when the
+verse moves because the text size, the window, or the text above it changes. Scrolling by
+hand pauses this. Five seconds after the last touch while the audio plays, or when play
+is pressed, the reader scrolls back. Each move is one native scroll every few seconds, so
+following adds no work between verses. When the audio moves on to the next chapter, the reader opens it
+and keeps following.
+
+- **Times:** `assets/bible/audio-timings/<narrator>/<book>.biblejson` holds, for each
+  chapter, when each verse starts, in seconds, by verse number (null for a verse with no
+  time). `services/BibleAudioTimings.ts` reads them and finds the verse at the playback
+  position. The player reports its position about once a second, so the mark is set to
+  change half a second before each verse's time, which on average puts the change in the
+  pause before the verse rather than after it starts.
+- **English:** HelloAO publishes verse times for three of its four BSB narrators.
+  `scripts/build-bible-audio-timings.mjs` keeps a chapter's times only when HelloAO's
+  recording is the one the app plays and the verse numbers match the bundled text. That
+  leaves out Leviticus 19 for all three, and one psalm each for two of them. Gilbert has no
+  times.
+- **Mandarin, Cantonese, and Spanish:** the church's copies of these recordings have no
+  published times, so they were made by forced alignment: a speech model lines up the
+  bundled text with each recording, and the start of each verse's first word is its time,
+  moved to the end of a nearby pause when the aligner is more than half a second from one.
+  `scripts/bible-audio-alignment/` holds the steps: `download.py` copies every recording as
+  hosted (nothing is changed or re-uploaded), `align.py` aligns each chapter on a GPU
+  (torchaudio's MMS_FA, with the Chinese as toneless pinyin or jyutping), and `finish.py`
+  writes the app's files. `finish.py` gives a chapter no times if it failed to align, has
+  the wrong number of verses, its starts don't increase, or verse 1 starts too late, and it
+  records each recording's size and SHA-256 in
+  `scripts/bible-audio-timing-sources/`, so a recording replaced later can be found and
+  aligned again. The Cantonese narrator reads the CUV's notes aloud and the Mandarin
+  narrator doesn't, so the notes are aligned as text for one and skipped for the other.
+- **Checks:** speech recognizers that don't share the aligner's model heard sampled chapters,
+  and each verse's first heard word was compared with its time (`spot_check_chinese.py`
+  with SenseVoice, `spot_check_spanish.py` with Whisper). Mandarin: 1,034 verses in 40
+  chapters, all within 0.3 s. Cantonese: 937 verses, 95.5% within 0.3 s, none late, and
+  2.7% early enough to mark the next verse while the last words of the one before are
+  read (`spot_check_harm.py` sorts the misses). Spanish: 133 verses in 7 chapters, 98% within 0.5 s.
+- **Running them again:** a Python environment with `torch` and `torchaudio` 2.8, `numpy`,
+  `pypinyin`, `ToJyutping`, and `imageio-ffmpeg` (and `funasr` and `transformers` for the checks). On a
+  consumer GPU each chapter takes 3 to 5 seconds, so all 3,567 take about four hours, plus
+  the downloads.

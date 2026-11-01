@@ -77,6 +77,11 @@ import {
   getAudioReaderPreferenceKey,
   WORDPROJECT_CREDITS,
 } from '@/services/BibleAudioSources';
+import {
+  fetchVerseStartTimes,
+  getVerseAtAudioTime,
+  type VerseStartTimes,
+} from '@/services/BibleAudioTimings';
 import type {
   BibleAudioChapterIdentity,
   BibleAudioStatus,
@@ -99,6 +104,7 @@ import {
   isChineseBibleTranslation,
 } from '@/services/BiblePinyinService';
 import {
+  getCenteredVerseScrollY,
   getTopVisibleVerse,
   getTranslationSwitchPosition,
   isNewReaderLink,
@@ -156,6 +162,8 @@ const BIBLE_CHAPTER_KEY = 'user-bible-chapter';
 const VERSE_SCROLL_TOP_OFFSET = 96;
 // How many times, 250 ms apart, to look for a linked verse's position: 5 s.
 const VERSE_LAYOUT_ATTEMPTS = 20;
+// How long after a scroll by hand the reader goes back to the verse being read.
+const READING_VERSE_FOLLOW_RESUME_MS = 5000;
 const BIBLE_AUDIO_READERS_KEY = 'user-bible-audio-readers';
 const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
@@ -659,6 +667,14 @@ export default function BibleScreen() {
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
   const readerScrollY = useRef(0);
+  // Each verse's last layout, for following the verse being read (#561).
+  // Never cleared: onLayout only fires when a verse's layout changes, and a
+  // new chapter can reuse a verse's view, so a cleared entry might not return.
+  const verseLayouts = useRef<Record<number, { y: number; height: number }>>({});
+  // Whether the reader follows the verse being read aloud (#561), and the
+  // timer that starts following again after a scroll by hand.
+  const followsReadingVerse = useRef(true);
+  const followResumeTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Selection state
   const [supportedTranslation, setSupportedTranslation] = useState(() => {
@@ -1224,6 +1240,84 @@ export default function BibleScreen() {
   const selectedAudioUrlsRef = useRef(selectedAudioUrls);
   selectedAudioUrlsRef.current = selectedAudioUrls;
 
+  // The verse being read aloud is marked while this chapter's recording is
+  // loaded (#561). Changing narrator unloads the audio, so the one selected is
+  // the one playing.
+  const [audioVerseTimes, setAudioVerseTimes] = useState<{
+    key: string;
+    times: VerseStartTimes | null;
+  } | null>(null);
+  const audioVerseTimesKey =
+    book && selectedAudioReader
+      ? `${supportedTranslation.id}:${selectedAudioReader}:${book.id}:${chapterNum}`
+      : null;
+  useEffect(() => {
+    if (!book || !selectedAudioReader || !audioVerseTimesKey) return;
+    let cancelled = false;
+    fetchVerseStartTimes(supportedTranslation.id, selectedAudioReader, book.id, chapterNum)
+      .then((times) => {
+        if (!cancelled) setAudioVerseTimes({ key: audioVerseTimesKey, times });
+      })
+      .catch((error) => console.warn('Bible audio verse times failed to load', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [audioVerseTimesKey]);
+  const activeAudioChapter = audioStatus.activeChapter;
+  const loadedAudioUrl = loadedAudioUrlRef.current;
+  // Android's queue and the web player name the chapter they're playing; the
+  // iPhone's single player plays the chapter whose recording it loaded.
+  const isThisChapterAudioLoaded =
+    !!loadedAudioUrl &&
+    (activeAudioChapter
+      ? activeAudioChapter.translationId === supportedTranslation.id &&
+        activeAudioChapter.bookId === book?.id &&
+        activeAudioChapter.chapter === chapterNum
+      : selectedAudioUrls.includes(loadedAudioUrl));
+  const readingVerse =
+    isThisChapterAudioLoaded &&
+    audioVerseTimes?.key === audioVerseTimesKey &&
+    audioVerseTimes.times &&
+    (isPlaying || audioPositionMillis > 0)
+      ? getVerseAtAudioTime(
+          audioVerseTimes.times,
+          (scrubPositionMillis ?? audioPositionMillis) / 1000,
+        )
+      : null;
+  // The reader keeps the verse being read aloud in the middle of the text
+  // showing, scrolling as the narrator reaches each verse and when the text
+  // around it changes size. Verse 1 shows the chapter's start, with its
+  // heading. Scrolling by hand stops this for a few seconds, or until play is
+  // pressed.
+  const followReadingVerse = (verse: number | null, animated = true) => {
+    const layout = verse === null ? undefined : verseLayouts.current[verse];
+    if (verse === null || !layout || isSelectionActive) return;
+    forgetPendingScrolls();
+    scrollRef.current?.scrollTo({
+      y:
+        verse === 1
+          ? 0
+          : getCenteredVerseScrollY(
+              layout.y,
+              layout.height,
+              insets.top,
+              viewportHeight - dockViewportLayout.visibleHeight,
+            ),
+      animated,
+    });
+  };
+  useEffect(() => {
+    if (followsReadingVerse.current) followReadingVerse(readingVerse);
+  }, [readingVerse]);
+  // The timer's callback runs after later renders, so it reads this render's
+  // verse and playback state through a ref.
+  const resumeFollowingReadingVerse = useRef(() => {});
+  resumeFollowingReadingVerse.current = () => {
+    followsReadingVerse.current = true;
+    if (isPlaying) followReadingVerse(readingVerse);
+  };
+  useEffect(() => () => clearTimeout(followResumeTimeout.current), []);
+
   // `fromChapter` is the chapter being loaded, which can differ from both the
   // reader and the native player's current track during a failover.
   const buildUpcomingAudioQueue = (
@@ -1675,6 +1769,9 @@ export default function BibleScreen() {
       return;
     }
 
+    clearTimeout(followResumeTimeout.current);
+    followsReadingVerse.current = true;
+    followReadingVerse(readingVerse);
     await startAudio();
   };
 
@@ -2414,6 +2511,23 @@ export default function BibleScreen() {
     }
   };
 
+  const handleScrollBeginDrag = () => {
+    forgetPendingScrolls();
+    clearTimeout(followResumeTimeout.current);
+    followsReadingVerse.current = false;
+  };
+
+  /** Goes back to the verse being read aloud a few seconds after a scroll by hand. */
+  const handleScrollEnd = () => {
+    // Android also reports the end of the reader's own scrolls.
+    if (followsReadingVerse.current) return;
+    clearTimeout(followResumeTimeout.current);
+    followResumeTimeout.current = setTimeout(
+      () => resumeFollowingReadingVerse.current(),
+      READING_VERSE_FOLLOW_RESUME_MS,
+    );
+  };
+
   // Scroll to top when chapter content changes
   useEffect(() => {
     // Restore the surrounding app chrome on mount or chapter change.
@@ -2422,6 +2536,8 @@ export default function BibleScreen() {
     if (chapterData) {
       clearSelection();
       versePositions.current = {}; // Clear previous chapter positions
+      clearTimeout(followResumeTimeout.current);
+      followsReadingVerse.current = true;
 
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
@@ -3069,6 +3185,7 @@ export default function BibleScreen() {
         const { hasFootnotes, hasSubtitle } = getVerseExtras(content.number);
         const isSelected = selectedVerses.has(content.number);
         const isSaved = isVerseSaved(content.number);
+        const isBeingRead = content.number === readingVerse;
         const supportingVerse = supportingVerses.get(content.number);
         const primaryVerseText = BibleService.renderVerseToPlainText(
           supportedTranslation.id,
@@ -3253,9 +3370,15 @@ export default function BibleScreen() {
               },
             ]}
             onLayout={(e) => {
-              const verseY = e.nativeEvent.layout.y;
+              const { height, y: verseY } = e.nativeEvent.layout;
               const previousY = versePositions.current[content.number];
               versePositions.current[content.number] = verseY;
+              verseLayouts.current[content.number] = { y: verseY, height };
+              // The verse being read moves when the text size, the window, or
+              // the text above it changes; keep it in the middle (#561).
+              if (isBeingRead && followsReadingVerse.current) {
+                followReadingVerse(content.number, false);
+              }
               // A linked verse moves when the text above it grows, such as
               // pinyin made on the device after the chapter loads. Follow it
               // until the reader drags the page (#358).
@@ -3266,6 +3389,15 @@ export default function BibleScreen() {
             }}
           >
             <View style={ReaderStyles.verseRow}>
+              {isBeingRead && (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    ReaderStyles.verseBeingReadMark,
+                    { backgroundColor: theme.colors.primary },
+                  ]}
+                />
+              )}
               <View
                 style={[
                   ReaderStyles.verseNumberColumn,
@@ -3729,7 +3861,9 @@ export default function BibleScreen() {
         alwaysBounceVertical={true}
         scrollEventThrottle={32}
         onScroll={handleScroll}
-        onScrollBeginDrag={forgetPendingScrolls}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEnd}
+        onMomentumScrollEnd={handleScrollEnd}
         contentContainerStyle={[
           ReaderStyles.scrollContent,
           {

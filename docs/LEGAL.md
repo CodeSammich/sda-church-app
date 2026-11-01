@@ -33,6 +33,11 @@ translation's text from either:
   each BSB chapter comes with HelloAO's narrator links, and the app offers each one
   as a narrator. As of October 2026, HelloAO lists four narrators: three play from
   HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
+  HelloAO also publishes when each verse starts in its three recordings, and the
+  app ships those times so the reader can mark the verse being read
+  (`scripts/build-bible-audio-timings.mjs`, #561). HelloAO's
+  [terms](https://bible.helloao.org/docs/) allow it: "Cache, store and download
+  without expiry", and "AO Lab adds no restrictions".
 - [fetch(bible)](https://fetch.bible/) is the source of Reina-Valera 1909, bundled the
   same way from its public-domain `spa_rv`, whose normalized resource keeps the
   edition's translation footnotes. It's also the source of the original-language

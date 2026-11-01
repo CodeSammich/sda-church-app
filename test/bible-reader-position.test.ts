@@ -1,4 +1,5 @@
 import {
+  getCenteredVerseScrollY,
   getTopVisibleVerse,
   getTranslationSwitchPosition,
   isNewReaderLink,
@@ -24,6 +25,24 @@ describe('the verse at the top of the Bible reader', () => {
 
   it('does not depend on the order verses were laid out', () => {
     expect(getTopVisibleVerse({ 5: 470, 2: 180, 4: 400 }, 420)).toBe(4);
+  });
+});
+
+describe('the verse being read aloud (#561)', () => {
+  // Text shows from below the status bar (50) to the top of the audio dock (850).
+  it('scrolls to the middle of the text showing', () => {
+    const scrollY = getCenteredVerseScrollY(1000, 100, 50, 850);
+    expect(scrollY).toBe(600);
+    // On screen, the verse runs from 400 to 500, around the middle at 450.
+    expect(1000 - scrollY + 50).toBe(450);
+  });
+
+  it('shows the start of a verse too tall to fit, at the top', () => {
+    expect(getCenteredVerseScrollY(1000, 900, 50, 850)).toBe(950);
+  });
+
+  it('never scrolls above the start of the chapter', () => {
+    expect(getCenteredVerseScrollY(positions[1], 60, 50, 850)).toBe(0);
   });
 });
 

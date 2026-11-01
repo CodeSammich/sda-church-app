@@ -5,8 +5,8 @@
  *
  * - The BSB from HelloAO's complete translation, one file per book holding
  *   each chapter as HelloAO's chapter API returns it (text, footnotes, verse
- *   count, and the BSB's narrator links). The audio timings, which the app
- *   doesn't use, are left out.
+ *   count, and the BSB's narrator links). The audio timings are left out:
+ *   scripts/build-bible-audio-timings.mjs keeps them in files of their own.
  * - Reina-Valera 1909 from fetch(bible) (`spa_rv`), book by book in its
  *   plain-text format, with its translation notes.
  * - The verse popup's original-language texts from fetch(bible), in the same
