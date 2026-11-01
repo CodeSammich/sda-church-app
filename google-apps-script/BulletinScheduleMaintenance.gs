@@ -41,25 +41,29 @@ var BULLETIN_HEADER_PROTECTION_EDITOR = 'technology@nyccsda.org';
 var BULLETIN_HEADER_PROTECTION_DESCRIPTION =
   'Fixed bulletin header/column contract; update Apps Script and the mobile app first.';
 
+// Staff-facing text (dialogs, alerts, errors, notes) is in English and
+// Simplified Chinese, because the people who run the bulletin read Simplified.
+// Everything printed stays in Traditional Chinese on purpose. Keep the two
+// apart: see "Chinese script" in docs/operations/bulletin-automation.md.
 function getSabbathCalendarEnglishValidationHelpText_() {
   return (
     'Invalid input: Chinese characters are not allowed in the Sabbath Calendar. ' +
     'Please enter English only. To protect privacy and comply with applicable ' +
     'privacy regulations, the mobile app redacts last names for anonymity. ' +
     'Use the Name Dictionary tab in this master spreadsheet to find the approved English name.\n\n' +
-    '輸入無效：安息日行事曆不允許輸入中文，請只使用英文。為保護隱私並遵守適用的隱私法規，' +
-    '手機應用程式會隱去姓氏，以維持匿名。請使用此主試算表中的「Name Dictionary」分頁查找核准的英文姓名。'
+    '输入无效：安息日日历不允许输入中文，请只使用英文。为保护隐私并遵守适用的隐私法规，' +
+    '手机应用会隐去姓氏，以维持匿名。请使用此主电子表格中的“Name Dictionary”工作表查找核准的英文姓名。'
   );
 }
 
 function getSabbathCalendarEnglishValidationToastText_() {
   return (
     'No Chinese characters are allowed in the Sabbath Calendar. / ' +
-    '安息日行事曆不允許輸入中文。\n' +
+    '安息日日历不允许输入中文。\n' +
     'To protect privacy and comply with applicable privacy regulations, the mobile app ' +
     'redacts last names for anonymity. Use the Name Dictionary tab in this master spreadsheet ' +
-    'to find the approved English name. / 為保護隱私並遵守適用的隱私法規，手機應用程式會隱去姓氏，以維持匿名。' +
-    '請使用此主試算表中的「Name Dictionary」分頁查找核准的英文姓名。'
+    'to find the approved English name. / 为保护隐私并遵守适用的隐私法规，手机应用会隐去姓氏，以维持匿名。' +
+    '请使用此主电子表格中的“Name Dictionary”工作表查找核准的英文姓名。'
   );
 }
 
@@ -145,7 +149,7 @@ function showSabbathCalendarEnglishValidationNotice_() {
   try {
     var ui = SpreadsheetApp.getUi();
     if (ui && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
-      ui.alert('Invalid input / 輸入無效', message, ui.ButtonSet.OK);
+      ui.alert('Invalid input / 输入无效', message, ui.ButtonSet.OK);
       return;
     }
   } catch (error) {
@@ -156,7 +160,7 @@ function showSabbathCalendarEnglishValidationNotice_() {
   if (SpreadsheetApp.getActiveSpreadsheet) {
     SpreadsheetApp.getActiveSpreadsheet().toast(
       getSabbathCalendarEnglishValidationToastText_(),
-      'Invalid input / 輸入無效',
+      'Invalid input / 输入无效',
       8,
     );
   }

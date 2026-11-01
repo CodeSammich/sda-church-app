@@ -140,8 +140,12 @@ var BULLETIN_HEADER_CONTRACTS = Object.freeze({
   ]),
 });
 
+// Staff-facing text (dialogs, alerts, errors, notes) is in English and
+// Simplified Chinese, because the people who run the bulletin read Simplified.
+// Everything printed stays in Traditional Chinese on purpose. Keep the two
+// apart: see "Chinese script" in docs/operations/bulletin-automation.md.
 var BULLETIN_HEADER_CONTRACT_HELP_TEXT =
-  'Fixed bulletin column. Before adding, removing, renaming, or reordering columns, update Apps Script and the mobile app first. / 固定週刊欄位。新增、刪除、重新命名或重新排序欄位前，請先更新 Apps Script 和手機應用程式。';
+  'Fixed bulletin column. Before adding, removing, renaming, or reordering columns, update Apps Script and the mobile app first. / 固定的周刊列。添加、删除、重命名或重新排序列之前，请先更新 Apps Script 和手机应用。';
 
 function getBulletinHeaderContractIssues_(spreadsheet) {
   var issues = [];
@@ -174,7 +178,7 @@ function assertBulletinHeaderContracts_(spreadsheet) {
   if (issues.length) {
     throw new Error(
       'Bulletin column contract violation. Update Apps Script and the mobile app before editing these headers. / ' +
-        '週刊欄位契約違規。編輯這些欄位標題前，請先更新 Apps Script 和手機應用程式。\n' +
+        '周刊列标题与约定不符。编辑这些列标题之前，请先更新 Apps Script 和手机应用。\n' +
         issues.join('\n'),
     );
   }

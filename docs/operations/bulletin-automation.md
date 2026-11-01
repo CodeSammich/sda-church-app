@@ -29,6 +29,7 @@ Contents:
 - [Header protection and validation automation](#header-protection-and-validation-automation)
 - [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)
 - [Privacy, auto-translation, and name behavior](#privacy-auto-translation-and-name-behavior)
+- [Chinese script](#chinese-script)
 - [Digital mobile bulletin behavior](#digital-mobile-bulletin-behavior)
 - [Printed bulletin generation](#printed-bulletin-generation)
 - [Printed edge cases and content rules](#printed-edge-cases-and-content-rules), including [Giving QR slots](#giving-qr-slots)
@@ -320,7 +321,7 @@ setup is needed.
   planner decides whether to leave those. The value is never changed.
 - Each red cell has a note, shown by the small black triangle in its top-right
   corner. Hovering over the cell lists the person's other roles that Sabbath by
-  column header, for example `Duplicate / 重複: English Teacher`. The repeated
+  column header, for example `Duplicate / 重复: English Teacher`. The repeated
   Chair/Pastoral Prayer and Offering Prayer headers are named by location.
 - Cells with several names (`Mary Lin / John Chen`) are compared name by name.
   Placeholders such as `TBD` and `Choir` are ignored. Case and spacing
@@ -334,8 +335,8 @@ copied into new rows are cleared. Expect the color to appear a few seconds
 after an edit.
 
 The script only clears cells that are exactly `#ea9999`, and only replaces or
-clears notes that start with `Duplicate / 重複:` (or the earlier `Roster check /
-名單檢查` wording). Other cell colors and
+clears notes that start with `Duplicate / 重复:` (or the earlier `Duplicate /
+重複:` and `Roster check / 名單檢查` wordings). Other cell colors and
 planners' own notes are left alone; a cell with a planner's note still turns
 red but keeps that note. Do not use `#ea9999` for manual highlighting in F:Y.
 
@@ -440,6 +441,26 @@ recognized Bible quotations printed as BSB text. Read [What the printed bulletin
 does today](sabbath-encouragement-copyright.md#what-the-printed-bulletin-does-today)
 before changing that source or translation policy. Do not extend machine
 translation to Scripture, names, or worship content.
+
+## Chinese script
+
+The printed bulletin and the text staff read in the spreadsheet use different
+Chinese scripts on purpose (#565):
+
+- **Printed bulletins are in Traditional Chinese.** That covers the church
+  name, headings, Bible book names, the schedule, the giving notes, and the
+  Sabbath Encouragement. The bulletin is formal, and most of the people who read
+  it on paper are older members. Younger readers mostly use the app, which shows
+  either script.
+- **Staff-facing text is in English and Simplified Chinese.** That covers the
+  Create bulletin dialog, alerts, error messages, cell notes, and column help.
+  The people who run the bulletin read Simplified. The text uses the terms in
+  Google Sheets' Simplified Chinese interface (电子表格, 工作表, 单元格), so it
+  names what staff see on screen.
+
+Don't change one to match the other. A comment above the staff-facing strings in
+each script points here. Anything that reads input accepts both forms, for
+example `牧[師师]` and `長老|长老`.
 
 ## Digital mobile bulletin behavior
 
