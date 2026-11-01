@@ -20,7 +20,7 @@ export const CHURCH_BUILDING_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/13221703/church_building.jpg';
 export const PASTOR_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/13221020/moses_fang-1536x1024.jpg';
-export const ELDER_IMAGE_URL =
+export const PASTOR_HAO_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/13221317/sarah_fang-1536x1024.jpg';
 export const FLUSHING_FELLOWSHIP_IMAGE_URL =
   'https://assets.adventistconnect.org/newyork2/2026/07/01230029/flushing_fellowship_3.jpg';

@@ -42,7 +42,7 @@ export default function MeetOurTeamScreen() {
     en: {
       title: 'Meet Our Team',
       seniorPastor: 'Senior Pastor',
-      elder: 'Elder',
+      pastor: 'Pastor',
       childrensMinistry: "Children's Ministry",
       call: 'Call',
       email: 'Email',
@@ -50,7 +50,7 @@ export default function MeetOurTeamScreen() {
     zh: {
       title: '認識我們的團隊',
       seniorPastor: '主任牧師',
-      elder: '長老',
+      pastor: '牧師',
       childrensMinistry: '兒童事工',
       call: '致電',
       email: '電郵',
@@ -58,7 +58,7 @@ export default function MeetOurTeamScreen() {
     'zh-cn': {
       title: '认识我们的团队',
       seniorPastor: '主任牧师',
-      elder: '长老',
+      pastor: '牧师',
       childrensMinistry: '儿童事工',
       call: '致电',
       email: '电邮',
@@ -66,7 +66,7 @@ export default function MeetOurTeamScreen() {
     es: {
       title: 'Conoce a nuestro equipo',
       seniorPastor: 'Pastor Principal',
-      elder: 'Anciana',
+      pastor: 'Pastora',
       childrensMinistry: 'Ministerio Infantil',
       call: 'Llamar',
       email: 'Correo',
