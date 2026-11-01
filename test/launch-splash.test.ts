@@ -33,7 +33,6 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedStyle: run,
     useReducedMotion: () => false,
     useSharedValue: (value: number) => ({ value }),
-    withDelay: (_ms: number, animation: number) => animation,
     withTiming: (value: number, _config: unknown, done?: (finished: boolean) => void) => {
       done?.(true);
       return value;
@@ -144,6 +143,23 @@ describe('the launch animation', () => {
     });
     expect(onDone).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('launch-splash', HIDDEN).props.pointerEvents).toBe('none');
+  });
+
+  it('skips the drawing on a tap, and shows the app once it has loaded', async () => {
+    const Reanimated = require('react-native-reanimated');
+    // The drawing never finishes by itself; only the fade does.
+    jest.spyOn(Reanimated, 'withTiming').mockImplementation((...args: unknown[]) => {
+      const [value, , done] = args as [number, unknown, ((finished: boolean) => void)?];
+      if (value === 0) done?.(true);
+      return value;
+    });
+    const onDone = jest.fn();
+    const screen = await render(createElement(LaunchSplash, { appReady: true, onDone }));
+    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'layout', LAYOUT);
+    expect(onDone).not.toHaveBeenCalled();
+
+    await fireEvent(screen.getByTestId('launch-splash', HIDDEN), 'touchEnd');
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 
   it('shows the finished symbol still with Reduce Motion', async () => {

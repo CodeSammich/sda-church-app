@@ -19,7 +19,6 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
@@ -27,7 +26,8 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 /**
  * The launch animation (#538): the church symbol is drawn as if with a pen
- * while the app loads underneath, then fades away once both have finished.
+ * while the app loads underneath, then fades away once both have finished. A
+ * tap skips it.
  * components/LaunchDrawing.ts says what is drawn when. It runs on the UI
  * thread, so the app loading doesn't make it stutter.
  *
@@ -44,10 +44,10 @@ const [, , VIEW_WIDTH, VIEW_HEIGHT] = CHURCH_SYMBOL_VIEW_BOX.split(' ').map(Numb
 export const LAUNCH_SYMBOL_ASPECT = VIEW_WIDTH / VIEW_HEIGHT;
 const WINDOWS = getDrawingWindows(CHURCH_SYMBOL_SHAPES);
 
-export const LAUNCH_DRAW_MS = 1300;
-// The finished symbol stays a moment before fading.
-const HOLD_MS = 150;
-export const LAUNCH_FADE_MS = 250;
+// Short, because the drawing can only start once the app's code has loaded,
+// when the app is nearly ready: its length is mostly added to the open time.
+export const LAUNCH_DRAW_MS = 800;
+export const LAUNCH_FADE_MS = 200;
 // The pen's width, in the symbol's units: about a point on a phone.
 const PEN_WIDTH = 1.8;
 
@@ -136,18 +136,22 @@ export function LaunchSplash({ appReady, onDone }: LaunchSplashProps) {
     );
   };
 
+  // A tap finishes the drawing at once, so the app shows as soon as it's ready.
+  const skip = () => {
+    if (drawn) return;
+    progress.value = 1;
+    setDrawn(true);
+  };
+
   useEffect(() => {
     if (!drawn || !appReady || fading) return;
     setFading(true);
-    opacity.value = withDelay(
-      HOLD_MS,
-      withTiming(
-        0,
-        { duration: LAUNCH_FADE_MS, easing: Easing.out(Easing.quad) },
-        (finished) => {
-          if (finished) scheduleOnRN(onDone);
-        },
-      ),
+    opacity.value = withTiming(
+      0,
+      { duration: LAUNCH_FADE_MS, easing: Easing.out(Easing.quad) },
+      (finished) => {
+        if (finished) scheduleOnRN(onDone);
+      },
     );
   }, [appReady, drawn, fading, onDone, opacity]);
 
@@ -157,7 +161,9 @@ export function LaunchSplash({ appReady, onDone }: LaunchSplashProps) {
     <Animated.View
       style={[styles.container, fadeStyle]}
       onLayout={start}
-      // Taps wait until the app shows; the symbol is decoration.
+      onTouchEnd={skip}
+      // Taps skip the drawing, then go to the app once it shows. The symbol is
+      // decoration.
       pointerEvents={fading ? 'none' : 'auto'}
       accessible={false}
       accessibilityElementsHidden
