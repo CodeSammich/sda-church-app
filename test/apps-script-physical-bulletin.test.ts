@@ -394,15 +394,16 @@ describe('printed bulletin Apps Script helpers', () => {
       context,
     ) as string;
 
-    expect(html).toContain('Queens / 皇后區');
+    expect(html).toContain('Queens / 皇后区');
+    expect(html).toContain('Brooklyn / 布鲁克林');
     expect(html).toContain('Regular / 普通');
-    expect(html).toContain('Communion / 聖餐');
+    expect(html).toContain('Communion / 圣餐');
     expect(html).toContain('Brooklyn Communion is not currently available');
     expect(html).toContain('updateLocationFormatAvailability');
     expect(html).toContain('.choice:disabled');
     expect(html).not.toContain('Detect from response');
     expect(html).toContain('Bible book ');
-    expect(html).toContain('聖經書卷</label>');
+    expect(html).toContain('圣经书卷</label>');
     expect(html).toContain('Jeremiah · 耶利米書');
     expect(html).toContain('eng_kjv');
     expect(html).toContain('CUV — 和合本（Traditional Chinese）');
@@ -410,16 +411,16 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('11 or 11-15');
     expect(html).toContain('If the speaker submitted a Bible verse in Sabbath Sermon Data');
     expect(html).toContain('getPrintedBulletinPromptWarning');
-    expect(html).toContain('Add announcement / 新增消息');
+    expect(html).toContain('Add announcement / 添加通知');
     expect(html).toContain('getPrintedBulletinPromptData');
-    expect(html).toContain('Instructions / 使用說明');
+    expect(html).toContain('Instructions / 使用说明');
     expect(html).toContain('Check the current week in the app');
     expect(html).not.toContain('Admin reminder / 管理員提醒');
-    expect(html).toContain('1. Update the digital bulletin / 第一步：更新數位週刊');
-    expect(html).toContain('2. Create the printed bulletin / 第二步：建立實體週刊');
+    expect(html).toContain('1. Update the digital bulletin / 第一步：更新手机版周刊');
+    expect(html).toContain('2. Create the printed bulletin / 第二步：创建纸质周刊');
     expect(html).toContain('add or update one row per location in Sabbath Sermon Data');
-    expect(html).toContain('請先查看本應用程式，然後在「Sabbath Sermon Data」中');
-    expect(html).toContain('↗ Open Sabbath Sermon Data / 開啟安息日講道資料');
+    expect(html).toContain('请先在应用中查看本周的周刊，然后在“Sabbath Sermon Data”中');
+    expect(html).toContain('↗ Open Sabbath Sermon Data / 打开安息日讲道数据');
     expect(html).toContain('https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit#gid=1768045043');
     expect(html).not.toContain('forms.gle');
     expect(html).not.toContain('Worship Data form');
@@ -1825,7 +1826,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(output.requiresConfirmation).toBe(true);
     expect(output.warning).toContain('approximately 200 English words');
-    expect(output.warningChinese).toContain('200 個英文單字');
+    expect(output.warningChinese).toContain('200 个英文单词');
   });
 
   it('formats Bible labels using the selected HelloAO translations', () => {

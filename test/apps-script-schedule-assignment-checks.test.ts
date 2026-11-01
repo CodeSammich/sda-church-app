@@ -227,7 +227,7 @@ describe('Sabbath Calendar conflict notes', () => {
     edit(2, 21, 'John Chen');
 
     expect(schedule.notes[1][QUEENS_SERMON - 1]).toBe(
-      'Duplicate / 重複: Pianist, Brooklyn Chair/Pastoral Prayer',
+      'Duplicate / 重复: Pianist, Brooklyn Chair/Pastoral Prayer',
     );
   });
 
@@ -237,7 +237,20 @@ describe('Sabbath Calendar conflict notes', () => {
 
     edit(2, PIANIST, 'Mary Lin');
 
-    expect(schedule.notes[1][QUEENS_SERMON - 1]).toBe('Duplicate / 重複: Pianist');
+    expect(schedule.notes[1][QUEENS_SERMON - 1]).toBe('Duplicate / 重复: Pianist');
+  });
+
+  it('clears notes left in the Traditional Chinese wording from before #565', () => {
+    const { schedule, edit } = setup([
+      scheduleRow('2026-10-03', { [QUEENS_SERMON]: 'Mary Lin', [PIANIST]: 'Mary Lin' }),
+    ]);
+    schedule.notes[1][QUEENS_SERMON - 1] = 'Duplicate / 重複: Pianist';
+    schedule.notes[1][PIANIST - 1] = 'Duplicate / 重複: Queens Sermon';
+
+    edit(2, PIANIST, 'Grace Ho');
+
+    expect(schedule.notes[1][QUEENS_SERMON - 1]).toBe('');
+    expect(schedule.notes[1][PIANIST - 1]).toBe('');
   });
 
   it('keeps a planner\'s own note while still coloring the cell', () => {
