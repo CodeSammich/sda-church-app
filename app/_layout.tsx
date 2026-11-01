@@ -225,7 +225,7 @@ const needsCjkSystemFont = (language: SupportedLanguage) =>
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-// The church symbol rises into view while the app loads (#538). The key-screen
+// The church symbol is drawn while the app loads (#538). The key-screen
 // builds skip it so their shots don't wait for it, and the web doesn't play it.
 const playsLaunchAnimation = Platform.OS !== 'web' && !isKeyScreensBuild();
 
