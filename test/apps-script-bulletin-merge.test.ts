@@ -22,6 +22,15 @@ const NEW_INTAKE_HEADERS = [
   'Special Music Title',
 ];
 
+// The Weekly Data tab's headers since #558: the speaker's columns, then the
+// hymns in the order they're sung.
+const WEEKLY_HEADERS = [
+  'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
+  'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
+  'English Hymn of Praise', 'Chinese Hymn of Praise', 'Special Music Title',
+  'English Hymn of Response', 'Chinese Hymn of Response',
+];
+
 const createSheet = (name: string, headers: string[], rows: string[][] = []) => ({
   getName: () => name,
   getDataRange: () => ({
@@ -269,24 +278,30 @@ describe('Apps Script bulletin response merging', () => {
     expect(location.specialMusicTitle).toBe('It Is Well');
   });
 
-  it('reads only the Weekly Data tab, which needs all thirteen headers', () => {
-    expect(getIntakeContractIssues([...INTAKE_HEADERS, ...NEW_INTAKE_HEADERS])).toEqual([]);
+  it('reads only the Weekly Data tab, which needs all thirteen headers in order', () => {
+    expect(getIntakeContractIssues(WEEKLY_HEADERS)).toEqual([]);
     // The tab before #558, under its old name, is no longer read.
     expect(getIntakeContractIssues(INTAKE_HEADERS, 'Sabbath Sermon Data')).toEqual([
       'Missing required sheet: Weekly Data',
     ]);
-    expect(getIntakeContractIssues([...INTAKE_HEADERS, 'Sabbath School Hymn 1'])).toEqual([
-      'Weekly Data! column 11 must be "Sabbath School Hymn 2" (found "")',
-      'Weekly Data! column 12 must be "Sabbath School Hymn 3" (found "")',
-      'Weekly Data! column 13 must be "Special Music Title" (found "")',
+    expect(getIntakeContractIssues(WEEKLY_HEADERS.slice(0, 10))).toEqual([
+      'Weekly Data! column 11 must be "Special Music Title" (found "")',
+      'Weekly Data! column 12 must be "English Hymn of Response" (found "")',
+      'Weekly Data! column 13 must be "Chinese Hymn of Response" (found "")',
     ]);
+    // The old order, with the new columns at the end, is rejected too.
+    expect(getIntakeContractIssues([...INTAKE_HEADERS, ...NEW_INTAKE_HEADERS])[0]).toBe(
+      'Weekly Data! column 3 must be "Bible Verses" (found "English Hymn of Praise")',
+    );
   });
 
-  it('rejects a wrong, moved, or extra header on the weekly tab', () => {
-    expect(
-      getIntakeContractIssues([...INTAKE_HEADERS, 'Opening Hymn', ...NEW_INTAKE_HEADERS.slice(1)]),
-    ).toEqual(['Weekly Data! column 10 must be "Sabbath School Hymn 1" (found "Opening Hymn")']);
-    expect(getIntakeContractIssues([...INTAKE_HEADERS, ...NEW_INTAKE_HEADERS, 'Notes'])).toEqual([
+  it('rejects a wrong or extra header on the weekly tab', () => {
+    const wrong = [...WEEKLY_HEADERS];
+    wrong[5] = 'Opening Hymn';
+    expect(getIntakeContractIssues(wrong)).toEqual([
+      'Weekly Data! column 6 must be "Sabbath School Hymn 1" (found "Opening Hymn")',
+    ]);
+    expect(getIntakeContractIssues([...WEEKLY_HEADERS, 'Notes'])).toEqual([
       'Weekly Data! column 14 must be "" (found "Notes")',
     ]);
   });

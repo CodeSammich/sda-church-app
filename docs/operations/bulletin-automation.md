@@ -169,12 +169,13 @@ This is the reviewed, final-owner intake sheet, filled in week by week. Keep
 one row per Sabbath and location. Row 1 must be:
 
 ```text
-Date | Location | English Hymn of Praise | Chinese Hymn of Praise |
-English Sermon Title | Chinese Sermon Title | English Hymn of Response |
-Chinese Hymn of Response | Bible Verses |
+Date | Location | Bible Verses | English Sermon Title | Chinese Sermon Title |
 Sabbath School Hymn 1 | Sabbath School Hymn 2 | Sabbath School Hymn 3 |
-Special Music Title
+English Hymn of Praise | Chinese Hymn of Praise | Special Music Title |
+English Hymn of Response | Chinese Hymn of Response
 ```
+
+The speaker's columns come first, then the hymns in the order they're sung.
 
 Until #558 this tab was `Sabbath Sermon Data`, with the first nine columns.
 #558's four columns went into a copy named `Weekly Data`, made before its
@@ -186,6 +187,10 @@ Opening the spreadsheet adds the rows to fill in: a `Queens` and a `Brooklyn`
 row, with the date, for this coming Sabbath and the one after, the two weeks the
 app shows (see [Automatic quarter and visibility
 maintenance](#automatic-quarter-and-visibility-maintenance)).
+
+Rows 2 and 3 are worked examples, one for each location, with `Example` in
+`Date`. Nothing reads a row whose `Date` isn't a date, so they never reach a
+bulletin. Keep them at the top for whoever fills in the week.
 
 Rules:
 

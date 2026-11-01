@@ -134,10 +134,10 @@ describe('printed bulletin Apps Script helpers', () => {
 
   describe('Weekly Data rows for the next Sabbaths (#558)', () => {
     const HEADERS = [
-      'Date', 'Location', 'English Hymn of Praise', 'Chinese Hymn of Praise',
-      'English Sermon Title', 'Chinese Sermon Title', 'English Hymn of Response',
-      'Chinese Hymn of Response', 'Bible Verses', 'Sabbath School Hymn 1',
-      'Sabbath School Hymn 2', 'Sabbath School Hymn 3', 'Special Music Title',
+      'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
+      'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
+      'English Hymn of Praise', 'Chinese Hymn of Praise', 'Special Music Title',
+      'English Hymn of Response', 'Chinese Hymn of Response',
     ];
     // Dates the script writes come from its own vm context, so instanceof
     // Date doesn't recognize them here.
@@ -191,7 +191,7 @@ describe('printed bulletin Apps Script helpers', () => {
     };
 
     it('adds a Queens and a Brooklyn row for this coming Sabbath and the next', () => {
-      const sheet = weeklySheet([['2026-10-31', 'Queens', 'AH 206 Face to Face']]);
+      const sheet = weeklySheet([['2026-10-31', 'Queens', 'Matthew 6:10']]);
       // A Wednesday: the coming Sabbath is November 7.
       expect(run(sheet, '2026-11-04')).toBe(4);
       expect(added(sheet, 2)).toEqual([
@@ -201,7 +201,16 @@ describe('printed bulletin Apps Script helpers', () => {
         ['Sat Nov 14 2026', 'Brooklyn'],
       ]);
       expect(sheet.formats).toEqual(['3:1:4:yyyy-mm-dd']);
-      expect(sheet.values[1][2]).toBe('AH 206 Face to Face');
+      expect(sheet.values[1][2]).toBe('Matthew 6:10');
+    });
+
+    it("ignores the example rows at the top, whose Date isn't a date", () => {
+      const sheet = weeklySheet([
+        ['Example', 'Queens', 'John 10:11-16', 'The Good Shepherd'],
+        ['Example', 'Brooklyn', 'Psalms 23:1-6'],
+      ]);
+      expect(run(sheet, '2026-11-04')).toBe(4);
+      expect(sheet.values.slice(1, 3).map((row) => row[0])).toEqual(['Example', 'Example']);
     });
 
     it('never repeats a row staff already added, however its date is written', () => {
@@ -405,12 +414,12 @@ describe('printed bulletin Apps Script helpers', () => {
       ['2026-09-05', ...Array(24).fill('')],
     ]);
     const intakeSheet = makeSheet('Weekly Data', [[
-      'Date', 'Location', 'English Hymn of Praise', 'Chinese Hymn of Praise',
-      'English Sermon Title', 'Chinese Sermon Title', 'English Hymn of Response',
-      'Chinese Hymn of Response', 'Bible Verses',
-      'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3', 'Special Music Title',
+      'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
+      'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
+      'English Hymn of Praise', 'Chinese Hymn of Praise', 'Special Music Title',
+      'English Hymn of Response', 'Chinese Hymn of Response',
     ], [
-      '2026-09-05', 'brooklyn', '', '', '', '', '', '', 'Luke 7:36-39', '', '', '', '',
+      '2026-09-05', 'brooklyn', 'Luke 7:36-39', '', '', '', '', '', '', '', '', '', '',
     ]]);
     const context = loadAppsScript({
       SpreadsheetApp: {
@@ -2220,32 +2229,32 @@ describe('printed bulletin Apps Script helpers', () => {
         getValues: () => [[
           'Date',
           'Location',
-          'English Hymn of Praise',
-          'Chinese Hymn of Praise',
+          'Bible Verses',
           'English Sermon Title',
           'Chinese Sermon Title',
-          'English Hymn of Response',
-          'Chinese Hymn of Response',
-          'Bible Verses',
           'Sabbath School Hymn 1',
           'Sabbath School Hymn 2',
           'Sabbath School Hymn 3',
+          'English Hymn of Praise',
+          'Chinese Hymn of Praise',
           'Special Music Title',
+          'English Hymn of Response',
+          'Chinese Hymn of Response',
         ]],
         getDisplayValues: () => [[
           'Date',
           'Location',
-          'English Hymn of Praise',
-          'Chinese Hymn of Praise',
+          'Bible Verses',
           'English Sermon Title',
           'Chinese Sermon Title',
-          'English Hymn of Response',
-          'Chinese Hymn of Response',
-          'Bible Verses',
           'Sabbath School Hymn 1',
           'Sabbath School Hymn 2',
           'Sabbath School Hymn 3',
+          'English Hymn of Praise',
+          'Chinese Hymn of Praise',
           'Special Music Title',
+          'English Hymn of Response',
+          'Chinese Hymn of Response',
         ]],
       }),
     };
@@ -2594,10 +2603,10 @@ describe('Sabbath Calendar year-ahead rows', () => {
     sheet.backgrounds[13][BROOKLYN_SERMON - 1] = CONFLICT;
 
     const sermonHeaders = [
-      'Date', 'Location', 'English Hymn of Praise', 'Chinese Hymn of Praise',
-      'English Sermon Title', 'Chinese Sermon Title', 'English Hymn of Response',
-      'Chinese Hymn of Response', 'Bible Verses',
-      'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3', 'Special Music Title',
+      'Date', 'Location', 'Bible Verses', 'English Sermon Title', 'Chinese Sermon Title',
+      'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
+      'English Hymn of Praise', 'Chinese Hymn of Praise', 'Special Music Title',
+      'English Hymn of Response', 'Chinese Hymn of Response',
     ];
     const sermonSheet = {
       getName: () => 'Weekly Data',

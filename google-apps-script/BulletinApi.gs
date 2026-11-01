@@ -90,20 +90,20 @@ var PRIVATE_NAME_PLACEHOLDER = 'Name withheld';
 // These headers are intentionally concise so final owners can correct a week's
 // content directly without an append-only response workflow.
 var BULLETIN_INTAKE_SCHEMA = Object.freeze([
-  { headers: ['English Hymn of Praise'], path: ['hymnOfPraise', 'english'] },
-  { headers: ['Chinese Hymn of Praise'], path: ['hymnOfPraise', 'chinese'] },
+  { headers: ['Bible Verses'], path: ['bibleVerses'] },
   { headers: ['English Sermon Title'], path: ['sermonTitle', 'english'] },
   { headers: ['Chinese Sermon Title'], path: ['sermonTitle', 'chinese'] },
-  { headers: ['English Hymn of Response'], path: ['hymnOfResponse', 'english'] },
-  { headers: ['Chinese Hymn of Response'], path: ['hymnOfResponse', 'chinese'] },
-  { headers: ['Bible Verses'], path: ['bibleVerses'] },
   // One hymn per cell, typed in either language. They're sung again as the
   // closing hymns, so there's no closing-hymn column.
   { headers: ['Sabbath School Hymn 1'], path: ['sabbathSchoolHymns', 0] },
   { headers: ['Sabbath School Hymn 2'], path: ['sabbathSchoolHymns', 1] },
   { headers: ['Sabbath School Hymn 3'], path: ['sabbathSchoolHymns', 2] },
+  { headers: ['English Hymn of Praise'], path: ['hymnOfPraise', 'english'] },
+  { headers: ['Chinese Hymn of Praise'], path: ['hymnOfPraise', 'chinese'] },
   // The piece performed. Who performs it is the Sabbath Calendar's Special Music.
   { headers: ['Special Music Title'], path: ['specialMusicTitle'] },
+  { headers: ['English Hymn of Response'], path: ['hymnOfResponse', 'english'] },
+  { headers: ['Chinese Hymn of Response'], path: ['hymnOfResponse', 'chinese'] },
 ]);
 
 // These first-row headers are a versioned interface between the spreadsheet,
@@ -137,20 +137,21 @@ var BULLETIN_HEADER_CONTRACTS = Object.freeze({
     'Encouragement',
     'Sabbath School',
   ]),
+  // The speaker's columns, then the hymns in the order they're sung (#558).
   'Weekly Data': Object.freeze([
     'Date',
     'Location',
-    'English Hymn of Praise',
-    'Chinese Hymn of Praise',
+    'Bible Verses',
     'English Sermon Title',
     'Chinese Sermon Title',
-    'English Hymn of Response',
-    'Chinese Hymn of Response',
-    'Bible Verses',
     'Sabbath School Hymn 1',
     'Sabbath School Hymn 2',
     'Sabbath School Hymn 3',
+    'English Hymn of Praise',
+    'Chinese Hymn of Praise',
     'Special Music Title',
+    'English Hymn of Response',
+    'Chinese Hymn of Response',
   ]),
 });
 
