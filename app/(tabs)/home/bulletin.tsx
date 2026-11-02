@@ -6,6 +6,7 @@ import {
   openURL,
   openYouTubeSearch,
 } from '@/constants/ExternalLinks';
+import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -723,15 +724,8 @@ export default function WeeklyBulletinScreen() {
     return () => clearInterval(timer);
   }, [refreshAvailableAt]);
 
-  const dateLocale =
-    language === 'zh' ? 'zh-TW' : language === 'zh-cn' ? 'zh-CN' : language;
-
   const formatDate = (date: string) =>
-    new Intl.DateTimeFormat(dateLocale, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(new Date(`${date}T12:00:00`));
+    formatAppDate(new Date(`${date}T12:00:00`), language, { year: true });
 
   const selectWeek = (index: number) => {
     setSelectedWeek(String(index));
