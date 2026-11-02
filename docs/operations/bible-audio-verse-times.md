@@ -212,6 +212,7 @@ MAX_CHAPTERS=50 python -I scripts/bible-audio-alignment/check_verse_times.py <re
     word of its own.
   - **Doubtful:** a miss whose heard time lies outside the verses around it. These are
     usually the recognizer's mistake, such as a repeated passage.
+  - **Checked by ear:** a miss with an entry in `corrections.json` is listed apart.
 
 The recognizer is wrong about some misses, so check each one before changing it. Open the
 recording at both times, or transcribe the seconds around them:
@@ -221,21 +222,22 @@ python -I scripts/bible-audio-alignment/listen.py <repo> <work-dir> <narrator> E
 ```
 
 It prints the app's starts, where speech resumes after each pause, each syllable or word
-heard with its time, and the loudness every 0.1 s. Checking the Cantonese turned up these
-kinds:
+heard with its time, and the loudness every 0.1 s. Checking the Mandarin and Cantonese
+turned up these kinds:
 
 | What you hear | What to do |
 |---|---|
 | The aligner gave the verse before too little or too much time. | Use the suggested start. |
 | The verse starts with a short word and a pause, such as 說、 or 耶穌說、, and the pause rule moved the start past it. | Use the suggested start. |
 | The start is in the pause before the verse, but a second or more early. | Use the suggested start. |
-| The narrator reads a verse, or its start, twice. | Use the first reading. |
+| The narrator reads a verse, or its start, twice. | Start it at the first reading, and the next verse after the second. |
 | The narrator announces a verse before reading it, such as 彌迦書第一章十四節. | Start the verse at the announcement. |
 | The recording leaves out verses. | Give them no time (null), and fix the verses after. |
 | The recognizer matched the chapter announcement or a psalm title, or a repeated passage. | Nothing: the time is right. |
 
 Add each fix to `corrections.json` with a short reason, run `finish.py` (step 6), and
-compare again.
+compare again. A time that was right can go in too, unchanged, so the next check lists it
+as checked by ear.
 
 ### 9. Use it in the app
 
