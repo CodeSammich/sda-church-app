@@ -137,18 +137,23 @@ const checkLesson = async ({ first }, fetcher = fetch) => {
 /**
  * Each record a shot can name in screens.json: when it's ready for the shot,
  * how long to wait for that at most, and its check. Audio is ready once it
- * plays or fails, and a lesson once it has opened somewhere.
+ * plays or fails, and a lesson once it has opened somewhere. `typical` is how
+ * many seconds past the shot's wait it took in the first trial run
+ * (41389692195), counted in its group's time (shotCost).
  */
 const RECORDS = {
   [RECORD_KEYS.audio]: {
     ready: (record) => record.currentTime > 0 || !!record.error,
     waitUpTo: 20,
+    typical: 1,
     check: checkPlayback,
   },
   [RECORD_KEYS.lesson]: {
     ready: (record) => !!record.outcome,
     // The lookup gives up after 12 seconds, and the download takes a few more.
     waitUpTo: 40,
+    // With Quick Look's retakes while it draws the PDF.
+    typical: 18,
     check: checkLesson,
   },
 };

@@ -873,7 +873,9 @@ twice fails the run.
 iPhone-only shots in the `worship-and-you` group check it there, on the app the run
 already builds (#551). That group finished first or second in the six release runs
 from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so the two shots,
-about 40 seconds, shouldn't lengthen the run.
+about 50 seconds with their launches, shouldn't lengthen the run. In the first trial
+the audio started a second after its 6-second wait, and the lesson took 22 seconds
+from launch to the shot.
 
 - `bible-audio-playing` starts Psalm 23's Mandarin recording with `play=1`. A second
   screenshot, `bible-audio-playing-default-later.png`, is taken 10 seconds after the

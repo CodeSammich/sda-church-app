@@ -114,9 +114,10 @@ const ROUTE_KEY = 'screenshot-route';
 const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
   JSON.parse(readFileSync(file, 'utf8'));
 
-// A shot's rough cost in seconds: its wait and any later shot's, plus about 5
-// to relaunch the app and take the screenshot.
-const shotCost = (shot) => shot.wait + (shot.later || 0) + 5;
+// A shot's rough cost in seconds: its wait, the time its record usually takes
+// after that, and any later shot's, plus about 5 to relaunch the app and take
+// the screenshot.
+const shotCost = (shot) => shot.wait + (RECORDS[shot.record]?.typical || 0) + (shot.later || 0) + 5;
 
 /**
  * The shots of one group in test/screens/screens.json: related screens

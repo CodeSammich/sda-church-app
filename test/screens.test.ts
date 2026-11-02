@@ -95,9 +95,11 @@ describe('key screen list (test/screens/screens.json)', () => {
     const playing = config.screens.find((screen: { name: string }) => screen.name === 'bible-audio-playing');
     expect(playing.path).toMatch(/^bible\?.*&play=1$/);
     expect(planCaptures(config, 'android').some((shot: { record?: string }) => shot.record)).toBe(false);
-    // Its later shot counts in its group's time.
+    // Its later shot, and the time it usually takes to start, count in its group's time.
     const shot = shots.find((each: { name: string }) => each.name === 'bible-audio-playing-default');
-    expect(shotCost(shot)).toBe(shot.wait + 10 + 5);
+    expect(shotCost(shot)).toBe(shot.wait + RECORDS[shot.record].typical + 10 + 5);
+    const lesson = shots.find((each: { name: string }) => each.name === 'sabbath-school-lesson-viewer-default');
+    expect(shotCost(lesson)).toBe(lesson.wait + RECORDS[lesson.record].typical + 5);
   });
 
   it('opens only popups the screen can open from its path (#372)', () => {
