@@ -90,7 +90,7 @@ The other copies:
 
 - **The web app's offline copy.** `public/sw.js`, the service worker, is network-first: it keeps the response to every GET request, from the website or elsewhere, in the browser's Cache Storage under `sda-church-v<version>`, and serves that copy when the network fails. A new version deletes the older copies.
 - **Bundled Bible files on Android.** These are the `expo-asset` copies above, in the cache directory, which the system may clear.
-- **The Android widget's verses.** `expo-widgets` keeps the widget's layout and the week of verses the app last gave it (#235) in the app's `expo.modules.widgets` shared preferences, a few kilobytes. Android's Auto Backup includes them, as it does every shared preferences file. The app replaces them the next time Home loads.
+- **The Android widget's verses.** `expo-widgets` keeps the widget's layout and the week of verses the app last gave it (#235) in the app's `expo.modules.widgets` shared preferences, a few kilobytes. Android's Auto Backup includes them, as it does every shared preferences file. Home gives the widget a new week once a day, or when the language changes, and notes when in `verse-of-the-day/widget.txt` in the cache directory (`services/VerseOfTheDayWidget.android.ts`).
 - **Streamed audio isn't saved by the app.** Bible audio streams through `expo-audio`, unless the member downloaded it (below). On the web, the browser and the service worker may keep what was fetched, as for any request.
 
 ## Bible audio downloaded to listen offline
