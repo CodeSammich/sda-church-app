@@ -156,6 +156,25 @@ the system's alert asks first: Cancel, Wait for Wi-Fi, or Use mobile data; and a
 over 1 GB, such as the English Bible, asks first even on Wi-Fi. See
 [Bible audio downloaded to listen offline](feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
 
+When streamed Bible audio keeps stopping to load
+([#595](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/595)),
+the audio settings button at the left of the audio bar points the listener to Listen
+offline:
+- **When:** after 3 stalls in one listening session, or one longer than 5 seconds. The
+  usual loading at a chapter's start, or after a skip or a drag, doesn't count toward the 3.
+- **How:** the button's border pulses three times in the theme's main color, then a dot,
+  like the sleep timer's, stays until the popup opens. With Reduce Motion (iOS) or Remove
+  animations (Android) on, only the dot shows. A pulse due while the screen is off waits
+  until the app is back.
+- **In the popup:** it scrolls to Listen offline, which says "Playback keeps stopping to
+  load. Download to listen without waiting." Screen readers hear the same line as the
+  button's hint, not as an announcement.
+- **Not nagging:** at most once each time the app starts, never again once Bible audio has
+  been on the phone, and not for 7 days after the listener closes the popup without
+  downloading.
+
+`services/BibleAudioDownloadTip.ts` decides when.
+
 ### Key Principles & Exceptions:
 
 1.  **Brand Neutrality:** External service destinations use official provider assets
