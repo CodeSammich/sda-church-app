@@ -13,11 +13,12 @@ A verse that opens with a few words and a colon, such as "Y dijo:", keeps the al
 snap.py moved it more than 0.5 s later: the narrator reads the phrase straight on from the verse
 before, so the pause snap.py found is the one after the phrase.
 
-Starts checked by ear or by a recognizer and found wrong are replaced from corrections.json, next to
-this script, but only while the recording's sha256 still matches the one corrected.
+Starts checked by ear (check_verse_times.py, listen.py) are set from corrections.json, next to this
+script, but only while the recording's sha256 still matches the one checked.
 
-A chapter gets no times if it failed to align, its starts don't increase, or verse 1 starts more
-than 25 s in (plus 0.6 s per character of a psalm title read before it). Verses that look odd are listed for a check but keep their times.
+A chapter gets no times if it failed to align, has the wrong number of verses, its starts don't
+increase, or verse 1 starts more than 25 s in (plus 0.6 s per character of a psalm title read
+before it). Verses that look odd are listed for a check but keep their times.
 """
 import json, os, re, statistics, sys
 from collections import defaultdict

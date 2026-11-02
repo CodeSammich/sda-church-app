@@ -167,8 +167,8 @@ describe('verse start times that ship with the app', () => {
   );
 
   it('has every hand correction, each for the recording on file', () => {
-    // scripts/bible-audio-alignment/corrections.json: starts a recognizer found wrong and a
-    // listen confirmed (#573), such as the Cantonese Hebrews 12, which skips verses 3 to 14.
+    // scripts/bible-audio-alignment/corrections.json: starts checked by ear (#573), mostly ones a
+    // recognizer found wrong, such as the Cantonese Hebrews 12, which skips verses 3 to 14.
     const corrections = JSON.parse(
       readFileSync(join(process.cwd(), 'scripts/bible-audio-alignment/corrections.json'), 'utf8'),
     );

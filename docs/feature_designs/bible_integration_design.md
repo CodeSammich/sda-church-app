@@ -582,21 +582,24 @@ and keeps following.
   aligned again. The Cantonese narrator reads the CUV's notes aloud and the Mandarin
   narrator doesn't, so the notes are aligned as text for one and skipped for the other.
   `finish.py` also gives no time to the CUV's 66 verses that only say 見上節 ("see the verse
-  before"), which the narrators skip, and keeps the aligner's start for a verse that opens
-  with a few words and a colon, such as "Y dijo:" (110 Spanish verses): the narrator reads
-  the phrase straight on from the verse before and pauses after it.
+  before"), which the narrators skip. For a verse that opens with a few words and a colon,
+  such as "Y dijo:", it keeps the aligner's start when the pause rule moved it more than
+  0.5 s later (110 Spanish verses): the narrator reads the phrase straight on from the verse
+  before and pauses after it.
 - **Checks:** speech recognizers that don't share the aligner's model heard every chapter
   (`check_verse_times.py`, with SenseVoice for Chinese and Whisper for Spanish), and each
-  verse's time was compared with when its first two words were heard (#573). Each verse
-  more than 1 s off was checked by ear, and the wrong ones are fixed in
-  `scripts/bible-audio-alignment/corrections.json`: 22 Mandarin verses, 56 Cantonese, and 14
-  Spanish. Of the verses whose first words were heard, 99.99% of 30,471 Mandarin, 99.77% of
-  27,747 Cantonese, and 99.66% of 26,379 Spanish are within 0.3 s. The few still more than
-  1 s off are the recognizer's mistakes, such as matching a passage that repeats, as in
-  Numbers 7. The checks also found that the Cantonese recording of Hebrews 12 leaves out
-  verses 3 to 14, which get no time. Before that, sampled chapters (`spot_check_chinese.py`,
-  `spot_check_spanish.py`) chose the pause rule: in Cantonese it put 99.5–99.9% of 1,698
-  verses within 0.3 s, where an earlier rule had 95.5%.
+  verse's time was compared with when its first word was heard, if its first two were
+  heard in order (#573). Each verse more than 1 s off was checked by ear.
+  `scripts/bible-audio-alignment/corrections.json` holds the starts checked by ear: 22
+  Mandarin, 56 Cantonese, and 14 Spanish. Two of the Cantonese confirm a start that was
+  right, and 12 are the Hebrews 12 verses the recording leaves out. Of the verses whose
+  first words were heard, 99.99% of 30,471 Mandarin, 99.77% of 27,747 Cantonese, and
+  99.66% of 26,379 Spanish are within 0.3 s. The few still more than 1 s off are the
+  recognizer's or the check's mistakes, such as matching a passage that repeats, as in
+  Numbers 7, or deliberate, such as a verse read twice starting at its first reading.
+  Before that, sampled chapters (`spot_check_chinese.py`, `spot_check_spanish.py`) chose the
+  pause rule: in Cantonese it put 99.5–99.9% of 1,698 verses within 0.3 s, where an earlier
+  rule had 95.5%.
 - **Running them again:** a Python environment with `torch` and `torchaudio` 2.8, `numpy`,
   `pypinyin`, `ToJyutping`, and `imageio-ffmpeg` (and `funasr`, `faster-whisper`, and
   `transformers` for the checks). On a consumer GPU each chapter takes 3 to 5 seconds, so

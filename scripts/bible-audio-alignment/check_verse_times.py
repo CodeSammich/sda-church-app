@@ -26,8 +26,8 @@ A verse is a miss when its start is more than 1 s from `heard`, more than 1 s af
 more than 1 s before `before`. A verse in corrections.json was already checked by ear, so it's
 listed apart rather than as a miss. A miss whose recognizer time falls outside the neighbouring
 verses' starts is set aside as doubtful: in a chapter that repeats a passage, such as Numbers 7,
-the recognizer's words can line up with another copy. Each miss gets a suggested start: the
-recognizer's time, moved to where speech resumes after a pause if one ends within 0.5 s.
+the recognizer's words can line up with another copy. A miss found by `heard` gets a suggested
+start: the recognizer's time, moved to where speech resumes after a pause if one ends within 0.5 s.
 """
 import bisect, json, os, re, subprocess, sys, time, unicodedata
 from difflib import SequenceMatcher
