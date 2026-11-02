@@ -90,6 +90,22 @@ describe('Android phone-only portrait (#426)', () => {
     expect(appJson.orientation).toBe('portrait');
     expect(appJson.plugins).toContain('./plugins/withAndroidPhonePortrait');
   });
+
+  it('lets the iPad turn every way and resize (#324)', () => {
+    // An iPad app that can share the screen with another app must declare all
+    // four orientations, or App Store Connect rejects the upload, and from
+    // iPadOS 26 every app's window can be resized (Apple's TN3192). The iPad
+    // reads its own key; the iPhone keeps app.json's portrait.
+    expect(appJson.ios.supportsTablet).toBe(true);
+    expect(appJson.ios.infoPlist['UISupportedInterfaceOrientations~ipad']).toEqual([
+      'UIInterfaceOrientationPortrait',
+      'UIInterfaceOrientationPortraitUpsideDown',
+      'UIInterfaceOrientationLandscapeLeft',
+      'UIInterfaceOrientationLandscapeRight',
+    ]);
+    // The deprecated opt-out of resizing, which iOS 27 ignores.
+    expect(appJson.ios.infoPlist).not.toHaveProperty('UIRequiresFullScreen');
+  });
 });
 
 describe('Android release shrinking (#428)', () => {

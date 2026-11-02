@@ -2,7 +2,7 @@ import { PopupHeader } from '@/components/PopupHeader';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import type { LessonDownloadProgress } from '@/features/sabbath-school/LessonDownloads';
-import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { StyleSheet } from 'react-native';
 import { Dialog, Portal, ProgressBar, Text } from 'react-native-paper';
@@ -91,6 +91,7 @@ export function ChildrenLessonDialog({ offline = false, onCancel, progress, titl
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight();
+  const popupWidthStyle = usePopupWidthStyle();
   const status = getChildrenLessonStatus(progress, language);
 
   return (
@@ -99,7 +100,7 @@ export function ChildrenLessonDialog({ offline = false, onCancel, progress, titl
         testID="children-lesson-dialog"
         visible={visible}
         onDismiss={onCancel}
-        style={[styles.dialog, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
+        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
       >
         <PopupHeader closeLabel={labels.close} onClose={onCancel} style={styles.header} title={title} />
         <Dialog.Content style={styles.content}>
@@ -132,7 +133,6 @@ export function ChildrenLessonDialog({ offline = false, onCancel, progress, titl
 
 const styles = StyleSheet.create({
   content: { gap: 16, paddingBottom: 24 },
-  dialog: { alignSelf: 'center', maxWidth: 560, width: '90%' },
   // As in the other popups: with the X's 48-point row, 16 keeps the title where
   // Paper's own title sits.
   header: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },

@@ -482,9 +482,10 @@ describe('searching every hymnal from the page', () => {
     expect(listed[12]).toBe('more chinese-hymnal-505');
 
     // The list renders rows this far down only once it's laid out, so render
-    // the button from the list's own renderItem and press it.
+    // the button from the list's own renderItem and press it. Each row sits in
+    // the content column (#324), so the button is the column's child.
     const list = hostList(view);
-    const button = list.props.renderItem({ item: more() });
+    const button = list.props.renderItem({ item: more() }).props.children;
     expect(button.props.accessibilityLabel).toBe(`Show all ${count}, Chinese Hymnal — 505 Edition`);
     await act(() => button.props.onPress());
     const expanded = listedHymns(view);

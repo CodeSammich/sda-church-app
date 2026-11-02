@@ -1,6 +1,12 @@
 import {
+  CONTENT_MAX_WIDTH,
+  contentColumnStyle,
+  contentColumnWithin,
   DESIGN_TOKENS,
   getBottomTabContentHeight,
+  getContentMaxWidth,
+  getContentSideInset,
+  getContentWidth,
   getGlobalHeaderContentHeight,
 } from '@/constants/Layout';
 import { readFileSync } from 'node:fs';
@@ -90,4 +96,111 @@ describe('responsive bottom-tab height', () => {
       );
     },
   );
+});
+
+describe('the content column on wide screens (#324)', () => {
+  // The widest phone the app supports today, and 13-inch iPad widths: portrait,
+  // landscape, and a window beside another app.
+  it.each([320, 390, 440])('leaves a %i-point phone its whole width', (width) => {
+    expect(getContentWidth(width)).toBe(width);
+    expect(getContentSideInset(width)).toBe(0);
+    // At every text size.
+    expect(getContentWidth(width, 2)).toBe(width);
+  });
+
+  it.each([
+    { width: 1032, inset: (1032 - CONTENT_MAX_WIDTH) / 2 },
+    { width: 1376, inset: (1376 - CONTENT_MAX_WIDTH) / 2 },
+    { width: 744, inset: (744 - CONTENT_MAX_WIDTH) / 2 },
+  ])('centers the column in a $width-point window', ({ width, inset }) => {
+    expect(getContentWidth(width)).toBe(CONTENT_MAX_WIDTH);
+    expect(getContentSideInset(width)).toBe(inset);
+  });
+
+  it('is wider than every phone, so phone layouts never change', () => {
+    expect(CONTENT_MAX_WIDTH).toBeGreaterThan(440);
+    expect(contentColumnStyle()).toEqual({
+      width: '100%',
+      maxWidth: CONTENT_MAX_WIDTH,
+      alignSelf: 'center',
+    });
+  });
+
+  it('widens with the text above the default 125%, so a line holds as many words', () => {
+    expect(getContentMaxWidth(1)).toBe(CONTENT_MAX_WIDTH);
+    expect(getContentMaxWidth(1.25)).toBe(CONTENT_MAX_WIDTH);
+    expect(getContentMaxWidth(1.5)).toBe(864);
+    expect(getContentMaxWidth(2)).toBe(1152);
+    // At 200%, a 13-inch iPad's whole width in portrait, and most of it in landscape.
+    expect(getContentWidth(1032, 2)).toBe(1032);
+    expect(getContentSideInset(1376, 2)).toBe((1376 - 1152) / 2);
+    expect(contentColumnStyle(1.5).maxWidth).toBe(864);
+  });
+
+  it("lines a padded banner's text up with the column below it", () => {
+    expect(contentColumnWithin(20)).toEqual({
+      width: '100%',
+      maxWidth: CONTENT_MAX_WIDTH - 40,
+      alignSelf: 'center',
+    });
+    expect(contentColumnWithin(20, 2).maxWidth).toBe(1152 - 40);
+  });
+});
+
+describe('popup width on wide screens (#324)', () => {
+  const { getPopupWidthStyle, POPUP_MAX_WIDTH } = require('@/styles/PopupStyles');
+
+  it("keeps a phone popup's width", () => {
+    // The Bible's popups: the screen less 20-point margins.
+    expect(getPopupWidthStyle(390 - 40)).toEqual({ alignSelf: 'center', width: 350 });
+    // The dialogs: 90% of the screen.
+    expect(getPopupWidthStyle(390 * 0.9)).toEqual({ alignSelf: 'center', width: 351 });
+  });
+
+  it('holds popups on a tablet to their widest, as a number Paper applies to the whole popup', () => {
+    expect(POPUP_MAX_WIDTH).toBe(560);
+    expect(getPopupWidthStyle(1032 - 40).width).toBe(560);
+    expect(getPopupWidthStyle(1376 * 0.9).width).toBe(560);
+    expect(getPopupWidthStyle(1032 * 0.9, 500).width).toBe(500);
+  });
+
+  it("gives no popup a percentage width and a maxWidth, which iOS's Paper Surface splits", () => {
+    // Any style in a file with a Paper Dialog or Modal. A plain View, such as
+    // the library banner's cover, applies both to one view.
+    const { readdirSync, statSync } = require('node:fs');
+    const { join } = require('node:path');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) walk(path);
+        else if (path.endsWith('.tsx')) files.push(path);
+      }
+    };
+    ['app', 'components', 'features'].forEach(walk);
+    const popups = files.filter((file) => /<(Dialog|Modal)\b/.test(readFileSync(file, 'utf8')));
+    const offenders = popups.flatMap((file) =>
+      (readFileSync(file, 'utf8').match(/\{[^{}]*\}/g) || [])
+        .filter((style) => /\bwidth: '\d+%'/.test(style) && /\bmaxWidth: \d+/.test(style))
+        .map((style) => `${file}: ${style.replace(/\s+/g, ' ')}`),
+    );
+    expect(offenders).toEqual([]);
+    expect(popups.length).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe('the column follows the app text size and the device text size (#324)', () => {
+  it('multiplies them, since the app holds their product to a cap', () => {
+    const source = readFileSync('hooks/useContentColumnScale.ts', 'utf8');
+    expect(source).toContain('return textScale * (');
+    // With the iPad's largest text, the app draws its own text near 100%, yet the
+    // text is 3.2× and the column has to be as wide as the screen.
+    expect(getContentWidth(1032, 1.03 * 3.1)).toBe(1032);
+  });
+
+  it('gives Bible text margins on a tablet, not a phone', () => {
+    const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(bible).toContain('viewportWidth > CONTENT_MAX_WIDTH ? { paddingLeft: 24, paddingRight: 24 } : null');
+    expect(bible).toContain('const columnScale = textScale * osFontScale;');
+  });
 });

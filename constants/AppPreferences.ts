@@ -39,6 +39,35 @@ export type TextScale =
 export const DEFAULT_TEXT_SCALE: TextScale = 1.25;
 
 /**
+ * A tablet's text starts at 150% (#324). A tablet is held farther away than a
+ * phone, so at 125% its text read small, and members who ask for the app on an
+ * iPad often chose one for bigger text. The content column widens with it
+ * (getContentMaxWidth), so lines hold as many words as on a phone.
+ */
+export const TABLET_DEFAULT_TEXT_SCALE: TextScale = 1.5;
+
+/**
+ * The shorter side, in points, from which a screen counts as a tablet's:
+ * Android's own line for large screens (600 dp), which every iPad passes, the
+ * iPad mini at 744, and no phone does.
+ */
+export const TABLET_MIN_SCREEN_SIDE = 600;
+
+/**
+ * The text size a device starts at, before the reader chooses one: 150% on a
+ * tablet or an unfolded foldable, 125% on a phone and on the web, whose wide
+ * windows are mostly computers. The screen the app first opens on decides,
+ * since first-launch setup saves the size.
+ */
+export const getDefaultTextScale = (
+  screen: { width: number; height: number },
+  platform: string,
+): TextScale =>
+  platform !== 'web' && Math.min(screen.width, screen.height) >= TABLET_MIN_SCREEN_SIDE
+    ? TABLET_DEFAULT_TEXT_SCALE
+    : DEFAULT_TEXT_SCALE;
+
+/**
  * The most the app's text size and the phone's may add up to, since the two
  * multiply: 3.2×, just above the iPhone's own largest text (about 3.1×). So the
  * app never shows text larger than the phone alone can, a size apps already
@@ -96,12 +125,18 @@ const snapTextScale = (value: unknown): TextScale | null => {
 export const isTextScale = (value: unknown): value is TextScale =>
   snapTextScale(value) !== null;
 
-export const normalizeTextScale = (value: unknown): TextScale =>
-  snapTextScale(value) ?? DEFAULT_TEXT_SCALE;
+export const normalizeTextScale = (
+  value: unknown,
+  fallback: TextScale = DEFAULT_TEXT_SCALE,
+): TextScale => snapTextScale(value) ?? fallback;
 
-export const parseStoredTextScale = (value: string | null): TextScale => {
-  if (value === null || value.trim() === '') return DEFAULT_TEXT_SCALE;
-  return normalizeTextScale(Number(value));
+/** The saved size, or `fallback`, the device's default, if none is saved. */
+export const parseStoredTextScale = (
+  value: string | null,
+  fallback: TextScale = DEFAULT_TEXT_SCALE,
+): TextScale => {
+  if (value === null || value.trim() === '') return fallback;
+  return normalizeTextScale(Number(value), fallback);
 };
 
 export const serializeTextScale = (value: unknown): string => {

@@ -1,3 +1,4 @@
+import { contentColumnStyle } from '@/constants/Layout';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   CHURCH_EMAIL,
@@ -13,6 +14,7 @@ import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -28,6 +30,7 @@ export default function MeetOurTeamScreen() {
   const theme = useAppTheme();
   const NavigationStyles = useNavigationStyles();
   const { textScale } = useTextSize();
+  const columnScale = useContentColumnScale();
   const { fontScale } = useWindowDimensions();
   const useStackedActions = fontScale * textScale >= 1.5;
   const styles = useMemo(
@@ -112,7 +115,7 @@ export default function MeetOurTeamScreen() {
         </ImageBackground>
 
         {/* Content Body */}
-        <View style={styles.body}>
+        <View style={[styles.body, contentColumnStyle(columnScale)]}>
           {/* Cards for each team member */}
           {TEAM_MEMBERS.map((member, index) => (
             <Card
