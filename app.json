@@ -84,7 +84,8 @@
       ],
       "expo-status-bar",
       "./plugins/withAndroidLocalSigning",
-      "./plugins/withAndroidPhonePortrait"
+      "./plugins/withAndroidPhonePortrait",
+      "./plugins/withAndroidBackupRules"
     ],
     "extra": {
       "router": {}

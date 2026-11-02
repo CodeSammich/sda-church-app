@@ -7,6 +7,9 @@
 # with the screen off. The failover logic itself has Jest scenarios in
 # test/bible-audio-source-controller.test.ts.
 #
+# It checks that a book downloaded to listen offline (#556) plays with no
+# connection, moving between its chapters with the media keys.
+#
 # It also checks that the reader marks and follows the verse being read
 # (#561) and doesn't fight a listener who scrolls. The build must set
 # EXPO_PUBLIC_AUDIO_E2E=1, so the reader logs what it decides
@@ -336,6 +339,45 @@ scenario_previous_before_start() {
   wait_until 20 'Leviticus 2 after next' title_has ' 2 ' || return 1
 }
 
+# Bible audio downloaded to listen offline (#556): download 2 Thessalonians,
+# three short chapters (1.2 MB in Mandarin), under Listen offline in the audio
+# settings popup, then play it with no connection, and move to the next chapter and
+# back with the media keys. The rows' descriptions are their title, then what
+# they say: "Download 帖撒羅尼迦後書, 1.2 MB", then "帖撒羅尼迦後書, On this phone · 1.2 MB".
+book_on_phone() { ui_dump | grep -E 'content-desc="帖撒羅尼迦後書, On this phone' >/dev/null; }
+scenario_downloaded_book_offline() {
+  open_chapter 2TH 1
+  local point
+  point=$(element_center 'Audio settings[^"]*') || { echo 'no audio settings button'; return 1; }
+  # shellcheck disable=SC2086
+  sh_ input tap $point >/dev/null
+  if ! book_on_phone; then
+    point=$(element_center 'Download 帖撒羅尼迦後書, [^"]*') || { echo 'no Download row for the book'; return 1; }
+    # shellcheck disable=SC2086
+    sh_ input tap $point >/dev/null
+    # On mobile data, the app asks first.
+    if point=$(ATTR=text TRIES=3 element_center '(Use mobile data|USE MOBILE DATA)'); then
+      # shellcheck disable=SC2086
+      sh_ input tap $point >/dev/null
+    fi
+    wait_until 180 '2 Thessalonians downloaded' book_on_phone || return 1
+  fi
+  # The X, or back, closes the popup; the download is done.
+  sh_ input keyevent KEYCODE_BACK >/dev/null
+  network off
+  sleep 2
+  locate_controls || { echo 'no play button'; return 1; }
+  tap_play_pause
+  wait_until 30 '2 Thessalonians 1 playing offline' playing_with_title ' 1 ' || return 1
+  media_key KEYCODE_MEDIA_NEXT
+  wait_until 20 '2 Thessalonians 2 playing offline' playing_with_title ' 2 ' || return 1
+  # Previous goes back a chapter in a chapter's first seconds, and restarts it after.
+  media_key KEYCODE_MEDIA_PREVIOUS
+  sleep 1
+  title_has ' 2 ' && media_key KEYCODE_MEDIA_PREVIOUS
+  wait_until 20 '2 Thessalonians 1 playing offline again' playing_with_title ' 1 ' || return 1
+}
+
 # What the reader decided (#561), oldest first: one decision a line, such as
 # "following verse 3" or "JHN 3:3 is being read at 28503 ms".
 reader_log() {
@@ -527,6 +569,7 @@ run dead-zone-screen-off scenario_dead_zone_screen_off
 run mid-chapter-offline scenario_mid_chapter_offline
 run pause-and-resume scenario_pause_and_resume
 run previous-before-start scenario_previous_before_start
+run downloaded-book-offline scenario_downloaded_book_offline
 run verse-follows-audio scenario_verse_follows_audio
 run scroll-by-hand scenario_scroll_by_hand
 run scroll-while-paused scenario_scroll_while_paused

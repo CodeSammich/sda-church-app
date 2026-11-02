@@ -1,12 +1,13 @@
 # What the app keeps on the phone
 
-Issues: [#517](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/517) (the bundled 1919 Chinese Union Version), [#52](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/52) (offline reading), and [#524](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/524) (what's backed up)
+Issues: [#517](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/517) (the bundled 1919 Chinese Union Version), [#52](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/52) (offline reading), [#524](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/524) (what's backed up), and [#556](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/556) (Bible audio to listen offline)
 
-The app keeps three kinds of data on the device:
+The app keeps four kinds of data on the device:
 
 - **The Bible texts, which ship inside the app.** They're read-only, and the same on every phone.
 - **A small store of settings and saved verses**, kept with AsyncStorage, which the phone's own backup includes.
 - **Copies the app can download again:** the bulletin, today's verse, the children's lesson PDFs, and on Android the copies of the bundled Bible files. On a phone they're kept where the backup leaves them out. The web app also keeps an offline copy of itself.
+- **Bible audio a member downloads to listen offline:** a book, the New Testament, or the whole Bible, for one narrator, on a phone. It stays until the member deletes it, and the backup leaves it out too.
 
 Nothing on the device is sent anywhere, and the app doesn't use iCloud Drive or CloudKit. This page explains where each kind lives on iOS, Android, and the web, what's backed up, and what the store policies say about it.
 
@@ -19,7 +20,7 @@ Every Bible text ships with the app, so it opens with no network:
 - the Reina-Valera 1909;
 - the verse popup's Hebrew Old Testament and Greek New Testament.
 
-That's 66 books in each translation, and 39 in the Hebrew and 27 in the Greek: about 26 MB in all (about 6.8 MB compressed). Only audio streams.
+That's 66 books in each translation, and 39 in the Hebrew and 27 in the Greek: about 26 MB in all (about 6.8 MB compressed). Only audio streams, unless the member downloads it (see [Bible audio downloaded to listen offline](#bible-audio-downloaded-to-listen-offline)).
 
 **The files.** The texts are in `assets/bible/<collection>/<book>.biblejson`, such as `assets/bible/cuv1919/hant/gen.biblejson` or `assets/bible/bsb/jhn.biblejson`. The translations are `cuv1919/hant`, `cuv1919/hans`, `bsb`, and `rv1909`, and each also has a `books.biblejson` with every book's name and size. The Hebrew and Greek are `original/hbo_sr` and `original/grc_sr`, with no book list: the popup finds a verse by book, chapter, and verse. `audio-timings/<narrator>` holds when each verse starts in that narrator's recordings, about 200 KB a narrator, also with no book list (#561): `scripts/build-bible-audio-timings.mjs` writes the three HelloAO narrators', and `scripts/bible-audio-alignment/finish.py` the church recordings'.
 
@@ -88,12 +89,37 @@ The other copies:
 
 - **The web app's offline copy.** `public/sw.js`, the service worker, is network-first: it keeps the response to every GET request, from the website or elsewhere, in the browser's Cache Storage under `sda-church-v<version>`, and serves that copy when the network fails. A new version deletes the older copies.
 - **Bundled Bible files on Android.** These are the `expo-asset` copies above, in the cache directory, which the system may clear.
-- **Audio isn't saved by the app.** Bible audio streams through `expo-audio`. On the web, the browser and the service worker may keep what was fetched, as for any request.
+- **Streamed audio isn't saved by the app.** Bible audio streams through `expo-audio`, unless the member downloaded it (below). On the web, the browser and the service worker may keep what was fetched, as for any request.
+
+## Bible audio downloaded to listen offline
+
+Bible audio streams chapter by chapter, which stalls where the signal comes and goes, as on the subway. So on a phone, a member can download the audio of the book being read, the New Testament, or the whole Bible, for the narrator they've chosen, under **Listen offline** in the Bible's audio settings (#556). Nothing downloads without a tap. **Offline Bible Audio**, in the You tab, lists what's on the phone and deletes it. The web streams, and offers no downloads.
+
+| | |
+| --- | --- |
+| **Where** | `bible-audio/<narrator>/<book>/<chapter>.mp3` in the documents directory (`Paths.document`): `Documents` on iOS, and the files directory on Android. The narrators are `cuv-mandarin`, `cuv-cantonese`, `rv1909`, `souer`, `hays`, and `david`. |
+| **Kept** | Until the member deletes it. The phone doesn't clear the documents directory when space runs low, as it may clear the cache, and a member who downloads a book for the commute expects it to be there, as Spotify's and YouTube's downloads are. |
+| **Backed up?** | **No.** On iOS, `modules/backup-exclusion` sets `isExcludedFromBackup` on the folder and on each file; if it can't mark the folder, the app downloads nothing. On Android, `plugins/withAndroidBackupRules.js` leaves the folder out of Auto Backup and out of a transfer to a new phone, with `android:fullBackupContent` (Android 11 and lower) and `android:dataExtractionRules` (Android 12 and later). Everything else is backed up as before. |
+| **How big** | The whole Bible is 0.94 GB in Mandarin, 0.79 GB in Cantonese, and 0.86 GB in Spanish, but 4–7 GB in English (Souer 5.50, Hays 4.05, David 6.83), whose recordings are about four to eight times the bitrate. John is 18–25 MB in Chinese and Spanish, and 104–171 MB in English. `constants/BibleAudioDownloadSizes.json` has every book's size for each narrator, so the app shows a choice's size before it starts (`scripts/build-bible-audio-download-sizes.mjs` writes it). |
+
+Why not the cache, like the lesson PDFs: Apple's [File System Programming Guide](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html) says "the system may delete the `Caches/` directory to free up disk space", and Android's does too (below). A lesson is needed for a week; a book of audio may be for months. Why it must stay out of the backup: Apple's guide says "If your application downloads video or audio files, make sure they are not included in the backup", and on Android, a backup over 25 MB stops all of the app's backup, settings and saved verses included.
+
+**Downloading** (`services/BibleAudioDownloads.ts`):
+
+- Each chapter is its own file, downloaded into a `.part` file first and renamed once it's all there (`services/FileDownloads.ts`, shared with the lesson PDFs), three at a time. So a download stopped part way, by its X or the app being closed, keeps the chapters it finished, and the next tap downloads only the rest. A `.part` file a closed app left is deleted the next time the app looks.
+- Each chapter comes from where it streams from: the church's copy first, and for Mandarin its two mirrors after, which are the same file. The WordProject recordings (Cantonese and Spanish) come only from the church's copies, and the English ones from HelloAO. See [LEGAL.md](../LEGAL.md#bible-audio-downloaded-to-listen-offline).
+- Before it starts, the app checks the phone will still have 500 MB free afterwards. If it won't, it says so and downloads nothing.
+- A download over 1 GB asks first, even on Wi-Fi ("Download 5.50 GB?"): an English whole Bible, or Hays' or David's New Testament, but nothing in Chinese or Spanish. Smaller English copies are a later optimization (#585).
+- On mobile data, it asks first: Cancel, Wait for Wi-Fi, or Use mobile data. A download the member didn't allow on mobile data starts no new chapter while the phone is on it, so one started at home doesn't carry on over mobile data on the way out; the up to three chapters already downloading finish.
+- If the connection drops, or the iPhone leaves the app, which stops its downloads, the download waits and goes on when the connection or the app is back. After six chapters in a row fail while the phone is online, as when a host is down, it stops; the next tap tries again.
+- It goes on with the popup closed, so the whole Bible needn't keep it open. Each choice's row shows its own progress: a book downloading as part of the New Testament shows it, but the New Testament doesn't look downloading because a book in it is.
+
+**Playing:** a downloaded chapter plays from the phone first, whatever source the listener chose, and then from the sources it streams from, in their usual order: the listener's chosen source first, if any, then the church's copy and the fallbacks (`withDownloadedCopy` in `services/BibleAudioService.ts`). That's so for the chapter in the reader and for the queue behind the lock screen and earbuds' next and previous (#543). The lock screen credits the first source it would otherwise stream from, and the verse times (#561) still fit, since the file is the same. The Android queue keeps the chapters it's given, and stops adding more if one it holds changes, so each playback session uses the downloads there when it started (`snapshotDownloadedChapters`); a chapter that finishes downloading meanwhile plays from the phone from the next session, and in the reader at once.
 
 ## No iCloud storage
 
 - The app has no iCloud capability or entitlement, and doesn't use CloudKit or iCloud Drive: nothing is stored in the member's iCloud by the app.
-- It writes nothing to the Documents directory.
+- It writes only downloaded Bible audio to the Documents directory, marked to stay out of the backup (above).
 - The phone's own backup, to iCloud or to a computer, includes AsyncStorage's folder, as above. That backup is the member's, made by iOS, and the app can't read it.
 
 ## Store policies
@@ -106,6 +132,7 @@ The other copies:
   - the app bundle: "The contents of this directory are not backed up by iTunes or iCloud";
   - `Library/Caches`: "the contents of this directory are not backed up by iTunes or iCloud";
   - `Library/Application Support`: "backed up by iTunes and iCloud". AsyncStorage's folder is there, with the settings and saved verses, so the app lets it be backed up.
+  - `Documents` and `Application Support` are "backed up by default. You can exclude files from the backup by calling `-[NSURL setResourceValue:forKey:error:]` using the `NSURLIsExcludedFromBackupKey` key." Downloaded Bible audio is in `Documents`, excluded that way, through Swift's `isExcludedFromBackup`.
   - and, on what may not go in the backup: "Any file that can be re-created or downloaded must be excluded from the backup." The bulletin, today's verse, and the children's lesson PDFs go in `Library/Caches`.
 - [App privacy details](https://developer.apple.com/app-store/app-privacy-details/): "Data that is processed only on device is not “collected” and does not need to be disclosed". "Collect" means "transmitting data off the device". So nothing on this page changes the App Store privacy answers.
 - [Privacy manifests and required-reason APIs](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api): `expo-file-system`, which reads the Bible files, ships its own `PrivacyInfo.xcprivacy`, declaring the file timestamp and disk space APIs it uses. It was already installed with `expo`, which depends on it; the Bible files are the first code to use it.
@@ -115,6 +142,7 @@ The other copies:
 - [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469): "Collect" means "transmitting data from your app off a user's device", and data "only processed locally on the user's device and not sent off device" doesn't need to be disclosed. So the Data safety form doesn't change either.
   - Android's own backup to Google Drive is Google's service, which the member turns on. It isn't the app sending data.
 - [Back up user data with Auto Backup](https://developer.android.com/identity/data/autobackup): by default, Auto Backup includes the app's "Shared preferences files", its internal files, and "Files in the directory returned by `getDatabasePath(String)`", stored "in a private folder in the user's Google Drive account". It "excludes files in directories returned by `getCacheDir()`", where the Bible file copies, the bulletin, today's verse, and the children's lesson PDFs are. "The default value is `true`, but we recommend explicitly setting the attribute in your manifest", so `app.json` sets `allowBackup` to `true`; setting it to `false` would turn Auto Backup off.
+  - Downloaded Bible audio is in the files directory, which Auto Backup includes ("Files saved to your app's internal storage and accessed by `getFilesDir()`"). And "If the amount of data is over 25 MB, the system calls `onQuotaExceeded()` and doesn't back up data to the cloud", so audio left in would stop the settings and saved verses being backed up too. The app's backup rules leave the folder out. They only exclude: "If you specify an `<include>` element, the system no longer includes any files by default", so with none, everything else is backed up as before.
 - [Access app-specific files](https://developer.android.com/training/data-storage/app-specific): "When the device is low on internal storage space, Android may delete these cache files to recover space". The app copies a Bible file again if that happens.
 
 ## Tests
@@ -127,5 +155,8 @@ The other copies:
 - `test/cache-store.test.ts` and `test/cache-store.web.test.ts`: that a phone keeps the copies in the cache directory and deletes the ones AsyncStorage kept before #524, and that the web keeps them in AsyncStorage without touching the file system.
 - `test/bulletin-service.test.ts`: that the bulletin copies are in the cache directory on a phone, and only the last two weeks' are kept.
 - `test/children-lesson-downloads.test.ts`: that a lesson PDF is downloaded once into the cache directory, that a failed download is never taken for the lesson, and that a copy opens offline on its lesson's days and is deleted after its last day.
-- `test/device-backup.test.ts`: the backup settings in `app.json`, on iOS and Android, and that the copies the app can download again go through `services/CacheStore.ts`.
+- `test/device-backup.test.ts`: the backup settings in `app.json`, on iOS and Android, that the copies the app can download again go through `services/CacheStore.ts`, and that downloaded Bible audio is in the documents directory, marked on iOS and left out by Android's backup rules, which exclude nothing else.
+- `test/bible-audio-downloads.test.ts`: where each narrator's chapters download from (never WordProject's servers, and HelloAO's the links the reader streams), every book's size, a download into the documents directory one file a chapter, the order playback tries, stopping, waiting for Wi-Fi or a connection, refusing when the iPhone can't keep it out of the backup, finding an earlier session's downloads, and deleting.
+- `test/bible-audio-offline-section.test.ts`: the Listen offline rows, their sizes and progress, the mobile data question, and the no connection and not enough space messages.
+- `test/bible-audio-service.test.ts`: that the queue puts a downloaded chapter first, then the sources it streams from, in their usual order.
 - `test/setup.ts` replaces `services/BundledBible.ts` for the other tests with a reader of the files on disk.

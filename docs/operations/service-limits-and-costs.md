@@ -95,8 +95,9 @@ These choices exist to keep the app free and within every provider's limits:
   without a key, and the bulletin data goes through the church's own Apps Script
   instead of the Google Sheets API.
 - **The church hosts its own copies of the Bible audio**, so outside hosts are only
-  fallbacks ([Audio Power](#audio-power)), and chapters stream on demand rather than
-  downloading whole books
+  fallbacks ([Audio Power](#audio-power)), and chapters stream on demand. Whole books
+  download only when a member asks, to listen offline, one chapter at a time, three at
+  once (#556)
   ([how the app fetches audio](adventist-connect-media.md#how-the-app-fetches-audio)).
 - **Caching at every layer of the bulletin.** The Apps Script caches each response
   for 2 minutes, the app caches each Sabbath's bulletin on the device, and manual

@@ -44,10 +44,13 @@ jest.mock('@/services/BundledBible', () => {
   };
 });
 
-// The cache directory, for the copies services/CacheStore.ts keeps on a phone.
+// The cache directory, for the copies services/CacheStore.ts keeps on a phone,
+// and the documents directory, for downloaded Bible audio.
 jest.mock('expo-file-system', () => require('./helpers/file-system-mock').fileSystemMock);
 beforeEach(() => {
-  require('./helpers/file-system-mock').mockFiles.clear();
+  const { mockDisk, mockFiles } = require('./helpers/file-system-mock');
+  mockFiles.clear();
+  mockDisk.availableBytes = 64_000_000_000;
 });
 
 // This intentional TypeScript setup expression verifies that Jest transforms
