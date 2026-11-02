@@ -251,12 +251,13 @@ of cards for **Watch Livestream**, **Weekly Bulletin**, **Tithe & Offering**, **
 Visitor) live here.
 
 **Android home screen widget (#235):** **Today's Verse** can also sit on an Android
-phone's home screen, with its heading, verse, and reference in the app's language and
-the phone's light or dark mode. Tapping it opens the verse in the Bible reader, as
-**Read Verse** does. Each time Home loads the verse, it hands the widget the next week's
-verses, and the widget shows the day's, so the verse changes within an hour of 6 AM
-without the app being opened. After a week without the app, it keeps the last verse.
-Long verses get smaller type. iPhones don't have the widget. The code is in
+phone's home screen, with its heading, verse, and reference in the app's language, in the
+app icon's blue. It stays blue in dark mode, because Android draws a widget's colors once
+and doesn't redraw it when the phone switches modes. Tapping it opens the verse in the
+Bible reader, as **Read Verse** does. Once a day, when Home loads the verse, it hands the
+widget the next week's verses, and the widget shows the day's, so the verse changes within
+an hour of 6 AM without the app being opened. After a week without the app, it keeps the
+last verse. Long verses get smaller type. iPhones don't have the widget. The code is in
 `widgets/VerseOfTheDayWidget.tsx`, `services/VerseOfTheDayWidgetData.ts`, and
 `plugins/withAndroidVerseWidget.js`.
 

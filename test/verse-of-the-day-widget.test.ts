@@ -19,7 +19,7 @@ import {
 } from '@/services/VerseOfTheDayWidgetData';
 
 jest.mock('expo-widgets', () => ({
-  createWidget: (name: string, layout: unknown) => ({ name, layout, updateSnapshot: () => {} }),
+  createWidget: (name: string, layout: unknown) => ({ name, layout, updateSnapshot() {}, reload() {} }),
 }));
 jest.mock('@expo/ui/jetpack-compose', () => ({}));
 jest.mock('@expo/ui/jetpack-compose/modifiers', () => ({}));
@@ -102,7 +102,7 @@ describe('updating the widget from the home page', () => {
   ];
   let cache: Map<string, string>;
   let service: typeof import('@/services/VerseOfTheDayWidget.android');
-  let widget: { updateSnapshot: jest.Mock };
+  let widget: { updateSnapshot: jest.Mock; reload: jest.Mock };
   let loadDays: jest.SpyInstance;
 
   beforeEach(() => {
@@ -119,6 +119,7 @@ describe('updating the widget from the home page', () => {
         .mockResolvedValue(week);
       widget = require('@/widgets/VerseOfTheDayWidget').default;
       widget.updateSnapshot = jest.fn();
+      widget.reload = jest.fn();
       service = require('@/services/VerseOfTheDayWidget.android');
     });
   });
@@ -137,6 +138,15 @@ describe('updating the widget from the home page', () => {
     jest.setSystemTime(new Date(2026, 10, 3, 6));
     await service.updateVerseOfTheDayWidget('zh', '今日經文');
     expect(widget.updateSnapshot).toHaveBeenCalledTimes(3);
+  });
+
+  it('redraws the widget once per app run when its verses are current, for a new layout', async () => {
+    cache.set('widget.txt', ['2026-11-2', 'en', 'Today’s Verse'].join('\n'));
+    await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    expect(widget.reload).toHaveBeenCalledTimes(1);
+    expect(widget.updateSnapshot).not.toHaveBeenCalled();
+    expect(loadDays).not.toHaveBeenCalled();
   });
 
   it('keeps only the newest language’s verses when the language changes mid-load', async () => {
@@ -296,10 +306,10 @@ describe('the widget layout', () => {
     expect(tree.props.modifiers).toContainEqual({ $type: 'fillMaxSize', args: [] });
   });
 
-  it('follows the phone’s dark mode with the app’s dark colors', () => {
+  it('looks the same in light and dark mode, in the app icon’s blue', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 3, 9) });
-    expect(render(week, 'light').props.colors.containerColor).toBe('#FAF4EF');
-    expect(render(week, 'dark').props.colors.containerColor).toBe('#14130F');
+    expect(render(week, 'dark')).toEqual(render(week, 'light'));
+    expect(render(week).props.colors.containerColor).toBe(appJson.android.adaptiveIcon.backgroundColor);
   });
 
   it('uses smaller type for long verses, counting Chinese characters as wide', () => {
