@@ -61,7 +61,8 @@ Android runs `expo prebuild` and then Gradle on a GitHub-hosted Linux runner
 (`npm run build:android` and `npm run build:android:apk`); a committed config plugin,
 `plugins/withAndroidLocalSigning.js`, teaches the generated Gradle project to use a
 keystore supplied through environment variables, and
-`plugins/withAndroidPhonePortrait.js` keeps phones in portrait (see
+`plugins/withAndroidPhonePortrait.js` keeps phones in portrait, and
+`plugins/withAndroidVerseWidget.js` adds the home screen widget (see
 [Versions and maintenance](#versions-and-maintenance)). iOS runs Expo prebuild and Xcode on a
 GitHub-hosted macOS runner, in its own workflow, `.github/workflows/native-ios-build.yml`.
 The church added its Apple signing secrets to the `production` Environment in September
@@ -1373,6 +1374,19 @@ smallest width is under 600dp, so tablets and unfolded foldables turn freely. An
 ignores orientation locks on screens 600dp or wider for apps that target API 36, and Play
 Console flags apps that set one (#426). Whether to support iPad is a separate decision
 (#324).
+
+The Android home screen widget for the verse of the day (#235) is built with
+`expo-widgets`. `plugins/withAndroidVerseWidget.js` runs only the Android half of its
+config plugin, because the full plugin also adds an iOS widget extension and app group,
+which would need their own signing. `package.json` keeps `expo-widgets` and `@expo/ui` out
+of iOS autolinking, so the iPhone app doesn't change. The plugin also replaces the
+widget's receiver with one that opens the verse when it's tapped, has Android redraw the
+widget every hour, and translates its name in the widget list. Gradle runs Metro twice
+more for the widget (`generateExpoWidgetsBundle` and `generateExpoWidgetsLayoutRegistry`).
+When updating `expo-widgets`, check that its Android plugin files are still in
+`plugin/build/android/` (`test/verse-of-the-day-widget.test.ts` runs them on an empty
+project), then try the widget on an emulator: add it from the home screen's widget list,
+tap it, and turn dark mode on.
 
 Before release, run `npx expo install --check`, `npm run doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices, with the
