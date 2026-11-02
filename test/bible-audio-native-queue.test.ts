@@ -76,6 +76,41 @@ describe('chapters before the first one (#543)', () => {
     expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 2 });
   });
 
+  it("reads each insert's own status event, sent partway through, as the chapter that was playing", () => {
+    // expo-audio sends a status after every insert, numbered as the queue was
+    // then: after inserting 2, chapter 3 was at index 1 of 3 tracks. Read as
+    // if both inserts had happened, it would look like chapter 4 was playing,
+    // and the reader would follow it there.
+    const { queue, emit } = startAt(3, [2, 1]);
+    emit({ currentIndex: 1, trackCount: 3 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 3 });
+    emit({ currentIndex: 0, trackCount: 2 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 3 });
+    emit({ currentIndex: 2, trackCount: 4 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 3 });
+    // Once an event counts every insert, a real Previous is read as it is.
+    emit({ currentIndex: 1, trackCount: 4 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 2 });
+  });
+
+  it('reads a status event that arrives during an insert as the chapter that was playing', () => {
+    const context = setup();
+    const { queue, playlist, status, sources } = context;
+    const seen: (number | undefined)[] = [];
+    queue.subscribe(() => seen.push(queue.getStatus().activeChapter?.chapter));
+    // Like a native event delivered before insert() returns.
+    const insert = playlist.insert.getMockImplementation()!;
+    playlist.insert.mockImplementation((source: AudioSource, index: number) => {
+      insert(source, index);
+      context.emit({ trackCount: sources.length } as Partial<AudioPlaylistStatus>);
+    });
+    queue.replace(chapter(3).source);
+    queue.setCurrentChapter(chapter(3));
+    queue.setPreviousQueue([2, 1].map(chapter));
+    expect(status.currentIndex).toBe(2);
+    expect(seen.slice(-2)).toEqual([3, 3]);
+  });
+
   it('tops them up after going back, without repeating or reordering any', () => {
     const { queue, status, sources, emit } = startAt(5, [4, 3]);
     emit({ currentIndex: 2 });

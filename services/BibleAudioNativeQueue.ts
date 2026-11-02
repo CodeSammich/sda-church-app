@@ -64,9 +64,16 @@ export class BibleAudioNativeQueue {
   // destroyed once the fresh playlist is playing, or when the reader closes.
   private retiredPlaylists: AudioPlaylist[] = [];
   // Chapters inserted ahead of the current one renumber the native queue, but
-  // status events sent before the insert can still be on their way, numbered
-  // the old way. Until an event agrees with the playlist's live index, one that
-  // doesn't is read with this shift (#543).
+  // status events sent before an insert can still be on their way, numbered
+  // the old way. Each insert sends its own event too, numbered as the queue was
+  // after it, partway through a run of inserts. Each status says how many
+  // tracks the queue had when it was sent, and the queue only grows until it's
+  // replaced, so an event is read with the inserts that left the queue longer
+  // than that: frontInsertCounts holds the queue's length after each insert
+  // (#543). An event without a track count falls back to pendingIndexShift:
+  // until one agrees with the playlist's live index, one that doesn't is read
+  // with every insert since.
+  private frontInsertCounts: number[] = [];
   private pendingIndexShift = 0;
 
   constructor(private readonly createPlaylist: () => AudioPlaylist) {}
@@ -126,6 +133,7 @@ export class BibleAudioNativeQueue {
     this.subscription = undefined;
     this.tracks = [];
     this.pendingIndexShift = 0;
+    this.frontInsertCounts = [];
     this.lastMetadataTrack = undefined;
     this.snapshot = idleStatus();
     this.destroyRetiredPlaylists();
@@ -191,6 +199,7 @@ export class BibleAudioNativeQueue {
     this.subscription = undefined;
     this.tracks = [];
     this.pendingIndexShift = 0;
+    this.frontInsertCounts = [];
     this.snapshot = idleStatus();
   }
 
@@ -217,6 +226,16 @@ export class BibleAudioNativeQueue {
 
   // The track a status event is about. See pendingIndexShift.
   private eventTrackIndex(status: AudioPlaylistStatus) {
+    const sentWith = (status as AudioPlaylistStatus & { trackCount?: unknown }).trackCount;
+    if (this.frontInsertCounts.length && typeof sentWith === 'number') {
+      const notYetCounted = this.frontInsertCounts.filter(count => count > sentWith).length;
+      if (!notYetCounted) {
+        // This event counts every insert, so later ones will too.
+        this.frontInsertCounts = [];
+        this.pendingIndexShift = 0;
+      }
+      return status.currentIndex + notYetCounted;
+    }
     if (!this.pendingIndexShift) return status.currentIndex;
     const liveIndex = this.callNative('current index', playlist => playlist.currentIndex);
     if (liveIndex === undefined) return status.currentIndex;
@@ -249,6 +268,7 @@ export class BibleAudioNativeQueue {
     this.callNative('replace', playlist => {
       this.tracks = [];
       this.pendingIndexShift = 0;
+      this.frontInsertCounts = [];
       this.lastMetadataTrack = undefined;
       playlist.clear();
       if (source) {
@@ -305,9 +325,12 @@ export class BibleAudioNativeQueue {
         }
       }
       for (const item of items.slice(head.length)) {
-        playlist.insert(item.source, 0);
+        // Record the insert first: its own status event can arrive during the
+        // call, and must find the track list already renumbered.
         this.tracks.unshift(item);
         this.pendingIndexShift += 1;
+        this.frontInsertCounts.push(playlist.trackCount + 1);
+        playlist.insert(item.source, 0);
       }
     });
   }
