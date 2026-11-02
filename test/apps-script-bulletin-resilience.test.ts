@@ -506,6 +506,36 @@ describe('bulletin tab and column tags', () => {
     ]);
   });
 
+  it('reads the tagged prayer column when a new one on the same side gets its name', () => {
+    const { workbook, context } = tagged();
+    const calendar = workbook.sheet('Sabbath Calendar');
+    calendar.insertColumn(7, 'Offering Prayer', 'Another prayer');
+
+    const bulletin = buildBulletin(context);
+
+    expect(bulletin.queens.offeringPrayer).toBe('Offering Prayer 14');
+    expect(bulletin.brooklyn.offeringPrayer).toBe('Offering Prayer 22');
+    expect(run(context, 'getRenamedBulletinTabsAndColumns_(workbook)')).toEqual([
+      'Sabbath Calendar: 2 Queens columns are named Offering Prayer; column O is read',
+    ]);
+  });
+
+  it('keeps reading a column renamed to a prayer column on its side in its old role', () => {
+    const { workbook, context } = tagged();
+    const calendar = workbook.sheet('Sabbath Calendar');
+    calendar.setHeader(5, 'Offering Prayer');
+
+    const bulletin = buildBulletin(context);
+
+    expect(bulletin.queens.sermon).toBe('Queens Sermon 6');
+    expect(bulletin.queens.offeringPrayer).toBe('Offering Prayer 14');
+    expect(run(context, 'getMissingBulletinColumns_(workbook)')).toEqual([]);
+    expect(run(context, 'getRenamedBulletinTabsAndColumns_(workbook)')).toEqual([
+      'Sabbath Calendar: 2 Queens columns are named Offering Prayer; column N is read',
+      'Sabbath Calendar: "Offering Prayer" is read as Queens Sermon',
+    ]);
+  });
+
   it("blanks a deleted column's field, lists it as missing, and drops its tag", () => {
     const { workbook, context } = tagged();
     const calendar = workbook.sheet('Sabbath Calendar');

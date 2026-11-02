@@ -321,9 +321,10 @@ function findBulletinColumn_(sheetName, headers, column) {
  * side of the row a repeated header is on. When more than one column has an
  * expected column's exact name, such as a second Date added for another
  * fellowship, one is read and the others are left out: a column with data
- * before an empty one, then the tagged one, then the first. So a new column
- * can't take an existing one's place or its tag. Reads no tags while every
- * expected column has its name once.
+ * before an empty one, then the tagged one, then the first. A repeated
+ * header's copies are compared on their own side. So a new column can't take
+ * an existing one's place or its tag. Reads no tags while every expected
+ * column has its name once.
  */
 function resolveBulletinHeaders_(sheet, sheetName, headers) {
   var effective = headers.slice();
@@ -337,22 +338,43 @@ function resolveBulletinHeaders_(sheet, sheetName, headers) {
     expectedTags[column.tag] = true;
     expectedHeaders[normalizeHeader_(column.header)] = true;
   });
-  columns.forEach(function (column) {
-    // A repeated Sabbath Calendar header is meant to appear on each side.
+  var readTags = function () {
+    tags = tags || findBulletinColumnTags_(sheet);
+    return tags;
+  };
+
+  // More than one column with an expected column's exact name: one is read
+  // and the others are left out. A repeated header is compared on its own
+  // side of Brooklyn Sermon, where it's meant to appear once.
+  var breakTie = function (column) {
+    var normalized = effective.map(normalizeHeader_);
+    var from = 0;
+    var to = effective.length;
+    var where = '';
     if (column.location) {
-      return;
+      var brooklynStart = normalized.indexOf('brooklyn sermon');
+      // Without Brooklyn Sermon the sides go by order, and a header named
+      // with its location is found anywhere.
+      if (brooklynStart === -1 || normalized.indexOf(normalizeHeader_(column.label)) !== -1) {
+        return;
+      }
+      if (column.location === 'brooklyn') {
+        from = brooklynStart;
+      } else {
+        to = brooklynStart;
+      }
+      where = column.location === 'brooklyn' ? ' Brooklyn' : ' Queens';
     }
     var wanted = normalizeHeader_(column.header);
     var named = [];
-    effective.forEach(function (header, index) {
-      if (normalizeHeader_(header) === wanted) {
+    for (var index = from; index < to; index += 1) {
+      if (normalized[index] === wanted) {
         named.push(index);
       }
-    });
+    }
     if (named.length < 2) {
       return;
     }
-    tags = tags || findBulletinColumnTags_(sheet);
     // A column with something in it beats an empty one, such as the empty
     // Weekly Data column an open adds when a rename came before any tag, once
     // the old name is put back.
@@ -361,7 +383,7 @@ function resolveBulletinHeaders_(sheet, sheetName, headers) {
     });
     var choices = filled.length ? filled : named;
     var read = choices[0];
-    tags.forEach(function (entry) {
+    readTags().forEach(function (entry) {
       if (entry.tag === column.tag && choices.indexOf(entry.index) !== -1) {
         read = entry.index;
       }
@@ -371,36 +393,49 @@ function resolveBulletinHeaders_(sheet, sheetName, headers) {
         effective[index] = '';
       }
     });
-    duplicates.push({ label: column.label, count: named.length, column: read + 1 });
-  });
-  columns
-    .slice()
-    .sort(function (left, right) {
-      return (left.location ? 1 : 0) - (right.location ? 1 : 0);
-    })
-    .forEach(function (column) {
-      if (findBulletinColumn_(sheetName, effective, column) !== -1) {
+    duplicates.push({
+      names: named.length + where + ' columns are named ' + (where ? column.header : column.label),
+      column: read + 1,
+    });
+  };
+
+  // An expected column missing by name is read from the column carrying its
+  // tag, unless that column now has another expected column's name.
+  var findRenamed = function (column) {
+    if (findBulletinColumn_(sheetName, effective, column) !== -1) {
+      return;
+    }
+    readTags().forEach(function (entry) {
+      var current = normalizeHeader_(effective[entry.index]);
+      if (
+        entry.tag !== column.tag ||
+        entry.index >= effective.length ||
+        expectedTags[current] ||
+        expectedHeaders[current]
+      ) {
         return;
       }
-      tags = tags || findBulletinColumnTags_(sheet);
-      tags.forEach(function (entry) {
-        var current = normalizeHeader_(effective[entry.index]);
-        // A tagged column that now has another expected column's name is
-        // read as that one.
-        if (
-          entry.tag !== column.tag ||
-          entry.index >= effective.length ||
-          expectedTags[current] ||
-          expectedHeaders[current]
-        ) {
-          return;
-        }
-        // Named from the sheet's own header, since a tie above may have
-        // left this column out under it.
-        renamed.push({ label: column.label, header: String(headers[entry.index] || '') });
-        effective[entry.index] = column.label;
-      });
+      // Named from the sheet's own header, since a tie may have left this
+      // column out under it.
+      renamed.push({ label: column.label, header: String(headers[entry.index] || '') });
+      effective[entry.index] = column.label;
     });
+  };
+
+  var single = columns.filter(function (column) {
+    return !column.location;
+  });
+  var repeated = columns.filter(function (column) {
+    return Boolean(column.location);
+  });
+  single.forEach(breakTie);
+  // Puts a renamed Brooklyn Sermon back before the repeated headers look for
+  // their side.
+  single.forEach(findRenamed);
+  repeated.forEach(breakTie);
+  // Again for every column, since a tie on a side can leave out a renamed
+  // column that took a repeated header's name.
+  single.concat(repeated).forEach(findRenamed);
   return { headers: effective, renamed: renamed, duplicates: duplicates };
 }
 
@@ -481,11 +516,8 @@ function getRenamedBulletinTabsAndColumns_(spreadsheet) {
       return;
     }
     var resolved = resolveBulletinHeaders_(sheet, name, readTable_(sheet).headers);
-    resolved.duplicates.forEach(function (column) {
-      renamed.push(
-        name + ': ' + column.count + ' columns are named ' + column.label +
-          '; column ' + getColumnLetters_(column.column) + ' is read',
-      );
+    resolved.duplicates.forEach(function (tie) {
+      renamed.push(name + ': ' + tie.names + '; column ' + getColumnLetters_(tie.column) + ' is read');
     });
     resolved.renamed.forEach(function (column) {
       renamed.push(name + ': "' + column.header + '" is read as ' + column.label);

@@ -354,8 +354,9 @@ or column through a rename or a move. So:
   So the original stays in use and keeps its tag, and so does a column whose
   old name was put back after an open added an empty one. The alert names it
   once, such as `Sabbath Calendar: 2 columns are named Date; column B is
-  read`. A hymn's `English …` and `Chinese …` columns don't count as the same
-  name;
+  read`. A prayer column that appears on both sides counts on its own side,
+  such as `2 Queens columns are named Offering Prayer`. A hymn's `English …`
+  and `Chinese …` columns don't count as the same name;
 - deleting a column the scripts use, or renaming it before the spreadsheet has
   been opened since this was deployed, blanks only that field, in the app and
   in print, and the rest of the bulletin still loads. On `Weekly Data`, the
