@@ -138,6 +138,52 @@ describe('verse start times that ship with the app', () => {
     },
   );
 
+  it.each(CHURCH_NARRATORS.filter(([narrator]) => narrator.startsWith('cuv-')))(
+    '%s: no time for a verse that only says 見上節, which the narrators skip',
+    (narrator, text) => {
+      // The CUV joins some verses into the one before (#573).
+      let joined = 0;
+      for (const { id } of readJson(`${text}/books`)) {
+        const { contents } = readJson(`${text}/${id.toLowerCase()}`);
+        const { chapters } = readJson(`audio-timings/${narrator}/${id.toLowerCase()}`);
+        contents.forEach((verses: unknown[][], number: number) => {
+          verses.forEach((items, verse) => {
+            const words = items.filter((item) => typeof item === 'string').join('').trim();
+            if (verse === 0 || !['見上節', '见上节'].includes(words)) return;
+            joined += 1;
+            expect([id, number, verse, chapters[number][verse - 1]]).toEqual([id, number, verse, null]);
+          });
+        });
+      }
+      expect(joined).toBe(66);
+    },
+  );
+
+  it('has every hand correction, each for the recording on file', () => {
+    // scripts/bible-audio-alignment/corrections.json: starts a recognizer found wrong and a
+    // listen confirmed (#573), such as the Cantonese Hebrews 12, which skips verses 3 to 14.
+    const corrections = JSON.parse(
+      readFileSync(join(process.cwd(), 'scripts/bible-audio-alignment/corrections.json'), 'utf8'),
+    );
+    for (const [narrator, chapters] of Object.entries<
+      Record<string, { sha256: string; starts: Record<string, number | null> }>
+    >(corrections)) {
+      const sources = JSON.parse(
+        readFileSync(join(process.cwd(), 'scripts/bible-audio-timing-sources', `${narrator}.json`), 'utf8'),
+      );
+      for (const [key, { sha256, starts }] of Object.entries(chapters)) {
+        expect([narrator, key, sources[key]?.sha256]).toEqual([narrator, key, sha256]);
+        const [book, number] = key.split(' ');
+        const times = readJson(`audio-timings/${narrator}/${book.toLowerCase()}`).chapters[Number(number)];
+        for (const [verse, start] of Object.entries(starts)) {
+          expect([narrator, key, verse, times[Number(verse) - 1]]).toEqual([narrator, key, verse, start]);
+        }
+      }
+    }
+    const hebrews = readJson('audio-timings/cuv-cantonese/heb').chapters[12];
+    expect(hebrews.slice(1, 15)).toEqual([25.94, ...Array(12).fill(null), 49.36]);
+  });
+
   it.each(HELLOAO_NARRATORS)(
     "%s: every book's times match the bundled BSB's chapters and verse numbers, in order",
     (narrator) => {
