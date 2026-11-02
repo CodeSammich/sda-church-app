@@ -402,10 +402,10 @@
     {
       "name": "share-app",
       "group": "worship-and-you",
-      "$comment": "The Share the App popup, opened by popup=share-app (#555): an X beside its title, the download page's QR code on white so it scans in the dark theme too, the address, and Share Link, with no Close button. The QR image has no text, so the rules require the address and the button.",
+      "$comment": "The Share the App popup, opened by popup=share-app (#555): an X beside its title, the download page's QR code on white so it scans in the dark theme too, the address, and Share Link, with no Close button. The QR image has no text, so the rules require the address and the button. The button's share icon reads as \"<\" before its label, so the label isn't anchored at the start.",
       "path": "you?popup=share-app",
       "variants": ["default"],
-      "mustShowLines": ["app\\.nyccsda\\.org/download", "^Share Link$"],
+      "mustShowLines": ["app\\.nyccsda\\.org/download", "Share Link$"],
       "mustNotShowLines": ["^Close$"]
     },
     {
