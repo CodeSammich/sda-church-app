@@ -17,9 +17,11 @@
  *    Bulletin menu. Until then it is a plain alert, because Google does not
  *    let simple triggers open HTML dialogs.
  *
- * Row 1 (headers) and columns A:E (date, quarter, and service metadata) are
- * never read or painted. Only fills and notes the script wrote are ever
- * changed.
+ * Only the roster's person columns are read or painted, each found by its
+ * header wherever it is: columns can be moved, inserted, or added without
+ * changing anything here. Row 1 (headers) and the date, quarter, and service
+ * metadata columns are never touched. Only fills and notes the script wrote
+ * are ever changed.
  */
 
 // Staff-facing text (dialogs, alerts, errors, notes) is in English and
@@ -43,16 +45,59 @@ var SCHEDULE_ASSIGNMENT_CHECK_CONFIG = Object.freeze({
 
 var SCHEDULE_NAME_SEPARATOR_PATTERN = /(\s*(?:\/|&|\+|,|;|\n|\band\b)\s*)/i;
 
-function getSchedulePersonColumnBounds_() {
-  var headers =
+/**
+ * The roster's person columns, in sheet order: each expected header from
+ * Queens Sermon on, found by name in the sheet's own header row (#558's
+ * follow-up). A repeated header (Chair/Pastoral Prayer, Offering Prayer) is
+ * found as findScheduleColumn_ finds it, and labeled with its location. A
+ * missing column is skipped, and a column the bulletin doesn't know is left
+ * alone.
+ */
+function getSchedulePersonColumns_(sheet) {
+  var expected =
     BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
-  var first = headers.indexOf(SCHEDULE_ASSIGNMENT_CHECK_CONFIG.firstPersonHeader) + 1;
-  return { first: first, last: headers.length, count: headers.length - first + 1 };
+  var first = expected.indexOf(SCHEDULE_ASSIGNMENT_CHECK_CONFIG.firstPersonHeader);
+  var brooklynStart = expected.indexOf('Brooklyn Sermon');
+  var lastColumn = Math.max(1, sheet.getLastColumn());
+  var headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  var seen = {};
+  var columns = [];
+  expected.forEach(function (header, index) {
+    var occurrence = seen[header] || 0;
+    seen[header] = occurrence + 1;
+    if (index < first) {
+      return;
+    }
+    var location = '';
+    if (expected.indexOf(header) !== expected.lastIndexOf(header)) {
+      location = index >= brooklynStart ? 'brooklyn' : 'queens';
+    }
+    var found = findScheduleColumn_(headers, header, location, occurrence);
+    var columnNumber = found + 1;
+    if (found === -1 || columns.some(function (column) { return column.number === columnNumber; })) {
+      return;
+    }
+    columns.push({
+      number: columnNumber,
+      label: location ? (location === 'brooklyn' ? 'Brooklyn ' : 'Queens ') + header : header,
+    });
+  });
+  return columns.sort(function (a, b) {
+    return a.number - b.number;
+  });
 }
 
-function isSchedulePersonCell_(rowNumber, columnNumber) {
-  var bounds = getSchedulePersonColumnBounds_();
-  return rowNumber >= 2 && columnNumber >= bounds.first && columnNumber <= bounds.last;
+function findSchedulePersonColumn_(columns, columnNumber) {
+  for (var index = 0; index < columns.length; index += 1) {
+    if (columns[index].number === columnNumber) {
+      return columns[index];
+    }
+  }
+  return null;
+}
+
+function isSchedulePersonCell_(sheet, rowNumber, columnNumber) {
+  return rowNumber >= 2 && !!findSchedulePersonColumn_(getSchedulePersonColumns_(sheet), columnNumber);
 }
 
 /**
@@ -165,33 +210,15 @@ function findScheduleRowConflicts_(row, lookup) {
 }
 
 /**
- * Names a person column for a planner. The repeated Chair/Pastoral Prayer
- * and Offering Prayer headers get their location so the note is unambiguous.
+ * Names the person's other roles that Sabbath by column, for example
+ * "Duplicate / 重复: English Teacher". The repeated Chair/Pastoral Prayer and
+ * Offering Prayer headers carry their location, so the note is unambiguous.
  */
-function getSchedulePersonColumnLabel_(columnNumber) {
-  var headers =
-    BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
-  var header = headers[columnNumber - 1];
-  if (headers.indexOf(header) === headers.lastIndexOf(header)) {
-    return header;
-  }
-  var brooklynStart = headers.indexOf('Brooklyn Sermon') + 1;
-  return (columnNumber >= brooklynStart ? 'Brooklyn ' : 'Queens ') + header;
-}
-
-/**
- * Names the person's other roles that Sabbath by column header, for example
- * "Duplicate / 重复: English Teacher".
- */
-function buildScheduleConflictNote_(otherColumnNumbers) {
-  if (!otherColumnNumbers.length) {
+function buildScheduleConflictNote_(otherLabels) {
+  if (!otherLabels.length) {
     return '';
   }
-  return (
-    SCHEDULE_ASSIGNMENT_CHECK_CONFIG.notePrefix +
-    ' ' +
-    otherColumnNumbers.map(getSchedulePersonColumnLabel_).join(', ')
-  );
+  return SCHEDULE_ASSIGNMENT_CHECK_CONFIG.notePrefix + ' ' + otherLabels.join(', ');
 }
 
 function isScheduleConflictNote_(note) {
@@ -216,8 +243,15 @@ function refreshScheduleRosterChecks_(sheet, lookup) {
   }
 
   var config = SCHEDULE_ASSIGNMENT_CHECK_CONFIG;
-  var bounds = getSchedulePersonColumnBounds_();
-  var range = sheet.getRange(2, bounds.first, lastRow - 1, bounds.count);
+  var columns = getSchedulePersonColumns_(sheet);
+  if (!columns.length) {
+    return 0;
+  }
+  // One read and write over the span the person columns cover; any other
+  // column inside it is read but left as it was.
+  var firstColumn = columns[0].number;
+  var span = columns[columns.length - 1].number - firstColumn + 1;
+  var range = sheet.getRange(2, firstColumn, lastRow - 1, span);
   var values = range.getDisplayValues();
   var backgrounds = range.getBackgrounds();
   var notes = range.getNotes();
@@ -226,7 +260,11 @@ function refreshScheduleRosterChecks_(sheet, lookup) {
   var notesChanged = false;
 
   values.forEach(function (row, rowIndex) {
-    findScheduleRowConflicts_(row, lookup).forEach(function (others, columnIndex) {
+    var people = columns.map(function (column) {
+      return row[column.number - firstColumn];
+    });
+    findScheduleRowConflicts_(people, lookup).forEach(function (others, personIndex) {
+      var columnIndex = columns[personIndex].number - firstColumn;
       var current = String(backgrounds[rowIndex][columnIndex] || '').toLowerCase();
       if (others.length) {
         conflictCells += 1;
@@ -245,7 +283,7 @@ function refreshScheduleRosterChecks_(sheet, lookup) {
       }
       var wantedNote = buildScheduleConflictNote_(
         others.map(function (otherIndex) {
-          return bounds.first + otherIndex;
+          return columns[otherIndex].label;
         }),
       );
       if (wantedNote !== currentNote) {
@@ -354,8 +392,7 @@ function findUnknownScheduleNames_(range, lookup) {
     return [];
   }
   var sheet = range.getSheet();
-  var headers =
-    BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
+  var columns = getSchedulePersonColumns_(sheet);
   var values = range.getDisplayValues();
   var seen = {};
   var unknown = [];
@@ -364,7 +401,8 @@ function findUnknownScheduleNames_(range, lookup) {
     row.forEach(function (value, columnIndex) {
       var rowNumber = range.getRow() + rowIndex;
       var columnNumber = range.getColumn() + columnIndex;
-      if (!isSchedulePersonCell_(rowNumber, columnNumber)) {
+      var personColumn = rowNumber >= 2 ? findSchedulePersonColumn_(columns, columnNumber) : null;
+      if (!personColumn) {
         return;
       }
       splitScheduleCellNames_(value).forEach(function (name) {
@@ -377,7 +415,7 @@ function findUnknownScheduleNames_(range, lookup) {
           name: name,
           row: rowNumber,
           column: columnNumber,
-          role: headers[columnNumber - 1],
+          role: personColumn.label,
           date: sheet.getRange(rowNumber, 1).getDisplayValue(),
           suggestions: suggestScheduleNames_(name, lookup),
         });
@@ -615,12 +653,12 @@ function addScheduleNameToDictionary(request) {
 function replaceScheduleNameFromDialog(request) {
   var row = Number(request && request.row);
   var column = Number(request && request.column);
-  if (!isSchedulePersonCell_(row, column)) {
+  var sheet = getBulletinScheduleMaintenanceSheet_();
+  if (!isSchedulePersonCell_(sheet, row, column)) {
     throw new Error('That cell is not a roster name cell. / 此单元格不是名单中的姓名单元格。');
   }
   var from = normalizePhysicalNameKey_(request.from);
   var to = getScheduleDialogText_(request.to, 'Name');
-  var sheet = getBulletinScheduleMaintenanceSheet_();
   var cell = sheet.getRange(row, column);
   var replaced = false;
   var updated = String(cell.getDisplayValue())

@@ -113,11 +113,12 @@ function onEdit(e) {
 
   var values = range.getDisplayValues();
   var invalidCount = 0;
+  var englishColumns = getSabbathCalendarColumnNumbers_(sheet);
   values.forEach(function (row, rowIndex) {
     row.forEach(function (value, columnIndex) {
       var rowNumber = range.getRow() + rowIndex;
       var columnNumber = range.getColumn() + columnIndex;
-      if (rowNumber < 2 || columnNumber < 1 || columnNumber > 25) {
+      if (rowNumber < 2 || englishColumns.indexOf(columnNumber) === -1) {
         return;
       }
 
@@ -714,6 +715,32 @@ function hideOldBulletinScheduleRows_(sheet, now) {
   flushHiddenRange(lastRow + 1);
   flushShownRange(lastRow + 1);
   return hiddenCount;
+}
+
+/**
+ * The Sabbath Calendar's own columns (BULLETIN_SHEET_COLUMNS), each found by
+ * its header wherever it is, as the bulletin finds them. These are the ones
+ * kept in English; a column a planner adds is left alone.
+ */
+function getSabbathCalendarColumnNumbers_(sheet) {
+  var expected = BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
+  var headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getDisplayValues()[0];
+  var brooklynStart = expected.indexOf('Brooklyn Sermon');
+  var seen = {};
+  var numbers = [];
+  expected.forEach(function (header, index) {
+    var occurrence = seen[header] || 0;
+    seen[header] = occurrence + 1;
+    var location = '';
+    if (expected.indexOf(header) !== expected.lastIndexOf(header)) {
+      location = index >= brooklynStart ? 'brooklyn' : 'queens';
+    }
+    var found = findScheduleColumn_(headers, header, location, occurrence);
+    if (found !== -1 && numbers.indexOf(found + 1) === -1) {
+      numbers.push(found + 1);
+    }
+  });
+  return numbers;
 }
 
 function getBulletinScheduleMaintenanceColumns_(sheet) {

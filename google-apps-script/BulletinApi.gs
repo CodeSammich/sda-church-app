@@ -115,8 +115,10 @@ var BULLETIN_INTAKE_SCHEMA = Object.freeze([
 // wherever it is (#558): a column can be moved, and others added, without
 // changing anything here. A missing column leaves only its own field blank,
 // and opening the spreadsheet names it (getMissingBulletinColumns_). The
-// Sabbath Calendar's roster checks still go by this order, and its repeated
-// headers by which side of Brooklyn Sermon they're on (findScheduleColumn_).
+// Sabbath Calendar's roster checks find their columns by name too
+// (getSchedulePersonColumns_). Its repeated headers can be named with their
+// location, or go by which side of Brooklyn Sermon they're on
+// (findScheduleColumn_).
 var BULLETIN_SHEET_COLUMNS = Object.freeze({
   'Sabbath Calendar': Object.freeze([
     'Date',
@@ -588,18 +590,26 @@ function dateMatches_(rawValue, displayValue, requestedDate) {
 }
 
 // Finds a Sabbath Calendar column by its header. Chair/Pastoral Prayer and
-// Offering Prayer appear once for each location, so a location's copy is
-// looked for on its own side of Brooklyn Sermon: a column added, moved or
-// removed on one side can't shift the other's. Without Brooklyn Sermon, the
-// first copy is Queens's and the second Brooklyn's. Other headers are found
-// wherever they are.
+// Offering Prayer appear once for each location. A location's copy can be
+// named outright, such as "Queens Offering Prayer" or "Brooklyn Chair/Pastoral
+// Prayer", and is then found wherever it is. Otherwise it's looked for on its
+// own side of Brooklyn Sermon: a column added, moved or removed on one side
+// can't shift the other's. Without Brooklyn Sermon, the first copy is Queens's
+// and the second Brooklyn's. Other headers are found wherever they are.
 function findScheduleColumn_(headers, header, location, occurrence) {
   var wanted = normalizeHeader_(header);
   var expected = BULLETIN_SHEET_COLUMNS[CONFIG.scheduleSheetName];
+  var normalized = headers.map(normalizeHeader_);
+  if (location && expected.indexOf(header) !== expected.lastIndexOf(header)) {
+    var named = normalized.indexOf(normalizeHeader_(location + ' ' + header));
+    if (named !== -1) {
+      return named;
+    }
+  }
   var from = 0;
   var to = headers.length;
   var skip = occurrence || 0;
-  var brooklynStart = headers.map(normalizeHeader_).indexOf('brooklyn sermon');
+  var brooklynStart = normalized.indexOf('brooklyn sermon');
   if (location && brooklynStart !== -1 && expected.indexOf(header) !== expected.lastIndexOf(header)) {
     if (location === 'brooklyn') {
       from = brooklynStart;
@@ -609,7 +619,7 @@ function findScheduleColumn_(headers, header, location, occurrence) {
     skip = 0;
   }
   for (var index = from; index < to; index += 1) {
-    if (normalizeHeader_(headers[index]) !== wanted) {
+    if (normalized[index] !== wanted) {
       continue;
     }
     if (skip === 0) {
