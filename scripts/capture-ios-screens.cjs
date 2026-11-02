@@ -323,7 +323,10 @@ const SPLASH_BANDS = [
 
 /**
  * Whether the screenshot still shows the launch splash. A slow first launch can
- * leave it up past the wait, and the logo keeps it from looking blank.
+ * leave it up past the wait. The phone's launch screen is plain blue (#538), so
+ * looksBlank catches that too; this also catches the blue with the church
+ * symbol in its middle, as the launch animation shows (key-screen builds skip
+ * it).
  */
 const looksLikeSplash = async (file, color = SPLASH_COLOR) => {
   const sharp = require('sharp');

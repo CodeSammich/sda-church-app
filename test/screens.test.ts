@@ -467,7 +467,7 @@ describe('splash check', () => {
     return file;
   };
 
-  it('recognizes the launch splash, which the logo keeps from looking blank', async () => {
+  it('recognizes the splash blue with the church symbol in its middle', async () => {
     const file = await screenshot('splash', '#00405C');
     expect(await looksBlank(file)).toBe(false);
     expect(await looksLikeSplash(file)).toBe(true);
