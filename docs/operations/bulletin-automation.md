@@ -329,34 +329,29 @@ On open, the script:
 The API and the printed bulletin find every `Sabbath Calendar` and `Weekly
 Data` column by its header, wherever it is. Each open also tags the four tabs,
 and each of those columns, with
-[developer metadata](https://developers.google.com/apps-script/reference/spreadsheet/developer-metadata):
-`bulletin.tab` with a value such as `sabbath-calendar`, and `bulletin.column`
-with the column's name in lower case, such as `queens sermon` or `brooklyn
-offering prayer` (`tagBulletinTabsAndColumns_`, #580). A tag stays with its tab
-or column through a rename or a move. So:
+[developer metadata](https://developers.google.com/apps-script/reference/spreadsheet/developer-metadata),
+which stays with a tab or column through a rename or a move and can't be seen
+or edited in Sheets (`tagBulletinTabsAndColumns_`, #580). The rules, the
+reasons for them, and every known edge case are in
+[Bulletin spreadsheet tags](../feature_designs/bulletin_spreadsheet_tags.md).
+For the people running the sheet:
 
 - moving a column, or adding one the scripts don't use, changes nothing;
-- renaming a tab or column the scripts use changes nothing either: the app, the
-  printed bulletin, the roster checks, and the English-only guard keep reading
-  it by its tag. The next open's alert names each rename once, such as
-  `Sabbath Calendar: "Speaker" is read as Queens Sermon`. Nothing needs
-  doing, though renaming it back is fine too;
-- the name still comes first. A tab or column with the expected name is the
-  one read, and the next open moves the tag to it, so one made again under
-  its old name replaces the renamed one, and a duplicated tab never takes
-  over from the original. The tag only finds a tab or column when nothing has
-  its name. A renamed column that now has another expected column's name is
-  read as that one once the original is gone; while the original is still
-  there, the renamed column keeps its old role;
-- when more than one column has an expected column's exact name, such as a
-  second `Date` added for another fellowship, one is read: a column with
-  something in it before an empty one, then the tagged one, then the first.
-  So the original stays in use and keeps its tag, and so does a column whose
-  old name was put back after an open added an empty one. The alert names it
-  once, such as `Sabbath Calendar: 2 columns are named Date; column B is
-  read`. A prayer column that appears on both sides counts on its own side,
-  such as `2 Queens columns are named Offering Prayer`. A hymn's `English …`
-  and `Chinese …` columns don't count as the same name;
+- renaming a tab or column the scripts use changes nothing either, once the
+  spreadsheet has been opened since the deploy: the app, the printed bulletin,
+  the roster checks, and the English-only guard keep reading it by its tag. The
+  next open's alert names each rename once, such as `Sabbath Calendar:
+  "Speaker" is read as Queens Sermon`. Nothing needs doing, though renaming it
+  back is fine too;
+- a tab or column made again under its old name takes over from the renamed
+  one, and a copied tab doesn't take over from an original that still has its
+  name;
+- when two columns have the same expected name, the alert says which one is
+  read, such as `Sabbath Calendar: 2 columns are named Date; column B is
+  read`: the one with data, and then the original. A prayer column that
+  appears on both sides counts on its own side, such as `2 Queens columns are
+  named Offering Prayer`. Rename the extra column, or delete an empty one an
+  open added;
 - deleting a column the scripts use, or renaming it before the spreadsheet has
   been opened since this was deployed, blanks only that field, in the app and
   in print, and the rest of the bulletin still loads. On `Weekly Data`, the
@@ -375,16 +370,9 @@ or column through a rename or a move. So:
   `Quarter` also stops the open-time upkeep from its quarter rows on (steps 4
   to 7 above) until the column is back. The tagging in step 8 still runs.
 
-Sheets has no menu for developer metadata, so the tags can't be seen or
-removed by hand. Since the header row and `Sabbath Calendar!A:B` are
-protected, an open by someone outside the technology group may not be able to
-tag them; a later open by the group does, and nothing else waits on it.
-The `Leadership` tab's `Pastors` and `Elders` columns aren't tagged: they're
-found by those words in any header that holds only the title.
-
-Until #558 the scripts expected every header in a fixed order. One changed
-header stopped the whole bulletin and the open-time upkeep, and a rule on each
-header cell rejected any other name.
+Since the header row and `Sabbath Calendar!A:B` are protected, an open by
+someone outside the technology group may not be able to tag them; a later open
+by the group does, and nothing else waits on it.
 
 ### English-only Sabbath Calendar input
 
@@ -656,7 +644,9 @@ preview surface, not the canonical release channel.
 
 ### Caching and refresh
 
-- The API caches privacy-filtered responses for 120 seconds.
+- The API caches privacy-filtered responses for 120 seconds. A response for an
+  app from 1.6.0, which may come without its schedule, is cached apart from one
+  for older apps and the API checks.
 - The app caches successful bulletin responses per Sabbath date on the device,
   except one without its schedule (`scheduleNotSet`), which never replaces a
   stored copy.
