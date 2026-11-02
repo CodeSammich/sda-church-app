@@ -59,7 +59,11 @@ function getSchedulePersonColumns_(sheet) {
   var first = expected.indexOf(SCHEDULE_ASSIGNMENT_CHECK_CONFIG.firstPersonHeader);
   var brooklynStart = expected.indexOf('Brooklyn Sermon');
   var lastColumn = Math.max(1, sheet.getLastColumn());
-  var headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  var headers = getBulletinHeaders_(
+    sheet,
+    BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName,
+    sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0],
+  );
   var seen = {};
   var columns = [];
   expected.forEach(function (header, index) {
@@ -124,7 +128,8 @@ function splitScheduleCellNames_(value) {
  * disables unknown-name warnings rather than flagging every name.
  */
 function loadScheduleNameLookup_() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(
+  var sheet = getBulletinSheet_(
+    SpreadsheetApp.getActiveSpreadsheet(),
     SCHEDULE_ASSIGNMENT_CHECK_CONFIG.nameDictionarySheetName,
   );
   if (!sheet) {
@@ -490,8 +495,7 @@ function onScheduleNameCheckEdit(e) {
   if (
     !e ||
     !e.range ||
-    e.range.getSheet().getName() !==
-      BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName
+    !isBulletinTab_(e.range.getSheet(), BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName)
   ) {
     return;
   }
@@ -631,7 +635,8 @@ function addScheduleNameToDictionary(request) {
   }
 
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = spreadsheet.getSheetByName(
+  var sheet = getBulletinSheet_(
+    spreadsheet,
     SCHEDULE_ASSIGNMENT_CHECK_CONFIG.nameDictionarySheetName,
   );
   if (!sheet) {
@@ -681,7 +686,8 @@ function replaceScheduleNameFromDialog(request) {
 
 function openNameDictionaryFromDialog() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = spreadsheet.getSheetByName(
+  var sheet = getBulletinSheet_(
+    spreadsheet,
     SCHEDULE_ASSIGNMENT_CHECK_CONFIG.nameDictionarySheetName,
   );
   if (sheet) {

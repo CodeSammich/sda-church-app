@@ -308,10 +308,14 @@ function onOpen() {
       Logger.log('Automatic schedule maintenance skipped: ' + error);
     }
   }
-  // After the upkeep, which puts back what it can of Weekly Data.
+  // After the upkeep, which puts back what it can of Weekly Data and tags
+  // what it finds.
   var missingColumns = [];
+  var renamed = [];
   try {
-    missingColumns = getMissingBulletinColumns_(SpreadsheetApp.getActiveSpreadsheet());
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    missingColumns = getMissingBulletinColumns_(spreadsheet);
+    renamed = takeNewBulletinRenames_(getRenamedBulletinTabsAndColumns_(spreadsheet));
   } catch (error) {
     if (typeof Logger !== 'undefined') {
       Logger.log('Bulletin column check failed: ' + error);
@@ -322,10 +326,20 @@ function onOpen() {
     .createMenu('Printed Bulletin')
     .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
     .addToUi();
-  if (missingColumns.length && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
+  if (!ui.alert || !ui.ButtonSet || !ui.ButtonSet.OK) {
+    return;
+  }
+  if (missingColumns.length) {
     ui.alert(
       'Bulletin columns not found / 找不到周刊列',
-      getMissingBulletinColumnsMessage_(missingColumns),
+      getMissingBulletinColumnsMessage_(missingColumns) +
+        (renamed.length ? '\n\n' + getRenamedBulletinMessage_(renamed) : ''),
+      ui.ButtonSet.OK,
+    );
+  } else if (renamed.length) {
+    ui.alert(
+      'Bulletin tabs or columns renamed / 周刊工作表或列已改名',
+      getRenamedBulletinMessage_(renamed),
       ui.ButtonSet.OK,
     );
   }
@@ -338,6 +352,46 @@ function getMissingBulletinColumnsMessage_(missingColumns) {
     '在恢复名称完全相同的工作表或列之前，手机应用和纸质周刊中的这些内容会留空。列可以放在任何位置。\n\n' +
     missingColumns.join('\n')
   );
+}
+
+function getRenamedBulletinMessage_(renamed) {
+  return (
+    'The app and the printed bulletin still read these under their new names. ' +
+    'Nothing else needs doing.\n' +
+    '手机应用和纸质周刊仍会按新名称读取以下内容，无需其他操作。\n\n' +
+    renamed.join('\n')
+  );
+}
+
+// Each rename is announced once, on the next open by anyone: the ones shown
+// are kept in the document's properties. A rename that's undone and made
+// again is announced again. Where the properties can't be read, every open
+// announces them.
+var BULLETIN_RENAMES_SHOWN_PROPERTY = 'bulletin.renamesShown';
+
+function takeNewBulletinRenames_(renamed) {
+  var properties;
+  var shown = [];
+  try {
+    properties = PropertiesService.getDocumentProperties();
+    shown = JSON.parse(properties.getProperty(BULLETIN_RENAMES_SHOWN_PROPERTY) || '[]');
+  } catch (error) {
+    return renamed;
+  }
+  if (!Array.isArray(shown)) {
+    shown = [];
+  }
+  var fresh = renamed.filter(function (line) {
+    return shown.indexOf(line) === -1;
+  });
+  if (fresh.length || shown.length !== renamed.length) {
+    try {
+      properties.setProperty(BULLETIN_RENAMES_SHOWN_PROPERTY, JSON.stringify(renamed));
+    } catch (error) {
+      return renamed;
+    }
+  }
+  return fresh;
 }
 
 /**
@@ -931,7 +985,7 @@ function getPrintedBibleVersePropertyKey_(date, location) {
 function getBulletinIntakeSheetUrl_() {
   try {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = spreadsheet && spreadsheet.getSheetByName(CONFIG.intakeSheetName);
+    var sheet = spreadsheet && getBulletinSheet_(spreadsheet, CONFIG.intakeSheetName);
     if (sheet) {
       return spreadsheet.getUrl() + '#gid=' + sheet.getSheetId();
     }
@@ -1848,7 +1902,7 @@ var PHYSICAL_NAME_TITLES = Object.freeze([
 ]);
 
 function buildPhysicalNameDictionary_() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Name Dictionary');
+  var sheet = getBulletinSheet_(SpreadsheetApp.getActiveSpreadsheet(), 'Name Dictionary');
   var dictionary = {
     englishToChinese: {},
     chineseToEnglish: {},
@@ -1912,7 +1966,8 @@ function readPhysicalLeadershipTitles_(dictionary) {
   PHYSICAL_NAME_TITLES.forEach(function (title) {
     dictionary.titledNames[title.key] = [];
   });
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(
+  var sheet = getBulletinSheet_(
+    SpreadsheetApp.getActiveSpreadsheet(),
     PHYSICAL_LEADERSHIP_SHEET_NAME,
   );
   if (!sheet) {

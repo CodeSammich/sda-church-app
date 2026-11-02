@@ -92,16 +92,18 @@ the church's Workspace terms during annual maintenance.
 | `test/apps-script-physical-bulletin.test.ts` | Physical layout, sheet columns, privacy, lookup, QR, and maintenance regression tests |
 | `test/apps-script-bulletin-merge.test.ts` | Intake mapping and precedence regression tests |
 | `test/apps-script-schedule-assignment-checks.test.ts` | Roster conflict highlighting and unknown-name warning tests |
+| `test/apps-script-bulletin-tags.test.ts` | Renamed and moved tabs and columns found by their tags |
 | `test/integration/bulletin-api.mjs` | Opt-in read-only production API contract check |
 
 ## The three mandatory sheets
 
-The scripts read these three tabs. Row 1 holds the headers. In `Sabbath
-Calendar` and `Weekly Data`, each column is found by its header, wherever it is
-(see [Columns are read by name](#columns-are-read-by-name)). Keep those header
-names as documented, though capitalization and extra spaces don't matter. The
-`Name Dictionary` is read by position: English names in column A, Chinese in
-column B.
+The scripts read these three tabs, and `Leadership`. Row 1 holds the headers.
+In `Sabbath Calendar` and `Weekly Data`, each column is found by its header,
+wherever it is, and still found after it's renamed (see [Columns are read by
+name](#columns-are-read-by-name)). Keep those header names as documented,
+though capitalization and extra spaces don't matter. The `Name Dictionary` is
+read by position: English names in column A, Chinese in column B. All four
+tabs can be renamed.
 
 ### 1. `Name Dictionary`
 
@@ -209,8 +211,9 @@ spreadsheet opens, a deleted or emptied `Weekly Data` is set up again with
 these headers and the two example rows (`WEEKLY_DATA_EXAMPLE_ROWS`), and an
 expected column that's gone is added back, empty, at the far right, with a
 notice naming it (`ensureWeeklyDataTab_`). Nothing is renamed, moved, or
-removed. A column renamed by hand keeps its data under the new name, beside the
-empty one added back: move the data across and delete the renamed column.
+removed. A renamed tab or column isn't gone: it's still read by its tag, so
+nothing is added back for it. Only one renamed before its first tag, or
+deleted, comes back empty: move any data across and delete the renamed column.
 
 Rules:
 
@@ -314,32 +317,58 @@ On open, the script:
    for the next two Sabbaths, and sets its `Date` and `Location` rules;
 6. hides old schedule rows without deleting them;
 7. repaints the conflict highlights described below across every schedule row;
-   and
-8. shows one alert, in English and Simplified Chinese, listing any expected
-   column or tab still missing from `Sabbath Calendar` or `Weekly Data` (see
-   [Columns are read by name](#columns-are-read-by-name)).
+8. tags the tabs and columns it finds by name, so a later rename doesn't lose
+   them (see [Columns are read by name](#columns-are-read-by-name)); and
+9. shows one alert, in English and Simplified Chinese, listing any expected
+   column or tab still missing from `Sabbath Calendar` or `Weekly Data`, and
+   any tab or column renamed since the last notice.
 
 ### Columns are read by name
 
 The API and the printed bulletin find every `Sabbath Calendar` and `Weekly
-Data` column by its header, wherever it is. So:
+Data` column by its header, wherever it is. Each open also tags the four tabs,
+and each of those columns, with
+[developer metadata](https://developers.google.com/apps-script/reference/spreadsheet/developer-metadata):
+`bulletin.tab` with a value such as `sabbath-calendar`, and `bulletin.column`
+with the column's name in lower case, such as `queens sermon` or `brooklyn
+offering prayer` (`tagBulletinTabsAndColumns_`, #580). A tag stays with its tab
+or column through a rename or a move. So:
 
 - moving a column, or adding one the scripts don't use, changes nothing;
-- renaming or deleting a column the scripts use blanks only that field, in the
-  app and in print, and the rest of the bulletin still loads. On `Weekly Data`,
-  the next open adds the column back (see [`Weekly Data`](#3-weekly-data)). On
-  the `Sabbath Calendar`, the alert above names it each time the spreadsheet
+- renaming a tab or column the scripts use changes nothing either: the app, the
+  printed bulletin, the roster checks, and the English-only guard keep reading
+  it by its tag. The next open's alert names each rename once, such as
+  `Sabbath Calendar: "Speaker" is read as Queens Sermon`. Nothing needs
+  doing, though renaming it back is fine too;
+- the name still comes first. A tab or column with the expected name is the
+  one read, and the next open moves the tag to it, so one made again under
+  its old name replaces the renamed one, and a duplicated tab never takes
+  over from the original. The tag only finds a tab or column when nothing has
+  its name. A renamed column that now has another expected column's name is
+  read as that one;
+- deleting a column the scripts use, or renaming it before the spreadsheet has
+  been opened since this was deployed, blanks only that field, in the app and
+  in print, and the rest of the bulletin still loads. On `Weekly Data`, the
+  next open adds the column back (see [`Weekly Data`](#3-weekly-data)). On the
+  `Sabbath Calendar`, the alert above names it each time the spreadsheet
   opens, until a column with that name is back, in any position. A repeated
   prayer column, listed as `Queens …` or `Brooklyn …`, goes back on its
   location's side of `Brooklyn Sermon`, named without the location. The alert
   also names a `Weekly Data` column when the person opening the sheet can't
   edit its protected header row, so the column couldn't be added back;
 - a missing `Weekly Data` tab, or one without `Date` or `Location`, leaves every
-  week's content blank until the next open puts it back. A missing `Sabbath
+  week's content blank until the next open puts it back. A deleted `Sabbath
   Calendar`, or one without `Date`, stops the bulletin, since every bulletin
   starts from that tab's date row. A `Sabbath Calendar` without `Date` or
   `Quarter` also stops the open-time upkeep from its quarter rows on (steps 4
   to 7 above) until the column is back.
+
+Sheets has no menu for developer metadata, so the tags can't be seen or
+removed by hand. Since the header row and `Sabbath Calendar!A:B` are
+protected, an open by someone outside the technology group may not be able to
+tag them; a later open by the group does, and nothing else waits on it.
+The `Leadership` tab's `Pastors` and `Elders` columns aren't tagged: they're
+found by those words in any header that holds only the title.
 
 Until #558 the scripts expected every header in a fixed order. One changed
 header stopped the whole bulletin and the open-time upkeep, and a rule on each
@@ -859,9 +888,11 @@ changes the URL and requires a coordinated mobile-app update.
 | --- | --- | --- |
 | App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`; allow up to 120 seconds for API cache expiry |
 | New intake verse is ignored by print prompt | Old print memory or override | Check that `Weekly Data → Bible Verses` is nonblank; it has priority over old memory |
-| API returns `No schedule found for …` | Missing `Sabbath Calendar` date row (a missing or renamed tab returns `Schedule sheet not found` instead) | Restore the exact tab name and a matching Date row |
-| The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was renamed or deleted, so that field is blank | Give a column that exact name again, in any position. To rename one on purpose, follow the [Change checklist](#change-checklist) |
-| An empty column appeared at the far right of `Weekly Data` | An expected column was renamed or deleted, and the open-time upkeep added it back | If it was renamed, move its data into the added column and delete the renamed one. To rename on purpose, follow the [Change checklist](#change-checklist) |
+| API returns `No schedule found for …` | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag) | Restore the tab and a matching Date row |
+| The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
+| The spreadsheet opens with **Bulletin tabs or columns renamed** | Someone renamed a tab or column the scripts read | Nothing: it's still read by its tag, and the notice shows once. See [Columns are read by name](#columns-are-read-by-name) |
+| A renamed column stopped being read | A column with its old name was added, which the scripts read instead | Delete the new column, or move its data into it and delete the renamed one |
+| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one |
 | A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side, or name it with its location, such as `Queens Offering Prayer` |
 | A roster cell is pale red | The same name is in another roster cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
 | No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Google Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
@@ -896,12 +927,15 @@ For header changes:
 
 - **Moving a column, or adding one the scripts don't read,** needs no code
   change. On the `Sabbath Calendar`, add it at the far right (see above).
-- **Renaming a column the scripts read, or adding one they should,** starts in
-  the code: the field's schema entry (`COLUMN_SCHEMA` or
+- **Renaming a tab or column in the spreadsheet** needs no code change; its tag
+  keeps it read (see [Columns are read by name](#columns-are-read-by-name)).
+- **Changing the name the code expects for a column, or adding one the scripts
+  should read,** starts in the code: the field's schema entry (`COLUMN_SCHEMA` or
   `BULLETIN_INTAKE_SCHEMA`), `BULLETIN_SHEET_COLUMNS`, the tests, and this
   document. Search the scripts for the old name too: `Date`, `Location`,
   `Quarter`, `Bible Verses`, `Queens Sermon`, and `Brooklyn Sermon` are also
-  used directly.
+  used directly. A new expected name gets a new tag: the first open after the
+  deploy tags the column once it has that name.
   - **`Weekly Data`:** to rename without a gap, add the old name after the new
     one in the entry's `headers`, and in `BULLETIN_COLUMN_ALTERNATIVES` for the
     open-time alert and repair. The sheet can then be renamed any time after
