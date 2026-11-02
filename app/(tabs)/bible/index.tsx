@@ -128,7 +128,11 @@ import {
   SavedVerseSort,
   storeSavedVerses,
 } from '@/services/SavedVersesService';
-import { getScreenshotPopup } from '@/services/ScreenshotRoute';
+import {
+  getScreenshotPopup,
+  isScreenshotPlay,
+  recordForScreenshot,
+} from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
 import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
@@ -615,6 +619,7 @@ export default function BibleScreen() {
     referenceRequest: paramReferenceRequest,
     backTo: paramBackTo,
     popup: paramPopup,
+    play: paramPlay,
   } = useLocalSearchParams<{
     bookId?: string;
     chapter?: string;
@@ -624,6 +629,7 @@ export default function BibleScreen() {
     referenceRequest?: string;
     backTo?: string;
     popup?: string;
+    play?: string;
   }>();
 
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
@@ -3022,6 +3028,41 @@ export default function BibleScreen() {
     paramChapter,
     paramPopup,
     paramVerseStart,
+  ]);
+
+  // The key-screen capture can't tap Play either, so play=1 starts the linked
+  // chapter's audio in its build, and the player's status is saved for the
+  // capture, which checks that the elapsed time moves (#551). The hosts it
+  // would try go with it, so the capture can tell a network failure from the
+  // app's.
+  const screenshotPlayStarted = useRef(false);
+  const recordScreenshotAudio = () =>
+    recordForScreenshot('audio', {
+      playing: audioStatus.playing,
+      currentTime: audioStatus.currentTime,
+      duration: audioStatus.duration,
+      isBuffering: audioStatus.isBuffering,
+      error: audioStatus.error ?? null,
+      source: audioStatus.activeSourceUrl ?? null,
+      sources: selectedAudioUrlsRef.current,
+    });
+  useEffect(() => {
+    if (screenshotPlayStarted.current || !chapterData || !isScreenshotPlay(paramPlay)) return;
+    if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
+    if (audioReaderEntries.length === 0) return;
+    screenshotPlayStarted.current = true;
+    recordScreenshotAudio();
+    void toggleAudio();
+  }, [audioReaderEntries.length, book?.id, chapterData, chapterNum, paramBookId, paramChapter, paramPlay]);
+  const screenshotAudioSecond = Math.floor(audioStatus.currentTime || 0);
+  useEffect(() => {
+    if (screenshotPlayStarted.current) recordScreenshotAudio();
+  }, [
+    audioStatus.activeSourceUrl,
+    audioStatus.error,
+    audioStatus.isBuffering,
+    audioStatus.playing,
+    screenshotAudioSecond,
   ]);
 
   const supportingVerses = useMemo(

@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -32,7 +32,7 @@
     "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, and the popup a tapped verse opens.",
     "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
     "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
-    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs."
+    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs. Also, on the iPhone only, Bible audio playing and a children's lesson open in Quick Look (#551): this group finished first or second in the six release runs from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so these longer shots shouldn't lengthen the run."
   },
   "screens": [
     {
@@ -317,6 +317,30 @@
       "variants": ["zh"],
       "mustShowLines": ["^少年級", "沒有網路連線"],
       "mustNotShowLines": ["下載中"]
+    },
+    {
+      "name": "sabbath-school-lesson-viewer",
+      "group": "worship-and-you",
+      "platforms": ["ios"],
+      "$comment": "A children's lesson downloaded and open in Quick Look, the iPhone's own viewer (#529, #551). popup=lesson-viewer opens the Beginner student lesson in a key-screens build as a tap would: this week's PDF is about 1 MB. The app records how it opened (record), and the capture fails unless Quick Look opened, saying whether the network was the cause. Where the week's lesson has no PDF yet, the browser opens its website instead and the run only warns, so the rules accept that page's address too. Nothing of the page beneath may show.",
+      "path": "sabbath-school?popup=lesson-viewer",
+      "variants": ["default"],
+      "wait": 4,
+      "record": "screenshot-lesson",
+      "mustShowLines": ["^Beginner \\(ages 1.3\\)$|aliveinjesus\\.info"],
+      "mustNotShowLines": ["^Students$", "^Teachers$", "^Opens this week's lesson PDF"]
+    },
+    {
+      "name": "bible-audio-playing",
+      "group": "worship-and-you",
+      "platforms": ["ios"],
+      "$comment": "Bible audio playing on the iPhone (#551), which nothing else checks before release: Android's is checked by android-audio-e2e.yml. play=1 starts Psalm 23's Mandarin recording in a key-screens build as a tap on Play would. A second screenshot is taken later seconds after the first, and the elapsed time left of the timeline must have moved on by at least half that (mustAdvance). The player's own status is recorded too (record): if it didn't play, the capture says whether this runner could reach the audio's hosts, so a network failure reads as one. The lock screen's 10- and 30-second skips can't be pressed in the Simulator; test/bible-audio-service.test.ts checks what the app passes them.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&play=1",
+      "variants": ["default"],
+      "wait": 6,
+      "later": 10,
+      "record": "screenshot-audio",
+      "mustAdvance": "^(\\d+):(\\d{2})\\b"
     },
     {
       "name": "hymnal-selection",

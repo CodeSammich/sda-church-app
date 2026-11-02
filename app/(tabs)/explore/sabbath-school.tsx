@@ -19,7 +19,7 @@ import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, List, Text } from 'react-native-paper';
 
@@ -93,17 +93,25 @@ export default function SabbathSchoolScreen() {
 
   // The key screens can't tap, so a key-screens build opens the lesson popup
   // from the path: sabbath-school?popup=lesson-download or lesson-offline.
+  // popup=lesson-viewer opens the Beginner student lesson as a tap would, so
+  // the iPhone's shot shows it downloaded and open in Quick Look (#551).
   const { popup } = useLocalSearchParams<{ popup?: string }>();
   const [screenshotDialog, setScreenshotDialog] = useState<ChildrenLessonDialogState | null>(null);
+  const openLesson = childrenLesson.open;
+  const lessonViewerOpened = useRef(false);
   useEffect(() => {
-    const screenshotPopup = getScreenshotPopup(popup, ['lesson-download', 'lesson-offline']);
+    const screenshotPopup = getScreenshotPopup(popup, ['lesson-download', 'lesson-offline', 'lesson-viewer']);
     if (screenshotPopup === 'lesson-download') {
       setScreenshotDialog({ title: labels.junior, progress: { bytesWritten: 5_100_000, totalBytes: 14_200_000 } });
     }
     if (screenshotPopup === 'lesson-offline') {
       setScreenshotDialog({ title: labels.junior, progress: null, offline: true });
     }
-  }, [popup, labels.junior]);
+    if (screenshotPopup === 'lesson-viewer' && !lessonViewerOpened.current) {
+      lessonViewerOpened.current = true;
+      void openLesson('beginner-student', labels.beginner);
+    }
+  }, [popup, labels.junior, labels.beginner, openLesson]);
   const lessonDialog = screenshotDialog ?? childrenLesson.dialog;
 
   // Every age group shows every week; tapping one finds this week's lesson
