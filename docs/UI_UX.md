@@ -169,7 +169,7 @@ offline:
   like the sleep timer's, stays until the popup opens. With Reduce Motion (iOS) or Remove
   animations (Android) on, only the dot shows. A pulse due while the screen is off waits
   until the app is back.
-- **In the popup:** it scrolls to Listen offline, which says "Playback keeps stopping to
+- **In the popup:** it scrolls to Listen offline, which says "Playback often stops to
   load. Download to listen without waiting." Screen readers hear the same line as the
   button's hint, not as an announcement.
 - **Not nagging:** at most once each time the app starts, never again once Bible audio has
