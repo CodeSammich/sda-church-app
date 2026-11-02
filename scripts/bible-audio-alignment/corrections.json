@@ -314,6 +314,97 @@
       "starts": {
         "9": 88.94
       }
+    },
+    "1CH 4": {
+      "why": "Verse 35 starts with 约珥, before a pause.",
+      "sha256": "008217c5c56081272812286f4aa99210411e368aa5031c4f58a93de2ae90a189",
+      "starts": {
+        "35": 328.58
+      }
+    },
+    "ISA 3": {
+      "why": "Verse 3 starts with 五十夫长, before a pause.",
+      "sha256": "8a8027b70d1ab45b466ffcd7b55d5c32eadefe4213d24d916deaba920a82707b",
+      "starts": {
+        "3": 25.6
+      }
+    },
+    "EZK 17": {
+      "why": "Verse 3 starts with 说, before a pause.",
+      "sha256": "79b3a7ab11860f30d49b39b4ac272254a1af8090773f184a9bb33c28ea7bb5a5",
+      "starts": {
+        "3": 13.94
+      }
+    },
+    "EZK 38": {
+      "why": "Verse 11 starts with 说, before a pause.",
+      "sha256": "fae2cfa725c5b5ecab1260f6e76c2a300661890c91df4fd894c4ee68b2e59a80",
+      "starts": {
+        "11": 90.36
+      }
+    },
+    "MRK 3": {
+      "why": "Verse 20 starts after a 4-second pause, not at the end of verse 19.",
+      "sha256": "4840db8e5fe1115d508471235368175e9b8f5b5939096f227f49b48119d10e4a",
+      "starts": {
+        "20": 179.66
+      }
+    },
+    "LUK 24": {
+      "why": "The aligner gave verse 22 too much time.",
+      "sha256": "dc03c23183a825cd9004e7247711554b9754dbdcb663a28f878d21c632cccadf",
+      "starts": {
+        "23": 171.92
+      }
+    },
+    "ACT 7": {
+      "why": "Verse 3 starts with 对他说, before a pause.",
+      "sha256": "1f613d2b142ca6f4e7e57d45230574aa38e39b452083a8353a303a8612f8b9c5",
+      "starts": {
+        "3": 22.15
+      }
+    },
+    "ACT 8": {
+      "why": "Verse 19 starts with 说, before a pause.",
+      "sha256": "38092c4c72821005c8a36d2e8433376db3020f8f33f119b8da22b88f68396b56",
+      "starts": {
+        "19": 118.82
+      }
+    },
+    "ACT 10": {
+      "why": "Verse 31 starts with 说, before a pause.",
+      "sha256": "c10c3cfc031917a9fa4cc7b7fec7d92711d2a1ff73aff4302ebf262589a27c17",
+      "starts": {
+        "31": 211.79
+      }
+    },
+    "ACT 13": {
+      "why": "Verse 10 starts with 说, before a pause.",
+      "sha256": "856220ea9b8ff3fa5f088d7405ea6b532e9a291cdc86c24f4dfd57b67a789881",
+      "starts": {
+        "10": 81.49
+      }
+    },
+    "EPH 4": {
+      "why": "Verse 6 starts with 一神, before a pause.",
+      "sha256": "405e9da1f8d873fd13dca1fd5ae56ef9a2de9eed69d26f826dfb0dced97c50a8",
+      "starts": {
+        "6": 34.25
+      }
+    },
+    "PHP 3": {
+      "why": "The aligner gave verse 13 too much time.",
+      "sha256": "fd68514d0d227cc2df5e57771f22d0a1c980414e1a1bc8668185697d33a5b673",
+      "starts": {
+        "14": 84.34
+      }
+    },
+    "REV 11": {
+      "why": "Verse 17 starts with 说, before a pause.",
+      "sha256": "f815ee970ffd8e9cb0617fac187467f94e902f0f51d1733c692246e8dd0a9b90",
+      "starts": {
+        "17": 157.88
+      }
     }
   },
   "rv1909": {
