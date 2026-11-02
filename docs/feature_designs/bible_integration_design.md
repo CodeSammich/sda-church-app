@@ -563,12 +563,18 @@ and keeps following.
   leaves out Leviticus 19 for all three, and one psalm each for two of them. Gilbert has no
   times.
 - **Mandarin, Cantonese, and Spanish:** the church's copies of these recordings have no
-  published times, so they were made by forced alignment: a speech model lines up the
+  published times, so they were made by forced alignment
+  ([Bible audio verse times](../operations/bible-audio-verse-times.md) has the steps, for
+  a new narrator or language too): a speech model lines up the
   bundled text with each recording, and the start of each verse's first word is its time,
-  moved to the end of a nearby pause when the aligner is more than half a second from one.
+  corrected by the recording's pauses (`snap.py`). A start the aligner put at the end of
+  the verse before, or in the pause after it, moves to where speech resumes. Any other
+  start more than half a second from where speech resumes moves to the nearest such place
+  within 1.5 s.
   `scripts/bible-audio-alignment/` holds the steps: `download.py` copies every recording as
   hosted (nothing is changed or re-uploaded), `align.py` aligns each chapter on a GPU
-  (torchaudio's MMS_FA, with the Chinese as toneless pinyin or jyutping), and `finish.py`
+  (torchaudio's MMS_FA, with the Chinese as toneless pinyin or jyutping), `resnap.py`
+  applies `snap.py` again to saved alignments without the speech model, and `finish.py`
   writes the app's files. `finish.py` gives a chapter no times if it failed to align, has
   the wrong number of verses, its starts don't increase, or verse 1 starts too late, and it
   records each recording's size and SHA-256 in
@@ -577,10 +583,13 @@ and keeps following.
   narrator doesn't, so the notes are aligned as text for one and skipped for the other.
 - **Checks:** speech recognizers that don't share the aligner's model heard sampled chapters,
   and each verse's first heard word was compared with its time (`spot_check_chinese.py`
-  with SenseVoice, `spot_check_spanish.py` with Whisper). Mandarin: 1,034 verses in 40
-  chapters, all within 0.3 s. Cantonese: 937 verses, 95.5% within 0.3 s, none late, and
-  2.7% early enough to mark the next verse while the last words of the one before are
-  read (`spot_check_harm.py` sorts the misses). Spanish: 133 verses in 7 chapters, 98% within 0.5 s.
+  with SenseVoice, `spot_check_spanish.py` with Whisper). Mandarin: 1,411 verses in 55
+  chapters, all within 0.3 s. Cantonese: 1,698 verses in 70 chapters, 99.5–99.9% within
+  0.3 s and none late, where an earlier pause rule had 95.5%, with 2.7% of verses marked
+  early while the last words of the verse before were read (`spot_check_harm.py` sorts
+  misses). Spanish: 133 verses in 7 chapters, 98% within 0.5 s. A recognizer can match a
+  verse's opening words to an identical passage elsewhere, as in Numbers 7, so a large
+  disagreement is checked against the verses around it before the time is blamed.
 - **Running them again:** a Python environment with `torch` and `torchaudio` 2.8, `numpy`,
   `pypinyin`, `ToJyutping`, and `imageio-ffmpeg` (and `funasr` and `transformers` for the checks). On a
   consumer GPU each chapter takes 3 to 5 seconds, so all 3,567 take about four hours, plus
