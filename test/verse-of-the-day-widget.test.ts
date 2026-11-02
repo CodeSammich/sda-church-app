@@ -96,6 +96,77 @@ describe('the verses the app hands the widget', () => {
   });
 });
 
+describe('updating the widget from the home page', () => {
+  const week: VerseWidgetDay[] = [
+    { day: '2026-11-2', text: 'Monday', reference: 'Ref', url: 'sdachurchapp://bible' },
+  ];
+  let cache: Map<string, string>;
+  let service: typeof import('@/services/VerseOfTheDayWidget.android');
+  let widget: { updateSnapshot: jest.Mock };
+  let loadDays: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date(2026, 10, 2, 9) });
+    cache = new Map();
+    jest.isolateModules(() => {
+      const CacheStore = require('@/services/CacheStore');
+      jest.spyOn(CacheStore, 'readCachedText').mockImplementation(async (spec: any) => cache.get(spec.name) ?? null);
+      jest.spyOn(CacheStore, 'writeCachedText').mockImplementation(async (spec: any, text: any) => {
+        cache.set(spec.name, text);
+      });
+      loadDays = jest
+        .spyOn(require('@/services/VerseOfTheDayWidgetData'), 'loadVerseWidgetDays')
+        .mockResolvedValue(week);
+      widget = require('@/widgets/VerseOfTheDayWidget').default;
+      widget.updateSnapshot = jest.fn();
+      service = require('@/services/VerseOfTheDayWidget.android');
+    });
+  });
+
+  it('hands the widget the week once a day, and again for another language', async () => {
+    await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    expect(widget.updateSnapshot).toHaveBeenCalledWith({ title: 'Today’s Verse', days: week });
+
+    await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    expect(widget.updateSnapshot).toHaveBeenCalledTimes(1);
+
+    await service.updateVerseOfTheDayWidget('zh', '今日經文');
+    expect(widget.updateSnapshot).toHaveBeenCalledTimes(2);
+    expect(loadDays).toHaveBeenLastCalledWith('zh');
+
+    jest.setSystemTime(new Date(2026, 10, 3, 6));
+    await service.updateVerseOfTheDayWidget('zh', '今日經文');
+    expect(widget.updateSnapshot).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps only the newest language’s verses when the language changes mid-load', async () => {
+    let finishEnglish: (days: VerseWidgetDay[]) => void = () => {};
+    loadDays.mockImplementationOnce(() => new Promise((resolve) => (finishEnglish = resolve)));
+    const english = service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    await service.updateVerseOfTheDayWidget('es', 'Versículo de hoy');
+    finishEnglish(week);
+    await english;
+    expect(widget.updateSnapshot).toHaveBeenCalledTimes(1);
+    expect(widget.updateSnapshot).toHaveBeenCalledWith({ title: 'Versículo de hoy', days: week });
+  });
+
+  it('leaves the widget alone when no verse loads', async () => {
+    loadDays.mockResolvedValueOnce([]);
+    await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    loadDays.mockRejectedValueOnce(new Error('no Bible'));
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    expect(widget.updateSnapshot).not.toHaveBeenCalled();
+    expect(cache.size).toBe(0);
+  });
+
+  it('does nothing on iOS and the web', async () => {
+    const { updateVerseOfTheDayWidget } = require('@/services/VerseOfTheDayWidget');
+    await expect(updateVerseOfTheDayWidget('en', 'Today’s Verse')).resolves.toBeUndefined();
+    expect(widget.updateSnapshot).not.toHaveBeenCalled();
+  });
+});
+
 describe('the verse text', () => {
   it('is read from the Bible that ships with the app, with its book name', async () => {
     jest.spyOn(BibleService, 'fetchBooks').mockResolvedValue([
