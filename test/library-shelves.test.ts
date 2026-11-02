@@ -40,6 +40,7 @@ describe('library shelf order', () => {
       ...LIBRARY_CATALOG.publicDomainWorks.map(({ id }) => id),
       ...LIBRARY_CATALOG.officialCollections.map(({ id }) => id),
       ...LIBRARY_CATALOG.churchDocuments.map(({ id }) => id),
+      ...LIBRARY_CATALOG.sdaBibleBooks.map(({ id }) => id),
     ]);
     for (const leaders of Object.values(LIBRARY_SHELF_LEADERS)) {
       for (const key of leaders ?? []) expect(keys).toContain(key);
@@ -53,6 +54,7 @@ describe('keeping the library balanced (#391)', () => {
     ...LIBRARY_CATALOG.publicDomainWorks,
     ...LIBRARY_CATALOG.officialCollections,
     ...LIBRARY_CATALOG.churchDocuments,
+    ...LIBRARY_CATALOG.sdaBibleBooks,
   ];
 
   it('puts her books after the others even when a shelf leads with one of hers', () => {

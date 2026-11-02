@@ -4,9 +4,12 @@ import type { SupportedLanguage } from '@/constants/LanguageContext';
  * The library's shelves, in the order the library page shows them. General
  * Christian books come first, then books for children and young people, then
  * Adventist writers, so a visitor meets the wider Christian shelf before the
- * denomination's own.
+ * denomination's own. The Chinese shelf, of books the church's leaders chose
+ * from the Chinese Union Mission's reader (#554), shows only in Chinese, since
+ * it holds only Chinese books; most are by Adventist writers, so it sits with
+ * them.
  */
-export const LIBRARY_SHELVES = ['classics', 'children', 'youth', 'egw', 'pioneers'] as const;
+export const LIBRARY_SHELVES = ['classics', 'children', 'youth', 'chinese', 'egw', 'pioneers'] as const;
 export type LibraryShelf = (typeof LIBRARY_SHELVES)[number];
 
 export const LIBRARY_SHELF_TITLES: Readonly<
@@ -15,6 +18,7 @@ export const LIBRARY_SHELF_TITLES: Readonly<
   classics: { en: 'Christian Classics', zh: '基督教經典', 'zh-cn': '基督教经典', es: 'Clásicos cristianos' },
   children: { en: 'Children', zh: '兒童', 'zh-cn': '儿童', es: 'Niños' },
   youth: { en: 'Youth / Young Adults', zh: '青年／青年成人', 'zh-cn': '青年／青年成人', es: 'Jóvenes / Adultos jóvenes' },
+  chinese: { en: 'Chinese Books', zh: '中文書籍', 'zh-cn': '中文书籍', es: 'Libros en chino' },
   egw: { en: 'Ellen G. White', zh: '懷愛倫', 'zh-cn': '怀爱伦', es: 'Elena G. de White' },
   pioneers: { en: 'Adventist Pioneers', zh: '復臨先驅', 'zh-cn': '复临先驱', es: 'Pioneros adventistas' },
 };

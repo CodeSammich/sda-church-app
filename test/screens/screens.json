@@ -240,10 +240,13 @@
     {
       "name": "explore",
       "group": "library",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380), and their Android counterparts at Android's largest font. xl-android-font-max is also the Android counterpart of max. max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\".",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380), and their Android counterparts at Android's largest font. xl-android-font-max is also the Android counterpart of max. max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\". In Chinese the Library is 精選書庫 (hand-picked library), and the In-depth Bible Study card for the SDA Bible app shows below Spotify; it's Chinese only, since the app's commentary and nearly all its books are Chinese (#554).",
       "path": "explore",
       "variants": ["default", "dark", "zh", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max", "xl-android-font-max", "es-xl-android-font-max"],
       "variantRules": {
+        "default": { "mustNotShowLines": ["^In-depth Bible"] },
+        "zh": { "mustShowLines": ["^精選書庫", "^深入研經"], "mustNotShowLines": ["圖書館"] },
+        "es": { "mustNotShowLines": ["^Estudio bíblico a fondo"] },
         "max": { "mustShowLines": ["^Library\\b"] },
         "xl-android-font-max": { "mustShowLines": ["^Library\\b"] }
       }
@@ -261,6 +264,14 @@
       "group": "library",
       "path": "explore/library/egw",
       "variants": ["default", "zh"]
+    },
+    {
+      "name": "library-chinese",
+      "group": "library",
+      "$comment": "Chinese readers get a shelf of books the church's leaders chose from the Chinese Union Mission's reader, titled in the app's script; the covers are the reader's, in Simplified. The Traditional title of 地上的最後一夜 can only come from the app's own text, not its cover (#554).",
+      "path": "explore/library/chinese",
+      "variants": ["zh"],
+      "mustShowLines": ["跪下的基督徒", "地上的最後一夜"]
     },
     {
       "name": "library-children",

@@ -1,15 +1,30 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
+import { getSdaBibleEgwBookUrl, withSdaBibleInterface } from './SdaBibleReader';
 
 export type EgwEditionLanguage = 'en' | 'zh' | 'es';
 export type EgwBookCategory = 'conflict' | 'growth' | 'wholePerson';
 
-export type EgwBookEdition = Readonly<{
-  language: EgwEditionLanguage;
-  title: string;
-  bookId: number;
-  firstParagraph: string;
-  url: string;
-}>;
+/**
+ * Where an edition opens. English and Spanish open on EGW Writings, the White
+ * Estate's reader, at the book's first paragraph. Chinese opens in the Chinese
+ * Union Mission's reader (#554), which is easier to read in; its `bookId` is
+ * the Mission's, which also keys its cover catalog (ChineseLibrary.ts).
+ */
+export type EgwBookEdition = Readonly<
+  | {
+      language: 'en' | 'es';
+      title: string;
+      bookId: number;
+      firstParagraph: string;
+      url: string;
+    }
+  | {
+      language: 'zh';
+      title: string;
+      bookId: number;
+      url: string;
+    }
+>;
 
 export type EgwBookWork = Readonly<{
   id: string;
@@ -24,7 +39,7 @@ const readUrl = (firstParagraph: string) =>
   `https://text.egwwritings.org/read/${firstParagraph}`;
 
 const edition = (
-  language: EgwEditionLanguage,
+  language: 'en' | 'es',
   title: string,
   bookId: number,
   firstParagraph: string,
@@ -34,6 +49,13 @@ const edition = (
   bookId,
   firstParagraph,
   url: readUrl(firstParagraph),
+});
+
+const chineseEdition = (title: string, bookId: number): EgwBookEdition => ({
+  language: 'zh',
+  title,
+  bookId,
+  url: getSdaBibleEgwBookUrl(bookId),
 });
 
 export const EGW_BOOKS: readonly EgwBookWork[] = [
@@ -48,7 +70,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'Patriarchs and Prophets', 84, '84.4'),
-      edition('zh', '先祖与先知', 14604, '14604.1'),
+      chineseEdition('先祖与先知', 127),
       edition('es', 'Historia de los Patriarcas y Profetas', 1704, '1704.2'),
     ],
   },
@@ -63,7 +85,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'Prophets and Kings', 88, '88.8'),
-      edition('zh', '先知与君王', 14605, '14605.1'),
+      chineseEdition('先知与君王', 128),
       edition('es', 'Profetas y Reyes', 217, '217.2'),
     ],
   },
@@ -78,7 +100,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'The Desire of Ages', 130, '130.4'),
-      edition('zh', '历代愿望', 14492, '14492.1'),
+      chineseEdition('历代愿望', 55),
       edition('es', 'El Deseado de Todas las Gentes', 174, '174.2'),
     ],
   },
@@ -93,7 +115,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'The Acts of the Apostles', 127, '127.5'),
-      edition('zh', '使徒行述', 14510, '14510.1'),
+      chineseEdition('使徒行述', 81),
       edition('es', 'Los Hechos de los Apóstoles', 198, '198.2'),
     ],
   },
@@ -108,7 +130,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'The Great Controversy', 132, '132.2'),
-      edition('zh', '善恶之争', 14504, '14504.1'),
+      chineseEdition('善恶之争', 75),
       edition('es', 'El Conflicto de los Siglos', 1710, '1710.2'),
     ],
   },
@@ -123,7 +145,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'Steps to Christ', 108, '108.4'),
-      edition('zh', '喜乐的泉源', 14538, '14538.1'),
+      chineseEdition('喜乐的泉源', 120),
       edition('es', 'El Camino a Cristo', 1749, '1749.3'),
     ],
   },
@@ -138,7 +160,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'Christ’s Object Lessons', 15, '15.5'),
-      edition('zh', '基督比喻实训', 14481, '14481.1'),
+      chineseEdition('基督比喻实训', 34),
       edition('es', 'Palabras de Vida del Gran Maestro', 210, '210.2'),
     ],
   },
@@ -153,7 +175,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'The Ministry of Healing', 135, '135.6'),
-      edition('zh', '服务真诠', 14468, '14468.1'),
+      chineseEdition('服务真诠', 16),
       edition('es', 'El Ministerio de Curación', 1757, '1757.2'),
     ],
   },
@@ -168,7 +190,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'Education', 29, '29.5'),
-      edition('zh', '教育论', 14488, '14488.1'),
+      chineseEdition('教育论', 50),
       edition('es', 'La Educación', 1702, '1702.2'),
     ],
   },
@@ -183,7 +205,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'Child Guidance', 8, '8.4'),
-      edition('zh', '儿童教育指南', 14465, '14465.1'),
+      chineseEdition('儿童教育指南', 13),
       edition('es', 'Conducción del Niño', 157, '157.2'),
     ],
   },
@@ -198,7 +220,7 @@ export const EGW_BOOKS: readonly EgwBookWork[] = [
     },
     editions: [
       edition('en', 'Messages to Young People', 76, '76.1'),
-      edition('zh', '告青年书', 14475, '14475.1'),
+      chineseEdition('告青年书', 23),
       edition('es', 'Mensajes para los Jóvenes', 1769, '1769.1'),
     ],
   },
@@ -231,6 +253,10 @@ export const getEgwEditionForLanguage = (
     work.editions[0]
   );
 };
+
+/** The link a book opens: its edition in the app language, in the app's script. */
+export const getEgwBookUrlForLanguage = (work: EgwBookWork, language: SupportedLanguage) =>
+  withSdaBibleInterface(getEgwEditionForLanguage(work, language).url, language);
 
 const getOfficialCoverUrl = (edition: EgwBookEdition) =>
   `${EGW_COVER_BASE_URL}${edition.bookId}?type=small`;

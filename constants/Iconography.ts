@@ -13,6 +13,7 @@ type AppIconography = {
     appleAppStore: AppIconProps;
     library: MaterialAppIcon;
     sabbathSchool: MaterialAppIcon;
+    sdaBible: MaterialAppIcon;
   };
   tabs: {
     explore: MaterialAppIcon;
@@ -28,6 +29,8 @@ export const APP_ICONOGRAPHY: AppIconography = {
     },
     library: { name: 'bookshelf' },
     sabbathSchool: { name: 'school' },
+    // A plain book, not the SDA Bible app's own logo (#554).
+    sdaBible: { name: 'book-open-variant' },
   },
   tabs: {
     explore: { name: 'compass' },

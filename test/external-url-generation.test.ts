@@ -160,7 +160,7 @@ describe('generated external dependency URLs', () => {
     expect(urls707).toHaveLength(2137);
   });
 
-  it('generates every curated EGW edition URL on the official host', () => {
+  it('generates every curated EGW edition URL on its reader', () => {
     const editions = EGW_BOOKS.flatMap((work) => work.editions);
 
     expect(editions).toHaveLength(33);
@@ -168,8 +168,13 @@ describe('generated external dependency URLs', () => {
     expect(editions.filter(({ language }) => language === 'zh')).toHaveLength(11);
     expect(editions.filter(({ language }) => language === 'es')).toHaveLength(11);
     assertHttpsUrls(
-      editions.map(({ url }) => url),
+      editions.filter(({ language }) => language !== 'zh').map(({ url }) => url),
       'text.egwwritings.org',
+    );
+    // The Chinese editions open in the Chinese Union Mission's reader (#554).
+    assertHttpsUrls(
+      editions.filter(({ language }) => language === 'zh').map(({ url }) => url),
+      'read.sdabible.org',
     );
   });
 });

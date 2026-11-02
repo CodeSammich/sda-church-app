@@ -284,8 +284,12 @@ the hymnal page, whose way back returns to the verse (`features/hymnal/HymnScrip
 
 **Purpose:** Deep personal growth through books, recorded sermons, and classes.
 
-**UI:** A short list of cards (`app/(tabs)/explore/index.tsx`): **Library**, **Sermon
-Archive** (YouTube), **Audio Archive** (Spotify), and **Zoom Class**. The Library is the
+**UI:** A short list of cards (`app/(tabs)/explore/index.tsx`): **Library** (精選書庫, a
+hand-picked library, in Chinese), **Sermon Archive** (YouTube), **Audio Archive** (Spotify),
+**In-depth Bible Study** (深入研經) in Chinese only, and **Zoom Class**. In-depth Bible
+Study opens the Chinese Union Mission's SDA Bible app, with Chinese commentary and over
+1,000 books: its App Store page on iPhone and iPad, its online reader on Android and the
+web (#554). It has a plain book icon, not the app's logo. The Library is the
 bookshelf-style part: a carousel of featured books, turned by swiping, a dot, or the
 little arrows on the banner's sides, then shelves that are each a row of covers, with a search
 across all books (see [Christian Library](feature_designs/christian_library.md)). Hymnals

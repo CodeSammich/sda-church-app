@@ -1,5 +1,6 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import type { LibraryShelf } from './LibraryShelves';
+import { withSdaBibleInterface } from './SdaBibleReader';
 
 export type LibraryRights =
   | 'public-domain-us'
@@ -12,7 +13,8 @@ export type LibraryCollection =
   | 'adventist-pioneers'
   | 'christian-classics'
   | 'youth'
-  | 'children';
+  | 'children'
+  | 'chinese-books';
 
 export type LibraryItem = Readonly<{
   id: string;
@@ -46,6 +48,10 @@ export type LibraryItem = Readonly<{
   // own source and rights basis; see "Library Sources and Licensing" in
   // docs/LEGAL.md.
   spanish?: LibraryItemEdition;
+  // The publisher's own cover thumbnail, shown only to identify the book, for
+  // books with no bundled cover; see the Chinese Union Mission row in
+  // docs/LEGAL.md. Without a connection the book shows the placeholder.
+  coverUrl?: string;
 }>;
 
 type LibraryItemText = Readonly<{
@@ -367,26 +373,369 @@ const churchDocuments: readonly LibraryItem[] = [
   },
 ];
 
-// Add Chinese Adventist books only after verifying their rights and sources. The
-// candidates are in docs/feature_designs/christian_library.md, under "Chinese
-// Adventist research queue". (#176, which added the Chinese covers, is closed.)
+// Chinese books the church's leaders chose from the Chinese Union Mission's
+// online reader (#554). They're linked, not copied: each opens its page in the
+// reader, in the app's script, and shows the reader's cover thumbnail. Titles
+// and authors are from the covers; the reader lists no authors.
+const sdaBibleBooks: readonly LibraryItem[] = [
+  {
+    // Published anonymously: its author signed it "An Unknown Christian".
+    id: 'kneeling-christian',
+    title: 'The Kneeling Christian',
+    author: 'An Unknown Christian',
+    collection: 'chinese-books',
+    description: 'A classic call to prayer: why it matters and how to pray.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-162',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/25/thumb',
+    traditionalChinese: {
+      title: '跪下的基督徒',
+      author: '佚名',
+      description: '論禱告的經典之作：禱告為何重要，又當如何禱告。',
+    },
+    simplifiedChinese: {
+      title: '跪下的基督徒',
+      author: '佚名',
+      description: '论祷告的经典之作：祷告为何重要，又当如何祷告。',
+    },
+  },
+  {
+    id: 'batchelor-richest-caveman',
+    title: 'The Richest Caveman',
+    author: 'Doug Batchelor',
+    collection: 'chinese-books',
+    description:
+      'Doug Batchelor tells how he left a wealthy home to live in a cave, and found the Bible there.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-411',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/317/thumb',
+    traditionalChinese: {
+      title: '最富有的穴居人',
+      author: '道格·巴契勒',
+      description: '道格·巴契勒親述：他離開富裕的家，獨自住進山洞，在那裡讀到了《聖經》。',
+    },
+    simplifiedChinese: {
+      title: '最富有的穴居人',
+      author: '道格·巴契勒',
+      description: '道格·巴契勒亲述：他离开富裕的家，独自住进山洞，在那里读到了《圣经》。',
+    },
+  },
+  {
+    id: 'crews-last-night-on-earth',
+    title: 'The Last Night on Earth',
+    author: 'Joe Crews',
+    collection: 'chinese-books',
+    description: 'Everyone will have a last night on earth: on being ready for it.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-407',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/819/thumb',
+    traditionalChinese: {
+      title: '地上的最後一夜',
+      author: '喬·克魯斯',
+      description: '每個人都會經歷在地上的最後一夜：論如何為那一夜作好預備。',
+    },
+    simplifiedChinese: {
+      title: '地上的最后一夜',
+      author: '乔·克鲁斯',
+      description: '每个人都会经历在地上的最后一夜：论如何为那一夜作好预备。',
+    },
+  },
+  {
+    id: 'jesske-deathwatch-in-siberia',
+    title: 'Deathwatch in Siberia',
+    author: 'W. S. Jesske',
+    collection: 'chinese-books',
+    description:
+      'A story from Siberia, where nineteenth-century Russia exiled people for living by their conscience.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-435',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/847/thumb',
+    traditionalChinese: {
+      title: '在西伯利亞的死神一瞥',
+      author: '傑斯克',
+      description: '發生在西伯利亞的故事：十九世紀的俄國把按良心生活的人流放到那裡。',
+    },
+    simplifiedChinese: {
+      title: '在西伯利亚的死神一瞥',
+      author: '杰斯克',
+      description: '发生在西伯利亚的故事：十九世纪的俄国把按良心生活的人流放到那里。',
+    },
+  },
+  {
+    id: 'batchelor-recalling-lots-wife',
+    title: "Recalling Lot's Wife",
+    author: 'Doug Batchelor',
+    collection: 'chinese-books',
+    description: "Lot's wife as a warning against drifting from the truth without noticing.",
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-813',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/975/thumb',
+    traditionalChinese: {
+      title: '回想羅得的妻子',
+      author: '道格·巴契勒',
+      description: '以羅得的妻子為鑑，提醒信徒不要在不知不覺中偏離真理。',
+    },
+    simplifiedChinese: {
+      title: '回想罗得的妻子',
+      author: '道格·巴契勒',
+      description: '以罗得的妻子为鉴，提醒信徒不要在不知不觉中偏离真理。',
+    },
+  },
+  {
+    id: 'batchelor-bible-and-evolution',
+    title: 'The Bible and Evolution',
+    author: 'Doug Batchelor',
+    collection: 'chinese-books',
+    description: 'Why the evidence points to a Creator rather than to evolution.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-815',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/979/thumb',
+    traditionalChinese: {
+      title: '聖經與進化論',
+      author: '道格·巴契勒',
+      description: '為何證據指向創造主，而非進化論。',
+    },
+    simplifiedChinese: {
+      title: '圣经与进化论',
+      author: '道格·巴契勒',
+      description: '为何证据指向创造主，而非进化论。',
+    },
+  },
+  {
+    id: 'batchelor-to-see-the-king',
+    title: 'To See the King',
+    author: 'Doug Batchelor',
+    collection: 'chinese-books',
+    description: "Isaiah's vision in Isaiah 6, and what it shows about conversion, cleansing, and God's call.",
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-1445',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/723/thumb',
+    traditionalChinese: {
+      title: '得見我的王',
+      author: '道格·巴契勒',
+      description: '從《以賽亞書》第六章以賽亞所見的異象，看悔改、潔淨與蒙召。',
+    },
+    simplifiedChinese: {
+      title: '得见我的王',
+      author: '道格·巴契勒',
+      description: '从《以赛亚书》第六章以赛亚所见的异象，看悔改、洁净与蒙召。',
+    },
+  },
+  {
+    id: 'batchelor-pharisee-or-tax-collector',
+    title: 'Am I a Pharisee or a Tax Collector?',
+    author: 'Doug Batchelor',
+    collection: 'chinese-books',
+    description:
+      "Jesus's parable of the Pharisee and the tax collector, and the two kinds of worshipper it describes.",
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-863',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/1001/thumb',
+    traditionalChinese: {
+      title: '我是法利賽人還是稅吏？',
+      author: '道格·巴契勒',
+      description: '耶穌關於法利賽人和稅吏的比喻，以及其中描繪的兩種敬拜者。',
+    },
+    simplifiedChinese: {
+      title: '我是法利赛人还是税吏？',
+      author: '道格·巴契勒',
+      description: '耶稣关于法利赛人和税吏的比喻，以及其中描绘的两种敬拜者。',
+    },
+  },
+  {
+    // Amazing Facts credits the English book to Joe Crews; the Chinese
+    // edition's cover reads 丹尼·克鲁斯, which the Chinese text follows so it
+    // matches the cover beside it.
+    id: 'crews-baptized-paganism',
+    title: 'Baptized Paganism',
+    author: 'Joe Crews',
+    collection: 'chinese-books',
+    description: 'How pagan customs entered the Christian church.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-811',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/971/thumb',
+    traditionalChinese: {
+      title: '受了洗的異教',
+      author: '丹尼·克魯斯',
+      description: '異教的習俗如何進入了基督教會。',
+    },
+    simplifiedChinese: {
+      title: '受了洗的异教',
+      author: '丹尼·克鲁斯',
+      description: '异教的习俗如何进入了基督教会。',
+    },
+  },
+  {
+    id: 'rasi-gibson-understanding-creation',
+    title: 'Understanding Creation',
+    author: 'Humberto Rasi and James Gibson',
+    collection: 'chinese-books',
+    description: 'Answers to questions on faith and science, for readers curious about creation.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-560',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/1101/thumb',
+    traditionalChinese: {
+      title: '認識創造',
+      author: '詹姆斯·吉布森、亨貝托·拉西',
+      description: '關於信仰與科學的問答，寫給對創造感到好奇的讀者。',
+    },
+    simplifiedChinese: {
+      title: '认识创造',
+      author: '詹姆斯·吉布森、亨贝托·拉西',
+      description: '关于信仰与科学的问答，写给对创造感到好奇的读者。',
+    },
+  },
+  {
+    id: 'peckham-theodicy-of-love',
+    title: 'Theodicy of Love',
+    author: 'John C. Peckham',
+    collection: 'chinese-books',
+    description: 'The cosmic conflict and the problem of evil.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-542',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/1131/thumb',
+    traditionalChinese: {
+      title: '愛的神義論',
+      author: '約翰·佩卡姆',
+      description: '宇宙之爭與罪惡的問題。',
+    },
+    simplifiedChinese: {
+      title: '爱的神义论',
+      author: '约翰·佩卡姆',
+      description: '宇宙之争与罪恶的问题。',
+    },
+  },
+  {
+    // About Ellen G. White, not by her, so it sits on her shelf (see
+    // ITEM_SHELVES) without counting as one of her books.
+    id: 'lake-ellen-white-under-fire',
+    title: 'Ellen White Under Fire',
+    author: 'Jud Lake',
+    collection: 'chinese-books',
+    description: 'The criticisms made of Ellen G. White, past and present, and the answers to them.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-1333',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/1265/thumb',
+    traditionalChinese: {
+      title: '浴火信使',
+      author: '尤德·萊克',
+      description: '探討古今對懷愛倫的批評，以及對這些批評的回應。',
+    },
+    simplifiedChinese: {
+      title: '浴火信使',
+      author: '尤德·莱克',
+      description: '探讨古今对怀爱伦的批评，以及对这些批评的回应。',
+    },
+  },
+  {
+    id: 'schwarz-greenleaf-light-bearers',
+    title: 'Light Bearers',
+    author: 'Richard W. Schwarz and Floyd Greenleaf',
+    collection: 'chinese-books',
+    description: 'A history of the Seventh-day Adventist Church.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-1402',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/1271/thumb',
+    traditionalChinese: {
+      title: '擎光者',
+      author: '理查德·W·施瓦茲、弗洛伊德·格林利夫',
+      description: '基督復臨安息日會的歷史。',
+    },
+    simplifiedChinese: {
+      title: '擎光者',
+      author: '理查德·W·施瓦兹、弗洛伊德·格林利夫',
+      description: '基督复临安息日会的历史。',
+    },
+  },
+  {
+    id: 'morneau-trip-into-the-supernatural',
+    title: 'A Trip into the Supernatural',
+    author: 'Roger J. Morneau',
+    collection: 'chinese-books',
+    description:
+      'Roger Morneau tells how he was drawn into the world of evil spirits, and how he left it for Christ.',
+    language: 'zh',
+    onlyForChineseReaders: true,
+    rights: 'official-external',
+    sourceName: 'SDA Bible',
+    sourceUrl: 'https://read.sdabible.org/library/work/m-1367',
+    coverUrl: 'https://read.sdabible.org/api/library/assets/1243/thumb',
+    traditionalChinese: {
+      title: '靈界之旅',
+      author: '羅傑·J·莫諾',
+      description: '羅傑·莫諾親述他如何陷入邪靈的世界，又如何離開它歸向基督。',
+    },
+    simplifiedChinese: {
+      title: '灵界之旅',
+      author: '罗杰·J·莫诺',
+      description: '罗杰·莫诺亲述他如何陷入邪灵的世界，又如何离开它归向基督。',
+    },
+  },
+];
+
+// Add other Chinese Adventist books only after verifying their rights and
+// sources. The candidates are in docs/feature_designs/christian_library.md,
+// under "Chinese Adventist research queue". (#176, which added the Chinese
+// covers, is closed.)
 
 export const LIBRARY_CATALOG = Object.freeze({
   publicDomainWorks,
   officialCollections,
   churchDocuments,
+  sdaBibleBooks,
 });
 
-// The Sabbath Encouragement quotations sit with Ellen G. White's books. Other
-// works are shelved by collection.
+// The Sabbath Encouragement quotations and Ellen White Under Fire sit with
+// Ellen G. White's books. Other works are shelved by collection.
 const ITEM_SHELVES: Readonly<Record<string, LibraryShelf>> = {
   'sabbath-encouragement': 'egw',
+  'lake-ellen-white-under-fire': 'egw',
 };
 const COLLECTION_SHELVES: Readonly<Record<LibraryCollection, LibraryShelf>> = {
   'adventist-pioneers': 'pioneers',
   'christian-classics': 'classics',
   youth: 'youth',
   children: 'children',
+  'chinese-books': 'chinese',
 };
 
 /** The library shelf (the `[collection]` route) that lists this work. */
@@ -412,6 +761,7 @@ export const getLibraryItemsForLanguage = (language: SupportedLanguage) => {
     publicDomainWorks: forThisReader(publicDomainWorks),
     officialCollections: forThisReader(officialCollections),
     churchDocuments: forThisReader(churchDocuments),
+    sdaBibleBooks: forThisReader(sdaBibleBooks),
   };
 };
 
@@ -427,7 +777,10 @@ export const getLibraryItemDisplayText = (
     title: item.title,
   };
 
-/** Where the book opens for this reader, and on what rights basis. */
+/**
+ * Where the book opens for this reader, and on what rights basis. A book in
+ * the SDA Bible reader opens in the app's script.
+ */
 export const getLibraryItemSource = (
   item: LibraryItem,
   language: SupportedLanguage,
@@ -436,5 +789,5 @@ export const getLibraryItemSource = (
     (language === 'es' && item.spanish) ||
     ((language === 'zh' || language === 'zh-cn') && item.chineseEdition) ||
     item;
-  return { rights, sourceName, sourceUrl };
+  return { rights, sourceName, sourceUrl: withSdaBibleInterface(sourceUrl, language) };
 };
