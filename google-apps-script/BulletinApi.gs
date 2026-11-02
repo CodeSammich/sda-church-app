@@ -320,9 +320,10 @@ function findBulletinColumn_(sheetName, headers, column) {
  * for their location go after the rest, since Brooklyn Sermon decides which
  * side of the row a repeated header is on. When more than one column has an
  * expected column's exact name, such as a second Date added for another
- * fellowship, the tagged one is read and the others are left out, so a new
- * column can't take an existing one's place or its tag. Reads no tags while
- * every expected column has its name once.
+ * fellowship, one is read and the others are left out: a column with data
+ * before an empty one, then the tagged one, then the first. So a new column
+ * can't take an existing one's place or its tag. Reads no tags while every
+ * expected column has its name once.
  */
 function resolveBulletinHeaders_(sheet, sheetName, headers) {
   var effective = headers.slice();
@@ -352,9 +353,16 @@ function resolveBulletinHeaders_(sheet, sheetName, headers) {
       return;
     }
     tags = tags || findBulletinColumnTags_(sheet);
-    var read = named[0];
+    // A column with something in it beats an empty one, such as the empty
+    // Weekly Data column an open adds when a rename came before any tag, once
+    // the old name is put back.
+    var filled = named.filter(function (index) {
+      return bulletinColumnHasData_(sheet, index);
+    });
+    var choices = filled.length ? filled : named;
+    var read = choices[0];
     tags.forEach(function (entry) {
-      if (entry.tag === column.tag && named.indexOf(entry.index) !== -1) {
+      if (entry.tag === column.tag && choices.indexOf(entry.index) !== -1) {
         read = entry.index;
       }
     });
@@ -387,11 +395,27 @@ function resolveBulletinHeaders_(sheet, sheetName, headers) {
         ) {
           return;
         }
-        renamed.push({ label: column.label, header: String(effective[entry.index] || '') });
+        // Named from the sheet's own header, since a tie above may have
+        // left this column out under it.
+        renamed.push({ label: column.label, header: String(headers[entry.index] || '') });
         effective[entry.index] = column.label;
       });
     });
   return { headers: effective, renamed: renamed, duplicates: duplicates };
+}
+
+// Whether a column has anything below its header row.
+function bulletinColumnHasData_(sheet, index) {
+  var rows = sheet.getLastRow() - 1;
+  if (rows < 1) {
+    return false;
+  }
+  return sheet
+    .getRange(2, index + 1, rows, 1)
+    .getDisplayValues()
+    .some(function (row) {
+      return String(row[0] || '').trim() !== '';
+    });
 }
 
 // A column's letters, such as C for column 3 or AA for column 27.

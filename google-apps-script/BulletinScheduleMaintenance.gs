@@ -200,8 +200,6 @@ function runBulletinScheduleMaintenance_(now) {
     var hidden = hideOldBulletinScheduleRows_(sheet, now);
     // Runs after quarter rows are appended so the scan covers every row.
     var conflicts = refreshScheduleRosterChecksSafely_(sheet);
-    // Last, so a Weekly Data tab made again above is tagged too.
-    tagBulletinTabsAndColumnsSafely_(SpreadsheetApp.getActiveSpreadsheet());
     SpreadsheetApp.flush();
     return {
       populated: populated,
@@ -211,7 +209,14 @@ function runBulletinScheduleMaintenance_(now) {
       validation: validation,
     };
   } finally {
-    lock.releaseLock();
+    // Last, so a Weekly Data tab made again above is tagged too, and even
+    // when a step above stops the upkeep, such as on a Sabbath Calendar
+    // without its Date column, so the other tabs and columns keep their tags.
+    try {
+      tagBulletinTabsAndColumnsSafely_(SpreadsheetApp.getActiveSpreadsheet());
+    } finally {
+      lock.releaseLock();
+    }
   }
 }
 

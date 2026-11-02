@@ -45,6 +45,7 @@ type FakeSheet = {
   getLastRow: () => number;
   getLastColumn: () => number;
   getMaxColumns: () => number;
+  insertColumnsAfter: (after: number, count: number) => void;
   getDataRange: () => { getValues: () => string[][]; getDisplayValues: () => string[][] };
   getRange: (...args: (number | string)[]) => unknown;
   addDeveloperMetadata: (key: string, value: string) => void;
@@ -124,6 +125,8 @@ const createWorkbook = (tabs: Record<string, string[][]>): FakeWorkbook => {
       getLastRow: () => sheet.grid.length,
       getLastColumn: () => Math.max(0, ...sheet.grid.map((row) => row.length)),
       getMaxColumns: () => sheet.getLastColumn(),
+      // The grid grows as values are written past its edge.
+      insertColumnsAfter: () => undefined,
       getDataRange: () => ({
         getValues: () => sheet.grid.map((row) => [...row]),
         getDisplayValues: () => sheet.grid.map((row) => [...row]),
@@ -453,6 +456,85 @@ describe('bulletin tab and column tags', () => {
     expect(run(context, 'getRenamedBulletinTabsAndColumns_(workbook)')).toEqual([
       'Sabbath Calendar: 2 columns are named Queens Sermon; column F is read',
     ]);
+  });
+
+  it('reads the column with data when an empty one an open added gets the same name', () => {
+    const workbook = createChurchWorkbook();
+    const context = load(workbook);
+    const weekly = workbook.sheet('Weekly Data');
+    // Renamed before anything was tagged: the next open adds an empty
+    // Bible Verses column and tags it.
+    weekly.setHeader(2, 'Scripture');
+    runInContext('ensureWeeklyDataTab_(workbook); tagBulletinTabsAndColumns_(workbook)', context);
+    expect(weekly.grid[0][WEEKLY_HEADERS.length]).toBe('Bible Verses');
+    // Then someone puts the old name back.
+    weekly.setHeader(2, 'Bible Verses');
+
+    const intake = run<{ bibleVerses: string }>(
+      context,
+      `(function () {
+        var location = createLocation_();
+        populateBulletinIntake_(location, getBulletinIntakeRows_(workbook, '${SABBATH}', 'queens'));
+        return location;
+      })()`,
+    );
+
+    expect(intake.bibleVerses).toBe('John 10:11-16');
+    expect(run(context, 'getRenamedBulletinTabsAndColumns_(workbook)')).toEqual([
+      'Weekly Data: 2 columns are named Bible Verses; column C is read',
+    ]);
+    runInContext('tagBulletinTabsAndColumns_(workbook)', context);
+    const verseTags = workbook.entries.filter(
+      (entry) => entry.sheet === weekly && entry.value === 'bible verses',
+    );
+    expect(verseTags.map((entry) => entry.column)).toEqual([3]);
+  });
+
+  it('keeps reading a renamed column in its old role when the name it took is still in use', () => {
+    const { workbook, context } = tagged();
+    const calendar = workbook.sheet('Sabbath Calendar');
+    calendar.setHeader(5, 'Translation');
+
+    const bulletin = buildBulletin(context);
+
+    expect(bulletin.queens.sermon).toBe('Queens Sermon 6');
+    expect(bulletin.queens.translation).toBe('Translation 7');
+    expect(run(context, 'getMissingBulletinColumns_(workbook)')).toEqual([]);
+    expect(run(context, 'getRenamedBulletinTabsAndColumns_(workbook)')).toEqual([
+      'Sabbath Calendar: 2 columns are named Translation; column G is read',
+      'Sabbath Calendar: "Translation" is read as Queens Sermon',
+    ]);
+  });
+
+  it("blanks a deleted column's field, lists it as missing, and drops its tag", () => {
+    const { workbook, context } = tagged();
+    const calendar = workbook.sheet('Sabbath Calendar');
+    calendar.deleteColumn(5);
+
+    expect(buildBulletin(context).queens.sermon).toBe('');
+    expect(buildBulletin(context).queens.translation).toBe('Translation 7');
+    expect(run(context, 'getMissingBulletinColumns_(workbook)')).toEqual([
+      'Sabbath Calendar: Queens Sermon',
+    ]);
+    expect(workbook.entries.some((entry) => entry.value === 'queens sermon')).toBe(false);
+  });
+
+  it('still tags what it finds when the upkeep stops early', () => {
+    const workbook = createChurchWorkbook();
+    const context = load(workbook);
+    context.LockService = {
+      getDocumentLock: () => ({ tryLock: () => true, releaseLock: () => undefined }),
+    };
+    // A Sabbath Calendar renamed before it was ever tagged stops the upkeep
+    // at its first step.
+    workbook.sheet('Sabbath Calendar').setName('Calendar 2026');
+
+    expect(() =>
+      runInContext(`runBulletinScheduleMaintenance_(new Date('2026-11-02T12:00:00'))`, context),
+    ).toThrow();
+    expect(
+      workbook.entries.filter((entry) => !entry.column).map((entry) => entry.sheet.name),
+    ).toEqual(['Weekly Data', 'Name Dictionary', 'Leadership']);
   });
 
   it("doesn't count a hymn's English and Chinese columns as the same name", () => {
