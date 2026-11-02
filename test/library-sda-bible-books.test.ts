@@ -18,13 +18,13 @@ const shelfBooks = async (language: SupportedLanguage) => {
 // The books the church's leaders chose from the Chinese Union Mission's
 // reader (#554) are Chinese, so only Chinese readers see them.
 describe.each<[SupportedLanguage, string, string]>([
-  ['zh', '?ui=tc', '跪下的基督徒'],
-  ['zh-cn', '?ui=cn', '跪下的基督徒'],
-])("the Chinese shelf with the app in %s", (language, script, firstTitle) => {
-  it("lists thirteen of them, with the reader's covers, opening in the app's script", async () => {
-    const books = (await shelfBooks(language)).getShelfBooks('chinese');
-    expect(books).toHaveLength(13);
-    expect(books[0].title).toBe(firstTitle);
+  ['zh', '?ui=tc', '地上的最後一夜'],
+  ['zh-cn', '?ui=cn', '地上的最后一夜'],
+])("today's Adventist writers with the app in %s", (language, script, secondTitle) => {
+  it("lists twelve of them, with the reader's covers, opening in the app's script", async () => {
+    const books = (await shelfBooks(language)).getShelfBooks('contemporary');
+    expect(books).toHaveLength(12);
+    expect(books.map(({ title }) => title).slice(0, 2)).toEqual(['最富有的穴居人', secondTitle]);
 
     for (const book of books) {
       const item = LIBRARY_CATALOG.sdaBibleBooks.find(({ id }) => id === book.key)!;
@@ -36,6 +36,11 @@ describe.each<[SupportedLanguage, string, string]>([
     }
   });
 
+  it('puts The Kneeling Christian second among the Christian classics', async () => {
+    const keys = (await shelfBooks(language)).getShelfBooks('classics').map(({ key }) => key);
+    expect(keys.slice(0, 2)).toEqual(['sibbes-bruised-reed', 'kneeling-christian']);
+  });
+
   it("puts Ellen White Under Fire on her shelf, after Sabbath Encouragement and her own books' leaders", async () => {
     const keys = (await shelfBooks(language)).getShelfBooks('egw').map(({ key }) => key);
     expect(keys).toContain('lake-ellen-white-under-fire');
@@ -44,9 +49,10 @@ describe.each<[SupportedLanguage, string, string]>([
 });
 
 describe.each<SupportedLanguage>(['en', 'es'])('the library with the app in %s', (language) => {
-  it('leaves the Chinese shelf empty, so the library page hides it', async () => {
+  it("leaves today's Adventist writers' shelf empty, so the library page hides it", async () => {
     const library = await shelfBooks(language);
-    expect(library.getShelfBooks('chinese')).toEqual([]);
+    expect(library.getShelfBooks('contemporary')).toEqual([]);
+    expect(library.getShelfBooks('classics').map(({ key }) => key)).not.toContain('kneeling-christian');
     expect(library.getShelfBooks('egw').map(({ key }) => key)).not.toContain('lake-ellen-white-under-fire');
   });
 });

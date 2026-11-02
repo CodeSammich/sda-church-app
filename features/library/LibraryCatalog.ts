@@ -14,7 +14,7 @@ export type LibraryCollection =
   | 'christian-classics'
   | 'youth'
   | 'children'
-  | 'chinese-books';
+  | 'contemporary-adventist';
 
 export type LibraryItem = Readonly<{
   id: string;
@@ -374,16 +374,18 @@ const churchDocuments: readonly LibraryItem[] = [
 ];
 
 // Chinese books the church's leaders chose from the Chinese Union Mission's
-// online reader (#554). They're linked, not copied: each opens its page in the
-// reader, in the app's script, and shows the reader's cover thumbnail. Titles
-// and authors are from the covers; the reader lists no authors.
+// online reader (#554), nearly all by today's Adventist writers. They're
+// linked, not copied: each opens its page in the reader, in the app's script,
+// and shows the reader's cover thumbnail. Titles and authors are from the
+// covers; the reader lists no authors.
 const sdaBibleBooks: readonly LibraryItem[] = [
   {
-    // Published anonymously: its author signed it "An Unknown Christian".
+    // Published anonymously in the 1920s: its author signed it "An Unknown
+    // Christian". Not an Adventist book, so it sits with the classics.
     id: 'kneeling-christian',
     title: 'The Kneeling Christian',
     author: 'An Unknown Christian',
-    collection: 'chinese-books',
+    collection: 'christian-classics',
     description: 'A classic call to prayer: why it matters and how to pray.',
     language: 'zh',
     onlyForChineseReaders: true,
@@ -406,7 +408,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'batchelor-richest-caveman',
     title: 'The Richest Caveman',
     author: 'Doug Batchelor',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description:
       'Doug Batchelor tells how he left a wealthy home to live in a cave, and found the Bible there.',
     language: 'zh',
@@ -430,7 +432,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'crews-last-night-on-earth',
     title: 'The Last Night on Earth',
     author: 'Joe Crews',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: 'Everyone will have a last night on earth: on being ready for it.',
     language: 'zh',
     onlyForChineseReaders: true,
@@ -453,7 +455,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'jesske-deathwatch-in-siberia',
     title: 'Deathwatch in Siberia',
     author: 'W. S. Jesske',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description:
       'A story from Siberia, where nineteenth-century Russia exiled people for living by their conscience.',
     language: 'zh',
@@ -477,7 +479,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'batchelor-recalling-lots-wife',
     title: "Recalling Lot's Wife",
     author: 'Doug Batchelor',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: "Lot's wife as a warning against drifting from the truth without noticing.",
     language: 'zh',
     onlyForChineseReaders: true,
@@ -500,7 +502,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'batchelor-bible-and-evolution',
     title: 'The Bible and Evolution',
     author: 'Doug Batchelor',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: 'Why the evidence points to a Creator rather than to evolution.',
     language: 'zh',
     onlyForChineseReaders: true,
@@ -523,7 +525,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'batchelor-to-see-the-king',
     title: 'To See the King',
     author: 'Doug Batchelor',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: "Isaiah's vision in Isaiah 6, and what it shows about conversion, cleansing, and God's call.",
     language: 'zh',
     onlyForChineseReaders: true,
@@ -546,7 +548,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'batchelor-pharisee-or-tax-collector',
     title: 'Am I a Pharisee or a Tax Collector?',
     author: 'Doug Batchelor',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description:
       "Jesus's parable of the Pharisee and the tax collector, and the two kinds of worshipper it describes.",
     language: 'zh',
@@ -573,7 +575,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'crews-baptized-paganism',
     title: 'Baptized Paganism',
     author: 'Joe Crews',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: 'How pagan customs entered the Christian church.',
     language: 'zh',
     onlyForChineseReaders: true,
@@ -596,7 +598,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'rasi-gibson-understanding-creation',
     title: 'Understanding Creation',
     author: 'Humberto Rasi and James Gibson',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: 'Answers to questions on faith and science, for readers curious about creation.',
     language: 'zh',
     onlyForChineseReaders: true,
@@ -619,7 +621,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'peckham-theodicy-of-love',
     title: 'Theodicy of Love',
     author: 'John C. Peckham',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: 'The cosmic conflict and the problem of evil.',
     language: 'zh',
     onlyForChineseReaders: true,
@@ -644,7 +646,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'lake-ellen-white-under-fire',
     title: 'Ellen White Under Fire',
     author: 'Jud Lake',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: 'The criticisms made of Ellen G. White, past and present, and the answers to them.',
     language: 'zh',
     onlyForChineseReaders: true,
@@ -667,7 +669,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'schwarz-greenleaf-light-bearers',
     title: 'Light Bearers',
     author: 'Richard W. Schwarz and Floyd Greenleaf',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description: 'A history of the Seventh-day Adventist Church.',
     language: 'zh',
     onlyForChineseReaders: true,
@@ -690,7 +692,7 @@ const sdaBibleBooks: readonly LibraryItem[] = [
     id: 'morneau-trip-into-the-supernatural',
     title: 'A Trip into the Supernatural',
     author: 'Roger J. Morneau',
-    collection: 'chinese-books',
+    collection: 'contemporary-adventist',
     description:
       'Roger Morneau tells how he was drawn into the world of evil spirits, and how he left it for Christ.',
     language: 'zh',
@@ -735,7 +737,7 @@ const COLLECTION_SHELVES: Readonly<Record<LibraryCollection, LibraryShelf>> = {
   'christian-classics': 'classics',
   youth: 'youth',
   children: 'children',
-  'chinese-books': 'chinese',
+  'contemporary-adventist': 'contemporary',
 };
 
 /** The library shelf (the `[collection]` route) that lists this work. */

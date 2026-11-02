@@ -266,12 +266,12 @@
       "variants": ["default", "zh"]
     },
     {
-      "name": "library-chinese",
+      "name": "library-contemporary",
       "group": "library",
-      "$comment": "Chinese readers get a shelf of books the church's leaders chose from the Chinese Union Mission's reader, titled in the app's script; the covers are the reader's, in Simplified. The Traditional shelf title and the first book's author, 佚名, which no cover shows, can only come from the app's own text (#554). The second row's titles are below the fold on the Android phone.",
-      "path": "explore/library/chinese",
+      "$comment": "Chinese readers get a shelf of today's Adventist writers, books the church's leaders chose from the Chinese Union Mission's reader, titled in the app's script; the covers are the reader's, in Simplified. The Traditional shelf title and 地上的最後一夜 (最后 on its cover) can only come from the app's own text (#554). The second row's titles are below the fold on both phones.",
+      "path": "explore/library/contemporary",
       "variants": ["zh"],
-      "mustShowLines": ["^中文書籍$", "^跪下的基督徒$", "^佚名$"]
+      "mustShowLines": ["^當代復臨著作$", "^最富有的穴居人$", "^地上的最後一夜$"]
     },
     {
       "name": "library-children",

@@ -73,7 +73,8 @@ describe('library catalog', () => {
       'sibbes-bruised-reed': 'classics',
       'story-of-jesus': 'children',
       'sabbath-encouragement': 'egw',
-      'kneeling-christian': 'chinese',
+      'kneeling-christian': 'classics',
+      'batchelor-richest-caveman': 'contemporary',
       // About Ellen G. White, so it sits with her books (#554).
       'lake-ellen-white-under-fire': 'egw',
     });
@@ -212,14 +213,15 @@ describe('library catalog', () => {
       }
     });
 
-    it('shows them only to Chinese readers, on the Chinese shelf but one', () => {
+    it("shows them only to Chinese readers, on today's Adventist writers' shelf but two", () => {
       const ids = (language: 'en' | 'es' | 'zh' | 'zh-cn') =>
         getLibraryItemsForLanguage(language).sdaBibleBooks.map(({ id }) => id);
       expect(ids('zh')).toHaveLength(14);
       expect(ids('zh-cn')).toHaveLength(14);
       expect(ids('en')).toEqual([]);
       expect(ids('es')).toEqual([]);
-      expect(books.filter((book) => getLibraryItemShelf(book) !== 'chinese').map(({ id }) => id)).toEqual([
+      expect(books.filter((book) => getLibraryItemShelf(book) !== 'contemporary').map(({ id }) => id)).toEqual([
+        'kneeling-christian',
         'lake-ellen-white-under-fire',
       ]);
     });
