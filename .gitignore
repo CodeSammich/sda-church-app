@@ -44,6 +44,7 @@ build/
 downloads/
 expo-env.d.ts
 *.tsbuildinfo
+__pycache__/
 external-dependency-report.json
 .env*
 # Local Apps Script project/deployment identifiers and OAuth credentials.

@@ -23,8 +23,10 @@ a new narrator or language.
   - **Keep the work folder:** `finish.py` writes every chapter from it, so it needs every
     chapter's result, not just the new one. Without it, align the whole narrator again.
   - **In the work folder,** delete the old file, its line in
-    `audio/<narrator>/sources.jsonl`, and its result in `align/`. Then run steps 4 to 7:
-    each step skips what's already done.
+    `audio/<narrator>/sources.jsonl`, and its result in `align/`. Then run steps 4 to 8:
+    each step skips what's already done. The chapter's entry in `corrections.json` no
+    longer applies, so check that chapter by ear again. Then update the entry's starts and
+    SHA-256, or delete it: the tests fail until you do.
 - **A text change that moves verses,** such as a verse split differently. The tests fail
   when a chapter's times no longer have one entry per verse.
 
@@ -48,13 +50,19 @@ check the result. The scripts are in `scripts/bible-audio-alignment/`.
 ### What you need
 
 - **A GPU:** an NVIDIA GPU with CUDA. Aligning takes 3 to 5 seconds a chapter on a
-  consumer card, or about a minute on a CPU, and checking with a recognizer takes about
-  15 seconds a chapter.
+  consumer card, or about a minute on a CPU. Checking with a recognizer takes 5 to 10
+  seconds a chapter, and needs the GPU.
 - **Python packages:** a virtual environment with `torch` and `torchaudio` 2.8 (the CUDA
   build), `numpy`, `imageio-ffmpeg`, and a romanizer for the language's script:
-  `pypinyin` for Mandarin, `ToJyutping` for Cantonese, none for a Latin script. The checks
-  also need `funasr` (SenseVoice, for Chinese) or `transformers` (Whisper, for other
-  languages).
+  `pypinyin` for Mandarin, `ToJyutping` for Cantonese, none for a Latin script.
+- **A recognizer, for the checks:**
+  - **Chinese:** `funasr`, for SenseVoice.
+  - **Other languages:** `faster-whisper`, for Whisper, in `check_verse_times.py` and
+    `listen.py`. It also needs NVIDIA's cuBLAS and cuDNN for CUDA 12
+    (`nvidia-cublas-cu12` and `nvidia-cudnn-cu12`; the CUDA build of `torch` already
+    installs them), and doesn't find them by itself: put their folders,
+    `site-packages/nvidia/cublas/lib` and `site-packages/nvidia/cudnn/lib`, on
+    `LD_LIBRARY_PATH`. `spot_check_spanish.py` uses `transformers` instead.
 - **Disk:** under 1 GB of recordings per narrator. Keep them outside the repository.
   `download.py` downloads every narrator in its list, so comment out the ones you don't
   need.
@@ -101,8 +109,10 @@ Each script names its narrators near the top:
   - `romanize`: the romanizer.
   - `NOTES_SPOKEN`, `verse_words`, and `heading_words`: step 2's rules.
 - **`finish.py`:** `TEXT`.
-- **The check scripts:** `spot_check_chinese.py` or `spot_check_spanish.py`, adapted for
-  another language.
+- **The check scripts:**
+  - `spot_check_chinese.py` or `spot_check_spanish.py`, adapted for another language.
+  - `check_verse_times.py` and `listen.py`: `TEXT`, whether the narrator is Chinese, and
+    Whisper's `language`. `check_verse_times.py` also has `NOTES_SPOKEN`.
 
 The narrator's name becomes its folder in `assets/bible/audio-timings/`.
 
@@ -151,6 +161,27 @@ node scripts/write-bible-asset-index.mjs
 - **Rejected chapters:** a chapter gets no times if it failed to align, has the wrong
   number of verses, has starts that don't increase, or has a verse 1 that starts too late.
   The report lists those, and verses to check.
+- **Verses that only say 見上節:** the CUV joins some verses into the one before, and the
+  later number holds only 見上節 ("see the verse before"). The narrators skip it, so it
+  gets no time, and the reader keeps the verse before marked.
+- **Opening phrases before a colon:** a verse that opens with up to four words and a
+  colon (24 characters at most), such as "Y dijo:", keeps the aligner's start if the pause
+  rule moved it more than 0.5 s later. The narrator reads the phrase straight on from the
+  verse before, so the pause the rule found is the one after the phrase. This kept 110
+  Spanish starts. The recognizer heard the opening of 98 of them, and 97 are within 0.5 s
+  of it. The last, Acts 13:10 ("Dijo:"), is one of step 8's false alarms.
+- **Corrections:** `corrections.json`, next to the scripts, holds starts checked by ear
+  (step 8): mostly ones found wrong, and a few found right. Each chapter's entry says why,
+  and has the recording's SHA-256, as in `scripts/bible-audio-timing-sources/`. `finish.py` applies the entry
+  only while the recording still matches. The report lists any entry it skipped. Check
+  those chapters again. An entry looks like this:
+
+  ```json
+  "PRO 5": {"why": "Verses 11 and 12 are read twice; they start at the first reading.",
+            "sha256": "…", "starts": {"11": 90.2, "12": 97.58}}
+  ```
+
+  A start can be `null`, for a verse the recording leaves out.
 
 ### 7. Check against a recognizer
 
@@ -177,10 +208,67 @@ word times are rougher, about ±0.3 s, so with it aim for 98% within 0.5 s. Then
 - **Check a large disagreement against the verses around it.** In a chapter that repeats
   a passage, such as Numbers 7, the recognizer's match can land on a later copy of the same
   words, and the time is right.
-- **Check every verse,** not just a sample, before calling a narrator done. #573 tracks
-  adding that script here.
 
-### 8. Use it in the app
+### 8. Check every verse
+
+A sample can't find the rare verse that's badly off. Check every verse before calling a
+narrator done:
+
+```bash
+MAX_CHAPTERS=50 python -I scripts/bible-audio-alignment/check_verse_times.py <repo> <work-dir> <narrator>
+```
+
+- **Batches:** it takes 5 to 10 seconds a chapter, so 2 to 3 hours a narrator. Each run
+  transcribes up to `MAX_CHAPTERS` chapters, so run it again until every chapter is done.
+- **Transcripts:** it keeps what the recognizer heard, and the recording's pauses, in
+  `<work-dir>/heard/<narrator>/`. After a fix, `COMPARE_ONLY=1` compares again in under a
+  minute, without a GPU.
+- **Pauses:** a word can't start in a pause, so a heard time inside one counts as where
+  speech resumes. Whisper often starts a word where the word before it ends, so for it a
+  time less than 0.3 s before a pause counts the same way.
+- **The report:** `<work-dir>/report/<narrator>-check.md` has the share of verses within
+  0.3 s, and lists every verse more than 1 s off.
+  - **First words heard:** most verses are checked by when the recognizer heard their
+    first word, if it heard their first two in order (characters, in Chinese). A miss
+    found this way gets a suggested start.
+  - **Others:** the rest are checked against the nearest words it heard. A start can't
+    be more than 1 s before the last heard word of the verse before, or more than 1 s
+    after the first heard word of its own. Such a miss has no suggested start.
+  - **Doubtful:** a miss whose heard time lies outside the verses around it. These are
+    usually the recognizer's mistake, such as a repeated passage.
+  - **Checked by ear:** a miss with an entry in `corrections.json` is listed apart.
+
+The recognizer is wrong about some misses, so check each one before changing it. Open the
+recording at both times, or transcribe the seconds around them:
+
+```bash
+python -I scripts/bible-audio-alignment/listen.py <repo> <work-dir> <narrator> EXO:10:231-246
+```
+
+It prints the app's starts, where speech resumes after each pause, each syllable or word
+heard with its time, and the loudness every 0.1 s. Checking the three narrators turned up
+these kinds:
+
+| What you hear | What to do |
+|---|---|
+| The aligner gave the verse before too little or too much time. | Use the suggested start. |
+| The verse starts with a short phrase and a pause, such as 說、, 耶穌說、, or "Y á sus dos hijos;", and the pause rule moved the start past it. | Use the suggested start. `finish.py` already handles a phrase that ends in a colon. |
+| The start is in the pause before the verse, but a second or more early. | Use the suggested start. |
+| The narrator reads a verse, or its start, twice. | Start it at the first reading, and the next verse after the second. |
+| The narrator announces a verse before reading it, such as 彌迦書第一章十四節. | Start the verse at the announcement. |
+| The narrator reads the book's title and "Capítulo 1", or a psalm's title, and verse 1 starts during it. | Start verse 1 where speech resumes after it. |
+| The recording leaves out verses. | Give them no time (null), and fix the verses after. |
+| The recognizer matched the chapter announcement, a psalm title, or a repeated passage, such as "los hijos de" in a list. | Nothing: the time is right. |
+| The recognizer left out words, or put a verse's first word in the chapter announcement. | Nothing: the time is right. Whisper does both. |
+
+Add each fix to `corrections.json` with a short reason, run `finish.py` (step 6), and
+compare again. A time that was right can go in too, unchanged, so the next check lists it
+as checked by ear. With Whisper, expect dozens of misses that aren't the app's. The
+Spanish check still lists 76, and each was looked at. They're the last two kinds, and a few
+verses that open with one short word before a pause, such as "Dijo:", which the 0.3 s rule
+above moves past.
+
+### 9. Use it in the app
 
 - **The narrator mapping:** in `services/BibleAudioTimings.ts`, map the translation and
   narrator to the new folder.
