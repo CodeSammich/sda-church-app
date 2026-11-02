@@ -142,7 +142,16 @@ jobs:
           adb shell settings put global animator_duration_scale 0
 
       - name: Build the debug APK for the emulator
+        env:
+          # The reader logs what it decides, for the #561 scenarios
+          # (services/AudioE2eLog.ts). Only this build does.
+          EXPO_PUBLIC_AUDIO_E2E: '1'
         run: npm run build:android:apk:debug:intel -- --output "$RUNNER_TEMP/app.apk"
+
+      # The reader's scenarios compare screenshots and make a filmstrip
+      # (scripts/e2e/android-frames.sh).
+      - name: Install ffmpeg
+        run: sudo apt-get install -y --no-install-recommends ffmpeg >/dev/null
 
       - name: Check that only the church's host is blocked
         run: |
@@ -178,9 +187,10 @@ jobs:
           # adb waits forever for a device, so bound it.
           timeout 60 adb logcat -d -v time > "$RUNNER_TEMP/e2e-output/logcat.txt" 2>/dev/null || true
 
-      # Screenshots and logs only: this job reads no secrets or tokens.
-      - name: Upload failure details
-        if: failure() || cancelled()
+      # Screenshots and logs only: this job reads no secrets or tokens. Every
+      # run, for the reader's screenshots and filmstrip.
+      - name: Upload screenshots and logs
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: android-audio-e2e-${{ github.run_id }}
