@@ -310,7 +310,7 @@
       "variants": ["default", "zh", "es"],
       "variantRules": {
         "default": { "mustShowLines": ["^This Week$", "^This Week.s Mission\\b"] },
-        "zh": { "mustShowLines": ["^本週$", "^本週宣教影片$"] },
+        "zh": { "mustShowLines": ["^本週$", "^本週聖工消息$"] },
         "es": { "mustShowLines": ["^Esta semana$", "^Video misionero\\b"] }
       }
     },
