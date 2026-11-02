@@ -114,7 +114,12 @@ describe('the bugs fixed in 0.42.0', () => {
 
   it('catches a screen in the wrong language', () => {
     const englishTabs = [line('Home', 0.944), line('Bible', 0.944), line('Explore', 0.944), line('You', 0.944)];
-    expect(checkShot(shot('explore-zh'), englishTabs)).toEqual(['tab labels missing: 首頁, 聖經, 探索']);
+    // The Chinese Explore cards' own checks catch it too (#554).
+    expect(checkShot(shot('explore-zh'), englishTabs)).toEqual([
+      'tab labels missing: 首頁, 聖經, 探索',
+      'no line matches /^精選書庫/',
+      'no line matches /^深入研經/',
+    ]);
   });
 
   it('catches the setup dialog and unfilled values', () => {
