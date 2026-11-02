@@ -15,7 +15,7 @@ const {
 
 const MARKER = 'NYCCSDA_VERSE_WIDGET';
 
-/** The home screen widget that features/verse-of-the-day/VerseOfTheDayWidget.tsx registers (#235). */
+/** The home screen widget, whose layout is in features/verse-of-the-day (#235). */
 const VERSE_WIDGET = {
   name: 'VerseOfTheDay',
   displayName: 'Today’s Verse',
@@ -67,45 +67,18 @@ const escapeAndroidString = (value) =>
     .replace(/"/g, '\\"');
 
 /**
- * The widget's receiver. expo-widgets turns a tap on a button into a
- * broadcast to it with the button's target. The widget's one button covers
- * it and targets an app link, so the receiver opens that link. A new
- * referenceRequest takes the reader to the verse even if the link is the same
- * as last time (see BibleService.createScriptureReferenceRequest).
+ * The widget's receiver. expo-widgets finds it as `<package>.VerseOfTheDayProvider`,
+ * so it's written into the app's package, but its code is
+ * VerseWidgetReceiver in modules/verse-widget: it opens the verse when the
+ * widget is tapped, and gives the widget's colors their dark-mode versions.
  */
 function createProviderKt(androidPackage) {
-  const className = getProviderClassName(VERSE_WIDGET);
   return `package ${androidPackage}
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import expo.modules.widgets.ExpoWidgetsAppWidgetProvider
+import org.nyccsda.versewidget.VerseWidgetReceiver
 
 // ${MARKER}: written by plugins/withAndroidVerseWidget.js.
-class ${className} : ExpoWidgetsAppWidgetProvider(${JSON.stringify(VERSE_WIDGET.name)}) {
-  override fun onReceive(context: Context, intent: Intent) {
-    val target = intent.getStringExtra(TARGET_EXTRA)
-    if (intent.action == INTERACTION_ACTION && target != null && target.startsWith(LINK_PREFIX)) {
-      val link = Uri.parse(target).buildUpon()
-        .appendQueryParameter("referenceRequest", "widget-\${System.currentTimeMillis()}")
-        .build()
-      context.startActivity(
-        Intent(Intent.ACTION_VIEW, link)
-          .setPackage(context.packageName)
-          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      )
-      return
-    }
-    super.onReceive(context, intent)
-  }
-
-  private companion object {
-    const val INTERACTION_ACTION = "expo.modules.widgets.ACTION_WIDGET_INTERACTION"
-    const val TARGET_EXTRA = "expo.modules.widgets.extra.TARGET"
-    const val LINK_PREFIX = "sdachurchapp:"
-  }
-}
+class ${getProviderClassName(VERSE_WIDGET)} : VerseWidgetReceiver()
 `;
 }
 
