@@ -1417,18 +1417,31 @@ The Android home screen widget for the verse of the day (#235) is built with
 `expo-widgets`. `plugins/withAndroidVerseWidget.js` runs only the Android half of its
 config plugin, because the full plugin also adds an iOS widget extension and app group,
 which would need their own signing. `package.json` keeps `expo-widgets` and `@expo/ui` out
-of iOS autolinking, so the iPhone app doesn't change. The plugin also replaces the
-widget's receiver with one that opens the verse when it's tapped, has Android redraw the
-widget every hour, and translates its name in the widget list. Gradle runs Metro twice
-more for the widget (`generateExpoWidgetsBundle` and `generateExpoWidgetsLayoutRegistry`).
-The second builds the layout the widget shows before the app first runs, but Gradle
-doesn't watch `features/verse-of-the-day/VerseOfTheDayWidget.tsx` for it. So after
-changing that file, delete `node_modules/expo-widgets/android/build/generated/expo-widgets`
-before building in a reused `android/` project; CI builds from scratch.
+of iOS autolinking, so the iPhone app doesn't change. The plugin also has Android redraw
+the widget every hour, translates its name in the widget list, and makes the widget's
+receiver the one in `modules/verse-widget`, a local Expo module for Android only:
+
+- **Light and dark mode.** `expo-widgets` gives each color one value, and Android doesn't
+  redraw a widget when the phone switches modes. The receiver pairs each of the layout's
+  light-mode colors with its dark-mode twin before Android draws the widget, so Android 12
+  and later switch between them on their own.
+- **Redraws.** `expo-widgets`' own redraw (`updateSnapshot` or `reload`) wouldn't go through
+  the receiver, so the app never calls it. It stores the week of verses as the widget's
+  initial props, which doesn't draw, and then asks the module to redraw the widget.
+- **Taps.** `expo-widgets` sends a tap on the widget's button to the receiver, which opens
+  the verse in the app.
+
+Gradle runs Metro twice more for the widget (`generateExpoWidgetsBundle` and
+`generateExpoWidgetsLayoutRegistry`). The second builds the layout the widget shows
+before the app first runs, from `features/verse-of-the-day/VerseOfTheDayWidget.tsx`, but
+Gradle doesn't watch the layout's files for it. So after changing them, delete
+`node_modules/expo-widgets/android/build/generated/expo-widgets` before building in a
+reused `android/` project; CI builds from scratch.
 When updating `expo-widgets`, check that its Android plugin files are still in
 `plugin/build/android/` (`test/verse-of-the-day-widget.test.ts` runs them on an empty
-project), then try the widget on an emulator: add it from the home screen's widget list
-before and after opening the app, tap it, and change the app's language.
+project), that the app still builds, and then try the widget on an emulator: add it
+from the home screen's widget list before and after opening the app, tap it, change the
+app's language, and switch the phone between light and dark mode.
 
 Before release, run `npx expo install --check`, `npm run doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices, with the

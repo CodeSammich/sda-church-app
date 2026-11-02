@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
+import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
 import {
   getVerseOfTheDay,
@@ -19,8 +20,19 @@ import {
   type VerseWidgetProps,
 } from '@/services/VerseOfTheDayWidgetData';
 
+// The widgets the app registers, and its redraws through its own receiver.
+const mockCreatedWidgets: { name: string; layout: unknown; props: unknown }[] = [];
+const mockRedraws: number[] = [];
 jest.mock('expo-widgets', () => ({
-  createWidget: (name: string, layout: unknown) => ({ name, layout, updateSnapshot() {}, reload() {} }),
+  createWidget: (name: string, layout: unknown, props?: unknown) => {
+    mockCreatedWidgets.push({ name, layout, props });
+    return { name, layout };
+  },
+}));
+jest.mock('@/modules/verse-widget', () => ({
+  redrawVerseWidget: async () => {
+    mockRedraws.push(Date.now());
+  },
 }));
 jest.mock('@expo/ui/jetpack-compose', () => ({}));
 jest.mock('@expo/ui/jetpack-compose/modifiers', () => ({}));
@@ -28,6 +40,10 @@ jest.mock('@expo/ui/jetpack-compose/modifiers', () => ({}));
 const appJson = JSON.parse(readFileSync(resolve(process.cwd(), 'app.json'), 'utf8')).expo;
 const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'));
 const plugin = require('../plugins/withAndroidVerseWidget');
+const receiverKotlin = readFileSync(
+  resolve(process.cwd(), 'modules/verse-widget/android/src/main/java/org/nyccsda/versewidget/VerseWidgetReceiver.kt'),
+  'utf8',
+);
 
 afterEach(() => {
   jest.useRealTimers();
@@ -103,12 +119,14 @@ describe('updating the widget from the home page', () => {
   ];
   let cache: Map<string, string>;
   let service: typeof import('@/services/VerseOfTheDayWidget.android');
-  let widget: { updateSnapshot: jest.Mock; reload: jest.Mock };
   let loadDays: jest.SpyInstance;
+  const storedProps = () => mockCreatedWidgets.map((widget) => widget.props);
 
   beforeEach(() => {
     jest.useFakeTimers({ now: new Date(2026, 10, 2, 9) });
     cache = new Map();
+    mockCreatedWidgets.length = 0;
+    mockRedraws.length = 0;
     jest.isolateModules(() => {
       const CacheStore = require('@/services/CacheStore');
       jest.spyOn(CacheStore, 'readCachedText').mockImplementation(async (spec: any) => cache.get(spec.name) ?? null);
@@ -118,36 +136,53 @@ describe('updating the widget from the home page', () => {
       loadDays = jest
         .spyOn(require('@/services/VerseOfTheDayWidgetData'), 'loadVerseWidgetDays')
         .mockResolvedValue(week);
-      widget = require('@/features/verse-of-the-day/VerseOfTheDayWidget').default;
-      widget.updateSnapshot = jest.fn();
-      widget.reload = jest.fn();
       service = require('@/services/VerseOfTheDayWidget.android');
     });
   });
 
-  it('hands the widget the week once a day, and again for another language', async () => {
+  it('stores the week without drawing, then redraws through the app’s receiver', async () => {
     await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
-    expect(widget.updateSnapshot).toHaveBeenCalledWith({ title: 'Today’s Verse', days: week });
+    expect(mockCreatedWidgets).toEqual([
+      {
+        name: 'VerseOfTheDay',
+        layout: require('@/features/verse-of-the-day/VerseOfTheDayWidgetLayout').VerseOfTheDayWidgetLayout,
+        props: { title: 'Today’s Verse', days: week },
+      },
+    ]);
+    expect(mockRedraws).toHaveLength(1);
+  });
 
+  it('reads a new week once a day, and again for another language', async () => {
     await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
-    expect(widget.updateSnapshot).toHaveBeenCalledTimes(1);
+    await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    expect(loadDays).toHaveBeenCalledTimes(1);
+    expect(mockRedraws).toHaveLength(1);
 
     await service.updateVerseOfTheDayWidget('zh', '今日經文');
-    expect(widget.updateSnapshot).toHaveBeenCalledTimes(2);
     expect(loadDays).toHaveBeenLastCalledWith('zh');
+    expect(storedProps()).toHaveLength(2);
 
     jest.setSystemTime(new Date(2026, 10, 3, 6));
     await service.updateVerseOfTheDayWidget('zh', '今日經文');
-    expect(widget.updateSnapshot).toHaveBeenCalledTimes(3);
+    expect(loadDays).toHaveBeenCalledTimes(3);
+    expect(mockRedraws).toHaveLength(3);
   });
 
-  it('redraws the widget once per app run when its verses are current, for a new layout', async () => {
-    cache.set('widget.txt', ['2026-11-2', 'en', 'Today’s Verse'].join('\n'));
+  it('hands the widget its last week once each time the app runs, without reading the Bible', async () => {
+    const props = { title: 'Today’s Verse', days: week };
+    cache.set('widget.json', JSON.stringify({ made: ['2026-11-2', 'en', 'Today’s Verse'].join('\n'), props }));
     await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
     await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
-    expect(widget.reload).toHaveBeenCalledTimes(1);
-    expect(widget.updateSnapshot).not.toHaveBeenCalled();
+    expect(storedProps()).toEqual([props]);
+    expect(mockRedraws).toHaveLength(1);
     expect(loadDays).not.toHaveBeenCalled();
+  });
+
+  it('reads the week again if its saved copy is unreadable', async () => {
+    cache.set('widget.json', '{"made":');
+    await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
+    expect(loadDays).toHaveBeenCalledTimes(1);
+    expect(storedProps()).toEqual([{ title: 'Today’s Verse', days: week }]);
   });
 
   it('keeps only the newest language’s verses when the language changes mid-load', async () => {
@@ -157,8 +192,7 @@ describe('updating the widget from the home page', () => {
     await service.updateVerseOfTheDayWidget('es', 'Versículo de hoy');
     finishEnglish(week);
     await english;
-    expect(widget.updateSnapshot).toHaveBeenCalledTimes(1);
-    expect(widget.updateSnapshot).toHaveBeenCalledWith({ title: 'Versículo de hoy', days: week });
+    expect(storedProps()).toEqual([{ title: 'Versículo de hoy', days: week }]);
   });
 
   it('leaves the widget alone when no verse loads', async () => {
@@ -167,14 +201,15 @@ describe('updating the widget from the home page', () => {
     loadDays.mockRejectedValueOnce(new Error('no Bible'));
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     await service.updateVerseOfTheDayWidget('en', 'Today’s Verse');
-    expect(widget.updateSnapshot).not.toHaveBeenCalled();
+    expect(mockCreatedWidgets).toEqual([]);
+    expect(mockRedraws).toEqual([]);
     expect(cache.size).toBe(0);
   });
 
   it('does nothing on iOS and the web', async () => {
     const { updateVerseOfTheDayWidget } = require('@/services/VerseOfTheDayWidget');
     await expect(updateVerseOfTheDayWidget('en', 'Today’s Verse')).resolves.toBeUndefined();
-    expect(widget.updateSnapshot).not.toHaveBeenCalled();
+    expect(mockCreatedWidgets).toEqual([]);
   });
 });
 
@@ -214,7 +249,8 @@ describe('the widget layout', () => {
 
   // Android runs the layout as a string in the widget's own runtime, where
   // Expo UI's components, modifiers, and JSX functions are globals.
-  const layout = (): string => require('@/features/verse-of-the-day/VerseOfTheDayWidget').default.layout;
+  const layout = (): string =>
+    require('@/features/verse-of-the-day/VerseOfTheDayWidgetLayout').VerseOfTheDayWidgetLayout;
   const jsx = (type: unknown, props: Record<string, any>) => ({ type, props });
   const modifier =
     (name: string) =>
@@ -307,10 +343,17 @@ describe('the widget layout', () => {
     expect(tree.props.modifiers).toContainEqual({ $type: 'fillMaxSize', args: [] });
   });
 
-  it('looks the same in light and dark mode, in the app icon’s blue', () => {
+  it('uses the app’s light-mode colors, which the receiver pairs with their dark-mode twins', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 3, 9) });
-    expect(render(week, 'dark')).toEqual(render(week, 'light'));
-    expect(render(week).props.colors.containerColor).toBe(appJson.android.adaptiveIcon.backgroundColor);
+    const tree = render(week);
+    const column = tree.props.children;
+    const [title, , verse, , reference] = column.props.children;
+    const light = customLightTheme.colors;
+    expect([tree.props.colors.containerColor, title.props.color, verse.props.color, reference.props.color]).toEqual(
+      [light.background, light.primary, light.onSurface, light.onSurfaceVariant],
+    );
+    // Android picks the colors; the layout draws the same tree in either mode.
+    expect(render(week, 'dark')).toEqual(tree);
   });
 
   it('uses smaller type for long verses, counting Chinese characters as wide', () => {
@@ -327,14 +370,27 @@ describe('the widget layout', () => {
 });
 
 describe('the Android widget config plugin', () => {
-  it('opens only app links, in the app itself, from the widget’s receiver', () => {
+  it('writes the receiver expo-widgets looks for, as the app’s own receiver', () => {
     const kotlin: string = plugin.createProviderKt('org.example.app');
     expect(kotlin).toContain('package org.example.app');
-    expect(kotlin).toContain('class VerseOfTheDayProvider : ExpoWidgetsAppWidgetProvider("VerseOfTheDay")');
-    expect(kotlin).toContain(`const val LINK_PREFIX = "${appJson.scheme}:"`);
-    expect(kotlin).toContain('.setPackage(context.packageName)');
-    expect(kotlin).toContain('super.onReceive(context, intent)');
-    expect(kotlin).toContain('"widget-${System.currentTimeMillis()}"');
+    expect(kotlin).toContain('class VerseOfTheDayProvider : VerseWidgetReceiver()');
+  });
+
+  it('opens only app links, in the app itself, from the widget’s receiver', () => {
+    expect(receiverKotlin).toContain(`private const val LINK_PREFIX = "${appJson.scheme}:"`);
+    expect(receiverKotlin).toContain('.setPackage(context.packageName)');
+    expect(receiverKotlin).toContain('super.onReceive(context, intent)');
+    expect(receiverKotlin).toContain('"widget-${System.currentTimeMillis()}"');
+  });
+
+  it('pairs each of the widget’s colors with the app’s dark-mode color for it', () => {
+    const pairs = [...receiverKotlin.matchAll(/0xFF([0-9A-F]{6})\.toInt\(\) to 0xFF([0-9A-F]{6})\.toInt\(\)/g)].map(
+      ([, day, night]) => [`#${day}`, `#${night}`],
+    );
+    const tokens = ['background', 'primary', 'onSurface', 'onSurfaceVariant'] as const;
+    expect(pairs).toEqual(
+      tokens.map((token) => [customLightTheme.colors[token], customDarkTheme.colors[token]].map((c) => c.toUpperCase())),
+    );
   });
 
   it('has Android redraw the widget every hour', () => {
@@ -351,7 +407,10 @@ describe('the Android widget config plugin', () => {
   });
 
   it('uses the widget name the app registers', () => {
-    expect(require('@/features/verse-of-the-day/VerseOfTheDayWidget').default.name).toBe(plugin.VERSE_WIDGET.name);
+    const name = plugin.VERSE_WIDGET.name;
+    expect(require('@/features/verse-of-the-day/VerseOfTheDayWidgetLayout').VERSE_WIDGET_NAME).toBe(name);
+    expect(require('@/features/verse-of-the-day/VerseOfTheDayWidget').default.name).toBe(name);
+    expect(receiverKotlin).toContain(`const val VERSE_WIDGET_NAME = "${name}"`);
     expect(plugin.VERSE_WIDGET.ios).toBeNull();
   });
 
@@ -399,6 +458,12 @@ describe('the Android widget config plugin', () => {
     // new top-level folder would build locally but be missing everywhere else.
     const files = [
       'features/verse-of-the-day/VerseOfTheDayWidget.tsx',
+      'features/verse-of-the-day/VerseOfTheDayWidgetLayout.tsx',
+      'modules/verse-widget/expo-module.config.json',
+      'modules/verse-widget/index.ts',
+      'modules/verse-widget/android/build.gradle',
+      'modules/verse-widget/android/src/main/java/org/nyccsda/versewidget/VerseWidgetModule.kt',
+      'modules/verse-widget/android/src/main/java/org/nyccsda/versewidget/VerseWidgetReceiver.kt',
       'services/VerseOfTheDayWidget.ts',
       'services/VerseOfTheDayWidget.android.ts',
       'services/VerseOfTheDayWidgetData.ts',
@@ -411,7 +476,11 @@ describe('the Android widget config plugin', () => {
     }
   });
 
-  it('keeps expo-widgets and Expo UI out of the iPhone app', () => {
+  it('keeps expo-widgets, Expo UI, and the widget’s module out of the iPhone app', () => {
+    const moduleConfig = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'modules/verse-widget/expo-module.config.json'), 'utf8'),
+    );
+    expect(moduleConfig.platforms).toEqual(['android']);
     expect(appJson.plugins).toContain('./plugins/withAndroidVerseWidget');
     expect(appJson.plugins.flat()).not.toContain('expo-widgets');
     expect(packageJson.expo.autolinking.ios.exclude).toEqual(
