@@ -249,11 +249,22 @@ describe('saved settings', () => {
 describe('iOS key screens', () => {
   const workflow = repoFile('.github/workflows/ios-key-screens.yml');
 
-  it('runs one runner per group, each capturing and checking only its group', () => {
+  it('runs one runner per group, each capturing and checking only its group, and one for the iPad', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(workflow)![1].split(', ');
-    expect(groups).toEqual(Object.keys(config.groups));
-    expect(workflow).toMatch(/capture-ios-screens\.cjs --out [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
-    expect(workflow).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
+    expect(groups).toEqual([...Object.keys(config.groups), 'ipad']);
+    expect(workflow).toContain('- { group: ipad, batch: 6, ipad: true }\n');
+    // Six jobs, five Macs: five at a time, in list order, so the compiling
+    // runner is never the one left waiting while the others wait for its app.
+    expect(workflow).toMatch(/strategy:\n\s+fail-fast: false\n(?:\s+#.*\n)*\s+max-parallel: 5\n/);
+    expect(groups.at(-1)).toBe('ipad');
+    const builder = /- \{ group: ([a-z-]+), batch: \d+, builds: true \}\n/.exec(workflow)![1];
+    expect(groups.indexOf(builder)).toBeLessThan(5);
+    const part = "PART: ${{ matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group) }}\n";
+    expect(workflow).toMatch(/capture-ios-screens\.cjs --out [^\n]+\n\s+\$PART\n/);
+    expect(workflow).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+\$PART\n/);
+    expect(workflow.split(part)).toHaveLength(3);
+    // The iPad's runner boots the iPad, which the launch check uses too.
+    expect(workflow).toContain('capture-ios-screens.cjs --platform "$PLATFORM" --pick-device');
   });
 
   it('compiles the app once, on the lightest group\'s runner, and the others wait for it', () => {
@@ -315,7 +326,7 @@ describe('iOS key screens', () => {
     // after a failed part, and then fail.
     expect(merge).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
     expect(merge).toContain("needs.capture.result != 'success'");
-    expect(merge).toContain('node scripts/merge-key-screens.cjs --platform ios --out');
+    expect(merge).toContain('node scripts/merge-key-screens.cjs --platform ios,ipad --out');
     // Two downloads: the screenshots alone, which the review comment links,
     // and the Simulator app. Chrome's Safe Browsing blocked the screenshots
     // while they shared a zip with the unsigned app.
@@ -513,6 +524,194 @@ describe('splash check', () => {
     expect(await looksLikeSplash(await screenshot('dark', '#171b1c'))).toBe(false);
     // The splash colour with content in it, such as a header in the same blue.
     expect(await looksLikeSplash(await screenshot('content', '#00405C', [700, 2200]))).toBe(false);
+  });
+});
+
+describe('iPad key screens (#324)', () => {
+  const ipad = planCaptures(config, 'ipad');
+  const ipadNames = ipad.map((shot: { name: string }) => shot.name);
+  const { IPAD_APP_STORE_SIZE, SERVE_SIM, variantsOn, writeIpadAppStoreCopy } = require('../scripts/capture-ios-screens.cjs');
+  const { planChecks, regionsFor } = require('../scripts/check-screens.cjs');
+
+  it('takes only the screens that list ipadVariants, named ipad/<screen>-<variant>.png', () => {
+    const listed = config.screens.filter((screen: { ipadVariants?: string[] }) => screen.ipadVariants);
+    expect(new Set(ipad.map((shot: { screen: string }) => shot.screen))).toEqual(
+      new Set(listed.map((screen: { name: string }) => screen.name)),
+    );
+    for (const shot of ipad) expect(shot.file).toBe(`ipad/${shot.name}.png`);
+    // The iPhone and Android lists don't change.
+    expect(shots.map((shot: { name: string }) => shot.name)).not.toContain('home-landscape');
+    expect(variantsOn({ variants: ['default'], ipadVariants: ['landscape'] }, 'ios')).toEqual(['default']);
+    expect(variantsOn({ variants: ['default'] }, 'ipad')).toEqual([]);
+  });
+
+  it("covers what a wide screen changes: the column, landscape, the library's grid, and a dialog", () => {
+    expect(ipadNames).toEqual(
+      expect.arrayContaining([
+        'home-default',
+        'home-landscape',
+        'bible-dual-default',
+        'bible-dual-landscape',
+        // The iPad's own large text: the column widens with it, so lines don't
+        // wrap phrase by phrase.
+        'bible-dual-ios-large-text',
+        'library-default',
+        'library-children-default',
+        // A Paper dialog: on iOS, a percentage width filled 90% of the iPad.
+        'text-size-default',
+      ]),
+    );
+  });
+
+  it('turns the iPad only once, taking the portrait shots first', () => {
+    const turned = ipad.map((shot: { settings: { orientation: string } }) => shot.settings.orientation);
+    expect(turned.indexOf('landscape')).toBeGreaterThan(0);
+    expect(turned.slice(turned.indexOf('landscape')).every((value: string) => value === 'landscape')).toBe(true);
+  });
+
+  it("keeps the iPad's orientation out of the app's storage, and off the iPhone and Android", () => {
+    const landscape = ipad.find((shot: { name: string }) => shot.name === 'home-landscape');
+    expect(landscape.settings).toMatchObject({ orientation: 'landscape', iosTextSize: 'large' });
+    expect(Object.values(buildManifest(landscape.settings, landscape.route))).not.toContain('landscape');
+    for (const shot of [...shots, ...planCaptures(config, 'android')]) {
+      expect(shot.settings).not.toHaveProperty('orientation');
+    }
+  });
+
+  it("saves no text size on the iPad, so its shots show a tablet's own 150%, which the Text size dialog confirms", () => {
+    for (const shot of ipad) expect(buildManifest(shot.settings)).not.toHaveProperty('user-text-scale');
+    // A variant that sets a size still saves it.
+    expect(buildManifest({ ...ipad[0].settings, textScale: 2 })['user-text-scale']).toBe('2');
+    const lines = (rules: Array<string | { line: string }>) =>
+      rules.map((rule) => (typeof rule === 'string' ? rule : rule.line));
+    const forOne = (platform: string) => {
+      const shot = planChecks(config, platform).find((each: { name: string }) => each.name === 'text-size-default');
+      return lines(
+        shot.mustShowLines.filter(
+          (rule: string | { platforms?: string[] }) =>
+            typeof rule === 'string' || !rule.platforms || rule.platforms.includes(platform),
+        ),
+      );
+    };
+    expect(forOne('ipad')).toEqual(expect.arrayContaining(['^Reset to 150%', '^Current selection: 150%']));
+    expect(forOne('ipad')).not.toContain('^Reset to 125%');
+    expect(forOne('ios')).toContain('^Reset to 125%');
+    expect(forOne('ios')).not.toContain('^Current selection: 150%');
+  });
+
+  it('keeps to a few shots, since its runner waits for a free Mac and every release PR waits for it', () => {
+    // About 2 minutes of capture. A reminder to prune, like each group's limit.
+    const minutes = ipad.reduce((sum: number, shot: any) => sum + shotCost(shot), 0) / 60;
+    expect(minutes).toBeLessThanOrEqual(2.5);
+  });
+
+  it('lists App Store iPad shots for the uploaded listing, at most 10, all captured on the iPad', () => {
+    expect(Object.keys(config.appStoreIpad)).toEqual(['en-US']);
+    const list = config.appStoreIpad['en-US'];
+    expect(list.length).toBeGreaterThan(0);
+    expect(list.length).toBeLessThanOrEqual(10);
+    for (const name of list) expect(ipadNames).toContain(name);
+    for (const copy of planStoreCopies(config, 'ipad')) {
+      expect(copy.file).toMatch(/^app-store-ipad\/en-US\/\d\d-.+\.png$/);
+      expect(copy.source).toBe(`ipad/${copy.name}.png`);
+    }
+  });
+
+  it("checks each shot with its screen's rules, against the iPad's regions for its orientation", () => {
+    const checks = planChecks(config, 'ipad');
+    expect(checks.map((shot: { name: string }) => shot.name)).toEqual(ipadNames);
+    const bible = checks.find((shot: { name: string }) => shot.name === 'bible-dual-default');
+    expect(bible.mustShowLines).toEqual(expect.arrayContaining(['BSB', 'CUV']));
+    const portrait = checks.find((shot: { name: string }) => shot.name === 'home-default');
+    const landscape = checks.find((shot: { name: string }) => shot.name === 'home-landscape');
+    expect(regionsFor(portrait).tabs).toBeDefined();
+    expect(regionsFor(landscape)).not.toBe(regionsFor(portrait));
+  });
+
+  it("saves App Store copies at the 13-inch iPad's size, either way up, and refuses another size", async () => {
+    const sharp = require('sharp');
+    const { mkdtempSync } = require('node:fs');
+    const { tmpdir } = require('node:os');
+    const { join } = require('node:path');
+    const dir = mkdtempSync(join(tmpdir(), 'app-store-ipad-'));
+    const make = async (name: string, width: number, height: number) => {
+      const file = join(dir, name);
+      await sharp({ create: { width, height, channels: 4, background: { r: 30, g: 90, b: 150, alpha: 1 } } })
+        .png()
+        .toFile(file);
+      return file;
+    };
+    const { width, height } = IPAD_APP_STORE_SIZE;
+    for (const [name, w, h] of [['portrait.png', width, height], ['landscape.png', height, width]] as const) {
+      const copy = join(dir, `copy-${name}`);
+      await writeIpadAppStoreCopy(await make(name, w, h), copy);
+      expect(await sharp(copy).metadata()).toMatchObject({ width: w, height: h, channels: 3, hasAlpha: false });
+    }
+    await expect(writeIpadAppStoreCopy(await make('iphone.png', 1320, 2868), join(dir, 'copy.png'))).rejects.toThrow(
+      'not the 13-inch iPad',
+    );
+  });
+
+  it('pins serve-sim, which turns the Simulator through private interfaces', () => {
+    expect(SERVE_SIM).toMatch(/^serve-sim@\d+\.\d+\.\d+$/);
+  });
+
+  describe('status bar and orientation', () => {
+    const sharp = require('sharp');
+    const { mkdtempSync } = require('node:fs');
+    const { tmpdir } = require('node:os');
+    const { join } = require('node:path');
+    const { STATUS_BAR_REGIONS_BY_SCREEN, screenOf, turnUpright } = require('../scripts/capture-ios-screens.cjs');
+    const dir = mkdtempSync(join(tmpdir(), 'ipad-status-'));
+    const box = (left: number, top: number, width: number, height: number, fill = '#111') => ({
+      input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${fill}"/></svg>`),
+      left,
+      top,
+    });
+
+    // A 13-inch iPad screenshot: the clock and date on the left of the 48-pixel
+    // status bar, the icons on the right, and a line of text at textAt.
+    const ipadShot = async (name: string, width: number, height: number, textAt?: number) => {
+      const file = join(dir, `${name}.png`);
+      const overlays = [box(48, 19, 270, 26), box(width - 200, 19, 140, 26)];
+      if (textAt !== undefined) {
+        for (let left = 60; left < width - 200; left += 160) overlays.push(box(left, textAt, 120, 22, '#222'));
+      }
+      await sharp({ create: { width, height, channels: 3, background: '#f3e6df' } }).composite(overlays).png().toFile(file);
+      return file;
+    };
+
+    it.each([
+      { screen: 'ipad', width: 2064, height: 2752 },
+      { screen: 'ipad-landscape', width: 2752, height: 2064 },
+    ])("catches text behind the $screen's status bar, but not its clock and icons", async ({ screen, width, height }) => {
+      const regions = STATUS_BAR_REGIONS_BY_SCREEN[screen];
+      expect(await statusBarClear(await ipadShot(`${screen}-clear`, width, height), regions)).toBe(true);
+      expect(await statusBarClear(await ipadShot(`${screen}-behind`, width, height, 16), regions)).toBe(false);
+      // Text just below the status bar, as the Bible shows when scrolled.
+      expect(await statusBarClear(await ipadShot(`${screen}-below`, width, height, 52), regions)).toBe(true);
+    });
+
+    it('checks each shot against its own screen and orientation', () => {
+      expect(screenOf(ipad.find((shot: { name: string }) => shot.name === 'home-default'))).toBe('ipad');
+      expect(screenOf(ipad.find((shot: { name: string }) => shot.name === 'bible-dual-landscape'))).toBe('ipad-landscape');
+      expect(screenOf(shots[0])).toBe('ios');
+    });
+
+    it('turns a landscape screenshot upright, its left edge to the top', async () => {
+      // simctl saves the landscape screen sideways: the app's top on the left.
+      const file = join(dir, 'sideways.png');
+      await sharp({ create: { width: 30, height: 40, channels: 3, background: '#ffffff' } })
+        .composite([box(0, 0, 5, 40, '#000')])
+        .png()
+        .toFile(file);
+      await turnUpright(file);
+      const { data, info } = await sharp(file).raw().toBuffer({ resolveWithObject: true });
+      expect([info.width, info.height]).toEqual([40, 30]);
+      // The dark strip is now along the top.
+      expect(data[0]).toBeLessThan(50);
+      expect(data[(info.height - 1) * info.width * info.channels]).toBeGreaterThan(200);
+    });
   });
 });
 

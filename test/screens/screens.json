@@ -1,7 +1,11 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, appStoreIpad the iPad's, from the screens that list ipadVariants (#324), and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
+  },
+  "ipad": {
+    "$comment": "The iPad (#324): the 13-inch iPad Pro, whose screen is the size App Store Connect's iPad screenshots take. Only the screens that list ipadVariants are taken on it, on a runner of its own; its variants can turn it to landscape (orientation), which serve-sim does, since simctl can't. See \"iPad key screens\" in docs/operations/native-builds.md.",
+    "device": "iPad Pro 13-inch (M5)"
   },
   "android": {
     "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
@@ -25,7 +29,8 @@
     "android-font-max": { "fontScale": 2 },
     "xl-android-font-max": { "textScale": 2, "fontScale": 2 },
     "es-xl-android-font-max": { "language": "es", "textScale": 2, "fontScale": 2 },
-    "android-display-large": { "displayScale": 1.2 }
+    "android-display-large": { "displayScale": 1.2 },
+    "landscape": { "orientation": "landscape" }
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give, and first-launch setup over it.",
@@ -55,6 +60,7 @@
       "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. zh and zh-cn: the countdown's date in Chinese, such as 11月6日星期五, which the iPhone's text recognition reads with a space before 星期. On Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"), so the app writes Chinese dates out by hand (formatAppDate).",
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
+      "ipadVariants": ["default", "landscape"],
       "variantRules": {
         "xl-ios-large-text": {
           "mustShowLines": ["^Today.s Verse$"],
@@ -82,11 +88,12 @@
     {
       "name": "bible-dual",
       "group": "bible-reading",
-      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376).",
+      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376). On the iPad, Vision can read the book button's chevron as part of its name, \"Psalmsv\".",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max"],
-      "mustShowLines": ["^(XA\\b|文A|A EN\\b)", "\\bEN\\b", "BSB", "CUV", "^Psalms\\b"]
+      "ipadVariants": ["default", "ios-large-text", "landscape"],
+      "mustShowLines": ["^(XA\\b|文A|A EN\\b)", "\\bEN\\b", "BSB", "CUV", "^Psalms(\\b|v$)"]
     },
     {
       "name": "bible-dual-back",
@@ -316,6 +323,7 @@
       "$comment": "The featured carousel's arrows sit beside its dots, under the carousel, so they never cover its first book's title (#447): The Bruised Reed in every language, whole on one line, right of the cover. The shelf below wraps the same title after The Bruised, so only the carousel's line matches. Vision isn't asked to read the arrows: a chevron alone in a circle is no reliable text.",
       "path": "explore/library",
       "variants": ["default", "dark", "zh", "zh-cn", "es"],
+      "ipadVariants": ["default"],
       "mustShowLines": [{ "line": "^The Bruised Reed$", "minLeft": 0.3 }]
     },
     {
@@ -338,6 +346,7 @@
       "$comment": "Books by other writers lead the Children shelf, and Ellen G. White's books for adults stay on her own shelf (#391).",
       "path": "explore/library/children",
       "variants": ["default", "zh", "zh-cn", "es"],
+      "ipadVariants": ["default"],
       "mustShowLines": ["^Story of the Bible", "^Hurlbut.s Life of"],
       "mustNotShowLines": [
         "^Child Guidance", "^Messages to Young", "^Christ.s Object",
@@ -518,10 +527,18 @@
     {
       "name": "text-size",
       "group": "worship-and-you",
-      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% its text runs past the popups' height limit (POPUP_MAX_HEIGHT_FRACTION in styles/PopupStyles.ts), so the dialog stops there and its text scrolls, leaving room around it to tap. Its title is also on the You screen behind it, so the rules require lines only the dialog shows.",
+      "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% its text runs past the popups' height limit (POPUP_MAX_HEIGHT_FRACTION in styles/PopupStyles.ts), so the dialog stops there and its text scrolls, leaving room around it to tap. Its title is also on the You screen behind it, so the rules require lines only the dialog shows. The iPad saves no text size, so its shot shows the size a tablet starts at, 150%, and Reset returns there (#324).",
       "path": "you?popup=text-size",
       "variants": ["default", "xl"],
-      "mustShowLines": ["^Current selection", "^Reset to 125%"],
+      "ipadVariants": ["default"],
+      "mustShowLines": [
+        "^Current selection",
+        { "line": "^Reset to 125%", "platforms": ["ios", "android"] },
+        { "line": "^Reset to 150%", "platforms": ["ipad"] }
+      ],
+      "variantRules": {
+        "default": { "mustShowLines": [{ "line": "^Current selection: 150%", "platforms": ["ipad"] }] }
+      },
       "mustNotShowLines": ["^Apply$", "^Close$"]
     },
     {
@@ -545,6 +562,9 @@
   "appStore": {
     "en-US": ["home-default", "bible-dual-default", "bible-cuv-zh", "bible-dual-dark", "explore-default", "library-default"],
     "zh-Hant": ["home-zh", "bible-cuv-cantonese-zh", "bible-pinyin-zh", "explore-zh", "library-zh", "bible-cuvs-zh-cn", "bible-cuv-zh-dark"]
+  },
+  "appStoreIpad": {
+    "en-US": ["home-default", "bible-dual-default", "bible-dual-landscape", "library-default", "home-landscape"]
   },
   "googlePlay": {
     "en-US": ["home-default", "bible-dual-default", "bible-audio-settings-default", "bible-dual-dark", "explore-default", "library-default"],

@@ -17,7 +17,7 @@ import {
   useAppTheme,
   type ThemeMode,
 } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { AppIcon } from '@/components/AppIcon';
 import { PopupScrollView } from '@/components/PopupScrollView';
 import { useContext, useRef, useState } from 'react';
@@ -289,6 +289,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const theme = useAppTheme();
   // Setup can't be closed, so it needs no room around it for a tap outside.
   const popupMaxHeight = usePopupMaxHeight(0.9);
+  const popupWidthStyle = usePopupWidthStyle(500);
   const { width: viewportWidth } = useWindowDimensions();
   const [isSavingTextScale, setIsSavingTextScale] = useState(false);
   const [failedTextScale, setFailedTextScale] = useState<TextScale | null>(null);
@@ -341,6 +342,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
         dismissable={false}
         contentContainerStyle={[
           styles.modal,
+          popupWidthStyle,
           { maxHeight: popupMaxHeight },
           getPopupSurfaceStyle(theme),
         ]}
@@ -522,10 +524,7 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
 
 const styles = StyleSheet.create({
   modal: {
-    alignSelf: 'center',
     marginVertical: 20,
-    maxWidth: 500,
-    width: '90%',
   },
   modalContent: {
     padding: 24,

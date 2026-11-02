@@ -1,3 +1,5 @@
+import { DEFAULT_TEXT_SCALE } from '@/constants/AppPreferences';
+
 /**
  * Centralized layout constants to ensure consistency across the "Digital Sanctuary".
  * Based on UI_UX.md standards.
@@ -29,6 +31,53 @@ export const DESIGN_TOKENS = {
   // Dimension for timeline markers in the History section
   TIMELINE_CIRCLE_SIZE: 50,
 };
+
+/**
+ * The widest a page's content grows on a wide screen, at the app's default
+ * text size: an iPad, an Android tablet, an unfolded foldable, or a desktop
+ * browser (#324). Wider, it stays this wide and centered, so lines of text
+ * stay a comfortable length to read and a page's cards and buttons stay near
+ * each other. Banner images, the header, and the tab bar still span the
+ * screen. Phones are narrower than this, so it never changes their layout.
+ */
+export const CONTENT_MAX_WIDTH = 720;
+
+/**
+ * How wide the content column may grow at the app's text size:
+ * CONTENT_MAX_WIDTH at the default 125% or smaller, and wider in proportion
+ * above it, so a line holds about as many words at 200% as at 125%, rather
+ * than wrapping a verse's every line on a screen with room to spare.
+ */
+export const getContentMaxWidth = (textScale: number = DEFAULT_TEXT_SCALE) =>
+  Math.round(CONTENT_MAX_WIDTH * Math.max(1, (Number.isFinite(textScale) ? textScale : 1) / DEFAULT_TEXT_SCALE));
+
+/** The centered content column, for a page's content below its banner. */
+export const contentColumnStyle = (textScale: number = DEFAULT_TEXT_SCALE) => ({
+  width: '100%' as const,
+  maxWidth: getContentMaxWidth(textScale),
+  alignSelf: 'center' as const,
+});
+
+/**
+ * The content column inside a full-width box with this much padding on each
+ * side, such as a banner's title, so it lines up with the column below.
+ */
+export const contentColumnWithin = (sidePadding: number, textScale: number = DEFAULT_TEXT_SCALE) => ({
+  width: '100%' as const,
+  maxWidth: getContentMaxWidth(textScale) - 2 * sidePadding,
+  alignSelf: 'center' as const,
+});
+
+/** How wide a page's content is in a window this wide. */
+export const getContentWidth = (windowWidth: number, textScale: number = DEFAULT_TEXT_SCALE) =>
+  Math.min(windowWidth, getContentMaxWidth(textScale));
+
+/**
+ * The side padding that keeps a full-width row's contents, such as the tab
+ * bar's buttons, within the content column.
+ */
+export const getContentSideInset = (windowWidth: number, textScale: number = DEFAULT_TEXT_SCALE) =>
+  Math.max(0, (windowWidth - getContentMaxWidth(textScale)) / 2);
 
 export const getBottomTabContentHeight = (
   effectiveTextScale: number,

@@ -2,7 +2,8 @@
 
 Copies of the images uploaded to Google Play and the App Store, so the next update
 starts from what's uploaded instead of from scratch. Each store has one set of six
-phone screenshots, which every listing language shows. How each store's screenshots
+phone screenshots, which every listing language shows, and the App Store one set of
+iPad screenshots (#324). How each store's screenshots
 are captured, their sizes, and what they may show are in
 [Store listings](../operations/store-listing.md#screenshots).
 
@@ -23,6 +24,11 @@ are captured, their sizes, and what they may show are in
   English with the Chinese interface, the Bible in the dark theme, Explore, and the
   Library. Home comes first: the first three appear on the App Store's install sheets,
   and Home shows what the app is. The other languages' listings show these too.
+- `app-store/ipad/en-US/`: the iPad screenshots, in upload order, at 2064 × 2752 (or
+  2752 × 2064 in landscape), the size App Store Connect's **iPad 13-inch display** slot
+  takes, copied from a run's `screens/app-store-ipad/en-US/` with the first release that
+  supports iPad (#324): Home, the Bible in English and Chinese, the Bible in
+  landscape, the Library, and Home in landscape.
 - `app-store/header/`: the App Store product page headers, one per listing language:
   `en-US.png`, `zh-Hant.png`, `zh-Hans.png`, and `es.png` for both Spanish listings.
   Each is a 3840 × 1646 (21:9) PNG with no transparency. App Store Connect's header
@@ -57,6 +63,8 @@ Each run also saves numbered App Store copies in its screenshots download's
   in the dark theme, Explore, and the Library.
 - `screens/app-store/zh-Hant/`: seven shots with the Chinese interface, which aren't
   uploaded.
+- `screens/app-store-ipad/en-US/`: the iPad set to upload, from the `appStoreIpad`
+  list.
 
 Each run saves numbered Google Play copies too, in `screens/google-play/en-US/` and
 `screens/google-play/zh-TW/`, from the `googlePlay` lists, on an emulator of Google

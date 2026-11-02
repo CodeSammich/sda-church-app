@@ -13,7 +13,7 @@ import { PopupScrollView } from '@/components/PopupScrollView';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { createElement, useContext, useEffect, useRef, useState } from 'react';
 import {
   type GestureResponderEvent,
@@ -44,7 +44,7 @@ const labelsByLanguage = {
     previewText: '“I was blind, but now I see.” — John 9:25',
     saveError: 'Text size could not be saved. Please try again.',
     close: 'Close',
-    reset: 'Reset to 125%',
+    reset: (percent: number) => `Reset to ${percent}%`,
   },
   zh: {
     title: '字體大小',
@@ -58,7 +58,7 @@ const labelsByLanguage = {
     previewText: '「我從前是眼瞎的，如今能看見了。」— 約翰福音 9:25',
     saveError: '無法儲存字體大小。請再試一次。',
     close: '關閉',
-    reset: '重設為 125%',
+    reset: (percent: number) => `重設為 ${percent}%`,
   },
   'zh-cn': {
     title: '字体大小',
@@ -72,7 +72,7 @@ const labelsByLanguage = {
     previewText: '“我从前是眼瞎的，如今能看见了。”— 约翰福音 9:25',
     saveError: '无法保存字体大小。请再试一次。',
     close: '关闭',
-    reset: '重置为 125%',
+    reset: (percent: number) => `重置为 ${percent}%`,
   },
   es: {
     title: 'Tamaño del texto',
@@ -88,7 +88,7 @@ const labelsByLanguage = {
     previewText: '“Yo era ciego y ahora veo.” — Juan 9:25',
     saveError: 'No se pudo guardar el tamaño del texto. Inténtalo de nuevo.',
     close: 'Cerrar',
-    reset: 'Restablecer al 125%',
+    reset: (percent: number) => `Restablecer al ${percent}%`,
   },
 } as const;
 
@@ -179,10 +179,16 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
   const { language } = useContext(LanguageContext);
   // The chosen size, not the one drawn, which a very large phone text size can
   // reduce (MAX_COMBINED_TEXT_SCALE).
-  const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
+  const {
+    setTextScale,
+    textScale: drawnTextScale,
+    preferredTextScale,
+    defaultTextScale = DEFAULT_TEXT_SCALE,
+  } = useTextSize();
   const textScale = preferredTextScale ?? drawnTextScale;
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight();
+  const popupWidthStyle = usePopupWidthStyle();
   const labels = labelsByLanguage[language] ?? labelsByLanguage.en;
   // The size the slider shows. While a finger drags the slider, it runs ahead
   // of the app's size, which changes when the finger lifts.
@@ -279,7 +285,7 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
         visible={visible}
         onDismiss={onDismiss}
         style={[
-          styles.dialog,
+          popupWidthStyle,
           { maxHeight: popupMaxHeight },
           getPopupSurfaceStyle(theme),
         ]}
@@ -455,9 +461,9 @@ export const TextSizeDialog = ({ onDismiss, visible }: TextSizeDialogProps) => {
         </Dialog.ScrollArea>
         <View style={styles.actions}>
           <TextDialogAction
-            disabled={draftScale === DEFAULT_TEXT_SCALE}
-            label={labels.reset}
-            onPress={() => applyScale(DEFAULT_TEXT_SCALE)}
+            disabled={draftScale === defaultTextScale}
+            label={labels.reset(Math.round(defaultTextScale * 100))}
+            onPress={() => applyScale(defaultTextScale)}
           />
         </View>
       </Dialog>
@@ -474,11 +480,6 @@ const styles = StyleSheet.create({
   currentValue: {
     marginTop: 20,
     textAlign: 'center',
-  },
-  dialog: {
-    alignSelf: 'center',
-    maxWidth: 560,
-    width: '90%',
   },
   dialogAction: {
     alignItems: 'center',

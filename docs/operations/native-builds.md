@@ -797,7 +797,8 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 The five runners screenshot the 40 screens listed in `test/screens/screens.json`, 96
 shots in all, so a layout problem on iPhone shows up before release rather than in
-TestFlight (#331). Each runner takes one group (`--group <name>`) of related
+TestFlight (#331). A sixth runner takes the iPad's shots; see
+[iPad key screens](#ipad-key-screens). Each runner takes one group (`--group <name>`) of related
 screens, such as the Bible reader's layout or the library, listed under `groups` in
 `screens.json` with what each holds. Each runner checks its shots' text, and
 `scripts/merge-key-screens.cjs` joins the groups into one `screens/` folder and makes
@@ -974,6 +975,49 @@ setting also needs its storage key in the script's `SETTING_KEYS`, and the test 
 the app still reads that key. A screen whose content changes every day, such as Home
 with its verse of the day and countdown, is marked `changesDaily`, for when these images
 are compared with known-good copies.
+
+#### iPad key screens
+
+The app runs on iPad as an iPad app (#324), so the release PR's run also screenshots it,
+on a sixth runner (batch 6, `--platform ipad`) and a 13-inch iPad Pro Simulator
+(`ipad.device` in `screens.json`). The maintainers have no iPad, so these shots, and a
+check on a member's iPad through TestFlight before each App Store release, are how iPad
+layouts get tested.
+
+- **Which shots.** A few, for what a wide screen changes rather than what the app does,
+  which the iPhone's shots already cover: only the screens that list `ipadVariants`, 8
+  shots. Home and the Bible reader with its dock, in portrait and landscape, the Bible
+  at the iPad's own large text (the column widens with it), the library's banner and
+  shelves, a library grid (three covers a row), and the Text size dialog, since on iOS a
+  Paper dialog with a percentage width filled 90% of the iPad.
+  The `landscape` variant turns the iPad sideways; the portrait shots come first, so it
+  turns once. The iPad's shots save no text size, unlike the iPhone's 100%, so they show
+  the 150% a tablet starts at, as members and the App Store listing see it; the Text
+  size dialog's checks confirm it. The iPad's shots are named `screens/ipad/<screen>-<variant>.png`.
+- **Turning the Simulator.** `simctl` can't rotate a Simulator, so the capture uses
+  [serve-sim](https://github.com/EvanBacon/serve-sim), an Apache-2.0 tool by an Expo
+  developer that drives the Simulator through Apple's private interfaces. `npx`
+  fetches it on the Mac runner only, pinned to one version (`SERVE_SIM` in
+  `scripts/capture-ios-screens.cjs`); it isn't in `package.json`. A new Xcode may need a
+  newer version: if the landscape shots come out in portrait, check its releases first.
+  serve-sim can also unfold the iPhone Duo Simulator, which #432 needs.
+- **Text checks.** The same rules as the iPhone's, with the iPad's own places for the tab
+  labels and chapter controls, by orientation (`REGIONS_BY_PLATFORM` in
+  `scripts/check-screens.cjs`), and its own status bar regions for `statusBarClear`
+  (`STATUS_BAR_REGIONS_BY_SCREEN`). A rule written for the iPhone's screen can name its
+  `platforms`.
+- **App Store copies.** The shots under `appStoreIpad` are copied, without transparency,
+  to `screens/app-store-ipad/en-US/`, the uploaded listing's, at the 13-inch iPad's 2064 × 2752, portrait or
+  landscape, which App Store Connect's **iPad 13-inch display** slot takes.
+- **Time.** GitHub's free plan runs five Mac jobs at once, so the iPad's runner gets a
+  Mac only when the first group's runner finishes, and the release PR waits for it:
+  about 3 minutes to download and unpack the app, 3.5 for the iPad's first boot, about
+  20 seconds a shot, and 2 to read their text. Keep its list short; each shot adds to
+  every release PR's wait.
+- **What it can't show.** A window beside another app, or one resized by hand, which no
+  command can set up. The layouts follow the window's width, not the device, so the
+  narrow widths look like a phone's and the wide ones like the iPad's; the unit tests in
+  `test/layout.test.ts` cover the widths in between.
 
 #### Android key screens
 
@@ -1415,13 +1459,15 @@ JavaScript loads by name, so Expo's bundler lists them in a `keep.xml` file and 
 shrinker keeps everything on that list. If an image is missing only from a release
 build, check that it's listed in `android/app/build/generated/res/react/release/raw/keep.xml`.
 
-Phones stay in portrait on both platforms. On iOS, `"orientation": "portrait"` in
-`app.json` does it. On Android, `plugins/withAndroidPhonePortrait.js` removes the
+Phones stay in portrait on both platforms. On the iPhone, `"orientation": "portrait"` in
+`app.json` does it. The iPad turns every way (#324): its own
+`UISupportedInterfaceOrientations~ipad` key in `app.json` lists all four orientations,
+which App Store Connect requires of an iPad app that can share the screen with another
+app, and iPadOS 26 lets every iPad app's window be resized. On Android, `plugins/withAndroidPhonePortrait.js` removes the
 manifest's orientation lock and asks for portrait at run time only when the screen's
 smallest width is under 600dp, so tablets and unfolded foldables turn freely. Android 16
 ignores orientation locks on screens 600dp or wider for apps that target API 36, and Play
-Console flags apps that set one (#426). Whether to support iPad is a separate decision
-(#324).
+Console flags apps that set one (#426).
 
 The Android home screen widget for the verse of the day (#235) is built with
 `expo-widgets`. `plugins/withAndroidVerseWidget.js` runs only the Android half of its

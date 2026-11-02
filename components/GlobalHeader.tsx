@@ -1,3 +1,4 @@
+import { contentColumnStyle } from '@/constants/Layout';
 import {
   getBackAction,
   getBackTarget,
@@ -26,6 +27,7 @@ import {
   type BibleSearchOptions,
   type BibleSearchRow,
 } from '@/hooks/useBibleSearch';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { prepareBibleSearch } from '@/services/BibleSearch';
 import { isKeyScreensBuild } from '@/services/ScreenshotRoute';
 import { useAppTheme } from '@/constants/Themes';
@@ -126,6 +128,7 @@ export const GlobalHeader = (props: any) => {
     bibleTranslation;
   const theme = useAppTheme();
   const { textScale } = useTextSize();
+  const columnScale = useContentColumnScale();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -570,7 +573,11 @@ export const GlobalHeader = (props: any) => {
       keyboardDismissMode={isBiblePage ? 'on-drag' : 'none'}
       // iOS draws its keyboard over the app, so the last results scroll above it.
       automaticallyAdjustKeyboardInsets={isBiblePage}
-      contentContainerStyle={isBiblePage ? { paddingTop: 8, paddingBottom: insets.bottom + 16 } : undefined}
+      // In the content column on a wide screen (#324).
+      contentContainerStyle={[
+        contentColumnStyle(columnScale),
+        isBiblePage ? { paddingTop: 8, paddingBottom: insets.bottom + 16 } : null,
+      ]}
       keyExtractor={(item) => item.key}
       maxToRenderPerBatch={10}
       renderItem={({ item }) => {

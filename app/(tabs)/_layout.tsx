@@ -9,7 +9,7 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { BottomTabHeightContext } from '@/constants/BottomTabHeightContext';
-import { DESIGN_TOKENS, getBottomTabContentHeight } from '@/constants/Layout';
+import { DESIGN_TOKENS, getBottomTabContentHeight, getContentSideInset } from '@/constants/Layout';
 import { getBottomTabTextScale, HEADER_MAX_FONT_SCALE } from '@/hooks/useGlobalHeaderHeight';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
@@ -77,7 +77,7 @@ export default function TabLayout() {
   const theme = useAppTheme();
   const pathname = usePathname();
   const { textScale } = useTextSize();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width: windowWidth } = useWindowDimensions();
   const tabContentHeight = getBottomTabContentHeight(getBottomTabTextScale(textScale, fontScale));
   const { language } = useContext(LanguageContext);
   const { onPassiveCheck } = useContext(UpdateContext);
@@ -195,7 +195,9 @@ export default function TabLayout() {
             height: tabContentHeight + bottomTabInset + 4,
             paddingTop: 4,
             paddingBottom: bottomTabInset,
-            paddingHorizontal: fullscreenEdgeInset,
+            // On a wide screen the four tabs stay within the content column,
+            // rather than spreading across it (#324).
+            paddingHorizontal: fullscreenEdgeInset + getContentSideInset(windowWidth),
             elevation: 0,
             backgroundColor: 'transparent',
             borderTopColor: isBibleRoute
@@ -203,6 +205,9 @@ export default function TabLayout() {
               : theme.colors.outlineVariant,
             borderTopWidth: isBibleRoute ? 0 : StyleSheet.hairlineWidth,
           },
+          // React Navigation puts each label beside its icon on a wide screen,
+          // far from it on a tablet. Keep the phone's layout (#324, #432).
+          tabBarLabelPosition: 'below-icon',
           tabBarItemStyle: {
             flex: 1,
             minWidth: 0,

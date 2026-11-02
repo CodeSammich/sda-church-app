@@ -31,8 +31,10 @@
  *                                                         capture-ios-screens.cjs --group bible-reading
  *   node scripts/check-screens.cjs --dir <screens folder> --platform android
  *                                                         Checks the Android shots, android/*.png
+ *   node scripts/check-screens.cjs --dir <screens folder> --platform ipad
+ *                                                         Checks the iPad shots, ipad/*.png (#324)
  *   node scripts/check-screens.cjs --dir <screens folder> --platform all
- *                                                         Checks both, as in the joined artifact
+ *                                                         Checks them all, as in the joined artifacts
  *
  * Writes ocr.json and checks.json into that folder, and a summary to the step
  * summary. Exits 1 if any rule fails.
@@ -41,7 +43,7 @@ const { execFileSync } = require('node:child_process');
 const { appendFileSync, existsSync, mkdtempSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
-const { PLATFORMS, loadConfig, planCaptures, takeGroup } = require('./capture-ios-screens.cjs');
+const { PLATFORMS, loadConfig, planCaptures, screenOf, takeGroup, variantsOn } = require('./capture-ios-screens.cjs');
 
 // Vision's languages for each app language, most important first. Bible screens
 // in English also show Chinese, so English reads both.
@@ -78,6 +80,19 @@ const REGIONS_BY_PLATFORM = {
     // While reading, the tab bar hides and the chapter controls move down.
     chapterControlsReading: [0.88, 0.99],
   },
+  // The 13-inch iPad in portrait, 3:4 (#324): the tab labels at 96% of the
+  // way down, and the chapter controls at 91%, or 96% while reading.
+  ipad: {
+    tabs: [0.92, 0.99],
+    chapterControls: [0.85, 0.94],
+    chapterControlsReading: [0.92, 0.99],
+  },
+  // And in landscape, 4:3: the tab labels at 95%, the chapter controls at 89%.
+  'ipad-landscape': {
+    tabs: [0.91, 0.99],
+    chapterControls: [0.83, 0.93],
+    chapterControlsReading: [0.9, 0.99],
+  },
   // The Galaxy A07's screen, 20:9, with Android's gesture bar below the tabs.
   android: {
     tabs: [0.88, 0.99],
@@ -93,6 +108,7 @@ const REGIONS = REGIONS_BY_PLATFORM.ios;
 const NEVER_SHOWN = ['Open in', 'Get Started', 'undefined', 'NaN', '[object Object]'];
 const NEVER_SHOWN_BY_PLATFORM = {
   ios: NEVER_SHOWN,
+  ipad: NEVER_SHOWN,
   android: [...NEVER_SHOWN, "isn't responding", 'keeps stopping', 'has stopped'],
 };
 
@@ -154,10 +170,13 @@ const expectedLabels = (shot) => {
 const forPlatform = (rules, platform) =>
   (rules || []).filter((rule) => typeof rule === 'string' || !rule.platforms || rule.platforms.includes(platform));
 
+/** Where a shot's labels belong: its device's regions, turned as the shot was. */
+const regionsFor = (shot) => REGIONS_BY_PLATFORM[screenOf(shot)];
+
 /** Returns what's wrong with one shot, given the lines of text read from it. */
 const checkShot = (shot, lines) => {
   const problems = [];
-  const regions = REGIONS_BY_PLATFORM[shot.platform];
+  const regions = regionsFor(shot);
   for (const [region, labels] of expectedLabels(shot)) {
     const missing = labels.filter((label) => !showsLabel(lines, label, regions[region]));
     if (!missing.length) continue;
@@ -235,7 +254,7 @@ const joinRules = (screenRules, variantRules) =>
 const planChecks = (config, platform = 'ios') =>
   planCaptures(config, platform).map((shot) => {
     const screen = config.screens.find((candidate) =>
-      candidate.variants.some((variant) => `${candidate.name}-${variant}` === shot.name),
+      variantsOn(candidate, platform).some((variant) => `${candidate.name}-${variant}` === shot.name),
     );
     const variant = shot.name.slice(screen.name.length + 1);
     const forVariant = screen.variantRules?.[variant] || {};
@@ -285,13 +304,13 @@ const ocrRapid = (jobs) => {
 };
 
 /**
- * Reads each image's text with its platform's reader: Vision for the iPhone,
- * on a Mac, and RapidOCR for Android, on Linux.
+ * Reads each image's text with its platform's reader: Vision for the iPhone
+ * and iPad, on a Mac, and RapidOCR for Android, on Linux.
  */
 const ocr = (jobs) => {
   const android = jobs.filter((job) => job.platform === 'android');
-  const iphone = jobs.filter((job) => job.platform !== 'android');
-  return { ...(iphone.length ? ocrVision(iphone) : {}), ...ocrRapid(android) };
+  const apple = jobs.filter((job) => job.platform !== 'android');
+  return { ...(apple.length ? ocrVision(apple) : {}), ...ocrRapid(android) };
 };
 
 /**
@@ -343,7 +362,7 @@ const readText = async (dir, shots) => {
   for (const shot of present) {
     const file = join(dir, shot.file);
     for (const [regionName, labels] of expectedLabels(shot)) {
-      const region = REGIONS_BY_PLATFORM[shot.platform][regionName];
+      const region = regionsFor(shot)[regionName];
       if (labels.every((label) => showsLabel(text[file] || [], label, region))) continue;
       const strip = join(workDir, `${shot.name}-${regionName}.png`);
       await cropStrip(file, region, strip);
@@ -367,11 +386,11 @@ const main = async () => {
   };
   const dir = argument('--dir') && resolve(argument('--dir'));
   if (!dir) {
-    console.error('Usage: node scripts/check-screens.cjs --dir <screens folder> [--platform ios|android|all] [--group <group>]');
+    console.error('Usage: node scripts/check-screens.cjs --dir <screens folder> [--platform ios|ipad|android|all] [--group <group>]');
     process.exit(2);
   }
   const config = loadConfig();
-  // all: both platforms' shots in one folder, as in the joined artifact.
+  // all: every platform's shots in one folder, as in the joined artifacts.
   const platform = argument('--platform') || 'ios';
   const platforms = platform === 'all' ? PLATFORMS : [platform];
   const shots = takeGroup(platforms.flatMap((each) => planChecks(config, each)), argument('--group'), config);
@@ -389,7 +408,7 @@ const main = async () => {
   writeFileSync(join(dir, 'checks.json'), JSON.stringify(results, null, 1));
   const failed = results.filter((result) => result.problems.length);
   const summary = [
-    `### Key-screen text checks (${{ ios: 'iPhone', android: 'Android', all: 'iPhone and Android' }[platform]})`,
+    `### Key-screen text checks (${{ ios: 'iPhone', ipad: 'iPad', android: 'Android', all: 'iPhone, iPad, and Android' }[platform]})`,
     '',
     `${results.length - failed.length} of ${results.length} screenshots pass.`,
     ...failed.map((result) => `- ❌ ${result.file}: ${result.problems.join('; ')}`),
@@ -414,6 +433,7 @@ module.exports = {
   VERSE_BUTTON_SHORT,
   REGIONS,
   REGIONS_BY_PLATFORM,
+  regionsFor,
   NEVER_SHOWN,
   NEVER_SHOWN_BY_PLATFORM,
   showsLabel,
