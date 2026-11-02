@@ -159,6 +159,11 @@ node scripts/write-bible-asset-index.mjs
 - **Verses that only say 見上節:** the CUV joins some verses into the one before, and the
   later number holds only 見上節 ("see the verse before"). The narrators skip it, so it
   gets no time, and the reader keeps the verse before marked.
+- **Opening phrases before a colon:** a verse that opens with a few words and a colon, such
+  as "Y dijo:", keeps the aligner's start if the pause rule moved it more than 0.5 s later.
+  The narrator reads the phrase straight on from the verse before, so the pause the rule
+  found is the one after the phrase. In all 104 such Spanish verses the recognizer heard,
+  the aligner was right.
 - **Corrections:** `corrections.json`, next to the scripts, holds starts that were found
   wrong and checked by ear (step 8). Each chapter's entry says why, and has the
   recording's SHA-256. `finish.py` applies the entry only while the recording still
@@ -201,8 +206,12 @@ MAX_CHAPTERS=50 python -I scripts/bible-audio-alignment/check_verse_times.py <re
 
 - **Batches:** it takes 5 to 10 seconds a chapter, so 2 to 3 hours a narrator. Each run
   transcribes up to `MAX_CHAPTERS` chapters, so run it again until every chapter is done.
-- **Transcripts:** it keeps what the recognizer heard in `<work-dir>/heard/<narrator>/`.
-  After a fix, `COMPARE_ONLY=1` compares again in about a minute, without a GPU.
+- **Transcripts:** it keeps what the recognizer heard, and the recording's pauses, in
+  `<work-dir>/heard/<narrator>/`. After a fix, `COMPARE_ONLY=1` compares again in about a
+  minute, without a GPU.
+- **Pauses:** a word can't start in a pause, so a heard time inside one counts as where
+  speech resumes. Whisper often starts a word where the word before it ends, so for it a
+  time less than 0.3 s before a pause counts the same way.
 - **The report:** `<work-dir>/report/<narrator>-check.md` has the share of verses within
   0.3 s, and lists every verse more than 1 s off, with a suggested start.
   - **First words heard:** most verses are checked by when the recognizer heard their
@@ -222,22 +231,27 @@ python -I scripts/bible-audio-alignment/listen.py <repo> <work-dir> <narrator> E
 ```
 
 It prints the app's starts, where speech resumes after each pause, each syllable or word
-heard with its time, and the loudness every 0.1 s. Checking the Mandarin and Cantonese
-turned up these kinds:
+heard with its time, and the loudness every 0.1 s. Checking the three narrators turned up
+these kinds:
 
 | What you hear | What to do |
 |---|---|
 | The aligner gave the verse before too little or too much time. | Use the suggested start. |
-| The verse starts with a short word and a pause, such as 說、 or 耶穌說、, and the pause rule moved the start past it. | Use the suggested start. |
+| The verse starts with a short phrase and a pause, such as 說、, 耶穌說、, or "Y á sus dos hijos;", and the pause rule moved the start past it. | Use the suggested start. `finish.py` already handles a phrase that ends in a colon. |
 | The start is in the pause before the verse, but a second or more early. | Use the suggested start. |
 | The narrator reads a verse, or its start, twice. | Start it at the first reading, and the next verse after the second. |
 | The narrator announces a verse before reading it, such as 彌迦書第一章十四節. | Start the verse at the announcement. |
+| The narrator reads the book's title and "Capítulo 1", and verse 1 starts during the title. | Start verse 1 where speech resumes after "Capítulo 1". |
 | The recording leaves out verses. | Give them no time (null), and fix the verses after. |
-| The recognizer matched the chapter announcement or a psalm title, or a repeated passage. | Nothing: the time is right. |
+| The recognizer matched the chapter announcement, a psalm title, or a repeated passage, such as "los hijos de" in a list. | Nothing: the time is right. |
+| The recognizer left out words, or put a verse's first word in the chapter announcement. | Nothing: the time is right. Whisper does both. |
 
 Add each fix to `corrections.json` with a short reason, run `finish.py` (step 6), and
 compare again. A time that was right can go in too, unchanged, so the next check lists it
-as checked by ear.
+as checked by ear. With Whisper, expect dozens of misses that are its own. The Spanish
+check still lists 76, and each was looked at. They're the last two kinds, and a few verses
+that open with one short word before a pause, such as "Dijo:", which the 0.3 s rule above
+moves past.
 
 ### 9. Use it in the app
 

@@ -35,6 +35,13 @@
         "21": 174.08
       }
     },
+    "JOB 32": {
+      "why": "Verse 16 started at the beginning of the pause before it, not its end.",
+      "sha256": "0573738e49c54c84547bcf6a562327d2a5f2a4fd5a68eb79b2ace2bd8f3ec1a6",
+      "starts": {
+        "16": 150.12
+      }
+    },
     "JOB 38": {
       "why": "Verse 41 starts with 烏鴉之雛.",
       "sha256": "8045c1decdda2064ea175e56378bc4d2870dee5825c21729a949541ba7553ac5",
@@ -241,6 +248,13 @@
         "16": 165.42
       }
     },
+    "2CO 6": {
+      "why": "Verse 3 started during the last word of verse 2.",
+      "sha256": "4fc02f44c2577ed13ca9b3e906c0f14c1589910df4f47c2d71fa0fc053dfe09a",
+      "starts": {
+        "3": 31.42
+      }
+    },
     "HEB 12": {
       "why": "The recording goes from verse 2 to verse 15: verses 3 to 14 aren't read.",
       "sha256": "31971bd6ef4f212f02aefb7c2e2c8fdc14f82c5fb5d176d7bdf8b9a257ab0644",
@@ -422,11 +436,96 @@
     }
   },
   "rv1909": {
-    "2CO 6": {
-      "why": "Verse 2 starts with \"Porque dice:\", before a pause.",
-      "sha256": "d974744ade6ecc974a9cdfb5aa539ef758a009446ad684d9c519401b7342e9e5",
+    "EXO 18": {
+      "why": "Verse 3 starts with \"Y á sus dos hijos\", before a pause.",
+      "sha256": "fd4d844cee968dc97bf5741b62255d08f3d410dd778f306fe75646690dcbc78b",
       "starts": {
-        "2": 10.34
+        "3": 20.7
+      }
+    },
+    "LEV 4": {
+      "why": "Verse 9 starts with \"Y los dos riñones\", before a pause.",
+      "sha256": "7a95dfdd61584a3b6e40483be44bcd015fab51e1d636b343df5a984b86f2c3f1",
+      "starts": {
+        "9": 77.02
+      }
+    },
+    "DEU 34": {
+      "why": "Verse 2 starts with \"Y á todo Nephtalí\", before a pause.",
+      "sha256": "3379cde84a9ce70ee5382be7899b3a1fdf346cd5ea6436526cb0d551544e9199",
+      "starts": {
+        "2": 13.9
+      }
+    },
+    "MAL 1": {
+      "why": "Verse 3 starts with \"Y á Esaú aborrecí\", before a pause.",
+      "sha256": "a86f2c628c790fa7131de52ac2f80e5d3c11b7e3f47a56c2bac9a23c06554e43",
+      "starts": {
+        "3": 18.4
+      }
+    },
+    "MAT 17": {
+      "why": "Verse 23 starts with \"Y le matarán\", before a pause.",
+      "sha256": "3a78df0f1df2f1babbd174efe4d4bb63e02218750c5f9dd2ac0989b0ced48cdc",
+      "starts": {
+        "23": 192.8
+      }
+    },
+    "2CO 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "82d6c6930a362abe2211027a315bd185b62c9d83fd59b7e6177517fdb0ca0b55",
+      "starts": {
+        "1": 7.12
+      }
+    },
+    "PHP 2": {
+      "why": "Verse 2 starts with \"Cumplid mi gozo\", before a pause.",
+      "sha256": "34e374f7f4820ab371b840056e57c73c39b39b263e250610c9aa29f56dbdd7b4",
+      "starts": {
+        "2": 11.64
+      }
+    },
+    "COL 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "fc0933abc79b4db3ee83b8c52c5b2cdd449d6ef79bedb6d33fe4c83ba7aaa821",
+      "starts": {
+        "1": 7.34
+      }
+    },
+    "2TH 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "104933702841d798a4dfb937d2e6df2008abfe1e74f743555c6f1c530de8d675",
+      "starts": {
+        "1": 7.98
+      }
+    },
+    "2TI 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "c7b9689b7bbac8ce9c9f9e56750c3662ba10530f52ec8d988b4e2dc779c41714",
+      "starts": {
+        "1": 7.2
+      }
+    },
+    "TIT 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "37a4fbcf45f8033e1d588b96668a4f12da57e291cd817b7a5f73b3f2bf88fd6b",
+      "starts": {
+        "1": 7.16
+      }
+    },
+    "1PE 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1; verse 5 starts with \"Para nosotros\", before a pause.",
+      "sha256": "ab4e6bb72f59fbbd8218680fcf287e8a6cb50694b774536d54ef97a8a0e9e98a",
+      "starts": {
+        "1": 7.1,
+        "5": 47.56
+      }
+    },
+    "1PE 2": {
+      "why": "The aligner started verse 11 while the end of verse 10 was read.",
+      "sha256": "c0731612c3f9535eb9cc5920a39524e9ec90a7ee22dee87be11157103d3b2390",
+      "starts": {
+        "11": 103.74
       }
     }
   }

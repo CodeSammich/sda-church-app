@@ -4,13 +4,18 @@ usage: python -I check_verse_times.py <repo> <full_dir> <narrator> [BOOK or BOOK
 
 1. Transcribes each chapter's recording with a recognizer that doesn't share the aligner's model:
    SenseVoice (funasr) for Chinese, Whisper small (faster-whisper) for Spanish. What it heard,
-   with times, goes to <full_dir>/heard/<narrator>/<BOOK>_<CH>.json. Chapters already transcribed
+   with times, and the recording's pauses (snap.py's) go to
+   <full_dir>/heard/<narrator>/<BOOK>_<CH>.json. Chapters already transcribed
    are skipped (unless the recording changed), so it can run in batches (MAX_CHAPTERS=50) and be
    stopped and started again. COMPARE_ONLY=1 skips this step, and needs no GPU.
 2. Once every chapter is transcribed, lines up every transcript with the text by sound (toneless pinyin or jyutping for Chinese,
    plain letters for Spanish) and compares each verse with its time in
    <repo>/assets/bible/audio-timings/<narrator>/. Writes <full_dir>/report/<narrator>-check.md and
    <full_dir>/report/<narrator>-check.json.
+
+A word can't start in a pause, so a recognizer time inside one moves to where speech resumes.
+Whisper often starts a word where the word before it ends, so for Spanish a time less than 0.3 s
+before a pause moves too. Not for Chinese: 說 alone, before a pause, is that short.
 
 Each verse gets up to three readings from the recognizer:
 - heard: when its first word was heard, if its first two words were heard in order;
@@ -24,7 +29,7 @@ verses' starts is set aside as doubtful: in a chapter that repeats a passage, su
 the recognizer's words can line up with another copy. Each miss gets a suggested start: the
 recognizer's time, moved to where speech resumes after a pause if one ends within 0.5 s.
 """
-import json, os, re, subprocess, sys, time, unicodedata
+import bisect, json, os, re, subprocess, sys, time, unicodedata
 from difflib import SequenceMatcher
 import numpy as np
 import imageio_ffmpeg
@@ -39,6 +44,7 @@ CHINESE = narrator != 'rv1909'
 NOTES_SPOKEN = narrator == 'cuv-cantonese'  # as in align.py
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 TOLERANCE = 1.0
+LEAD_IN = 0 if CHINESE else 0.3  # see the docstring
 books = json.load(open(os.path.join(repo, 'assets/bible', TEXT, 'books.biblejson')))
 sources = {(r['book'], r['chapter']): r for r in map(json.loads, open(os.path.join(full, 'audio', narrator, 'sources.jsonl')))}
 chapters = [(b['id'], c) for b in books for c in range(1, b['numberOfChapters'] + 1)
@@ -92,9 +98,11 @@ if todo:
     for key in todo:
         t0 = time.time()
         src = sources[key]
-        heard = transcribe(decode(os.path.join(full, src['path'])))
+        pcm = decode(os.path.join(full, src['path']))
+        heard = transcribe(pcm)
+        pauses = [[round(a, 2), round(b, 2)] for a, b in find_pauses(pcm)]
         with open(heard_path(key) + '.tmp', 'w') as f:
-            json.dump({'sha256': src['sha256'], 'heard': heard}, f, ensure_ascii=False)
+            json.dump({'sha256': src['sha256'], 'heard': heard, 'pauses': pauses}, f, ensure_ascii=False)
         os.replace(heard_path(key) + '.tmp', heard_path(key))
         print(f'{narrator} {key[0]} {key[1]}: {len(heard)} {"syllables" if CHINESE else "words"} heard, {time.time() - t0:.0f}s',
               flush=True)
@@ -159,6 +167,12 @@ def reference(book, chapter, contents):
     return ref
 
 
+def speech_start(t, pauses, pause_starts):
+    """The time, or where speech resumes if it falls in a pause (or just before one, for Whisper)."""
+    i = bisect.bisect_right(pause_starts, t + LEAD_IN) - 1
+    return pauses[i][1] if i >= 0 and t < pauses[i][1] else t
+
+
 def suggest(t, pauses, low, high):
     """The recognizer's time, moved to where speech resumes if a pause ends within 0.5 s."""
     ends = [b for _, b in pauses if abs(b - t) <= 0.5 and low < b < high]
@@ -189,7 +203,10 @@ for key in chapters:
         continue
     stats['chapters'] += 1
     ref = reference(book, chapter, text['contents'][chapter])
-    hyp = [(s, t) for w, t in saved['heard'] for s in (sounds(w)[:1] if not CHINESE else sounds(w))]
+    pauses = saved['pauses'] if 'pauses' in saved else find_pauses(decode(os.path.join(full, sources[key]['path'])))
+    pause_starts = [a for a, _ in pauses]
+    hyp = [(s, speech_start(t, pauses, pause_starts)) for w, t in saved['heard']
+           for s in (sounds(w)[:1] if not CHINESE else sounds(w))]
     sm = SequenceMatcher(None, [r[2] for r in ref], [h[0] for h in hyp], autojunk=False)
     at = {}  # ref index -> hyp index, only from runs of two or more, to leave out chance matches
     for a, b, n in sm.get_matching_blocks():
@@ -199,7 +216,6 @@ for key in chapters:
     by_verse = {}
     for i, (vn, kind, _) in enumerate(ref):
         by_verse.setdefault(vn, []).append((i, kind))
-    pauses = None
     for vn in range(1, len(starts) + 1):
         start = starts[vn - 1]
         if start is None:
@@ -237,8 +253,6 @@ for key in chapters:
             doubtful.append(row)
             continue
         if heard is not None:
-            if pauses is None:
-                pauses = find_pauses(decode(os.path.join(full, sources[key]['path'])))
             row['suggested'] = suggest(heard, pauses, prev_start, next_start)
         (checked_by_ear if (book, chapter, vn) in by_ear else misses).append(row)
 

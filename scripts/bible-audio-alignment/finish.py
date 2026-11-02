@@ -9,13 +9,17 @@ one start per verse number, null for a verse with no time), <repo>/scripts/bible
 The CUV joins some verses into the one before, and leaves the later number holding only 見上節
 ("see the verse before"). The narrators don't read it, so such a verse gets no time.
 
+A verse that opens with a few words and a colon, such as "Y dijo:", keeps the aligner's start when
+snap.py moved it more than 0.5 s later: the narrator reads the phrase straight on from the verse
+before, so the pause snap.py found is the one after the phrase.
+
 Starts checked by ear or by a recognizer and found wrong are replaced from corrections.json, next to
 this script, but only while the recording's sha256 still matches the one corrected.
 
 A chapter gets no times if it failed to align, its starts don't increase, or verse 1 starts more
 than 25 s in (plus 0.6 s per character of a psalm title read before it). Verses that look odd are listed for a check but keep their times.
 """
-import json, os, statistics, sys
+import json, os, re, statistics, sys
 from collections import defaultdict
 
 repo, full = sys.argv[1:3]
@@ -23,6 +27,7 @@ narrators = sys.argv[3:] or ['cuv-mandarin', 'cuv-cantonese', 'rv1909']
 TEXT = {'cuv-mandarin': 'cuv1919/hans', 'cuv-cantonese': 'cuv1919/hant', 'rv1909': 'rv1909'}
 books = json.load(open(os.path.join(repo, 'assets/bible/cuv1919/hant/books.biblejson')))
 SEE_VERSE_BEFORE = {'見上節', '见上节'}
+COLON_PHRASE = re.compile(r'\W*(?:\S+\s+){0,3}?\S+?:')  # up to four words, then a colon
 CORRECTIONS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'corrections.json')))
 
 for narrator in narrators:
@@ -54,7 +59,7 @@ for narrator in narrators:
     score_floor = sorted(scores)[len(scores) // 200]  # the lowest 0.5%
 
     rejected, checks, moved_total, timed = [], defaultdict(list), 0, 0
-    corrections, corrected, stale, joined = CORRECTIONS.get(narrator, {}), 0, [], 0
+    corrections, corrected, stale, joined, kept = CORRECTIONS.get(narrator, {}), 0, [], 0, 0
     files = defaultdict(lambda: None)
     sources = {}
     for b in books:
@@ -71,9 +76,15 @@ for narrator in narrators:
                 continue
             st = list(r['starts'])
             for i, items in enumerate(text['contents'][c][1:len(st) + 1]):
-                if ''.join(x for x in items if isinstance(x, str)).strip() in SEE_VERSE_BEFORE:
+                words = ''.join(x for x in items if isinstance(x, str)).strip()
+                if words in SEE_VERSE_BEFORE:
                     st[i] = None
                     joined += 1
+                    continue
+                phrase = COLON_PHRASE.match(words)
+                if phrase and len(phrase.group(0)) <= 24 and st[i] is not None and st[i] - r['aligned'][i] > 0.5:
+                    st[i] = r['aligned'][i]
+                    kept += 1
             fix = corrections.get(key)
             if fix and fix['sha256'] != r['sha256']:
                 stale.append(key)
@@ -129,6 +140,7 @@ for narrator in narrators:
         f.write(f'- Chapters with a verse to check: {len(checks)}\n')
         f.write(f'- Starts moved to the end of a pause: {moved_total}\n')
         f.write(f'- Verses that only say 見上節, given no time: {joined}\n')
+        f.write(f'- Starts kept before an opening phrase and colon: {kept}\n')
         f.write(f'- Starts corrected from corrections.json: {corrected}\n')
         if stale:
             f.write(f'- Corrections not applied, because the recording changed: {", ".join(stale)}\n')
@@ -138,4 +150,4 @@ for narrator in narrators:
         if checks:
             f.write('## To check\n\n' + ''.join(f'- {k}: {"; ".join(v)}\n' for k, v in sorted(checks.items())) + '\n')
     print(f'{narrator}: {timed} timed, {len(rejected)} rejected, {len(checks)} to check, {moved_total} moved, '
-          f'{corrected} corrected' + (f', STALE corrections: {", ".join(stale)}' if stale else ''))
+          f'{kept} kept before a colon, {corrected} corrected' + (f', STALE corrections: {", ".join(stale)}' if stale else ''))

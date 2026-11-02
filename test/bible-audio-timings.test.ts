@@ -110,6 +110,13 @@ describe('verse start times that ship with the app', () => {
     expect([spanish?.length, spanish?.[0], spanish?.[15]]).toEqual([36, 2.96, 117.16]);
   });
 
+  it('starts a Spanish verse at its opening phrase and colon, not at the pause after it', async () => {
+    // Matthew 4:6, "Y le dice: Si eres Hijo de Dios": the narrator reads "Y le dice:" straight on
+    // from verse 5, then pauses. The pause rule alone would start the verse at 39.0, after it (#573).
+    const matthew = await fetchVerseStartTimes('spa_r09', RV1909_READER, 'MAT', 4);
+    expect(matthew?.[5]).toBe(37.62);
+  });
+
   it.each(CHURCH_NARRATORS)(
     "%s: every chapter's times, one per verse of the bundled text, in order, from a recording on file",
     (narrator, text) => {
