@@ -308,10 +308,14 @@ function onOpen() {
       Logger.log('Automatic schedule maintenance skipped: ' + error);
     }
   }
-  // After the upkeep, which puts back what it can of Weekly Data.
+  // After the upkeep, which puts back what it can of Weekly Data and tags
+  // what it finds.
   var missingColumns = [];
+  var renamed = [];
   try {
-    missingColumns = getMissingBulletinColumns_(SpreadsheetApp.getActiveSpreadsheet());
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    missingColumns = getMissingBulletinColumns_(spreadsheet);
+    renamed = takeNewBulletinRenames_(getRenamedBulletinTabsAndColumns_(spreadsheet));
   } catch (error) {
     if (typeof Logger !== 'undefined') {
       Logger.log('Bulletin column check failed: ' + error);
@@ -322,10 +326,20 @@ function onOpen() {
     .createMenu('Printed Bulletin')
     .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
     .addToUi();
-  if (missingColumns.length && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
+  if (!ui.alert || !ui.ButtonSet || !ui.ButtonSet.OK) {
+    return;
+  }
+  if (missingColumns.length) {
     ui.alert(
       'Bulletin columns not found / 找不到周刊列',
-      getMissingBulletinColumnsMessage_(missingColumns),
+      getMissingBulletinColumnsMessage_(missingColumns) +
+        (renamed.length ? '\n\n' + getRenamedBulletinMessage_(renamed) : ''),
+      ui.ButtonSet.OK,
+    );
+  } else if (renamed.length) {
+    ui.alert(
+      'Bulletin tabs or columns changed / 周刊工作表或列有变动',
+      getRenamedBulletinMessage_(renamed),
       ui.ButtonSet.OK,
     );
   }
@@ -338,6 +352,45 @@ function getMissingBulletinColumnsMessage_(missingColumns) {
     '在恢复名称完全相同的工作表或列之前，手机应用和纸质周刊中的这些内容会留空。列可以放在任何位置。\n\n' +
     missingColumns.join('\n')
   );
+}
+
+function getRenamedBulletinMessage_(renamed) {
+  return (
+    'The app and the printed bulletin read these as listed. Nothing else needs doing.\n' +
+    '手机应用和纸质周刊会按以下说明读取这些内容，无需其他操作。\n\n' +
+    renamed.join('\n')
+  );
+}
+
+// Each rename is announced once, on the next open by anyone: the ones shown
+// are kept in the document's properties. A rename that's undone and made
+// again is announced again. Where the properties can't be read, every open
+// announces them.
+var BULLETIN_RENAMES_SHOWN_PROPERTY = 'bulletin.renamesShown';
+
+function takeNewBulletinRenames_(renamed) {
+  var properties;
+  var shown = [];
+  try {
+    properties = PropertiesService.getDocumentProperties();
+    shown = JSON.parse(properties.getProperty(BULLETIN_RENAMES_SHOWN_PROPERTY) || '[]');
+  } catch (error) {
+    return renamed;
+  }
+  if (!Array.isArray(shown)) {
+    shown = [];
+  }
+  var fresh = renamed.filter(function (line) {
+    return shown.indexOf(line) === -1;
+  });
+  if (fresh.length || shown.length !== renamed.length) {
+    try {
+      properties.setProperty(BULLETIN_RENAMES_SHOWN_PROPERTY, JSON.stringify(renamed));
+    } catch (error) {
+      return renamed;
+    }
+  }
+  return fresh;
 }
 
 /**
@@ -526,6 +579,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function showGenerationError(error){document.getElementById("statusView").hidden=true;document.getElementById("bulletinForm").hidden=false;showError("Could not create bulletin / 无法创建周刊\\n\\n"+(error&&error.message?error.message:String(error)));setTimeout(function(){var message=document.getElementById("error");if(message&&message.scrollIntoView){message.scrollIntoView({behavior:"smooth",block:"center"});}},0);}' +
     'function showResult(result){document.getElementById("statusView").innerHTML=' +
     '"<h2>Printed bulletin ready / 纸质周刊已完成</h2><p class=\'intro\'>"+escapeHtml(result.title||"Your bulletin is ready. / 您的周刊已准备好。")+"</p>"+'+
+    '(result.scheduleNotSet?"<p class=\'intro\'>The Sabbath Calendar has no schedule for this Sabbath yet, so its roster says TBD.<br>安息日日历还没有这个安息日的安排，所以名单显示为 TBD。</p>":"")+'+
     '"<a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open Google Doc / 打开 Google 文档</a>"+'+
     '"<div class=\'actions\'><button type=\'button\' class=\'cancel\' onclick=\'google.script.host.close()\'>Close / 关闭</button></div>";}' +
     'function runRequest(request){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(function(result){' +
@@ -721,7 +775,7 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   var bulletin = null;
   if (date) {
     try {
-      bulletin = buildBulletin_(date);
+      bulletin = buildBulletin_(date, { allowMissingSchedule: true });
       scheduleVerse = bulletin[location] ? String(bulletin[location].bibleVerses || '') : '';
       reviewedIntakeVerse = getReviewedBulletinIntakeBibleVerse_(date, location);
     } catch (error) {
@@ -931,7 +985,7 @@ function getPrintedBibleVersePropertyKey_(date, location) {
 function getBulletinIntakeSheetUrl_() {
   try {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = spreadsheet && spreadsheet.getSheetByName(CONFIG.intakeSheetName);
+    var sheet = spreadsheet && getBulletinSheet_(spreadsheet, CONFIG.intakeSheetName);
     if (sheet) {
       return spreadsheet.getUrl() + '#gid=' + sheet.getSheetId();
     }
@@ -1062,7 +1116,10 @@ function createPrintedBulletinUnlocked_(
   var location = normalizePrintedBulletinLocation_(requestedLocation);
   var bibleTranslations = normalizePhysicalBibleTranslations_(requestedBibleTranslations);
   var nameDictionary = buildPhysicalNameDictionary_();
-  var bulletin = buildBulletin_(date, { includeFullNames: true });
+  // Without this Sabbath's schedule the roster prints as TBD, and the dialog
+  // says why (#580).
+  var bulletin = buildBulletin_(date, { includeFullNames: true, allowMissingSchedule: true });
+  var scheduleNotSet = Boolean(bulletin.scheduleNotSet);
   var printedAnnouncements = readPrintedBulletinAnnouncements_(date);
   bulletin.printedAnnouncements = printedAnnouncements.entries;
   bulletin.hasPrintedAnnouncements = printedAnnouncements.found;
@@ -1131,6 +1188,7 @@ function createPrintedBulletinUnlocked_(
     format: format,
     action: action,
     url: document.getUrl(),
+    scheduleNotSet: scheduleNotSet,
   };
 }
 
@@ -1848,7 +1906,7 @@ var PHYSICAL_NAME_TITLES = Object.freeze([
 ]);
 
 function buildPhysicalNameDictionary_() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Name Dictionary');
+  var sheet = getBulletinSheet_(SpreadsheetApp.getActiveSpreadsheet(), 'Name Dictionary');
   var dictionary = {
     englishToChinese: {},
     chineseToEnglish: {},
@@ -1912,7 +1970,8 @@ function readPhysicalLeadershipTitles_(dictionary) {
   PHYSICAL_NAME_TITLES.forEach(function (title) {
     dictionary.titledNames[title.key] = [];
   });
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(
+  var sheet = getBulletinSheet_(
+    SpreadsheetApp.getActiveSpreadsheet(),
     PHYSICAL_LEADERSHIP_SHEET_NAME,
   );
   if (!sheet) {

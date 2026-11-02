@@ -2,6 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { mockFiles } from './helpers/file-system-mock';
 
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { version: '1.6.0' } },
+}));
+
 import {
   Bulletin,
   BulletinLocation,
@@ -91,6 +96,37 @@ describe('bulletin service', () => {
 
   const bulletinFor = (date: string) =>
     ({ date, queens: emptyLocation(), brooklyn: emptyLocation() }) as Bulletin;
+
+  const respondWith = (bulletin: Bulletin) =>
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, bulletin }),
+    } as Response);
+
+  it("asks for the bulletin with the app's version, so the API knows what it can show", async () => {
+    const fetchSpy = respondWith(bulletinFor('2026-08-08'));
+
+    await fetchBulletin('2026-08-08');
+
+    expect(String(fetchSpy.mock.calls[0][0])).toMatch(/\?date=2026-08-08&appVersion=1\.6\.0$/);
+  });
+
+  it("doesn't store a bulletin without its schedule over a copy that has one", async () => {
+    const stored = { ...bulletinFor('2026-08-08'), quarter: 'Q3' };
+    await cacheBulletin(stored, new Date(2026, 7, 7, 20).getTime());
+    respondWith({ ...bulletinFor('2026-08-08'), scheduleNotSet: true });
+
+    expect((await fetchBulletin('2026-08-08')).scheduleNotSet).toBe(true);
+    expect(await getCachedBulletin('2026-08-08', 0, { allowStale: true })).toEqual(stored);
+  });
+
+  it("doesn't store a bulletin without its schedule when there's no copy", async () => {
+    respondWith({ ...bulletinFor('2026-08-08'), scheduleNotSet: true });
+
+    await fetchBulletin('2026-08-08');
+
+    expect(await getCachedBulletin('2026-08-08', 0, { allowStale: true })).toBeUndefined();
+  });
 
   it('keeps the copies in the cache directory on a phone, out of AsyncStorage and its backups', async () => {
     await cacheBulletin(bulletinFor('2026-08-08'), new Date(2026, 7, 7, 20).getTime());

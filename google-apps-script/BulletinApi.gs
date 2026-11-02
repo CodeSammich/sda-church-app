@@ -169,50 +169,372 @@ var BULLETIN_COLUMN_ALTERNATIVES = Object.freeze({
   'Hymn of Response': Object.freeze(['English Hymn of Response', 'Chinese Hymn of Response']),
 });
 
+// Every tab the scripts read, with the tag it carries. Opening the spreadsheet
+// tags each tab, and each column in BULLETIN_SHEET_COLUMNS, with developer
+// metadata, which stays with a tab or column when it's renamed or moved
+// (#580; tagBulletinTabsAndColumns_). A tab or column is found by its name
+// first, so one made again under the expected name is the one read. Only when
+// nothing has the name does the tag find it under its new name. A tab's
+// earlier names, if the code ever renames one, are tried last.
+var BULLETIN_TAB_TAG_KEY = 'bulletin.tab';
+var BULLETIN_COLUMN_TAG_KEY = 'bulletin.column';
+var BULLETIN_TABS = Object.freeze({
+  'Sabbath Calendar': Object.freeze({ tag: 'sabbath-calendar', earlierNames: Object.freeze([]) }),
+  'Weekly Data': Object.freeze({ tag: 'weekly-data', earlierNames: Object.freeze([]) }),
+  'Name Dictionary': Object.freeze({ tag: 'name-dictionary', earlierNames: Object.freeze([]) }),
+  Leadership: Object.freeze({ tag: 'leadership', earlierNames: Object.freeze([]) }),
+});
+
+// The tab the scripts read as this one, or null.
+function getBulletinSheet_(spreadsheet, name) {
+  var sheet = spreadsheet.getSheetByName(name);
+  var tab = BULLETIN_TABS[name];
+  if (sheet || !tab) {
+    return sheet;
+  }
+  var tagged = findBulletinTabTags_(spreadsheet, tab.tag);
+  if (tagged.length) {
+    return tagged[0].sheet;
+  }
+  for (var index = 0; index < tab.earlierNames.length; index += 1) {
+    sheet = spreadsheet.getSheetByName(tab.earlierNames[index]);
+    if (sheet) {
+      return sheet;
+    }
+  }
+  return null;
+}
+
+function isBulletinTab_(sheet, name) {
+  if (!sheet) {
+    return false;
+  }
+  if (sheet.getName() === name) {
+    return true;
+  }
+  if (typeof sheet.getParent !== 'function') {
+    return false;
+  }
+  var found = getBulletinSheet_(sheet.getParent(), name);
+  return Boolean(found) && found.getSheetId() === sheet.getSheetId();
+}
+
+// The tabs carrying this tag, in tab order, each with its tag. Empty where
+// developer metadata can't be read, as in the tests' fake spreadsheets.
+function findBulletinTabTags_(spreadsheet, tag) {
+  if (typeof spreadsheet.createDeveloperMetadataFinder !== 'function') {
+    return [];
+  }
+  try {
+    return spreadsheet
+      .createDeveloperMetadataFinder()
+      .withKey(BULLETIN_TAB_TAG_KEY)
+      .withValue(tag)
+      .find()
+      .map(function (metadata) {
+        return { sheet: metadata.getLocation().getSheet(), metadata: metadata };
+      })
+      .filter(function (entry) {
+        return Boolean(entry.sheet);
+      })
+      .sort(function (left, right) {
+        return left.sheet.getIndex() - right.sheet.getIndex();
+      });
+  } catch (error) {
+    logBulletinTagError_('Could not read the tags of tab ' + tag, error);
+    return [];
+  }
+}
+
+// The tab's tagged columns, each with its 0-based index and its tag.
+function findBulletinColumnTags_(sheet) {
+  if (typeof sheet.createDeveloperMetadataFinder !== 'function') {
+    return [];
+  }
+  try {
+    return sheet
+      .createDeveloperMetadataFinder()
+      .withKey(BULLETIN_COLUMN_TAG_KEY)
+      .find()
+      .map(function (metadata) {
+        var column = metadata.getLocation().getColumn();
+        return column
+          ? { index: column.getColumn() - 1, tag: metadata.getValue(), metadata: metadata }
+          : null;
+      })
+      .filter(Boolean);
+  } catch (error) {
+    logBulletinTagError_('Could not read the column tags of ' + sheet.getName(), error);
+    return [];
+  }
+}
+
+function logBulletinTagError_(message, error) {
+  if (typeof Logger !== 'undefined') {
+    Logger.log(message + ': ' + error);
+  }
+}
+
+/**
+ * A tab's expected columns. A repeated Sabbath Calendar header is labeled
+ * with its location, such as "Brooklyn Offering Prayer". A column's tag is its
+ * label in lower case.
+ */
+function getBulletinExpectedColumns_(sheetName) {
+  var expected = BULLETIN_SHEET_COLUMNS[sheetName] || [];
+  var isSchedule = sheetName === CONFIG.scheduleSheetName;
+  var brooklynStart = expected.indexOf('Brooklyn Sermon');
+  var seen = {};
+  return expected.map(function (header, index) {
+    var occurrence = seen[header] || 0;
+    seen[header] = occurrence + 1;
+    var location = '';
+    if (isSchedule && expected.indexOf(header) !== expected.lastIndexOf(header)) {
+      location = index >= brooklynStart ? 'brooklyn' : 'queens';
+    }
+    var label = location ? (location === 'brooklyn' ? 'Brooklyn ' : 'Queens ') + header : header;
+    return {
+      header: header,
+      location: location,
+      occurrence: occurrence,
+      label: label,
+      tag: normalizeHeader_(label),
+    };
+  });
+}
+
+// Where an expected column is among these headers, by name, or -1.
+function findBulletinColumn_(sheetName, headers, column) {
+  return sheetName === CONFIG.scheduleSheetName
+    ? findScheduleColumn_(headers, column.header, column.location, column.occurrence)
+    : findFirstHeaderIndex_(
+        headers,
+        [column.header].concat(BULLETIN_COLUMN_ALTERNATIVES[column.header] || []),
+      );
+}
+
+/**
+ * A tab's header row as the scripts read it, and the columns read under a new
+ * name. An expected column whose name isn't in the row, but whose tag is on a
+ * column, was renamed: that column reads as the expected one. Columns named
+ * for their location go after the rest, since Brooklyn Sermon decides which
+ * side of the row a repeated header is on. When more than one column has an
+ * expected column's exact name, such as a second Date added for another
+ * fellowship, one is read and the others are left out: a column with data
+ * before an empty one, then the tagged one, then the first. A repeated
+ * header's copies are compared on their own side. So a new column can't take
+ * an existing one's place or its tag. Reads no tags while every expected
+ * column has its name once.
+ */
+function resolveBulletinHeaders_(sheet, sheetName, headers) {
+  var effective = headers.slice();
+  var renamed = [];
+  var duplicates = [];
+  var tags = null;
+  var expectedTags = {};
+  var expectedHeaders = {};
+  var columns = getBulletinExpectedColumns_(sheetName);
+  columns.forEach(function (column) {
+    expectedTags[column.tag] = true;
+    expectedHeaders[normalizeHeader_(column.header)] = true;
+  });
+  var readTags = function () {
+    tags = tags || findBulletinColumnTags_(sheet);
+    return tags;
+  };
+
+  // More than one column with an expected column's exact name: one is read
+  // and the others are left out. A repeated header is compared on its own
+  // side of Brooklyn Sermon, where it's meant to appear once.
+  var breakTie = function (column) {
+    var normalized = effective.map(normalizeHeader_);
+    var from = 0;
+    var to = effective.length;
+    var where = '';
+    if (column.location) {
+      var brooklynStart = normalized.indexOf('brooklyn sermon');
+      // Without Brooklyn Sermon the sides go by order, and a header named
+      // with its location is found anywhere.
+      if (brooklynStart === -1 || normalized.indexOf(normalizeHeader_(column.label)) !== -1) {
+        return;
+      }
+      if (column.location === 'brooklyn') {
+        from = brooklynStart;
+      } else {
+        to = brooklynStart;
+      }
+      where = column.location === 'brooklyn' ? ' Brooklyn' : ' Queens';
+    }
+    var wanted = normalizeHeader_(column.header);
+    var named = [];
+    for (var index = from; index < to; index += 1) {
+      if (normalized[index] === wanted) {
+        named.push(index);
+      }
+    }
+    if (named.length < 2) {
+      return;
+    }
+    // A column with something in it beats an empty one, such as the empty
+    // Weekly Data column an open adds when a rename came before any tag, once
+    // the old name is put back.
+    var filled = named.filter(function (index) {
+      return bulletinColumnHasData_(sheet, index);
+    });
+    var choices = filled.length ? filled : named;
+    var read = choices[0];
+    readTags().forEach(function (entry) {
+      if (entry.tag === column.tag && choices.indexOf(entry.index) !== -1) {
+        read = entry.index;
+      }
+    });
+    named.forEach(function (index) {
+      if (index !== read) {
+        effective[index] = '';
+      }
+    });
+    duplicates.push({
+      names: named.length + where + ' columns are named ' + (where ? column.header : column.label),
+      column: read + 1,
+    });
+  };
+
+  // An expected column missing by name is read from the column carrying its
+  // tag, unless that column now has another expected column's name.
+  var findRenamed = function (column) {
+    if (findBulletinColumn_(sheetName, effective, column) !== -1) {
+      return;
+    }
+    readTags().forEach(function (entry) {
+      var current = normalizeHeader_(effective[entry.index]);
+      if (
+        entry.tag !== column.tag ||
+        entry.index >= effective.length ||
+        expectedTags[current] ||
+        expectedHeaders[current]
+      ) {
+        return;
+      }
+      // Named from the sheet's own header, since a tie may have left this
+      // column out under it.
+      renamed.push({ label: column.label, header: String(headers[entry.index] || '') });
+      effective[entry.index] = column.label;
+    });
+  };
+
+  var single = columns.filter(function (column) {
+    return !column.location;
+  });
+  var repeated = columns.filter(function (column) {
+    return Boolean(column.location);
+  });
+  single.forEach(breakTie);
+  // Puts a renamed Brooklyn Sermon back before the repeated headers look for
+  // their side.
+  single.forEach(findRenamed);
+  repeated.forEach(breakTie);
+  // Again for every column, since a tie on a side can leave out a renamed
+  // column that took a repeated header's name.
+  single.concat(repeated).forEach(findRenamed);
+  return { headers: effective, renamed: renamed, duplicates: duplicates };
+}
+
+// Whether a column has anything below its header row.
+function bulletinColumnHasData_(sheet, index) {
+  var rows = sheet.getLastRow() - 1;
+  if (rows < 1) {
+    return false;
+  }
+  return sheet
+    .getRange(2, index + 1, rows, 1)
+    .getDisplayValues()
+    .some(function (row) {
+      return String(row[0] || '').trim() !== '';
+    });
+}
+
+// A column's letters, such as C for column 3 or AA for column 27.
+function getColumnLetters_(columnNumber) {
+  var letters = '';
+  for (var number = columnNumber; number > 0; number = Math.floor((number - 1) / 26)) {
+    letters = String.fromCharCode(65 + ((number - 1) % 26)) + letters;
+  }
+  return letters;
+}
+
+function getBulletinHeaders_(sheet, sheetName, headers) {
+  return resolveBulletinHeaders_(sheet, sheetName, headers).headers;
+}
+
+function readBulletinTable_(sheet, sheetName) {
+  var table = readTable_(sheet);
+  table.headers = getBulletinHeaders_(sheet, sheetName, table.headers);
+  return table;
+}
+
 /**
  * The expected columns a tab is missing, such as "Weekly Data: Bible Verses",
- * or the tab itself. Order and extra columns don't matter. A repeated
- * Sabbath Calendar header is named with its location.
+ * or the tab itself. Order and extra columns don't matter, and a renamed tab
+ * or column that still has its tag isn't missing. A repeated Sabbath Calendar
+ * header is named with its location.
  */
 function getMissingBulletinColumns_(spreadsheet) {
   var missing = [];
   Object.keys(BULLETIN_SHEET_COLUMNS).forEach(function (sheetName) {
-    var sheet = spreadsheet.getSheetByName(sheetName);
+    var sheet = getBulletinSheet_(spreadsheet, sheetName);
     if (!sheet) {
       missing.push(sheetName + ' (tab)');
       return;
     }
-    var headers = readTable_(sheet).headers;
-    var expected = BULLETIN_SHEET_COLUMNS[sheetName];
-    var isSchedule = sheetName === CONFIG.scheduleSheetName;
-    var brooklynStart = expected.indexOf('Brooklyn Sermon');
-    var seen = {};
-    expected.forEach(function (header, index) {
-      var occurrence = seen[header] || 0;
-      seen[header] = occurrence + 1;
-      var location = '';
-      if (isSchedule && expected.indexOf(header) !== expected.lastIndexOf(header)) {
-        location = index >= brooklynStart ? 'brooklyn' : 'queens';
-      }
-      var found = isSchedule
-        ? findScheduleColumn_(headers, header, location, occurrence) !== -1
-        : findFirstHeaderIndex_(
-            headers,
-            [header].concat(BULLETIN_COLUMN_ALTERNATIVES[header] || []),
-          ) !== -1;
-      if (!found) {
-        var label = location ? (location === 'brooklyn' ? 'Brooklyn ' : 'Queens ') + header : header;
-        missing.push(sheetName + ': ' + label);
+    var headers = readBulletinTable_(sheet, sheetName).headers;
+    getBulletinExpectedColumns_(sheetName).forEach(function (column) {
+      if (findBulletinColumn_(sheetName, headers, column) === -1) {
+        missing.push(sheetName + ': ' + column.label);
       }
     });
   });
   return missing;
 }
 
+/**
+ * The tabs and columns read under a new name, found by their tags, such as
+ * 'Sabbath Calendar: "Speaker" is read as Queens Sermon', and the names more
+ * than one column has, such as 'Sabbath Calendar: 2 columns are named Date;
+ * column B is read'.
+ */
+function getRenamedBulletinTabsAndColumns_(spreadsheet) {
+  var renamed = [];
+  Object.keys(BULLETIN_TABS).forEach(function (name) {
+    var sheet = getBulletinSheet_(spreadsheet, name);
+    if (!sheet) {
+      return;
+    }
+    if (sheet.getName() !== name) {
+      renamed.push('Tab "' + sheet.getName() + '" is read as ' + name);
+    }
+    if (!BULLETIN_SHEET_COLUMNS[name]) {
+      return;
+    }
+    var resolved = resolveBulletinHeaders_(sheet, name, readTable_(sheet).headers);
+    resolved.duplicates.forEach(function (tie) {
+      renamed.push(name + ': ' + tie.names + '; column ' + getColumnLetters_(tie.column) + ' is read');
+    });
+    resolved.renamed.forEach(function (column) {
+      renamed.push(name + ': "' + column.header + '" is read as ' + column.label);
+    });
+  });
+  return renamed;
+}
+
 function doGet(event) {
   try {
     var requestedDate = getRequestedDate_(event);
-    var bulletin = getBulletin_(requestedDate);
+    var bulletin = getBulletin_(requestedDate, {
+      allowMissingSchedule: isAppVersionAtLeast_(
+        event && event.parameter ? event.parameter.appVersion : '',
+        SCHEDULE_NOT_SET_APP_VERSION,
+      ),
+    });
 
     return jsonResponse_({ ok: true, bulletin: bulletin });
   } catch (error) {
@@ -223,35 +545,63 @@ function doGet(event) {
   }
 }
 
-function getBulletin_(requestedDate) {
+// The first app version that shows a bulletin whose schedule isn't set
+// (#580). Older apps, and the API checks, still get an error, so an older
+// app keeps showing the last copy it had rather than a blank one.
+var SCHEDULE_NOT_SET_APP_VERSION = '1.6.0';
+
+// Whether an app version such as 1.6.2 is this one or later. Anything that
+// isn't a version, such as a request without one, is not.
+function isAppVersionAtLeast_(version, minimum) {
+  var text = String(version || '').trim();
+  if (!/^\d+(\.\d+){0,2}$/.test(text)) {
+    return false;
+  }
+  var have = text.split('.');
+  var want = minimum.split('.');
+  for (var index = 0; index < 3; index += 1) {
+    var difference = Number(have[index] || 0) - Number(want[index] || 0);
+    if (difference) {
+      return difference > 0;
+    }
+  }
+  return true;
+}
+
+function getBulletin_(requestedDate, options) {
   var cache = CacheService.getScriptCache();
-  var cacheKey = 'bulletin:' + CONFIG.cacheVersion + ':' + requestedDate;
+  var cacheKey =
+    'bulletin:' +
+    CONFIG.cacheVersion +
+    ':' +
+    (options && options.allowMissingSchedule ? 'schedule-optional:' : '') +
+    requestedDate;
 
   var cachedJson = cache.get(cacheKey);
   if (cachedJson) {
     return JSON.parse(cachedJson);
   }
 
-  var bulletin = buildBulletin_(requestedDate);
+  var bulletin = buildBulletin_(requestedDate, options);
   cache.put(cacheKey, JSON.stringify(bulletin), CONFIG.cacheSeconds);
   return bulletin;
 }
 
 function buildBulletin_(requestedDate, options) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var scheduleSheetName = getScheduleSheetName_(requestedDate);
-  var scheduleSheet = spreadsheet.getSheetByName(scheduleSheetName);
-
-  if (!scheduleSheet) {
-    throw new Error('Schedule sheet not found: ' + scheduleSheetName);
+  var schedule = readScheduleRow_(
+    spreadsheet,
+    getScheduleSheetName_(requestedDate),
+    requestedDate,
+  );
+  if (schedule.error && !(options && options.allowMissingSchedule)) {
+    throw new Error(schedule.error);
   }
-
-  var scheduleTable = readTable_(scheduleSheet);
-  var scheduleRow = findDateRow_(scheduleTable, requestedDate);
-
-  if (!scheduleRow) {
-    throw new Error('No schedule found for ' + requestedDate);
-  }
+  // Without the tab, its Date column, or this Sabbath's row (#580), every
+  // schedule field is blank and the bulletin says the schedule isn't set.
+  // Weekly Data's sermon and hymns still come.
+  var scheduleTable = schedule.table || { headers: [] };
+  var scheduleRow = schedule.row || [];
 
   var bulletin = {
     date: requestedDate,
@@ -264,6 +614,9 @@ function buildBulletin_(requestedDate, options) {
     queens: createLocation_(),
     brooklyn: createLocation_(),
   };
+  if (schedule.error) {
+    bulletin.scheduleNotSet = true;
+  }
 
   var headerOccurrences = {};
   COLUMN_SCHEMA.forEach(function (field) {
@@ -327,6 +680,24 @@ function buildBulletin_(requestedDate, options) {
   }
 
   return bulletin;
+}
+
+// This Sabbath's Sabbath Calendar row and the tab's headers, or the error
+// saying which of the tab, its Date column, or the row is missing.
+function readScheduleRow_(spreadsheet, sheetName, requestedDate) {
+  var sheet = getBulletinSheet_(spreadsheet, sheetName);
+  if (!sheet) {
+    return { error: 'Schedule sheet not found: ' + sheetName };
+  }
+  var table = readBulletinTable_(sheet, sheetName);
+  if (findFirstHeaderIndex_(table.headers, CONFIG.dateHeaders) === -1) {
+    return { error: 'Schedule sheet is missing a Date column' };
+  }
+  var row = findDateRow_(table, requestedDate);
+  if (!row) {
+    return { error: 'No schedule found for ' + requestedDate };
+  }
+  return { table: table, row: row };
 }
 
 var BULLETIN_METADATA_TRANSLATION_TARGETS = Object.freeze({
@@ -482,12 +853,12 @@ function populateBulletinIntake_(location, intakeRows) {
 }
 
 function getBulletinIntakeRows_(spreadsheet, requestedDate, location) {
-  var sheet = spreadsheet.getSheetByName(CONFIG.intakeSheetName);
+  var sheet = getBulletinSheet_(spreadsheet, CONFIG.intakeSheetName);
   if (!sheet) {
     return null;
   }
 
-  var table = readTable_(sheet);
+  var table = readBulletinTable_(sheet, CONFIG.intakeSheetName);
   var dateColumn = findFirstHeaderIndex_(table.headers, ['Date']);
   var locationColumn = findFirstHeaderIndex_(table.headers, ['Location']);
   // Without them no row can be matched, so the week's content stays blank;

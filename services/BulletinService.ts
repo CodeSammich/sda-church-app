@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 import { getBulletinApiUrl } from '@/constants/ExternalLinks';
 import { type CachedText, pruneCachedTexts, readCachedText, writeCachedText } from '@/services/CacheStore';
 
@@ -62,6 +64,12 @@ export type Bulletin = {
   };
   queens: BulletinLocation;
   brooklyn: BulletinLocation;
+  /**
+   * The Sabbath Calendar has no schedule for this date (#580): the tab, its
+   * Date column, or the date's row is missing, so every schedule field is
+   * blank. Sent only to app versions that show it.
+   */
+  scheduleNotSet?: boolean;
 };
 
 type BulletinApiResponse =
@@ -227,7 +235,7 @@ export const fetchBulletin = async (
   date: string,
   signal?: AbortSignal,
 ) => {
-  const response = await fetch(getBulletinApiUrl(date), {
+  const response = await fetch(getBulletinApiUrl(date, Constants.expoConfig?.version), {
     cache: 'no-store',
     headers: { Accept: 'application/json' },
     signal,
@@ -246,6 +254,10 @@ export const fetchBulletin = async (
     throw new Error('Bulletin response is incomplete');
   }
 
-  await cacheBulletin(payload.bulletin).catch(() => undefined);
+  // A bulletin without its schedule isn't kept, so it never replaces a
+  // stored copy that has one, and the next look asks again.
+  if (!payload.bulletin.scheduleNotSet) {
+    await cacheBulletin(payload.bulletin).catch(() => undefined);
+  }
   return payload.bulletin;
 };

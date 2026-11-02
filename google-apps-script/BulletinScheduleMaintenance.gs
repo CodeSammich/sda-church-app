@@ -95,19 +95,13 @@ function onEdit(e) {
 
   var range = e.range;
   var sheet = range.getSheet();
-  if (
-    sheet &&
-    sheet.getName() === SCHEDULE_ASSIGNMENT_CHECK_CONFIG.nameDictionarySheetName
-  ) {
+  if (isBulletinTab_(sheet, SCHEDULE_ASSIGNMENT_CHECK_CONFIG.nameDictionarySheetName)) {
     // Dictionary edits can merge or split pinyin aliases, which changes
     // which roster cells count as the same person.
     refreshScheduleRosterChecksSafely_();
     return;
   }
-  if (
-    !sheet ||
-    sheet.getName() !== BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName
-  ) {
+  if (!isBulletinTab_(sheet, BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName)) {
     return;
   }
 
@@ -215,7 +209,14 @@ function runBulletinScheduleMaintenance_(now) {
       validation: validation,
     };
   } finally {
-    lock.releaseLock();
+    // Last, so a Weekly Data tab made again above is tagged too, and even
+    // when a step above stops the upkeep, such as on a Sabbath Calendar
+    // without its Date column, so the other tabs and columns keep their tags.
+    try {
+      tagBulletinTabsAndColumnsSafely_(SpreadsheetApp.getActiveSpreadsheet());
+    } finally {
+      lock.releaseLock();
+    }
   }
 }
 
@@ -226,7 +227,7 @@ function runBulletinScheduleMaintenance_(now) {
 function ensureBulletinHeaderProtections_() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   Object.keys(BULLETIN_SHEET_COLUMNS).forEach(function (sheetName) {
-    var sheet = spreadsheet.getSheetByName(sheetName);
+    var sheet = getBulletinSheet_(spreadsheet, sheetName);
     if (!sheet) {
       return;
     }
@@ -257,6 +258,109 @@ function ensureBulletinHeaderProtections_() {
       }
     }
   });
+}
+
+/**
+ * Tags each tab in BULLETIN_TABS, and each expected column of the bulletin
+ * tabs, so a later rename doesn't lose it (#580). Only what's found by its
+ * name is tagged. A renamed tab or column keeps the tag it has, and a missing
+ * one has nothing to tag. The name wins, as when the scripts read: a tag left
+ * on another tab or column moves to the one with the name, such as from a
+ * duplicated tab, or a renamed column that someone made again under its old
+ * name. An editor who can't change a protected range leaves its tag for the
+ * next open by the technology group.
+ */
+function tagBulletinTabsAndColumns_(spreadsheet) {
+  var visibility = SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT;
+  Object.keys(BULLETIN_TABS).forEach(function (name) {
+    var tab = BULLETIN_TABS[name];
+    var tagged = findBulletinTabTags_(spreadsheet, tab.tag);
+    var sheet = spreadsheet.getSheetByName(name);
+    if (!sheet && !tagged.length) {
+      sheet = getBulletinSheet_(spreadsheet, name);
+    }
+    if (!sheet) {
+      return;
+    }
+    var hasTag = false;
+    tagged.forEach(function (entry) {
+      if (entry.sheet.getSheetId() === sheet.getSheetId()) {
+        hasTag = true;
+      } else {
+        tryBulletinTagChange_(name, function () {
+          entry.metadata.remove();
+        });
+      }
+    });
+    if (!hasTag) {
+      tryBulletinTagChange_(name, function () {
+        sheet.addDeveloperMetadata(BULLETIN_TAB_TAG_KEY, tab.tag, visibility);
+      });
+    }
+  });
+
+  Object.keys(BULLETIN_SHEET_COLUMNS).forEach(function (name) {
+    var sheet = getBulletinSheet_(spreadsheet, name);
+    if (!sheet || sheet.getLastColumn() < 1) {
+      return;
+    }
+    var headers = getBulletinHeaders_(
+      sheet,
+      name,
+      sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0],
+    );
+    var tags = findBulletinColumnTags_(sheet);
+    getBulletinExpectedColumns_(name).forEach(function (column) {
+      var index = findBulletinColumn_(name, headers, column);
+      if (index === -1) {
+        return;
+      }
+      var hasTag = false;
+      tags.forEach(function (entry) {
+        if (entry.tag !== column.tag) {
+          return;
+        }
+        if (entry.index === index) {
+          hasTag = true;
+        } else {
+          tryBulletinTagChange_(name + ': ' + column.label, function () {
+            entry.metadata.remove();
+          });
+        }
+      });
+      if (!hasTag) {
+        tryBulletinTagChange_(name + ': ' + column.label, function () {
+          getBulletinWholeColumn_(sheet, index + 1).addDeveloperMetadata(
+            BULLETIN_COLUMN_TAG_KEY,
+            column.tag,
+            visibility,
+          );
+        });
+      }
+    });
+  });
+}
+
+function tagBulletinTabsAndColumnsSafely_(spreadsheet) {
+  try {
+    tagBulletinTabsAndColumns_(spreadsheet);
+  } catch (error) {
+    logBulletinTagError_('Could not tag the bulletin tabs and columns', error);
+  }
+}
+
+function tryBulletinTagChange_(what, change) {
+  try {
+    change();
+  } catch (error) {
+    logBulletinTagError_('Could not update the tag of ' + what, error);
+  }
+}
+
+// Developer metadata goes on a whole column, such as C:C.
+function getBulletinWholeColumn_(sheet, columnNumber) {
+  var letters = getColumnLetters_(columnNumber);
+  return sheet.getRange(letters + ':' + letters);
 }
 
 /**
@@ -346,7 +450,8 @@ function applySabbathCalendarEnglishValidation_(sheet) {
 }
 
 function getBulletinScheduleMaintenanceSheet_() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(
+  var sheet = getBulletinSheet_(
+    SpreadsheetApp.getActiveSpreadsheet(),
     BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName,
   );
   if (!sheet) {
@@ -466,7 +571,7 @@ var WEEKLY_DATA_EXAMPLE_ROWS = Object.freeze([
 function ensureWeeklyDataTab_(spreadsheet) {
   var name = CONFIG.intakeSheetName;
   var expected = BULLETIN_SHEET_COLUMNS[name];
-  var sheet = spreadsheet.getSheetByName(name) || spreadsheet.insertSheet(name);
+  var sheet = getBulletinSheet_(spreadsheet, name) || spreadsheet.insertSheet(name);
   if (sheet.getLastRow() === 0) {
     var rows = [expected.slice()].concat(
       WEEKLY_DATA_EXAMPLE_ROWS.map(function (row) {
@@ -485,7 +590,11 @@ function ensureWeeklyDataTab_(spreadsheet) {
   }
 
   var lastColumn = sheet.getLastColumn();
-  var headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  var headers = getBulletinHeaders_(
+    sheet,
+    name,
+    sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0],
+  );
   var missing = expected.filter(function (header) {
     return (
       findFirstHeaderIndex_(
@@ -525,7 +634,11 @@ function showWeeklyDataNotice_(spreadsheet, message) {
 function populateUpcomingWeeklyDataRows_(spreadsheet, now) {
   var sheet = ensureWeeklyDataTab_(spreadsheet);
   var lastColumn = sheet.getLastColumn();
-  var headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  var headers = getBulletinHeaders_(
+    sheet,
+    CONFIG.intakeSheetName,
+    sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0],
+  );
   var dateColumn = findFirstHeaderIndex_(headers, ['Date']) + 1;
   var locationColumn = findFirstHeaderIndex_(headers, ['Location']) + 1;
   if (!dateColumn || !locationColumn) {
@@ -724,7 +837,11 @@ function hideOldBulletinScheduleRows_(sheet, now) {
  */
 function getSabbathCalendarColumnNumbers_(sheet) {
   var expected = BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
-  var headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getDisplayValues()[0];
+  var headers = getBulletinHeaders_(
+    sheet,
+    BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName,
+    sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getDisplayValues()[0],
+  );
   var brooklynStart = expected.indexOf('Brooklyn Sermon');
   var seen = {};
   var numbers = [];
@@ -744,9 +861,11 @@ function getSabbathCalendarColumnNumbers_(sheet) {
 }
 
 function getBulletinScheduleMaintenanceColumns_(sheet) {
-  var headers = sheet
-    .getRange(1, 1, 1, sheet.getLastColumn())
-    .getDisplayValues()[0];
+  var headers = getBulletinHeaders_(
+    sheet,
+    BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName,
+    sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0],
+  );
   var dateColumn = findBulletinMaintenanceHeaderColumn_(
     headers,
     BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.dateHeader,
