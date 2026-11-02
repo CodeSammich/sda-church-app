@@ -149,7 +149,9 @@ Important structural columns:
 - Column B, `Quarter`, is the schedule-maintenance quarter marker. The script
   owns the date and quarter structure; do not manually move these columns.
 - The repeated `Chair/Pastoral Prayer` and `Offering Prayer` headers are
-  intentional. Each location's copy is the one on its side of `Brooklyn Sermon`:
+  intentional. A location's copy can be named outright, such as `Queens Offering
+  Prayer` or `Brooklyn Chair/Pastoral Prayer`, and is then found wherever it is.
+  Otherwise each location's copy is the one on its side of `Brooklyn Sermon`:
   Queens's before it, Brooklyn's after (`findScheduleColumn_`). Without a
   `Brooklyn Sermon` column, the first copy is Queens's and the second Brooklyn's.
 - `Flower Offering` belongs to the Queens worship program and schedule data. It
@@ -162,11 +164,12 @@ Important structural columns:
   the printed bulletin, which uses it when no printed announcements were saved
   for that date; the printed sunset time is calculated, not read from the
   sheet.
-- The roster conflict highlights and unknown-name checks still go by this order,
-  from `Queens Sermon` to `Sabbath School` (F:Y,
-  `getSchedulePersonColumnBounds_`). Add a new `Sabbath Calendar` column at the
-  far right, after `Sabbath School`; the checks skip it unless it's also added
-  to `BULLETIN_SHEET_COLUMNS`.
+- The roster conflict highlights, the unknown-name checks, and the
+  English-only guard find their columns by name too, wherever they are
+  (`getSchedulePersonColumns_`, `getSabbathCalendarColumnNumbers_`). A column
+  you add is left alone by all three unless it's also added to
+  `BULLETIN_SHEET_COLUMNS`. Keep `Date` and `Quarter` in columns A and B,
+  which the technology group's protection covers.
 
 The header row is protected for the technology group
 `technology@nyccsda.org`. Columns A:B are also protected for that group across
@@ -405,12 +408,14 @@ nothing is removed, reordered, or hidden. Every run also sets the `Date` column'
 ### Roster conflict highlights and unknown names
 
 `ScheduleAssignmentChecks.gs` helps planners catch two roster mistakes in the
-person columns (`Queens Sermon` through `Sabbath School`, F:Y). Row 1 and
-columns A:E are never checked or changed.
+person columns: the expected columns from `Queens Sermon` through `Sabbath
+School`, each found by its header wherever it is. Row 1, the date, quarter,
+and service metadata columns, and any column you add are never checked or
+changed.
 
 #### Same person twice on one Sabbath (automatic red)
 
-If a name appears in more than one F:Y cell of the same row, every cell holding
+If a name appears in more than one roster cell of the same row, every cell holding
 it turns pale red (`#ea9999`, the Sheets "light red 2" color). No click or
 setup is needed.
 
@@ -438,7 +443,7 @@ The script only clears cells that are exactly `#ea9999`, and only replaces or
 clears notes that start with `Duplicate / 重复:` (or the earlier `Duplicate /
 重複:` and `Roster check / 名單檢查` wordings). Other cell colors and
 planners' own notes are left alone; a cell with a planner's note still turns
-red but keeps that note. Do not use `#ea9999` for manual highlighting in F:Y.
+red but keeps that note. Do not use `#ea9999` for manual highlighting in the roster columns.
 
 #### Name not in the Name Dictionary (popup)
 
@@ -857,9 +862,8 @@ changes the URL and requires a coordinated mobile-app update.
 | API returns `No schedule found for …` | Missing `Sabbath Calendar` date row (a missing or renamed tab returns `Schedule sheet not found` instead) | Restore the exact tab name and a matching Date row |
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was renamed or deleted, so that field is blank | Give a column that exact name again, in any position. To rename one on purpose, follow the [Change checklist](#change-checklist) |
 | An empty column appeared at the far right of `Weekly Data` | An expected column was renamed or deleted, and the open-time upkeep added it back | If it was renamed, move its data into the added column and delete the renamed one. To rename on purpose, follow the [Change checklist](#change-checklist) |
-| A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side |
-| A roster highlight's note or an unknown-name popup names the wrong role | A `Sabbath Calendar` column was inserted or moved; the roster checks go by the documented order | Restore the order, and add new columns at the far right |
-| A roster cell is pale red | The same name is in another F:Y cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
+| A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side, or name it with its location, such as `Queens Offering Prayer` |
+| A roster cell is pale red | The same name is in another roster cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
 | No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Google Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
 | A red cell shows no hover note | The cell already had a planner's own note, which the script keeps | Read the row to find the other role, or delete the planner's note so the script can add its own |
 | Chinese text appears in Sabbath Calendar | Typed or pasted into A:Y | The onEdit guard should clear it with a popup; if it stays with a red corner, check **Extensions → Apps Script → Executions** for errors. Use Name Dictionary for approved English names |
