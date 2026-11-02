@@ -46,8 +46,11 @@ export const CHURCH_LONGITUDE = -73.88914;
 export const BULLETIN_API_BASE_URL =
   'https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec';
 
-export const getBulletinApiUrl = (date: string) =>
-  `${BULLETIN_API_BASE_URL}?date=${encodeURIComponent(date)}`;
+// The app's version tells the API which response shapes it understands, such
+// as a bulletin whose schedule isn't set (#580).
+export const getBulletinApiUrl = (date: string, appVersion?: string) =>
+  `${BULLETIN_API_BASE_URL}?date=${encodeURIComponent(date)}` +
+  (appVersion ? `&appVersion=${encodeURIComponent(appVersion)}` : '');
 
 /**
  * Centralized hub for external destinations.

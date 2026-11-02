@@ -92,7 +92,7 @@ the church's Workspace terms during annual maintenance.
 | `test/apps-script-physical-bulletin.test.ts` | Physical layout, sheet columns, privacy, lookup, QR, and maintenance regression tests |
 | `test/apps-script-bulletin-merge.test.ts` | Intake mapping and precedence regression tests |
 | `test/apps-script-schedule-assignment-checks.test.ts` | Roster conflict highlighting and unknown-name warning tests |
-| `test/apps-script-bulletin-tags.test.ts` | Renamed and moved tabs and columns found by their tags |
+| `test/apps-script-bulletin-resilience.test.ts` | Renamed and moved tabs and columns found by their tags, and bulletins without their schedule |
 | `test/integration/bulletin-api.mjs` | Opt-in read-only production API contract check |
 
 ## The three mandatory sheets
@@ -358,8 +358,9 @@ or column through a rename or a move. So:
   edit its protected header row, so the column couldn't be added back;
 - a missing `Weekly Data` tab, or one without `Date` or `Location`, leaves every
   week's content blank until the next open puts it back. A deleted `Sabbath
-  Calendar`, or one without `Date`, stops the bulletin, since every bulletin
-  starts from that tab's date row. A `Sabbath Calendar` without `Date` or
+  Calendar`, or one without `Date`, leaves every week without its schedule (see
+  [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)).
+  A `Sabbath Calendar` without `Date` or
   `Quarter` also stops the open-time upkeep from its quarter rows on (steps 4
   to 7 above) until the column is back.
 
@@ -524,9 +525,26 @@ only when it is blank may a saved printed override or older fallback memory be
 used. This prevents an old manual selection from masking newly reviewed intake.
 
 Blank content remains blank in the API and renders as `TBD` in the app or as the
-bilingual printed placeholder. Missing roster rows are different: a missing
-`Sabbath Calendar` sheet or missing date row is an API error because there is no
-canonical schedule record.
+bilingual printed placeholder.
+
+A missing schedule is different: the `Sabbath Calendar` tab, its `Date` column,
+or the Sabbath's row is gone, so there's no schedule record at all (#580).
+Then:
+
+- **App 1.6.0 and later** send their version with each request
+  (`appVersion=1.6.0`), and get the bulletin with every schedule field blank,
+  `Weekly Data`'s content, and `scheduleNotSet: true`. The app shows "This
+  Sabbath's schedule isn't set yet" above the rest, which shows `TBD`. It
+  doesn't store that bulletin, so a copy it stored earlier, with a schedule,
+  is shown instead, and the next look asks again.
+- **Older apps, and the API checks** (`verify-bulletin-api` and the external
+  dependency monitor), get the error as before: `Schedule sheet not found: …`,
+  `Schedule sheet is missing a Date column`, or `No schedule found for …`. An
+  older app keeps showing the last copy it stored, rather than a blank one it
+  can't explain. `SCHEDULE_NOT_SET_APP_VERSION` in `BulletinApi.gs` sets the
+  first version that gets the bulletin instead.
+- **The printed bulletin** is still made, with its roster as `TBD`, and the
+  dialog says the Sabbath Calendar has no schedule for that Sabbath yet.
 
 ### Public response boundary
 
@@ -628,7 +646,9 @@ preview surface, not the canonical release channel.
 ### Caching and refresh
 
 - The API caches privacy-filtered responses for 120 seconds.
-- The app caches successful bulletin responses per Sabbath date on the device.
+- The app caches successful bulletin responses per Sabbath date on the device,
+  except one without its schedule (`scheduleNotSet`), which never replaces a
+  stored copy.
 - Next Week loads lazily when opened.
 - A manual refresh bypasses the device cache but still observes the server's
   two-minute Apps Script cache and enters a five-minute local cooldown.
@@ -888,7 +908,7 @@ changes the URL and requires a coordinated mobile-app update.
 | --- | --- | --- |
 | App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`; allow up to 120 seconds for API cache expiry |
 | New intake verse is ignored by print prompt | Old print memory or override | Check that `Weekly Data → Bible Verses` is nonblank; it has priority over old memory |
-| API returns `No schedule found for …` | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag) | Restore the tab and a matching Date row |
+| API returns `No schedule found for …`, or the app says the schedule isn't set | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag). Apps from 1.6.0 get the bulletin without its schedule instead of the error | Restore the tab and a matching Date row |
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
 | The spreadsheet opens with **Bulletin tabs or columns renamed** | Someone renamed a tab or column the scripts read | Nothing: it's still read by its tag, and the notice shows once. See [Columns are read by name](#columns-are-read-by-name) |
 | A renamed column stopped being read | A column with its old name was added, which the scripts read instead | Delete the new column, or move its data into it and delete the renamed one |

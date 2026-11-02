@@ -580,6 +580,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function showGenerationError(error){document.getElementById("statusView").hidden=true;document.getElementById("bulletinForm").hidden=false;showError("Could not create bulletin / 无法创建周刊\\n\\n"+(error&&error.message?error.message:String(error)));setTimeout(function(){var message=document.getElementById("error");if(message&&message.scrollIntoView){message.scrollIntoView({behavior:"smooth",block:"center"});}},0);}' +
     'function showResult(result){document.getElementById("statusView").innerHTML=' +
     '"<h2>Printed bulletin ready / 纸质周刊已完成</h2><p class=\'intro\'>"+escapeHtml(result.title||"Your bulletin is ready. / 您的周刊已准备好。")+"</p>"+'+
+    '(result.scheduleNotSet?"<p class=\'intro\'>The Sabbath Calendar has no schedule for this Sabbath yet, so its roster says TBD.<br>安息日日历还没有这个安息日的安排，所以名单显示为 TBD。</p>":"")+'+
     '"<a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open Google Doc / 打开 Google 文档</a>"+'+
     '"<div class=\'actions\'><button type=\'button\' class=\'cancel\' onclick=\'google.script.host.close()\'>Close / 关闭</button></div>";}' +
     'function runRequest(request){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(function(result){' +
@@ -775,7 +776,7 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   var bulletin = null;
   if (date) {
     try {
-      bulletin = buildBulletin_(date);
+      bulletin = buildBulletin_(date, { allowMissingSchedule: true });
       scheduleVerse = bulletin[location] ? String(bulletin[location].bibleVerses || '') : '';
       reviewedIntakeVerse = getReviewedBulletinIntakeBibleVerse_(date, location);
     } catch (error) {
@@ -1116,7 +1117,10 @@ function createPrintedBulletinUnlocked_(
   var location = normalizePrintedBulletinLocation_(requestedLocation);
   var bibleTranslations = normalizePhysicalBibleTranslations_(requestedBibleTranslations);
   var nameDictionary = buildPhysicalNameDictionary_();
-  var bulletin = buildBulletin_(date, { includeFullNames: true });
+  // Without this Sabbath's schedule the roster prints as TBD, and the dialog
+  // says why (#580).
+  var bulletin = buildBulletin_(date, { includeFullNames: true, allowMissingSchedule: true });
+  var scheduleNotSet = Boolean(bulletin.scheduleNotSet);
   var printedAnnouncements = readPrintedBulletinAnnouncements_(date);
   bulletin.printedAnnouncements = printedAnnouncements.entries;
   bulletin.hasPrintedAnnouncements = printedAnnouncements.found;
@@ -1185,6 +1189,7 @@ function createPrintedBulletinUnlocked_(
     format: format,
     action: action,
     url: document.getUrl(),
+    scheduleNotSet: scheduleNotSet,
   };
 }
 

@@ -2,8 +2,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext, runInContext } from 'node:vm';
 
-// Renamed and moved tabs and columns are still found by the developer
-// metadata tags the open-time upkeep puts on them (#580).
+// The bulletin survives a reorganized spreadsheet (#580): renamed and moved
+// tabs and columns are still found by the developer metadata tags the
+// open-time upkeep puts on them, and a missing schedule gives a bulletin that
+// says so, for the app versions that show it.
 
 const SCHEDULE_HEADERS = [
   'Date', 'Quarter', 'Special Remark', 'Tithe Purpose', 'Pastor Travel',
@@ -235,7 +237,18 @@ const createChurchWorkbook = () =>
   });
 
 const load = (workbook: FakeWorkbook, properties?: Map<string, string>) => {
+  const cache = new Map<string, string>();
   const context = createContext({
+    CacheService: {
+      getScriptCache: () => ({
+        get: (key: string) => cache.get(key) ?? null,
+        put: (key: string, value: string) => cache.set(key, value),
+      }),
+    },
+    ContentService: {
+      MimeType: { JSON: 'json' },
+      createTextOutput: (text: string) => ({ text, setMimeType: () => ({ text }) }),
+    },
     SpreadsheetApp: {
       getActiveSpreadsheet: () => workbook,
       DeveloperMetadataVisibility: { DOCUMENT: 'DOCUMENT' },
@@ -490,5 +503,107 @@ describe('bulletin tab and column tags', () => {
 
     expect(run(context, `takeNewBulletinRenames_(['A'])`)).toEqual(['A']);
     expect(run(context, `takeNewBulletinRenames_(['A'])`)).toEqual(['A']);
+  });
+});
+
+describe('a bulletin without its schedule', () => {
+  type Response = { ok: boolean; error?: string; bulletin?: Bulletin & { scheduleNotSet?: boolean } };
+
+  const request = (context: object, appVersion?: string) =>
+    JSON.parse(
+      runInContext(
+        `doGet({ parameter: ${JSON.stringify({ date: SABBATH, ...(appVersion ? { appVersion } : {}) })} }).text`,
+        context,
+      ) as string,
+    ) as Response;
+
+  const softBulletin = (context: object) =>
+    run<Bulletin & { scheduleNotSet?: boolean }>(
+      context,
+      `buildBulletin_('${SABBATH}', { includeFullNames: true, allowMissingSchedule: true })`,
+    );
+
+  // Each way the Sabbath Calendar can lose the bulletin's schedule, and the
+  // error older apps still get.
+  const breakages: Array<[string, (workbook: FakeWorkbook) => void, string]> = [
+    [
+      'the tab is deleted',
+      (workbook) => workbook.sheets.splice(workbook.sheets.indexOf(workbook.sheet('Sabbath Calendar')), 1),
+      'Schedule sheet not found: Sabbath Calendar',
+    ],
+    [
+      'its Date column is deleted',
+      (workbook) => workbook.sheet('Sabbath Calendar').deleteColumn(0),
+      'Schedule sheet is missing a Date column',
+    ],
+    [
+      "this Sabbath's row is missing",
+      (workbook) => workbook.sheet('Sabbath Calendar').grid.splice(1, 1),
+      `No schedule found for ${SABBATH}`,
+    ],
+  ];
+
+  it.each(breakages)('still gives the week when %s, saying the schedule is not set', (_, breakIt) => {
+    const workbook = createChurchWorkbook();
+    breakIt(workbook);
+    const context = load(workbook);
+
+    const bulletin = softBulletin(context);
+
+    expect(bulletin.scheduleNotSet).toBe(true);
+    expect(bulletin.date).toBe(SABBATH);
+    expect(bulletin.quarter).toBe('');
+    expect(bulletin.queens.sermon).toBe('');
+    expect(bulletin.brooklyn.offeringPrayer).toBe('');
+    // Weekly Data's content still comes.
+    expect(bulletin.queens.bibleVerses).toBe('John 10:11-16');
+    expect(bulletin.queens.sermonTitle).toEqual({ english: 'The Good Shepherd', chinese: '好牧人' });
+  });
+
+  it.each(breakages)('gives older apps the same error as before when %s', (_, breakIt, error) => {
+    const workbook = createChurchWorkbook();
+    breakIt(workbook);
+    const context = load(workbook);
+
+    expect(() => buildBulletin(context)).toThrow(error);
+    expect(request(context)).toEqual({ ok: false, error });
+    expect(request(context, '1.5.0')).toEqual({ ok: false, error });
+    expect(request(context, '1.6.0')).toMatchObject({ ok: true, bulletin: { scheduleNotSet: true } });
+  });
+
+  it('leaves scheduleNotSet out while the schedule is there', () => {
+    const context = load(createChurchWorkbook());
+
+    const response = request(context, '1.6.0');
+
+    expect(response.ok).toBe(true);
+    expect(response.bulletin).not.toHaveProperty('scheduleNotSet');
+    expect(response.bulletin?.quarter).toBe('Q4');
+  });
+
+  it("doesn't hand an older app a bulletin cached for a newer one", () => {
+    const workbook = createChurchWorkbook();
+    workbook.sheet('Sabbath Calendar').grid.splice(1, 1);
+    const context = load(workbook);
+
+    expect(request(context, '1.6.0').ok).toBe(true);
+    expect(request(context, '1.5.0').ok).toBe(false);
+  });
+
+  it.each([
+    ['1.6.0', true],
+    ['1.6.2', true],
+    ['1.10.0', true],
+    ['2', true],
+    ['1.6', true],
+    ['1.5.9', false],
+    ['0.43.0', false],
+    ['', false],
+    ['1.6.0-beta', false],
+    ['latest', false],
+  ])('counts app version %p as showing it: %p', (version, expected) => {
+    const context = load(createChurchWorkbook());
+
+    expect(run(context, `isAppVersionAtLeast_(${JSON.stringify(version)}, SCHEDULE_NOT_SET_APP_VERSION)`)).toBe(expected);
   });
 });

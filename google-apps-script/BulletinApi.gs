@@ -424,7 +424,12 @@ function getRenamedBulletinTabsAndColumns_(spreadsheet) {
 function doGet(event) {
   try {
     var requestedDate = getRequestedDate_(event);
-    var bulletin = getBulletin_(requestedDate);
+    var bulletin = getBulletin_(requestedDate, {
+      allowMissingSchedule: isAppVersionAtLeast_(
+        event && event.parameter ? event.parameter.appVersion : '',
+        SCHEDULE_NOT_SET_APP_VERSION,
+      ),
+    });
 
     return jsonResponse_({ ok: true, bulletin: bulletin });
   } catch (error) {
@@ -435,35 +440,63 @@ function doGet(event) {
   }
 }
 
-function getBulletin_(requestedDate) {
+// The first app version that shows a bulletin whose schedule isn't set
+// (#580). Older apps, and the API checks, still get an error, so an older
+// app keeps showing the last copy it had rather than a blank one.
+var SCHEDULE_NOT_SET_APP_VERSION = '1.6.0';
+
+// Whether an app version such as 1.6.2 is this one or later. Anything that
+// isn't a version, such as a request without one, is not.
+function isAppVersionAtLeast_(version, minimum) {
+  var text = String(version || '').trim();
+  if (!/^\d+(\.\d+){0,2}$/.test(text)) {
+    return false;
+  }
+  var have = text.split('.');
+  var want = minimum.split('.');
+  for (var index = 0; index < 3; index += 1) {
+    var difference = Number(have[index] || 0) - Number(want[index] || 0);
+    if (difference) {
+      return difference > 0;
+    }
+  }
+  return true;
+}
+
+function getBulletin_(requestedDate, options) {
   var cache = CacheService.getScriptCache();
-  var cacheKey = 'bulletin:' + CONFIG.cacheVersion + ':' + requestedDate;
+  var cacheKey =
+    'bulletin:' +
+    CONFIG.cacheVersion +
+    ':' +
+    (options && options.allowMissingSchedule ? 'schedule-optional:' : '') +
+    requestedDate;
 
   var cachedJson = cache.get(cacheKey);
   if (cachedJson) {
     return JSON.parse(cachedJson);
   }
 
-  var bulletin = buildBulletin_(requestedDate);
+  var bulletin = buildBulletin_(requestedDate, options);
   cache.put(cacheKey, JSON.stringify(bulletin), CONFIG.cacheSeconds);
   return bulletin;
 }
 
 function buildBulletin_(requestedDate, options) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var scheduleSheetName = getScheduleSheetName_(requestedDate);
-  var scheduleSheet = getBulletinSheet_(spreadsheet, scheduleSheetName);
-
-  if (!scheduleSheet) {
-    throw new Error('Schedule sheet not found: ' + scheduleSheetName);
+  var schedule = readScheduleRow_(
+    spreadsheet,
+    getScheduleSheetName_(requestedDate),
+    requestedDate,
+  );
+  if (schedule.error && !(options && options.allowMissingSchedule)) {
+    throw new Error(schedule.error);
   }
-
-  var scheduleTable = readBulletinTable_(scheduleSheet, scheduleSheetName);
-  var scheduleRow = findDateRow_(scheduleTable, requestedDate);
-
-  if (!scheduleRow) {
-    throw new Error('No schedule found for ' + requestedDate);
-  }
+  // Without the tab, its Date column, or this Sabbath's row (#580), every
+  // schedule field is blank and the bulletin says the schedule isn't set.
+  // Weekly Data's sermon and hymns still come.
+  var scheduleTable = schedule.table || { headers: [] };
+  var scheduleRow = schedule.row || [];
 
   var bulletin = {
     date: requestedDate,
@@ -476,6 +509,9 @@ function buildBulletin_(requestedDate, options) {
     queens: createLocation_(),
     brooklyn: createLocation_(),
   };
+  if (schedule.error) {
+    bulletin.scheduleNotSet = true;
+  }
 
   var headerOccurrences = {};
   COLUMN_SCHEMA.forEach(function (field) {
@@ -539,6 +575,24 @@ function buildBulletin_(requestedDate, options) {
   }
 
   return bulletin;
+}
+
+// This Sabbath's Sabbath Calendar row and the tab's headers, or the error
+// saying which of the tab, its Date column, or the row is missing.
+function readScheduleRow_(spreadsheet, sheetName, requestedDate) {
+  var sheet = getBulletinSheet_(spreadsheet, sheetName);
+  if (!sheet) {
+    return { error: 'Schedule sheet not found: ' + sheetName };
+  }
+  var table = readBulletinTable_(sheet, sheetName);
+  if (findFirstHeaderIndex_(table.headers, CONFIG.dateHeaders) === -1) {
+    return { error: 'Schedule sheet is missing a Date column' };
+  }
+  var row = findDateRow_(table, requestedDate);
+  if (!row) {
+    return { error: 'No schedule found for ' + requestedDate };
+  }
+  return { table: table, row: row };
 }
 
 var BULLETIN_METADATA_TRANSLATION_TARGETS = Object.freeze({

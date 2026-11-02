@@ -85,9 +85,9 @@ listing then shows "No data collected" and "No data shared with third parties."
 - The app has no analytics, ads, crash reporting, push notifications, or over-the-air
   update SDK. These are the usual reasons an Expo app has to answer Yes.
 - Every network request fetches content: a Bible chapter, commentary, or audio file,
-  the bulletin for a date (only `?date=` is sent), a library or lesson catalog, or a
-  cover image. No search terms, form input, identifiers, or location leave the phone;
-  Bible, hymnal, and Library searches run on the phone.
+  the bulletin for a date (only the date and the app's version are sent), a library or
+  lesson catalog, or a cover image. No search terms, form input, identifiers, or location
+  leave the phone; Bible, hymnal, and Library searches run on the phone.
 - Settings and saved verses stay on the phone.
 - Sharing a verse is user-initiated, which Google exempts from "shared".
 - The giving button and other external links open the phone's browser, which Google
