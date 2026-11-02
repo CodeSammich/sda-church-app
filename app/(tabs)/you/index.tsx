@@ -12,6 +12,8 @@ import {
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { getTextSizeMenuCopy } from '@/constants/TextSizeCopy';
+import { formatDownloadSize } from '@/constants/DownloadCopy';
+import { useDownloadedBibleAudioBytes } from '@/hooks/useBibleAudioDownloads';
 import { useTextSize } from '@/constants/TextSizeContext';
 import {
   useAppTheme,
@@ -42,6 +44,9 @@ const allLabels = {
       'Is this a problem or an idea?\n\n\nWhat happened, or what would you like the app to do?\n\n\nIf something went wrong, what were you doing just before? A screenshot helps.',
     darkMode: 'Theme',
     darkModeSub: 'Choose a color theme',
+    offlineAudio: 'Offline Bible Audio',
+    offlineAudioSub: 'Books downloaded to listen to with no connection',
+    offlineAudioSize: (size: string) => `Downloaded: ${size}`,
     language: 'Language',
     languageSub: 'Change app language',
     contact: 'Connect',
@@ -65,6 +70,9 @@ const allLabels = {
       '這是問題回報，還是功能建議？\n\n\n發生了什麼事？或您希望 App 增加什麼功能？\n\n\n如果是問題：發生前您正在做什麼？附上截圖會很有幫助。',
     darkMode: '主題',
     darkModeSub: '選擇顏色主題',
+    offlineAudio: '離線聖經音訊',
+    offlineAudioSub: '已下載、可在沒有網路時收聽的書卷',
+    offlineAudioSize: (size: string) => `已下載：${size}`,
     language: '語言',
     languageSub: '更改應用程式語言',
     contact: '聯繫',
@@ -88,6 +96,9 @@ const allLabels = {
       '这是问题反馈，还是功能建议？\n\n\n发生了什么？或您希望 App 增加什么功能？\n\n\n如果是问题：发生前您正在做什么？附上截图会很有帮助。',
     darkMode: '主题',
     darkModeSub: '选择颜色主题',
+    offlineAudio: '离线圣经音频',
+    offlineAudioSub: '已下载、可在没有网络时收听的书卷',
+    offlineAudioSize: (size: string) => `已下载：${size}`,
     language: '语言',
     languageSub: '更改应用语言',
     contact: '联系',
@@ -111,6 +122,9 @@ const allLabels = {
       '¿Es un problema o una idea?\n\n\n¿Qué pasó, o qué le gustaría que hiciera la app?\n\n\nSi algo falló, ¿qué estaba haciendo justo antes? Una captura de pantalla ayuda.',
     darkMode: 'Tema',
     darkModeSub: 'Elegir un tema de color',
+    offlineAudio: 'Audio bíblico sin conexión',
+    offlineAudioSub: 'Libros descargados para escuchar sin conexión',
+    offlineAudioSize: (size: string) => `Descargado: ${size}`,
     language: 'Idioma',
     languageSub: 'Cambiar idioma de la aplicación',
     contact: 'Conectar',
@@ -151,6 +165,8 @@ export default function YouScreen() {
   }, [popup]);
   const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  // Phones only: the web streams Bible audio (#556).
+  const offlineAudioBytes = useDownloadedBibleAudioBytes();
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
 
   return (
@@ -222,6 +238,24 @@ export default function YouScreen() {
               iconColor={theme.colors.primary}
               onPress={() => setShowThemeDialog(true)}
             />
+            {Platform.OS !== 'web' && (
+              <MenuCard
+                title={labels.offlineAudio}
+                description={
+                  offlineAudioBytes
+                    ? labels.offlineAudioSize(formatDownloadSize(offlineAudioBytes, language))
+                    : labels.offlineAudioSub
+                }
+                icon="download-circle-outline"
+                iconColor={theme.colors.primary}
+                onPress={() =>
+                  router.push({
+                    pathname: '/you/audio-downloads',
+                    params: { backTo: '/you' },
+                  } as any)
+                }
+              />
+            )}
           </List.Section>
 
           <List.Section>

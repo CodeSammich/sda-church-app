@@ -66,13 +66,21 @@ import {
   shouldStopBibleAudioAtChapterEnd,
   type BibleAudioSleepTimerSetting,
   configureBibleAudioPlayback,
+  getBibleAudioCreditUrl,
   getBibleAudioMediaTitle,
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getOrderedBibleAudioReaders,
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
+  withDownloadedCopy,
 } from '@/services/BibleAudioService';
+import {
+  getDownloadableBibleAudioNarrator,
+  snapshotDownloadedChapters,
+} from '@/services/BibleAudioDownloads';
+import { useDownloadedChapterUri } from '@/hooks/useBibleAudioDownloads';
+import { BibleAudioOfflineSection } from '@/components/BibleAudioOfflineSection';
 import {
   CUV_AUDIO_READERS,
   getAudioReaderPreferenceKey,
@@ -1243,10 +1251,27 @@ export default function BibleScreen() {
     : availableAudioSources[0]
       ? getBibleAudioSourceId(availableAudioSources[0])
       : undefined;
-  const selectedAudioUrls = prioritizeBibleAudioSource(
+  const streamedAudioUrls = prioritizeBibleAudioSource(
     rawSelectedAudioUrls,
     selectedAudioSourceId,
   );
+  // A chapter the member downloaded for listening offline plays from the
+  // phone first, whatever source is chosen (#556).
+  const audioDownloadNarrator = getDownloadableBibleAudioNarrator(
+    supportedTranslation.id,
+    selectedAudioReader,
+  );
+  const downloadedAudioUri = useDownloadedChapterUri(
+    audioDownloadNarrator,
+    book?.id,
+    chapterNum,
+  );
+  const downloadedAudioUriRef = useRef(downloadedAudioUri);
+  downloadedAudioUriRef.current = downloadedAudioUri;
+  // The queue's chapters downloaded when playback started, so that a chapter
+  // downloading meanwhile doesn't change one the native queue already holds.
+  const queuedDownloadsRef = useRef<(bookId: string, chapter: number) => string | null>(() => null);
+  const selectedAudioUrls = withDownloadedCopy(streamedAudioUrls, downloadedAudioUri);
   const selectedAudioUrlsRef = useRef(selectedAudioUrls);
   selectedAudioUrlsRef.current = selectedAudioUrls;
 
@@ -1355,7 +1380,8 @@ export default function BibleScreen() {
       currentChapter: activeChapter?.chapter ?? chapterNum,
       sleepTimer: sleepTimerSettingRef.current,
       preferredSourceId: selectedAudioSourceId,
-      selectedAudioUrls,
+      getDownloadedUri: (bookId, chapter) => queuedDownloadsRef.current(bookId, chapter),
+      selectedAudioUrls: streamedAudioUrls,
       selectedReader: selectedAudioReader,
       translationId: supportedTranslation.id,
       translationLabel: supportedTranslation.name,
@@ -1602,11 +1628,11 @@ export default function BibleScreen() {
       chapter: book
         ? { bookId: book.id, chapter: chapterNum, translationId: supportedTranslation.id }
         : undefined,
-      sources: selectedAudioUrlsRef.current.map((uri) => {
+      sources: selectedAudioUrlsRef.current.map((uri, _, uris) => {
         const title = getBibleAudioMediaTitle(
           `${book?.name || labels.bible} ${chapterNum}`,
           supportedTranslation.name,
-          uri,
+          getBibleAudioCreditUrl(uri, uris, downloadedAudioUriRef.current),
         );
         return {
           source: { uri, name: title },
@@ -1632,6 +1658,7 @@ export default function BibleScreen() {
       // Seed the native playlist once, then publish it to lock-screen controls.
       // Android's MediaSession must observe the complete initial playlist
       // before ExoPlayer advances to its first queued chapter.
+      queuedDownloadsRef.current = snapshotDownloadedChapters(audioDownloadNarrator);
       initializeBibleAudioPlayback({
         player: audioPlayer,
         currentChapter: target.chapter
@@ -4403,6 +4430,22 @@ export default function BibleScreen() {
                   </TouchableOpacity>
                 );
               })}
+
+              <BibleAudioOfflineSection
+                book={book ? { id: book.id, name: book.name } : undefined}
+                reader={selectedAudioReader}
+                styles={{
+                  divider: styles.audioSettingsDivider,
+                  helper: styles.audioSettingsHelper,
+                  row: styles.pressRow,
+                  rowCaption: styles.pressRowCaption,
+                  rowLabel: styles.pressRowLabel,
+                  rowTitle: styles.pressRowTitle,
+                  sectionTitle: styles.audioSettingsSectionTitle,
+                }}
+                textScale={bibleUiTextScale}
+                translationId={supportedTranslation.id}
+              />
 
               {availableAudioSources.length > 0 && (
                 <>

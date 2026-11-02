@@ -53,6 +53,13 @@ const AUDIO_POWER_CUV_BOOK_BY_ID = new Map<
   ]),
 );
 
+/**
+ * Every book's USFM id and number of chapters, in canonical Protestant order:
+ * the books each narrator records.
+ */
+export const BIBLE_AUDIO_BOOKS: readonly (readonly [bookId: string, chapters: number])[] =
+  AUDIO_POWER_CUV_BOOKS.map(([id, , chapters]) => [id, chapters]);
+
 /** Whether a translation uses the shared Audio Power CUV narration. */
 export const supportsAudioPowerCuv = (translationId: string) =>
   AUDIO_POWER_CUV_TRANSLATIONS.has(translationId);
@@ -260,4 +267,21 @@ export const WORDPROJECT_CREDITS: Readonly<
     url: WORDPROJECT_CANTONESE_AUDIO_URL,
   },
   [RV1909_READER]: { language: 'spanish', url: WORDPROJECT_SPANISH_AUDIO_URL },
+};
+
+/**
+ * The name of the recording a narrator choice plays, as the verse times
+ * (#561) and the downloads for listening offline (#556) name it: `cuv-mandarin`
+ * or `cuv-cantonese` for either CUV edition, `rv1909`, and each BSB narrator by
+ * HelloAO's name for it, such as `souer`. Null for a narrator the app doesn't
+ * know.
+ */
+export const getBibleAudioNarrator = (translationId: string, reader: string): string | null => {
+  if (translationId === 'BSB') return reader || null;
+  if (supportsAudioPowerCuv(translationId)) {
+    const language = CUV_AUDIO_READERS[reader]?.language;
+    return language ? `cuv-${language}` : null;
+  }
+  if (supportsRv1909Audio(translationId) && reader === RV1909_READER) return 'rv1909';
+  return null;
 };
