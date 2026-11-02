@@ -41,7 +41,7 @@ import {
 } from '@/constants/AppPreferences';
 import { useBottomTabHeight } from '@/constants/BottomTabHeightContext';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { getBottomTabContentHeight } from '@/constants/Layout';
+import { CONTENT_MAX_WIDTH, contentColumnStyle, getBottomTabContentHeight, getContentSideInset, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
 import {
@@ -153,7 +153,7 @@ import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
 import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
 import { HYMNALS } from '@/features/hymnal/Hymnals';
-import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, getPopupWidthStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
 import {
   createReaderStyles,
@@ -592,10 +592,22 @@ export default function BibleScreen() {
   // Their text passes the same cap to React Native. The Bible text itself
   // follows the system size in full.
   const dockTextScale = Math.max(1, bibleUiTextScale * getHeaderFontScale(osFontScale));
+  // The text's column on a wide screen (#324), widening with the app's text
+  // size and the device's. A tablet gets margins beside the text too: a phone's
+  // 4 points left the text against the screen's edge once the column filled it.
+  const columnScale = textScale * osFontScale;
+  const readingColumnStyle = useMemo(
+    () => [
+      contentColumnStyle(columnScale),
+      viewportWidth > CONTENT_MAX_WIDTH ? { paddingLeft: 24, paddingRight: 24 } : null,
+    ],
+    [columnScale, viewportWidth],
+  );
   const measuredBottomTabHeight = useBottomTabHeight();
   const dockLayout = useMemo(
-    () => getBibleDockLayout(viewportWidth, dockTextScale),
-    [dockTextScale, viewportWidth],
+    // The dock's controls stay in the content column on a wide screen.
+    () => getBibleDockLayout(getContentWidth(viewportWidth, columnScale), dockTextScale),
+    [columnScale, dockTextScale, viewportWidth],
   );
   // The verse pill says "Vs." rather than "Verse" only when the book, chapter,
   // and verse pills can't all fit at full width, so the book name is cut short
@@ -686,6 +698,12 @@ export default function BibleScreen() {
     return `${translation.name} (${translationLanguageLabel})`;
   };
   const popupMaxHeight = usePopupMaxHeight();
+  // The dock spans the screen, with its top boundary; on a wide screen its
+  // rows pad their controls into the content column (#324).
+  const dockSideInset = getContentSideInset(viewportWidth, columnScale);
+  // ReaderStyles.modalContent's 20-point margin, held to the You tab's dialog
+  // width on a wide screen (#324).
+  const popupWidthStyle = useMemo(() => getPopupWidthStyle(viewportWidth - 40), [viewportWidth]);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
@@ -3924,7 +3942,10 @@ export default function BibleScreen() {
           borderTopColor: theme.colors.outlineVariant,
           borderTopWidth: hasChapterAudio ? 0 : 1,
         },
-        fullscreenEdgeInset > 0 && { paddingHorizontal: fullscreenEdgeInset },
+        (fullscreenEdgeInset > 0 || dockSideInset > 0) && {
+          paddingHorizontal:
+            (fullscreenEdgeInset > 0 ? fullscreenEdgeInset : stackChapterControls ? 8 : 4) + dockSideInset,
+        },
       ]}
     >
       {stackChapterControls ? (
@@ -3991,6 +4012,7 @@ export default function BibleScreen() {
         onMomentumScrollEnd={handleScrollEnd}
         contentContainerStyle={[
           ReaderStyles.scrollContent,
+          readingColumnStyle,
           {
             paddingTop: headerHeight + 10,
             paddingBottom: dockViewportLayout.visibleHeight + FOOTER_PADDING_GUTTER,
@@ -4085,7 +4107,7 @@ export default function BibleScreen() {
               <View
                 style={[
                   styles.selectionBarInner,
-                  { minHeight: dockLayout.selectionBarHeight },
+                  { minHeight: dockLayout.selectionBarHeight, paddingHorizontal: 8 + dockSideInset },
                 ]}
               >
                 <IconButton
@@ -4139,6 +4161,7 @@ export default function BibleScreen() {
                   minHeight: dockLayout.audioDockHeight,
                   borderTopColor: theme.colors.outlineVariant,
                   borderTopWidth: 1,
+                  paddingHorizontal: 12 + dockSideInset,
                 },
               ]}
             >
@@ -4395,6 +4418,7 @@ export default function BibleScreen() {
           onDismiss={() => setAudioSettingsVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            popupWidthStyle,
             { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
@@ -4621,6 +4645,7 @@ export default function BibleScreen() {
           onDismiss={() => setBackgroundAudioGuidanceVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            popupWidthStyle,
             { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
@@ -4689,6 +4714,7 @@ export default function BibleScreen() {
           onDismiss={() => setSleepTimerVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            popupWidthStyle,
             { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
@@ -4762,6 +4788,7 @@ export default function BibleScreen() {
           onDismiss={closeModal}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            popupWidthStyle,
             { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}

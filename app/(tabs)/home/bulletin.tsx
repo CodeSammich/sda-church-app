@@ -1,4 +1,5 @@
 import { WrappingButton as Button } from '@/components/WrappingButton';
+import { contentColumnStyle } from '@/constants/Layout';
 import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -11,6 +12,7 @@ import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import {
   createScriptureReferenceRequest,
   formatScriptureReference,
@@ -513,6 +515,7 @@ export default function WeeklyBulletinScreen() {
   const { language } = useContext(LanguageContext);
   const labels = (LABELS[language as keyof typeof LABELS] || LABELS.en) as Labels;
   const theme = useAppTheme();
+  const columnScale = useContentColumnScale();
   const DocumentStyles = useDocumentStyles();
   const NavigationStyles = useNavigationStyles();
   const headerHeight = useGlobalHeaderHeight();
@@ -1290,7 +1293,7 @@ export default function WeeklyBulletinScreen() {
           </Text>
         </ImageBackground>
 
-        <View style={styles.weekTabsContainer}>
+        <View style={[styles.weekTabsContainer, contentColumnStyle(columnScale)]}>
           <Button
             accessibilityRole="tab"
             accessibilityState={{ selected: selectedWeek === '0' }}
@@ -1325,7 +1328,7 @@ export default function WeeklyBulletinScreen() {
               cooldownSeconds % 60,
             ).padStart(2, '0')}`;
             return (
-              <View key={week.date} style={styles.weekSection}>
+              <View key={week.date} style={[styles.weekSection, contentColumnStyle(columnScale)]}>
                 <View
                   style={[
                     styles.weekHeader,

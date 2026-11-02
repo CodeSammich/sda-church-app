@@ -1,6 +1,7 @@
 import { ChildrenLessonDialog } from '@/components/ChildrenLessonDialog';
 import { MenuCard } from '@/components/MenuCard';
 import { VerseHero } from '@/components/VerseHero';
+import { contentColumnStyle } from '@/constants/Layout';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   getMissionSpotlightSabbath,
@@ -26,6 +27,7 @@ import {
   type ChineseMissionSpotlight,
 } from '@/features/sabbath-school/ChineseMissionSpotlight';
 import type { ChildrenLessonDialogState } from '@/hooks/useChildrenLessonOpener';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
@@ -99,6 +101,7 @@ export default function SabbathSchoolScreen() {
   const { language } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
+  const columnScale = useContentColumnScale();
   const navigationStyles = useNavigationStyles();
   const documentStyles = useDocumentStyles();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
@@ -199,7 +202,7 @@ export default function SabbathSchoolScreen() {
               : ['#1E4E79', '#2873A3', '#3B8FBD']
           }
         />
-        <View style={styles.content}>
+        <View style={[styles.content, contentColumnStyle(columnScale)]}>
         <List.Section>
           <Text
             variant="titleLarge"

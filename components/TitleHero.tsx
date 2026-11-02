@@ -1,3 +1,4 @@
+import { contentColumnWithin } from '@/constants/Layout';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
@@ -90,6 +91,8 @@ const createStyles = (
       paddingHorizontal: 20,
     },
     title: {
+      // In line with the page's content column on a wide screen.
+      ...contentColumnWithin(20, effectiveScale),
       color: '#FFFFFF',
       fontSize: scaleTypographyMetric(28, textScale),
       fontWeight: 'bold',

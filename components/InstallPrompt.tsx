@@ -1,6 +1,6 @@
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { StyleSheet } from 'react-native';
 import { Button, Modal, Portal, Text } from 'react-native-paper';
@@ -40,6 +40,7 @@ const allLabels = {
 export const InstallPrompt = ({ onDismiss, onInstall }: InstallPromptProps) => {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
+  const popupWidthStyle = usePopupWidthStyle(500);
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
 
   return (
@@ -49,6 +50,7 @@ export const InstallPrompt = ({ onDismiss, onInstall }: InstallPromptProps) => {
         onDismiss={onDismiss}
         contentContainerStyle={[
           styles.modal,
+          popupWidthStyle,
           getPopupSurfaceStyle(theme),
         ]}
       >
@@ -73,9 +75,6 @@ const styles = StyleSheet.create({
   modal: {
     margin: 20,
     padding: 24,
-    maxWidth: 500,
-    alignSelf: 'center',
-    width: '90%',
   },
   title: {
     textAlign: 'center',

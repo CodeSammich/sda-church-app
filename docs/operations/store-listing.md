@@ -378,10 +378,7 @@ transparency both stores reject. Replace them there whenever the stores get new 
 - **App Store:** iPhone screenshots only, at 1206 × 2622. App Store Connect's iPhone slot,
   **iPhone with Dynamic Island (medium display)**, takes only the 6.1- and 6.3-inch sizes
   (1179 × 2556 or 1206 × 2622) and rejects 1320 × 2868, which the 1.3.2 listing used.
-  The app is iPhone-only
-  (`supportsTablet: false` in `app.json`), so App Store Connect asks for no iPad
-  screenshots once the version uses a build made with that setting; iPads still install
-  it and run it in iPhone mode. The current set comes from the key screens of the
+  The current set comes from the key screens of the
   **iOS key screens** run on a release PR, whose App Store copies are scaled from the
   Simulator's 1320 × 2868 to 1206 × 2622, with a clean status bar (9:41, full battery and
   signal); see [Key screens](native-builds.md#key-screens). Screenshots from a real
@@ -398,10 +395,15 @@ transparency both stores reject. Replace them there whenever the stores get new 
   stores (guideline 2.3.10: no Android or Google Play), and
   any text translated into each listing's language. See Apple's
   [asset best practices](https://developer.apple.com/app-store/asset-best-practices/).
-- **Adding iPad later:** a later version can add iPad support, with iPad screenshots;
-  see #324.
-  Apple doesn't let an update remove a device family once released, so test on an iPad
-  before turning it on.
+- **App Store, iPad:** the app runs on iPad as an iPad app (`supportsTablet: true` in
+  `app.json`, #324), so App Store Connect asks for at least one screenshot for **iPad
+  13-inch display**, at 2064 × 2752 in portrait or 2752 × 2064 in landscape, and scales
+  them for smaller iPads. The set comes from the same run's iPad shots, in
+  `screens/app-store-ipad/en-US/` (see
+  [iPad key screens](native-builds.md#ipad-key-screens)). Upload them with the first
+  version whose build supports iPad. Apple doesn't let an update remove a device family
+  once a version with it is released, so check that release on an iPad through
+  TestFlight before releasing it on the App Store.
 - **Leave out:** the bulletin, which shows members' names; Meet Our Team, which has staff
   photos; the hymnal covers, which belong to other publishers; and personal phone numbers
   or email addresses. The verse of the day changes each day, following a hand-picked list

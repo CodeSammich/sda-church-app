@@ -13,7 +13,7 @@ import {
 } from '@/constants/ExternalLinks';
 import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { contentColumnStyle, contentColumnWithin, DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
@@ -440,8 +440,10 @@ export default function HomeScreen() {
           <Text
             variant="titleMedium"
             style={{
+              // The content column's width on a wide screen, so the verse
+              // keeps a comfortable line length.
+              ...contentColumnWithin(24, effectiveTextScale),
               color: '#FFFFFF',
-              alignSelf: 'stretch',
               textAlign: 'center',
               fontStyle: 'italic',
               marginTop: 4,
@@ -625,6 +627,7 @@ const createStyles = (
     overflow: 'hidden',
   },
   content: {
+    ...contentColumnStyle(effectiveTextScale),
     padding: 20,
     paddingBottom: 16,
   },
@@ -634,10 +637,10 @@ const createStyles = (
     marginBottom: 8,
   },
   heroActions: {
+    ...contentColumnWithin(24, effectiveTextScale),
     flexDirection: useStackedLayout ? 'column' : 'row',
     marginTop: 16,
     gap: 12,
-    width: '100%',
     paddingHorizontal: 16,
   },
   heroActionButton: {

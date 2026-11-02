@@ -12,9 +12,11 @@ import {
 import { LanguageContext } from '@/constants/LanguageContext';
 import { openSdaBible } from '@/features/library/SdaBibleReader';
 import { APP_ICONOGRAPHY } from '@/constants/Iconography';
+import { contentColumnStyle } from '@/constants/Layout';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
@@ -90,6 +92,7 @@ const allLabels = {
 
 export default function ExploreScreen() {
   const theme = useAppTheme();
+  const columnScale = useContentColumnScale();
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
@@ -130,7 +133,7 @@ export default function ExploreScreen() {
           </Text>
         </ImageBackground>
 
-        <View style={styles.cardList}>
+        <View style={[styles.cardList, contentColumnStyle(columnScale)]}>
           <MenuCard
             title={labels.library}
             description={labels.librarySub}

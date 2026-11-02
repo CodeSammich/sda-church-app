@@ -3,7 +3,7 @@ import {
   scaleTypographyMetric,
   type TextScale,
 } from '@/constants/AppPreferences';
-import { getBottomTabContentHeight } from '@/constants/Layout';
+import { contentColumnStyle, contentColumnWithin, getBottomTabContentHeight } from '@/constants/Layout';
 import { getBottomTabTextScale } from '@/hooks/useGlobalHeaderHeight';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useMemo } from 'react';
@@ -35,6 +35,7 @@ export const createNavigationStyles = (
     flex: 1,
   },
   contentContainer: {
+    ...contentColumnStyle(textScale * fontScale),
     padding: 20, // Preference: explore/index.tsx
     paddingBottom:
       getBottomTabContentHeight(getBottomTabTextScale(textScale, fontScale)) + bottomInset + 24,
@@ -54,6 +55,8 @@ export const createNavigationStyles = (
     marginBottom: 20,
   },
   heroTitle: {
+    // In line with the content column below the banner on a wide screen.
+    ...contentColumnWithin(20, textScale * fontScale),
     fontWeight: 'bold',
     fontSize: scaleTypographyMetric(26, textScale),
     lineHeight: scaleTypographyMetric(34, textScale),

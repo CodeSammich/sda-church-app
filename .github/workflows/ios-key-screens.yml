@@ -7,7 +7,8 @@ name: iOS key screens
 # Download the app from the run's artifacts to test it in the Simulator on a
 # Mac; docs/operations/native-builds.md explains how.
 #
-# It also takes the release's iPhone key screens (#331). The Android ones are
+# It also takes the release's iPhone key screens (#331), and the iPad's on a
+# runner of their own (#324). The Android ones are
 # taken on Linux by android-key-screens.yml (#372); this workflow's review
 # comment waits for that run and links both, so one approval covers both.
 on:
@@ -66,6 +67,13 @@ jobs:
       actions: read
     strategy:
       fail-fast: false
+      # GitHub's free plan runs five Mac jobs at once. Started together, the six
+      # jobs below got Macs in no fixed order: on November 2, 2026, the iPad's
+      # runner got one and the compiling runner didn't, so the other five waited
+      # 45 minutes for an app nobody was building. Five at a time, the jobs
+      # start in list order, so the compiling runner always gets a Mac and the
+      # iPad's, last, takes the first one free.
+      max-parallel: 5
       matrix:
         # One runner per key-screen group in test/screens/screens.json, each
         # of related screens, so the release PR waits for the slowest group
@@ -73,18 +81,23 @@ jobs:
         # screens.json in step. GitHub's free plan runs five Mac jobs at once.
         # Three Simulators on one runner were slower: its 3 processors couldn't
         # keep up with them.
-        group: [home, bible-reading, bible-text, library, worship-and-you]
+        group: [home, bible-reading, bible-text, library, worship-and-you, ipad]
         # The app is compiled once, by the runner with the smallest group, and
         # shared with the others, which boot their iPhones meanwhile; five
         # separate compiles made the run wait for the slowest of five. A test
         # checks that exactly one group builds and that the others wait for it.
-        # Each group's batch number, 1 to 5 in list order, names its job.
+        # Each group's batch number, 1 to 5 in list order, names its job. One
+        # more runner, batch 6, takes the iPad's shots (#324), the screens
+        # that list ipadVariants, as Android's batch 6 takes Google Play's. It
+        # starts when the first group's runner is done with its Mac (max-parallel
+        # above), and its few shots finish soon after the other groups'.
         include:
           - { group: home, batch: 1 }
           - { group: bible-reading, batch: 2 }
           - { group: bible-text, batch: 3, builds: true }
           - { group: library, batch: 4 }
           - { group: worship-and-you, batch: 5 }
+          - { group: ipad, batch: 6, ipad: true }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -178,11 +191,13 @@ jobs:
         # finish last.
         env:
           BOOT_NOW: ${{ !matrix.builds || steps.compile-cache.outputs.cache-matched-key == '' }}
+          PLATFORM: ${{ matrix.ipad && 'ipad' || 'ios' }}
         run: |
           set -euo pipefail
-          # The iPhone test/screens/screens.json names, on the newest installed
-          # iOS runtime, so the launch check and the key screens share it.
-          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
+          # The iPhone test/screens/screens.json names, or its iPad on the iPad's
+          # runner, on the newest installed iOS runtime, so the launch check and
+          # the key screens share it.
+          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --platform "$PLATFORM" --pick-device)"
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
           if [ "$BOOT_NOW" = true ]; then
             nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
@@ -354,11 +369,13 @@ jobs:
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
-        # Only this group's screens.
+        # Only this group's screens, or the iPad's, named ipad/<screen>-<variant>.png.
         timeout-minutes: 20
+        env:
+          PART: ${{ matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group) }}
         run: >-
           node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
-          --group ${{ matrix.group }}
+          $PART
 
       - name: Check the text on the key screens
         # Reads each screenshot's text with Apple's Vision framework and checks
@@ -368,9 +385,11 @@ jobs:
         # the screenshots. Runs even if a capture failed, to report on the rest.
         if: ${{ !cancelled() }}
         timeout-minutes: 10
+        env:
+          PART: ${{ matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group) }}
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
-          --group ${{ matrix.group }}
+          $PART
 
       - name: Upload this group
         if: always()
@@ -426,7 +445,7 @@ jobs:
           mkdir -p "$SCREENS_OUT" "$APP_OUT"
           find "$RUNNER_TEMP/parts" -maxdepth 2 -type f \( -name '*-simulator.zip' -o -name '*-first-screen.png' \) \
             -exec cp {} "$APP_OUT/" \;
-          node scripts/merge-key-screens.cjs --platform ios --out "$SCREENS_OUT/screens" "$RUNNER_TEMP"/parts/*/screens
+          node scripts/merge-key-screens.cjs --platform ios,ipad --out "$SCREENS_OUT/screens" "$RUNNER_TEMP"/parts/*/screens
 
       - name: Upload the screenshots
         if: always()
@@ -495,7 +514,7 @@ jobs:
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The preview is taking the iPhone and Android screenshots for commit \`${SHA:0:7}\`. That takes 30 to 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The preview is taking the iPhone, iPad, and Android screenshots for commit \`${SHA:0:7}\`. That takes 30 to 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY
@@ -585,7 +604,7 @@ jobs:
             fi
           }
           run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
-          download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"
+          download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone and iPad screenshots')"
           app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
           if [ -n "$ANDROID_RUN_ID" ]; then
             android="$(screenshots "$ANDROID_RUN_ID" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
@@ -618,15 +637,16 @@ jobs:
           <!-- key-screens-review sha=$SHA -->
           ### 📸 Screenshots to review
 
-          The iPhone and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
+          The iPhone, iPad, and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
 
           $checks
 
           $timing
 
-          1. **Download** $download and $android, and open their \`screens/ios/\` and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), and \`zh\`, \`zh-cn\`, and \`es\`.
+          1. **Download** $download and $android, and open their \`screens/ios/\`, \`screens/ipad/\`, and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad turned sideways), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:
              - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
+             - on the iPad, a page's text and buttons spread across the whole screen instead of staying in a centered column, or a tab label far from its icon;
              - a verse number split from its verse, or a button label cut short;
              - the wrong language, a blank or half-drawn screen, or a popup covering the page;
              - dark mode or large text that's hard to read.
@@ -634,7 +654,7 @@ jobs:
              The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
           3. **Approve:** $approve
 
-          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
+          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
 
           To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
           BODY
