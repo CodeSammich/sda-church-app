@@ -150,6 +150,13 @@
         "19": 265.4
       }
     },
+    "HOS 13": {
+      "why": "Verse 11 is read twice; verse 12 starts after the second reading.",
+      "sha256": "c2eb4863f4b79f16679a15d53148868981840462426a614279f6f2b2d200afab",
+      "starts": {
+        "12": 134.2
+      }
+    },
     "MIC 1": {
       "why": "The narrator announces chapter 1, verse 14, before verse 14.",
       "sha256": "eea534d078d8fa49ba1f1182dc3a8c0a007d47e5cb10510652c0ea502c6c5ea9",
@@ -169,6 +176,13 @@
       "sha256": "c4409ba6f6014c8f0c852dcfa290ac9806f50897de7360d4bb8644257b01b26d",
       "starts": {
         "16": 190.86
+      }
+    },
+    "ZEC 12": {
+      "why": "Verses 12 to 14 each say 男的獨在一處; the recognizer matched verse 14 to verse 13's. The start is right.",
+      "sha256": "3a585d7d36a3cc2b2ee3e361eccb822787ff4c46e26b1e60075b6189d9c09f79",
+      "starts": {
+        "14": 184.06
       }
     },
     "MAT 15": {

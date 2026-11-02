@@ -233,16 +233,14 @@ for key in chapters:
             continue
         row = {'book': book, 'chapter': chapter, 'verse': vn, 'start': start, 'off': round(off, 2),
                'by': 'heard' if heard is not None else ('after' if off > 0 else 'before'), 'recognizer': rec}
-        if (book, chapter, vn) in by_ear:
-            checked_by_ear.append(row)
-        elif not prev_start - 0.5 <= rec <= next_start + 0.5:
+        if (book, chapter, vn) not in by_ear and not prev_start - 0.5 <= rec <= next_start + 0.5:
             doubtful.append(row)
             continue
         if heard is not None:
             if pauses is None:
                 pauses = find_pauses(decode(os.path.join(full, sources[key]['path'])))
             row['suggested'] = suggest(heard, pauses, prev_start, next_start)
-        misses.append(row)
+        (checked_by_ear if (book, chapter, vn) in by_ear else misses).append(row)
 
 total = stats['verses']
 heard_n = stats['heard']
