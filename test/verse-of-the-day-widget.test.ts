@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -117,7 +118,7 @@ describe('updating the widget from the home page', () => {
       loadDays = jest
         .spyOn(require('@/services/VerseOfTheDayWidgetData'), 'loadVerseWidgetDays')
         .mockResolvedValue(week);
-      widget = require('@/widgets/VerseOfTheDayWidget').default;
+      widget = require('@/features/verse-of-the-day/VerseOfTheDayWidget').default;
       widget.updateSnapshot = jest.fn();
       widget.reload = jest.fn();
       service = require('@/services/VerseOfTheDayWidget.android');
@@ -213,7 +214,7 @@ describe('the widget layout', () => {
 
   // Android runs the layout as a string in the widget's own runtime, where
   // Expo UI's components, modifiers, and JSX functions are globals.
-  const layout = (): string => require('@/widgets/VerseOfTheDayWidget').default.layout;
+  const layout = (): string => require('@/features/verse-of-the-day/VerseOfTheDayWidget').default.layout;
   const jsx = (type: unknown, props: Record<string, any>) => ({ type, props });
   const modifier =
     (name: string) =>
@@ -350,7 +351,7 @@ describe('the Android widget config plugin', () => {
   });
 
   it('uses the widget name the app registers', () => {
-    expect(require('@/widgets/VerseOfTheDayWidget').default.name).toBe(plugin.VERSE_WIDGET.name);
+    expect(require('@/features/verse-of-the-day/VerseOfTheDayWidget').default.name).toBe(plugin.VERSE_WIDGET.name);
     expect(plugin.VERSE_WIDGET.ios).toBeNull();
   });
 
@@ -386,10 +387,27 @@ describe('the Android widget config plugin', () => {
       expect(read('res/values-b+zh+Hans/verse_widget_strings.xml')).toContain('今日经文');
       expect(read('res/values-es/verse_widget_strings.xml')).toContain('Versículo de hoy');
       expect(JSON.parse(read('expo-widgets-layout-registry.config.json'))).toEqual({
-        widgets: [{ name: 'VerseOfTheDay', initialLayout: './widgets/VerseOfTheDayWidget.tsx' }],
+        widgets: [{ name: 'VerseOfTheDay', initialLayout: './features/verse-of-the-day/VerseOfTheDayWidget.tsx' }],
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps the widget’s files where git tracks them', () => {
+    // The repository's .gitignore lists the folders it tracks, so a file in a
+    // new top-level folder would build locally but be missing everywhere else.
+    const files = [
+      'features/verse-of-the-day/VerseOfTheDayWidget.tsx',
+      'services/VerseOfTheDayWidget.ts',
+      'services/VerseOfTheDayWidget.android.ts',
+      'services/VerseOfTheDayWidgetData.ts',
+      'services/VerseOfTheDayText.ts',
+      'plugins/withAndroidVerseWidget.js',
+    ];
+    for (const file of files) {
+      const ignored = spawnSync('git', ['check-ignore', '--quiet', file], { cwd: process.cwd() }).status;
+      expect([file, ignored]).toEqual([file, 1]);
     }
   });
 

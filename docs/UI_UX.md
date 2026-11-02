@@ -221,8 +221,8 @@ Bible reader, as **Read Verse** does. Once a day, when Home loads the verse, it 
 widget the next week's verses, and the widget shows the day's, so the verse changes within
 an hour of 6 AM without the app being opened. After a week without the app, it keeps the
 last verse. Long verses get smaller type. iPhones don't have the widget. The code is in
-`widgets/VerseOfTheDayWidget.tsx`, `services/VerseOfTheDayWidgetData.ts`, and
-`plugins/withAndroidVerseWidget.js`.
+`features/verse-of-the-day/VerseOfTheDayWidget.tsx`, `services/VerseOfTheDayWidgetData.ts`,
+and `plugins/withAndroidVerseWidget.js`.
 
 **Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the
 six hymnals, in the style of the Library's featured books, puts the app language's hymnals
