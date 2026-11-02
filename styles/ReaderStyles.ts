@@ -239,6 +239,16 @@ export const createReaderStyles = (textScale: TextScale) => {
     flexDirection: 'row',
     width: '100%',
   },
+  // Beside the number of the verse being read aloud (#561). It overlays the
+  // row, so the text doesn't move when it comes and goes.
+  verseBeingReadMark: {
+    borderRadius: 1.5,
+    bottom: scaleTypographyMetric(4, textScale),
+    left: 0,
+    position: 'absolute',
+    top: scaleTypographyMetric(4, textScale),
+    width: 3,
+  },
   verseNumberColumn: {
     alignItems: 'flex-end',
     flexShrink: 0,
