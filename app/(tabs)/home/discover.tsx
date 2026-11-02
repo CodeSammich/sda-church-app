@@ -1,9 +1,11 @@
 import { GridMenuCard } from '@/components/GridMenuCard';
+import { contentColumnStyle } from '@/constants/Layout';
 import { CHURCH_BUILDING_IMAGE_URL } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +22,7 @@ import { Text } from 'react-native-paper';
 export default function DiscoverScreen() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
+  const columnScale = useContentColumnScale();
   const DocumentStyles = useDocumentStyles();
   const NavigationStyles = useNavigationStyles();
   const headerHeight = useGlobalHeaderHeight();
@@ -97,7 +100,7 @@ export default function DiscoverScreen() {
         </ImageBackground>
 
         {/* Body */}
-        <View style={styles.grid}>
+        <View style={[styles.grid, contentColumnStyle(columnScale)]}>
           <GridMenuCard
             title={labels.aboutSDA}
             titleBlockLines={3}

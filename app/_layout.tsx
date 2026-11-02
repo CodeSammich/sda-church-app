@@ -2,7 +2,7 @@ import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LaunchSplash } from '@/components/LaunchSplash';
 import {
-  DEFAULT_TEXT_SCALE,
+  getDefaultTextScale,
   getEffectiveTextScale,
   parseStoredTextScale,
   persistTextScalePreference,
@@ -72,6 +72,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
+  Dimensions,
   LogBox,
   Platform,
   StatusBar,
@@ -113,6 +114,8 @@ const isBibleReaderPath = (pathname: string) =>
 
 const DEFERRED_REFRESH_FLAG = '__sdaChurchDeferredRefresh';
 const AUTO_UPDATE_CHECK_COOLDOWN_MS = 60 * 60 * 1000;
+// The text size this device starts at: 150% on a tablet, 125% elsewhere (#324).
+const DEVICE_DEFAULT_TEXT_SCALE = getDefaultTextScale(Dimensions.get('screen'), Platform.OS);
 type UpdateStatus = 'idle' | 'checking' | 'up-to-date' | 'updating';
 
 const reloadFromCdn = () => {
@@ -254,14 +257,14 @@ export default function RootLayout() {
   // Light, or Dark from the theme settings.
   const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_SYSTEM);
   const [sunTimes, setSunTimes] = useState<{ sunrise: Date; sunset: Date } | null>(null);
-  const [textScale, setTextScale] = useState<TextScale>(DEFAULT_TEXT_SCALE);
+  const [textScale, setTextScale] = useState<TextScale>(DEVICE_DEFAULT_TEXT_SCALE);
   // The app's text size and the phone's multiply. Every screen draws with the
   // chosen size, reduced only if the phone's is so large that together they'd
   // pass MAX_COMBINED_TEXT_SCALE; the Text size setting shows the chosen one.
   const { fontScale: systemFontScale } = useWindowDimensions();
   const effectiveTextScale = getEffectiveTextScale(textScale, systemFontScale);
   const [theme, setTheme] = useState(() =>
-    getAppTheme(colorScheme === THEME_DARK, false, DEFAULT_TEXT_SCALE),
+    getAppTheme(colorScheme === THEME_DARK, false, DEVICE_DEFAULT_TEXT_SCALE),
   );
   const [isReady, setIsReady] = useState(false);
   const [launchSplashVisible, setLaunchSplashVisible] = useState(playsLaunchAnimation);
@@ -653,7 +656,7 @@ export default function RootLayout() {
         // Use saved settings if they exist, otherwise fallback to system defaults
         const preferredLanguage = (savedLang as SupportedLanguage) || systemLang;
         const useDarkTheme = colorScheme === THEME_DARK;
-        const preferredTextScale = parseStoredTextScale(savedTextScale);
+        const preferredTextScale = parseStoredTextScale(savedTextScale, DEVICE_DEFAULT_TEXT_SCALE);
         setLanguage(preferredLanguage);
         setTextScale(preferredTextScale);
         const preferredThemeMode: ThemeMode =
@@ -849,6 +852,7 @@ export default function RootLayout() {
               setTextScale: handleSetTextScale,
               textScale: effectiveTextScale,
               preferredTextScale: textScale,
+              defaultTextScale: DEVICE_DEFAULT_TEXT_SCALE,
             }}
           >
             <ThemeContext.Provider

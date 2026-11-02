@@ -14,6 +14,31 @@ export const getPopupSurfaceStyle = (theme: AppTheme) => ({
 });
 
 /**
+ * The widest a popup grows, on a tablet or other wide screen (#324). On a phone
+ * it's 90% of the screen's width, or its margins decide.
+ */
+export const POPUP_MAX_WIDTH = 560;
+
+/**
+ * A popup's width: its width on a phone, up to `maxWidth`, centered.
+ *
+ * Give a Paper Modal or Dialog this number, not a percentage `width` with a
+ * `maxWidth`. On iOS, Paper's Surface puts the width on an outer view and the
+ * `maxWidth` on an inner one, so on an iPad the popup filled 90% of the screen
+ * with its content in only part of it (#324), as with `maxHeight` below.
+ */
+export const getPopupWidthStyle = (phoneWidth: number, maxWidth = POPUP_MAX_WIDTH) => ({
+  alignSelf: 'center' as const,
+  width: Math.max(0, Math.round(Math.min(phoneWidth, maxWidth))),
+});
+
+/** A dialog's width: 90% of the screen, up to `maxWidth`. */
+export const usePopupWidthStyle = (maxWidth = POPUP_MAX_WIDTH) => {
+  const { width } = useWindowDimensions();
+  return getPopupWidthStyle(width * 0.9, maxWidth);
+};
+
+/**
  * How tall a popup may grow, as a fraction of the space between the safe
  * areas, at any text size: past it, the popup's content scrolls. It leaves
  * room around every popup for a thumb to tap outside and close it. On a

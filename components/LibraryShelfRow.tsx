@@ -1,9 +1,10 @@
 import { AppIcon } from '@/components/AppIcon';
 import { LibraryCoverImage } from '@/components/LibraryCoverImage';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { contentColumnStyle, DESIGN_TOKENS, getContentSideInset } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import type { LibraryShelfBook } from '@/features/library/useLibraryShelfBooks';
 import { useMemo } from 'react';
 import {
@@ -11,6 +12,7 @@ import {
   Platform,
   StyleSheet,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Text } from 'react-native-paper';
@@ -25,12 +27,16 @@ type LibraryShelfRowProps = Readonly<{
 /**
  * One shelf of the library page: its title, a link to the whole shelf, and
  * its covers in a row that scrolls sideways. A longer shelf makes the row
- * longer, not the page.
+ * longer, not the page. On a wide screen the row still spans the screen, and
+ * its first cover lines up with the content column the title is in.
  */
 export function LibraryShelfRow({ books, onSeeAll, seeAllLabel, title }: LibraryShelfRowProps) {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
-  const styles = useMemo(() => createStyles(textScale), [textScale]);
+  const { width } = useWindowDimensions();
+  const columnScale = useContentColumnScale();
+  const styles = useMemo(() => createStyles(textScale, columnScale), [columnScale, textScale]);
+  const sideInset = getContentSideInset(width, columnScale);
 
   return (
     <View style={styles.row}>
@@ -59,7 +65,7 @@ export function LibraryShelfRow({ books, onSeeAll, seeAllLabel, title }: Library
         </TouchableOpacity>
       </View>
       <FlatList
-        contentContainerStyle={styles.books}
+        contentContainerStyle={[styles.books, { paddingHorizontal: 20 + sideInset }]}
         data={books}
         horizontal
         keyExtractor={(book) => book.key}
@@ -105,12 +111,16 @@ export function LibraryShelfRow({ books, onSeeAll, seeAllLabel, title }: Library
   );
 }
 
-const createStyles = (textScale: Parameters<typeof scaleTypographyMetric>[1]) =>
+const createStyles = (
+  textScale: Parameters<typeof scaleTypographyMetric>[1],
+  columnScale: number,
+) =>
   StyleSheet.create({
     row: {
       marginBottom: 28,
     },
     header: {
+      ...contentColumnStyle(columnScale),
       alignItems: 'center',
       flexDirection: 'row',
       gap: 12,

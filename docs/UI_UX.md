@@ -236,6 +236,58 @@ open. On November 1, 2026, the church chose to keep the drawing but keep it shor
 Keep it under a second if you change it. The brand rules it follows are in
 [LEGAL_BRANDING.md](LEGAL_BRANDING.md#the-launch-animation).
 
+#### Wide screens: iPad, tablets, and foldables
+
+The app is one layout that follows the window's width, not a separate tablet design
+(#324). Older members read on iPads for the bigger text and screen, so a wide screen
+shows the phone's pages larger and roomier, not more on each page:
+
+- **Text starts at 150% on a tablet**, not a phone's 125% (`getDefaultTextScale` in
+  `constants/AppPreferences.ts`). A tablet is held farther away, so at 125% its pages
+  read small, and Text size's Reset returns to 150% there. A device counts as a tablet
+  when its screen's shorter side is at least 600 points, Android's own line, which every
+  iPad passes and no phone does; the web stays at 125%, since its wide windows are mostly
+  computers. First-launch setup saves the size, so a foldable keeps the size it was set
+  up with.
+- **A centered content column.** A page's content grows to at most 720 points wide at
+  the default 125% text (`CONTENT_MAX_WIDTH` in `constants/Layout.ts`) and stays
+  centered, so lines of Bible text stay a comfortable length and a page's cards and
+  buttons stay near each other. Larger text widens it in proportion, 864 points at a
+  tablet's 150% and 1152 at 200%, so a line holds about as many words: members who chose an iPad for
+  bigger text get the screen's width, not a narrow column of short lines. The size it
+  follows is the app's text size times the device's (`useContentColumnScale`), since
+  members enlarge text in either place. Phones are narrower than the column, so their
+  layout never changes. Put a new page's content in the column with
+  `contentColumnStyle(columnScale)`, and size anything that depends on the width from
+  `getContentWidth(width, columnScale)`, not the window's width. On a tablet the Bible's
+  text also gets 24-point margins, since a phone's 4 points would leave it against the
+  screen's edge once the column fills the screen.
+- **Full-width edges.** Banner images, the header, the Bible's dock background, and the
+  tab bar still span the screen, so the app reaches the edges as it does on a phone
+  (see Edge-to-Edge above). Their text and buttons line up with the column
+  (`contentColumnWithin`, and the tab bar's `getContentSideInset`). Rows that scroll
+  sideways, such as the library's shelves, span the screen too, starting in line with
+  the column.
+- **A third column of book covers** in a library shelf's grid once the column is 600
+  points wide (`getLibraryGridColumns`), so covers stay a sensible size. Other grids,
+  such as Home's cards, keep two columns, which the column keeps a phone-like shape.
+- **Popups at most 560 points wide** (`POPUP_MAX_WIDTH` in `styles/PopupStyles.ts`),
+  centered as on a phone (`usePopupWidthStyle`, or `getPopupWidthStyle` for a popup with
+  side margins). Give a popup that number, never a percentage width with a `maxWidth`:
+  on iOS, Paper splits the two between its views, and an iPad popup filled 90% of the
+  screen with its content in part of it.
+- **Tab labels under their icons**, as on a phone. React Navigation's default puts each
+  label beside its icon on a wide screen, far from it on a tablet.
+- **Every way up on a large screen, portrait on phones.** The iPad turns to any
+  orientation and can share the screen with another app or be resized, as iPadOS 26
+  expects of every iPad app (Apple's
+  [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key)).
+  Android tablets and unfolded foldables turn freely (#426). Phones stay in portrait on
+  both platforms. In a narrow window beside another app, the layout is a phone's.
+
+The release PR's screenshot run takes the iPad's pages in both orientations
+([iPad key screens](operations/native-builds.md#ipad-key-screens)).
+
 ## Navigation Layout
 
 ### 1. Home (The "Pulse")

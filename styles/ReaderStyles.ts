@@ -408,6 +408,7 @@ export const createReaderStyles = (textScale: TextScale) => {
     borderRadius: 7,
     marginLeft: -7,
   },
+  // The Bible screen puts this in the content column on a wide screen (#324).
   scrollContent: {
     paddingLeft: 4,
     paddingRight: enlargedReadingLayout ? 8 : 20,

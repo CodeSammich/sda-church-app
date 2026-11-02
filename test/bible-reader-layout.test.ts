@@ -131,7 +131,8 @@ describe('Bible reader text scaling', () => {
     // "Psalms" read "Ps…" beside a full-size "Verse".
     const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     expect(source).toContain('bibleUiTextScale * getHeaderFontScale(osFontScale)');
-    expect(source).toContain('getBibleDockLayout(viewportWidth, dockTextScale)');
+    // On a wide screen, the dock's controls get the content column's width (#324).
+    expect(source).toContain('getBibleDockLayout(getContentWidth(viewportWidth, columnScale), dockTextScale)');
     // The book, chapter, and Verse labels, the selection count, the audio
     // language mark, both audio times, and the hidden copy that measures pills.
     expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(8);
@@ -267,7 +268,8 @@ describe('Bible reader text scaling', () => {
     const modals = bible.split('<Modal').slice(1);
     expect(modals).toHaveLength(4);
     for (const modal of modals) {
-      expect(modal).toMatch(/^\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}\s+contentContainerStyle=\{\[\s+ReaderStyles\.modalContent,\s+\{ maxHeight: popupMaxHeight \},/);
+      // Each is as wide as the You tab's dialogs at most, on a wide screen (#324).
+      expect(modal).toMatch(/^\s+visible=\{[^}]+\}\s+onDismiss=\{[^\n]+\}\s+contentContainerStyle=\{\[\s+ReaderStyles\.modalContent,\s+popupWidthStyle,\s+\{ maxHeight: popupMaxHeight \},/);
     }
     expect(createReaderStyles(2)).not.toHaveProperty('audioSettingsContent');
   });

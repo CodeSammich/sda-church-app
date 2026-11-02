@@ -3,8 +3,9 @@ import {
   scaleTypographyMetric,
   type TextScale,
 } from '@/constants/AppPreferences';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { contentColumnStyle, DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -12,7 +13,11 @@ import { StyleSheet } from 'react-native';
  * Global styles for informational/reading pages (e.g., About, Beliefs, Privacy).
  * Ensures a consistent look and feel across the application's document-style content.
  */
-export const createDocumentStyles = (textScale: TextScale) => StyleSheet.create({
+export const createDocumentStyles = (
+  textScale: TextScale,
+  // The text size the content column follows: the app's times the device's.
+  columnScale: number = textScale,
+) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -25,6 +30,7 @@ export const createDocumentStyles = (textScale: TextScale) => StyleSheet.create(
     lineHeight: scaleTypographyMetric(34, textScale),
   },
   section: {
+    ...contentColumnStyle(columnScale),
     paddingHorizontal: 16,
     marginBottom: 24,
   },
@@ -114,5 +120,6 @@ export const DocumentStyles = createDocumentStyles(DEFAULT_TEXT_SCALE);
 
 export const useDocumentStyles = () => {
   const { textScale } = useTextSize();
-  return useMemo(() => createDocumentStyles(textScale), [textScale]);
+  const columnScale = useContentColumnScale();
+  return useMemo(() => createDocumentStyles(textScale, columnScale), [columnScale, textScale]);
 };
