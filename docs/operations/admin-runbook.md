@@ -245,6 +245,12 @@ The QR codes and where they point are listed in
 The app code uses the church's own `app.nyccsda.org` address, never the GitHub Pages
 address it redirects to, so printed codes keep working if the website moves.
 
+The app shows the same download code itself, under **You → Share the App** (#555). Its
+image, `assets/images/app-download-qr.jpg`, ships with the app. If the download address
+ever changes, update `APP_DOWNLOAD_URL` in `constants/ExternalLinks.ts` and regenerate
+the image with `node scripts/generate-qr.mjs --url <address> --output
+assets/images/app-download-qr.jpg`; `test/share-app-qr.test.ts` fails until both match.
+
 **To change a destination,** edit that file in a pull request. The workflow runs by
 itself when a change to the file, to `scripts/generate-qr.mjs`, or to the workflow
 reaches `main`, so a changed URL can't be forgotten. It also runs from **Run

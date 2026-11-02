@@ -99,6 +99,14 @@ export const openInItsApp = async (
 };
 
 /**
+ * The app's download page, which sends a phone to its app store (#237). The
+ * printed bulletin's app QR code (scripts/bulletin-qr-codes.json) and the You
+ * tab's **Share the App** code (assets/images/app-download-qr.jpg, #555) both
+ * point here.
+ */
+export const APP_DOWNLOAD_URL = 'https://app.nyccsda.org/download';
+
+/**
  * The privacy policy is kept only on the website, which both store listings
  * link to (#403), so a wording fix needs a website deploy, not a new app build.
  * Keep public/privacy-policy.html at this path.

@@ -304,7 +304,11 @@ are on Home, not here.
 
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
 **Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
-**About & Support** starts with **Help & Feedback**, which opens a draft email to
+**About & Support** starts with **Share the App** (#555): a popup with a QR code a
+friend can scan with their phone's camera to reach the download page
+(`https://app.nyccsda.org/download`, which sends them to their app store), the address,
+and **Share Link** for the device's share sheet. The code sits on white, so it scans in
+the dark theme too. Next is **Help & Feedback**, which opens a draft email to
 `technology@nyccsda.org` in the device's email app, for help or a feature request
 (#541). Its subject is always English, `[NYCCSDA App] Help or feature request`, with
 the same prefix as the Bible translation request's, so the emails are easy to filter.
