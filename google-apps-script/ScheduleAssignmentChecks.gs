@@ -17,20 +17,27 @@
  *    Bulletin menu. Until then it is a plain alert, because Google does not
  *    let simple triggers open HTML dialogs.
  *
- * Row 1 (headers) and columns A:E (date, quarter, and service metadata) are
- * never read or painted. Only fills and notes the script wrote are ever
- * changed.
+ * Only the roster's person columns are read or painted, each found by its
+ * header wherever it is: columns can be moved, inserted, or added without
+ * changing anything here. Row 1 (headers) and the date, quarter, and service
+ * metadata columns are never touched. Only fills and notes the script wrote
+ * are ever changed.
  */
 
+// Staff-facing text (dialogs, alerts, errors, notes) is in English and
+// Simplified Chinese, because the people who run the bulletin read Simplified.
+// Everything printed stays in Traditional Chinese on purpose. Keep the two
+// apart: see "Chinese script" in docs/operations/bulletin-automation.md.
 var SCHEDULE_ASSIGNMENT_CHECK_CONFIG = Object.freeze({
   nameDictionarySheetName: 'Name Dictionary',
   firstPersonHeader: 'Queens Sermon',
   // Google Sheets palette "light red 2".
   conflictColor: '#ea9999',
-  notePrefix: 'Duplicate / 重複:',
-  // Earlier wording of the note. Still recognized as the script's own, so
-  // those notes are rewritten instead of being kept as planner notes.
-  legacyNotePrefixes: ['Roster check / 名單檢查'],
+  notePrefix: 'Duplicate / 重复:',
+  // Earlier wordings of the note, including the Traditional Chinese one from
+  // before #565. Still recognized as the script's own, so those notes are
+  // rewritten instead of being kept as planner notes.
+  legacyNotePrefixes: ['Roster check / 名單檢查', 'Duplicate / 重複:'],
   maxSuggestions: 3,
   nameCheckTriggerHandler: 'onScheduleNameCheckEdit',
   nameCheckTriggerProperty: 'SCHEDULE_NAME_CHECK_TRIGGER',
@@ -38,16 +45,59 @@ var SCHEDULE_ASSIGNMENT_CHECK_CONFIG = Object.freeze({
 
 var SCHEDULE_NAME_SEPARATOR_PATTERN = /(\s*(?:\/|&|\+|,|;|\n|\band\b)\s*)/i;
 
-function getSchedulePersonColumnBounds_() {
-  var headers =
-    BULLETIN_HEADER_CONTRACTS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
-  var first = headers.indexOf(SCHEDULE_ASSIGNMENT_CHECK_CONFIG.firstPersonHeader) + 1;
-  return { first: first, last: headers.length, count: headers.length - first + 1 };
+/**
+ * The roster's person columns, in sheet order: each expected header from
+ * Queens Sermon on, found by name in the sheet's own header row (#558's
+ * follow-up). A repeated header (Chair/Pastoral Prayer, Offering Prayer) is
+ * found as findScheduleColumn_ finds it, and labeled with its location. A
+ * missing column is skipped, and a column the bulletin doesn't know is left
+ * alone.
+ */
+function getSchedulePersonColumns_(sheet) {
+  var expected =
+    BULLETIN_SHEET_COLUMNS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
+  var first = expected.indexOf(SCHEDULE_ASSIGNMENT_CHECK_CONFIG.firstPersonHeader);
+  var brooklynStart = expected.indexOf('Brooklyn Sermon');
+  var lastColumn = Math.max(1, sheet.getLastColumn());
+  var headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  var seen = {};
+  var columns = [];
+  expected.forEach(function (header, index) {
+    var occurrence = seen[header] || 0;
+    seen[header] = occurrence + 1;
+    if (index < first) {
+      return;
+    }
+    var location = '';
+    if (expected.indexOf(header) !== expected.lastIndexOf(header)) {
+      location = index >= brooklynStart ? 'brooklyn' : 'queens';
+    }
+    var found = findScheduleColumn_(headers, header, location, occurrence);
+    var columnNumber = found + 1;
+    if (found === -1 || columns.some(function (column) { return column.number === columnNumber; })) {
+      return;
+    }
+    columns.push({
+      number: columnNumber,
+      label: location ? (location === 'brooklyn' ? 'Brooklyn ' : 'Queens ') + header : header,
+    });
+  });
+  return columns.sort(function (a, b) {
+    return a.number - b.number;
+  });
 }
 
-function isSchedulePersonCell_(rowNumber, columnNumber) {
-  var bounds = getSchedulePersonColumnBounds_();
-  return rowNumber >= 2 && columnNumber >= bounds.first && columnNumber <= bounds.last;
+function findSchedulePersonColumn_(columns, columnNumber) {
+  for (var index = 0; index < columns.length; index += 1) {
+    if (columns[index].number === columnNumber) {
+      return columns[index];
+    }
+  }
+  return null;
+}
+
+function isSchedulePersonCell_(sheet, rowNumber, columnNumber) {
+  return rowNumber >= 2 && !!findSchedulePersonColumn_(getSchedulePersonColumns_(sheet), columnNumber);
 }
 
 /**
@@ -160,33 +210,15 @@ function findScheduleRowConflicts_(row, lookup) {
 }
 
 /**
- * Names a person column for a planner. The repeated Chair/Pastoral Prayer
- * and Offering Prayer headers get their location so the note is unambiguous.
+ * Names the person's other roles that Sabbath by column, for example
+ * "Duplicate / 重复: English Teacher". The repeated Chair/Pastoral Prayer and
+ * Offering Prayer headers carry their location, so the note is unambiguous.
  */
-function getSchedulePersonColumnLabel_(columnNumber) {
-  var headers =
-    BULLETIN_HEADER_CONTRACTS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
-  var header = headers[columnNumber - 1];
-  if (headers.indexOf(header) === headers.lastIndexOf(header)) {
-    return header;
-  }
-  var brooklynStart = headers.indexOf('Brooklyn Sermon') + 1;
-  return (columnNumber >= brooklynStart ? 'Brooklyn ' : 'Queens ') + header;
-}
-
-/**
- * Names the person's other roles that Sabbath by column header, for example
- * "Duplicate / 重複: English Teacher".
- */
-function buildScheduleConflictNote_(otherColumnNumbers) {
-  if (!otherColumnNumbers.length) {
+function buildScheduleConflictNote_(otherLabels) {
+  if (!otherLabels.length) {
     return '';
   }
-  return (
-    SCHEDULE_ASSIGNMENT_CHECK_CONFIG.notePrefix +
-    ' ' +
-    otherColumnNumbers.map(getSchedulePersonColumnLabel_).join(', ')
-  );
+  return SCHEDULE_ASSIGNMENT_CHECK_CONFIG.notePrefix + ' ' + otherLabels.join(', ');
 }
 
 function isScheduleConflictNote_(note) {
@@ -211,8 +243,15 @@ function refreshScheduleRosterChecks_(sheet, lookup) {
   }
 
   var config = SCHEDULE_ASSIGNMENT_CHECK_CONFIG;
-  var bounds = getSchedulePersonColumnBounds_();
-  var range = sheet.getRange(2, bounds.first, lastRow - 1, bounds.count);
+  var columns = getSchedulePersonColumns_(sheet);
+  if (!columns.length) {
+    return 0;
+  }
+  // One read and write over the span the person columns cover; any other
+  // column inside it is read but left as it was.
+  var firstColumn = columns[0].number;
+  var span = columns[columns.length - 1].number - firstColumn + 1;
+  var range = sheet.getRange(2, firstColumn, lastRow - 1, span);
   var values = range.getDisplayValues();
   var backgrounds = range.getBackgrounds();
   var notes = range.getNotes();
@@ -221,7 +260,11 @@ function refreshScheduleRosterChecks_(sheet, lookup) {
   var notesChanged = false;
 
   values.forEach(function (row, rowIndex) {
-    findScheduleRowConflicts_(row, lookup).forEach(function (others, columnIndex) {
+    var people = columns.map(function (column) {
+      return row[column.number - firstColumn];
+    });
+    findScheduleRowConflicts_(people, lookup).forEach(function (others, personIndex) {
+      var columnIndex = columns[personIndex].number - firstColumn;
       var current = String(backgrounds[rowIndex][columnIndex] || '').toLowerCase();
       if (others.length) {
         conflictCells += 1;
@@ -240,7 +283,7 @@ function refreshScheduleRosterChecks_(sheet, lookup) {
       }
       var wantedNote = buildScheduleConflictNote_(
         others.map(function (otherIndex) {
-          return bounds.first + otherIndex;
+          return columns[otherIndex].label;
         }),
       );
       if (wantedNote !== currentNote) {
@@ -349,8 +392,7 @@ function findUnknownScheduleNames_(range, lookup) {
     return [];
   }
   var sheet = range.getSheet();
-  var headers =
-    BULLETIN_HEADER_CONTRACTS[BULLETIN_SCHEDULE_MAINTENANCE_CONFIG.scheduleSheetName];
+  var columns = getSchedulePersonColumns_(sheet);
   var values = range.getDisplayValues();
   var seen = {};
   var unknown = [];
@@ -359,7 +401,8 @@ function findUnknownScheduleNames_(range, lookup) {
     row.forEach(function (value, columnIndex) {
       var rowNumber = range.getRow() + rowIndex;
       var columnNumber = range.getColumn() + columnIndex;
-      if (!isSchedulePersonCell_(rowNumber, columnNumber)) {
+      var personColumn = rowNumber >= 2 ? findSchedulePersonColumn_(columns, columnNumber) : null;
+      if (!personColumn) {
         return;
       }
       splitScheduleCellNames_(value).forEach(function (name) {
@@ -372,7 +415,7 @@ function findUnknownScheduleNames_(range, lookup) {
           name: name,
           row: rowNumber,
           column: columnNumber,
-          role: headers[columnNumber - 1],
+          role: personColumn.label,
           date: sheet.getRange(rowNumber, 1).getDisplayValue(),
           suggestions: suggestScheduleNames_(name, lookup),
         });
@@ -482,8 +525,8 @@ function getUnknownScheduleNamesNoticeText_(unknown) {
     'These names are not in the Name Dictionary tab. Please check the spelling, ' +
     'or add the name (with the Chinese name if there is one) so the printed ' +
     'bulletin shows it correctly.\n' +
-    '以下姓名不在「Name Dictionary」分頁中。請檢查拼寫，或新增此姓名（如有中文姓名請一併填寫），' +
-    '以便印刷週刊正確顯示。\n\n' +
+    '以下姓名不在“Name Dictionary”工作表中。请检查拼写，或添加此姓名（如有中文姓名请一并填写），' +
+    '以便纸质周刊正确显示。\n\n' +
     lines.join('\n')
   );
 }
@@ -531,10 +574,10 @@ function buildUnknownScheduleNamesHtml_(unknown) {
     '.close{background:#f1f3f4;border:0;border-radius:4px;cursor:pointer;font-size:13px;padding:7px 14px;}' +
     '</style></head><body>' +
     '<p class="intro">These names are not in the Name Dictionary. Pick the intended name, or add a new one (with the Chinese name if there is one).<br>' +
-    '以下姓名不在姓名字典中。請選擇正確的姓名，或新增姓名（如有中文姓名請一併填寫）。</p>' +
+    '以下姓名不在姓名字典中。请选择正确的姓名，或添加姓名（如有中文姓名请一并填写）。</p>' +
     '<div id="entries"></div>' +
-    '<div class="actions"><button type="button" class="link" id="openDictionary">Open Name Dictionary tab / 開啟姓名字典分頁</button>' +
-    '<button type="button" class="close" onclick="google.script.host.close()">Close / 關閉</button></div>' +
+    '<div class="actions"><button type="button" class="link" id="openDictionary">Open Name Dictionary tab / 打开姓名字典工作表</button>' +
+    '<button type="button" class="close" onclick="google.script.host.close()">Close / 关闭</button></div>' +
     '<script>' +
     'var entries=' + entriesJson + ';' +
     'function el(tag,className,text){var node=document.createElement(tag);if(className){node.className=className;}if(text){node.textContent=text;}return node;}' +
@@ -548,12 +591,12 @@ function buildUnknownScheduleNamesHtml_(unknown) {
     'if(entry.suggestions.length){card.appendChild(el("div","label","Did you mean? / 您是否指："));var list=el("div","suggestions");' +
     'entry.suggestions.forEach(function(suggestion){var button=el("button","suggestion",suggestion);button.type="button";' +
     'button.onclick=function(){run(card,status,"replaceScheduleNameFromDialog",{row:entry.row,column:entry.column,from:entry.name,to:suggestion},' +
-    '"Replaced with "+suggestion+" / 已改為 "+suggestion);};list.appendChild(button);});card.appendChild(list);}' +
-    'card.appendChild(el("div","label","Add to Name Dictionary / 加入姓名字典"));var form=el("div","add");' +
+    '"Replaced with "+suggestion+" / 已改为 "+suggestion);};list.appendChild(button);});card.appendChild(list);}' +
+    'card.appendChild(el("div","label","Add to Name Dictionary / 添加到姓名字典"));var form=el("div","add");' +
     'var english=el("input");english.value=entry.name;english.placeholder="English name / 英文姓名";english.setAttribute("aria-label","English name");' +
-    'var chinese=el("input");chinese.placeholder="Chinese name (optional) / 中文姓名（可選）";chinese.setAttribute("aria-label","Chinese name");' +
-    'var add=el("button","primary","Add / 新增");add.type="button";add.onclick=function(){if(!english.value.trim()){setStatus(status,false,"English name is required. / 必須填寫英文姓名。");return;}' +
-    'run(card,status,"addScheduleNameToDictionary",{english:english.value,chinese:chinese.value},"Added to Name Dictionary / 已加入姓名字典");};' +
+    'var chinese=el("input");chinese.placeholder="Chinese name (optional) / 中文姓名（可选）";chinese.setAttribute("aria-label","Chinese name");' +
+    'var add=el("button","primary","Add / 添加");add.type="button";add.onclick=function(){if(!english.value.trim()){setStatus(status,false,"English name is required. / 必须填写英文姓名。");return;}' +
+    'run(card,status,"addScheduleNameToDictionary",{english:english.value,chinese:chinese.value},"Added to Name Dictionary / 已添加到姓名字典");};' +
     'form.appendChild(english);form.appendChild(chinese);form.appendChild(add);card.appendChild(form);card.appendChild(status);' +
     'document.getElementById("entries").appendChild(card);});' +
     'document.getElementById("openDictionary").onclick=function(){google.script.run.withSuccessHandler(function(){google.script.host.close();}).openNameDictionaryFromDialog();};' +
@@ -566,7 +609,7 @@ function getScheduleDialogText_(value, label) {
     .trim()
     .replace(/\s+/g, ' ');
   if (!text || text.length > 80) {
-    throw new Error(label + ' must be 1–80 characters. / ' + label + ' 必須為 1–80 個字元。');
+    throw new Error(label + ' must be 1–80 characters. / ' + label + ' 必须为 1–80 个字符。');
   }
   return text;
 }
@@ -579,12 +622,12 @@ function addScheduleNameToDictionary(request) {
   var english = getScheduleDialogText_(request && request.english, 'English name');
   if (/[㐀-䶿一-鿿豈-﫿]/.test(english)) {
     throw new Error(
-      'Put Chinese characters in the Chinese name box. / 請將中文字填入中文姓名欄。',
+      'Put Chinese characters in the Chinese name box. / 请将中文字填入中文姓名框。',
     );
   }
   var chinese = String((request && request.chinese) || '').trim();
   if (chinese.length > 80) {
-    throw new Error('Chinese name is too long. / 中文姓名過長。');
+    throw new Error('Chinese name is too long. / 中文姓名过长。');
   }
 
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -592,7 +635,7 @@ function addScheduleNameToDictionary(request) {
     SCHEDULE_ASSIGNMENT_CHECK_CONFIG.nameDictionarySheetName,
   );
   if (!sheet) {
-    throw new Error('Name Dictionary sheet not found. / 找不到姓名字典分頁。');
+    throw new Error('Name Dictionary sheet not found. / 找不到姓名字典工作表。');
   }
   var lookup = loadScheduleNameLookup_();
   if (lookup.englishByKey[normalizePhysicalNameKey_(english)]) {
@@ -610,12 +653,12 @@ function addScheduleNameToDictionary(request) {
 function replaceScheduleNameFromDialog(request) {
   var row = Number(request && request.row);
   var column = Number(request && request.column);
-  if (!isSchedulePersonCell_(row, column)) {
-    throw new Error('That cell is not a roster name cell. / 此儲存格不是名單姓名欄。');
+  var sheet = getBulletinScheduleMaintenanceSheet_();
+  if (!isSchedulePersonCell_(sheet, row, column)) {
+    throw new Error('That cell is not a roster name cell. / 此单元格不是名单中的姓名单元格。');
   }
   var from = normalizePhysicalNameKey_(request.from);
   var to = getScheduleDialogText_(request.to, 'Name');
-  var sheet = getBulletinScheduleMaintenanceSheet_();
   var cell = sheet.getRange(row, column);
   var replaced = false;
   var updated = String(cell.getDisplayValue())
@@ -629,7 +672,7 @@ function replaceScheduleNameFromDialog(request) {
     })
     .join('');
   if (!replaced) {
-    throw new Error('The cell has changed since this check. / 此儲存格內容已變更。');
+    throw new Error('The cell has changed since this check. / 此单元格的内容在检查后已被更改。');
   }
   cell.setValue(updated);
   refreshScheduleRosterChecksSafely_(sheet);

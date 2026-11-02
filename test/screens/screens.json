@@ -391,13 +391,22 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "Help & Feedback, the first item under About & Support, emails the technology team (#541).",
+      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). On Android's default screen Help & Feedback now falls just below the screenshot, so only the Chinese variant, whose rows are shorter, requires it.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Help\\b.*Feedback"] },
-        "zh": { "mustShowLines": ["幫助與意見回饋"] }
+        "default": { "mustShowLines": ["^Share the App$"] },
+        "zh": { "mustShowLines": ["分享應用程式", "幫助與意見回饋"] }
       }
+    },
+    {
+      "name": "share-app",
+      "group": "worship-and-you",
+      "$comment": "The Share the App popup, opened by popup=share-app (#555): an X beside its title, the download page's QR code on white so it scans in the dark theme too, the address, and Share Link, with no Close button. The QR image has no text, so the rules require the address and the button. The button's share icon reads as \"<\" before its label, so the label isn't anchored at the start.",
+      "path": "you?popup=share-app",
+      "variants": ["default"],
+      "mustShowLines": ["app\\.nyccsda\\.org/download", "Share Link$"],
+      "mustNotShowLines": ["^Close$"]
     },
     {
       "name": "text-size",

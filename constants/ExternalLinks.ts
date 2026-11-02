@@ -50,21 +50,6 @@ export const getBulletinApiUrl = (date: string) =>
   `${BULLETIN_API_BASE_URL}?date=${encodeURIComponent(date)}`;
 
 /**
- * Staff-only source schedule. Google Drive enforces access for signed-in
- * nyccsda.org accounts; the public PWA does not proxy or embed its contents.
- */
-export const QUARTERLY_SCHEDULE_URL =
-  'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit?usp=sharing';
-
-// Staff are signed in to the Google Sheets app, so the schedule opens there.
-export const openQuarterlySchedule = () =>
-  openInItsApp(
-    QUARTERLY_SCHEDULE_URL,
-    'Access unavailable',
-    'Could not open the staff schedule.',
-  );
-
-/**
  * Centralized hub for external destinations.
  * Consolidating these here satisfies Tenet 5 (Simplicity) by providing
  * a single source of truth for the app's external touchpoints.
@@ -95,10 +80,10 @@ export const openURL = async (
 
 /**
  * Hands a link to the app it belongs to: phone numbers to the phone, email
- * addresses to the mail app, and YouTube, Spotify, Zoom, Google Maps, Google
- * Sheets, App Store and Google Play links to those apps, where people are signed
- * in and can watch, join, get directions, or install. A phone without that app
- * opens the link in its own browser.
+ * addresses to the mail app, and YouTube, Spotify, Zoom, Google Maps, App Store
+ * and Google Play links to those apps, where people are signed in and can watch,
+ * join, get directions, or install. A phone without that app opens the link in
+ * its own browser.
  */
 export const openInItsApp = async (
   url: string,
@@ -112,6 +97,14 @@ export const openInItsApp = async (
     console.error('Linking error:', error);
   }
 };
+
+/**
+ * The app's download page, which sends a phone to its app store (#237). The
+ * printed bulletin's app QR code (scripts/bulletin-qr-codes.json) and the You
+ * tab's **Share the App** code (assets/images/app-download-qr.jpg, #555) both
+ * point here.
+ */
+export const APP_DOWNLOAD_URL = 'https://app.nyccsda.org/download';
 
 /**
  * The privacy policy is kept only on the website, which both store listings

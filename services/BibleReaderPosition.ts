@@ -37,6 +37,25 @@ export function getTopVisibleVerse(
 }
 
 /**
+ * Where to scroll so a verse sits in the middle of the text showing, which runs
+ * from `visibleTop` to `visibleBottom` on screen: the verse's middle at its
+ * middle, or the verse's top at its top when the verse is too tall to fit.
+ */
+export function getCenteredVerseScrollY(
+  verseY: number,
+  verseHeight: number,
+  visibleTop: number,
+  visibleBottom: number,
+) {
+  const visibleHeight = visibleBottom - visibleTop;
+  const scrollY =
+    verseHeight >= visibleHeight
+      ? verseY - visibleTop
+      : verseY + verseHeight / 2 - (visibleTop + visibleHeight / 2);
+  return Math.max(0, Math.round(scrollY));
+}
+
+/**
  * Picks the position to restore after switching to `translationId`: the
  * verse at the top of the reader. While the chapter is still loading, no
  * verse is on screen, so a second quick switch keeps the position the first

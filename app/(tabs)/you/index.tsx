@@ -1,6 +1,7 @@
 import { UpdateContext } from '@/app/_layout';
 import { MenuCard } from '@/components/MenuCard';
 import { LanguageDialog } from '@/components/LanguageDialog';
+import { ShareAppDialog } from '@/components/ShareAppDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
 import {
@@ -35,6 +36,8 @@ const allLabels = {
     aboutSupport: 'About & Support',
     support: 'Help & Feedback',
     supportSub: 'Ask for help or suggest a feature, by email',
+    shareApp: 'Share the App',
+    shareAppSub: 'A QR code a friend can scan to download it',
     supportPrompt:
       'Is this a problem or an idea?\n\n\nWhat happened, or what would you like the app to do?\n\n\nIf something went wrong, what were you doing just before? A screenshot helps.',
     darkMode: 'Theme',
@@ -56,6 +59,8 @@ const allLabels = {
     aboutSupport: '關於與支援',
     support: '幫助與意見回饋',
     supportSub: '透過電子郵件尋求協助或建議新功能',
+    shareApp: '分享應用程式',
+    shareAppSub: '朋友掃描 QR 碼即可下載',
     supportPrompt:
       '這是問題回報，還是功能建議？\n\n\n發生了什麼事？或您希望 App 增加什麼功能？\n\n\n如果是問題：發生前您正在做什麼？附上截圖會很有幫助。',
     darkMode: '主題',
@@ -77,6 +82,8 @@ const allLabels = {
     aboutSupport: '关于与支持',
     support: '帮助与反馈',
     supportSub: '通过电子邮件寻求帮助或建议新功能',
+    shareApp: '分享应用',
+    shareAppSub: '朋友扫描二维码即可下载',
     supportPrompt:
       '这是问题反馈，还是功能建议？\n\n\n发生了什么？或您希望 App 增加什么功能？\n\n\n如果是问题：发生前您正在做什么？附上截图会很有帮助。',
     darkMode: '主题',
@@ -98,6 +105,8 @@ const allLabels = {
     aboutSupport: 'Información y Ayuda',
     support: 'Ayuda y Sugerencias',
     supportSub: 'Pida ayuda o sugiera una función, por correo',
+    shareApp: 'Compartir la App',
+    shareAppSub: 'Un código QR para que un amigo la descargue',
     supportPrompt:
       '¿Es un problema o una idea?\n\n\n¿Qué pasó, o qué le gustaría que hiciera la app?\n\n\nSi algo falló, ¿qué estaba haciendo justo antes? Una captura de pantalla ayuda.',
     darkMode: 'Tema',
@@ -127,16 +136,18 @@ export default function YouScreen() {
   const [showTextSize, setShowTextSize] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
+  const [showShareApp, setShowShareApp] = useState(false);
   const headerHeight = useGlobalHeaderHeight();
   const { popup } = useLocalSearchParams<{ popup?: string }>();
 
   // The key-screen capture can't tap, so its build opens a dialog from the
   // path, such as you?popup=text-size (#372).
   useEffect(() => {
-    const screenshotPopup = getScreenshotPopup(popup, ['language', 'text-size', 'theme']);
+    const screenshotPopup = getScreenshotPopup(popup, ['language', 'text-size', 'theme', 'share-app']);
     if (screenshotPopup === 'language') setShowLanguage(true);
     if (screenshotPopup === 'text-size') setShowTextSize(true);
     if (screenshotPopup === 'theme') setShowThemeDialog(true);
+    if (screenshotPopup === 'share-app') setShowShareApp(true);
   }, [popup]);
   const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
@@ -228,6 +239,13 @@ export default function YouScreen() {
               {labels.aboutSupport}
             </Text>
             <MenuCard
+              title={labels.shareApp}
+              description={labels.shareAppSub}
+              icon="qrcode"
+              iconColor={theme.colors.secondary}
+              onPress={() => setShowShareApp(true)}
+            />
+            <MenuCard
               title={labels.support}
               description={labels.supportSub}
               icon="email-outline"
@@ -293,6 +311,7 @@ export default function YouScreen() {
         visible={showThemeDialog}
         onDismiss={() => setShowThemeDialog(false)}
       />
+      <ShareAppDialog visible={showShareApp} onDismiss={() => setShowShareApp(false)} />
     </>
   );
 }

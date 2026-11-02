@@ -37,7 +37,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [HelloAO](#helloao) | English BSB audio, printed bulletin verses | Free | "No usage limits" | n/a | Low: CDN |
 | [fetch(bible)](#fetchbible) | The build script's source for RV1909 and the original-language texts; the app makes no request | Free | "No limits from us" | n/a | None at run time |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
-| [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons | Free | None published | Unknown | Low: CDN |
+| [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons, the bulletin's lesson title | Free | None published | Unknown | Low: CDN |
 | [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
 | [EGW Writings covers](#egw-writings-covers) | Library thumbnails | Free | None published | Unknown | Low: Cloudflare |
 | [Sunrise-Sunset](#sunrise-sunset) | Sunset times on the printed bulletins | Free, **attribution required** | "Reasonable" volume; `429` + `Retry-After` | Throttled | None: two requests per printed bulletin; the app no longer calls it |
@@ -208,6 +208,12 @@ lessons, 33 MB for one Chinese lesson) and keeps it, and the lookup, for the les
 week. Nothing downloads without a tap. So each phone downloads each lesson it opens at most once in its week, or twice when the catalog's dates are off (#529; see
 [Children's Sabbath School Lessons](../feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone)).
 
+The bulletin shows the week's adult lesson title (#558). Opening a week's bulletin
+downloads that quarter's adult lesson list in the app's language (about 12 KB,
+3 KB compressed), once per Sabbath and language while the app runs. Each printed
+bulletin makes the same two requests from Apps Script, for the English and
+Traditional Chinese titles.
+
 ### Chinese Union Mission library
 
 `api.sdabible.org` (catalog) and `cms.sdabible.site` (cover images), used only for
@@ -341,9 +347,9 @@ cost: YouTube, Spotify, Zoom, AdventistGiving, zgaxr (Chinese hymnals), Hymns fo
 Worship, the Adventech and Alive in Jesus lesson readers, EGW Writings reading,
 Project Gutenberg, the Internet Archive and HathiTrust book scans, Chapel Library,
 WordProject (the Bible audio credits), the Chinese Union Mission 506 hymnal store
-pages, Google Maps, the staff schedule in Google Sheets, and the conference, union,
-and adventist.org sites. Their availability risks, such as zgaxr's, are covered
-in [Architecture](../architecture.md#third-party-apis-and-websites).
+pages, Google Maps, and the conference, union, and adventist.org sites. Their
+availability risks, such as zgaxr's, are covered in
+[Architecture](../architecture.md#third-party-apis-and-websites).
 
 ## Known gaps
 

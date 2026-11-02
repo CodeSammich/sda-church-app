@@ -147,8 +147,11 @@ E2E_ONLY="pause-and-resume" scripts/e2e/android-bible-audio.sh   # one scenario
   failed scenario it saves the reason, a screenshot, the app's log, and the media session in
   `e2e-output/` (`E2E_OUTPUT` changes the folder).
 - `E2E_ONLY` takes space-separated scenario names: `next-chapter-screen-off`,
-  `dead-zone-screen-off`, `mid-chapter-offline`, `pause-and-resume`, and
-  `primary-host-down`.
+  `dead-zone-screen-off`, `mid-chapter-offline`, `pause-and-resume`,
+  `previous-before-start`, `primary-host-down`, and the reader's `verse-follows-audio`,
+  `scroll-by-hand`, `scroll-while-paused`, and `follow-after-screen-off`.
+- The reader's scenarios need a build made with `EXPO_PUBLIC_AUDIO_E2E=1`, so the reader
+  logs what it decides, and `ffmpeg` on your path (or `FFMPEG`) to compare screenshots.
 - `primary-host-down` runs only with `E2E_PRIMARY_BLOCKED=1`, and needs the church's
   audio host, `assets.adventistconnect.org`, to be unreachable. The workflow arranges
   both, with a local DNS server on the runner.

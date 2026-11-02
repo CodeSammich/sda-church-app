@@ -3,7 +3,8 @@ import { CHURCH_LOCATIONS } from '@/constants/ChurchData';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openInMaps,
-  openQuarterlySchedule,
+  openURL,
+  openYouTubeSearch,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
@@ -21,7 +22,14 @@ import {
   BulletinHymnPresentation,
   QUEENS_FIXED_HYMNS,
   resolveBulletinHymnPresentation,
+  toBulletinHymnText,
 } from '@/services/BulletinHymnalService';
+import {
+  type AdultLesson,
+  findAdultLesson,
+  formatAdultLesson,
+} from '@/features/sabbath-school/AdultLesson';
+import type { SupportedLanguage } from '@/constants/LanguageContext';
 import {
   Bulletin,
   BulletinLocation,
@@ -40,7 +48,7 @@ import { useNavigationStyles } from '@/styles/NavigationStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { ActivityIndicator, Card, Divider, IconButton, Text } from 'react-native-paper';
@@ -59,8 +67,6 @@ const LABELS = {
     nameWithheld: 'Name withheld',
     choir: 'Choir',
     sabbathSchoolProgram: 'Sabbath School',
-    schedule: 'Schedule sheet (staff only)',
-    scheduleHint: 'Opens a sheet that needs a church staff account.',
     worshipProgram: 'Worship Program',
     serviceRoster: 'Service Roster',
     queens: 'Queens',
@@ -72,6 +78,10 @@ const LABELS = {
     readNow: 'Read now',
     openHymn: 'Open hymn',
     openHymnInHymnal: 'Open {hymn} in the hymnal',
+    searchYouTube: 'Search YouTube',
+    searchYouTubeFor: 'Search YouTube for {hymn}',
+    readLesson: 'Read lesson',
+    readLessonOnline: 'Read {lesson} on the Sabbath School website',
     metadata: {
       quarter: 'Quarter',
       specialRemark: 'Special Remark',
@@ -92,6 +102,9 @@ const LABELS = {
       hymnOfResponse: 'Hymn of Response',
       benediction: 'Benediction',
       postlude: 'Postlude',
+      sabbathSchoolHymns: 'Opening & Closing Hymns',
+      lesson: 'Lesson',
+      specialMusicTitle: 'Piece',
     },
     roles: {
       sermon: 'Sermon Speaker',
@@ -131,8 +144,6 @@ const LABELS = {
     nameWithheld: '姓名保留',
     choir: '詩班',
     sabbathSchoolProgram: '安息日學',
-    schedule: '時間表（僅限同工）',
-    scheduleHint: '開啟需要教會同工帳號的表格。',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     queens: '皇后區',
@@ -144,6 +155,10 @@ const LABELS = {
     readNow: '立即閱讀',
     openHymn: '開啟詩歌',
     openHymnInHymnal: '在詩歌本中開啟{hymn}',
+    searchYouTube: '在 YouTube 搜尋',
+    searchYouTubeFor: '在 YouTube 搜尋{hymn}',
+    readLesson: '閱讀課程',
+    readLessonOnline: '在安息日學網站閱讀{lesson}',
     metadata: {
       quarter: '季度',
       specialRemark: '特別事項',
@@ -164,6 +179,9 @@ const LABELS = {
       hymnOfResponse: '回應詩',
       benediction: '祝福',
       postlude: '後奏曲',
+      sabbathSchoolHymns: '開會及結會詩歌',
+      lesson: '課程',
+      specialMusicTitle: '曲目',
     },
     roles: {
       sermon: '講員',
@@ -203,8 +221,6 @@ const LABELS = {
     nameWithheld: '姓名保留',
     choir: '诗班',
     sabbathSchoolProgram: '安息日学',
-    schedule: '时间表（仅限同工）',
-    scheduleHint: '打开需要教会同工账号的表格。',
     worshipProgram: '崇拜程序',
     serviceRoster: '服事安排',
     queens: '皇后区',
@@ -216,6 +232,10 @@ const LABELS = {
     readNow: '立即阅读',
     openHymn: '打开诗歌',
     openHymnInHymnal: '在诗歌本中打开{hymn}',
+    searchYouTube: '在 YouTube 搜索',
+    searchYouTubeFor: '在 YouTube 搜索{hymn}',
+    readLesson: '阅读课程',
+    readLessonOnline: '在安息日学网站阅读{lesson}',
     metadata: {
       quarter: '季度',
       specialRemark: '特别事项',
@@ -236,6 +256,9 @@ const LABELS = {
       hymnOfResponse: '回应诗',
       benediction: '祝福',
       postlude: '后奏曲',
+      sabbathSchoolHymns: '开会及结会诗歌',
+      lesson: '课程',
+      specialMusicTitle: '曲目',
     },
     roles: {
       sermon: '讲员',
@@ -275,8 +298,6 @@ const LABELS = {
     nameWithheld: 'Nombre reservado',
     choir: 'Coro',
     sabbathSchoolProgram: 'Escuela Sabática',
-    schedule: 'Horario (solo para el personal)',
-    scheduleHint: 'Abre una hoja que requiere una cuenta del personal de la iglesia.',
     worshipProgram: 'Programa de Adoración',
     serviceRoster: 'Asignaciones de Servicio',
     queens: 'Queens',
@@ -288,6 +309,10 @@ const LABELS = {
     readNow: 'Leer ahora',
     openHymn: 'Abrir himno',
     openHymnInHymnal: 'Abrir {hymn} en el himnario',
+    searchYouTube: 'Buscar en YouTube',
+    searchYouTubeFor: 'Buscar {hymn} en YouTube',
+    readLesson: 'Leer lección',
+    readLessonOnline: 'Leer {lesson} en el sitio de la Escuela Sabática',
     metadata: {
       quarter: 'Trimestre',
       specialRemark: 'Observación Especial',
@@ -308,6 +333,9 @@ const LABELS = {
       hymnOfResponse: 'Himno de Respuesta',
       benediction: 'Bendición',
       postlude: 'Postludio',
+      sabbathSchoolHymns: 'Himnos de apertura y clausura',
+      lesson: 'Lección',
+      specialMusicTitle: 'Pieza',
     },
     roles: {
       sermon: 'Orador del Sermón',
@@ -357,12 +385,30 @@ type DataRowProps = {
     label: string;
     value: string;
   };
-  action?: {
-    accessibilityLabel: string;
-    label: string;
-    onPress: () => void;
-  };
+  action?: RowAction;
 };
+
+type RowAction = {
+  accessibilityLabel: string;
+  label: string;
+  onPress: () => void;
+  /** Defaults to a music note. */
+  icon?: 'music-note' | 'youtube' | 'book-open-variant';
+};
+
+const RowActionButton = ({ action }: { action: RowAction }) => (
+  <View style={styles.programActionLine}>
+    <Button
+      accessibilityLabel={action.accessibilityLabel}
+      mode="contained"
+      icon={action.icon || 'music-note'}
+      onPress={action.onPress}
+      style={styles.programActionButton}
+    >
+      {action.label}
+    </Button>
+  </View>
+);
 
 const DataRow = ({ label, value, emptyText, last, assignment, action }: DataRowProps) => (
   <View style={[styles.dataRow, !last && styles.dataRowBorder]}>
@@ -378,19 +424,33 @@ const DataRow = ({ label, value, emptyText, last, assignment, action }: DataRowP
         <Text variant="bodyMedium">{assignment.value}</Text>
       </View>
     )}
-    {action && (
-      <View style={styles.programActionLine}>
-        <Button
-          accessibilityLabel={action.accessibilityLabel}
-          mode="contained"
-          icon="music-note"
-          onPress={action.onPress}
-          style={styles.programActionButton}
-        >
-          {action.label}
-        </Button>
+    {action && <RowActionButton action={action} />}
+  </View>
+);
+
+/** A row of several hymns, each with its own button, such as the Sabbath School's. */
+const HymnListRow = ({
+  label,
+  hymns,
+  emptyText,
+  last,
+}: {
+  label: string;
+  hymns: Array<{ displayText: string; action?: RowAction }>;
+  emptyText: string;
+  last?: boolean;
+}) => (
+  <View style={[styles.dataRow, !last && styles.dataRowBorder]}>
+    <Text variant="labelLarge" style={styles.dataRowLabel}>
+      {label}
+    </Text>
+    {hymns.length === 0 && <Text variant="bodyMedium">{emptyText}</Text>}
+    {hymns.map((hymn, index) => (
+      <View key={`${index}:${hymn.displayText}`} style={index > 0 && styles.hymnListItem}>
+        <Text variant="bodyMedium">{hymn.displayText}</Text>
+        {hymn.action && <RowActionButton action={hymn.action} />}
       </View>
-    )}
+    ))}
   </View>
 );
 
@@ -453,6 +513,20 @@ export default function WeeklyBulletinScreen() {
     weekDates.map((date) => ({ date, loading: false })),
   );
   const [selectedWeek, setSelectedWeek] = useState('0');
+  // Each Sabbath's adult lesson, by language and date, from the lesson catalog.
+  const [lessons, setLessons] = useState<Record<string, AdultLesson | null>>({});
+  const selectedDate = weekDates[Number(selectedWeek)];
+  const lessonKey = `${language}:${selectedDate}`;
+  useEffect(() => {
+    let cancelled = false;
+    void findAdultLesson(selectedDate, language as SupportedLanguage).then((lesson) => {
+      if (!cancelled) setLessons((current) => ({ ...current, [lessonKey]: lesson }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [language, lessonKey, selectedDate]);
+  const lesson = lessons[lessonKey];
   const [selectedLocation, setSelectedLocation] = useState<BulletinLocationTab>('queens');
   const loadingWeeksRef = useRef(new Set<string>());
   const refreshAvailableAtRef = useRef<[number, number]>([0, 0]);
@@ -677,14 +751,24 @@ export default function WeeklyBulletinScreen() {
   const getBulletinHymnAction = (
     presentation: BulletinHymnPresentation,
   ): DataRowProps['action'] => {
-    const { destination, displayText } = presentation;
-    if (!destination) return undefined;
-
-    return {
-      accessibilityLabel: labels.openHymnInHymnal.replace('{hymn}', displayText),
-      label: labels.openHymn,
-      onPress: () => openBulletinHymn(destination),
-    };
+    const { destination, displayText, youtubeSearchQuery } = presentation;
+    if (destination) {
+      return {
+        accessibilityLabel: labels.openHymnInHymnal.replace('{hymn}', displayText),
+        label: labels.openHymn,
+        onPress: () => openBulletinHymn(destination),
+      };
+    }
+    // A hymn no hymnal has, such as a song on YouTube.
+    if (youtubeSearchQuery) {
+      return {
+        accessibilityLabel: labels.searchYouTubeFor.replace('{hymn}', displayText),
+        label: labels.searchYouTube,
+        icon: 'youtube',
+        onPress: () => openYouTubeSearch(youtubeSearchQuery),
+      };
+    }
+    return undefined;
   };
 
   const renderProgram = (
@@ -805,10 +889,18 @@ export default function WeeklyBulletinScreen() {
             emptyText={labels.notAvailable}
           />
         )}
-        {isQueens && (
+        {(isQueens || hasBulletinValue(location.specialMusicTitle)) && (
           <DataRow
             label={labels.program.specialMusic}
             value={getRosterValue(location.specialMusic, labels)}
+            assignment={
+              hasBulletinValue(location.specialMusicTitle)
+                ? {
+                    label: labels.program.specialMusicTitle,
+                    value: location.specialMusicTitle!.trim(),
+                  }
+                : undefined
+            }
             emptyText={labels.notAssigned}
           />
         )}
@@ -856,27 +948,81 @@ export default function WeeklyBulletinScreen() {
   };
 
   const renderSabbathSchool = (location: BulletinLocation, isQueens: boolean) => {
-    const rows: Array<{
-      label: string;
-      value?: string;
-      assignment?: DataRowProps['assignment'];
-    }> = isQueens
+    type Row = { render: (last: boolean) => ReactNode };
+    const person = (label: string, value?: string): Row => ({
+      render: (last) => (
+        <DataRow
+          key={label}
+          label={label}
+          value={getRosterValue(value, labels)}
+          emptyText={labels.notAssigned}
+          last={last}
+        />
+      ),
+    });
+    // Each opening hymn is sung again to close, so one row names them for both.
+    const hymns: Row = {
+      render: (last) => (
+        <HymnListRow
+          key="hymns"
+          label={labels.program.sabbathSchoolHymns}
+          hymns={(location.sabbathSchoolHymns || [])
+            .filter(hasBulletinValue)
+            .map((value) => {
+              const presentation = resolveBulletinHymnPresentation(
+                toBulletinHymnText(value),
+                language,
+              );
+              return {
+                displayText: presentation.displayText,
+                action: getBulletinHymnAction(presentation),
+              };
+            })}
+          emptyText={labels.notAvailable}
+          last={last}
+        />
+      ),
+    };
+    const lessonText = lesson ? formatAdultLesson(lesson, language as SupportedLanguage) : '';
+    const lessonRow: Row = {
+      render: (last) => (
+        <DataRow
+          key="lesson"
+          label={labels.program.lesson}
+          value={lessonText}
+          emptyText={labels.notAvailable}
+          last={last}
+          action={
+            lesson
+              ? {
+                  accessibilityLabel: labels.readLessonOnline.replace('{lesson}', lessonText),
+                  label: labels.readLesson,
+                  icon: 'book-open-variant',
+                  onPress: () => void openURL(lesson.url),
+                }
+              : undefined
+          }
+        />
+      ),
+    };
+    const rows: Row[] = isQueens
       ? [
-          { label: labels.roles.ssChair, value: location.ssChair },
-          { label: labels.roles.ssOpeningPrayer, value: location.ssOpeningPrayer },
-          { label: labels.roles.chineseTeacher, value: location.chineseTeacher },
-          { label: labels.roles.englishTeacher, value: location.englishTeacher },
-          { label: labels.roles.youthTeacher, value: location.youthTeacher },
-          { label: labels.roles.kidsTeacher, value: location.kidsTeacher },
-          { label: labels.roles.ssClosingPrayer, value: location.closingPrayer },
+          person(labels.roles.ssChair, location.ssChair),
+          person(labels.roles.ssOpeningPrayer, location.ssOpeningPrayer),
+          hymns,
+          lessonRow,
+          person(labels.roles.chineseTeacher, location.chineseTeacher),
+          person(labels.roles.englishTeacher, location.englishTeacher),
+          person(labels.roles.youthTeacher, location.youthTeacher),
+          person(labels.roles.kidsTeacher, location.kidsTeacher),
+          person(labels.roles.ssClosingPrayer, location.closingPrayer),
         ]
       : [
-          { label: labels.roles.prayer, value: location.chairPastoralPrayer },
-          {
-            label: labels.roles.sabbathEncouragement,
-            value: location.encouragement,
-          },
-          { label: labels.roles.sabbathSchool, value: location.sabbathSchool },
+          hymns,
+          person(labels.roles.prayer, location.chairPastoralPrayer),
+          person(labels.roles.sabbathEncouragement, location.encouragement),
+          person(labels.roles.sabbathSchool, location.sabbathSchool),
+          lessonRow,
         ];
 
     return (
@@ -890,16 +1036,7 @@ export default function WeeklyBulletinScreen() {
           </Text>
         </View>
         <Divider style={styles.sectionHeadingDivider} />
-        {rows.map(({ label, value, assignment }, index) => (
-          <DataRow
-            key={label}
-            label={label}
-            value={getRosterValue(value, labels)}
-            emptyText={labels.notAssigned}
-            last={index === rows.length - 1}
-            assignment={assignment}
-          />
-        ))}
+        {rows.map((row, index) => row.render(index === rows.length - 1))}
       </View>
     );
   };
@@ -1145,23 +1282,6 @@ export default function WeeklyBulletinScreen() {
           </Button>
         </View>
 
-        <View style={styles.scheduleButtonRow}>
-          {/* The schedule sheet needs a church staff account, so the button
-              says so and stays muted, so members don't tap it expecting the
-              bulletin. */}
-          <Button
-            accessibilityHint={labels.scheduleHint}
-            accessibilityLabel={labels.schedule}
-            icon="lock-outline"
-            mode="outlined"
-            onPress={openQuarterlySchedule}
-            style={styles.scheduleButton}
-            textColor={theme.colors.onSurfaceVariant}
-          >
-            {labels.schedule}
-          </Button>
-        </View>
-
         {weeks[Number(selectedWeek)] &&
           (() => {
             const index = Number(selectedWeek);
@@ -1277,13 +1397,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  scheduleButtonRow: {
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-  scheduleButton: {
-    alignSelf: 'stretch',
-  },
   weekHeader: {
     alignItems: 'center',
     borderBottomWidth: 2,
@@ -1382,6 +1495,9 @@ const styles = StyleSheet.create({
   },
   programActionButton: {
     width: '100%',
+  },
+  hymnListItem: {
+    marginTop: 10,
   },
   loadingContainer: {
     alignItems: 'center',

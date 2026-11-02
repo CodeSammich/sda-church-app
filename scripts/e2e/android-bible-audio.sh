@@ -7,6 +7,12 @@
 # with the screen off. The failover logic itself has Jest scenarios in
 # test/bible-audio-source-controller.test.ts.
 #
+# It also checks that the reader marks and follows the verse being read
+# (#561) and doesn't fight a listener who scrolls. The build must set
+# EXPO_PUBLIC_AUDIO_E2E=1, so the reader logs what it decides
+# (services/AudioE2eLog.ts): the screen keeps moving while audio plays, so
+# uiautomator can't read it. Screenshots show whether the page moved.
+#
 # Environment:
 #   ADB                   adb binary (default: adb)
 #   ADB_ARGS              extra adb arguments, such as -e for the emulator
@@ -17,6 +23,7 @@
 #   E2E_ONLY              space-separated scenario names to run (default: all)
 #   E2E_PACKAGE           the app ID to test (default: org.nyccsda.app.preview, the
 #                         debug-signed preview build's; org.nyccsda.app for a store build)
+#   FFMPEG                ffmpeg binary for comparing screenshots (default: ffmpeg)
 #
 # Prints PASS or FAIL for each scenario, and exits non-zero if any failed.
 set -uo pipefail
@@ -33,6 +40,9 @@ failures=0
 adb_() { "$ADB_BIN" "${ADB_EXTRA[@]}" "$@"; }
 sh_() { adb_ shell "$@" | tr -d '\r'; }
 log() { printf '[%s] %s\n' "$(date +%T)" "$*"; }
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=scripts/e2e/android-frames.sh
+. "$REPO/scripts/e2e/android-frames.sh"
 
 wake() {
   sh_ input keyevent KEYCODE_WAKEUP >/dev/null
@@ -301,6 +311,212 @@ scenario_pause_and_resume() {
     { echo "resumed at ${resumed_at}ms after pausing at ${paused_at}ms"; return 1; }
 }
 
+# Earbuds' previous and next (#543). Started in Leviticus 2: previous more
+# than 3 seconds in restarts the chapter, as Android does; at its start, it goes
+# back to Leviticus 1, a chapter before the one that started playing; and next
+# returns to Leviticus 2, so the queue's numbering survived the chapters
+# inserted ahead of it. Paused, so the position stays under 3 seconds.
+media_key() { sh_ input keyevent "$1" >/dev/null; }
+position_under() { [ "$(session_field position)" -lt "$1" ] 2>/dev/null; }
+paused_with_title() { is_paused && title_has "$1"; }
+scenario_previous_before_start() {
+  open_chapter LEV 2
+  locate_controls || { echo 'no play button'; return 1; }
+  tap_play_pause
+  wait_until 60 'Leviticus 2 playing' playing_with_title ' 2 ' || return 1
+  sleep 6
+  title_has ' 2 ' || { echo "moved to $(session_field title) by itself"; return 1; }
+  media_key KEYCODE_MEDIA_PREVIOUS
+  media_key KEYCODE_MEDIA_PAUSE
+  wait_until 20 'Leviticus 2 restarted and paused' paused_with_title ' 2 ' || return 1
+  position_under 3000 || { echo "previous left Leviticus 2 at $(session_field position)ms"; return 1; }
+  media_key KEYCODE_MEDIA_PREVIOUS
+  wait_until 20 'Leviticus 1 after previous at the start' title_has ' 1 ' || return 1
+  media_key KEYCODE_MEDIA_NEXT
+  wait_until 20 'Leviticus 2 after next' title_has ' 2 ' || return 1
+}
+
+# What the reader decided (#561), oldest first: one decision a line, such as
+# "following verse 3" or "JHN 3:3 is being read at 28503 ms".
+reader_log() {
+  adb_ logcat -d -s ReactNativeJS:V | tr -d '\r' | sed -n 's/.*Bible reader: //p' | sed "s/'\$//"
+}
+reader_lines() { reader_log | wc -l; }
+# The number of the first decision matching the extended regex $1 after line $2.
+reader_line_after() { # regex [after-line]
+  reader_log | awk -v after="${2:-0}" -v re="$1" 'NR > after && $0 ~ re { print NR; exit }'
+}
+reader_has_after() { [ -n "$(reader_line_after "$1" "${2:-0}")" ]; }
+
+# The verse the bundled times say is being read at a position, with the
+# reader's half-second lead (services/BibleAudioTimings.ts).
+expected_verse() { # narrator book chapter ms
+  node -e '
+    const fs = require("fs");
+    const [repo, narrator, book, chapter, ms] = process.argv.slice(1);
+    const file = `${repo}/assets/bible/audio-timings/${narrator}/${book.toLowerCase()}.biblejson`;
+    const times = JSON.parse(fs.readFileSync(file, "utf8")).chapters[Number(chapter)] || [];
+    let verse = "";
+    times.forEach((start, index) => { if (start !== null && start - 0.5 <= ms / 1000) verse = index + 1; });
+    console.log(verse);' "$REPO" "$@"
+}
+
+# Every verse the reader marked is the one the bundled times give for where
+# the player was, and the verses it followed never go backwards.
+reader_matches_times() {
+  local line book chapter verse ms expected
+  while read -r line; do
+    read -r book chapter verse ms <<< "$(sed -E 's/^([1-3A-Z]+) ([0-9]+):([0-9]+) is being read at ([0-9]+) ms$/\1 \2 \3 \4/' <<< "$line")"
+    expected=$(expected_verse cuv-mandarin "$book" "$chapter" "$ms")
+    [ "$expected" = "$verse" ] ||
+      { echo "marked $book $chapter:$verse at ${ms}ms; the bundled times say verse $expected"; return 1; }
+  done < <(reader_log | grep -E '^[1-3A-Z]+ [0-9]+:[0-9]+ is being read at [0-9]+ ms$')
+}
+
+# The reader's text, below the header and above the audio controls, and right
+# of the bar that marks the verse being read: it changes only when the page
+# scrolls. A follow or a scroll by hand has finished when it stops changing.
+REGION=(0.08 0.15 0.95 0.62)
+page() { settled_region "$OUT/$1.png" "${REGION[@]}"; }
+
+# Pauses with the earbuds' key, where the screen goes still, and finds the
+# controls again: a scroll by hand shows or hides the tab bar, which moves them.
+pause_and_locate() {
+  media_key KEYCODE_MEDIA_PAUSE
+  wait_until 30 'paused' is_paused || return 1
+  locate_controls || { echo 'no play button after pausing'; return 1; }
+}
+
+# Drags the page down and holds it, so it shows earlier verses.
+FINGER_X=540
+hold_page_back() {
+  sh_ input motionevent DOWN "$FINGER_X" 800 >/dev/null
+  sh_ input motionevent MOVE "$FINGER_X" 1100 >/dev/null
+  sh_ input motionevent MOVE "$FINGER_X" 1400 >/dev/null
+  sh_ input motionevent MOVE "$FINGER_X" 1700 >/dev/null
+}
+let_go() { sh_ input motionevent UP "$FINGER_X" 1700 >/dev/null; }
+
+# John 3 plays, and the reader marks and follows each verse as it's read, at
+# the place the bundled times give. After a seek while paused, it marks and
+# follows the verse at the new place.
+scenario_verse_follows_audio() {
+  open_chapter JHN 3
+  locate_controls || { echo 'no play button'; return 1; }
+  local top followed
+  top=$(page follow-top) || { echo 'the chapter never settled'; return 1; }
+  tap_play_pause
+  wait_until 120 'John 3:3 followed' reader_has_after '^following verse 3$' || return 1
+  local numbers
+  numbers=$(reader_log | sed -n 's/^following verse //p' | tr '\n' ' ')
+  awk '{ for (i = 2; i <= NF; i++) if ($i < $(i - 1)) exit 1 }' <<< "$numbers" ||
+    { echo "followed verses out of order: $numbers"; return 1; }
+  followed=$(page follow-verse-3) || { echo 'the page never settled'; return 1; }
+  [ "$followed" != "$top" ] || { echo 'the page did not move to follow John 3:3'; return 1; }
+  pause_and_locate || return 1
+  local mark
+  mark=$(reader_lines)
+  seek_to_fraction 0.7 || { echo 'no seek bar'; return 1; }
+  wait_until 30 'the verse at the new place marked' \
+    reader_has_after 'is being read at' "$mark" || return 1
+  local verse
+  verse=$(reader_log | tail -n +"$((mark + 1))" | sed -nE 's/^JHN 3:([0-9]+) is being read.*/\1/p' | tail -1)
+  [ "${verse:-0}" -gt 10 ] || { echo "after seeking to 70% the reader marked verse ${verse:-none}"; return 1; }
+  wait_until 30 "John 3:$verse followed" reader_has_after "^following verse $verse\$" "$mark" || return 1
+  [ "$(page follow-after-seek)" != "$followed" ] || { echo 'the page did not move after the seek'; return 1; }
+  reader_matches_times
+}
+
+# Psalm 119, whose verses are short. The listener drags the page back and
+# holds it while the narrator moves on: the reader leaves the page alone. Let
+# go, and a few seconds later it goes back to the verse being read.
+scenario_scroll_by_hand() {
+  open_chapter PSA 119
+  locate_controls || { echo 'no play button'; return 1; }
+  tap_play_pause
+  # By verse 8 the page has scrolled, so dragging it back moves it.
+  wait_until 180 'Psalm 119:8 followed' reader_has_after '^following verse 8$' || return 1
+  local mark held moved followed
+  followed=$(page scroll-following) || { echo 'the page never settled'; return 1; }
+  record_start scroll-by-hand 50
+  mark=$(reader_lines)
+  hold_page_back
+  wait_until 30 'the reader to stop following' \
+    reader_has_after '^stopped following: scrolled by hand$' "$mark" || { let_go; return 1; }
+  held=$(page scroll-held) || { let_go; echo 'the held page never settled'; return 1; }
+  [ "$held" != "$followed" ] || { let_go; echo 'dragging did not move the page'; return 1; }
+  local held_at
+  held_at=$(reader_lines)
+  wait_until 60 'a verse read while the page is held' \
+    reader_has_after 'is being read at' "$held_at" || { let_go; return 1; }
+  screenshot "$OUT/scroll-held-later.png"
+  local later
+  later=$(region_hash "$OUT/scroll-held-later.png" "${REGION[@]}")
+  let_go
+  [ "$later" = "$held" ] || { echo 'the reader moved the page while the listener held it'; return 1; }
+  wait_until 60 'following again after letting go' \
+    reader_has_after '^following again after a scroll by hand$' "$mark" || return 1
+  local resumed
+  resumed=$(reader_line_after '^following again after a scroll by hand$' "$mark")
+  reader_log | sed -n "$((mark + 1)),$((resumed - 1))p" | grep '^following verse' >/dev/null &&
+    { echo 'the reader followed a verse before the listener let go and waited'; return 1; }
+  wait_until 30 'the verse being read followed' reader_has_after '^following verse' "$resumed" || return 1
+  moved=$(page scroll-resumed) || { echo 'the page never settled after following again'; return 1; }
+  [ "$moved" != "$held" ] || { echo 'the page did not go back to the verse being read'; return 1; }
+  if record_finish "$OUT/scroll-by-hand.mp4"; then
+    filmstrip "$OUT/scroll-by-hand.mp4" "$OUT/scroll-by-hand-filmstrip.png" 50 1 10 ||
+      log 'scroll-by-hand: no filmstrip'
+  fi
+  reader_matches_times
+}
+
+# Paused, the listener scrolls: the page stays where they put it, however long
+# they read. Play takes it back to the verse being read.
+scenario_scroll_while_paused() {
+  open_chapter JHN 3
+  locate_controls || { echo 'no play button'; return 1; }
+  tap_play_pause
+  wait_until 120 'John 3:3 followed' reader_has_after '^following verse 3$' || return 1
+  pause_and_locate || return 1
+  local mark still played back
+  mark=$(reader_lines)
+  sh_ input swipe "$FINGER_X" 800 "$FINGER_X" 1700 300 >/dev/null
+  wait_until 30 'the reader to stop following' \
+    reader_has_after '^stopped following: scrolled by hand$' "$mark" || return 1
+  wait_until 60 'the scroll timer to pass while paused' \
+    reader_has_after '^paused; following again at play$' "$mark" || return 1
+  still=$(page paused-scrolled) || { echo 'the page never settled'; return 1; }
+  reader_has_after '^following verse' "$mark" && { echo 'the reader moved the page while paused'; return 1; }
+  locate_controls || { echo 'no play button after scrolling'; return 1; }
+  played=$(reader_lines)
+  tap_play_pause
+  wait_until 30 'play pressed' reader_has_after '^following again: play pressed$' "$played" || return 1
+  wait_until 30 'the verse being read followed' reader_has_after '^following verse' "$played" || return 1
+  back=$(page paused-played) || { echo 'the page never settled after play'; return 1; }
+  [ "$back" != "$still" ] || { echo 'play did not take the page back to the verse being read'; return 1; }
+}
+
+# Psalm 117 plays into Psalm 118 with the screen off. When the screen comes
+# back on, the reader shows Psalm 118 and follows the verse being read.
+scenario_follow_after_screen_off() {
+  open_chapter PSA 117
+  locate_controls || { echo 'no play button'; return 1; }
+  tap_play_pause
+  wait_until 60 'Psalm 117 marked' reader_has_after '^PSA 117:[0-9]+ is being read' || return 1
+  screen_off
+  wait_until 150 'Psalm 118 playing with the screen off' playing_with_title ' 118 ' || return 1
+  local mark
+  mark=$(reader_lines)
+  wake
+  wait_until 60 'a verse of Psalm 118 marked after waking' \
+    reader_has_after '^PSA 118:[0-9]+ is being read' "$mark" || return 1
+  local marked verse
+  marked=$(reader_line_after '^PSA 118:[0-9]+ is being read' "$mark")
+  verse=$(reader_log | sed -n "${marked}p" | sed -E 's/^PSA 118:([0-9]+) .*/\1/')
+  wait_until 30 "Psalm 118:$verse followed" reader_has_after "^following verse $verse\$" "$((marked - 1))" || return 1
+  reader_matches_times
+}
+
 sh_ cmd media_session volume --stream 3 --set 0 >/dev/null 2>&1
 prepare_app
 if [ "${E2E_PRIMARY_BLOCKED:-0}" = 1 ]; then
@@ -310,6 +526,11 @@ run next-chapter-screen-off scenario_next_chapter_screen_off
 run dead-zone-screen-off scenario_dead_zone_screen_off
 run mid-chapter-offline scenario_mid_chapter_offline
 run pause-and-resume scenario_pause_and_resume
+run previous-before-start scenario_previous_before_start
+run verse-follows-audio scenario_verse_follows_audio
+run scroll-by-hand scenario_scroll_by_hand
+run scroll-while-paused scenario_scroll_while_paused
+run follow-after-screen-off scenario_follow_after_screen_off
 wake
 
 if [ "$failures" -gt 0 ]; then

@@ -211,7 +211,8 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
       // separate Song Leader value.
       printBrooklynPerson_(location.chair, location.chairPastoralPrayer),
     ],
-    [printedBilingualText_('Opening Hymn', '開會唱詩'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
+    // The closing repeats every opening hymn, so one row names them for both.
+    [printedBilingualText_('Opening & Closing Hymns', '開會及合班唱詩'), formatSabbathSchoolHymnsForPrint_(location.sabbathSchoolHymns), printedBilingualText_('Congregation', '會眾')],
     [printedBilingualText_('Prayer', '祈禱'), '', printValue_(location.chairPastoralPrayer)],
     [
       printedBilingualText_('Sabbath Encouragement', '安息日勉勵'),
@@ -221,8 +222,7 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
         location.sabbathMessage || location.chairPastoralPrayer,
       ),
     ],
-    [printedBilingualText_('Sabbath School', '安息日學課'), physicalTbdText_(), printValue_(location.sabbathSchool)],
-    [printedBilingualText_('Closing Hymn', '合班唱詩'), physicalTbdText_(), printedBilingualText_('Congregation', '會眾')],
+    [printedBilingualText_('Sabbath School', '安息日學課'), formatSabbathSchoolLessonForPrint_(bulletin.sabbathSchoolLesson), printValue_(location.sabbathSchool)],
     [printedBilingualText_('Closing Prayer', '合班禱告'), physicalTbdText_(), physicalTbdText_('尚未安排')],
   ]));
 
@@ -253,7 +253,7 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
     ],
     [printedBilingualText_('Pastoral Prayer', '牧養禱告'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Tithe & Offering', '十一與奉獻'), formatPhysicalOfferingValue_(bulletin.tithePurpose), printValue_(location.offeringPrayer)],
-    [printedBilingualText_('Special Music', '特別音樂'), '', printValue_(location.specialMusic)],
+    [printedBilingualText_('Special Music', '特別音樂'), String(location.specialMusicTitle || '').trim(), printValue_(location.specialMusic)],
   ];
   var worshipRowsAfterSermon = [
     [printedBilingualText_('Hymn of Response', '回應詩'), formatHymnForPrint_(location.hymnOfResponse), printedBilingualText_('Congregation', '會眾')],

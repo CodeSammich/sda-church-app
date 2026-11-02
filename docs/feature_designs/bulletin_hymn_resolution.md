@@ -4,13 +4,14 @@
 
 Bulletin hymn fields are bilingual, human-entered data. They may contain a number, a
 title, both, a misspelled title, content in the wrong language field, or only one of the
-two language answers. The app resolves this input locally against the configured hymn
-catalogs; it does not machine-translate hymn titles.
+two language answers. A hymn may come from any hymnal, usually a Chinese one, or from
+none, such as a song on YouTube. The app resolves this input locally against every
+hymnal it has; it does not machine-translate hymn titles.
 
 All bulletin hymn fields in the app must use
 `resolveBulletinHymnPresentation()` from `services/BulletinHymnalService.ts`. It returns
-one object containing both the visible `displayText` and the optional reader
-`destination`. Keeping those values together prevents the title and button from resolving
+one object containing the visible `displayText`, the optional reader `destination`, and,
+when no hymnal has the hymn, the optional `youtubeSearchQuery`. Keeping those values together prevents the title and button from resolving
 different intake answers.
 
 The printed bulletin doesn't use this resolver. `resolvePrintedHymnText_` in
@@ -35,23 +36,65 @@ UI language currently supported by the bulletin.
 | Only the other-language field has no mapped equivalent | Keep its canonical source number and title and open the source hymnal. |
 | Content was placed in the wrong language field | Use title and writing-system evidence to detect its actual catalog, then apply the same mapping rules. |
 | A correct number has a mistyped title | Treat the number as primary and repair the title from the catalog. |
-| Only a title was entered | Fuzzy-match both active catalogs; reject weak matches. |
-| Text cannot be recognized | Display the submitted text unchanged and do not invent a hymn-number link. |
+| Only a title was entered | Fuzzy-match every hymnal's titles; reject weak matches. |
+| The hymn is only in another hymnal, such as the 506 or a 707 | Show its number and title with that hymnal's short name, such as `61. 奇异恩典（中文 506）`, and open that hymnal. |
+| Text cannot be recognized | Display the submitted text unchanged, with no hymn-number link, and offer a **Search YouTube** button for the text as typed. |
 | Both fields are blank | Display the localized empty state and provide no action. |
 
 Cross-hymnal mappings are curated number equivalences in
 `features/hymnal/HymnalNumberMappings.json`. They are not general translations, and missing
 entries must never be guessed from similar titles.
 
+### Every hymnal (#558)
+
+The resolver looks in every hymnal on the hymnal page (`HYMNALS` in
+`features/hymnal/Hymnals.ts`), with the church's own two first:
+
+- **Numbers.** A number is looked up in every hymnal that has it. The declared hymnal
+  (the 1985 for the `english` side, the 505 for the `chinese` side; a one-cell hymn's
+  side is set by how it's written) gets a bonus, so a bare number
+  stays in the church's hymnal. A typed title still counts, so `第1首 聖哉真神` opens the
+  506's hymn 1, because the 505's hymn 1 has another title.
+- **Titles.** A title-only answer is compared with every hymnal's titles, Traditional and
+  Simplified alike. A match outside the church's two hymnals must be close (0.8, against
+  0.55 for the church's own), since thousands of titles make a loose match likely to be
+  wrong.
+- **Speed.** A title search compares about 3,800 hymns, so each hymn's normalized title
+  and bigrams are worked out once, and each answer is looked up once: the bulletin
+  redraws every second while its refresh countdown runs.
+- **YouTube.** An answer no hymnal has gets `youtubeSearchQuery`, the text as typed, and
+  the bulletin shows **Search YouTube** in place of **Open hymn**. It opens like the
+  hymnal page's recordings (`openYouTubeSearch`): in the YouTube app where one is
+  installed.
+
+Only the 1985 and the 505 have a cross-reference table, so a 506 or 707 hymn shows in
+Chinese whatever the app's language.
+
+### One-cell hymns
+
+Each Sabbath School hymn has a single cell in the weekly sheet, typed in either
+language. `toBulletinHymnText()` turns it into a `BulletinHymnText`: Chinese text or a
+bare number goes in `chinese` (a Chinese hymnal number), anything else in Latin letters
+in `english`. From there it takes the same path as every other bulletin hymn. The
+printed bulletin reads a cell the same way (`formatSabbathSchoolHymnsForPrint_`).
+
+The hymn of praise and the hymn of response have one cell each too. The Apps Script
+files that cell under `english` or `chinese` by the same rule (`getBulletinHymnLanguage_`
+in `BulletinApi.gs`), so the API still returns both sides, one of them blank, and the
+app needs no change. A tab that still has the older English and Chinese columns is read
+as before.
+
 ## Adding another bulletin hymn field
 
 1. Expose the intake value as `{ english: string; chinese: string }`, represented by
-   `BulletinHymnText`.
+   `BulletinHymnText`. A one-cell field in either language goes through
+   `toBulletinHymnText()` first.
 2. Call `resolveBulletinHymnPresentation(fieldValue, language)` once during bulletin
    rendering.
 3. Use `presentation.displayText` for the row value and derive its accessible button from
-   `presentation.destination`. Do not call the display and destination compatibility
-   helpers separately in new UI code.
+   `presentation.destination`, or `presentation.youtubeSearchQuery` when there's no
+   destination (`getBulletinHymnAction` in `app/(tabs)/home/bulletin.tsx`). Do not call
+   the display and destination compatibility helpers separately in new UI code.
 4. Add tests for both UI languages, a one-language submission, a missing mapping, blank
    data, and any field-specific fixed value.
 
@@ -86,5 +129,6 @@ selection, and the adapter types rather than merely adding another constant.
 
 `test/bulletin-hymnal-service.test.ts` is the behavioral specification. In particular, it
 covers bidirectional mappings, number-first typo repair, title-only fuzzy matching,
-wrong-field detection, unmapped fallbacks, fixed Queens responses, and the requirement
+wrong-field detection, unmapped fallbacks, fixed Queens responses, hymns only another
+hymnal has, the YouTube fallback, how a Sabbath School cell is read, and the requirement
 that display text and routing use the same selected form answer.

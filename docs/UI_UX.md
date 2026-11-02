@@ -111,11 +111,10 @@ brand-guideline review before adding it.
 Websites open in the in-app browser, which slides up over the app and closes back to
 it: Safari View Controller on iOS, a Custom Tab on Android, and a new tab on the web.
 Links that belong to another app open that app instead: phone numbers, email addresses,
-YouTube, Spotify, Zoom, Google Maps, the staff schedule in Google Sheets, and the App
-Store and Google Play. A phone without that app opens them in its own browser. Every
-link goes through `openURL` (websites) or `openInItsApp` (other apps) in
-`constants/ExternalLinks.ts`; `test/link-opening.test.ts` checks where each one opens,
-and that no screen opens a link itself.
+YouTube, Spotify, Zoom, Google Maps, and the App Store and Google Play. A phone without
+that app opens them in its own browser. Every link goes through `openURL` (websites) or
+`openInItsApp` (other apps) in `constants/ExternalLinks.ts`; `test/link-opening.test.ts`
+checks where each one opens, and that no screen opens a link itself.
 
 Large files, such as lesson PDFs of more than a few megabytes, don't open straight in
 the in-app browser. There, a phone can show a blank page until the whole file has arrived,
@@ -182,6 +181,24 @@ simple, blended colors.
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital
   Sanctuary."
 
+#### Opening the app
+
+The phone's own launch screen is plain brand blue (`#00405C`, from `expo-splash-screen` in
+`app.json`). The app's first screen takes over in the same blue, and the church symbol is
+drawn as if with a pen, from the bottom up, at half the screen's width, in under a
+second (`components/LaunchSplash.tsx`, `components/LaunchDrawing.ts`, #538). It runs on
+the UI thread with Reanimated and `react-native-svg` while the app loads underneath, and
+the blue fades once both are done. A tap skips the drawing. It plays only when the app
+starts, not when it comes back from the background. With Reduce Motion (iOS) or Remove
+animations (Android) on, the finished symbol shows still. The key-screen builds and the
+web skip it.
+
+The drawing can only start once the app's code has loaded, and by then the app is
+nearly ready, so most of the drawing's length is added to the time the app takes to
+open. On November 1, 2026, the church chose to keep the drawing but keep it short.
+Keep it under a second if you change it. The brand rules it follows are in
+[LEGAL_BRANDING.md](LEGAL_BRANDING.md#the-launch-animation).
+
 ## Navigation Layout
 
 ### 1. Home (The "Pulse")
@@ -245,6 +262,13 @@ tab bar. They stay up with the keyboard put away. The keyboard's Search key open
 reference, but for words it only puts the keyboard away, since the first match is only
 a guess. The X closes them, and so does Android's Back, whose first press puts the
 keyboard away if it's up.
+While a chapter's audio plays, or is paused partway, a thin bar in the primary color
+(blue in light mode, gold in dark) beside a verse's number marks the verse being read,
+for each narrator with verse times (`services/BibleAudioTimings.ts`, #561). The reader
+keeps that verse in the middle of the screen, scrolling as the narrator reaches each
+verse. That scrolling leaves the tab bar and audio controls where they are, so they don't
+move under a finger reaching for them. Scrolling by hand pauses following; five seconds after the last touch while the audio
+plays, or when play is pressed, it scrolls back. Saved and selected verses keep their colors.
 Tapping a verse opens its details, with **Save**, **Share**, and, when a hymn's verse
 includes it, **Hymn** (or **Hymns**, which lists each with its verse and hymnal, such as
 "Psalm 23 · English"): the English hymns and the same hymns in the 505, with the 505 first
@@ -280,7 +304,11 @@ are on Home, not here.
 
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
 **Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
-**About & Support** starts with **Help & Feedback**, which opens a draft email to
+**About & Support** starts with **Share the App** (#555): a popup with a QR code a
+friend can scan with their phone's camera to reach the download page
+(`https://app.nyccsda.org/download`, which sends them to their app store), the address,
+and **Share Link** for the device's share sheet. The code sits on white, so it scans in
+the dark theme too. Next is **Help & Feedback**, which opens a draft email to
 `technology@nyccsda.org` in the device's email app, for help or a feature request
 (#541). Its subject is always English, `[NYCCSDA App] Help or feature request`, with
 the same prefix as the Bible translation request's, so the emails are easy to filter.

@@ -10,18 +10,27 @@ const chapter = (number: number): BibleAudioQueueItem => ({
 
 function setup() {
   const sources: AudioSource[] = [];
+  let listener: ((status: AudioPlaylistStatus) => void) | undefined;
   const status = {
     currentIndex: 0, playing: false, currentTime: 0, duration: 120,
     isLoaded: true, isBuffering: false, didJustFinish: false,
   } as AudioPlaylistStatus;
   const playlist = {
-    addListener: jest.fn(() => ({ remove: jest.fn() })),
+    addListener: jest.fn((_event: string, callback: typeof listener) => {
+      listener = callback;
+      return { remove: jest.fn() };
+    }),
     destroy: jest.fn(), release: jest.fn(),
     get currentIndex() { return status.currentIndex; },
     get trackCount() { return sources.length; },
     get currentStatus() { return status; },
     clear: jest.fn(() => { sources.length = 0; status.currentIndex = 0; }),
     add: jest.fn((source: AudioSource) => sources.push(source)),
+    // Like Media3: an item inserted at or before the current one moves it on.
+    insert: jest.fn((source: AudioSource, index: number) => {
+      sources.splice(index, 0, source);
+      if (sources.length > 1 && index <= status.currentIndex) status.currentIndex += 1;
+    }),
     remove: jest.fn((index: number) => sources.splice(index, 1)),
     play: jest.fn(), pause: jest.fn(), updateLockScreenMetadata: jest.fn(),
   };
@@ -30,8 +39,104 @@ function setup() {
   queue.replace(chapter(1).source);
   queue.setCurrentChapter(chapter(1));
   queue.setQueue([chapter(2), chapter(3)]);
-  return { queue, playlist, status, sources };
+  const emit = (next: Partial<AudioPlaylistStatus> = {}) => listener?.({ ...status, ...next });
+  return { queue, playlist, status, sources, emit };
 }
+
+// Starts playback at a later chapter, as when someone plays Genesis 5.
+const startAt = (start: number, previous: number[]) => {
+  const context = setup();
+  context.queue.replace(chapter(start).source);
+  context.queue.setCurrentChapter(chapter(start));
+  context.queue.setQueue([chapter(start + 1)]);
+  context.queue.setPreviousQueue(previous.map(chapter));
+  return context;
+};
+
+describe('chapters before the first one (#543)', () => {
+  it('queues them nearest first, so native Previous goes back a chapter', () => {
+    const { queue, status, sources, playlist } = startAt(3, [2, 1]);
+    expect(sources).toEqual([1, 2, 3, 4].map(n => chapter(n).source));
+    expect(queue.currentStatus.activeChapter).toMatchObject({ chapter: 3 });
+    status.currentIndex = 1;
+    expect(queue.currentStatus.activeChapter).toMatchObject({ chapter: 2 });
+    expect(playlist.remove).not.toHaveBeenCalled();
+  });
+
+  it('reads a status event sent before the insert as the chapter that was playing', () => {
+    const { queue, emit } = startAt(3, [2, 1]);
+    // Numbered before the two inserts: index 0 was chapter 3 then.
+    emit({ currentIndex: 0, playing: true });
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 3 });
+    // The first event numbered the new way ends the correction...
+    emit({ currentIndex: 2, playing: true });
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 3 });
+    // ...so a real Previous afterwards is read as it is.
+    emit({ currentIndex: 1, playing: true });
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 2 });
+  });
+
+  it("reads each insert's own status event, sent partway through, as the chapter that was playing", () => {
+    // expo-audio sends a status after every insert, numbered as the queue was
+    // then: after inserting 2, chapter 3 was at index 1 of 3 tracks. Read as
+    // if both inserts had happened, it would look like chapter 4 was playing,
+    // and the reader would follow it there.
+    const { queue, emit } = startAt(3, [2, 1]);
+    emit({ currentIndex: 1, trackCount: 3 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 3 });
+    emit({ currentIndex: 0, trackCount: 2 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 3 });
+    emit({ currentIndex: 2, trackCount: 4 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 3 });
+    // Once an event counts every insert, a real Previous is read as it is.
+    emit({ currentIndex: 1, trackCount: 4 } as Partial<AudioPlaylistStatus>);
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 2 });
+  });
+
+  it('reads a status event that arrives during an insert as the chapter that was playing', () => {
+    const context = setup();
+    const { queue, playlist, status, sources } = context;
+    const seen: (number | undefined)[] = [];
+    queue.subscribe(() => seen.push(queue.getStatus().activeChapter?.chapter));
+    // Like a native event delivered before insert() returns.
+    const insert = playlist.insert.getMockImplementation()!;
+    playlist.insert.mockImplementation((source: AudioSource, index: number) => {
+      insert(source, index);
+      context.emit({ trackCount: sources.length } as Partial<AudioPlaylistStatus>);
+    });
+    queue.replace(chapter(3).source);
+    queue.setCurrentChapter(chapter(3));
+    queue.setPreviousQueue([2, 1].map(chapter));
+    expect(status.currentIndex).toBe(2);
+    expect(seen.slice(-2)).toEqual([3, 3]);
+  });
+
+  it('tops them up after going back, without repeating or reordering any', () => {
+    const { queue, status, sources, emit } = startAt(5, [4, 3]);
+    emit({ currentIndex: 2 });
+    status.currentIndex = 1;
+    queue.setPreviousQueue([3, 2, 1].map(chapter));
+    expect(sources).toEqual([1, 2, 3, 4, 5, 6].map(n => chapter(n).source));
+    expect(queue.currentStatus.activeChapter).toMatchObject({ chapter: 4 });
+    queue.setPreviousQueue([3, 2, 1].map(chapter));
+    expect(sources).toHaveLength(6);
+  });
+
+  it("leaves the queue alone when the chapters before are another reader's", () => {
+    const { queue, sources, playlist } = startAt(3, [2]);
+    queue.setPreviousQueue([{ ...chapter(2), source: { uri: 'https://example.com/other/2.mp3' } }, chapter(1)]);
+    expect(sources).toEqual([2, 3, 4].map(n => chapter(n).source));
+    expect(playlist.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops correcting the numbering once a new recording replaces the queue', () => {
+    const { queue, emit } = startAt(3, [2, 1]);
+    queue.replace(chapter(8).source);
+    queue.setCurrentChapter(chapter(8));
+    emit({ currentIndex: 0 });
+    expect(queue.getStatus().activeChapter).toMatchObject({ chapter: 8 });
+  });
+});
 
 it('supplies future chapters to native playback before any text or React transition', () => {
   const { queue, status, sources, playlist } = setup();

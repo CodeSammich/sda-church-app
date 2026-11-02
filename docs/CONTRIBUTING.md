@@ -272,8 +272,8 @@ GitHub's code scanning default setup and have no workflow file.
 
 - Check: `Bible audio on an Android emulator`. Runs on the release PR into `main`, and by
   hand.
-- Plays real Bible chapters on an Android emulator to test audio host failover and
-  playback with the screen off. See
+- Plays real Bible chapters on an Android emulator to test audio host failover,
+  playback with the screen off, and the reader following the verse being read. See
   [Bible audio emulator test](operations/admin-runbook.md#bible-audio-emulator-test).
 
 ### `Issues - Pending Release Label` (`.github/workflows/pending-release-label.yml`)

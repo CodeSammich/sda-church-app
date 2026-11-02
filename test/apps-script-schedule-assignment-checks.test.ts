@@ -65,6 +65,7 @@ const createSheet = (name: string, values: Grid) => {
   const sheet = {
     getName: () => name,
     getLastRow: () => values.length,
+    getLastColumn: () => values[0].length,
     getRange: makeRange,
     getDataRange: () => makeRange(1, 1, values.length, values[0].length),
     appendRow: (row: string[]) => values.push(row),
@@ -92,8 +93,9 @@ const setup = (
     ['David Wong', '王大衛'],
   ],
   extraContext: Record<string, unknown> = {},
+  headers: string[] = HEADERS,
 ) => {
-  const schedule = createSheet('Sabbath Calendar', [HEADERS, ...scheduleRows]);
+  const schedule = createSheet('Sabbath Calendar', [headers, ...scheduleRows]);
   const names = createSheet('Name Dictionary', [['English Name', 'Chinese Name'], ...dictionary]);
   const alerts: string[] = [];
   const properties: Record<string, string> = {};
@@ -227,7 +229,7 @@ describe('Sabbath Calendar conflict notes', () => {
     edit(2, 21, 'John Chen');
 
     expect(schedule.notes[1][QUEENS_SERMON - 1]).toBe(
-      'Duplicate / 重複: Pianist, Brooklyn Chair/Pastoral Prayer',
+      'Duplicate / 重复: Pianist, Brooklyn Chair/Pastoral Prayer',
     );
   });
 
@@ -237,7 +239,20 @@ describe('Sabbath Calendar conflict notes', () => {
 
     edit(2, PIANIST, 'Mary Lin');
 
-    expect(schedule.notes[1][QUEENS_SERMON - 1]).toBe('Duplicate / 重複: Pianist');
+    expect(schedule.notes[1][QUEENS_SERMON - 1]).toBe('Duplicate / 重复: Pianist');
+  });
+
+  it('clears notes left in the Traditional Chinese wording from before #565', () => {
+    const { schedule, edit } = setup([
+      scheduleRow('2026-10-03', { [QUEENS_SERMON]: 'Mary Lin', [PIANIST]: 'Mary Lin' }),
+    ]);
+    schedule.notes[1][QUEENS_SERMON - 1] = 'Duplicate / 重複: Pianist';
+    schedule.notes[1][PIANIST - 1] = 'Duplicate / 重複: Queens Sermon';
+
+    edit(2, PIANIST, 'Grace Ho');
+
+    expect(schedule.notes[1][QUEENS_SERMON - 1]).toBe('');
+    expect(schedule.notes[1][PIANIST - 1]).toBe('');
   });
 
   it('keeps a planner\'s own note while still coloring the cell', () => {
@@ -258,6 +273,80 @@ describe('Sabbath Calendar conflict notes', () => {
 
     expect(schedule.backgrounds[1][PIANIST - 1]).toBe('#ffffff');
     expect(schedule.notes[1][PIANIST - 1]).toBe('');
+  });
+});
+
+describe('Sabbath Calendar columns found by name', () => {
+  // A planner inserts a column of their own after Pastor Travel and moves
+  // Pianist to the far right: every roster column is still found by its header.
+  const MOVED = [
+    ...HEADERS.slice(0, 5),
+    'Planner Notes',
+    ...HEADERS.slice(5).filter((header) => header !== 'Pianist'),
+    'Pianist',
+  ];
+  const column = (header: string, occurrence = 0) =>
+    MOVED.map((name, index) => (name === header ? index + 1 : 0)).filter(Boolean)[occurrence];
+  const row = (date: string, people: Record<number, string>) => {
+    const values = MOVED.map(() => '');
+    values[0] = date;
+    Object.entries(people).forEach(([at, value]) => {
+      values[Number(at) - 1] = value;
+    });
+    return values;
+  };
+
+  it('highlights and notes the right cells after columns are moved or added', () => {
+    const { schedule, edit } = setup(
+      [row('2026-10-03', { [column('Queens Sermon')]: 'John Chen', [column('Planner Notes')]: 'John Chen' })],
+      undefined,
+      {},
+      MOVED,
+    );
+
+    edit(2, column('Pianist'), 'John Chen');
+
+    expect(schedule.backgrounds[1][column('Queens Sermon') - 1]).toBe(CONFLICT);
+    expect(schedule.backgrounds[1][column('Pianist') - 1]).toBe(CONFLICT);
+    expect(schedule.notes[1][column('Queens Sermon') - 1]).toBe('Duplicate / 重复: Pianist');
+    // The planner's own column isn't a roster column, so it's never painted.
+    expect(schedule.backgrounds[1][column('Planner Notes') - 1]).toBe('#ffffff');
+  });
+
+  it('names a repeated header by location when it is moved across Brooklyn Sermon', () => {
+    // Queens's Offering Prayer, renamed with its location and moved to the end.
+    const headers = [
+      ...HEADERS.filter((header, index) => !(header === 'Offering Prayer' && index < 19)),
+      'Queens Offering Prayer',
+    ];
+    const at = (header: string, occurrence = 0) =>
+      headers.map((name, index) => (name === header ? index + 1 : 0)).filter(Boolean)[occurrence];
+    const values = headers.map(() => '');
+    values[0] = '2026-10-03';
+    values[at('Queens Offering Prayer') - 1] = 'Mary Lin';
+    const { schedule, edit, context } = setup([values], undefined, {}, headers);
+
+    edit(2, at('Pianist'), 'Mary Lin');
+
+    expect(schedule.notes[1][at('Pianist') - 1]).toBe('Duplicate / 重复: Queens Offering Prayer');
+    expect(
+      runInContext(
+        `[findScheduleColumn_(${JSON.stringify(headers)}, 'Offering Prayer', 'queens', 0),
+          findScheduleColumn_(${JSON.stringify(headers)}, 'Offering Prayer', 'brooklyn', 1)]`,
+        context,
+      ),
+    ).toEqual([at('Queens Offering Prayer') - 1, at('Offering Prayer') - 1]);
+  });
+
+  it("keeps the Sabbath Calendar's own columns in English wherever they are, and leaves added ones alone", () => {
+    const { schedule, edit, alerts } = setup([row('2026-10-03', {})], undefined, {}, MOVED);
+
+    edit(2, column('Pianist'), '王大衛');
+    expect(schedule.values[1][column('Pianist') - 1]).toBe('');
+    expect(alerts.length).toBeGreaterThan(0);
+
+    edit(2, column('Planner Notes'), '中文備註');
+    expect(schedule.values[1][column('Planner Notes') - 1]).toBe('中文備註');
   });
 });
 

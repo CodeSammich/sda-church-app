@@ -657,7 +657,10 @@ const navigationLinks = [
   ['English-to-Chinese hymnal lookup image', 'https://assets.adventistconnect.org/newyork2/2026/08/09144957/SDAH_1985_to_Chinese_505_Hymnal_Lookup-scaled.jpg', true],
   ['Chinese-to-English hymnal lookup image', 'https://assets.adventistconnect.org/newyork2/2026/08/09144912/Chinese_505_Hymnal_to_SDAH_1985_Lookup-scaled.jpg', true],
   ['PWA install guide', 'https://youtu.be/5IwrG8BTylw?si=7FW6G4DWiJmLkz89&t=15'],
-  ['staff schedule', 'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit?usp=sharing', false, [401, 403]],
+  // The schedule sheet the bulletin is made from. The app no longer opens it
+  // (#553), but if it's gone, so is the bulletin. It needs a church sign-in, so
+  // 401 or 403 means it's there.
+  ['bulletin schedule sheet', 'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit?usp=sharing', false, [401, 403]],
   // Its bot protection answers some networks with 403 (seen from a home
   // connection on 2026-10-01), so 403 means "up, but blocking the monitor".
   ['Adventist Giving', 'https://adventistgiving.org/donate/AN48CO', false, [403]],

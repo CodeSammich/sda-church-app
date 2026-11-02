@@ -6,7 +6,7 @@
  * contains full names and must only be created by an authorized Sheets user.
  *
  * It holds everything the locations share: the Sheet menu and prompts, the data
- * join, Google Doc and PDF export, page and table primitives, and the shared
+ * join, Google Doc creation, page and table primitives, and the shared
  * cover, giving, and announcement blocks. Each location's page layout lives in
  * its own file (PrintedQueensBulletin.gs, PrintedBrooklynBulletin.gs), and the
  * Communion service content both locations print is in PrintedCommunionBulletin.gs.
@@ -38,8 +38,10 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   qrImageFolderProperty: 'PRINTED_BULLETIN_QR_FOLDER_ID',
   qrImageFolderId: '11esgvM1uhY5e94A_eL2ITI0iKNLIFEEr',
   legacyBrooklynCoverImageProperty: 'BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID',
+  // The dialog links to the Weekly Data tab itself (getBulletinIntakeSheetUrl_);
+  // this opens the spreadsheet when the tab can't be looked up.
   bulletinIntakeSheetUrl:
-    'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit#gid=1768045043',
+    'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit',
   printedAnnouncementsPropertyPrefix: 'PRINTED_ANNOUNCEMENTS_',
   printedBibleVersePropertyPrefix: 'PRINTED_BIBLE_VERSE_',
   printedAnnouncementsMaxEntries: 12,
@@ -49,6 +51,8 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   sdaLogoImageFileId: '19NBpTBQZyj2oSYY9qSQOvEkoPFd4M3E5',
   qrPlaceholderImageFileId: '12lLYC4iPLUrOA_0Lj_N6CzVM5b8VqNlq',
   documentPropertyPrefix: 'PHYSICAL_BULLETIN_DOC_ID_',
+  // Bulletins were also exported as PDFs before #558. A remembered PDF is
+  // trashed when its Doc is made again, so it can't be mistaken for the edited Doc.
   pdfPropertyPrefix: 'PHYSICAL_BULLETIN_PDF_ID_',
   pageWidth: 792,
   pageHeight: 612,
@@ -68,6 +72,9 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   bibleChineseTranslation: 'cmn_cuv',
   bibleCacheSeconds: 21600,
   sunsetApiBaseUrl: 'https://api.sunrise-sunset.org/json',
+  // This week's adult lesson title comes from the same Adventech catalog as
+  // the app's Sabbath School links.
+  sabbathSchoolApiBaseUrl: 'https://sabbath-school.adventech.io/api/v2',
   sunsetLatitude: 40.74546,
   sunsetLongitude: -73.88914,
   sunsetTimeZone: 'America/New_York',
@@ -294,15 +301,6 @@ var PRINTED_BIBLE_CHAPTER_COUNTS = Object.freeze({
 var PRINTED_OFFERING_TRANSLATION_CACHE = {};
 
 function onOpen() {
-  var headerContractError = null;
-  try {
-    ensureBulletinHeaderContractValidation_();
-  } catch (error) {
-    headerContractError = error;
-    if (typeof Logger !== 'undefined') {
-      Logger.log('Bulletin header contract check failed: ' + error);
-    }
-  }
   try {
     maintainBulletinScheduleOnOpen_();
   } catch (error) {
@@ -310,18 +308,36 @@ function onOpen() {
       Logger.log('Automatic schedule maintenance skipped: ' + error);
     }
   }
+  // After the upkeep, which puts back what it can of Weekly Data.
+  var missingColumns = [];
+  try {
+    missingColumns = getMissingBulletinColumns_(SpreadsheetApp.getActiveSpreadsheet());
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Bulletin column check failed: ' + error);
+    }
+  }
   var ui = SpreadsheetApp.getUi();
   ui
     .createMenu('Printed Bulletin')
-    .addItem('Create Google Doc + PDF…', 'createPrintedBulletinFromPrompt')
+    .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
     .addToUi();
-  if (headerContractError && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
+  if (missingColumns.length && ui.alert && ui.ButtonSet && ui.ButtonSet.OK) {
     ui.alert(
-      'Bulletin columns require an update / 週刊欄位需要更新',
-      headerContractError.message || String(headerContractError),
+      'Bulletin columns not found / 找不到周刊列',
+      getMissingBulletinColumnsMessage_(missingColumns),
       ui.ButtonSet.OK,
     );
   }
+}
+
+function getMissingBulletinColumnsMessage_(missingColumns) {
+  return (
+    'The app and the printed bulletin leave these blank until a tab or column ' +
+    'with this exact name is back. A column can be in any position.\n' +
+    '在恢复名称完全相同的工作表或列之前，手机应用和纸质周刊中的这些内容会留空。列可以放在任何位置。\n\n' +
+    missingColumns.join('\n')
+  );
 }
 
 /**
@@ -340,11 +356,15 @@ function createPrintedBulletinFromPrompt() {
     .setHeight(820);
   SpreadsheetApp.getUi().showModalDialog(
     output,
-    'Bulletin workflow / 週刊流程',
+    'Bulletin workflow / 周刊流程',
   );
   return null;
 }
 
+// Staff-facing text (dialogs, alerts, errors, notes) is in English and
+// Simplified Chinese, because the people who run the bulletin read Simplified.
+// Everything printed stays in Traditional Chinese on purpose. Keep the two
+// apart: see "Chinese script" in docs/operations/bulletin-automation.md.
 function buildPrintedBulletinPromptHtml_(defaultDate) {
   var bookOptions = Object.keys(PRINTED_BIBLE_BOOK_LABELS)
     .map(function (bookId) {
@@ -429,52 +449,52 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'font-size:14px;margin:10px 0;padding:11px 12px;text-decoration:none;}' +
     '</style></head><body>' +
     '<div id="formView">' +
-    '<h2 class="section-heading">1. Update the digital bulletin / 第一步：更新數位週刊</h2>' +
-    '<div class="admin-reminder"><strong>Instructions / 使用說明：</strong> Check the current week in the app, then add or update one row per location in Sabbath Sermon Data. Nonblank values there feed both the digital and printed bulletins; no separate intake workflow is required.' +
-    '<br>請先查看本應用程式，然後在「Sabbath Sermon Data」中為每個地點新增或更新一行資料。該表格的非空欄位會同時提供手機版和印刷版週刊使用；不需要另外建立資料流程。</div>' +
+    '<h2 class="section-heading">1. Update the digital bulletin / 第一步：更新手机版周刊</h2>' +
+    '<div class="admin-reminder"><strong>Instructions / 使用说明：</strong> Check the current week in the app, then add or update one row per location in Weekly Data. Nonblank values there feed both the digital and printed bulletins; no separate intake workflow is required.' +
+    '<br>请先在应用中查看本周的周刊，然后在“Weekly Data”中为每个地点添加或更新一行。该工作表中的非空单元格会同时用于手机版和纸质周刊，无需另外提交。</div>' +
     '<div class="form-links"><a class="form-button" href="' +
-    escapePrintedBulletinHtml_(PRINTED_BULLETIN_CONFIG.bulletinIntakeSheetUrl) +
-    '">↗ Open Sabbath Sermon Data / 開啟安息日講道資料</a></div></div>' +
-    '<h2 class="section-heading" style="margin-top:20px;">2. Create the printed bulletin / 第二步：建立實體週刊</h2>' +
+    escapePrintedBulletinHtml_(getBulletinIntakeSheetUrl_()) +
+    '">↗ Open Weekly Data / 打开 Weekly Data</a></div></div>' +
+    '<h2 class="section-heading" style="margin-top:20px;">2. Create the printed bulletin / 第二步：创建纸质周刊</h2>' +
     '<form id="bulletinForm">' +
     '<label for="date">Sabbath date <span class="required-mark" aria-hidden="true">*</span><br>安息日日期</label>' +
     '<input id="date" type="date" value="' +
     escapePrintedBulletinHtml_(defaultDate) +
     '" required>' +
-    '<div class="help">Defaults to the closest upcoming Saturday.<br>預設為下一個最近的星期六。</div>' +
-    '<label>Location<br>地點</label>' +
+    '<div class="help">Defaults to the closest upcoming Saturday.<br>默认为即将到来的星期六。</div>' +
+    '<label>Location<br>地点</label>' +
     '<div class="choices" id="locationChoices">' +
-    '<button type="button" class="choice selected" data-value="queens">Queens / 皇后區</button>' +
-    '<button type="button" class="choice" data-value="brooklyn">Brooklyn / 布碌崙</button>' +
+    '<button type="button" class="choice selected" data-value="queens">Queens / 皇后区</button>' +
+    '<button type="button" class="choice" data-value="brooklyn">Brooklyn / 布鲁克林</button>' +
     '</div>' +
     '<label>Format<br>格式</label>' +
     '<div class="choices" id="formatChoices">' +
     '<button type="button" class="choice selected" data-value="regular">Regular / 普通</button>' +
-    '<button type="button" class="choice" data-value="communion">Communion / 聖餐</button>' +
+    '<button type="button" class="choice" data-value="communion">Communion / 圣餐</button>' +
     '</div>' +
-    '<div class="help">Brooklyn Communion is not currently available. Choose Regular for Brooklyn.<br>目前尚未提供布碌崙聖餐禮週刊；布碌崙請選擇普通格式。</div>' +
-    '<label for="englishTranslation">English Bible translation<br>英文聖經譯本</label>' +
+    '<div class="help">Brooklyn Communion is not currently available. Choose Regular for Brooklyn.<br>目前尚未提供布鲁克林圣餐周刊；布鲁克林请选择普通格式。</div>' +
+    '<label for="englishTranslation">English Bible translation<br>英文圣经译本</label>' +
     '<select id="englishTranslation">' +
     englishTranslationOptions +
     '</select>' +
-    '<div class="help">Chinese Bible translation: CUV — 和合本（Traditional Chinese）.<br>中文聖經譯本：CUV — 和合本（繁體中文）。</div>' +
-    '<label for="book">Bible book <span class="required-mark" aria-hidden="true">*</span><br>聖經書卷</label>' +
-    '<select id="book" required><option value="">Choose a book — 選擇書卷</option>' +
+    '<div class="help">Chinese Bible translation: CUV — 和合本（Traditional Chinese）.<br>中文圣经译本：CUV — 和合本（繁体中文）。</div>' +
+    '<label for="book">Bible book <span class="required-mark" aria-hidden="true">*</span><br>圣经书卷</label>' +
+    '<select id="book" required><option value="">Choose a book — 选择书卷</option>' +
     bookOptions +
     '</select>' +
     '<div class="row">' +
     '<div><label for="chapter">Chapter <span class="required-mark" aria-hidden="true">*</span><br>章</label><select id="chapter" disabled required>' +
-    '<option value="">Choose a book first — 請先選擇書卷</option></select></div>' +
-    '<div><label for="verses">Verse(s) <span class="required-mark" aria-hidden="true">*</span><br>節</label><input id="verses" type="text" placeholder="11 or 11-15" inputmode="text" required></div>' +
+    '<option value="">Choose a book first — 请先选择书卷</option></select></div>' +
+    '<div><label for="verses">Verse(s) <span class="required-mark" aria-hidden="true">*</span><br>节</label><input id="verses" type="text" placeholder="11 or 11-15" inputmode="text" required></div>' +
     '</div>' +
-    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in Sabbath Sermon Data, it will appear here automatically. Check or edit it before creating.<br>選擇書卷和章，然後輸入一節或一段經文，例如 11 或 11-15。如果講員已在「Sabbath Sermon Data」提交聖經經文，系統會自動填入。建立前請確認或修改。</div>' +
-    '<label>Printed announcements / 印刷週刊消息</label>' +
-    '<div class="help">Optional. Add one entry per card. These entries are printed only; they are not shown in the mobile bulletin.<br>可選。每張卡片輸入一則消息。這些消息只會印在週刊上，不會顯示在手機版週刊。</div>' +
+    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in Weekly Data, it will appear here automatically. Check or edit it before creating.<br>选择书卷和章，然后输入一节或一段经文，例如 11 或 11-15。如果讲员已在“Weekly Data”提交圣经经文，系统会自动填入。创建前请确认或修改。</div>' +
+    '<label>Printed announcements / 纸质周刊通知</label>' +
+    '<div class="help">Optional. Add one entry per card. These entries are printed only; they are not shown in the mobile bulletin.<br>可选。每张卡片输入一条通知。这些通知只打印在纸质周刊上，不会显示在手机版周刊中。</div>' +
     '<div id="announcementList"></div>' +
-    '<button type="button" class="announcement-add" id="addAnnouncement">+ Add announcement / 新增消息</button>' +
+    '<button type="button" class="announcement-add" id="addAnnouncement">+ Add announcement / 添加通知</button>' +
     '<div id="error" class="error" hidden></div>' +
     '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
-    '<button type="submit" class="submit" id="submit" disabled>Create / 建立</button></div>' +
+    '<button type="submit" class="submit" id="submit" disabled>Create / 创建</button></div>' +
     '</form></div>' +
     '<div class="status-slot"><div id="statusView" hidden></div></div>' +
     '<script>' +
@@ -491,26 +511,25 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function escapeHtml(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\\x27/g,"&#39;");}' +
     'function updateSubmitState(){var date=document.getElementById("date").value.trim();var book=document.getElementById("book").value;var chapter=document.getElementById("chapter").value;var verses=document.getElementById("verses").value.trim();var unsupported=locationValue==="brooklyn"&&formatValue==="communion";document.getElementById("submit").disabled=Boolean(unsupported||!(date&&book&&chapter&&verses));}' +
     'function showError(message){var error=document.getElementById("error");error.textContent=message;error.hidden=false;updateSubmitState();}' +
-    'function announcementMarkup(entry,index){entry=entry||{};var scope=entry.scope||"all";return "<div class=\\"announcement-entry\\"><div class=\\"announcement-header\\"><strong>Announcement "+(index+1)+" / 消息 "+(index+1)+"</strong><button type=\\"button\\" class=\\"announcement-remove\\">Remove / 移除</button></div><select class=\\"announcement-scope\\"><option value=\\"all\\""+(scope==="all"?" selected":"")+">Both locations / 兩地</option><option value=\\"queens\\""+(scope==="queens"?" selected":"")+">Queens / 皇后區</option><option value=\\"brooklyn\\""+(scope==="brooklyn"?" selected":"")+">Brooklyn / 布碌崙</option></select><label>English announcement / 英文消息</label><textarea class=\\"announcement-english\\" placeholder=\\"Optional English announcement\\">"+escapeHtml(entry.english||"")+"</textarea><label>Traditional Chinese announcement / 繁體中文消息</label><textarea class=\\"announcement-chinese\\" placeholder=\\"Optional Traditional Chinese announcement\\">"+escapeHtml(entry.chinese||"")+"</textarea></div>";}' +
-    'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 消息 "+(index+1);});}' +
+    'function announcementMarkup(entry,index){entry=entry||{};var scope=entry.scope||"all";return "<div class=\\"announcement-entry\\"><div class=\\"announcement-header\\"><strong>Announcement "+(index+1)+" / 通知 "+(index+1)+"</strong><button type=\\"button\\" class=\\"announcement-remove\\">Remove / 移除</button></div><select class=\\"announcement-scope\\"><option value=\\"all\\""+(scope==="all"?" selected":"")+">Both locations / 两个地点</option><option value=\\"queens\\""+(scope==="queens"?" selected":"")+">Queens / 皇后区</option><option value=\\"brooklyn\\""+(scope==="brooklyn"?" selected":"")+">Brooklyn / 布鲁克林</option></select><label>English announcement / 英文通知</label><textarea class=\\"announcement-english\\" placeholder=\\"Optional English announcement\\">"+escapeHtml(entry.english||"")+"</textarea><label>Traditional Chinese announcement / 繁体中文通知</label><textarea class=\\"announcement-chinese\\" placeholder=\\"Optional Traditional Chinese announcement\\">"+escapeHtml(entry.chinese||"")+"</textarea></div>";}' +
+    'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 通知 "+(index+1);});}' +
     'function addAnnouncementEntry(entry){var list=document.getElementById("announcementList");var index=list.children.length;list.insertAdjacentHTML("beforeend",announcementMarkup(entry,index));refreshAnnouncementLabels();}' +
     'function renderAnnouncements(entries){var list=document.getElementById("announcementList");list.innerHTML="";if(!entries||!entries.length){entries=[{}];}entries.forEach(addAnnouncementEntry);refreshAnnouncementLabels();announcementsDirty=false;updateSubmitState();}' +
-    'function updateChapterOptions(selectedChapter){var book=document.getElementById("book");var selected=book.options[book.selectedIndex];var count=Number(selected.getAttribute("data-chapters")||0);var chapter=document.getElementById("chapter");chapter.innerHTML="";if(!count){chapter.disabled=true;chapter.add(new Option("Choose a book first — 請先選擇書卷",""));updateSubmitState();return;}chapter.disabled=false;chapter.add(new Option("Choose chapter — 選擇章",""));for(var i=1;i<=count;i++){chapter.add(new Option(String(i),String(i)));}if(selectedChapter){chapter.value=String(selectedChapter);}updateSubmitState();}' +
-    'function setVerseReference(reference){suppressVerseDirty=true;var value=String(reference||"").replace(/[：]/g,":").replace(/^(.+?):(\\d+):/,"$1 $2:").trim();var match=value.match(/^(.+?)\\s+(\\d+):(\\d+)(?:-(\\d+))?$/);var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses");book.value="";chapter.innerHTML="<option value=\\"\\">Choose a book first — 請先選擇書卷</option>";chapter.disabled=true;verses.value="";if(match){for(var i=0;i<book.options.length;i++){if(String(book.options[i].getAttribute("data-english")||"").toLowerCase()===match[1].toLowerCase()){book.selectedIndex=i;updateChapterOptions(match[2]);verses.value=match[3]+(match[4]?"-"+match[4]:"");break;}}}suppressVerseDirty=false;updateSubmitState();}' +
+    'function updateChapterOptions(selectedChapter){var book=document.getElementById("book");var selected=book.options[book.selectedIndex];var count=Number(selected.getAttribute("data-chapters")||0);var chapter=document.getElementById("chapter");chapter.innerHTML="";if(!count){chapter.disabled=true;chapter.add(new Option("Choose a book first — 请先选择书卷",""));updateSubmitState();return;}chapter.disabled=false;chapter.add(new Option("Choose chapter — 选择章",""));for(var i=1;i<=count;i++){chapter.add(new Option(String(i),String(i)));}if(selectedChapter){chapter.value=String(selectedChapter);}updateSubmitState();}' +
+    'function setVerseReference(reference){suppressVerseDirty=true;var value=String(reference||"").replace(/[：]/g,":").replace(/^(.+?):(\\d+):/,"$1 $2:").trim();var match=value.match(/^(.+?)\\s+(\\d+):(\\d+)(?:-(\\d+))?$/);var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses");book.value="";chapter.innerHTML="<option value=\\"\\">Choose a book first — 请先选择书卷</option>";chapter.disabled=true;verses.value="";if(match){for(var i=0;i<book.options.length;i++){if(String(book.options[i].getAttribute("data-english")||"").toLowerCase()===match[1].toLowerCase()){book.selectedIndex=i;updateChapterOptions(match[2]);verses.value=match[3]+(match[4]?"-"+match[4]:"");break;}}}suppressVerseDirty=false;updateSubmitState();}' +
     'function renderPromptData(data){promptData=data||{scheduleVerse:""};renderAnnouncements(promptData.announcements||[]);setVerseReference(promptData.verse||"");verseDirty=false;updateSubmitState();}' +
     'function loadPromptData(){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(renderPromptData).withFailureHandler(function(){renderPromptData({announcements:[],scheduleVerse:"",verse:""});}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
     'function collectAnnouncements(){var entries=[];Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry"),function(card){var english=card.querySelector(".announcement-english").value.trim();var chinese=card.querySelector(".announcement-chinese").value.trim();if(english||chinese){entries.push({scope:card.querySelector(".announcement-scope").value,english:english,chinese:chinese});}});return entries;}' +
     'function showLoading(){document.getElementById("bulletinForm").hidden=true;document.getElementById("statusView").hidden=false;document.getElementById("statusView").innerHTML=' +
-    '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Creating printed bulletin…<br>正在建立實體週刊…</h2><p class=\'intro\'>This may take a minute while the Google Doc and PDF are prepared.<br>建立 Google 文件和 PDF 可能需要一點時間。</p></div>";focusStatusView_();}' +
+    '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Creating printed bulletin…<br>正在创建纸质周刊…</h2><p class=\'intro\'>This may take a minute while the Google Doc is prepared.<br>创建 Google 文档可能需要一点时间。</p></div>";focusStatusView_();}' +
     'function focusStatusView_(){setTimeout(function(){var status=document.getElementById("statusView");if(status&&status.scrollIntoView){status.scrollIntoView({behavior:"smooth",block:"nearest"});}},0);}' +
-    'function showGenerationError(error){document.getElementById("statusView").hidden=true;document.getElementById("bulletinForm").hidden=false;showError("Could not create bulletin / 無法建立週刊\\n\\n"+(error&&error.message?error.message:String(error)));setTimeout(function(){var message=document.getElementById("error");if(message&&message.scrollIntoView){message.scrollIntoView({behavior:"smooth",block:"center"});}},0);}' +
+    'function showGenerationError(error){document.getElementById("statusView").hidden=true;document.getElementById("bulletinForm").hidden=false;showError("Could not create bulletin / 无法创建周刊\\n\\n"+(error&&error.message?error.message:String(error)));setTimeout(function(){var message=document.getElementById("error");if(message&&message.scrollIntoView){message.scrollIntoView({behavior:"smooth",block:"center"});}},0);}' +
     'function showResult(result){document.getElementById("statusView").innerHTML=' +
-    '"<h2>Printed bulletin ready / 實體週刊已完成</h2><p class=\'intro\'>"+escapeHtml(result.title||"Your bulletin is ready. / 您的週刊已準備好。")+"</p>"+'+
-    '"<a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open Google Doc / 開啟 Google 文件</a>"+'+
-    '"<a class=\'link\' href=\'"+escapeHtml(result.pdfUrl)+"\'>Open PDF / 開啟 PDF</a>"+'+
-    '"<div class=\'actions\'><button type=\'button\' class=\'cancel\' onclick=\'google.script.host.close()\'>Close / 關閉</button></div>";}' +
+    '"<h2>Printed bulletin ready / 纸质周刊已完成</h2><p class=\'intro\'>"+escapeHtml(result.title||"Your bulletin is ready. / 您的周刊已准备好。")+"</p>"+'+
+    '"<a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open Google Doc / 打开 Google 文档</a>"+'+
+    '"<div class=\'actions\'><button type=\'button\' class=\'cancel\' onclick=\'google.script.host.close()\'>Close / 关闭</button></div>";}' +
     'function runRequest(request){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(function(result){' +
-    'if(result&&result.requiresConfirmation){var message=result.warning+"\\n\\n"+result.warningChinese+"\\n\\nContinue anyway? / 仍要繼續嗎？";if(window.confirm(message)){request.confirmLongVerse=true;runRequest(request);}else{updateSubmitState();}return;}' +
+    'if(result&&result.requiresConfirmation){var message=result.warning+"\\n\\n"+result.warningChinese+"\\n\\nContinue anyway? / 仍要继续吗？";if(window.confirm(message)){request.confirmLongVerse=true;runRequest(request);}else{updateSubmitState();}return;}' +
     'showLoading();google.script.run.withSuccessHandler(showResult).withFailureHandler(function(error){showGenerationError(error);}).createPrintedBulletinFromRequest(request);' +
     '}).withFailureHandler(function(error){showError(error&&error.message?error.message:String(error));}).getPrintedBulletinPromptWarning(request.verse||"",Boolean(request.confirmLongVerse),{englishTranslation:request.englishTranslation});}' +
     'document.getElementById("locationChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){locationValue=event.target.getAttribute("data-value");selectChoice("locationChoices",locationValue);updateLocationFormatAvailability();loadPromptData();}});' +
@@ -523,7 +542,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'document.getElementById("book").addEventListener("change",function(){updateChapterOptions();if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
     'document.getElementById("chapter").addEventListener("change",function(){if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
     'document.getElementById("verses").addEventListener("input",function(){if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
-    'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses").value.trim();if(!date||!book.value||!chapter.value||!verses){showError("Sabbath date, Bible book, chapter, and verse/range are required. / 安息日日期、聖經書卷、章和節數（或節數範圍）均為必填。");return;}if(verses&&!/^\\d+(?:-\\d+)?$/.test(verses)){showError("Verse(s) must look like 11 or 11-15. / 節數格式應為 11 或 11-15。");return;}var range=verses.split("-");if(range.length===2&&Number(range[1])<Number(range[0])){showError("The ending verse must not be smaller than the starting verse. / 結束節數不可小於開始節數。");return;}var reference=book.options[book.selectedIndex].getAttribute("data-english")+" "+chapter.value+":"+verses;var request={date:date,format:formatValue,location:locationValue,verse:reference,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}if(verseDirty){request.verseOverrideDirty=true;}runRequest(request);});' +
+    'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses").value.trim();if(!date||!book.value||!chapter.value||!verses){showError("Sabbath date, Bible book, chapter, and verse/range are required. / 安息日日期、圣经书卷、章和节数（或节数范围）均为必填。");return;}if(verses&&!/^\\d+(?:-\\d+)?$/.test(verses)){showError("Verse(s) must look like 11 or 11-15. / 节数格式应为 11 或 11-15。");return;}var range=verses.split("-");if(range.length===2&&Number(range[1])<Number(range[0])){showError("The ending verse must not be smaller than the starting verse. / 结束节数不可小于开始节数。");return;}var reference=book.options[book.selectedIndex].getAttribute("data-english")+" "+chapter.value+":"+verses;var request={date:date,format:formatValue,location:locationValue,verse:reference,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}if(verseDirty){request.verseOverrideDirty=true;}runRequest(request);});' +
     'selectChoice("locationChoices",locationValue);selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();loadPromptData();' +
     '</script></body></html>'
   );
@@ -550,12 +569,12 @@ function getPrintedBulletinPromptWarning(reference, confirmed, bibleTranslations
     requiresConfirmation: true,
     warning: warning,
     warningChinese: stats
-      ? '這段經文約有 ' +
+      ? '这段经文约有 ' +
         stats.words +
-        ' 個英文單字（' +
+        ' 个英文单词（' +
         stats.characters +
-        ' 個字元）。雙語經文欄可能會有較多換行，甚至使週刊增加頁數。'
-      : '這段經文較長，雙語經文欄可能會有較多換行，甚至使週刊增加頁數。',
+        ' 个字符）。双语经文栏可能会有较多换行，甚至使周刊增加页数。'
+      : '这段经文较长，双语经文栏可能会有较多换行，甚至使周刊增加页数。',
   };
 }
 
@@ -635,19 +654,6 @@ function getPhysicalBibleTextStats_(text) {
   };
 }
 
-function showPrintedBulletinResultDialog_(result) {
-  var output = HtmlService.createHtmlOutput(
-    buildPrintedBulletinResultHtml_(result),
-  )
-    .setWidth(460)
-    .setHeight(260);
-  SpreadsheetApp.getUi().showModalDialog(
-    output,
-    'Printed bulletin ' +
-      (result.action === 'updated' ? 'updated / 已更新' : 'created / 已建立'),
-  );
-}
-
 /**
  * Called asynchronously by the progress dialog after the user finishes the
  * prompts. Keeping the expensive Docs/Drive work in a google.script.run call
@@ -682,7 +688,7 @@ function createPrintedBulletinFromRequest(request) {
 
 function validatePrintedBulletinRequest_(request) {
   if (!toIsoDate_(request.date)) {
-    throw new Error('Sabbath date is required. / 安息日日期為必填。');
+    throw new Error('Sabbath date is required. / 安息日日期为必填。');
   }
   var location = normalizePrintedBulletinLocation_(request.location);
   var requestedFormat = String(request.format || '').trim().toLowerCase();
@@ -691,10 +697,10 @@ function validatePrintedBulletinRequest_(request) {
   }
   var verse = String(request.verse || '').trim();
   if (!verse) {
-    throw new Error('Bible book, chapter, and verse/range are required. / 聖經書卷、章和節數（或節數範圍）均為必填。');
+    throw new Error('Bible book, chapter, and verse/range are required. / 圣经书卷、章和节数（或节数范围）均为必填。');
   }
   if (!/^.+\s+\d+:\d+(?:-\d+)?$/.test(verse)) {
-    throw new Error('Bible reference must include a book, chapter, and verse/range. / 聖經經文必須包括書卷、章和節數（或節數範圍）。');
+    throw new Error('Bible reference must include a book, chapter, and verse/range. / 圣经经文必须包括书卷、章和节数（或节数范围）。');
   }
 }
 
@@ -738,7 +744,7 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
       });
     }
   }
-  // The reviewed Sabbath Sermon Data row is the source of truth for this
+  // The reviewed Weekly Data row is the source of truth for this
   // prompt. A prior printed-bulletin memory is only a fallback when that
   // managed intake cell is blank, so an old manual selection cannot mask a
   // newly reviewed Bible reference.
@@ -921,102 +927,18 @@ function getPrintedBibleVersePropertyKey_(date, location) {
   );
 }
 
-function showPrintedBulletinLoadingDialog_(request) {
-  var output = HtmlService.createHtmlOutput(
-    buildPrintedBulletinLoadingHtml_(request),
-  )
-    .setWidth(460)
-    .setHeight(280);
-  SpreadsheetApp.getUi().showModalDialog(output, 'Creating printed bulletin');
-}
-
-function buildPrintedBulletinLoadingHtml_(request) {
-  var requestJson = JSON.stringify(request || {})
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026');
-
-  return (
-    '<!doctype html>' +
-    '<html><head><base target="_blank"><style>' +
-    'body{font-family:Arial,sans-serif;color:#202124;padding:22px;}' +
-    '.state{text-align:center;padding:8px 0;}' +
-    '.spinner{width:34px;height:34px;margin:4px auto 18px;border:4px solid #dadce0;' +
-    'border-top-color:#1a73e8;border-radius:50%;animation:spin .85s linear infinite;}' +
-    '@keyframes spin{to{transform:rotate(360deg)}}' +
-    'h2{font-size:18px;margin:0 0 8px;}' +
-    'p{font-size:14px;line-height:1.45;margin:0 0 16px;}' +
-    '.link{display:block;border:1px solid #dadce0;border-radius:6px;' +
-    'color:#1a73e8;font-size:14px;margin:10px 0;padding:11px 12px;' +
-    'text-decoration:none;text-align:left;}' +
-    '.link:hover{background:#f8f9fa;}' +
-    'button{float:right;background:#1a73e8;border:0;border-radius:4px;' +
-    'color:white;cursor:pointer;padding:8px 18px;}' +
-    '.error{color:#b3261e;text-align:left;white-space:pre-wrap;}' +
-    '</style></head><body>' +
-    '<div id="state" class="state">' +
-    '<div class="spinner" aria-label="Loading"></div>' +
-    '<h2>Creating printed bulletin…<br>正在建立實體週刊…</h2>' +
-    '<p>This may take a minute while the Google Doc is laid out and the PDF is exported.<br>建立 Google 文件和匯出 PDF 可能需要一點時間。</p>' +
-    '</div>' +
-    '<script>' +
-    'function escapeHtml(value){return String(value==null?"":value)' +
-    '.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")' +
-    '.replace(/"/g,"&quot;").replace(/\'/g,"&#39;");}' +
-    'function showResult(result){' +
-    'var action=result.action==="updated"?"updated":"created";' +
-    'document.getElementById("state").innerHTML=' +
-    '"<h2>Printed bulletin "+escapeHtml(action)+"</h2>"+' +
-    '"<p>"+escapeHtml(result.title||"Your bulletin is ready.")+"</p>"+' +
-    '"<a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open Google Doc</a>"+' +
-    '"<a class=\'link\' href=\'"+escapeHtml(result.pdfUrl)+"\'>Open PDF</a>"+' +
-    '"<button onclick=\'google.script.host.close()\'>Close</button>";' +
-    '}' +
-    'function showError(error){' +
-    'var message=error&&error.message?error.message:String(error);' +
-    'document.getElementById("state").innerHTML=' +
-    '"<h2>Printed bulletin could not be created</h2>"+' +
-    '"<p class=\'error\'>"+escapeHtml(message)+"</p>"+' +
-    '"<button onclick=\'google.script.host.close()\'>Close</button>";' +
-    '}' +
-    'google.script.run.withSuccessHandler(showResult).withFailureHandler(showError)' +
-    '.createPrintedBulletinFromRequest(' +
-    requestJson +
-    ');' +
-    '</script></body></html>'
-  );
-}
-
-function buildPrintedBulletinResultHtml_(result) {
-  var action = result.action === 'updated' ? 'updated' : 'created';
-  return (
-    '<!doctype html>' +
-    '<html><head><base target="_blank"><style>' +
-    'body{font-family:Arial,sans-serif;color:#202124;padding:18px 22px;}' +
-    'h2{font-size:18px;margin:0 0 8px;}' +
-    'p{font-size:14px;margin:0 0 16px;}' +
-    '.link{display:block;border:1px solid #dadce0;border-radius:6px;' +
-    'color:#1a73e8;font-size:14px;margin:10px 0;padding:11px 12px;' +
-    'text-decoration:none;}' +
-    '.link:hover{background:#f8f9fa;}' +
-    'button{float:right;background:#1a73e8;border:0;border-radius:4px;' +
-    'color:white;cursor:pointer;padding:8px 18px;}' +
-    '</style></head><body>' +
-    '<h2>Printed bulletin ' +
-    escapePrintedBulletinHtml_(action) +
-    ' / 實體週刊</h2>' +
-    '<p>' +
-    escapePrintedBulletinHtml_(result.title || 'Your bulletin is ready.') +
-    '</p>' +
-    '<a class="link" href="' +
-    escapePrintedBulletinHtml_(result.url) +
-    '">Open Google Doc / 開啟 Google 文件</a>' +
-    '<a class="link" href="' +
-    escapePrintedBulletinHtml_(result.pdfUrl) +
-    '">Open PDF / 開啟 PDF</a>' +
-    '<button onclick="google.script.host.close()">Close</button>' +
-    '</body></html>'
-  );
+// A link straight to the Weekly Data tab, or else to the spreadsheet.
+function getBulletinIntakeSheetUrl_() {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = spreadsheet && spreadsheet.getSheetByName(CONFIG.intakeSheetName);
+    if (sheet) {
+      return spreadsheet.getUrl() + '#gid=' + sheet.getSheetId();
+    }
+  } catch (error) {
+    // Outside the bound spreadsheet, such as in tests.
+  }
+  return PRINTED_BULLETIN_CONFIG.bulletinIntakeSheetUrl;
 }
 
 function escapePrintedBulletinHtml_(value) {
@@ -1159,20 +1081,15 @@ function createPrintedBulletinUnlocked_(
   validatePrintedBulletinCombination_(location, format);
   var nextBulletin = tryBuildPrivateBulletin_(getNextSabbathDate_(date), nameDictionary);
   hydratePhysicalSunsetTimes_(bulletin, nextBulletin);
+  bulletin.sabbathSchoolLesson = getPhysicalSabbathSchoolLesson_(date);
   var title = getPrintedBulletinTitle_(location, date, format);
   var documentPropertyKey = getPrintedBulletinPropertyKey_(
     PRINTED_BULLETIN_CONFIG.documentPropertyPrefix,
     location,
     date,
   );
-  var pdfPropertyKey = getPrintedBulletinPropertyKey_(
-    PRINTED_BULLETIN_CONFIG.pdfPropertyPrefix,
-    location,
-    date,
-  );
   var properties = PropertiesService.getScriptProperties();
   var legacyDocumentPropertyKey = PRINTED_BULLETIN_CONFIG.documentPropertyPrefix + date;
-  var legacyPdfPropertyKey = PRINTED_BULLETIN_CONFIG.pdfPropertyPrefix + date;
   var existingDocumentId = properties.getProperty(documentPropertyKey);
   if (!existingDocumentId && location === 'queens') {
     existingDocumentId = properties.getProperty(legacyDocumentPropertyKey);
@@ -1206,19 +1123,7 @@ function createPrintedBulletinUnlocked_(
   if (location === 'queens' && legacyDocumentPropertyKey !== documentPropertyKey) {
     properties.deleteProperty(legacyDocumentPropertyKey);
   }
-  if (!properties.getProperty(pdfPropertyKey) && location === 'queens') {
-    var legacyPdfId = properties.getProperty(legacyPdfPropertyKey);
-    if (legacyPdfId) {
-      properties.setProperty(pdfPropertyKey, legacyPdfId);
-      properties.deleteProperty(legacyPdfPropertyKey);
-    }
-  }
-  var pdf = createOrReplacePrintedBulletinPdf_(
-    document.getId(),
-    title,
-    pdfPropertyKey,
-    location,
-  );
+  trashPrintedBulletinPdf_(properties, location, date);
 
   return {
     id: document.getId(),
@@ -1226,9 +1131,6 @@ function createPrintedBulletinUnlocked_(
     format: format,
     action: action,
     url: document.getUrl(),
-    pdfAction: pdf.action,
-    pdfId: pdf.id,
-    pdfUrl: pdf.url,
   };
 }
 
@@ -1469,7 +1371,7 @@ function resolvePrintedBulletinFormat_(requestedFormat, bulletin) {
 function validatePrintedBulletinCombination_(location, format) {
   if (location === 'brooklyn' && format === 'communion') {
     throw new Error(
-      'Brooklyn Communion bulletins are not available yet. Choose Regular for Brooklyn. / 目前尚未提供布碌崙聖餐禮週刊；布碌崙請選擇普通格式。',
+      'Brooklyn Communion bulletins are not available yet. Choose Regular for Brooklyn. / 目前尚未提供布鲁克林圣餐周刊；布鲁克林请选择普通格式。',
     );
   }
 }
@@ -1614,6 +1516,99 @@ function getPhysicalSunsetTime_(date) {
     Logger.log('Sunset lookup failed for ' + requestedDate + ': ' + error);
     return '';
   }
+}
+
+/**
+ * This Sabbath's adult Sabbath School lesson, in English and Traditional
+ * Chinese, or blanks if the catalog can't be read. The class discusses the
+ * lesson studied the week before, so it's the lesson whose week (Sabbath to
+ * Friday) ends the day before this Sabbath. That Friday is always in the
+ * lesson's own quarter, since a quarter starts on the Sabbath on or before
+ * its first day.
+ */
+function getPhysicalSabbathSchoolLesson_(date) {
+  var lesson = { english: '', chinese: '' };
+  var requestedDate = toIsoDate_(date);
+  if (!requestedDate || typeof UrlFetchApp === 'undefined') {
+    return lesson;
+  }
+  var parts = requestedDate.split('-');
+  var friday = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) - 1));
+  var quarter =
+    friday.getUTCFullYear() + '-' + pad2_(Math.floor(friday.getUTCMonth() / 3) + 1);
+  var fridayKey =
+    friday.getUTCFullYear() + '-' + pad2_(friday.getUTCMonth() + 1) + '-' + pad2_(friday.getUTCDate());
+  [
+    { key: 'english', path: '/en/quarterlies/' + quarter, format: function (number, title) { return 'Lesson ' + number + ': ' + title; } },
+    { key: 'chinese', path: '/zh/quarterlies/' + quarter + '-hant', format: function (number, title) { return '第' + number + '課 ' + title; } },
+  ].forEach(function (source) {
+    var url = PRINTED_BULLETIN_CONFIG.sabbathSchoolApiBaseUrl + source.path + '/index.json';
+    try {
+      var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+        Logger.log('Sabbath School catalog returned HTTP ' + response.getResponseCode() + ' for ' + url);
+        return;
+      }
+      var lessons = (JSON.parse(response.getContentText()) || {}).lessons || [];
+      for (var index = 0; index < lessons.length; index += 1) {
+        var entry = lessons[index] || {};
+        var start = toAdventechIsoDate_(entry.start_date);
+        var end = toAdventechIsoDate_(entry.end_date);
+        var title = String(entry.title || '').trim();
+        if (start && end && title && start <= fridayKey && fridayKey <= end) {
+          lesson[source.key] = source.format(Number(entry.id) || entry.id, title);
+          return;
+        }
+      }
+    } catch (error) {
+      Logger.log('Sabbath School lesson lookup failed for ' + url + ': ' + error);
+    }
+  });
+  return lesson;
+}
+
+// Adventech writes dates as DD/MM/YYYY.
+function toAdventechIsoDate_(value) {
+  var match = String(value || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return match ? match[3] + '-' + match[2] + '-' + match[1] : '';
+}
+
+function formatSabbathSchoolLessonForPrint_(lesson) {
+  lesson = lesson || {};
+  var english = String(lesson.english || '').trim();
+  var chinese = String(lesson.chinese || '').trim();
+  return english || chinese ? printedBilingualText_(english, chinese) : physicalTbdText_();
+}
+
+/**
+ * The Sabbath School hymns on one line per language, such as
+ * "第413首 · 第205首" over "AH 348 · AH 206". Each cell holds one hymn, typed in
+ * either language: Chinese text or a bare number is a Chinese hymnal number,
+ * and a bare number prints as 第N首. What was typed is printed; the other
+ * language is filled in by number where the hymnals' number maps have it, and
+ * otherwise repeats what was typed. Two identical lines print as one.
+ */
+function formatSabbathSchoolHymnsForPrint_(hymns) {
+  var english = [];
+  var chinese = [];
+  (hymns || []).forEach(function (value) {
+    var entry = String(value === null || typeof value === 'undefined' ? '' : value).trim();
+    if (!entry) {
+      return;
+    }
+    var isEnglish = /[A-Za-z]/.test(entry) && !/[\u3400-\u9fff]/.test(entry);
+    var resolved = isEnglish
+      ? resolvePrintedHymnText_(entry, '')
+      : resolvePrintedHymnText_('', /^\d+$/.test(entry) ? '第' + entry + '首' : entry);
+    english.push(resolved.english || entry);
+    chinese.push(resolved.chinese || entry);
+  });
+  if (!english.length) {
+    return physicalTbdText_();
+  }
+  var englishLine = english.join(' · ');
+  var chineseLine = chinese.join(' · ');
+  return englishLine === chineseLine ? englishLine : printedBilingualText_(englishLine, chineseLine);
 }
 
 function resolvePhysicalBiblePassage_(reference, bibleTranslations, includeVerseLines) {
@@ -2191,32 +2186,32 @@ function getPrintedBulletinOutputFolderId_(location) {
   );
 }
 
-function createOrReplacePrintedBulletinPdf_(documentId, title, propertyKey, location) {
-  var properties = PropertiesService.getScriptProperties();
-  var previousPdfId = properties.getProperty(propertyKey);
-  var pdfBlob = DocumentApp.openById(documentId)
-    .getAs(MimeType.PDF)
-    .setName(title + '.pdf');
-  var folderId = getPrintedBulletinOutputFolderId_(location);
-  var folder = folderId
-    ? DriveApp.getFolderById(folderId)
-    : DriveApp.getRootFolder();
-  var pdfFile = folder.createFile(pdfBlob);
-
-  if (previousPdfId && previousPdfId !== pdfFile.getId()) {
-    try {
-      DriveApp.getFileById(previousPdfId).setTrashed(true);
-    } catch (error) {
-      // A deleted or inaccessible prior PDF should not prevent the new one.
-    }
+/**
+ * Bulletins are only Google Docs now (#558): staff edit the Doc every week, so
+ * a PDF made with it would soon be out of date, and Google Docs can download a
+ * PDF whenever one is needed. A PDF this script made for the same date and
+ * location before then goes to the trash, so it can't be mistaken for the Doc.
+ */
+function trashPrintedBulletinPdf_(properties, location, date) {
+  var keys = [
+    getPrintedBulletinPropertyKey_(PRINTED_BULLETIN_CONFIG.pdfPropertyPrefix, location, date),
+  ];
+  // Queens PDFs were once remembered by date alone.
+  if (location === 'queens') {
+    keys.push(PRINTED_BULLETIN_CONFIG.pdfPropertyPrefix + date);
   }
-
-  properties.setProperty(propertyKey, pdfFile.getId());
-  return {
-    action: previousPdfId ? 'replaced' : 'created',
-    id: pdfFile.getId(),
-    url: pdfFile.getUrl(),
-  };
+  keys.forEach(function (key) {
+    var pdfId = properties.getProperty(key);
+    if (!pdfId) {
+      return;
+    }
+    try {
+      DriveApp.getFileById(pdfId).setTrashed(true);
+    } catch (error) {
+      // A PDF that's already gone, or that this account can't reach, is fine.
+    }
+    properties.deleteProperty(key);
+  });
 }
 
 function appendBookletPage_(body, leftRenderer, rightRenderer, isFirstPage, footerRenderer, footerOptions) {
@@ -3211,7 +3206,12 @@ function physicalTbdText_(traditionalChinese) {
 
 function formatHymnForPrint_(hymn) {
   hymn = hymn || {};
-  var resolved = resolvePrintedHymnText_(hymn.english, hymn.chinese);
+  // A bare number is a Chinese hymnal number, printed as 第N首.
+  var chineseInput = String(hymn.chinese || '').trim();
+  var resolved = resolvePrintedHymnText_(
+    hymn.english,
+    /^\d+$/.test(chineseInput) ? '第' + chineseInput + '首' : chineseInput,
+  );
   var english = resolved.english;
   var chinese = resolved.chinese;
   if (isPhysicalTbd_(english) || isPhysicalTbd_(chinese)) {
