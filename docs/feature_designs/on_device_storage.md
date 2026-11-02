@@ -54,6 +54,7 @@ The app saves its settings and the member's saved verses with [AsyncStorage](htt
 | `saved-bible-verses-v1` | Saved verses | `services/SavedVersesService.ts` |
 | `preferred-bulletin-location` | Which congregation's bulletin to show | `app/(tabs)/home/bulletin.tsx` |
 | `chinese-mission-spotlight` | The newest Mandarin mission video (聖工剪影) the phone has found: its YouTube ID, Sabbath, and story title, a few bytes, so the app in Chinese can offer it until the next one is found (#508) | `features/sabbath-school/ChineseMissionSpotlight.ts` |
+| `bible-audio-download-tip` | Whether the tip pointing to Listen offline may show again (#595): `downloaded` once Bible audio has been on the phone, or when its 7-day rest ends | `services/BibleAudioDownloadTip.ts` |
 | `pwa-update-last-check-v1` | When the web app last checked for an update (web only, in `localStorage` directly) | `app/_layout.tsx` |
 | `screenshot-route` | The screen to open, in key-screen builds only | The key-screen capture scripts; `services/ScreenshotRoute.ts` reads it, then deletes it |
 
@@ -93,7 +94,7 @@ The other copies:
 
 ## Bible audio downloaded to listen offline
 
-Bible audio streams chapter by chapter, which stalls where the signal comes and goes, as on the subway. So on a phone, a member can download a book's audio, a section's (`constants/BibleSections.ts`: the Law, History, Poetry and Wisdom, the Major and Minor Prophets, the Gospels, Paul's Letters, the General Letters, and Acts and Revelation, which are a book each), a Testament's, or the whole Bible's, for one narrator, in **Offline Bible Audio** in the You tab (#556). It's one page for downloading and deleting: a tree of the whole Bible, its Testaments, their sections, closed until tapped, and their books, each with its state, its size, and download, stop, or delete. **Listen offline**, in the Bible's audio settings, is one row that opens it at the narrator chosen there, with the book being read showing; Back returns to the Bible. Nothing downloads without a tap. The web streams, and offers no downloads.
+Bible audio streams chapter by chapter, which stalls where the signal comes and goes, as on the subway. So on a phone, a member can download a book's audio, a section's (`constants/BibleSections.ts`: the Law, History, Poetry and Wisdom, the Major and Minor Prophets, the Gospels, Paul's Letters, the General Letters, and Acts and Revelation, which are a book each), a Testament's, or the whole Bible's, for one narrator, in **Offline Bible Audio** in the You tab (#556). It's one page for downloading and deleting: a tree of the whole Bible, its Testaments, their sections, closed until tapped, and their books, each with its state, its size, and download, stop, or delete. **Listen offline**, in the Bible's audio settings, is one row that opens it at the narrator chosen there, with the book being read showing; Back returns to the Bible. Nothing downloads without a tap, though when streaming keeps stalling, the audio settings button points the listener to Listen offline (#595). The web streams, and offers no downloads.
 
 | | |
 | --- | --- |
