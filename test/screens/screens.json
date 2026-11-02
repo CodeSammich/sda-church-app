@@ -303,13 +303,13 @@
     {
       "name": "sabbath-school",
       "group": "worship-and-you",
-      "$comment": "The first children's age group shows every week, in each language (#338). The Android phone's screen leaves it below the fold.",
+      "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Beginner \\(ages 1-3\\)", "platforms": ["ios"] }] },
-        "zh": { "mustShowLines": [{ "line": "幼兒級（1-3歲）", "platforms": ["ios"] }] },
-        "es": { "mustShowLines": [{ "line": "^Principiantes \\(1-3 años\\)", "platforms": ["ios"] }] }
+        "default": { "mustShowLines": ["^This Week$", "^This Week.s Mission\\b"] },
+        "zh": { "mustShowLines": ["^本週$", "^本週宣教影片$"] },
+        "es": { "mustShowLines": ["^Esta semana$", "^Video misionero\\b"] }
       }
     },
     {

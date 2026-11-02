@@ -320,6 +320,35 @@ export const openBabiesSabbathSchool = (language: SupportedLanguage = 'en') =>
     'Could not open the Babies parent and teacher resources.',
   );
 
+/**
+ * Adventist Mission's Mission Spotlight page (#508): this quarter's weekly
+ * mission videos, the ones Sabbath School plays, each dated by its Sabbath.
+ * Each story's own page is named after its title, so the app can't work out
+ * this week's; the button names the Sabbath to look for instead
+ * (getMissionSpotlightSabbath). Spanish has its own edition. Chinese readers
+ * get English: the page's 中文 choices lead to Chinese Hope TV, which has only
+ * three videos a quarter, not the weekly ones.
+ */
+export const getMissionSpotlightUrl = (language: SupportedLanguage = 'en') =>
+  language === 'es'
+    ? 'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight/mission-spotlight-spanish'
+    : 'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight';
+
+/**
+ * The Sabbath whose mission video is this week's: today on a Sabbath, otherwise
+ * the next one. Adventist Mission dates each weekly story by the Sabbath it's
+ * shown, and puts the whole quarter's up ahead of time.
+ */
+export const getMissionSpotlightSabbath = (date = new Date()) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate() + 6 - date.getDay());
+
+export const openMissionSpotlight = (language: SupportedLanguage = 'en') =>
+  openURL(
+    getMissionSpotlightUrl(language),
+    'Error',
+    "Could not open this week's mission video.",
+  );
+
 export const openChineseHymnalIos = () =>
   openInItsApp(
     'https://apps.apple.com/us/app/506%E8%AE%9A%E7%BE%8E%E8%A9%A9-traditional-chinese/id6498894032',

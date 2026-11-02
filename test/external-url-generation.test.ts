@@ -4,6 +4,8 @@ import {
   getBibleRequestEmailUrl,
   getBabiesSabbathSchoolUrl,
   getCurrentSabbathSchoolUrl,
+  getMissionSpotlightSabbath,
+  getMissionSpotlightUrl,
   getSupportEmailUrl,
 } from '@/constants/ExternalLinks';
 import { getAudioPowerCuvChapterLinks } from '@/services/BibleAudioSources';
@@ -105,6 +107,29 @@ describe('generated external dependency URLs', () => {
     expect(getCurrentSabbathSchoolUrl('en', new Date(2026, 8, 26))).toBe(
       'https://sabbath-school.adventech.io/en/2026-04/01',
     );
+  });
+
+  it('opens the Mission Spotlight page in Spanish for Spanish, and in English otherwise (#508)', () => {
+    const english =
+      'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight';
+    expect(getMissionSpotlightUrl('en')).toBe(english);
+    expect(getMissionSpotlightUrl('zh')).toBe(english);
+    expect(getMissionSpotlightUrl('zh-cn')).toBe(english);
+    expect(getMissionSpotlightUrl('es')).toBe(`${english}/mission-spotlight-spanish`);
+  });
+
+  it("names this week's Sabbath for the mission video: today on a Sabbath, otherwise the next", () => {
+    const sabbath = (date: Date) => getMissionSpotlightSabbath(date).toDateString();
+    // Adventist Mission dated 2026 Q4's stories October 3, 10, 17, and so on.
+    expect(sabbath(new Date(2026, 9, 3, 9, 30))).toBe(new Date(2026, 9, 3).toDateString());
+    expect(sabbath(new Date(2026, 9, 3, 23, 59))).toBe(new Date(2026, 9, 3).toDateString());
+    expect(sabbath(new Date(2026, 9, 4, 0, 1))).toBe(new Date(2026, 9, 10).toDateString());
+    // November 1, 2026 is the Sunday clocks fall back in New York.
+    expect(sabbath(new Date(2026, 10, 1, 1, 30))).toBe(new Date(2026, 10, 7).toDateString());
+    expect(sabbath(new Date(2026, 10, 6, 20))).toBe(new Date(2026, 10, 7).toDateString());
+    // Across a month, a quarter, and a year.
+    expect(sabbath(new Date(2026, 8, 29))).toBe(new Date(2026, 9, 3).toDateString());
+    expect(sabbath(new Date(2026, 11, 28))).toBe(new Date(2027, 0, 2).toDateString());
   });
 
   it('generates all 1,189 CUV chapters with three ordered, valid origins', () => {

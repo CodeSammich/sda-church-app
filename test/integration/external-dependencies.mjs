@@ -737,6 +737,11 @@ const navigationLinks = [
   ['Sabbath School English', 'https://sabbath-school.adventech.io/en'],
   ['Sabbath School Chinese', 'https://sabbath-school.adventech.io/zh'],
   ['Sabbath School Spanish', 'https://sabbath-school.adventech.io/es'],
+  // The weekly mission video (#508). Vercel's security checkpoint answers
+  // every request from a script with 429, even for a page that doesn't exist,
+  // so these show only that the site is still there.
+  ['Mission Spotlight', 'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight'],
+  ['Mission Spotlight Spanish', 'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight/mission-spotlight-spanish'],
   ['Chinese hymnal iOS', 'https://apps.apple.com/us/app/506%E8%AE%9A%E7%BE%8E%E8%A9%A9-traditional-chinese/id6498894032'],
   ['Chinese hymnal Android', 'https://play.google.com/store/apps/details?id=org.chumadventist.hymnal506.next'],
   ['church map', 'https://www.google.com/maps/search/?api=1&query=760%2041st%20Ave%20Elmhurst%20NY%2011373'],

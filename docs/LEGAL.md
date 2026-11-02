@@ -475,10 +475,12 @@ Jesus website when it finds none
 ([design](feature_designs/sabbath_school_lessons.md)). The weekly bulletin, in the app
 and on paper, names the adult lesson the class discusses, by its number and title from
 the same public catalog, with a link to the reader (#558); no lesson text is copied.
+The screen also opens Adventist Mission's page of weekly mission videos (#508).
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
 | **Adventech** (`sabbath-school.adventech.io`; PDFs from `sabbath-school-pdf.adventech.io` and `sabbath-school-resources-media.adventech.io`) | A link to the adult lesson reader. For children, the public catalog, to find this week's lesson, and the official lesson PDF. On a phone, the person's own phone downloads the PDF, keeps it in the app's cache for that week, and opens it in the phone's own PDF viewer, so opening it again is instant ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529)). A lesson downloads only when the person taps it. | The lessons are © General Conference of Seventh-day Adventists®, all rights reserved. [Adventech's lesson repository](https://github.com/Adventech/sabbath-school-lessons#copyright) says that no part of the adult guide may be "edited, altered, modified, adapted, translated, re-produced, or published" without the General Conference's prior written authorization. We found no separate public statement for the children's lessons, so they're treated the same way. The app doesn't alter, translate, or republish any lesson. The phone downloads the official, unmodified file from Adventech's own hosts, as a browser would, and keeps it only in its cache. This is an engineering assessment, not an express license. |
+| **Adventist Mission** (`adventistmission.org`) | A link to its Mission Spotlight page, where this quarter's weekly mission videos play: the Spanish edition for Spanish readers, the English one otherwise. | Linking only. The videos play on Adventist Mission's own page; the app doesn't copy, download, or re-host them. |
 
 Rules for this feature:
 

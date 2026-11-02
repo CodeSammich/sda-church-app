@@ -65,6 +65,22 @@ npm run test:integration:external
 The command writes `external-dependency-report.json`, which is ignored by Git
 and uploaded by Actions for 30 days.
 
+## What the monitor can't check
+
+The Sabbath School screen's **This Week's Mission Video** opens Adventist
+Mission's Mission Spotlight page, or its Spanish edition (#508). Both sit behind
+Vercel's security checkpoint, which answers every request from a script with
+HTTP 429, even for a page that doesn't exist. So the monitor accepts 429 there,
+and its check shows only that `adventistmission.org` still answers. The
+[yearly checkup](../../scripts/yearly-checkup.cjs) asks someone to open the
+button in English and in Spanish instead.
+
+If the page has moved, find it on adventistmission.org under Mission+ → Mission
+Promotion → For Sabbath School → Mission Spotlight, and the Spanish edition in
+that page's language menu. Then update `getMissionSpotlightUrl` in
+`constants/ExternalLinks.ts` and the two Mission Spotlight entries in
+`test/integration/external-dependencies.mjs`.
+
 ## Failures and warnings
 
 A request that times out, can't connect, or gets a temporary error status such as

@@ -315,11 +315,11 @@ describe('rules for one platform (#372)', () => {
   const androidShot = (name: string) => androidShots.find((candidate: { name: string }) => candidate.name === name);
   const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.95));
 
-  it("skip a line the emulator's shorter screen leaves below the fold, and keep it on the iPhone", () => {
-    expect(checkShot(androidShot('sabbath-school-default'), tabs)).toEqual([]);
-    expect(checkShot(shot('sabbath-school-default'), tabs.map((each) => ({ ...each, box: [0.1, 0.944, 0.3, 0.02] })))).toEqual([
-      'no line matches /^Beginner \\(ages 1-3\\)/',
-    ]);
+  it("skip a line only the iPhone's reader can read, and keep it on the iPhone", () => {
+    // RapidOCR reads setup's Next button as "Net" on the Android phone.
+    const setup = [line('Welcome', 0.3), line('Language', 0.4), line('Net', 0.9)];
+    expect(checkShot(androidShot('setup-default'), setup)).toEqual([]);
+    expect(checkShot(shot('setup-default'), setup)).toEqual(['no line matches /^Next$/']);
   });
 
   it('accept the 文A icon as either reader reads it', () => {
