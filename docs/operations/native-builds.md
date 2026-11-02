@@ -790,7 +790,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 33 screens listed in `test/screens/screens.json`, 87
+The five runners screenshot the 40 screens listed in `test/screens/screens.json`, 96
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner takes one group (`--group <name>`) of related
 screens, such as the Bible reader's layout or the library, listed under `groups` in
@@ -833,7 +833,10 @@ limit is a reminder to prune, not a rule:
    `popup=lesson-download` and `popup=lesson-offline`, the children's lesson popup with
    a fixed download or offline (#529). Only the key-screen
    builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens
-   just the screen.
+   just the screen. Two shots go further and start something real (#551): the Bible's
+   `play=1` plays the chapter's audio as a tap on Play would (`isScreenshotPlay`), and
+   Sabbath School's `popup=lesson-viewer` downloads the Beginner student lesson and
+   opens it, as a tap would.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
    wait (9 for the Bible, which measured settles within 6), so a group's 14 to 22 shots
@@ -864,6 +867,33 @@ on the splash after its retakes) is launched once more, as when a busy runner on
 Home on the splash for 41 seconds. The step summary lists each such shot, and the run
 shows it as a warning, so a launch problem that keeps coming back is noticed; failing
 twice fails the run.
+
+**Audio and Quick Look.** Bible audio plays only on Android in the other checks
+([Android audio test on release PRs](#android-audio-test-on-release-prs)), so two
+iPhone-only shots in the `worship-and-you` group check it there, on the app the run
+already builds (#551). That group finished first or second in the six release runs
+from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so the two shots,
+about 40 seconds, shouldn't lengthen the run.
+
+- `bible-audio-playing` starts Psalm 23's Mandarin recording with `play=1`. A second
+  screenshot, `bible-audio-playing-default-later.png`, is taken 10 seconds after the
+  first (`later`), and the elapsed time left of the timeline must have moved on by at
+  least 5 seconds (`mustAdvance`, a text check).
+- `sabbath-school-lesson-viewer` must show the lesson open in Quick Look, the iPhone's
+  own PDF viewer. If the week's lesson has no PDF yet, the app opens its website in the
+  browser instead; the run then warns that Quick Look wasn't checked, and passes.
+
+For both, the key-screens build also saves what happened into its storage
+(`recordForScreenshot` in `services/ScreenshotRoute.ts`): the player's status, with
+the addresses it streams from, or how the lesson opened. The capture reads it back
+(`scripts/key-screen-records.cjs`, named by the screen's `record`) and fails the shot
+if the audio didn't play or Quick Look didn't open. Both need the network, so when one
+fails, the runner asks those addresses itself, since the Simulator shares its network,
+and the failure ends either "The network was the cause, not the app: this runner
+couldn't reach them either", or that the runner reached them, so the app is at fault.
+The lock screen's 10- and 30-second skips can't be pressed in the Simulator; a unit
+test (`test/bible-audio-service.test.ts`) checks the app passes those intervals, and the
+TestFlight check covers the rest.
 
 **Text checks.** `scripts/check-screens.cjs` then reads each screenshot's text with
 Apple's Vision framework (`scripts/ocr-screens.swift`, built into macOS) and checks what

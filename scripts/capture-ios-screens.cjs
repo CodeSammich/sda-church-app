@@ -30,6 +30,7 @@ const { execFileSync, spawnSync } = require('node:child_process');
 const { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { dirname, join, resolve } = require('node:path');
+const { RECORDS, readRecord, waitForRecord } = require('./key-screen-records.cjs');
 
 const projectRoot = resolve(__dirname, '..');
 const SCHEME = 'sdachurchapp';
@@ -113,9 +114,9 @@ const ROUTE_KEY = 'screenshot-route';
 const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
   JSON.parse(readFileSync(file, 'utf8'));
 
-// A shot's rough cost in seconds: its wait, plus about 5 to relaunch the app
-// and take the screenshot.
-const shotCost = (shot) => shot.wait + 5;
+// A shot's rough cost in seconds: its wait and any later shot's, plus about 5
+// to relaunch the app and take the screenshot.
+const shotCost = (shot) => shot.wait + (shot.later || 0) + 5;
 
 /**
  * The shots of one group in test/screens/screens.json: related screens
@@ -163,6 +164,13 @@ const planCaptures = (config, platform = 'ios') => {
           settings: { ...BASE_SETTINGS[platform], ...(screen.settings || {}), ...overrides },
           checks: screen.checks || [],
           wait: screen.wait || (screen.path.startsWith('bible') ? BIBLE_WAIT : WAIT),
+          // A record the app saves of what it did, for a check of its own
+          // (key-screen-records.cjs), and a second screenshot `later` seconds
+          // after the first, as for audio that must keep playing (#551).
+          ...(screen.record ? { record: screen.record } : {}),
+          ...(screen.later
+            ? { later: screen.later, laterFile: `${platform}/${screen.name}-${variant}-later.png` }
+            : {}),
         }];
       }),
     );
@@ -472,6 +480,9 @@ const capture = async (outDir, group) => {
         samples.push({ seconds, file: sample });
       }
       await sleepUntil(launched + shot.wait * 1000);
+      const recorded = shot.record && RECORDS[shot.record];
+      const readShotRecord = () => readRecord(manifest, shot.record);
+      if (recorded) await waitForRecord(readShotRecord, recorded);
 
       const file = join(outDir, shot.file);
       mkdirSync(dirname(file), { recursive: true });
@@ -479,9 +490,11 @@ const capture = async (outDir, group) => {
       // Simulator still draws the Dynamic Island.) Taken even when something went
       // wrong, so the artifact shows what was on screen. It waits for a screen
       // that's still blank, or still loading (takeFinalShot).
+      // A screen that keeps changing, such as audio playing, is taken as it is.
       await takeFinalShot(() => simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', file), file, {
-        lastSample: samples.at(-1)?.file,
+        lastSample: shot.later ? undefined : samples.at(-1)?.file,
       });
+      const records = recorded ? [readShotRecord()] : [];
       const finalSeconds = Math.round((Date.now() - launched) / 1000);
       await compareSamples(samples, file);
       const settled = settledAfter(samples, finalSeconds);
@@ -497,10 +510,26 @@ const capture = async (outDir, group) => {
         console.log(`${shot.file} <- ${shot.url}  (${problems.join(', ')} after ${finalSeconds}s; launching again)`);
         continue;
       }
+      if (shot.later) {
+        await sleep(shot.later);
+        simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', join(outDir, shot.laterFile));
+        if (recorded) records.push(readShotRecord());
+      }
       timings.push({ shot: shot.name, file: shot.file, wait: shot.wait, shotAt: finalSeconds, settledAfter: settled });
       for (const check of shot.checks) {
         if (!CHECKS[check]) problems.push(`unknown check "${check}"`);
         else if (!(await CHECKS[check](file))) problems.push(`failed ${check}`);
+      }
+      if (shot.record && !recorded) problems.push(`unknown record "${shot.record}"`);
+      if (recorded) {
+        const { problems: wrong, notes = [] } = await recorded.check({
+          first: records[0],
+          later: records[1],
+          seconds: shot.later,
+        });
+        problems.push(...wrong);
+        for (const problem of wrong) console.log(`::error::${shot.file}: ${problem}`);
+        for (const note of notes) console.log(`::warning::${shot.file}: ${note}`);
       }
       if (problems.length) failures.push(`${shot.file}: ${problems.join(', ')}`);
       else captured.add(shot.name);

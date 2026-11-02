@@ -760,8 +760,12 @@ into `main`, and can be run manually on any branch.
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(87 screenshots of 33 screens in all), and checks their text with
-`scripts/check-screens.cjs`. Another job then joins the groups. The **Android key
+(96 screenshots of 40 screens in all), and checks their text with
+`scripts/check-screens.cjs`. Two of them check that Bible audio plays and that a
+children's lesson opens in Quick Look (#551). If one fails, the group's step summary
+says whether the network was the cause. If it was, run the failed jobs again; if not,
+the app is at fault
+([Audio and Quick Look](native-builds.md#ios-key-screens-unsigned-simulator-builds)). Another job then joins the groups. The **Android key
 screens** workflow takes and checks the same screens on an Android emulator, on Linux
 runners ([Android key screens](native-builds.md#android-key-screens)). The review
 comment waits for it and links both platforms' screenshots, before

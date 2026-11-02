@@ -62,3 +62,32 @@ export const getScreenshotPopup = <T extends string>(
   isKeyScreensBuild() && typeof value === 'string' && (popups as readonly string[]).includes(value)
     ? (value as T)
     : null;
+
+/**
+ * Whether a key-screen path asks the Bible to play its chapter's audio, with
+ * `play=1`, as a tap on Play would (#551). The iPhone key screens check that
+ * its elapsed time moves. Outside a key-screens build it's always false, so a
+ * real link can't start audio.
+ */
+export const isScreenshotPlay = (value: string | string[] | undefined) =>
+  isKeyScreensBuild() && value === '1';
+
+/**
+ * Where a key-screens build records how a checked action went, for the capture
+ * to read from the app's storage (scripts/key-screen-records.cjs, #551): the
+ * Bible player's status after play=1, and how a children's lesson opened. The
+ * capture explains a failure with it, such as hosts the network couldn't reach.
+ */
+export const SCREENSHOT_RECORD_KEYS = {
+  audio: 'screenshot-audio',
+  lesson: 'screenshot-lesson',
+} as const;
+
+/** Saves a record for the capture, in a key-screens build only. */
+export const recordForScreenshot = (
+  kind: keyof typeof SCREENSHOT_RECORD_KEYS,
+  record: Readonly<Record<string, unknown>>,
+) => {
+  if (!isKeyScreensBuild()) return;
+  AsyncStorage.setItem(SCREENSHOT_RECORD_KEYS[kind], JSON.stringify(record)).catch(() => {});
+};

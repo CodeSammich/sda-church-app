@@ -1,8 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
+  SCREENSHOT_RECORD_KEYS,
   SCREENSHOT_ROUTE_KEY,
   getScreenshotPopup,
+  isScreenshotPlay,
+  recordForScreenshot,
   parseScreenshotRoute,
   takeScreenshotRoute,
 } from '@/services/ScreenshotRoute';
@@ -68,6 +71,42 @@ describe('saved screen for the key-screen capture', () => {
     for (const value of [undefined, '', '0', 'true']) {
       withKeyScreensBuild(value);
       expect(getScreenshotPopup('verse', ['verse'])).toBeNull();
+    }
+  });
+});
+
+describe('actions the key-screen capture checks (#551)', () => {
+  beforeEach(() => withKeyScreensBuild('1'));
+  afterAll(() => withKeyScreensBuild(undefined));
+
+  it('plays the Bible’s audio for play=1, only in a key-screens build', () => {
+    expect(isScreenshotPlay('1')).toBe(true);
+    for (const value of [undefined, '', '0', 'true', ['1']]) expect(isScreenshotPlay(value)).toBe(false);
+    for (const value of [undefined, '', '0', 'true']) {
+      withKeyScreensBuild(value);
+      expect(isScreenshotPlay('1')).toBe(false);
+    }
+  });
+
+  it('records how an action went, only in a key-screens build', async () => {
+    recordForScreenshot('lesson', { outcome: 'preview' });
+    await new Promise((done) => setImmediate(done));
+    expect(JSON.parse((await AsyncStorage.getItem(SCREENSHOT_RECORD_KEYS.lesson))!)).toEqual({ outcome: 'preview' });
+    await AsyncStorage.removeItem(SCREENSHOT_RECORD_KEYS.lesson);
+
+    withKeyScreensBuild(undefined);
+    recordForScreenshot('audio', { playing: true });
+    await new Promise((done) => setImmediate(done));
+    expect(await AsyncStorage.getItem(SCREENSHOT_RECORD_KEYS.audio)).toBeNull();
+  });
+
+  it('starts them from the screens the key screens open', () => {
+    const bible = readFileSync(join(__dirname, '..', 'app/(tabs)/bible/index.tsx'), 'utf8');
+    expect(bible).toMatch(/isScreenshotPlay\(paramPlay\)/);
+    expect(bible).toContain("recordForScreenshot('audio'");
+    const lessons = readFileSync(join(__dirname, '..', 'hooks/useChildrenLessonOpener.ts'), 'utf8');
+    for (const outcome of ['preview', 'browser', 'offline', 'error']) {
+      expect(lessons).toMatch(new RegExp(`recordForScreenshot\\('lesson', \\{ outcome: '${outcome}'`));
     }
   });
 });

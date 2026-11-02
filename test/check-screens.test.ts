@@ -1,4 +1,5 @@
 const {
+  checkAdvance,
   checkShot,
   fromStrip,
   planChecks,
@@ -339,5 +340,44 @@ describe('the verse button’s short label (#372)', () => {
     expect(checkShot(longChapter, [...verses, line('Vs.', 0.92)])).toEqual([]);
     const split = verses.map((each) => (each.text.startsWith('102') ? { ...each, text: '1020 have not departed' } : each));
     expect(checkShot(longChapter, [...split, line('Vs.', 0.92)])).toEqual(['no line matches /^102(?!\\d)/']);
+  });
+});
+
+describe('audio that keeps playing (#551)', () => {
+  const playing = shot('bible-audio-playing-default');
+  // As Vision reads the audio dock: the elapsed time with the slider's thumb
+  // after it, the length at the right, and the status bar's clock.
+  const dock = (elapsed: string, length = '1:07') => [
+    { text: '9:41', box: [0.15, 0.03, 0.09, 0.02] },
+    { text: `${elapsed} 0`, box: [0.025, 0.818, 0.098, 0.013] },
+    { text: length, box: [0.915, 0.82, 0.057, 0.012] },
+  ];
+
+  it('takes a later shot of it, and checks its elapsed time there', () => {
+    expect(playing).toMatchObject({ later: 10, laterFile: 'ios/bible-audio-playing-default-later.png' });
+    expect(playing.mustAdvance).toBeDefined();
+  });
+
+  it('passes an elapsed time that moved on by at least half the time between the shots', () => {
+    expect(checkAdvance(playing, dock('0:04'), dock('0:14'))).toEqual([]);
+    expect(checkAdvance(playing, dock('0:58'), dock('1:03'))).toEqual([]);
+  });
+
+  it('fails one that stood still or barely moved, reading the elapsed time, not the clock or length', () => {
+    expect(checkAdvance(playing, dock('0:04'), dock('0:04', '1:20'))).toEqual([
+      'the time shown went from 0:04 to 0:04 in 10 seconds, not on by at least 5',
+    ]);
+    expect(checkAdvance(playing, dock('0:04'), dock('0:07'))).toHaveLength(1);
+  });
+
+  it('fails when the later shot or its time is missing', () => {
+    expect(checkAdvance(playing, dock('0:04'), undefined)).toEqual(['no later screenshot']);
+    const noTime = [{ text: 'Psalms v', box: [0.24, 0.865, 0.158, 0.015] }];
+    expect(checkAdvance(playing, noTime, dock('0:14'))[0]).toMatch(/in the screenshot$/);
+    expect(checkAdvance(playing, dock('0:04'), noTime)[0]).toMatch(/in the later screenshot$/);
+  });
+
+  it('leaves other shots alone', () => {
+    expect(checkAdvance(shot('bible-default'), dock('0:00'), undefined)).toEqual([]);
   });
 });
