@@ -391,11 +391,11 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541).",
+      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). On Android's default screen Help & Feedback now falls just below the screenshot, so only the Chinese variant, whose rows are shorter, requires it.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Share the App$", "^Help\\b.*Feedback"] },
+        "default": { "mustShowLines": ["^Share the App$"] },
         "zh": { "mustShowLines": ["分享應用程式", "幫助與意見回饋"] }
       }
     },
