@@ -1427,8 +1427,8 @@ delete `node_modules/expo-widgets/android/build/generated/expo-widgets` before b
 in a reused `android/` project; CI builds from scratch.
 When updating `expo-widgets`, check that its Android plugin files are still in
 `plugin/build/android/` (`test/verse-of-the-day-widget.test.ts` runs them on an empty
-project), then try the widget on an emulator: add it from the home screen's widget list,
-tap it, and turn dark mode on.
+project), then try the widget on an emulator: add it from the home screen's widget list
+before and after opening the app, tap it, and change the app's language.
 
 Before release, run `npx expo install --check`, `npm run doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices, with the
