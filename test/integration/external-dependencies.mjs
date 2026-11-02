@@ -766,7 +766,8 @@ for (const [name, url, expectedText] of websitePages) {
 
 await record('public bulletin JSON contract', 'Bulletin API', async () => {
   const date = process.env.BULLETIN_TEST_DATE || '2026-08-08';
-  const data = await getJson(`https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec?date=${date}`);
+  // client=check: the API doesn't take this check for an older app (#580).
+  const data = await getJson(`https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec?date=${date}&client=check`);
   if (data?.ok !== true || data.bulletin?.date !== date || !data.bulletin?.queens || !data.bulletin?.brooklyn) {
     throw new Error('bulletin response fields are missing');
   }

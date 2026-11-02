@@ -63,7 +63,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain, Expo doctor) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. The three monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
-| A yearly checkup or Workspace backup issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
+| A yearly checkup, Workspace backup, or bulletin changeover issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
 | An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
 The monitors can't read `release-approvers` membership or reliably @mention the
@@ -839,6 +839,11 @@ closes the issue when the service recovers. A new alert is assigned to the users
 `MONITOR_ALERT_ASSIGNEES`; see
 [Getting notified only when action is needed](#getting-notified-only-when-action-is-needed). See
 [External dependency monitor](external-dependency-monitor.md).
+
+It also opens **[changeover] Retire the bulletin API's … changeover**, once, when
+no app older than a changeover's version has asked the bulletin API for 14 days. It isn't an
+alert and doesn't close itself: do the cleanup it describes. See
+[Changeovers](../feature_designs/bulletin_spreadsheet_tags.md#changeovers).
 
 ## Store toolchain monitor alerts
 

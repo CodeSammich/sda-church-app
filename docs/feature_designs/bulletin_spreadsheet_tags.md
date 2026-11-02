@@ -7,16 +7,17 @@ columns, move them, copy tabs, and undo their mistakes, and the sheet will grow 
 cover more fellowships and calendars. None of that may take the bulletin down (#580).
 
 This document owns the rules the Apps Script uses to find the tabs and columns it reads
-after people change them, the reasons for each rule, and every edge case known so far,
-each with the test that holds it. It's written for whoever changes that code next.
+after people change them, and the changeovers it keeps for older apps: the reasons for
+each rule, and every edge case known so far, each with the test that holds it. It's
+written for whoever changes that code next.
 [Bulletin automation](../operations/bulletin-automation.md#columns-are-read-by-name)
 says what the people running the spreadsheet need to know, and owns the procedures,
 such as changing a header in the code.
 
 PR #586 built two of #580's three parts: finding a renamed tab or column (item 1), and
-a bulletin without its schedule instead of an error (item 3). Item 2, keeping an old
-name working through a changeover and retiring it, is
-[planned](#planned-changeovers-580-item-2).
+a bulletin without its schedule instead of an error (item 3). Item 2, keeping an older
+way of answering for older apps and retiring it once none is left, is in
+[Changeovers](#changeovers).
 
 **Status:** the rules are tested against a fake spreadsheet that models developer
 metadata, and the Apps Script calls were checked against Google's documentation. The
@@ -296,22 +297,72 @@ The edge cases depend on people, so this design will change as they use the shee
 4. **Keep the principles.** A fix that needs a script to undo it, or that takes the
    whole bulletin down over one column, is the wrong fix.
 
-## Planned: changeovers (#580 item 2)
+## Changeovers
 
-Not built yet. When a change needs the app too, such as a new response field or a
-renamed tab the app depends on, the old name or shape keeps working beside the new one
-until no app needs it:
+A changeover is an older way of answering that the API keeps, beside the new one, for
+apps too old to handle the new one (#580 item 2). It's retired once no such app is
+left. The first one is [the missing-schedule fallback](#the-missing-schedule-fallback):
+apps before 1.6.0 still get an error for a missing schedule.
 
-- **Mark each changeover** with the app version that makes it unneeded.
-- **Count the app versions that call.** Since 1.6.0 the app sends `appVersion` with each
-  request. The script keeps a daily count by version, with no personal data. A request
-  without a version is from an app older than 1.6.0. The API's own checks will mark
-  themselves, so they don't count as old apps.
-- **Retire it** once no app older than the mark has called for 14 days. The daily
-  external dependency monitor reads which changeovers are ready from the API and opens
-  a cleanup issue with GitHub's own token, so the script holds no GitHub token.
-- **No Play Developer API.** Google Play has no public version lookup, and a Play token
-  in the public bulletin script would carry the deploying account's Play Console
-  powers. The counts measure what matters, the phones still calling.
+- **Marked in the code.** `BULLETIN_CHANGEOVERS` in `BulletinApi.gs` lists each one:
+  an `id`, the app version that makes the old way unneeded (`retiresWith`), and what
+  to remove (`cleanup`).
+- **The script notes the last day an older app called.** `noteOlderAppCall_` runs on
+  each bulletin request with a valid date. A request without `appVersion` is from an
+  app older than 1.6.0, which didn't send one. For each changeover the app is older
+  than, the script writes the day to the script property
+  `bulletin.changeover.<id>.olderAppLastCalled`. A cache entry remembers the write
+  for up to 6 hours, so the day is written a few times a day at most. The API's own
+  checks send `client=check` and aren't counted, and neither is a version that isn't
+  one. A failure here is logged and never stops the bulletin.
+- **The status.** `?changeovers=1` returns each changeover with `olderAppLastCalled`,
+  `watchedSince`, and `ready`. Watching starts the first time the status is read,
+  which the monitor does daily once the script is deployed. A changeover is ready
+  once 14 days (`CHANGEOVER_QUIET_DAYS`) have passed since the later of the two.
+- **The cleanup issue.** The daily
+  [external dependency monitor](../operations/external-dependency-monitor.md) reads
+  the status and, for each ready changeover, opens **[changeover] Retire the bulletin
+  API's `<id>` changeover**, once ever, with GitHub's own token
+  (`scripts/bulletin-changeovers.cjs`). Its Priority starts at Low. When it can't read
+  the status it only warns, since its own bulletin check already reports an API
+  that's down.
+- **The cleanup** removes the old way and its entry in one PR.
 
-This section becomes the changeover design once it's built.
+| What happens | Result | Test |
+| --- | --- | --- |
+| An app before 1.6.0, or one older than the mark, asks for a bulletin | The day is noted | notes the day an older app asks for a bulletin: … |
+| Many older apps ask in one day | The day is written once while the cache remembers it, so at most once every 6 hours | writes the day once while the cache remembers it, however many older apps ask |
+| A newer app, an API check, a version that isn't one, or a request without a valid date | Not noted | doesn't take … for an older app |
+| Noting fails | The bulletin is still given | still gives the bulletin when … |
+| The status is read for the first time | Watching starts, and nothing is ready for 14 days | starts watching the first time the status is read, so nothing is ready at once |
+| No older app asks for 14 days | Ready, and the next monitor run opens the issue | is ready once no older app has asked for 14 days; opens a cleanup issue for each changeover the API says is ready, and only those |
+| The issue was opened before, even if it's closed | Not opened again | doesn't open a changeover's issue again, even once it's closed |
+| The live script predates changeovers, or the API is down | The monitor warns and opens nothing | only warns when it reads … |
+| Phones that never update keep calling | The changeover never retires, and the old way stays | By design |
+| Something other than the app calls without a version, such as a script someone runs by hand | Taken for an older app, which only delays the retirement | By design |
+
+To see where each changeover stands, open the API's URL from
+`constants/ExternalLinks.ts` with `?changeovers=1`.
+
+### Changeover decisions
+
+**The last day, not a count.** #580 planned a daily count of requests by version.
+Requests run at the same time, so an exact count would need a lock on every request,
+and a count without one loses updates. The rule only needs the last day an older app
+called. Each write sets the day outright, with nothing read first, so requests at the
+same time lose nothing that matters. A request that starts just before midnight can
+save the earlier day after one that saved the new day, so the day can lag by one until
+the next older app calls.
+
+**A caller without a version counts as an older app.** Apps Script doesn't show a
+web app its request headers, so a request without `appVersion` can't be told apart
+from an app before 1.6.0. Erring this way can only delay a cleanup. The other way
+could retire an answer a phone still needs.
+
+**No Play Developer API.** Google Play has no public version lookup, and a Play token
+in the public bulletin script would carry the deploying account's Play Console
+powers. Store numbers would also miss phones that never update, which are the ones a
+changeover is for.
+
+**The status is public.** Like the bulletin, `?changeovers=1` needs no sign-in. It
+shows only dates and the list in the code, which this repository already publishes.
