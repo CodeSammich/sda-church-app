@@ -1422,9 +1422,9 @@ widget's receiver with one that opens the verse when it's tapped, has Android re
 widget every hour, and translates its name in the widget list. Gradle runs Metro twice
 more for the widget (`generateExpoWidgetsBundle` and `generateExpoWidgetsLayoutRegistry`).
 The second builds the layout the widget shows before the app first runs, but Gradle
-doesn't watch `widgets/VerseOfTheDayWidget.tsx` for it. So after changing that file,
-delete `node_modules/expo-widgets/android/build/generated/expo-widgets` before building
-in a reused `android/` project; CI builds from scratch.
+doesn't watch `features/verse-of-the-day/VerseOfTheDayWidget.tsx` for it. So after
+changing that file, delete `node_modules/expo-widgets/android/build/generated/expo-widgets`
+before building in a reused `android/` project; CI builds from scratch.
 When updating `expo-widgets`, check that its Android plugin files are still in
 `plugin/build/android/` (`test/verse-of-the-day-widget.test.ts` runs them on an empty
 project), then try the widget on an emulator: add it from the home screen's widget list

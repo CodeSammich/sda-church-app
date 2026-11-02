@@ -2,7 +2,7 @@ import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { readCachedText, writeCachedText } from '@/services/CacheStore';
 import { getVerseOfTheDayDateKey } from '@/services/VerseOfTheDay';
 import { loadVerseWidgetDays } from '@/services/VerseOfTheDayWidgetData';
-import VerseOfTheDayWidget from '@/widgets/VerseOfTheDayWidget';
+import VerseOfTheDayWidget from '@/features/verse-of-the-day/VerseOfTheDayWidget';
 
 // The day, language, and title the widget last got its week of verses for.
 const LAST_UPDATE = { folder: 'verse-of-the-day', name: 'widget.txt', key: 'votd_widget' };

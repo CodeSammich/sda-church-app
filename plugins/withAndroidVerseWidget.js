@@ -15,7 +15,7 @@ const {
 
 const MARKER = 'NYCCSDA_VERSE_WIDGET';
 
-/** The home screen widget that widgets/VerseOfTheDayWidget.tsx registers (#235). */
+/** The home screen widget that features/verse-of-the-day/VerseOfTheDayWidget.tsx registers (#235). */
 const VERSE_WIDGET = {
   name: 'VerseOfTheDay',
   displayName: 'Today’s Verse',
@@ -29,7 +29,7 @@ const VERSE_WIDGET = {
     targetCellHeight: 2,
     resizeMode: 'both',
     // Lets the widget draw before the app first runs.
-    initialLayout: './widgets/VerseOfTheDayWidget.tsx',
+    initialLayout: './features/verse-of-the-day/VerseOfTheDayWidget.tsx',
   },
 };
 
