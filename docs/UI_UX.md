@@ -250,6 +250,16 @@ of cards for **Watch Livestream**, **Weekly Bulletin**, **Tithe & Offering**, **
 & Visitor**. Giving, the hymnals, and the staff list (**Meet Our Team**, under New Member &
 Visitor) live here.
 
+**Android home screen widget (#235):** **Today's Verse** can also sit on an Android
+phone's home screen, with its heading, verse, and reference in the app's language and
+the phone's light or dark mode. Tapping it opens the verse in the Bible reader, as
+**Read Verse** does. Each time Home loads the verse, it hands the widget the next week's
+verses, and the widget shows the day's, so the verse changes within an hour of 6 AM
+without the app being opened. After a week without the app, it keeps the last verse.
+Long verses get smaller type. iPhones don't have the widget. The code is in
+`widgets/VerseOfTheDayWidget.tsx`, `services/VerseOfTheDayWidgetData.ts`, and
+`plugins/withAndroidVerseWidget.js`.
+
 **Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the
 six hymnals, in the style of the Library's featured books, puts the app language's hymnals
 first; swiping to one, tapping its dot, or tapping the little arrows on the banner's sides
