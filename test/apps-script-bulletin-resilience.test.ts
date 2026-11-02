@@ -421,6 +421,51 @@ describe('bulletin tab and column tags', () => {
     expect(sermonTags.map((entry) => entry.column)).toEqual([calendar.getLastColumn()]);
   });
 
+  it('reads the tagged column when a new column gets its name, and keeps its tag', () => {
+    const { workbook, context } = tagged();
+    const calendar = workbook.sheet('Sabbath Calendar');
+    // Another fellowship's dates, added in front.
+    calendar.insertColumn(0, 'Date', '2026-11-14');
+
+    const bulletin = buildBulletin(context);
+
+    expect(bulletin.date).toBe(SABBATH);
+    expect(bulletin.queens.sermon).toBe('Queens Sermon 6');
+    expect(run(context, 'getMissingBulletinColumns_(workbook)')).toEqual([]);
+    expect(run(context, 'getRenamedBulletinTabsAndColumns_(workbook)')).toEqual([
+      'Sabbath Calendar: 2 columns are named Date; column B is read',
+    ]);
+
+    runInContext('tagBulletinTabsAndColumns_(workbook)', context);
+    const dateTags = workbook.entries.filter(
+      (entry) => entry.sheet === calendar && entry.value === 'date',
+    );
+    expect(dateTags.map((entry) => entry.column)).toEqual([2]);
+  });
+
+  it('reads the first of two columns with the same name when neither is tagged, and says which', () => {
+    const workbook = createChurchWorkbook();
+    const context = load(workbook);
+    const calendar = workbook.sheet('Sabbath Calendar');
+    calendar.insertColumn(calendar.getLastColumn(), 'Queens Sermon', 'Another sermon');
+
+    expect(buildBulletin(context).queens.sermon).toBe('Queens Sermon 6');
+    expect(run(context, 'getRenamedBulletinTabsAndColumns_(workbook)')).toEqual([
+      'Sabbath Calendar: 2 columns are named Queens Sermon; column F is read',
+    ]);
+  });
+
+  it("doesn't count a hymn's English and Chinese columns as the same name", () => {
+    const { workbook, context } = tagged();
+    const weekly = workbook.sheet('Weekly Data');
+    weekly.setHeader(8, 'English Hymn of Praise');
+    weekly.insertColumn(9, 'Chinese Hymn of Praise', '讚美詩');
+    workbook.finderCalls = 0;
+
+    expect(run(context, 'getRenamedBulletinTabsAndColumns_(workbook)')).toEqual([]);
+    expect(workbook.finderCalls).toBe(0);
+  });
+
   it("doesn't read a tagged column that now has another expected column's name", () => {
     const { workbook, context } = tagged();
     const calendar = workbook.sheet('Sabbath Calendar');

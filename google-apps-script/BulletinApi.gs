@@ -318,12 +318,16 @@ function findBulletinColumn_(sheetName, headers, column) {
  * name. An expected column whose name isn't in the row, but whose tag is on a
  * column, was renamed: that column reads as the expected one. Columns named
  * for their location go after the rest, since Brooklyn Sermon decides which
- * side of the row a repeated header is on. Reads no tags while every expected
- * column has its name.
+ * side of the row a repeated header is on. When more than one column has an
+ * expected column's exact name, such as a second Date added for another
+ * fellowship, the tagged one is read and the others are left out, so a new
+ * column can't take an existing one's place or its tag. Reads no tags while
+ * every expected column has its name once.
  */
 function resolveBulletinHeaders_(sheet, sheetName, headers) {
   var effective = headers.slice();
   var renamed = [];
+  var duplicates = [];
   var tags = null;
   var expectedTags = {};
   var expectedHeaders = {};
@@ -331,6 +335,35 @@ function resolveBulletinHeaders_(sheet, sheetName, headers) {
   columns.forEach(function (column) {
     expectedTags[column.tag] = true;
     expectedHeaders[normalizeHeader_(column.header)] = true;
+  });
+  columns.forEach(function (column) {
+    // A repeated Sabbath Calendar header is meant to appear on each side.
+    if (column.location) {
+      return;
+    }
+    var wanted = normalizeHeader_(column.header);
+    var named = [];
+    effective.forEach(function (header, index) {
+      if (normalizeHeader_(header) === wanted) {
+        named.push(index);
+      }
+    });
+    if (named.length < 2) {
+      return;
+    }
+    tags = tags || findBulletinColumnTags_(sheet);
+    var read = named[0];
+    tags.forEach(function (entry) {
+      if (entry.tag === column.tag && named.indexOf(entry.index) !== -1) {
+        read = entry.index;
+      }
+    });
+    named.forEach(function (index) {
+      if (index !== read) {
+        effective[index] = '';
+      }
+    });
+    duplicates.push({ label: column.label, count: named.length, column: read + 1 });
   });
   columns
     .slice()
@@ -358,7 +391,16 @@ function resolveBulletinHeaders_(sheet, sheetName, headers) {
         effective[entry.index] = column.label;
       });
     });
-  return { headers: effective, renamed: renamed };
+  return { headers: effective, renamed: renamed, duplicates: duplicates };
+}
+
+// A column's letters, such as C for column 3 or AA for column 27.
+function getColumnLetters_(columnNumber) {
+  var letters = '';
+  for (var number = columnNumber; number > 0; number = Math.floor((number - 1) / 26)) {
+    letters = String.fromCharCode(65 + ((number - 1) % 26)) + letters;
+  }
+  return letters;
 }
 
 function getBulletinHeaders_(sheet, sheetName, headers) {
@@ -397,7 +439,9 @@ function getMissingBulletinColumns_(spreadsheet) {
 
 /**
  * The tabs and columns read under a new name, found by their tags, such as
- * 'Sabbath Calendar: "Speaker" is read as Queens Sermon'.
+ * 'Sabbath Calendar: "Speaker" is read as Queens Sermon', and the names more
+ * than one column has, such as 'Sabbath Calendar: 2 columns are named Date;
+ * column B is read'.
  */
 function getRenamedBulletinTabsAndColumns_(spreadsheet) {
   var renamed = [];
@@ -412,11 +456,16 @@ function getRenamedBulletinTabsAndColumns_(spreadsheet) {
     if (!BULLETIN_SHEET_COLUMNS[name]) {
       return;
     }
-    resolveBulletinHeaders_(sheet, name, readTable_(sheet).headers).renamed.forEach(
-      function (column) {
-        renamed.push(name + ': "' + column.header + '" is read as ' + column.label);
-      },
-    );
+    var resolved = resolveBulletinHeaders_(sheet, name, readTable_(sheet).headers);
+    resolved.duplicates.forEach(function (column) {
+      renamed.push(
+        name + ': ' + column.count + ' columns are named ' + column.label +
+          '; column ' + getColumnLetters_(column.column) + ' is read',
+      );
+    });
+    resolved.renamed.forEach(function (column) {
+      renamed.push(name + ': "' + column.header + '" is read as ' + column.label);
+    });
   });
   return renamed;
 }

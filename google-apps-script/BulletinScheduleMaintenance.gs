@@ -354,10 +354,7 @@ function tryBulletinTagChange_(what, change) {
 
 // Developer metadata goes on a whole column, such as C:C.
 function getBulletinWholeColumn_(sheet, columnNumber) {
-  var letters = '';
-  for (var number = columnNumber; number > 0; number = Math.floor((number - 1) / 26)) {
-    letters = String.fromCharCode(65 + ((number - 1) % 26)) + letters;
-  }
+  var letters = getColumnLetters_(columnNumber);
   return sheet.getRange(letters + ':' + letters);
 }
 

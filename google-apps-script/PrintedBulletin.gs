@@ -338,7 +338,7 @@ function onOpen() {
     );
   } else if (renamed.length) {
     ui.alert(
-      'Bulletin tabs or columns renamed / 周刊工作表或列已改名',
+      'Bulletin tabs or columns changed / 周刊工作表或列有变动',
       getRenamedBulletinMessage_(renamed),
       ui.ButtonSet.OK,
     );
@@ -356,9 +356,8 @@ function getMissingBulletinColumnsMessage_(missingColumns) {
 
 function getRenamedBulletinMessage_(renamed) {
   return (
-    'The app and the printed bulletin still read these under their new names. ' +
-    'Nothing else needs doing.\n' +
-    '手机应用和纸质周刊仍会按新名称读取以下内容，无需其他操作。\n\n' +
+    'The app and the printed bulletin read these as listed. Nothing else needs doing.\n' +
+    '手机应用和纸质周刊会按以下说明读取这些内容，无需其他操作。\n\n' +
     renamed.join('\n')
   );
 }

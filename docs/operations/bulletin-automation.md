@@ -321,7 +321,8 @@ On open, the script:
    them (see [Columns are read by name](#columns-are-read-by-name)); and
 9. shows one alert, in English and Simplified Chinese, listing any expected
    column or tab still missing from `Sabbath Calendar` or `Weekly Data`, and
-   any tab or column renamed since the last notice.
+   any tab or column renamed, or any name more than one column has, since the
+   last notice.
 
 ### Columns are read by name
 
@@ -346,6 +347,12 @@ or column through a rename or a move. So:
   over from the original. The tag only finds a tab or column when nothing has
   its name. A renamed column that now has another expected column's name is
   read as that one;
+- when more than one column has an expected column's exact name, such as a
+  second `Date` added for another fellowship, the tagged one is still the one
+  read, and it keeps its tag. The alert names it once, such as `Sabbath
+  Calendar: 2 columns are named Date; column B is read`. Before anything is
+  tagged, the first one is read. A hymn's `English …` and `Chinese …` columns
+  don't count as the same name;
 - deleting a column the scripts use, or renaming it before the spreadsheet has
   been opened since this was deployed, blanks only that field, in the app and
   in print, and the rest of the bulletin still loads. On `Weekly Data`, the
@@ -910,7 +917,7 @@ changes the URL and requires a coordinated mobile-app update.
 | New intake verse is ignored by print prompt | Old print memory or override | Check that `Weekly Data → Bible Verses` is nonblank; it has priority over old memory |
 | API returns `No schedule found for …`, or the app says the schedule isn't set | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag). Apps from 1.6.0 get the bulletin without its schedule instead of the error | Restore the tab and a matching Date row |
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
-| The spreadsheet opens with **Bulletin tabs or columns renamed** | Someone renamed a tab or column the scripts read | Nothing: it's still read by its tag, and the notice shows once. See [Columns are read by name](#columns-are-read-by-name) |
+| The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the tagged one of two with the same name is read, and the notice shows once. Rename the extra column if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |
 | A renamed column stopped being read | A column with its old name was added, which the scripts read instead | Delete the new column, or move its data into it and delete the renamed one |
 | An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one |
 | A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side, or name it with its location, such as `Queens Offering Prayer` |
