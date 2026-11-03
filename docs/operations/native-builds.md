@@ -795,7 +795,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 40 screens listed in `test/screens/screens.json`, 98
+The five runners screenshot the 43 screens listed in `test/screens/screens.json`, 102
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). A sixth runner takes the iPad's shots; see
 [iPad key screens](#ipad-key-screens). Each runner takes one group (`--group <name>`) of related

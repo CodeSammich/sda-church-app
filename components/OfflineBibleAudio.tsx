@@ -40,7 +40,7 @@ import {
 } from '@/services/DownloadNotifications';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
-import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkStateAsync, NetworkStateType } from 'expo-network';
 import { useLocalSearchParams } from 'expo-router';
@@ -424,12 +424,13 @@ function NarratorDialog({ narrator, onChoose, onDismiss, visible }: NarratorDial
   const labels: Labels = copy[language] || copy.en;
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight();
+  const popupWidthStyle = usePopupWidthStyle();
   return (
     <Portal>
       <Dialog
         visible={visible}
         onDismiss={onDismiss}
-        style={[styles.dialog, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
+        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
       >
         <PopupHeader
           closeLabel={labels.close}
@@ -893,8 +894,6 @@ const styles = StyleSheet.create({
   hidden: { opacity: 0 },
   groupTitle: { fontWeight: 'bold' },
   progress: { borderRadius: 2, height: 4, marginTop: 6 },
-  // As ThemeDialog's.
-  dialog: { alignSelf: 'center', maxWidth: 560, width: '90%' },
   dialogHeader: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },
   dialogScrollArea: { borderBottomWidth: 0, marginBottom: 0, paddingHorizontal: 0 },
   dialogContent: { paddingBottom: 24, paddingHorizontal: 24, paddingTop: 4 },
