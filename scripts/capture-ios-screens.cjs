@@ -141,10 +141,14 @@ const shotCost = (shot) => shot.wait + (RECORDS[shot.record]?.typical || 0) + (s
  */
 const takeGroup = (shots, group, config) => {
   if (!group) return shots;
-  if (!Object.hasOwn(config.groups, group)) {
-    throw new Error(`No group "${group}"; screens.json has ${Object.keys(config.groups).join(', ')}.`);
+  // EVAL (#324): several groups, comma-separated.
+  const groups = group.split(',');
+  for (const each of groups) {
+    if (!Object.hasOwn(config.groups, each)) {
+      throw new Error(`No group "${each}"; screens.json has ${Object.keys(config.groups).join(', ')}.`);
+    }
   }
-  return shots.filter((shot) => shot.group === group);
+  return shots.filter((shot) => groups.includes(shot.group));
 };
 
 /**
@@ -162,7 +166,18 @@ const variantSuits = (overrides, platform) =>
  * Android take every screen's `variants`, unless its `platforms` leave one out.
  */
 const variantsOn = (screen, platform) => {
-  if (platform === 'ipad') return screen.ipadVariants || [];
+  if (platform === 'ipad') {
+    // EVAL (#324): IPAD_EVAL=full takes every screen's iPhone variants, with
+    // 100% text (small) in place of large, which is the iPad's own default, and
+    // each screen in landscape; IPAD_EVAL=basic each screen in portrait and
+    // landscape.
+    const onIos = !screen.platforms || screen.platforms.includes('ios');
+    if (process.env.IPAD_EVAL === 'full') {
+      return onIos ? [...new Set([...screen.variants.map((variant) => (variant === 'large' ? 'small' : variant)), 'landscape'])] : [];
+    }
+    if (process.env.IPAD_EVAL === 'basic') return onIos ? ['default', 'landscape'] : [];
+    return screen.ipadVariants || [];
+  }
   return !screen.platforms || screen.platforms.includes(platform) ? screen.variants : [];
 };
 
@@ -320,13 +335,18 @@ const newestRuntime = () => {
  * runner lacks one.
  */
 const pickDevice = (config, platform = 'ios') => {
-  const name = config[platform].device;
+  // EVAL (#324): IPAD_DEVICE picks another iPad, or the newest of its kind.
+  const name = (platform === 'ipad' && process.env.IPAD_DEVICE) || config[platform].device;
   const runtime = newestRuntime();
   const { devices } = JSON.parse(simctl('list', 'devices', 'available', '--json'));
   const existing = (devices[runtime.identifier] || []).find((device) => device.name === name);
   if (existing) return { udid: existing.udid, name, runtime: runtime.name };
   const { devicetypes } = JSON.parse(simctl('list', 'devicetypes', '--json'));
-  const type = devicetypes.find((candidate) => candidate.name === name);
+  const prefix = `${name.split(' (')[0]} (`;
+  const type =
+    devicetypes.find((candidate) => candidate.name === name) ||
+    devicetypes.filter((candidate) => candidate.name.startsWith(prefix)).pop();
+  if (type && type.name !== name) console.error(`No "${name}" Simulator; using "${type.name}".`);
   if (!type) throw new Error(`This Xcode has no "${name}" Simulator; update ${platform}.device in test/screens/screens.json.`);
   return { udid: simctl('create', name, type.identifier, runtime.identifier), name, runtime: runtime.name };
 };

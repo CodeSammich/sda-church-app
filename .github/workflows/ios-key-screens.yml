@@ -92,6 +92,16 @@ jobs:
           - { group: library, batch: 4 }
           - { group: worship-and-you, batch: 5 }
           - { group: ipad, batch: 6, ipad: true }
+          # EVAL (#324), not for merging: every key screen on three iPads.
+          - { group: 'home,bible-reading', batch: 7, ipad: true, eval: full, name: ipad13-a, part: '--platform ipad --group home,bible-reading' }
+          - { group: 'bible-text,library', batch: 8, ipad: true, eval: full, name: ipad13-b, part: '--platform ipad --group bible-text,library' }
+          - { group: worship-and-you, batch: 9, ipad: true, eval: full, name: ipad13-c, part: '--platform ipad --group worship-and-you' }
+          - { group: all-mini, batch: 10, ipad: true, eval: basic, device: 'iPad mini (A17 Pro)', name: ipad-mini, part: '--platform ipad' }
+          - { group: all-a16, batch: 11, ipad: true, eval: basic, device: 'iPad (A16)', name: ipad-a16, part: '--platform ipad' }
+          - { group: interact, batch: 12, ipad: true, interact: true, name: ipad13-interact }
+    env:
+      IPAD_EVAL: ${{ matrix.eval }}
+      IPAD_DEVICE: ${{ matrix.device }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -364,9 +374,10 @@ jobs:
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
         # Only this group's screens, or the iPad's, named ipad/<screen>-<variant>.png.
-        timeout-minutes: 20
+        if: ${{ !matrix.interact }}
+        timeout-minutes: ${{ matrix.eval && 75 || 20 }}
         env:
-          PART: ${{ matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group) }}
+          PART: ${{ matrix.part || (matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group)) }}
         run: >-
           node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
           $PART
@@ -377,22 +388,28 @@ jobs:
         # verse button's whole label, verse numbers starting their lines, and no
         # system prompt or setup dialog. Saves ocr.json and checks.json beside
         # the screenshots. Runs even if a capture failed, to report on the rest.
-        if: ${{ !cancelled() }}
-        timeout-minutes: 10
+        if: ${{ !cancelled() && !matrix.interact }}
+        continue-on-error: ${{ matrix.eval && true || false }}
+        timeout-minutes: ${{ matrix.eval && 30 || 10 }}
         env:
-          PART: ${{ matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group) }}
+          PART: ${{ matrix.part || (matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group)) }}
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
           $PART
+
+      - name: EVAL (#324) Drive the iPad through taps, typing, and turns
+        if: ${{ matrix.interact }}
+        timeout-minutes: 30
+        run: node scripts/ipad-interact.cjs --out "$RUNNER_TEMP/ios-pr-preview/interact"
 
       - name: Upload this group
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: key-screens-${{ github.run_id }}-${{ matrix.group }}
+          name: ${{ matrix.name && format('ipad-eval-{0}-{1}', github.run_id, matrix.name) || format('key-screens-{0}-{1}', github.run_id, matrix.group) }}
           path: ${{ runner.temp }}/ios-pr-preview/
           if-no-files-found: warn
-          retention-days: 1
+          retention-days: 3
 
   simulator:
     # Joins the groups into two artifacts: the screenshots and checks from

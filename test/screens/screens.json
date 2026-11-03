@@ -30,7 +30,8 @@
     "xl-android-font-max": { "textScale": 2, "fontScale": 2 },
     "es-xl-android-font-max": { "language": "es", "textScale": 2, "fontScale": 2 },
     "android-display-large": { "displayScale": 1.2 },
-    "landscape": { "orientation": "landscape" }
+    "landscape": { "orientation": "landscape" },
+    "small": { "textScale": 1 }
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give, and first-launch setup over it.",
