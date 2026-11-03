@@ -12,7 +12,13 @@
     "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
     "systemImage": "system-images;android-36;google_apis;x86_64",
     "phone": { "name": "Samsung Galaxy A07 4G", "width": 720, "height": 1600, "density": 300 },
-    "googlePlay": { "name": "Google Play screenshot size", "width": 1080, "height": 1920, "density": 420 }
+    "googlePlay": { "name": "Google Play screenshot size", "width": 1080, "height": 1920, "density": 420 },
+    "splitWindows": [
+      { "$comment": "The iPad's Split View and Slide Over windows, in points (dp at 2x, 320 dpi), taken on their own emulators (#324): Slide Over, and the 11-inch iPad's half, the 13-inch iPad's half in portrait, and its two-thirds in landscape.", "width": 320, "height": 744 },
+      { "width": 504, "height": 1194 },
+      { "width": 678, "height": 1024 },
+      { "width": 981, "height": 1024 }
+    ]
   },
   "variants": {
     "default": {},
