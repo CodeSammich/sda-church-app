@@ -527,8 +527,16 @@ function getRenamedBulletinTabsAndColumns_(spreadsheet) {
 }
 
 function doGet(event) {
+  var parameter = (event && event.parameter) || {};
   try {
+    if (parameter.changeovers) {
+      return jsonResponse_({
+        ok: true,
+        changeovers: getChangeoverStatus_(getPrintedBulletinToday_()),
+      });
+    }
     var requestedDate = getRequestedDate_(event);
+    noteOlderAppCall_(parameter);
     var bulletin = getBulletin_(requestedDate, {
       allowMissingSchedule: isAppVersionAtLeast_(
         event && event.parameter ? event.parameter.appVersion : '',
@@ -566,6 +574,103 @@ function isAppVersionAtLeast_(version, minimum) {
     }
   }
   return true;
+}
+
+// Changeovers (#580): ways of answering kept for older apps beside the new
+// one. Each is marked with the app version that makes it unneeded, and can
+// be retired once no older app has asked for a bulletin for
+// CHANGEOVER_QUIET_DAYS days. The daily external dependency monitor reads
+// ?changeovers=1 and opens a cleanup issue for each one that's ready
+// (scripts/bulletin-changeovers.cjs).
+var BULLETIN_CHANGEOVERS = Object.freeze([
+  Object.freeze({
+    id: 'schedule-not-set',
+    retiresWith: SCHEDULE_NOT_SET_APP_VERSION,
+    cleanup:
+      'Give every request the bulletin without its schedule: remove ' +
+      'SCHEDULE_NOT_SET_APP_VERSION and the error for a missing schedule in ' +
+      'buildBulletin_, and make verify-bulletin-api and the external dependency ' +
+      'monitor fail on scheduleNotSet instead.',
+  }),
+]);
+
+var CHANGEOVER_QUIET_DAYS = 14;
+
+// Cache entries last at most 6 hours, so each changeover's day is written
+// a few times a day at most, however many older apps call.
+var CHANGEOVER_NOTED_SECONDS = 21600;
+
+function getChangeoverPropertyKey_(changeover, name) {
+  return 'bulletin.changeover.' + changeover.id + '.' + name;
+}
+
+// Notes the day an app older than a changeover's version asked for a
+// bulletin. A request without a version is from an app older than 1.6.0.
+// The API's own checks send client=check and aren't counted, and a version
+// that isn't one isn't from the app. Only that day is kept, nothing about
+// who asked, and a failure here never stops the bulletin.
+function noteOlderAppCall_(parameter) {
+  try {
+    var today = getPrintedBulletinToday_();
+    var version = String(parameter.appVersion || '').trim();
+    if (parameter.client === 'check' || (version && !isAppVersionAtLeast_(version, '0'))) {
+      return;
+    }
+    var cache = CacheService.getScriptCache();
+    var properties;
+    BULLETIN_CHANGEOVERS.forEach(function (changeover) {
+      if (version && isAppVersionAtLeast_(version, changeover.retiresWith)) {
+        return;
+      }
+      var key = getChangeoverPropertyKey_(changeover, 'olderAppLastCalled');
+      if (cache.get(key) === today) {
+        return;
+      }
+      properties = properties || PropertiesService.getScriptProperties();
+      properties.setProperty(key, today);
+      cache.put(key, today, CHANGEOVER_NOTED_SECONDS);
+    });
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log("Could not note an older app's call: " + error);
+    }
+  }
+}
+
+// What the monitor reads: each changeover, the last day an older app called,
+// and whether it can be retired. Watching starts the first time this is
+// read, so a changeover is never ready sooner than CHANGEOVER_QUIET_DAYS
+// after that, even when no older app has called.
+function getChangeoverStatus_(today) {
+  var properties = PropertiesService.getScriptProperties();
+  return BULLETIN_CHANGEOVERS.map(function (changeover) {
+    var sinceKey = getChangeoverPropertyKey_(changeover, 'watchedSince');
+    var watchedSince = properties.getProperty(sinceKey);
+    if (!watchedSince) {
+      watchedSince = today;
+      properties.setProperty(sinceKey, today);
+    }
+    var lastCalled =
+      properties.getProperty(getChangeoverPropertyKey_(changeover, 'olderAppLastCalled')) || '';
+    var quietSince = lastCalled > watchedSince ? lastCalled : watchedSince;
+    return {
+      id: changeover.id,
+      retiresWith: changeover.retiresWith,
+      cleanup: changeover.cleanup,
+      watchedSince: watchedSince,
+      olderAppLastCalled: lastCalled,
+      quietDays: CHANGEOVER_QUIET_DAYS,
+      ready: getDaysBetweenIsoDates_(quietSince, today) >= CHANGEOVER_QUIET_DAYS,
+    };
+  });
+}
+
+function getDaysBetweenIsoDates_(from, to) {
+  var toTime = function (date) {
+    var parts = date.split('-');
+    return Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  };
+  return Math.round((toTime(to) - toTime(from)) / 86400000);
 }
 
 function getBulletin_(requestedDate, options) {
