@@ -629,6 +629,48 @@ describe('iPad layout checks (#324)', () => {
   });
 });
 
+describe("Android shots at an iPad's split windows (#324)", () => {
+  const { planSplitCaptures } = require('../scripts/capture-ios-screens.cjs');
+  const { checkIpadLayout, checkShot, planSplitChecks, splitRegions } = require('../scripts/check-screens.cjs');
+  const { deviceFor } = require('../scripts/capture-android-screens.cjs');
+  const widths = config.android.splitWindows.map((window: { width: number }) => window.width);
+
+  it('takes the screens a wide screen changes most, at 150%, at Slide Over and Split View widths', () => {
+    expect(widths).toEqual([320, 504, 678, 981]);
+    const portrait = config.screens.filter((screen: { ipadVariants: string[] }) => screen.ipadVariants.includes('default'));
+    for (const width of widths) {
+      const split = planSplitCaptures(config, width);
+      expect(split.map((shot: { screen: string }) => shot.screen)).toEqual(portrait.map((screen: { name: string }) => screen.name));
+      for (const shot of split) {
+        expect(shot.file).toBe(`android/${shot.screen}-w${width}.png`);
+        expect(shot.settings.textScale).toBe(1.5);
+      }
+      // An emulator that size, in points at 2x.
+      const window = config.android.splitWindows.find((each: { width: number }) => each.width === width);
+      expect(deviceFor(config, { split: width })).toMatchObject({ width: width * 2, height: window.height * 2, density: 320 });
+    }
+    expect(() => planSplitCaptures(config, 700)).toThrow('No split window 700 points wide');
+    expect(deviceFor(config, {})).toBe(config.android.phone);
+  });
+
+  it('checks the tab labels where a split window puts them, and the column only where the window is wider', () => {
+    const home = planSplitChecks(config, 981).find((shot: { screen: string }) => shot.screen === 'home');
+    const tabs = splitRegions(home.split).tabs;
+    // The tab labels sit about 58 points up from the bottom.
+    expect(tabs[0]).toBeLessThan(1 - 58 / 1024);
+    expect(tabs[1]).toBeGreaterThan(1 - 58 / 1024);
+    const labels = ['Home', 'Bible', 'Explore', 'You'].map((text, index) => ({ text, box: [0.1 + index * 0.2, 1 - 66 / 1024, 0.08, 0.02] }));
+    expect(checkShot(home, labels)).toEqual([]);
+    // Text past the 864-point column, 6% in from each side at 981.
+    expect(checkIpadLayout(home, [{ text: 'Read Verse', box: [0.02, 0.5, 0.2, 0.02] }])).toHaveLength(1);
+    // At 504 the column fills the window.
+    const narrow = planSplitChecks(config, 504).find((shot: { screen: string }) => shot.screen === 'home');
+    expect(checkIpadLayout(narrow, [{ text: 'Read Verse', box: [0.02, 0.5, 0.96, 0.02] }])).toEqual([]);
+    // Its mustShowLines are the phone's, so they're left out.
+    expect(planSplitChecks(config, 504).every((shot: { mustShowLines?: unknown }) => shot.mustShowLines === undefined)).toBe(true);
+  });
+});
+
 describe('iPad key screens (#324)', () => {
   const ipad = planCaptures(config, 'ipad');
   const ipadNames = ipad.map((shot: { name: string }) => shot.name);
@@ -1360,13 +1402,23 @@ describe('Android key screens workflow (#372)', () => {
   it('captures and checks each group on its own emulator runner, from the list in screens.json', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(capture)![1].split(', ');
     expect(groups).toEqual(Object.keys(config.groups));
-    expect(capture).toContain("PART: ${{ matrix.store && '--store' || format('--group {0}', matrix.group) }}");
+    expect(capture).toContain(
+      "PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.store && '--store' || format('--group {0}', matrix.group)) }}",
+    );
     expect(capture).toMatch(/capture-android-screens\.cjs --out [^\n]+ \$PART\n/);
     // The sixth runner takes the Google Play shots, and has no group to check.
     expect(capture).toContain('- { group: google-play, batch: 6, store: true }');
     expect(capture.match(/if: \$\{\{ !cancelled\(\) && !matrix\.store \}\}/g)).toHaveLength(2);
     expect(capture).toContain("process.env.STORE === 'true' ? googlePlay : phone");
-    expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--platform android --group \$\{\{ matrix\.group \}\}\n/);
+    expect(capture).toContain(
+      "PART: ${{ matrix.split && format('--split {0}', matrix.split) || format('--platform android --group {0}', matrix.group) }}",
+    );
+    expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+\$PART\n/);
+    // Batches 7 to 10: an iPad's split windows (#324), one each.
+    const widths = config.android.splitWindows.map((window: { width: number }) => window.width);
+    widths.forEach((width: number, index: number) => {
+      expect(capture).toContain(`- { group: split-${width}, batch: ${index + 7}, split: ${width} }`);
+    });
     expect(capture).toContain('pip" install --quiet -r scripts/ocr-requirements.txt');
     expect(capture.indexOf('capture-android-screens.cjs')).toBeLessThan(capture.indexOf('--platform android'));
     expect(capture).toContain('name: android-key-screens-${{ github.run_id }}-${{ matrix.group }}');

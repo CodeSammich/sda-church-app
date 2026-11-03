@@ -126,7 +126,10 @@ jobs:
         # Each group's batch number, 1 to 5 in list order, names its job. One
         # more runner, batch 6, takes the Google Play shots, on an emulator of
         # Play's size: Play takes no screenshot taller than 2:1, and the
-        # phone's screen is 2.22:1.
+        # phone's screen is 2.22:1. Batches 7 to 10 take the screens a wide
+        # screen changes most at an iPad's Split View and Slide Over widths
+        # (android.splitWindows), which no Simulator can be made to show
+        # (#324). Linux runners are free, so they cost no Mac.
         include:
           - { group: home, batch: 1 }
           - { group: bible-reading, batch: 2 }
@@ -134,6 +137,10 @@ jobs:
           - { group: library, batch: 4 }
           - { group: worship-and-you, batch: 5 }
           - { group: google-play, batch: 6, store: true }
+          - { group: split-320, batch: 7, split: 320 }
+          - { group: split-504, batch: 8, split: 504 }
+          - { group: split-678, batch: 9, split: 678 }
+          - { group: split-981, batch: 10, split: 981 }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -188,18 +195,23 @@ jobs:
       - name: Start the emulator
         env:
           STORE: ${{ matrix.store && 'true' || 'false' }}
+          SPLIT: ${{ matrix.split }}
         run: |
           set -euo pipefail
           avdmanager_bin="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/avdmanager | sort -V | tail -1)"
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
           echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
-          # The phone in test/screens/screens.json, or Google Play's size for
-          # its shots. avdmanager has no profile for the phone, so this starts
-          # from a generic one and sets the screen.
+          # The phone in test/screens/screens.json, Google Play's size for its
+          # shots, or an iPad's split window, in points at 2x. avdmanager has no
+          # profile for the phone, so this starts from a generic one and sets
+          # the screen.
           read -r WIDTH HEIGHT DENSITY < <(node -p \
-            "const { phone, googlePlay } = require('./test/screens/screens.json').android;
-             const device = process.env.STORE === 'true' ? googlePlay : phone;
+            "const { phone, googlePlay, splitWindows } = require('./test/screens/screens.json').android;
+             const split = splitWindows.find((window) => window.width === Number(process.env.SPLIT));
+             const device = split
+               ? { width: split.width * 2, height: split.height * 2, density: 320 }
+               : process.env.STORE === 'true' ? googlePlay : phone;
              [device.width, device.height, device.density].join(' ')")
           echo no | "$avdmanager_bin" create avd --force -n key-screens -k "$SYSTEM_IMAGE" -d pixel
           AVD_CONFIG="$ANDROID_AVD_HOME/key-screens.avd/config.ini"
@@ -258,10 +270,11 @@ jobs:
 
       - name: Capture the key screens
         # Screenshots of this group's screens in test/screens/screens.json,
-        # named android/<screen>-<variant>.png, or the Google Play copies.
+        # named android/<screen>-<variant>.png, the Google Play copies, or a
+        # split window's shots, android/<screen>-w<width>.png.
         timeout-minutes: 20
         env:
-          PART: ${{ matrix.store && '--store' || format('--group {0}', matrix.group) }}
+          PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.store && '--store' || format('--group {0}', matrix.group)) }}
         run: >-
           node scripts/capture-android-screens.cjs --out "$RUNNER_TEMP/android-key-screens/screens" $PART
 
@@ -278,13 +291,15 @@ jobs:
 
       - name: Check the text on the key screens
         # The iPhone's checks, with the tab bar and chapter controls where the
-        # emulator puts them. Runs even if a capture failed, to report on the
-        # rest.
+        # emulator puts them, or a split window's (check-screens.cjs --split).
+        # Runs even if a capture failed, to report on the rest.
         if: ${{ !cancelled() && !matrix.store }}
         timeout-minutes: 15
+        env:
+          PART: ${{ matrix.split && format('--split {0}', matrix.split) || format('--platform android --group {0}', matrix.group) }}
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/android-key-screens/screens"
-          --platform android --group ${{ matrix.group }}
+          $PART
 
       - name: Collect the emulator's logs
         if: failure() || cancelled()

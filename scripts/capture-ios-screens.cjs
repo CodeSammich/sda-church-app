@@ -210,6 +210,37 @@ const planCaptures = (config, platform = 'ios') => {
 };
 
 /**
+ * The Android shots at one of the iPad's Split View and Slide Over widths
+ * (`android.splitWindows` in screens.json, #324), which no Simulator can be
+ * made to show: the screens whose `ipadVariants` take the iPad in portrait,
+ * the ones a wide screen changes most, at a tablet's 150% text, named
+ * android/<screen>-w<width>.png. The layouts follow the window's width, so an
+ * emulator that size shows what the iPad's window would.
+ */
+const SPLIT_TEXT_SCALE = 1.5;
+const planSplitCaptures = (config, width) => {
+  const window = (config.android.splitWindows || []).find((each) => each.width === width);
+  if (!window) {
+    throw new Error(`No split window ${width} points wide; screens.json has ${(config.android.splitWindows || []).map((each) => each.width).join(', ')}.`);
+  }
+  return config.screens
+    .filter((screen) => (screen.ipadVariants || []).includes('default'))
+    .map((screen) => ({
+      platform: 'android',
+      screen: screen.name,
+      group: screen.group,
+      name: `${screen.name}-w${width}`,
+      file: `android/${screen.name}-w${width}.png`,
+      route: screen.path,
+      url: `${SCHEME}://${screen.path}`,
+      settings: { ...BASE_SETTINGS.android, ...(screen.settings || {}), textScale: SPLIT_TEXT_SCALE },
+      checks: [],
+      wait: screen.wait || (screen.path.startsWith('bible') ? BIBLE_WAIT : WAIT),
+      split: { width: window.width, height: window.height },
+    }));
+};
+
+/**
  * The AsyncStorage manifest: every value is a string, keyed by its storage key,
  * plus the screen to open unless it's Home. An object is saved as JSON, and a
  * null isn't saved, so the app uses its own default.
@@ -739,6 +770,8 @@ module.exports = {
   STILL_RETRIES,
   loadConfig,
   planCaptures,
+  planSplitCaptures,
+  SPLIT_TEXT_SCALE,
   buildManifest,
   planAppStore,
   planStoreCopies,

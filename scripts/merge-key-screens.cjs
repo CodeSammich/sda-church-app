@@ -18,7 +18,7 @@
  */
 const { appendFileSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
 const { dirname, join, resolve } = require('node:path');
-const { PLATFORMS, STORE_COPY_WRITERS, loadConfig, planCaptures, planStoreCopies } = require('./capture-ios-screens.cjs');
+const { PLATFORMS, STORE_COPY_WRITERS, loadConfig, planCaptures, planSplitCaptures, planStoreCopies } = require('./capture-ios-screens.cjs');
 
 const PLATFORM_NAMES = { ios: 'iPhone', ipad: 'iPad', android: 'Android' };
 
@@ -50,7 +50,11 @@ const mergeResults = (shots, parts) => {
 
 const merge = async (outDir, partDirs, platforms = ['ios']) => {
   const config = loadConfig();
-  const shots = platforms.flatMap((platform) => planCaptures(config, platform));
+  // Android's include its shots at an iPad's split windows (#324).
+  const splits = platforms.includes('android')
+    ? (config.android.splitWindows || []).flatMap((window) => planSplitCaptures(config, window.width))
+    : [];
+  const shots = [...platforms.flatMap((platform) => planCaptures(config, platform)), ...splits];
   for (const platform of platforms) {
     mkdirSync(join(outDir, platform), { recursive: true });
     for (const partDir of partDirs) {
