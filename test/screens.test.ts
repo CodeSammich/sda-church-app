@@ -317,7 +317,9 @@ describe('iOS key screens', () => {
       /if \[ "\$BOOT_NOW" = true \]; then\n\s+nohup xcrun simctl bootstatus "\$DEVICE_ID" -b [^\n]+&\n/,
     );
     // The iPhone, and the iPad for the group's iPad shots, boot together.
-    expect(boot).toMatch(/\n\s+nohup xcrun simctl bootstatus "\$IPAD_ID" -b [^\n]+&\n\s+fi\n/);
+    // Not on the compiling runner, which boots its iPad after its iPhone shots.
+    expect(boot).toContain('BOOT_IPAD: ${{ !matrix.builds }}\n');
+    expect(boot).toMatch(/if \[ "\$BOOT_IPAD" = true \]; then\n\s+nohup xcrun simctl bootstatus "\$IPAD_ID" -b [^\n]+&\n\s+fi\n/);
     expect(workflow.match(/nohup xcrun simctl bootstatus/g)).toHaveLength(2);
     // The launch step, after the build, boots it or waits for it.
     const launch = workflow.slice(workflow.indexOf('- name: Launch on a simulated iPhone'));
@@ -595,8 +597,10 @@ describe('iPad layout checks (#324)', () => {
     expect(checkIpadLayout(home, [line('Psalm 23', 0.001, 0.2, 0.5)])).toEqual(
       expect.arrayContaining([expect.stringMatching(/^text at the screen's edge, likely cut off: "Psalm 23"/)]),
     );
-    // Not the status bar's clock, near the edge on purpose.
+    // Not the status bar's clock, near the edge on purpose, nor the window's
+    // resize grip in the corner, which Vision reads as "/".
     expect(checkIpadLayout(home, [line('9:41 AM', 0.002, 0.1, 0.007)])).toEqual([]);
+    expect(checkIpadLayout(home, [line('/', 0.98, 0.999, 0.973)])).toEqual([]);
     // Nor a screen that shows a web page or Quick Look, wide on purpose.
     expect(checkIpadLayout(shot('sabbath-school-lesson-viewer-landscape'), [line('Beginner', 0.001, 0.9, 0.5)])).toEqual([]);
     // Nor an iPhone shot.
