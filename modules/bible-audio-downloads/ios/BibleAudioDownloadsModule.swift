@@ -18,8 +18,8 @@ public class BibleAudioDownloadsModule: Module {
   public func definition() -> ModuleDefinition {
     Name("BibleAudioDownloads")
 
-    AsyncFunction("enqueue") { (downloads: [ChapterDownload], allowMobileData: Bool) in
-      BibleAudioDownloadSessions.shared.enqueue(downloads, allowMobileData: allowMobileData)
+    AsyncFunction("enqueue") { (downloads: [ChapterDownload], allowMobileData: Bool, promise: Promise) in
+      BibleAudioDownloadSessions.shared.enqueue(downloads, allowMobileData: allowMobileData) { promise.resolve(nil) }
     }
 
     AsyncFunction("list") { (promise: Promise) in

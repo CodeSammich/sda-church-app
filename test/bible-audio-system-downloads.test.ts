@@ -157,6 +157,24 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     expect(getBibleAudioScopeStatus(MANDARIN, JUDE).waitingFor).toBeNull();
   });
 
+  it("say it waits for Wi-Fi on mobile data even for a chapter part way, as iOS lists it as running", async () => {
+    downloadBibleAudio(MANDARIN, PHILEMON);
+    await poll();
+    Object.assign(mockSystem.tasks.get('cuv-mandarin/PHM/1')!, { state: 'running', bytesWritten: 400, totalBytes: 1000 });
+    await poll();
+    expect(getBibleAudioScopeStatus(MANDARIN, PHILEMON)).toMatchObject({ active: true, downloadedBytes: 400 });
+    // Wi-Fi drops: iOS still says running, with its 400 bytes.
+    mockNetwork.state = { type: 'CELLULAR', isConnected: true, isInternetReachable: true };
+    mockNetwork.listeners.forEach((listener) => listener(mockNetwork.state));
+    await poll();
+    expect(getBibleAudioScopeStatus(MANDARIN, PHILEMON)).toMatchObject({
+      downloading: true,
+      active: false,
+      waitingFor: 'wifi',
+      downloadedBytes: 400,
+    });
+  });
+
   it('say it waits for Wi-Fi while Android holds a download off a metered network, as a hotspot', async () => {
     downloadBibleAudio(MANDARIN, JUDE);
     await poll();

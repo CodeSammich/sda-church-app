@@ -24,6 +24,9 @@ const EXCLUDED = [
   // only to the app's external files, and the app moves each chapter into
   // bible-audio when it's done. `external` is that folder. Custom until #612.
   { domain: 'external', path: 'bible-audio-partial' },
+  // The downloader's list of chapters under way (#611): on a new phone they
+  // aren't, so it would only be dropped. Custom until #612.
+  { domain: 'sharedpref', path: 'bible-audio-downloads.xml' },
   // The home screen widget's layout and week of verses (#235), which
   // expo-widgets keeps in shared preferences. The app gives the widget its
   // week again whenever it runs, so a restored copy would only be out of date.

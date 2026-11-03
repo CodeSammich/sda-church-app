@@ -238,7 +238,7 @@ export const getBibleAudioScopeCaption = (
       const waiting = status.waitingFor === 'wifi' ? labels.waitingForWifi : labels.waitingForConnection;
       return { text: `${waiting} · ${labels.progress(size(status.downloadedBytes), size(total))}`, fraction };
     }
-    // Its turn hasn't come: three chapters download at a time.
+    // Its turn hasn't come: the phone downloads a few chapters at a time.
     if (!status.active) return { text: labels.queued(size(Math.max(0, total - status.downloadedBytes))), fraction: null };
     return getDownloadProgressStatus({ bytesWritten: status.downloadedBytes, totalBytes: total }, language);
   }

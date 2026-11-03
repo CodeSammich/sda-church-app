@@ -318,6 +318,7 @@ export const getBibleAudioScopeStatus = (
     waiting = true;
     mobileData ||= item.mobileData;
     heldOffWifi ||= heldForWifi.has(key);
+    downloadedBytes += heldBytes.get(key) ?? 0;
   }
   const asked = [...(requested.get(narrator)?.values() ?? [])].some((request) => covers(request.scope, scope));
   const downloading = asked && (active || waiting);
@@ -470,9 +471,12 @@ const tries = new Map<string, number>();
 // Chapters on their way to the phone's downloader, which a list mustn't take
 // for finished or failed.
 const handingOver = new Set<string>();
-// Chapters Android holds for unmetered Wi-Fi while the phone is on another
-// network, as a hotspot, which is someone's data plan.
+// Chapters held for Wi-Fi: on Android, for unmetered Wi-Fi while the phone is
+// on another network, as a hotspot, which is someone's data plan; on either,
+// a Wi-Fi-only one while the phone is on mobile data.
 const heldForWifi = new Set<string>();
+// What's arrived of chapters waiting part way, as one held when Wi-Fi dropped.
+const heldBytes = new Map<string, number>();
 let polling: ReturnType<typeof setInterval> | null = null;
 // Calls to the phone's downloader, one at a time, so a list never runs
 // between an enqueue and the tasks it starts.
@@ -540,6 +544,7 @@ const applySystemStatuses = (statuses: readonly SystemDownloadStatus[]) => {
   queued.clear();
   running.clear();
   heldForWifi.clear();
+  heldBytes.clear();
   const failed: Queued[] = [];
   for (const [key, item] of known) {
     if (live.has(key)) continue;
@@ -564,13 +569,15 @@ const applySystemStatuses = (statuses: readonly SystemDownloadStatus[]) => {
     // Android retries a host that doesn't answer for minutes: try its mirror.
     if (status.state === 'failed' || (status.state === 'paused' && status.reason === 'retry' && sources > 1)) {
       failed.push(item);
-    } else if (status.state === 'running' && status.bytesWritten > 0) {
+    } else if (status.state === 'running' && status.bytesWritten > 0 && (item.mobileData || !isOnMobileData())) {
       running.set(status.id, { item, bytesWritten: status.bytesWritten });
     } else {
+      // iOS says a chapter that's received some of its bytes is running, even
+      // while its Wi-Fi-only session holds it on mobile data.
       queued.set(status.id, item);
-      if (status.state === 'paused' && !item.mobileData && (status.reason === 'network' || status.reason === 'wifi')) {
-        heldForWifi.add(status.id);
-      }
+      if (status.bytesWritten > 0) heldBytes.set(status.id, status.bytesWritten);
+      const pausedForWifi = status.state === 'paused' && (status.reason === 'network' || status.reason === 'wifi');
+      if (!item.mobileData && (pausedForWifi || isOnMobileData())) heldForWifi.add(status.id);
     }
   }
   retryOnSystem(failed);
@@ -851,5 +858,6 @@ export const resetBibleAudioDownloadsForTests = () => {
   tries.clear();
   handingOver.clear();
   heldForWifi.clear();
+  heldBytes.clear();
   systemCalls = Promise.resolve();
 };

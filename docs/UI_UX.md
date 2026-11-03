@@ -137,7 +137,9 @@ opens a big file should work the same way. The children's Sabbath School lessons
 first ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529));
 see [Opening a lesson on a phone](feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
 The download itself and what its progress says are shared: `services/FileDownloads.ts`
-and `constants/DownloadCopy.ts`. Use them, rather than copy the lessons' code.
+and `constants/DownloadCopy.ts`. Use them, rather than copy the lessons' code. Bible audio
+shares the progress text; on a phone, its download is the phone's own
+(`modules/bible-audio-downloads`, #611), so it goes on while the phone is locked.
 
 Bible audio downloaded to listen offline
 ([#556](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/556))

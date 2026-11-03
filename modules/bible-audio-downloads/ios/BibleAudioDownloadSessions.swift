@@ -7,10 +7,11 @@ import Foundation
 /// DownloadTask has a background session, but no Wi-Fi-only setting, so
 /// with the phone locked it would carry on over mobile data when Wi-Fi drops.
 ///
-/// One session is Wi-Fi only: no cellular and no expensive networks, so a
-/// phone's hotspot, someone's data plan, waits too. The other may use any
-/// network, for downloads the member allowed on mobile data. Both are set on
-/// the session, which a request can't loosen.
+/// One session is Wi-Fi only: no cellular, no expensive networks, so a
+/// phone's hotspot, someone's data plan, waits too, and no Wi-Fi the member
+/// set to Low Data Mode. The other may use any network, for downloads the
+/// member allowed on mobile data. Both are set on the session, which a request
+/// can't loosen.
 ///
 /// Each finished chapter is moved straight into the app's Documents folder,
 /// at the path the app asked for, and kept out of the iPhone's backups, with
@@ -48,6 +49,7 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
     let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
     configuration.allowsCellularAccess = anyNetwork
     configuration.allowsExpensiveNetworkAccess = anyNetwork
+    configuration.allowsConstrainedNetworkAccess = anyNetwork
     configuration.isDiscretionary = false
     configuration.sessionSendsLaunchEvents = true
     configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -61,17 +63,22 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
       .resolvingSymlinksInPath()
   }
 
-  func enqueue(_ downloads: [ChapterDownload], allowMobileData: Bool) {
+  /// Starts the chapters, in place of any already downloading under the same
+  /// names, as when the member allows mobile data for ones waiting for Wi-Fi.
+  func enqueue(_ downloads: [ChapterDownload], allowMobileData: Bool, done: @escaping () -> Void) {
     let session: URLSession = allowMobileData ? anyNetwork! : wifi!
     let ids = Set(downloads.map(\.id))
-    queue.addOperation { self.stopped.subtract(ids) }
-    for download in downloads {
-      guard let source = URL(string: download.url), let target = URL(string: download.path), target.isFileURL else {
-        continue
+    cancelTasks(ids) {
+      self.queue.addOperation { self.stopped.subtract(ids) }
+      for download in downloads {
+        guard let source = URL(string: download.url), let target = URL(string: download.path), target.isFileURL else {
+          continue
+        }
+        let task = session.downloadTask(with: URLRequest(url: source))
+        task.taskDescription = [download.id, target.path].joined(separator: "\n")
+        task.resume()
       }
-      let task = session.downloadTask(with: URLRequest(url: source))
-      task.taskDescription = [download.id, target.path].joined(separator: "\n")
-      task.resume()
+      done()
     }
   }
 
@@ -109,6 +116,10 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
   /// Stops chapters downloading, so none is moved into place afterwards.
   func cancel(_ ids: Set<String>, done: @escaping () -> Void) {
     queue.addOperation { self.stopped.formUnion(ids) }
+    cancelTasks(ids, done: done)
+  }
+
+  private func cancelTasks(_ ids: Set<String>, done: @escaping () -> Void) {
     let group = DispatchGroup()
     for session in [wifi!, anyNetwork!] {
       group.enter()
