@@ -207,8 +207,8 @@
       "path": "you/audio-downloads?narrator=souer",
       "variants": ["default", "zh"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English . Souer \\(BSB\\)", "^Whole Bible$", "^66 books", "^Old Testament$", "^Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
-        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語 . Souer", "^整本聖經$", "^66 卷", "^舊約$", "^摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
+        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–]\\s*Souer", "^Whole Bible$", "^66 books", "^Old Testament$", "^Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
+        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–]\\s*Souer", "^整本聖經$", "^66 卷", "^舊約$", "^摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
       }
     },
     {
