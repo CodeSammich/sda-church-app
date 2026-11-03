@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <!-- Bible audio downloads (#611; custom until #612). -->
+  <!-- Bible audio downloads (#611, #610; custom until #612). -->
+  <!-- Android 14 and later: the app's own downloads, which Android doesn't
+       hold to an hour's quota as it does the app's background jobs. -->
+  <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
+  <!-- A download's progress and Stop, asked for only when a long download
+       starts, never at launch. -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <application>
-    <!-- Moves each finished chapter into the app's own files, even when the app
-         isn't running. Only the system's download service may send it. -->
+    <!-- Moves each chapter DownloadManager finishes into the app's own files,
+         even when the app isn't running (Android 13 and lower). Only the
+         system's download service may send it. -->
     <receiver
       android:name="org.nyccsda.bibleaudiodownloads.BibleAudioDownloadReceiver"
       android:exported="true"
@@ -11,5 +18,14 @@
         <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
       </intent-filter>
     </receiver>
+    <!-- Stop, from a download's notification: only the app's own. -->
+    <receiver
+      android:name="org.nyccsda.bibleaudiodownloads.BibleAudioDownloadActionReceiver"
+      android:exported="false" />
+    <!-- The user-initiated data transfer job (Android 14 and later). -->
+    <service
+      android:name="org.nyccsda.bibleaudiodownloads.BibleAudioTransferService"
+      android:exported="false"
+      android:permission="android.permission.BIND_JOB_SERVICE" />
   </application>
 </manifest>

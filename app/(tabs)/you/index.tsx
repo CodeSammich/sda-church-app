@@ -1,5 +1,5 @@
 import { UpdateContext } from '@/app/_layout';
-import { MenuCard } from '@/components/MenuCard';
+import { MenuCard, MenuCardSwitchVisual } from '@/components/MenuCard';
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { ShareAppDialog } from '@/components/ShareAppDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
@@ -21,12 +21,18 @@ import {
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import packageJson from '@/package.json';
+import {
+  getDownloadNotificationsEnabled,
+  hasDownloadNotifications,
+  setDownloadNotificationsEnabled,
+  subscribeDownloadNotifications,
+} from '@/services/DownloadNotifications';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { List, Text, TouchableRipple } from 'react-native-paper';
@@ -47,6 +53,8 @@ const allLabels = {
     offlineAudio: 'Offline Bible Audio',
     offlineAudioSub: 'Download Bible audio to listen with no connection',
     offlineAudioSize: (size: string) => `Downloaded: ${size}`,
+    notifications: 'Download notifications',
+    notificationsSub: Platform.OS === 'ios' ? 'Say when a Bible audio download is done' : 'Show a Bible audio download’s progress, and when it’s done',
     language: 'Language',
     languageSub: 'Change app language',
     contact: 'Connect',
@@ -73,6 +81,8 @@ const allLabels = {
     offlineAudio: '離線聖經音訊',
     offlineAudioSub: '下載聖經音訊，在沒有網路時收聽',
     offlineAudioSize: (size: string) => `已下載：${size}`,
+    notifications: '下載通知',
+    notificationsSub: Platform.OS === 'ios' ? '聖經音訊下載完成時通知' : '顯示聖經音訊下載的進度，以及何時完成',
     language: '語言',
     languageSub: '更改應用程式語言',
     contact: '聯繫',
@@ -99,6 +109,8 @@ const allLabels = {
     offlineAudio: '离线圣经音频',
     offlineAudioSub: '下载圣经音频，在没有网络时收听',
     offlineAudioSize: (size: string) => `已下载：${size}`,
+    notifications: '下载通知',
+    notificationsSub: Platform.OS === 'ios' ? '圣经音频下载完成时通知' : '显示圣经音频下载的进度，以及何时完成',
     language: '语言',
     languageSub: '更改应用语言',
     contact: '联系',
@@ -125,6 +137,8 @@ const allLabels = {
     offlineAudio: 'Audio bíblico sin conexión',
     offlineAudioSub: 'Descarga audio bíblico para escuchar sin conexión',
     offlineAudioSize: (size: string) => `Descargado: ${size}`,
+    notifications: 'Notificaciones de descarga',
+    notificationsSub: Platform.OS === 'ios' ? 'Avisar cuando termine una descarga de audio bíblico' : 'Mostrar el progreso de una descarga de audio bíblico, y cuándo termina',
     language: 'Idioma',
     languageSub: 'Cambiar idioma de la aplicación',
     contact: 'Conectar',
@@ -167,6 +181,8 @@ export default function YouScreen() {
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   // Phones only: the web streams Bible audio (#556).
   const offlineAudioBytes = useDownloadedBibleAudioBytes();
+  // Where the app's own notifications show a download (#610).
+  const notificationsOn = useSyncExternalStore(subscribeDownloadNotifications, getDownloadNotificationsEnabled);
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
 
   return (
@@ -254,6 +270,25 @@ export default function YouScreen() {
                     params: { backTo: '/you' },
                   } as any)
                 }
+              />
+            )}
+            {hasDownloadNotifications() && (
+              <MenuCard
+                title={labels.notifications}
+                description={labels.notificationsSub}
+                icon="bell-outline"
+                iconColor={theme.colors.primary}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: notificationsOn }}
+                rightElement={() => (
+                  <MenuCardSwitchVisual
+                    active={notificationsOn}
+                    activeColor={theme.colors.primary}
+                    inactiveColor={theme.colors.outline}
+                    thumbColor={theme.colors.onPrimary}
+                  />
+                )}
+                onPress={() => void setDownloadNotificationsEnabled(!notificationsOn)}
               />
             )}
           </List.Section>

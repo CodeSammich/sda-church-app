@@ -1,5 +1,6 @@
 import ExpoModulesCore
 import Foundation
+import UIKit
 
 /// Bible audio chapters handed to two background URLSessions (#611), which
 /// iOS keeps downloading while the iPhone is locked or the app is suspended.
@@ -81,6 +82,7 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
     let session: URLSession = allowMobileData ? anyNetwork! : wifi!
     let root = Self.comparable(audioRoot) + "/"
     let ids = Set(downloads.map(\.id))
+    BibleAudioNotifications.handedOver(groups: Set(downloads.map(\.group).filter { !$0.isEmpty }))
     cancelTasks(ids) {
       self.queue.addOperation { self.stopped.subtract(ids) }
       for download in downloads {
@@ -117,6 +119,12 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
             "mobileData": mobileData,
           ])
         }
+      }
+      // Nothing left, with the app on screen, whose page said so: no word
+      // later. Not when iOS woke the app in the background for the sessions'
+      // events, which say so themselves.
+      if result.isEmpty, await MainActor.run(body: { UIApplication.shared.applicationState == .active }) {
+        BibleAudioNotifications.forget()
       }
       done(result)
     }
@@ -156,6 +164,7 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
   func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
     guard case let (id, relative)? = Self.decode(downloadTask), !stopped.contains(id) else { return }
     if let response = downloadTask.response as? HTTPURLResponse, !(200...299).contains(response.statusCode) {
+      BibleAudioNotifications.failed()
       return
     }
     // Only into the app's own Bible audio folder.
@@ -178,12 +187,25 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
     }
   }
 
-  func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {}
+  func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    // Stopped by the member isn't a failure.
+    if let error = error as? URLError, error.code != .cancelled { BibleAudioNotifications.failed() }
+  }
 
+  // iOS woke the app for a session's events: once nothing's left, a word that
+  // it's done (#610), then iOS may put the app back to sleep.
   func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
     guard let identifier = session.configuration.identifier else { return }
-    DispatchQueue.main.async {
-      self.completionHandlers.removeValue(forKey: identifier)?()
+    let sessions: [URLSession] = [wifi!, anyNetwork!]
+    Task {
+      var left = 0
+      for each in sessions {
+        left += await each.allTasks.filter { $0.state == .running || $0.state == .suspended }.count
+      }
+      if left == 0 { BibleAudioNotifications.finished() }
+      DispatchQueue.main.async {
+        self.completionHandlers.removeValue(forKey: identifier)?()
+      }
     }
   }
 

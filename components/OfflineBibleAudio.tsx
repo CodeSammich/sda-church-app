@@ -28,6 +28,7 @@ import {
   type BibleAudioScopeStatus,
 } from '@/services/BibleAudioDownloads';
 import { BIBLE_BOOK_NAMES, BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP } from '@/services/BibleService';
+import { askForDownloadNotifications } from '@/services/DownloadNotifications';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
@@ -595,7 +596,10 @@ export function OfflineBibleAudio() {
       showAppAlert(labels.offlineTitle, labels.offline);
       return;
     }
-    const begin = (mobileData: boolean) => {
+    const begin = async (mobileData: boolean) => {
+      // The first long download, a section or more, asks for leave to show
+      // its progress (#610); never at launch.
+      await askForDownloadNotifications(scope.kind !== 'book').catch(() => undefined);
       try {
         downloadBibleAudio(option, scope, { mobileData });
       } catch (error) {
@@ -607,14 +611,14 @@ export function OfflineBibleAudio() {
       if (remainingBytes > BIBLE_AUDIO_CONFIRM_BYTES) {
         showAppAlert(labels.bigTitle(remaining), labels.big, [
           { text: labels.cancel, style: 'cancel' },
-          { text: labels.confirmDownload, onPress: () => begin(false) },
+          { text: labels.confirmDownload, onPress: () => void begin(false) },
         ]);
         return;
       }
-      begin(false);
+      void begin(false);
       return;
     }
-    askMobileData(remaining, begin);
+    askMobileData(remaining, (mobileData) => void begin(mobileData));
   };
 
   // "Delete the Gospels? (210 MB)", or for the whole Bible when only some is

@@ -1,6 +1,7 @@
 import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json';
-import { BIBLE_AUDIO_NARRATOR_ORDER } from '@/constants/BibleAudioNarrators';
+import { BIBLE_AUDIO_NARRATOR_ORDER, getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
 import { BIBLE_SECTIONS, type BibleTestament } from '@/constants/BibleSections';
+import type { SupportedLanguage } from '@/constants/LanguageContext';
 import { excludeFromBackup } from '@/modules/backup-exclusion';
 import { getBibleAudioSystemDownloads, type SystemDownloadStatus } from '@/modules/bible-audio-downloads';
 import {
@@ -490,13 +491,33 @@ const callSystem = <T>(call: () => Promise<T>): Promise<T> => {
 const chapterFile = ({ narrator, bookId, chapter }: Pick<Queued, 'narrator' | 'bookId' | 'chapter'>) =>
   new File(bookFolder(narrator, bookId), chapterFileName(chapter));
 
+// The language the phone's notifications name a download in (#610), as
+// "English – Souer (BSB)": the app's, set from its root.
+let notificationLanguage: SupportedLanguage = 'en';
+export const setBibleAudioDownloadLanguage = (language: SupportedLanguage) => {
+  notificationLanguage = language;
+};
+
 const handToSystem = (items: readonly Queued[], allowMobileData: boolean) => {
   const system = systemDownloads();
   if (!system || !items.length) return;
   const downloads = items.flatMap((item) => {
     const urls = getBibleAudioDownloadUrls(item.narrator, item.bookId, item.chapter);
     const id = keyOf(item);
-    return urls.length ? [{ id, url: urls[(tries.get(id) ?? 0) % urls.length], path: chapterFile(item).uri }] : [];
+    if (!urls.length) return [];
+    // The next source first, then the rest in turn, for a phone that tries them all.
+    const first = (tries.get(id) ?? 0) % urls.length;
+    const inTurn = [...urls.slice(first), ...urls.slice(0, first)];
+    return [
+      {
+        id,
+        url: inTurn[0],
+        fallbacks: inTurn.slice(1),
+        path: chapterFile(item).uri,
+        group: getBibleAudioNarratorName(item.narrator, notificationLanguage) ?? item.narrator,
+        bytes: Math.round((SIZES[item.narrator]?.[item.bookId] ?? 0) / Math.max(1, CHAPTERS.get(item.bookId) ?? 1)),
+      },
+    ];
   });
   downloads.forEach(({ id }) => handingOver.add(id));
   void callSystem(() => system.enqueue(downloads, allowMobileData)).finally(() =>
@@ -546,6 +567,7 @@ const applySystemStatuses = (statuses: readonly SystemDownloadStatus[]) => {
   heldForWifi.clear();
   heldBytes.clear();
   const failed: Queued[] = [];
+  const stoppedByPhone: string[] = [];
   for (const [key, item] of known) {
     if (live.has(key)) continue;
     if (handingOver.has(key)) {
@@ -566,6 +588,10 @@ const applySystemStatuses = (statuses: readonly SystemDownloadStatus[]) => {
     const item = known.get(status.id) ?? itemOf(status);
     if (!item) continue;
     const sources = getBibleAudioDownloadUrls(item.narrator, item.bookId, item.chapter).length;
+    if (status.state === 'stopped') {
+      stoppedByPhone.push(status.id);
+      continue;
+    }
     // Android retries a host that doesn't answer for minutes: try its mirror.
     if (status.state === 'failed' || (status.state === 'paused' && status.reason === 'retry' && sources > 1)) {
       failed.push(item);
@@ -583,7 +609,19 @@ const applySystemStatuses = (statuses: readonly SystemDownloadStatus[]) => {
       if (!item.mobileData && (pausedForWifi || isOnMobileData())) heldForWifi.add(status.id);
     }
   }
+  if (stoppedByPhone.length) stoppedFromNotification(stoppedByPhone);
   retryOnSystem(failed);
+};
+
+// Stop, on a download's notification (#610), stopped what the phone had: the
+// member's stop, as the X's, so none of it is asked for again.
+const stoppedFromNotification = (ids: readonly string[]) => {
+  const narrators = new Set(ids.map((id) => id.split('/')[0]));
+  for (const narrator of narrators) requested.delete(narrator);
+  ids.forEach((id) => tries.delete(id));
+  const system = systemDownloads();
+  if (system) void callSystem(() => system.cancel([...ids]));
+  saveRequests();
 };
 
 // The next source for each failed chapter, up to ATTEMPTS times round them all.
@@ -597,7 +635,8 @@ const retryOnSystem = (failed: readonly Queued[]) => {
   for (const item of failed) {
     const key = keyOf(item);
     const sources = Math.max(1, getBibleAudioDownloadUrls(item.narrator, item.bookId, item.chapter).length);
-    const count = (tries.get(key) ?? 0) + 1;
+    // A phone that tried every source has been round them once.
+    const count = (tries.get(key) ?? 0) + (system.triesEverySource ? sources : 1);
     if (count % sources === 0) failuresInARow += 1;
     if (count < sources * ATTEMPTS && failuresInARow < FAILURES_TO_STOP) {
       tries.set(key, count);

@@ -40,7 +40,7 @@ type MockTask = {
   url: string;
   path: string;
   mobileData: boolean;
-  state: 'waiting' | 'running' | 'paused' | 'failed';
+  state: 'waiting' | 'running' | 'paused' | 'failed' | 'stopped';
   reason: 'wifi' | 'network' | 'retry' | 'paused' | null;
   bytesWritten: number;
   totalBytes: number;
@@ -48,12 +48,16 @@ type MockTask = {
 const mockTasks = new Map<string, MockTask>();
 const mockSystem = {
   tasks: mockTasks,
-  enqueue: jest.fn(async (downloads: { id: string; url: string; path: string }[], mobileData: boolean) => {
+  // Android 14 and later: a chapter is tried from every source it's given.
+  triesEverySource: false,
+  enqueue: jest.fn(async (downloads: { id: string; url: string; path: string; fallbacks?: string[]; group?: string; bytes?: number }[], mobileData: boolean) => {
     for (const download of downloads) {
       mockTasks.set(download.id, { ...download, mobileData, state: 'waiting', reason: null, bytesWritten: 0, totalBytes: -1 });
     }
   }),
-  list: jest.fn(async () => [...mockTasks.values()].map(({ url, path, ...status }) => status)),
+  list: jest.fn(async () =>
+    [...mockTasks.values()].map(({ url, path, fallbacks, group, bytes, ...status }: MockTask & Record<string, unknown>) => status),
+  ),
   cancel: jest.fn(async (ids: string[]) => {
     ids.forEach((id) => mockTasks.delete(id));
   }),
@@ -85,6 +89,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   resetBibleAudioDownloadsForTests();
   mockSystem.tasks.clear();
+  mockSystem.triesEverySource = false;
   jest.clearAllMocks();
   mockNetwork.state = { type: 'WIFI', isConnected: true, isInternetReachable: true };
   mockNetwork.listeners.clear();
@@ -105,11 +110,18 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     const [downloads, mobileData] = lastEnqueue();
     expect(downloads).toHaveLength(28 + 16 + 24 + 21);
     expect(mobileData).toBe(false);
+    const [first, ...others] = getBibleAudioDownloadUrls(MANDARIN, 'MAT', 1);
     expect(downloads[0]).toEqual({
       id: 'cuv-mandarin/MAT/1',
-      url: getBibleAudioDownloadUrls(MANDARIN, 'MAT', 1)[0],
+      url: first,
+      // For a phone that tries each in turn with the app closed (Android 14 and later).
+      fallbacks: others,
       path: 'document/bible-audio/cuv-mandarin/MAT/1.mp3',
+      // What its notification calls it, and about how big it is.
+      group: 'Mandarin (Chinese Union Version)',
+      bytes: expect.any(Number),
     });
+    expect(downloads[0].bytes).toBeGreaterThan(100_000);
     downloadBibleAudio('souer', JUDE, { mobileData: true });
     await poll();
     expect(lastEnqueue()[1]).toBe(true);
@@ -207,6 +219,54 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     await poll(2);
     expect(lastEnqueue()[0][0].url).toBe(first);
     expect(getBibleAudioScopeStatus(MANDARIN, JUDE).downloading).toBe(true);
+  });
+
+  it('count a failure as a round of every source when the phone tried them all, and start the next from the next one', async () => {
+    mockSystem.triesEverySource = true;
+    downloadBibleAudio(MANDARIN, JUDE);
+    await poll();
+    const [first, second, third] = getBibleAudioDownloadUrls(MANDARIN, 'JUD', 1);
+    expect(lastEnqueue()[0][0]).toMatchObject({ url: first, fallbacks: [second, third] });
+    // Three rounds of all three sources, as the in-app downloader tries them, then it gives up.
+    for (let round = 1; round <= 3; round += 1) {
+      mockSystem.tasks.get('cuv-mandarin/JUD/1')!.state = 'failed';
+      await poll(2);
+      expect(mockSystem.enqueue).toHaveBeenCalledTimes(round < 3 ? round + 1 : 3);
+    }
+    expect(mockSystem.tasks.size).toBe(0);
+    expect(getBibleAudioScopeStatus(MANDARIN, JUDE).downloading).toBe(false);
+  });
+
+  it("treat Stop on the phone's notification as the member's stop, and not ask for it again", async () => {
+    downloadBibleAudio(MANDARIN, GOSPELS);
+    await poll();
+    finish('cuv-mandarin/MAT/1');
+    mockSystem.tasks.forEach((task) => (task.state = 'stopped'));
+    await poll();
+    expect(getBibleAudioScopeStatus(MANDARIN, GOSPELS)).toMatchObject({ downloading: false, downloadedChapters: 1 });
+    // The phone forgets them, and nothing's kept to hand over when the app starts again.
+    expect(mockSystem.tasks.size).toBe(0);
+    expect(mockFiles.has(REQUESTS)).toBe(false);
+  });
+
+  it('not hand over again, when the app starts, what was stopped from the notification while it was closed', async () => {
+    mockFiles.set(REQUESTS, JSON.stringify([{ narrator: MANDARIN, scope: JUDE, mobileData: false }]));
+    mockSystem.tasks.set('cuv-mandarin/JUD/1', {
+      id: 'cuv-mandarin/JUD/1',
+      url: 'https://example.org/1.mp3',
+      path: 'document/bible-audio/cuv-mandarin/JUD/1.mp3',
+      mobileData: false,
+      state: 'stopped',
+      reason: null,
+      bytesWritten: 0,
+      totalBytes: -1,
+    });
+    loadBibleAudioDownloads();
+    await poll(2);
+    expect(mockSystem.enqueue).not.toHaveBeenCalled();
+    expect(getBibleAudioScopeStatus(MANDARIN, JUDE).downloading).toBe(false);
+    expect(mockSystem.tasks.size).toBe(0);
+    expect(mockFiles.has(REQUESTS)).toBe(false);
   });
 
   it('stop after chapters keep failing every source, as when the hosts are down', async () => {
@@ -317,6 +377,12 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
       'modules/bible-audio-downloads/ios/BibleAudioDownloadSessions.swift',
       'modules/bible-audio-downloads/ios/BibleAudioDownloadsModule.swift',
       'modules/bible-audio-downloads/ios/BibleAudioDownloadsAppDelegate.swift',
+      'modules/bible-audio-downloads/ios/BibleAudioNotifications.swift',
+      'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioTransfers.kt',
+      'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioTransferService.kt',
+      'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioNotifications.kt',
+      'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioDownloadActionReceiver.kt',
+      'modules/bible-audio-downloads/android/src/main/AndroidManifest.xml',
       'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioDownloadStore.kt',
       'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioDownloadsModule.kt',
       'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioDownloadReceiver.kt',
@@ -375,6 +441,40 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     expect(kotlin).toContain('private const val FAILURES_TO_PAUSE = 6');
     expect(source).toContain('const FAILURES_TO_STOP = 6;');
     expect(kotlin).toContain('if (waiting.isEmpty() || tracked.getInt(FAILURES, 0) >= FAILURES_TO_PAUSE) return');
+  });
+
+  it("download with the app's own user-initiated jobs on Android 14 and later, which Android doesn't hold to an hour's quota", () => {
+    const read = (name: string) =>
+      readFileSync(join(process.cwd(), `modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/${name}`), 'utf8');
+    const transfers = read('BibleAudioTransfers.kt');
+    const service = read('BibleAudioTransferService.kt');
+    const module = read('BibleAudioDownloadsModule.kt');
+    // DownloadManager's downloads are the app's background jobs: on battery,
+    // out of sight, the emulator ran only 75 an hour.
+    expect(transfers).toContain('.setUserInitiated(true)');
+    expect(module.match(/Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.UPSIDE_DOWN_CAKE\) \{\n\s+BibleAudioTransfers/g)).toHaveLength(3);
+    // Wi-Fi only: Wi-Fi that isn't metered, so not a phone's hotspot, nor an
+    // unmetered mobile plan.
+    expect(transfers).toMatch(
+      /if \(!mobileData\) \{\n\s+addTransportType\(NetworkCapabilities\.TRANSPORT_WIFI\)\n\s+addCapability\(NetworkCapabilities\.NET_CAPABILITY_NOT_METERED\)/,
+    );
+    // Three at a time between both jobs, each chapter from each source in turn,
+    // carrying on where it stopped.
+    expect(transfers).toContain('const val AT_ONCE = 3');
+    expect(service).toContain('private val SHARED = Semaphore(BibleAudioTransfers.AT_ONCE)');
+    expect(service).toContain('for (url in transfer.urls)');
+    expect(service).toContain('connection.setRequestProperty("Range", "bytes=$offset-")');
+    // Partial files in the folder no backup takes; a web page is never kept as a chapter.
+    expect(transfers).toContain('File(context.noBackupFilesDir, PARTIAL_FOLDER)');
+    expect(service).toContain('connection.contentType?.startsWith("text/html") != true');
+    // Its notification at once, as Android requires; Stop and Android's Task Manager stop it all.
+    expect(service.indexOf('setNotification(')).toBeLessThan(service.indexOf('run.start()'));
+    expect(transfers).toContain('fun stopAll()');
+    expect(transfers).toContain('markStoppedByAndroidLocked()');
+    const manifest = readFileSync(join(process.cwd(), 'modules/bible-audio-downloads/android/src/main/AndroidManifest.xml'), 'utf8');
+    expect(manifest).toContain('android.permission.RUN_USER_INITIATED_JOBS');
+    expect(manifest).toContain('android:permission="android.permission.BIND_JOB_SERVICE"');
+    expect(manifest).toMatch(/BibleAudioDownloadActionReceiver"\n\s+android:exported="false"/);
   });
 
   it("keep Android's downloads going while locked, and leave no partial files behind", () => {
