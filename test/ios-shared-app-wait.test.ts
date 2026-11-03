@@ -79,7 +79,7 @@ describe('waiting for the shared app', () => {
     expect(step.if).toBe('${{ !matrix.builds }}');
     expect(step.timeout).toBe(false);
     const capture = workflow.slice(workflow.indexOf('\n  capture:\n'), workflow.indexOf('\n    steps:\n'));
-    expect(capture).toContain('\n    timeout-minutes: ${{ matrix.builds && 50 || 110 }}\n');
+    expect(capture).toContain('\n    timeout-minutes: ${{ matrix.builds && 60 || 120 }}\n');
     expect(step.maxQueuedSeconds).toBe(2700);
     expect(step.run).toContain('set -euo pipefail\n');
   });
