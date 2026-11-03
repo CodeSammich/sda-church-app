@@ -15,6 +15,7 @@ import { Divider, Text } from 'react-native-paper';
 const copy = {
   en: {
     listenOffline: 'Listen offline',
+    bufferingTip: 'Playback often stops to load. Download to listen without waiting.',
     open: 'Offline Bible Audio',
     downloading: 'Downloading…',
     book: (book: string) => `${book} downloaded`,
@@ -25,6 +26,7 @@ const copy = {
   },
   zh: {
     listenOffline: '離線收聽',
+    bufferingTip: '播放時常停下來載入。下載後即可收聽，不必等待。',
     open: '離線聖經音訊',
     downloading: '下載中…',
     book: (book: string) => `已下載${book}`,
@@ -35,6 +37,7 @@ const copy = {
   },
   'zh-cn': {
     listenOffline: '离线收听',
+    bufferingTip: '播放时常停下来加载。下载后即可收听，不必等待。',
     open: '离线圣经音频',
     downloading: '下载中…',
     book: (book: string) => `已下载${book}`,
@@ -45,6 +48,7 @@ const copy = {
   },
   es: {
     listenOffline: 'Escuchar sin conexión',
+    bufferingTip: 'La reproducción se detiene a menudo para cargar. Descarga el audio para escucharlo sin esperar.',
     open: 'Audio bíblico sin conexión',
     downloading: 'Descargando…',
     book: (book: string) => `${book} descargado`,
@@ -54,6 +58,10 @@ const copy = {
     nothing: 'Descarga un libro, una sección o toda la Biblia',
   },
 } as const;
+
+/** Why to download, when streaming keeps stopping to load (#595). */
+export const getBibleAudioDownloadTipLine = (language: SupportedLanguage) =>
+  (copy[language] || copy.en).bufferingTip;
 
 /**
  * What the row says about a narrator's downloads: that some are downloading,
@@ -79,6 +87,7 @@ export const getBibleAudioOfflineCaption = (
 export type BibleAudioOfflineSectionStyles = Readonly<{
   divider: StyleProp<ViewStyle>;
   sectionTitle: StyleProp<TextStyle>;
+  helper: StyleProp<TextStyle>;
   row: StyleProp<ViewStyle>;
   rowLabel: StyleProp<ViewStyle>;
   rowTitle: StyleProp<TextStyle>;
@@ -95,6 +104,8 @@ type BibleAudioOfflineSectionProps = Readonly<{
   styles: BibleAudioOfflineSectionStyles;
   /** Closes the popup and opens Offline Bible Audio at this narrator. */
   onOpen: (narrator: string) => void;
+  /** Says why to download, when streaming keeps stopping to load (#595). */
+  showsTip?: boolean;
 }>;
 
 /**
@@ -104,7 +115,15 @@ type BibleAudioOfflineSectionProps = Readonly<{
  * Phones only, and only for narrators the app may download (see
  * services/BibleAudioDownloads.ts).
  */
-export function BibleAudioOfflineSection({ book, onOpen, reader, styles, textScale, translationId }: BibleAudioOfflineSectionProps) {
+export function BibleAudioOfflineSection({
+  book,
+  onOpen,
+  reader,
+  showsTip = false,
+  styles,
+  textScale,
+  translationId,
+}: BibleAudioOfflineSectionProps) {
   const { language } = useContext(LanguageContext);
   const labels = copy[language] || copy.en;
   const theme = useAppTheme();
@@ -119,6 +138,11 @@ export function BibleAudioOfflineSection({ book, onOpen, reader, styles, textSca
       <Text variant="titleMedium" style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
         {labels.listenOffline}
       </Text>
+      {showsTip && (
+        <Text variant="bodyMedium" style={[styles.helper, { color: theme.colors.primary, paddingBottom: 8 }]}>
+          {labels.bufferingTip}
+        </Text>
+      )}
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel={`${labels.open}, ${caption}`}
