@@ -170,8 +170,8 @@ offline:
   animations (Android) on, only the dot shows. A pulse due while the screen is off waits
   until the app is back.
 - **In the popup:** it scrolls to Listen offline, which says "Playback often stops to
-  load. Download to listen without waiting." Screen readers hear the same line as the
-  button's hint, not as an announcement.
+  load. Download to listen without waiting." above the row that opens Offline Bible
+  Audio. Screen readers hear the same line as the button's hint, not as an announcement.
 - **Not nagging:** at most once each time the app starts, never again once Bible audio has
   been on the phone, and not for 7 days after the listener closes the popup without
   downloading.
