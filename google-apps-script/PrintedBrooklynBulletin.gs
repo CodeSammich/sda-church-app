@@ -18,17 +18,18 @@ function appendBrooklynOnlineZoomPanel_(cell) {
     ruleParent.asParagraph().setLineSpacing(1);
     ruleParent.asParagraph().setSpacingBefore(0);
     ruleParent.asParagraph().setSpacingAfter(0);
+    setPrintedRuleParagraphSize_(ruleParent.asParagraph());
   }
 
   appendBrooklynOnlineText_(
     cell,
     'Online Zoom / 線上 Zoom — Mandarin only / 僅限普通話',
-    8,
+    PRINTED_BULLETIN_TYPE.bodySize,
   );
   appendBrooklynOnlineText_(
     cell,
     '254 187 9535 | Password / 密碼: 760641',
-    8,
+    PRINTED_BULLETIN_TYPE.bodySize,
   );
   appendBrooklynOnlineSlotTable_(cell, [
     [
@@ -73,8 +74,8 @@ function appendBrooklynOnlineSlotTable_(cell, slots) {
 }
 
 function appendBrooklynOnlineSlot_(cell, slot) {
-  appendBrooklynOnlineText_(cell, slot[1], 8, false);
-  appendBrooklynOnlineText_(cell, slot[0], 8, false);
+  appendBrooklynOnlineText_(cell, slot[1], PRINTED_BULLETIN_TYPE.bodySize, false);
+  appendBrooklynOnlineText_(cell, slot[0], PRINTED_BULLETIN_TYPE.bodySize, false);
 }
 
 function appendBrooklynOnlineText_(cell, text, size, bold) {
@@ -199,7 +200,7 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
     cell,
     printedBilingualText_('BROOKLYN CHINESE SABBATH SCHOOL', '布魯克林華人團契 安息日學'),
   );
-  appendCenteredText_(cell, '10:00 am–11:25 am', 9, false);
+  appendCenteredText_(cell, '10:00 am–11:25 am', PRINTED_BULLETIN_TYPE.bodySize, false);
 
   appendBrooklynProgramTable_(cell, mergeBrooklynStudyRowsByAssignment_([
     [printedBilingualText_('Welcome', '歡迎'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
@@ -227,7 +228,7 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
   ]));
 
   appendHalfSpacer_(cell);
-  appendCompactItalicCenteredText_(cell, '† Five Minutes Break | 休息五分鐘 †', 8.5);
+  appendCompactItalicCenteredText_(cell, '† Five Minutes Break | 休息五分鐘 †');
 }
 
 function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
@@ -236,9 +237,9 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
     cell,
     printedBilingualText_('BROOKLYN CHINESE SABBATH WORSHIP', '布魯克林華人團契 聖日崇拜'),
   );
-  appendCenteredText_(cell, '11:30 am–1:00 pm', 9, false);
+  appendCenteredText_(cell, '11:30 am–1:00 pm', PRINTED_BULLETIN_TYPE.bodySize, false);
   appendHalfSpacer_(cell);
-  appendCompactItalicCenteredText_(cell, '† Silent Prayer | 請默禱 †', 8.5);
+  appendCompactItalicCenteredText_(cell, '† Silent Prayer | 請默禱 †');
   appendHalfSpacer_(cell);
 
   var worshipRowsBeforeSermon = [
@@ -289,7 +290,7 @@ function appendBrooklynWorshipPanel_(cell, bulletin, includeClosingRows) {
 function appendBrooklynMeetingsPanel_(cell, bulletin, nextBulletin) {
   var current = bulletin.brooklyn;
   var next = nextBulletin ? nextBulletin.brooklyn : null;
-  appendCenteredText_(cell, 'Announcements | 報告事項', 10.5, true);
+  appendCenteredText_(cell, 'Announcements | 報告事項', PRINTED_BULLETIN_TYPE.subheadingSize, true);
   appendPrintedAnnouncementsTable_(
     cell,
     getPhysicalPrintedAnnouncementEntries_(bulletin, 'brooklyn'),
@@ -308,30 +309,6 @@ function appendBrooklynMeetingsPanel_(cell, bulletin, nextBulletin) {
 
 function appendBrooklynCoverPanel_(cell, bulletin, format) {
   renderPrintedBrooklynCoverPanel_(cell, bulletin, format);
-}
-
-function appendBrooklynContactBlock_(cell) {
-  appendBodyText_(
-    cell,
-    printedBilingualText_(
-      'New York Chinese SDA Church\n7606 41st Ave, Elmhurst, NY 11373',
-      '紐約華人基督復臨安息日教會\n7606 41st Ave, Elmhurst, NY 11373',
-    ),
-  );
-  appendBodyText_(
-    cell,
-    printedBilingualText_(
-      'Brooklyn Chinese SDA Fellowship\nSaturday 10:30 am\nBay Ridge Spanish SDA Church\n5318 4th Avenue, Brooklyn',
-      '布魯克林安息日聚會\n每週六上午 10:30\nBay Ridge Spanish SDA Church\n5318 4th Avenue, Brooklyn',
-    ),
-  );
-  appendBodyText_(
-    cell,
-    printedBilingualText_(
-      'Flushing Fellowship\nThursday 7:00 pm–9:00 pm\n143-11 Willets Point Boulevard, Whitestone, NY 11357',
-      '法拉盛團契\n每週四晚上 7:00–9:00\n143-11 Willets Point Boulevard, Whitestone, NY 11357',
-    ),
-  );
 }
 
 function appendBrooklynCommunionPanel_(cell, bulletin) {

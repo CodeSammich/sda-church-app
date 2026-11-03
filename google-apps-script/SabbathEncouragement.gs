@@ -52,6 +52,53 @@ function normalizeSabbathEncouragementText_(text) {
     .join("\n\n");
 }
 
+/**
+ * The snapshot is in Simplified Chinese, like its source PDF, but the printed
+ * bulletin is in Traditional (#565). The Chinese column prints through
+ * toPrintedTraditionalChinese_, which converts every Simplified character the
+ * snapshot uses, then fixes the words whose conversion depends on context
+ * (關係 but 牢繫, 干犯 but 枯乾). Both lists come from OpenCC (cn to tw) and a
+ * read of every changed line (#603). The English column still translates the
+ * snapshot itself, so its Bible references keep matching SABBATH_BIBLE_BOOKS_.
+ */
+var SABBATH_ENCOURAGEMENT_SIMPLIFIED_ =
+  '万与专业丛东两严丧个丰临为丽举么义乐习乡买乱争于亏亘亚产亲亵仅仆从仪们价众优会伟传伤伪体余侣儿兑关兴养兽内写军决况净准减' +
+  '几凭击划则创别剥劝办务动励劳势区医华协单卖占却历压厌参发变号后吗听启呐响唤园围国图圣场坏块坚堕壮声处备复够头夸夺妆妇娱学' +
+  '宝实审宾对导寿将尽属岂岛师带帮干并广庄应废开异弃张弥弯强归当录征径忧怀怜总恒恳恶恼悦悯惧惭惯愿懒战户执扬护报担拣择挂挡挥' +
+  '损换捣据搅摆敌数斗无旧时显晓机杂权条来极标树样检棱欢欧毁毕气没沦泼洁洒济涌渎温满灯灵点炼烦热爱牵犹献环现画畅盖着础确碍礼' +
+  '祷离种称稣穷窃竞筹简类粮紧约纪纯纳纷线练细终经绑结绕给络绝统继绩绪续维编缘罗耻职联聪肃肴胜脉脑脚脱艳节苍范荣获营虑虚虽衔' +
+  '补装见观视觉触誉计认讨让训议讯记讲许论设证评识诉词试诗诚话该诫语误诱说诵请诸读课谁调谅谆谈谋谐谕谟谢谦谨财责货质贫购贵资' +
+  '赋赎赏赐赚赛赞赶趋跃践车转轰轻载较辈辉辑辩边达过迈还这进远违连迟适选遗里鉴钉钱铁铭铺链锁锅错镇长门闪问闲间阅阳阴阵际陨险' +
+  '随隐难雇静页项顺须顾颁颂预领题额风饬饭饮饰饼马驳驴驾验骗黄齐龙';
+var SABBATH_ENCOURAGEMENT_TRADITIONAL_ =
+  '萬與專業叢東兩嚴喪個豐臨為麗舉麼義樂習鄉買亂爭於虧亙亞產親褻僅僕從儀們價眾優會偉傳傷偽體餘侶兒兌關興養獸內寫軍決況淨準減' +
+  '幾憑擊劃則創別剝勸辦務動勵勞勢區醫華協單賣佔卻歷壓厭參發變號後嗎聽啟吶響喚園圍國圖聖場壞塊堅墮壯聲處備復夠頭誇奪妝婦娛學' +
+  '寶實審賓對導壽將盡屬豈島師帶幫幹並廣莊應廢開異棄張彌彎強歸當錄徵徑憂懷憐總恆懇惡惱悅憫懼慚慣願懶戰戶執揚護報擔揀擇掛擋揮' +
+  '損換搗據攪擺敵數鬥無舊時顯曉機雜權條來極標樹樣檢稜歡歐毀畢氣沒淪潑潔灑濟湧瀆溫滿燈靈點煉煩熱愛牽猶獻環現畫暢蓋著礎確礙禮' +
+  '禱離種稱穌窮竊競籌簡類糧緊約紀純納紛線練細終經綁結繞給絡絕統繼績緒續維編緣羅恥職聯聰肅餚勝脈腦腳脫豔節蒼範榮獲營慮虛雖銜' +
+  '補裝見觀視覺觸譽計認討讓訓議訊記講許論設證評識訴詞試詩誠話該誡語誤誘說誦請諸讀課誰調諒諄談謀諧諭謨謝謙謹財責貨質貧購貴資' +
+  '賦贖賞賜賺賽贊趕趨躍踐車轉轟輕載較輩輝輯辯邊達過邁還這進遠違連遲適選遺裡鑑釘錢鐵銘鋪鏈鎖鍋錯鎮長門閃問閒間閱陽陰陣際隕險' +
+  '隨隱難僱靜頁項順須顧頒頌預領題額風飭飯飲飾餅馬駁驢駕驗騙黃齊龍';
+var SABBATH_ENCOURAGEMENT_TRADITIONAL_WORDS_ = Object.freeze([
+  ['周期', '週期'], ['一周', '一週'], ['每周', '每週'], ['全周', '全週'], ['只手', '隻手'], ['只羊', '隻羊'],
+  ['幹犯', '干犯'], ['枯幹', '枯乾'], ['借著', '藉著'], ['借以', '藉以'], ['借此', '藉此'], ['也象', '也像'],
+  ['日象', '日像'], ['當象', '當像'], ['好象', '好像'], ['可象', '可像'], ['獸象', '獸像'], ['必象', '必像'],
+  ['盡量', '儘量'], ['盡速', '儘速'], ['盡可', '儘可'], ['贊美', '讚美'], ['頌贊', '頌讚'], ['松散', '鬆散'],
+  ['明了', '明瞭'], ['標志', '標誌'], ['雜志', '雜誌'], ['托付', '託付'], ['牢系', '牢繫'], ['聯系', '聯繫'],
+  ['關系', '關係'], ['答復', '答覆'], ['編發', '編髮'], ['制備', '製備'], ['金鏈', '金鍊'],
+]);
+
+function toPrintedTraditionalChinese_(text) {
+  var converted = String(text || '').replace(/[\u3400-\u9fff]/g, function (character) {
+    var index = SABBATH_ENCOURAGEMENT_SIMPLIFIED_.indexOf(character);
+    return index < 0 ? character : SABBATH_ENCOURAGEMENT_TRADITIONAL_.charAt(index);
+  });
+  SABBATH_ENCOURAGEMENT_TRADITIONAL_WORDS_.forEach(function (word) {
+    converted = converted.split(word[0]).join(word[1]);
+  });
+  return converted;
+}
+
 var SABBATH_BIBLE_BOOKS_ = Object.freeze({
   '创': { id: 'GEN', label: 'Genesis' },
   '出': { id: 'EXO', label: 'Exodus' },
@@ -308,7 +355,7 @@ function appendBrooklynEncouragementPage_(body, bulletin) {
     body,
     function (cell) {
       // Keep all Chinese in this panel regular: no bold and no underline.
-      appendSabbathEncouragementColumn_(cell, "安息日勉勵", getSabbathEncouragementPageText_(bulletin.date), 10, false, false, false);
+      appendSabbathEncouragementColumn_(cell, "安息日勉勵", toPrintedTraditionalChinese_(getSabbathEncouragementPageText_(bulletin.date)), 10, false, false, false);
       appendSabbathEncouragementVerseColumn_(
         cell,
         bulletin.brooklyn,
@@ -336,6 +383,7 @@ function appendSabbathEncouragementVerseColumn_(cell, location, bibleTranslation
     ruleParent.asParagraph().setLineSpacing(1);
     ruleParent.asParagraph().setSpacingBefore(0);
     ruleParent.asParagraph().setSpacingAfter(0);
+    setPrintedRuleParagraphSize_(ruleParent.asParagraph());
   }
 
   var referenceLabels = formatPhysicalBibleReferenceLabels_(location, bibleTranslations);
@@ -356,7 +404,7 @@ function appendSabbathEncouragementVerseColumn_(cell, location, bibleTranslation
   appendSabbathEncouragementVerseText_(cell, reference, 10, true, 4);
   var paragraph = cell.appendParagraph(text);
   paragraph.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
-  paragraph.setLineSpacing(1.08);
+  paragraph.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
   paragraph.setSpacingBefore(0);
   paragraph.setSpacingAfter(0);
   var verseTextParagraph = paragraph.editAsText();
@@ -366,7 +414,7 @@ function appendSabbathEncouragementVerseColumn_(cell, location, bibleTranslation
 function appendSabbathEncouragementVerseText_(cell, text, size, bold, spacingAfter, underline) {
   var paragraph = cell.appendParagraph(String(text || ''));
   paragraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-  paragraph.setLineSpacing(1.08);
+  paragraph.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
   paragraph.setSpacingBefore(0);
   paragraph.setSpacingAfter(spacingAfter || 0);
   var rendered = paragraph.editAsText();
@@ -388,7 +436,7 @@ function appendSabbathEncouragementColumn_(cell, heading, text, size, showDiscla
     disclaimer.setLineSpacing(1);
     disclaimer.setSpacingBefore(0);
     disclaimer.setSpacingAfter(4);
-    styleText_(disclaimer.editAsText(), 7, false);
+    styleText_(disclaimer.editAsText(), PRINTED_BULLETIN_TYPE.bodySize, false);
     disclaimer.editAsText().setItalic(true);
   }
   var paragraphs = String(text || "").split(/\n\n/);
@@ -405,7 +453,7 @@ function appendSabbathEncouragementColumn_(cell, heading, text, size, showDiscla
   paragraphs.forEach(function (paragraph, index) {
     var rendered = cell.appendParagraph(paragraph);
     rendered.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
-    rendered.setLineSpacing(1.08);
+    rendered.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
     rendered.setSpacingBefore(0);
     rendered.setSpacingAfter(0);
     var renderedText = rendered.editAsText();
@@ -425,7 +473,7 @@ function appendSabbathEncouragementColumn_(cell, heading, text, size, showDiscla
 
 function appendSabbathEncouragementHeading_(cell, heading, bold, underline) {
   // Keep this heading clearly above the 10-point body text without using the
-  // oversized 15-point general panel heading. The verse panel uses the same
+  // 13-point general panel heading. The verse panel uses the same
   // size so the two halves read as one designed spread.
   var paragraph = cell.appendParagraph(String(heading || ''));
   paragraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
@@ -445,7 +493,7 @@ function appendSabbathEncouragementHeading_(cell, heading, bold, underline) {
 }
 
 function styleSabbathEncouragementText_(text, size, bold) {
-  styleText_(text, size, bold, { preserveCjkFont: true });
+  styleText_(text, size, bold);
   // CJK text must stay regular even when a surrounding English heading is
   // bold. Explicitly clear inherited CJK bold and underline styles.
   setPrintedCjkBold_(text, text.getText(), false);

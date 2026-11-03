@@ -21,7 +21,7 @@ function appendFootWashingPanel_(cell, bulletin) {
   ]);
   appendSpacer_(cell);
   appendSpacer_(cell);
-  appendCompactItalicCenteredText_(cell, getPrintedCommunionFootWashingInstruction_(), 8.5);
+  appendCompactItalicCenteredText_(cell, getPrintedCommunionFootWashingInstruction_());
 }
 
 function appendCommunionOpeningActionsPanel_(cell, bulletin, locationKey) {
@@ -192,39 +192,11 @@ function appendPrintedCommunionPassageBox_(cell, bulletin, kind) {
     {
       borderWidth: 0.75,
       borderColor: '#000000',
-      columnWidths: [170, 190],
+      columnWidths: [140, 220],
       alignments: [
         DocumentApp.HorizontalAlignment.LEFT,
         DocumentApp.HorizontalAlignment.LEFT,
       ],
-      fontSize: 8,
-      headerFontSize: 8,
-      paddingTop: 1,
-      paddingBottom: 1,
-    },
-  );
-}
-
-function appendPrintedCommunionReadingPassageBox_(cell, bulletin, readingIndex) {
-  var reading = PRINTED_COMMUNION_LAYOUT.readings[readingIndex];
-  var passages = bulletin.physicalCommunionReadingPassages || {};
-  var passage = passages[reading.reference] || {};
-  appendDataTable_(
-    cell,
-    [
-      [reading.referenceChinese, reading.reference],
-      [passage.chinese || reading.referenceChinese, passage.english || reading.reference],
-    ],
-    {
-      borderWidth: 0.75,
-      borderColor: '#000000',
-      columnWidths: [170, 190],
-      alignments: [
-        DocumentApp.HorizontalAlignment.LEFT,
-        DocumentApp.HorizontalAlignment.LEFT,
-      ],
-      fontSize: 8,
-      headerFontSize: 8,
       paddingTop: 1,
       paddingBottom: 1,
     },

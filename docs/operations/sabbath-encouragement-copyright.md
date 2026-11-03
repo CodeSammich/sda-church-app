@@ -102,8 +102,9 @@ original English edition, so the English column is a machine translation from th
 labeled as one. The table above records how each source should be treated; the script
 treats every source the same way:
 
-- **Chinese column:** the page's text from the snapshot, unchanged apart from line breaks,
-  including its Chinese Bible quotations and citations.
+- **Chinese column:** the page's text from the snapshot, unchanged apart from line breaks
+  and its conversion from Simplified to Traditional characters (#603), including its
+  Chinese Bible quotations and citations.
 - **English column:** each paragraph is machine translated from Chinese by Google's
   `LanguageApp`. That includes the Ellen White quotations, their citations, and the headings, so
   her words appear as a translation from the Chinese rather than in her original English
