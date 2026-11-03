@@ -556,7 +556,7 @@ jobs:
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The preview is taking the iPhone, iPad, and Android screenshots for commit \`${SHA:0:7}\`. That takes 30 to 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The preview is taking the iOS (iPhone and iPad) and Android screenshots for commit \`${SHA:0:7}\`. That takes 30 to 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY
@@ -565,7 +565,7 @@ jobs:
 
   review-comment:
     # Tells the release PR's reviewer where this commit's screenshots are, the
-    # iPhone's and Android's, and how to approve them, for the "Screenshots
+    # iOS (iPhone and iPad) and Android ones, and how to approve them, for the "Screenshots
     # reviewed" check (#331, #372). key-screens-review.yml writes it, after
     # waiting for the Android run, which usually finishes first. Each run
     # replaces the previous comment, and a rerun of Android's join refreshes it
