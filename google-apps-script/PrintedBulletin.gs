@@ -12,6 +12,35 @@
  * Communion service content both locations print is in PrintedCommunionBulletin.gs.
  */
 
+/**
+ * The pastor's type rules for the printed bulletin (#603): English in Times New
+ * Roman, Chinese in one Song (Ming) style face, and no text under 10 points.
+ * The Chinese font must come from Google Docs' own font list: Docs prints
+ * nothing else, so a Mac font such as 宋體-繁 would print in Docs' fallback.
+ * UoqMunThenKhung is the only Ming style face in that list.
+ *
+ * UoqMunThenKhung has every common Traditional character but lacks most
+ * Simplified-only ones (张, 陈) and some rare ones. Each character it lacks
+ * prints in the fallback font, and the rest of its name or verse stays in
+ * UoqMunThenKhung.
+ *
+ * Staff can change any of the fonts without a deploy by setting its Script
+ * Property (Apps Script → Project Settings → Script properties) to a name from
+ * Docs' Font → More fonts list; see readPrintedBulletinFonts_.
+ */
+var PRINTED_BULLETIN_TYPE = Object.freeze({
+  latinFont: 'Times New Roman',
+  chineseFont: 'UoqMunThenKhung',
+  chineseFallbackFont: 'Noto Sans SC',
+  latinFontProperty: 'PRINTED_BULLETIN_LATIN_FONT',
+  chineseFontProperty: 'PRINTED_BULLETIN_CJK_FONT',
+  chineseFallbackFontProperty: 'PRINTED_BULLETIN_CJK_FALLBACK_FONT',
+  bodySize: 10,
+  subheadingSize: 11,
+  headingSize: 13,
+  lineSpacing: 1,
+});
+
 var PRINTED_BULLETIN_CONFIG = Object.freeze({
   churchName: 'New York Chinese Seventh-day Adventist Church',
   churchNameChinese: '基督復臨安息日會紐約華人教會',
@@ -63,8 +92,10 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   bookletHorizontalMargin: 14,
   bookletHalfWidth: 368,
   bookletFoldGutter: 28,
-  regularCoverImageMaxWidth: 490,
-  communionCoverImageMaxWidth: 340,
+  // The cover art is a little smaller than before #603 to leave room for the
+  // 10-point contact and Zoom lines below it.
+  regularCoverImageMaxWidth: 460,
+  communionCoverImageMaxWidth: 320,
   studyTime: '10:00 am–11:25 am  |  上午 10:00–11:25',
   worshipTime: '11:40 am–1:00 pm  |  上午 11:40–下午 1:00',
   bibleApiBaseUrl: 'https://bible.helloao.org/api',
@@ -1242,6 +1273,8 @@ function getPrintedBulletinPropertyKey_(prefix, location, date) {
 
 function renderPrintedBulletinDocument_(document, bulletin, nextBulletin, format, location) {
   var body = document.getBody();
+  // Read the font Script Properties once per Doc, not once per paragraph.
+  printedBulletinFonts_ = readPrintedBulletinFonts_();
 
   body.clear();
   body.setPageWidth(PRINTED_BULLETIN_CONFIG.pageWidth);
@@ -1289,8 +1322,8 @@ function appendSharedCoverPanel_(cell, bulletin, format, location) {
       PRINTED_BULLETIN_CONFIG.churchNameChinese,
     ),
   );
-  appendCenteredText_(cell, primaryAddress, 8.5, true);
-  appendCenteredText_(cell, formatSharedCoverDate_(bulletin.date), 9, true);
+  appendCenteredText_(cell, primaryAddress, PRINTED_BULLETIN_TYPE.bodySize, true);
+  appendCenteredText_(cell, formatSharedCoverDate_(bulletin.date), PRINTED_BULLETIN_TYPE.bodySize, true);
   appendPrintedBulletinCoverImage_(cell, format);
   appendSharedCoverContactColumns_(cell);
 }
@@ -1335,14 +1368,11 @@ function appendSharedCoverContactLines_(cell, lines, alignment) {
   lines.forEach(function (line) {
     var paragraph = cell.appendParagraph(line.text);
     paragraph.setAlignment(alignment);
-    paragraph.setLineSpacing(1.05);
+    paragraph.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
     paragraph.setSpacingBefore(0);
     paragraph.setSpacingAfter(0);
     var rendered = paragraph.editAsText();
-    var isBold = line.bold !== false;
-    styleText_(rendered, line.italic ? 7.5 : 8, isBold, {
-      preserveCjkFont: isBold,
-    });
+    styleText_(rendered, PRINTED_BULLETIN_TYPE.bodySize, line.bold !== false);
     rendered.setItalic(Boolean(line.italic));
   });
 }
@@ -2301,12 +2331,25 @@ function appendCompactPageBreak_(body) {
       ? last.asParagraph()
       : null;
   var pageBreak = paragraph ? paragraph.appendPageBreak() : body.appendPageBreak();
+  pageBreak.getParent().setAttributes(getCompactParagraphAttributes_());
+}
+
+// A rule sits in a paragraph of Docs' default 11-point size. Three points
+// leaves room for the line and gives the 10-point text the rest (#603).
+function setPrintedRuleParagraphSize_(paragraph) {
+  var attributes = {};
+  attributes[DocumentApp.Attribute.FONT_SIZE] = 3;
+  paragraph.setAttributes(attributes);
+}
+
+// One-point type and no spacing, for a paragraph that must take no room.
+function getCompactParagraphAttributes_() {
   var attributes = {};
   attributes[DocumentApp.Attribute.FONT_SIZE] = 1;
   attributes[DocumentApp.Attribute.LINE_SPACING] = 1;
   attributes[DocumentApp.Attribute.SPACING_BEFORE] = 0;
   attributes[DocumentApp.Attribute.SPACING_AFTER] = 0;
-  pageBreak.getParent().setAttributes(attributes);
+  return attributes;
 }
 
 function appendBookletContentTable_(container, leftRenderer, rightRenderer) {
@@ -2321,6 +2364,14 @@ function appendBookletContentTable_(container, leftRenderer, rightRenderer) {
   leftCell.clear();
   gutterCell.clear();
   rightCell.clear();
+  // clear() leaves an empty paragraph in Docs' default 11-point size at the
+  // top of each panel. Shrinking it gives the 10-point text that room (#603).
+  [leftCell, rightCell].forEach(function (cell) {
+    var leadingParagraph = getLeadingEmptyParagraph_(cell);
+    if (leadingParagraph) {
+      leadingParagraph.setAttributes(getCompactParagraphAttributes_());
+    }
+  });
   leftCell.setPaddingBottom(0);
   gutterCell.setPaddingLeft(0);
   gutterCell.setPaddingRight(0);
@@ -2340,6 +2391,7 @@ function appendBookletFooter_(container, footerRenderer, footerOptions) {
         : 0,
     );
     ruleParent.asParagraph().setSpacingAfter(0);
+    setPrintedRuleParagraphSize_(ruleParent.asParagraph());
   }
   var qrColumns = footerOptions && footerOptions.qrColumns;
   var qrCount = qrColumns ? Math.max(1, footerOptions.qrCount || 3) : 0;
@@ -2428,30 +2480,6 @@ function centerPrintedBulletinImage_(image) {
   }
 }
 
-function appendCoverMeetingSchedule_(cell) {
-  appendSpacer_(cell);
-  [
-    ['安息日學（週六）', 'Sabbath School (Sat): 10:00 am - 11:25 am'],
-    ['聖日崇拜（週六）', 'Divine Worship (Sat): 11:40 am - 01:00 pm'],
-    ['青年團契（週六）', 'Youth Fellowship (Sat): 02:00 pm - 03:30 pm'],
-    ['法拉盛團契（週四）', 'Flushing Fellowship (Thurs): 07:00 pm - 09:00 pm'],
-  ].forEach(function (line) {
-    var paragraph = cell.appendParagraph(line[0] + '  ' + line[1]);
-    paragraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-    paragraph.setSpacingBefore(0);
-    paragraph.setSpacingAfter(0);
-    styleText_(paragraph.editAsText(), 8, false);
-  });
-  appendSpacer_(cell);
-}
-
-function appendCoverWelcomeBlock_(cell) {
-  appendCenteredText_(cell, '歡迎各界人士來研究聖經，崇拜上帝，與祂主恩', 9, true);
-  appendCenteredText_(cell, 'All Are Welcome to Our Meetings', 10, true);
-  appendCenteredText_(cell, '76-06 41st Avenue, Elmhurst, NY 11373-1030', 8, false);
-  appendCenteredText_(cell, 'Telephone: 1-718-205-8618', 8, false);
-}
-
 function appendPrintedAnnouncementsTable_(cell, entries) {
   entries = entries || [];
   if (!entries.length) {
@@ -2459,8 +2487,8 @@ function appendPrintedAnnouncementsTable_(cell, entries) {
   }
 
   // Keep the submitted announcement text verbatim. The table only changes
-  // presentation: a wider English column, matching row heights, and a smaller
-  // font for unusually long rows when the available page area is tight.
+  // presentation: a wider English column and matching row heights. Long
+  // announcements stay at body size (#603); staff shorten them in the Doc.
   var table = cell.appendTable(
     entries.map(function (entry) {
       return [String(entry.chinese || ''), String(entry.english || '')];
@@ -2474,7 +2502,6 @@ function appendPrintedAnnouncementsTable_(cell, entries) {
 
   entries.forEach(function (entry, rowIndex) {
     var row = table.getRow(rowIndex);
-    var rowFontSize = getPrintedAnnouncementRowFontSize_(entry);
     [entry.chinese, entry.english].forEach(function (text, columnIndex) {
       var numberedText = formatPrintedAnnouncementNumberedText_(text, rowIndex);
       var tableCell = row.getCell(columnIndex);
@@ -2484,7 +2511,7 @@ function appendPrintedAnnouncementsTable_(cell, entries) {
       tableCell.setPaddingLeft(1);
       tableCell.setPaddingRight(1);
       tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
-      appendPrintedAnnouncementTableCell_(tableCell, numberedText, rowFontSize);
+      appendPrintedAnnouncementTableCell_(tableCell, numberedText);
     });
   });
 }
@@ -2494,18 +2521,25 @@ function formatPrintedAnnouncementNumberedText_(value, rowIndex) {
   return text ? String(Number(rowIndex) + 1) + '. ' + text : '';
 }
 
-function appendPrintedAnnouncementTableCell_(cell, value, fontSize) {
+function appendPrintedAnnouncementTableCell_(cell, value) {
   var text = protectPrintedChinesePunctuation_(String(value || '').trim());
   if (!text) {
     return;
   }
-  var paragraph = cell.appendParagraph(text);
+  // Write into the empty paragraph clear() leaves, so no blank 11-point line
+  // sits above each announcement.
+  var paragraph = getLeadingEmptyParagraph_(cell);
+  if (paragraph) {
+    paragraph.setText(text);
+  } else {
+    paragraph = cell.appendParagraph(text);
+  }
   paragraph.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
-  paragraph.setLineSpacing(1.25);
+  paragraph.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
   paragraph.setSpacingBefore(0);
   paragraph.setSpacingAfter(0);
   var rendered = paragraph.editAsText();
-  styleText_(rendered, fontSize, false);
+  styleText_(rendered, PRINTED_BULLETIN_TYPE.bodySize, false);
   var firstSentenceLength = getFirstPrintedAnnouncementSentenceLength_(text);
   if (firstSentenceLength > 0) {
     setPrintedLatinBold_(rendered, 0, firstSentenceLength - 1);
@@ -2524,38 +2558,6 @@ function protectPrintedChinesePunctuation_(text) {
     /([\u3400-\u9fff])([，。！？；：、）》」』】”’])/g,
     '$1\uFEFF$2',
   );
-}
-
-function getPrintedAnnouncementRowFontSize_(entry) {
-  var chineseLines = estimatePrintedAnnouncementLines_(entry && entry.chinese);
-  var englishLines = estimatePrintedAnnouncementLines_(entry && entry.english);
-  var estimatedLines = Math.max(chineseLines, englishLines);
-  if (estimatedLines > 24) {
-    return 6.5;
-  }
-  if (estimatedLines > 19) {
-    return 7;
-  }
-  if (estimatedLines > 15) {
-    return 7.5;
-  }
-  if (estimatedLines > 12) {
-    return 8;
-  }
-  return 8.5;
-}
-
-function estimatePrintedAnnouncementLines_(value) {
-  var text = String(value || '').trim();
-  if (!text) {
-    return 0;
-  }
-  return text.split(/\r?\n/).reduce(function (total, line) {
-    var widthUnits = Array.prototype.reduce.call(line, function (sum, character) {
-      return sum + (/^[\u3400-\u9fff]$/.test(character) ? 1 : 0.5);
-    }, 0);
-    return total + Math.max(1, Math.ceil(widthUnits / 34));
-  }, 0);
 }
 
 function getPhysicalPrintedAnnouncementEntries_(bulletin, location) {
@@ -2591,27 +2593,6 @@ function getPhysicalPrintedAnnouncementText_(bulletin, location) {
     .join('\n\n');
 }
 
-function appendPrintedAnnouncement_(cell, entry) {
-  [entry && entry.chinese, entry && entry.english].forEach(function (text) {
-    text = String(text || '').trim();
-    if (!text) {
-      return;
-    }
-    var paragraph = cell.appendParagraph(text);
-    paragraph.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
-    paragraph.setLineSpacing(1.25);
-    paragraph.setSpacingBefore(0);
-    paragraph.setSpacingAfter(0);
-    var rendered = paragraph.editAsText();
-    styleText_(rendered, 9, false);
-    var firstSentenceLength = getFirstPrintedAnnouncementSentenceLength_(text);
-    if (firstSentenceLength > 0) {
-      setPrintedLatinBold_(rendered, 0, firstSentenceLength - 1);
-    }
-  });
-  appendSpacer_(cell);
-}
-
 function getFirstPrintedAnnouncementSentenceLength_(text) {
   var value = String(text || '');
   if (!value) {
@@ -2626,7 +2607,7 @@ function appendGivingText_(cell, options) {
   appendGivingHeadingText_(
     cell,
     'Tithes & Offerings | 什一奉獻與自由奉獻',
-    10.5,
+    PRINTED_BULLETIN_TYPE.subheadingSize,
     true,
     options.reuseLeadingParagraph,
   );
@@ -2637,14 +2618,14 @@ function appendGivingText_(cell, options) {
       'Cash offerings: for a tax-deductible receipt, write your English name on the church envelope as Last, First or First Last. Please print clearly (no cursive or calligraphy) so the treasurer can read it.',
       '現金奉獻：如需可扣稅收據，請在教會奉獻信封上以英文或拼音清楚寫上「姓，名」或「名姓」。為方便司庫辨認，請用正楷，不要使用草書或行書。',
     ),
-    8,
+    PRINTED_BULLETIN_TYPE.bodySize,
     false,
     0.9,
   );
   appendCompactCenteredText_(
     cell,
     'Stocks/equities: We recommend donor-advised funds; see our church\'s mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
-    8,
+    PRINTED_BULLETIN_TYPE.bodySize,
     false,
     0.9,
   );
@@ -2656,7 +2637,6 @@ function appendGivingQrPlaceholders_(cell, options) {
   var location = options.location || 'queens';
   var imageMaxWidth = compact ? 50 : 58;
   var cellPadding = compact ? 0 : 3;
-  var labelFontSize = compact ? 7.5 : 8;
   var reuseLeadingParagraph = Boolean(options.reuseLeadingParagraph);
   // The outer footer cell starts with an empty paragraph after clear(). Keep a
   // reference and remove it only after inserting the QR table; removing it
@@ -2679,11 +2659,12 @@ function appendGivingQrPlaceholders_(cell, options) {
     tableCell.setPaddingLeft(0);
     tableCell.setPaddingRight(0);
     tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
+    // Put each code in the paragraph clear() leaves, so no blank 11-point
+    // line sits above it.
     appendGivingQrPlaceholderCell_(tableCell, item, {
       imageMaxWidth: imageMaxWidth,
-      labelFontSize: labelFontSize,
       location: location,
-      reuseLeadingParagraph: reuseLeadingParagraph,
+      reuseLeadingParagraph: true,
     });
   });
 }
@@ -2693,7 +2674,6 @@ function appendGivingQrPlaceholderCells_(cells, options) {
   var compact = Boolean(options.compact);
   var imageMaxWidth = compact ? 50 : 58;
   var cellPadding = compact ? 0 : 3;
-  var labelFontSize = compact ? 7.5 : 8;
   getGivingQrItems_(options.location || 'queens').forEach(function (item, index) {
     var tableCell = cells[index];
     if (!tableCell) {
@@ -2707,7 +2687,6 @@ function appendGivingQrPlaceholderCells_(cells, options) {
     tableCell.setVerticalAlignment(DocumentApp.VerticalAlignment.TOP);
     appendGivingQrPlaceholderCell_(tableCell, item, {
       imageMaxWidth: imageMaxWidth,
-      labelFontSize: labelFontSize,
       location: options.location || 'queens',
       reuseLeadingParagraph: Boolean(options.reuseLeadingParagraph),
     });
@@ -2746,7 +2725,7 @@ function appendGivingQrPlaceholderCell_(tableCell, item, options) {
   } catch (error) {
     Logger.log(item.label + ' QR image could not be loaded: ' + error);
   }
-  appendCompactCenteredText_(tableCell, item.label, options.labelFontSize, true);
+  appendCompactCenteredText_(tableCell, item.label, PRINTED_BULLETIN_TYPE.bodySize, true);
 }
 
 function getGivingQrItems_(location) {
@@ -2938,7 +2917,9 @@ function appendHorizontalScheduleTable_(cell, current, next, entries, currentDat
   appendDataTable_(cell, rows, {
     borderWidth: 0.75,
     borderColor: '#000000',
-    columnWidths: [18, 55, 58, 50, 58, 50, 58],
+    // Sized for 10-point text: the narrow number column and 1-point side
+    // padding leave the names as much room as the panel allows.
+    columnWidths: [16, 66, 58, 62, 46, 62, 46],
     alignments: [
       DocumentApp.HorizontalAlignment.LEFT,
       DocumentApp.HorizontalAlignment.CENTER,
@@ -2948,10 +2929,10 @@ function appendHorizontalScheduleTable_(cell, current, next, entries, currentDat
       DocumentApp.HorizontalAlignment.CENTER,
       DocumentApp.HorizontalAlignment.CENTER,
     ],
-    fontSize: 7,
-    headerFontSize: 7,
     paddingTop: 0,
     paddingBottom: 0,
+    paddingLeft: 1,
+    paddingRight: 1,
   });
 }
 
@@ -2983,15 +2964,12 @@ function splitPrintedBilingualValue_(value) {
 }
 
 function appendPanelHeading_(cell, title, subtitle) {
-  appendCenteredText_(cell, title, 15, true);
+  // Single line spacing keeps the Chinese title close above the English one
+  // (#603).
+  appendCompactCenteredText_(cell, title, PRINTED_BULLETIN_TYPE.headingSize, true, 1);
   if (subtitle) {
-    appendCenteredText_(cell, subtitle, 9, false);
+    appendCenteredText_(cell, subtitle, PRINTED_BULLETIN_TYPE.bodySize, false);
   }
-  appendSpacer_(cell);
-}
-
-function appendSectionHeading_(cell, text) {
-  appendCenteredText_(cell, text, 11, true);
   appendSpacer_(cell);
 }
 
@@ -3000,7 +2978,6 @@ function appendSilentPrayerHeading_(cell, english, traditionalChinese) {
   appendCompactItalicCenteredText_(
     cell,
     '† ' + english + ' | ' + traditionalChinese + ' †',
-    8.5,
   );
 }
 
@@ -3010,7 +2987,7 @@ function appendCenteredText_(cell, text, size, bold) {
     .forEach(function (line) {
       var paragraph = cell.appendParagraph(line);
       paragraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-      paragraph.setLineSpacing(1.25);
+      paragraph.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
       paragraph.setSpacingBefore(0);
       paragraph.setSpacingAfter(0);
       styleText_(paragraph.editAsText(), size, bold);
@@ -3030,7 +3007,7 @@ function appendCompactCenteredText_(cell, text, size, bold, lineSpacing) {
     });
 }
 
-function appendCompactItalicCenteredText_(cell, text, size) {
+function appendCompactItalicCenteredText_(cell, text) {
   String(text || '')
     .split(/\r?\n/)
     .forEach(function (line) {
@@ -3040,7 +3017,7 @@ function appendCompactItalicCenteredText_(cell, text, size) {
       paragraph.setSpacingBefore(0);
       paragraph.setSpacingAfter(0);
       var rendered = paragraph.editAsText();
-      styleText_(rendered, size, false);
+      styleText_(rendered, PRINTED_BULLETIN_TYPE.bodySize, false);
       rendered.setItalic(true);
     });
 }
@@ -3048,15 +3025,15 @@ function appendCompactItalicCenteredText_(cell, text, size) {
 function appendBodyText_(cell, text) {
   var paragraph = cell.appendParagraph(String(text || ''));
   paragraph.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
-  paragraph.setLineSpacing(1.25);
+  paragraph.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
   paragraph.setSpacingBefore(0);
   paragraph.setSpacingAfter(0);
-  styleText_(paragraph.editAsText(), 9, false);
+  styleText_(paragraph.editAsText(), PRINTED_BULLETIN_TYPE.bodySize, false);
 }
 
 function appendSpacer_(cell) {
   var paragraph = cell.appendParagraph(' ');
-  paragraph.setLineSpacing(1.25);
+  paragraph.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
   paragraph.setSpacingBefore(0);
   paragraph.setSpacingAfter(0);
   styleText_(paragraph.editAsText(), 3, false);
@@ -3068,13 +3045,6 @@ function appendHalfSpacer_(cell) {
   paragraph.setSpacingBefore(0);
   paragraph.setSpacingAfter(0);
   styleText_(paragraph.editAsText(), 1.5, false);
-}
-
-function appendInfoTable_(cell, rows) {
-  appendDataTable_(
-    cell,
-    [[printedBilingualText_('Item', '項目'), printedBilingualText_('Details', '內容')]].concat(rows),
-  );
 }
 
 function appendProgramTable_(cell, rows, options) {
@@ -3095,11 +3065,12 @@ function appendProgramTable_(cell, rows, options) {
     var tableRow = table.getRow(rowIndex);
     for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {
       var tableCell = tableRow.getCell(columnIndex);
-      tableCell.setPaddingTop(0.5);
+      tableCell.setPaddingTop(0);
       tableCell.setPaddingBottom(0.5);
+      setPrintedProgramCellSidePadding_(tableCell);
       styleTableCell_(
         tableCell,
-        9,
+        PRINTED_BULLETIN_TYPE.bodySize,
         false,
         columnIndex === 0
           ? DocumentApp.HorizontalAlignment.LEFT
@@ -3123,11 +3094,12 @@ function appendSermonRow_(cell, row) {
   table.setColumnWidth(2, 95);
   for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {
     var tableCell = table.getCell(0, columnIndex);
-    tableCell.setPaddingTop(0.5);
+    tableCell.setPaddingTop(0);
     tableCell.setPaddingBottom(0.5);
+    setPrintedProgramCellSidePadding_(tableCell);
     styleTableCell_(
       tableCell,
-      9,
+      PRINTED_BULLETIN_TYPE.bodySize,
       false,
       columnIndex === 0
         ? DocumentApp.HorizontalAlignment.LEFT
@@ -3136,6 +3108,13 @@ function appendSermonRow_(cell, row) {
           : DocumentApp.HorizontalAlignment.RIGHT,
     );
   }
+}
+
+// Docs pads each side of a cell by 5 points. Two leaves the 10-point titles
+// and names more room before they wrap (#603).
+function setPrintedProgramCellSidePadding_(tableCell) {
+  tableCell.setPaddingLeft(2);
+  tableCell.setPaddingRight(2);
 }
 
 function appendDataTable_(cell, rows, options) {
@@ -3168,9 +3147,15 @@ function appendDataTable_(cell, rows, options) {
       var tableCell = row.getCell(columnIndex);
       tableCell.setPaddingTop(paddingTop);
       tableCell.setPaddingBottom(paddingBottom);
+      if (typeof options.paddingLeft === 'number') {
+        tableCell.setPaddingLeft(options.paddingLeft);
+      }
+      if (typeof options.paddingRight === 'number') {
+        tableCell.setPaddingRight(options.paddingRight);
+      }
       styleTableCell_(
         tableCell,
-        rowIndex === 0 ? options.headerFontSize || 8 : options.fontSize || 8,
+        PRINTED_BULLETIN_TYPE.bodySize,
         rowIndex === 0,
         options.alignments && options.alignments[columnIndex]
           ? options.alignments[columnIndex]
@@ -3188,15 +3173,14 @@ function styleTableCell_(tableCell, size, bold, alignment) {
     }
     var paragraph = child.asParagraph();
     paragraph.setAlignment(alignment);
-    paragraph.setLineSpacing(1.25);
+    paragraph.setLineSpacing(PRINTED_BULLETIN_TYPE.lineSpacing);
     paragraph.setSpacingBefore(0);
     paragraph.setSpacingAfter(0);
     styleText_(paragraph.editAsText(), size, bold);
   }
 }
 
-function styleText_(text, size, bold, options) {
-  options = options || {};
+function styleText_(text, size, bold) {
   var value = text.getText();
   text.setFontSize(size);
   text.setBold(Boolean(bold));
@@ -3204,54 +3188,114 @@ function styleText_(text, size, bold, options) {
   // disclaimer, or other intentionally italicized paragraph. Dedicated
   // italic helpers opt back in after this shared reset.
   text.setItalic(false);
-
-  if (options.preserveCjkFont) {
-    setPrintedLatinFontFamily_(text, value);
-  } else {
-    text.setFontFamily('Times New Roman');
-  }
+  setPrintedFontFamilies_(text, value);
   if (bold) {
     setPrintedCjkBold_(text, value, false);
   }
 }
 
+// Chinese characters, Chinese punctuation and full-width forms, and the
+// surrogate pairs of rarer characters (some names use them).
 function isPrintedCjkCharacter_(character) {
-  return /[\u3400-\u9fff\uf900-\ufaff]/.test(character);
+  return /[\u2e80-\u2fdf\u3000-\u303f\u3400-\u9fff\uf900-\ufaff\ufe30-\ufe4f\ufeff\uff00-\uffef\ud800-\udfff]/.test(
+    character,
+  );
 }
 
-function setPrintedLatinFontFamily_(text, value) {
-  var latinStart = 0;
-  for (var index = 0; index < value.length; index += 1) {
-    if (!isPrintedCjkCharacter_(value.charAt(index))) {
-      continue;
-    }
-    if (latinStart < index) {
-      text.setFontFamily(latinStart, index - 1, 'Times New Roman');
-    }
-    latinStart = index + 1;
-  }
-  if (latinStart < value.length) {
-    text.setFontFamily(latinStart, value.length - 1, 'Times New Roman');
-  }
-}
-
-function setPrintedCjkBold_(text, value, bold) {
+// Calls back with the first and last index of each run of Chinese characters.
+function forEachPrintedCjkRun_(value, callback) {
   var cjkStart = -1;
-  for (var index = 0; index < value.length; index += 1) {
-    if (isPrintedCjkCharacter_(value.charAt(index))) {
+  for (var index = 0; index <= value.length; index += 1) {
+    if (index < value.length && isPrintedCjkCharacter_(value.charAt(index))) {
       if (cjkStart < 0) {
         cjkStart = index;
       }
       continue;
     }
     if (cjkStart >= 0) {
-      text.setBold(cjkStart, index - 1, Boolean(bold));
+      callback(cjkStart, index - 1);
       cjkStart = -1;
     }
   }
-  if (cjkStart >= 0) {
-    text.setBold(cjkStart, value.length - 1, Boolean(bold));
+}
+
+// The fonts for the Doc being made, read by renderPrintedBulletinDocument_.
+var printedBulletinFonts_ = null;
+
+// The Script Properties' fonts, or the defaults when a property is unset or
+// blank. A name Docs doesn't offer prints in Docs' fallback font, so clearing
+// the property is the way back.
+function readPrintedBulletinFonts_() {
+  var properties =
+    typeof PropertiesService !== 'undefined' ? PropertiesService.getScriptProperties() : null;
+  var read = function (propertyName, fallback) {
+    var value = properties ? String(properties.getProperty(propertyName) || '').trim() : '';
+    return value || fallback;
+  };
+  return {
+    latin: read(PRINTED_BULLETIN_TYPE.latinFontProperty, PRINTED_BULLETIN_TYPE.latinFont),
+    chinese: read(PRINTED_BULLETIN_TYPE.chineseFontProperty, PRINTED_BULLETIN_TYPE.chineseFont),
+    chineseFallback: read(
+      PRINTED_BULLETIN_TYPE.chineseFallbackFontProperty,
+      PRINTED_BULLETIN_TYPE.chineseFallbackFont,
+    ),
+  };
+}
+
+function getPrintedBulletinFonts_() {
+  return (
+    printedBulletinFonts_ || {
+      latin: PRINTED_BULLETIN_TYPE.latinFont,
+      chinese: PRINTED_BULLETIN_TYPE.chineseFont,
+      chineseFallback: PRINTED_BULLETIN_TYPE.chineseFallbackFont,
+    }
+  );
+}
+
+// A Doc holds one font per run, so Chinese runs get the Chinese font and
+// everything else, digits and Latin punctuation included, the Latin font. Each
+// character the default Chinese font lacks then gets the fallback font, alone,
+// so one rare character doesn't change the font of a whole verse. Coverage is
+// only known for the default font; another font set in the Script Property is
+// used for every Chinese character.
+function setPrintedFontFamilies_(text, value) {
+  var fonts = getPrintedBulletinFonts_();
+  var checkCoverage = fonts.chinese === PRINTED_BULLETIN_TYPE.chineseFont;
+  text.setFontFamily(fonts.latin);
+  forEachPrintedCjkRun_(value, function (start, end) {
+    text.setFontFamily(start, end, fonts.chinese);
+    if (!checkCoverage) {
+      return;
+    }
+    for (var index = start; index <= end; index += 1) {
+      if (!isPrintedCharacterInDefaultChineseFont_(value.charCodeAt(index))) {
+        text.setFontFamily(index, index, fonts.chineseFallback);
+      }
+    }
+  });
+}
+
+// Whether UoqMunThenKhung has the character with this UTF-16 code: one in
+// U+4E00–U+9FFF is looked up in its coverage map, Chinese punctuation and
+// full-width forms count as covered, and rarer characters (Extension A,
+// compatibility ideographs, both halves of a surrogate pair) as not.
+function isPrintedCharacterInDefaultChineseFont_(code) {
+  if (code >= 0x4e00 && code <= 0x9fff) {
+    var offset = code - 0x4e00;
+    var nibble = parseInt(PRINTED_DEFAULT_CHINESE_FONT_COVERAGE_.charAt(offset >> 2), 16);
+    return Boolean((nibble >> (3 - (offset & 3))) & 1);
   }
+  return !(
+    (code >= 0x3400 && code <= 0x4dbf) ||
+    (code >= 0xf900 && code <= 0xfaff) ||
+    (code >= 0xd800 && code <= 0xdfff)
+  );
+}
+
+function setPrintedCjkBold_(text, value, bold) {
+  forEachPrintedCjkRun_(value, function (start, end) {
+    text.setBold(start, end, Boolean(bold));
+  });
 }
 
 function setPrintedLatinBold_(text, start, end) {
@@ -3414,3 +3458,11 @@ function hasPrintValue_(value) {
   var text = String(value === null || typeof value === 'undefined' ? '' : value).trim();
   return Boolean(text && text.toLowerCase() !== 'tbd');
 }
+
+// UoqMunThenKhung's characters in U+4E00–U+9FFF, one bit each, high bit
+// first, as hexadecimal: 7,920 of 20,992. That's every common Traditional
+// character and the Simplified forms Japanese shares (国, 会), but not most
+// Simplified-only ones (张, 陈). Made from the font's character map (Google
+// Fonts, ofl/uoqmunthenkhung); see isPrintedCharacterInDefaultChineseFont_.
+var PRINTED_DEFAULT_CHINESE_FONT_COVERAGE_ =
+  'd1f6cfc342b4e2d9349737cf20405002a6fa7cdbee9e9220fb370fc75c86b71dd077c4ec00018aec1387dfffb049963b1ab56bb4c01707013877c9b7dc0b56a3865d6aeb7efc0248b3cb8628040dafa4840c4ae8300d3d12256746a215464c50eec0aea1402035b9dffead282dfe47c8a76df744aef8ff0e1e5c021cc36cd6e6dbb26f040de293f0597f0a1e1c63fd0539e47819927d4c5ad54425d7bb00b4f3e6858764d82550f3d7e479aac243fdd1280012a586c6b21070fe0b557efff7b85affe817835e56deb2e248013aa1d79deabbaf282ffd709febd3028267e6202d4b43ca20010fd5c2de29970f5e20071abb7308ef01faf6100f427a2d5ec1234682ce9b9b0143ead1600e91d0acf94ae087239c40a6820b09f0ee59b7d932b06599d5328913cf9192a13fc8404ee1150930d01010b82a9400b3923f09d8040d68b7700444c821cc24c03869e26054e4469460118b02d230f2452a55cb2c5be17c20718ef8ad7f618289c3ddb4b5ee1ac4782532d61c8b30720674f8ec16ba0611504850b994410608c2600420222c01010000213a0100300e605883a05240043000d803146828aa839408dfbd3e58d4a595dd15fd3e029ec1bf48b8976fda96a36ff75222a8ac41ffcebfd4defc8f42400088c80042dc53ba05102040c0e58e3443124ff129400804211ab048004d120029188844a00a01ec004cba1677927d1732184ef5041593849d0a0d1178103eff59210728831407c278e59235f0c8dbbb58fdff9147455d8a46aa53ce7f7cd149fdf8f1cac0ee1d4c140ce3cec832c4950003ae5cc7f144207234a465bcfd85015c7c2b3193e07e9c073054abd380fb70d2c76439d198890f29be14e53593df0a2132cae009da222233fc800112802faf81eefe376223ba97c1d67c929287524bba607f9a0298445d2ffffbfcc00f5f0f61c8424101b12067265f850801d26334b8cba2d1f5fbac129a45a230d0660e6002059b0a07ac0e26f0026889814512f03180b4663c5eb05bed3628a0fb0deb3e86010acc3c390fd304c74fc63208ad8031cac5594d1d814c7e1b2350e7cc4038b36b1c098d874e197c5921672fcb9b2259cec3c4a29268cb4bc0026c8248bdff90d70f1703be4fa542cbd34bfe25f50b4558b52ce2419fd0ca23f8e62d4b5c333c001382607028ccfecef84d11000b0376071995e385d6680af52da1d1836470cc9f207876a08a4520201c7ef0b71dce62224e9893966913513e90c6299430556438795370f286e40b9000c16210308388068908b02b1090700050372cb800b00c61a205d10021e6134a98597f6139d1ba74069208377d3986173bb1001910042481dff15bbb9983e206857fe0e1ba2676cdbaf0601a50ff4c68177cf4b3d400481a215305f276d64c0000681e6b09c025ea1e58002b24898f1966e64afa75f805f01475df5f28ea18260a9911533203a04982ad25316b2d2d5a5c060009298362415c20b179708344004899aa07a8a8eb864900db205e40f2000c91c85bd622475144b71388a002000840861851828c06622c40081f11f000b108c50801494408611968e201c209036a264a2fca208408a12d418088444258c2ad49870e0cdb020c801000aca6ff839822d5e1412846e9002210a109e246ba02a150e04c11dc4020135f2c730b130c03a10090a0adba8b50020186d03114a4e62202946644a61764003026ebbe21c810057bb865d202d150808b33c0800500210a28bb42e3805c0e54ab36ddf1bc0a7f487caf759b81237348643c1074ce35242cd2b040f82bc0541001eb4088b02388228965eae2bebb92927a020289e136a62b1b5d2328da49d800138ec003aa8301003a76b80047091a5003852c925d010411383547100c200c2c05c704a9a11402000408192829434e55a11161942a4630cc2001890924410260400238802ac3c09727a4840121cc2708140322d067c0d064815b488010849609eb8002611fb25f8100f0508a6558803781806382211db5746df73582e52ab140d2868a164006ddea04850acd200b152defc0244880cb590054ce441302810c790351300187900d8a819c0a34067054a5916d967446a42226cfa101aab2af748df8e01bf469be9b86127282f6444041507bb01fedb7013166eed8c928504cf0e01772136d7756b42e664374905d30ebba1800000000000000000000000000000000000002a40d8ecc8181f2a5c037ba082658c322cd462a2c01c252d058de1ce5c842801215022022a36081fb470f5812b4647d68201a0a02764c05d88c27e002301851d042021adc010612d8e1b0a114bc98c094a7b2c550e1b5ac183ae5eeab9b20fa17c0811000e52ab3638200142045161dd1d60400795b571158707e42038810916ec09661a88020001599076232a3a1b04404452a1a898051eb94193e1000a068448c02c20110725f45602810884b400428d9ca74d268000a080982005da1560c0406d0f215e210f4010289a0c9580afb80604045840c0c600172233053202005808100068c3b01104070003814081871c6008b568853084f00d2b3e470a824400911005a154192a20a8130040003201110348b90e0008009235205074e0171004250aa0c31567090a547609423422812cd017c212ccd40813cce2928b42e44302294580c02038a2d290353b113a8436930258000282c13000888b0abf79534245b3a4280ee12b2def0582d4c54a2dfaca24b295d223beb1653aae92b8b74c2981042424b12f90219e904902ab268000000000000000000000000000000000000012142ea8c20603c10e8246e1886e1ffbb9dfda6703afa2c88bc0db5bb1000000000000000000b14db004420044110801822221b42355ab1142900e180076070cc4029f884419a082a286d7458404039e02286bd28113010009e14683c5f066110d32e4e0909780000000000001b1387e1392e0248202ef589e4d617df77f10266ca6577fedef5c72fadf9f1c40032a146805022001668840506204025c20104e84000fe2b8034683d803154a10a383b4ca0c7dfc3ff5f4606090366cc02104809ef8cd6c1722b00419a948056b8018c31584501b5408964b0f92a0184e6f69b363008b40b38840a840a20280ba0290e90401284c38f6c800084110098e0401276a04c807032b820a50f4000000000000000000000000000000000000000000000000000000000000100b1737ac0fdc4605a13bc8e88640000000000000840ab6011a81d809f7e28bfa40eb70ddc91a1ebd8cf7e665a30f1a3508be7524a0920b0d63ac5625aead44a684e1580889294180052d810080006365176a9f1a8481c89dc021f1db20511d8000000000000a152281a0000192177280e1468b8b6c98a04072458e50a00000000000003c2048e58084e80e4d5200660914403324000908502b40625312c7000000000000000858188c8017acb72374910120400a135e360187c0748a000012d001003730180b6485082e16a107980e4048aecbc104c07e07203c02b218100038000000000000000000000000005589a0013c2241112b800134a80c04ec839a02001410020085128b06a011140060520e4000000720000000000000000000004cd6098750506640cfb180fe8de84810b5c01821440c009081200332809f328230000048c0c800000000000000000000000';
