@@ -337,7 +337,7 @@ access):
 ```text
 No sign-in is required, and every feature works without an account. The one exception is the Schedule sheet (staff only) button on the bulletin page, which opens the church's internal Google Sheet. Only church staff can open it, and nothing else in the app depends on it.
 
-This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services.
+This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services; members can also download it to listen offline (You tab, Offline Bible Audio).
 
 Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
 
@@ -409,8 +409,11 @@ transparency both stores reject. Replace them there whenever the stores get new 
 
 ## What not to claim
 
-- **Offline audio:** all four translations' text, and the verse popup's Hebrew and
-  Greek, ship with the app and open with no connection, but audio streams.
+- **Audio that ships with the app:** all four translations' text, and the verse popup's
+  Hebrew and Greek, ship with the app and open with no connection, but audio streams. On
+  iOS and Android, a member can download it to listen offline (#556), so "download Bible
+  audio to listen offline" is fine; "audio included" or "works offline out of the box"
+  isn't. The web streams only.
 - **Languages beyond Spanish:** the descriptions' "other languages" means Spanish for now.
 - **Hymn lyrics, sheet music, books, or lessons in the app:** they open on their
   publishers' websites.

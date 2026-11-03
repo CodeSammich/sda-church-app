@@ -4,15 +4,16 @@ import {
   type AudioPlayer,
 } from 'expo-audio';
 
+import { BIBLE_AUDIO_NARRATOR_ORDER } from '@/constants/BibleAudioNarrators';
 import type { TranslationBook } from './BibleService';
 import {
+  getBibleAudioNarrator,
   getChurchHostedAudioLinks,
   hasChurchHostedAudio,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
 import type { BibleAudioQueueControls, BibleAudioQueueItem } from './BibleAudioPlayer.types';
 
-const BSB_AUDIO_READER_PRIORITY = ['souer', 'hays', 'david'] as const;
 
 // Expo Audio's persistent non-mixing mode keeps system interruptions from
 // being treated as an intentional app stop, so playback does not reclaim
@@ -168,21 +169,20 @@ export const getOrderedBibleAudioReaders = (
   translationId: string,
   links?: TranslationBookChapterAudioLinks,
 ) => {
-  const entries = Object.entries(links || {});
-  if (translationId !== 'BSB') return entries;
-
-  const priority = new Map<string, number>(
-    BSB_AUDIO_READER_PRIORITY.map((reader, index) => [reader, index]),
-  );
-
-  return entries
+  // The app's one narrator order (constants/BibleAudioNarrators.ts): Souer,
+  // Hays, then David for the BSB, and Mandarin before Cantonese. Readers it
+  // doesn't know keep the provider's order, after those it does.
+  const rank = (reader: string) => {
+    const index = BIBLE_AUDIO_NARRATOR_ORDER.indexOf(
+      getBibleAudioNarrator(translationId, reader)?.toLocaleLowerCase() ?? '',
+    );
+    return index < 0 ? BIBLE_AUDIO_NARRATOR_ORDER.length : index;
+  };
+  return Object.entries(links || {})
     .map((entry, providerIndex) => ({ entry, providerIndex }))
     .sort(
       (left, right) =>
-        (priority.get(left.entry[0].toLocaleLowerCase()) ??
-          BSB_AUDIO_READER_PRIORITY.length) -
-          (priority.get(right.entry[0].toLocaleLowerCase()) ??
-            BSB_AUDIO_READER_PRIORITY.length) ||
+        rank(left.entry[0]) - rank(right.entry[0]) ||
         left.providerIndex - right.providerIndex,
     )
     .map(({ entry }) => entry);
@@ -269,6 +269,21 @@ export const shouldStopBibleAudioAtChapterEnd = (
 ) => setting === 'chapter' ||
   (setting === 'book' && chapter === numberOfChapters);
 
+/**
+ * A chapter's recordings in the order playback tries them: the phone's copy
+ * first, if the member downloaded it (#556), whatever source the listener
+ * chose, then the others, which stream, in the order given.
+ */
+export const withDownloadedCopy = (urls: readonly string[], downloadedUri: string | null) =>
+  downloadedUri ? [downloadedUri, ...urls.filter((url) => url !== downloadedUri)] : [...urls];
+
+/**
+ * The recording a title credits. A downloaded copy is credited to the source
+ * it's a copy of, the first one that streams.
+ */
+export const getBibleAudioCreditUrl = (url: string, urls: readonly string[], downloadedUri: string | null) =>
+  url === downloadedUri ? (urls.find((other) => other !== downloadedUri) ?? url) : url;
+
 interface BibleAudioQueueOptions {
   albumTitle: string;
   artist: string;
@@ -277,6 +292,8 @@ interface BibleAudioQueueOptions {
   currentChapter: number;
   /** The chapters after the current one, or before it, nearest first. */
   direction?: 'following' | 'preceding';
+  /** The phone's copy of a chapter, played first, or null (#556). */
+  getDownloadedUri?: (bookId: string, chapter: number) => string | null;
   limit?: number;
   sleepTimer?: BibleAudioSleepTimerSetting;
   preferredSourceId?: string;
@@ -298,6 +315,7 @@ export const buildBibleAudioQueue = ({
   currentBookId,
   currentChapter,
   direction = 'following',
+  getDownloadedUri,
   // Keep descriptors available when background React effects are suspended.
   // The web adapter still preloads only the immediate next recording.
   limit = 24,
@@ -333,11 +351,12 @@ export const buildBibleAudioQueue = ({
         .filter((url): url is string => !!url);
     }
 
-    const tracks = queuedUrls.map((url) => {
+    const downloadedUri = getDownloadedUri?.(book.id, chapter) ?? null;
+    const tracks = withDownloadedCopy(queuedUrls, downloadedUri).map((url) => {
       const title = getBibleAudioMediaTitle(
         `${book.name} ${chapter}`,
         translationLabel,
-        url,
+        getBibleAudioCreditUrl(url, queuedUrls, downloadedUri),
       );
       return {
         source: { uri: url, name: title },

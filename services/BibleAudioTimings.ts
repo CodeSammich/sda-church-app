@@ -1,10 +1,5 @@
 import { BUNDLED_BIBLE_ASSETS, type BundledBibleCollection } from '@/assets/bible';
-import {
-  CUV_AUDIO_READERS,
-  RV1909_READER,
-  supportsAudioPowerCuv,
-  supportsRv1909Audio,
-} from '@/services/BibleAudioSources';
+import { getBibleAudioNarrator } from '@/services/BibleAudioSources';
 import { readBundledBibleFile } from '@/services/BundledBible';
 
 /**
@@ -24,16 +19,8 @@ interface AudioTimingsBook {
 }
 
 const timingsCollection = (translationId: string, reader: string) => {
-  let narrator: string | undefined;
-  if (translationId === 'BSB') {
-    narrator = reader;
-  } else if (supportsAudioPowerCuv(translationId)) {
-    // Both CUV editions play the same recordings: cuv-mandarin or cuv-cantonese.
-    const language = CUV_AUDIO_READERS[reader]?.language;
-    narrator = language && `cuv-${language}`;
-  } else if (supportsRv1909Audio(translationId) && reader === RV1909_READER) {
-    narrator = 'rv1909';
-  }
+  // Both CUV editions play the same recordings: cuv-mandarin or cuv-cantonese.
+  const narrator = getBibleAudioNarrator(translationId, reader);
   const collection = narrator && `audio-timings/${narrator}`;
   return collection && collection in BUNDLED_BIBLE_ASSETS
     ? (collection as BundledBibleCollection)

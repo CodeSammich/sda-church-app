@@ -1067,6 +1067,9 @@ Bible chapters to check what only a real player shows:
 - **Previous before the start (#543):** started in Leviticus 2, the media key's
   previous restarts the chapter more than 3 seconds in, goes back to Leviticus 1
   at the start, and next returns to Leviticus 2.
+- **A book downloaded to listen offline (#556):** 2 Thessalonians is downloaded in
+  Offline Bible Audio, opened from Listen offline, then plays with the network off, and the media keys move to chapter 2
+  and back.
 - **The verse being read (#561):** in John 3 the reader marks and follows each verse
   where the bundled times say, and after a seek it follows the verse at the new place.
 - **Scrolling by hand (#561):** in Psalm 119, a listener drags the page back and holds

@@ -1,6 +1,6 @@
 # Legal, Licensing, and Privacy
 
-Last legal review: 2026-08-09. Facts about the app updated: 2026-10-27.
+Last legal review: 2026-08-09. Facts about the app updated: 2026-11-01.
 
 This document centralizes the project's licensing records, third-party source reviews,
 privacy disclosures, branding restrictions, and legal disclaimer. It records engineering
@@ -31,8 +31,9 @@ translation's text from either:
   it from HelloAO's complete translation. HelloAO also supplies the BSB's English
   audio:
   each BSB chapter comes with HelloAO's narrator links, and the app offers each one
-  as a narrator. As of October 2026, HelloAO lists four narrators: three play from
-  HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
+  as a narrator. The app's BSB files, built in October 2026, have four: three play from
+  HelloAO's audio host (`audio.bible.helloao.org`) and one, Gilbert, from
+  `openbible.com`. HelloAO has since dropped Gilbert, so the next rebuild leaves him out.
   HelloAO also publishes when each verse starts in its three recordings, and the
   app ships those times so the reader can mark the verse being read
   (`scripts/build-bible-audio-timings.mjs`, #561). HelloAO's
@@ -325,6 +326,30 @@ Blagovestnik's pages include a personal email address, so their copies are in th
 church's IT Admin shared drive instead. The statement above was retrieved from
 http://www.blagovestnik.org/ukraine/ukraine.htm on October 1, 2026, when the page's
 SHA-256 was `ee452da37125959f162b56ce55259091cdc61564a2653343440b15fdffc79413`.
+
+### Bible audio downloaded to listen offline
+
+On a phone, a member can download the audio of a book, a section such as the Gospels, a
+Testament, or the whole Bible, for one narrator, to listen with no connection
+([#556](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/556)).
+The files stay on the member's own phone, unchanged, until they delete them. The app
+downloads only what it already streams, from where it streams it, and offers no way to
+share or export a file. What each source allows:
+
+| Recording | Source | Offline downloads |
+| --- | --- | --- |
+| Mandarin (Chinese Union Version) | Audio Power, from the church's copies | Its owner approved the church app's use, download, and self-hosting of the recordings ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)). The church's copy comes first, then the Internet Archive's and Audio Power's, which are the same files. |
+| Cantonese, and Spanish (Reina-Valera 1909) | WordProject, from the church's copies | Its book pages invite downloading a whole book (see [WordProject Cantonese audio](#wordproject-cantonese-audio)). Downloaded only from the church's copies, never WordProject's servers, and kept exactly as hosted. |
+| English (BSB): Souer, Hays, and David | HelloAO | HelloAO's [terms](https://bible.helloao.org/docs/): "Cache, store and download without expiry", and "AO Lab adds no restrictions". Gilbert's recordings, on openbible.com, aren't offered. |
+| Anything from Bible Brain later ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)) | Faith Comes By Hearing | Only content from its `/download` endpoint may be offered offline (see [Bible Brain API license](#bible-brain-api-license-faith-comes-by-hearing-planned-not-in-use)). |
+
+Downloading contacts no service the app doesn't already stream from, so the services the
+privacy policy names don't change; its storage section says downloaded audio stays on
+the phone until it's deleted. The English recordings are bigger, about 5.5 GB for
+Souer's whole Bible: smaller copies would mean re-encoding them and hosting the church's
+own, which only public-domain recordings allow. Check each narrator's status before
+doing that. Where the files live, and how they're kept out of backups, is in
+[What the app keeps on the phone](feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
 
 ### “Free to access” doesn't necessarily mean “public domain”
 
@@ -686,7 +711,8 @@ publishes it with no new app build.
 
 It covers the app's links to external resources, such as the hymn sites, EGW
 Writings, and Adventech's Sabbath School lessons, and the copyright caution that goes
-with them; the children's lessons a phone keeps for their week; how to change the text size
+with them; the children's lessons a phone keeps for their week; the Bible audio a phone
+keeps, unchanged, once downloaded to listen offline; how to change the text size
 in EGW Writings' reader; what the app shows from other sources, such as cover
 thumbnails, and where each Library book is hosted; and the external platforms the app
 links to, such as YouTube and Spotify.

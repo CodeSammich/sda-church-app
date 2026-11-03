@@ -136,10 +136,47 @@ there's no connection instead. The web keeps opening files in a new tab. Anythin
 opens a big file should work the same way. The children's Sabbath School lessons came
 first ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529));
 see [Opening a lesson on a phone](feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
-Their code (`features/sabbath-school/LessonDownloads.ts`,
-`hooks/useChildrenLessonOpener.ts`, `components/ChildrenLessonDialog.tsx`) is written
-for lessons, so the second use should move its download, progress, and viewer parts
-somewhere shared rather than copy them.
+The download itself and what its progress says are shared: `services/FileDownloads.ts`
+and `constants/DownloadCopy.ts`. Use them, rather than copy the lessons' code.
+
+Bible audio downloaded to listen offline
+([#556](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/556))
+is the second use, for later rather than to open now. It's downloaded and deleted on one
+page, **Offline Bible Audio** in the You tab, which **Listen offline** in the Bible's audio
+settings opens. The page is a tree of the whole Bible, its Testaments, their sections,
+closed until tapped, and their books, for one narrator; opened from the Bible, it shows
+the book being read. Each row says what it holds: its size, how far along its download
+is, part of it, or all of it. Narrators are named language first, as "English – Souer
+(BSB)" or "Mandarin (Chinese Union Version)", and listed in one order, as the translation
+picker lists their translations (`constants/BibleAudioNarrators.ts`); the Bible's audio
+settings name the English ones the same way. A row's download
+progress shows at once, with an X that stops it, and goes on when the page closes, since
+the whole Bible takes a while. Deleting goes by the same rows, after the system's alert
+asks, naming what it deletes and its size. It stays in the documents directory until the
+member deletes it, rather than in the cache, and the size of each choice shows before it
+starts. Over mobile data,
+the system's alert asks first: Cancel, Wait for Wi-Fi, or Use mobile data; and a download
+over 1 GB, such as the English Bible, asks first even on Wi-Fi. See
+[Bible audio downloaded to listen offline](feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
+
+When streamed Bible audio keeps stopping to load
+([#595](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/595)),
+the audio settings button at the left of the audio bar points the listener to Listen
+offline:
+- **When:** after 3 stalls in one listening session, or one longer than 5 seconds. The
+  usual loading at a chapter's start, or after a skip or a drag, doesn't count toward the 3.
+- **How:** the button's border pulses three times in the theme's main color, then a dot,
+  like the sleep timer's, stays until the popup opens. With Reduce Motion (iOS) or Remove
+  animations (Android) on, only the dot shows. A pulse due while the screen is off waits
+  until the app is back.
+- **In the popup:** it scrolls to Listen offline, which says "Playback often stops to
+  load. Download to listen without waiting." above the row that opens Offline Bible
+  Audio. Screen readers hear the same line as the button's hint, not as an announcement.
+- **Not nagging:** at most once each time the app starts, never again once Bible audio has
+  been on the phone, and not for 7 days after the listener closes the popup without
+  downloading.
+
+`services/BibleAudioDownloadTip.ts` decides when.
 
 ### Key Principles & Exceptions:
 
@@ -307,7 +344,9 @@ are on Home, not here.
 **Purpose:** Preferences and information about the app.
 
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
-**Language**, **Text size**, and **Theme** (System, Sunrise/Sunset, Light, or Dark).
+**Language**, **Text size**, **Theme** (System, Sunrise/Sunset, Light, or Dark), and,
+on a phone, **Offline Bible Audio**, where Bible audio is downloaded to listen offline,
+and deleted, by book, section, Testament, or the whole Bible (#556).
 **About & Support** starts with **Share the App** (#555): a popup with a QR code a
 friend can scan with their phone's camera to reach the download page
 (`https://app.nyccsda.org/download`, which sends them to their app store), the address,

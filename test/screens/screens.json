@@ -29,7 +29,7 @@
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give, and first-launch setup over it.",
-    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, and the popup a tapped verse opens.",
+    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, the popup a tapped verse opens, and Offline Bible Audio, which its audio settings open.",
     "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
     "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
     "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs. Also, on the iPhone only, Bible audio playing and a children's lesson open in Quick Look (#551): this group finished first or second in the six release runs from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so these longer shots shouldn't lengthen the run."
@@ -190,15 +190,35 @@
     {
       "name": "bible-audio-settings",
       "group": "bible-reading",
-      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages, in English (the Google Play screenshot) and Chinese. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. It's centred like the other popups: until 1.3.2 it sat at the bottom, its title 47% of the way down where theirs are at 25 to 32%, so the title must be no farther down than 40%.",
+      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages, in English (the Google Play screenshot) and Chinese. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. It's centred like the other popups: until 1.3.2 it sat at the bottom, its title 47% of the way down where theirs are at 25 to 32%, so the title must be no farther down than 40%. Under the audio languages, Listen offline is one row that opens Offline Bible Audio in the You tab, where Bible audio is downloaded and deleted (#556); it must show, though the Android phone's shorter popup may leave the row below the fold.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=audio-settings",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["default", "zh"],
       "mustShowLines": ["^WordProject$"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$"], "mustNotShowLines": ["^Close$"] },
-        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$"], "mustNotShowLines": ["^關閉$"] }
+        "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$", "^Listen offline$", { "line": "^Offline Bible Audio$", "platforms": ["ios"] }], "mustNotShowLines": ["^Close$", "^Whole Bible$"] },
+        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] }
       }
+    },
+    {
+      "name": "offline-bible-audio",
+      "group": "bible-reading",
+      "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete. The text readers may read a closed section's chevron with its title (\"> Law\") and drop the spaces in \"英語 – Souer\" and \"66 卷\", so the rules allow both.",
+      "path": "you/audio-downloads?narrator=souer",
+      "variants": ["default", "zh"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–]\\s*Souer", "^Whole Bible$", "^66 books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
+        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–]\\s*Souer", "^整本聖經$", "^66\\s*卷", "^舊約$", "(^|\\s)摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
+      }
+    },
+    {
+      "name": "bible-audio-download-tip",
+      "group": "bible-reading",
+      "$comment": "The audio settings popup as the marked audio button opens it when playback keeps stopping to load (#595), by popup=audio-download-tip in the preview build. The BSB has four narrators above Listen offline, so the popup scrolls down to it: the tip's line, and the Offline Bible Audio row below it, which opens the downloads (#556), must show. The line doesn't say \"keeps stopping\", which Android's check reserves for the system's crash dialog.",
+      "path": "bible?bookId=JHN&chapter=3&translationId=BSB&popup=audio-download-tip",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^Playback often stops", "^Listen offline$", "^Offline Bible Audio$"]
     },
     {
       "name": "bible-long-chapter",
@@ -428,12 +448,12 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). On Android's default screen Help & Feedback now falls just below the screenshot, so only the Chinese variant, whose rows are shorter, requires it.",
+      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Share the App$"] },
-        "zh": { "mustShowLines": ["分享應用程式", "幫助與意見回饋"] }
+        "default": { "mustShowLines": [{ "line": "^Share the App$", "platforms": ["ios"] }, "^Offline Bible Audio$"] },
+        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, { "line": "幫助與意見回饋", "platforms": ["ios"] }, "^離線聖經音訊$"] }
       }
     },
     {

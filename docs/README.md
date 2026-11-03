@@ -148,7 +148,8 @@ E2E_ONLY="pause-and-resume" scripts/e2e/android-bible-audio.sh   # one scenario
   `e2e-output/` (`E2E_OUTPUT` changes the folder).
 - `E2E_ONLY` takes space-separated scenario names: `next-chapter-screen-off`,
   `dead-zone-screen-off`, `mid-chapter-offline`, `pause-and-resume`,
-  `previous-before-start`, `primary-host-down`, and the reader's `verse-follows-audio`,
+  `previous-before-start`, `downloaded-book-offline` (a book downloaded to listen
+  offline, #556), `primary-host-down`, and the reader's `verse-follows-audio`,
   `scroll-by-hand`, `scroll-while-paused`, and `follow-after-screen-off`.
 - The reader's scenarios need a build made with `EXPO_PUBLIC_AUDIO_E2E=1`, so the reader
   logs what it decides, and `ffmpeg` on your path (or `FFMPEG`) to compare screenshots.
