@@ -20,6 +20,10 @@ const EXCLUDED = [
   // download again. Over Auto Backup's 25 MB limit, Android backs up nothing
   // of the app's, so the settings would stop being backed up too.
   { domain: 'file', path: 'bible-audio' },
+  // The home screen widget's layout and week of verses (#235), which
+  // expo-widgets keeps in shared preferences. The app gives the widget its
+  // week again whenever it runs, so a restored copy would only be out of date.
+  { domain: 'sharedpref', path: 'expo.modules.widgets.xml' },
 ];
 
 const ATTRIBUTES = {

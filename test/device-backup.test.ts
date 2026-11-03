@@ -32,15 +32,22 @@ describe('device backups', () => {
     }
   });
 
-  it('leave out downloaded Bible audio on Android, and nothing else', () => {
+  it('leave out downloaded Bible audio and the widget’s verses on Android, and nothing else', () => {
     expect(app.plugins).toContain('./plugins/withAndroidBackupRules');
-    expect(EXCLUDED).toEqual([{ domain: 'file', path: 'bible-audio' }]);
-    const exclude = '<exclude domain="file" path="bible-audio"/>';
-    // Android 11 and lower, and both of Android 12's sections.
-    expect(getFullBackupContent().split(exclude)).toHaveLength(2);
-    expect(getDataExtractionRules().split(exclude)).toHaveLength(3);
-    expect(getDataExtractionRules()).toMatch(/<cloud-backup>\s*<exclude[^>]*>\s*<\/cloud-backup>/);
-    expect(getDataExtractionRules()).toMatch(/<device-transfer>\s*<exclude[^>]*>\s*<\/device-transfer>/);
+    expect(EXCLUDED).toEqual([
+      { domain: 'file', path: 'bible-audio' },
+      { domain: 'sharedpref', path: 'expo.modules.widgets.xml' },
+    ]);
+    for (const exclude of [
+      '<exclude domain="file" path="bible-audio"/>',
+      '<exclude domain="sharedpref" path="expo.modules.widgets.xml"/>',
+    ]) {
+      // Android 11 and lower, and both of Android 12's sections.
+      expect(getFullBackupContent().split(exclude)).toHaveLength(2);
+      expect(getDataExtractionRules().split(exclude)).toHaveLength(3);
+    }
+    expect(getDataExtractionRules()).toMatch(/<cloud-backup>(\s*<exclude[^>]*>)+\s*<\/cloud-backup>/);
+    expect(getDataExtractionRules()).toMatch(/<device-transfer>(\s*<exclude[^>]*>)+\s*<\/device-transfer>/);
     // An <include> would stop everything else being backed up, AsyncStorage included.
     expect(`${getFullBackupContent()}${getDataExtractionRules()}`).not.toContain('<include');
   });
