@@ -12,13 +12,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
 import { createElement, type ComponentType } from 'react';
-import { Alert, AppState } from 'react-native';
+import { showAppAlert } from '@/components/AppAlert';
+import { AppState } from 'react-native';
 import { mockDisk, mockFiles } from './helpers/file-system-mock';
 import { renderWithPreferences } from './helpers/render-preferences';
 
 // Offline Bible Audio, in the You tab (#556): the one place Bible audio is
 // downloaded and deleted, by narrator, as a tree of the whole Bible, its
 // Testaments, their sections, and the books.
+jest.mock('@/components/AppAlert', () => ({
+  ...jest.requireActual('@/components/AppAlert'),
+  showAppAlert: jest.fn(),
+}));
 let mockParams: Record<string, string> = {};
 let mockScreenOptions: Record<string, unknown> = {};
 jest.mock('expo-router', () => ({
@@ -77,7 +82,7 @@ const renderPage = async (params: Record<string, string> = {}, language: 'en' | 
 };
 
 const lastAlert = () => {
-  const [title, message, buttons] = (Alert.alert as jest.Mock).mock.lastCall ?? [];
+  const [title, message, buttons] = (showAppAlert as jest.Mock).mock.lastCall ?? [];
   return { title, message, buttons: (buttons ?? []) as { text: string; onPress?: () => void }[] };
 };
 
@@ -87,7 +92,7 @@ beforeEach(async () => {
   mockScreenOptions = {};
   await AsyncStorage.clear();
   Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active', writable: true });
-  jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  (showAppAlert as jest.Mock).mockClear();
   jest.spyOn(File, 'downloadFileAsync').mockImplementation((async (_url: string, destination: File) => {
     // Never finishes, so each row stays downloading.
     await new Promise(() => undefined);
@@ -211,11 +216,11 @@ describe('Offline Bible Audio', () => {
     expect(getBibleAudioScopeStatus('souer', { kind: 'bible' }).downloading).toBe(true);
 
     // The Mandarin Bible is under 1 GB, so it starts at once.
-    (Alert.alert as jest.Mock).mockClear();
+    (showAppAlert as jest.Mock).mockClear();
     const mandarin = await renderPage({ narrator: 'cuv-mandarin' });
     await fireEvent.press(mandarin.getByRole('button', { name: /^Download the whole Bible, / }));
     await act(async () => undefined);
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(showAppAlert).not.toHaveBeenCalled();
     expect(getBibleAudioScopeStatus('cuv-mandarin', { kind: 'bible' }).downloading).toBe(true);
   });
 
@@ -224,7 +229,7 @@ describe('Offline Bible Audio', () => {
     let screen = await renderPage({ narrator: 'cuv-mandarin' });
     await fireEvent.press(screen.getByRole('button', { name: /^Download Acts, / }));
     await act(async () => undefined);
-    expect(Alert.alert).toHaveBeenLastCalledWith('No connection', 'Connect to the internet to download.');
+    expect(showAppAlert).toHaveBeenLastCalledWith('No connection', 'Connect to the internet to download.');
 
     mockNetwork.state = { type: 'WIFI', isConnected: true, isInternetReachable: true };
     mockDisk.availableBytes = 600_000_000;

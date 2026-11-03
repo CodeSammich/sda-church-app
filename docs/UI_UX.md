@@ -156,11 +156,11 @@ progress shows at once, with an X that stops it. It goes on when the page closes
 with the phone locked or the app in the background, since the whole Bible takes a while:
 the phone itself downloads it (#611), on Wi-Fi only unless the member chose mobile data.
 Meanwhile Android shows its own download notification, one for all the chapters; #610
-adds the app's own. Deleting goes by the same rows, after the system's alert
+adds the app's own. Deleting goes by the same rows, after the app's popup
 asks, naming what it deletes and its size. It stays in the documents directory until the
 member deletes it, rather than in the cache, and the size of each choice shows before it
 starts. Over mobile data,
-the system's alert asks first: Cancel, Wait for Wi-Fi, or Use mobile data; and a download
+the app's popup asks first: Use mobile data, Wait for Wi-Fi, or Cancel; and a download
 over 1 GB, such as the English Bible, asks first even on Wi-Fi. See
 [Bible audio downloaded to listen offline](feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
 
@@ -220,6 +220,14 @@ simple, blended colors.
 - **Boundary Definition:** A restrained 0.5px top boundary using the theme's subtle
   outline token is permitted for the bottom tab navigation bar and persistent audio
   controls. Do not add shadows, strong dividers, or decorative glass effects.
+- **Popups:** Every popup is the app's own, never the system's alert (`Alert.alert`),
+  which on Android looks unlike the rest of the app. A popup is centred, with the shared
+  corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall at any
+  text size, scrolling beyond that. One that only says something has an X in its title row
+  and no Close button. One that asks a question has its answers as buttons, stacked so
+  large text fits, the main one first and Cancel last, and no X; a tap outside it answers
+  Cancel. Code shows a notice or question with `showAppAlert`
+  (`components/AppAlert.tsx`), and `test/app-alert.test.ts` fails on a system alert.
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital
   Sanctuary."
 

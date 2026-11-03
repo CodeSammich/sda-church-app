@@ -37,11 +37,7 @@ describe("the Chinese Union Mission's SDA Bible reader (#554)", () => {
 
   it('sends an iPhone or iPad to the App Store', () => {
     load('ios').openSdaBible('zh');
-    expect(mockOpenInItsApp).toHaveBeenCalledWith(
-      'https://apps.apple.com/us/app/sda-bible/id6823826805',
-      expect.any(String),
-      expect.any(String),
-    );
+    expect(mockOpenInItsApp).toHaveBeenCalledWith('https://apps.apple.com/us/app/sda-bible/id6823826805');
     expect(mockOpenURL).not.toHaveBeenCalled();
   });
 

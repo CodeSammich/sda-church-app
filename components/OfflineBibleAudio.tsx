@@ -1,3 +1,4 @@
+import { showAppAlert } from '@/components/AppAlert';
 import { AppIcon } from '@/components/AppIcon';
 import { PopupHeader } from '@/components/PopupHeader';
 import { PopupScrollView } from '@/components/PopupScrollView';
@@ -27,13 +28,14 @@ import {
   type BibleAudioScopeStatus,
 } from '@/services/BibleAudioDownloads';
 import { BIBLE_BOOK_NAMES, BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP } from '@/services/BibleService';
+import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkStateAsync, NetworkStateType } from 'expo-network';
 import { useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Dialog, IconButton, Portal, ProgressBar, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -494,6 +496,9 @@ export function OfflineBibleAudio() {
   const params = useLocalSearchParams();
   const narratorParam = firstParam(params.narrator);
   const bookParam = firstParam(params.bookId);
+  // The key-screen capture can't tap, so its build asks the mobile-data
+  // question from the path, for the whole Bible (#611).
+  const screenshotPopup = getScreenshotPopup(params.popup, ['mobile-data']);
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight();
   useBibleAudioDownloads();
@@ -564,17 +569,30 @@ export function OfflineBibleAudio() {
 
   const name = (option: string) => getBibleAudioNarratorName(option, language) ?? option;
 
+  const askMobileData = (remaining: string, begin: (mobileData: boolean) => void) =>
+    showAppAlert(labels.mobileDataTitle, labels.mobileData(remaining), [
+      { text: labels.cancel, style: 'cancel' },
+      { text: labels.waitForWifi, onPress: () => begin(false) },
+      { text: labels.useMobileData, onPress: () => begin(true) },
+    ]);
+  useEffect(() => {
+    if (screenshotPopup !== 'mobile-data' || !narrator) return;
+    const status = getBibleAudioScopeStatus(narrator, { kind: 'bible' });
+    askMobileData(formatDownloadSize(status.totalBytes - status.downloadedBytes, language), () => undefined);
+    // Once, for the narrator shown.
+  }, [screenshotPopup, narrator]);
+
   const start = async (option: string, scope: BibleAudioDownloadScope) => {
     const status = getBibleAudioScopeStatus(option, scope);
     const remainingBytes = Math.max(0, status.totalBytes - status.downloadedBytes);
     const remaining = formatDownloadSize(remainingBytes, language);
     if (!hasRoomForBibleAudio(remainingBytes)) {
-      Alert.alert(labels.noRoomTitle, labels.noRoom(remaining));
+      showAppAlert(labels.noRoomTitle, labels.noRoom(remaining));
       return;
     }
     const network = await getNetworkStateAsync().catch(() => null);
     if (network && (network.isConnected === false || network.isInternetReachable === false)) {
-      Alert.alert(labels.offlineTitle, labels.offline);
+      showAppAlert(labels.offlineTitle, labels.offline);
       return;
     }
     const begin = (mobileData: boolean) => {
@@ -582,12 +600,12 @@ export function OfflineBibleAudio() {
         downloadBibleAudio(option, scope, { mobileData });
       } catch (error) {
         console.error('Bible audio download failed to start:', error);
-        Alert.alert(labels.errorTitle, labels.backupError);
+        showAppAlert(labels.errorTitle, labels.backupError);
       }
     };
     if (network?.type !== NetworkStateType.CELLULAR) {
       if (remainingBytes > BIBLE_AUDIO_CONFIRM_BYTES) {
-        Alert.alert(labels.bigTitle(remaining), labels.big, [
+        showAppAlert(labels.bigTitle(remaining), labels.big, [
           { text: labels.cancel, style: 'cancel' },
           { text: labels.confirmDownload, onPress: () => begin(false) },
         ]);
@@ -596,11 +614,7 @@ export function OfflineBibleAudio() {
       begin(false);
       return;
     }
-    Alert.alert(labels.mobileDataTitle, labels.mobileData(remaining), [
-      { text: labels.cancel, style: 'cancel' },
-      { text: labels.waitForWifi, onPress: () => begin(false) },
-      { text: labels.useMobileData, onPress: () => begin(true) },
-    ]);
+    askMobileData(remaining, begin);
   };
 
   // "Delete the Gospels? (210 MB)", or for the whole Bible when only some is
@@ -611,7 +625,7 @@ export function OfflineBibleAudio() {
         ? labels.deleteAll(name(option))
         : labels.delete(what);
     const size = formatDownloadSize(getDownloadedBibleAudioBytes(option, scope), language);
-    Alert.alert(labels.question(action, size), labels.deleteMessage, [
+    showAppAlert(labels.question(action, size), labels.deleteMessage, [
       { text: labels.cancel, style: 'cancel' },
       { text: labels.confirmDelete, style: 'destructive', onPress: () => deleteBibleAudio(option, scope) },
     ]);
@@ -774,7 +788,7 @@ export function OfflineBibleAudio() {
                       iconColor={theme.colors.onSurfaceVariant}
                       onPress={() => {
                         const size = formatDownloadSize(narratorTotal(option), language);
-                        Alert.alert(labels.question(labels.deleteAll(name(option)), size), labels.deleteMessage, [
+                        showAppAlert(labels.question(labels.deleteAll(name(option)), size), labels.deleteMessage, [
                           { text: labels.cancel, style: 'cancel' },
                           { text: labels.confirmDelete, style: 'destructive', onPress: () => deleteBibleAudio(option, BIBLE) },
                         ]);

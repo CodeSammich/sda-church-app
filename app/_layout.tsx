@@ -1,3 +1,4 @@
+import { AppAlertHost } from '@/components/AppAlert';
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LaunchSplash } from '@/components/LaunchSplash';
@@ -1127,6 +1128,7 @@ function RootLayoutNav({
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
+        <AppAlertHost />
         {installAvailable && (
           <InstallPrompt onInstall={onInstall} onDismiss={onDismissInstall} />
         )}

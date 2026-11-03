@@ -1,5 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
-import { Alert, Linking, Platform } from 'react-native';
+import { showAppAlert, type LocalizedText } from '@/components/AppAlert';
+import { Linking, Platform } from 'react-native';
 import { SupportedLanguage } from './LanguageContext';
 import {
   findChildrenLessonUrl,
@@ -58,6 +59,20 @@ export const getBulletinApiUrl = (date: string, appVersion?: string) =>
  * a single source of truth for the app's external touchpoints.
  */
 
+// What a link that won't open says, in the app's popup.
+const LINK_ERROR_TITLE: LocalizedText = {
+  en: 'Couldn’t open the link',
+  zh: '無法開啟連結',
+  'zh-cn': '无法打开链接',
+  es: 'No se pudo abrir el enlace',
+};
+export const LINK_ERROR_MESSAGE: LocalizedText = {
+  en: 'Check your connection, then try again.',
+  zh: '請檢查網路連線，然後再試一次。',
+  'zh-cn': '请检查网络连接，然后再试一次。',
+  es: 'Revisa tu conexión y vuelve a intentarlo.',
+};
+
 /**
  * Opens a website in the in-app browser, which slides up over the app and
  * closes back to it: Safari View Controller on iOS, a Custom Tab on Android.
@@ -66,8 +81,8 @@ export const getBulletinApiUrl = (date: string, appVersion?: string) =>
  */
 export const openURL = async (
   url: string,
-  errorTitle = 'Error',
-  errorMessage = 'Could not open the link.',
+  errorTitle: LocalizedText = LINK_ERROR_TITLE,
+  errorMessage: LocalizedText = LINK_ERROR_MESSAGE,
 ) => {
   try {
     if (Platform.OS === 'web') {
@@ -76,7 +91,7 @@ export const openURL = async (
       await WebBrowser.openBrowserAsync(url);
     }
   } catch (error) {
-    Alert.alert(errorTitle, errorMessage);
+    showAppAlert(errorTitle, errorMessage);
     console.error('In-app browser error:', error);
   }
 };
@@ -90,13 +105,13 @@ export const openURL = async (
  */
 export const openInItsApp = async (
   url: string,
-  errorTitle = 'Error',
-  errorMessage = 'Could not open the link.',
+  errorTitle: LocalizedText = LINK_ERROR_TITLE,
+  errorMessage: LocalizedText = LINK_ERROR_MESSAGE,
 ) => {
   try {
     await Linking.openURL(url);
   } catch (error) {
-    Alert.alert(errorTitle, errorMessage);
+    showAppAlert(errorTitle, errorMessage);
     console.error('Linking error:', error);
   }
 };
@@ -117,7 +132,7 @@ export const APP_DOWNLOAD_URL = 'https://app.nyccsda.org/download';
 export const PRIVACY_POLICY_URL = 'https://app.nyccsda.org/privacy-policy.html';
 
 export const openPrivacyPolicy = () =>
-  openURL(PRIVACY_POLICY_URL, 'Error', 'Could not open the privacy policy.');
+  openURL(PRIVACY_POLICY_URL);
 
 /**
  * The legal disclaimer is kept only on the website too (#412), beside the
@@ -127,7 +142,7 @@ export const openPrivacyPolicy = () =>
 export const LEGAL_DISCLAIMER_URL = 'https://app.nyccsda.org/legal.html';
 
 export const openLegalDisclaimer = () =>
-  openURL(LEGAL_DISCLAIMER_URL, 'Error', 'Could not open the legal disclaimer.');
+  openURL(LEGAL_DISCLAIMER_URL);
 
 /**
  * Whether the Tithe & Offering page shows the church's Zelle section. Off until
@@ -136,62 +151,34 @@ export const openLegalDisclaimer = () =>
 export const SHOW_ZELLE_GIVING = false;
 
 export const openAdventistGiving = async () => {
-  return openURL(
-    'https://adventistgiving.org/donate/AN48CO',
-    'Error',
-    'Could not open the online giving link.',
-  );
+  return openURL('https://adventistgiving.org/donate/AN48CO');
 };
 
 export const openSpotifyPodcast = async () => {
-  return openInItsApp(
-    'https://open.spotify.com/show/6Ig7RqU3A5vivl4x3FJFLV',
-    'Error',
-    'Could not open the Spotify podcast.',
-  );
+  return openInItsApp('https://open.spotify.com/show/6Ig7RqU3A5vivl4x3FJFLV');
 };
 
 export const openZoomClass = async () => {
-  return openInItsApp(
-    'https://us06web.zoom.us/j/2541879535?pwd=Rmhsa0pFK3hQVTRHMzVqQ2swZlBodz09',
-    'Error',
-    'Could not open the Zoom class link.',
-  );
+  return openInItsApp('https://us06web.zoom.us/j/2541879535?pwd=Rmhsa0pFK3hQVTRHMzVqQ2swZlBodz09');
 };
 
 export const openSermonArchive = async () => {
-  return openInItsApp(
-    'https://www.youtube.com/playlist?list=PLX85oBoVF4TKC4p0hJ6EK6X_2zXOB53eW',
-    'Error',
-    'Could not open the YouTube sermon archive.',
-  );
+  return openInItsApp('https://www.youtube.com/playlist?list=PLX85oBoVF4TKC4p0hJ6EK6X_2zXOB53eW');
 };
 
 export const openSabbathStream = async () => {
-  return openInItsApp(
-    'https://www.youtube.com/@newyorkchinesesdachurch1334/streams',
-    'Error',
-    'Could not open the YouTube livestream.',
-  );
+  return openInItsApp('https://www.youtube.com/@newyorkchinesesdachurch1334/streams');
 };
 
 export const openYouTubeSearch = (query: string) => {
-  return openInItsApp(
-    `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-    'Error',
-    'Could not open the YouTube search results.',
-  );
+  return openInItsApp(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`);
 };
 
 export const openYouTubeVideo = (url: string) =>
-  openInItsApp(url, 'Error', 'Could not open the YouTube video.');
+  openInItsApp(url);
 
 export const openIosPwaInstallGuide = () =>
-  openInItsApp(
-    IOS_PWA_INSTALL_GUIDE_URL,
-    'Error',
-    'Could not open the PWA installation guide.',
-  );
+  openInItsApp(IOS_PWA_INSTALL_GUIDE_URL);
 
 // SABBATH SCHOOL DIGITAL ECOSYSTEM
 // DENOMINATIONAL CORE FRAMEWORK & PUBLIC DATA BACKBONE
@@ -215,11 +202,7 @@ export const openSabbathSchool = (language: SupportedLanguage) => {
     path = 'zh';
   }
 
-  return openURL(
-    `https://sabbath-school.adventech.io/${path}`,
-    'Error',
-    'Could not open the Sabbath School link.',
-  );
+  return openURL(`https://sabbath-school.adventech.io/${path}`);
 };
 
 const getSabbathSchoolLanguage = (language: SupportedLanguage) =>
@@ -248,18 +231,10 @@ export const getCurrentSabbathSchoolUrl = (
 };
 
 export const openCurrentSabbathSchool = (language: SupportedLanguage) =>
-  openURL(
-    getCurrentSabbathSchoolUrl(language),
-    'Error',
-    "Could not open this week's Sabbath School lesson.",
-  );
+  openURL(getCurrentSabbathSchoolUrl(language));
 
 export const openChildrenSabbathSchool = () =>
-  openURL(
-    'https://aliveinjesus.info/',
-    'Error',
-    "Could not open the children's Sabbath School catalog.",
-  );
+  openURL('https://aliveinjesus.info/');
 
 /**
  * Opens this week's children's lesson in the browser. The web uses this; a
@@ -286,19 +261,12 @@ export const openCurrentChildrenSabbathSchool = (
         }
         externalWindow.location.replace(url);
       } else {
-        await openURL(
-          url,
-          'Error',
-          "Could not open the children's Sabbath School lesson.",
-        );
+        await openURL(url);
       }
     })
     .catch((error) => {
       externalWindow?.close();
-      Alert.alert(
-        'Error',
-        "Could not open the children's Sabbath School lesson in the external browser.",
-      );
+      showAppAlert(LINK_ERROR_TITLE, LINK_ERROR_MESSAGE);
       console.error('Children Sabbath School lesson error:', error);
     });
 };
@@ -314,11 +282,7 @@ export const getBabiesSabbathSchoolUrl = (language: SupportedLanguage = 'en') =>
 };
 
 export const openBabiesSabbathSchool = (language: SupportedLanguage = 'en') =>
-  openURL(
-    getBabiesSabbathSchoolUrl(language),
-    'Error',
-    'Could not open the Babies parent and teacher resources.',
-  );
+  openURL(getBabiesSabbathSchoolUrl(language));
 
 /**
  * Adventist Mission's Mission Spotlight page (#508): this quarter's weekly
@@ -343,25 +307,15 @@ export const getMissionSpotlightSabbath = (date = new Date()) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate() + 6 - date.getDay());
 
 export const openMissionSpotlight = (language: SupportedLanguage = 'en') =>
-  openURL(
-    getMissionSpotlightUrl(language),
-    'Error',
-    "Could not open this week's mission video.",
-  );
+  openURL(getMissionSpotlightUrl(language));
 
 export const openChineseHymnalIos = () =>
   openInItsApp(
     'https://apps.apple.com/us/app/506%E8%AE%9A%E7%BE%8E%E8%A9%A9-traditional-chinese/id6498894032',
-    'Error',
-    'Could not open the App Store link.',
   );
 
 export const openChineseHymnalAndroid = () =>
-  openInItsApp(
-    'https://play.google.com/store/apps/details?id=org.chumadventist.hymnal506.next',
-    'Error',
-    'Could not open the Google Play link.',
-  );
+  openInItsApp('https://play.google.com/store/apps/details?id=org.chumadventist.hymnal506.next');
 
 /**
  * Opens a given address in the Google Maps app, or the browser without it.
@@ -372,7 +326,7 @@ export const openInMaps = async (address: string) => {
   const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     address,
   )}`;
-  return openInItsApp(url, 'Error', 'Could not open Google Maps.');
+  return openInItsApp(url);
 };
 
 export const openBeliefs = () =>
@@ -382,19 +336,11 @@ export const openAtlanticUnion = () => openURL('https://atlantic-union.org/');
 
 export const openPhone = (phone: string) => {
   const cleanedPhone = phone.replace(/[^\d+]/g, '');
-  return openInItsApp(
-    `tel:${cleanedPhone}`,
-    'Error',
-    'Phone calls are not supported on this device or emulator.',
-  );
+  return openInItsApp(`tel:${cleanedPhone}`);
 };
 
 export const openEmail = (email: string) =>
-  openInItsApp(
-    `mailto:${email}`,
-    'Error',
-    'Email is not configured on this device or emulator.',
-  );
+  openInItsApp(`mailto:${email}`);
 
 /** The app's public support address, also on the support page and store listings. */
 export const TECHNOLOGY_EMAIL = 'technology@nyccsda.org';
@@ -415,11 +361,7 @@ export const getBibleRequestEmailUrl = (prompt: string) =>
   `&body=${encodeURIComponent(prompt)}`;
 
 export const openBibleRequestEmail = (prompt: string) =>
-  openInItsApp(
-    getBibleRequestEmailUrl(prompt),
-    'Error',
-    'Email is not configured on this device or emulator.',
-  );
+  openInItsApp(getBibleRequestEmailUrl(prompt));
 
 /** The app version and phone system, the first things support asks. */
 export const getAppAndSystemLine = (
@@ -447,8 +389,4 @@ export const getSupportEmailUrl = (prompt: string, appAndSystem: string) =>
   `&body=${encodeURIComponent(`${prompt}\n\n\n\n${appAndSystem}`)}`;
 
 export const openSupportEmail = (prompt: string, version: string) =>
-  openInItsApp(
-    getSupportEmailUrl(prompt, getAppAndSystemLine(version)),
-    'Error',
-    'Email is not configured on this device or emulator.',
-  );
+  openInItsApp(getSupportEmailUrl(prompt, getAppAndSystemLine(version)));
