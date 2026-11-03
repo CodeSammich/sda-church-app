@@ -178,6 +178,11 @@ const variantsOn = (screen, platform) => {
     if (process.env.IPAD_EVAL === 'basic') return onIos ? ['default', 'landscape'] : [];
     return screen.ipadVariants || [];
   }
+  // EVAL (#324): ANDROID_EVAL=widths takes every Android screen once, at a
+  // tablet's 150% text, on an emulator sized like an iPad's split window.
+  if (platform === 'android' && process.env.ANDROID_EVAL === 'widths') {
+    return !screen.platforms || screen.platforms.includes('android') ? ['large'] : [];
+  }
   return !screen.platforms || screen.platforms.includes(platform) ? screen.variants : [];
 };
 

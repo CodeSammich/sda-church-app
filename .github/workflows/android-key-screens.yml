@@ -134,6 +134,20 @@ jobs:
           - { group: library, batch: 4 }
           - { group: worship-and-you, batch: 5 }
           - { group: google-play, batch: 6, store: true }
+          # EVAL (#324), not for merging: every screen at a tablet's 150% text,
+          # on emulators the size of an iPad's Split View and Slide Over windows,
+          # in points (dp), at 2x.
+          - { group: w320, batch: 7, eval: widths, wdp: 320, hdp: 744 }
+          - { group: w375, batch: 8, eval: widths, wdp: 375, hdp: 1024 }
+          - { group: w504, batch: 9, eval: widths, wdp: 504, hdp: 1194 }
+          - { group: w561, batch: 10, eval: widths, wdp: 561, hdp: 744 }
+          - { group: w592, batch: 11, eval: widths, wdp: 592, hdp: 834 }
+          - { group: w639, batch: 12, eval: widths, wdp: 639, hdp: 1376 }
+          - { group: w678, batch: 13, eval: widths, wdp: 678, hdp: 1024 }
+          - { group: w809, batch: 14, eval: widths, wdp: 809, hdp: 834 }
+          - { group: w981, batch: 15, eval: widths, wdp: 981, hdp: 1024 }
+    env:
+      ANDROID_EVAL: ${{ matrix.eval }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -188,6 +202,8 @@ jobs:
       - name: Start the emulator
         env:
           STORE: ${{ matrix.store && 'true' || 'false' }}
+          WDP: ${{ matrix.wdp }}
+          HDP: ${{ matrix.hdp }}
         run: |
           set -euo pipefail
           avdmanager_bin="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/avdmanager | sort -V | tail -1)"
@@ -201,6 +217,7 @@ jobs:
             "const { phone, googlePlay } = require('./test/screens/screens.json').android;
              const device = process.env.STORE === 'true' ? googlePlay : phone;
              [device.width, device.height, device.density].join(' ')")
+          if [ -n "$WDP" ]; then WIDTH=$((WDP * 2)); HEIGHT=$((HDP * 2)); DENSITY=320; fi
           echo no | "$avdmanager_bin" create avd --force -n key-screens -k "$SYSTEM_IMAGE" -d pixel
           AVD_CONFIG="$ANDROID_AVD_HOME/key-screens.avd/config.ini"
           sed -i '/^hw\.lcd\.\(width\|height\|density\)=/d; /^skin\./d' "$AVD_CONFIG"
@@ -259,9 +276,9 @@ jobs:
       - name: Capture the key screens
         # Screenshots of this group's screens in test/screens/screens.json,
         # named android/<screen>-<variant>.png, or the Google Play copies.
-        timeout-minutes: 20
+        timeout-minutes: ${{ matrix.eval && 60 || 20 }}
         env:
-          PART: ${{ matrix.store && '--store' || format('--group {0}', matrix.group) }}
+          PART: ${{ matrix.eval && ' ' || (matrix.store && '--store' || format('--group {0}', matrix.group)) }}
         run: >-
           node scripts/capture-android-screens.cjs --out "$RUNNER_TEMP/android-key-screens/screens" $PART
 
@@ -269,7 +286,7 @@ jobs:
         # RapidOCR (scripts/ocr-screens.py), at the version
         # scripts/ocr-requirements.txt pins. Apple's Vision, which reads the
         # iPhone shots, runs only on a Mac.
-        if: ${{ !cancelled() && !matrix.store }}
+        if: ${{ !cancelled() && !matrix.store && !matrix.eval }}
         run: |
           set -euo pipefail
           python3 -m venv "$RUNNER_TEMP/ocr"
@@ -280,7 +297,7 @@ jobs:
         # The iPhone's checks, with the tab bar and chapter controls where the
         # emulator puts them. Runs even if a capture failed, to report on the
         # rest.
-        if: ${{ !cancelled() && !matrix.store }}
+        if: ${{ !cancelled() && !matrix.store && !matrix.eval }}
         timeout-minutes: 15
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/android-key-screens/screens"
@@ -298,7 +315,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: android-key-screens-${{ github.run_id }}-${{ matrix.group }}
+          name: ${{ matrix.eval && format('android-eval-{0}-{1}', github.run_id, matrix.group) || format('android-key-screens-{0}-{1}', github.run_id, matrix.group) }}
           path: ${{ runner.temp }}/android-key-screens/
           if-no-files-found: warn
           retention-days: 1
