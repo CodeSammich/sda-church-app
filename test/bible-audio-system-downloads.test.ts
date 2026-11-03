@@ -45,15 +45,18 @@ type MockTask = {
   bytesWritten: number;
   totalBytes: number;
 };
+const mockTasks = new Map<string, MockTask>();
 const mockSystem = {
-  tasks: new Map<string, MockTask>(),
+  tasks: mockTasks,
   enqueue: jest.fn(async (downloads: { id: string; url: string; path: string }[], mobileData: boolean) => {
     for (const download of downloads) {
-      mockSystem.tasks.set(download.id, { ...download, mobileData, state: 'waiting', reason: null, bytesWritten: 0, totalBytes: -1 });
+      mockTasks.set(download.id, { ...download, mobileData, state: 'waiting', reason: null, bytesWritten: 0, totalBytes: -1 });
     }
   }),
-  list: jest.fn(async () => [...mockSystem.tasks.values()].map(({ url, path, ...status }) => status)),
-  cancel: jest.fn(async (ids: string[]) => ids.forEach((id) => mockSystem.tasks.delete(id))),
+  list: jest.fn(async () => [...mockTasks.values()].map(({ url, path, ...status }) => status)),
+  cancel: jest.fn(async (ids: string[]) => {
+    ids.forEach((id) => mockTasks.delete(id));
+  }),
 };
 jest.mock('@/modules/bible-audio-downloads', () => ({ getBibleAudioSystemDownloads: () => mockSystem }));
 
