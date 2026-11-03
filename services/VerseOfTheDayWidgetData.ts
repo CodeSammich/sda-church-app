@@ -6,7 +6,11 @@ import {
   getVerseOfTheDayDateKey,
   type VerseReference,
 } from '@/services/VerseOfTheDay';
-import { loadVerseOfTheDayText } from '@/services/VerseOfTheDayText';
+import {
+  formatVerseOfTheDayShare,
+  getTranslationName,
+  loadVerseOfTheDayText,
+} from '@/services/VerseOfTheDayText';
 
 /**
  * What the Android home screen widget shows (#235).
@@ -27,14 +31,35 @@ export interface VerseWidgetDay {
   day: string;
   text: string;
   reference: string;
+  /** The verse's number, which the widget shows before the text, as `[16]`. */
+  verse: number;
   /** Opens the verse in the Bible reader, as the home page's Read button does. */
   url: string;
+  /** What the share button shares, as the home page's Share button does. */
+  share: string;
 }
 
-export interface VerseWidgetProps {
-  /** The home page's heading for the verse, in the app's language. */
+/** The theme colors the widget uses, from constants/ThemeColors.ts. */
+export interface VerseWidgetColors {
+  background: string;
+  primary: string;
+  onSurface: string;
+  onSurfaceVariant: string;
+}
+
+/** The week of verses and the labels around them, in the app's language. */
+export interface VerseWidgetWeek {
+  /** The home page's heading for the verse. */
   title: string;
+  /** The home page's label for sharing the verse, for screen readers. */
+  shareLabel: string;
+  /** The name of the translation the verses are from, such as `BSB`. */
+  translation: string;
   days: VerseWidgetDay[];
+}
+
+export interface VerseWidgetProps extends VerseWidgetWeek {
+  colors: { light: VerseWidgetColors; dark: VerseWidgetColors };
 }
 
 export function getVerseWidgetUrl(verse: VerseReference, language: SupportedLanguage): string {
@@ -56,12 +81,20 @@ export function getVerseWidgetUrl(verse: VerseReference, language: SupportedLang
   return `${APP_LINK_SCHEME}://bible?${query}`;
 }
 
-/** The verses of the day from today on, in the app's language. */
-export async function loadVerseWidgetDays(
+/** The home page's labels the widget shows, in the app's language. */
+export interface VerseWidgetLabels {
+  title: string;
+  share: string;
+}
+
+/** The verses of the day from today on, and the widget's labels, in the app's language. */
+export async function loadVerseWidgetWeek(
   language: SupportedLanguage,
+  labels: VerseWidgetLabels,
   now: Date = new Date(),
-): Promise<VerseWidgetDay[]> {
+): Promise<VerseWidgetWeek> {
   const translationId = DEFAULT_TRANSLATION_MAP[language] || 'BSB';
+  const translation = getTranslationName(translationId);
   const today = getVerseOfTheDayDate(now);
   const days: VerseWidgetDay[] = [];
 
@@ -74,8 +107,10 @@ export async function loadVerseWidgetDays(
       day: getVerseOfTheDayDateKey(date),
       text: verse.text,
       reference: verse.reference,
+      verse: verse.verse,
       url: getVerseWidgetUrl(verse, language),
+      share: formatVerseOfTheDayShare(verse, translation),
     });
   }
-  return days;
+  return { title: labels.title, shareLabel: labels.share, translation, days };
 }

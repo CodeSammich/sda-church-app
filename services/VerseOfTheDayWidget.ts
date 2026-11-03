@@ -1,4 +1,5 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
+import type { VerseWidgetLabels } from '@/services/VerseOfTheDayWidgetData';
 
 /**
  * Only Android has the home screen widget (#235), in
@@ -6,5 +7,5 @@ import type { SupportedLanguage } from '@/constants/LanguageContext';
  */
 export async function updateVerseOfTheDayWidget(
   _language: SupportedLanguage,
-  _title: string,
+  _labels: VerseWidgetLabels,
 ): Promise<void> {}

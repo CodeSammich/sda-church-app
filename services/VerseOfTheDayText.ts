@@ -35,3 +35,16 @@ export async function loadVerseOfTheDayText(
     verse: selection.verse,
   };
 }
+
+/** The name the app shows for a Bible translation, such as `BSB`. */
+export function getTranslationName(translationId: string): string {
+  return BibleService.SUPPORTED_TRANSLATIONS.find((t) => t.id === translationId)?.name || translationId;
+}
+
+/** What the app shares for a verse of the day: the verse, then its reference and translation. */
+export function formatVerseOfTheDayShare(
+  verse: { text: string; reference: string },
+  translationName: string,
+): string {
+  return `${verse.text}\n\n— ${verse.reference} (${translationName})`;
+}
