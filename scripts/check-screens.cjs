@@ -20,7 +20,12 @@
  *   such as the Bible header without its 文A icon at a large text size;
  * - a screen with a `later` shot and `mustAdvance` shows a time, as minutes
  *   and seconds, that moved on by at least half the time between the shots,
- *   such as Bible audio's elapsed time while it plays (#551).
+ *   such as Bible audio's elapsed time while it plays (#551);
+ * - on the iPad (#324), a page's text stays in the centred content column,
+ *   no text touches the screen's left or right edge, and a popup is no wider
+ *   than POPUP_MAX_WIDTH, measured from its surface's colour, since on iOS a
+ *   popup could fill the screen with its text still in the middle. A screen
+ *   with `wideContent`, such as a web page the app shows, skips the first two.
  *
  * Where a label is missing, it takes a closer look at that strip of the screen,
  * enlarged and with more contrast, before reporting it.
@@ -82,16 +87,20 @@ const REGIONS_BY_PLATFORM = {
   },
   // The 13-inch iPad in portrait, 3:4 (#324): the tab labels at 96% of the
   // way down, and the chapter controls at 91%, or 96% while reading.
+  // A page's content runs from below the header, which ends 88 points down,
+  // to the tab bar: the column check looks there.
   ipad: {
     tabs: [0.92, 0.99],
     chapterControls: [0.85, 0.94],
     chapterControlsReading: [0.92, 0.99],
+    content: [0.068, 0.92],
   },
   // And in landscape, 4:3: the tab labels at 95%, the chapter controls at 89%.
   'ipad-landscape': {
     tabs: [0.91, 0.99],
     chapterControls: [0.83, 0.93],
     chapterControlsReading: [0.9, 0.99],
+    content: [0.09, 0.91],
   },
   // The Galaxy A07's screen, 20:9, with Android's gesture bar below the tabs.
   android: {
@@ -246,6 +255,143 @@ const checkAdvance = (shot, lines, laterLines) => {
     : [`the time shown went from ${before[0]} to ${after[0]} in ${shot.later} seconds, not on by at least ${shot.later / 2}`];
 };
 
+/**
+ * The app's layout sizes the iPad checks expect, from constants/Layout.ts,
+ * constants/AppPreferences.ts, and styles/PopupStyles.ts, which
+ * test/screens.test.ts keeps in step: the content column is CONTENT_MAX_WIDTH
+ * points wide at the default text size and wider in proportion above it; a
+ * tablet starts at TABLET_TEXT_SCALE; and a popup is at most POPUP_MAX_WIDTH.
+ */
+const CONTENT_MAX_WIDTH = 720;
+const DEFAULT_TEXT_SCALE = 1.25;
+const TABLET_TEXT_SCALE = 1.5;
+const POPUP_MAX_WIDTH = 560;
+
+// The iPad's own text size, as the app sees it (fontScale). The iPad shots
+// use its default; at a larger one the column is about as wide as the screen,
+// so the column check skips it.
+const IOS_FONT_SCALES = { large: 1 };
+
+// How far, as a fraction of the width, text may stray past the column or come
+// to the screen's edge: Vision's boxes are a few points loose, and a line's
+// box can include a chevron or icon beside it.
+const COLUMN_SLACK = 0.01;
+const EDGE = 0.004;
+// Below the status bar, whose clock sits near the left edge.
+const BELOW_STATUS_BAR = 0.025;
+
+// A popup's surface, the light theme's canvas (constants/Themes.ts), which
+// the dimmed page behind it never matches.
+const POPUP_SURFACE = [0xf2, 0xe6, 0xdf];
+
+const percent = (fraction) => `${Math.round(fraction * 100)}%`;
+
+/** The iPad's width in points, as the shot was turned. */
+const widthInPoints = (shot) =>
+  screenOf(shot) === 'ipad-landscape' ? shot.points.height : shot.points.width;
+
+/** The content column's left and right edges, as fractions of the width, or null to skip. */
+const columnEdges = (shot) => {
+  const fontScale = IOS_FONT_SCALES[shot.settings.iosTextSize];
+  if (!fontScale) return null;
+  const width = widthInPoints(shot);
+  const scale = (shot.settings.textScale ?? TABLET_TEXT_SCALE) * fontScale;
+  const column = Math.min(width, Math.round(CONTENT_MAX_WIDTH * Math.max(1, scale / DEFAULT_TEXT_SCALE)));
+  return [(width - column) / 2 / width, (width + column) / 2 / width];
+};
+
+/**
+ * What's wrong with an iPad shot's layout, from its text's positions (#324):
+ * text outside the content column, between the header and the tab bar, and
+ * text touching the screen's left or right edge, as when landscape cuts a page
+ * off.
+ */
+const checkIpadLayout = (shot, lines) => {
+  if (shot.platform !== 'ipad' || shot.wideContent) return [];
+  const problems = [];
+  const read = lines.filter((line) => !line.closerLook);
+  const edges = columnEdges(shot);
+  if (edges) {
+    const [left, right] = [edges[0] - COLUMN_SLACK, edges[1] + COLUMN_SLACK];
+    const [top, bottom] = regionsFor(shot).content;
+    const outside = read.filter(
+      (line) => line.box[1] >= top && line.box[1] <= bottom && (line.box[0] < left || line.box[0] + line.box[2] > right),
+    );
+    if (outside.length) {
+      problems.push(
+        `text outside the content column, ${percent(edges[0])} to ${percent(edges[1])} of the way across: ` +
+          outside
+            .slice(0, 3)
+            .map((line) => `"${line.text.trim()}" at ${percent(line.box[0])} to ${percent(line.box[0] + line.box[2])}`)
+            .join(', '),
+      );
+    }
+  }
+  const touching = read.filter(
+    (line) => line.box[1] >= BELOW_STATUS_BAR && (line.box[0] < EDGE || line.box[0] + line.box[2] > 1 - EDGE),
+  );
+  if (touching.length) {
+    problems.push(`text at the screen's edge, likely cut off: ${touching.slice(0, 3).map((line) => `"${line.text.trim()}"`).join(', ')}`);
+  }
+  return problems;
+};
+
+/** Whether a shot shows a popup: popup= in its path (#372), or a screen marked `popup`, such as setup. */
+const showsPopup = (shot) => Boolean(shot.popup) || /[?&]popup=/.test(shot.route);
+
+/**
+ * The widest run of `color` through the screen's middle, as a fraction of the
+ * width: a popup's surface, which is centred. Runs bridge gaps of up to `gap`
+ * of the width, such as a line of text, and each row starts from the middle,
+ * or the nearest surface pixel within a gap of it. A page without a dimmed
+ * popup over it is the same colour edge to edge, 1.
+ */
+const surfaceWidth = async (file, color = POPUP_SURFACE, { tolerance = 10, gap = 0.012 } = {}) => {
+  const sharp = require('sharp');
+  const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
+  const isSurface = (x, y) => {
+    const index = (y * width + x) * 3;
+    return color.every((value, channel) => Math.abs(data[index + channel] - value) <= tolerance);
+  };
+  const maxGap = Math.round(width * gap);
+  const middle = Math.round(width / 2);
+  let widest = 0;
+  for (let y = Math.round(height * 0.1); y < height * 0.9; y += 4) {
+    let start = -1;
+    for (let dx = 0; dx <= maxGap && start < 0; dx++) {
+      if (isSurface(middle + dx, y)) start = middle + dx;
+      else if (isSurface(middle - dx, y)) start = middle - dx;
+    }
+    if (start < 0) continue;
+    const edge = (step) => {
+      let last = start;
+      for (let x = start; x >= 0 && x < width; x += step) {
+        if (isSurface(x, y)) last = x;
+        else if (Math.abs(x - last) > maxGap) break;
+      }
+      return last;
+    };
+    widest = Math.max(widest, (edge(1) - edge(-1) + 1) / width);
+  }
+  return widest;
+};
+
+/**
+ * Whether an iPad popup is at most POPUP_MAX_WIDTH wide (#324). On iOS, a
+ * popup given a percentage width filled 90% of the iPad with its text in only
+ * the middle, so its text alone can't tell. Light theme only: in dark mode the
+ * dimmed page is too close to the surface's colour.
+ */
+const checkPopupWidth = async (shot, file) => {
+  if (shot.platform !== 'ipad' || shot.wideContent || !showsPopup(shot) || shot.settings.theme === 'dark') return [];
+  const width = widthInPoints(shot);
+  const measured = await surfaceWidth(file);
+  return measured > POPUP_MAX_WIDTH / width + COLUMN_SLACK
+    ? [`the popup is about ${Math.round(measured * width)} points wide, more than ${POPUP_MAX_WIDTH}`]
+    : [];
+};
+
 /** Both lists of rules, or undefined when neither has any. */
 const joinRules = (screenRules, variantRules) =>
   screenRules || variantRules ? [...(screenRules || []), ...(variantRules || [])] : undefined;
@@ -261,6 +407,9 @@ const planChecks = (config, platform = 'ios') =>
     return {
       ...shot,
       tabs: screen.tabs,
+      ...(screen.wideContent ? { wideContent: true } : {}),
+      ...(screen.popup ? { popup: true } : {}),
+      ...(platform === 'ipad' ? { points: config.ipad.points } : {}),
       mustAdvance: screen.mustAdvance,
       mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
       mustNotShowLines: joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
@@ -397,14 +546,23 @@ const main = async () => {
   const text = await readText(dir, shots);
   writeFileSync(join(dir, 'ocr.json'), JSON.stringify(text, null, 1));
 
-  const results = shots.map((shot) => {
-    const lines = text[join(dir, shot.file)];
+  const results = [];
+  for (const shot of shots) {
+    const file = join(dir, shot.file);
+    const lines = text[file];
     const later = shot.laterFile && text[join(dir, shot.laterFile)];
-    return {
+    results.push({
       file: shot.file,
-      problems: lines ? [...checkShot(shot, lines), ...checkAdvance(shot, lines, later)] : ['no screenshot'],
-    };
-  });
+      problems: lines
+        ? [
+            ...checkShot(shot, lines),
+            ...checkAdvance(shot, lines, later),
+            ...checkIpadLayout(shot, lines),
+            ...(await checkPopupWidth(shot, file)),
+          ]
+        : ['no screenshot'],
+    });
+  }
   writeFileSync(join(dir, 'checks.json'), JSON.stringify(results, null, 1));
   const failed = results.filter((result) => result.problems.length);
   const summary = [
@@ -439,6 +597,15 @@ module.exports = {
   showsLabel,
   checkShot,
   checkAdvance,
+  checkIpadLayout,
+  checkPopupWidth,
+  columnEdges,
+  surfaceWidth,
+  CONTENT_MAX_WIDTH,
+  DEFAULT_TEXT_SCALE,
+  TABLET_TEXT_SCALE,
+  POPUP_MAX_WIDTH,
+  POPUP_SURFACE,
   planChecks,
   fromStrip,
 };

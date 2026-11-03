@@ -27,6 +27,7 @@ import {
   type BibleAudioScopeStatus,
 } from '@/services/BibleAudioDownloads';
 import { BIBLE_BOOK_NAMES, BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP } from '@/services/BibleService';
+import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -501,6 +502,12 @@ export function OfflineBibleAudio() {
   const [narrator, setNarrator] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [choosingNarrator, setChoosingNarrator] = useState(false);
+  // The key-screen capture can't tap, so its build opens the narrator popup
+  // from the path, you/audio-downloads?popup=narrator (#324).
+  const screenshotPopup = getScreenshotPopup(params.popup, ['narrator']);
+  useEffect(() => {
+    if (screenshotPopup === 'narrator') setChoosingNarrator(true);
+  }, [screenshotPopup]);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   // The book being read, from the Bible: the page scrolls to its row once.
   const contentRef = useRef<ComponentRef<typeof View>>(null);

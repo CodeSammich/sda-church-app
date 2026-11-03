@@ -5,7 +5,8 @@
   },
   "ipad": {
     "$comment": "The iPad (#324): the 13-inch iPad Pro, whose screen is the size App Store Connect's iPad screenshots take. Only the screens that list ipadVariants are taken on it, on a runner of its own; its variants can turn it to landscape (orientation), which serve-sim does, since simctl can't. See \"iPad key screens\" in docs/operations/native-builds.md.",
-    "device": "iPad Pro 13-inch (M5)"
+    "device": "iPad Pro 13-inch (M5)",
+    "points": { "width": 1032, "height": 1376 }
   },
   "android": {
     "$comment": "The emulator. phone is the best-selling Android phone of Q1 2026, the Samsung Galaxy A07 4G (Counterpoint), sold mostly in the Middle East, Africa, and Latin America, where most Adventists live: a 6.7-inch 720 × 1600 screen at 300 dpi, 384 × 853 dp. The US's best-selling Androids, the Galaxy A16 and A17, are 384 dp wide too, as this church's members' phones are likely to be. Google Play takes no screenshot taller than 2:1, so its shots are taken on a second emulator of googlePlay's size. google_apis, not google_apis_playstore, because the capture writes the app's settings as root. See \"Android key screens\" in docs/operations/native-builds.md.",
@@ -32,7 +33,11 @@
     "xl-android-font-max": { "textScale": 2, "fontScale": 2 },
     "es-xl-android-font-max": { "language": "es", "textScale": 2, "fontScale": 2 },
     "android-display-large": { "displayScale": 1.2 },
-    "landscape": { "orientation": "landscape" }
+    "landscape": { "orientation": "landscape" },
+    "landscape-zh": { "orientation": "landscape", "language": "zh" },
+    "landscape-zh-cn": { "orientation": "landscape", "language": "zh-cn" },
+    "landscape-es": { "orientation": "landscape", "language": "es" },
+    "landscape-xl": { "orientation": "landscape", "textScale": 2 }
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give, and first-launch setup over it.",
@@ -46,10 +51,12 @@
       "name": "setup",
       "group": "home",
       "tabs": false,
+      "popup": true,
       "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of three (#523), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
       "path": "",
       "settings": { "setupDone": false },
       "variants": ["default", "large"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^Welcome$", "^Language$", { "line": "^Next$", "platforms": ["ios"] }],
       "mustNotShowLines": ["^Appearance$", "^Text size$"],
       "variantRules": {
@@ -62,7 +69,7 @@
       "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). zh and zh-cn: the countdown's date in Chinese, such as 11月6日星期五, which the iPhone's text recognition reads with a space before 星期. On Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"), so the app writes Chinese dates out by hand (formatAppDate).",
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
-      "ipadVariants": ["default", "landscape"],
+      "ipadVariants": ["default", "landscape", "landscape-xl"],
       "variantRules": {
         "xl-ios-large-text": {
           "mustShowLines": ["^Today.s Verse$"],
@@ -86,6 +93,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default", "dark", "large"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^Psalms\\b"]
     },
     {
@@ -105,6 +113,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB&backTo=%2F",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "large", "xl"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["\\bEN\\b", "^Psalms\\b"],
       "variantRules": {
         "default": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)", "BSB", "CUV"] },
@@ -125,6 +134,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh", "zh-dark"],
+      "ipadVariants": ["landscape-zh"],
       "mustShowLines": ["國語", "^\u8a69\u7bc7"]
     },
     {
@@ -139,6 +149,7 @@
         "audioReaders": { "cuv": "粵語 (WordProject)" }
       },
       "variants": ["zh"],
+      "ipadVariants": ["landscape-zh"],
       "mustShowLines": ["粵語", "^\u8a69\u7bc7"]
     },
     {
@@ -148,6 +159,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv",
       "settings": { "translation": "spa_r09", "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustNotShowLines": ["Salmos"]
     },
     {
@@ -157,6 +169,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cu1",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["zh-cn"],
+      "ipadVariants": ["landscape-zh-cn"],
       "mustShowLines": ["国语", "^\u8bd7\u7bc7"]
     },
     {
@@ -164,7 +177,8 @@
       "group": "bible-text",
       "path": "bible?bookId=JHN&chapter=3&translationId=cmn_cuv",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": true },
-      "variants": ["default", "zh", "large"]
+      "variants": ["default", "zh", "large"],
+      "ipadVariants": ["landscape-zh"]
     },
     {
       "name": "bible-scrolled",
@@ -174,6 +188,7 @@
       "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=14&verseEnd=16",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": true },
       "variants": ["default", "large", "dark"],
+      "ipadVariants": ["default", "landscape", "landscape-xl"],
       "checks": ["statusBarClear"],
       "mustShowLines": ["^14\\b", "^15\\b", "^16\\b", "^John\\b"]
     },
@@ -184,6 +199,7 @@
       "path": "bible?bookId=JHN&chapter=3&translationId=BSB&verseStart=16&verseEnd=16&popup=verse",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^John 3:16$", "\\bShare Verse$", "^Source: Statistical Restoration Greek\\b", "\\bCC BY 4\\.0\\b"],
       "mustNotShowLines": ["^Close$"]
     },
@@ -194,7 +210,8 @@
       "path": "bible?bookId=GEN&chapter=22&translationId=BSB&search=Moriah",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
-      "mustShowLines": ["^This chapter\\W+1 verse$", "^Whole Bible\\W+2 verses$", "^Genesis\\W+1$", "^Genesis 22:2$"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": ["^This chapter\\W+1 verse$", "^Whole Bible\\W+2 verses$", "^Genesis\\W+1$", "^(•\\s*)?Genesis 22:2$"],
       "mustNotShowLines": ["^Verse$", "^Explore$"]
     },
     {
@@ -204,6 +221,7 @@
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=audio-settings",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^WordProject$"],
       "variantRules": {
         "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$", "^Listen offline$", { "line": "^Offline Bible Audio$", "platforms": ["ios"] }], "mustNotShowLines": ["^Close$", "^Whole Bible$"] },
@@ -216,10 +234,20 @@
       "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete. The text readers may read a closed section's chevron with its title (\"> Law\") and drop the spaces in \"英語 – Souer\" and \"66 卷\", so the rules allow both.",
       "path": "you/audio-downloads?narrator=souer",
       "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
       "variantRules": {
         "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–]\\s*Souer", "^Whole Bible$", "^66 books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
         "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–]\\s*Souer", "^整本聖經$", "^66\\s*卷", "^舊約$", "(^|\\s)摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
       }
+    },
+    {
+      "name": "offline-bible-audio-narrator",
+      "group": "bible-reading",
+      "$comment": "Offline Bible Audio's narrator popup, which lists every narrator to download with what's on the phone, by popup=narrator in the preview build (#324). A key-screen build has nothing downloaded. Its iPad shot checks the popup's width: when it was new, it had a percentage width, which on iOS fills 90% of an iPad.",
+      "path": "you/audio-downloads?narrator=souer&popup=narrator",
+      "variants": ["default"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": ["^Narrator$", "^Nothing downloaded$"]
     },
     {
       "name": "bible-audio-download-tip",
@@ -228,6 +256,7 @@
       "path": "bible?bookId=JHN&chapter=3&translationId=BSB&popup=audio-download-tip",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^Playback often stops", "^Listen offline$", "^Offline Bible Audio$"]
     },
     {
@@ -238,6 +267,7 @@
       "path": "bible?bookId=PSA&chapter=119&translationId=BSB&verseStart=100&verseEnd=100",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default", "xl", "ios-large-text", "android-font-max"],
+      "ipadVariants": ["landscape"],
       "checks": ["statusBarClear"],
       "mustShowLines": ["^100(?!\\d)", "^101(?!\\d)", "^102(?!\\d)", "^Psalms\\b"]
     },
@@ -249,6 +279,7 @@
       "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=16&verseEnd=16",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^16\\b", { "line": "\\bHiggaion Selah", "minLeft": 0.5 }]
     },
     {
@@ -259,6 +290,7 @@
       "path": "bible?bookId=PSA&chapter=9&translationId=BSB&verseStart=20&verseEnd=20",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^20\\b", { "line": "^Selah\\b", "minLeft": 0.5 }]
     },
     {
@@ -267,6 +299,7 @@
       "path": "bible?bookId=JHN&chapter=3&translationId=spa_r09",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["es"],
+      "ipadVariants": ["landscape-es"],
       "mustShowLines": ["^Juan\\b"]
     },
     {
@@ -275,6 +308,7 @@
       "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380), and their Android counterparts at Android's largest font. xl-android-font-max is also the Android counterpart of max. max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\". In Chinese the Library is 精選書庫 (hand-picked library), and the In-depth Bible Study card for the SDA Bible app shows below Spotify; it's Chinese only, since the app's commentary and nearly all its books are Chinese (#554).",
       "path": "explore",
       "variants": ["default", "dark", "zh", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max", "xl-android-font-max", "es-xl-android-font-max"],
+      "ipadVariants": ["default", "landscape"],
       "variantRules": {
         "default": { "mustNotShowLines": ["^In-depth Bible"] },
         "zh": { "mustShowLines": ["^精選書庫", "^深入研經"], "mustNotShowLines": ["圖書館"] },
@@ -289,14 +323,15 @@
       "$comment": "The featured carousel's arrows sit beside its dots, under the carousel, so they never cover its first book's title (#447): The Bruised Reed in every language, whole on one line, right of the cover. The shelf below wraps the same title after The Bruised, so only the carousel's line matches. Vision isn't asked to read the arrows: a chevron alone in a circle is no reliable text.",
       "path": "explore/library",
       "variants": ["default", "dark", "zh", "zh-cn", "es"],
-      "ipadVariants": ["default"],
+      "ipadVariants": ["default", "landscape", "landscape-xl"],
       "mustShowLines": [{ "line": "^The Bruised Reed$", "minLeft": 0.3 }]
     },
     {
       "name": "library-egw",
       "group": "library",
       "path": "explore/library/egw",
-      "variants": ["default", "zh"]
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"]
     },
     {
       "name": "library-contemporary",
@@ -304,6 +339,7 @@
       "$comment": "Chinese readers get a shelf of today's Adventist writers, books the church's leaders chose from the Chinese Union Mission's reader, titled in the app's script; the covers are the reader's, in Simplified. The Traditional shelf title and 地上的最後一夜 (最后 on its cover) can only come from the app's own text (#554). The second row's titles are below the fold on both phones.",
       "path": "explore/library/contemporary",
       "variants": ["zh"],
+      "ipadVariants": ["landscape-zh"],
       "mustShowLines": ["^當代復臨著作$", "^最富有的穴居人$", "^地上的最後一夜$"]
     },
     {
@@ -312,7 +348,7 @@
       "$comment": "Books by other writers lead the Children shelf, and Ellen G. White's books for adults stay on her own shelf (#391).",
       "path": "explore/library/children",
       "variants": ["default", "zh", "zh-cn", "es"],
-      "ipadVariants": ["default"],
+      "ipadVariants": ["default", "landscape"],
       "mustShowLines": ["^Story of the Bible", "^Hurlbut.s Life of"],
       "mustNotShowLines": [
         "^Child Guidance", "^Messages to Young", "^Christ.s Object",
@@ -326,6 +362,7 @@
       "$comment": "Pastor Hsi leads the Youth shelf, ahead of Ellen G. White's books, and The Pilgrim's Progress follows in each reader's language: its 1869 Mandarin edition for Chinese readers, and Chapel Library's for Spanish (#391). Its English and Spanish titles wrap, differently on each phone, so only their first words are checked.",
       "path": "explore/library/youth",
       "variants": ["default", "zh", "zh-cn", "es"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^Pastor Hsi"],
       "variantRules": {
         "default": { "mustShowLines": ["^The Pilgrim.s\\b"] },
@@ -340,6 +377,7 @@
       "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. In Chinese the title is 本週聖工剪影, or the Sabbath of the last Mandarin video the phone found, such as 10月31日聖工剪影. The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
+      "ipadVariants": ["default", "landscape", "landscape-xl"],
       "variantRules": {
         "default": { "mustShowLines": ["^This Week$", "^This Week.s Mission\\b"] },
         "zh": { "mustShowLines": ["^本週$", "^(本週|\\d{1,2}月\\d{1,2}日)聖工剪影$"] },
@@ -352,6 +390,7 @@
       "$comment": "The popup a tap on a children's lesson opens while its PDF downloads (#529). Key screens can't tap, so a key-screens build opens it from popup=, with a fixed 5.1 of 14.2 MB. The iPhone's text recognition reads \"14.2MB\", without the space.",
       "path": "sabbath-school?popup=lesson-download",
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^Junior \\(ages 10.12\\)", "^Downloading\\W+5\\.1 of 14\\.2 ?MB$", "^It stays on this phone"]
     },
     {
@@ -360,6 +399,7 @@
       "$comment": "The same popup offline with no copy of the lesson (#529, part of #533): it says so, with only the X, in Chinese.",
       "path": "sabbath-school?popup=lesson-offline",
       "variants": ["zh"],
+      "ipadVariants": ["landscape-zh"],
       "mustShowLines": ["^少年級", "沒有網路連線"],
       "mustNotShowLines": ["下載中"]
     },
@@ -369,7 +409,9 @@
       "platforms": ["ios"],
       "$comment": "A children's lesson downloaded and open in Quick Look, the iPhone's own viewer (#529, #551). popup=lesson-viewer opens the Beginner student lesson in a key-screens build as a tap would: this week's PDF is about 1 MB. The app records how it opened (record), and the capture fails unless Quick Look opened, saying whether the network was the cause. Where the week's lesson has no PDF yet, the browser opens its website instead and the run only warns, so the rules accept that page's address too. Nothing of the page beneath may show.",
       "path": "sabbath-school?popup=lesson-viewer",
+      "wideContent": true,
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "wait": 4,
       "record": "screenshot-lesson",
       "mustShowLines": ["^Beginner \\(ages 1.3\\)$|aliveinjesus\\.info"],
@@ -382,6 +424,7 @@
       "$comment": "Bible audio playing on the iPhone (#551), which nothing else checks before release: Android's is checked by android-audio-e2e.yml. play=1 starts Psalm 23's Mandarin recording in a key-screens build as a tap on Play would. A second screenshot is taken later seconds after the first, and the elapsed time left of the timeline must have moved on by at least half that (mustAdvance). The player's own status is recorded too (record): if it didn't play, the capture says whether this runner could reach the audio's hosts, so a network failure reads as one. The lock screen's 10- and 30-second skips can't be pressed in the Simulator; test/bible-audio-service.test.ts checks what the app passes them.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&play=1",
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "wait": 6,
       "later": 10,
       "record": "screenshot-audio",
@@ -393,6 +436,7 @@
       "$comment": "The hymnal page (#413): a carousel of the hymnals, the app language's first, then the picked hymnal's search and its hymns, each 1985 or 505 hymn with the other hymnal's number, a verse chip beside it (an English hymn's own, and a 505 hymn's 1985 equivalent's in Chinese, such as 詩篇 100 on 505's 1), and the 1985 and 505 hymns' Piano only videos (#424). Vision reads the 文A icon in a chip as XA and a row's treble clef as a character, so those lines are matched anywhere.",
       "path": "home/hymnal-selection",
       "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
       "variantRules": {
         "default": {
           "mustShowLines": ["^SDA Hymnal\\b", "^1985 Edition$", "Search by number, title", "\\b1\\. Praise to the Lord", "\\bPsalm 103:2-5\\b", "\\b505\\W+5$"]
@@ -408,6 +452,7 @@
       "$comment": "A link to one hymn, as from the bulletin: the hymnal page opens on the SDA Hymnal with just that hymn, marked, its Chinese 505 number, its With singing and Piano only videos (#424), and Show all hymns. At the app's 200% text size the Chinese 505 · 16 chip must still show its whole number (a long label wraps inside the chip), and the buttons stack, so they and Show all hymns may fall below the shot. The hymnal's name and the hymn's title wrap at 200% too, so there only their first words are required.",
       "path": "home/english-hymnal?hymnNum=12",
       "variants": ["default", "xl"],
+      "ipadVariants": ["default", "landscape"],
       "mustShowLines": [{ "line": "\\b505\\W+16$", "platforms": ["ios"] }],
       "mustNotShowLines": ["\\b1\\. Praise to the Lord", "\\b13\\. New Songs"],
       "variantRules": {
@@ -423,6 +468,7 @@
       "$comment": "An older hymnal route with an old search, highlight=平安夜, opens the hymnal page with that hymnal picked: the 506, not the 505 a Chinese interface would show first, its cover photo cropped to the carousel's 2:3 frame. Its one match, 82, comes first, with its recording labeled 演唱 (With singing) although the 506 has no piano videos yet, then the heading over the matches in the other hymnals, each under its hymnal's name, the 505's 66 first, and no longer the hymnal's short name on each result's own line (\"505\", \"1985\", \"707 新編簡譜\"). Vision may read \"82. 平安夜\" without the space, may read the dash in a hymnal's name as 一, and reads the YouTube logo before 演唱 as a character.",
       "path": "home/chinese-506-hymnal?highlight=%E5%B9%B3%E5%AE%89%E5%A4%9C",
       "variants": ["zh"],
+      "ipadVariants": ["landscape-zh"],
       "mustShowLines": ["^中文讚美詩$", "^506 ?版$", "\\b82\\. ?平安夜", "演唱", "^其他詩歌本$", "讚美詩\\W*505 ?版$", "\\b66\\. ?平安夜"],
       "mustNotShowLines": ["YouTube", "^505$", "^1985$", "^707 新編簡譜$"]
     },
@@ -432,6 +478,7 @@
       "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\". xl-android-font-max is the same case on Android, at its largest font. es-default-text is Spanish at the app's default 125%: on the Android phone's 384 points, \"Compañerismo\" was wider than its card's title, so each card shrinks its grid's text just enough to keep the widest word whole (#324). Its ñ may read as another letter.",
       "path": "home/discover",
       "variants": ["default", "zh", "es-default-text", "xl-ios-large-text", "xl-android-font-max"],
+      "ipadVariants": ["default", "landscape"],
       "variantRules": {
         "es-default-text": { "mustShowLines": ["^Compa.erismo$"] },
         "xl-ios-large-text": { "mustShowLines": ["\\bDenomination$"] },
@@ -442,13 +489,15 @@
       "name": "about-sda",
       "group": "home",
       "path": "home/about-sda",
-      "variants": ["default", "es"]
+      "variants": ["default", "es"],
+      "ipadVariants": ["landscape"]
     },
     {
       "name": "about-my-church",
       "group": "home",
       "path": "home/about-my-church",
-      "variants": ["default", "zh"]
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"]
     },
     {
       "name": "give",
@@ -456,6 +505,7 @@
       "$comment": "Zelle stays hidden until its address is ready (#392). When shown, its heading sits just above the tab bar.",
       "path": "home/give",
       "variants": ["default", "zh", "es"],
+      "ipadVariants": ["landscape"],
       "mustNotShowLines": ["Zelle", "^Electronic Transfer\\b", "^電子轉賬", "^Transferencia Electrónica"]
     },
     {
@@ -464,6 +514,7 @@
       "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
+      "ipadVariants": ["default", "landscape"],
       "variantRules": {
         "default": { "mustShowLines": [{ "line": "^Share the App$", "platforms": ["ios"] }, "^Offline Bible Audio$"] },
         "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, { "line": "幫助與意見回饋", "platforms": ["ios"] }, "^離線聖經音訊$"] }
@@ -475,6 +526,7 @@
       "$comment": "The Share the App popup, opened by popup=share-app (#555): an X beside its title, the download page's QR code on white so it scans in the dark theme too, the address, and Share Link, with no Close button. The QR image has no text, so the rules require the address and the button. The button's share icon reads as \"<\" before its label, so the label isn't anchored at the start.",
       "path": "you?popup=share-app",
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["app\\.nyccsda\\.org/download", "Share Link$"],
       "mustNotShowLines": ["^Close$"]
     },
@@ -484,7 +536,7 @@
       "$comment": "The Text size dialog, opened by popup=text-size (#372): an X beside its title, and Reset the only button at its foot, with no Apply, since a size takes effect as it changes (#464). At 200% its text runs past the popups' height limit (POPUP_MAX_HEIGHT_FRACTION in styles/PopupStyles.ts), so the dialog stops there and its text scrolls, leaving room around it to tap. Its title is also on the You screen behind it, so the rules require lines only the dialog shows. The iPad saves no text size, so its shot shows the size a tablet starts at, 150%, and Reset returns there (#324).",
       "path": "you?popup=text-size",
       "variants": ["default", "xl"],
-      "ipadVariants": ["default"],
+      "ipadVariants": ["default", "landscape", "landscape-xl"],
       "mustShowLines": [
         "^Current selection",
         { "line": "^Reset to 125%", "platforms": ["ios", "android"] },
@@ -501,6 +553,7 @@
       "$comment": "The Language dialog, opened by popup=language (#372): an X beside its title and no Close button (#464). Its title is also on the You screen behind it, so the rules require the options' descriptions, which only the dialog shows.",
       "path": "you?popup=language",
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^Traditional Chinese", "^Simplified Chinese"],
       "mustNotShowLines": ["^Close$"]
     },
@@ -510,6 +563,7 @@
       "$comment": "The legal disclaimer moved to the website (#412); the open-source notices stay in the app, on this screen.",
       "path": "you/licenses",
       "variants": ["default"],
+      "ipadVariants": ["landscape"],
       "mustShowLines": ["^Open-Source Licenses$", "^SunCalc\\b"]
     }
   ],
