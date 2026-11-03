@@ -550,7 +550,8 @@ describe('iPad layout checks (#324)', () => {
     expect(DEFAULT_TEXT_SCALE).toBe(preferences.DEFAULT_TEXT_SCALE);
     expect(TABLET_TEXT_SCALE).toBe(preferences.TABLET_DEFAULT_TEXT_SCALE);
     expect(POPUP_MAX_WIDTH).toBe(require('../styles/PopupStyles').POPUP_MAX_WIDTH);
-    const canvas = /background: '#([0-9A-F]{6})', \/\/ The Canvas/.exec(repoFile('constants/Themes.ts'))![1];
+    // The light theme's canvas, which every popup's surface is (getPopupSurfaceStyle).
+    const canvas = require('../constants/Themes').customLightTheme.colors.background.slice(1);
     expect(POPUP_SURFACE).toEqual([0, 2, 4].map((at) => parseInt(canvas.slice(at, at + 2), 16)));
     // The 13-inch iPad's points, at 2 pixels each, are its screenshots' size.
     expect([config.ipad.points.width * 2, config.ipad.points.height * 2]).toEqual([
