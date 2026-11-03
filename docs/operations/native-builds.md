@@ -672,8 +672,11 @@ In the faster of the runs with a matching compile cache:
 In the slower one, the compiling runner was slow throughout: 3 minutes just to list its
 simulated iPhones, then 3.7 to compile and 6.0 to boot, install, and launch, so it finished
 last. After a library update, the compile reuses less of the cache: 3.7 to 6.1 minutes in
-the compile-only runs under **Compile cache**, so expect a run a few minutes longer.
-Each **Key screens** job times out after 40 minutes; the longest took 27.2.
+the compile-only runs under **Compile cache**, so expect a run a few minutes longer. A
+dependency update can miss most of the cache: the first build after Expo SDK 58's November
+2026 patch releases (#604) took 28.6 minutes to compile. So the compiling job times out
+after 50 minutes, and the others, whose time includes waiting for it, after 90. Before
+that update, the longest job took 27.2.
 
 From the logs of earlier runs:
 
