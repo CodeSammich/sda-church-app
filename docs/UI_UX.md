@@ -252,17 +252,20 @@ Visitor) live here.
 
 **Android home screen widget (#235):** **Today's Verse** can also sit on an Android
 phone's home screen, laid out like YouVersion's Verse of the Day widget: the heading, the
-reference, a share button, the verse with its number in the phone's serif font, and the
-translation, in the app's language. A verse longer than the widget's size stops at the end
-of the last whole line that fits, as YouVersion's does. The colors are the app's: the
-primary blue on the warm canvas, or gold on near-black, following the phone's light or
-dark mode. Android 12 and later switch it with the phone; older versions at its next
-hourly redraw. Tapping it opens the verse in the Bible reader, as **Read Verse** does, and
-the share button shares it as **Share Verse** does. Once a day, when Home loads the verse,
-it hands the widget the next week's verses, and the widget shows the day's, so the verse
-changes within an hour of 6 AM without the app being opened. After a week without the app,
-it keeps the last verse. iPhones don't have the widget. The code is in
-`features/verse-of-the-day/`, `services/VerseOfTheDayWidgetData.ts`,
+reference, a light/dark button and a share button, the verse with its number in the
+phone's serif font, and the translation, in the app's language. A verse longer than the
+widget's size stops at the end of the last whole line that fits, as YouVersion's does. The
+colors are the app's: the primary blue on the warm canvas, or gold on near-black,
+following the phone's light or dark mode. Android 12 and later switch it with the phone;
+older versions at its next hourly redraw. A member whose phone is dark but whose wallpaper
+is light, or the reverse, can tap the light/dark button. Each tap flips the widget's
+colors. When the new look matches the phone's mode, the widget goes back to following the
+phone. Each widget keeps its own choice. Tapping it opens the verse in the Bible reader,
+as **Read Verse** does, and the share button shares it as **Share Verse** does. Once a
+day, when Home loads the verse, it hands the widget the next week's verses, and the widget
+shows the day's, so the verse changes within an hour of 6 AM without the app being opened.
+After a week without the app, it keeps the last verse. iPhones don't have the widget. The
+code is in `features/verse-of-the-day/`, `services/VerseOfTheDayWidgetData.ts`,
 `modules/verse-widget/`, and `plugins/withAndroidVerseWidget.js`.
 
 **Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the

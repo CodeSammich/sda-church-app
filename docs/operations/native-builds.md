@@ -1437,7 +1437,10 @@ receiver the one in `modules/verse-widget`, a local Expo module for Android only
   the receiver, so the app never calls it. It stores the week of verses as the widget's
   initial props, which doesn't draw, and then asks the module to redraw the widget.
 - **Taps.** `expo-widgets` sends a tap on one of the widget's buttons to the receiver,
-  which opens the verse in the app or the phone's share sheet.
+  which opens the verse in the app or the phone's share sheet, or flips that widget
+  between light and dark. Each tap flips the widget's colors. When the new look matches
+  the phone's mode, the widget goes back to following the phone. The receiver keeps
+  each widget's choice in the `verse_widget_theme` shared preferences, by widget ID.
 
 Gradle runs Metro twice more for the widget (`generateExpoWidgetsBundle` and
 `generateExpoWidgetsLayoutRegistry`). The second builds the layout the widget shows

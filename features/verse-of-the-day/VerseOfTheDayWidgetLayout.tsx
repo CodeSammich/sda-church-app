@@ -1,4 +1,4 @@
-import { Box, Button, Column, Image, Spacer, Text } from '@expo/ui/jetpack-compose';
+import { Box, Button, Column, Image, Row, Spacer, Text } from '@expo/ui/jetpack-compose';
 import {
   cornerRadius,
   fillMaxSize,
@@ -7,6 +7,7 @@ import {
   padding,
   paddingAll,
   size,
+  width,
 } from '@expo/ui/jetpack-compose/modifiers';
 
 import type { VerseWidgetColors, VerseWidgetProps } from '@/services/VerseOfTheDayWidgetData';
@@ -48,7 +49,8 @@ export const VERSE_WIDGET_COLORS: VerseWidgetProps['colors'] = {
  *   phone's serif font and cuts it to the whole lines the widget's size fits.
  * - Links go in the buttons' `target`, which ButtonProps leaves out but
  *   expo-widgets passes on to the app's receiver: an app link opens the
- *   verse, and `share:` and the text open the share sheet.
+ *   verse, `share:` and the text open the share sheet, and `theme:` flips
+ *   this widget between the light and dark look.
  */
 export const VerseOfTheDayWidgetLayout = (
   props: Partial<VerseWidgetProps>,
@@ -74,7 +76,7 @@ export const VerseOfTheDayWidgetLayout = (
     >
       <Column modifiers={[fillMaxSize(), paddingAll(16)]}>
         <Box contentAlignment="topEnd" modifiers={[fillMaxWidth()]}>
-          <Column modifiers={[fillMaxWidth(), padding(0, 0, 36, 0)]}>
+          <Column modifiers={[fillMaxWidth(), padding(0, 0, 76, 0)]}>
             <Text color={colors.onSurfaceVariant} maxLines={1} style={{ fontSize: 15 }}>
               {(props && props.title) || 'Today’s Verse'}
             </Text>
@@ -84,16 +86,27 @@ export const VerseOfTheDayWidgetLayout = (
               </Text>
             ) : null}
           </Column>
-          {verse ? (
-            <Button {...({ target: `share:${verse.share}` } as object)}>
+          <Row>
+            <Button {...({ target: 'theme:' } as object)}>
               <Image
-                source={{ uri: 'verse_widget_share' }}
+                source={{ uri: 'verse_widget_theme' }}
                 tint={colors.primary}
-                contentDescription={props.shareLabel}
+                contentDescription={props && props.themeLabel}
                 modifiers={[size(24, 24)]}
               />
             </Button>
-          ) : null}
+            {verse ? <Spacer modifiers={[width(16)]} /> : null}
+            {verse ? (
+              <Button {...({ target: `share:${verse.share}` } as object)}>
+                <Image
+                  source={{ uri: 'verse_widget_share' }}
+                  tint={colors.primary}
+                  contentDescription={props.shareLabel}
+                  modifiers={[size(24, 24)]}
+                />
+              </Button>
+            ) : null}
+          </Row>
         </Box>
         <Spacer modifiers={[height(16)]} />
         <Text color={colors.onSurface} style={{ fontSize: 18 }}>

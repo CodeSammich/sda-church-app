@@ -37,10 +37,12 @@ describe('device backups', () => {
     expect(EXCLUDED).toEqual([
       { domain: 'file', path: 'bible-audio' },
       { domain: 'sharedpref', path: 'expo.modules.widgets.xml' },
+      { domain: 'sharedpref', path: 'verse_widget_theme.xml' },
     ]);
     for (const exclude of [
       '<exclude domain="file" path="bible-audio"/>',
       '<exclude domain="sharedpref" path="expo.modules.widgets.xml"/>',
+      '<exclude domain="sharedpref" path="verse_widget_theme.xml"/>',
     ]) {
       // Android 11 and lower, and both of Android 12's sections.
       expect(getFullBackupContent().split(exclude)).toHaveLength(2);

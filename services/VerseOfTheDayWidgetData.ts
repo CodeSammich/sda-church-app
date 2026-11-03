@@ -53,6 +53,8 @@ export interface VerseWidgetWeek {
   title: string;
   /** The home page's label for sharing the verse, for screen readers. */
   shareLabel: string;
+  /** The label of the button that switches the widget between light and dark, for screen readers. */
+  themeLabel: string;
   /** The name of the translation the verses are from, such as `BSB`. */
   translation: string;
   days: VerseWidgetDay[];
@@ -80,6 +82,14 @@ export function getVerseWidgetUrl(verse: VerseReference, language: SupportedLang
     .join('&');
   return `${APP_LINK_SCHEME}://bible?${query}`;
 }
+
+/** The widget's button that switches it between light and dark. */
+export const VERSE_WIDGET_THEME_LABELS: Record<SupportedLanguage, string> = {
+  en: 'Switch between light and dark',
+  zh: '切換淺色／深色',
+  'zh-cn': '切换浅色／深色',
+  es: 'Cambiar entre claro y oscuro',
+};
 
 /** The home page's labels the widget shows, in the app's language. */
 export interface VerseWidgetLabels {
@@ -112,5 +122,11 @@ export async function loadVerseWidgetWeek(
       share: formatVerseOfTheDayShare(verse, translation),
     });
   }
-  return { title: labels.title, shareLabel: labels.share, translation, days };
+  return {
+    title: labels.title,
+    shareLabel: labels.share,
+    themeLabel: VERSE_WIDGET_THEME_LABELS[language],
+    translation,
+    days,
+  };
 }

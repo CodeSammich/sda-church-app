@@ -20,6 +20,7 @@ import {
   type VerseWidgetDay,
   type VerseWidgetProps,
   type VerseWidgetWeek,
+  VERSE_WIDGET_THEME_LABELS,
 } from '@/services/VerseOfTheDayWidgetData';
 
 // The widgets the app registers, and its redraws through its own receiver.
@@ -92,6 +93,19 @@ describe('the verses the app hands the widget', () => {
     );
   });
 
+  it('label the light/dark button in every language', async () => {
+    for (const language of ['en', 'zh', 'zh-cn', 'es'] as const) {
+      const week = await loadVerseWidgetWeek(language, englishLabels, new Date(2026, 10, 2, 9));
+      expect(week.themeLabel).toBe(VERSE_WIDGET_THEME_LABELS[language]);
+    }
+    expect(Object.values(VERSE_WIDGET_THEME_LABELS)).toEqual([
+      'Switch between light and dark',
+      '切換淺色／深色',
+      '切换浅色／深色',
+      'Cambiar entre claro y oscuro',
+    ]);
+  });
+
   it('share each verse the way the home page’s Share button does', async () => {
     const [day] = await loadDays('es', new Date(2026, 10, 2, 9));
     expect(day.share).toBe(`${day.text}\n\n— ${day.reference} (RVR09)`);
@@ -144,6 +158,7 @@ describe('updating the widget from the home page', () => {
   const weekIn = (labels: { title: string; share: string }): VerseWidgetWeek => ({
     title: labels.title,
     shareLabel: labels.share,
+    themeLabel: 'Switch between light and dark',
     translation: 'BSB',
     days: [day],
   });
@@ -291,6 +306,7 @@ describe('the widget layout', () => {
     (...args: unknown[]) => ({ $type: name, args });
   const globals: Record<string, unknown> = {
     Box: 'Box',
+    Row: 'Row',
     Button: 'Button',
     Column: 'Column',
     Image: 'Image',
@@ -303,6 +319,7 @@ describe('the widget layout', () => {
     padding: modifier('padding'),
     paddingAll: modifier('paddingAll'),
     size: modifier('size'),
+    width: modifier('width'),
     _jsx: jsx,
     _jsxs: jsx,
     _jsxDEV: jsx,
@@ -332,6 +349,7 @@ describe('the widget layout', () => {
   const week: VerseWidgetProps = {
     title: 'Today’s Verse',
     shareLabel: 'Share Verse',
+    themeLabel: 'Switch between light and dark',
     translation: 'BSB',
     days: [day('2026-11-2', 'Monday'), day('2026-11-3', 'Tuesday'), day('2026-11-4', 'Wednesday')],
     colors: layoutModule().VERSE_WIDGET_COLORS,
@@ -382,14 +400,16 @@ describe('the widget layout', () => {
       const tree = render(props);
       expect(texts(tree)).toContain('Open the app to see today’s verse.');
       expect(tree.props.target).toBe('sdachurchapp://');
-      expect(nodes(tree).filter((n) => n.type === 'Image')).toEqual([]);
+      // Only the light/dark button: there's nothing to share yet.
+      const icons = nodes(tree).filter((n) => n.type === 'Image');
+      expect(icons.map((n) => n.props.source.uri)).toEqual(['verse_widget_theme']);
     }
     expect(render(atBuild as Partial<VerseWidgetProps>).props.colors.containerColor).toBe(
       LIGHT_THEME_COLORS.background,
     );
   });
 
-  it('opens the verse when tapped anywhere but the share button', () => {
+  it('opens the verse when tapped anywhere but its two buttons', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 3, 9) });
     const tree = render(week);
     expect(tree.type).toBe('Button');
@@ -399,11 +419,21 @@ describe('the widget layout', () => {
     const buttons = nodes(tree).filter((n) => n.type === 'Button');
     expect(buttons.map((n) => n.props.target)).toEqual([
       'sdachurchapp://bible?day=2026-11-3',
+      'theme:',
       'share:Share 2026-11-3',
     ]);
-    const [icon] = nodes(buttons[1]).filter((n) => n.type === 'Image');
-    expect(icon.props.source).toEqual({ uri: 'verse_widget_share' });
-    expect(icon.props.contentDescription).toBe('Share Verse');
+    const icon = (button: Node) => nodes(button).filter((n) => n.type === 'Image')[0].props;
+    expect([icon(buttons[1]).source, icon(buttons[1]).contentDescription]).toEqual([
+      { uri: 'verse_widget_theme' },
+      'Switch between light and dark',
+    ]);
+    expect([icon(buttons[2]).source, icon(buttons[2]).contentDescription]).toEqual([
+      { uri: 'verse_widget_share' },
+      'Share Verse',
+    ]);
+    // The two buttons sit side by side, in the same size and color.
+    expect(icon(buttons[1]).modifiers).toEqual(icon(buttons[2]).modifiers);
+    expect(icon(buttons[1]).tint).toBe(icon(buttons[2]).tint);
   });
 
   it('draws in the theme’s colors for the phone’s mode', () => {
@@ -471,11 +501,25 @@ describe('the Android widget config plugin', () => {
     expect(receiverKotlin).toContain('private const val SHARE_PREFIX = "share:"');
     expect(receiverKotlin).toContain('Intent(Intent.ACTION_SEND).setType("text/plain")');
     expect(read('modules/verse-widget/android/src/main/res/drawable/verse_widget_share.xml')).toContain('<vector');
-    // Only the layout's JavaScript names the icon, so the release build's
-    // resource shrinker has to be told to keep it.
+    // Only the layout's JavaScript names the icons, so the release build's
+    // resource shrinker has to be told to keep them.
     expect(read('modules/verse-widget/android/src/main/res/raw/verse_widget_keep.xml')).toContain(
-      'tools:keep="@drawable/verse_widget_share"',
+      'tools:keep="@drawable/verse_widget_share,@drawable/verse_widget_theme"',
     );
+  });
+
+  it('flips one widget between light and dark from its button, without opening the app', () => {
+    expect(read('modules/verse-widget/android/src/main/res/drawable/verse_widget_theme.xml')).toContain('<vector');
+    expect(receiverKotlin).toContain('private const val THEME_TARGET = "theme:"');
+    expect(receiverKotlin).toContain(
+      'target == THEME_TARGET -> flipLook(context, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))',
+    );
+    // The tap only knows its target, so the receiver adds which widget it's on.
+    expect(receiverKotlin).toContain('intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)');
+    // A second tap undoes the first: a look that matches the phone follows the phone again.
+    expect(receiverKotlin).toContain('if (nextDark == phoneDark) remove(key(id)) else putBoolean(key(id), nextDark)');
+    // A removed widget's choice goes with it.
+    expect(receiverKotlin).toContain('WidgetLooks.forget(context, appWidgetIds)');
   });
 
   it('takes its colors from the app’s themes, with none of its own in the receiver', () => {
@@ -571,6 +615,7 @@ describe('the Android widget config plugin', () => {
       'modules/verse-widget/android/src/main/java/org/nyccsda/versewidget/VerseWidgetModule.kt',
       'modules/verse-widget/android/src/main/java/org/nyccsda/versewidget/VerseWidgetReceiver.kt',
       'modules/verse-widget/android/src/main/res/drawable/verse_widget_share.xml',
+      'modules/verse-widget/android/src/main/res/drawable/verse_widget_theme.xml',
       'modules/verse-widget/android/src/main/res/raw/verse_widget_keep.xml',
       'services/VerseOfTheDayWidget.ts',
       'services/VerseOfTheDayWidget.android.ts',

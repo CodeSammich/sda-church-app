@@ -24,6 +24,9 @@ const EXCLUDED = [
   // expo-widgets keeps in shared preferences. The app gives the widget its
   // week again whenever it runs, so a restored copy would only be out of date.
   { domain: 'sharedpref', path: 'expo.modules.widgets.xml' },
+  // The light or dark look each widget's button chose, by the widget's ID,
+  // which another phone wouldn't share (modules/verse-widget).
+  { domain: 'sharedpref', path: 'verse_widget_theme.xml' },
 ];
 
 const ATTRIBUTES = {

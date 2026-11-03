@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
@@ -32,8 +33,11 @@ import androidx.glance.EmittableImage
 import androidx.glance.EmittableWithChildren
 import androidx.glance.GlanceModifier
 import androidx.glance.TintColorFilterParams
+import androidx.glance.action.Action
+import androidx.glance.action.ActionModifier
 import androidx.glance.appwidget.AppWidgetId
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.SendBroadcastIntentAction
 import androidx.glance.background
 import androidx.glance.layout.EmittableColumn
 import androidx.glance.layout.HeightModifier
@@ -48,6 +52,9 @@ import androidx.glance.unit.Dimension
 import androidx.glance.unit.FixedColorProvider
 import expo.modules.widgets.ExpoWidgetsAppWidgetProvider
 import io.github.expo.peek.emittables.PeekEmittableAppWidget
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import androidx.glance.color.ColorProvider as DayNightColorProvider
@@ -59,6 +66,7 @@ private const val INTERACTION_ACTION = "expo.modules.widgets.ACTION_WIDGET_INTER
 private const val TARGET_EXTRA = "expo.modules.widgets.extra.TARGET"
 private const val LINK_PREFIX = "sdachurchapp:"
 private const val SHARE_PREFIX = "share:"
+private const val THEME_TARGET = "theme:"
 // Line fitting is logged after `adb shell setprop log.tag.VerseWidget DEBUG`.
 private const val LOG_TAG = "VerseWidget"
 
@@ -82,7 +90,8 @@ private const val MAX_CHILDREN = 10
  *   between light and dark mode. So the layout is drawn in both modes, and each
  *   light-mode color is paired with the dark-mode color in the same place.
  *   Android 12 and later switch between them on their own. Older versions pick
- *   one when the widget is drawn, which is every hour.
+ *   one when the widget is drawn, which is every hour. A widget whose button
+ *   chose a look is drawn in that mode only.
  * - The verse: the layout's one text without a line limit. It's set in the
  *   phone's serif font and cut to the whole lines that fit, as YouVersion's
  *   widget does, so no line is cut through the middle.
@@ -90,7 +99,8 @@ private const val MAX_CHILDREN = 10
  *   An app link opens in the app, and a new referenceRequest takes the reader
  *   to the verse even if the link is the same as last time (see
  *   BibleService.createScriptureReferenceRequest). A `share:` target opens the
- *   phone's share sheet with the rest of the target as the text.
+ *   phone's share sheet with the rest of the target as the text, and `theme:`
+ *   flips this widget between light and dark (WidgetLooks).
  */
 open class VerseWidgetReceiver : ExpoWidgetsAppWidgetProvider(VERSE_WIDGET_NAME) {
   override val glanceAppWidget: PeekEmittableAppWidget = DayNightWidget(super.glanceAppWidget)
@@ -101,7 +111,27 @@ open class VerseWidgetReceiver : ExpoWidgetsAppWidgetProvider(VERSE_WIDGET_NAME)
       target == null -> super.onReceive(context, intent)
       target.startsWith(LINK_PREFIX) -> openLink(context, target)
       target.startsWith(SHARE_PREFIX) -> share(context, target.removePrefix(SHARE_PREFIX))
+      target == THEME_TARGET -> flipLook(context, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
       else -> super.onReceive(context, intent)
+    }
+  }
+
+  override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+    WidgetLooks.forget(context, appWidgetIds)
+    super.onDeleted(context, appWidgetIds)
+  }
+
+  /** Flips the tapped widget between light and dark, and redraws only it. */
+  private fun flipLook(context: Context, id: Int) {
+    if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return
+    WidgetLooks.flip(context, id)
+    val result = goAsync()
+    CoroutineScope(Dispatchers.Default).launch {
+      try {
+        glanceAppWidget.refresh(context, AppWidgetId(id))
+      } finally {
+        result.finish()
+      }
     }
   }
 
@@ -142,16 +172,71 @@ private class DayNightWidget(private val expoWidget: PeekEmittableAppWidget) : P
   override val sizeMode: SizeMode = SizeMode.Exact
 
   override fun provideRoot(context: Context, id: AppWidgetId, options: Bundle, size: DpSize): Emittable {
-    val day = expoWidget.provideRoot(context.inMode(Configuration.UI_MODE_NIGHT_NO), id, options, size)
-    val night = expoWidget.provideRoot(context.inMode(Configuration.UI_MODE_NIGHT_YES), id, options, size)
-    val root = if (day.sameShape(night)) {
-      day.also { it.pairNightColors(night) }
-    } else {
-      expoWidget.provideRoot(context, id, options, size)
+    val root = when (WidgetLooks.isDark(context, id.appWidgetId)) {
+      // The look this widget's button chose, whatever the phone's mode.
+      false -> expoWidget.provideRoot(context.inMode(Configuration.UI_MODE_NIGHT_NO), id, options, size)
+      true -> expoWidget.provideRoot(context.inMode(Configuration.UI_MODE_NIGHT_YES), id, options, size)
+      null -> {
+        val day = expoWidget.provideRoot(context.inMode(Configuration.UI_MODE_NIGHT_NO), id, options, size)
+        val night = expoWidget.provideRoot(context.inMode(Configuration.UI_MODE_NIGHT_YES), id, options, size)
+        if (day.sameShape(night)) {
+          day.also { it.pairNightColors(night) }
+        } else {
+          expoWidget.provideRoot(context, id, options, size)
+        }
+      }
     }
+    root.tagLookButton(id.appWidgetId)
     root.fitVerse(context, size)
     return root
   }
+}
+
+/**
+ * The look each widget's light/dark button chose, by widget: light, dark, or
+ * none, which follows the phone. Each tap flips the colors the widget shows.
+ * When the new look matches the phone's mode, the widget goes back to
+ * following the phone, so a second tap always undoes the first.
+ */
+private object WidgetLooks {
+  private const val FILE = "verse_widget_theme"
+
+  /** Whether the widget's button chose dark, light, or neither (null). */
+  fun isDark(context: Context, id: Int): Boolean? {
+    val prefs = prefs(context)
+    return if (prefs.contains(key(id))) prefs.getBoolean(key(id), false) else null
+  }
+
+  fun flip(context: Context, id: Int) {
+    val phoneDark = phoneIsDark()
+    val nextDark = !(isDark(context, id) ?: phoneDark)
+    prefs(context).edit().apply {
+      if (nextDark == phoneDark) remove(key(id)) else putBoolean(key(id), nextDark)
+    }.apply()
+  }
+
+  fun forget(context: Context, ids: IntArray) {
+    prefs(context).edit().apply { ids.forEach { remove(key(it)) } }.apply()
+  }
+
+  private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+
+  private fun key(id: Int) = "dark_$id"
+
+  // The phone's own mode, whatever the app's theme setting.
+  private fun phoneIsDark() =
+    Resources.getSystem().configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+}
+
+/**
+ * expo-widgets' tap on the light/dark button carries only its target, so the
+ * receiver adds which widget it's on.
+ */
+private fun Emittable.tagLookButton(id: Int) {
+  val action = modifier.foldIn<Action?>(null) { found, element -> (element as? ActionModifier)?.action ?: found }
+  val intent = (action as? SendBroadcastIntentAction)?.intent
+  if (intent?.getStringExtra(TARGET_EXTRA) == THEME_TARGET) intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+  if (this is EmittableWithChildren) children.forEach { it.tagLookButton(id) }
 }
 
 /**
