@@ -127,7 +127,8 @@ const ROUTE_KEY = 'screenshot-route';
 const SERVE_SIM = 'serve-sim@0.1.48';
 const SERVE_SIM_ORIENTATIONS = { portrait: 'portrait', landscape: 'landscape_left' };
 
-const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
+// TRIAL-ONLY (#324): KEY_SCREENS_CONFIG points the trial at its own list.
+const loadConfig = (file = process.env.KEY_SCREENS_CONFIG || join(projectRoot, 'test/screens/screens.json')) =>
   JSON.parse(readFileSync(file, 'utf8'));
 
 // A shot's rough cost in seconds: its wait, the time its record usually takes

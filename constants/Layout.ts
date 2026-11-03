@@ -1,4 +1,5 @@
 import { DEFAULT_TEXT_SCALE } from '@/constants/AppPreferences';
+import { layoutTrial } from '@/constants/LayoutTrial'; // TRIAL-ONLY (#324)
 
 /**
  * Centralized layout constants to ensure consistency across the "Digital Sanctuary".
@@ -54,7 +55,8 @@ export const getContentMaxWidth = (textScale: number = DEFAULT_TEXT_SCALE) =>
 /** The centered content column, for a page's content below its banner. */
 export const contentColumnStyle = (textScale: number = DEFAULT_TEXT_SCALE) => ({
   width: '100%' as const,
-  maxWidth: getContentMaxWidth(textScale),
+  // TRIAL-ONLY (#324): no column when broken on purpose.
+  maxWidth: layoutTrial.broken ? undefined : getContentMaxWidth(textScale),
   alignSelf: 'center' as const,
 });
 

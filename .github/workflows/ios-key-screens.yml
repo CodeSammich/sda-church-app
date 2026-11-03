@@ -448,6 +448,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 1
 
+      # TRIAL-ONLY (#324): never merged.
+      - name: TRIAL-ONLY Break the column and a popup on purpose, and expect the iPad checks to fail
+        if: ${{ !cancelled() && matrix.group == 'home' && steps.ipad.outcome != 'skipped' }}
+        timeout-minutes: 10
+        run: node scripts/ipad-break-trial.cjs "$RUNNER_TEMP/ipad-trial"
+
+      # TRIAL-ONLY (#324): never merged.
+      - name: TRIAL-ONLY Upload the trial's shots
+        if: ${{ always() && matrix.group == 'home' && steps.ipad.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ipad-trial-${{ github.run_id }}
+          path: ${{ runner.temp }}/ipad-trial/
+          if-no-files-found: warn
+          retention-days: 7
+
   simulator:
     # Joins the groups into two artifacts: the screenshots and checks from
     # every group, which the review comment links, and the app with its first

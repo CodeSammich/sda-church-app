@@ -1,3 +1,4 @@
+import { layoutTrial } from '@/constants/LayoutTrial'; // TRIAL-ONLY (#324)
 import type { AppTheme } from '@/constants/Themes';
 import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,10 +28,14 @@ export const POPUP_MAX_WIDTH = 560;
  * `maxWidth` on an inner one, so on an iPad the popup filled 90% of the screen
  * with its content in only part of it (#324), as with `maxHeight` below.
  */
-export const getPopupWidthStyle = (phoneWidth: number, maxWidth = POPUP_MAX_WIDTH) => ({
-  alignSelf: 'center' as const,
-  width: Math.max(0, Math.round(Math.min(phoneWidth, maxWidth))),
-});
+export const getPopupWidthStyle = (phoneWidth: number, maxWidth = POPUP_MAX_WIDTH) =>
+  // TRIAL-ONLY (#324): the percentage width that filled 90% of the iPad.
+  layoutTrial.broken
+    ? ({ alignSelf: 'center' as const, width: '90%', maxWidth } as unknown as { alignSelf: 'center'; width: number })
+    : {
+        alignSelf: 'center' as const,
+        width: Math.max(0, Math.round(Math.min(phoneWidth, maxWidth))),
+      };
 
 /** A dialog's width: 90% of the screen, up to `maxWidth`. */
 export const usePopupWidthStyle = (maxWidth = POPUP_MAX_WIDTH) => {

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { layoutTrial } from '@/constants/LayoutTrial'; // TRIAL-ONLY (#324)
 
 /**
  * The screen to open at the next launch, saved by the key-screen capture
@@ -41,6 +42,7 @@ export const takeScreenshotRoute = async (): Promise<string | null> => {
   if (!isKeyScreensBuild()) return null;
   const value = await AsyncStorage.getItem(SCREENSHOT_ROUTE_KEY);
   if (value === null) return null;
+  if (value.includes('trialBreak=1')) layoutTrial.broken = true; // TRIAL-ONLY (#324)
   await AsyncStorage.removeItem(SCREENSHOT_ROUTE_KEY);
   return parseScreenshotRoute(value);
 };
