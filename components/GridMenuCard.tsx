@@ -2,7 +2,7 @@ import { useAppTheme } from '@/constants/Themes';
 import { scaleTypographyMetric, type TextScale } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Animated,
@@ -35,6 +35,13 @@ interface GridMenuCardProps {
   /** Lines reserved equally across a grid so translated titles cannot resize one card. */
   titleBlockLines?: 2 | 3;
   showArrow?: boolean;
+  /**
+   * Every title in the card's grid. A card holds its text down until the
+   * widest word of any of them fits on one line of its title, so cards that
+   * share a grid keep one size (fitGridMenuCardTextScale). Without it, the
+   * card's own title.
+   */
+  fitTitles?: string[];
 }
 
 export const getGridMenuCardTitleBlockMinHeight = (
@@ -73,6 +80,54 @@ export const getGridMenuCardTextScale = (textScale: TextScale, fontScale: number
   return Math.min(textScale * phoneScale, GRID_MENU_CARD_TEXT_MAX_SCALE) as TextScale;
 };
 
+// The card's padding and border on each side, and the share of the rest that
+// its title may use (styles.title's maxWidth).
+const CARD_PADDING = 18;
+const CARD_BORDER = 1;
+const TITLE_WIDTH_FRACTION = 0.9;
+const TITLE_FONT_SIZE = 15;
+const TITLE_LINE_HEIGHT = 20;
+
+/** The smallest the card text gets to keep a word whole: 80% of its size at 100%. */
+export const GRID_MENU_CARD_TEXT_MIN_SCALE = 0.8;
+
+/** The width of a title's lines in a card `cardWidth` points wide. */
+export const getGridMenuCardTitleWidth = (cardWidth: number) =>
+  (cardWidth - 2 * (CARD_PADDING + CARD_BORDER)) * TITLE_WIDTH_FRACTION;
+
+/**
+ * The card text's scale, given `widestWord`, the widest word of the grid's
+ * titles, in points, at `scale`: smaller in proportion where that word wouldn't
+ * fit on one line of the title, which would break it mid-word. The cap above
+ * was set on a 412-point phone. On narrower ones "Denomination" broke at 125%
+ * from 390 points down, and Spanish "Compañerismo" from 412; in a narrow iPad
+ * window, both did (#324). Two points spare, since a word exactly as wide as
+ * the line broke on Android.
+ */
+export const fitGridMenuCardTextScale = (
+  scale: TextScale,
+  cardWidth: number,
+  widestWord: number,
+): TextScale => {
+  const room = getGridMenuCardTitleWidth(cardWidth) - 2;
+  if (!(cardWidth > 0) || !(widestWord > room)) return scale;
+  return Math.max(GRID_MENU_CARD_TEXT_MIN_SCALE, (scale * room) / widestWord) as TextScale;
+};
+
+/**
+ * The widest of `words` in a bold title at `scale`, measured with the
+ * browser's canvas. The web has no onTextLayout, which measures them on a
+ * phone.
+ */
+const measureWebWords = (words: string[], scale: number) => {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return 0;
+  const context = document.createElement('canvas').getContext?.('2d');
+  if (!context) return 0;
+  const family = getComputedStyle(document.body).fontFamily || 'sans-serif';
+  context.font = `700 ${TITLE_FONT_SIZE * scale}px ${family}`;
+  return Math.max(0, ...words.map((word) => context.measureText(word).width));
+};
+
 export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   title,
   subtitle,
@@ -86,17 +141,33 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
   style,
   titleBlockLines = 2,
   showArrow = true,
+  fitTitles,
 }) => {
   const theme = useAppTheme();
   const { textScale } = useTextSize();
   const { fontScale } = useWindowDimensions();
+  const cappedScale = getGridMenuCardTextScale(textScale, fontScale);
+  // The grid's words, each measured on a line of its own at the capped size,
+  // and the card's width, so the text can shrink to keep every word whole.
+  const fitWords = useMemo(
+    () => [...new Set((fitTitles ?? [title]).flatMap((each) => each.split(/\s+/u)).filter(Boolean))],
+    [fitTitles, title],
+  );
+  const [cardWidth, setCardWidth] = useState(0);
+  const [measuredWord, setMeasuredWord] = useState(0);
+  const widestWord = measuredWord || measureWebWords(fitWords, cappedScale);
+  const cardTextScale = fitGridMenuCardTextScale(cappedScale, cardWidth, widestWord);
   const styles = useMemo(
-    () => createStyles(
-      textScale,
-      getGridMenuCardTextScale(textScale, fontScale),
-      titleBlockLines,
-    ),
-    [fontScale, textScale, titleBlockLines],
+    () => createStyles(textScale, cardTextScale, titleBlockLines),
+    [cardTextScale, textScale, titleBlockLines],
+  );
+  const measureTextStyle = useMemo(
+    () => ({
+      fontSize: scaleTypographyMetric(TITLE_FONT_SIZE, cappedScale),
+      fontWeight: '700' as const,
+      lineHeight: scaleTypographyMetric(TITLE_LINE_HEIGHT, cappedScale),
+    }),
+    [cappedScale],
   );
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -134,8 +205,27 @@ export const GridMenuCard: React.FC<GridMenuCardProps> = ({
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        onLayout={(event) => setCardWidth(event.nativeEvent.layout.width)}
         activeOpacity={1}
       >
+        <View
+          accessibilityElementsHidden
+          aria-hidden
+          importantForAccessibility="no-hide-descendants"
+          pointerEvents="none"
+          style={styles.measure}
+        >
+          <Text
+            allowFontScaling={false}
+            onTextLayout={(event) =>
+              setMeasuredWord(Math.max(0, ...event.nativeEvent.lines.map((line) => line.width)))
+            }
+            style={measureTextStyle}
+            testID="grid-menu-card-word-measure"
+          >
+            {fitWords.join('\n')}
+          </Text>
+        </View>
         {/* Title block — top left */}
         <View pointerEvents="none" style={styles.titleBlock}>
             <Text
@@ -211,8 +301,8 @@ const createStyles = (
 ) => StyleSheet.create({
   card: {
     borderRadius: 20,
-    borderWidth: 1,
-    padding: 18,
+    borderWidth: CARD_BORDER,
+    padding: CARD_PADDING,
     minHeight: 148 + Math.round(Math.max(0, cardTextScale - 1) * 64),
     justifyContent: 'space-between',
     overflow: 'hidden',
@@ -225,11 +315,19 @@ const createStyles = (
     minHeight: getGridMenuCardTitleBlockMinHeight(cardTextScale, titleBlockLines),
   },
   title: {
-    fontSize: scaleTypographyMetric(15, cardTextScale),
+    fontSize: scaleTypographyMetric(TITLE_FONT_SIZE, cardTextScale),
     fontWeight: '700',
     // color will be set via theme (onSurface) in component
-    lineHeight: scaleTypographyMetric(20, cardTextScale),
-    maxWidth: '90%',
+    lineHeight: scaleTypographyMetric(TITLE_LINE_HEIGHT, cardTextScale),
+    maxWidth: `${TITLE_WIDTH_FRACTION * 100}%`,
+  },
+  // Out of sight and wide enough that no word wraps; the card clips it.
+  measure: {
+    left: 0,
+    opacity: 0,
+    position: 'absolute',
+    top: 0,
+    width: 4000,
   },
   subtitle: {
     fontSize: scaleTypographyMetric(12, cardTextScale),

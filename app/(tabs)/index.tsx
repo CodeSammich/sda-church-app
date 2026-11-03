@@ -141,6 +141,11 @@ export default function HomeScreen() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  // One size for every card's text, which keeps each title's words whole.
+  const gridTitles = useMemo(
+    () => [labels.livestream, labels.bulletin, labels.give, labels.hymnal, labels.sabbathSchool, labels.discover],
+    [labels],
+  );
   // Once the app's and the phone's text sizes add up to 2× or more, the verse
   // card's two buttons each get a full row, and the Sabbath countdown's label
   // sits above the countdown, so words like "Compartir" and "Sabbath" are
@@ -534,6 +539,7 @@ export default function HomeScreen() {
 
           <View style={styles.grid}>
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.livestream}
               titleBlockLines={3}
               subtitle={(labels as any).liveNow}
@@ -546,6 +552,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.bulletin}
               titleBlockLines={3}
               icon="newspaper-variant-outline"
@@ -561,6 +568,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.give}
               titleBlockLines={3}
               icon="hand-heart-outline"
@@ -576,6 +584,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.hymnal}
               titleBlockLines={3}
               icon="music-note"
@@ -591,6 +600,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.sabbathSchool}
               titleBlockLines={3}
               icon="book-open-page-variant"
@@ -606,6 +616,7 @@ export default function HomeScreen() {
               showArrow={false}
             />
             <GridMenuCard
+              fitTitles={gridTitles}
               title={labels.discover}
               titleBlockLines={3}
               icon="compass"
