@@ -702,14 +702,16 @@ app's own code, while Android uses a native queue.
   check again after an hour; then the same plugged in. On the iPhone, the page shows
   the count when unlocked; on Android 14 and later, the notification does. Note both
   numbers in the release pull request. Android 14 and later should go well past 75 an
-  hour on battery, which is where Android 13 and lower, and the app before 1.6.1,
-  stopped: each of their chapters is one of the app's background jobs. iOS paces a
+  hour on battery, which is where the `DownloadManager` path stopped on the Android 16
+  emulator: each of its chapters is one of the app's background jobs. Android 13 and
+  lower still use it. iOS paces a
   background session's downloads as it sees fit, so a slow hour there is worth an
   issue, not a failed release.
 - [ ] **Download notifications (#610).** On a fresh install, open You: the app hasn't
-  asked about notifications. Start a section in Offline Bible Audio: the app's own popup
-  asks first, saying the download keeps going either way; tap **Not now**, and the
-  download goes on with no question from the phone. Start another section: no popup.
+  asked about notifications. Start a section of several books, such as the Gospels, in
+  Offline Bible Audio: the app's own popup asks first, saying the download keeps going
+  either way; tap **Not now**, and the download goes on with no question from the phone.
+  Start another such section: no popup.
   Start a Testament: it asks once more; tap **Allow**, then allow the phone's question.
   - **Android 14 and later:** the notification shows the narrator and "N of M chapters",
     and Stop stops it, as the page's X does. In You, turn **Download notifications** off:

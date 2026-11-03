@@ -233,7 +233,7 @@ simple, blended colors.
   for (Tenet 7). Today there's one kind: a Bible audio download the member started (#610).
   - **What they say, by phone.** None is needed for a download to go on in the
     background; they only show it.
-    - **Android 14 and later:** while chapters download out of sight, the download's
+    - **Android 14 and later:** while chapters download, the download's
       progress ("Mandarin (Chinese Union Version): 312 of 1,189 chapters"), with Stop; then
       "Downloaded", or that it waits for Wi-Fi or a connection. Android requires a
       notification while the app's own download job runs, so with the member's notifications
@@ -243,8 +243,8 @@ simple, blended colors.
       sight. iOS shows no progress for a background download.
     - **Android 13 and lower:** nothing of the app's. The system's own download notification
       shows the chapters, as Android requires for them to download while the phone is locked.
-  - **Asked at need, never at launch.** The first time a download of a section or more
-    starts, the app's own popup asks first, since the phone's question can't say why: what
+  - **Asked at need, never at launch.** The first time a download of a section of several
+    books or more starts, the app's own popup asks first, since the phone's question can't say why: what
     the notifications are for, that the download keeps going either way, and that You turns
     them off. Only **Allow** brings the phone's question. After **Not now**, the app asks once
     more at most, at the next Testament or whole Bible, and then never. Turning them on in

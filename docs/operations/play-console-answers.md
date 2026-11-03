@@ -187,4 +187,4 @@ Copies of the feature graphic and screenshots are in
 | A new foreground service type, such as downloads | Foreground service, with a new video |
 | Downloads through Android's `DownloadManager`, as offline Bible audio since #611 on Android 13 and lower | Nothing: it's the system's service, not the app's foreground service, and it adds no permission |
 | User-initiated data transfer jobs (`RUN_USER_INITIATED_JOBS`), as offline Bible audio on Android 14 and later | Nothing: a normal permission with no declaration, and not a foreground service |
-| Local notifications (`POST_NOTIFICATIONS`), as a download's progress since #610 | Nothing, while they're made on the phone and only about what the member started. Push notifications are the row above |
+| Local notifications (`POST_NOTIFICATIONS`), as a download's progress since #610 | Nothing, while they're made on the phone and only about what the member started. Push notifications are the second row |
