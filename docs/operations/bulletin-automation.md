@@ -26,6 +26,7 @@ Contents:
 - [System boundaries](#system-boundaries)
 - [The three mandatory sheets](#the-three-mandatory-sheets)
 - [The `Leadership` tab](#the-leadership-tab)
+- [The `Hymn Bank` tab](#the-hymn-bank-tab)
 - [Header protection and validation automation](#header-protection-and-validation-automation)
 - [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)
 - [Privacy, auto-translation, and name behavior](#privacy-auto-translation-and-name-behavior)
@@ -44,7 +45,8 @@ Master spreadsheet
 ├── Sabbath Calendar       roster, service assignments, metadata
 ├── Weekly Data           reviewed final-owner bulletin content
 ├── Name Dictionary        private physical-print name resolution
-└── Leadership             pastors and elders, for printed titles
+├── Leadership             pastors and elders, for printed titles
+└── Hymn Bank              hymns to copy into Weekly Data; no script reads it
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
@@ -244,6 +246,8 @@ Rules:
   read as a Chinese hymnal number. Leave unused cells blank. There's no
   closing-hymn column: the closing repeats every opening hymn, so both
   bulletins show them once, as the opening and closing hymns.
+- The [`Hymn Bank` tab](#the-hymn-bank-tab) has every hymn written this way,
+  ready to copy into any of the hymn cells.
 - `Special Music Title` is the piece performed. Who performs it stays in the
   `Sabbath Calendar`'s `Special Music`, which is a Queens column, so Brooklyn's
   piece shows with `TBD` for its performer.
@@ -297,6 +301,48 @@ Head | Paul Wen  | Ruth Ho
   names print without titles.
 - To add another title, add a column here and an entry in
   `PHYSICAL_NAME_TITLES` in `PrintedBulletin.gs`.
+
+## The `Hymn Bank` tab
+
+This optional tab lists every hymn in the church's two hymnals, to copy into
+`Weekly Data`'s hymn cells instead of typing them (#606). No script reads it,
+so it can be renamed, sorted, or deleted, and refreshing it needs no deploy.
+
+```text
+Chinese Hymnal 505 中文赞美诗 | SDA Hymnal 1985 英文诗歌本
+第1首 在主寶座前              | AH 82 Before Jehovah’s Awful Throne
+第163首 門外有一位客人        |
+                              | AH 2 All Creatures of Our God and King
+```
+
+- Each cell holds one hymn, written the way `Weekly Data` takes it. Copy a
+  cell and paste it into a hymn cell. The other language is filled in from it,
+  as for any typed hymn.
+- The 505 comes first, in number order, with the same hymn in the 1985 beside
+  it wherever the hymnals' number map pairs them. The 1985 hymns with no 505
+  pair follow, also in number order.
+- To find a hymn by number or title, press Ctrl+F (⌘F on a Mac).
+- Hymn titles are in Traditional Chinese, because they print (see [Chinese
+  script](#chinese-script)); the headers are staff-facing, so they're
+  Simplified. The app stores the 505's titles in Simplified, as printed on
+  each hymn's score (`scripts/scrape-chinese-505-hymnal.mjs`). The script
+  converts them with `opencc-js`, and its `TRADITIONAL_FIXES` corrects the
+  characters the converter gets wrong, such as 祢, which it turns into 禰.
+
+To make the tab, or refresh it after the app's hymnal data or number map
+changes, run this from the repo:
+
+```sh
+node scripts/export-hymn-bank.cjs --output hymn-bank.tsv
+```
+
+Open `hymn-bank.tsv`, select everything, and copy it. In the spreadsheet, add a
+tab named `Hymn Bank` (or clear the old one), click cell A1, and paste: the
+tabs in the file split it into the two columns. Then **View → Freeze → 1 row**
+keeps the headers in sight, and **Protect sheet** (right-click the tab), with
+**Restrict who can edit this range**, lets staff copy cells but not change
+them. `test/hymn-bank.test.ts` checks that the app and the printed bulletin
+read every cell as its own hymn.
 
 ## Header protection and validation automation
 

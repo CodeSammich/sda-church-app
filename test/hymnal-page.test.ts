@@ -343,10 +343,11 @@ describe('1985 ↔ 505 cross-references', () => {
     expect(getHymnCrossReferences('chinese-hymnal-505', 497)).toEqual([
       { hymnalId: 'sdah-1985-en', number: 694, available: true },
     ]);
-    // Asterisked in the table, missing from the online 505 catalog, or another hymnal.
+    // Asterisked in the table, or another hymnal.
     expect(getHymnCrossReferences('sdah-1985-en', 2)).toEqual([]);
+    // 505's hymn 90 has no page online, but is listed with its title (#606).
     expect(getHymnCrossReferences('sdah-1985-en', 254)).toEqual([
-      { hymnalId: 'chinese-hymnal-505', number: 90, available: false },
+      { hymnalId: 'chinese-hymnal-505', number: 90, available: true },
     ]);
     expect(getHymnCrossReferences('chinese-hymnal-506', 1)).toEqual([]);
   });

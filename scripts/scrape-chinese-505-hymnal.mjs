@@ -53,6 +53,59 @@ const NUMBER_BY_PAGE_ID = new Map([
 // are right, so it stays.
 const DUPLICATE_PAGE_IDS = new Set([6177]);
 
+// Titles the directory has wrong, as printed at the top of each hymn's score
+// (第N首 and the title). The church's own hymn list found them (#606); a title
+// changes only where the score agrees with it.
+const TITLE_BY_NUMBER = new Map([
+  [7, '主慈爱如河流'], // "主慈爱如流水"
+  [11, '赞美三一真神'], // a dash, "三—真神"
+  [27, '赞主圣名'], // "赞主盛名"
+  [63, '美哉小城'], // "没哉小城"
+  [71, '巍然乘驴'], // "魏然乘驴"
+  [78, '请往客西马尼'], // "前往客西马尼"
+  [79, '愿钉十架'], // "愿钉十字架"
+  [86, '神圣纯爱'], // "圣神纯爱"
+  [88, '我有一好友'], // "我有一好朋友"
+  [99, '快来拥祂为王'], // "快来拥他为王"
+  [109, '公义审判之主'], // "公益审判之主"
+  [113, '信徒须宣告'], // "信徒需宣告"
+  [114, '儆醒预备'], // "僸醒预备"
+  [127, '务要忠心'], // "勿要忠心"
+  [142, '主施鸿恩'], // "主施洪恩"
+  [146, '上帝圣言万古存'], // "上帝圣言万古传"
+  [160, '只要靠祂'], // "只要靠他"
+  [183, '卸罪与主'], // "缷罪与主"
+  [203, '世上城邑'], // "世上呈邑"
+  [235, '圣明洞鉴'], // "圣名洞鉴"
+  [239, '先求真光'], // "先求真观"
+  [248, '主照祢旨意'], // "主照你旨意"
+  [249, '我要跟从祢'], // "我要跟从你"
+  [260, '披主义袍'], // "批主义袍"
+  [291, '抛碇于灵磐'], // "抛碇灵磐"
+  [298, '我甚爱祂'], // "我甚爱他"
+  [306, '至宝圣名'], // "至宝盛名"
+  [317, '流泪作工'], // "流泪做工"
+  [325, '因爱作工'], // "因爱做工"
+  [338, '务要提防'], // "勿要提防"
+  [344, '洪福之望'], // "洪福之愿"
+  [381, '上主是我牧者'], // "上主是我牧场"
+  [453, '谨守十诫'], // "觐守十诫"
+  [492, '赞美天上真神'], // "赞美天山真神"
+]);
+
+// Hymns with no page in the directory, titled as printed on their score
+// images. They're listed without a page ID, so the app opens the directory for
+// them. The image for 90 shows 第89首, so 90's title is the church's hymn list's,
+// which its English twin, AH 254 The Great Physician Now Is Near, bears out.
+const UNLINKED_TITLES = new Map([
+  [90, '至大神医'],
+  [194, '罪人良友'],
+  [201, '将有大喜乐'],
+  [207, '感恩信徒一齐来'],
+  [307, '我爱说主的故事'],
+  [370, '求主启示'],
+]);
+
 const links = [...html.matchAll(linkPattern)];
 if (links.length < 500) {
   throw new Error(`Expected at least 500 hymn links, found ${links.length}.`);
@@ -61,11 +114,8 @@ if (links.length < 500) {
 const entries = links
   .map((match) => {
     const pageId = Number.parseInt(match[1], 10);
-    return {
-      number: NUMBER_BY_PAGE_ID.get(pageId) ?? Number.parseInt(match[2], 10),
-      title: decodeHtml(match[3]),
-      pageId,
-    };
+    const number = NUMBER_BY_PAGE_ID.get(pageId) ?? Number.parseInt(match[2], 10);
+    return { number, title: TITLE_BY_NUMBER.get(number) ?? decodeHtml(match[3]), pageId };
   })
   .filter(({ pageId }) => !DUPLICATE_PAGE_IDS.has(pageId));
 
@@ -75,18 +125,25 @@ if (uniqueNumbers.size !== entries.length || uniquePageIds.size !== entries.leng
   throw new Error('The scraped directory contains duplicate hymn numbers or page IDs.');
 }
 
+// A page the directory adds later wins over its unlinked title.
+for (const [number, title] of UNLINKED_TITLES) {
+  if (!uniqueNumbers.has(number)) entries.push({ number, title });
+}
+
 entries.sort((a, b) => a.number - b.number);
 
 const data = Object.fromEntries(
-  entries.map(({ number, title, pageId }) => [number, { title, pageId }]),
+  entries.map(({ number, title, pageId }) => [number, pageId ? { title, pageId } : { title }]),
 );
 
 await writeFile(outputPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 
+const listed = new Set(entries.map(({ number }) => number));
 const missing = Array.from({ length: 505 }, (_, index) => index + 1).filter(
-  (number) => !uniqueNumbers.has(number),
+  (number) => !listed.has(number),
 );
+const unlinked = entries.filter(({ pageId }) => !pageId).map(({ number }) => number);
 
 console.log(
-  `Wrote ${entries.length} Chinese 505 hymnal links to ${outputPath}. Missing source entries: ${missing.join(', ') || 'none'}.`,
+  `Wrote ${entries.length} Chinese 505 hymns to ${outputPath}. Without a page: ${unlinked.join(', ') || 'none'}. Missing: ${missing.join(', ') || 'none'}.`,
 );
