@@ -2,6 +2,7 @@ import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json
 import { BIBLE_AUDIO_NARRATOR_ORDER } from '@/constants/BibleAudioNarrators';
 import { BIBLE_SECTIONS, type BibleTestament } from '@/constants/BibleSections';
 import { excludeFromBackup } from '@/modules/backup-exclusion';
+import { getBibleAudioSystemDownloads, type SystemDownloadStatus } from '@/modules/bible-audio-downloads';
 import {
   BIBLE_AUDIO_BOOKS,
   getAudioPowerCuvChapterLinks,
@@ -36,6 +37,13 @@ import { AppState, Platform } from 'react-native';
  * Each chapter is its own file, so a download stopped part way, by the X, a
  * lost connection, or the app being closed, keeps the chapters it finished.
  * See docs/feature_designs/on_device_storage.md.
+ *
+ * On a phone, the phone's own downloader does the downloading (#611,
+ * modules/bible-audio-downloads), so it goes on while the phone is locked or
+ * the app is in the background, on Wi-Fi only unless the member allowed
+ * mobile data. That's custom code, to replace with Expo's once it can keep a
+ * background download on Wi-Fi only (#612). The in-app downloader below,
+ * three chapters at a time, is for where there's no native module.
  */
 
 export type BibleAudioDownloadScope =
@@ -49,6 +57,10 @@ const CHAPTERS = new Map(BIBLE_AUDIO_BOOKS);
 const HELLOAO_AUDIO = 'https://audio.bible.helloao.org/api/BSB';
 
 const FOLDER = 'bible-audio';
+// What was asked for, kept for the phone's downloader across app launches.
+const REQUESTS_FILE = 'requests.json';
+// How often the open app asks the phone's downloader how it's doing.
+const POLL_MS = 1_000;
 const CONCURRENT_DOWNLOADS = 3;
 // A chapter whose every copy fails is tried this many times in all.
 const ATTEMPTS = 3;
@@ -156,11 +168,12 @@ const keyOf = ({ narrator, bookId, chapter }: Pick<Queued, 'narrator' | 'bookId'
 
 // Chapters waiting to download, in order, and those downloading now.
 const queued = new Map<string, Queued>();
-const running = new Map<string, { item: Queued; bytesWritten: number; controller: AbortController }>();
+const running = new Map<string, { item: Queued; bytesWritten: number; controller?: AbortController }>();
 // The scopes members asked for, by narrator and then key, while any is
 // downloading: a row shows a download only when it, or a scope that holds it,
 // was asked for. So John downloading doesn't make the Gospels look as if they are.
-const requested = new Map<string, Map<string, BibleAudioDownloadScope>>();
+type Request = Readonly<{ scope: BibleAudioDownloadScope; mobileData: boolean }>;
+const requested = new Map<string, Map<string, Request>>();
 let network: NetworkState | null = null;
 // Set when downloads failed because the phone lost its connection or left the
 // app; they go on when it's back.
@@ -221,6 +234,7 @@ export const loadBibleAudioDownloads = () => {
     console.warn('Could not read the downloaded Bible audio:', error);
   }
   emit();
+  if (systemDownloads()) void reconcileSystem();
 };
 
 /** The phone's copy of a chapter, or null when there isn't one. */
@@ -298,12 +312,14 @@ export const getBibleAudioScopeStatus = (
   }
   let waiting = false;
   let mobileData = false;
-  for (const item of queued.values()) {
+  let heldOffWifi = false;
+  for (const [key, item] of queued) {
     if (item.narrator !== narrator || !inScope.has(item.bookId)) continue;
     waiting = true;
     mobileData ||= item.mobileData;
+    heldOffWifi ||= heldForWifi.has(key);
   }
-  const asked = [...(requested.get(narrator)?.values() ?? [])].some((request) => covers(request, scope));
+  const asked = [...(requested.get(narrator)?.values() ?? [])].some((request) => covers(request.scope, scope));
   const downloading = asked && (active || waiting);
   return {
     books: books.length,
@@ -318,7 +334,7 @@ export const getBibleAudioScopeStatus = (
       ? null
       : waitingForConnection
         ? 'connection'
-        : isOnMobileData() && !mobileData
+        : (isOnMobileData() && !mobileData) || heldOffWifi
           ? 'wifi'
           : null,
   };
@@ -350,15 +366,20 @@ const watchConnection = () => {
   if (subscriptions.length) return;
   const update = (state: NetworkState) => {
     network = state;
-    if (isConnected(state)) waitingForConnection = false;
+    // The phone's downloader waits for a connection by itself.
+    if (systemDownloads()) waitingForConnection = !isConnected(state);
+    else if (isConnected(state)) waitingForConnection = false;
     emit();
     pump();
   };
   subscriptions = [
     addNetworkStateListener(update),
-    // On iPhone, downloads stop while the app is in the background.
     AppState.addEventListener('change', (state) => {
-      if (state === 'active' && waitingForConnection) getNetworkStateAsync().then(update, () => undefined);
+      if (state !== 'active') return;
+      // What the phone downloaded while the app was away.
+      if (systemDownloads()) void refreshSystem();
+      // On iPhone, the in-app downloader stops while the app is in the background.
+      else if (waitingForConnection) getNetworkStateAsync().then(update, () => undefined);
     }),
   ];
   getNetworkStateAsync().then(update, () => update({ isConnected: true, isInternetReachable: true }));
@@ -370,6 +391,8 @@ const stopWatching = () => {
   requested.clear();
   network = null;
   waitingForConnection = false;
+  stopPolling();
+  saveRequests();
 };
 
 const nextToDownload = () => {
@@ -380,6 +403,8 @@ const nextToDownload = () => {
 };
 
 const pump = () => {
+  // The phone's downloader runs its own queue.
+  if (systemDownloads()) return;
   // Until the connection's known, so nothing starts on mobile data unasked.
   while (network && !waitingForConnection && running.size < CONCURRENT_DOWNLOADS) {
     const next = nextToDownload();
@@ -436,6 +461,232 @@ const downloadChapter = async (item: Queued) => {
   }
 };
 
+// ---- The phone's downloader (#611), on a phone. Custom until #612. ----
+
+const systemDownloads = () => (Platform.OS === 'web' ? null : getBibleAudioSystemDownloads());
+
+// Which try each chapter is on, through its sources in turn.
+const tries = new Map<string, number>();
+// Chapters on their way to the phone's downloader, which a list mustn't take
+// for finished or failed.
+const handingOver = new Set<string>();
+// Chapters Android holds for unmetered Wi-Fi while the phone is on another
+// network, as a hotspot, which is someone's data plan.
+const heldForWifi = new Set<string>();
+let polling: ReturnType<typeof setInterval> | null = null;
+// Calls to the phone's downloader, one at a time, so a list never runs
+// between an enqueue and the tasks it starts.
+let systemCalls: Promise<unknown> = Promise.resolve();
+const callSystem = <T>(call: () => Promise<T>): Promise<T> => {
+  const next = systemCalls.then(call, call);
+  systemCalls = next.catch((error) => console.warn('The phone’s Bible audio downloader failed:', error));
+  return next;
+};
+
+const chapterFile = ({ narrator, bookId, chapter }: Pick<Queued, 'narrator' | 'bookId' | 'chapter'>) =>
+  new File(bookFolder(narrator, bookId), chapterFileName(chapter));
+
+const handToSystem = (items: readonly Queued[], allowMobileData: boolean) => {
+  const system = systemDownloads();
+  if (!system || !items.length) return;
+  const downloads = items.flatMap((item) => {
+    const urls = getBibleAudioDownloadUrls(item.narrator, item.bookId, item.chapter);
+    const id = keyOf(item);
+    return urls.length ? [{ id, url: urls[(tries.get(id) ?? 0) % urls.length], path: chapterFile(item).uri }] : [];
+  });
+  downloads.forEach(({ id }) => handingOver.add(id));
+  void callSystem(() => system.enqueue(downloads, allowMobileData)).finally(() =>
+    downloads.forEach(({ id }) => handingOver.delete(id)),
+  );
+  startPolling();
+};
+
+const startPolling = () => {
+  if (polling) return;
+  polling = setInterval(() => {
+    if (AppState.currentState === 'active') void refreshSystem();
+  }, POLL_MS);
+};
+
+const stopPolling = () => {
+  if (polling) clearInterval(polling);
+  polling = null;
+};
+
+const itemOf = (status: SystemDownloadStatus): Queued | null => {
+  const [narrator, bookId, chapter] = status.id.split('/');
+  return narrator && CHAPTERS.has(bookId) && Number(chapter) > 0
+    ? { narrator, bookId, chapter: Number(chapter), mobileData: status.mobileData, attempts: 0 }
+    : null;
+};
+
+// Once nothing's left, it stops watching, unless the app is just starting
+// and hasn't yet handed over what's left of earlier requests.
+const refreshSystem = ({ settle = true }: { settle?: boolean } = {}) =>
+  callSystem(async () => {
+    const system = systemDownloads();
+    if (!system) return;
+    applySystemStatuses(await system.list());
+    if (settle && !queued.size && !running.size && !handingOver.size) stopWatching();
+    emit();
+  });
+
+// What the phone reports: `queued` and `running` mirror it. A chapter gone from
+// its list finished, with its file in place, or failed.
+const applySystemStatuses = (statuses: readonly SystemDownloadStatus[]) => {
+  const known = new Map<string, Queued>(queued);
+  running.forEach(({ item }, key) => known.set(key, item));
+  const live = new Set(statuses.map(({ id }) => id));
+  queued.clear();
+  running.clear();
+  heldForWifi.clear();
+  const failed: Queued[] = [];
+  for (const [key, item] of known) {
+    if (live.has(key)) continue;
+    if (handingOver.has(key)) {
+      queued.set(key, item);
+      continue;
+    }
+    const file = chapterFile(item);
+    if (file.exists) {
+      record(item.narrator, item.bookId, item.chapter, file.size);
+      tries.delete(key);
+      failuresInARow = 0;
+    } else {
+      failed.push(item);
+    }
+  }
+  for (const status of statuses) {
+    // Or one asked for before the app started.
+    const item = known.get(status.id) ?? itemOf(status);
+    if (!item) continue;
+    const sources = getBibleAudioDownloadUrls(item.narrator, item.bookId, item.chapter).length;
+    // Android retries a host that doesn't answer for minutes: try its mirror.
+    if (status.state === 'failed' || (status.state === 'paused' && status.reason === 'retry' && sources > 1)) {
+      failed.push(item);
+    } else if (status.state === 'running' && status.bytesWritten > 0) {
+      running.set(status.id, { item, bytesWritten: status.bytesWritten });
+    } else {
+      queued.set(status.id, item);
+      if (status.state === 'paused' && !item.mobileData && (status.reason === 'network' || status.reason === 'wifi')) {
+        heldForWifi.add(status.id);
+      }
+    }
+  }
+  retryOnSystem(failed);
+};
+
+// The next source for each failed chapter, up to ATTEMPTS times round them all.
+// After FAILURES_TO_STOP chapters in a row fail every source, the host is
+// likely down: stop, as the in-app downloader does.
+const retryOnSystem = (failed: readonly Queued[]) => {
+  const system = systemDownloads();
+  if (!system || !failed.length) return;
+  const again: Queued[] = [];
+  const givenUp: string[] = [];
+  for (const item of failed) {
+    const key = keyOf(item);
+    const sources = Math.max(1, getBibleAudioDownloadUrls(item.narrator, item.bookId, item.chapter).length);
+    const count = (tries.get(key) ?? 0) + 1;
+    if (count % sources === 0) failuresInARow += 1;
+    if (count < sources * ATTEMPTS && failuresInARow < FAILURES_TO_STOP) {
+      tries.set(key, count);
+      queued.set(key, item);
+      again.push(item);
+    } else {
+      tries.delete(key);
+      givenUp.push(key);
+    }
+  }
+  if (failuresInARow >= FAILURES_TO_STOP) {
+    givenUp.push(...queued.keys(), ...running.keys());
+    queued.clear();
+    running.clear();
+    requested.clear();
+    saveRequests();
+    again.length = 0;
+  }
+  // Clears Android's record of a failed download.
+  if (givenUp.length) void callSystem(() => system.cancel(givenUp));
+  handToSystem(
+    again.filter(({ mobileData }) => !mobileData),
+    false,
+  );
+  handToSystem(
+    again.filter(({ mobileData }) => mobileData),
+    true,
+  );
+};
+
+const requestsFile = () => new File(rootFolder(), REQUESTS_FILE);
+
+// Kept beside the audio, out of the backup with it, so a download the phone
+// carries on with the app closed still shows when it opens again.
+const saveRequests = () => {
+  if (!systemDownloads()) return;
+  const list = [...requested].flatMap(([narrator, asks]) => [...asks.values()].map((ask) => ({ narrator, ...ask })));
+  try {
+    const file = requestsFile();
+    if (list.length) {
+      rootFolder().create({ intermediates: true, idempotent: true });
+      if (!file.exists) file.create();
+      file.write(JSON.stringify(list));
+    } else if (file.exists) {
+      file.delete();
+    }
+  } catch (error) {
+    console.warn('Could not save the Bible audio downloads asked for:', error);
+  }
+};
+
+const readRequests = async () => {
+  try {
+    const file = requestsFile();
+    if (!file.exists) return;
+    const list: unknown = JSON.parse(await file.text());
+    if (!Array.isArray(list)) return;
+    for (const entry of list) {
+      if (typeof entry?.narrator !== 'string' || !entry.scope || typeof entry.scope.kind !== 'string') continue;
+      let asked = requested.get(entry.narrator);
+      if (!asked) requested.set(entry.narrator, (asked = new Map()));
+      asked.set(scopeKey(entry.scope), { scope: entry.scope, mobileData: entry.mobileData === true });
+    }
+  } catch (error) {
+    console.warn('Could not read the Bible audio downloads asked for:', error);
+  }
+};
+
+// When the app starts: what the phone did while it was closed. A chapter asked
+// for that's neither on the phone nor downloading, as one iOS stopped when the
+// app was swiped away, is handed over again.
+const reconcileSystem = async () => {
+  await readRequests();
+  await refreshSystem({ settle: false });
+  for (const [narrator, asks] of requested) {
+    for (const { scope, mobileData } of asks.values()) {
+      const items: Queued[] = [];
+      for (const bookId of getBibleAudioScopeBooks(scope)) {
+        const onPhone = downloaded.get(narrator)?.get(bookId);
+        for (let chapter = 1; chapter <= (CHAPTERS.get(bookId) ?? 0); chapter += 1) {
+          const key = keyOf({ narrator, bookId, chapter });
+          if (onPhone?.has(chapter) || running.has(key) || queued.has(key)) continue;
+          const item = { narrator, bookId, chapter, mobileData, attempts: 0 };
+          queued.set(key, item);
+          items.push(item);
+        }
+      }
+      handToSystem(items, mobileData);
+    }
+  }
+  if (queued.size || running.size) {
+    watchConnection();
+    startPolling();
+  } else {
+    stopWatching();
+  }
+  emit();
+};
+
 /**
  * Downloads a scope's chapters that aren't on the phone yet. Chapters already
  * downloading carry on. On mobile data, only what the member agreed to
@@ -457,7 +708,10 @@ export const downloadBibleAudio = (
   failuresInARow = 0;
   let asked = requested.get(narrator);
   if (!asked) requested.set(narrator, (asked = new Map()));
-  asked.set(scopeKey(scope), scope);
+  const requestKey = scopeKey(scope);
+  asked.set(requestKey, { scope, mobileData: mobileData || (asked.get(requestKey)?.mobileData ?? false) });
+  // For the phone's downloader: what's new to it, or now allowed on mobile data.
+  const handOver: Queued[] = [];
   for (const bookId of getBibleAudioScopeBooks(scope)) {
     const onPhone = downloaded.get(narrator)?.get(bookId);
     for (let chapter = 1; chapter <= (CHAPTERS.get(bookId) ?? 0); chapter += 1) {
@@ -465,30 +719,55 @@ export const downloadBibleAudio = (
       if (onPhone?.has(chapter) || running.has(key)) continue;
       const waiting = queued.get(key);
       if (waiting) {
-        if (mobileData) queued.set(key, { ...waiting, mobileData });
+        if (mobileData && !waiting.mobileData) {
+          queued.set(key, { ...waiting, mobileData });
+          handOver.push({ ...waiting, mobileData });
+        }
       } else {
-        queued.set(key, { narrator, bookId, chapter, mobileData, attempts: 0 });
+        const item = { narrator, bookId, chapter, mobileData, attempts: 0 };
+        queued.set(key, item);
+        handOver.push(item);
       }
     }
   }
   watchConnection();
   emit();
-  pump();
+  if (systemDownloads()) {
+    saveRequests();
+    handToSystem(handOver, mobileData);
+  } else {
+    pump();
+  }
 };
 
 /** Stops a scope's chapters downloading. The ones already on the phone stay. */
 export const stopBibleAudioDownload = (narrator: string, scope: BibleAudioDownloadScope) => {
   const books = new Set(getBibleAudioScopeBooks(scope));
+  const stopped: string[] = [];
   for (const [key, item] of queued) {
-    if (item.narrator === narrator && books.has(item.bookId)) queued.delete(key);
+    if (item.narrator !== narrator || !books.has(item.bookId)) continue;
+    queued.delete(key);
+    stopped.push(key);
   }
-  for (const { item, controller } of running.values()) {
-    if (item.narrator === narrator && books.has(item.bookId)) controller.abort();
+  for (const [key, { item, controller }] of running) {
+    if (item.narrator !== narrator || !books.has(item.bookId)) continue;
+    if (controller) {
+      controller.abort();
+    } else {
+      running.delete(key);
+      stopped.push(key);
+    }
   }
   const asked = requested.get(narrator);
   asked?.forEach((request, key) => {
-    if (covers(scope, request)) asked.delete(key);
+    if (covers(scope, request.scope)) asked.delete(key);
   });
+  const system = systemDownloads();
+  if (system) {
+    stopped.forEach((key) => tries.delete(key));
+    if (stopped.length) void callSystem(() => system.cancel(stopped));
+    saveRequests();
+  }
   emit();
   pump();
 };
@@ -509,18 +788,33 @@ export const getDownloadedBibleAudioBytes = (narrator: string, scope: BibleAudio
  */
 export const deleteBibleAudio = (narrator: string, scope: BibleAudioDownloadScope) => {
   stopBibleAudioDownload(narrator, scope);
-  const books = downloaded.get(narrator);
-  for (const bookId of getBibleAudioScopeBooks(scope)) {
-    const folder = bookFolder(narrator, bookId);
-    if (folder.exists) folder.delete();
-    books?.delete(bookId);
+  const deleteFiles = () => {
+    const books = downloaded.get(narrator);
+    for (const bookId of getBibleAudioScopeBooks(scope)) {
+      const folder = bookFolder(narrator, bookId);
+      if (folder.exists) folder.delete();
+      books?.delete(bookId);
+    }
+    if (scope.kind === 'bible') {
+      const folder = new Directory(rootFolder(), narrator);
+      if (folder.exists) folder.delete();
+    }
+    if (books && !books.size) downloaded.delete(narrator);
+    emit();
+  };
+  deleteFiles();
+  // A chapter the phone finished just as it was stopped: once the phone has
+  // stopped them all, delete again, unless the member has asked for it anew.
+  if (systemDownloads()) {
+    void callSystem(async () => {
+      const books = new Set(getBibleAudioScopeBooks(scope));
+      const askedAgain =
+        [...queued.values(), ...[...running.values()].map(({ item }) => item)].some(
+          (item) => item.narrator === narrator && books.has(item.bookId),
+        );
+      if (!askedAgain) deleteFiles();
+    });
   }
-  if (scope.kind === 'bible') {
-    const folder = new Directory(rootFolder(), narrator);
-    if (folder.exists) folder.delete();
-  }
-  if (books && !books.size) downloaded.delete(narrator);
-  emit();
 };
 
 export type DownloadedBibleAudio = Readonly<{
@@ -548,10 +842,14 @@ export const listDownloadedBibleAudio = (): DownloadedBibleAudio[] =>
 /** Forgets everything, for tests. */
 export const resetBibleAudioDownloadsForTests = () => {
   queued.clear();
-  running.forEach(({ controller }) => controller.abort());
+  running.forEach(({ controller }) => controller?.abort());
   running.clear();
   downloaded.clear();
   loaded = false;
   failuresInARow = 0;
   stopWatching();
+  tries.clear();
+  handingOver.clear();
+  heldForWifi.clear();
+  systemCalls = Promise.resolve();
 };

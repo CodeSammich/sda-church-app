@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Bible audio downloads (#611; custom until #612). -->
+  <application>
+    <!-- Moves each finished chapter into the app's own files, even when the app
+         isn't running. Only the system's download service may send it. -->
+    <receiver
+      android:name="org.nyccsda.bibleaudiodownloads.BibleAudioDownloadReceiver"
+      android:exported="true"
+      android:permission="android.permission.SEND_DOWNLOAD_COMPLETED_INTENTS">
+      <intent-filter>
+        <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>

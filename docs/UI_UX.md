@@ -150,8 +150,11 @@ is, part of it, or all of it. Narrators are named language first, as "English â€
 (BSB)" or "Mandarin (Chinese Union Version)", and listed in one order, as the translation
 picker lists their translations (`constants/BibleAudioNarrators.ts`); the Bible's audio
 settings name the English ones the same way. A row's download
-progress shows at once, with an X that stops it, and goes on when the page closes, since
-the whole Bible takes a while. Deleting goes by the same rows, after the system's alert
+progress shows at once, with an X that stops it. It goes on when the page closes, and
+with the phone locked or the app in the background, since the whole Bible takes a while:
+the phone itself downloads it (#611), on Wi-Fi only unless the member chose mobile data.
+Meanwhile Android shows its own download notification, one for all the chapters; #610
+adds the app's own. Deleting goes by the same rows, after the system's alert
 asks, naming what it deletes and its size. It stays in the documents directory until the
 member deletes it, rather than in the cache, and the size of each choice shows before it
 starts. Over mobile data,

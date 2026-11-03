@@ -185,3 +185,4 @@ Copies of the feature graphic and screenshots are in
 | Children's content shown in the app | Target audience |
 | A Bible bundled in the app package | Content rating's Downloaded App question |
 | A new foreground service type, such as downloads | Foreground service, with a new video |
+| Downloads through Android's `DownloadManager`, as offline Bible audio since #611 | Nothing: it's the system's service, not the app's foreground service, and it adds no permission |

@@ -1,0 +1,17 @@
+// Bible audio downloads that go on with the app closed (#611). Custom code, to
+// remove once Expo can do it (#612): see ../index.ts.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'org.nyccsda'
+version = '1.0.0'
+
+android {
+  namespace "org.nyccsda.bibleaudiodownloads"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}

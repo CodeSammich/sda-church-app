@@ -9,7 +9,7 @@ const {
 /**
  * What Android's Auto Backup leaves out (#556). Each path is relative to its
  * domain's folder; `file` is the files directory, expo-file-system's
- * `Paths.document`.
+ * `Paths.document`, and `external` the app's external files directory.
  *
  * Only excludes: with no <include>, everything else is still backed up as
  * before, AsyncStorage's settings and saved verses included.
@@ -20,6 +20,10 @@ const EXCLUDED = [
   // download again. Over Auto Backup's 25 MB limit, Android backs up nothing
   // of the app's, so the settings would stop being backed up too.
   { domain: 'file', path: 'bible-audio' },
+  // Bible audio still downloading (#611): Android's DownloadManager writes
+  // only to the app's external files, and the app moves each chapter into
+  // bible-audio when it's done. `external` is that folder. Custom until #612.
+  { domain: 'external', path: 'bible-audio-partial' },
   // The home screen widget's layout and week of verses (#235), which
   // expo-widgets keeps in shared preferences. The app gives the widget its
   // week again whenever it runs, so a restored copy would only be out of date.

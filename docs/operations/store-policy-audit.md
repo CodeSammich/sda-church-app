@@ -252,7 +252,9 @@ a parental gate.
 ### 5. Permissions and native behavior
 
 The intended release permissions are audio playback and the Android media foreground
-service needed for background playback. The app does not request camera, microphone,
+service needed for background playback. Since #611, offline Bible audio downloads go
+through Android's `DownloadManager`, a system service rather than a foreground service of
+the app's. It adds no permission, and collects nothing, so Data safety doesn't change. The app does not request camera, microphone,
 location, contacts, photos, or notifications. The Android generated project previously
 contained legacy storage and `SYSTEM_ALERT_WINDOW` entries inherited from dependencies;
 `app.json` now blocks them. It also blocks `ACCESS_WIFI_STATE`, which `expo-network`

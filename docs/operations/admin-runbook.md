@@ -688,6 +688,15 @@ app's own code, while Android uses a native queue.
 - [ ] **Changes while playing.** Change the chapter, the translation, and
   **Preferred source** under **Audio settings**, and seek within a chapter. Leave the
   Bible tab and come back: it returns to the chapter that's playing.
+- [ ] **Downloads while locked, on Wi-Fi only (#611).** On Wi-Fi, start a book in
+  You → **Offline Bible Audio** (2 Thessalonians in Mandarin is 1.2 MB; John is
+  24.5 MB), lock the phone, and wait a minute. Unlock: it carried on. Start a bigger
+  one, such as the Gospels, lock the phone, and turn Wi-Fi off with mobile data on.
+  Nothing more may download: on the iPhone, Settings → Cellular shows no new data for
+  the app, and the page says "Waiting for Wi-Fi". Turn Wi-Fi back on while it's
+  still locked: it goes on. Then try it again after tapping **Use mobile data**: it
+  carries on over mobile data. On a phone's hotspot, a download not allowed on mobile
+  data waits too.
 - [ ] **Offline start.** After using the app online, close it fully, turn on airplane
   mode, and open it. It starts, and the **Home** tab and the bulletin show what they
   last loaded.
