@@ -1,4 +1,8 @@
-import { BibleAudioOfflineSection, getBibleAudioOfflineCaption } from '@/components/BibleAudioOfflineSection';
+import {
+  BibleAudioOfflineSection,
+  getBibleAudioDownloadTipLine,
+  getBibleAudioOfflineCaption,
+} from '@/components/BibleAudioOfflineSection';
 import { downloadBibleAudio, loadBibleAudioDownloads, resetBibleAudioDownloadsForTests } from '@/services/BibleAudioDownloads';
 import { act, fireEvent } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
@@ -20,7 +24,7 @@ jest.mock('expo-network', () => ({
 
 const MANDARIN_READER = '基督徒团契 (Audio Power)';
 const JOHN = { id: 'JHN', name: 'John' };
-const styles = { divider: {}, row: {}, rowCaption: {}, rowLabel: {}, rowTitle: {}, sectionTitle: {} };
+const styles = { divider: {}, helper: {}, row: {}, rowCaption: {}, rowLabel: {}, rowTitle: {}, sectionTitle: {} };
 
 // Every chapter of a book on the phone, for one narrator.
 const putOnPhone = (narrator: string, bookId: string, chapters: number) => {
@@ -32,13 +36,20 @@ const putOnPhone = (narrator: string, bookId: string, chapters: number) => {
 };
 
 const renderSection = (
-  { reader = MANDARIN_READER, translationId = 'cmn_cuv', language = 'en' as 'en' | 'zh', onOpen = jest.fn() } = {},
+  {
+    reader = MANDARIN_READER,
+    translationId = 'cmn_cuv',
+    language = 'en' as 'en' | 'zh',
+    onOpen = jest.fn(),
+    showsTip = false,
+  } = {},
 ) =>
   renderWithPreferences(
     createElement(BibleAudioOfflineSection, {
       book: language === 'zh' ? { id: 'JHN', name: '約翰福音' } : JOHN,
       onOpen,
       reader,
+      showsTip,
       styles,
       textScale: 1.25,
       translationId,
@@ -92,6 +103,26 @@ describe('Listen offline', () => {
     expect(screen.getByText('離線收聽')).toBeTruthy();
     expect(screen.getByText('離線聖經音訊')).toBeTruthy();
     expect(screen.getByText('下載一卷書、一個部分或整本聖經')).toBeTruthy();
+  });
+
+  it('say why to download when playback keeps stopping to load (#595)', async () => {
+    const tip = 'Playback often stops to load. Download to listen without waiting.';
+    expect(getBibleAudioDownloadTipLine('en')).toBe(tip);
+    expect((await renderSection()).queryByText(tip)).toBeNull();
+    const screen = await renderSection({ showsTip: true });
+    expect(screen.getByText(tip)).toBeTruthy();
+    // Above the row it points to.
+    expect(screen.getByRole('button', { name: /^Offline Bible Audio, / })).toBeTruthy();
+    expect((await renderSection({ language: 'zh', showsTip: true })).getByText('播放時常停下來載入。下載後即可收聽，不必等待。')).toBeTruthy();
+
+    // The key-screen checks fail a shot showing these, such as Android's
+    // "keeps stopping" crash dialog.
+    const { NEVER_SHOWN_BY_PLATFORM } = require('../scripts/check-screens.cjs');
+    const reserved: string[] = [...NEVER_SHOWN_BY_PLATFORM.ios, ...NEVER_SHOWN_BY_PLATFORM.android];
+    for (const language of ['en', 'zh', 'zh-cn', 'es'] as const) {
+      const line = getBibleAudioDownloadTipLine(language);
+      expect(reserved.filter((text) => line.includes(text))).toEqual([]);
+    }
   });
 
   it("isn't offered for a narrator the app can't download, or on the web", async () => {
