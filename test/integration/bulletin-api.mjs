@@ -73,7 +73,8 @@ const assertLocation = (location, path, rosterFields) => {
   }
 };
 
-const response = await fetch(`${API_BASE_URL}?date=${encodeURIComponent(TEST_DATE)}`, {
+// client=check: the API doesn't take this check for an older app (#580).
+const response = await fetch(`${API_BASE_URL}?date=${encodeURIComponent(TEST_DATE)}&client=check`, {
   headers: { Accept: 'application/json' },
   signal: AbortSignal.timeout(45_000),
 });

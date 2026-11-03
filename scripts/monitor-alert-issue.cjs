@@ -3,7 +3,8 @@
  * (External Dependency, Store Toolchain, Expo Doctor, Apple Signing) keeps one
  * open issue, found by its exact title: a failing run opens it or comments on
  * it, and a passing run closes it. The dated reminders (Yearly Checkup,
- * Workspace Backup Reminder) instead open each title once, with openIssueOnce.
+ * Workspace Backup Reminder) and the bulletin changeover cleanups
+ * (bulletin-changeovers.cjs) instead open each title once, with openIssueOnce.
  *
  * Alerts are assigned to the usernames in the MONITOR_ALERT_ASSIGNEES Actions
  * variable so they notify a maintainer without anyone watching the repository.

@@ -50,6 +50,12 @@ and QR codes depend on. Each must
 load through the custom domain and still contain its expected text. See
 [The app website](admin-runbook.md#the-app-website-appnyccsdaorg).
 
+The workflow also reads the bulletin API's changeovers (`?changeovers=1`), the older
+ways of answering the API keeps for older apps; the local command below doesn't. For each one no older app has needed for 14
+days, it opens a cleanup issue, once. Its own bulletin requests send `client=check`,
+so the API doesn't take them for an older app. See
+[Changeovers](../feature_designs/bulletin_spreadsheet_tags.md#changeovers).
+
 Run it locally with:
 
 ```sh

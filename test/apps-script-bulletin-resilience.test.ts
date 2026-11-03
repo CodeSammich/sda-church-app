@@ -239,8 +239,16 @@ const createChurchWorkbook = () =>
     Leadership: [['Pastors', 'Elders'], ['Ada Lin', 'Ben Hall']],
   });
 
-const load = (workbook: FakeWorkbook, properties?: Map<string, string>) => {
+const load = (
+  workbook: FakeWorkbook,
+  properties?: Map<string, string>,
+  scriptProperties?: Map<string, string>,
+) => {
   const cache = new Map<string, string>();
+  const propertyStore = (store: Map<string, string>) => ({
+    getProperty: (key: string) => store.get(key) ?? null,
+    setProperty: (key: string, value: string) => store.set(key, value),
+  });
   const context = createContext({
     CacheService: {
       getScriptCache: () => ({
@@ -256,14 +264,13 @@ const load = (workbook: FakeWorkbook, properties?: Map<string, string>) => {
       getActiveSpreadsheet: () => workbook,
       DeveloperMetadataVisibility: { DOCUMENT: 'DOCUMENT' },
     },
-    PropertiesService: properties
-      ? {
-          getDocumentProperties: () => ({
-            getProperty: (key: string) => properties.get(key) ?? null,
-            setProperty: (key: string, value: string) => properties.set(key, value),
-          }),
-        }
-      : undefined,
+    PropertiesService:
+      properties || scriptProperties
+        ? {
+            ...(properties ? { getDocumentProperties: () => propertyStore(properties) } : {}),
+            ...(scriptProperties ? { getScriptProperties: () => propertyStore(scriptProperties) } : {}),
+          }
+        : undefined,
     workbook,
   });
   [
@@ -762,5 +769,149 @@ describe('a bulletin without its schedule', () => {
     const context = load(createChurchWorkbook());
 
     expect(run(context, `isAppVersionAtLeast_(${JSON.stringify(version)}, SCHEDULE_NOT_SET_APP_VERSION)`)).toBe(expected);
+  });
+});
+
+describe('changeovers kept for older apps', () => {
+  type Status = {
+    id: string;
+    retiresWith: string;
+    watchedSince: string;
+    olderAppLastCalled: string;
+    quietDays: number;
+    ready: boolean;
+  };
+
+  const LAST_CALLED = 'bulletin.changeover.schedule-not-set.olderAppLastCalled';
+  const WATCHED_SINCE = 'bulletin.changeover.schedule-not-set.watchedSince';
+
+  // The script's day is set by the test, and every property write is counted.
+  const setUp = (today = '2026-11-20') => {
+    const scriptProperties = new Map<string, string>();
+    const writes: string[] = [];
+    const set = scriptProperties.set.bind(scriptProperties);
+    scriptProperties.set = (key: string, value: string) => {
+      writes.push(key);
+      return set(key, value);
+    };
+    const context = load(createChurchWorkbook(), undefined, scriptProperties);
+    const setToday = (day: string) =>
+      runInContext(`getPrintedBulletinToday_ = function () { return '${day}'; }`, context);
+    setToday(today);
+    const ask = (parameter: Record<string, string>) =>
+      JSON.parse(runInContext(`doGet({ parameter: ${JSON.stringify(parameter)} }).text`, context) as string);
+    const status = () => {
+      const response = ask({ changeovers: '1' });
+      expect(response.ok).toBe(true);
+      return response.changeovers as Status[];
+    };
+    return { scriptProperties, writes, context, setToday, ask, status };
+  };
+
+  it.each([
+    ['without a version, as apps before 1.6.0 do', {}],
+    ['from 1.5.0', { appVersion: '1.5.0' }],
+  ])('notes the day an older app asks for a bulletin: %s', (_, parameter) => {
+    const { scriptProperties, ask } = setUp();
+
+    expect(ask({ date: SABBATH, ...parameter }).ok).toBe(true);
+
+    expect(scriptProperties.get(LAST_CALLED)).toBe('2026-11-20');
+  });
+
+  it.each([
+    ['an app on the changeover version', { appVersion: '1.6.0' }],
+    ['a newer app', { appVersion: '1.7.2' }],
+    ["the API's own checks", { client: 'check' }],
+    ["something that isn't the app", { appVersion: 'latest' }],
+    ['a request without a valid date', { date: 'soon' }],
+  ])("doesn't take %s for an older app", (_, parameter) => {
+    const { scriptProperties, ask } = setUp();
+
+    ask({ date: SABBATH, ...parameter });
+
+    expect(scriptProperties.has(LAST_CALLED)).toBe(false);
+  });
+
+  it('writes the day once while the cache remembers it, however many older apps ask', () => {
+    const { writes, ask, setToday, scriptProperties } = setUp();
+
+    ask({ date: SABBATH });
+    ask({ date: SABBATH, appVersion: '1.5.0' });
+    ask({ date: SABBATH });
+    expect(writes).toEqual([LAST_CALLED]);
+
+    setToday('2026-11-21');
+    ask({ date: SABBATH });
+    expect(writes).toEqual([LAST_CALLED, LAST_CALLED]);
+    expect(scriptProperties.get(LAST_CALLED)).toBe('2026-11-21');
+  });
+
+  it.each([
+    ['the script properties are unavailable', ''],
+    ["the day can't be read", "getPrintedBulletinToday_ = function () { throw new Error('no clock'); };"],
+  ])("still gives the bulletin when %s", (_, breakIt) => {
+    const context = load(createChurchWorkbook());
+    runInContext(breakIt, context);
+
+    const response = JSON.parse(
+      runInContext(`doGet({ parameter: { date: '${SABBATH}' } }).text`, context) as string,
+    );
+
+    expect(response.ok).toBe(true);
+    expect(response.bulletin.date).toBe(SABBATH);
+  });
+
+  it('starts watching the first time the status is read, so nothing is ready at once', () => {
+    const { status, scriptProperties } = setUp();
+
+    expect(status()).toEqual([
+      expect.objectContaining({
+        id: 'schedule-not-set',
+        retiresWith: '1.6.0',
+        watchedSince: '2026-11-20',
+        olderAppLastCalled: '',
+        quietDays: 14,
+        ready: false,
+      }),
+    ]);
+    expect(scriptProperties.get(WATCHED_SINCE)).toBe('2026-11-20');
+  });
+
+  it('is ready once no older app has asked for 14 days', () => {
+    const { scriptProperties, status, setToday } = setUp();
+    scriptProperties.set(WATCHED_SINCE, '2026-11-03');
+    scriptProperties.set(LAST_CALLED, '2026-11-20');
+
+    setToday('2026-12-03');
+    expect(status()[0].ready).toBe(false);
+
+    setToday('2026-12-04');
+    expect(status()[0]).toMatchObject({ olderAppLastCalled: '2026-11-20', ready: true });
+  });
+
+  it('waits 14 days from when watching started when no older app has asked', () => {
+    const { scriptProperties, status, setToday } = setUp();
+    scriptProperties.set(WATCHED_SINCE, '2026-11-03');
+
+    setToday('2026-11-16');
+    expect(status()[0].ready).toBe(false);
+
+    setToday('2026-11-17');
+    expect(status()[0].ready).toBe(true);
+  });
+
+  it('marks each changeover with an app version and what to remove', () => {
+    const context = load(createChurchWorkbook());
+
+    const list = run<{ id: string; retiresWith: string; cleanup: string }[]>(context, 'BULLETIN_CHANGEOVERS');
+
+    expect(list.length).toBeGreaterThan(0);
+    list.forEach((changeover) => {
+      expect(changeover.id).toMatch(/^[a-z0-9-]+$/);
+      expect(run(context, `isAppVersionAtLeast_(${JSON.stringify(changeover.retiresWith)}, '0')`)).toBe(true);
+      expect(changeover.cleanup.length).toBeGreaterThan(20);
+    });
+    expect(new Set(list.map((changeover) => changeover.id)).size).toBe(list.length);
   });
 });
