@@ -1,48 +1,43 @@
-import { BibleAudioOfflineSection, getBibleAudioScopeCaption } from '@/components/BibleAudioOfflineSection';
-import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json';
-import { formatDownloadSize } from '@/constants/DownloadCopy';
-import {
-  getBibleAudioScopeStatus,
-  resetBibleAudioDownloadsForTests,
-  type BibleAudioScopeStatus,
-} from '@/services/BibleAudioDownloads';
+import { BibleAudioOfflineSection, getBibleAudioOfflineCaption } from '@/components/BibleAudioOfflineSection';
+import { downloadBibleAudio, loadBibleAudioDownloads, resetBibleAudioDownloadsForTests } from '@/services/BibleAudioDownloads';
 import { act, fireEvent } from '@testing-library/react-native';
 import { File } from 'expo-file-system';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createElement } from 'react';
-import { Alert, AppState, Platform } from 'react-native';
-import { mockDisk, mockFiles } from './helpers/file-system-mock';
+import { AppState, Platform } from 'react-native';
+import { mockFiles } from './helpers/file-system-mock';
 import { renderWithPreferences } from './helpers/render-preferences';
 
-// "Listen offline" in the Bible audio settings popup (#556).
+// "Listen offline" in the Bible audio settings popup (#556): one row that
+// opens Offline Bible Audio in the You tab.
 jest.mock('@/modules/backup-exclusion', () => ({ excludeFromBackup: jest.fn(() => true) }));
-const mockNetwork = { state: { type: 'WIFI', isConnected: true, isInternetReachable: true } };
 jest.mock('expo-network', () => ({
   NetworkStateType: { CELLULAR: 'CELLULAR', WIFI: 'WIFI' },
-  getNetworkStateAsync: jest.fn(async () => mockNetwork.state),
+  getNetworkStateAsync: jest.fn(async () => ({ type: 'WIFI', isConnected: true, isInternetReachable: true })),
   addNetworkStateListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
 const MANDARIN_READER = '基督徒团契 (Audio Power)';
-const SIZES: Record<string, Record<string, number>> = BIBLE_AUDIO_DOWNLOAD_SIZES;
-const JOHN = { kind: 'book', bookId: 'JHN' } as const;
-const NEW_TESTAMENT_BOOKS = Object.keys(SIZES['cuv-mandarin']).slice(39);
-const sum = (bytes: number[]) => bytes.reduce((total, each) => total + each, 0);
-const styles = { divider: {}, helper: {}, row: {}, rowCaption: {}, rowLabel: {}, rowTitle: {}, sectionTitle: {} };
+const JOHN = { id: 'JHN', name: 'John' };
+const styles = { divider: {}, row: {}, rowCaption: {}, rowLabel: {}, rowTitle: {}, sectionTitle: {} };
 
-const status = (overrides: Partial<BibleAudioScopeStatus>): BibleAudioScopeStatus => ({
-  chapters: 21,
-  downloadedChapters: 0,
-  downloadedBytes: 0,
-  totalBytes: 24_500_000,
-  downloading: false,
-  waitingFor: null,
-  ...overrides,
-});
+// Every chapter of a book on the phone, for one narrator.
+const putOnPhone = (narrator: string, bookId: string, chapters: number) => {
+  for (let chapter = 1; chapter <= chapters; chapter += 1) {
+    mockFiles.set(`document/bible-audio/${narrator}/${bookId}/${chapter}.mp3`, 'x'.repeat(1000));
+  }
+  resetBibleAudioDownloadsForTests();
+  loadBibleAudioDownloads();
+};
 
-const renderSection = (reader = MANDARIN_READER, translationId = 'cmn_cuv', language: 'en' | 'zh' = 'en') =>
+const renderSection = (
+  { reader = MANDARIN_READER, translationId = 'cmn_cuv', language = 'en' as 'en' | 'zh', onOpen = jest.fn() } = {},
+) =>
   renderWithPreferences(
     createElement(BibleAudioOfflineSection, {
-      book: { id: 'JHN', name: language === 'zh' ? '約翰福音' : 'John' },
+      book: language === 'zh' ? { id: 'JHN', name: '約翰福音' } : JOHN,
+      onOpen,
       reader,
       styles,
       textScale: 1.25,
@@ -53,128 +48,71 @@ const renderSection = (reader = MANDARIN_READER, translationId = 'cmn_cuv', lang
 
 beforeEach(() => {
   resetBibleAudioDownloadsForTests();
-  mockNetwork.state = { type: 'WIFI', isConnected: true, isInternetReachable: true };
   Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active', writable: true });
-  jest.spyOn(File, 'downloadFileAsync').mockImplementation((async (_url: string, destination: File) => {
-    // Never finishes, so each row stays downloading.
-    await new Promise(() => undefined);
-    return destination;
-  }) as never);
 });
 
 describe('Listen offline', () => {
-  it('says what each choice holds: its size, its progress, what it waits for, or that it is on the phone', () => {
-    expect(getBibleAudioScopeCaption(status({}), 'en').text).toBe('24.5 MB');
-    expect(getBibleAudioScopeCaption(status({ downloading: true, downloadedBytes: 5_100_000 }), 'en')).toEqual({
-      text: 'Downloading · 5.1 of 24.5 MB',
-      fraction: 5.1 / 24.5,
-    });
-    expect(getBibleAudioScopeCaption(status({ downloading: true, downloadedBytes: 5_100_000, waitingFor: 'wifi' }), 'en').text)
-      .toBe('Waiting for Wi-Fi · 5.1 MB of 24.5 MB');
-    expect(getBibleAudioScopeCaption(status({ downloading: true, waitingFor: 'connection' }), 'zh').text)
-      .toBe('等待網路連線 · 0.0 MB / 24.5 MB');
-    expect(getBibleAudioScopeCaption(status({ downloadedChapters: 21, downloadedBytes: 24_600_000 }), 'en').text)
-      .toBe('On this phone · 24.6 MB');
-    expect(getBibleAudioScopeCaption(status({ downloadedChapters: 12, downloadedBytes: 13_000_000 }), 'es').text)
-      .toBe('12 de 21 capítulos en este teléfono · faltan 11,5 MB');
-    // The English Bibles run to gigabytes.
-    expect(getBibleAudioScopeCaption(status({ chapters: 1189, totalBytes: 5_500_000_000 }), 'en').text).toBe('5.50 GB');
-    expect(
-      getBibleAudioScopeCaption(status({ chapters: 1189, totalBytes: 5_500_000_000, downloading: true, downloadedBytes: 1_200_000_000 }), 'en').text,
-    ).toBe('Downloading · 1.20 of 5.50 GB');
+  it('say what is on the phone: nothing yet, the book being read, some books, the whole Bible, or a download going on', () => {
+    expect(getBibleAudioOfflineCaption('cuv-mandarin', JOHN, 'en')).toBe('Download a book, a section, or the whole Bible');
+    putOnPhone('cuv-mandarin', 'JUD', 1);
+    expect(getBibleAudioOfflineCaption('cuv-mandarin', JOHN, 'en')).toBe('1 of 66 books downloaded');
+    putOnPhone('cuv-mandarin', 'JHN', 21);
+    expect(getBibleAudioOfflineCaption('cuv-mandarin', JOHN, 'en')).toBe('John downloaded');
+    expect(getBibleAudioOfflineCaption('cuv-mandarin', { id: 'JHN', name: '約翰福音' }, 'zh')).toBe('已下載約翰福音');
+    // Reading another book, it counts the books.
+    expect(getBibleAudioOfflineCaption('cuv-mandarin', { id: 'GEN', name: 'Genesis' }, 'en')).toBe('2 of 66 books downloaded');
+    // Another narrator's downloads are theirs.
+    expect(getBibleAudioOfflineCaption('cuv-cantonese', JOHN, 'en')).toBe('Download a book, a section, or the whole Bible');
+
+    jest.spyOn(File, 'downloadFileAsync').mockImplementation((() => new Promise(() => undefined)) as never);
+    downloadBibleAudio('cuv-mandarin', { kind: 'book', bookId: 'MAT' });
+    expect(getBibleAudioOfflineCaption('cuv-mandarin', JOHN, 'en')).toBe('Downloading…');
   });
 
-  it('offer the book being read, the New Testament, and the whole Bible, each with its size', async () => {
-    const screen = await renderSection();
+  it('count part of a book as partly downloaded, and the whole Bible once it is all there', () => {
+    mockFiles.set('document/bible-audio/rv1909/GEN/1.mp3', 'x');
+    resetBibleAudioDownloadsForTests();
+    loadBibleAudioDownloads();
+    expect(getBibleAudioOfflineCaption('rv1909', undefined, 'es')).toBe('Descargado en parte');
+  });
+
+  it('open Offline Bible Audio at the narrator chosen above', async () => {
+    const onOpen = jest.fn();
+    const screen = await renderSection({ onOpen });
     expect(screen.getByText('Listen offline')).toBeTruthy();
-    expect(screen.getByText('John')).toBeTruthy();
-    expect(screen.getByText(formatDownloadSize(SIZES['cuv-mandarin'].JHN, 'en'))).toBeTruthy();
-    expect(screen.getByText('New Testament')).toBeTruthy();
-    expect(screen.getByText(formatDownloadSize(sum(NEW_TESTAMENT_BOOKS.map((book) => SIZES['cuv-mandarin'][book])), 'en'))).toBeTruthy();
-    expect(screen.getByText('Whole Bible')).toBeTruthy();
-    expect(screen.getByText(formatDownloadSize(sum(Object.values(SIZES['cuv-mandarin'])), 'en'))).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Offline Bible Audio, Download a book, a section, or the whole Bible' }));
+    expect(onOpen).toHaveBeenCalledWith('cuv-mandarin');
+    // No download rows, sizes or X here any more: those are on the page.
+    expect(screen.queryByText('Whole Bible')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Download / })).toBeNull();
   });
 
   it('show in Chinese', async () => {
-    const screen = await renderSection(MANDARIN_READER, 'cmn_cuv', 'zh');
+    const screen = await renderSection({ language: 'zh' });
     expect(screen.getByText('離線收聽')).toBeTruthy();
-    expect(screen.getByText('新約')).toBeTruthy();
-    expect(screen.getByText('整本聖經')).toBeTruthy();
+    expect(screen.getByText('離線聖經音訊')).toBeTruthy();
+    expect(screen.getByText('下載一卷書、一個部分或整本聖經')).toBeTruthy();
   });
 
-  it("aren't offered for a narrator the app can't download, or on the web", async () => {
-    expect((await renderSection('gilbert', 'BSB')).queryByText('Listen offline')).toBeNull();
+  it("isn't offered for a narrator the app can't download, or on the web", async () => {
+    expect((await renderSection({ reader: 'gilbert', translationId: 'BSB' })).queryByText('Listen offline')).toBeNull();
     jest.replaceProperty(Platform, 'OS', 'web');
     expect((await renderSection()).queryByText('Listen offline')).toBeNull();
   });
 
-  it('download on Wi-Fi at a tap, with an X that stops it', async () => {
+  it('closes the popup and opens the page with Back returning to the reader, at the book being read', () => {
+    const source = readFileSync(join(__dirname, '..', 'app/(tabs)/bible/index.tsx'), 'utf8');
+    const open = source.slice(source.indexOf('onOpen={(narrator) => {'), source.indexOf('reader={selectedAudioReader}'));
+    expect(open).toContain('setAudioSettingsVisible(false);');
+    expect(open).toMatch(/pathname: '\/you\/audio-downloads'/);
+    expect(open).toMatch(/params: \{ backTo: '\/bible', narrator, bookId: book\?\.id \?\? '' \}/);
+  });
+
+  it('re-render as downloads change', async () => {
     const screen = await renderSection();
-    await fireEvent.press(screen.getByRole('button', { name: /^Download John,/ }));
-    await act(async () => undefined);
-    expect(getBibleAudioScopeStatus('cuv-mandarin', JOHN).downloading).toBe(true);
-    expect(screen.getByText(/^Downloading/)).toBeTruthy();
-
-    await fireEvent.press(screen.getByRole('button', { name: 'Stop downloading John' }));
-    expect(getBibleAudioScopeStatus('cuv-mandarin', JOHN).downloading).toBe(false);
-  });
-
-  it('ask before using mobile data, and wait for Wi-Fi if the member says so', async () => {
-    mockNetwork.state = { type: 'CELLULAR', isConnected: true, isInternetReachable: true };
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    const screen = await renderSection();
-    await fireEvent.press(screen.getByRole('button', { name: /^Download John,/ }));
-    await act(async () => undefined);
-
-    const [title, message, buttons] = alert.mock.calls[0];
-    expect([title, message]).toEqual(['Use mobile data?', `You’re on mobile data. This download is ${formatDownloadSize(SIZES['cuv-mandarin'].JHN, 'en')}.`]);
-    expect(buttons?.map(({ text }) => text)).toEqual(['Cancel', 'Wait for Wi-Fi', 'Use mobile data']);
-    expect(getBibleAudioScopeStatus('cuv-mandarin', JOHN).downloading).toBe(false);
-
-    await act(async () => buttons?.[1].onPress?.());
-    await act(async () => undefined);
-    expect(getBibleAudioScopeStatus('cuv-mandarin', JOHN)).toMatchObject({ downloading: true, waitingFor: 'wifi' });
-    expect(File.downloadFileAsync).not.toHaveBeenCalled();
-  });
-
-  it('ask first before a download over 1 GB, even on Wi-Fi, as for the English whole Bible', async () => {
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    const souerBible = formatDownloadSize(sum(Object.values(SIZES.souer)), 'en');
-    const screen = await renderSection('souer', 'BSB');
-    await fireEvent.press(screen.getByRole('button', { name: /^Download Whole Bible,/ }));
-    await act(async () => undefined);
-
-    const [title, message, buttons] = alert.mock.calls[0];
-    expect([title, message]).toEqual([`Download ${souerBible}?`, 'It takes a while, and stays on this phone until you delete it.']);
-    expect(buttons?.map(({ text }) => text)).toEqual(['Cancel', 'Download']);
-    expect(getBibleAudioScopeStatus('souer', { kind: 'bible' }).downloading).toBe(false);
-    await act(async () => buttons?.[1].onPress?.());
-    expect(getBibleAudioScopeStatus('souer', { kind: 'bible' }).downloading).toBe(true);
-
-    // The Mandarin Bible is under 1 GB, so it starts at once.
-    alert.mockClear();
-    const mandarin = await renderSection();
-    await fireEvent.press(mandarin.getByRole('button', { name: /^Download Whole Bible,/ }));
-    await act(async () => undefined);
-    expect(alert).not.toHaveBeenCalled();
-    expect(getBibleAudioScopeStatus('cuv-mandarin', { kind: 'bible' }).downloading).toBe(true);
-  });
-
-  it("say so when the phone is offline or hasn't the room, and download nothing", async () => {
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    mockNetwork.state = { type: 'NONE', isConnected: false, isInternetReachable: false };
-    let screen = await renderSection();
-    await fireEvent.press(screen.getByRole('button', { name: /^Download John,/ }));
-    await act(async () => undefined);
-    expect(alert).toHaveBeenLastCalledWith('No connection', 'Connect to the internet to download.');
-
-    mockNetwork.state = { type: 'WIFI', isConnected: true, isInternetReachable: true };
-    mockDisk.availableBytes = 600_000_000;
-    screen = await renderSection();
-    await fireEvent.press(screen.getByRole('button', { name: /^Download Whole Bible,/ }));
-    await act(async () => undefined);
-    expect(alert.mock.lastCall?.[0]).toBe('Not enough space');
-    expect(mockFiles.size).toBe(0);
-    expect(getBibleAudioScopeStatus('cuv-mandarin', { kind: 'bible' }).downloading).toBe(false);
+    expect(screen.getByText('Download a book, a section, or the whole Bible')).toBeTruthy();
+    await act(async () => putOnPhone('cuv-mandarin', 'JHN', 21));
+    // putOnPhone reloads the store, which tells the row.
+    expect(screen.getByText('John downloaded')).toBeTruthy();
   });
 });

@@ -64,6 +64,9 @@ export const BIBLE_AUDIO_BOOKS: readonly (readonly [bookId: string, chapters: nu
 export const supportsAudioPowerCuv = (translationId: string) =>
   AUDIO_POWER_CUV_TRANSLATIONS.has(translationId);
 
+/** Where the Bible saves each translation's chosen narrator, as `{ [key]: reader }`. */
+export const BIBLE_AUDIO_READERS_STORAGE_KEY = 'user-bible-audio-readers';
+
 /**
  * The key a listener's narrator choice is saved under. Both CUV editions share
  * their recordings, so a chosen audio language carries between them.

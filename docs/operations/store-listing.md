@@ -337,7 +337,7 @@ access):
 ```text
 No sign-in is required, and every feature works without an account. The one exception is the Schedule sheet (staff only) button on the bulletin page, which opens the church's internal Google Sheet. Only church staff can open it, and nothing else in the app depends on it.
 
-This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services; members can also download it to listen offline (Bible tab, audio settings, Listen offline).
+This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services; members can also download it to listen offline (You tab, Offline Bible Audio).
 
 Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
 
