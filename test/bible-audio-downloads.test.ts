@@ -155,7 +155,7 @@ describe('Bible audio downloads', () => {
   });
 
   it('know every book\'s size for every narrator, and the church copies\' from the files themselves', () => {
-    expect(BIBLE_AUDIO_DOWNLOAD_NARRATORS).toEqual(['cuv-mandarin', 'cuv-cantonese', 'rv1909', 'souer', 'hays', 'david']);
+    expect(BIBLE_AUDIO_DOWNLOAD_NARRATORS).toEqual(['souer', 'hays', 'david', 'cuv-mandarin', 'cuv-cantonese', 'rv1909']);
     for (const narrator of BIBLE_AUDIO_DOWNLOAD_NARRATORS) {
       expect(Object.keys(SIZES[narrator])).toEqual(BIBLE_AUDIO_BOOKS.map(([bookId]) => bookId));
       expect(Object.values(SIZES[narrator]).every((bytes) => bytes > 100_000)).toBe(true);
@@ -402,9 +402,10 @@ describe('Bible audio downloads', () => {
     mockFiles.set('document/bible-audio/souer/JHN/3.mp3.1761000000000.part', 'x');
     mockFiles.set('document/bible-audio/rv1909/GEN/1.mp3', 'x'.repeat(700));
     loadBibleAudioDownloads();
+    // In the app's one narrator order: English first, as the BSB is in the translation picker.
     expect(listDownloadedBibleAudio()).toEqual([
-      { narrator: 'rv1909', bytes: 700, books: [{ bookId: 'GEN', chapters: 50, downloadedChapters: 1, bytes: 700 }] },
       { narrator: 'souer', bytes: 9_000, books: [{ bookId: 'JHN', chapters: 21, downloadedChapters: 2, bytes: 9_000 }] },
+      { narrator: 'rv1909', bytes: 700, books: [{ bookId: 'GEN', chapters: 50, downloadedChapters: 1, bytes: 700 }] },
     ]);
     expect(audioFiles()).not.toContain('document/bible-audio/souer/JHN/3.mp3.1761000000000.part');
     expect(getDownloadedChapterUri('souer', 'JHN', 2)).toBe('document/bible-audio/souer/JHN/2.mp3');

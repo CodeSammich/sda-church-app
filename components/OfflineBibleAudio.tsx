@@ -1,6 +1,7 @@
 import { AppIcon } from '@/components/AppIcon';
 import { PopupHeader } from '@/components/PopupHeader';
 import { PopupScrollView } from '@/components/PopupScrollView';
+import { getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
 import {
   BIBLE_SECTIONS,
   BIBLE_TESTAMENT_NAMES,
@@ -35,31 +36,6 @@ import { useContext, useEffect, useRef, useState, type ComponentRef, type ReactN
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Dialog, IconButton, Portal, ProgressBar, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-/** Each narrator a member can download, as this page names it. */
-export const BIBLE_AUDIO_NARRATOR_NAMES: Readonly<Record<string, Readonly<Record<SupportedLanguage, string>>>> = {
-  'cuv-mandarin': {
-    en: 'Mandarin (Chinese Union Version)',
-    zh: '國語（和合本）',
-    'zh-cn': '国语（和合本）',
-    es: 'Mandarín (Versión Unión China)',
-  },
-  'cuv-cantonese': {
-    en: 'Cantonese (Chinese Union Version)',
-    zh: '粵語（和合本）',
-    'zh-cn': '粤语（和合本）',
-    es: 'Cantonés (Versión Unión China)',
-  },
-  rv1909: {
-    en: 'Spanish (Reina-Valera 1909)',
-    zh: '西班牙語（Reina-Valera 1909）',
-    'zh-cn': '西班牙语（Reina-Valera 1909）',
-    es: 'Español (Reina-Valera 1909)',
-  },
-  souer: { en: 'Souer (BSB)', zh: 'Souer（英文 BSB）', 'zh-cn': 'Souer（英文 BSB）', es: 'Souer (BSB, inglés)' },
-  hays: { en: 'Hays (BSB)', zh: 'Hays（英文 BSB）', 'zh-cn': 'Hays（英文 BSB）', es: 'Hays (BSB, inglés)' },
-  david: { en: 'David (BSB)', zh: 'David（英文 BSB）', 'zh-cn': 'David（英文 BSB）', es: 'David (BSB, inglés)' },
-};
 
 const copy = {
   en: {
@@ -407,7 +383,7 @@ function ScopeRow({ expanded, kind, narrator, onDelete, onDownload, onToggle, sc
         <IconButton
           accessibilityLabel={
             scope.kind === 'bible' && !complete
-              ? labels.deleteAll(BIBLE_AUDIO_NARRATOR_NAMES[narrator]?.[language] ?? narrator)
+              ? labels.deleteAll(getBibleAudioNarratorName(narrator, language) ?? narrator)
               : labels.delete(what)
           }
           icon="delete-outline"
@@ -451,7 +427,7 @@ function NarratorDialog({ narrator, onChoose, onDismiss, visible }: NarratorDial
             <View accessibilityRole="radiogroup" style={styles.options}>
               {BIBLE_AUDIO_DOWNLOAD_NARRATORS.map((option) => {
                 const selected = option === narrator;
-                const name = BIBLE_AUDIO_NARRATOR_NAMES[option]?.[language] ?? option;
+                const name = getBibleAudioNarratorName(option, language) ?? option;
                 const total = narratorTotal(option);
                 const caption = total ? labels.downloaded(formatDownloadSize(total, language)) : labels.nothing;
                 return (
@@ -586,7 +562,7 @@ export function OfflineBibleAudio() {
     // The language only picks a first default.
   }, [narratorParam, bookParam]);
 
-  const name = (option: string) => BIBLE_AUDIO_NARRATOR_NAMES[option]?.[language] ?? option;
+  const name = (option: string) => getBibleAudioNarratorName(option, language) ?? option;
 
   const start = async (option: string, scope: BibleAudioDownloadScope) => {
     const status = getBibleAudioScopeStatus(option, scope);
@@ -628,7 +604,7 @@ export function OfflineBibleAudio() {
   };
 
   // "Delete the Gospels? (210 MB)", or for the whole Bible when only some is
-  // on the phone, "Delete all downloads for Souer (BSB)? (1.20 GB)".
+  // on the phone, "Delete all downloads for English – Souer (BSB)? (1.20 GB)".
   const confirmDelete = (option: string, scope: BibleAudioDownloadScope, what: string) => {
     const action =
       scope.kind === 'bible' && !isComplete(getBibleAudioScopeStatus(option, scope))

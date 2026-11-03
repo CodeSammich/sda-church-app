@@ -146,7 +146,10 @@ page, **Offline Bible Audio** in the You tab, which **Listen offline** in the Bi
 settings opens. The page is a tree of the whole Bible, its Testaments, their sections,
 closed until tapped, and their books, for one narrator; opened from the Bible, it shows
 the book being read. Each row says what it holds: its size, how far along its download
-is, part of it, or all of it. A row's download
+is, part of it, or all of it. Narrators are named language first, as "English – Souer
+(BSB)" or "Mandarin (Chinese Union Version)", and listed in one order, as the translation
+picker lists their translations (`constants/BibleAudioNarrators.ts`); the Bible's audio
+settings name the English ones the same way. A row's download
 progress shows at once, with an X that stops it, and goes on when the page closes, since
 the whole Bible takes a while. Deleting goes by the same rows, after the system's alert
 asks, naming what it deletes and its size. It stays in the documents directory until the

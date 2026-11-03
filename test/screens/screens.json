@@ -203,12 +203,12 @@
     {
       "name": "offline-bible-audio",
       "group": "bible-reading",
-      "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for the Mandarin narrator: the narrator, then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete.",
-      "path": "you/audio-downloads?narrator=cuv-mandarin",
+      "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete.",
+      "path": "you/audio-downloads?narrator=souer",
       "variants": ["default", "zh"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Offline Bible Audio$", "^Whole Bible$", "^66 books", "^Old Testament$", "^Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
-        "zh": { "mustShowLines": ["^離線聖經音訊$", "^整本聖經$", "^66 卷", "^舊約$", "^摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
+        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English . Souer \\(BSB\\)", "^Whole Bible$", "^66 books", "^Old Testament$", "^Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
+        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語 . Souer", "^整本聖經$", "^66 卷", "^舊約$", "^摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
       }
     },
     {
