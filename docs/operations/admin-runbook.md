@@ -696,9 +696,27 @@ app's own code, while Android uses a native queue.
   the app, and the page says "Waiting for Wi-Fi". Turn Wi-Fi back on while it's
   still locked: it goes on. Then try it again after tapping **Use mobile data**: it
   carries on over mobile data. On a phone's hotspot, a download not allowed on mobile
-  data waits too. On Android, on battery, a locked download slows after about 75
-  chapters in an hour, the system's limit for an app's background work; plugged in,
-  or with the app open, it doesn't. So check the Gospels on a charger too.
+  data waits too.
+- [ ] **Chapters an hour, locked (#611).** Start the Mandarin Old Testament (929
+  chapters) on Wi-Fi, note the chapters downloaded, lock the phone on battery, and
+  check again after an hour; then the same plugged in. On the iPhone, the page shows
+  the count when unlocked; on Android 14 and later, the notification does. Note both
+  numbers in the release pull request. Android 14 and later should go well past 75 an
+  hour on battery, which is where Android 13 and lower, and the app before 1.6.1,
+  stopped: each of their chapters is one of the app's background jobs. iOS paces a
+  background session's downloads as it sees fit, so a slow hour there is worth an
+  issue, not a failed release.
+- [ ] **Download notifications (#610).** On a fresh install, open You: the app hasn't
+  asked about notifications. Start a section in Offline Bible Audio: the app's own popup
+  asks first, saying the download keeps going either way; tap **Not now**, and the
+  download goes on with no question from the phone. Start another section: no popup.
+  Start a Testament: it asks once more; tap **Allow**, then allow the phone's question.
+  - **Android 14 and later:** the notification shows the narrator and "N of M chapters",
+    and Stop stops it, as the page's X does. In You, turn **Download notifications** off:
+    the next download's notification is the quiet kind, minimized.
+  - **iPhone:** lock the phone until a download finishes: a notification says it's done.
+  - **Android 13 and lower:** only the system's download notification shows, and You has
+    no switch.
 - [ ] **Offline start.** After using the app online, close it fully, turn on airplane
   mode, and open it. It starts, and the **Home** tab and the bulletin show what they
   last loaded.

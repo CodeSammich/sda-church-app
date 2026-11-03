@@ -28,7 +28,7 @@ import {
   type BibleAudioScopeStatus,
 } from '@/services/BibleAudioDownloads';
 import { BIBLE_BOOK_NAMES, BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP } from '@/services/BibleService';
-import { askForDownloadNotifications } from '@/services/DownloadNotifications';
+import { askForDownloadNotifications, showDownloadNotificationQuestion } from '@/services/DownloadNotifications';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
@@ -498,8 +498,8 @@ export function OfflineBibleAudio() {
   const narratorParam = firstParam(params.narrator);
   const bookParam = firstParam(params.bookId);
   // The key-screen capture can't tap, so its build asks the mobile-data
-  // question from the path, for the whole Bible (#611).
-  const screenshotPopup = getScreenshotPopup(params.popup, ['mobile-data']);
+  // question (#611), or the notifications one (#610), from the path.
+  const screenshotPopup = getScreenshotPopup(params.popup, ['mobile-data', 'notifications']);
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight();
   useBibleAudioDownloads();
@@ -577,6 +577,7 @@ export function OfflineBibleAudio() {
       { text: labels.useMobileData, onPress: () => begin(true) },
     ]);
   useEffect(() => {
+    if (screenshotPopup === 'notifications') showDownloadNotificationQuestion(language, () => undefined);
     if (screenshotPopup !== 'mobile-data' || !narrator) return;
     const status = getBibleAudioScopeStatus(narrator, { kind: 'bible' });
     askMobileData(formatDownloadSize(status.totalBytes - status.downloadedBytes, language), () => undefined);

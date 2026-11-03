@@ -417,7 +417,9 @@ transparency both stores reject. Replace them there whenever the stores get new 
 - **Languages beyond Spanish:** the descriptions' "other languages" means Spanish for now.
 - **Hymn lyrics, sheet music, books, or lessons in the app:** they open on their
   publishers' websites.
-- **Notifications or widgets:** the app has neither.
+- **Notifications:** only a Bible audio download's own, which the member allows (#610):
+  not announcements, reminders, or news.
+- **Widgets:** on Android only, the verse of the day (#235); the iPhone's comes later (#614).
 - **A location-based Sabbath time:** the countdown is for New York.
 - **A kids app:** don't use "for kids" or "for children" in the name, subtitle,
   screenshots, or description; see the audit's item 4.

@@ -252,10 +252,23 @@ a parental gate.
 ### 5. Permissions and native behavior
 
 The intended release permissions are audio playback and the Android media foreground
-service needed for background playback. Since #611, offline Bible audio downloads go
-through Android's `DownloadManager`, a system service rather than a foreground service of
-the app's. It adds no permission, and collects nothing, so Data safety doesn't change. The app does not request camera, microphone,
-location, contacts, photos, or notifications. The Android generated project previously
+service needed for background playback. Since #611, offline Bible audio downloads go on
+with the phone locked, with no foreground service of the app's:
+
+- **Android 14 and later:** the app's own user-initiated data transfer jobs, which need
+  `RUN_USER_INITIATED_JOBS`, a normal permission Android grants at install, with no Play
+  Console declaration (it's not a foreground service type). Android doesn't hold them to
+  the hour's quota it puts on an app's background jobs.
+- **Android 13 and lower:** Android's `DownloadManager`, a system service, which adds no
+  permission.
+- **Notifications (#610):** `POST_NOTIFICATIONS`, asked for only when a long download
+  starts, with the app's own explanation first, never at launch. They're made on the
+  phone, about that download only; no push service, token, or server is involved, so
+  Data safety and App Privacy don't change. The iPhone asks iOS the same way, for a word
+  when a download is done. See [Notifications](../UI_UX.md) in the UI rules.
+
+None of this collects anything. The app does not request camera, microphone, location,
+contacts, or photos. The Android generated project previously
 contained legacy storage and `SYSTEM_ALERT_WINDOW` entries inherited from dependencies;
 `app.json` now blocks them. It also blocks `ACCESS_WIFI_STATE`, which `expo-network`
 declares only for reading Wi-Fi details; the app uses it just to learn when the

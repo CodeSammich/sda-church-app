@@ -73,6 +73,15 @@ const ASK: Readonly<
 
 export const getDownloadNotificationQuestion = (language: SupportedLanguage) => ASK[language] ?? ASK.en;
 
+/** The app's question, in this phone's words, answered by `answer(allow)`. */
+export const showDownloadNotificationQuestion = (questionLanguage: SupportedLanguage, answer: (allow: boolean) => void) => {
+  const words = getDownloadNotificationQuestion(questionLanguage);
+  showAppAlert(Platform.OS === 'ios' ? words.iosTitle : words.title, Platform.OS === 'ios' ? words.iosMessage : words.message, [
+    { text: words.notNow, style: 'cancel', onPress: () => answer(false) },
+    { text: words.allow, onPress: () => answer(true) },
+  ]);
+};
+
 const TEXT: Readonly<Record<SupportedLanguage, DownloadNotificationText>> = {
   en: {
     channel: 'Bible audio downloads',
@@ -200,17 +209,7 @@ export const askForDownloadNotifications = async (size: DownloadSize) => {
   if (asked === 'asked' || (asked === 'not-now' && size === 'section')) return;
   const permission = await downloads.getNotificationPermission?.();
   if (!permission || permission.granted || !permission.canAskAgain) return;
-  const words = getDownloadNotificationQuestion(language);
-  const allow = await new Promise<boolean>((resolve) =>
-    showAppAlert(
-      Platform.OS === 'ios' ? words.iosTitle : words.title,
-      Platform.OS === 'ios' ? words.iosMessage : words.message,
-      [
-        { text: words.notNow, style: 'cancel', onPress: () => resolve(false) },
-        { text: words.allow, onPress: () => resolve(true) },
-      ],
-    ),
-  );
+  const allow = await new Promise<boolean>((resolve) => showDownloadNotificationQuestion(language, resolve));
   await AsyncStorage.setItem(ASKED_STORAGE_KEY, allow || asked === 'not-now' ? 'asked' : 'not-now');
   if (allow) {
     await downloads.requestNotificationPermission().catch(() => undefined);

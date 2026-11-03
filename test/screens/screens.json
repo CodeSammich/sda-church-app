@@ -224,6 +224,31 @@
       }
     },
     {
+      "name": "bible-audio-notifications-question",
+      "group": "bible-reading",
+      "$comment": "The app's own question before the phone's, the first time a long download starts (#610), by popup=notifications in the preview build: what the notifications are for, that the download keeps going either way, and where to turn them off, with Allow first and Not now. iOS asks only for a word when it's done, so its words are shorter. The text readers may read the curly apostrophes as straight ones.",
+      "path": "you/audio-downloads?narrator=cuv-mandarin&popup=notifications",
+      "variants": ["default", "zh"],
+      "variantRules": {
+        "default": {
+          "mustShowLines": [
+            { "line": "^Show this download.s", "platforms": ["android"] },
+            { "line": "^Get a notice when it.s", "platforms": ["ios"] },
+            "keeps going either", "^Allow$", "^Not now$"
+          ],
+          "mustNotShowLines": ["^Close$", "^Don.t allow$"]
+        },
+        "zh": {
+          "mustShowLines": [
+            { "line": "^顯示這次下載的進度", "platforms": ["android"] },
+            { "line": "^下載完成時通知您", "platforms": ["ios"] },
+            "下載都會繼續", "^允許$", "^以後再說$"
+          ],
+          "mustNotShowLines": ["^關閉$"]
+        }
+      }
+    },
+    {
       "name": "bible-audio-download-tip",
       "group": "bible-reading",
       "$comment": "The audio settings popup as the marked audio button opens it when playback keeps stopping to load (#595), by popup=audio-download-tip in the preview build. The BSB has four narrators above Listen offline, so the popup scrolls down to it: the tip's line, and the Offline Bible Audio row below it, which opens the downloads (#556), must show. The line doesn't say \"keeps stopping\", which Android's check reserves for the system's crash dialog.",
@@ -460,12 +485,12 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only.",
+      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting but one, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only. Download notifications, the last, turns off the app\u2019s notifications for downloads (#610), where the app shows its own: the iPhone, and Android 14 and later. Its line is checked on the iPhone, where it shows above the fold with Share the App.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Share the App$", "platforms": ["ios"] }, "^Offline Bible Audio$"] },
-        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, { "line": "幫助與意見回饋", "platforms": ["ios"] }, "^離線聖經音訊$"] }
+        "default": { "mustShowLines": [{ "line": "^Share the App$", "platforms": ["ios"] }, "^Offline Bible Audio$", { "line": "^Download notifications$", "platforms": ["ios"] }] },
+        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, { "line": "幫助與意見回饋", "platforms": ["ios"] }, "^離線聖經音訊$", { "line": "^下載通知$", "platforms": ["ios"] }] }
       }
     },
     {
