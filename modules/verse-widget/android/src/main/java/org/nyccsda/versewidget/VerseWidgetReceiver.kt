@@ -16,8 +16,11 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.util.Log
+import android.util.TypedValue
 import androidx.compose.ui.unit.DpSize
 import androidx.glance.BackgroundModifier
 import androidx.glance.Emittable
@@ -51,6 +54,8 @@ private const val INTERACTION_ACTION = "expo.modules.widgets.ACTION_WIDGET_INTER
 private const val TARGET_EXTRA = "expo.modules.widgets.extra.TARGET"
 private const val LINK_PREFIX = "sdachurchapp:"
 private const val SHARE_PREFIX = "share:"
+// Line fitting is logged after `adb shell setprop log.tag.VerseWidget DEBUG`.
+private const val LOG_TAG = "VerseWidget"
 
 /**
  * The Android home screen widget's receiver (#235). The app's
@@ -196,12 +201,15 @@ private fun ColorProvider.withNight(night: ColorProvider): ColorProvider {
  * Sets the verse in serif and lets it fill the space its column leaves, cut
  * to the whole lines that fit. The space is the widget's size less the
  * padding around the verse and the height of everything else in its column.
+ * On a widget too small for a line of the verse, what's below the verse (the
+ * translation) gives way first, and then the verse itself.
  */
 private fun Emittable.fitVerse(context: Context, size: DpSize) {
   val path = pathTo { it is EmittableText && it.maxLines == Int.MAX_VALUE } ?: return
   val verse = path.last() as EmittableText
   val column = path.getOrNull(path.size - 2) as? EmittableColumn ?: return
   val measure = TextMeasure(context)
+  verse.style = (verse.style ?: TextStyle()).copy(fontFamily = FontFamily.Serif)
 
   var width = size.width.value
   var height = size.height.value
@@ -210,12 +218,23 @@ private fun Emittable.fitVerse(context: Context, size: DpSize) {
     width -= padding.horizontal
     height -= padding.vertical
   }
-  for (child in column.children) {
-    if (child !== verse) height -= child.heightDp(context, width, measure)
-  }
+  fun space() = height - column.children.filter { it !== verse }
+    .sumOf { it.heightDp(context, width, measure).toDouble() }.toFloat()
 
-  verse.style = (verse.style ?: TextStyle()).copy(fontFamily = FontFamily.Serif)
-  verse.maxLines = max(1, measure.linesThatFit(verse, width, height))
+  var lines = measure.linesThatFit(verse, width, space())
+  val index = column.children.indexOf(verse)
+  if (lines == 0) {
+    while (column.children.size > index + 1) column.children.removeAt(column.children.size - 1)
+    lines = measure.linesThatFit(verse, width, space())
+  }
+  if (Log.isLoggable(LOG_TAG, Log.DEBUG)) {
+    Log.d(LOG_TAG, "size=${size.width.value}x${size.height.value}dp text=${width}x${space()}dp lines=$lines/${measure.lineCount(verse, width)}")
+  }
+  if (lines == 0) {
+    column.children.removeAt(index)
+    return
+  }
+  verse.maxLines = lines
   verse.modifier = verse.modifier.then(HeightModifier(Dimension.Expand))
 }
 
@@ -259,14 +278,16 @@ private fun Emittable.heightDp(context: Context, width: Float, measure: TextMeas
 
 /** Lays text out the way a widget's TextView does, to measure it. */
 private class TextMeasure(context: Context) {
-  private val density = context.resources.displayMetrics.density
-  private val fontScale = context.resources.configuration.fontScale
+  private val metrics = context.resources.displayMetrics
+  private val density = metrics.density
 
   fun heightDp(text: EmittableText, widthDp: Float): Float {
     val layout = layout(text, widthDp)
     val lines = min(layout.lineCount, text.maxLines)
     return if (lines == 0) 0f else layout.getLineBottom(lines - 1) / density
   }
+
+  fun lineCount(text: EmittableText, widthDp: Float): Int = layout(text, widthDp).lineCount
 
   fun linesThatFit(text: EmittableText, widthDp: Float, heightDp: Float): Int {
     val layout = layout(text, widthDp)
@@ -278,7 +299,8 @@ private class TextMeasure(context: Context) {
   private fun layout(text: EmittableText, widthDp: Float): StaticLayout {
     val style = text.style
     val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-      textSize = (style?.fontSize?.value ?: 14f) * fontScale * density
+      // As Android sizes text in sp, including its gentler scaling of large text (Android 14).
+      textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, style?.fontSize?.value ?: 14f, metrics)
       typeface = Typeface.create(
         if (style?.fontFamily == FontFamily.Serif) Typeface.SERIF else Typeface.DEFAULT,
         if (style?.fontWeight == FontWeight.Bold) Typeface.BOLD else Typeface.NORMAL,
@@ -287,6 +309,14 @@ private class TextMeasure(context: Context) {
     val builder = StaticLayout.Builder
       .obtain(text.text, 0, text.text.length, paint, max(1, (widthDp * density).toInt()))
       .setIncludePad(true)
+      .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
+      .setHyphenationFrequency(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          Layout.HYPHENATION_FREQUENCY_NONE
+        } else {
+          Layout.HYPHENATION_FREQUENCY_NORMAL
+        }
+      )
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) builder.setUseLineSpacingFromFallbacks(true)
     return builder.build()
   }

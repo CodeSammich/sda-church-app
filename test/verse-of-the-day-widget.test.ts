@@ -344,14 +344,14 @@ describe('the widget layout', () => {
 
   it('shows the heading, the reference, the numbered verse, and the translation, as YouVersion’s does', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 3, 14) });
-    expect(texts(render(week))).toEqual(['Today’s Verse', 'Ref 2026-11-3', '[16] Tuesday', 'BSB']);
+    expect(texts(render(week))).toEqual(['Today’s Verse', 'Ref 2026-11-3', '[16]\u00A0Tuesday', 'BSB']);
   });
 
   it('changes verses at 6 AM, as the app does', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 3, 5, 59) });
-    expect(texts(render(week))).toContain('[16] Monday');
+    expect(texts(render(week))).toContain('[16]\u00A0Monday');
     jest.setSystemTime(new Date(2026, 10, 3, 6, 0));
-    expect(texts(render(week))).toContain('[16] Tuesday');
+    expect(texts(render(week))).toContain('[16]\u00A0Tuesday');
   });
 
   it('picks the same day as the app for every hour of a year', () => {
@@ -362,14 +362,14 @@ describe('the widget layout', () => {
       const key = getVerseOfTheDayDateKey(now);
       jest.setSystemTime(now);
       const shown = texts(render(withDays([day(key, 'Match'), day('later', 'Other')])));
-      if (!shown.includes('[16] Match')) misses.push(now.toString());
+      if (!shown.includes('[16]\u00A0Match')) misses.push(now.toString());
     }
     expect(misses).toEqual([]);
   });
 
   it('keeps the last verse it has after the week runs out', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 20, 9) });
-    expect(texts(render(week))).toContain('[16] Wednesday');
+    expect(texts(render(week))).toContain('[16]\u00A0Wednesday');
   });
 
   it('asks the reader to open the app before the app has sent any verses', () => {
@@ -449,7 +449,7 @@ describe('the widget layout', () => {
   it('leaves the line limit off only the verse, which the receiver sets in serif and fits', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 3, 9) });
     const unlimited = textNodes(render(week)).filter((n) => n.props.maxLines === undefined);
-    expect(unlimited.map((n) => n.props.children)).toEqual(['[16] Tuesday']);
+    expect(unlimited.map((n) => n.props.children)).toEqual(['[16]\u00A0Tuesday']);
   });
 });
 

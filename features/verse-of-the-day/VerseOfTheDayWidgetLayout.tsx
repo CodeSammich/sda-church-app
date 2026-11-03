@@ -75,12 +75,14 @@ export const VerseOfTheDayWidgetLayout = (
       <Column modifiers={[fillMaxSize(), paddingAll(16)]}>
         <Box contentAlignment="topEnd" modifiers={[fillMaxWidth()]}>
           <Column modifiers={[fillMaxWidth(), padding(0, 0, 36, 0)]}>
-            <Text color={colors.onSurfaceVariant} maxLines={1} style={{ fontSize: 13 }}>
+            <Text color={colors.onSurfaceVariant} maxLines={1} style={{ fontSize: 15 }}>
               {(props && props.title) || 'Today’s Verse'}
             </Text>
-            <Text color={colors.primary} maxLines={1} style={{ fontSize: 17, fontWeight: 'bold' }}>
-              {verse ? verse.reference : ''}
-            </Text>
+            {verse ? (
+              <Text color={colors.primary} maxLines={1} style={{ fontSize: 20, fontWeight: 'bold' }}>
+                {verse.reference}
+              </Text>
+            ) : null}
           </Column>
           {verse ? (
             <Button {...({ target: `share:${verse.share}` } as object)}>
@@ -93,14 +95,16 @@ export const VerseOfTheDayWidgetLayout = (
             </Button>
           ) : null}
         </Box>
-        <Spacer modifiers={[height(8)]} />
-        <Text color={colors.onSurface} style={{ fontSize: 17 }}>
-          {verse ? `[${verse.verse}] ${verse.text}` : 'Open the app to see today’s verse.'}
+        <Spacer modifiers={[height(10)]} />
+        <Text color={colors.onSurface} style={{ fontSize: 18 }}>
+          {verse ? `[${verse.verse}]\u00A0${verse.text}` : 'Open the app to see today’s verse.'}
         </Text>
-        <Spacer modifiers={[height(8)]} />
-        <Text color={colors.onSurfaceVariant} maxLines={1} style={{ fontSize: 11 }}>
-          {verse ? props.translation : ''}
-        </Text>
+        {verse ? <Spacer modifiers={[height(8)]} /> : null}
+        {verse ? (
+          <Text color={colors.onSurfaceVariant} maxLines={1} style={{ fontSize: 12 }}>
+            {props.translation}
+          </Text>
+        ) : null}
       </Column>
     </Button>
   );
