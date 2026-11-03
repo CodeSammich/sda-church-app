@@ -12,6 +12,7 @@ import {
   TEXT_SCALE_MIN,
   type TextScale,
 } from './AppPreferences';
+import { DARK_THEME_COLORS, LIGHT_THEME_COLORS } from './ThemeColors';
 
 /**
  * Material Design 3 Theme definitions for both React Native Paper and React Navigation.
@@ -74,7 +75,7 @@ export const customLightTheme = {
   colors: {
     ...MD3LightTheme.colors,
     // Primary: Deep Ocean Blue
-    primary: '#0369A1', // Accessible companion to the hymnal icon's brighter sky blue
+    primary: LIGHT_THEME_COLORS.primary,
     onPrimary: '#FFFFFF', // Crisp action text and iconography
     primaryContainer: '#E3F2FD', // Selection Container
     onPrimaryContainer: '#0369A1', // General Iconography
@@ -132,17 +133,17 @@ export const customLightTheme = {
     onTertiaryContainer: '#0369A1',
 
     // Backgrounds & Surfaces
-    background: '#F2E6DF', // The Canvas
+    background: LIGHT_THEME_COLORS.background,
     onBackground: '#1A1A1A', // The Ink: High-contrast text on Canvas
     surface: '#FAF4EF', // The Object: Warm cards/containers
     bulletinSurface: '#FAF4EF', // Warm surface with clear separation from the canvas
     bulletinRemarkSurface: '#FFF1CC', // Restrained amber notice surface
     onBulletinRemarkSurface: '#6B3D00', // High-contrast warm notice text
-    onSurface: '#1A1A1A', // The Ink: High-contrast text on Surfaces
+    onSurface: LIGHT_THEME_COLORS.onSurface,
 
     // UI Variants & Boundaries
     surfaceVariant: '#F1F3F4', // Secondary UI / Top Search Bar BG
-    onSurfaceVariant: '#606060', // Muted Intent: Top Search Bar Icon/Text
+    onSurfaceVariant: LIGHT_THEME_COLORS.onSurfaceVariant,
     outline: '#CAC4D0', // Boundary (Outline)
     outlineVariant: '#E0E0E0', // Boundary (Subtle) / Divider
 
@@ -213,7 +214,7 @@ export const customDarkTheme: AppTheme = {
     // Primary: restrained gold on warm black, inspired by premium evening packaging.
     // The palette is especially useful in readers: gold identifies interaction and
     // annotation while warm-white body text remains the highest-contrast element.
-    primary: '#D2B258',
+    primary: DARK_THEME_COLORS.primary,
     onPrimary: '#181202',
     primaryContainer: '#302714',
     onPrimaryContainer: '#EBCD78',
@@ -272,17 +273,17 @@ export const customDarkTheme: AppTheme = {
     onTertiaryContainer: '#EBCD78',
 
     // Backgrounds & Surfaces
-    background: '#080808', // Render-matched near-black reader canvas
+    background: DARK_THEME_COLORS.background,
     onBackground: '#F3EDE1', // Warm-white reading ink reduces cool-screen glare
     surface: '#14130F', // Warm charcoal cards and reader controls
     bulletinSurface: '#14130F',
     bulletinRemarkSurface: '#332A18',
     onBulletinRemarkSurface: '#F6D88A',
-    onSurface: '#F3EDE1',
+    onSurface: DARK_THEME_COLORS.onSurface,
 
     // UI Variants & Boundaries
     surfaceVariant: '#211F18',
-    onSurfaceVariant: '#BDB5A2',
+    onSurfaceVariant: DARK_THEME_COLORS.onSurfaceVariant,
     outline: '#947D3F',
     outlineVariant: '#3B3423',
 

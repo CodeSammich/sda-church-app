@@ -214,16 +214,19 @@ of cards for **Watch Livestream**, **Weekly Bulletin**, **Tithe & Offering**, **
 Visitor) live here.
 
 **Android home screen widget (#235):** **Today's Verse** can also sit on an Android
-phone's home screen, with its heading, verse, and reference in the app's language. It
-follows the phone's light or dark mode in the app's colors: the primary blue on the warm
-canvas, or gold on near-black. Android 12 and later switch it with the phone; older
-versions at its next hourly redraw. Tapping it opens the verse in the Bible reader, as
-**Read Verse** does. Once a day, when Home loads the verse, it hands the
-widget the next week's verses, and the widget shows the day's, so the verse changes within
-an hour of 6 AM without the app being opened. After a week without the app, it keeps the
-last verse. Long verses get smaller type. iPhones don't have the widget. The code is in
-`features/verse-of-the-day/`, `services/VerseOfTheDayWidgetData.ts`,
-`modules/verse-widget/`, and `plugins/withAndroidVerseWidget.js`.
+phone's home screen, laid out like YouVersion's Verse of the Day widget: the heading, the
+reference, a share button, the verse with its number in the phone's serif font, and the
+translation, in the app's language. A verse longer than the widget's size is cut at the
+last whole line that fits. The colors are the app's: the primary blue on the warm canvas,
+or gold on near-black, following the phone's light or dark mode. Android 12 and later
+switch it with the phone; older versions at its next hourly redraw. Tapping it opens the
+verse in the Bible reader, as **Read Verse** does, and the share button shares it as
+**Share Verse** does. Once a day, when Home loads the verse, it hands the widget the next
+week's verses, and the widget shows the day's, so the verse changes within an hour of
+6 AM without the app being opened. After a week without the app, it keeps the last
+verse. iPhones don't have the widget. The code is in `features/verse-of-the-day/`,
+`services/VerseOfTheDayWidgetData.ts`, `modules/verse-widget/`, and
+`plugins/withAndroidVerseWidget.js`.
 
 **Hymnal** opens the hymnal page (`features/hymnal/HymnalScreen.tsx`). A carousel of the
 six hymnals, in the style of the Library's featured books, puts the app language's hymnals

@@ -1383,27 +1383,32 @@ of iOS autolinking, so the iPhone app doesn't change. The plugin also has Androi
 the widget every hour, translates its name in the widget list, and makes the widget's
 receiver the one in `modules/verse-widget`, a local Expo module for Android only:
 
-- **Light and dark mode.** `expo-widgets` gives each color one value, and Android doesn't
-  redraw a widget when the phone switches modes. The receiver pairs each of the layout's
-  light-mode colors with its dark-mode twin before Android draws the widget, so Android 12
-  and later switch between them on their own.
+- **Light and dark mode.** The layout takes the app's colors (`constants/ThemeColors.ts`,
+  which `constants/Themes.ts` uses too) in the phone's current mode, and Android doesn't
+  redraw a widget when the phone switches modes. So the receiver draws the layout in both
+  modes and pairs each light-mode color with the dark-mode color in the same place, and
+  Android 12 and later switch between them on their own.
+- **The verse.** `expo-widgets` has no font family or line fitting, so the receiver sets
+  the verse in the phone's serif font and measures how many whole lines fit the widget's
+  size.
 - **Redraws.** `expo-widgets`' own redraw (`updateSnapshot` or `reload`) wouldn't go through
   the receiver, so the app never calls it. It stores the week of verses as the widget's
   initial props, which doesn't draw, and then asks the module to redraw the widget.
-- **Taps.** `expo-widgets` sends a tap on the widget's button to the receiver, which opens
-  the verse in the app.
+- **Taps.** `expo-widgets` sends a tap on one of the widget's buttons to the receiver,
+  which opens the verse in the app or the phone's share sheet.
 
 Gradle runs Metro twice more for the widget (`generateExpoWidgetsBundle` and
 `generateExpoWidgetsLayoutRegistry`). The second builds the layout the widget shows
-before the app first runs, from `features/verse-of-the-day/VerseOfTheDayWidget.tsx`, but
-Gradle doesn't watch the layout's files for it. So after changing them, delete
+before the app first runs, from `features/verse-of-the-day/VerseOfTheDayWidget.tsx`, with
+only relative imports: `@/` paths and packages are empty there. Gradle doesn't watch the
+layout's files for it. So after changing them, delete
 `node_modules/expo-widgets/android/build/generated/expo-widgets` before building in a
 reused `android/` project; CI builds from scratch.
 When updating `expo-widgets`, check that its Android plugin files are still in
 `plugin/build/android/` (`test/verse-of-the-day-widget.test.ts` runs them on an empty
 project), that the app still builds, and then try the widget on an emulator: add it
-from the home screen's widget list before and after opening the app, tap it, change the
-app's language, and switch the phone between light and dark mode.
+from the home screen's widget list before and after opening the app, tap it and its share
+button, change the app's language, and switch the phone between light and dark mode.
 
 Before release, run `npx expo install --check`, `npm run doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices, with the
