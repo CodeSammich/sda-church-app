@@ -247,7 +247,10 @@ const planShots = (config, { group, store }) => {
 
 const capture = async (outDir, { group, store }) => {
   const config = loadConfig();
-  const device = store ? config.android.googlePlay : config.android.phone;
+  // EVAL (#324): WDP x HDP points at 2x.
+  const device = process.env.WDP
+    ? { width: Number(process.env.WDP) * 2, height: Number(process.env.HDP) * 2, density: 320 }
+    : store ? config.android.googlePlay : config.android.phone;
   const pkg = previewPackage();
   await becomeRoot();
   prepareEmulator();

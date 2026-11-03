@@ -162,6 +162,11 @@ const variantSuits = (overrides, platform) =>
  * Android take every screen's `variants`, unless its `platforms` leave one out.
  */
 const variantsOn = (screen, platform) => {
+  // EVAL (#324): ANDROID_EVAL=se takes Home and New Member & Visitor at 125%
+  // and 150%, in English and Spanish, on an iPhone SE-sized screen.
+  if (platform === 'android' && process.env.ANDROID_EVAL === 'se') {
+    return ['home', 'discover'].includes(screen.name) ? ['se-125', 'se-150', 'se-es-125', 'se-es-150'] : [];
+  }
   if (platform === 'ipad') return screen.ipadVariants || [];
   return !screen.platforms || screen.platforms.includes(platform) ? screen.variants : [];
 };
