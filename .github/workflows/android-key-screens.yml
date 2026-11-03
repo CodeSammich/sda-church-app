@@ -279,6 +279,8 @@ jobs:
         timeout-minutes: ${{ matrix.eval && 60 || 20 }}
         env:
           PART: ${{ matrix.eval && ' ' || (matrix.store && '--store' || format('--group {0}', matrix.group)) }}
+          WDP: ${{ matrix.wdp }}
+          HDP: ${{ matrix.hdp }}
         run: >-
           node scripts/capture-android-screens.cjs --out "$RUNNER_TEMP/android-key-screens/screens" $PART
 
