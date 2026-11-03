@@ -34,8 +34,9 @@ describe('device backups', () => {
 
   it('leave out downloaded Bible audio, what is still downloading, and the widget’s verses on Android, and nothing else', () => {
     expect(app.plugins).toContain('./plugins/withAndroidBackupRules');
-    // The second is where Android's DownloadManager writes a chapter until the
-    // app moves it into bible-audio (#611).
+    // The second and third are #611's: where Android's DownloadManager writes a
+    // chapter until the app moves it into bible-audio, and the list of chapters
+    // under way.
     expect(EXCLUDED).toEqual([
       { domain: 'file', path: 'bible-audio' },
       { domain: 'external', path: 'bible-audio-partial' },
