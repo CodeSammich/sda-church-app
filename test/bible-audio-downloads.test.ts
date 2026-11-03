@@ -4,13 +4,16 @@ import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json
 import { excludeFromBackup } from '@/modules/backup-exclusion';
 import {
   BIBLE_AUDIO_DOWNLOAD_NARRATORS,
-  deleteBibleAudioBook,
+  deleteBibleAudio,
   downloadBibleAudio,
   getBibleAudioDownloadUrls,
+  getBibleAudioScopeBooks,
   getBibleAudioScopeStatus,
+  getDownloadedBibleAudioBytes,
   getDownloadableBibleAudioNarrator,
   getDownloadedChapterUri,
   hasRoomForBibleAudio,
+  isDownloadingBibleAudio,
   listDownloadedBibleAudio,
   loadBibleAudioDownloads,
   resetBibleAudioDownloadsForTests,
@@ -46,6 +49,12 @@ const exclude = excludeFromBackup as jest.MockedFunction<typeof excludeFromBacku
 const JOHN = { kind: 'book', bookId: 'JHN' } as const;
 const JUDE = { kind: 'book', bookId: 'JUD' } as const;
 const PHILEMON = { kind: 'book', bookId: 'PHM' } as const;
+const OBADIAH = { kind: 'book', bookId: 'OBA' } as const;
+const GOSPELS = { kind: 'section', sectionId: 'gospels' } as const;
+const GENERAL_LETTERS = { kind: 'section', sectionId: 'general-letters' } as const;
+const NEW_TESTAMENT = { kind: 'testament', testament: 'new' } as const;
+const OLD_TESTAMENT = { kind: 'testament', testament: 'old' } as const;
+const BIBLE = { kind: 'bible' } as const;
 const SIZES: Record<string, Record<string, number>> = BIBLE_AUDIO_DOWNLOAD_SIZES;
 
 const setNetwork = (state: Partial<MockNetwork>) => {
@@ -226,41 +235,86 @@ describe('Bible audio downloads', () => {
     expect(mockFiles.get('document/bible-audio/cuv-mandarin/JUD/1.mp3')).toContain('archive.org');
   });
 
-  it('count a scope\'s progress in bytes, and the New Testament and whole Bible in chapters', async () => {
+  it('hold the books of a book, a section, a Testament, and the whole Bible', () => {
+    expect(getBibleAudioScopeBooks(JOHN)).toEqual(['JHN']);
+    expect(getBibleAudioScopeBooks(GOSPELS)).toEqual(['MAT', 'MRK', 'LUK', 'JHN']);
+    expect(getBibleAudioScopeBooks(NEW_TESTAMENT)).toHaveLength(27);
+    expect(getBibleAudioScopeBooks(OLD_TESTAMENT)).toHaveLength(39);
+    expect(getBibleAudioScopeBooks(BIBLE)).toEqual([...getBibleAudioScopeBooks(OLD_TESTAMENT), ...getBibleAudioScopeBooks(NEW_TESTAMENT)]);
+    expect(getBibleAudioScopeBooks({ kind: 'section', sectionId: 'apocrypha' })).toEqual([]);
+    expect(getBibleAudioScopeBooks({ kind: 'book', bookId: 'XYZ' })).toEqual([]);
+  });
+
+  it("count a scope's progress in bytes, its chapters, and the books all on the phone", async () => {
     mockDownloads();
     downloadBibleAudio('cuv-mandarin', JUDE);
     await until(isDone(JUDE));
     const onPhone = mockFiles.get('document/bible-audio/cuv-mandarin/JUD/1.mp3')!.length;
-    expect(getBibleAudioScopeStatus('cuv-mandarin', JUDE).downloadedBytes).toBe(onPhone);
-    expect(getBibleAudioScopeStatus('cuv-mandarin', { kind: 'new-testament' })).toMatchObject({
+    expect(getBibleAudioScopeStatus('cuv-mandarin', JUDE)).toMatchObject({
+      books: 1,
+      downloadedBooks: 1,
+      downloadedBytes: onPhone,
+    });
+    expect(getDownloadedBibleAudioBytes('cuv-mandarin', GENERAL_LETTERS)).toBe(onPhone);
+    expect(getBibleAudioScopeStatus('cuv-mandarin', GENERAL_LETTERS)).toMatchObject({
+      books: 8,
+      downloadedBooks: 1,
+      chapters: 34,
+      downloadedChapters: 1,
+    });
+    expect(getBibleAudioScopeStatus('cuv-mandarin', NEW_TESTAMENT)).toMatchObject({
+      books: 27,
+      downloadedBooks: 1,
       chapters: 260,
       downloadedChapters: 1,
     });
-    expect(getBibleAudioScopeStatus('cuv-mandarin', { kind: 'bible' })).toMatchObject({
+    expect(getBibleAudioScopeStatus('cuv-mandarin', BIBLE)).toMatchObject({
+      books: 66,
+      downloadedBooks: 1,
       chapters: 1189,
       downloadedChapters: 1,
       totalBytes: Object.values(SIZES['cuv-mandarin']).reduce((total, bytes) => total + bytes),
     });
+    // Part of a book on the phone isn't a book downloaded.
+    mockFiles.set('document/bible-audio/cuv-mandarin/JHN/1.mp3', 'x'.repeat(10));
+    resetBibleAudioDownloadsForTests();
+    loadBibleAudioDownloads();
+    expect(getBibleAudioScopeStatus('cuv-mandarin', GOSPELS)).toMatchObject({ downloadedBooks: 0, downloadedChapters: 1 });
   });
 
-  it("show a download on the rows asked for, and the books inside them, but not the rows around them", () => {
-    mockDownloads(async (url, destination) => {
-      await new Promise(() => undefined);
+  it("show a download on the rows asked for, and the books inside them, but not the rows around them", async () => {
+    // Each chapter downloads until it's stopped.
+    mockDownloads(async (url, destination, options) => {
+      await new Promise((_, reject) => options?.signal?.addEventListener('abort', () => reject(new Error('stopped'))));
       return destination;
     });
     downloadBibleAudio('cuv-mandarin', JOHN);
     const downloading = () =>
-      [JOHN, PHILEMON, { kind: 'new-testament' } as const, { kind: 'bible' } as const].map(
+      [JOHN, GOSPELS, PHILEMON, NEW_TESTAMENT, BIBLE].map(
         (scope) => getBibleAudioScopeStatus('cuv-mandarin', scope).downloading,
       );
-    expect(downloading()).toEqual([true, false, false, false]);
-    downloadBibleAudio('cuv-mandarin', { kind: 'new-testament' });
-    expect(downloading()).toEqual([true, true, true, false]);
-    // Stopping John leaves the rest of the New Testament downloading.
+    expect(downloading()).toEqual([true, false, false, false, false]);
+    expect(isDownloadingBibleAudio('cuv-mandarin')).toBe(true);
+    expect(isDownloadingBibleAudio('souer')).toBe(false);
+    downloadBibleAudio('cuv-mandarin', GOSPELS);
+    expect(downloading()).toEqual([true, true, false, false, false]);
+    // Three chapters download at a time: John's, so Matthew waits its turn.
+    await until(() => getBibleAudioScopeStatus('cuv-mandarin', JOHN).active);
+    expect(getBibleAudioScopeStatus('cuv-mandarin', { kind: 'book', bookId: 'MAT' })).toMatchObject({ downloading: true, active: false });
+    downloadBibleAudio('cuv-mandarin', NEW_TESTAMENT);
+    expect(downloading()).toEqual([true, true, true, true, false]);
+    // Stopping John leaves the rest of the Gospels and the New Testament downloading.
     stopBibleAudioDownload('cuv-mandarin', JOHN);
-    expect(downloading()).toEqual([false, true, true, false]);
-    stopBibleAudioDownload('cuv-mandarin', { kind: 'new-testament' });
-    expect(downloading()).toEqual([false, false, false, false]);
+    await until(() => !getBibleAudioScopeStatus('cuv-mandarin', JOHN).downloading);
+    expect(downloading()).toEqual([false, true, true, true, false]);
+    // Stopping the Gospels stops the Gospels' own download, and the New
+    // Testament's goes on without them.
+    stopBibleAudioDownload('cuv-mandarin', GOSPELS);
+    await until(() => !getBibleAudioScopeStatus('cuv-mandarin', GOSPELS).downloading);
+    expect(downloading()).toEqual([false, false, true, true, false]);
+    stopBibleAudioDownload('cuv-mandarin', NEW_TESTAMENT);
+    await until(() => !isDownloadingBibleAudio('cuv-mandarin'));
+    expect(downloading()).toEqual([false, false, false, false, false]);
   });
 
   it('stop at the X, keeping the chapters already downloaded', async () => {
@@ -361,10 +415,63 @@ describe('Bible audio downloads', () => {
     downloadBibleAudio('cuv-mandarin', JUDE);
     downloadBibleAudio('cuv-mandarin', PHILEMON);
     await until(() => isDone(JUDE)() && isDone(PHILEMON)());
-    deleteBibleAudioBook('cuv-mandarin', 'JUD');
+    deleteBibleAudio('cuv-mandarin', JUDE);
     expect(audioFiles()).toEqual(['document/bible-audio/cuv-mandarin/PHM/1.mp3']);
     expect(getDownloadedChapterUri('cuv-mandarin', 'JUD', 1)).toBeNull();
     expect(listDownloadedBibleAudio().map(({ books }) => books.map(({ bookId }) => bookId))).toEqual([['PHM']]);
+  });
+
+  it("delete a section, a Testament, or all of a narrator's, and nothing outside it", async () => {
+    mockDownloads();
+    for (const scope of [JUDE, PHILEMON, OBADIAH]) downloadBibleAudio('cuv-mandarin', scope);
+    downloadBibleAudio('rv1909', JUDE);
+    await until(() => [JUDE, PHILEMON, OBADIAH].every((scope) => isDone(scope)()) && isDone(JUDE, 'rv1909')());
+    const books = () => listDownloadedBibleAudio().map(({ narrator, books }) => [narrator, books.map(({ bookId }) => bookId)]);
+    expect(books()).toEqual([['cuv-mandarin', ['OBA', 'PHM', 'JUD']], ['rv1909', ['JUD']]]);
+
+    deleteBibleAudio('cuv-mandarin', GENERAL_LETTERS);
+    expect(books()).toEqual([['cuv-mandarin', ['OBA', 'PHM']], ['rv1909', ['JUD']]]);
+    deleteBibleAudio('cuv-mandarin', NEW_TESTAMENT);
+    expect(books()).toEqual([['cuv-mandarin', ['OBA']], ['rv1909', ['JUD']]]);
+    expect(getDownloadedBibleAudioBytes('cuv-mandarin', BIBLE)).toBeGreaterThan(0);
+    deleteBibleAudio('cuv-mandarin', BIBLE);
+    expect(books()).toEqual([['rv1909', ['JUD']]]);
+    expect(audioFiles()).toEqual(['document/bible-audio/rv1909/JUD/1.mp3']);
+    expect(getDownloadedBibleAudioBytes('cuv-mandarin', BIBLE)).toBe(0);
+  });
+
+  it('stop what a delete covers mid-download, go on with the rest, and never bring back a chapter that finishes as it goes', async () => {
+    const finishing: (() => void)[] = [];
+    mockDownloads(async (url, destination, options) => {
+      if (destination.uri.includes('/JUD/')) {
+        // Jude stops at the X.
+        await new Promise((_, reject) => options?.signal?.addEventListener('abort', () => reject(new Error('stopped'))));
+      } else {
+        // The Gospels' chapters finish even once stopped, as one whose last
+        // bytes have already arrived does.
+        await new Promise<void>((resolve) => finishing.push(resolve));
+      }
+      mockFiles.set(destination.uri, url);
+      return destination;
+    });
+    downloadBibleAudio('cuv-mandarin', GOSPELS);
+    downloadBibleAudio('cuv-mandarin', JUDE);
+    await until(() => finishing.length === 3);
+    expect(getBibleAudioScopeStatus('cuv-mandarin', GOSPELS).downloading).toBe(true);
+
+    deleteBibleAudio('cuv-mandarin', GOSPELS);
+    expect(getBibleAudioScopeStatus('cuv-mandarin', GOSPELS).downloading).toBe(false);
+    finishing.forEach((finish) => finish());
+    // Jude, waiting behind them, starts once they've gone.
+    await until(() => getBibleAudioScopeStatus('cuv-mandarin', JUDE).downloading);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(audioFiles().filter((path) => /\/(MAT|MRK|LUK|JHN)\//.test(path))).toEqual([]);
+    expect(getBibleAudioScopeStatus('cuv-mandarin', GOSPELS)).toMatchObject({ downloadedChapters: 0, downloading: false });
+    expect(getBibleAudioScopeStatus('cuv-mandarin', JUDE).downloading).toBe(true);
+
+    deleteBibleAudio('cuv-mandarin', BIBLE);
+    await until(() => !isDownloadingBibleAudio('cuv-mandarin'));
+    expect(audioFiles()).toEqual([]);
   });
 
   it('check there is room, leaving some space free', () => {

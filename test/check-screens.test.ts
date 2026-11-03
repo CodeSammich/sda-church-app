@@ -56,12 +56,11 @@ describe('popup shots (#372)', () => {
   it('catch the audio settings popup back at the bottom of the screen', () => {
     // What Vision read on the 1.3.2 release PR, where the popup still sat at
     // the bottom, its title 47% of the way down, and the Listen offline
-    // section added since (#556).
+    // row added since (#556).
     const atBottom = [
       ...(samples.bottomSheet['bible-audio-settings-zh'] as Line[]),
       line('離線收聽', 0.9),
-      line('新約', 0.93),
-      line('整本聖經', 0.95),
+      line('離線聖經音訊', 0.94),
     ];
     expect(checkShot(shot('bible-audio-settings-zh'), atBottom)).toEqual([
       '/^有聲書設定$/ is 47% of the way down, not at most 40%',

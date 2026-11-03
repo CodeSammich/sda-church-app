@@ -82,6 +82,7 @@ import {
 import { useDownloadedChapterUri } from '@/hooks/useBibleAudioDownloads';
 import { BibleAudioOfflineSection } from '@/components/BibleAudioOfflineSection';
 import {
+  BIBLE_AUDIO_READERS_STORAGE_KEY,
   CUV_AUDIO_READERS,
   getAudioReaderPreferenceKey,
   WORDPROJECT_CREDITS,
@@ -177,7 +178,7 @@ const VERSE_SCROLL_TOP_OFFSET = 96;
 const VERSE_LAYOUT_ATTEMPTS = 20;
 // How long after a scroll by hand the reader goes back to the verse being read.
 const READING_VERSE_FOLLOW_RESUME_MS = 5000;
-const BIBLE_AUDIO_READERS_KEY = 'user-bible-audio-readers';
+const BIBLE_AUDIO_READERS_KEY = BIBLE_AUDIO_READERS_STORAGE_KEY;
 const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
 const BIBLE_DUAL_LANGUAGE_KEY = 'user-bible-dual-language';
@@ -4433,10 +4434,16 @@ export default function BibleScreen() {
 
               <BibleAudioOfflineSection
                 book={book ? { id: book.id, name: book.name } : undefined}
+                onOpen={(narrator) => {
+                  setAudioSettingsVisible(false);
+                  router.push({
+                    pathname: '/you/audio-downloads',
+                    params: { backTo: '/bible', narrator, bookId: book?.id ?? '' },
+                  } as any);
+                }}
                 reader={selectedAudioReader}
                 styles={{
                   divider: styles.audioSettingsDivider,
-                  helper: styles.audioSettingsHelper,
                   row: styles.pressRow,
                   rowCaption: styles.pressRowCaption,
                   rowLabel: styles.pressRowLabel,

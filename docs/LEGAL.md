@@ -329,8 +329,8 @@ SHA-256 was `ee452da37125959f162b56ce55259091cdc61564a2653343440b15fdffc79413`.
 
 ### Bible audio downloaded to listen offline
 
-On a phone, a member can download the audio of a book, the New Testament, or the whole
-Bible, for one narrator, to listen with no connection
+On a phone, a member can download the audio of a book, a section such as the Gospels, a
+Testament, or the whole Bible, for one narrator, to listen with no connection
 ([#556](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/556)).
 The files stay on the member's own phone, unchanged, until they delete them. The app
 downloads only what it already streams, from where it streams it, and offers no way to

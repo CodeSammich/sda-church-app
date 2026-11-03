@@ -129,7 +129,7 @@ church-website platform.
   Cantonese and Spanish audio stop until the library recovers. Cantonese listeners
   can switch to the Mandarin narrator meanwhile.
 - The player streams with byte-range requests. On a phone, a member can also
-  download a book, the New Testament, or the whole Bible to listen offline (#556),
+  download a book, a section, a Testament, or the whole Bible to listen offline (#556),
   only when they tap it: one file a chapter, church copy first, three at a time.
   See [What the app keeps on the phone](../feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
 - The web player preloads only the next chapter. On native, the app queues up to 24

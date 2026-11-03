@@ -1,4 +1,5 @@
 import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json';
+import { BIBLE_SECTIONS, type BibleTestament } from '@/constants/BibleSections';
 import { excludeFromBackup } from '@/modules/backup-exclusion';
 import {
   BIBLE_AUDIO_BOOKS,
@@ -18,9 +19,10 @@ import {
 import { AppState, Platform } from 'react-native';
 
 /**
- * Bible audio kept on the phone for listening offline (#556): a book, the New
- * Testament, or the whole Bible, for one narrator, downloaded only when the
- * member taps it. Playback tries the phone's copy first (see
+ * Bible audio kept on the phone for listening offline (#556): a book, a
+ * section (constants/BibleSections.ts), a Testament, or the whole Bible, for
+ * one narrator, downloaded only when the member taps it, in You → Offline
+ * Bible Audio. Playback tries the phone's copy first (see
  * buildBibleAudioQueue's `getDownloadedUri`).
  *
  * The files are in `bible-audio/<narrator>/<book>/<chapter>.mp3` in the
@@ -37,12 +39,12 @@ import { AppState, Platform } from 'react-native';
 
 export type BibleAudioDownloadScope =
   | Readonly<{ kind: 'book'; bookId: string }>
-  | Readonly<{ kind: 'new-testament' }>
+  | Readonly<{ kind: 'section'; sectionId: string }>
+  | Readonly<{ kind: 'testament'; testament: BibleTestament }>
   | Readonly<{ kind: 'bible' }>;
 
 const SIZES: Readonly<Record<string, Readonly<Record<string, number>>>> = BIBLE_AUDIO_DOWNLOAD_SIZES;
 const CHAPTERS = new Map(BIBLE_AUDIO_BOOKS);
-const NEW_TESTAMENT = BIBLE_AUDIO_BOOKS.findIndex(([bookId]) => bookId === 'MAT');
 const HELLOAO_AUDIO = 'https://audio.bible.helloao.org/api/BSB';
 
 const FOLDER = 'bible-audio';
@@ -66,18 +68,38 @@ export const getDownloadableBibleAudioNarrator = (translationId: string, reader?
   return narrator && narrator in SIZES ? narrator : null;
 };
 
-const scopeKey = (scope: BibleAudioDownloadScope) => (scope.kind === 'book' ? `book:${scope.bookId}` : scope.kind);
-
-// Whether downloading `request` downloads all of `scope` too.
-const covers = (request: string, scope: BibleAudioDownloadScope) =>
-  request === 'bible' ||
-  request === scopeKey(scope) ||
-  (request === 'new-testament' && scope.kind === 'book' && getBibleAudioScopeBooks({ kind: 'new-testament' }).includes(scope.bookId));
+const scopeKey = (scope: BibleAudioDownloadScope) => {
+  switch (scope.kind) {
+    case 'book':
+      return `book:${scope.bookId}`;
+    case 'section':
+      return `section:${scope.sectionId}`;
+    case 'testament':
+      return `testament:${scope.testament}`;
+    default:
+      return 'bible';
+  }
+};
 
 /** The books a scope covers, in canonical order. */
 export const getBibleAudioScopeBooks = (scope: BibleAudioDownloadScope): string[] => {
-  if (scope.kind === 'book') return CHAPTERS.has(scope.bookId) ? [scope.bookId] : [];
-  return BIBLE_AUDIO_BOOKS.slice(scope.kind === 'bible' ? 0 : NEW_TESTAMENT).map(([bookId]) => bookId);
+  switch (scope.kind) {
+    case 'book':
+      return CHAPTERS.has(scope.bookId) ? [scope.bookId] : [];
+    case 'section':
+      return [...(BIBLE_SECTIONS.find(({ id }) => id === scope.sectionId)?.books ?? [])];
+    case 'testament':
+      return BIBLE_SECTIONS.filter(({ testament }) => testament === scope.testament).flatMap(({ books }) => books);
+    default:
+      return BIBLE_AUDIO_BOOKS.map(([bookId]) => bookId);
+  }
+};
+
+// Whether downloading `request` downloads all of `scope` too.
+const covers = (request: BibleAudioDownloadScope, scope: BibleAudioDownloadScope) => {
+  const held = new Set(getBibleAudioScopeBooks(request));
+  const books = getBibleAudioScopeBooks(scope);
+  return books.length > 0 && books.every((bookId) => held.has(bookId));
 };
 
 /**
@@ -134,10 +156,10 @@ const keyOf = ({ narrator, bookId, chapter }: Pick<Queued, 'narrator' | 'bookId'
 // Chapters waiting to download, in order, and those downloading now.
 const queued = new Map<string, Queued>();
 const running = new Map<string, { item: Queued; bytesWritten: number; controller: AbortController }>();
-// The scopes members asked for, by narrator, while any is downloading: a row
-// shows a download only when it, or a scope that holds it, was asked for. So
-// John downloading doesn't make the New Testament look as if it is.
-const requested = new Map<string, Set<string>>();
+// The scopes members asked for, by narrator and then key, while any is
+// downloading: a row shows a download only when it, or a scope that holds it,
+// was asked for. So John downloading doesn't make the Gospels look as if they are.
+const requested = new Map<string, Map<string, BibleAudioDownloadScope>>();
 let network: NetworkState | null = null;
 // Set when downloads failed because the phone lost its connection or left the
 // app; they go on when it's back.
@@ -226,6 +248,9 @@ export const snapshotDownloadedChapters = (narrator: string | null) => {
 const isOnMobileData = () => network?.type === NetworkStateType.CELLULAR;
 
 export type BibleAudioScopeStatus = Readonly<{
+  books: number;
+  /** The books all on the phone. */
+  downloadedBooks: number;
   chapters: number;
   downloadedChapters: number;
   /** What's on the phone, and what's arrived of the chapters downloading now. */
@@ -237,6 +262,8 @@ export type BibleAudioScopeStatus = Readonly<{
    * chapters are downloading or waiting to.
    */
   downloading: boolean;
+  /** Whether any of its chapters are arriving now, not only waiting their turn. */
+  active: boolean;
   /** Why it isn't downloading now, while it waits. */
   waitingFor: 'connection' | 'wifi' | null;
 }>;
@@ -249,13 +276,16 @@ export const getBibleAudioScopeStatus = (
   const books = getBibleAudioScopeBooks(scope);
   const inScope = new Set(books);
   let chapters = 0;
+  let downloadedBooks = 0;
   let downloadedChapters = 0;
   let downloadedBytes = 0;
   let totalBytes = 0;
   for (const bookId of books) {
-    chapters += CHAPTERS.get(bookId) ?? 0;
+    const bookChapters = CHAPTERS.get(bookId) ?? 0;
+    chapters += bookChapters;
     totalBytes += SIZES[narrator]?.[bookId] ?? 0;
     const onPhone = downloaded.get(narrator)?.get(bookId);
+    if (onPhone && onPhone.size >= bookChapters) downloadedBooks += 1;
     downloadedChapters += onPhone?.size ?? 0;
     onPhone?.forEach((bytes) => (downloadedBytes += bytes));
   }
@@ -272,14 +302,17 @@ export const getBibleAudioScopeStatus = (
     waiting = true;
     mobileData ||= item.mobileData;
   }
-  const asked = [...(requested.get(narrator) ?? [])].some((request) => covers(request, scope));
+  const asked = [...(requested.get(narrator)?.values() ?? [])].some((request) => covers(request, scope));
   const downloading = asked && (active || waiting);
   return {
+    books: books.length,
+    downloadedBooks,
     chapters,
     downloadedChapters,
     downloadedBytes,
     totalBytes,
     downloading,
+    active: downloading && active,
     waitingFor: !downloading || active
       ? null
       : waitingForConnection
@@ -289,6 +322,11 @@ export const getBibleAudioScopeStatus = (
           : null,
   };
 };
+
+/** Whether any of a narrator's chapters are downloading, or waiting to. */
+export const isDownloadingBibleAudio = (narrator: string) =>
+  [...running.values()].some(({ item }) => item.narrator === narrator) ||
+  [...queued.values()].some((item) => item.narrator === narrator);
 
 /** Whether the phone has room for `bytes` more, leaving some space free. */
 export const hasRoomForBibleAudio = (bytes: number) => {
@@ -367,6 +405,11 @@ const downloadChapter = async (item: Queued) => {
             emitProgress();
           },
         });
+        // Stopped, or deleted, as it finished: a deleted book mustn't come back.
+        if (controller.signal.aborted) {
+          if (file.exists) file.delete();
+          return;
+        }
         if (Platform.OS === 'ios') excludeFromBackup(file.uri);
         record(item.narrator, item.bookId, item.chapter, file.size);
         failuresInARow = 0;
@@ -412,8 +455,8 @@ export const downloadBibleAudio = (
   }
   failuresInARow = 0;
   let asked = requested.get(narrator);
-  if (!asked) requested.set(narrator, (asked = new Set()));
-  asked.add(scopeKey(scope));
+  if (!asked) requested.set(narrator, (asked = new Map()));
+  asked.set(scopeKey(scope), scope);
   for (const bookId of getBibleAudioScopeBooks(scope)) {
     const onPhone = downloaded.get(narrator)?.get(bookId);
     for (let chapter = 1; chapter <= (CHAPTERS.get(bookId) ?? 0); chapter += 1) {
@@ -442,23 +485,40 @@ export const stopBibleAudioDownload = (narrator: string, scope: BibleAudioDownlo
     if (item.narrator === narrator && books.has(item.bookId)) controller.abort();
   }
   const asked = requested.get(narrator);
-  asked?.forEach((request) => {
-    const requestScope: BibleAudioDownloadScope =
-      request === 'bible' || request === 'new-testament'
-        ? { kind: request }
-        : { kind: 'book', bookId: request.slice('book:'.length) };
-    if (covers(scopeKey(scope), requestScope)) asked.delete(request);
+  asked?.forEach((request, key) => {
+    if (covers(scope, request)) asked.delete(key);
   });
   emit();
   pump();
 };
 
-/** Deletes a book's downloaded chapters, and stops any still downloading. */
-export const deleteBibleAudioBook = (narrator: string, bookId: string) => {
-  stopBibleAudioDownload(narrator, { kind: 'book', bookId });
-  const folder = bookFolder(narrator, bookId);
-  if (folder.exists) folder.delete();
-  downloaded.get(narrator)?.delete(bookId);
+/** How much of a scope is on the phone, in bytes, not counting chapters still downloading. */
+export const getDownloadedBibleAudioBytes = (narrator: string, scope: BibleAudioDownloadScope) => {
+  let bytes = 0;
+  for (const bookId of getBibleAudioScopeBooks(scope)) {
+    downloaded.get(narrator)?.get(bookId)?.forEach((size) => (bytes += size));
+  }
+  return bytes;
+};
+
+/**
+ * Deletes a scope's downloaded chapters, and stops any of them still
+ * downloading: a book, a section, a Testament, or for the whole Bible,
+ * everything downloaded for the narrator. Other books' downloads go on.
+ */
+export const deleteBibleAudio = (narrator: string, scope: BibleAudioDownloadScope) => {
+  stopBibleAudioDownload(narrator, scope);
+  const books = downloaded.get(narrator);
+  for (const bookId of getBibleAudioScopeBooks(scope)) {
+    const folder = bookFolder(narrator, bookId);
+    if (folder.exists) folder.delete();
+    books?.delete(bookId);
+  }
+  if (scope.kind === 'bible') {
+    const folder = new Directory(rootFolder(), narrator);
+    if (folder.exists) folder.delete();
+  }
+  if (books && !books.size) downloaded.delete(narrator);
   emit();
 };
 

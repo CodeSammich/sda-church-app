@@ -141,11 +141,17 @@ and `constants/DownloadCopy.ts`. Use them, rather than copy the lessons' code.
 
 Bible audio downloaded to listen offline
 ([#556](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/556))
-is the second use, for later rather than to open now. Its progress shows at once in the
-row the member tapped, under **Listen offline** in the Bible's audio settings, with an X
-that stops it; it goes on when that popup closes, since the whole Bible takes a while.
-It stays in the documents directory until the member deletes it, in the You tab, rather
-than in the cache, and the size of each choice shows before it starts. Over mobile data,
+is the second use, for later rather than to open now. It's downloaded and deleted on one
+page, **Offline Bible Audio** in the You tab, which **Listen offline** in the Bible's audio
+settings opens. The page is a tree of the whole Bible, its Testaments, their sections,
+closed until tapped, and their books, for one narrator; opened from the Bible, it shows
+the book being read. Each row says what it holds: its size, how far along its download
+is, part of it, or all of it. A row's download
+progress shows at once, with an X that stops it, and goes on when the page closes, since
+the whole Bible takes a while. Deleting goes by the same rows, after the system's alert
+asks, naming what it deletes and its size. It stays in the documents directory until the
+member deletes it, rather than in the cache, and the size of each choice shows before it
+starts. Over mobile data,
 the system's alert asks first: Cancel, Wait for Wi-Fi, or Use mobile data; and a download
 over 1 GB, such as the English Bible, asks first even on Wi-Fi. See
 [Bible audio downloaded to listen offline](feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
@@ -317,8 +323,8 @@ are on Home, not here.
 
 **UI:** A list of cards (`app/(tabs)/you/index.tsx`) in two groups. **Settings** has
 **Language**, **Text size**, **Theme** (System, Sunrise/Sunset, Light, or Dark), and,
-on a phone, **Offline Bible Audio**, which lists and deletes the Bible audio downloaded
-to listen offline (#556).
+on a phone, **Offline Bible Audio**, where Bible audio is downloaded to listen offline,
+and deleted, by book, section, Testament, or the whole Bible (#556).
 **About & Support** starts with **Share the App** (#555): a popup with a QR code a
 friend can scan with their phone's camera to reach the download page
 (`https://app.nyccsda.org/download`, which sends them to their app store), the address,

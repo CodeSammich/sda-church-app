@@ -340,19 +340,28 @@ scenario_previous_before_start() {
 }
 
 # Bible audio downloaded to listen offline (#556): download 2 Thessalonians,
-# three short chapters (1.2 MB in Mandarin), under Listen offline in the audio
-# settings popup, then play it with no connection, and move to the next chapter and
-# back with the media keys. The rows' descriptions are their title, then what
-# they say: "Download 帖撒羅尼迦後書, 1.2 MB", then "帖撒羅尼迦後書, On this phone · 1.2 MB".
-book_on_phone() { ui_dump | grep -E 'content-desc="帖撒羅尼迦後書, On this phone' >/dev/null; }
+# three short chapters (1.2 MB in Mandarin), in Offline Bible Audio, which the
+# audio settings popup's Listen offline row opens at the book's section, then
+# play it with no connection, and move to the next chapter and back with the
+# media keys. The popup's row says "Offline Bible Audio, 帖撒羅尼迦後書
+# downloaded" once it's there; on the page, the book's row is "2 Thessalonians,
+# Downloaded · 1.2 MB", and its button "Download 2 Thessalonians, 1.2 MB".
+book_in_popup() { ui_dump | grep -E 'content-desc="Offline Bible Audio, 帖撒羅尼迦後書 downloaded' >/dev/null; }
+book_on_page() { ui_dump | grep -E 'content-desc="2 Thessalonians, Downloaded' >/dev/null; }
 scenario_downloaded_book_offline() {
   open_chapter 2TH 1
   local point
   point=$(element_center 'Audio settings[^"]*') || { echo 'no audio settings button'; return 1; }
   # shellcheck disable=SC2086
   sh_ input tap $point >/dev/null
-  if ! book_on_phone; then
-    point=$(element_center 'Download 帖撒羅尼迦後書, [^"]*') || { echo 'no Download row for the book'; return 1; }
+  if book_in_popup; then
+    # Already downloaded: the X, or back, closes the popup.
+    sh_ input keyevent KEYCODE_BACK >/dev/null
+  else
+    point=$(element_center 'Offline Bible Audio, [^"]*') || { echo 'no Listen offline row'; return 1; }
+    # shellcheck disable=SC2086
+    sh_ input tap $point >/dev/null
+    point=$(element_center 'Download 2 Thessalonians, [^"]*') || { echo 'no Download button for the book'; return 1; }
     # shellcheck disable=SC2086
     sh_ input tap $point >/dev/null
     # On mobile data, the app asks first.
@@ -360,10 +369,10 @@ scenario_downloaded_book_offline() {
       # shellcheck disable=SC2086
       sh_ input tap $point >/dev/null
     fi
-    wait_until 180 '2 Thessalonians downloaded' book_on_phone || return 1
+    wait_until 180 '2 Thessalonians downloaded' book_on_page || return 1
+    # Back returns to the Bible.
+    sh_ input keyevent KEYCODE_BACK >/dev/null
   fi
-  # The X, or back, closes the popup; the download is done.
-  sh_ input keyevent KEYCODE_BACK >/dev/null
   network off
   sleep 2
   locate_controls || { echo 'no play button'; return 1; }

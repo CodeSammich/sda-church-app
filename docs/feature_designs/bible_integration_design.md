@@ -454,8 +454,8 @@ is preferred there over `AsyncStorage` due to the large payload size of full Bib
 and better performance with structured data queries. On iOS and Android, the app caches
 a book's file in memory once it opens. Every reader translation ships with the app
 (`assets/bible`), and so do the verse popup's Hebrew and Greek, so the text opens with no
-network. Audio streams, but on a phone a member can download a book, the New Testament,
-or the whole Bible to listen offline (#556). `scripts/build-bundled-bibles.mjs`
+network. Audio streams, but on a phone a member can download a book, a section, a
+Testament, or the whole Bible to listen offline, in the You tab's Offline Bible Audio (#556). `scripts/build-bundled-bibles.mjs`
 (BSB, RV1909, and the Hebrew and Greek) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
 holds each chapter as HelloAO's chapter API returns it, without its audio timings.
 `scripts/build-bible-audio-timings.mjs` keeps those in `assets/bible/audio-timings`, one
