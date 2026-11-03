@@ -110,7 +110,7 @@ upkeep, such as yearly Apple renewals and runner image retirements, is under
 
 `scripts/build-android-native.mjs` reuses an existing generated `android/` project
 for repeat local builds. This avoids an unnecessary npm registry metadata lookup for
-`expo-template-bare-minimum@58.0.25`, including when `--no-install` is used. A clean
+`expo-template-bare-minimum@58.0.31`, including when `--no-install` is used. A clean
 GitHub Actions checkout still runs Expo prebuild. When `app.json`, a native config
 plugin, or another native setting changes, force regeneration with either:
 
@@ -155,14 +155,14 @@ orchestration visible in this repository and avoid another credential boundary.
 
 ## Expo 58 Android prebuild
 
-The app uses Expo SDK 58 (`expo ~58.0.16`) with React Native 0.88.0, and the matching
+The app uses Expo SDK 58 (`expo ~58.0.22`) with React Native 0.88.1, and the matching
 template package. Use Node 22, the version the native workflows use. Generate the
 Android project with the exact template version used by the build script:
 
 ```sh
 npm install
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.25 \
+  --template expo-template-bare-minimum@58.0.31 \
   --platform android
 ```
 
@@ -175,7 +175,7 @@ Do not hand-edit `android/`; put durable changes in
 
 ```sh
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.25 \
+  --template expo-template-bare-minimum@58.0.31 \
   --platform android \
   --no-install
 ```
@@ -617,8 +617,9 @@ once, one per key-screen group, numbered in the groups' order: **iOS key screens
   app, giving up at once if the compiling runner's job ends without it. As a defense
   against GitHub's degraded availability, when its Mac runners are in short supply,
   they wait as long as the compiling runner is compiling, and up to 45 minutes while
-  it's still queued for a Mac. Their job limit is 90 minutes, against the compiling
-  runner's 40. A fixed 25-minute wait used to fail runs whose compiling runner merely
+  it's still queued for a Mac. Their job limit is 110 minutes, against the compiling
+  runner's 50: 45 minutes queued, 50 compiling, and about 10 to install and capture,
+  plus a margin. A fixed 25-minute wait used to fail runs whose compiling runner merely
   got its Mac late.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
@@ -672,8 +673,11 @@ In the faster of the runs with a matching compile cache:
 In the slower one, the compiling runner was slow throughout: 3 minutes just to list its
 simulated iPhones, then 3.7 to compile and 6.0 to boot, install, and launch, so it finished
 last. After a library update, the compile reuses less of the cache: 3.7 to 6.1 minutes in
-the compile-only runs under **Compile cache**, so expect a run a few minutes longer.
-Each **Key screens** job times out after 40 minutes; the longest took 27.2.
+the compile-only runs under **Compile cache**, so expect a run a few minutes longer. A
+dependency update can miss most of the cache: the first build after Expo SDK 58's November
+2026 patch releases (#604) took 28.6 minutes to compile. So the compiling job times out
+after 50 minutes, and the others, whose time includes waiting for it, after 110. Before
+that update, the longest job took 27.2.
 
 From the logs of earlier runs:
 
