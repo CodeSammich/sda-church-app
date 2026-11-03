@@ -75,16 +75,17 @@ function appendScheduleTable_(cell, bulletin, nextBulletin) {
   var current = bulletin.queens;
   var next = nextBulletin ? nextBulletin.queens : null;
   appendHorizontalScheduleTable_(cell, current, next, [
-    [printedBilingualText_('SS Pianist', '安息日學鋼琴'), function (location) { return location.pianist; }],
-    [printedBilingualText_('SS Teacher E.', '安息日學英文老師'), function (location) { return location.englishTeacher; }],
-    [printedBilingualText_('SS Teacher C.', '安息日學中文老師'), function (location) { return location.chineseTeacher; }],
-    [printedBilingualText_('DS Chair', '崇拜主席'), function (location) { return location.chairPastoralPrayer; }],
-    [printedBilingualText_('DS Pianist', '崇拜鋼琴'), function (location) { return location.pianist; }],
-    [printedBilingualText_('Offering Prayer', '奉獻禱告'), function (location) { return location.offeringPrayer; }],
-    [printedBilingualText_('DS Sermon', '崇拜證道'), function (location) { return location.sermon; }],
-    [printedBilingualText_('DS Interpreter', '崇拜翻譯'), function (location) { return location.translation; }],
+    // The pastor's four-character labels; see PRINTED_ROLE_DOT.
+    [printedBilingualText_('SS Pianist', '學課' + PRINTED_ROLE_DOT + '司琴'), function (location) { return location.pianist; }],
+    [printedBilingualText_('SS Teacher E.', '英文教師'), function (location) { return location.englishTeacher; }],
+    [printedBilingualText_('SS Teacher C.', '中文教師'), function (location) { return location.chineseTeacher; }],
+    [printedBilingualText_('DS Chair', '崇拜' + PRINTED_ROLE_DOT + '主席'), function (location) { return location.chairPastoralPrayer; }],
+    [printedBilingualText_('DS Pianist', '崇拜' + PRINTED_ROLE_DOT + '司琴'), function (location) { return location.pianist; }],
+    [printedBilingualText_('Offering Prayer', '奉獻祈禱'), function (location) { return location.offeringPrayer; }],
+    [printedBilingualText_('DS Sermon', '崇拜' + PRINTED_ROLE_DOT + '證道'), function (location) { return location.sermon; }],
+    [printedBilingualText_('DS Interpreter', '崇拜' + PRINTED_ROLE_DOT + '翻譯'), function (location) { return location.translation; }],
     [printedBilingualText_('Special Music', '特別音樂'), function (location) { return location.specialMusic; }],
-    [printedBilingualText_('Flower Offering', '花卉奉獻'), function (location) { return location.flowerOffering; }],
+    [printedBilingualText_('Flower Offering', '鮮花奉獻'), function (location) { return location.flowerOffering; }],
     [printedBilingualText_('Offerings', '奉獻事項'), function (location, data) { return formatPhysicalOfferingValue_(data.tithePurpose); }],
     [printedBilingualText_('Sunset Times', '日落時間'), function (location, data) { return data.sunsetTime; }],
   ], bulletin, nextBulletin);

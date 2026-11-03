@@ -2165,6 +2165,87 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(tables[0][2][3]).toBe('6:12 PM');
   });
 
+  it("prints the pastor's four-character role labels, each on one line, in the roster grid", () => {
+    type RosterTable = {
+      rows: string[][];
+      options: { columnWidths: number[]; paddingLeft: number; paddingRight: number };
+    };
+    const tables: RosterTable[] = [];
+    const context = loadAppsScript({
+      capturedTables: tables,
+      DocumentApp: { HorizontalAlignment: { LEFT: 'left', CENTER: 'center' } },
+    });
+    runInContext(
+      `appendDataTable_ = function (cell, rows, options) {
+        capturedTables.push({ rows: rows, options: options });
+      };
+      appendCenteredText_ = function () {};
+      appendPrintedAnnouncementsTable_ = function () {};
+      appendScheduleTable_({}, { queens: {} }, null);
+      appendBrooklynMeetingsPanel_({}, { brooklyn: {} }, null);`,
+      context,
+    );
+    const [queens, brooklyn] = tables;
+
+    // The Queens grid prints in Regular and Communion bulletins alike.
+    expect(queens.rows.slice(1).map((row) => [row[1], row[2]])).toEqual([
+      ['SS Pianist', '學課･司琴'],
+      ['SS Teacher E.', '英文教師'],
+      ['SS Teacher C.', '中文教師'],
+      ['DS Chair', '崇拜･主席'],
+      ['DS Pianist', '崇拜･司琴'],
+      ['Offering Prayer', '奉獻祈禱'],
+      ['DS Sermon', '崇拜･證道'],
+      ['DS Interpreter', '崇拜･翻譯'],
+      ['Special Music', '特別音樂'],
+      ['Flower Offering', '鮮花奉獻'],
+      ['Offerings', '奉獻事項'],
+      ['Sunset Times', '日落時間'],
+    ]);
+    expect(brooklyn.rows.slice(1).map((row) => row[2])).toEqual([
+      '主席',
+      '技術同工',
+      '勉勵',
+      '奉獻祈禱',
+      '安息日學',
+      '崇拜･證道',
+      '日落時間',
+    ]);
+
+    const { columnWidths, paddingLeft, paddingRight } = queens.options;
+    expect(brooklyn.options.columnWidths).toEqual(columnWidths);
+    // The grid keeps its width in the panel.
+    expect(columnWidths.reduce((sum, width) => sum + width, 0)).toBe(356);
+    const room = (column: number) => columnWidths[column] - paddingLeft - paddingRight;
+
+    // At 10 points each UoqMunThenKhung character is 10 points wide and its
+    // half-width dot (U+FF65) is 5. Each character has to be in the font, or
+    // it prints in the fallback.
+    const chineseWidth = (label: string) =>
+      [...label].reduce((sum, character) => {
+        expect(
+          runInContext(
+            `isPrintedCharacterInDefaultChineseFont_(${character.charCodeAt(0)})`,
+            context,
+          ),
+        ).toBe(true);
+        return sum + (character === '･' ? 5 : 10);
+      }, 0);
+    for (const table of [queens, brooklyn]) {
+      for (const row of table.rows) {
+        expect(chineseWidth(row[2])).toBeLessThanOrEqual(room(2));
+      }
+    }
+    // The Chinese name columns hold 尚未安排 (TBD), 40 points.
+    expect(room(4)).toBeGreaterThanOrEqual(40);
+    expect(room(6)).toBeGreaterThanOrEqual(40);
+    // "Sacrifice-Global" is 66.08 points in Times New Roman at 10 points, and
+    // Docs won't break it at the hyphen. Both English name columns hold it,
+    // with a point to spare.
+    expect(room(3)).toBeGreaterThanOrEqual(67.08);
+    expect(room(5)).toBeGreaterThanOrEqual(67.08);
+  });
+
   it('keeps bilingual labels and content in the physical output helpers', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(

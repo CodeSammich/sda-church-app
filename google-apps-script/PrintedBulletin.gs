@@ -2887,6 +2887,13 @@ function getPrintedBulletinQrImageFileName_(kind, location) {
   return '';
 }
 
+// The roster's Chinese role labels follow the pastor's: four characters, with
+// this dot between two-character pairs (崇拜･主席), so each fits on one line.
+// U+FF65 is UoqMunThenKhung's half-width middle dot, centred on the
+// characters. U+00B7 is narrower but sits low, U+30FB is a full character
+// wide, and the font has no U+2027.
+var PRINTED_ROLE_DOT = '･';
+
 function appendHorizontalScheduleTable_(cell, current, next, entries, currentData, nextData) {
   current = withPhysicalRosterNames_(current);
   next = withPhysicalRosterNames_(next);
@@ -2913,9 +2920,11 @@ function appendHorizontalScheduleTable_(cell, current, next, entries, currentDat
   appendDataTable_(cell, rows, {
     borderWidth: 0.75,
     borderColor: '#000000',
-    // Sized for 10-point text: the narrow number column and 1-point side
-    // padding leave the names as much room as the panel allows.
-    columnWidths: [16, 66, 58, 62, 46, 62, 46],
+    // Sized for 10-point text with 1-point side padding, so each column holds
+    // 2 points less than its width. The widest Chinese role label (崇拜･主席)
+    // is 45 points and 尚未安排 is 40. The English columns get the rest, so
+    // "Sacrifice-Global" (66 points in Times New Roman) fits without breaking.
+    columnWidths: [14, 66, 48, 70, 44, 70, 44],
     alignments: [
       DocumentApp.HorizontalAlignment.LEFT,
       DocumentApp.HorizontalAlignment.CENTER,

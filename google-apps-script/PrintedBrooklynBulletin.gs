@@ -299,9 +299,10 @@ function appendBrooklynMeetingsPanel_(cell, bulletin, nextBulletin) {
     [printedBilingualText_('Chair', '主席'), function (value) { return printBrooklynPerson_(value.chair, value.chairPastoralPrayer); }],
     [printedBilingualText_('Technician', '技術同工'), function (value) { return printValue_(value.technician); }],
     [printedBilingualText_('Encouragement', '勉勵'), function (value) { return printBrooklynPerson_(value.encouragement, value.sabbathMessage); }],
-    [printedBilingualText_('Offering Prayer', '奉獻禱告'), function (value) { return printValue_(value.offeringPrayer); }],
+    // Labels the Queens roster shares are the pastor's; see PRINTED_ROLE_DOT.
+    [printedBilingualText_('Offering Prayer', '奉獻祈禱'), function (value) { return printValue_(value.offeringPrayer); }],
     [printedBilingualText_('Sabbath School', '安息日學'), function (value) { return printValue_(value.sabbathSchool); }],
-    [printedBilingualText_('Sermon', '崇拜證道'), function (value) { return printValue_(value.sermon); }],
+    [printedBilingualText_('Sermon', '崇拜' + PRINTED_ROLE_DOT + '證道'), function (value) { return printValue_(value.sermon); }],
     [printedBilingualText_('Sunset Times', '日落時間'), function (value) { return printValue_(value.sunsetTime); }],
   ]);
 
