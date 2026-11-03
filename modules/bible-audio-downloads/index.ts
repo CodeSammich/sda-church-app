@@ -29,8 +29,8 @@ export type SystemDownload = Readonly<{ id: string; url: string; path: string }>
 export type SystemDownloadStatus = Readonly<{
   id: string;
   state: 'waiting' | 'running' | 'paused' | 'failed';
-  /** Android's reason a download is paused; iOS doesn't say. */
-  reason: 'wifi' | 'network' | 'retry' | 'paused' | null;
+  /** Android's reason a download is paused. iOS doesn't say, and leaves it out. */
+  reason?: 'wifi' | 'network' | 'retry' | 'paused' | null;
   bytesWritten: number;
   /** -1 until the server says. */
   totalBytes: number;

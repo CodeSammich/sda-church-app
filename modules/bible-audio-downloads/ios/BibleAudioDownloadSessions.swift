@@ -1,3 +1,4 @@
+import ExpoModulesCore
 import Foundation
 
 /// Bible audio chapters handed to two background URLSessions (#611), which
@@ -15,7 +16,9 @@ import Foundation
 ///
 /// Each finished chapter is moved straight into the app's Documents folder,
 /// at the path the app asked for, and kept out of the iPhone's backups, with
-/// or without the app's JavaScript running. The app finds it there.
+/// or without the app's JavaScript running. The app finds it there. A task
+/// keeps its path relative to the Bible audio folder, as an app update may
+/// move the app's folders while a download goes on.
 final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
   static let shared = BibleAudioDownloadSessions()
 
@@ -60,13 +63,20 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
   private var audioRoot: URL {
     FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
       .appendingPathComponent("bible-audio", isDirectory: true)
-      .resolvingSymlinksInPath()
+  }
+
+  // A path to compare with another: /var is /private/var on iOS, and the app
+  // and FileManager may name the same folder either way.
+  private static func comparable(_ url: URL) -> String {
+    let path = url.standardizedFileURL.path
+    return path.hasPrefix("/private/") ? String(path.dropFirst("/private".count)) : path
   }
 
   /// Starts the chapters, in place of any already downloading under the same
   /// names, as when the member allows mobile data for ones waiting for Wi-Fi.
   func enqueue(_ downloads: [ChapterDownload], allowMobileData: Bool, done: @escaping () -> Void) {
     let session: URLSession = allowMobileData ? anyNetwork! : wifi!
+    let root = Self.comparable(audioRoot) + "/"
     let ids = Set(downloads.map(\.id))
     cancelTasks(ids) {
       self.queue.addOperation { self.stopped.subtract(ids) }
@@ -74,8 +84,11 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
         guard let source = URL(string: download.url), let target = URL(string: download.path), target.isFileURL else {
           continue
         }
+        // Only into the app's own Bible audio folder.
+        let path = Self.comparable(target)
+        guard path.hasPrefix(root) else { continue }
         let task = session.downloadTask(with: URLRequest(url: source))
-        task.taskDescription = [download.id, target.path].joined(separator: "\n")
+        task.taskDescription = [download.id, String(path.dropFirst(root.count))].joined(separator: "\n")
         task.resume()
       }
       done()
@@ -84,33 +97,26 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
 
   /// The chapters still downloading or waiting, from both sessions.
   func list(_ done: @escaping ([[String: Any]]) -> Void) {
-    let group = DispatchGroup()
-    let lock = NSLock()
-    var result: [[String: Any]] = []
-    for (session, mobileData) in [(wifi!, false), (anyNetwork!, true)] {
-      group.enter()
-      session.getAllTasks { tasks in
-        let entries: [[String: Any]] = tasks.compactMap { task in
+    let sessions: [(URLSession, Bool)] = [(wifi!, false), (anyNetwork!, true)]
+    Task {
+      var result: [[String: Any]] = []
+      for (session, mobileData) in sessions {
+        for task in await session.allTasks {
           guard task.state == .running || task.state == .suspended, case let (id, _)? = Self.decode(task) else {
-            return nil
+            continue
           }
-          return [
+          // iOS doesn't say why one waits, so there's no "reason": the app knows the network.
+          result.append([
             "id": id,
-            // iOS doesn't say why one waits; the app knows the network.
             "state": task.countOfBytesReceived > 0 ? "running" : "waiting",
-            "reason": NSNull(),
             "bytesWritten": task.countOfBytesReceived,
             "totalBytes": task.countOfBytesExpectedToReceive,
             "mobileData": mobileData,
-          ]
+          ])
         }
-        lock.lock()
-        result += entries
-        lock.unlock()
-        group.leave()
       }
+      done(result)
     }
-    group.notify(queue: .main) { done(result) }
   }
 
   /// Stops chapters downloading, so none is moved into place afterwards.
@@ -120,19 +126,17 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
   }
 
   private func cancelTasks(_ ids: Set<String>, done: @escaping () -> Void) {
-    let group = DispatchGroup()
-    for session in [wifi!, anyNetwork!] {
-      group.enter()
-      session.getAllTasks { tasks in
-        for task in tasks {
+    let sessions: [URLSession] = [wifi!, anyNetwork!]
+    Task {
+      for session in sessions {
+        for task in await session.allTasks {
           if case let (id, _)? = Self.decode(task), ids.contains(id) {
             task.cancel()
           }
         }
-        group.leave()
       }
+      done()
     }
-    group.notify(queue: .main, execute: done)
   }
 
   /// From the app delegate, when iOS wakes the app to finish a session's work.
@@ -147,13 +151,13 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
   // MARK: - URLSessionDownloadDelegate
 
   func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-    guard case let (id, path)? = Self.decode(downloadTask), !stopped.contains(id) else { return }
+    guard case let (id, relative)? = Self.decode(downloadTask), !stopped.contains(id) else { return }
     if let response = downloadTask.response as? HTTPURLResponse, !(200...299).contains(response.statusCode) {
       return
     }
-    let target = URL(fileURLWithPath: path).resolvingSymlinksInPath()
     // Only into the app's own Bible audio folder.
-    guard target.path.hasPrefix(audioRoot.path + "/") else { return }
+    guard !relative.isEmpty, !relative.split(separator: "/").contains("..") else { return }
+    let target = audioRoot.appendingPathComponent(relative)
     let manager = FileManager.default
     do {
       try manager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
