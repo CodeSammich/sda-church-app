@@ -696,7 +696,9 @@ app's own code, while Android uses a native queue.
   the app, and the page says "Waiting for Wi-Fi". Turn Wi-Fi back on while it's
   still locked: it goes on. Then try it again after tapping **Use mobile data**: it
   carries on over mobile data. On a phone's hotspot, a download not allowed on mobile
-  data waits too.
+  data waits too. On Android, on battery, a locked download slows after about 75
+  chapters in an hour, the system's limit for an app's background work; plugged in,
+  or with the app open, it doesn't. So check the Gospels on a charger too.
 - [ ] **Offline start.** After using the app online, close it fully, turn on airplane
   mode, and open it. It starts, and the **Home** tab and the bulletin show what they
   last loaded.

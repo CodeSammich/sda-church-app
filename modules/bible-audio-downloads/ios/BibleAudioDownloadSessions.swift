@@ -54,6 +54,9 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
     configuration.allowsExpensiveNetworkAccess = anyNetwork
     configuration.allowsConstrainedNetworkAccess = anyNetwork
     configuration.isDiscretionary = false
+    // Three chapters at a time from each host, as the in-app downloader
+    // (CONCURRENT_DOWNLOADS): one mirror is a small ministry's own server.
+    configuration.httpMaximumConnectionsPerHost = 3
     configuration.sessionSendsLaunchEvents = true
     configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
     configuration.urlCache = nil

@@ -127,6 +127,11 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     downloadBibleAudio(MANDARIN, JUDE);
     await poll();
     expect(getBibleAudioScopeStatus(MANDARIN, PHILEMON)).toMatchObject({ downloading: true, active: false });
+    // Downloading from its start, before any bytes: with three at a time, a
+    // short chapter may come and go between two looks.
+    Object.assign(mockSystem.tasks.get('cuv-mandarin/PHM/1')!, { state: 'running', bytesWritten: 0, totalBytes: -1 });
+    await poll();
+    expect(getBibleAudioScopeStatus(MANDARIN, PHILEMON)).toMatchObject({ downloading: true, active: true, downloadedBytes: 0 });
     Object.assign(mockSystem.tasks.get('cuv-mandarin/PHM/1')!, { state: 'running', bytesWritten: 400, totalBytes: 1000 });
     await poll();
     expect(getBibleAudioScopeStatus(MANDARIN, PHILEMON)).toMatchObject({ downloading: true, active: true, downloadedBytes: 400 });
@@ -333,9 +338,43 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
       join(process.cwd(), 'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioDownloadStore.kt'),
       'utf8',
     );
-    expect(kotlin).toContain('.setAllowedOverMetered(allowMobileData)');
-    expect(kotlin).toContain('.setAllowedOverRoaming(allowMobileData)');
-    expect(kotlin).toContain('if (!allowMobileData) request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)');
+    expect(kotlin).toContain('.setAllowedOverMetered(next.mobileData)');
+    expect(kotlin).toContain('.setAllowedOverRoaming(next.mobileData)');
+    expect(kotlin).toContain('if (!next.mobileData) request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)');
+    expect(kotlin).toContain('editor.putString(key, encodeWaiting(Waiting(key, download.id, download.url, target.path, allowMobileData)))');
+  });
+
+  it('take three chapters at a time, as the in-app downloader does, and stop starting more while the host fails', () => {
+    // One mirror is a small ministry's own server.
+    const source = readFileSync(join(process.cwd(), 'services/BibleAudioDownloads.ts'), 'utf8');
+    expect(source).toContain('const CONCURRENT_DOWNLOADS = 3;');
+    const swift = readFileSync(join(process.cwd(), 'modules/bible-audio-downloads/ios/BibleAudioDownloadSessions.swift'), 'utf8');
+    expect(swift.match(/configuration\.httpMaximumConnectionsPerHost = 3\b/g)).toHaveLength(1);
+    expect(swift).toMatch(/private func makeSession[\s\S]*httpMaximumConnectionsPerHost[\s\S]*return URLSession/);
+    const kotlin = readFileSync(
+      join(process.cwd(), 'modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioDownloadStore.kt'),
+      'utf8',
+    );
+    // Left to itself, DownloadManager ran 11 of a whole Bible at once, and
+    // handing it all 1,189 chapters kept the receiver waiting until Android
+    // said the app wasn't responding. It gets three at a time; the receiver
+    // starts the next as each ends, with the app closed too.
+    expect(kotlin).toContain('private const val AT_ONCE = 3');
+    expect(kotlin.match(/manager\.enqueue\(/g)).toHaveLength(1);
+    expect(kotlin).toMatch(/private fun startNextLocked\(\) \{[\s\S]*?val downloadId = manager\.enqueue\(request\)/);
+    for (const name of ['fun enqueue', 'fun list', 'fun cancel', 'fun complete']) {
+      const body = kotlin.slice(kotlin.indexOf(name), kotlin.indexOf('\n  }\n', kotlin.indexOf(name)));
+      expect({ name, startsNext: body.includes('startNextLocked()') }).toEqual({ name, startsNext: true });
+    }
+    // One handed over again, as from its next source, goes first, so a section
+    // isn't left waiting on one chapter until the rest of the Bible is done.
+    expect(kotlin).toContain('val key = WAITING_PREFIX + if (download.id in handedBefore) "$AGAIN$place" else place');
+    expect(kotlin).toContain('private const val AGAIN = "!"');
+    expect(kotlin).toContain('.sortedBy { it.key }');
+    // After six failures in a row, the rest wait for the app to try the next source.
+    expect(kotlin).toContain('private const val FAILURES_TO_PAUSE = 6');
+    expect(source).toContain('const FAILURES_TO_STOP = 6;');
+    expect(kotlin).toContain('if (waiting.isEmpty() || tracked.getInt(FAILURES, 0) >= FAILURES_TO_PAUSE) return');
   });
 
   it("keep Android's downloads going while locked, and leave no partial files behind", () => {

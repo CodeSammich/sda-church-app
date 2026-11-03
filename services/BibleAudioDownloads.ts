@@ -569,7 +569,10 @@ const applySystemStatuses = (statuses: readonly SystemDownloadStatus[]) => {
     // Android retries a host that doesn't answer for minutes: try its mirror.
     if (status.state === 'failed' || (status.state === 'paused' && status.reason === 'retry' && sources > 1)) {
       failed.push(item);
-    } else if (status.state === 'running' && status.bytesWritten > 0 && (item.mobileData || !isOnMobileData())) {
+    } else if (status.state === 'running' && (item.mobileData || !isOnMobileData())) {
+      // From its start: Android has three under way at a time, and a short
+      // chapter can start and finish between two looks, which would make the
+      // row say it's only waiting.
       running.set(status.id, { item, bytesWritten: status.bytesWritten });
     } else {
       // iOS says a chapter that's received some of its bytes is running, even
