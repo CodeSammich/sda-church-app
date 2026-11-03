@@ -598,8 +598,8 @@ export function OfflineBibleAudio() {
     }
     const begin = async (mobileData: boolean) => {
       // The first long download, a section or more, asks for leave to show
-      // its progress (#610); never at launch.
-      await askForDownloadNotifications(scope.kind !== 'book').catch(() => undefined);
+      // its progress (#610), with the app's own popup first; never at launch.
+      await askForDownloadNotifications(scope.kind).catch(() => undefined);
       try {
         downloadBibleAudio(option, scope, { mobileData });
       } catch (error) {

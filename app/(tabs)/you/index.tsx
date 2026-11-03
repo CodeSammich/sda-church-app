@@ -22,8 +22,9 @@ import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
 import packageJson from '@/package.json';
 import {
-  getDownloadNotificationsEnabled,
+  getDownloadNotificationsOn,
   hasDownloadNotifications,
+  refreshDownloadNotificationPermission,
   setDownloadNotificationsEnabled,
   subscribeDownloadNotifications,
 } from '@/services/DownloadNotifications';
@@ -33,7 +34,7 @@ import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useState, useSyncExternalStore } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { List, Text, TouchableRipple } from 'react-native-paper';
 
@@ -181,8 +182,17 @@ export default function YouScreen() {
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
   // Phones only: the web streams Bible audio (#556).
   const offlineAudioBytes = useDownloadedBibleAudioBytes();
-  // Where the app's own notifications show a download (#610).
-  const notificationsOn = useSyncExternalStore(subscribeDownloadNotifications, getDownloadNotificationsEnabled);
+  // Where the app's own notifications show a download (#610): on only if the
+  // member wants them and the phone allows them, as after a change in Settings.
+  const notificationsOn = useSyncExternalStore(subscribeDownloadNotifications, getDownloadNotificationsOn);
+  useEffect(() => {
+    if (!hasDownloadNotifications()) return;
+    void refreshDownloadNotificationPermission();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refreshDownloadNotificationPermission();
+    });
+    return () => subscription.remove();
+  }, []);
   const textSizeCopy = getTextSizeMenuCopy(language, textScale);
 
   return (

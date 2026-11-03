@@ -155,8 +155,9 @@ settings name the English ones the same way. A row's download
 progress shows at once, with an X that stops it. It goes on when the page closes, and
 with the phone locked or the app in the background, since the whole Bible takes a while:
 the phone itself downloads it (#611), on Wi-Fi only unless the member chose mobile data.
-Meanwhile Android shows its own download notification, one for all the chapters; #610
-adds the app's own. Deleting goes by the same rows, after the app's popup
+Meanwhile a notification can show it, with Stop, as **Notifications** below says: the
+app's own on Android 14 and later, and the system's download notification on Android 13
+and lower; on the iPhone, a word when it's done. Deleting goes by the same rows, after the app's popup
 asks, naming what it deletes and its size. It stays in the documents directory until the
 member deletes it, rather than in the cache, and the size of each choice shows before it
 starts. Over mobile data,
@@ -228,6 +229,38 @@ simple, blended colors.
   large text fits, the main one first and Cancel last, and no X; a tap outside it answers
   Cancel. Code shows a notice or question with `showAppAlert`
   (`components/AppAlert.tsx`), and `test/app-alert.test.ts` fails on a system alert.
+- **Notifications:** The app's notifications are few, quiet, and only ones the member asked
+  for (Tenet 7). Today there's one kind: a Bible audio download the member started (#610).
+  - **What they say, by phone.** None is needed for a download to go on in the
+    background; they only show it.
+    - **Android 14 and later:** while chapters download out of sight, the download's
+      progress ("Mandarin (Chinese Union Version): 312 of 1,189 chapters"), with Stop; then
+      "Downloaded", or that it waits for Wi-Fi or a connection. Android requires a
+      notification while the app's own download job runs, so with the member's notifications
+      off it's the quiet kind: minimized, with no status bar icon, and gone when the job ends.
+      Without the permission, Android shows the job only in its Task Manager.
+    - **iPhone:** a word when a download finishes, or couldn't, while the app is out of
+      sight. iOS shows no progress for a background download.
+    - **Android 13 and lower:** nothing of the app's. The system's own download notification
+      shows the chapters, as Android requires for them to download while the phone is locked.
+  - **Asked at need, never at launch.** The first time a download of a section or more
+    starts, the app's own popup asks first, since the phone's question can't say why: what
+    the notifications are for, that the download keeps going either way, and that You turns
+    them off. Only **Allow** brings the phone's question. After **Not now**, the app asks once
+    more at most, at the next Testament or whole Bible, and then never. Turning them on in
+    You asks the phone at once, or opens the app's settings where the phone won't ask again.
+  - **One switch:** You → **Download notifications**. It shows on only when the member wants
+    them and the phone allows them.
+  - **Never:** badges, reminders to come back, sounds, marketing, or anything sent from a
+    server. They're made on the phone, so nothing about them leaves it, and Data safety and
+    App Privacy don't change.
+  - **Why the permission isn't dropped after each download:** iOS can't take back leave once
+    given, and on Android asking at every download would nag, and Android stops showing its
+    question after two refusals. So the app limits what it does instead:
+    `test/notification-guard.test.ts` fails if anything but `modules/bible-audio-downloads`
+    posts a notification.
+  - **Anything new,** such as announcements (#562) or event reminders (#49), needs its own
+    decision, and an update to this policy, first.
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital
   Sanctuary."
 

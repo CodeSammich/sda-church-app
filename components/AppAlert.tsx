@@ -92,6 +92,8 @@ export function AppAlertHost() {
   // The main answer first, as the last one Alert.alert would list; Cancel last.
   const answers = alert.buttons.filter((button) => button !== cancel).reverse();
   const asks = alert.buttons.length > 0;
+  // The app's font for the answers, as Paper's buttons have; their size follows the text size.
+  const answerFont = { fontFamily: theme.fonts.labelLarge.fontFamily, fontWeight: theme.fonts.labelLarge.fontWeight };
 
   return (
     <Portal>
@@ -138,12 +140,13 @@ export function AppAlertHost() {
                 }
                 onPress={() => close(button)}
                 style={styles.answer}
+                labelStyle={answerFont}
               >
                 {button.text}
               </WrappingButton>
             ))}
             {cancel && (
-              <WrappingButton mode="text" onPress={() => close(cancel)} style={styles.answer}>
+              <WrappingButton mode="text" onPress={() => close(cancel)} style={styles.answer} labelStyle={answerFont}>
                 {cancel.text}
               </WrappingButton>
             )}
