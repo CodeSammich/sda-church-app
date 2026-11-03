@@ -2165,7 +2165,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(tables[0][2][3]).toBe('6:12 PM');
   });
 
-  it("prints the pastor's four-character role labels, each on one line, in the roster grid", () => {
+  it("prints each roster grid label on one line, with the pastor's four-character Chinese labels", () => {
     type RosterTable = {
       rows: string[][];
       options: { columnWidths: number[]; paddingLeft: number; paddingRight: number };
@@ -2214,9 +2214,62 @@ describe('printed bulletin Apps Script helpers', () => {
 
     const { columnWidths, paddingLeft, paddingRight } = queens.options;
     expect(brooklyn.options.columnWidths).toEqual(columnWidths);
-    // The grid keeps its width in the panel.
-    expect(columnWidths.reduce((sum, width) => sum + width, 0)).toBe(356);
     const room = (column: number) => columnWidths[column] - paddingLeft - paddingRight;
+
+    // The grid is no wider than the announcements table above it, which
+    // prints in the same panel every week.
+    const announcementWidths: number[] = [];
+    const announcementCell = {
+      clear: () => undefined,
+      setPaddingTop: () => undefined,
+      setPaddingBottom: () => undefined,
+      setPaddingLeft: () => undefined,
+      setPaddingRight: () => undefined,
+      setVerticalAlignment: () => undefined,
+    };
+    const announcementContext = loadAppsScript({
+      DocumentApp: { VerticalAlignment: { TOP: 'top' } },
+    });
+    Object.assign(announcementContext, {
+      appendPrintedAnnouncementTableCell_: () => undefined,
+      testPanel: {
+        appendTable: () => ({
+          setBorderWidth: () => undefined,
+          setColumnWidth: (column: number, width: number) => {
+            announcementWidths[column] = width;
+          },
+          getRow: () => ({ getCell: () => announcementCell }),
+        }),
+      },
+    });
+    runInContext(
+      `appendPrintedAnnouncementsTable_(testPanel, [{ english: 'Potluck after worship.', chinese: '崇拜後聚餐。' }])`,
+      announcementContext,
+    );
+    const sum = (widths: number[]) => widths.reduce((total, width) => total + width, 0);
+    expect(sum(announcementWidths)).toBe(360);
+    expect(sum(columnWidths)).toBeLessThanOrEqual(sum(announcementWidths));
+
+    // Times New Roman advance widths in 2048ths of an em, for the characters
+    // the English labels use (Liberation Serif has the same widths).
+    const timesWidths: Record<string, number> = {
+      ' ': 512, '-': 682, '.': 512, C: 1366, D: 1479, E: 1251, F: 1139, G: 1479, I: 682,
+      M: 1821, O: 1479, P: 1139, S: 1139, T: 1251, a: 909, b: 1024, c: 909, e: 909, f: 682,
+      g: 1024, h: 1024, i: 569, l: 569, m: 1593, n: 1024, o: 1024, p: 1024, r: 682, s: 797,
+      t: 569, u: 1024, w: 1479, y: 1024,
+    };
+    const timesWidth = (text: string) =>
+      [...text].reduce((total, character) => {
+        expect(timesWidths[character]).toBeDefined();
+        return total + (timesWidths[character] / 2048) * 10;
+      }, 0);
+    // Each English role label fits its column with 1.5 points to spare.
+    // "Flower Offering", the widest, is 65.3 points.
+    for (const table of [queens, brooklyn]) {
+      for (const row of table.rows.slice(1)) {
+        expect(timesWidth(row[1])).toBeLessThanOrEqual(room(1) - 1.5);
+      }
+    }
 
     // At 10 points each UoqMunThenKhung character is 10 points wide and its
     // half-width dot (U+FF65) is 5. Each character has to be in the font, or
@@ -2239,11 +2292,10 @@ describe('printed bulletin Apps Script helpers', () => {
     // The Chinese name columns hold 尚未安排 (TBD), 40 points.
     expect(room(4)).toBeGreaterThanOrEqual(40);
     expect(room(6)).toBeGreaterThanOrEqual(40);
-    // "Sacrifice-Global" is 66.08 points in Times New Roman at 10 points, and
-    // Docs won't break it at the hyphen. Both English name columns hold it,
-    // with a point to spare.
-    expect(room(3)).toBeGreaterThanOrEqual(67.08);
-    expect(room(5)).toBeGreaterThanOrEqual(67.08);
+    // Docs won't break "Sacrifice-Global" (66.1 points) at the hyphen. Both
+    // English name columns hold it with 1.5 points to spare.
+    expect(timesWidth('Sacrifice-Global')).toBeLessThanOrEqual(room(3) - 1.5);
+    expect(timesWidth('Sacrifice-Global')).toBeLessThanOrEqual(room(5) - 1.5);
   });
 
   it('keeps bilingual labels and content in the physical output helpers', () => {

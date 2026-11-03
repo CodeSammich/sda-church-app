@@ -2921,10 +2921,11 @@ function appendHorizontalScheduleTable_(cell, current, next, entries, currentDat
     borderWidth: 0.75,
     borderColor: '#000000',
     // Sized for 10-point text with 1-point side padding, so each column holds
-    // 2 points less than its width. The widest Chinese role label (崇拜･主席)
-    // is 45 points and 尚未安排 is 40. The English columns get the rest, so
-    // "Sacrifice-Global" (66 points in Times New Roman) fits without breaking.
-    columnWidths: [14, 66, 48, 70, 44, 70, 44],
+    // 2 points less than its width. In Times New Roman, "Flower Offering" is
+    // 65.3 points and "Sacrifice-Global" 66.1. The widest Chinese role label
+    // (崇拜･主席) is 45 points and 尚未安排 is 40. At 359 points the grid is
+    // still narrower than the 360-point announcements table above it.
+    columnWidths: [14, 69, 48, 70, 44, 70, 44],
     alignments: [
       DocumentApp.HorizontalAlignment.LEFT,
       DocumentApp.HorizontalAlignment.CENTER,
