@@ -320,16 +320,16 @@ describe('Offline Bible Audio', () => {
     await AsyncStorage.setItem('user-bible-audio-readers', JSON.stringify({ BSB: 'hays' }));
     await AsyncStorage.setItem('user-bible-translation', 'BSB');
     screen = await renderPage();
-    await waitFor(() => expect(screen.getByText('Hays (BSB)')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('English – Hays (BSB)')).toBeTruthy());
     expect(screen.getByText('Other narrators')).toBeTruthy();
     expect(screen.getByText('Spanish (Reina-Valera 1909)')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Delete all downloads for Spanish (Reina-Valera 1909)' }));
     expect(lastAlert().title).toBe(`Delete all downloads for Spanish (Reina-Valera 1909)? (${size(CHAPTER_BYTES)})`);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Narrator: Hays (BSB). Change' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Narrator: English – Hays (BSB). Change' }));
     expect(screen.getByRole('radio', { name: `Spanish (Reina-Valera 1909), Downloaded · ${size(CHAPTER_BYTES)}` })).toBeTruthy();
-    await fireEvent.press(screen.getByRole('radio', { name: 'David (BSB), Nothing downloaded' }));
-    expect(screen.getByRole('button', { name: 'Narrator: David (BSB). Change' })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: 'English – David (BSB), Nothing downloaded' }));
+    expect(screen.getByRole('button', { name: 'Narrator: English – David (BSB). Change' })).toBeTruthy();
   });
 
   it('start at the narrator the Bible saved, and by language when it saved none', async () => {

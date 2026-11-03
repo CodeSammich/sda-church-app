@@ -1,4 +1,5 @@
 import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json';
+import { BIBLE_AUDIO_NARRATOR_ORDER } from '@/constants/BibleAudioNarrators';
 import { BIBLE_SECTIONS, type BibleTestament } from '@/constants/BibleSections';
 import { excludeFromBackup } from '@/modules/backup-exclusion';
 import {
@@ -58,8 +59,8 @@ const PROGRESS_EMIT_MS = 250;
 // What a download must leave free, so it never fills the phone.
 const SPACE_TO_LEAVE = 500_000_000;
 
-/** The narrators a member can download, in the order the You tab lists them. */
-export const BIBLE_AUDIO_DOWNLOAD_NARRATORS = Object.keys(SIZES);
+/** The narrators a member can download, in the app's one narrator order. */
+export const BIBLE_AUDIO_DOWNLOAD_NARRATORS = BIBLE_AUDIO_NARRATOR_ORDER.filter((narrator) => narrator in SIZES);
 
 /** The narrator a reader choice plays, by its download name, if it can be downloaded here. */
 export const getDownloadableBibleAudioNarrator = (translationId: string, reader?: string) => {

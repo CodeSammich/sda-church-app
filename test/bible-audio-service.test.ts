@@ -133,6 +133,15 @@ describe('Bible audio playback', () => {
     ]);
   });
 
+  it('lists Mandarin before Cantonese, and narrators it does not know after those it does', () => {
+    const mandarin = '基督徒团契 (Audio Power)';
+    const { CANTONESE_CUV_READER } = jest.requireActual('../services/BibleAudioSources');
+    const cuv = { [CANTONESE_CUV_READER]: 'c.mp3', [mandarin]: 'm.mp3' };
+    expect(getOrderedBibleAudioReaders('cmn_cuv', cuv).map(([reader]) => reader)).toEqual([mandarin, CANTONESE_CUV_READER]);
+    const bsb = { someone: 'x.mp3', gilbert: 'g.mp3', hays: 'h.mp3' };
+    expect(getOrderedBibleAudioReaders('BSB', bsb).map(([reader]) => reader)).toEqual(['hays', 'gilbert', 'someone']);
+  });
+
   it('preserves provider order for other translations', () => {
     const links = {
       david: 'https://audio.example/david.mp3',

@@ -4,15 +4,16 @@ import {
   type AudioPlayer,
 } from 'expo-audio';
 
+import { BIBLE_AUDIO_NARRATOR_ORDER } from '@/constants/BibleAudioNarrators';
 import type { TranslationBook } from './BibleService';
 import {
+  getBibleAudioNarrator,
   getChurchHostedAudioLinks,
   hasChurchHostedAudio,
   type TranslationBookChapterAudioLinks,
 } from './BibleAudioSources';
 import type { BibleAudioQueueControls, BibleAudioQueueItem } from './BibleAudioPlayer.types';
 
-const BSB_AUDIO_READER_PRIORITY = ['souer', 'hays', 'david'] as const;
 
 // Expo Audio's persistent non-mixing mode keeps system interruptions from
 // being treated as an intentional app stop, so playback does not reclaim
@@ -168,21 +169,20 @@ export const getOrderedBibleAudioReaders = (
   translationId: string,
   links?: TranslationBookChapterAudioLinks,
 ) => {
-  const entries = Object.entries(links || {});
-  if (translationId !== 'BSB') return entries;
-
-  const priority = new Map<string, number>(
-    BSB_AUDIO_READER_PRIORITY.map((reader, index) => [reader, index]),
-  );
-
-  return entries
+  // The app's one narrator order (constants/BibleAudioNarrators.ts): Souer,
+  // Hays, then David for the BSB, and Mandarin before Cantonese. Readers it
+  // doesn't know keep the provider's order, after those it does.
+  const rank = (reader: string) => {
+    const index = BIBLE_AUDIO_NARRATOR_ORDER.indexOf(
+      getBibleAudioNarrator(translationId, reader)?.toLocaleLowerCase() ?? '',
+    );
+    return index < 0 ? BIBLE_AUDIO_NARRATOR_ORDER.length : index;
+  };
+  return Object.entries(links || {})
     .map((entry, providerIndex) => ({ entry, providerIndex }))
     .sort(
       (left, right) =>
-        (priority.get(left.entry[0].toLocaleLowerCase()) ??
-          BSB_AUDIO_READER_PRIORITY.length) -
-          (priority.get(right.entry[0].toLocaleLowerCase()) ??
-            BSB_AUDIO_READER_PRIORITY.length) ||
+        rank(left.entry[0]) - rank(right.entry[0]) ||
         left.providerIndex - right.providerIndex,
     )
     .map(({ entry }) => entry);

@@ -81,10 +81,12 @@ import {
 } from '@/services/BibleAudioDownloads';
 import { useDownloadedChapterUri } from '@/hooks/useBibleAudioDownloads';
 import { BibleAudioOfflineSection } from '@/components/BibleAudioOfflineSection';
+import { getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
 import {
   BIBLE_AUDIO_READERS_STORAGE_KEY,
   CUV_AUDIO_READERS,
   getAudioReaderPreferenceKey,
+  getBibleAudioNarrator,
   WORDPROJECT_CREDITS,
 } from '@/services/BibleAudioSources';
 import {
@@ -4373,11 +4375,14 @@ export default function BibleScreen() {
                 const isSelected = reader === selectedAudioReader;
                 const audioLanguage = CUV_AUDIO_READERS[reader];
                 // Chinese interfaces show the mark alone; others add the name.
+                // Others lead with their language, as Offline Bible Audio
+                // names them: "English – Souer (BSB)" (#556).
                 const readerLabel = audioLanguage
                   ? language === 'zh' || language === 'zh-cn'
                     ? getAudioLanguageMark(audioLanguage)
                     : `${getAudioLanguageMark(audioLanguage)} ${labels[audioLanguage.language]}`
-                  : getAudioReaderLabel(reader);
+                  : getBibleAudioNarratorName(getBibleAudioNarrator(supportedTranslation.id, reader), language) ??
+                    getAudioReaderLabel(reader);
                 const readerCredit = audioLanguage?.credit;
                 return (
                   <TouchableOpacity
