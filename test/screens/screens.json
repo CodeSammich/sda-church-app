@@ -17,6 +17,8 @@
     "default": {},
     "dark": { "theme": "dark" },
     "large": { "textScale": 1.5 },
+    "es-default-text": { "language": "es", "textScale": 1.25 },
+    "es-large": { "language": "es", "textScale": 1.5 },
     "xl": { "textScale": 2 },
     "ios-large-text": { "iosTextSize": "accessibility-large" },
     "zh": { "language": "zh" },
@@ -57,15 +59,16 @@
     {
       "name": "home",
       "group": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. zh and zh-cn: the countdown's date in Chinese, such as 11月6日星期五, which the iPhone's text recognition reads with a space before 星期. On Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"), so the app writes Chinese dates out by hand (formatAppDate).",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). zh and zh-cn: the countdown's date in Chinese, such as 11月6日星期五, which the iPhone's text recognition reads with a space before 星期. On Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"), so the app writes Chinese dates out by hand (formatAppDate).",
       "path": "",
-      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
+      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
       "ipadVariants": ["default", "landscape"],
       "variantRules": {
         "xl-ios-large-text": {
           "mustShowLines": ["^Today.s Verse$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
+        "es-large": { "mustShowLines": ["Compartir$"], "mustNotShowLines": ["\\bCompar(t|ti)?$", "^(tir|ir)\\b"] },
         "es-xl-ios-large-text": { "mustShowLines": ["^Vers[ií]culo\\b"] },
         "xl-android-font-max": {
           "mustShowLines": ["^Today.s( Verse)?$"],
@@ -426,10 +429,11 @@
     {
       "name": "discover",
       "group": "home",
-      "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\". xl-android-font-max is the same case on Android, at its largest font.",
+      "$comment": "xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text, held to 3.2× by the combined cap. The two-column cards' titles stay at the default 1.25× (#387), so \"About Denomination\" must keep \"Denomination\" whole instead of breaking it as \"Den / omination\". xl-android-font-max is the same case on Android, at its largest font. es-default-text is Spanish at the app's default 125%: on the Android phone's 384 points, \"Compañerismo\" was wider than its card's title, so each card shrinks its grid's text just enough to keep the widest word whole (#324). Its ñ may read as another letter.",
       "path": "home/discover",
-      "variants": ["default", "zh", "xl-ios-large-text", "xl-android-font-max"],
+      "variants": ["default", "zh", "es-default-text", "xl-ios-large-text", "xl-android-font-max"],
       "variantRules": {
+        "es-default-text": { "mustShowLines": ["^Compa.erismo$"] },
         "xl-ios-large-text": { "mustShowLines": ["\\bDenomination$"] },
         "xl-android-font-max": { "mustShowLines": ["\\bDenomination$"] }
       }
