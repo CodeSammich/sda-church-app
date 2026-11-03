@@ -512,14 +512,18 @@ export function OfflineBibleAudio() {
   const narratorParam = firstParam(params.narrator);
   const bookParam = firstParam(params.bookId);
   // The key-screen capture can't tap, so its build asks the mobile-data
-  // question (#611), or the notifications one (#610), from the path.
-  const screenshotPopup = getScreenshotPopup(params.popup, ['mobile-data', 'notifications']);
+  // question (#611), or the notifications one (#610), or opens the narrator
+  // popup (#324), from the path.
+  const screenshotPopup = getScreenshotPopup(params.popup, ['mobile-data', 'notifications', 'narrator']);
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight();
   useBibleAudioDownloads();
   const [narrator, setNarrator] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [choosingNarrator, setChoosingNarrator] = useState(false);
+  useEffect(() => {
+    if (screenshotPopup === 'narrator') setChoosingNarrator(true);
+  }, [screenshotPopup]);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   // The book being read, from the Bible: the page scrolls to its row once.
   const contentRef = useRef<ComponentRef<typeof View>>(null);

@@ -49,24 +49,26 @@ jobs:
     # Expo SDK 58's November patch releases (#604) its compile alone took
     # 28.6 minutes, so a 40-minute limit cancelled the job. 50 still leaves
     # room for a slow compile or the one 11-minute app install seen, without a
-    # stuck job holding a Mac for an hour. The other batches get 110, since
-    # their time includes waiting for the compiling runner: up to 45 minutes
-    # while GitHub, short of Mac runners, keeps it queued, then its 50, then
-    # about 10 to install the app and capture their screens. 45 + 50 + 10 is
-    # 105, plus a margin, so the release PR's run doesn't fail on timing alone.
-    timeout-minutes: ${{ matrix.builds && 50 || 110 }}
+    # stuck job holding a Mac for an hour. Each runner then takes its group's
+    # iPad shots too (#324), about 10 minutes more on the busiest, so the
+    # compiling one gets 60. The other batches get 120, since their time
+    # includes waiting for the compiling runner: up to 45 minutes while GitHub,
+    # short of Mac runners, keeps it queued, then its 60, then about 15 to
+    # install the app and capture their screens. 45 + 60 + 15 is 120, so the
+    # release PR's run doesn't fail on timing alone.
+    timeout-minutes: ${{ matrix.builds && 60 || 120 }}
     permissions:
       contents: read
       # To see when the shared app is ready, and whether its runner failed.
       actions: read
     strategy:
       fail-fast: false
-      # GitHub's free plan runs five Mac jobs at once. Started together, the six
-      # jobs below got Macs in no fixed order: on November 2, 2026, the iPad's
-      # runner got one and the compiling runner didn't, so the other five waited
-      # 45 minutes for an app nobody was building. Five at a time, the jobs
-      # start in list order, so the compiling runner always gets a Mac and the
-      # iPad's, last, takes the first one free.
+      # GitHub's free plan runs five Mac jobs at once. On November 2, 2026, a
+      # sixth job, the iPad's own runner, got a Mac and the compiling runner
+      # didn't, so the other five waited 45 minutes for an app nobody was
+      # building. So there are five jobs, and each takes its group's iPad shots
+      # after its iPhone shots (#324); this keeps any later sixth from taking
+      # the compiling runner's Mac.
       max-parallel: 5
       matrix:
         # One runner per key-screen group in test/screens/screens.json, each
@@ -75,23 +77,20 @@ jobs:
         # screens.json in step. GitHub's free plan runs five Mac jobs at once.
         # Three Simulators on one runner were slower: its 3 processors couldn't
         # keep up with them.
-        group: [home, bible-reading, bible-text, library, worship-and-you, ipad]
+        group: [home, bible-reading, bible-text, library, worship-and-you]
         # The app is compiled once, by the runner with the smallest group, and
         # shared with the others, which boot their iPhones meanwhile; five
         # separate compiles made the run wait for the slowest of five. A test
         # checks that exactly one group builds and that the others wait for it.
-        # Each group's batch number, 1 to 5 in list order, names its job. One
-        # more runner, batch 6, takes the iPad's shots (#324), the screens
-        # that list ipadVariants, as Android's batch 6 takes Google Play's. It
-        # starts when the first group's runner is done with its Mac (max-parallel
-        # above), and its few shots finish soon after the other groups'.
+        # Each group's batch number, 1 to 5 in list order, names its job. Each
+        # runner also takes its group's iPad shots (#324), on an iPad it boots
+        # while it waits, so the iPad adds no runner and no wait for a Mac.
         include:
           - { group: home, batch: 1 }
           - { group: bible-reading, batch: 2 }
           - { group: bible-text, batch: 3, builds: true }
           - { group: library, batch: 4 }
           - { group: worship-and-you, batch: 5 }
-          - { group: ipad, batch: 6, ipad: true }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -177,7 +176,8 @@ jobs:
         # runners, most of it one iOS data-migration step for location
         # services, and on their 3 processors it slows whatever runs
         # alongside it (docs/operations/native-builds.md). So it starts after
-        # the package installs, while the other runners wait for the app. The
+        # the package installs, while the other runners wait for the app, and
+        # the iPad boots alongside it, for the group's iPad shots (#324). The
         # runner that compiles boots its iPhone after the build, in the launch
         # step, when it restored a compile cache: booting alongside, a build
         # from a matching cache took 10.8 minutes instead of 2.3. With no cache,
@@ -185,16 +185,18 @@ jobs:
         # finish last.
         env:
           BOOT_NOW: ${{ !matrix.builds || steps.compile-cache.outputs.cache-matched-key == '' }}
-          PLATFORM: ${{ matrix.ipad && 'ipad' || 'ios' }}
         run: |
           set -euo pipefail
-          # The iPhone test/screens/screens.json names, or its iPad on the iPad's
-          # runner, on the newest installed iOS runtime, so the launch check and
-          # the key screens share it.
-          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --platform "$PLATFORM" --pick-device)"
+          # The iPhone and iPad test/screens/screens.json names, on the newest
+          # installed iOS runtime, so the launch check and the key screens share
+          # the iPhone.
+          DEVICE_ID="$(node scripts/capture-ios-screens.cjs --pick-device)"
+          IPAD_ID="$(node scripts/capture-ios-screens.cjs --platform ipad --pick-device)"
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          echo "IPAD_ID=$IPAD_ID" >> "$GITHUB_ENV"
           if [ "$BOOT_NOW" = true ]; then
             nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
+            nohup xcrun simctl bootstatus "$IPAD_ID" -b > "$RUNNER_TEMP/ipad-boot.log" 2>&1 &
           fi
 
       - name: Build for the Simulator without signing
@@ -315,6 +317,7 @@ jobs:
         run: ditto -x -k "$RUNNER_TEMP/ios-simulator-app/app.zip" "$RUNNER_TEMP/ios-simulator-app"
 
       - name: Launch on a simulated iPhone
+        id: launch
         env:
           BUILDS: ${{ matrix.builds && 'true' || 'false' }}
           # Named like the Android preview's sda-church-app-pr-<number>-<run>-arm-debug.apk.
@@ -363,13 +366,11 @@ jobs:
       - name: Capture the key screens
         # Screenshots of the screens in test/screens/screens.json, named
         # ios/<screen>-<variant>.png, for checking layouts before release (#331).
-        # Only this group's screens, or the iPad's, named ipad/<screen>-<variant>.png.
+        # Only this group's screens.
         timeout-minutes: 20
-        env:
-          PART: ${{ matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group) }}
         run: >-
           node scripts/capture-ios-screens.cjs --out "$RUNNER_TEMP/ios-pr-preview/screens"
-          $PART
+          --group ${{ matrix.group }}
 
       - name: Check the text on the key screens
         # Reads each screenshot's text with Apple's Vision framework and checks
@@ -379,11 +380,9 @@ jobs:
         # the screenshots. Runs even if a capture failed, to report on the rest.
         if: ${{ !cancelled() }}
         timeout-minutes: 10
-        env:
-          PART: ${{ matrix.ipad && '--platform ipad' || format('--group {0}', matrix.group) }}
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
-          $PART
+          --group ${{ matrix.group }}
 
       - name: Upload this group
         if: always()
@@ -391,6 +390,49 @@ jobs:
         with:
           name: key-screens-${{ github.run_id }}-${{ matrix.group }}
           path: ${{ runner.temp }}/ios-pr-preview/
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Capture the key screens on the iPad
+        # The group's iPad shots (#324), named ipad/<screen>-<variant>.png: every
+        # key screen in landscape, and the ones a wide screen changes most in
+        # portrait and at 200%. The iPhone is done, so it shuts down and its
+        # memory goes to the iPad, which booted while this runner waited (or now,
+        # on the runner that compiled).
+        id: ipad
+        if: ${{ !cancelled() && steps.launch.outcome == 'success' }}
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          xcrun simctl shutdown "$DEVICE_ID" || true
+          APP_PATH="$(find "$RUNNER_TEMP/ios-simulator/Build/Products/Release-iphonesimulator" \
+            "$RUNNER_TEMP/ios-simulator-app" -maxdepth 1 -name '*.app' -print -quit 2>/dev/null || true)"
+          xcrun simctl bootstatus "$IPAD_ID" -b
+          if [ -f "$RUNNER_TEMP/ipad-boot.log" ]; then
+            echo '::group::Simulated iPad boot log'
+            cat "$RUNNER_TEMP/ipad-boot.log"
+            echo '::endgroup::'
+          fi
+          xcrun simctl install "$IPAD_ID" "$APP_PATH"
+          node scripts/capture-ios-screens.cjs --platform ipad --group ${{ matrix.group }} \
+            --out "$RUNNER_TEMP/ipad-part/screens"
+
+      - name: Check the text and layout on the iPad
+        # The same text checks, against the iPad's positions, and the iPad's
+        # own: text in the centred column, none at the screen's edge, and
+        # popups no wider than they're meant to be (scripts/check-screens.cjs).
+        if: ${{ !cancelled() && steps.ipad.outcome != 'skipped' }}
+        timeout-minutes: 10
+        run: >-
+          node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ipad-part/screens"
+          --platform ipad --group ${{ matrix.group }}
+
+      - name: Upload this group's iPad shots
+        if: ${{ always() && steps.ipad.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: key-screens-${{ github.run_id }}-${{ matrix.group }}-ipad
+          path: ${{ runner.temp }}/ipad-part/
           if-no-files-found: warn
           retention-days: 1
 

@@ -132,8 +132,11 @@ const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
 
 // A shot's rough cost in seconds: its wait, the time its record usually takes
 // after that, and any later shot's, plus about 5 to relaunch the app and take
-// the screenshot.
-const shotCost = (shot) => shot.wait + (RECORDS[shot.record]?.typical || 0) + (shot.later || 0) + 5;
+// the screenshot, and 5 more on the iPad, whose larger screenshots, some
+// turned upright, took about 20 seconds a shot to the iPhone's 14 (#324).
+const IPAD_EXTRA = 5;
+const shotCost = (shot) =>
+  shot.wait + (RECORDS[shot.record]?.typical || 0) + (shot.later || 0) + 5 + (shot.platform === 'ipad' ? IPAD_EXTRA : 0);
 
 /**
  * The shots of one group in test/screens/screens.json: related screens
@@ -157,9 +160,10 @@ const variantSuits = (overrides, platform) =>
   );
 
 /**
- * A screen's variants on one platform. The iPad takes only the screens that
- * list `ipadVariants`, which keeps its runner short (#324); the iPhone and
- * Android take every screen's `variants`, unless its `platforms` leave one out.
+ * A screen's variants on one platform. The iPad takes each screen's
+ * `ipadVariants` (#324), on the same runner as the screen's iPhone shots; the
+ * iPhone and Android take every screen's `variants`, unless its `platforms`
+ * leave one out.
  */
 const variantsOn = (screen, platform) => {
   if (platform === 'ipad') return screen.ipadVariants || [];
