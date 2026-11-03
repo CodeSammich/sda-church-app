@@ -56,11 +56,9 @@ describe('library catalog', () => {
   });
 
   it('puts every book on a shelf the library screens can open', () => {
-    const shelves = [
-      ...LIBRARY_CATALOG.publicDomainWorks,
-      ...LIBRARY_CATALOG.officialCollections,
-      ...LIBRARY_CATALOG.churchDocuments,
-    ].map((work) => [work.id, getLibraryItemShelf(work)]);
+    const shelves = Object.values(LIBRARY_CATALOG)
+      .flat()
+      .map((work) => [work.id, getLibraryItemShelf(work)]);
 
     for (const [, shelf] of shelves) {
       expect(LIBRARY_SHELVES).toContain(shelf);
@@ -75,6 +73,10 @@ describe('library catalog', () => {
       'sibbes-bruised-reed': 'classics',
       'story-of-jesus': 'children',
       'sabbath-encouragement': 'egw',
+      'kneeling-christian': 'classics',
+      'batchelor-richest-caveman': 'contemporary',
+      // About Ellen G. White, so it sits with her books (#554).
+      'lake-ellen-white-under-fire': 'egw',
     });
   });
 
@@ -191,6 +193,52 @@ describe('library catalog', () => {
         expect(works.indexOf(item.id)).toBeLessThan(withChinese.length);
       }
     }
+  });
+
+  describe("books in the Chinese Union Mission's reader (#554)", () => {
+    const books = LIBRARY_CATALOG.sdaBibleBooks;
+
+    it('links the fourteen books the church chose, with the reader\'s own covers', () => {
+      expect(books).toHaveLength(14);
+      expect(new Set(books.map(({ sourceUrl }) => sourceUrl)).size).toBe(books.length);
+      for (const book of books) {
+        expect(book.rights).toBe('official-external');
+        expect(book.sourceName).toBe('SDA Bible');
+        expect(book.sourceUrl).toMatch(/^https:\/\/read\.sdabible\.org\/library\/work\/m-\d+$/);
+        expect(book.coverUrl).toMatch(/^https:\/\/read\.sdabible\.org\/api\/library\/assets\/\d+\/thumb$/);
+        expect(book.traditionalChinese?.title).toMatch(/[\u3400-\u9fff]/);
+        expect(book.simplifiedChinese?.title).toMatch(/[\u3400-\u9fff]/);
+        expect(book.traditionalChinese?.author).toMatch(/[\u3400-\u9fff]/);
+        expect(book.simplifiedChinese?.author).toMatch(/[\u3400-\u9fff]/);
+      }
+    });
+
+    it("shows them only to Chinese readers, on today's Adventist writers' shelf but two", () => {
+      const ids = (language: 'en' | 'es' | 'zh' | 'zh-cn') =>
+        getLibraryItemsForLanguage(language).sdaBibleBooks.map(({ id }) => id);
+      expect(ids('zh')).toHaveLength(14);
+      expect(ids('zh-cn')).toHaveLength(14);
+      expect(ids('en')).toEqual([]);
+      expect(ids('es')).toEqual([]);
+      expect(books.filter((book) => getLibraryItemShelf(book) !== 'contemporary').map(({ id }) => id)).toEqual([
+        'kneeling-christian',
+        'lake-ellen-white-under-fire',
+      ]);
+    });
+
+    it("opens each book in the reader in the app's script", () => {
+      const [kneeling] = books;
+      expect(getLibraryItemSource(kneeling, 'zh').sourceUrl).toBe(
+        'https://read.sdabible.org/library/work/m-162?ui=tc',
+      );
+      expect(getLibraryItemSource(kneeling, 'zh-cn').sourceUrl).toBe(
+        'https://read.sdabible.org/library/work/m-162?ui=cn',
+      );
+      expect(getLibraryItemDisplayText(kneeling, 'zh').title).toBe('跪下的基督徒');
+      const lastNight = books.find(({ id }) => id === 'crews-last-night-on-earth')!;
+      expect(getLibraryItemDisplayText(lastNight, 'zh').title).toBe('地上的最後一夜');
+      expect(getLibraryItemDisplayText(lastNight, 'zh-cn').title).toBe('地上的最后一夜');
+    });
   });
 
   it('lists books with a Spanish edition first for Spanish readers', () => {

@@ -26,12 +26,12 @@ const copy = {
     previousFeatured: 'Previous featured book', nextFeatured: 'Next featured book',
   },
   zh: {
-    title: '圖書館', seeAll: '查看全部', featured: '精選', read: '閱讀',
+    title: '精選書庫', seeAll: '查看全部', featured: '精選', read: '閱讀',
     featuredPage: (page: number, count: number) => `精選書籍 ${page}/${count}`,
     previousFeatured: '上一本精選書籍', nextFeatured: '下一本精選書籍',
   },
   'zh-cn': {
-    title: '图书馆', seeAll: '查看全部', featured: '精选', read: '阅读',
+    title: '精选书库', seeAll: '查看全部', featured: '精选', read: '阅读',
     featuredPage: (page: number, count: number) => `精选书籍 ${page}/${count}`,
     previousFeatured: '上一本精选书籍', nextFeatured: '下一本精选书籍',
   },
@@ -84,6 +84,7 @@ export default function LibraryHubScreen() {
       ...catalog.publicDomainWorks,
       ...catalog.officialCollections,
       ...catalog.churchDocuments,
+      ...catalog.sdaBibleBooks,
     ].map(
       (work) => {
         const text = getLibraryItemDisplayText(work, language);
@@ -100,7 +101,15 @@ export default function LibraryHubScreen() {
       },
     );
     return [...egw, ...other];
-  }, [catalog.churchDocuments, catalog.officialCollections, catalog.publicDomainWorks, egwAuthor, language, open]);
+  }, [
+    catalog.churchDocuments,
+    catalog.officialCollections,
+    catalog.publicDomainWorks,
+    catalog.sdaBibleBooks,
+    egwAuthor,
+    language,
+    open,
+  ]);
   return (
     <>
       <Stack.Screen

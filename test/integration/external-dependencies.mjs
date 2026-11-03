@@ -535,6 +535,12 @@ await record('public-domain scans stay openly downloadable', 'Internet Archive',
 });
 
 const chineseLibrarySource = await readFile('features/library/ChineseLibrary.ts', 'utf8');
+const egwCatalogSource = await readFile('features/library/EgwBookCatalog.ts', 'utf8');
+// The Mission's id for each of Ellen G. White's books, which keys her Chinese
+// covers and opens her Chinese editions in the Mission's reader.
+const chineseEgwBookIds = [...egwCatalogSource.matchAll(
+  /chineseEdition\(\s*'[^']+'\s*,\s*(\d+)\s*\)/g,
+)].map(([, bookId]) => Number(bookId));
 const chineseLibraryCatalogUrl = chineseLibrarySource.match(
   /CHINESE_LIBRARY_CATALOG_URL\s*=\s*\n?\s*'(https:\/\/api\.sdabible\.org\/[^']+)'/,
 )?.[1];
@@ -543,7 +549,8 @@ await record('current EGW cover catalog', 'Chinese Union Mission library', async
   if (!chineseLibraryCatalogUrl) throw new Error('cover catalog URL is missing');
   const catalog = await getJson(chineseLibraryCatalogUrl);
   const books = Array.isArray(catalog.childCategories) ? catalog.childCategories : [];
-  const curatedIds = [127, 128, 55, 81, 75, 120, 34, 16, 50, 13, 23];
+  const curatedIds = chineseEgwBookIds;
+  if (curatedIds.length !== 11) throw new Error(`found ${curatedIds.length} Chinese editions, expected 11`);
   const availableIds = new Set(books.map(({ book_id }) => book_id));
   // A book or two leaving the catalog shows its cover's fallback; most of them
   // leaving means the catalog changed.
@@ -565,12 +572,13 @@ await record('current EGW cover catalog', 'Chinese Union Mission library', async
   );
 });
 
-const egwCatalogSource = await readFile('features/library/EgwBookCatalog.ts', 'utf8');
 const egwCoverBaseUrl = egwCatalogSource.match(
   /EGW_COVER_BASE_URL\s*=\s*'(https:\/\/[^']+)'/,
 )?.[1];
+// English and Spanish editions open on EGW Writings; the Chinese ones open in
+// the Chinese Union Mission's reader, checked below with its other books.
 const egwEditions = [...egwCatalogSource.matchAll(
-  /edition\(\s*'(en|zh|es)'\s*,\s*'[^']+'\s*,\s*(\d+)\s*,\s*'(\d+\.\d+)'\s*\)/g,
+  /edition\(\s*'(en|es)'\s*,\s*'[^']+'\s*,\s*(\d+)\s*,\s*'(\d+\.\d+)'\s*\)/g,
 )].map(([, language, bookId, firstParagraph]) => ({
   language,
   bookId: Number(bookId),
@@ -579,17 +587,17 @@ const egwEditions = [...egwCatalogSource.matchAll(
 }));
 
 await record('catalog contains eleven deep links per language', 'EGW Writings', async () => {
-  for (const language of ['en', 'zh', 'es']) {
+  for (const language of ['en', 'es']) {
     const editions = egwEditions.filter((entry) => entry.language === language);
     if (editions.length !== 11) throw new Error(`${language} has ${editions.length} editions`);
     if (editions.some(({ bookId, firstParagraph }) => !firstParagraph.startsWith(`${bookId}.`))) {
       throw new Error(`${language} contains a mismatched book and paragraph ID`);
     }
   }
-  if (new Set(egwEditions.map(({ url }) => url)).size !== 33) {
+  if (new Set(egwEditions.map(({ url }) => url)).size !== 22) {
     throw new Error('edition deep links are not unique');
   }
-  return '33 unique English, Chinese, and Spanish edition links';
+  return '22 unique English and Spanish edition links';
 });
 
 for (const language of ['en', 'es']) {
@@ -611,7 +619,7 @@ for (const language of ['en', 'es']) {
   });
 }
 
-for (const language of ['en', 'zh', 'es']) {
+for (const language of ['en', 'es']) {
   await record(`daily ${language} text edition samples`, 'EGW Writings', async (warn) => {
     const editions = egwEditions.filter((entry) => entry.language === language);
     return spotCheck(editions, language.charCodeAt(0), async ({ url }) => {
@@ -629,6 +637,64 @@ for (const language of ['en', 'zh', 'es']) {
     }, warn, { label: ({ firstParagraph }) => firstParagraph });
   });
 }
+
+// The Library's Chinese books open in the Chinese Union Mission's online reader
+// (#554): Ellen G. White's at `egw-<book id>`, the others at the slugs in
+// LibraryCatalog.ts, each with the reader's cover. The reader is a small
+// server, so batched requests to its own API check every book, ten at a time:
+// its firewall refuses a batch of 25 (HTTP 403).
+const SDA_BIBLE_READER = 'https://read.sdabible.org';
+const sdaBibleBooks = [
+  ...chineseEgwBookIds.map((bookId) => ({ slug: `egw-${bookId}` })),
+  ...[...libraryCatalogSource.matchAll(
+    /sourceUrl:\s*'https:\/\/read\.sdabible\.org\/library\/work\/([^']+)',\s*coverUrl:\s*'(https:\/\/read\.sdabible\.org\/api\/library\/assets\/\d+\/thumb)'/g,
+  )].map(([, slug, coverUrl]) => ({ slug, coverUrl })),
+];
+
+await record('Library books open in the reader', 'Chinese Union Mission library', async (warn) => {
+  if (sdaBibleBooks.length !== 25) {
+    throw new Error(`found ${sdaBibleBooks.length} reader books, expected 11 of Ellen G. White's and 14 others`);
+  }
+  const results = [];
+  for (let start = 0; start < sdaBibleBooks.length; start += 10) {
+    const batch = sdaBibleBooks.slice(start, start + 10);
+    const input = Object.fromEntries(
+      batch.map(({ slug }, index) => [index, { json: { slug, locale: 'tc' } }]),
+    );
+    const answers = await getJson(
+      `${SDA_BIBLE_READER}/api/trpc/${batch.map(() => 'library.work').join(',')}` +
+        `?batch=1&input=${encodeURIComponent(JSON.stringify(input))}`,
+    );
+    if (!Array.isArray(answers) || answers.length !== batch.length) {
+      throw new Error('the reader answered in an unexpected shape');
+    }
+    results.push(...answers);
+  }
+  const problems = [];
+  sdaBibleBooks.forEach(({ slug, coverUrl }, index) => {
+    const work = results[index]?.result?.data?.json;
+    if (!work) problems.push(`${slug} is gone`);
+    else if (!work.hasFullText) problems.push(`${slug} no longer has its text`);
+    else if (coverUrl && `${SDA_BIBLE_READER}${work.coverThumbUrl}` !== coverUrl) {
+      problems.push(`${slug}'s cover moved to ${work.coverThumbUrl}`);
+    }
+  });
+  // A book or two leaving the reader is a warning to replace them; most of
+  // them failing means the reader itself changed.
+  if (problems.length * 2 > sdaBibleBooks.length) {
+    throw new Error(`${problems.length} of ${sdaBibleBooks.length} books failed: ${problems.join('; ')}`);
+  }
+  for (const problem of problems) warn(problem);
+  const covers = sdaBibleBooks.filter(({ coverUrl }) => coverUrl);
+  const coverSamples = await spotCheck(
+    covers,
+    313,
+    ({ coverUrl }) => probe(coverUrl, { binary: true, expectedHosts: ['read.sdabible.org'] }),
+    warn,
+    { label: ({ slug }) => slug },
+  );
+  return `${sdaBibleBooks.length - problems.length} of ${sdaBibleBooks.length} books with their text; covers ${coverSamples}`;
+});
 
 // Every Bible text ships with the app (assets/bible), the verse popup's Hebrew
 // and Greek included, so none is fetched at run time. The BSB's narrator links are inside those files, so check

@@ -441,8 +441,8 @@ checks nearly all of them daily.
 | Bulletin | Google Sheets | `docs.google.com` | The [scheduling roster](#printed-and-digital-bulletin) the bulletin is made from, which Google opens only for signed-in `nyccsda.org` accounts. The app doesn't open it (#553) | Apps Script |
 | Sabbath School | Adventech | `sabbath-school.adventech.io`, `sabbath-school-pdf.adventech.io`, `sabbath-school-resources-media.adventech.io` | Children's lesson catalogs (API), both Adventech quarterlies and Alive in Jesus books, and their lesson PDFs; adult lessons (reader); the week's adult lesson title for the bulletin, in the app and the printed bulletin (API) | In app and link |
 | Sabbath School | Alive in Jesus | `aliveinjesus.info` | Children's age-group websites, opened when this week's lesson isn't found; Babies resources | Link |
-| Library | Chinese Union Mission | `api.sdabible.org`, `cms.sdabible.site` | Cover thumbnails for the Chinese Ellen G. White editions (the books open on EGW Writings) | In app |
-| Library | EGW Writings | `a.egwwritings.org`, `text.egwwritings.org` | Book covers (in app); reading (link) | In app and link |
+| Library | Chinese Union Mission | `read.sdabible.org`, `api.sdabible.org`, `cms.sdabible.site`, App Store | For Chinese readers: Ellen G. White's Chinese editions and 14 other Chinese books, opened in the Mission's online reader (link), with their cover thumbnails (in app); the Explore tab's In-depth Bible Study card, which opens the SDA Bible app's App Store page on iPhone and iPad and the online reader elsewhere (link) | In app and link |
+| Library | EGW Writings | `a.egwwritings.org`, `text.egwwritings.org` | Book covers (in app); reading in English and Spanish (link) | In app and link |
 | Library | Project Gutenberg | `gutenberg.org` | Public-domain Christian classics | Link |
 | Library | Internet Archive | `archive.org` | Scans of public-domain books, such as *The Bruised Reed* and *Pastor Hsi* | Link |
 | Library | HathiTrust | `babel.hathitrust.org` | The 1869 Chinese *Pilgrim's Progress* (天路歷程), for Chinese readers | Link |
