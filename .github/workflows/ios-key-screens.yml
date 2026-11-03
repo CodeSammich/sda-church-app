@@ -790,8 +790,16 @@ jobs:
           test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
           echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
 
+      # The iPhone's and the iPad's (#324), each writing its own results.
       - name: Check the text on the key screens
-        run: node scripts/check-screens.cjs --dir "$SCREENS"
+        run: |
+          set -uo pipefail
+          status=0
+          node scripts/check-screens.cjs --dir "$SCREENS" || status=1
+          cp "$SCREENS/ocr.json" "$SCREENS/ocr-ios.json"
+          cp "$SCREENS/checks.json" "$SCREENS/checks-ios.json"
+          node scripts/check-screens.cjs --dir "$SCREENS" --platform ipad || status=1
+          exit "$status"
 
       - name: Upload the text that was read
         if: always()
@@ -799,7 +807,7 @@ jobs:
         with:
           name: key-screen-checks-${{ inputs.screens_from_run }}
           path: |
-            ${{ env.SCREENS }}/ocr.json
-            ${{ env.SCREENS }}/checks.json
+            ${{ env.SCREENS }}/ocr*.json
+            ${{ env.SCREENS }}/checks*.json
           if-no-files-found: warn
           retention-days: 14
