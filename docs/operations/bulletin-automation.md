@@ -541,7 +541,9 @@ Then:
   `Schedule sheet is missing a Date column`, or `No schedule found for …`. An
   older app keeps showing the last copy it stored, rather than a blank one it
   can't explain. `SCHEDULE_NOT_SET_APP_VERSION` in `BulletinApi.gs` sets the
-  first version that gets the bulletin instead.
+  first version that gets the bulletin instead. This is a
+  [changeover](../feature_designs/bulletin_spreadsheet_tags.md#changeovers):
+  a cleanup issue opens once no older app has asked for 14 days.
 - **The printed bulletin** is still made, with its roster as `TBD`, and the
   dialog says the Sabbath Calendar has no schedule for that Sabbath yet.
 
@@ -892,8 +894,8 @@ After deployment:
 2. generate a test date for each changed location/format;
 3. verify the Google Doc link;
 4. confirm the Doc is in the correct folder;
-5. verify the public `/exec?date=YYYY-MM-DD` response does not contain email,
-   timestamps, Chinese names, pinyin, or full last names; and
+5. verify the public `/exec?date=YYYY-MM-DD&client=check` response does not
+   contain email, timestamps, Chinese names, pinyin, or full last names; and
 6. run the opt-in integration test when production verification is appropriate:
 
 ```bash
@@ -966,6 +968,23 @@ For header changes:
   - **`Sabbath Calendar`:** an entry has one `header` and no alternatives, so
     rename the column straight after approving the deploy. Until then, that
     one field is blank.
+
+For a change to the API's answer that older apps can't handle, such as a
+renamed field or an answer they'd show wrongly:
+
+- **Keep the old answer for older apps** beside the new one. Since 1.6.0 the
+  app sends its version (`appVersion`) with each request, and
+  `isAppVersionAtLeast_` tells them apart, as `SCHEDULE_NOT_SET_APP_VERSION`
+  does.
+- **Mark it as a changeover** in `BULLETIN_CHANGEOVERS` in `BulletinApi.gs`:
+  an `id`, the app version that makes the old answer unneeded (`retiresWith`),
+  and what to remove (`cleanup`).
+- **Leave the timing to the monitor.** Once no older app has asked for a
+  bulletin for 14 days, the daily External Dependency Monitor opens the issue
+  **[changeover] Retire the bulletin API's … changeover**. Then do the cleanup
+  it describes, and remove the entry. A new check of the live API should send
+  `client=check`, so it isn't taken for an older app. See
+  [Changeovers](../feature_designs/bulletin_spreadsheet_tags.md#changeovers).
 
 The API returns only the fields in its schemas and the optional Brooklyn fields
 in `populateOptionalBrooklynScheduleFields_`, so any other new column reaches
