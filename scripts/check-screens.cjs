@@ -330,7 +330,9 @@ const columnEdges = (shot) => {
 const checkIpadLayout = (shot, lines) => {
   if ((shot.platform !== 'ipad' && !shot.split) || shot.wideContent) return [];
   const problems = [];
-  const read = lines.filter((line) => !line.closerLook);
+  // Words and numbers only: iPadOS draws its window's resize grip in the
+  // bottom-right corner, which Vision reads as "/".
+  const read = lines.filter((line) => !line.closerLook && /[\p{L}\p{N}]/u.test(line.text));
   const edges = columnEdges(shot);
   if (edges) {
     const [left, right] = [edges[0] - COLUMN_SLACK, edges[1] + COLUMN_SLACK];

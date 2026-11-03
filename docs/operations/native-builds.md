@@ -996,8 +996,9 @@ Store release, are how iPad layouts get tested.
   once got a Mac before the compiling runner did, and the other five waited 45 minutes.
   Each runner boots the iPad alongside the iPhone while it waits for the app, then shuts
   the iPhone down before the iPad's shots, so the two don't share the runner's memory.
-  The compiling runner boots its iPad after its iPhone shots, unless it boots both during
-  a compile with no cache.
+  The compiling runner boots its iPad only after its iPhone shots: with both booted
+  during a compile, its iPhone shots slowed to a minute each, and the app was gone from
+  one.
 - **Turning the Simulator.** `simctl` can't rotate a Simulator, so the capture uses
   [serve-sim](https://github.com/EvanBacon/serve-sim), an Apache-2.0 tool by an Expo
   developer that drives the Simulator through Apple's private interfaces. `npx`
@@ -1035,8 +1036,8 @@ Store release, are how iPad layouts get tested.
   to 7 more to read each shot's text. A test flags a group whose iPad shots would take
   more than 7 minutes, like the iPhone's 6: a reminder to prune, then to rebalance the
   groups, and only then to raise the limit. The busiest group's runner takes about 10
-  minutes more than it did without the iPad, so the compiling runner's job limit is 60
-  minutes and the others' 120.
+  minutes more than it did without the iPad, so the compiling runner's job limit is 70
+  minutes and the others' 130.
 - **What it can't show.** A window beside another app, or one resized by hand, which no
   command can set up in the Simulator. The layouts follow the window's width, not the
   device, so the Android key screens take the screens a wide screen changes most at Split
