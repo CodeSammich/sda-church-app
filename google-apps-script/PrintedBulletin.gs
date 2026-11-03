@@ -20,9 +20,9 @@
  * UoqMunThenKhung is the only Ming style face in that list.
  *
  * UoqMunThenKhung has every common Traditional character but lacks most
- * Simplified-only ones (张, 陈) and some rare ones, so a Chinese run (a name, a
- * title) with a character it lacks prints wholly in the fallback font instead,
- * and no name mixes two fonts.
+ * Simplified-only ones (张, 陈) and some rare ones. Each character it lacks
+ * prints in the fallback font, and the rest of its name or verse stays in
+ * UoqMunThenKhung.
  *
  * Staff can change any of the fonts without a deploy by setting its Script
  * Property (Apps Script → Project Settings → Script properties) to a name from
@@ -3253,45 +3253,43 @@ function getPrintedBulletinFonts_() {
 }
 
 // A Doc holds one font per run, so Chinese runs get the Chinese font and
-// everything else, digits and Latin punctuation included, the Latin font. A
-// Chinese run the default Chinese font can't print in full gets the fallback
-// font. Coverage is only known for the default font; another font set in the
-// Script Property is used for every Chinese run.
+// everything else, digits and Latin punctuation included, the Latin font. Each
+// character the default Chinese font lacks then gets the fallback font, alone,
+// so one rare character doesn't change the font of a whole verse. Coverage is
+// only known for the default font; another font set in the Script Property is
+// used for every Chinese character.
 function setPrintedFontFamilies_(text, value) {
   var fonts = getPrintedBulletinFonts_();
+  var checkCoverage = fonts.chinese === PRINTED_BULLETIN_TYPE.chineseFont;
   text.setFontFamily(fonts.latin);
   forEachPrintedCjkRun_(value, function (start, end) {
-    var font =
-      fonts.chinese === PRINTED_BULLETIN_TYPE.chineseFont &&
-      !isPrintedRunInDefaultChineseFont_(value, start, end)
-        ? fonts.chineseFallback
-        : fonts.chinese;
-    text.setFontFamily(start, end, font);
+    text.setFontFamily(start, end, fonts.chinese);
+    if (!checkCoverage) {
+      return;
+    }
+    for (var index = start; index <= end; index += 1) {
+      if (!isPrintedCharacterInDefaultChineseFont_(value.charCodeAt(index))) {
+        text.setFontFamily(index, index, fonts.chineseFallback);
+      }
+    }
   });
 }
 
-// Whether UoqMunThenKhung has every character from start to end: those in
-// U+4E00–U+9FFF are looked up in its coverage map, Chinese punctuation and
+// Whether UoqMunThenKhung has the character with this UTF-16 code: one in
+// U+4E00–U+9FFF is looked up in its coverage map, Chinese punctuation and
 // full-width forms count as covered, and rarer characters (Extension A,
-// compatibility ideographs, surrogate pairs) as not.
-function isPrintedRunInDefaultChineseFont_(value, start, end) {
-  for (var index = start; index <= end; index += 1) {
-    var code = value.charCodeAt(index);
-    if (code >= 0x4e00 && code <= 0x9fff) {
-      var offset = code - 0x4e00;
-      var nibble = parseInt(PRINTED_DEFAULT_CHINESE_FONT_COVERAGE_.charAt(offset >> 2), 16);
-      if (!((nibble >> (3 - (offset & 3))) & 1)) {
-        return false;
-      }
-    } else if (
-      (code >= 0x3400 && code <= 0x4dbf) ||
-      (code >= 0xf900 && code <= 0xfaff) ||
-      (code >= 0xd800 && code <= 0xdfff)
-    ) {
-      return false;
-    }
+// compatibility ideographs, both halves of a surrogate pair) as not.
+function isPrintedCharacterInDefaultChineseFont_(code) {
+  if (code >= 0x4e00 && code <= 0x9fff) {
+    var offset = code - 0x4e00;
+    var nibble = parseInt(PRINTED_DEFAULT_CHINESE_FONT_COVERAGE_.charAt(offset >> 2), 16);
+    return Boolean((nibble >> (3 - (offset & 3))) & 1);
   }
-  return true;
+  return !(
+    (code >= 0x3400 && code <= 0x4dbf) ||
+    (code >= 0xf900 && code <= 0xfaff) ||
+    (code >= 0xd800 && code <= 0xdfff)
+  );
 }
 
 function setPrintedCjkBold_(text, value, bold) {
@@ -3465,6 +3463,6 @@ function hasPrintValue_(value) {
 // first, as hexadecimal: 7,920 of 20,992. That's every common Traditional
 // character and the Simplified forms Japanese shares (国, 会), but not most
 // Simplified-only ones (张, 陈). Made from the font's character map (Google
-// Fonts, ofl/uoqmunthenkhung); see isPrintedRunInDefaultChineseFont_.
+// Fonts, ofl/uoqmunthenkhung); see isPrintedCharacterInDefaultChineseFont_.
 var PRINTED_DEFAULT_CHINESE_FONT_COVERAGE_ =
   'd1f6cfc342b4e2d9349737cf20405002a6fa7cdbee9e9220fb370fc75c86b71dd077c4ec00018aec1387dfffb049963b1ab56bb4c01707013877c9b7dc0b56a3865d6aeb7efc0248b3cb8628040dafa4840c4ae8300d3d12256746a215464c50eec0aea1402035b9dffead282dfe47c8a76df744aef8ff0e1e5c021cc36cd6e6dbb26f040de293f0597f0a1e1c63fd0539e47819927d4c5ad54425d7bb00b4f3e6858764d82550f3d7e479aac243fdd1280012a586c6b21070fe0b557efff7b85affe817835e56deb2e248013aa1d79deabbaf282ffd709febd3028267e6202d4b43ca20010fd5c2de29970f5e20071abb7308ef01faf6100f427a2d5ec1234682ce9b9b0143ead1600e91d0acf94ae087239c40a6820b09f0ee59b7d932b06599d5328913cf9192a13fc8404ee1150930d01010b82a9400b3923f09d8040d68b7700444c821cc24c03869e26054e4469460118b02d230f2452a55cb2c5be17c20718ef8ad7f618289c3ddb4b5ee1ac4782532d61c8b30720674f8ec16ba0611504850b994410608c2600420222c01010000213a0100300e605883a05240043000d803146828aa839408dfbd3e58d4a595dd15fd3e029ec1bf48b8976fda96a36ff75222a8ac41ffcebfd4defc8f42400088c80042dc53ba05102040c0e58e3443124ff129400804211ab048004d120029188844a00a01ec004cba1677927d1732184ef5041593849d0a0d1178103eff59210728831407c278e59235f0c8dbbb58fdff9147455d8a46aa53ce7f7cd149fdf8f1cac0ee1d4c140ce3cec832c4950003ae5cc7f144207234a465bcfd85015c7c2b3193e07e9c073054abd380fb70d2c76439d198890f29be14e53593df0a2132cae009da222233fc800112802faf81eefe376223ba97c1d67c929287524bba607f9a0298445d2ffffbfcc00f5f0f61c8424101b12067265f850801d26334b8cba2d1f5fbac129a45a230d0660e6002059b0a07ac0e26f0026889814512f03180b4663c5eb05bed3628a0fb0deb3e86010acc3c390fd304c74fc63208ad8031cac5594d1d814c7e1b2350e7cc4038b36b1c098d874e197c5921672fcb9b2259cec3c4a29268cb4bc0026c8248bdff90d70f1703be4fa542cbd34bfe25f50b4558b52ce2419fd0ca23f8e62d4b5c333c001382607028ccfecef84d11000b0376071995e385d6680af52da1d1836470cc9f207876a08a4520201c7ef0b71dce62224e9893966913513e90c6299430556438795370f286e40b9000c16210308388068908b02b1090700050372cb800b00c61a205d10021e6134a98597f6139d1ba74069208377d3986173bb1001910042481dff15bbb9983e206857fe0e1ba2676cdbaf0601a50ff4c68177cf4b3d400481a215305f276d64c0000681e6b09c025ea1e58002b24898f1966e64afa75f805f01475df5f28ea18260a9911533203a04982ad25316b2d2d5a5c060009298362415c20b179708344004899aa07a8a8eb864900db205e40f2000c91c85bd622475144b71388a002000840861851828c06622c40081f11f000b108c50801494408611968e201c209036a264a2fca208408a12d418088444258c2ad49870e0cdb020c801000aca6ff839822d5e1412846e9002210a109e246ba02a150e04c11dc4020135f2c730b130c03a10090a0adba8b50020186d03114a4e62202946644a61764003026ebbe21c810057bb865d202d150808b33c0800500210a28bb42e3805c0e54ab36ddf1bc0a7f487caf759b81237348643c1074ce35242cd2b040f82bc0541001eb4088b02388228965eae2bebb92927a020289e136a62b1b5d2328da49d800138ec003aa8301003a76b80047091a5003852c925d010411383547100c200c2c05c704a9a11402000408192829434e55a11161942a4630cc2001890924410260400238802ac3c09727a4840121cc2708140322d067c0d064815b488010849609eb8002611fb25f8100f0508a6558803781806382211db5746df73582e52ab140d2868a164006ddea04850acd200b152defc0244880cb590054ce441302810c790351300187900d8a819c0a34067054a5916d967446a42226cfa101aab2af748df8e01bf469be9b86127282f6444041507bb01fedb7013166eed8c928504cf0e01772136d7756b42e664374905d30ebba1800000000000000000000000000000000000002a40d8ecc8181f2a5c037ba082658c322cd462a2c01c252d058de1ce5c842801215022022a36081fb470f5812b4647d68201a0a02764c05d88c27e002301851d042021adc010612d8e1b0a114bc98c094a7b2c550e1b5ac183ae5eeab9b20fa17c0811000e52ab3638200142045161dd1d60400795b571158707e42038810916ec09661a88020001599076232a3a1b04404452a1a898051eb94193e1000a068448c02c20110725f45602810884b400428d9ca74d268000a080982005da1560c0406d0f215e210f4010289a0c9580afb80604045840c0c600172233053202005808100068c3b01104070003814081871c6008b568853084f00d2b3e470a824400911005a154192a20a8130040003201110348b90e0008009235205074e0171004250aa0c31567090a547609423422812cd017c212ccd40813cce2928b42e44302294580c02038a2d290353b113a8436930258000282c13000888b0abf79534245b3a4280ee12b2def0582d4c54a2dfaca24b295d223beb1653aae92b8b74c2981042424b12f90219e904902ab268000000000000000000000000000000000000012142ea8c20603c10e8246e1886e1ffbb9dfda6703afa2c88bc0db5bb1000000000000000000b14db004420044110801822221b42355ab1142900e180076070cc4029f884419a082a286d7458404039e02286bd28113010009e14683c5f066110d32e4e0909780000000000001b1387e1392e0248202ef589e4d617df77f10266ca6577fedef5c72fadf9f1c40032a146805022001668840506204025c20104e84000fe2b8034683d803154a10a383b4ca0c7dfc3ff5f4606090366cc02104809ef8cd6c1722b00419a948056b8018c31584501b5408964b0f92a0184e6f69b363008b40b38840a840a20280ba0290e90401284c38f6c800084110098e0401276a04c807032b820a50f4000000000000000000000000000000000000000000000000000000000000100b1737ac0fdc4605a13bc8e88640000000000000840ab6011a81d809f7e28bfa40eb70ddc91a1ebd8cf7e665a30f1a3508be7524a0920b0d63ac5625aead44a684e1580889294180052d810080006365176a9f1a8481c89dc021f1db20511d8000000000000a152281a0000192177280e1468b8b6c98a04072458e50a00000000000003c2048e58084e80e4d5200660914403324000908502b40625312c7000000000000000858188c8017acb72374910120400a135e360187c0748a000012d001003730180b6485082e16a107980e4048aecbc104c07e07203c02b218100038000000000000000000000000005589a0013c2241112b800134a80c04ec839a02001410020085128b06a011140060520e4000000720000000000000000000004cd6098750506640cfb180fe8de84810b5c01821440c009081200332809f328230000048c0c800000000000000000000000';

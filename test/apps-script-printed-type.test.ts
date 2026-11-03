@@ -341,17 +341,17 @@ describe('printed bulletin type (#603)', () => {
     expect(fontAt('讚美上帝')).toBe('UoqMunThenKhung');
   });
 
-  it('prints a Chinese run with a character the font lacks wholly in the fallback font', () => {
+  it('prints only the characters the font lacks in the fallback font', () => {
     const { paragraphs } = render(bulletin(), 'regular', 'queens');
-    const runFonts = (name: string) => {
+    const fontsOf = (name: string) => {
       const paragraph = paragraphs.find((candidate) => candidate.text.includes(name))!;
       const start = paragraph.text.indexOf(name);
-      return new Set(paragraph.chars.slice(start, start + name.length).map((style) => style.font));
+      return paragraph.chars.slice(start, start + name.length).map((style) => style.font);
     };
 
-    // 张 is Simplified; the whole name prints in one font.
-    expect(runFonts('张美玲')).toEqual(new Set(['Noto Sans SC']));
-    expect(runFonts('陳美玲')).toEqual(new Set(['UoqMunThenKhung']));
+    // 张 is Simplified and not in UoqMunThenKhung; the rest of the name is.
+    expect(fontsOf('张美玲')).toEqual(['Noto Sans SC', 'UoqMunThenKhung', 'UoqMunThenKhung']);
+    expect(fontsOf('陳美玲')).toEqual(['UoqMunThenKhung', 'UoqMunThenKhung', 'UoqMunThenKhung']);
   });
 
   it('takes the fonts from the Script Properties, without a deploy', () => {

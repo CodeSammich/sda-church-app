@@ -118,8 +118,8 @@ Data begins on row 2.
 - `English Name` is the canonical English name used for physical printing.
 - `Chinese Name` is the traditional-Chinese display name. The dictionary normally
   stores Chinese names surname-first. A name prints exactly as typed, in either
-  script. One with a character the bulletin's Chinese font lacks, such as most
-  Simplified-only characters (张, 陈), prints wholly in the fallback font (see
+  script. A character the bulletin's Chinese font lacks, such as most
+  Simplified-only characters (张, 陈), prints in the fallback font (see
   [Type](#type)); in Traditional it prints in the bulletin's font.
 - The private printed renderer derives surname-first and given-name-first pinyin
   aliases from `Chinese Name` with the generated `pinyin-pro` runtime. Pinyin is
@@ -232,10 +232,10 @@ Rules:
 - `English Sermon Title` and `Chinese Sermon Title` are separate on purpose:
   people write both, and neither is machine-translated from the other.
 - Chinese in the title and hymn columns here, and in the print dialog's
-  announcements, prints exactly as typed. A stretch of Chinese with a character
-  the bulletin's Chinese font lacks, such as most Simplified-only characters,
-  prints in the fallback font (see [Type](#type)). The Chinese Bible reference
-  isn't typed: it's built from the English one.
+  announcements, prints exactly as typed. A character the bulletin's Chinese
+  font lacks, such as most Simplified-only characters, prints in the fallback
+  font (see [Type](#type)). The Chinese Bible reference isn't typed: it's built
+  from the English one.
 - `Hymn of Praise` and `Hymn of Response` each hold one hymn, typed in either
   language like the Sabbath School hymns below, such as `AH 1 Praise to the Lord`
   or `第452首 遵命有福`. The script files it as English or Chinese by how it's
@@ -778,10 +778,8 @@ font such as 宋體-繁 (Songti TC) can't be used. In that list,
 Chinese, so it's the default. It has every common Traditional character and the
 Simplified forms Japanese shares (国, 会), but not most Simplified-only ones
 (张, 陈), and it lacks these 67 rare characters of the CUV Bible:
-儹匉咷嗐嘬噝墁戥挓揝搋摞杴橛汊洑玎璫癤瞅矬碡磣秸窨綹繸纍羢臌荽菢蒺蔯蔻薅虼蝘蝻蟥蠓訇誆讟賙跐蹧躥醡鍤鏇鏊鐏颻餂饈騌騸鴞鵀鶘鶿鸇鸕麀麃鼫. A Chinese run (a name, a title, a verse) that has a character it
-lacks prints wholly in the fallback font, so no name mixes two fonts. A run is a
-stretch of Chinese characters and punctuation; a space, a digit or Latin text
-ends it, so each verse of a passage is its own run.
+儹匉咷嗐嘬噝墁戥挓揝搋摞杴橛汊洑玎璫癤瞅矬碡磣秸窨綹繸纍羢臌荽菢蒺蔯蔻薅虼蝘蝻蟥蠓訇誆讟賙跐蹧躥醡鍤鏇鏊鐏颻餂饈騌騸鴞鵀鶘鶿鸇鸕麀麃鼫. Each character it lacks prints in the fallback font, alone; the rest of the name
+or verse stays in UoqMunThenKhung.
 
 Each font can be changed without a deploy, in **Extensions → Apps Script →
 Project Settings → Script properties**. The value must be a font name from
@@ -792,11 +790,11 @@ deleting the property goes back to the default.
 | --- | --- | --- |
 | `PRINTED_BULLETIN_CJK_FONT` | `UoqMunThenKhung` | All Chinese |
 | `PRINTED_BULLETIN_LATIN_FONT` | `Times New Roman` | English, digits, and Latin punctuation |
-| `PRINTED_BULLETIN_CJK_FALLBACK_FONT` | `Noto Sans SC` | Chinese runs UoqMunThenKhung can't print in full |
+| `PRINTED_BULLETIN_CJK_FALLBACK_FONT` | `Noto Sans SC` | Each Chinese character UoqMunThenKhung lacks |
 
 The script knows UoqMunThenKhung's characters (`PRINTED_DEFAULT_CHINESE_FONT_COVERAGE_`)
-but not another font's. With another Chinese font set, every Chinese run uses
-it and the fallback font isn't used.
+but not another font's. With another Chinese font set, every Chinese character
+uses it and the fallback font isn't used.
 
 ## Printed edge cases and content rules
 
@@ -985,7 +983,7 @@ changes the URL and requires a coordinated mobile-app update.
 | Old rows disappeared | They were hidden, not deleted | Unhide rows when historical planning is needed; maintenance is non-destructive |
 | Google Doc is in Trash or not updated | Saved ID points to a trashed/deleted file | Run generation again; the script treats it as missing and creates a new Doc in the configured folder |
 | The Doc, or its printout, has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Shorten the long text in the Doc (an announcement, a sermon title). If every week overflows, restore the renderer's panel/gutter structure; never clip text or go under 10 points to fit |
-| A name or title prints in a plainer Chinese font than the rest | It has a Simplified or rare character the bulletin's Chinese font lacks, so the whole run uses the fallback font | Nothing, if it's spelled as intended. A Simplified name or title typed in Traditional prints in the bulletin's font; a rare character always prints in the fallback font. See [Type](#type) |
+| A Chinese character prints in a plainer font than the rest | It's a Simplified or rare character the bulletin's Chinese font lacks, so it uses the fallback font | Nothing, if it's spelled as intended. A Simplified name or title typed in Traditional prints in the bulletin's font; a rare character always prints in the fallback font. See [Type](#type) |
 | All Chinese, or all English, prints in the wrong font | `PRINTED_BULLETIN_CJK_FONT` or `PRINTED_BULLETIN_LATIN_FONT` names a font Docs doesn't offer | Fix the name from Docs' **Font → More fonts** list, or delete the Script Property for the default |
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
 | Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten (on the Sabbath School hymns row, an unmapped English hymn repeats on purpose) | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
