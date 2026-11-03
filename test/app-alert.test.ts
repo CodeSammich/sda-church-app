@@ -42,6 +42,9 @@ describe('the app popup', () => {
     expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
     const answers = screen.getAllByText(/^(Use mobile data|Wait for Wi-Fi|Cancel)$/);
     expect(answers.map((text) => text.props.children)).toEqual(['Use mobile data', 'Wait for Wi-Fi', 'Cancel']);
+    // They wrap at large text sizes: Paper's Button cut "Usar datos móviles"
+    // to "Usar datos m..." at the largest.
+    for (const answer of answers) expect(answer.props.numberOfLines).toBeUndefined();
 
     await fireEvent.press(screen.getByText('Use mobile data'));
     expect(useMobileData).toHaveBeenCalledTimes(1);

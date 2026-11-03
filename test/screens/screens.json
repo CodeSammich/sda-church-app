@@ -214,13 +214,13 @@
     {
       "name": "bible-audio-mobile-data",
       "group": "bible-reading",
-      "$comment": "The question Offline Bible Audio asks before a download on mobile data (#611), by popup=mobile-data in the preview build, for Souer's whole Bible: the app's own popup, not the system's alert, with its answers as stacked buttons, Use mobile data first and Cancel last, and no X. In Spanish at the largest text sizes, the longest answers must still show whole. The text readers may read the curly apostrophe in \"You’re\" as a straight one, and drop the hyphen in \"Wi-Fi\".",
+      "$comment": "The question Offline Bible Audio asks before a download on mobile data (#611), by popup=mobile-data in the preview build, for Souer's whole Bible: the app's own popup, not the system's alert, with its answers as stacked buttons, Use mobile data first and Cancel last, and no X. In Spanish at the largest text sizes, the title and the longest answer may wrap, but no answer may be cut short with an ellipsis, as Paper's one-line Button cut \"Usar datos m...\" (run 41714586130). The text readers may read the curly apostrophe in \"You’re\" as a straight one, and drop the hyphen in \"Wi-Fi\".",
       "path": "you/audio-downloads?narrator=souer&popup=mobile-data",
       "variants": ["default", "es-xl-ios-large-text", "es-xl-android-font-max"],
       "variantRules": {
         "default": { "mustShowLines": ["^Use mobile data\\?$", "^You.re on mobile data", "^Use mobile data$", "^Wait for Wi-?Fi$", "^Cancel$"], "mustNotShowLines": ["^Close$", "^CANCEL$", "^OK$"] },
-        "es-xl-ios-large-text": { "mustShowLines": ["^¿Usar datos móviles\\?$", "^Usar datos móviles$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$"] },
-        "es-xl-android-font-max": { "mustShowLines": ["^¿Usar datos móviles\\?$", "^Usar datos móviles$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "^CANCELAR$"] }
+        "es-xl-ios-large-text": { "mustShowLines": ["^¿Usar datos", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "(\\.\\.\\.|…)$"] },
+        "es-xl-android-font-max": { "mustShowLines": ["^¿Usar datos", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "^CANCELAR$", "(\\.\\.\\.|…)$"] }
       }
     },
     {

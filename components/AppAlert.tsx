@@ -1,11 +1,12 @@
 import { PopupHeader } from '@/components/PopupHeader';
 import { PopupScrollView } from '@/components/PopupScrollView';
+import { WrappingButton } from '@/components/WrappingButton';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { useContext, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, Text } from 'react-native-paper';
+import { Dialog, Portal, Text } from 'react-native-paper';
 
 /**
  * The app's own popups, in place of the system's alerts (Alert.alert), which
@@ -124,7 +125,7 @@ export function AppAlertHost() {
         {asks && (
           <View style={styles.answers}>
             {answers.map((button, index) => (
-              <Button
+              <WrappingButton
                 key={button.text}
                 mode={index === 0 ? 'contained' : 'outlined'}
                 buttonColor={index === 0 && button.style === 'destructive' ? theme.colors.error : undefined}
@@ -136,14 +137,15 @@ export function AppAlertHost() {
                     : undefined
                 }
                 onPress={() => close(button)}
+                style={styles.answer}
               >
                 {button.text}
-              </Button>
+              </WrappingButton>
             ))}
             {cancel && (
-              <Button mode="text" onPress={() => close(cancel)}>
+              <WrappingButton mode="text" onPress={() => close(cancel)} style={styles.answer}>
                 {cancel.text}
-              </Button>
+              </WrappingButton>
             )}
           </View>
         )}
@@ -163,6 +165,8 @@ const styles = StyleSheet.create({
   message: { paddingBottom: 8, paddingHorizontal: 24 },
   // With no buttons below, as much room under the message as above the title.
   noticeMessage: { paddingBottom: 24 },
-  // Stacked, so long answers in large text still fit, as "Usar datos móviles".
+  // Stacked, and wrapping (Paper's Button keeps to one line), so long answers
+  // in large text still fit, as "Usar datos móviles".
   answers: { gap: 8, paddingBottom: 20, paddingHorizontal: 24, paddingTop: 12 },
+  answer: { alignSelf: 'stretch' },
 });
