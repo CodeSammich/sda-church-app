@@ -20,12 +20,13 @@ export const CHINESE_505_DIRECTORY_URL =
 export interface Chinese505Hymn {
   number: number;
   title: string;
-  pageId: number;
+  /** The hymn's page on m.zgaxr.com. A few hymns have none (#606). */
+  pageId?: number;
 }
 
 interface Chinese505HymnMetadata {
   title: string;
-  pageId: number;
+  pageId?: number;
 }
 
 const CHINESE_505_HYMNAL = hymnalData as Record<string, Chinese505HymnMetadata>;
@@ -42,7 +43,7 @@ export const getChinese505HymnUrl = (hymnNumber?: number) => {
   if (hymnNumber === undefined) return CHINESE_505_DIRECTORY_URL;
 
   const hymn = CHINESE_505_HYMNAL[hymnNumber.toString()];
-  if (!hymn) return CHINESE_505_DIRECTORY_URL;
+  if (!hymn?.pageId) return CHINESE_505_DIRECTORY_URL;
 
   return `https://m.zgaxr.com/index.php?m=content&c=index&a=show&catid=59&id=${hymn.pageId}`;
 };

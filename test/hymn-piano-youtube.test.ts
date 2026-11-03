@@ -112,7 +112,7 @@ describe('scripts/map-chinese-505-piano-youtube.mjs', () => {
 
     expect(mapping.playlistId).toBe(piano505Data.playlistId);
     expect(mapping.videos).toEqual({ 1: 'JxR9rqNut-s', 48: 'cutShort048', 63: 'reviewed063' });
-    expect(log).toContain('Mapped 3 of 499 hymns from 6 videos.');
+    expect(log).toContain('Mapped 3 of 505 hymns from 6 videos.');
     expect(log).toContain('493: "靠主得勝" (hymnal: "赞美耶和华")');
   });
 });

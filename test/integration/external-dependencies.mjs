@@ -305,7 +305,8 @@ for (const [name, catId, path] of hymnCatalogs) {
     const data = await readJson(path);
     const url = `https://m.zgaxr.com/index.php?m=content&c=index&a=lists&catid=${catId}`;
     const actual = normalizedIds(await getText(url), catId);
-    const expected = new Set(Object.values(data).map(({ pageId }) => pageId));
+    // A few 505 hymns have no page, only a title (#606).
+    const expected = new Set(Object.values(data).flatMap(({ pageId }) => (pageId ? [pageId] : [])));
     assertContainsSet(actual, expected, `${name} directory`);
     return `${expected.size} mapped page IDs present (${actual.size} published)`;
   });
@@ -313,7 +314,7 @@ for (const [name, catId, path] of hymnCatalogs) {
   await record('daily hymn page samples', name, async (warn) => {
     const data = await readJson(path);
     return spotCheck(
-      Object.values(data),
+      Object.values(data).filter(({ pageId }) => pageId),
       Number(catId),
       ({ pageId }) => probe(`https://m.zgaxr.com/index.php?m=content&c=index&a=show&catid=${catId}&id=${pageId}`),
       warn,

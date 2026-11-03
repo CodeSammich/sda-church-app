@@ -167,9 +167,10 @@ describe('generated external dependency URLs', () => {
   });
 
   it('generates every Chinese hymnal page URL from its published page ID', () => {
-    const urls505 = getSortedChinese505Hymns().map(({ number }) =>
-      getChinese505HymnUrl(number),
-    );
+    // Six 505 hymns have no page online and open the directory (#606).
+    const urls505 = getSortedChinese505Hymns()
+      .filter(({ pageId }) => pageId)
+      .map(({ number }) => getChinese505HymnUrl(number));
     const urls506 = getSortedChinese506Hymns().map(({ number }) =>
       getChinese506HymnUrl(number),
     );
