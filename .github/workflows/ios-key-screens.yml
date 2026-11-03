@@ -54,10 +54,12 @@ jobs:
     # Expo SDK 58's November patch releases (#604) its compile alone took
     # 28.6 minutes, so a 40-minute limit cancelled the job. 50 still leaves
     # room for a slow compile or the one 11-minute app install seen, without a
-    # stuck job holding a Mac for an hour. The other batches get 90, since
-    # their time includes waiting for the compiling runner to get a Mac, which
-    # GitHub can delay when its Mac runners are in short supply.
-    timeout-minutes: ${{ matrix.builds && 50 || 90 }}
+    # stuck job holding a Mac for an hour. The other batches get 110, since
+    # their time includes waiting for the compiling runner: up to 45 minutes
+    # while GitHub, short of Mac runners, keeps it queued, then its 50, then
+    # about 10 to install the app and capture their screens. 45 + 50 + 10 is
+    # 105, plus a margin, so the release PR's run doesn't fail on timing alone.
+    timeout-minutes: ${{ matrix.builds && 50 || 110 }}
     permissions:
       contents: read
       # To see when the shared app is ready, and whether its runner failed.
