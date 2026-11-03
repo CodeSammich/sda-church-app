@@ -226,7 +226,7 @@
     {
       "name": "bible-audio-notifications-question",
       "group": "bible-reading",
-      "$comment": "The app's own question before the phone's, the first time a long download starts (#610), by popup=notifications in the preview build: what the notifications are for, that the download keeps going either way, and where to turn them off, with Allow first and Not now. iOS asks only for a word when it's done, so its words are shorter. The text readers may read the curly apostrophes as straight ones.",
+      "$comment": "The app's own question before the phone's, the first time a long download starts (#610), by popup=notifications in the preview build: what the notifications are for, that the download keeps going either way, and where to turn them off, with Allow first and Not now. iOS asks only for a word when it's done, so its words are shorter. The text readers may read the curly apostrophes as straight ones, and the Chinese message wraps inside 下載都會繼續 on the Android phone, so the rule checks 不論是否允許.",
       "path": "you/audio-downloads?narrator=cuv-mandarin&popup=notifications",
       "variants": ["default", "zh"],
       "variantRules": {
@@ -242,7 +242,7 @@
           "mustShowLines": [
             { "line": "^顯示這次下載的進度", "platforms": ["android"] },
             { "line": "^下載完成時通知您", "platforms": ["ios"] },
-            "下載都會繼續", "^允許$", "^以後再說$"
+            "不論是否允許", "^允許$", "^以後再說$"
           ],
           "mustNotShowLines": ["^關閉$"]
         }
