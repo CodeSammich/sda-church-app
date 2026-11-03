@@ -3,7 +3,7 @@ import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
 } from '@/constants/ExternalBrandAssets';
-import { WrappingActionButton } from '@/components/WrappingActionButton';
+import { labelsFitSideBySide, WrappingActionButton } from '@/components/WrappingActionButton';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -13,7 +13,7 @@ import {
 } from '@/constants/ExternalLinks';
 import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
-import { contentColumnStyle, contentColumnWithin, DESIGN_TOKENS } from '@/constants/Layout';
+import { contentColumnStyle, contentColumnWithin, DESIGN_TOKENS, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
@@ -53,15 +53,10 @@ export default function HomeScreen() {
   // time would update the tab navigator, and every tab's header, as often.
   const screenOptions = useMemo(() => ({ heroUnderStatusBar }), [heroUnderStatusBar]);
   const { textScale } = useTextSize();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width: windowWidth } = useWindowDimensions();
   const effectiveTextScale = Math.max(1, fontScale * textScale);
   // Keep the home card grid at two columns at every text zoom level.
   const useStackedLayout = false;
-  // Once the app's and the phone's text sizes add up to 2× or more, the verse
-  // card's two buttons each get a full row, and the Sabbath countdown's label
-  // sits above the countdown, so words like "Compartir" and "Sabbath" are
-  // never cut off or broken mid-word (#385).
-  const stackHeroActions = effectiveTextScale >= 2;
   const styles = useMemo(
     () => createStyles(textScale, effectiveTextScale, useStackedLayout),
     [effectiveTextScale, textScale, useStackedLayout],
@@ -149,6 +144,20 @@ export default function HomeScreen() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  // Once the app's and the phone's text sizes add up to 2× or more, the verse
+  // card's two buttons each get a full row, and the Sabbath countdown's label
+  // sits above the countdown, so words like "Compartir" and "Sabbath" are
+  // never cut off or broken mid-word (#385). So they do, too, wherever a word
+  // of either button's label wouldn't fit beside the other button: on a narrow
+  // phone in Spanish, or in a narrow iPad window (#324).
+  const stackHeroActions =
+    effectiveTextScale >= 2 ||
+    !labelsFitSideBySide(
+      [(labels as any).shareVerse, (labels as any).readVerse],
+      getHeroActionsRowWidth(windowWidth, effectiveTextScale),
+      HERO_ACTIONS_GAP,
+      effectiveTextScale,
+    );
 
   const [verseOfTheDay, setVerseOfTheDay] = useState<{
     text: string;
@@ -603,13 +612,23 @@ export default function HomeScreen() {
   );
 }
 
+// The verse card's sides, its buttons' row's own padding, and the gap between
+// the two buttons.
+const HERO_SIDE_PADDING = 24;
+const HERO_ACTIONS_PADDING = 16;
+const HERO_ACTIONS_GAP = 12;
+
+/** The width the verse card's buttons share, within the content column. */
+const getHeroActionsRowWidth = (windowWidth: number, effectiveTextScale: number) =>
+  getContentWidth(windowWidth, effectiveTextScale) - 2 * HERO_SIDE_PADDING - 2 * HERO_ACTIONS_PADDING;
+
 const createStyles = (
   textScale: Parameters<typeof scaleTypographyMetric>[1],
   effectiveTextScale: number,
   useStackedLayout: boolean,
 ) => StyleSheet.create({
   hero: {
-    paddingHorizontal: 24,
+    paddingHorizontal: HERO_SIDE_PADDING,
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomLeftRadius: 28,
@@ -627,11 +646,11 @@ const createStyles = (
     marginBottom: 8,
   },
   heroActions: {
-    ...contentColumnWithin(24, effectiveTextScale),
+    ...contentColumnWithin(HERO_SIDE_PADDING, effectiveTextScale),
     flexDirection: useStackedLayout ? 'column' : 'row',
     marginTop: 16,
-    gap: 12,
-    paddingHorizontal: 16,
+    gap: HERO_ACTIONS_GAP,
+    paddingHorizontal: HERO_ACTIONS_PADDING,
   },
   heroActionButton: {
     flex: useStackedLayout ? undefined : 1,
