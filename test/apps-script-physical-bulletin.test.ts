@@ -843,28 +843,87 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(runInContext(`formatPrintedAnnouncementNumberedText_('', 2)`, context)).toBe('');
   });
 
-  it('keeps the DAF note with the left-side giving content', () => {
+  it('prints the giving text without the stocks line that pushed it onto a second page', () => {
+    const printed = (reuseLeadingParagraph: boolean) => {
+      const makeParagraph = (initial: string) => {
+        const paragraph = {
+          text: initial,
+          getType: () => 'PARAGRAPH',
+          asParagraph: () => paragraph,
+          getText: () => paragraph.text,
+          setText: (value: string) => {
+            paragraph.text = value;
+          },
+          setAlignment: () => undefined,
+          setLineSpacing: () => undefined,
+          setSpacingBefore: () => undefined,
+          setSpacingAfter: () => undefined,
+          editAsText: () => ({}),
+        };
+        return paragraph;
+      };
+      // A footer cell after clear(): one empty paragraph.
+      const paragraphs = [makeParagraph('')];
+      const cell = {
+        getNumChildren: () => paragraphs.length,
+        getChild: (index: number) => paragraphs[index],
+        appendParagraph: (value: string) => {
+          const paragraph = makeParagraph(value);
+          paragraphs.push(paragraph);
+          return paragraph;
+        },
+      };
+      const context = loadAppsScript({
+        DocumentApp: {
+          ElementType: { PARAGRAPH: 'PARAGRAPH' },
+          HorizontalAlignment: { CENTER: 'CENTER' },
+        },
+      });
+      Object.assign(context, { styleText_: () => undefined, testCell: cell });
+      runInContext(
+        `appendGivingText_(testCell, { reuseLeadingParagraph: ${reuseLeadingParagraph} })`,
+        context,
+      );
+      return paragraphs.map((paragraph) => paragraph.text);
+    };
+
+    for (const reuseLeadingParagraph of [true, false]) {
+      const lines = printed(reuseLeadingParagraph);
+      if (!reuseLeadingParagraph) {
+        // Not asked to reuse it, the cell's own empty paragraph stays first.
+        expect(lines.shift()).toBe('');
+      }
+      // The heading, the half spacer, and the cash-offering line in Chinese
+      // and English, with no empty paragraph left over. One more line pushed
+      // the bulletin onto a second page at the 10-point minimum, so a new line
+      // needs room made for it first.
+      expect(lines).toHaveLength(4);
+      expect(lines[0]).toBe('Tithes & Offerings | 什一奉獻與自由奉獻');
+      expect(lines[1]).toBe(' ');
+      expect(lines[2]).toMatch(/^現金奉獻：/);
+      expect(lines[3]).toMatch(/^Cash offerings: /);
+      // Stock gifts stay in the app's Give page, in every language.
+      for (const line of lines) {
+        expect(line).not.toMatch(/stocks?\b|equities|donor[- ]advised|\bEIN\b/i);
+      }
+    }
+
+    const givePage = readFileSync(join(process.cwd(), 'app/(tabs)/home/give.tsx'), 'utf8');
+    expect(givePage).toContain("dafTitle: 'Stocks/Equities'");
+    expect(givePage).toContain('EIN 11-3004814');
+  });
+
+  it('lists the giving QR codes for each location', () => {
     const source = readFileSync(
       join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'),
       'utf8',
     );
-    const givingTextStart = source.indexOf('function appendGivingText_');
-    const givingQrStart = source.indexOf('function appendGivingQrPlaceholders_');
     const givingQrItemsStart = source.indexOf('function getGivingQrItems_');
-    const givingText = source.slice(givingTextStart, givingQrStart);
-    const givingQr = source.slice(givingQrStart, source.indexOf('\nfunction ', givingQrStart + 10));
     const givingQrItems = source.slice(
       givingQrItemsStart,
       source.indexOf('\nfunction ', givingQrItemsStart + 10),
     );
 
-    expect(givingText.replace(/\\'/g, "'")).toContain(
-      "Stocks/equities: We recommend donor-advised funds; see our church's mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.",
-    );
-    expect(givingText).toContain('contact treasury@nyccsda.org.');
-    expect(givingText).toContain('Nonprofit EIN: 11-3004814.');
-    expect(givingText).toContain('Tithes & Offerings | 什一奉獻與自由奉獻');
-    expect(givingQr).not.toContain('Stocks/equities:');
     expect(givingQrItems).toContain("'Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'");
 
     const context = loadAppsScript({});

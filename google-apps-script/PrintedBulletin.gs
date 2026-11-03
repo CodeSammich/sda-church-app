@@ -2622,13 +2622,9 @@ function appendGivingText_(cell, options) {
     false,
     0.9,
   );
-  appendCompactCenteredText_(
-    cell,
-    'Stocks/equities: We recommend donor-advised funds; see our church\'s mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
-    PRINTED_BULLETIN_TYPE.bodySize,
-    false,
-    0.9,
-  );
+  // Stock and donor-advised fund gifts are left to the app's Give page, which
+  // has the EIN and the steps in every language. An English-only line for them
+  // here pushed the bulletin onto a second page at the 10-point minimum.
 }
 
 function appendGivingQrPlaceholders_(cell, options) {
