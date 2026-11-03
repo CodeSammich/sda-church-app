@@ -629,8 +629,9 @@ once, one per key-screen group, numbered in the groups' order: **iOS key screens
 **iOS key screens join** then joins the batches, on Linux, and uploads two downloads
 (14-day retention):
 
-- `ios-key-screens-<number>-<run>`, which the review comment links: the key screens in
-  `screens/ios/<screen>-<variant>.png` (described below), the App Store copies, and the
+- `ios-key-screens-<number>-<run>`, which the review comment links as the iOS (iPhone and
+  iPad) screenshots: the key screens in `screens/ios/<screen>-<variant>.png` and
+  `screens/ipad/<screen>-<variant>.png` (described below), the App Store copies, and the
   text checks.
 - The download ending in `-arm64`: the app, `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`,
   and a screenshot of its first screen, `…-arm64-first-screen.png`, named like the
@@ -949,7 +950,7 @@ pass or fail them, and a test makes sure of it.
 release pull request into `main`, the iOS preview posts a notice when the pull request
 opens or gets a push (the screenshots take 30 to 40 minutes, most of it the
 [Android key screens](#android-key-screens)' build) and removes the comment with the
-earlier, now out-of-date screenshots. When the iPhone run and the Android run for that
+earlier, now out-of-date screenshots. When the iOS run (iPhone and iPad) and the Android run for that
 commit have both finished, it replaces the notice with a comment linking both
 platforms' screenshots, so one review covers both. Its last job, **Screenshots reviewed**, waits
 in the `screenshot-review` environment until a **release-approvers** member approves.
@@ -1086,7 +1087,7 @@ workflow's run on the same commit. It then links both downloads, says whether bo
 passed, and says how long each run took, from its start until its join job finished. Its
 **Screenshots reviewed** approval covers both. To recheck an earlier
 run's Android screenshots with new rules, start this workflow by hand with
-**screens_from_run**, as for the iPhone.
+**screens_from_run**, as for iOS.
 
 **The phone.** The emulator is the size of the best-selling Android phone where most
 Adventists live, set under `android.phone` in `screens.json`. Of the church's 24.4

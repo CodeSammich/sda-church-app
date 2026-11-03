@@ -562,7 +562,7 @@ jobs:
           <!-- key-screens-review pending sha=$SHA -->
           ### 📸 Screenshots on the way
 
-          The preview is taking the iPhone, iPad, and Android screenshots for commit \`${SHA:0:7}\`. That takes 30 to 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
+          The preview is taking the iOS (iPhone and iPad) and Android screenshots for commit \`${SHA:0:7}\`. That takes 30 to 40 minutes ([progress]($progress)). When they're ready, this comment is replaced with them, what to look for, and how to approve them.
 
           Until an approver reviews them, the **Screenshots reviewed** check waits.
           BODY
@@ -571,7 +571,7 @@ jobs:
 
   review-comment:
     # Tells the release PR's reviewer where this commit's screenshots are, the
-    # iPhone's and Android's, and how to approve them, for the "Screenshots
+    # iOS (iPhone and iPad) and Android ones, and how to approve them, for the "Screenshots
     # reviewed" check (#331, #372). Each run replaces the previous comment, so
     # the one on the PR is always current.
     needs: simulator
@@ -652,8 +652,8 @@ jobs:
             fi
           }
           run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
-          download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone and iPad screenshots')"
-          app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
+          download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"
+          app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iOS Simulator app')"
           if [ -n "$ANDROID_RUN_ID" ]; then
             android="$(screenshots "$ANDROID_RUN_ID" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
           else
@@ -662,7 +662,7 @@ jobs:
           if [ "$CHECKS" = success ] && [ "$ANDROID_CHECKS" = success ]; then
             checks="✅ The automatic checks passed on both platforms: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
           else
-            checks="⚠️ **The automatic checks failed or didn't finish** (iPhone: ${CHECKS:-unknown}, Android: ${ANDROID_CHECKS:-not finished}). Start with the runs linked below to see why."
+            checks="⚠️ **The automatic checks failed or didn't finish** (iOS: ${CHECKS:-unknown}, Android: ${ANDROID_CHECKS:-not finished}). Start with the runs linked below to see why."
           fi
           # The comment posts without them if GitHub doesn't say.
           ios_took="$(took "$RUN_ID" 'iOS key screens join')" || ios_took=""
@@ -671,9 +671,9 @@ jobs:
             android_took="$(took "$ANDROID_RUN_ID" 'Android key screens join')" || android_took=""
           fi
           if [ -n "$ios_took" ] && [ -n "$android_took" ]; then
-            timing="⏱️ The iPhone run took $ios_took and the Android run $android_took, each from its start until its screenshots were ready."
+            timing="⏱️ The iOS run took $ios_took and the Android run $android_took, each from its start until its screenshots were ready."
           elif [ -n "$ios_took" ]; then
-            timing="⏱️ The iPhone run took $ios_took, from its start until its screenshots were ready."
+            timing="⏱️ The iOS run took $ios_took, from its start until its screenshots were ready."
           elif [ -n "$android_took" ]; then
             timing="⏱️ The Android run took $android_took, from its start until its screenshots were ready."
           else
@@ -685,13 +685,13 @@ jobs:
           <!-- key-screens-review sha=$SHA -->
           ### 📸 Screenshots to review
 
-          The iPhone, iPad, and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
+          The iOS (iPhone and iPad) and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
 
           $checks
 
           $timing
 
-          1. **Download** $download and $android, and open their \`screens/ios/\`, \`screens/ipad/\`, and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad turned sideways), and \`zh\`, \`zh-cn\`, and \`es\`.
+          1. **Download** $download and $android, and open their \`screens/ios/\` (iPhone), \`screens/ipad/\`, and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's or iPad's own large text), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad turned sideways, in a screen's own language as \`landscape-zh\` and so on, and at 200% as \`landscape-xl\`), \`w320\` to \`w981\` (Android at an iPad's Split View and Slide Over widths), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:
              - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
              - on the iPad, a page's text and buttons spread across the whole screen instead of staying in a centered column, or a tab label far from its icon;
@@ -702,7 +702,7 @@ jobs:
              The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
           3. **Approve:** $approve
 
-          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
+          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iOS download's \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
 
           To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
           BODY

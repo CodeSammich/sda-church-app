@@ -350,9 +350,9 @@ describe('iOS key screens', () => {
   it('links only the screenshots in the review comment, and offers the app separately', () => {
     const comment = workflow.slice(workflow.indexOf('\n  review-comment:\n'), workflow.indexOf('\n  screenshots-reviewed:\n'));
     expect(comment).toContain(
-      `download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone and iPad screenshots')"`,
+      `download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"`,
     );
-    expect(comment).toContain(`app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"`);
+    expect(comment).toContain(`app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iOS Simulator app')"`);
   });
 
   it('re-checks an earlier run from its screenshots, or from the app download of runs before the split', () => {
