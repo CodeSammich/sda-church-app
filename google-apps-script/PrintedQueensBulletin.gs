@@ -51,7 +51,7 @@ function appendAnnouncementsPanel_(cell, bulletin, nextBulletin) {
   // Keep this separate from the mobile bulletin: announcements are intentionally
   // not rendered digitally because their content and formatting are fluid and
   // they are already delivered in person and on the livestream.
-  appendCenteredText_(cell, 'Announcements | 報告事項', 10.5, true);
+  appendCenteredText_(cell, 'Announcements | 報告事項', PRINTED_BULLETIN_TYPE.subheadingSize, true);
   appendPrintedAnnouncementsTable_(
     cell,
     getPhysicalPrintedAnnouncementEntries_(bulletin, 'queens'),
@@ -96,7 +96,7 @@ function appendStudyPanel_(cell, bulletin) {
     cell,
     printedBilingualText_('THE CHURCH AT STUDY', '安息日學'),
   );
-  appendCenteredText_(cell, PRINTED_BULLETIN_CONFIG.studyTime, 9, false);
+  appendCenteredText_(cell, PRINTED_BULLETIN_CONFIG.studyTime, PRINTED_BULLETIN_TYPE.bodySize, false);
   var studyRows = [
     [printedBilingualText_('SS Chair', '安息日學主席'), '', printValue_(location.ssChair)],
     [printedBilingualText_('Opening Prayer', '開會禱告'), '', printValue_(location.ssOpeningPrayer)],
@@ -115,7 +115,7 @@ function appendWorshipPanel_(cell, bulletin, includeClosingRows) {
     cell,
     printedBilingualText_('THE CHURCH AT WORSHIP', '崇拜聚會'),
   );
-  appendCenteredText_(cell, PRINTED_BULLETIN_CONFIG.worshipTime, 9, false);
+  appendCenteredText_(cell, PRINTED_BULLETIN_CONFIG.worshipTime, PRINTED_BULLETIN_TYPE.bodySize, false);
   var worshipRowsBeforeSermon = [
     [printedBilingualText_('Chairman', '主席'), '', printValue_(location.chairPastoralPrayer)],
     [printedBilingualText_('Doxology', '頌讚'), printedBilingualText_('SDAH 694 — Praise God', '第497首 讚美上帝'), printedBilingualText_('Congregation', '會眾')],
@@ -206,7 +206,7 @@ function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslat
     for (var columnIndex = 0; columnIndex < 2; columnIndex += 1) {
       styleTableCell_(
         row.getCell(columnIndex),
-        rowIndex === 0 ? 9 : rowIndex === 1 ? 9 : 9,
+        PRINTED_BULLETIN_TYPE.bodySize,
         rowIndex < 2,
         alignments[rowIndex][columnIndex],
       );
@@ -221,23 +221,6 @@ function appendBibleReadingPanel_(cell, location, showPlaceholder, bibleTranslat
       row.getCell(columnIndex).setPaddingBottom(0);
     }
   }
-}
-
-function appendQueensClosingRows_(cell, bulletin) {
-  var location = bulletin.queens;
-  appendProgramTable_(cell, [
-    [
-      printedBilingualText_('Benediction', '祝禱'),
-      '',
-      printValue_(location.sermon),
-    ],
-    [
-      printedBilingualText_('Postlude', '後奏'),
-      printedBilingualText_('SDAH 690 — Dismiss Us, Lord', '第504首 散會頌'),
-      printedBilingualText_('Congregation', '會眾'),
-    ],
-  ]);
-  appendSilentPrayerHeading_(cell, 'Silent Prayer', '請默禱之後散會');
 }
 
 function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
@@ -285,11 +268,12 @@ function renderCommunionPrintedBulletinDocument_(body, bulletin, nextBulletin) {
 
 function appendCommunionVerticalGivingPanel_(cell) {
   appendSpacer_(cell);
+  // As in the Queens and Brooklyn footers, the giving heading sits right under
+  // the divider.
   appendCommunionSectionDivider_(cell);
-  appendSpacer_(cell);
   appendGivingText_(cell);
   appendSpacer_(cell);
-  appendGivingQrPlaceholders_(cell);
+  appendGivingQrPlaceholders_(cell, { compact: true });
 }
 
 function appendCommunionSectionDivider_(cell) {
@@ -299,5 +283,6 @@ function appendCommunionSectionDivider_(cell) {
     ruleParent.asParagraph().setLineSpacing(1);
     ruleParent.asParagraph().setSpacingBefore(0);
     ruleParent.asParagraph().setSpacingAfter(0);
+    setPrintedRuleParagraphSize_(ruleParent.asParagraph());
   }
 }

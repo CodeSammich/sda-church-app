@@ -101,6 +101,25 @@ jobs:
             });
             core.info(`Alert issue: ${result.action}`);
 
+      # The bulletin API's changeovers (#580): a way of answering kept for
+      # older apps opens a cleanup issue, once, after no older app has called
+      # for 14 days. The logic lives in scripts/bulletin-changeovers.cjs.
+      - name: Open cleanup issues for retired bulletin changeovers
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
+        with:
+          script: |
+            const changeovers = require(`${process.env.GITHUB_WORKSPACE}/scripts/bulletin-changeovers.cjs`);
+            await changeovers.openCleanupIssues({
+              github,
+              context,
+              core,
+              assignees: changeovers.parseAssignees(process.env.ALERT_ASSIGNEES),
+            });
+
       - name: Mark the workflow unhealthy
         if: steps.dependency-check.outcome == 'failure'
         run: |

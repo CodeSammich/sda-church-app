@@ -23,7 +23,7 @@ The EGW collection retains original, text-free thematic illustrations generated 
 
 The cards request small, remotely hosted cover thumbnails from the official provider for the current app language. English and Spanish covers use the book IDs already published by EGW Writings; Chinese covers use the Chinese Union Mission's live catalog and validate image URLs against the Mission's storage host. Spanish falls back to English, Chinese falls back to English, and all languages finally fall back to the bundled original artwork. No provider cover or linked book text is copied into the repository. The provider thumbnails are used only for identifying books that lead to their official reader editions. The White Estate copyright notice reserves rights in its website and app content, so this limited navigational thumbnail use is a fair-use assessment rather than an express license.
 
-The Library page shows each shelf as a row of covers that scrolls sideways, in this order: Christian Classics, Children, Youth / Young Adults, Ellen G. White, and Adventist Pioneers (`LIBRARY_SHELVES` in `features/library/LibraryShelves.ts`). General Christian books come first so a visitor meets the wider Christian shelf before the denomination's own writers. A new book lengthens its row rather than the page, and a new kind of book becomes a new row. Within a shelf, a few chosen books lead (`LIBRARY_SHELF_LEADERS`): *The Bruised Reed* in Christian Classics, *Pastor Hsi* in Youth / Young Adults, and in the Ellen G. White shelf, *Sabbath Encouragement* followed by her most-read books. The rest follow in catalog order.
+The Library page shows each shelf as a row of covers that scrolls sideways, in this order: Christian Classics, Children, Youth / Young Adults, Adventist Writers Today, Ellen G. White, and Adventist Pioneers (`LIBRARY_SHELVES` in `features/library/LibraryShelves.ts`). General Christian books come first so a visitor meets the wider Christian shelf before the denomination's own writers. Adventist Writers Today (當代復臨著作) shows only in Chinese for now, since all its books are Chinese; see [Books in the Chinese Union Mission's reader](#books-in-the-chinese-union-missions-reader). A new book lengthens its row rather than the page, and a new kind of book becomes a new row. Within a shelf, a few chosen books lead (`LIBRARY_SHELF_LEADERS`): *The Bruised Reed* in Christian Classics, *Pastor Hsi* in Youth / Young Adults, and in the Ellen G. White shelf, *Sabbath Encouragement* followed by her most-read books. The rest follow in catalog order.
 
 The Library is a Christian library with an Adventist section, not an Ellen G. White library (#391). On every shelf but her own, other writers' books come before hers, even ahead of a shelf's leading books (`orderShelfBooks`). Her books sit on one other shelf at most (`EGW_BOOK_IDS_BY_SHELF`): *Education* and *Messages to Young People* on Youth / Young Adults. *Child Guidance* and *Christ's Object Lessons* are written for adults, so they stay on her shelf. The Children and Youth shelves each hold more books by other writers than by her, and the featured books at the top of the page include one of hers at most: *Steps to Christ*, her most widely read. `test/library-balance.test.ts` checks all of this in every app language. Each row's "See all" opens that shelf's own page, and the page's search finds any book. Selecting a cover opens the book in the app language's edition when it has one, Ellen G. White's books included. Covers grow with the text size, so titles stay readable beneath them.
 
@@ -63,7 +63,30 @@ Their rights bases are in [Library Sources and Licensing](../LEGAL.md#library-so
 
 ### EGW Writings editions
 
-The EGW collection is organized by work, not by the website's current catalog language. Each curated work stores a separate official book ID and first readable paragraph for English, Chinese, and Spanish. Selecting a book opens the app language's edition directly, deep-linked to its first paragraph, as other Library books do. Traditional and Simplified Chinese share the one Chinese edition. Until 1.0.0 an edition dialog listed all three, from when only her books had other languages.
+The EGW collection is organized by work, not by the website's current catalog language. Each curated work stores an official EGW Writings book ID and first readable paragraph for English and Spanish, and the Chinese Union Mission's book ID for Chinese. Selecting a book opens the app language's edition directly, as other Library books do: English and Spanish on EGW Writings at the first paragraph, and Chinese in the Mission's reader (`read.sdabible.org/library/work/egw-<book ID>`), which is easier to read in (#554). Traditional and Simplified Chinese share the one Chinese edition; the reader shows it in the app's script. Until 1.0.0 an edition dialog listed all three, from when only her books had other languages.
+
+### Books in the Chinese Union Mission's reader
+
+The Chinese Union Mission's SDA Bible app has an online reader, `read.sdabible.org`, with about 1,100 Chinese books. The Library links a handful the church's leaders chose (#554), rather than mirroring the catalog: Chinese readers see them in the Library and its search, and other languages don't. Each opens its page in the reader (`/library/work/<slug>`) in the app's script, through the reader's `ui` parameter (`tc` or `cn`), and shows the reader's own cover thumbnail. They have no bundled cover, so without a connection they show the placeholder book icon, and the books can't be read offline anyway. They're `sdaBibleBooks` in `features/library/LibraryCatalog.ts`; titles and authors come from the covers, since the reader lists no authors.
+
+| Book | English title | Shelf |
+| --- | --- | --- |
+| 跪下的基督徒 | *The Kneeling Christian* | Christian Classics, second; not an Adventist book |
+| 最富有的穴居人 | Doug Batchelor, *The Richest Caveman* | Adventist Writers Today |
+| 地上的最後一夜 | Joe Crews, *The Last Night on Earth* | Adventist Writers Today |
+| 在西伯利亞的死神一瞥 | W. S. Jesske, *Deathwatch in Siberia* | Adventist Writers Today |
+| 回想羅得的妻子 | Doug Batchelor, *Recalling Lot's Wife* | Adventist Writers Today |
+| 聖經與進化論 | Doug Batchelor, *The Bible and Evolution* | Adventist Writers Today |
+| 得見我的王 | Doug Batchelor, *To See the King* | Adventist Writers Today |
+| 我是法利賽人還是稅吏？ | Doug Batchelor, *Am I a Pharisee or a Tax Collector?* | Adventist Writers Today |
+| 受了洗的異教 | Joe Crews, *Baptized Paganism* | Adventist Writers Today |
+| 認識創造 | Humberto Rasi and James Gibson (eds.), *Understanding Creation* | Adventist Writers Today |
+| 愛的神義論 | John C. Peckham, *Theodicy of Love* | Adventist Writers Today |
+| 浴火信使 | Jud Lake, *Ellen White Under Fire* | Ellen G. White, since it's about her |
+| 擎光者 | Richard W. Schwarz and Floyd Greenleaf, *Light Bearers* | Adventist Writers Today |
+| 靈界之旅 | Roger J. Morneau, *A Trip into the Supernatural* | Adventist Writers Today |
+
+To add or swap a book, check in the reader that it has its full text, then copy its slug and cover from the reader's API (`/api/trpc/library.work`, which returns `coverThumbUrl`). The daily dependency monitor checks every book's link, text, and cover, and expects 14; change its count with the list. The Explore tab's In-depth Bible Study card links the whole app (see [UI/UX](../UI_UX.md)).
 
 ## Chinese Adventist research queue
 

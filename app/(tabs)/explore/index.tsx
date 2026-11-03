@@ -10,6 +10,7 @@ import {
   openZoomClass,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
+import { openSdaBible } from '@/features/library/SdaBibleReader';
 import { APP_ICONOGRAPHY } from '@/constants/Iconography';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -35,7 +36,9 @@ const allLabels = {
     zoomSub:
       'Interactive Bible study and fellowship',
     library: 'Library',
-    librarySub: 'Christian classics, children\'s books, and Adventist writings',
+    librarySub: 'Books our church recommends: Christian classics, children\'s books, and Adventist writings',
+    sdaBible: 'In-depth Bible Study',
+    sdaBibleSub: 'SDA Bible app: commentary and 1,000+ books',
   },
   zh: {
     title: '探索',
@@ -47,8 +50,10 @@ const allLabels = {
     spotifySub: '收聽證道與課程',
     zoomClass: 'Zoom 課程',
     zoomSub: '互動式研經與團契。',
-    library: '圖書館',
-    librarySub: '基督教經典、兒童讀物與復臨著作',
+    library: '精選書庫',
+    librarySub: '教會推薦的書籍：基督教經典、兒童讀物與復臨著作',
+    sdaBible: '深入研經',
+    sdaBibleSub: 'SDA Bible 應用程式：聖經註釋與一千多本書籍',
   },
   'zh-cn': {
     title: '探索',
@@ -60,8 +65,10 @@ const allLabels = {
     spotifySub: '收听证道与课程',
     zoomClass: 'Zoom 课程',
     zoomSub: '互动式研经与团契。',
-    library: '图书馆',
-    librarySub: '基督教经典、儿童读物与复临著作',
+    library: '精选书库',
+    librarySub: '教会推荐的书籍：基督教经典、儿童读物与复临著作',
+    sdaBible: '深入研经',
+    sdaBibleSub: 'SDA Bible 应用程序：圣经注释与一千多本书籍',
   },
   es: {
     title: 'Explorar',
@@ -75,7 +82,9 @@ const allLabels = {
     zoomSub:
       'Estudio bíblico interactivo y compañerismo.',
     library: 'Biblioteca',
-    librarySub: 'Clásicos cristianos, libros infantiles y escritos adventistas',
+    librarySub: 'Libros que recomienda nuestra iglesia: clásicos cristianos, libros infantiles y escritos adventistas',
+    sdaBible: 'Estudio bíblico a fondo',
+    sdaBibleSub: 'App SDA Bible: comentarios y más de 1.000 libros',
   },
 };
 
@@ -147,6 +156,18 @@ export default function ExploreScreen() {
             darkImageSource={EXTERNAL_BRAND_ASSETS.spotifyIcon.dark}
             onPress={openSpotifyPodcast}
           />
+
+          {/* The SDA Bible app's commentary and nearly all its books are in
+              Chinese, so the card shows only in Chinese (#554). */}
+          {(language === 'zh' || language === 'zh-cn') && (
+            <MenuCard
+              title={labels.sdaBible}
+              description={labels.sdaBibleSub}
+              icon={APP_ICONOGRAPHY.explore.sdaBible}
+              iconColor={theme.colors.tertiary}
+              onPress={() => openSdaBible(language)}
+            />
+          )}
 
           <MenuCard
             title={labels.zoomClass}

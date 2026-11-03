@@ -66,16 +66,32 @@ import {
   shouldStopBibleAudioAtChapterEnd,
   type BibleAudioSleepTimerSetting,
   configureBibleAudioPlayback,
+  getBibleAudioCreditUrl,
   getBibleAudioMediaTitle,
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getOrderedBibleAudioReaders,
   initializeBibleAudioPlayback,
   prioritizeBibleAudioSource,
+  withDownloadedCopy,
 } from '@/services/BibleAudioService';
 import {
+  getDownloadableBibleAudioNarrator,
+  snapshotDownloadedChapters,
+} from '@/services/BibleAudioDownloads';
+import { useDownloadedChapterUri } from '@/hooks/useBibleAudioDownloads';
+import { useBibleAudioDownloadTip } from '@/hooks/useBibleAudioDownloadTip';
+import {
+  BibleAudioOfflineSection,
+  getBibleAudioDownloadTipLine,
+} from '@/components/BibleAudioOfflineSection';
+import { BibleAudioDownloadTipMarks } from '@/components/BibleAudioDownloadTipMarks';
+import { getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
+import {
+  BIBLE_AUDIO_READERS_STORAGE_KEY,
   CUV_AUDIO_READERS,
   getAudioReaderPreferenceKey,
+  getBibleAudioNarrator,
   WORDPROJECT_CREDITS,
 } from '@/services/BibleAudioSources';
 import {
@@ -128,7 +144,11 @@ import {
   SavedVerseSort,
   storeSavedVerses,
 } from '@/services/SavedVersesService';
-import { getScreenshotPopup } from '@/services/ScreenshotRoute';
+import {
+  getScreenshotPopup,
+  isScreenshotPlay,
+  recordForScreenshot,
+} from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
 import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
@@ -165,7 +185,7 @@ const VERSE_SCROLL_TOP_OFFSET = 96;
 const VERSE_LAYOUT_ATTEMPTS = 20;
 // How long after a scroll by hand the reader goes back to the verse being read.
 const READING_VERSE_FOLLOW_RESUME_MS = 5000;
-const BIBLE_AUDIO_READERS_KEY = 'user-bible-audio-readers';
+const BIBLE_AUDIO_READERS_KEY = BIBLE_AUDIO_READERS_STORAGE_KEY;
 const BIBLE_AUDIO_SOURCES_KEY = 'user-bible-audio-sources';
 const BIBLE_SHOW_PINYIN_KEY = 'user-bible-show-pinyin';
 const BIBLE_DUAL_LANGUAGE_KEY = 'user-bible-dual-language';
@@ -615,6 +635,7 @@ export default function BibleScreen() {
     referenceRequest: paramReferenceRequest,
     backTo: paramBackTo,
     popup: paramPopup,
+    play: paramPlay,
   } = useLocalSearchParams<{
     bookId?: string;
     chapter?: string;
@@ -624,6 +645,7 @@ export default function BibleScreen() {
     referenceRequest?: string;
     backTo?: string;
     popup?: string;
+    play?: string;
   }>();
 
   const labels = uiLabels[language as keyof typeof uiLabels] || uiLabels.en;
@@ -1237,10 +1259,45 @@ export default function BibleScreen() {
     : availableAudioSources[0]
       ? getBibleAudioSourceId(availableAudioSources[0])
       : undefined;
-  const selectedAudioUrls = prioritizeBibleAudioSource(
+  const streamedAudioUrls = prioritizeBibleAudioSource(
     rawSelectedAudioUrls,
     selectedAudioSourceId,
   );
+  // A chapter the member downloaded for listening offline plays from the
+  // phone first, whatever source is chosen (#556).
+  const audioDownloadNarrator = getDownloadableBibleAudioNarrator(
+    supportedTranslation.id,
+    selectedAudioReader,
+  );
+  const downloadedAudioUri = useDownloadedChapterUri(
+    audioDownloadNarrator,
+    book?.id,
+    chapterNum,
+  );
+  const downloadedAudioUriRef = useRef(downloadedAudioUri);
+  downloadedAudioUriRef.current = downloadedAudioUri;
+  // When playback keeps stopping to load, the audio settings button points
+  // the listener to Listen offline (#595).
+  const downloadTip = useBibleAudioDownloadTip(
+    audioDownloadNarrator,
+    audioSettingsVisible,
+    () => {
+      const status = audioPlayer.currentStatus;
+      return {
+        listening: Platform.OS !== 'web' && nativePlaybackIntentRef.current,
+        // Not `!playing`: Android reports a play the listener asked for as
+        // playing while it loads.
+        waiting: !isScrubbingRef.current && status.isBuffering,
+        positionMillis: status.currentTime * 1000,
+      };
+    },
+  );
+  const audioSettingsScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const scrolledToDownloadTipRef = useRef(false);
+  // The queue's chapters downloaded when playback started, so that a chapter
+  // downloading meanwhile doesn't change one the native queue already holds.
+  const queuedDownloadsRef = useRef<(bookId: string, chapter: number) => string | null>(() => null);
+  const selectedAudioUrls = withDownloadedCopy(streamedAudioUrls, downloadedAudioUri);
   const selectedAudioUrlsRef = useRef(selectedAudioUrls);
   selectedAudioUrlsRef.current = selectedAudioUrls;
 
@@ -1349,7 +1406,8 @@ export default function BibleScreen() {
       currentChapter: activeChapter?.chapter ?? chapterNum,
       sleepTimer: sleepTimerSettingRef.current,
       preferredSourceId: selectedAudioSourceId,
-      selectedAudioUrls,
+      getDownloadedUri: (bookId, chapter) => queuedDownloadsRef.current(bookId, chapter),
+      selectedAudioUrls: streamedAudioUrls,
       selectedReader: selectedAudioReader,
       translationId: supportedTranslation.id,
       translationLabel: supportedTranslation.name,
@@ -1596,11 +1654,11 @@ export default function BibleScreen() {
       chapter: book
         ? { bookId: book.id, chapter: chapterNum, translationId: supportedTranslation.id }
         : undefined,
-      sources: selectedAudioUrlsRef.current.map((uri) => {
+      sources: selectedAudioUrlsRef.current.map((uri, _, uris) => {
         const title = getBibleAudioMediaTitle(
           `${book?.name || labels.bible} ${chapterNum}`,
           supportedTranslation.name,
-          uri,
+          getBibleAudioCreditUrl(uri, uris, downloadedAudioUriRef.current),
         );
         return {
           source: { uri, name: title },
@@ -1626,6 +1684,7 @@ export default function BibleScreen() {
       // Seed the native playlist once, then publish it to lock-screen controls.
       // Android's MediaSession must observe the complete initial playlist
       // before ExoPlayer advances to its first queued chapter.
+      queuedDownloadsRef.current = snapshotDownloadedChapters(audioDownloadNarrator);
       initializeBibleAudioPlayback({
         player: audioPlayer,
         currentChapter: target.chapter
@@ -1746,6 +1805,10 @@ export default function BibleScreen() {
         );
     }, NATIVE_AUDIO_RECOVERY_MS);
   }, [audioPlayer, audioStatus.isBuffering, audioStatus.playing]);
+
+  useEffect(() => {
+    downloadTip.watcher.update();
+  }, [audioStatus.isBuffering, audioStatus.playing, downloadTip.watcher]);
 
   const offerBackgroundAudioGuidance = () => {
     if (!androidAudioBrowserName || backgroundAudioGuidanceCheckedRef.current) {
@@ -1868,6 +1931,7 @@ export default function BibleScreen() {
 
   const seekAudio = (nextPosition: number) => {
     if (!loadedAudioUrlRef.current) return;
+    downloadTip.watcher.noteSeek();
     const nativeDurationMillis = audioPlayer.currentStatus.duration * 1000;
     return seekController.seek(
       nextPosition,
@@ -2995,17 +3059,24 @@ export default function BibleScreen() {
   // The key-screen capture can't tap, so its build opens a popup from the
   // path once the linked chapter has loaded (#372): popup=verse for
   // verseStart's details, or popup=audio-settings once the chapter has audio.
+  // popup=audio-download-tip opens it as the marked button would, with the
+  // line that playback keeps stopping to load (#595).
   // A chapter change clears chapterData first, so a loaded chapter that
   // matches the link is the linked one.
   const screenshotPopupOpened = useRef(false);
   useEffect(() => {
     if (screenshotPopupOpened.current || !chapterData) return;
-    const screenshotPopup = getScreenshotPopup(paramPopup, ['verse', 'audio-settings']);
+    const screenshotPopup = getScreenshotPopup(paramPopup, [
+      'verse',
+      'audio-settings',
+      'audio-download-tip',
+    ]);
     if (!screenshotPopup) return;
     if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
-    if (screenshotPopup === 'audio-settings') {
+    if (screenshotPopup !== 'verse') {
       if (audioReaderEntries.length === 0) return;
       screenshotPopupOpened.current = true;
+      if (screenshotPopup === 'audio-download-tip') downloadTip.showForKeyScreens();
       setAudioSettingsVisible(true);
       return;
     }
@@ -3022,6 +3093,41 @@ export default function BibleScreen() {
     paramChapter,
     paramPopup,
     paramVerseStart,
+  ]);
+
+  // The key-screen capture can't tap Play either, so play=1 starts the linked
+  // chapter's audio in its build, and the player's status is saved for the
+  // capture, which checks that the elapsed time moves (#551). The hosts it
+  // would try go with it, so the capture can tell a network failure from the
+  // app's.
+  const screenshotPlayStarted = useRef(false);
+  const recordScreenshotAudio = () =>
+    recordForScreenshot('audio', {
+      playing: audioStatus.playing,
+      currentTime: audioStatus.currentTime,
+      duration: audioStatus.duration,
+      isBuffering: audioStatus.isBuffering,
+      error: audioStatus.error ?? null,
+      source: audioStatus.activeSourceUrl ?? null,
+      sources: selectedAudioUrlsRef.current,
+    });
+  useEffect(() => {
+    if (screenshotPlayStarted.current || !chapterData || !isScreenshotPlay(paramPlay)) return;
+    if (book?.id !== paramBookId || chapterNum !== Number(paramChapter)) return;
+    if (audioReaderEntries.length === 0) return;
+    screenshotPlayStarted.current = true;
+    recordScreenshotAudio();
+    void toggleAudio();
+  }, [audioReaderEntries.length, book?.id, chapterData, chapterNum, paramBookId, paramChapter, paramPlay]);
+  const screenshotAudioSecond = Math.floor(audioStatus.currentTime || 0);
+  useEffect(() => {
+    if (screenshotPlayStarted.current) recordScreenshotAudio();
+  }, [
+    audioStatus.activeSourceUrl,
+    audioStatus.error,
+    audioStatus.isBuffering,
+    audioStatus.playing,
+    screenshotAudioSecond,
   ]);
 
   const supportingVerses = useMemo(
@@ -4051,6 +4157,8 @@ export default function BibleScreen() {
                       : labels.audioSettings
                   }
                   accessibilityHint={`${
+                    downloadTip.marksButton ? `${getBibleAudioDownloadTipLine(language)} ` : ''
+                  }${
                     offersAudioLanguages ? labels.audioLanguage : labels.narrator
                   }, ${labels.audioSource}`}
                   style={[
@@ -4088,6 +4196,10 @@ export default function BibleScreen() {
                       color={theme.colors.onSurface}
                     />
                   )}
+                  <BibleAudioDownloadTipMarks
+                    color={theme.colors.primary}
+                    visible={downloadTip.marksButton}
+                  />
                 </TouchableOpacity>
 
                 <View style={ReaderStyles.audioTransportControls}>
@@ -4290,7 +4402,7 @@ export default function BibleScreen() {
           <View style={ReaderStyles.modalInner}>
             {renderPopupHeader(labels.audioSettings, () => setAudioSettingsVisible(false))}
             <Divider />
-            <PopupScrollView>
+            <PopupScrollView ref={audioSettingsScrollRef}>
               <Text
                 variant="titleMedium"
                 style={[
@@ -4304,11 +4416,14 @@ export default function BibleScreen() {
                 const isSelected = reader === selectedAudioReader;
                 const audioLanguage = CUV_AUDIO_READERS[reader];
                 // Chinese interfaces show the mark alone; others add the name.
+                // Others lead with their language, as Offline Bible Audio
+                // names them: "English – Souer (BSB)" (#556).
                 const readerLabel = audioLanguage
                   ? language === 'zh' || language === 'zh-cn'
                     ? getAudioLanguageMark(audioLanguage)
                     : `${getAudioLanguageMark(audioLanguage)} ${labels[audioLanguage.language]}`
-                  : getAudioReaderLabel(reader);
+                  : getBibleAudioNarratorName(getBibleAudioNarrator(supportedTranslation.id, reader), language) ??
+                    getAudioReaderLabel(reader);
                 const readerCredit = audioLanguage?.credit;
                 return (
                   <TouchableOpacity
@@ -4362,6 +4477,43 @@ export default function BibleScreen() {
                   </TouchableOpacity>
                 );
               })}
+
+{/* Opened by the tip, the popup scrolls to Listen offline, below
+                  however many narrators there are. */}
+              <View
+                onLayout={(event) => {
+                  if (!downloadTip.showsLine || scrolledToDownloadTipRef.current) return;
+                  scrolledToDownloadTipRef.current = true;
+                  audioSettingsScrollRef.current?.scrollTo({
+                    y: event.nativeEvent.layout.y,
+                    animated: false,
+                  });
+                }}
+              >
+                <BibleAudioOfflineSection
+                  book={book ? { id: book.id, name: book.name } : undefined}
+                  onOpen={(narrator) => {
+                    setAudioSettingsVisible(false);
+                    router.push({
+                      pathname: '/you/audio-downloads',
+                      params: { backTo: '/bible', narrator, bookId: book?.id ?? '' },
+                    } as any);
+                  }}
+                  reader={selectedAudioReader}
+                  showsTip={downloadTip.showsLine}
+                  styles={{
+                    divider: styles.audioSettingsDivider,
+                    helper: styles.audioSettingsHelper,
+                    row: styles.pressRow,
+                    rowCaption: styles.pressRowCaption,
+                    rowLabel: styles.pressRowLabel,
+                    rowTitle: styles.pressRowTitle,
+                    sectionTitle: styles.audioSettingsSectionTitle,
+                  }}
+                  textScale={bibleUiTextScale}
+                  translationId={supportedTranslation.id}
+                />
+              </View>
 
               {availableAudioSources.length > 0 && (
                 <>

@@ -7,6 +7,7 @@ import {
   activateBibleAudioLockScreen,
   buildBibleAudioQueue,
   configureBibleAudioPlayback,
+  getBibleAudioCreditUrl,
   getBibleAudioSourceId,
   getBibleAudioSourceLabel,
   getFollowingBibleChapters,
@@ -16,6 +17,7 @@ import {
   prioritizeBibleAudioSource,
   retargetHelloAoAudioUrl,
   shouldStopBibleAudioAtChapterEnd,
+  withDownloadedCopy,
 } from '@/services/BibleAudioService';
 
 describe('Bible audio playback', () => {
@@ -129,6 +131,15 @@ describe('Bible audio playback', () => {
       ['hays', links.hays],
       ['david', links.david],
     ]);
+  });
+
+  it('lists Mandarin before Cantonese, and narrators it does not know after those it does', () => {
+    const mandarin = '基督徒团契 (Audio Power)';
+    const { CANTONESE_CUV_READER } = jest.requireActual('../services/BibleAudioSources');
+    const cuv = { [CANTONESE_CUV_READER]: 'c.mp3', [mandarin]: 'm.mp3' };
+    expect(getOrderedBibleAudioReaders('cmn_cuv', cuv).map(([reader]) => reader)).toEqual([mandarin, CANTONESE_CUV_READER]);
+    const bsb = { someone: 'x.mp3', gilbert: 'g.mp3', hays: 'h.mp3' };
+    expect(getOrderedBibleAudioReaders('BSB', bsb).map(([reader]) => reader)).toEqual(['hays', 'gilbert', 'someone']);
   });
 
   it('preserves provider order for other translations', () => {
@@ -284,6 +295,48 @@ describe('Bible audio playback', () => {
   });
 });
 
+
+describe('Downloaded Bible audio in the queue (#556)', () => {
+  const books = [
+    { id: 'GEN', name: 'Genesis', commonName: 'Genesis', title: null, numberOfChapters: 3, totalNumberOfVerses: 0 },
+  ];
+  const DOWNLOADED = 'file:///data/user/0/org.nyccsda.app/files/bible-audio/cuv-mandarin/GEN/2.mp3';
+
+  it("plays the phone's copy first, even with another source chosen, then the streamed sources in their usual order", () => {
+    const [second, third] = buildBibleAudioQueue({
+      albumTitle: 'Bible audio',
+      artist: 'CUV',
+      books,
+      currentBookId: 'GEN',
+      currentChapter: 1,
+      getDownloadedUri: (bookId, chapter) => (bookId === 'GEN' && chapter === 2 ? DOWNLOADED : null),
+      preferredSourceId: 'archive.org',
+      selectedAudioUrls: [],
+      translationId: 'cmn_cuv',
+      translationLabel: 'CUV',
+    });
+
+    expect([second.source, ...(second.fallbacks ?? []).map(({ source }) => source)].map((source) => (source as any).uri))
+      .toEqual([
+        DOWNLOADED,
+        expect.stringContaining('archive.org'),
+        expect.stringContaining('assets.adventistconnect.org'),
+        expect.stringContaining('theaudiopower'),
+      ]);
+    // Credited to the first source it would otherwise stream from, not to a file path.
+    expect(second.metadata.title).toBe('Genesis 2 · CUV (Internet Archive)');
+    // A chapter that isn't on the phone streams.
+    expect((third.source as any).uri).toContain('archive.org');
+  });
+
+  it('orders a chapter the same way for the reader', () => {
+    const streamed = ['https://assets.adventistconnect.org/a.mp3', 'https://archive.org/a.mp3'];
+    expect(withDownloadedCopy(streamed, DOWNLOADED)).toEqual([DOWNLOADED, ...streamed]);
+    expect(withDownloadedCopy(streamed, null)).toEqual(streamed);
+    expect(getBibleAudioCreditUrl(DOWNLOADED, [DOWNLOADED, ...streamed], DOWNLOADED)).toBe(streamed[0]);
+    expect(getBibleAudioCreditUrl(streamed[1], [DOWNLOADED, ...streamed], DOWNLOADED)).toBe(streamed[1]);
+  });
+});
 
 describe('Bible audio sleep timer boundaries', () => {
   const options = {

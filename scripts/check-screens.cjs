@@ -17,7 +17,10 @@
  *   right-aligned text, and one with `maxTop` no farther down than that, such
  *   as a popup's title), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
- *   such as the Bible header without its 文A icon at a large text size.
+ *   such as the Bible header without its 文A icon at a large text size;
+ * - a screen with a `later` shot and `mustAdvance` shows a time, as minutes
+ *   and seconds, that moved on by at least half the time between the shots,
+ *   such as Bible audio's elapsed time while it plays (#551).
  *
  * Where a label is missing, it takes a closer look at that strip of the screen,
  * enlarged and with more contrast, before reporting it.
@@ -196,6 +199,34 @@ const checkShot = (shot, lines) => {
   return problems;
 };
 
+/** A time read as minutes and seconds, such as 1:05, in seconds. */
+const secondsOf = (match) => Number(match[1]) * 60 + Number(match[2]);
+
+/**
+ * Whether the time a shot shows moved on in its later shot (`later` seconds
+ * after it) by at least half that long. The time is the leftmost line matching
+ * `mustAdvance`, a regular expression whose first two groups are its minutes
+ * and seconds: the audio player's elapsed time, left of its length.
+ */
+const checkAdvance = (shot, lines, laterLines) => {
+  if (!shot.mustAdvance || !shot.later) return [];
+  const pattern = new RegExp(shot.mustAdvance, 'u');
+  const timeIn = (read) =>
+    [...(read || [])]
+      .sort((a, b) => a.box[0] - b.box[0])
+      .map((line) => pattern.exec(line.text.trim()))
+      .find(Boolean);
+  if (!laterLines) return ['no later screenshot'];
+  const [before, after] = [timeIn(lines), timeIn(laterLines)];
+  if (!before || !after) {
+    return [`no time matching /${shot.mustAdvance}/ in ${before ? 'the later screenshot' : 'the screenshot'}`];
+  }
+  const moved = secondsOf(after) - secondsOf(before);
+  return moved >= shot.later / 2
+    ? []
+    : [`the time shown went from ${before[0]} to ${after[0]} in ${shot.later} seconds, not on by at least ${shot.later / 2}`];
+};
+
 /** Both lists of rules, or undefined when neither has any. */
 const joinRules = (screenRules, variantRules) =>
   screenRules || variantRules ? [...(screenRules || []), ...(variantRules || [])] : undefined;
@@ -211,6 +242,7 @@ const planChecks = (config, platform = 'ios') =>
     return {
       ...shot,
       tabs: screen.tabs,
+      mustAdvance: screen.mustAdvance,
       mustShowLines: joinRules(screen.mustShowLines, forVariant.mustShowLines),
       mustNotShowLines: joinRules(screen.mustNotShowLines, forVariant.mustNotShowLines),
     };
@@ -296,8 +328,12 @@ const fromStrip = (line, region) => ({
 /** Reads every shot's text, taking a closer look where a label is missing. */
 const readText = async (dir, shots) => {
   const present = shots.filter((shot) => existsSync(join(dir, shot.file)));
-  const text = ocr(present.map((shot) => ({
-    file: join(dir, shot.file),
+  // With each shot's later screenshot, if it has one.
+  const files = present.flatMap((shot) =>
+    [shot.file, shot.laterFile].filter((file) => file && existsSync(join(dir, file))).map((file) => ({ shot, file })),
+  );
+  const text = ocr(files.map(({ shot, file }) => ({
+    file: join(dir, file),
     platform: shot.platform,
     languages: OCR_LANGUAGES[shot.settings.language],
   })));
@@ -344,7 +380,11 @@ const main = async () => {
 
   const results = shots.map((shot) => {
     const lines = text[join(dir, shot.file)];
-    return { file: shot.file, problems: lines ? checkShot(shot, lines) : ['no screenshot'] };
+    const later = shot.laterFile && text[join(dir, shot.laterFile)];
+    return {
+      file: shot.file,
+      problems: lines ? [...checkShot(shot, lines), ...checkAdvance(shot, lines, later)] : ['no screenshot'],
+    };
   });
   writeFileSync(join(dir, 'checks.json'), JSON.stringify(results, null, 1));
   const failed = results.filter((result) => result.problems.length);
@@ -378,6 +418,7 @@ module.exports = {
   NEVER_SHOWN_BY_PLATFORM,
   showsLabel,
   checkShot,
+  checkAdvance,
   planChecks,
   fromStrip,
 };

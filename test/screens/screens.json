@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -29,10 +29,10 @@
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give, and first-launch setup over it.",
-    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, and the popup a tapped verse opens.",
+    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, the popup a tapped verse opens, and Offline Bible Audio, which its audio settings open.",
     "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
     "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
-    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs."
+    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs. Also, on the iPhone only, Bible audio playing and a children's lesson open in Quick Look (#551): this group finished first or second in the six release runs from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so these longer shots shouldn't lengthen the run."
   },
   "screens": [
     {
@@ -52,7 +52,7 @@
     {
       "name": "home",
       "group": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. zh and zh-cn: the countdown's date in Chinese, such as 11月6日星期五, which the iPhone's text recognition reads with a space before 星期. On Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"), so the app writes Chinese dates out by hand (formatAppDate).",
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
       "variantRules": {
@@ -65,7 +65,9 @@
           "mustShowLines": ["^Today.s( Verse)?$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
-        "es-xl-android-font-max": { "mustShowLines": ["^Vers[ií]culo\\b"] }
+        "es-xl-android-font-max": { "mustShowLines": ["^Vers[ií]culo\\b"] },
+        "zh": { "mustShowLines": ["^\\d{1,2}月\\d{1,2}日 ?星期[一二三四五六日]$"] },
+        "zh-cn": { "mustShowLines": ["^\\d{1,2}月\\d{1,2}日 ?星期[一二三四五六日]$"] }
       },
       "changesDaily": true
     },
@@ -188,15 +190,35 @@
     {
       "name": "bible-audio-settings",
       "group": "bible-reading",
-      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages, in English (the Google Play screenshot) and Chinese. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. It's centred like the other popups: until 1.3.2 it sat at the bottom, its title 47% of the way down where theirs are at 25 to 32%, so the title must be no farther down than 40%.",
+      "$comment": "The audio settings popup, opened by popup=audio-settings in the preview build (#372): its title beside an X (#464), and the CUV's two audio languages, in English (the Google Play screenshot) and Chinese. The audio button behind it shows 國語, so the rules require lines only the popup shows. Vision misses the lone 粵語 label, so the Cantonese row is found by its credit, WordProject. It's centred like the other popups: until 1.3.2 it sat at the bottom, its title 47% of the way down where theirs are at 25 to 32%, so the title must be no farther down than 40%. Under the audio languages, Listen offline is one row that opens Offline Bible Audio in the You tab, where Bible audio is downloaded and deleted (#556); it must show, though the Android phone's shorter popup may leave the row below the fold.",
       "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&popup=audio-settings",
       "settings": { "dualLanguage": true, "supportingTranslation": "BSB", "pinyin": false },
       "variants": ["default", "zh"],
       "mustShowLines": ["^WordProject$"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$"], "mustNotShowLines": ["^Close$"] },
-        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$"], "mustNotShowLines": ["^關閉$"] }
+        "default": { "mustShowLines": [{ "line": "^Audio settings$", "maxTop": 0.4 }, "^Audio language$", "^Listen offline$", { "line": "^Offline Bible Audio$", "platforms": ["ios"] }], "mustNotShowLines": ["^Close$", "^Whole Bible$"] },
+        "zh": { "mustShowLines": [{ "line": "^有聲書設定$", "maxTop": 0.4 }, "^朗讀語言$", "^離線收聽$", { "line": "^離線聖經音訊$", "platforms": ["ios"] }], "mustNotShowLines": ["^關閉$", "^整本聖經$"] }
       }
+    },
+    {
+      "name": "offline-bible-audio",
+      "group": "bible-reading",
+      "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete. The text readers may read a closed section's chevron with its title (\"> Law\") and drop the spaces in \"英語 – Souer\" and \"66 卷\", so the rules allow both.",
+      "path": "you/audio-downloads?narrator=souer",
+      "variants": ["default", "zh"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–]\\s*Souer", "^Whole Bible$", "^66 books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
+        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–]\\s*Souer", "^整本聖經$", "^66\\s*卷", "^舊約$", "(^|\\s)摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
+      }
+    },
+    {
+      "name": "bible-audio-download-tip",
+      "group": "bible-reading",
+      "$comment": "The audio settings popup as the marked audio button opens it when playback keeps stopping to load (#595), by popup=audio-download-tip in the preview build. The BSB has four narrators above Listen offline, so the popup scrolls down to it: the tip's line, and the Offline Bible Audio row below it, which opens the downloads (#556), must show. The line doesn't say \"keeps stopping\", which Android's check reserves for the system's crash dialog.",
+      "path": "bible?bookId=JHN&chapter=3&translationId=BSB&popup=audio-download-tip",
+      "settings": { "dualLanguage": false, "pinyin": false },
+      "variants": ["default"],
+      "mustShowLines": ["^Playback often stops", "^Listen offline$", "^Offline Bible Audio$"]
     },
     {
       "name": "bible-long-chapter",
@@ -240,10 +262,13 @@
     {
       "name": "explore",
       "group": "library",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380), and their Android counterparts at Android's largest font. xl-android-font-max is also the Android counterpart of max. max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\".",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text check the tab labels at about 4× text, as on Home (#380), and their Android counterparts at Android's largest font. xl-android-font-max is also the Android counterpart of max. max is the app at 200% with the iPhone's very largest text, about 6× before the combined cap (MAX_COMBINED_TEXT_SCALE) held it to 3.2×; at 6× the Library card's title read \"Libr\". In Chinese the Library is 精選書庫 (hand-picked library), and the In-depth Bible Study card for the SDA Bible app shows below Spotify; it's Chinese only, since the app's commentary and nearly all its books are Chinese (#554).",
       "path": "explore",
       "variants": ["default", "dark", "zh", "es", "xl-ios-large-text", "es-xl-ios-large-text", "max", "xl-android-font-max", "es-xl-android-font-max"],
       "variantRules": {
+        "default": { "mustNotShowLines": ["^In-depth Bible"] },
+        "zh": { "mustShowLines": ["^精選書庫", "^深入研經"], "mustNotShowLines": ["圖書館"] },
+        "es": { "mustNotShowLines": ["^Estudio bíblico a fondo"] },
         "max": { "mustShowLines": ["^Library\\b"] },
         "xl-android-font-max": { "mustShowLines": ["^Library\\b"] }
       }
@@ -261,6 +286,14 @@
       "group": "library",
       "path": "explore/library/egw",
       "variants": ["default", "zh"]
+    },
+    {
+      "name": "library-contemporary",
+      "group": "library",
+      "$comment": "Chinese readers get a shelf of today's Adventist writers, books the church's leaders chose from the Chinese Union Mission's reader, titled in the app's script; the covers are the reader's, in Simplified. The Traditional shelf title and 地上的最後一夜 (最后 on its cover) can only come from the app's own text (#554). The second row's titles are below the fold on both phones.",
+      "path": "explore/library/contemporary",
+      "variants": ["zh"],
+      "mustShowLines": ["^當代復臨著作$", "^最富有的穴居人$", "^地上的最後一夜$"]
     },
     {
       "name": "library-children",
@@ -292,13 +325,13 @@
     {
       "name": "sabbath-school",
       "group": "worship-and-you",
-      "$comment": "The first children's age group shows every week, in each language (#338). The Android phone's screen leaves it below the fold.",
+      "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. In Chinese the title is 本週聖工剪影, or the Sabbath of the last Mandarin video the phone found, such as 10月31日聖工剪影. The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Beginner \\(ages 1-3\\)", "platforms": ["ios"] }] },
-        "zh": { "mustShowLines": [{ "line": "幼兒級（1-3歲）", "platforms": ["ios"] }] },
-        "es": { "mustShowLines": [{ "line": "^Principiantes \\(1-3 años\\)", "platforms": ["ios"] }] }
+        "default": { "mustShowLines": ["^This Week$", "^This Week.s Mission\\b"] },
+        "zh": { "mustShowLines": ["^本週$", "^(本週|\\d{1,2}月\\d{1,2}日)聖工剪影$"] },
+        "es": { "mustShowLines": ["^Esta semana$", "^Video misionero\\b"] }
       }
     },
     {
@@ -317,6 +350,30 @@
       "variants": ["zh"],
       "mustShowLines": ["^少年級", "沒有網路連線"],
       "mustNotShowLines": ["下載中"]
+    },
+    {
+      "name": "sabbath-school-lesson-viewer",
+      "group": "worship-and-you",
+      "platforms": ["ios"],
+      "$comment": "A children's lesson downloaded and open in Quick Look, the iPhone's own viewer (#529, #551). popup=lesson-viewer opens the Beginner student lesson in a key-screens build as a tap would: this week's PDF is about 1 MB. The app records how it opened (record), and the capture fails unless Quick Look opened, saying whether the network was the cause. Where the week's lesson has no PDF yet, the browser opens its website instead and the run only warns, so the rules accept that page's address too. Nothing of the page beneath may show.",
+      "path": "sabbath-school?popup=lesson-viewer",
+      "variants": ["default"],
+      "wait": 4,
+      "record": "screenshot-lesson",
+      "mustShowLines": ["^Beginner \\(ages 1.3\\)$|aliveinjesus\\.info"],
+      "mustNotShowLines": ["^Students$", "^Teachers$", "^Opens this week's lesson PDF"]
+    },
+    {
+      "name": "bible-audio-playing",
+      "group": "worship-and-you",
+      "platforms": ["ios"],
+      "$comment": "Bible audio playing on the iPhone (#551), which nothing else checks before release: Android's is checked by android-audio-e2e.yml. play=1 starts Psalm 23's Mandarin recording in a key-screens build as a tap on Play would. A second screenshot is taken later seconds after the first, and the elapsed time left of the timeline must have moved on by at least half that (mustAdvance). The player's own status is recorded too (record): if it didn't play, the capture says whether this runner could reach the audio's hosts, so a network failure reads as one. The lock screen's 10- and 30-second skips can't be pressed in the Simulator; test/bible-audio-service.test.ts checks what the app passes them.",
+      "path": "bible?bookId=PSA&chapter=23&translationId=cmn_cuv&play=1",
+      "variants": ["default"],
+      "wait": 6,
+      "later": 10,
+      "record": "screenshot-audio",
+      "mustAdvance": "^(\\d+):(\\d{2})\\b"
     },
     {
       "name": "hymnal-selection",
@@ -391,12 +448,12 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). On Android's default screen Help & Feedback now falls just below the screenshot, so only the Chinese variant, whose rows are shorter, requires it.",
+      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Share the App$"] },
-        "zh": { "mustShowLines": ["分享應用程式", "幫助與意見回饋"] }
+        "default": { "mustShowLines": [{ "line": "^Share the App$", "platforms": ["ios"] }, "^Offline Bible Audio$"] },
+        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, { "line": "幫助與意見回饋", "platforms": ["ios"] }, "^離線聖經音訊$"] }
       }
     },
     {

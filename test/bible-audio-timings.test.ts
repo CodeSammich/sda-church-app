@@ -110,6 +110,13 @@ describe('verse start times that ship with the app', () => {
     expect([spanish?.length, spanish?.[0], spanish?.[15]]).toEqual([36, 2.96, 117.16]);
   });
 
+  it('starts a Spanish verse at its opening phrase and colon, not at the pause after it', async () => {
+    // Matthew 4:6, "Y le dice: Si eres Hijo de Dios": the narrator reads "Y le dice:" straight on
+    // from verse 5, then pauses. The pause rule alone would start the verse at 39.0, after it (#573).
+    const matthew = await fetchVerseStartTimes('spa_r09', RV1909_READER, 'MAT', 4);
+    expect(matthew?.[5]).toBe(37.62);
+  });
+
   it.each(CHURCH_NARRATORS)(
     "%s: every chapter's times, one per verse of the bundled text, in order, from a recording on file",
     (narrator, text) => {
@@ -137,6 +144,52 @@ describe('verse start times that ship with the app', () => {
       expect(timed).toBe(1189);
     },
   );
+
+  it.each(CHURCH_NARRATORS.filter(([narrator]) => narrator.startsWith('cuv-')))(
+    '%s: no time for a verse that only says 見上節, which the narrators skip',
+    (narrator, text) => {
+      // The CUV joins some verses into the one before (#573).
+      let joined = 0;
+      for (const { id } of readJson(`${text}/books`)) {
+        const { contents } = readJson(`${text}/${id.toLowerCase()}`);
+        const { chapters } = readJson(`audio-timings/${narrator}/${id.toLowerCase()}`);
+        contents.forEach((verses: unknown[][], number: number) => {
+          verses.forEach((items, verse) => {
+            const words = items.filter((item) => typeof item === 'string').join('').trim();
+            if (verse === 0 || !['見上節', '见上节'].includes(words)) return;
+            joined += 1;
+            expect([id, number, verse, chapters[number][verse - 1]]).toEqual([id, number, verse, null]);
+          });
+        });
+      }
+      expect(joined).toBe(66);
+    },
+  );
+
+  it('has every hand correction, each for the recording on file', () => {
+    // scripts/bible-audio-alignment/corrections.json: starts checked by ear (#573), mostly ones a
+    // recognizer found wrong, such as the Cantonese Hebrews 12, which skips verses 3 to 14.
+    const corrections = JSON.parse(
+      readFileSync(join(process.cwd(), 'scripts/bible-audio-alignment/corrections.json'), 'utf8'),
+    );
+    for (const [narrator, chapters] of Object.entries<
+      Record<string, { sha256: string; starts: Record<string, number | null> }>
+    >(corrections)) {
+      const sources = JSON.parse(
+        readFileSync(join(process.cwd(), 'scripts/bible-audio-timing-sources', `${narrator}.json`), 'utf8'),
+      );
+      for (const [key, { sha256, starts }] of Object.entries(chapters)) {
+        expect([narrator, key, sources[key]?.sha256]).toEqual([narrator, key, sha256]);
+        const [book, number] = key.split(' ');
+        const times = readJson(`audio-timings/${narrator}/${book.toLowerCase()}`).chapters[Number(number)];
+        for (const [verse, start] of Object.entries(starts)) {
+          expect([narrator, key, verse, times[Number(verse) - 1]]).toEqual([narrator, key, verse, start]);
+        }
+      }
+    }
+    const hebrews = readJson('audio-timings/cuv-cantonese/heb').chapters[12];
+    expect(hebrews.slice(1, 15)).toEqual([25.94, ...Array(12).fill(null), 49.36]);
+  });
 
   it.each(HELLOAO_NARRATORS)(
     "%s: every book's times match the bundled BSB's chapters and verse numbers, in order",

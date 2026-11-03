@@ -79,6 +79,29 @@ describe('key screen list (test/screens/screens.json)', () => {
     );
   });
 
+  it('checks Bible audio and Quick Look on the iPhone only, in worship-and-you, with records the capture knows (#551)', () => {
+    const { RECORDS } = require('../scripts/key-screen-records.cjs');
+    const recorded = config.screens.filter((screen: { record?: string }) => screen.record);
+    expect(recorded.map((screen: { name: string }) => screen.name).sort()).toEqual([
+      'bible-audio-playing',
+      'sabbath-school-lesson-viewer',
+    ]);
+    for (const screen of recorded) {
+      expect(RECORDS).toHaveProperty(screen.record);
+      // Android checks its audio in android-audio-e2e.yml.
+      expect(screen.platforms).toEqual(['ios']);
+      expect(screen.group).toBe('worship-and-you');
+    }
+    const playing = config.screens.find((screen: { name: string }) => screen.name === 'bible-audio-playing');
+    expect(playing.path).toMatch(/^bible\?.*&play=1$/);
+    expect(planCaptures(config, 'android').some((shot: { record?: string }) => shot.record)).toBe(false);
+    // Its later shot, and the time it usually takes to start, count in its group's time.
+    const shot = shots.find((each: { name: string }) => each.name === 'bible-audio-playing-default');
+    expect(shotCost(shot)).toBe(shot.wait + RECORDS[shot.record].typical + 10 + 5);
+    const lesson = shots.find((each: { name: string }) => each.name === 'sabbath-school-lesson-viewer-default');
+    expect(shotCost(lesson)).toBe(lesson.wait + RECORDS[lesson.record].typical + 5);
+  });
+
   it('opens only popups the screen can open from its path (#372)', () => {
     const screenFiles: Record<string, string> = {
       bible: 'app/(tabs)/bible/index.tsx',
@@ -141,6 +164,7 @@ describe('saved settings', () => {
     const sources = [
       'app/_layout.tsx',
       'app/(tabs)/bible/index.tsx',
+      'services/BibleAudioSources.ts',
       'services/BibleService.ts',
       'constants/Themes.ts',
       'constants/AppPreferences.ts',
@@ -727,8 +751,12 @@ describe('Android key screens (#372)', () => {
   const { join } = require('node:path');
 
   it('takes the same screens, named android/<screen>-<variant>.png', () => {
+    // All but the iPhone's own checks, such as its audio (#551), which
+    // android-audio-e2e.yml covers on Android.
+    const shared = config.screens.filter((screen: { platforms?: string[] }) => !screen.platforms?.length || screen.platforms.includes('android'));
+    expect(shared.length).toBe(config.screens.length - 2);
     expect(new Set(android.map((shot: { screen: string }) => shot.screen))).toEqual(
-      new Set(config.screens.map((screen: { name: string }) => screen.name)),
+      new Set(shared.map((screen: { name: string }) => screen.name)),
     );
     for (const shot of android) expect(shot.file).toBe(`android/${shot.name}.png`);
     expect(names(android)).toEqual(expect.arrayContaining(['home-default', 'home-dark', 'home-large', 'bible-dual-xl']));

@@ -454,14 +454,15 @@ is preferred there over `AsyncStorage` due to the large payload size of full Bib
 and better performance with structured data queries. On iOS and Android, the app caches
 a book's file in memory once it opens. Every reader translation ships with the app
 (`assets/bible`), and so do the verse popup's Hebrew and Greek, so the text opens with no
-network; only audio streams. `scripts/build-bundled-bibles.mjs`
+network. Audio streams, but on a phone a member can download a book, a section, a
+Testament, or the whole Bible to listen offline, in the You tab's Offline Bible Audio (#556). `scripts/build-bundled-bibles.mjs`
 (BSB, RV1909, and the Hebrew and Greek) and `scripts/build-cuv-1919.mjs` (CUV) rebuild the files. A BSB file
 holds each chapter as HelloAO's chapter API returns it, without its audio timings.
 `scripts/build-bible-audio-timings.mjs` keeps those in `assets/bible/audio-timings`, one
 file per narrator and book, so the reader can mark the verse being read (#561).
 [What the app keeps on the phone](on_device_storage.md)
-says where the bundled texts and the app's other saved data live on each platform, what's
-backed up, and what the store policies say.
+says where the bundled texts, downloaded audio, and the app's other saved data live on
+each platform, what's backed up, and what the store policies say.
 
 ### 4.2 Bible Sharing Feature (done)
 
@@ -581,16 +582,27 @@ and keeps following.
   `scripts/bible-audio-timing-sources/`, so a recording replaced later can be found and
   aligned again. The Cantonese narrator reads the CUV's notes aloud and the Mandarin
   narrator doesn't, so the notes are aligned as text for one and skipped for the other.
-- **Checks:** speech recognizers that don't share the aligner's model heard sampled chapters,
-  and each verse's first heard word was compared with its time (`spot_check_chinese.py`
-  with SenseVoice, `spot_check_spanish.py` with Whisper). Mandarin: 1,411 verses in 55
-  chapters, all within 0.3 s. Cantonese: 1,698 verses in 70 chapters, 99.5–99.9% within
-  0.3 s and none late, where an earlier pause rule had 95.5%, with 2.7% of verses marked
-  early while the last words of the verse before were read (`spot_check_harm.py` sorts
-  misses). Spanish: 133 verses in 7 chapters, 98% within 0.5 s. A recognizer can match a
-  verse's opening words to an identical passage elsewhere, as in Numbers 7, so a large
-  disagreement is checked against the verses around it before the time is blamed.
+  `finish.py` also gives no time to the CUV's 66 verses that only say 見上節 ("see the verse
+  before"), which the narrators skip. For a verse that opens with a few words and a colon,
+  such as "Y dijo:", it keeps the aligner's start when the pause rule moved it more than
+  0.5 s later (110 Spanish verses): the narrator reads the phrase straight on from the verse
+  before and pauses after it.
+- **Checks:** speech recognizers that don't share the aligner's model heard every chapter
+  (`check_verse_times.py`, with SenseVoice for Chinese and Whisper for Spanish), and each
+  verse's time was compared with when its first word was heard, if its first two were
+  heard in order (#573). Each verse more than 1 s off was checked by ear.
+  `scripts/bible-audio-alignment/corrections.json` holds the starts checked by ear: 22
+  Mandarin, 56 Cantonese, and 14 Spanish. Two of the Cantonese confirm a start that was
+  right, and 12 are the Hebrews 12 verses the recording leaves out. Of the verses whose
+  first words were heard, 99.99% of 30,471 Mandarin, 99.77% of 27,747 Cantonese, and
+  99.66% of 26,379 Spanish are within 0.3 s. The few still more than 1 s off are the
+  recognizer's or the check's mistakes, such as matching a passage that repeats, as in
+  Numbers 7, or deliberate, such as a verse read twice starting at its first reading.
+  Before that, sampled chapters (`spot_check_chinese.py`, `spot_check_spanish.py`) chose the
+  pause rule: in Cantonese it put 99.5–99.9% of 1,698 verses within 0.3 s, where an earlier
+  rule had 95.5%.
 - **Running them again:** a Python environment with `torch` and `torchaudio` 2.8, `numpy`,
-  `pypinyin`, `ToJyutping`, and `imageio-ffmpeg` (and `funasr` and `transformers` for the checks). On a
-  consumer GPU each chapter takes 3 to 5 seconds, so all 3,567 take about four hours, plus
-  the downloads.
+  `pypinyin`, `ToJyutping`, and `imageio-ffmpeg` (and `funasr`, `faster-whisper`, and
+  `transformers` for the checks). On a consumer GPU each chapter takes 3 to 5 seconds, so
+  all 3,567 take about four hours, plus the downloads. Checking every verse takes another
+  2 to 3 hours a narrator.

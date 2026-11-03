@@ -128,8 +128,10 @@ church-website platform.
   rather than stopping playback. Audio Power is reached only if that fails too.
   Cantonese and Spanish audio stop until the library recovers. Cantonese listeners
   can switch to the Mandarin narrator meanwhile.
-- The player streams with byte-range requests; it does not download chapters for
-  offline use.
+- The player streams with byte-range requests. On a phone, a member can also
+  download a book, a section, a Testament, or the whole Bible to listen offline (#556),
+  only when they tap it: one file a chapter, church copy first, three at a time.
+  See [What the app keeps on the phone](../feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
 - The web player preloads only the next chapter. On native, the app queues up to 24
   upcoming chapter descriptors but does not fetch their audio itself.
 - The [external dependency monitor](external-dependency-monitor.md) checks that
@@ -197,6 +199,12 @@ listeners through Cloudflare.
 
 Even the last row is modest bandwidth for a CDN. What matters is who pays for it and
 under which terms.
+
+Downloads to listen offline (#556) add to this once per member and narrator: about
+0.9 GB for a whole Bible in Mandarin, Cantonese, or Spanish (0.79 to 0.94 GB), and
+18 to 25 MB for a book like John. If 200 members each downloaded a whole Bible, that's
+about 180 GB, spread over however long they take to do it: about a month of the
+heavy-use row, or eight of the congregation row. Each member downloads a file once, and replaying it uses no network.
 
 ### Wasabi (origin storage)
 

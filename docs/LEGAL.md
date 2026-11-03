@@ -1,6 +1,6 @@
 # Legal, Licensing, and Privacy
 
-Last legal review: 2026-08-09. Facts about the app updated: 2026-10-27.
+Last legal review: 2026-08-09. Facts about the app updated: 2026-11-01.
 
 This document centralizes the project's licensing records, third-party source reviews,
 privacy disclosures, branding restrictions, and legal disclaimer. It records engineering
@@ -31,8 +31,9 @@ translation's text from either:
   it from HelloAO's complete translation. HelloAO also supplies the BSB's English
   audio:
   each BSB chapter comes with HelloAO's narrator links, and the app offers each one
-  as a narrator. As of October 2026, HelloAO lists four narrators: three play from
-  HelloAO's audio host (`audio.bible.helloao.org`) and one from `openbible.com`.
+  as a narrator. The app's BSB files, built in October 2026, have four: three play from
+  HelloAO's audio host (`audio.bible.helloao.org`) and one, Gilbert, from
+  `openbible.com`. HelloAO has since dropped Gilbert, so the next rebuild leaves him out.
   HelloAO also publishes when each verse starts in its three recordings, and the
   app ships those times so the reader can mark the verse being read
   (`scripts/build-bible-audio-timings.mjs`, #561). HelloAO's
@@ -326,6 +327,30 @@ church's IT Admin shared drive instead. The statement above was retrieved from
 http://www.blagovestnik.org/ukraine/ukraine.htm on October 1, 2026, when the page's
 SHA-256 was `ee452da37125959f162b56ce55259091cdc61564a2653343440b15fdffc79413`.
 
+### Bible audio downloaded to listen offline
+
+On a phone, a member can download the audio of a book, a section such as the Gospels, a
+Testament, or the whole Bible, for one narrator, to listen with no connection
+([#556](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/556)).
+The files stay on the member's own phone, unchanged, until they delete them. The app
+downloads only what it already streams, from where it streams it, and offers no way to
+share or export a file. What each source allows:
+
+| Recording | Source | Offline downloads |
+| --- | --- | --- |
+| Mandarin (Chinese Union Version) | Audio Power, from the church's copies | Its owner approved the church app's use, download, and self-hosting of the recordings ([#134](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/134#issuecomment-5274730608)). The church's copy comes first, then the Internet Archive's and Audio Power's, which are the same files. |
+| Cantonese, and Spanish (Reina-Valera 1909) | WordProject, from the church's copies | Its book pages invite downloading a whole book (see [WordProject Cantonese audio](#wordproject-cantonese-audio)). Downloaded only from the church's copies, never WordProject's servers, and kept exactly as hosted. |
+| English (BSB): Souer, Hays, and David | HelloAO | HelloAO's [terms](https://bible.helloao.org/docs/): "Cache, store and download without expiry", and "AO Lab adds no restrictions". Gilbert's recordings, on openbible.com, aren't offered. |
+| Anything from Bible Brain later ([#241](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/241)) | Faith Comes By Hearing | Only content from its `/download` endpoint may be offered offline (see [Bible Brain API license](#bible-brain-api-license-faith-comes-by-hearing-planned-not-in-use)). |
+
+Downloading contacts no service the app doesn't already stream from, so the services the
+privacy policy names don't change; its storage section says downloaded audio stays on
+the phone until it's deleted. The English recordings are bigger, about 5.5 GB for
+Souer's whole Bible: smaller copies would mean re-encoding them and hosting the church's
+own, which only public-domain recordings allow. Check each narrator's status before
+doing that. Where the files live, and how they're kept out of backups, is in
+[What the app keeps on the phone](feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
+
 ### “Free to access” doesn't necessarily mean “public domain”
 
 fetch(bible) provides an open CDN with no API key, usage fee, request quota, or
@@ -391,8 +416,8 @@ is linked, not copied.
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
-| **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book directly in the app language's official edition (English; Chinese, one edition for both scripts; or Spanish), and small cover thumbnails from `a.egwwritings.org`. *The Story of Jesus* opens in English, or for Spanish readers as the official Spanish edition, *Cristo Nuestro Salvador* (`text.egwwritings.org/read/1747.3`), whose chapters match it one for one | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
-| **Chinese Union Mission** (`api.sdabible.org`, `cms.sdabible.site`) | Cover thumbnails for the Chinese EGW editions only, loaded from its public catalog. The books themselves open on EGW Writings. | Same limited navigational use as the EGW covers. Image URLs are checked against the Mission's storage host. |
+| **Ellen G. White writings** (EGW Writings, `egwwritings.org`) | Links that open each book directly in the app language's official edition, English or Spanish (Chinese readers open her books in the Chinese Union Mission's reader, in the next row), and small cover thumbnails from `a.egwwritings.org`. *The Story of Jesus* opens in English, or for Spanish readers as the official Spanish edition, *Cristo Nuestro Salvador* (`text.egwwritings.org/read/1747.3`), whose chapters match it one for one | The Ellen G. White Estate holds the rights to its editions, translations, website, and app content. The app only links to the official reader and never copies the text. Using the thumbnails to identify books that lead to their official editions is a fair-use assessment, not an express license. |
+| **Chinese Union Mission** (`read.sdabible.org`, `api.sdabible.org`, `cms.sdabible.site`) | For Chinese readers only: links that open Ellen G. White's Chinese editions, one for both scripts, and 14 other Chinese books the church's leaders chose (#554) in the online reader of the Mission's SDA Bible app, in the app's script; the Explore tab's link to that app (its App Store page on iPhone and iPad, the online reader elsewhere); and cover thumbnails for those books, from `read.sdabible.org` and, for hers, from the Mission's public catalog. | The app only links to the Mission's reader and never copies its text or covers into the app; the Mission's editions keep their own rights. The thumbnails get the same limited navigational use as the EGW covers: they identify books that lead to the Mission's own copies. Image URLs are checked against the Mission's hosts. A courtesy request to the Mission about these links and covers is tracked in #563. |
 | **Adventist pioneer books on EGW Writings** | A link to Uriah Smith, *Daniel and the Revelation*, 1897 edition (`text.egwwritings.org/read/12861.1`) | Published in 1897, so public domain in the U.S. The app only links to it. Later revisions, such as the 1944 *The Prophecies of Daniel and the Revelation*, are still copyrighted and must not be substituted. |
 | **Adventist Pioneer Library translation on EGW Writings** | For Spanish readers, J. N. Andrews, *Historia del Sábado* (`text.egwwritings.org/read/14404.2`), in place of the English *History of the Sabbath* | A 2020 Spanish translation of the 1873 edition by Rolando Itin, © Adventist Pioneer Library, published on EGW Writings; its credits page names the 1873 original. The translation is copyrighted, so the app only links to it. |
 | **Project Gutenberg** (`gutenberg.org`) | Links to seven works: Joseph Bates, *The Seventh Day Sabbath, a Perpetual Sign* (1847); J. N. Andrews, *History of the Sabbath and First Day of the Week* (1873); Uriah Smith, *The State of the Dead and the Destiny of the Wicked* (1873); John Bunyan, *The Pilgrim's Progress* (1678); Andrew Murray, *Humility* (1895); John Foxe, *Fox's Book of Martyrs* (an abridged 19th-century American edition); Jesse Lyman Hurlbut, *Hurlbut's Life of Christ for Young and Old* (1915, ebook 40460) | Each record is explicitly marked public domain in the U.S. |
@@ -475,10 +500,14 @@ Jesus website when it finds none
 ([design](feature_designs/sabbath_school_lessons.md)). The weekly bulletin, in the app
 and on paper, names the adult lesson the class discusses, by its number and title from
 the same public catalog, with a link to the reader (#558); no lesson text is copied.
+The screen also opens the week's mission video (#508): Adventist Mission's page of
+weekly videos, or, for Chinese readers, CHTV's Mandarin version on YouTube.
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
 | **Adventech** (`sabbath-school.adventech.io`; PDFs from `sabbath-school-pdf.adventech.io` and `sabbath-school-resources-media.adventech.io`) | A link to the adult lesson reader. For children, the public catalog, to find this week's lesson, and the official lesson PDF. On a phone, the person's own phone downloads the PDF, keeps it in the app's cache for that week, and opens it in the phone's own PDF viewer, so opening it again is instant ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529)). A lesson downloads only when the person taps it. | The lessons are © General Conference of Seventh-day Adventists®, all rights reserved. [Adventech's lesson repository](https://github.com/Adventech/sabbath-school-lessons#copyright) says that no part of the adult guide may be "edited, altered, modified, adapted, translated, re-produced, or published" without the General Conference's prior written authorization. We found no separate public statement for the children's lessons, so they're treated the same way. The app doesn't alter, translate, or republish any lesson. The phone downloads the official, unmodified file from Adventech's own hosts, as a browser would, and keeps it only in its cache. This is an engineering assessment, not an express license. |
+| **Adventist Mission** (`adventistmission.org`) | A link to its Mission Spotlight page, where this quarter's weekly mission videos play: the Spanish edition for Spanish readers, the English one otherwise, and Chinese readers whose phone hasn't found CHTV's version. | Linking only. The videos play on Adventist Mission's own page; the app doesn't copy, download, or re-host them. |
+| **CHTV 希望電視台** (Chinese Hope TV, on `youtube.com`) | For Chinese readers, the week's Mission Spotlight in Mandarin, which CHTV posts to its YouTube channel as 聖工剪影. The phone reads the channel's public feed to find the video, and keeps the newest one's ID, date, and story title so it can offer that one until the next is found. | Linking only. The video opens in the YouTube app or browser, under YouTube's terms and CHTV's rights; the app shows only the date and story title, and doesn't copy, download, or embed the video. |
 
 Rules for this feature:
 
@@ -609,9 +638,9 @@ The checked-in mappings and their regeneration scripts are:
 
 The 506 hymnal's **With singing** button opens that hymn's recording from a
 [public YouTube playlist of the 506 hymnal](https://www.youtube.com/playlist?list=PLZpA9AftZl_JIt-MCXSfP364-qR3ddrd3),
-which the church recommended. It is published by CHTV 希望電視台 (Chinese Hope TV,
-[chinesehope.tv](https://chinesehope.tv/)), the Chinese-language Hope Channel of the
-Seventh-day Adventist Church's Northern Asia-Pacific Division, and the recordings carry
+which the church recommended. It is published by CHTV 希望電視台 (Chinese Hope TV), the
+Chinese-language Hope Channel of the Seventh-day Adventist Church's Northern Asia-Pacific
+Division, and the recordings carry
 its watermark. Hymns without a recording yet, and the 505 and 707
 hymnals' sung buttons, search YouTube instead. The same limits apply as for zgaxr:
 
@@ -682,7 +711,8 @@ publishes it with no new app build.
 
 It covers the app's links to external resources, such as the hymn sites, EGW
 Writings, and Adventech's Sabbath School lessons, and the copyright caution that goes
-with them; the children's lessons a phone keeps for their week; how to change the text size
+with them; the children's lessons a phone keeps for their week; the Bible audio a phone
+keeps, unchanged, once downloaded to listen offline; how to change the text size
 in EGW Writings' reader; what the app shows from other sources, such as cover
 thumbnails, and where each Library book is hosted; and the external platforms the app
 links to, such as YouTube and Spotify.

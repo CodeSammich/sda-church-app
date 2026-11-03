@@ -26,6 +26,7 @@ Contents:
 - [System boundaries](#system-boundaries)
 - [The three mandatory sheets](#the-three-mandatory-sheets)
 - [The `Leadership` tab](#the-leadership-tab)
+- [The `Hymn Bank` tab](#the-hymn-bank-tab)
 - [Header protection and validation automation](#header-protection-and-validation-automation)
 - [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)
 - [Privacy, auto-translation, and name behavior](#privacy-auto-translation-and-name-behavior)
@@ -44,7 +45,8 @@ Master spreadsheet
 ├── Sabbath Calendar       roster, service assignments, metadata
 ├── Weekly Data           reviewed final-owner bulletin content
 ├── Name Dictionary        private physical-print name resolution
-└── Leadership             pastors and elders, for printed titles
+├── Leadership             pastors and elders, for printed titles
+└── Hymn Bank              hymns to copy into Weekly Data; no script reads it
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
@@ -92,16 +94,18 @@ the church's Workspace terms during annual maintenance.
 | `test/apps-script-physical-bulletin.test.ts` | Physical layout, sheet columns, privacy, lookup, QR, and maintenance regression tests |
 | `test/apps-script-bulletin-merge.test.ts` | Intake mapping and precedence regression tests |
 | `test/apps-script-schedule-assignment-checks.test.ts` | Roster conflict highlighting and unknown-name warning tests |
+| `test/apps-script-bulletin-resilience.test.ts` | Renamed and moved tabs and columns found by their tags, and bulletins without their schedule |
 | `test/integration/bulletin-api.mjs` | Opt-in read-only production API contract check |
 
 ## The three mandatory sheets
 
-The scripts read these three tabs. Row 1 holds the headers. In `Sabbath
-Calendar` and `Weekly Data`, each column is found by its header, wherever it is
-(see [Columns are read by name](#columns-are-read-by-name)). Keep those header
-names as documented, though capitalization and extra spaces don't matter. The
-`Name Dictionary` is read by position: English names in column A, Chinese in
-column B.
+The scripts read these three tabs, and `Leadership`. Row 1 holds the headers.
+In `Sabbath Calendar` and `Weekly Data`, each column is found by its header,
+wherever it is, and still found after it's renamed (see [Columns are read by
+name](#columns-are-read-by-name)). Keep those header names as documented,
+though capitalization and extra spaces don't matter. The `Name Dictionary` is
+read by position: English names in column A, Chinese in column B. All four
+tabs can be renamed.
 
 ### 1. `Name Dictionary`
 
@@ -115,7 +119,10 @@ Data begins on row 2.
 
 - `English Name` is the canonical English name used for physical printing.
 - `Chinese Name` is the traditional-Chinese display name. The dictionary normally
-  stores Chinese names surname-first.
+  stores Chinese names surname-first. A name prints exactly as typed, in either
+  script. A character the bulletin's Chinese font lacks, such as most
+  Simplified-only characters (张, 陈), prints in the fallback font (see
+  [Type](#type)); in Traditional it prints in the bulletin's font.
 - The private printed renderer derives surname-first and given-name-first pinyin
   aliases from `Chinese Name` with the generated `pinyin-pro` runtime. Pinyin is
   never stored as a third column, returned by the public API, or used to display
@@ -209,8 +216,9 @@ spreadsheet opens, a deleted or emptied `Weekly Data` is set up again with
 these headers and the two example rows (`WEEKLY_DATA_EXAMPLE_ROWS`), and an
 expected column that's gone is added back, empty, at the far right, with a
 notice naming it (`ensureWeeklyDataTab_`). Nothing is renamed, moved, or
-removed. A column renamed by hand keeps its data under the new name, beside the
-empty one added back: move the data across and delete the renamed column.
+removed. A renamed tab or column isn't gone: it's still read by its tag, so
+nothing is added back for it. Only one renamed before its first tag, or
+deleted, comes back empty: move any data across and delete the renamed column.
 
 Rules:
 
@@ -225,6 +233,11 @@ Rules:
   the dropdown again.
 - `English Sermon Title` and `Chinese Sermon Title` are separate on purpose:
   people write both, and neither is machine-translated from the other.
+- Chinese in the title and hymn columns here, and in the print dialog's
+  announcements, prints exactly as typed. A character the bulletin's Chinese
+  font lacks, such as most Simplified-only characters, prints in the fallback
+  font (see [Type](#type)). The Chinese Bible reference isn't typed: it's built
+  from the English one.
 - `Hymn of Praise` and `Hymn of Response` each hold one hymn, typed in either
   language like the Sabbath School hymns below, such as `AH 1 Praise to the Lord`
   or `第452首 遵命有福`. The script files it as English or Chinese by how it's
@@ -241,6 +254,8 @@ Rules:
   read as a Chinese hymnal number. Leave unused cells blank. There's no
   closing-hymn column: the closing repeats every opening hymn, so both
   bulletins show them once, as the opening and closing hymns.
+- The [`Hymn Bank` tab](#the-hymn-bank-tab) has every hymn written this way,
+  ready to copy into any of the hymn cells.
 - `Special Music Title` is the piece performed. Who performs it stays in the
   `Sabbath Calendar`'s `Special Music`, which is a Queens column, so Brooklyn's
   piece shows with `TBD` for its performer.
@@ -295,6 +310,48 @@ Head | Paul Wen  | Ruth Ho
 - To add another title, add a column here and an entry in
   `PHYSICAL_NAME_TITLES` in `PrintedBulletin.gs`.
 
+## The `Hymn Bank` tab
+
+This optional tab lists every hymn in the church's two hymnals, to copy into
+`Weekly Data`'s hymn cells instead of typing them (#606). No script reads it,
+so it can be renamed, sorted, or deleted, and refreshing it needs no deploy.
+
+```text
+Chinese Hymnal 505 中文赞美诗 | SDA Hymnal 1985 英文诗歌本
+第1首 在主寶座前              | AH 82 Before Jehovah’s Awful Throne
+第163首 門外有一位客人        |
+                              | AH 2 All Creatures of Our God and King
+```
+
+- Each cell holds one hymn, written the way `Weekly Data` takes it. Copy a
+  cell and paste it into a hymn cell. The other language is filled in from it,
+  as for any typed hymn.
+- The 505 comes first, in number order, with the same hymn in the 1985 beside
+  it wherever the hymnals' number map pairs them. The 1985 hymns with no 505
+  pair follow, also in number order.
+- To find a hymn by number or title, press Ctrl+F (⌘F on a Mac).
+- Hymn titles are in Traditional Chinese, because they print (see [Chinese
+  script](#chinese-script)); the headers are staff-facing, so they're
+  Simplified. The app stores the 505's titles in Simplified, as printed on
+  each hymn's score (`scripts/scrape-chinese-505-hymnal.mjs`). The script
+  converts them with `opencc-js`, and its `TRADITIONAL_FIXES` corrects the
+  characters the converter gets wrong, such as 祢, which it turns into 禰.
+
+To make the tab, or refresh it after the app's hymnal data or number map
+changes, run this from the repo:
+
+```sh
+node scripts/export-hymn-bank.cjs --output hymn-bank.tsv
+```
+
+Open `hymn-bank.tsv`, select everything, and copy it. In the spreadsheet, add a
+tab named `Hymn Bank` (or clear the old one), click cell A1, and paste: the
+tabs in the file split it into the two columns. Then **View → Freeze → 1 row**
+keeps the headers in sight, and **Protect sheet** (right-click the tab), with
+**Restrict who can edit this range**, lets staff copy cells but not change
+them. `test/hymn-bank.test.ts` checks that the app and the printed bulletin
+read every cell as its own hymn.
+
 ## Header protection and validation automation
 
 The bound spreadsheet's simple `onOpen` maintenance path runs for every user who
@@ -314,36 +371,62 @@ On open, the script:
    for the next two Sabbaths, and sets its `Date` and `Location` rules;
 6. hides old schedule rows without deleting them;
 7. repaints the conflict highlights described below across every schedule row;
-   and
-8. shows one alert, in English and Simplified Chinese, listing any expected
-   column or tab still missing from `Sabbath Calendar` or `Weekly Data` (see
-   [Columns are read by name](#columns-are-read-by-name)).
+8. tags the tabs and columns it finds by name, so a later rename doesn't lose
+   them (see [Columns are read by name](#columns-are-read-by-name)); and
+9. shows one alert, in English and Simplified Chinese, listing any expected
+   column or tab still missing from `Sabbath Calendar` or `Weekly Data`, and
+   any tab or column renamed, or any name more than one column has, since the
+   last notice.
 
 ### Columns are read by name
 
 The API and the printed bulletin find every `Sabbath Calendar` and `Weekly
-Data` column by its header, wherever it is. So:
+Data` column by its header, wherever it is. Each open also tags the four tabs,
+and each of those columns, with
+[developer metadata](https://developers.google.com/apps-script/reference/spreadsheet/developer-metadata),
+which stays with a tab or column through a rename or a move and can't be seen
+or edited in Sheets (`tagBulletinTabsAndColumns_`, #580). The rules, the
+reasons for them, and every known edge case are in
+[Bulletin spreadsheet tags](../feature_designs/bulletin_spreadsheet_tags.md).
+For the people running the sheet:
 
 - moving a column, or adding one the scripts don't use, changes nothing;
-- renaming or deleting a column the scripts use blanks only that field, in the
-  app and in print, and the rest of the bulletin still loads. On `Weekly Data`,
-  the next open adds the column back (see [`Weekly Data`](#3-weekly-data)). On
-  the `Sabbath Calendar`, the alert above names it each time the spreadsheet
+- renaming a tab or column the scripts use changes nothing either, once the
+  spreadsheet has been opened since the deploy: the app, the printed bulletin,
+  the roster checks, and the English-only guard keep reading it by its tag. The
+  next open's alert names each rename once, such as `Sabbath Calendar:
+  "Speaker" is read as Queens Sermon`. Nothing needs doing, though renaming it
+  back is fine too;
+- a tab or column made again under its old name takes over from the renamed
+  one, and a copied tab doesn't take over from an original that still has its
+  name;
+- when two columns have the same expected name, the alert says which one is
+  read, such as `Sabbath Calendar: 2 columns are named Date; column B is
+  read`: the one with data, and then the original. A prayer column that
+  appears on both sides counts on its own side, such as `2 Queens columns are
+  named Offering Prayer`. Rename the extra column, or delete an empty one an
+  open added;
+- deleting a column the scripts use, or renaming it before the spreadsheet has
+  been opened since this was deployed, blanks only that field, in the app and
+  in print, and the rest of the bulletin still loads. On `Weekly Data`, the
+  next open adds the column back (see [`Weekly Data`](#3-weekly-data)). On the
+  `Sabbath Calendar`, the alert above names it each time the spreadsheet
   opens, until a column with that name is back, in any position. A repeated
   prayer column, listed as `Queens …` or `Brooklyn …`, goes back on its
   location's side of `Brooklyn Sermon`, named without the location. The alert
   also names a `Weekly Data` column when the person opening the sheet can't
   edit its protected header row, so the column couldn't be added back;
 - a missing `Weekly Data` tab, or one without `Date` or `Location`, leaves every
-  week's content blank until the next open puts it back. A missing `Sabbath
-  Calendar`, or one without `Date`, stops the bulletin, since every bulletin
-  starts from that tab's date row. A `Sabbath Calendar` without `Date` or
+  week's content blank until the next open puts it back. A deleted `Sabbath
+  Calendar`, or one without `Date`, leaves every week without its schedule (see
+  [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)).
+  A `Sabbath Calendar` without `Date` or
   `Quarter` also stops the open-time upkeep from its quarter rows on (steps 4
-  to 7 above) until the column is back.
+  to 7 above) until the column is back. The tagging in step 8 still runs.
 
-Until #558 the scripts expected every header in a fixed order. One changed
-header stopped the whole bulletin and the open-time upkeep, and a rule on each
-header cell rejected any other name.
+Since the header row and `Sabbath Calendar!A:B` are protected, an open by
+someone outside the technology group may not be able to tag them; a later open
+by the group does, and nothing else waits on it.
 
 ### English-only Sabbath Calendar input
 
@@ -495,9 +578,28 @@ only when it is blank may a saved printed override or older fallback memory be
 used. This prevents an old manual selection from masking newly reviewed intake.
 
 Blank content remains blank in the API and renders as `TBD` in the app or as the
-bilingual printed placeholder. Missing roster rows are different: a missing
-`Sabbath Calendar` sheet or missing date row is an API error because there is no
-canonical schedule record.
+bilingual printed placeholder.
+
+A missing schedule is different: the `Sabbath Calendar` tab, its `Date` column,
+or the Sabbath's row is gone, so there's no schedule record at all (#580).
+Then:
+
+- **App 1.6.0 and later** send their version with each request
+  (`appVersion=1.6.0`), and get the bulletin with every schedule field blank,
+  `Weekly Data`'s content, and `scheduleNotSet: true`. The app shows "This
+  Sabbath's schedule isn't set yet" above the rest, which shows `TBD`. It
+  doesn't store that bulletin, so a copy it stored earlier, with a schedule,
+  is shown instead, and the next look asks again.
+- **Older apps, and the API checks** (`verify-bulletin-api` and the external
+  dependency monitor), get the error as before: `Schedule sheet not found: …`,
+  `Schedule sheet is missing a Date column`, or `No schedule found for …`. An
+  older app keeps showing the last copy it stored, rather than a blank one it
+  can't explain. `SCHEDULE_NOT_SET_APP_VERSION` in `BulletinApi.gs` sets the
+  first version that gets the bulletin instead. This is a
+  [changeover](../feature_designs/bulletin_spreadsheet_tags.md#changeovers):
+  a cleanup issue opens once no older app has asked for 14 days.
+- **The printed bulletin** is still made, with its roster as `TBD`, and the
+  dialog says the Sabbath Calendar has no schedule for that Sabbath yet.
 
 ### Public response boundary
 
@@ -556,7 +658,8 @@ Chinese scripts on purpose (#565):
   name, headings, Bible book names, the schedule, the giving notes, and the
   Sabbath Encouragement. The bulletin is formal, and most of the people who read
   it on paper are older members. Younger readers mostly use the app, which shows
-  either script.
+  either script. What staff type (names, titles, announcements) prints as
+  typed, in either script.
 - **Staff-facing text is in English and Simplified Chinese.** That covers the
   Create bulletin dialog, alerts, error messages, cell notes, and column help.
   The people who run the bulletin read Simplified. The text uses the terms in
@@ -598,8 +701,12 @@ preview surface, not the canonical release channel.
 
 ### Caching and refresh
 
-- The API caches privacy-filtered responses for 120 seconds.
-- The app caches successful bulletin responses per Sabbath date on the device.
+- The API caches privacy-filtered responses for 120 seconds. A response for an
+  app from 1.6.0, which may come without its schedule, is cached apart from one
+  for older apps and the API checks.
+- The app caches successful bulletin responses per Sabbath date on the device,
+  except one without its schedule (`scheduleNotSet`), which never replaces a
+  stored copy.
 - Next Week loads lazily when opened.
 - A manual refresh bypasses the device cache but still observes the server's
   two-minute Apps Script cache and enters a five-minute local cooldown.
@@ -695,6 +802,46 @@ The Brooklyn cover uses Brooklyn as the primary address while still highlighting
 all three locations. The Zoom rows are two on top and one centered below, with
 the topic before the day/time.
 
+### Type
+
+The pastor's rules for the printed bulletin (#603):
+
+- English prints in Times New Roman and Chinese in one Song (Ming) style font,
+  set run by run: a Doc holds one font per run, so `setPrintedFontFamilies_`
+  gives the Latin font to everything and then the Chinese font to each run of
+  Chinese characters and punctuation.
+- No text is smaller than 10 points. Body and table text is 10 points with
+  single line spacing (0.9 for the giving notes), panel titles 13, the
+  announcement and giving headings 11, and the Sabbath Encouragement's headings
+  12. Long announcements stay at 10 points; shorten them in the Doc.
+- A panel title's Chinese line sits right above its English line, with single
+  spacing between them.
+- Chinese stays regular (not bold), as before.
+
+Google Docs prints only fonts in its own **Font → More fonts** list, so a Mac
+font such as 宋體-繁 (Songti TC) can't be used. In that list,
+**UoqMunThenKhung** (宇文天穹) is the only Ming style face for Traditional
+Chinese, so it's the default. It has every common Traditional character and the
+Simplified forms Japanese shares (国, 会), but not most Simplified-only ones
+(张, 陈), and it lacks these 67 rare characters of the CUV Bible:
+儹匉咷嗐嘬噝墁戥挓揝搋摞杴橛汊洑玎璫癤瞅矬碡磣秸窨綹繸纍羢臌荽菢蒺蔯蔻薅虼蝘蝻蟥蠓訇誆讟賙跐蹧躥醡鍤鏇鏊鐏颻餂饈騌騸鴞鵀鶘鶿鸇鸕麀麃鼫. Each character it lacks prints in the fallback font, alone; the rest of the name
+or verse stays in UoqMunThenKhung.
+
+Each font can be changed without a deploy, in **Extensions → Apps Script →
+Project Settings → Script properties**. The value must be a font name from
+Docs' **Font → More fonts** list. The next **Create Google Doc…** uses it, and
+deleting the property goes back to the default.
+
+| Script property | Default | Used for |
+| --- | --- | --- |
+| `PRINTED_BULLETIN_CJK_FONT` | `UoqMunThenKhung` | All Chinese |
+| `PRINTED_BULLETIN_LATIN_FONT` | `Times New Roman` | English, digits, and Latin punctuation |
+| `PRINTED_BULLETIN_CJK_FALLBACK_FONT` | `Noto Sans SC` | Each Chinese character UoqMunThenKhung lacks |
+
+The script knows UoqMunThenKhung's characters (`PRINTED_DEFAULT_CHINESE_FONT_COVERAGE_`)
+but not another font's. With another Chinese font set, every Chinese character
+uses it and the fallback font isn't used.
+
 ## Printed edge cases and content rules
 
 ### Hymns
@@ -752,6 +899,15 @@ Each following Sabbath advances one page and wraps page 52 back to page 1. The
 Chinese and English columns are rendered separately, with paragraph spacing and
 the Today's Verse section divider preserved. The Chinese heading is intentionally
 regular rather than bold or underlined.
+
+The script's snapshot of the pages is in Simplified Chinese, like the PDF. The
+Chinese column prints it in Traditional (#603): `toPrintedTraditionalChinese_`
+converts each Simplified character the snapshot uses, then the words whose
+Traditional form depends on context, such as 關係 but 牢繫, and 干犯 but 枯乾.
+Both lists were made with OpenCC (cn to tw) and checked by reading every
+changed line. A new snapshot needs both lists made again. The English column
+still translates the Simplified snapshot, so its Bible references keep
+matching `SABBATH_BIBLE_BOOKS_`.
 
 ### Giving QR slots
 
@@ -842,8 +998,8 @@ After deployment:
 2. generate a test date for each changed location/format;
 3. verify the Google Doc link;
 4. confirm the Doc is in the correct folder;
-5. verify the public `/exec?date=YYYY-MM-DD` response does not contain email,
-   timestamps, Chinese names, pinyin, or full last names; and
+5. verify the public `/exec?date=YYYY-MM-DD&client=check` response does not
+   contain email, timestamps, Chinese names, pinyin, or full last names; and
 6. run the opt-in integration test when production verification is appropriate:
 
 ```bash
@@ -859,9 +1015,11 @@ changes the URL and requires a coordinated mobile-app update.
 | --- | --- | --- |
 | App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`; allow up to 120 seconds for API cache expiry |
 | New intake verse is ignored by print prompt | Old print memory or override | Check that `Weekly Data → Bible Verses` is nonblank; it has priority over old memory |
-| API returns `No schedule found for …` | Missing `Sabbath Calendar` date row (a missing or renamed tab returns `Schedule sheet not found` instead) | Restore the exact tab name and a matching Date row |
-| The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was renamed or deleted, so that field is blank | Give a column that exact name again, in any position. To rename one on purpose, follow the [Change checklist](#change-checklist) |
-| An empty column appeared at the far right of `Weekly Data` | An expected column was renamed or deleted, and the open-time upkeep added it back | If it was renamed, move its data into the added column and delete the renamed one. To rename on purpose, follow the [Change checklist](#change-checklist) |
+| API returns `No schedule found for …`, or the app says the schedule isn't set | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag, unless it was renamed before the spreadsheet was opened after the deploy). Apps from 1.6.0 get the bulletin without its schedule instead of the error | Restore the tab and a matching Date row |
+| The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
+| The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the notice says which of two same-named columns is read, and it shows once. Rename the extra column, or delete an empty one an open added, if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |
+| A renamed column stopped being read | A column with its old name was added, which the scripts read instead | Delete the new column, or move its data into it and delete the renamed one |
+| An empty column appeared at the far right of `Weekly Data` | An expected column was deleted, or renamed before it was tagged, and the open-time upkeep added it back | Move any data into the added column and delete the renamed one |
 | A prayer role shows under the wrong location | A repeated `Chair/Pastoral Prayer` or `Offering Prayer` column was moved across `Brooklyn Sermon` | Move it back to its location's side, or name it with its location, such as `Queens Offering Prayer` |
 | A roster cell is pale red | The same name is in another roster cell of that row | Hover over the cell to see the other roles; reassign one, or leave it if intended. The color clears on the next edit |
 | No unknown-name dialog, only an alert | No bulletin admin has used the Printed Bulletin menu yet, or the trigger owner's account was removed | Have an admin open **Printed Bulletin → Create Google Doc…**; if the owner was removed, delete the `SCHEDULE_NAME_CHECK_TRIGGER` script property first |
@@ -870,7 +1028,9 @@ changes the URL and requires a coordinated mobile-app update.
 | New quarter rows lack validation | Maintenance did not run or append failed | Open the workbook as an editor, inspect Apps Script logs, and rerun maintenance; do not manually limit the rule to X53 |
 | Old rows disappeared | They were hidden, not deleted | Unhide rows when historical planning is needed; maintenance is non-destructive |
 | Google Doc is in Trash or not updated | Saved ID points to a trashed/deleted file | Run generation again; the script treats it as missing and creates a new Doc in the configured folder |
-| The Doc, or its printout, has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Restore the renderer's panel/gutter structure; never clip text to fit |
+| The Doc, or its printout, has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Shorten the long text in the Doc (an announcement, a sermon title). If every week overflows, restore the renderer's panel/gutter structure; never clip text or go under 10 points to fit |
+| A Chinese character prints in a plainer font than the rest | It's a Simplified or rare character the bulletin's Chinese font lacks, so it uses the fallback font | Nothing, if it's spelled as intended. A Simplified name or title typed in Traditional prints in the bulletin's font; a rare character always prints in the fallback font. See [Type](#type) |
+| All Chinese, or all English, prints in the wrong font | `PRINTED_BULLETIN_CJK_FONT` or `PRINTED_BULLETIN_LATIN_FONT` names a font Docs doesn't offer | Fix the name from Docs' **Font → More fonts** list, or delete the Script Property for the default |
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
 | Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten (on the Sabbath School hymns row, an unmapped English hymn repeats on purpose) | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
 | QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
@@ -896,12 +1056,15 @@ For header changes:
 
 - **Moving a column, or adding one the scripts don't read,** needs no code
   change. On the `Sabbath Calendar`, add it at the far right (see above).
-- **Renaming a column the scripts read, or adding one they should,** starts in
-  the code: the field's schema entry (`COLUMN_SCHEMA` or
+- **Renaming a tab or column in the spreadsheet** needs no code change; its tag
+  keeps it read (see [Columns are read by name](#columns-are-read-by-name)).
+- **Changing the name the code expects for a column, or adding one the scripts
+  should read,** starts in the code: the field's schema entry (`COLUMN_SCHEMA` or
   `BULLETIN_INTAKE_SCHEMA`), `BULLETIN_SHEET_COLUMNS`, the tests, and this
   document. Search the scripts for the old name too: `Date`, `Location`,
   `Quarter`, `Bible Verses`, `Queens Sermon`, and `Brooklyn Sermon` are also
-  used directly.
+  used directly. A new expected name gets a new tag: the first open after the
+  deploy tags the column once it has that name.
   - **`Weekly Data`:** to rename without a gap, add the old name after the new
     one in the entry's `headers`, and in `BULLETIN_COLUMN_ALTERNATIVES` for the
     open-time alert and repair. The sheet can then be renamed any time after
@@ -911,6 +1074,23 @@ For header changes:
   - **`Sabbath Calendar`:** an entry has one `header` and no alternatives, so
     rename the column straight after approving the deploy. Until then, that
     one field is blank.
+
+For a change to the API's answer that older apps can't handle, such as a
+renamed field or an answer they'd show wrongly:
+
+- **Keep the old answer for older apps** beside the new one. Since 1.6.0 the
+  app sends its version (`appVersion`) with each request, and
+  `isAppVersionAtLeast_` tells them apart, as `SCHEDULE_NOT_SET_APP_VERSION`
+  does.
+- **Mark it as a changeover** in `BULLETIN_CHANGEOVERS` in `BulletinApi.gs`:
+  an `id`, the app version that makes the old answer unneeded (`retiresWith`),
+  and what to remove (`cleanup`).
+- **Leave the timing to the monitor.** Once no older app has asked for a
+  bulletin for 14 days, the daily External Dependency Monitor opens the issue
+  **[changeover] Retire the bulletin API's … changeover**. Then do the cleanup
+  it describes, and remove the entry. A new check of the live API should send
+  `client=check`, so it isn't taken for an older app. See
+  [Changeovers](../feature_designs/bulletin_spreadsheet_tags.md#changeovers).
 
 The API returns only the fields in its schemas and the optional Brooklyn fields
 in `populateOptionalBrooklynScheduleFields_`, so any other new column reaches

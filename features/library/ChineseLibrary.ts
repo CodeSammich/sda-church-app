@@ -1,24 +1,19 @@
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { EGW_BOOKS } from './EgwBookCatalog';
 
 export const CHINESE_LIBRARY_CATALOG_URL =
   'https://api.sdabible.org/getResourceCategory/egw/cn';
 
 const CHINESE_LIBRARY_STORAGE_URL = 'https://cms.sdabible.site/storage/';
 
-const CHINESE_LIBRARY_EGW_BOOK_IDS: Readonly<Record<string, number>> = {
-  'patriarchs-and-prophets': 127,
-  'prophets-and-kings': 128,
-  'desire-of-ages': 55,
-  'acts-of-the-apostles': 81,
-  'great-controversy': 75,
-  'steps-to-christ': 120,
-  'christs-object-lessons': 34,
-  'ministry-of-healing': 16,
-  education: 50,
-  'child-guidance': 13,
-  'messages-to-young-people': 23,
-};
+// The Mission's id for each of her books, which its Chinese edition opens at in
+// the Mission's reader and which keys its cover in this catalog.
+const CHINESE_LIBRARY_EGW_BOOK_IDS: Readonly<Record<string, number>> = Object.fromEntries(
+  EGW_BOOKS.flatMap((work) =>
+    work.editions.flatMap((edition) => (edition.language === 'zh' ? [[work.id, edition.bookId]] : [])),
+  ),
+);
 
 type ChineseLibraryBook = Readonly<{
   book_id?: unknown;

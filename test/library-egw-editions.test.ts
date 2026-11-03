@@ -11,13 +11,14 @@ jest.mock('@/constants/ExternalLinks', () => ({
 }));
 
 // Ellen G. White's books open like every other Library book: straight to the
-// app language's edition, with no dialog to choose one.
-describe.each<[SupportedLanguage, EgwEditionLanguage]>([
-  ['en', 'en'],
-  ['zh', 'zh'],
-  ['zh-cn', 'zh'],
-  ['es', 'es'],
-])('Ellen G. White books with the app in %s', (language, editionLanguage) => {
+// app language's edition, with no dialog to choose one. The Chinese edition
+// opens in the Chinese Union Mission's reader, in the app's script (#554).
+describe.each<[SupportedLanguage, EgwEditionLanguage, string]>([
+  ['en', 'en', ''],
+  ['zh', 'zh', '?ui=tc'],
+  ['zh-cn', 'zh', '?ui=cn'],
+  ['es', 'es', ''],
+])('Ellen G. White books with the app in %s', (language, editionLanguage, script) => {
   it(`open the ${editionLanguage} edition directly`, async () => {
     const { result } = await renderHook(() => useLibraryShelfBooks(language, { loadEgwCovers: false }));
     const books = result.current.getShelfBooks('egw').filter(({ key }) => key.startsWith('egw:'));
@@ -29,7 +30,11 @@ describe.each<[SupportedLanguage, EgwEditionLanguage]>([
       jest.mocked(openURL).mockClear();
       book.onPress();
       expect(openURL).toHaveBeenCalledTimes(1);
-      expect(openURL).toHaveBeenCalledWith(edition.url, work.workTitle[language], expect.any(String));
+      expect(openURL).toHaveBeenCalledWith(
+        `${edition.url}${script}`,
+        work.workTitle[language],
+        expect.any(String),
+      );
     }
   });
 });

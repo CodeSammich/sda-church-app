@@ -109,9 +109,9 @@ down rather than because of your change.
 
 ### Key screens on iPhone and Android
 
-The **iOS key screens** workflow, on the release pull request into `main`, takes 87
-screenshots of the 33 screens listed in `test/screens/screens.json` on a simulated
-iPhone, and 87 on an Android emulator, in light and dark, at larger text sizes, and in
+The **iOS key screens** workflow, on the release pull request into `main`, takes 96
+screenshots of the 40 screens listed in `test/screens/screens.json` on a simulated
+iPhone, and 94 on an Android emulator, in light and dark, at larger text sizes, and in
 Chinese and Spanish. `scripts/capture-ios-screens.cjs` and
 `scripts/capture-android-screens.cjs` take them, and `scripts/check-screens.cjs` reads
 their text with Apple's Vision framework and checks what each screen must show. The release then waits on the
@@ -148,7 +148,8 @@ E2E_ONLY="pause-and-resume" scripts/e2e/android-bible-audio.sh   # one scenario
   `e2e-output/` (`E2E_OUTPUT` changes the folder).
 - `E2E_ONLY` takes space-separated scenario names: `next-chapter-screen-off`,
   `dead-zone-screen-off`, `mid-chapter-offline`, `pause-and-resume`,
-  `previous-before-start`, `primary-host-down`, and the reader's `verse-follows-audio`,
+  `previous-before-start`, `downloaded-book-offline` (a book downloaded to listen
+  offline, #556), `primary-host-down`, and the reader's `verse-follows-audio`,
   `scroll-by-hand`, `scroll-while-paused`, and `follow-after-screen-off`.
 - The reader's scenarios need a build made with `EXPO_PUBLIC_AUDIO_E2E=1`, so the reader
   logs what it decides, and `ffmpeg` on your path (or `FFMPEG`) to compare screenshots.

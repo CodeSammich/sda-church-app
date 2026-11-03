@@ -6,6 +6,7 @@ import {
   openURL,
   openYouTubeSearch,
 } from '@/constants/ExternalLinks';
+import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -73,6 +74,8 @@ const LABELS = {
     brooklyn: 'Brooklyn',
     possibleJointService: 'Brooklyn service details are not listed for this Sabbath.',
     possibleJointServiceHint: 'There may be a joint service at Elmhurst.',
+    scheduleNotSet: "This Sabbath's schedule isn't set yet.",
+    scheduleNotSetHint: 'Speakers and other roles will show here once they are scheduled.',
     openElmhurst: 'Open Elmhurst Church',
     openBibleReference: 'Open {reference} in the Bible reader',
     readNow: 'Read now',
@@ -150,6 +153,8 @@ const LABELS = {
     brooklyn: '布魯克林',
     possibleJointService: '本安息日尚未列出布魯克林的聚會資料。',
     possibleJointServiceHint: '當天可能與艾姆赫斯特教會聯合聚會。',
+    scheduleNotSet: '本安息日的聚會安排尚未確定。',
+    scheduleNotSetHint: '講員和其他同工排定後，會顯示在這裡。',
     openElmhurst: '開啟艾姆赫斯特教會位置',
     openBibleReference: '在聖經閱讀器中開啟 {reference}',
     readNow: '立即閱讀',
@@ -227,6 +232,8 @@ const LABELS = {
     brooklyn: '布鲁克林',
     possibleJointService: '本安息日尚未列出布鲁克林的聚会资料。',
     possibleJointServiceHint: '当天可能与艾姆赫斯特教会联合聚会。',
+    scheduleNotSet: '本安息日的聚会安排尚未确定。',
+    scheduleNotSetHint: '讲员和其他同工排定后，会显示在这里。',
     openElmhurst: '打开艾姆赫斯特教会位置',
     openBibleReference: '在圣经阅读器中打开 {reference}',
     readNow: '立即阅读',
@@ -304,6 +311,8 @@ const LABELS = {
     brooklyn: 'Brooklyn',
     possibleJointService: 'No hay detalles del servicio de Brooklyn para este sábado.',
     possibleJointServiceHint: 'Puede haber un servicio conjunto en Elmhurst.',
+    scheduleNotSet: 'El programa de este sábado aún no está listo.',
+    scheduleNotSetHint: 'Los predicadores y demás participantes aparecerán aquí cuando se asignen.',
     openElmhurst: 'Abrir Iglesia de Elmhurst',
     openBibleReference: 'Abrir {reference} en el lector de la Biblia',
     readNow: 'Leer ahora',
@@ -601,7 +610,12 @@ export default function WeeklyBulletinScreen() {
               : week,
           ),
         );
-        const bulletin = await fetchBulletin(date, signal);
+        const fetched = await fetchBulletin(date, signal);
+        // A bulletin without its schedule (#580) gives way to a stored copy
+        // that has one, as when the API fails.
+        const bulletin = fetched.scheduleNotSet
+          ? ((await getCachedBulletin(date, Date.now(), { allowStale: true })) ?? fetched)
+          : fetched;
         if (!signal?.aborted) {
           setWeeks((current) =>
             current.map((week, weekIndex) =>
@@ -723,15 +737,8 @@ export default function WeeklyBulletinScreen() {
     return () => clearInterval(timer);
   }, [refreshAvailableAt]);
 
-  const dateLocale =
-    language === 'zh' ? 'zh-TW' : language === 'zh-cn' ? 'zh-CN' : language;
-
   const formatDate = (date: string) =>
-    new Intl.DateTimeFormat(dateLocale, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(new Date(`${date}T12:00:00`));
+    formatAppDate(new Date(`${date}T12:00:00`), language, { year: true });
 
   const selectWeek = (index: number) => {
     setSelectedWeek(String(index));
@@ -1084,6 +1091,7 @@ export default function WeeklyBulletinScreen() {
     isQueens: boolean,
     specialRemark: string,
     tithePurpose: string,
+    scheduleNotSet: boolean,
   ) => (
     <Card
       mode="outlined"
@@ -1112,10 +1120,32 @@ export default function WeeklyBulletinScreen() {
           </View>
         )}
 
-        {!isQueens && isBulletinLocationEmpty(location) && (
+        {scheduleNotSet && (
           <View
             style={[
-              styles.jointServiceNotice,
+              styles.locationNotice,
+              { backgroundColor: theme.colors.tertiaryContainer },
+            ]}
+          >
+            <Text
+              variant="titleMedium"
+              style={{ color: theme.colors.onTertiaryContainer }}
+            >
+              {labels.scheduleNotSet}
+            </Text>
+            <Text
+              variant="bodyMedium"
+              style={{ color: theme.colors.onTertiaryContainer }}
+            >
+              {labels.scheduleNotSetHint}
+            </Text>
+          </View>
+        )}
+
+        {!scheduleNotSet && !isQueens && isBulletinLocationEmpty(location) && (
+          <View
+            style={[
+              styles.locationNotice,
               { backgroundColor: theme.colors.tertiaryContainer },
             ]}
           >
@@ -1220,6 +1250,7 @@ export default function WeeklyBulletinScreen() {
           isQueens,
           localizedSpecialRemark,
           localizedTithePurpose,
+          Boolean(bulletin.scheduleNotSet),
         )}
       </>
     );
@@ -1465,7 +1496,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 14,
   },
-  jointServiceNotice: {
+  locationNotice: {
     borderRadius: 12,
     gap: 10,
     marginBottom: 20,

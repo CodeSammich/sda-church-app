@@ -78,16 +78,17 @@ describe('bulletin hymnal resolution', () => {
     });
   });
 
-  it('uses an English cross-reference when a Chinese source page is unavailable', () => {
+  it('opens a 505 hymn that has no page online by its number', () => {
+    // Hymn 90 is listed by its score's title, without a page (#606).
     expect(
       resolveBulletinHymnDestination(
         { english: '', chinese: '90. 中文標題可能有錯字' },
         'zh',
       ),
     ).toEqual({
-      hymnalId: 'sdah-1985-en',
-      hymnNumber: 254,
-      route: '/home/english-hymnal',
+      hymnalId: 'chinese-hymnal-505',
+      hymnNumber: 90,
+      route: '/home/chinese-505-hymnal',
     });
   });
 

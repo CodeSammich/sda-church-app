@@ -1,0 +1,532 @@
+{
+  "cuv-cantonese": {
+    "EXO 10": {
+      "why": "The aligner gave verse 15 too little time.",
+      "sha256": "3e72d46a11e23762b229151c8756312e2897f58c712e5b3b6aaae22c29a49bf0",
+      "starts": {
+        "16": 243.16
+      }
+    },
+    "LEV 18": {
+      "why": "Verse 16 is read twice; it starts at the first reading.",
+      "sha256": "e4a85de78ca97d529210aed0962538eddf62c95753933defe292fdbcff7542c1",
+      "starts": {
+        "16": 127.28
+      }
+    },
+    "2SA 5": {
+      "why": "Verse 16 starts with 以利沙瑪.",
+      "sha256": "e345d4276e100bd89c634473ebe9f7be4e8caaa9cbb1984be35db0ab1c3efecd",
+      "starts": {
+        "16": 147.9
+      }
+    },
+    "2CH 25": {
+      "why": "Verse 19 starts with 你說、看哪.",
+      "sha256": "f27ca3c38e524333f1873e557f131503d236932a301d1bfe7b06e18b437be576",
+      "starts": {
+        "19": 237.03
+      }
+    },
+    "JOB 31": {
+      "why": "Verse 21 starts after the pause.",
+      "sha256": "2a804975b9778a857b2da4ea7f00e245b18e44710f70802d4f0fcddaf76f0496",
+      "starts": {
+        "21": 174.08
+      }
+    },
+    "JOB 32": {
+      "why": "Verse 16 started at the beginning of the pause before it, not its end.",
+      "sha256": "0573738e49c54c84547bcf6a562327d2a5f2a4fd5a68eb79b2ace2bd8f3ec1a6",
+      "starts": {
+        "16": 150.12
+      }
+    },
+    "JOB 38": {
+      "why": "Verse 41 starts with 烏鴉之雛.",
+      "sha256": "8045c1decdda2064ea175e56378bc4d2870dee5825c21729a949541ba7553ac5",
+      "starts": {
+        "41": 301.16
+      }
+    },
+    "PSA 35": {
+      "why": "Verse 18 starts after the pause.",
+      "sha256": "e6a17defebe98d5a74d22b8f0a36404711a23a02b9c312278f5c8d244ed92820",
+      "starts": {
+        "18": 244.9
+      }
+    },
+    "PSA 104": {
+      "why": "Verse 31 starts after the pause.",
+      "sha256": "04238700fed6fb930204a8a3ee25a5d9806948a11645d4a34a0599379074ed78",
+      "starts": {
+        "31": 323.96
+      }
+    },
+    "PSA 119": {
+      "why": "Verse 28 starts after the pause.",
+      "sha256": "f3e42740eda42edc6dabac2f4c5c804cbdf1264de54c85afa2a7ff6e0fe8b486",
+      "starts": {
+        "28": 246.72
+      }
+    },
+    "PSA 129": {
+      "why": "Verse 1 starts after the title.",
+      "sha256": "d9e3d7257696a90bdf10790f4204c82e2320ada5b337d2e35b513aa77bf494ab",
+      "starts": {
+        "1": 11.4
+      }
+    },
+    "PSA 132": {
+      "why": "Verse 14 starts with 說, before a pause.",
+      "sha256": "5e4baed42193432c947abcb2d771398e949fd34a5e01be826964461b356adf6c",
+      "starts": {
+        "14": 149.14
+      }
+    },
+    "PSA 139": {
+      "why": "Verses 2 and 7 start after the pause.",
+      "sha256": "5db65d09024ad3e42fe06ee177648642d7e47a17a0fb0370373482e4ce8f8cf1",
+      "starts": {
+        "2": 21.06,
+        "7": 73.82
+      }
+    },
+    "PRO 5": {
+      "why": "Verses 11 and 12 are read twice; they start at the first reading.",
+      "sha256": "9eb2ab4e94f8c14eaac58e94b2ca4098dc1dce2513ae398b78876770bc60cf63",
+      "starts": {
+        "11": 90.2,
+        "12": 97.58
+      }
+    },
+    "PRO 30": {
+      "why": "Verse 14 starts after the pause.",
+      "sha256": "035778e7c7c12e1755b047ec9a374681f89903289587c581be9aca07dbc65197",
+      "starts": {
+        "14": 147.58
+      }
+    },
+    "SNG 5": {
+      "why": "Verse 1 starts after a breath.",
+      "sha256": "73aad323e9812cd7e599312413acfc13a01cb9fe12b16448a23a8c482cb43ac7",
+      "starts": {
+        "1": 8.2
+      }
+    },
+    "ISA 5": {
+      "why": "Verse 9 starts after the pause.",
+      "sha256": "68f9ad9c70ef2ab153e127b72b9627fd200478c4dd410a7096acaeca08589cbf",
+      "starts": {
+        "9": 156.46
+      }
+    },
+    "ISA 34": {
+      "why": "Verse 16 is read twice; it starts at the first reading.",
+      "sha256": "07c33d83e35f8fff53cde8d6b49ea9714997721037750d2b88fa9146dea8c6e9",
+      "starts": {
+        "16": 229.36
+      }
+    },
+    "ISA 60": {
+      "why": "Verse 17 starts after the pause.",
+      "sha256": "cb4c163679ab031da2e6963e219eabdc637e54726a4c415d33b9bae32bb64ceb",
+      "starts": {
+        "17": 226.2
+      }
+    },
+    "LAM 3": {
+      "why": "Verse 20 starts after the pause.",
+      "sha256": "171b59dd5b7f176946be3f5b837250cda9ec873e4c6199b5556ab44d5f46cda2",
+      "starts": {
+        "20": 144.7
+      }
+    },
+    "EZK 38": {
+      "why": "Verses 3 and 11 start with 說, before a pause.",
+      "sha256": "c1f921e766829c93f019fd80aa398a1829efbb3ed83e33919520838c41c39a36",
+      "starts": {
+        "3": 24.38,
+        "11": 133.61
+      }
+    },
+    "DAN 8": {
+      "why": "Verse 19 starts with 說, before a pause.",
+      "sha256": "17ec57f329eb71f3c38784ce9745e7e7fdc81c5b8f3f1b08ddcb694a8c983b19",
+      "starts": {
+        "19": 265.4
+      }
+    },
+    "HOS 13": {
+      "why": "Verse 11 is read twice; verse 12 starts after the second reading.",
+      "sha256": "c2eb4863f4b79f16679a15d53148868981840462426a614279f6f2b2d200afab",
+      "starts": {
+        "12": 134.2
+      }
+    },
+    "MIC 1": {
+      "why": "The narrator announces chapter 1, verse 14, before verse 14.",
+      "sha256": "eea534d078d8fa49ba1f1182dc3a8c0a007d47e5cb10510652c0ea502c6c5ea9",
+      "starts": {
+        "14": 172.1
+      }
+    },
+    "ZEC 7": {
+      "why": "The start of verse 3 is read twice; it starts at the first reading.",
+      "sha256": "5a8100c8af8daae700c7afef848df23caf3eaa350d5936e020bf6c0a4c0f414b",
+      "starts": {
+        "3": 28.04
+      }
+    },
+    "ZEC 11": {
+      "why": "The narrator announces chapter 11, verses 16 and 17, before verse 16.",
+      "sha256": "c4409ba6f6014c8f0c852dcfa290ac9806f50897de7360d4bb8644257b01b26d",
+      "starts": {
+        "16": 190.86
+      }
+    },
+    "ZEC 12": {
+      "why": "Verses 12 to 14 each say 男的獨在一處; the recognizer matched verse 14 to verse 13's. The start is right.",
+      "sha256": "3a585d7d36a3cc2b2ee3e361eccb822787ff4c46e26b1e60075b6189d9c09f79",
+      "starts": {
+        "14": 184.06
+      }
+    },
+    "MAT 15": {
+      "why": "Verse 22 starts after the pause.",
+      "sha256": "375a0106d9d022582efa191287c4fde4e262cbc1d16db5292e1c0a4102192aba",
+      "starts": {
+        "22": 171.88
+      }
+    },
+    "MRK 1": {
+      "why": "Verse 40 starts after the pause.",
+      "sha256": "555b814960080a07a8b6c7ca8fd76ac63c8d95f297ef4fd04669c4645d17df49",
+      "starts": {
+        "40": 302.32
+      }
+    },
+    "MRK 12": {
+      "why": "Verse 28 starts after the pause.",
+      "sha256": "34874598211204e38c916cd856f18de4e0cf8dea38624853978625fe21621338",
+      "starts": {
+        "28": 259.4
+      }
+    },
+    "LUK 5": {
+      "why": "Verse 17 starts after the pause.",
+      "sha256": "22fc57e910414b0832d63f90408e71e31e918eff7d8aa2810478e573c960b744",
+      "starts": {
+        "17": 151.96
+      }
+    },
+    "LUK 9": {
+      "why": "Verse 62 starts with 耶穌說, before a pause.",
+      "sha256": "80d2ec7791cac248a7e4d0c81fadef4c4eb513f36ff5b43176a554b511015f9b",
+      "starts": {
+        "62": 598.48
+      }
+    },
+    "LUK 19": {
+      "why": "Verse 16 starts after the pause.",
+      "sha256": "a2f26a5d746aa4b13d98d0ed64109b31c132235871782fe3a48112f104875fde",
+      "starts": {
+        "16": 126.26
+      }
+    },
+    "JHN 6": {
+      "why": "Verse 51 starts after the pause.",
+      "sha256": "0dc5c930ba56ec0d821b53c75daaba19c108267f18317f1bd5c825d658372779",
+      "starts": {
+        "51": 445.82
+      }
+    },
+    "ROM 6": {
+      "why": "Verse 16 starts after the pause.",
+      "sha256": "214753034e4d0120810298b8f78e1886867883bddfc5da07273c73821c81bae2",
+      "starts": {
+        "16": 165.42
+      }
+    },
+    "2CO 6": {
+      "why": "Verse 3 started during the last word of verse 2.",
+      "sha256": "4fc02f44c2577ed13ca9b3e906c0f14c1589910df4f47c2d71fa0fc053dfe09a",
+      "starts": {
+        "3": 31.42
+      }
+    },
+    "HEB 12": {
+      "why": "The recording goes from verse 2 to verse 15: verses 3 to 14 aren't read.",
+      "sha256": "31971bd6ef4f212f02aefb7c2e2c8fdc14f82c5fb5d176d7bdf8b9a257ab0644",
+      "starts": {
+        "3": null,
+        "4": null,
+        "5": null,
+        "6": null,
+        "7": null,
+        "8": null,
+        "9": null,
+        "10": null,
+        "11": null,
+        "12": null,
+        "13": null,
+        "14": null,
+        "15": 49.36,
+        "16": 62.78,
+        "17": 74.7,
+        "18": 91.32
+      }
+    },
+    "HEB 13": {
+      "why": "Verse 10 starts after the pause.",
+      "sha256": "66bf1213086285c838113334a71f82c20d4a57695a508078bed4aa7b41cf4dd8",
+      "starts": {
+        "10": 117.14
+      }
+    }
+  },
+  "cuv-mandarin": {
+    "GEN 19": {
+      "why": "Verse 7 starts with 说, before a pause.",
+      "sha256": "3d40ad9d474ecf0c04c9bbdb15645617232ed2907957878c296608ba9fc35066",
+      "starts": {
+        "7": 63.3
+      }
+    },
+    "NUM 1": {
+      "why": "Verses 24 and 38 start where the skipped 见上节 verse before each was placed.",
+      "sha256": "cf8d43760b892bdc7a7a27dda1f636983efd11b6edae587d44db94e8e039363e",
+      "starts": {
+        "24": 161.26,
+        "38": 257.4
+      }
+    },
+    "NUM 36": {
+      "why": "Verse 2 starts with 说, before a pause.",
+      "sha256": "aed2be105f357b9b98cf73cdf294454084db708a51f507b480f29a85e98eac7d",
+      "starts": {
+        "2": 17.86
+      }
+    },
+    "DEU 5": {
+      "why": "Verse 24 starts with 说, before a pause.",
+      "sha256": "a11f5de9036a82f8b247df617594de8d65c98cea49fb242b21ffbafe19eb6da0",
+      "starts": {
+        "24": 202.3
+      }
+    },
+    "DEU 20": {
+      "why": "Verse 3 starts with 说, before a pause.",
+      "sha256": "f4c85c23967c2ea6bd2a3bfbb74bf2be56baa7d98f74bf06c0b8b2ecdef85735",
+      "starts": {
+        "3": 24.82
+      }
+    },
+    "DEU 31": {
+      "why": "Verse 2 starts with 说, before a pause.",
+      "sha256": "465ba1d6d89a151e5109469bcaf9e9f21af428163711d01c5eb6038e4fda2fa7",
+      "starts": {
+        "2": 9.22
+      }
+    },
+    "2SA 22": {
+      "why": "Verse 3 starts with 我的神, before a pause.",
+      "sha256": "c1aa8ba9214804a812f3056b6336e0edd12d720c80c4430f752da67f3f50c689",
+      "starts": {
+        "3": 22.62
+      }
+    },
+    "1KI 12": {
+      "why": "Verse 9 starts with 说, before a pause.",
+      "sha256": "97010d9d37343f09c8b3c287c4876c15ad7190779d91e18245055c649f98a748",
+      "starts": {
+        "9": 88.94
+      }
+    },
+    "1CH 4": {
+      "why": "Verse 35 starts with 约珥, before a pause.",
+      "sha256": "008217c5c56081272812286f4aa99210411e368aa5031c4f58a93de2ae90a189",
+      "starts": {
+        "35": 328.58
+      }
+    },
+    "ISA 3": {
+      "why": "Verse 3 starts with 五十夫长, before a pause.",
+      "sha256": "8a8027b70d1ab45b466ffcd7b55d5c32eadefe4213d24d916deaba920a82707b",
+      "starts": {
+        "3": 25.6
+      }
+    },
+    "EZK 17": {
+      "why": "Verse 3 starts with 说, before a pause.",
+      "sha256": "79b3a7ab11860f30d49b39b4ac272254a1af8090773f184a9bb33c28ea7bb5a5",
+      "starts": {
+        "3": 13.94
+      }
+    },
+    "EZK 38": {
+      "why": "Verse 11 starts with 说, before a pause.",
+      "sha256": "fae2cfa725c5b5ecab1260f6e76c2a300661890c91df4fd894c4ee68b2e59a80",
+      "starts": {
+        "11": 90.36
+      }
+    },
+    "MRK 3": {
+      "why": "Verse 20 starts after a 4-second pause, not at the end of verse 19.",
+      "sha256": "4840db8e5fe1115d508471235368175e9b8f5b5939096f227f49b48119d10e4a",
+      "starts": {
+        "20": 179.66
+      }
+    },
+    "LUK 24": {
+      "why": "The aligner gave verse 22 too much time.",
+      "sha256": "dc03c23183a825cd9004e7247711554b9754dbdcb663a28f878d21c632cccadf",
+      "starts": {
+        "23": 171.92
+      }
+    },
+    "ACT 7": {
+      "why": "Verse 3 starts with 对他说, before a pause.",
+      "sha256": "1f613d2b142ca6f4e7e57d45230574aa38e39b452083a8353a303a8612f8b9c5",
+      "starts": {
+        "3": 22.15
+      }
+    },
+    "ACT 8": {
+      "why": "Verse 19 starts with 说, before a pause.",
+      "sha256": "38092c4c72821005c8a36d2e8433376db3020f8f33f119b8da22b88f68396b56",
+      "starts": {
+        "19": 118.82
+      }
+    },
+    "ACT 10": {
+      "why": "Verse 31 starts with 说, before a pause.",
+      "sha256": "c10c3cfc031917a9fa4cc7b7fec7d92711d2a1ff73aff4302ebf262589a27c17",
+      "starts": {
+        "31": 211.79
+      }
+    },
+    "ACT 13": {
+      "why": "Verse 10 starts with 说, before a pause.",
+      "sha256": "856220ea9b8ff3fa5f088d7405ea6b532e9a291cdc86c24f4dfd57b67a789881",
+      "starts": {
+        "10": 81.49
+      }
+    },
+    "EPH 4": {
+      "why": "Verse 6 starts with 一神, before a pause.",
+      "sha256": "405e9da1f8d873fd13dca1fd5ae56ef9a2de9eed69d26f826dfb0dced97c50a8",
+      "starts": {
+        "6": 34.25
+      }
+    },
+    "PHP 3": {
+      "why": "The aligner gave verse 13 too much time.",
+      "sha256": "fd68514d0d227cc2df5e57771f22d0a1c980414e1a1bc8668185697d33a5b673",
+      "starts": {
+        "14": 84.34
+      }
+    },
+    "REV 11": {
+      "why": "Verse 17 starts with 说, before a pause.",
+      "sha256": "f815ee970ffd8e9cb0617fac187467f94e902f0f51d1733c692246e8dd0a9b90",
+      "starts": {
+        "17": 157.88
+      }
+    }
+  },
+  "rv1909": {
+    "EXO 18": {
+      "why": "Verse 3 starts with \"Y á sus dos hijos\", before a pause.",
+      "sha256": "fd4d844cee968dc97bf5741b62255d08f3d410dd778f306fe75646690dcbc78b",
+      "starts": {
+        "3": 20.7
+      }
+    },
+    "LEV 4": {
+      "why": "Verse 9 starts with \"Y los dos riñones\", before a pause.",
+      "sha256": "7a95dfdd61584a3b6e40483be44bcd015fab51e1d636b343df5a984b86f2c3f1",
+      "starts": {
+        "9": 77.02
+      }
+    },
+    "DEU 34": {
+      "why": "Verse 2 starts with \"Y á todo Nephtalí\", before a pause.",
+      "sha256": "3379cde84a9ce70ee5382be7899b3a1fdf346cd5ea6436526cb0d551544e9199",
+      "starts": {
+        "2": 13.9
+      }
+    },
+    "MAL 1": {
+      "why": "Verse 3 starts with \"Y á Esaú aborrecí\", before a pause.",
+      "sha256": "a86f2c628c790fa7131de52ac2f80e5d3c11b7e3f47a56c2bac9a23c06554e43",
+      "starts": {
+        "3": 18.4
+      }
+    },
+    "MAT 17": {
+      "why": "Verse 23 starts with \"Y le matarán\", before a pause.",
+      "sha256": "3a78df0f1df2f1babbd174efe4d4bb63e02218750c5f9dd2ac0989b0ced48cdc",
+      "starts": {
+        "23": 192.8
+      }
+    },
+    "2CO 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "82d6c6930a362abe2211027a315bd185b62c9d83fd59b7e6177517fdb0ca0b55",
+      "starts": {
+        "1": 7.12
+      }
+    },
+    "PHP 2": {
+      "why": "Verse 2 starts with \"Cumplid mi gozo\", before a pause.",
+      "sha256": "34e374f7f4820ab371b840056e57c73c39b39b263e250610c9aa29f56dbdd7b4",
+      "starts": {
+        "2": 11.64
+      }
+    },
+    "COL 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "fc0933abc79b4db3ee83b8c52c5b2cdd449d6ef79bedb6d33fe4c83ba7aaa821",
+      "starts": {
+        "1": 7.34
+      }
+    },
+    "2TH 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "104933702841d798a4dfb937d2e6df2008abfe1e74f743555c6f1c530de8d675",
+      "starts": {
+        "1": 7.98
+      }
+    },
+    "2TI 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "c7b9689b7bbac8ce9c9f9e56750c3662ba10530f52ec8d988b4e2dc779c41714",
+      "starts": {
+        "1": 7.2
+      }
+    },
+    "TIT 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1.",
+      "sha256": "37a4fbcf45f8033e1d588b96668a4f12da57e291cd817b7a5f73b3f2bf88fd6b",
+      "starts": {
+        "1": 7.16
+      }
+    },
+    "1PE 1": {
+      "why": "The narrator reads the book's title and \"Capítulo 1\" before verse 1; verse 5 starts with \"Para nosotros\", before a pause.",
+      "sha256": "ab4e6bb72f59fbbd8218680fcf287e8a6cb50694b774536d54ef97a8a0e9e98a",
+      "starts": {
+        "1": 7.1,
+        "5": 47.56
+      }
+    },
+    "1PE 2": {
+      "why": "The aligner started verse 11 while the end of verse 10 was read.",
+      "sha256": "c0731612c3f9535eb9cc5920a39524e9ec90a7ee22dee87be11157103d3b2390",
+      "starts": {
+        "11": 103.74
+      }
+    }
+  }
+}

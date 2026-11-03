@@ -109,7 +109,7 @@ describe('hymnal number mappings', () => {
     }
   });
 
-  it('permits source mappings to Chinese hymns whose online page is unavailable', () => {
+  it('permits source mappings to Chinese hymns that have no page online', () => {
     const unavailableOnlineHymns = new Set(['90', '194', '201', '207', '307', '370']);
     const mappedTargetNumbers = Object.values(forwardMapping!.numberMap)
       .flatMap((targetNumbers) => targetNumbers ?? [])
@@ -118,7 +118,12 @@ describe('hymnal number mappings', () => {
     expect(mappedTargetNumbers.some((number) => unavailableOnlineHymns.has(number))).toBe(
       true,
     );
-    expect(Object.keys(chinese505Data)).toHaveLength(499);
+    // They're listed by their scores' titles, without a page (#606).
+    expect(
+      Object.entries(chinese505Data)
+        .filter(([, hymn]) => !('pageId' in hymn))
+        .map(([number]) => number),
+    ).toEqual([...unavailableOnlineHymns]);
   });
 
   it('reads both directions as one table in the registry', () => {

@@ -43,6 +43,7 @@ updates:
     # pinned packages in package.json, plus those two.
     ignore:
       - dependency-name: "@expo/metro-runtime"
+      - dependency-name: "@expo/ui"
       - dependency-name: "@expo/vector-icons"
       - dependency-name: "@react-native-async-storage/async-storage"
       - dependency-name: "expo-asset"
@@ -61,6 +62,7 @@ updates:
       - dependency-name: "expo-status-bar"
       - dependency-name: "expo-system-ui"
       - dependency-name: "expo-web-browser"
+      - dependency-name: "expo-widgets"
       - dependency-name: "jest-expo"
       - dependency-name: "react"
       - dependency-name: "react-dom"

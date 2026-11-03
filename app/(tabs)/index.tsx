@@ -11,16 +11,19 @@ import {
   CHURCH_LONGITUDE,
   openSabbathStream,
 } from '@/constants/ExternalLinks';
+import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
+import { getVerseOfTheDay, getVerseOfTheDayDateKey } from '@/services/VerseOfTheDay';
 import {
-  balanceQuotationMarks,
-  getVerseOfTheDay,
-  getVerseOfTheDayDateKey,
-} from '@/services/VerseOfTheDay';
+  formatVerseOfTheDayShare,
+  getTranslationName,
+  loadVerseOfTheDayText,
+} from '@/services/VerseOfTheDayText';
+import { updateVerseOfTheDayWidget } from '@/services/VerseOfTheDayWidget';
 import { getSunTimes } from '@/services/SunTimesService';
 import { readCachedText, writeCachedText } from '@/services/CacheStore';
 import { createNavigationStyles } from '@/styles/NavigationStyles';
@@ -216,12 +219,6 @@ export default function HomeScreen() {
   }, [useGps, userCoords, new Date().toDateString()]);
 
   const formatDisplayDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    };
-
     if (language === 'en') {
       const day = date.getDate();
       const suffix = (d: number) => {
@@ -241,7 +238,7 @@ export default function HomeScreen() {
       const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date);
       return `${weekday}, ${month} ${day}${suffix(day)}`;
     }
-    return new Intl.DateTimeFormat(language, options).format(date);
+    return formatAppDate(date, language, { weekday: true });
   };
 
   useEffect(() => {
@@ -324,27 +321,17 @@ export default function HomeScreen() {
         }
       }
 
-      const books = await BibleService.fetchBooks(transId);
-      const book = books.find((b: BibleService.TranslationBook) => b.id === selection.bookId);
-      if (!book) return;
-      const chapterData = await BibleService.fetchChapter(transId, book.id, selection.chapter);
-      const verseContent = chapterData.chapter.content.find(
-        (c) => c.type === 'verse' && c.number === selection.verse,
-      ) as BibleService.ChapterVerse | undefined;
-      if (!verseContent || !isCurrent()) return;
+      const loaded = await loadVerseOfTheDayText(transId, selection);
+      if (!loaded || !isCurrent()) return;
 
-      const verse = {
-        // The Bible text keeps its own punctuation. Only quotation marks that
-        // open or close in a neighboring verse are balanced.
-        text: balanceQuotationMarks(BibleService.renderVerseToPlainText(transId, verseContent)),
-        reference: `${book.name} ${selection.chapter}:${selection.verse}`,
-        bookId: book.id,
-        chapter: selection.chapter,
-        verse: selection.verse,
-        dateKey,
-      };
+      const verse = { ...loaded, dateKey };
       setVerseOfTheDay(verse);
       await writeCachedText(VOTD_CACHE, JSON.stringify(verse));
+      // The Android home screen widget gets this week's verses too (#235).
+      await updateVerseOfTheDayWidget(language as SupportedLanguage, {
+        title: labels.verseOfDay,
+        share: (labels as any).shareVerse,
+      });
     } catch (e) {
       console.warn('Failed to load the verse of the day:', e);
     }
@@ -364,9 +351,7 @@ export default function HomeScreen() {
     if (!verseOfTheDay) return;
     const transId =
       BibleService.DEFAULT_TRANSLATION_MAP[language as SupportedLanguage] || 'BSB';
-    const translation =
-      BibleService.SUPPORTED_TRANSLATIONS.find((t) => t.id === transId)?.name || transId;
-    const message = `${verseOfTheDay.text}\n\n— ${verseOfTheDay.reference} (${translation})`;
+    const message = formatVerseOfTheDayShare(verseOfTheDay, getTranslationName(transId));
 
     try {
       if (typeof navigator !== 'undefined' && (navigator as any).share) {

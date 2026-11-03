@@ -30,7 +30,7 @@ flowchart TB
     subgraph Lessons["Lessons and book covers"]
       direction TB
       adventechApi["Adventech Sabbath School API<br/>sabbath-school.adventech.io<br/>children's lesson catalogs:<br/>Adventech quarterlies and<br/>Alive in Jesus books"]
-      cum["Chinese Union Mission library<br/>api.sdabible.org · cms.sdabible.site<br/>Chinese EGW cover thumbnails"]
+      cum["Chinese Union Mission library<br/>*.sdabible.org · cms.sdabible.site<br/>Chinese book cover thumbnails"]
       egwCovers["EGW Writings<br/>a.egwwritings.org<br/>book covers"]
     end
   end
@@ -39,14 +39,14 @@ flowchart TB
     direction LR
     subgraph Worship["Worship media"]
       direction TB
-      youtube@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/youtube-icon.svg", label: "YouTube<br/>livestream, sermons,<br/>hymn recordings, piano<br/>accompaniments", pos: "b", w: 40, h: 28, constraint: "on" }
+      youtube@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/youtube-icon.svg", label: "YouTube<br/>livestream, sermons,<br/>hymn recordings, piano<br/>accompaniments, Chinese<br/>mission videos", pos: "b", w: 40, h: 28, constraint: "on" }
       spotify@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/spotify-icon.svg", label: "Spotify<br/>audio archive", pos: "b", w: 32, h: 32, constraint: "on" }
       zoom@{ img: "https://cdn.jsdelivr.net/gh/gilbarbara/logos@a5b65275e761a8347a99eded1101c6b130a06e52/logos/zoom-icon.svg", label: "Zoom<br/>online class", pos: "b", w: 32, h: 32, constraint: "on" }
     end
     subgraph Study["Hymns, study, reading"]
       direction TB
       hymns["Hymns<br/>m.zgaxr.com: Chinese 505 · 506 · 707<br/>hymnsforworship.org: English SDAH"]
-      ss["Sabbath School readers<br/>sabbath-school.adventech.io (adults)<br/>Adventech lesson PDFs (children)<br/>aliveinjesus.info (children)"]
+      ss["Sabbath School readers<br/>sabbath-school.adventech.io (adults)<br/>Adventech lesson PDFs (children)<br/>aliveinjesus.info (children)<br/>adventistmission.org (mission videos)"]
       reading["Library reading<br/>text.egwwritings.org · gutenberg.org<br/>archive.org · babel.hathitrust.org<br/>chapellibrary.org · app.nyccsda.org"]
     end
     subgraph More["Giving and more"]

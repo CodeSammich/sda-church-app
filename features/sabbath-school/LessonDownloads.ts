@@ -5,8 +5,8 @@ import {
   type ChildrenSabbathSchoolCurriculum,
 } from '@/features/sabbath-school/ChildrenLessons';
 import { getCacheFolder, readCachedText, writeCachedText } from '@/services/CacheStore';
+import { downloadFile, isDownloadingInto, isPhoneOffline, type DownloadProgress } from '@/services/FileDownloads';
 import { File } from 'expo-file-system';
-import { getNetworkStateAsync } from 'expo-network';
 
 /**
  * Children's lesson PDFs kept on the phone for the week (#529).
@@ -30,7 +30,6 @@ import { getNetworkStateAsync } from 'expo-network';
 const FOLDER = 'children-lessons';
 const INDEX = { folder: FOLDER, name: 'index.json', key: 'childrenLessonsIndex' } as const;
 const PDF_TYPE = 'application/pdf';
-const PROGRESS_INTERVAL_MS = 100;
 
 export type ChildrenLesson = Readonly<{
   curriculum: ChildrenSabbathSchoolCurriculum;
@@ -38,7 +37,7 @@ export type ChildrenLesson = Readonly<{
 }>;
 
 /** `totalBytes` is -1 until the server says how big the file is. */
-export type LessonDownloadProgress = Readonly<{ bytesWritten: number; totalBytes: number }>;
+export type LessonDownloadProgress = DownloadProgress;
 
 type SavedLesson = ChildrenLesson & {
   url: string;
@@ -143,47 +142,6 @@ const findLesson = async (
   return { pdf: url };
 };
 
-type Download = Readonly<{
-  promise: Promise<File>;
-  listeners: Set<(progress: LessonDownloadProgress) => void>;
-  controller: AbortController;
-}>;
-
-// Downloads under way, by address, so two requests for the same lesson share one.
-const downloads = new Map<string, Download>();
-
-const startDownload = (
-  url: string,
-  file: File,
-  listeners: Set<(progress: LessonDownloadProgress) => void>,
-): Download => {
-  const controller = new AbortController();
-  let reportedAt = 0;
-  const promise = (async () => {
-    const folder = getCacheFolder(FOLDER);
-    folder.create({ intermediates: true, idempotent: true });
-    // Into a separate file first: on Android, a download that fails part way
-    // leaves what it got. Each download has its own, so one that's stopping
-    // doesn't write into the next.
-    const partial = new File(folder, `${file.name}.${Date.now()}.part`);
-    await File.downloadFileAsync(url, partial, {
-      idempotent: true,
-      signal: controller.signal,
-      onProgress: (progress) => {
-        const now = Date.now();
-        if (now - reportedAt < PROGRESS_INTERVAL_MS) return;
-        reportedAt = now;
-        listeners.forEach((listener) => listener(progress));
-      },
-    });
-    partial.rename(file.name);
-    return new File(folder, file.name);
-  })().finally(() => {
-    if (downloads.get(url)?.controller === controller) downloads.delete(url);
-  });
-  return { promise, listeners, controller };
-};
-
 /**
  * The phone's copy of a lesson PDF, downloaded first unless it's there. Aborting
  * `signal` stops the download, even one another request shares.
@@ -197,22 +155,7 @@ const downloadLesson = (
   const file = lessonFile(curriculum, url);
   if (file.exists) return Promise.resolve(file);
   onProgress?.({ bytesWritten: 0, totalBytes: -1 });
-  let download = downloads.get(url);
-  // Not one that's stopping, as when the popup's X is followed by another tap.
-  if (download && !download.controller.signal.aborted) {
-    if (onProgress) download.listeners.add(onProgress);
-  } else {
-    download = startDownload(url, file, new Set(onProgress ? [onProgress] : []));
-    downloads.set(url, download);
-  }
-  const { controller, listeners, promise } = download;
-  const stop = () => controller.abort();
-  if (signal?.aborted) stop();
-  signal?.addEventListener('abort', stop);
-  return promise.finally(() => {
-    if (onProgress) listeners.delete(onProgress);
-    signal?.removeEventListener('abort', stop);
-  });
+  return downloadFile(url, getCacheFolder(FOLDER), file.name, { onProgress, signal });
 };
 
 /**
@@ -236,7 +179,7 @@ export const pruneChildrenLessons = async (today = new Date()) => {
   for (const entry of folder.list()) {
     if (!(entry instanceof File) || kept.has(entry.name)) continue;
     // A download under way writes a .part file.
-    if (entry.name.endsWith('.part') && downloads.size) continue;
+    if (entry.name.endsWith('.part') && isDownloadingInto(folder)) continue;
     entry.delete();
   }
 };
@@ -246,17 +189,6 @@ export type ChildrenLessonToOpen = Readonly<
 >;
 
 const OFFLINE = { offline: true } as const;
-
-// Asked only after a lookup finds no PDF or a download fails, so a network that
-// wrongly reports no internet can't stop one that would have worked.
-const isOffline = async () => {
-  try {
-    const network = await getNetworkStateAsync();
-    return network.isConnected === false || network.isInternetReachable === false;
-  } catch {
-    return false;
-  }
-};
 
 /**
  * This week's lesson for an age group: the phone's copy, downloaded first if
@@ -278,14 +210,14 @@ export const getChildrenLesson = async (
   } = {},
 ): Promise<ChildrenLessonToOpen> => {
   const found = await findLesson(lesson, date);
-  if ('website' in found) return (await isOffline()) ? OFFLINE : { url: found.website };
+  if ('website' in found) return (await isPhoneOffline()) ? OFFLINE : { url: found.website };
   try {
     const file = await downloadLesson(lesson, found.pdf, onProgress, signal);
     void pruneChildrenLessons(date);
     return { file, url: found.pdf };
   } catch (error) {
     if (signal?.aborted) throw error;
-    return (await isOffline()) ? OFFLINE : { url: found.pdf };
+    return (await isPhoneOffline()) ? OFFLINE : { url: found.pdf };
   }
 };
 

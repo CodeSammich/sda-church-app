@@ -63,7 +63,7 @@ Each kind of item that needs a person reaches a maintainer as follows:
 | A production deploy to approve | The `production` Environment waits for a `release-approvers` member. |
 | An Apple renewal reminder | The **Apple Signing Monitor** issue is assigned to the usernames in `APPLE_SIGNING_ALERT_ASSIGNEES`, falling back to `MONITOR_ALERT_ASSIGNEES`. |
 | A monitor alert (external dependencies, store toolchain, Expo doctor) | The alert issue is assigned to the usernames in the `MONITOR_ALERT_ASSIGNEES` Actions variable (comma-separated) under **Settings → Secrets and variables → Actions → Variables**. If it is empty, the alert @mentions whoever triggered the run. The three monitors share this handling in `scripts/monitor-alert-issue.cjs`, covered by `test/monitor-alert-issue.test.ts`. |
-| A yearly checkup or Workspace backup issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
+| A yearly checkup, Workspace backup, or bulletin changeover issue | The issue is assigned to the `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, @mentions whoever triggered the run), and its `Due:` line brings the due-date reminders below. |
 | An issue coming due | [Due-date reminders](#due-date-reminders) comment on an issue with a `Due:` line 30 and 7 days before the date and once it's overdue, @mentioning the same `MONITOR_ALERT_ASSIGNEES` users (or, if that is empty, whoever triggered the run). |
 
 The monitors can't read `release-approvers` membership or reliably @mention the
@@ -760,8 +760,12 @@ into `main`, and can be run manually on any branch.
 It builds the app once, without signing, for an Apple Silicon Mac, and shares it with
 five runners, one per key-screen group, which run at once. Each launches the app on a
 simulated iPhone, captures its group of the key screens in `test/screens/screens.json`
-(87 screenshots of 33 screens in all), and checks their text with
-`scripts/check-screens.cjs`. Another job then joins the groups. The **Android key
+(96 screenshots of 40 screens in all), and checks their text with
+`scripts/check-screens.cjs`. Two of them check that Bible audio plays and that a
+children's lesson opens in Quick Look (#551). If one fails, the group's step summary
+says whether the network was the cause. If it was, run the failed jobs again; if not,
+the app is at fault
+([Audio and Quick Look](native-builds.md#ios-key-screens-unsigned-simulator-builds)). Another job then joins the groups. The **Android key
 screens** workflow takes and checks the same screens on an Android emulator, on Linux
 runners ([Android key screens](native-builds.md#android-key-screens)). The review
 comment waits for it and links both platforms' screenshots, before
@@ -835,6 +839,11 @@ closes the issue when the service recovers. A new alert is assigned to the users
 `MONITOR_ALERT_ASSIGNEES`; see
 [Getting notified only when action is needed](#getting-notified-only-when-action-is-needed). See
 [External dependency monitor](external-dependency-monitor.md).
+
+It also opens **[changeover] Retire the bulletin API's … changeover**, once, when
+no app older than a changeover's version has asked the bulletin API for 14 days. It isn't an
+alert and doesn't close itself: do the cleanup it describes. See
+[Changeovers](../feature_designs/bulletin_spreadsheet_tags.md#changeovers).
 
 ## Store toolchain monitor alerts
 
@@ -1058,6 +1067,9 @@ Bible chapters to check what only a real player shows:
 - **Previous before the start (#543):** started in Leviticus 2, the media key's
   previous restarts the chapter more than 3 seconds in, goes back to Leviticus 1
   at the start, and next returns to Leviticus 2.
+- **A book downloaded to listen offline (#556):** 2 Thessalonians is downloaded in
+  Offline Bible Audio, opened from Listen offline, then plays with the network off, and the media keys move to chapter 2
+  and back.
 - **The verse being read (#561):** in John 3 the reader marks and follows each verse
   where the bundled times say, and after a seek it follows the verse at the new place.
 - **Scrolling by hand (#561):** in Psalm 119, a listener drags the page back and holds

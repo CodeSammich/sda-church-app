@@ -61,7 +61,8 @@ Android runs `expo prebuild` and then Gradle on a GitHub-hosted Linux runner
 (`npm run build:android` and `npm run build:android:apk`); a committed config plugin,
 `plugins/withAndroidLocalSigning.js`, teaches the generated Gradle project to use a
 keystore supplied through environment variables, and
-`plugins/withAndroidPhonePortrait.js` keeps phones in portrait (see
+`plugins/withAndroidPhonePortrait.js` keeps phones in portrait, and
+`plugins/withAndroidVerseWidget.js` adds the home screen widget (see
 [Versions and maintenance](#versions-and-maintenance)). iOS runs Expo prebuild and Xcode on a
 GitHub-hosted macOS runner, in its own workflow, `.github/workflows/native-ios-build.yml`.
 The church added its Apple signing secrets to the `production` Environment in September
@@ -110,7 +111,7 @@ upkeep, such as yearly Apple renewals and runner image retirements, is under
 
 `scripts/build-android-native.mjs` reuses an existing generated `android/` project
 for repeat local builds. This avoids an unnecessary npm registry metadata lookup for
-`expo-template-bare-minimum@58.0.25`, including when `--no-install` is used. A clean
+`expo-template-bare-minimum@58.0.31`, including when `--no-install` is used. A clean
 GitHub Actions checkout still runs Expo prebuild. When `app.json`, a native config
 plugin, or another native setting changes, force regeneration with either:
 
@@ -155,14 +156,14 @@ orchestration visible in this repository and avoid another credential boundary.
 
 ## Expo 58 Android prebuild
 
-The app uses Expo SDK 58 (`expo ~58.0.16`) with React Native 0.88.0, and the matching
+The app uses Expo SDK 58 (`expo ~58.0.22`) with React Native 0.88.1, and the matching
 template package. Use Node 22, the version the native workflows use. Generate the
 Android project with the exact template version used by the build script:
 
 ```sh
 npm install
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.25 \
+  --template expo-template-bare-minimum@58.0.31 \
   --platform android
 ```
 
@@ -175,7 +176,7 @@ Do not hand-edit `android/`; put durable changes in
 
 ```sh
 npx expo prebuild \
-  --template expo-template-bare-minimum@58.0.25 \
+  --template expo-template-bare-minimum@58.0.31 \
   --platform android \
   --no-install
 ```
@@ -617,8 +618,9 @@ once, one per key-screen group, numbered in the groups' order: **iOS key screens
   app, giving up at once if the compiling runner's job ends without it. As a defense
   against GitHub's degraded availability, when its Mac runners are in short supply,
   they wait as long as the compiling runner is compiling, and up to 45 minutes while
-  it's still queued for a Mac. Their job limit is 90 minutes, against the compiling
-  runner's 40. A fixed 25-minute wait used to fail runs whose compiling runner merely
+  it's still queued for a Mac. Their job limit is 110 minutes, against the compiling
+  runner's 50: 45 minutes queued, 50 compiling, and about 10 to install and capture,
+  plus a margin. A fixed 25-minute wait used to fail runs whose compiling runner merely
   got its Mac late.
 - Each then installs the app on the simulated iPhone that `test/screens/screens.json`
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
@@ -672,8 +674,11 @@ In the faster of the runs with a matching compile cache:
 In the slower one, the compiling runner was slow throughout: 3 minutes just to list its
 simulated iPhones, then 3.7 to compile and 6.0 to boot, install, and launch, so it finished
 last. After a library update, the compile reuses less of the cache: 3.7 to 6.1 minutes in
-the compile-only runs under **Compile cache**, so expect a run a few minutes longer.
-Each **Key screens** job times out after 40 minutes; the longest took 27.2.
+the compile-only runs under **Compile cache**, so expect a run a few minutes longer. A
+dependency update can miss most of the cache: the first build after Expo SDK 58's November
+2026 patch releases (#604) took 28.6 minutes to compile. So the compiling job times out
+after 50 minutes, and the others, whose time includes waiting for it, after 110. Before
+that update, the longest job took 27.2.
 
 From the logs of earlier runs:
 
@@ -790,7 +795,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 33 screens listed in `test/screens/screens.json`, 87
+The five runners screenshot the 40 screens listed in `test/screens/screens.json`, 96
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner takes one group (`--group <name>`) of related
 screens, such as the Bible reader's layout or the library, listed under `groups` in
@@ -829,11 +834,16 @@ limit is a reminder to prune, not a rule:
    Nothing can tap a popup or dialog open either, so a screen's path can ask for one
    with `popup=`, such as `you?popup=text-size`, the Bible's `popup=verse`, which
    opens the popup for `verseStart` once the chapter loads, or its
-   `popup=audio-settings`, once the chapter has audio (#372), or Sabbath School's
+   `popup=audio-settings`, once the chapter has audio (#372), or its
+   `popup=audio-download-tip`, the same popup as the tip opens it when playback keeps
+   stopping to load (#595), or Sabbath School's
    `popup=lesson-download` and `popup=lesson-offline`, the children's lesson popup with
    a fixed download or offline (#529). Only the key-screen
    builds read it (`getScreenshotPopup`), so on a real phone a link with `popup=` opens
-   just the screen.
+   just the screen. Two shots go further and start something real (#551): the Bible's
+   `play=1` plays the chapter's audio as a tap on Play would (`isScreenshotPlay`), and
+   Sabbath School's `popup=lesson-viewer` downloads the Beginner student lesson and
+   opens it, as a tap would.
 2. It launches the app, waits for the screen to load, and saves
    `screens/ios/<screen>-<variant>.png`. Each shot gets a fresh launch and a 10-second
    wait (9 for the Bible, which measured settles within 6), so a group's 14 to 22 shots
@@ -864,6 +874,35 @@ on the splash after its retakes) is launched once more, as when a busy runner on
 Home on the splash for 41 seconds. The step summary lists each such shot, and the run
 shows it as a warning, so a launch problem that keeps coming back is noticed; failing
 twice fails the run.
+
+**Audio and Quick Look.** Bible audio plays only on Android in the other checks
+([Android audio test on release PRs](#android-audio-test-on-release-prs)), so two
+iPhone-only shots in the `worship-and-you` group check it there, on the app the run
+already builds (#551). That group finished first or second in the six release runs
+from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so the two shots,
+about 50 seconds with their launches, shouldn't lengthen the run. In the first trial
+the audio started a second after its 6-second wait, and the lesson took 22 seconds
+from launch to the shot.
+
+- `bible-audio-playing` starts Psalm 23's Mandarin recording with `play=1`. A second
+  screenshot, `bible-audio-playing-default-later.png`, is taken 10 seconds after the
+  first (`later`), and the elapsed time left of the timeline must have moved on by at
+  least 5 seconds (`mustAdvance`, a text check).
+- `sabbath-school-lesson-viewer` must show the lesson open in Quick Look, the iPhone's
+  own PDF viewer. If the week's lesson has no PDF yet, the app opens its website in the
+  browser instead; the run then warns that Quick Look wasn't checked, and passes.
+
+For both, the key-screens build also saves what happened into its storage
+(`recordForScreenshot` in `services/ScreenshotRoute.ts`): the player's status, with
+the addresses it streams from, or how the lesson opened. The capture reads it back
+(`scripts/key-screen-records.cjs`, named by the screen's `record`) and fails the shot
+if the audio didn't play or Quick Look didn't open. Both need the network, so when one
+fails, the runner asks those addresses itself, since the Simulator shares its network,
+and the failure ends either "The network was the cause, not the app: this runner
+couldn't reach them either", or that the runner reached them, so the app is at fault.
+The lock screen's 10- and 30-second skips can't be pressed in the Simulator; a unit
+test (`test/bible-audio-service.test.ts`) checks the app passes those intervals, and the
+TestFlight check covers the rest.
 
 **Text checks.** `scripts/check-screens.cjs` then reads each screenshot's text with
 Apple's Vision framework (`scripts/ocr-screens.swift`, built into macOS) and checks what
@@ -1373,6 +1412,48 @@ smallest width is under 600dp, so tablets and unfolded foldables turn freely. An
 ignores orientation locks on screens 600dp or wider for apps that target API 36, and Play
 Console flags apps that set one (#426). Whether to support iPad is a separate decision
 (#324).
+
+The Android home screen widget for the verse of the day (#235) is built with
+`expo-widgets`. `plugins/withAndroidVerseWidget.js` runs only the Android half of its
+config plugin, because the full plugin also adds an iOS widget extension and app group,
+which would need their own signing. `package.json` keeps `expo-widgets` and `@expo/ui` out
+of iOS autolinking, so the iPhone app doesn't change. The plugin also has Android redraw
+the widget every hour, translates its name in the widget list, and makes the widget's
+receiver the one in `modules/verse-widget`, a local Expo module for Android only:
+
+- **Light and dark mode.** The layout takes the app's colors (`constants/ThemeColors.ts`,
+  which `constants/Themes.ts` uses too) in the phone's current mode, and Android doesn't
+  redraw a widget when the phone switches modes. So the receiver draws the layout in both
+  modes and pairs each light-mode color with the dark-mode color in the same place, and
+  Android 12 and later switch between them on their own.
+- **The verse.** `expo-widgets` has no font family, line spacing, or line fitting, so the
+  receiver lays the verse out itself, as YouVersion's widget looks: the phone's serif font,
+  lines 1.5 times the type size apart, and only the whole lines that fit the widget's size.
+  It measures the text as Android's widget text draws it and makes each line a one-line
+  text. A verse that runs on stops at the end of a whole line, with no "…". On a widget
+  too small for a line, the translation gives way first, then the verse. Running
+  `adb shell setprop log.tag.VerseWidget DEBUG` logs each fit.
+- **Redraws.** `expo-widgets`' own redraw (`updateSnapshot` or `reload`) wouldn't go through
+  the receiver, so the app never calls it. It stores the week of verses as the widget's
+  initial props, which doesn't draw, and then asks the module to redraw the widget.
+- **Taps.** `expo-widgets` sends a tap on one of the widget's buttons to the receiver,
+  which opens the verse in the app or the phone's share sheet, or flips that widget
+  between light and dark. Each tap flips the widget's colors. When the new look matches
+  the phone's mode, the widget goes back to following the phone. The receiver keeps
+  each widget's choice in the `verse_widget_theme` shared preferences, by widget ID.
+
+Gradle runs Metro twice more for the widget (`generateExpoWidgetsBundle` and
+`generateExpoWidgetsLayoutRegistry`). The second builds the layout the widget shows
+before the app first runs, from `features/verse-of-the-day/VerseOfTheDayWidget.tsx`, with
+only relative imports: `@/` paths and packages are empty there. Gradle doesn't watch the
+layout's files for it. So after changing them, delete
+`node_modules/expo-widgets/android/build/generated/expo-widgets` before building in a
+reused `android/` project; CI builds from scratch.
+When updating `expo-widgets`, check that its Android plugin files are still in
+`plugin/build/android/` (`test/verse-of-the-day-widget.test.ts` runs them on an empty
+project), that the app still builds, and then try the widget on an emulator: add it
+from the home screen's widget list before and after opening the app, tap it and its share
+button, change the app's language, and switch the phone between light and dark mode.
 
 Before release, run `npx expo install --check`, `npm run doctor`, and `npm run check`.
 Then build and test signed binaries on physical iPhone and Android devices, with the

@@ -1,4 +1,5 @@
 const {
+  checkAdvance,
   checkShot,
   fromStrip,
   planChecks,
@@ -54,8 +55,13 @@ describe('popup shots (#372)', () => {
 
   it('catch the audio settings popup back at the bottom of the screen', () => {
     // What Vision read on the 1.3.2 release PR, where the popup still sat at
-    // the bottom, its title 47% of the way down.
-    const atBottom = samples.bottomSheet['bible-audio-settings-zh'] as Line[];
+    // the bottom, its title 47% of the way down, and the Listen offline
+    // row added since (#556).
+    const atBottom = [
+      ...(samples.bottomSheet['bible-audio-settings-zh'] as Line[]),
+      line('離線收聽', 0.9),
+      line('離線聖經音訊', 0.94),
+    ];
     expect(checkShot(shot('bible-audio-settings-zh'), atBottom)).toEqual([
       '/^有聲書設定$/ is 47% of the way down, not at most 40%',
     ]);
@@ -114,7 +120,12 @@ describe('the bugs fixed in 0.42.0', () => {
 
   it('catches a screen in the wrong language', () => {
     const englishTabs = [line('Home', 0.944), line('Bible', 0.944), line('Explore', 0.944), line('You', 0.944)];
-    expect(checkShot(shot('explore-zh'), englishTabs)).toEqual(['tab labels missing: 首頁, 聖經, 探索']);
+    // The Chinese Explore cards' own checks catch it too (#554).
+    expect(checkShot(shot('explore-zh'), englishTabs)).toEqual([
+      'tab labels missing: 首頁, 聖經, 探索',
+      'no line matches /^精選書庫/',
+      'no line matches /^深入研經/',
+    ]);
   });
 
   it('catches the setup dialog and unfilled values', () => {
@@ -309,11 +320,11 @@ describe('rules for one platform (#372)', () => {
   const androidShot = (name: string) => androidShots.find((candidate: { name: string }) => candidate.name === name);
   const tabs = ['Home', 'Bible', 'Explore', 'You'].map((label) => line(label, 0.95));
 
-  it("skip a line the emulator's shorter screen leaves below the fold, and keep it on the iPhone", () => {
-    expect(checkShot(androidShot('sabbath-school-default'), tabs)).toEqual([]);
-    expect(checkShot(shot('sabbath-school-default'), tabs.map((each) => ({ ...each, box: [0.1, 0.944, 0.3, 0.02] })))).toEqual([
-      'no line matches /^Beginner \\(ages 1-3\\)/',
-    ]);
+  it("skip a line only the iPhone's reader can read, and keep it on the iPhone", () => {
+    // RapidOCR reads setup's Next button as "Net" on the Android phone.
+    const setup = [line('Welcome', 0.3), line('Language', 0.4), line('Net', 0.9)];
+    expect(checkShot(androidShot('setup-default'), setup)).toEqual([]);
+    expect(checkShot(shot('setup-default'), setup)).toEqual(['no line matches /^Next$/']);
   });
 
   it('accept the 文A icon as either reader reads it', () => {
@@ -339,5 +350,44 @@ describe('the verse button’s short label (#372)', () => {
     expect(checkShot(longChapter, [...verses, line('Vs.', 0.92)])).toEqual([]);
     const split = verses.map((each) => (each.text.startsWith('102') ? { ...each, text: '1020 have not departed' } : each));
     expect(checkShot(longChapter, [...split, line('Vs.', 0.92)])).toEqual(['no line matches /^102(?!\\d)/']);
+  });
+});
+
+describe('audio that keeps playing (#551)', () => {
+  const playing = shot('bible-audio-playing-default');
+  // As Vision reads the audio dock: the elapsed time with the slider's thumb
+  // after it, the length at the right, and the status bar's clock.
+  const dock = (elapsed: string, length = '1:07') => [
+    { text: '9:41', box: [0.15, 0.03, 0.09, 0.02] },
+    { text: `${elapsed} 0`, box: [0.025, 0.818, 0.098, 0.013] },
+    { text: length, box: [0.915, 0.82, 0.057, 0.012] },
+  ];
+
+  it('takes a later shot of it, and checks its elapsed time there', () => {
+    expect(playing).toMatchObject({ later: 10, laterFile: 'ios/bible-audio-playing-default-later.png' });
+    expect(playing.mustAdvance).toBeDefined();
+  });
+
+  it('passes an elapsed time that moved on by at least half the time between the shots', () => {
+    expect(checkAdvance(playing, dock('0:04'), dock('0:14'))).toEqual([]);
+    expect(checkAdvance(playing, dock('0:58'), dock('1:03'))).toEqual([]);
+  });
+
+  it('fails one that stood still or barely moved, reading the elapsed time, not the clock or length', () => {
+    expect(checkAdvance(playing, dock('0:04'), dock('0:04', '1:20'))).toEqual([
+      'the time shown went from 0:04 to 0:04 in 10 seconds, not on by at least 5',
+    ]);
+    expect(checkAdvance(playing, dock('0:04'), dock('0:07'))).toHaveLength(1);
+  });
+
+  it('fails when the later shot or its time is missing', () => {
+    expect(checkAdvance(playing, dock('0:04'), undefined)).toEqual(['no later screenshot']);
+    const noTime = [{ text: 'Psalms v', box: [0.24, 0.865, 0.158, 0.015] }];
+    expect(checkAdvance(playing, noTime, dock('0:14'))[0]).toMatch(/in the screenshot$/);
+    expect(checkAdvance(playing, dock('0:04'), noTime)[0]).toMatch(/in the later screenshot$/);
+  });
+
+  it('leaves other shots alone', () => {
+    expect(checkAdvance(shot('bible-default'), dock('0:00'), undefined)).toEqual([]);
   });
 });

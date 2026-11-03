@@ -46,8 +46,11 @@ export const CHURCH_LONGITUDE = -73.88914;
 export const BULLETIN_API_BASE_URL =
   'https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec';
 
-export const getBulletinApiUrl = (date: string) =>
-  `${BULLETIN_API_BASE_URL}?date=${encodeURIComponent(date)}`;
+// The app's version tells the API which response shapes it understands, such
+// as a bulletin whose schedule isn't set (#580).
+export const getBulletinApiUrl = (date: string, appVersion?: string) =>
+  `${BULLETIN_API_BASE_URL}?date=${encodeURIComponent(date)}` +
+  (appVersion ? `&appVersion=${encodeURIComponent(appVersion)}` : '');
 
 /**
  * Centralized hub for external destinations.
@@ -315,6 +318,35 @@ export const openBabiesSabbathSchool = (language: SupportedLanguage = 'en') =>
     getBabiesSabbathSchoolUrl(language),
     'Error',
     'Could not open the Babies parent and teacher resources.',
+  );
+
+/**
+ * Adventist Mission's Mission Spotlight page (#508): this quarter's weekly
+ * mission videos, the ones Sabbath School plays, each dated by its Sabbath.
+ * Each story's own page is named after its title, so the app can't work out
+ * this week's; the button names the Sabbath to look for instead
+ * (getMissionSpotlightSabbath). Spanish has its own edition. Chinese readers
+ * get CHTV's Mandarin video of the week on YouTube instead, and this page only
+ * when their phone has none (features/sabbath-school/ChineseMissionSpotlight.ts).
+ */
+export const getMissionSpotlightUrl = (language: SupportedLanguage = 'en') =>
+  language === 'es'
+    ? 'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight/mission-spotlight-spanish'
+    : 'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight';
+
+/**
+ * The Sabbath whose mission video is this week's: today on a Sabbath, otherwise
+ * the next one. Adventist Mission dates each weekly story by the Sabbath it's
+ * shown, and puts the whole quarter's up ahead of time.
+ */
+export const getMissionSpotlightSabbath = (date = new Date()) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate() + 6 - date.getDay());
+
+export const openMissionSpotlight = (language: SupportedLanguage = 'en') =>
+  openURL(
+    getMissionSpotlightUrl(language),
+    'Error',
+    "Could not open this week's mission video.",
   );
 
 export const openChineseHymnalIos = () =>

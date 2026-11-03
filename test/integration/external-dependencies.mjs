@@ -305,7 +305,8 @@ for (const [name, catId, path] of hymnCatalogs) {
     const data = await readJson(path);
     const url = `https://m.zgaxr.com/index.php?m=content&c=index&a=lists&catid=${catId}`;
     const actual = normalizedIds(await getText(url), catId);
-    const expected = new Set(Object.values(data).map(({ pageId }) => pageId));
+    // A few 505 hymns have no page, only a title (#606).
+    const expected = new Set(Object.values(data).flatMap(({ pageId }) => (pageId ? [pageId] : [])));
     assertContainsSet(actual, expected, `${name} directory`);
     return `${expected.size} mapped page IDs present (${actual.size} published)`;
   });
@@ -313,7 +314,7 @@ for (const [name, catId, path] of hymnCatalogs) {
   await record('daily hymn page samples', name, async (warn) => {
     const data = await readJson(path);
     return spotCheck(
-      Object.values(data),
+      Object.values(data).filter(({ pageId }) => pageId),
       Number(catId),
       ({ pageId }) => probe(`https://m.zgaxr.com/index.php?m=content&c=index&a=show&catid=${catId}&id=${pageId}`),
       warn,
@@ -535,6 +536,12 @@ await record('public-domain scans stay openly downloadable', 'Internet Archive',
 });
 
 const chineseLibrarySource = await readFile('features/library/ChineseLibrary.ts', 'utf8');
+const egwCatalogSource = await readFile('features/library/EgwBookCatalog.ts', 'utf8');
+// The Mission's id for each of Ellen G. White's books, which keys her Chinese
+// covers and opens her Chinese editions in the Mission's reader.
+const chineseEgwBookIds = [...egwCatalogSource.matchAll(
+  /chineseEdition\(\s*'[^']+'\s*,\s*(\d+)\s*\)/g,
+)].map(([, bookId]) => Number(bookId));
 const chineseLibraryCatalogUrl = chineseLibrarySource.match(
   /CHINESE_LIBRARY_CATALOG_URL\s*=\s*\n?\s*'(https:\/\/api\.sdabible\.org\/[^']+)'/,
 )?.[1];
@@ -543,7 +550,8 @@ await record('current EGW cover catalog', 'Chinese Union Mission library', async
   if (!chineseLibraryCatalogUrl) throw new Error('cover catalog URL is missing');
   const catalog = await getJson(chineseLibraryCatalogUrl);
   const books = Array.isArray(catalog.childCategories) ? catalog.childCategories : [];
-  const curatedIds = [127, 128, 55, 81, 75, 120, 34, 16, 50, 13, 23];
+  const curatedIds = chineseEgwBookIds;
+  if (curatedIds.length !== 11) throw new Error(`found ${curatedIds.length} Chinese editions, expected 11`);
   const availableIds = new Set(books.map(({ book_id }) => book_id));
   // A book or two leaving the catalog shows its cover's fallback; most of them
   // leaving means the catalog changed.
@@ -565,12 +573,13 @@ await record('current EGW cover catalog', 'Chinese Union Mission library', async
   );
 });
 
-const egwCatalogSource = await readFile('features/library/EgwBookCatalog.ts', 'utf8');
 const egwCoverBaseUrl = egwCatalogSource.match(
   /EGW_COVER_BASE_URL\s*=\s*'(https:\/\/[^']+)'/,
 )?.[1];
+// English and Spanish editions open on EGW Writings; the Chinese ones open in
+// the Chinese Union Mission's reader, checked below with its other books.
 const egwEditions = [...egwCatalogSource.matchAll(
-  /edition\(\s*'(en|zh|es)'\s*,\s*'[^']+'\s*,\s*(\d+)\s*,\s*'(\d+\.\d+)'\s*\)/g,
+  /edition\(\s*'(en|es)'\s*,\s*'[^']+'\s*,\s*(\d+)\s*,\s*'(\d+\.\d+)'\s*\)/g,
 )].map(([, language, bookId, firstParagraph]) => ({
   language,
   bookId: Number(bookId),
@@ -579,17 +588,17 @@ const egwEditions = [...egwCatalogSource.matchAll(
 }));
 
 await record('catalog contains eleven deep links per language', 'EGW Writings', async () => {
-  for (const language of ['en', 'zh', 'es']) {
+  for (const language of ['en', 'es']) {
     const editions = egwEditions.filter((entry) => entry.language === language);
     if (editions.length !== 11) throw new Error(`${language} has ${editions.length} editions`);
     if (editions.some(({ bookId, firstParagraph }) => !firstParagraph.startsWith(`${bookId}.`))) {
       throw new Error(`${language} contains a mismatched book and paragraph ID`);
     }
   }
-  if (new Set(egwEditions.map(({ url }) => url)).size !== 33) {
+  if (new Set(egwEditions.map(({ url }) => url)).size !== 22) {
     throw new Error('edition deep links are not unique');
   }
-  return '33 unique English, Chinese, and Spanish edition links';
+  return '22 unique English and Spanish edition links';
 });
 
 for (const language of ['en', 'es']) {
@@ -611,7 +620,7 @@ for (const language of ['en', 'es']) {
   });
 }
 
-for (const language of ['en', 'zh', 'es']) {
+for (const language of ['en', 'es']) {
   await record(`daily ${language} text edition samples`, 'EGW Writings', async (warn) => {
     const editions = egwEditions.filter((entry) => entry.language === language);
     return spotCheck(editions, language.charCodeAt(0), async ({ url }) => {
@@ -629,6 +638,64 @@ for (const language of ['en', 'zh', 'es']) {
     }, warn, { label: ({ firstParagraph }) => firstParagraph });
   });
 }
+
+// The Library's Chinese books open in the Chinese Union Mission's online reader
+// (#554): Ellen G. White's at `egw-<book id>`, the others at the slugs in
+// LibraryCatalog.ts, each with the reader's cover. The reader is a small
+// server, so batched requests to its own API check every book, ten at a time:
+// its firewall refuses a batch of 25 (HTTP 403).
+const SDA_BIBLE_READER = 'https://read.sdabible.org';
+const sdaBibleBooks = [
+  ...chineseEgwBookIds.map((bookId) => ({ slug: `egw-${bookId}` })),
+  ...[...libraryCatalogSource.matchAll(
+    /sourceUrl:\s*'https:\/\/read\.sdabible\.org\/library\/work\/([^']+)',\s*coverUrl:\s*'(https:\/\/read\.sdabible\.org\/api\/library\/assets\/\d+\/thumb)'/g,
+  )].map(([, slug, coverUrl]) => ({ slug, coverUrl })),
+];
+
+await record('Library books open in the reader', 'Chinese Union Mission library', async (warn) => {
+  if (sdaBibleBooks.length !== 25) {
+    throw new Error(`found ${sdaBibleBooks.length} reader books, expected 11 of Ellen G. White's and 14 others`);
+  }
+  const results = [];
+  for (let start = 0; start < sdaBibleBooks.length; start += 10) {
+    const batch = sdaBibleBooks.slice(start, start + 10);
+    const input = Object.fromEntries(
+      batch.map(({ slug }, index) => [index, { json: { slug, locale: 'tc' } }]),
+    );
+    const answers = await getJson(
+      `${SDA_BIBLE_READER}/api/trpc/${batch.map(() => 'library.work').join(',')}` +
+        `?batch=1&input=${encodeURIComponent(JSON.stringify(input))}`,
+    );
+    if (!Array.isArray(answers) || answers.length !== batch.length) {
+      throw new Error('the reader answered in an unexpected shape');
+    }
+    results.push(...answers);
+  }
+  const problems = [];
+  sdaBibleBooks.forEach(({ slug, coverUrl }, index) => {
+    const work = results[index]?.result?.data?.json;
+    if (!work) problems.push(`${slug} is gone`);
+    else if (!work.hasFullText) problems.push(`${slug} no longer has its text`);
+    else if (coverUrl && `${SDA_BIBLE_READER}${work.coverThumbUrl}` !== coverUrl) {
+      problems.push(`${slug}'s cover moved to ${work.coverThumbUrl}`);
+    }
+  });
+  // A book or two leaving the reader is a warning to replace them; most of
+  // them failing means the reader itself changed.
+  if (problems.length * 2 > sdaBibleBooks.length) {
+    throw new Error(`${problems.length} of ${sdaBibleBooks.length} books failed: ${problems.join('; ')}`);
+  }
+  for (const problem of problems) warn(problem);
+  const covers = sdaBibleBooks.filter(({ coverUrl }) => coverUrl);
+  const coverSamples = await spotCheck(
+    covers,
+    313,
+    ({ coverUrl }) => probe(coverUrl, { binary: true, expectedHosts: ['read.sdabible.org'] }),
+    warn,
+    { label: ({ slug }) => slug },
+  );
+  return `${sdaBibleBooks.length - problems.length} of ${sdaBibleBooks.length} books with their text; covers ${coverSamples}`;
+});
 
 // Every Bible text ships with the app (assets/bible), the verse popup's Hebrew
 // and Greek included, so none is fetched at run time. The BSB's narrator links are inside those files, so check
@@ -671,6 +738,11 @@ const navigationLinks = [
   ['Sabbath School English', 'https://sabbath-school.adventech.io/en'],
   ['Sabbath School Chinese', 'https://sabbath-school.adventech.io/zh'],
   ['Sabbath School Spanish', 'https://sabbath-school.adventech.io/es'],
+  // The weekly mission video (#508). Vercel's security checkpoint answers
+  // every request from a script with 429, even for a page that doesn't exist,
+  // so these show only that the site is still there.
+  ['Mission Spotlight', 'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight'],
+  ['Mission Spotlight Spanish', 'https://adventistmission.org/mission-plus/mission-promotion/for-sabbath-school/mission-spotlight/mission-spotlight-spanish'],
   ['Chinese hymnal iOS', 'https://apps.apple.com/us/app/506%E8%AE%9A%E7%BE%8E%E8%A9%A9-traditional-chinese/id6498894032'],
   ['Chinese hymnal Android', 'https://play.google.com/store/apps/details?id=org.chumadventist.hymnal506.next'],
   ['church map', 'https://www.google.com/maps/search/?api=1&query=760%2041st%20Ave%20Elmhurst%20NY%2011373'],
@@ -681,6 +753,41 @@ const navigationLinks = [
 for (const [name, url, binary = false, allowed = []] of navigationLinks) {
   await record(name, 'App navigation', () => probe(url, { binary, allowed: [...allowed, 429] }));
 }
+
+// The mission video in Mandarin (#508): CHTV posts it to YouTube as 聖工剪影 on
+// the Tuesday before its Sabbath, and phones find it in the channel's feed
+// (features/sabbath-school/ChineseMissionSpotlight.ts, which reads titles the
+// same way). Until they do, they offer the last one they found, so nothing here
+// fails. From Friday, a missing video, or a feed YouTube won't serve, is a
+// warning. Earlier in the week the feed often errors briefly, and that's ignored.
+const chineseSpotlightSource = await readFile('features/sabbath-school/ChineseMissionSpotlight.ts', 'utf8');
+const chtvChannelId = chineseSpotlightSource.match(/CHTV_CHANNEL_ID = '([\w-]{24})'/)?.[1];
+await record("this week's 聖工剪影", 'YouTube', async (warn) => {
+  if (!chtvChannelId) throw new Error('features/sabbath-school/ChineseMissionSpotlight.ts has no CHTV_CHANNEL_ID');
+  const today = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' })
+      .formatToParts(new Date())
+      .map(({ type, value }) => [type, value]),
+  );
+  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(today.weekday);
+  const sabbath = new Date(Date.UTC(Number(today.year), Number(today.month) - 1, Number(today.day) + 6 - weekday));
+  const [year, month, day] = [sabbath.getUTCFullYear(), sabbath.getUTCMonth() + 1, sabbath.getUTCDate()];
+  const fromFriday = weekday >= 5;
+  let feed;
+  try {
+    feed = await getText(`https://www.youtube.com/feeds/videos.xml?channel_id=${chtvChannelId}`);
+  } catch (error) {
+    if (fromFriday) warn(`CHTV's feed couldn't be read: ${describeError(error)}`);
+    return `feed unavailable today: ${describeError(error)}`;
+  }
+  const date = new RegExp(`(?:^|\\D)${month}月${day}日`);
+  const title = [...feed.matchAll(/<title>([^<]*)<\/title>/g)]
+    .map(([, text]) => text)
+    .find((text) => text.includes('聖工剪影') && !/粵語|粤语/.test(text) && text.includes(String(year)) && date.test(text));
+  if (title) return title;
+  if (fromFriday) warn(`CHTV's feed has no 聖工剪影 for ${year}年${month}月${day}日`);
+  return `${month}月${day}日's 聖工剪影 isn't in CHTV's feed yet`;
+});
 
 // Children's Sabbath School (#336): each age group opens this week's lesson PDF,
 // falling back to English and then to its Alive in Jesus website. These checks
@@ -766,7 +873,8 @@ for (const [name, url, expectedText] of websitePages) {
 
 await record('public bulletin JSON contract', 'Bulletin API', async () => {
   const date = process.env.BULLETIN_TEST_DATE || '2026-08-08';
-  const data = await getJson(`https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec?date=${date}`);
+  // client=check: the API doesn't take this check for an older app (#580).
+  const data = await getJson(`https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec?date=${date}&client=check`);
   if (data?.ok !== true || data.bulletin?.date !== date || !data.bulletin?.queens || !data.bulletin?.brooklyn) {
     throw new Error('bulletin response fields are missing');
   }

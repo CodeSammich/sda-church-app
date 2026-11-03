@@ -56,6 +56,8 @@ one place. Church admins can start at [Operate](#operate).
     sources, translation choices, and the alternatives considered
   - [Bulletin hymn resolution and extension guide](docs/feature_designs/bulletin_hymn_resolution.md):
     how bulletin hymn entries are matched to the hymnals, and how to extend it
+  - [Bulletin spreadsheet tags](docs/feature_designs/bulletin_spreadsheet_tags.md): how
+    the scripts find renamed tabs and columns, every known edge case, and how to change it
   - [Christian Library](docs/feature_designs/christian_library.md): the content policy
     and the curated catalog
   - [English hymnal integration](docs/feature_designs/hymnal_integration_design.md): the
@@ -161,4 +163,4 @@ Google Play internal testing and TestFlight. Nothing reaches the public until a
 maintainer submits it in each store.
 
 The app uses one Expo source for the native apps and the web/PWA build: Expo SDK 58
-(`expo ~58.0.16`) with React Native 0.88.0.
+(`expo ~58.0.22`) with React Native 0.88.1.

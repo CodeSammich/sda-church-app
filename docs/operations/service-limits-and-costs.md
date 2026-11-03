@@ -38,7 +38,7 @@ a card on file (see [Payment methods](../architecture.md#payment-methods)).
 | [fetch(bible)](#fetchbible) | The build script's source for RV1909 and the original-language texts; the app makes no request | Free | "No limits from us" | n/a | None at run time |
 | [Bulletin API (Apps Script)](#bulletin-api-apps-script) | Digital bulletin | Free (Workspace for Nonprofits) | 30 simultaneous executions per user | Requests fail with an error | **Medium at scale**: one account's ceiling |
 | [Adventech](#adventech-sabbath-school) | Children's Sabbath School lessons, the bulletin's lesson title | Free | None published | Unknown | Low: CDN |
-| [Chinese Union Mission library](#chinese-union-mission-library) | Chinese EGW cover thumbnails | Free | None published | Unknown | Low: cached on the device for a day |
+| [Chinese Union Mission library](#chinese-union-mission-library) | Chinese book cover thumbnails; Chinese books open in its reader | Free | None published | Unknown | Low: cached on the device for a day |
 | [EGW Writings covers](#egw-writings-covers) | Library thumbnails | Free | None published | Unknown | Low: Cloudflare |
 | [Sunrise-Sunset](#sunrise-sunset) | Sunset times on the printed bulletins | Free, **attribution required** | "Reasonable" volume; `429` + `Retry-After` | Throttled | None: two requests per printed bulletin; the app no longer calls it |
 | [GitHub Actions](#github-actions) | Tests, builds, deploys | Free (public repo) | Fair use, concurrency | Queued jobs | None |
@@ -95,8 +95,9 @@ These choices exist to keep the app free and within every provider's limits:
   without a key, and the bulletin data goes through the church's own Apps Script
   instead of the Google Sheets API.
 - **The church hosts its own copies of the Bible audio**, so outside hosts are only
-  fallbacks ([Audio Power](#audio-power)), and chapters stream on demand rather than
-  downloading whole books
+  fallbacks ([Audio Power](#audio-power)), and chapters stream on demand. Whole books
+  download only when a member asks, to listen offline, one chapter at a time, three at
+  once (#556)
   ([how the app fetches audio](adventist-connect-media.md#how-the-app-fetches-audio)).
 - **Caching at every layer of the bulletin.** The Apps Script caches each response
   for 2 minutes, the app caches each Sabbath's bulletin on the device, and manual
@@ -216,10 +217,18 @@ Traditional Chinese titles.
 
 ### Chinese Union Mission library
 
-`api.sdabible.org` (catalog) and `cms.sdabible.site` (cover images), used only for
-the cover thumbnails of the Chinese EGW editions; the books open on EGW Writings. The
-catalog is about 40 KB and took 1.1 s from a plain Apache server with no CDN or cache
-headers (*measured*). Free, no key, no published limits.
+`api.sdabible.org` (catalog) and `cms.sdabible.site` (cover images), used for the
+cover thumbnails of the Chinese EGW editions. The catalog is about 40 KB and took 1.1 s
+from a plain Apache server with no CDN or cache headers (*measured*). Free, no key, no
+published limits.
+
+`read.sdabible.org` is the Mission's online reader, where Chinese readers open her
+books and the 14 other Chinese books in the Library (#554), and which serves those 14
+books' cover thumbnails (about 20 KB each), loaded like any other remote image when a
+Chinese reader opens the Library. The daily [dependency
+monitor](../../test/integration/external-dependencies.mjs) checks all 25 links in three
+batched requests to the reader's own API, ten books at a time, because the reader's
+firewall refuses a batch of 25.
 
 **Load:** this is the smallest server the app talks to regularly, so the app keeps
 the cover list from the catalog on the device and refreshes it at most once a day.

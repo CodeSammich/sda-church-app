@@ -1509,6 +1509,7 @@ describe('printed bulletin Apps Script helpers', () => {
     const columnWidths: Array<[number, number]> = [];
     const makeCell = () => ({
       clear: () => undefined,
+      getNumChildren: () => 0,
       setPaddingBottom: () => undefined,
       setPaddingLeft: () => undefined,
       setPaddingRight: () => undefined,
@@ -1816,7 +1817,7 @@ describe('printed bulletin Apps Script helpers', () => {
       ) as string,
     );
 
-    expect(widths).toEqual({ regular: 490, communion: 340 });
+    expect(widths).toEqual({ regular: 460, communion: 320 });
   });
 
   it('defaults physical output to the configured Queens Drive folder', () => {
