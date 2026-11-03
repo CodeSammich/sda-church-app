@@ -44,6 +44,13 @@ since they're the fallback.
 See `features/sabbath-school/ChildrenLessons.ts` and
 [Children's Sabbath School Lessons](../feature_designs/sabbath_school_lessons.md).
 
+It reads CHTV 希望電視台's YouTube feed once, as phones do with the app in
+Chinese, and looks for the coming Sabbath's 聖工剪影, CHTV's Mandarin Mission
+Spotlight (#508). CHTV posts it the Tuesday before, and phones offer the last one
+they found until then, so this check never fails. From Friday, a missing video,
+or a feed YouTube won't serve, is a warning. Earlier in the week the feed's brief
+errors are ignored. See `features/sabbath-school/ChineseMissionSpotlight.ts`.
+
 It also checks the church's own website: the privacy policy, legal disclaimer,
 support, and download pages at `app.nyccsda.org`, which the store listings, the app,
 and QR codes depend on. Each must
@@ -94,7 +101,9 @@ report but open no issue:
   them do);
 - fewer than half of the curated books are missing from the Chinese cover
   catalog; or
-- a children's lesson isn't published yet in the first 14 days of a quarter.
+- a children's lesson isn't published yet in the first 14 days of a quarter; or
+- from Friday, the coming Sabbath's 聖工剪影 isn't in CHTV's feed, or the feed
+  can't be read.
 
 ## Alerts and recovery
 

@@ -326,8 +326,8 @@ export const openBabiesSabbathSchool = (language: SupportedLanguage = 'en') =>
  * Each story's own page is named after its title, so the app can't work out
  * this week's; the button names the Sabbath to look for instead
  * (getMissionSpotlightSabbath). Spanish has its own edition. Chinese readers
- * get English: the page's 中文 choices lead to Chinese Hope TV, which has only
- * three videos a quarter, not the weekly ones.
+ * get CHTV's Mandarin video of the week on YouTube instead, and this page only
+ * when their phone has none (features/sabbath-school/ChineseMissionSpotlight.ts).
  */
 export const getMissionSpotlightUrl = (language: SupportedLanguage = 'en') =>
   language === 'es'

@@ -305,12 +305,12 @@
     {
       "name": "sabbath-school",
       "group": "worship-and-you",
-      "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
+      "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. In Chinese the title is 本週聖工剪影, or the Sabbath of the last Mandarin video the phone found, such as 10月31日聖工剪影. The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
       "variantRules": {
         "default": { "mustShowLines": ["^This Week$", "^This Week.s Mission\\b"] },
-        "zh": { "mustShowLines": ["^本週$", "^本週聖工消息$"] },
+        "zh": { "mustShowLines": ["^本週$", "^(本週|\\d{1,2}月\\d{1,2}日)聖工剪影$"] },
         "es": { "mustShowLines": ["^Esta semana$", "^Video misionero\\b"] }
       }
     },

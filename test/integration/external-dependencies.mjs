@@ -753,6 +753,41 @@ for (const [name, url, binary = false, allowed = []] of navigationLinks) {
   await record(name, 'App navigation', () => probe(url, { binary, allowed: [...allowed, 429] }));
 }
 
+// The mission video in Mandarin (#508): CHTV posts it to YouTube as 聖工剪影 on
+// the Tuesday before its Sabbath, and phones find it in the channel's feed
+// (features/sabbath-school/ChineseMissionSpotlight.ts, which reads titles the
+// same way). Until they do, they offer the last one they found, so nothing here
+// fails. From Friday, a missing video, or a feed YouTube won't serve, is a
+// warning. Earlier in the week the feed often errors briefly, and that's ignored.
+const chineseSpotlightSource = await readFile('features/sabbath-school/ChineseMissionSpotlight.ts', 'utf8');
+const chtvChannelId = chineseSpotlightSource.match(/CHTV_CHANNEL_ID = '([\w-]{24})'/)?.[1];
+await record("this week's 聖工剪影", 'YouTube', async (warn) => {
+  if (!chtvChannelId) throw new Error('features/sabbath-school/ChineseMissionSpotlight.ts has no CHTV_CHANNEL_ID');
+  const today = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' })
+      .formatToParts(new Date())
+      .map(({ type, value }) => [type, value]),
+  );
+  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(today.weekday);
+  const sabbath = new Date(Date.UTC(Number(today.year), Number(today.month) - 1, Number(today.day) + 6 - weekday));
+  const [year, month, day] = [sabbath.getUTCFullYear(), sabbath.getUTCMonth() + 1, sabbath.getUTCDate()];
+  const fromFriday = weekday >= 5;
+  let feed;
+  try {
+    feed = await getText(`https://www.youtube.com/feeds/videos.xml?channel_id=${chtvChannelId}`);
+  } catch (error) {
+    if (fromFriday) warn(`CHTV's feed couldn't be read: ${describeError(error)}`);
+    return `feed unavailable today: ${describeError(error)}`;
+  }
+  const date = new RegExp(`(?:^|\\D)${month}月${day}日`);
+  const title = [...feed.matchAll(/<title>([^<]*)<\/title>/g)]
+    .map(([, text]) => text)
+    .find((text) => text.includes('聖工剪影') && !/粵語|粤语/.test(text) && text.includes(String(year)) && date.test(text));
+  if (title) return title;
+  if (fromFriday) warn(`CHTV's feed has no 聖工剪影 for ${year}年${month}月${day}日`);
+  return `${month}月${day}日's 聖工剪影 isn't in CHTV's feed yet`;
+});
+
 // Children's Sabbath School (#336): each age group opens this week's lesson PDF,
 // falling back to English and then to its Alive in Jesus website. These checks
 // fail when the English lessons for this quarter can't be found, which means
