@@ -11,6 +11,7 @@ import {
   CHURCH_LONGITUDE,
   openSabbathStream,
 } from '@/constants/ExternalLinks';
+import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
 import { DESIGN_TOKENS } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -216,12 +217,6 @@ export default function HomeScreen() {
   }, [useGps, userCoords, new Date().toDateString()]);
 
   const formatDisplayDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    };
-
     if (language === 'en') {
       const day = date.getDate();
       const suffix = (d: number) => {
@@ -241,7 +236,7 @@ export default function HomeScreen() {
       const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date);
       return `${weekday}, ${month} ${day}${suffix(day)}`;
     }
-    return new Intl.DateTimeFormat(language, options).format(date);
+    return formatAppDate(date, language, { weekday: true });
   };
 
   useEffect(() => {

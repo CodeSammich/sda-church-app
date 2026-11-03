@@ -3,22 +3,33 @@ import { MenuCard } from '@/components/MenuCard';
 import { VerseHero } from '@/components/VerseHero';
 import {
   CHURCH_BUILDING_IMAGE_URL,
+  getMissionSpotlightSabbath,
   openChildrenSabbathSchool,
   openBabiesSabbathSchool,
   openCurrentSabbathSchool,
+  openMissionSpotlight,
   openSabbathSchool,
+  openYouTubeVideo,
 } from '@/constants/ExternalLinks';
+import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { SABBATH_SCHOOL_BACK_TARGET } from '@/constants/BackNavigation';
 import { useAppTheme } from '@/constants/Themes';
 import { useChildrenLessonOpener } from '@/hooks/useChildrenLessonOpener';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
 import type { ChildrenSabbathSchoolCurriculum } from '@/features/sabbath-school/ChildrenLessons';
+import {
+  describeChineseMissionSpotlight,
+  findChineseMissionSpotlight,
+  getChineseMissionSpotlightUrl,
+  readRememberedChineseMissionSpotlight,
+  type ChineseMissionSpotlight,
+} from '@/features/sabbath-school/ChineseMissionSpotlight';
 import type { ChildrenLessonDialogState } from '@/hooks/useChildrenLessonOpener';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, List, Text } from 'react-native-paper';
@@ -27,6 +38,7 @@ const copy = {
   en: {
     title: 'Sabbath School', verse: '“Let the wise listen and gain instruction, and the discerning acquire wise counsel.”', verseRef: 'Proverbs 1:5 (BSB)', adult: 'Adult', children: 'Children',
     current: 'This Week', currentAdult: 'Open the current adult Bible study lesson',
+    missionVideo: 'This Week’s Mission Video', missionVideoSub: 'Mission Spotlight for Sabbath, {date}',
     allAdult: 'All Adult Lessons', allAdultSub: 'Browse current and past adult quarterlies',
     babies: 'Babies (birth–12 months)', babiesSub: 'Parent and teacher curriculum resources',
     beginner: 'Beginner (ages 1–3)', kindergarten: 'Kindergarten (ages 4–6)',
@@ -41,6 +53,7 @@ const copy = {
   zh: {
     title: '安息日學', verse: '「使智慧人聽見，增長學問，使聰明人得著智謀。」', verseRef: '箴言 1:5（和合本）', adult: '成人', children: '兒童',
     current: '本週', currentAdult: '開啟本週成人研經課程',
+    missionVideo: '本週聖工剪影', missionVideoSub: '{date}安息日的 Mission Spotlight（英文）',
     allAdult: '所有成人課程', allAdultSub: '瀏覽本季及過往季度課程',
     babies: '嬰兒（出生至 12 個月）', babiesSub: '家長與教師課程資源',
     beginner: '幼兒級（1–3 歲）', kindergarten: '幼稚級（4–6 歲）',
@@ -54,6 +67,7 @@ const copy = {
   'zh-cn': {
     title: '安息日学', verse: '“使智慧人听见，增长学问，使聪明人得着智谋。”', verseRef: '箴言 1:5（和合本）', adult: '成人', children: '儿童',
     current: '本周', currentAdult: '打开本周成人研经课程',
+    missionVideo: '本周圣工剪影', missionVideoSub: '{date}安息日的 Mission Spotlight（英文）',
     allAdult: '所有成人课程', allAdultSub: '浏览本季及过往季度课程',
     babies: '婴儿（出生至 12 个月）', babiesSub: '家长与教师课程资源',
     beginner: '幼儿组（1–3 岁）', kindergarten: '幼稚组（4–6 岁）',
@@ -67,6 +81,7 @@ const copy = {
   es: {
     title: 'Escuela Sabática', verse: '«Oirá el sabio, y aumentará el saber, y el entendido adquirirá consejo.»', verseRef: 'Proverbios 1:5 (RVR1960)', adult: 'Adultos', children: 'Niños',
     current: 'Esta semana', currentAdult: 'Abre la lección actual para adultos',
+    missionVideo: 'Video misionero de esta semana', missionVideoSub: 'Mission Spotlight del sábado {date}',
     allAdult: 'Todas las lecciones para adultos', allAdultSub: 'Explora las guías actuales y anteriores',
     babies: 'Bebés (0–12 meses)', babiesSub: 'Recursos para padres y maestros',
     beginner: 'Principiantes (1–3 años)', kindergarten: 'Jardín de infantes (4–6 años)',
@@ -90,6 +105,34 @@ export default function SabbathSchoolScreen() {
   const [childrenTab, setChildrenTab] = useState<'students' | 'teachers'>('students');
   const showingStudents = childrenTab === 'students';
   const childrenLesson = useChildrenLessonOpener(language);
+  // Coming back to the screen renders it again, so a screen left open from an
+  // earlier week names this week's Sabbath. Non-breaking spaces keep the date
+  // on one line, never "November" with "7" alone below it.
+  const focused = useIsFocused();
+  const sabbath = getMissionSpotlightSabbath();
+  const missionSabbath = formatAppDate(sabbath, language).replace(/\s/g, '\u00a0');
+  // Chinese readers get CHTV's Mandarin video: this week's once it's posted,
+  // and the last one the phone found until then; the English page only when
+  // it has none (features/sabbath-school/ChineseMissionSpotlight.ts). What the
+  // phone already has shows at once, before the feed answers.
+  const chinese = language === 'zh' || language === 'zh-cn';
+  const sabbathTime = sabbath.getTime();
+  const [chineseVideo, setChineseVideo] = useState<ChineseMissionSpotlight | null>(null);
+  useEffect(() => {
+    if (!focused || !chinese) return;
+    let current = true;
+    const thisSabbath = new Date(sabbathTime);
+    void readRememberedChineseMissionSpotlight(thisSabbath).then((remembered) => {
+      if (current && remembered) setChineseVideo(remembered);
+      return findChineseMissionSpotlight(thisSabbath).then((found) => {
+        if (current) setChineseVideo(found);
+      });
+    });
+    return () => {
+      current = false;
+    };
+  }, [focused, chinese, sabbathTime]);
+  const chineseCard = chinese && chineseVideo ? describeChineseMissionSpotlight(chineseVideo, sabbath, language) : null;
 
   // The key screens can't tap, so a key-screens build opens the lesson popup
   // from the path: sabbath-school?popup=lesson-download or lesson-offline.
@@ -171,6 +214,12 @@ export default function SabbathSchoolScreen() {
             {labels.adult}
           </Text>
           <MenuCard title={labels.current} description={labels.currentAdult} icon="calendar-today" onPress={() => openCurrentSabbathSchool(language)} />
+          <MenuCard
+            title={chineseCard?.title ?? labels.missionVideo}
+            description={chineseCard?.description ?? labels.missionVideoSub.replace('{date}', missionSabbath)}
+            icon="play-circle-outline"
+            onPress={() => (chineseCard && chineseVideo ? openYouTubeVideo(getChineseMissionSpotlightUrl(chineseVideo)) : openMissionSpotlight(language))}
+          />
           <MenuCard title={labels.allAdult} description={labels.allAdultSub} icon="bookshelf" onPress={() => openSabbathSchool(language)} />
         </List.Section>
         <List.Section>

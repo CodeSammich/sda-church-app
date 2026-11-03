@@ -44,6 +44,13 @@ since they're the fallback.
 See `features/sabbath-school/ChildrenLessons.ts` and
 [Children's Sabbath School Lessons](../feature_designs/sabbath_school_lessons.md).
 
+It reads CHTV 希望電視台's YouTube feed once, as phones do with the app in
+Chinese, and looks for the coming Sabbath's 聖工剪影, CHTV's Mandarin Mission
+Spotlight (#508). CHTV posts it the Tuesday before, and phones offer the last one
+they found until then, so this check never fails. From Friday, a missing video,
+or a feed YouTube won't serve, is a warning. Earlier in the week the feed's brief
+errors are ignored. See `features/sabbath-school/ChineseMissionSpotlight.ts`.
+
 It also checks the church's own website: the privacy policy, legal disclaimer,
 support, and download pages at `app.nyccsda.org`, which the store listings, the app,
 and QR codes depend on. Each must
@@ -65,6 +72,22 @@ npm run test:integration:external
 The command writes `external-dependency-report.json`, which is ignored by Git
 and uploaded by Actions for 30 days.
 
+## What the monitor can't check
+
+The Sabbath School screen's **This Week's Mission Video** opens Adventist
+Mission's Mission Spotlight page, or its Spanish edition (#508). Both sit behind
+Vercel's security checkpoint, which answers every request from a script with
+HTTP 429, even for a page that doesn't exist. So the monitor accepts 429 there,
+and its check shows only that `adventistmission.org` still answers. The
+[yearly checkup](../../scripts/yearly-checkup.cjs) asks someone to open the
+button in English and in Spanish instead.
+
+If the page has moved, find it on adventistmission.org under Mission+ → Mission
+Promotion → For Sabbath School → Mission Spotlight, and the Spanish edition in
+that page's language menu. Then update `getMissionSpotlightUrl` in
+`constants/ExternalLinks.ts` and the two Mission Spotlight entries in
+`test/integration/external-dependencies.mjs`.
+
 ## Failures and warnings
 
 A request that times out, can't connect, or gets a temporary error status such as
@@ -78,7 +101,9 @@ report but open no issue:
   them do);
 - fewer than half of the curated books are missing from the Chinese cover
   catalog; or
-- a children's lesson isn't published yet in the first 14 days of a quarter.
+- a children's lesson isn't published yet in the first 14 days of a quarter; or
+- from Friday, the coming Sabbath's 聖工剪影 isn't in CHTV's feed, or the feed
+  can't be read.
 
 ## Alerts and recovery
 

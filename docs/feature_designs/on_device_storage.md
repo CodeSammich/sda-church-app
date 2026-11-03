@@ -52,6 +52,7 @@ The app saves its settings and the member's saved verses with [AsyncStorage](htt
 | `user-bible-translation`, `user-bible-supporting-translation`, `user-bible-dual-language`, `user-bible-show-pinyin`, `user-bible-book`, `user-bible-chapter`, `user-bible-audio-readers`, `user-bible-audio-sources` | The Bible reader's choices and the place last read | `app/(tabs)/bible/index.tsx`; `app/_layout.tsx` also resets the translation to the new language's when the app language changes |
 | `saved-bible-verses-v1` | Saved verses | `services/SavedVersesService.ts` |
 | `preferred-bulletin-location` | Which congregation's bulletin to show | `app/(tabs)/home/bulletin.tsx` |
+| `chinese-mission-spotlight` | The newest Mandarin mission video (聖工剪影) the phone has found: its YouTube ID, Sabbath, and story title, a few bytes, so the app in Chinese can offer it until the next one is found (#508) | `features/sabbath-school/ChineseMissionSpotlight.ts` |
 | `pwa-update-last-check-v1` | When the web app last checked for an update (web only, in `localStorage` directly) | `app/_layout.tsx` |
 | `screenshot-route` | The screen to open, in key-screen builds only | The key-screen capture scripts; `services/ScreenshotRoute.ts` reads it, then deletes it |
 

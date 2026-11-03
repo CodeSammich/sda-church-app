@@ -475,10 +475,14 @@ Jesus website when it finds none
 ([design](feature_designs/sabbath_school_lessons.md)). The weekly bulletin, in the app
 and on paper, names the adult lesson the class discusses, by its number and title from
 the same public catalog, with a link to the reader (#558); no lesson text is copied.
+The screen also opens the week's mission video (#508): Adventist Mission's page of
+weekly videos, or, for Chinese readers, CHTV's Mandarin version on YouTube.
 
 | Source | What the app uses | Rights basis |
 | --- | --- | --- |
 | **Adventech** (`sabbath-school.adventech.io`; PDFs from `sabbath-school-pdf.adventech.io` and `sabbath-school-resources-media.adventech.io`) | A link to the adult lesson reader. For children, the public catalog, to find this week's lesson, and the official lesson PDF. On a phone, the person's own phone downloads the PDF, keeps it in the app's cache for that week, and opens it in the phone's own PDF viewer, so opening it again is instant ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529)). A lesson downloads only when the person taps it. | The lessons are © General Conference of Seventh-day Adventists®, all rights reserved. [Adventech's lesson repository](https://github.com/Adventech/sabbath-school-lessons#copyright) says that no part of the adult guide may be "edited, altered, modified, adapted, translated, re-produced, or published" without the General Conference's prior written authorization. We found no separate public statement for the children's lessons, so they're treated the same way. The app doesn't alter, translate, or republish any lesson. The phone downloads the official, unmodified file from Adventech's own hosts, as a browser would, and keeps it only in its cache. This is an engineering assessment, not an express license. |
+| **Adventist Mission** (`adventistmission.org`) | A link to its Mission Spotlight page, where this quarter's weekly mission videos play: the Spanish edition for Spanish readers, the English one otherwise, and Chinese readers whose phone hasn't found CHTV's version. | Linking only. The videos play on Adventist Mission's own page; the app doesn't copy, download, or re-host them. |
+| **CHTV 希望電視台** (Chinese Hope TV, on `youtube.com`) | For Chinese readers, the week's Mission Spotlight in Mandarin, which CHTV posts to its YouTube channel as 聖工剪影. The phone reads the channel's public feed to find the video, and keeps the newest one's ID, date, and story title so it can offer that one until the next is found. | Linking only. The video opens in the YouTube app or browser, under YouTube's terms and CHTV's rights; the app shows only the date and story title, and doesn't copy, download, or embed the video. |
 
 Rules for this feature:
 
@@ -609,9 +613,9 @@ The checked-in mappings and their regeneration scripts are:
 
 The 506 hymnal's **With singing** button opens that hymn's recording from a
 [public YouTube playlist of the 506 hymnal](https://www.youtube.com/playlist?list=PLZpA9AftZl_JIt-MCXSfP364-qR3ddrd3),
-which the church recommended. It is published by CHTV 希望電視台 (Chinese Hope TV,
-[chinesehope.tv](https://chinesehope.tv/)), the Chinese-language Hope Channel of the
-Seventh-day Adventist Church's Northern Asia-Pacific Division, and the recordings carry
+which the church recommended. It is published by CHTV 希望電視台 (Chinese Hope TV), the
+Chinese-language Hope Channel of the Seventh-day Adventist Church's Northern Asia-Pacific
+Division, and the recordings carry
 its watermark. Hymns without a recording yet, and the 505 and 707
 hymnals' sung buttons, search YouTube instead. The same limits apply as for zgaxr:
 
