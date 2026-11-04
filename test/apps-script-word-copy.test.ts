@@ -280,6 +280,8 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     expect(html).toContain('id="wordCopy">Make Word copy / 制作 Word 副本</button>');
     expect(html).toContain('createPrintedBulletinWordCopy({date:date,location:locationValue})');
     expect(html).toContain('Download Word copy / 下载 Word 副本');
+    // Only the download: the copy is for sending on, not for opening in Drive.
+    expect(html).not.toContain('Open in Google Drive');
     // It needs a Mac, and says what to do without one.
     expect(html).toContain('<strong>Needs a Mac with Microsoft Word.</strong>');
     expect(html).toContain('Without a Mac, print the Google Doc itself');
