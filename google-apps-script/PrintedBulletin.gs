@@ -43,6 +43,24 @@ var PRINTED_BULLETIN_TYPE = Object.freeze({
   lineSpacing: 1,
 });
 
+/**
+ * The Word copy for printing on a Mac (#627). Docs can't print Songti TC (宋體-繁),
+ * the pastor's preferred Chinese font, but Word on a Mac can. The copy is the
+ * week's Doc as it stands, exported as .docx, with every Chinese character set
+ * to Songti TC. Songti's lines are taller in Word, which pushed a bulletin onto
+ * extra pages, so each paragraph of text gets an exact line height of
+ * `lineHeight` times its largest font size. Paragraphs with pictures keep their
+ * own spacing: an exact height would crop the picture. `lineHeightProperty`
+ * changes the multiple without a deploy.
+ */
+var PRINTED_BULLETIN_WORD_COPY = Object.freeze({
+  chineseFont: 'Songti TC',
+  lineHeight: 1.15,
+  lineHeightProperty: 'PRINTED_BULLETIN_WORD_LINE_HEIGHT',
+  mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  nameSuffix: ' (Word, Songti TC).docx',
+});
+
 var PRINTED_BULLETIN_CONFIG = Object.freeze({
   churchName: 'New York Chinese Seventh-day Adventist Church',
   churchNameChinese: '基督復臨安息日會紐約華人教會',
@@ -521,6 +539,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '.spinner{width:34px;height:34px;margin:0 auto 18px;border:4px solid #dadce0;' +
     'border-top-color:#1a73e8;border-radius:50%;animation:spin .85s linear infinite;}' +
     '@keyframes spin{to{transform:rotate(360deg)}}' +
+    '.word-copy{background:#e8f0fe;color:#174ea6;}' +
     '.link{display:block;border:1px solid #dadce0;border-radius:6px;color:#1a73e8;' +
     'font-size:14px;margin:10px 0;padding:11px 12px;text-decoration:none;}' +
     '</style></head><body>' +
@@ -565,6 +584,13 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
     '<button type="submit" class="submit" id="submit" disabled>Create / 创建</button></div>' +
     '</form></div>' +
+    '<div id="wordCopySection"><h2 class="section-heading" style="margin-top:20px;">3. Printing on a Mac: a Word copy / 第三步（可选）：Mac 打印用 Word 副本</h2>' +
+    '<div class="admin-reminder"><strong>Needs a Mac with Microsoft Word.</strong> The pastor\'s Chinese font, Songti TC (宋體-繁), comes only with macOS, and Google Docs can\'t print it. Without a Mac, print the Google Doc itself: its Chinese is in UoqMunThenKhung (宇文天穹).<br>' +
+    '<strong>需要装有 Microsoft Word 的 Mac。</strong>牧师选用的中文字体宋体-繁（Songti TC）只有 macOS 自带，Google 文档无法打印该字体。没有 Mac 时，请直接打印 Google 文档，其中文字体为宇文天穹（UoqMunThenKhung）。</div>' +
+    '<div class="help">After the last edit to this Sabbath\'s Google Doc, make a Word copy with the Chinese in Songti TC. Open it in Word on the Mac to print. It uses the date and location above.<br>' +
+    '在这个安息日的 Google 文档最后修改之后，制作一份中文为宋体-繁的 Word 副本，在 Mac 上用 Word 打开打印。使用上面选择的日期和地点。</div>' +
+    '<div class="actions"><button type="button" class="word-copy" id="wordCopy">Make Word copy / 制作 Word 副本</button></div>' +
+    '<div id="wordCopyStatus" class="help" aria-live="polite"></div></div>' +
     '<div class="status-slot"><div id="statusView" hidden></div></div>' +
     '<script>' +
     'var initialRequest=' +
@@ -611,6 +637,11 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'document.getElementById("announcementList").addEventListener("click",function(event){if(event.target.classList.contains("announcement-remove")){event.target.closest(".announcement-entry").remove();if(!document.getElementById("announcementList").children.length){addAnnouncementEntry({});}refreshAnnouncementLabels();announcementsDirty=true;}});' +
     'document.getElementById("date").addEventListener("change",function(){loadPromptData();updateSubmitState();});' +
     'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();if(!date){showError("Sabbath date is required. / 安息日日期为必填。");return;}if(!promptData||!promptData.verse||promptData.verseProblem){showError((promptData&&promptData.verseProblem)||"Reading Weekly Data… / 正在读取 Weekly Data…");return;}var request={date:date,format:formatValue,location:locationValue,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}runRequest(request);});' +
+    'function makeWordCopy(){var date=document.getElementById("date").value.trim();var wordStatus=document.getElementById("wordCopyStatus");var button=document.getElementById("wordCopy");if(!date){wordStatus.className="error";wordStatus.textContent="Choose the Sabbath date first. / 请先选择安息日日期。";return;}' +
+    'button.disabled=true;wordStatus.className="help";wordStatus.textContent="Making the Word copy… / 正在制作 Word 副本…";google.script.run.withSuccessHandler(function(result){button.disabled=false;wordStatus.className="help";' +
+    'wordStatus.innerHTML="<a class=\'link\' href=\'"+escapeHtml(result.downloadUrl)+"\'>Download Word copy / 下载 Word 副本</a><a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open in Google Drive / 在 Google 云端硬盘中打开</a>";})' +
+    '.withFailureHandler(function(error){button.disabled=false;wordStatus.className="error";wordStatus.textContent=(error&&error.message)||String(error);}).createPrintedBulletinWordCopy({date:date,location:locationValue});}' +
+    'document.getElementById("wordCopy").addEventListener("click",makeWordCopy);' +
     'selectChoice("locationChoices",locationValue);selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();loadPromptData();' +
     '</script></body></html>'
   );
@@ -1231,6 +1262,184 @@ function createPrintedBulletinUnlocked_(
     url: document.getUrl(),
     scheduleNotSet: scheduleNotSet,
   };
+}
+
+/**
+ * Dialog action: makes the Word copy of a Sabbath's Doc for printing on a Mac
+ * (#627), next to the Doc in Drive, replacing the copy made before. It reads the
+ * Doc as it stands, so make it after the last edit. Any operator can.
+ */
+function createPrintedBulletinWordCopy(request) {
+  var date = toIsoDate_(request && request.date);
+  if (!date) {
+    throw new Error('Sabbath date is required. / 安息日日期为必填。');
+  }
+  var location = normalizePrintedBulletinLocation_(request && request.location);
+  var properties = PropertiesService.getScriptProperties();
+  var documentId =
+    properties.getProperty(
+      getPrintedBulletinPropertyKey_(PRINTED_BULLETIN_CONFIG.documentPropertyPrefix, location, date),
+    ) ||
+    (location === 'queens' ? properties.getProperty(PRINTED_BULLETIN_CONFIG.documentPropertyPrefix + date) : null);
+  var file = null;
+  try {
+    file = documentId ? DriveApp.getFileById(documentId) : null;
+  } catch (error) {
+    file = null;
+  }
+  if (!file || file.isTrashed()) {
+    throw new Error(
+      'There is no Google Doc for this Sabbath and location yet. Create it first, then make the Word copy.\n' +
+        '这个安息日和地点还没有 Google 文档。请先创建，再制作 Word 副本。',
+    );
+  }
+
+  var response = UrlFetchApp.fetch(
+    'https://www.googleapis.com/drive/v3/files/' +
+      encodeURIComponent(documentId) +
+      '/export?mimeType=' +
+      encodeURIComponent(PRINTED_BULLETIN_WORD_COPY.mimeType),
+    {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true,
+    },
+  );
+  if (response.getResponseCode() !== 200) {
+    throw new Error(
+      'Google Drive could not export the Doc as Word (' + response.getResponseCode() + '). Try again in a minute.\n' +
+        'Google 云端硬盘无法将文档导出为 Word（' + response.getResponseCode() + '）。请稍后再试。',
+    );
+  }
+
+  var lineHeight = Number(properties.getProperty(PRINTED_BULLETIN_WORD_COPY.lineHeightProperty));
+  if (!(lineHeight >= 0.8 && lineHeight <= 2)) {
+    lineHeight = PRINTED_BULLETIN_WORD_COPY.lineHeight;
+  }
+  var fonts = readPrintedBulletinFonts_();
+  var parts = Utilities.unzip(response.getBlob());
+  var styles = parts.filter(function (part) {
+    return part.getName() === 'word/styles.xml';
+  })[0];
+  var defaults = readPrintedDocxDefaults_(styles ? styles.getDataAsString('UTF-8') : '');
+  var name = file.getName() + PRINTED_BULLETIN_WORD_COPY.nameSuffix;
+  var rewritten = parts.map(function (part) {
+    var partName = part.getName();
+    if (partName !== 'word/document.xml' && partName !== 'word/styles.xml') {
+      return part;
+    }
+    var xml = part.getDataAsString('UTF-8');
+    xml =
+      partName === 'word/document.xml'
+        ? convertPrintedDocxDocumentXml_(xml, {
+            chineseFonts: [fonts.chinese, fonts.chineseFallback],
+            lineHeight: lineHeight,
+            defaultSize: defaults.size,
+            defaultMultiple: defaults.multiple,
+          })
+        : setPrintedDocxEastAsiaFonts_(xml, []);
+    return Utilities.newBlob(xml, 'application/xml', partName);
+  });
+  var docx = Utilities.zip(rewritten, name).setContentType(PRINTED_BULLETIN_WORD_COPY.mimeType);
+
+  var parents = file.getParents();
+  var folder = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
+  var previous = folder.getFilesByName(name);
+  while (previous.hasNext()) {
+    previous.next().setTrashed(true);
+  }
+  var copy = folder.createFile(docx);
+  return {
+    name: name,
+    url: copy.getUrl(),
+    downloadUrl: 'https://drive.google.com/uc?export=download&id=' + copy.getId(),
+  };
+}
+
+// styles.xml's default font size, in points, and line spacing multiple, which a
+// paragraph or run without its own uses.
+function readPrintedDocxDefaults_(stylesXml) {
+  var xml = String(stylesXml || '');
+  var runDefaults = (xml.match(/<w:rPrDefault>[\s\S]*?<\/w:rPrDefault>/) || [''])[0];
+  var paragraphDefaults = (xml.match(/<w:pPrDefault>[\s\S]*?<\/w:pPrDefault>/) || [''])[0];
+  var size = runDefaults.match(/<w:sz w:val="(\d+)"/);
+  var spacing = paragraphDefaults.match(/<w:spacing\b[^>]*>/);
+  var multiple = 1;
+  if (spacing && /w:line="(\d+)"/.test(spacing[0]) && !/w:lineRule="(exact|atLeast)"/.test(spacing[0])) {
+    multiple = Number(spacing[0].match(/w:line="(\d+)"/)[1]) / 240;
+  }
+  return { size: size ? Number(size[1]) / 2 : 11, multiple: multiple };
+}
+
+// Every w:rFonts gets Songti TC as its East Asian font, with no theme font to
+// override it. A run in one of `chineseFonts`, the Doc's Chinese and fallback
+// fonts, gets Songti TC in every slot, so a character Word files under Latin,
+// such as a full-width form, can't print in a font the Mac doesn't have.
+function setPrintedDocxEastAsiaFonts_(xml, chineseFonts) {
+  var songti = PRINTED_BULLETIN_WORD_COPY.chineseFont;
+  return String(xml).replace(/<w:rFonts\b([^>]*?)(\/?)>/g, function (match, attributes, selfClosing) {
+    var ascii = (attributes.match(/w:ascii="([^"]*)"/) || [])[1] || '';
+    var chinese = (chineseFonts || []).indexOf(ascii) !== -1;
+    var kept = attributes
+      .replace(/\s+w:(eastAsia|eastAsiaTheme|hint)="[^"]*"/g, '')
+      .replace(/\s+w:(ascii|hAnsi|cs|asciiTheme|hAnsiTheme|cstheme)="[^"]*"/g, function (slot) {
+        return chinese ? '' : slot;
+      });
+    var slots = chinese
+      ? ' w:ascii="' + songti + '" w:hAnsi="' + songti + '" w:cs="' + songti + '"'
+      : '';
+    return '<w:rFonts' + kept + slots + ' w:eastAsia="' + songti + '"' + selfClosing + '>';
+  });
+}
+
+/**
+ * The Word copy's document.xml: Songti TC for Chinese, no document grid for the
+ * lines to snap to, and an exact line height on every paragraph without a
+ * picture. The height is `lineHeight` times the paragraph's largest font size,
+ * times its own line spacing (0.9 for the giving notes).
+ */
+function convertPrintedDocxDocumentXml_(xml, options) {
+  var lineHeight = options.lineHeight;
+  var defaultSize = options.defaultSize || 11;
+  var defaultMultiple = options.defaultMultiple || 1;
+  var converted = String(xml).replace(/<w:docGrid\b[^>]*\/>/g, '');
+  // A paragraph's own opening tag, not a self-closing <w:p/>.
+  converted = converted.replace(/<w:p(?:\s[^>]*[^\/>])?>[\s\S]*?<\/w:p>/g, function (paragraph) {
+    if (/<w:(drawing|pict|object)\b/.test(paragraph)) {
+      return paragraph;
+    }
+    var sizes = (paragraph.match(/<w:sz w:val="\d+"/g) || []).map(function (size) {
+      return Number(size.match(/\d+/)[0]) / 2;
+    });
+    var largest = sizes.length ? Math.max.apply(null, sizes) : defaultSize;
+    var properties = (paragraph.match(/<w:pPr>[\s\S]*?<\/w:pPr>/) || [''])[0];
+    // The paragraph's own w:spacing, not a run's letter spacing, which is also
+    // w:spacing but inside a w:rPr.
+    var own = properties.split('<w:rPr>')[0];
+    var spacing = own.match(/<w:spacing\b[^>]*\/>/);
+    var multiple = defaultMultiple;
+    if (spacing && /w:line="(\d+)"/.test(spacing[0]) && !/w:lineRule="(exact|atLeast)"/.test(spacing[0])) {
+      multiple = Number(spacing[0].match(/w:line="(\d+)"/)[1]) / 240;
+    }
+    var exact = ' w:line="' + Math.round(largest * lineHeight * multiple * 20) + '" w:lineRule="exact"';
+    var withSpacing;
+    if (spacing) {
+      withSpacing = properties.replace(
+        spacing[0],
+        spacing[0].replace(/\s+w:(line|lineRule)="[^"]*"/g, '').replace(/\s*\/>$/, exact + '/>'),
+      );
+    } else if (properties) {
+      // w:spacing goes before these in w:pPr, as the schema orders them.
+      var later = own.match(
+        /<w:(ind|contextualSpacing|mirrorIndents|suppressOverlap|jc|textDirection|textAlignment|textboxTightWrap|outlineLvl|divId|cnfStyle|sectPr|pPrChange)\b/,
+      );
+      var before = later ? later[0] : properties.indexOf('<w:rPr>') !== -1 ? '<w:rPr>' : '</w:pPr>';
+      withSpacing = properties.replace(before, '<w:spacing' + exact + '/>' + before);
+    } else {
+      return paragraph.replace(/^(<w:p[^>]*>)/, '$1<w:pPr><w:spacing' + exact + '/></w:pPr>');
+    }
+    return paragraph.replace(properties, withSpacing);
+  });
+  return setPrintedDocxEastAsiaFonts_(converted, options.chineseFonts);
 }
 
 function tryOpenExistingPrintedBulletinDocument_(
@@ -3431,6 +3640,8 @@ function buildPrintedBulletinFontsHtml_(settings) {
     '</style></head><body>' +
     '<p class="intro">These fonts are for every printed bulletin made from now on, by anyone. A Doc already made keeps its fonts until it\'s made again with Create Google Doc…. A different font can change the line heights, so check that the next Doc still fits its pages.<br>' +
     '这些字体将用于此后任何人创建的所有纸质周刊。已创建的文档保留原字体，直到再次使用“Create Google Doc…”创建。更换字体可能改变行高，请检查下一份文档是否仍在原页数内。</p>' +
+    '<p class="intro">Songti TC (宋體-繁) isn\'t here: Google Docs can\'t print it. To print in it, use the Word copy in Create Google Doc…, on a Mac with Word.<br>' +
+    '这里没有宋体-繁（Songti TC）：Google 文档无法打印该字体。如需用该字体打印，请在 Mac 上用 Word 打开“Create Google Doc…”中的 Word 副本。</p>' +
     '<label for="chinese">Chinese font<br>中文字体</label>' + select('chinese', settings.chinese) +
     '<label for="latin">English font<br>英文字体</label>' + select('latin', settings.latin) +
     '<div id="status" class="status" aria-live="polite"></div>' +

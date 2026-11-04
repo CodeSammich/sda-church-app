@@ -759,8 +759,10 @@ needed. It opens a staff dialog that:
 5. shows the Bible reading from `Weekly Data → Bible Verses`, read-only, the
    same one the app shows. While it's blank or can't be read, the dialog says
    why (and, for one it can't read, how to write it), and **Create** stays off. To change it, close the
-   dialog, edit `Weekly Data`, and open the dialog again; and
-6. optionally accepts printed announcements.
+   dialog, edit `Weekly Data`, and open the dialog again;
+6. optionally accepts printed announcements; and
+7. makes a Word copy of the week's Doc for printing in Songti TC, which needs a
+   Mac with Word. See [Printing in Songti TC needs a Mac](#printing-in-songti-tc-needs-a-mac).
 
 A long passage still asks before it's printed, since it can push the bulletin
 onto another page.
@@ -850,7 +852,8 @@ The pastor's rules for the printed bulletin (#603):
 - Chinese stays regular (not bold), as before.
 
 Google Docs prints only fonts in its own **Font → More fonts** list, so a Mac
-font such as 宋體-繁 (Songti TC) can't be used. In that list,
+font such as 宋體-繁 (Songti TC) can't be used in the Doc; to print in it, see
+[Printing in Songti TC needs a Mac](#printing-in-songti-tc-needs-a-mac). In that list,
 **UoqMunThenKhung** (宇文天穹) is the only Ming style face for Traditional
 Chinese, so it's the default. It has every common Traditional character and the
 Simplified forms Japanese shares (国, 会), but not most Simplified-only ones
@@ -886,6 +889,45 @@ by hand.
 The script knows UoqMunThenKhung's characters (`PRINTED_DEFAULT_CHINESE_FONT_COVERAGE_`)
 but not another font's. With another Chinese font set, every Chinese character
 uses it and the fallback font isn't used.
+
+### Printing in Songti TC needs a Mac
+
+The pastor's preferred Chinese font is Songti TC (宋體-繁). It comes only with
+macOS, under Apple's license, and Google Docs can't print it: Docs prints only
+fonts in its own list, and none of its Chinese lists (Traditional, Hong Kong
+or Simplified) has a Song face besides UoqMunThenKhung. **So printing the
+bulletin in Songti TC needs a Mac with Microsoft Word.** Without one, print the
+Google Doc itself, in UoqMunThenKhung. Both dialogs say so.
+
+To print in Songti TC (#627):
+
+1. Make and edit the week's Doc as usual.
+2. After the last edit, open **Printed Bulletin → Create Google Doc…**, choose
+   the date and location, and click **Make Word copy** in step 3. It reads the
+   Doc as it stands, so a copy made before an edit misses that edit.
+3. Click **Download Word copy** and open the file in Word on the Mac. Print
+   from Word.
+
+The copy is saved as `<Doc title> (Word, Songti TC).docx` in the Doc's own
+Drive folder, replacing that week's earlier copy. The Doc doesn't change. The
+script exports the Doc as `.docx` through the Drive API, with the permissions
+it already has, and changes only `word/document.xml` and `word/styles.xml`:
+
+- Every run's East Asian font becomes Songti TC. A run in the Doc's Chinese or
+  fallback font gets Songti TC in every slot. English keeps its own font.
+- Songti's lines are taller in Word than UoqMunThenKhung's are in Docs. With
+  only the font changed, a Queens Regular bulletin ran to four pages. So each
+  paragraph of text gets an exact line height: 1.15 times its largest font
+  size, times its own line spacing. Set `PRINTED_BULLETIN_WORD_LINE_HEIGHT` to
+  change the 1.15 without a deploy; values outside 0.8 to 2 are ignored.
+- A paragraph with a picture (the cover, the QR codes, the logo) keeps its own
+  spacing, since an exact height would crop the picture. Empty `<w:p/>`
+  paragraphs are left alone too.
+- The document grid is removed, so Chinese lines don't snap to it.
+
+If the copy runs onto an extra page, lower `PRINTED_BULLETIN_WORD_LINE_HEIGHT`
+a little, such as to 1.1. If tall characters look clipped, raise it, such as to
+1.2. The next **Make Word copy** uses it.
 
 ## Printed edge cases and content rules
 
