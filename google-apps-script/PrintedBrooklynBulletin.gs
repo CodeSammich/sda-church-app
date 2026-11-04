@@ -201,6 +201,7 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
     printedBilingualText_('BROOKLYN CHINESE SABBATH SCHOOL', '布魯克林華人團契 安息日學'),
   );
   appendCenteredText_(cell, '10:00 am–11:25 am', PRINTED_BULLETIN_TYPE.bodySize, false);
+  var hymnRows = getPrintedSabbathSchoolHymnRows_(location.sabbathSchoolHymns, '開會唱詩', '合班唱詩');
 
   appendBrooklynProgramTable_(cell, mergeBrooklynStudyRowsByAssignment_([
     [printedBilingualText_('Welcome', '歡迎'), '', printBrooklynPerson_(location.chair, location.chairPastoralPrayer)],
@@ -212,8 +213,7 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
       // separate Song Leader value.
       printBrooklynPerson_(location.chair, location.chairPastoralPrayer),
     ],
-    // The closing repeats every opening hymn, so one row names them for both.
-    [printedBilingualText_('Opening & Closing Hymns', '開會及合班唱詩'), formatSabbathSchoolHymnsForPrint_(location.sabbathSchoolHymns), printedBilingualText_('Congregation', '會眾')],
+    hymnRows.opening,
     [printedBilingualText_('Prayer', '祈禱'), '', printValue_(location.chairPastoralPrayer)],
     [
       printedBilingualText_('Sabbath Encouragement', '安息日勉勵'),
@@ -224,6 +224,7 @@ function appendBrooklynStudyPanel_(cell, bulletin) {
       ),
     ],
     [printedBilingualText_('Sabbath School', '安息日學課'), formatSabbathSchoolLessonForPrint_(bulletin.sabbathSchoolLesson), printValue_(location.sabbathSchool)],
+    hymnRows.closing,
     [printedBilingualText_('Closing Prayer', '合班禱告'), physicalTbdText_(), physicalTbdText_('尚未安排')],
   ]));
 
@@ -299,9 +300,10 @@ function appendBrooklynMeetingsPanel_(cell, bulletin, nextBulletin) {
     [printedBilingualText_('Chair', '主席'), function (value) { return printBrooklynPerson_(value.chair, value.chairPastoralPrayer); }],
     [printedBilingualText_('Technician', '技術同工'), function (value) { return printValue_(value.technician); }],
     [printedBilingualText_('Encouragement', '勉勵'), function (value) { return printBrooklynPerson_(value.encouragement, value.sabbathMessage); }],
-    [printedBilingualText_('Offering Prayer', '奉獻禱告'), function (value) { return printValue_(value.offeringPrayer); }],
+    // Labels the Queens roster shares are the pastor's; see PRINTED_ROLE_DOT.
+    [printedBilingualText_('Offering Prayer', '奉獻祈禱'), function (value) { return printValue_(value.offeringPrayer); }],
     [printedBilingualText_('Sabbath School', '安息日學'), function (value) { return printValue_(value.sabbathSchool); }],
-    [printedBilingualText_('Sermon', '崇拜證道'), function (value) { return printValue_(value.sermon); }],
+    [printedBilingualText_('Sermon', '崇拜' + PRINTED_ROLE_DOT + '證道'), function (value) { return printValue_(value.sermon); }],
     [printedBilingualText_('Sunset Times', '日落時間'), function (value) { return printValue_(value.sunsetTime); }],
   ]);
 

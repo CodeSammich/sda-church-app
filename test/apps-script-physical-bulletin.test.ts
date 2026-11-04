@@ -103,7 +103,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output).not.toContain('中文經文');
   });
 
-  it('adds only the document-generation action to the Sheets menu', () => {
+  it('adds the document and font actions to the Sheets menu', () => {
     const menuItems: string[] = [];
     let menuTitle = '';
     const menu = {
@@ -129,6 +129,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(menuTitle).toBe('Printed Bulletin');
     expect(menuItems).toEqual([
       'Create Google Doc…',
+      'Fonts…',
     ]);
   });
 
@@ -577,7 +578,9 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(message).toContain('PHYSICAL_BULLETIN_ADMIN_EMAILS');
   });
 
-  it('preloads the reviewed Weekly Data verse ahead of print memory', () => {
+  // A Sabbath with a schedule row and a Weekly Data row whose Bible Verses is
+  // `verse`. Every Script Property reads as an old print-only verse.
+  const loadPromptFixture = (verse: string, extra: Record<string, unknown> = {}) => {
     const makeSheet = (name: string, rows: string[][]) => ({
       getName: () => name,
       getDataRange: () => ({
@@ -603,9 +606,9 @@ describe('printed bulletin Apps Script helpers', () => {
       'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
       'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
     ], [
-      '2026-09-05', 'brooklyn', 'Luke 7:36-39', '', '', '', '', '', '', '', '',
+      '2026-09-05', 'brooklyn', verse, '', '', '', '', '', '', '', '',
     ]]);
-    const context = loadAppsScript({
+    return loadAppsScript({
       SpreadsheetApp: {
         getActiveSpreadsheet: () => ({
           getSheetByName: (name: string) =>
@@ -620,18 +623,80 @@ describe('printed bulletin Apps Script helpers', () => {
         getScriptProperties: () => ({ getProperty: () => 'John 12:24' }),
       },
       Logger: { log: () => undefined },
+      ...extra,
     });
-
-    const output = JSON.parse(
+  };
+  const promptDataFor = (verse: string) =>
+    JSON.parse(
       runInContext(
         `JSON.stringify(getPrintedBulletinPromptData('2026-09-05', 'brooklyn'))`,
-        context,
+        loadPromptFixture(verse),
       ) as string,
     );
 
-    expect(output.scheduleVerse).toBe('Luke 7:36-39');
+  it('shows Weekly Data\'s verse, as the app does, and ignores an old print-only verse', () => {
+    const output = promptDataFor('Luke 7:36-39');
+
     expect(output.verse).toBe('Luke 7:36-39');
-    expect(output.hasVerseOverride).toBe(false);
+    expect(output.verseLabels).toEqual({ english: 'Luke 7:36–39', chinese: '路加福音 7:36–39' });
+    expect(output.verseProblem).toBe('');
+    expect(output).not.toHaveProperty('hasVerseOverride');
+  });
+
+  it('shows every passage of a reference with several', () => {
+    const output = promptDataFor('John 3:16; Psalm 23 and Jeremiah:29:11-15');
+
+    expect(output.verseLabels).toEqual({
+      english: 'John 3:16; Psalms 23; Jeremiah 29:11–15',
+      chinese: '約翰福音 3:16；詩篇 23；耶利米書 29:11–15',
+    });
+    expect(output.verseProblem).toBe('');
+  });
+
+  it('stops on a blank or TBD verse, in English and Simplified Chinese', () => {
+    ['', '  ', 'TBD'].forEach((verse) => {
+      const output = promptDataFor(verse);
+      expect(output.verseLabels).toBeNull();
+      expect(output.verseProblem).toContain('Weekly Data has no Bible Verses for this Sabbath and location.');
+      expect(output.verseProblem).toContain('“Weekly Data”中没有这个安息日和地点的“Bible Verses”');
+    });
+  });
+
+  it('names each passage it can\'t read, rather than printing the rest', () => {
+    const output = promptDataFor('John 3:16; Jhon 3:17, 18; John 22:1; John 3:0; John 3:18-16');
+
+    expect(output.verseLabels).toBeNull();
+    expect(output.verseProblem).toContain(
+      'Weekly Data\'s Bible Verses can\'t be read: “Jhon 3:17”, “18”, “John 22:1”, “John 3:0”, “John 3:18-16”.',
+    );
+    expect(output.verseProblem).toContain('无法读取“Weekly Data”中的“Bible Verses”：“Jhon 3:17”、“18”');
+    expect(output.verseProblem).not.toContain('“John 3:16”');
+  });
+
+  it('won\'t create the Doc without a readable Weekly Data verse, whatever the request says', () => {
+    const created: string[] = [];
+    const run = (verse: string) => {
+      const context = loadPromptFixture(verse, {
+        LockService: {
+          getScriptLock: () => ({ waitLock: () => undefined, tryLock: () => true, releaseLock: () => undefined }),
+        },
+        DocumentApp: { create: (name: string) => created.push(name) },
+        DriveApp: { getFileById: () => created.push('drive') },
+      });
+      return runInContext(
+        `try {
+          createPrintedBulletinFromRequest({
+            date: '2026-09-05', location: 'brooklyn', format: 'regular', verse: 'John 3:16'
+          });
+          'created';
+        } catch (error) { error.message; }`,
+        context,
+      ) as string;
+    };
+
+    expect(run('')).toContain('Weekly Data has no Bible Verses');
+    expect(run('Jhon 3:16')).toContain('can\'t be read: “Jhon 3:16”');
+    expect(created).toEqual([]);
   });
 
   it('makes only a Google Doc, and trashes a PDF made for the same bulletin before', () => {
@@ -686,7 +751,7 @@ describe('printed bulletin Apps Script helpers', () => {
     );
   });
 
-  it('builds a bilingual form with location/format buttons and structured Bible selectors', () => {
+  it('builds a bilingual form with location/format buttons and a read-only Bible reading', () => {
     const context = loadAppsScript({});
     const html = runInContext(
       `buildPrintedBulletinPromptHtml_('2026-09-26')`,
@@ -701,14 +766,9 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('updateLocationFormatAvailability');
     expect(html).toContain('.choice:disabled');
     expect(html).not.toContain('Detect from response');
-    expect(html).toContain('Bible book ');
-    expect(html).toContain('圣经书卷</label>');
-    expect(html).toContain('Jeremiah · 耶利米書');
     expect(html).toContain('eng_kjv');
     expect(html).toContain('CUV — 和合本（Traditional Chinese）');
     expect(html).not.toContain('cmn_cu1');
-    expect(html).toContain('11 or 11-15');
-    expect(html).toContain('If the speaker submitted a Bible verse in Weekly Data');
     expect(html).toContain('getPrintedBulletinPromptWarning');
     expect(html).toContain('Add announcement / 添加通知');
     expect(html).toContain('getPrintedBulletinPromptData');
@@ -726,9 +786,6 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).not.toContain('Worship Data form');
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
     expect(html).toContain('white-space:normal');
-    expect(html).toContain('id="book" required');
-    expect(html).toContain('id="chapter" disabled required');
-    expect(html).toContain('id="verses" type="text"');
     expect(html).toContain('class="required-mark"');
     expect(html).toContain('function updateSubmitState');
     expect(html).toContain('function showGenerationError');
@@ -738,7 +795,16 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('min-height:180px');
     expect(html).toContain('document.getElementById("bulletinForm").hidden=true');
     expect(html).toContain('block:"nearest"');
-    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Bible book'));
+    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Bible reading'));
+    // The verse is Weekly Data's, shown read-only (#622): no picker.
+    expect(html).toContain('id="verseView"');
+    expect(html).toContain('From the Bible Verses column in Weekly Data, the same verse the app shows.');
+    expect(html).toContain('来自“Weekly Data”的“Bible Verses”列');
+    expect(html).not.toMatch(/id="(book|chapter|verses)"/);
+    expect(html).not.toContain('Choose a book');
+    expect(html).not.toContain('选择书卷');
+    expect(html).not.toContain('verseOverrideDirty');
+    expect(html).toContain('verseReady');
   });
 
   it('stores ordered printed announcements in Apps Script properties', () => {
@@ -843,28 +909,87 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(runInContext(`formatPrintedAnnouncementNumberedText_('', 2)`, context)).toBe('');
   });
 
-  it('keeps the DAF note with the left-side giving content', () => {
+  it('prints the giving text without the stocks line that pushed it onto a second page', () => {
+    const printed = (reuseLeadingParagraph: boolean) => {
+      const makeParagraph = (initial: string) => {
+        const paragraph = {
+          text: initial,
+          getType: () => 'PARAGRAPH',
+          asParagraph: () => paragraph,
+          getText: () => paragraph.text,
+          setText: (value: string) => {
+            paragraph.text = value;
+          },
+          setAlignment: () => undefined,
+          setLineSpacing: () => undefined,
+          setSpacingBefore: () => undefined,
+          setSpacingAfter: () => undefined,
+          editAsText: () => ({}),
+        };
+        return paragraph;
+      };
+      // A footer cell after clear(): one empty paragraph.
+      const paragraphs = [makeParagraph('')];
+      const cell = {
+        getNumChildren: () => paragraphs.length,
+        getChild: (index: number) => paragraphs[index],
+        appendParagraph: (value: string) => {
+          const paragraph = makeParagraph(value);
+          paragraphs.push(paragraph);
+          return paragraph;
+        },
+      };
+      const context = loadAppsScript({
+        DocumentApp: {
+          ElementType: { PARAGRAPH: 'PARAGRAPH' },
+          HorizontalAlignment: { CENTER: 'CENTER' },
+        },
+      });
+      Object.assign(context, { styleText_: () => undefined, testCell: cell });
+      runInContext(
+        `appendGivingText_(testCell, { reuseLeadingParagraph: ${reuseLeadingParagraph} })`,
+        context,
+      );
+      return paragraphs.map((paragraph) => paragraph.text);
+    };
+
+    for (const reuseLeadingParagraph of [true, false]) {
+      const lines = printed(reuseLeadingParagraph);
+      if (!reuseLeadingParagraph) {
+        // Not asked to reuse it, the cell's own empty paragraph stays first.
+        expect(lines.shift()).toBe('');
+      }
+      // The heading, the half spacer, and the cash-offering line in Chinese
+      // and English, with no empty paragraph left over. One more line pushed
+      // the bulletin onto a second page at the 10-point minimum, so a new line
+      // needs room made for it first.
+      expect(lines).toHaveLength(4);
+      expect(lines[0]).toBe('Tithes & Offerings | 什一奉獻與自由奉獻');
+      expect(lines[1]).toBe(' ');
+      expect(lines[2]).toMatch(/^現金奉獻：/);
+      expect(lines[3]).toMatch(/^Cash offerings: /);
+      // Stock gifts stay in the app's Give page, in every language.
+      for (const line of lines) {
+        expect(line).not.toMatch(/stocks?\b|equities|donor[- ]advised|\bEIN\b/i);
+      }
+    }
+
+    const givePage = readFileSync(join(process.cwd(), 'app/(tabs)/home/give.tsx'), 'utf8');
+    expect(givePage).toContain("dafTitle: 'Stocks/Equities'");
+    expect(givePage).toContain('EIN 11-3004814');
+  });
+
+  it('lists the giving QR codes for each location', () => {
     const source = readFileSync(
       join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'),
       'utf8',
     );
-    const givingTextStart = source.indexOf('function appendGivingText_');
-    const givingQrStart = source.indexOf('function appendGivingQrPlaceholders_');
     const givingQrItemsStart = source.indexOf('function getGivingQrItems_');
-    const givingText = source.slice(givingTextStart, givingQrStart);
-    const givingQr = source.slice(givingQrStart, source.indexOf('\nfunction ', givingQrStart + 10));
     const givingQrItems = source.slice(
       givingQrItemsStart,
       source.indexOf('\nfunction ', givingQrItemsStart + 10),
     );
 
-    expect(givingText.replace(/\\'/g, "'")).toContain(
-      "Stocks/equities: We recommend donor-advised funds; see our church's mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.",
-    );
-    expect(givingText).toContain('contact treasury@nyccsda.org.');
-    expect(givingText).toContain('Nonprofit EIN: 11-3004814.');
-    expect(givingText).toContain('Tithes & Offerings | 什一奉獻與自由奉獻');
-    expect(givingQr).not.toContain('Stocks/equities:');
     expect(givingQrItems).toContain("'Zelle® (zelle@nyccsda.org)', 'Zelle® 轉賬'");
 
     const context = loadAppsScript({});
@@ -1143,34 +1268,107 @@ describe('printed bulletin Apps Script helpers', () => {
     });
   });
 
-  it('stores printed Bible verse overrides separately from reviewed intake data', () => {
-    const properties: Record<string, string> = {};
+  it('prunes per-week Script Properties more than four weeks old, and every old print-only verse', () => {
+    const properties: Record<string, string> = {
+      // Older than four weeks before 2026-11-03 (the cutoff is 2026-10-06).
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12': 'doc-a',
+      'PHYSICAL_BULLETIN_DOC_ID_BROOKLYN_2026-10-03': 'doc-b',
+      'PHYSICAL_BULLETIN_DOC_ID_2026-09-05': 'doc-c',
+      'PHYSICAL_BULLETIN_PDF_ID_QUEENS_2026-09-12': 'pdf-a',
+      'PHYSICAL_BULLETIN_PDF_ID_2026-09-05': 'pdf-b',
+      'PRINTED_ANNOUNCEMENTS_2026-09-12': '[]',
+      // Every old print-only verse goes, even next week's.
+      'PRINTED_BIBLE_VERSE_QUEENS_2026-09-12': 'John 1:1',
+      'PRINTED_BIBLE_VERSE_BROOKLYN_2026-11-07': 'John 1:2',
+      // Recent and future weeks stay, so a reprint still updates its Doc.
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-10-10': 'doc-d',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07': 'doc-e',
+      'PHYSICAL_BULLETIN_PDF_ID_BROOKLYN_2026-10-06': 'pdf-c',
+      'PRINTED_ANNOUNCEMENTS_2026-11-07': '[]',
+      // Anything else stays: settings, other prefixes, odd forms and dates.
+      'bulletin.changeover.schedule-not-set.watchedSince': '2026-09-01',
+      PRINTED_BULLETIN_CJK_FONT: 'Some Font',
+      PHYSICAL_BULLETIN_ADMIN_EMAILS: 'admin@example.com',
+      SCHEDULE_NAME_CHECK_TRIGGER: 'installed',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026_09_12': 'underscored',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-02-30': 'not a date',
+      'PHYSICAL_BULLETIN_DOC_ID_MANHATTAN_2026-09-12': 'unknown location',
+      'PRINTED_ANNOUNCEMENTS_QUEENS_2026-09-12': 'no location form',
+      'PRINTED_BIBLE_VERSE_2026-09-12': 'no location form',
+      'XPHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12': 'other prefix',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12_COPY': 'suffix',
+    };
+    const logs: string[] = [];
+    const locks: string[] = [];
     const context = loadAppsScript({
       PropertiesService: {
         getScriptProperties: () => ({
-          getProperty: (key: string) => properties[key] ?? null,
-          setProperty: (key: string, value: string) => {
-            properties[key] = value;
+          getKeys: () => Object.keys(properties),
+          deleteProperty: (key: string) => {
+            delete properties[key];
           },
         }),
       },
       LockService: {
         getScriptLock: () => ({
-          waitLock: () => undefined,
-          releaseLock: () => undefined,
+          tryLock: () => {
+            locks.push('lock');
+            return true;
+          },
+          releaseLock: () => locks.push('release'),
         }),
       },
+      Logger: { log: (message: string) => logs.push(message) },
     });
 
-    const output = JSON.parse(
-      runInContext(
-        `savePrintedBibleVerseOverride_('2026-09-26', 'queens', 'John 12:24'); JSON.stringify(readPrintedBibleVerseOverride_('2026-09-26', 'queens'))`,
-        context,
-      ) as string,
-    );
+    const removed = runInContext(`prunePrintedBulletinProperties_('2026-11-03')`, context);
 
-    expect(output).toEqual({ found: true, reference: 'John 12:24' });
-    expect(properties['PRINTED_BIBLE_VERSE_QUEENS_2026-09-26']).toBe('John 12:24');
+    expect(removed).toBe(8);
+    expect(Object.keys(properties).sort()).toEqual([
+      'PHYSICAL_BULLETIN_ADMIN_EMAILS',
+      'PHYSICAL_BULLETIN_DOC_ID_MANHATTAN_2026-09-12',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-02-30',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12_COPY',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-10-10',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026_09_12',
+      'PHYSICAL_BULLETIN_PDF_ID_BROOKLYN_2026-10-06',
+      'PRINTED_ANNOUNCEMENTS_2026-11-07',
+      'PRINTED_ANNOUNCEMENTS_QUEENS_2026-09-12',
+      'PRINTED_BIBLE_VERSE_2026-09-12',
+      'PRINTED_BULLETIN_CJK_FONT',
+      'SCHEDULE_NAME_CHECK_TRIGGER',
+      'XPHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12',
+      'bulletin.changeover.schedule-not-set.watchedSince',
+    ]);
+    expect(logs).toEqual(['Pruned 8 old printed bulletin Script Properties.']);
+    expect(locks).toEqual(['lock', 'release']);
+  });
+
+  it('skips pruning, without failing, while another run holds the lock or the properties fail', () => {
+    const deleted: string[] = [];
+    const load = (tryLock: boolean, getKeys: () => string[]) =>
+      loadAppsScript({
+        PropertiesService: {
+          getScriptProperties: () => ({ getKeys, deleteProperty: (key: string) => deleted.push(key) }),
+        },
+        LockService: {
+          getScriptLock: () => ({ tryLock: () => tryLock, releaseLock: () => undefined }),
+        },
+        Logger: { log: () => undefined },
+      });
+
+    const keys = () => ['PRINTED_BIBLE_VERSE_QUEENS_2026-09-12'];
+    expect(runInContext(`prunePrintedBulletinProperties_('2026-11-03')`, load(false, keys))).toBe(0);
+    expect(
+      runInContext(
+        `prunePrintedBulletinProperties_('2026-11-03')`,
+        load(true, () => {
+          throw new Error('Service unavailable');
+        }),
+      ),
+    ).toBe(0);
+    expect(deleted).toEqual([]);
   });
 
   it('detects communion format from the schedule remark', () => {
@@ -1674,27 +1872,60 @@ describe('printed bulletin Apps Script helpers', () => {
            sabbathSchoolLesson: { english: 'Lesson 5: Revelation and Inspiration', chinese: '第5課 啟示與默示' },
          };
          appendStudyPanel_('study', bulletin);
+         var queensStudy = captured;
+         captured = [];
          appendBrooklynStudyPanel_('brooklyn-study', bulletin);
          var worship = [];
          appendSermonRow_ = function () {};
          appendProgramTable_ = function (cell, rows) { worship = worship.concat(rows); };
          appendWorshipPanel_('worship', bulletin, false);
-         JSON.stringify({ study: captured, worship: worship })`,
+         JSON.stringify({ study: queensStudy, brooklyn: captured, worship: worship })`,
         context,
       ) as string,
     );
     const row = (list: string[][], label: string) => list.find(([first]) => first.includes(label));
 
-    expect(row(rows.study, 'Opening & Closing Hymns')).toEqual([
-      '開會及結會詩歌\nOpening & Closing Hymns',
-      '第413首 教會根基 · Amazing Love\nAH 348 · Amazing Love',
+    // The Sabbath School in its order: the opening hymns one per line after
+    // the opening prayer, and the closing hymns after the lesson, saying
+    // they're the opening hymns again rather than listing them twice.
+    const english = (list: string[][]) => list.map(([label]) => label.split('\n').pop());
+    expect(english(rows.study)).toEqual([
+      'SS Chair',
+      'Opening Prayer',
+      'Opening Hymns',
+      'Lesson / Study',
+      'Closing Hymns',
+      'Closing Prayer',
+    ]);
+    expect(row(rows.study, 'Opening Hymns')).toEqual([
+      '開會詩歌\nOpening Hymns',
+      'AH 348 · 第413首 教會根基\nAmazing Love',
       '會眾\nCongregation',
     ]);
-    expect(row(rows.study, 'Opening & Closing Hymns\u0000')).toBeUndefined();
-    expect(rows.study.filter(([label]: string[]) => /^(Opening|Closing) Hymn$/m.test(label))).toEqual([]);
+    expect(row(rows.study, 'Closing Hymns')).toEqual([
+      '結會詩歌\nClosing Hymns',
+      '同開會詩歌\nSame as Opening Hymns',
+      '會眾\nCongregation',
+    ]);
     expect(row(rows.study, 'Lesson / Study')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
-    expect(row(rows.study, '開會及合班唱詩')?.[1]).toBe('第413首 教會根基 · Amazing Love\nAH 348 · Amazing Love');
-    expect(row(rows.study, '安息日學課')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
+    expect(english(rows.brooklyn)).toEqual([
+      'Song and Bible Verse',
+      'Opening Hymns',
+      'Prayer',
+      'Sabbath Encouragement',
+      'Sabbath School',
+      'Closing Hymns',
+      'Closing Prayer',
+    ]);
+    expect(row(rows.brooklyn, 'Opening Hymns')?.slice(0, 2)).toEqual([
+      '開會唱詩\nOpening Hymns',
+      'AH 348 · 第413首 教會根基\nAmazing Love',
+    ]);
+    expect(row(rows.brooklyn, 'Closing Hymns')?.slice(0, 2)).toEqual([
+      '合班唱詩\nClosing Hymns',
+      '同開會唱詩\nSame as Opening Hymns',
+    ]);
+    expect(row(rows.brooklyn, '安息日學課')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
     expect(row(rows.worship, 'Special Music')?.slice(1)).toEqual(['It Is Well', 'Ruoxi Tan']);
   });
 
@@ -1756,9 +1987,14 @@ describe('printed bulletin Apps Script helpers', () => {
 
     // Queens: in order, without the blank middle cell.
     // AH 73 Holy, Holy, Holy is 505 #2, 聖哉真神.
-    expect(row('開會及結會詩歌')).toBe('第413首 教會根基 · 第2首\nAH 348 · AH 73 Holy, Holy, Holy');
-    // Brooklyn: a bare number is a Chinese hymnal number.
-    expect(row('開會及合班唱詩')).toBe('第205首\nAH 206');
+    expect(row('開會詩歌')).toBe('AH 348 · 第413首 教會根基\nAH 73 Holy, Holy, Holy · 第2首');
+    // Brooklyn: a bare number is a Chinese hymnal number. With one hymn, the
+    // rows say Hymn, not Hymns.
+    expect(row('開會唱詩')).toBe('AH 206 · 第205首');
+    expect(rows.find(([first]) => first.includes('合班唱詩'))?.slice(0, 2)).toEqual([
+      '合班唱詩\nClosing Hymn',
+      '同開會唱詩\nSame as Opening Hymn',
+    ]);
   });
 
   it('merges adjacent Brooklyn Sabbath School rows with the same assignment', () => {
@@ -2106,6 +2342,140 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(tables[0][2][3]).toBe('6:12 PM');
   });
 
+  it("prints each roster grid label on one line, with the pastor's four-character Chinese labels", () => {
+    type RosterTable = {
+      rows: string[][];
+      options: { columnWidths: number[]; paddingLeft: number; paddingRight: number };
+    };
+    const tables: RosterTable[] = [];
+    const context = loadAppsScript({
+      capturedTables: tables,
+      DocumentApp: { HorizontalAlignment: { LEFT: 'left', CENTER: 'center' } },
+    });
+    runInContext(
+      `appendDataTable_ = function (cell, rows, options) {
+        capturedTables.push({ rows: rows, options: options });
+      };
+      appendCenteredText_ = function () {};
+      appendPrintedAnnouncementsTable_ = function () {};
+      appendScheduleTable_({}, { queens: {} }, null);
+      appendBrooklynMeetingsPanel_({}, { brooklyn: {} }, null);`,
+      context,
+    );
+    const [queens, brooklyn] = tables;
+
+    // The Queens grid prints in Regular and Communion bulletins alike, in the
+    // pastor's order: Offerings before Flower Offering.
+    expect(queens.rows.slice(1).map((row) => [row[1], row[2]])).toEqual([
+      ['SS Pianist', '學課･司琴'],
+      ['SS Teacher E.', '英文教師'],
+      ['SS Teacher C.', '中文教師'],
+      ['DS Chair', '崇拜･主席'],
+      ['DS Pianist', '崇拜･司琴'],
+      ['Offering Prayer', '奉獻祈禱'],
+      ['DS Sermon', '崇拜･證道'],
+      ['DS Interpreter', '崇拜･翻譯'],
+      ['Special Music', '特別音樂'],
+      ['Offerings', '奉獻事項'],
+      ['Flower Offering', '鮮花奉獻'],
+      ['Sunset Times', '日落時間'],
+    ]);
+    expect(brooklyn.rows.slice(1).map((row) => row[2])).toEqual([
+      '主席',
+      '技術同工',
+      '勉勵',
+      '奉獻祈禱',
+      '安息日學',
+      '崇拜･證道',
+      '日落時間',
+    ]);
+
+    const { columnWidths, paddingLeft, paddingRight } = queens.options;
+    expect(brooklyn.options.columnWidths).toEqual(columnWidths);
+    const room = (column: number) => columnWidths[column] - paddingLeft - paddingRight;
+
+    // The grid is no wider than the announcements table above it, which
+    // prints in the same panel every week.
+    const announcementWidths: number[] = [];
+    const announcementCell = {
+      clear: () => undefined,
+      setPaddingTop: () => undefined,
+      setPaddingBottom: () => undefined,
+      setPaddingLeft: () => undefined,
+      setPaddingRight: () => undefined,
+      setVerticalAlignment: () => undefined,
+    };
+    const announcementContext = loadAppsScript({
+      DocumentApp: { VerticalAlignment: { TOP: 'top' } },
+    });
+    Object.assign(announcementContext, {
+      appendPrintedAnnouncementTableCell_: () => undefined,
+      testPanel: {
+        appendTable: () => ({
+          setBorderWidth: () => undefined,
+          setColumnWidth: (column: number, width: number) => {
+            announcementWidths[column] = width;
+          },
+          getRow: () => ({ getCell: () => announcementCell }),
+        }),
+      },
+    });
+    runInContext(
+      `appendPrintedAnnouncementsTable_(testPanel, [{ english: 'Potluck after worship.', chinese: '崇拜後聚餐。' }])`,
+      announcementContext,
+    );
+    const sum = (widths: number[]) => widths.reduce((total, width) => total + width, 0);
+    expect(sum(announcementWidths)).toBe(360);
+    expect(sum(columnWidths)).toBeLessThanOrEqual(sum(announcementWidths));
+
+    // Times New Roman advance widths in 2048ths of an em, for the characters
+    // the English labels use (Liberation Serif has the same widths).
+    const timesWidths: Record<string, number> = {
+      ' ': 512, '-': 682, '.': 512, C: 1366, D: 1479, E: 1251, F: 1139, G: 1479, I: 682,
+      M: 1821, O: 1479, P: 1139, S: 1139, T: 1251, a: 909, b: 1024, c: 909, e: 909, f: 682,
+      g: 1024, h: 1024, i: 569, l: 569, m: 1593, n: 1024, o: 1024, p: 1024, r: 682, s: 797,
+      t: 569, u: 1024, w: 1479, y: 1024,
+    };
+    const timesWidth = (text: string) =>
+      [...text].reduce((total, character) => {
+        expect(timesWidths[character]).toBeDefined();
+        return total + (timesWidths[character] / 2048) * 10;
+      }, 0);
+    // Each English role label fits its column with 1.5 points to spare.
+    // "Flower Offering", the widest, is 65.3 points.
+    for (const table of [queens, brooklyn]) {
+      for (const row of table.rows.slice(1)) {
+        expect(timesWidth(row[1])).toBeLessThanOrEqual(room(1) - 1.5);
+      }
+    }
+
+    // At 10 points each UoqMunThenKhung character is 10 points wide and its
+    // half-width dot (U+FF65) is 5. Each character has to be in the font, or
+    // it prints in the fallback.
+    const chineseWidth = (label: string) =>
+      [...label].reduce((sum, character) => {
+        expect(
+          runInContext(
+            `isPrintedCharacterInDefaultChineseFont_(${character.charCodeAt(0)})`,
+            context,
+          ),
+        ).toBe(true);
+        return sum + (character === '･' ? 5 : 10);
+      }, 0);
+    for (const table of [queens, brooklyn]) {
+      for (const row of table.rows) {
+        expect(chineseWidth(row[2])).toBeLessThanOrEqual(room(2));
+      }
+    }
+    // The Chinese name columns hold 尚未安排 (TBD), 40 points.
+    expect(room(4)).toBeGreaterThanOrEqual(40);
+    expect(room(6)).toBeGreaterThanOrEqual(40);
+    // Docs won't break "Sacrifice-Global" (66.1 points) at the hyphen. Both
+    // English name columns hold it with 1.5 points to spare.
+    expect(timesWidth('Sacrifice-Global')).toBeLessThanOrEqual(room(3) - 1.5);
+    expect(timesWidth('Sacrifice-Global')).toBeLessThanOrEqual(room(5) - 1.5);
+  });
+
   it('keeps bilingual labels and content in the physical output helpers', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
@@ -2144,7 +2514,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.both).toBe('第413首 教會根基\nAH 348 The Church Has One Foundation');
   });
 
-  it('prints the Sabbath School hymns on one line per language, filling the other by number', () => {
+  it('prints one line per Sabbath School hymn, filling the other language by number', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
       runInContext(
@@ -2159,18 +2529,23 @@ describe('printed bulletin Apps Script helpers', () => {
           englishOnly: formatSabbathSchoolHymnsForPrint_(['Amazing Love']),
           blank: formatSabbathSchoolHymnsForPrint_(['', '  ']),
           missing: formatSabbathSchoolHymnsForPrint_(undefined),
+          noHymnRows: getPrintedSabbathSchoolHymnRows_([], '開會詩歌', '結會詩歌'),
         })`,
         context,
       ) as string,
     );
 
     expect(output.mixed).toBe(
-      '第413首 教會根基 · 第413首 · 第413首 · 還要等多久\n' +
-        'AH 348 · AH 348 The Church Has One Foundation · AH 348 · 還要等多久',
+      ['AH 348 · 第413首 教會根基', 'AH 348 The Church Has One Foundation · 第413首', 'AH 348 · 第413首', '還要等多久'].join(
+        '\n',
+      ),
     );
     expect(output.englishOnly).toBe('Amazing Love');
     expect(output.blank).toBe('尚未確定\nTBD');
     expect(output.missing).toBe('尚未確定\nTBD');
+    // With no hymns, both rows say TBD rather than "the same as" nothing.
+    expect(output.noHymnRows.opening.slice(0, 2)).toEqual(['開會詩歌\nOpening Hymn', '尚未確定\nTBD']);
+    expect(output.noHymnRows.closing.slice(0, 2)).toEqual(['結會詩歌\nClosing Hymn', '尚未確定\nTBD']);
   });
 
   it("looks up the lesson the class discusses: the week that ends the day before", () => {
