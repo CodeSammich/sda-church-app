@@ -907,13 +907,12 @@ line in the printed layout.
 
 The Sabbath School hymns print in each Sabbath School panel's **Opening Hymns**
 row, after the opening prayer, one hymn per line, such as
-`第413首 教會根基 / AH 348` (`formatSabbathSchoolHymnsForPrint_`). Each cell has
-one hymn in either language, so it prints as typed, except that a bare number
-prints as `第N首`. The other language follows after a slash, Chinese first,
-where the map has it by number; otherwise the hymn prints once, as typed. The
-closing sings the same hymns, so the **Closing Hymns** row, after the lesson,
-says `同開會詩歌` (`同開會唱詩` in Brooklyn) and `Same as the opening hymns`
-rather than listing them twice (`getPrintedSabbathSchoolHymnRows_`). With one
+`AH 348 · 第413首 教會根基` (`formatSabbathSchoolHymnsForPrint_`). Each cell has
+one hymn in either language. Where the map has the other language by number,
+the line is the English, a dot, then the Chinese; otherwise the hymn prints
+once, as typed. A bare number is `第N首`. The closing sings the same hymns, so
+the **Closing Hymns** row, after the lesson, says `同開會詩歌` (`同開會唱詩` in
+Brooklyn) and `Same as Opening Hymns` rather than listing them twice (`getPrintedSabbathSchoolHymnRows_`). With one
 hymn, the rows say Hymn; with none, both say `TBD`. The lesson prints in the Queens `Lesson / Study` row and the Brooklyn
 `Sabbath School` row, and the special music piece beside its performer (`TBD`
 in Brooklyn).

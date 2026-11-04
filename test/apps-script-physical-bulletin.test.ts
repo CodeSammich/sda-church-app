@@ -1899,12 +1899,12 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
     expect(row(rows.study, 'Opening Hymns')).toEqual([
       '開會詩歌\nOpening Hymns',
-      '第413首 教會根基 / AH 348\nAmazing Love',
+      'AH 348 · 第413首 教會根基\nAmazing Love',
       '會眾\nCongregation',
     ]);
     expect(row(rows.study, 'Closing Hymns')).toEqual([
       '結會詩歌\nClosing Hymns',
-      '同開會詩歌\nSame as the opening hymns',
+      '同開會詩歌\nSame as Opening Hymns',
       '會眾\nCongregation',
     ]);
     expect(row(rows.study, 'Lesson / Study')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
@@ -1919,11 +1919,11 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
     expect(row(rows.brooklyn, 'Opening Hymns')?.slice(0, 2)).toEqual([
       '開會唱詩\nOpening Hymns',
-      '第413首 教會根基 / AH 348\nAmazing Love',
+      'AH 348 · 第413首 教會根基\nAmazing Love',
     ]);
     expect(row(rows.brooklyn, 'Closing Hymns')?.slice(0, 2)).toEqual([
       '合班唱詩\nClosing Hymns',
-      '同開會唱詩\nSame as the opening hymns',
+      '同開會唱詩\nSame as Opening Hymns',
     ]);
     expect(row(rows.brooklyn, '安息日學課')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
     expect(row(rows.worship, 'Special Music')?.slice(1)).toEqual(['It Is Well', 'Ruoxi Tan']);
@@ -1987,13 +1987,13 @@ describe('printed bulletin Apps Script helpers', () => {
 
     // Queens: in order, without the blank middle cell.
     // AH 73 Holy, Holy, Holy is 505 #2, 聖哉真神.
-    expect(row('開會詩歌')).toBe('第413首 教會根基 / AH 348\n第2首 / AH 73 Holy, Holy, Holy');
+    expect(row('開會詩歌')).toBe('AH 348 · 第413首 教會根基\nAH 73 Holy, Holy, Holy · 第2首');
     // Brooklyn: a bare number is a Chinese hymnal number. With one hymn, the
     // rows say Hymn, not Hymns.
-    expect(row('開會唱詩')).toBe('第205首 / AH 206');
+    expect(row('開會唱詩')).toBe('AH 206 · 第205首');
     expect(rows.find(([first]) => first.includes('合班唱詩'))?.slice(0, 2)).toEqual([
       '合班唱詩\nClosing Hymn',
-      '同開會唱詩\nSame as the opening hymn',
+      '同開會唱詩\nSame as Opening Hymn',
     ]);
   });
 
@@ -2536,7 +2536,7 @@ describe('printed bulletin Apps Script helpers', () => {
     );
 
     expect(output.mixed).toBe(
-      ['第413首 教會根基 / AH 348', '第413首 / AH 348 The Church Has One Foundation', '第413首 / AH 348', '還要等多久'].join(
+      ['AH 348 · 第413首 教會根基', 'AH 348 The Church Has One Foundation · 第413首', 'AH 348 · 第413首', '還要等多久'].join(
         '\n',
       ),
     );

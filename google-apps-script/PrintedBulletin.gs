@@ -1686,9 +1686,9 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
  * language is filled in by number where the hymnals' number maps have it, and
  * otherwise repeats what was typed. Two identical lines print as one.
  */
-// One line per Sabbath School hymn, as typed, with the other language after a
-// slash where the hymnal map has it, Chinese first, such as
-// "第413首 教會根基 / AH 348". A bare number is a Chinese hymnal number.
+// One line per Sabbath School hymn: the English, a dot, then the Chinese, where
+// the hymnal map has the other one, such as "AH 348 · 第413首 教會根基";
+// otherwise the hymn as typed. A bare number is a Chinese hymnal number.
 function getPrintedSabbathSchoolHymnLines_(hymns) {
   var lines = [];
   (hymns || []).forEach(function (value) {
@@ -1702,7 +1702,7 @@ function getPrintedSabbathSchoolHymnLines_(hymns) {
       : resolvePrintedHymnText_('', /^\d+$/.test(entry) ? '第' + entry + '首' : entry);
     var english = resolved.english || entry;
     var chinese = resolved.chinese || entry;
-    lines.push(english === chinese ? english : chinese + ' / ' + english);
+    lines.push(english === chinese ? english : english + ' · ' + chinese);
   });
   return lines;
 }
@@ -1731,7 +1731,7 @@ function getPrintedSabbathSchoolHymnRows_(hymns, openingChinese, closingChinese)
       printedBilingualText_(plural ? 'Closing Hymns' : 'Closing Hymn', closingChinese),
       lines.length
         ? printedBilingualText_(
-            plural ? 'Same as the opening hymns' : 'Same as the opening hymn',
+            plural ? 'Same as Opening Hymns' : 'Same as Opening Hymn',
             '同' + openingChinese,
           )
         : physicalTbdText_(),
