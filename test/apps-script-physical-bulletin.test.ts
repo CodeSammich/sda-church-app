@@ -849,7 +849,7 @@ describe('printed bulletin Apps Script helpers', () => {
     );
   });
 
-  it('builds a bilingual form with location/format buttons, and no Bible reading box', () => {
+  it('builds a short bilingual form: three steps, one help line each, and Preview', () => {
     const context = loadAppsScript({});
     const html = runInContext(
       `buildPrintedBulletinPromptHtml_('2026-09-26')`,
@@ -860,23 +860,27 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('Brooklyn / 布鲁克林');
     expect(html).toContain('Regular / 普通');
     expect(html).toContain('Communion / 圣餐');
-    expect(html).toContain('Brooklyn Communion is not currently available');
+    // Notes that say what the form already shows are gone.
+    expect(html).not.toContain('Brooklyn Communion is not currently available');
+    expect(html).not.toContain('closest upcoming Saturday');
     expect(html).toContain('updateLocationFormatAvailability');
     expect(html).toContain('.choice:disabled');
     expect(html).not.toContain('Detect from response');
     expect(html).toContain('eng_kjv');
-    expect(html).toContain('CUV — 和合本（Traditional Chinese）');
+    expect(html).toContain('Chinese is always CUV.<br>中文固定为和合本。');
     expect(html).not.toContain('cmn_cu1');
     expect(html).toContain('getPrintedBulletinPromptWarning');
     expect(html).toContain('Add announcement / 添加通知');
     expect(html).toContain('getPrintedBulletinPromptData');
-    expect(html).toContain('Instructions / 使用说明');
-    expect(html).toContain('Check the current week in the app');
-    expect(html).not.toContain('Admin reminder / 管理員提醒');
-    expect(html).toContain('1. Update the digital bulletin / 第一步：更新手机版周刊');
-    expect(html).toContain('2. Create the printed bulletin / 第二步：创建纸质周刊');
-    expect(html).toContain('add or update one row per location in Weekly Data');
-    expect(html).toContain('请先在应用中查看本周的周刊，然后在“Weekly Data”中');
+    // Each step: a heading and one short help line, English over Chinese.
+    expect(html).toContain('1. Update Weekly Data / 第一步：更新 Weekly Data');
+    expect(html).toContain('One row per location. The app and the printed bulletin both use it.<br>每个地点一行。应用和纸质周刊都使用这些内容。');
+    expect(html).toContain('2. Preview / 第二步：预览');
+    expect(html).toContain('3. Print the final version / 第三步：打印最终版');
+    expect(html).not.toContain('admin-reminder"');
+    expect(html).toContain('>Preview / 预览</button>');
+    expect(html).not.toContain('Create / 创建');
+    expect(html).toContain('<h2>Preview ready / 预览已完成</h2>');
     expect(html).toContain('↗ Open Weekly Data / 打开 Weekly Data');
     // Outside the spreadsheet, the link opens the spreadsheet itself.
     expect(html).toContain('href="https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit"');
@@ -892,15 +896,14 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('class="status-slot"');
     expect(html).toContain('document.getElementById("bulletinForm").hidden=true');
     expect(html).toContain('block:"nearest"');
-    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Printed announcements'));
-    // The verse is Weekly Data's, shown read-only (#622): no picker.
+    expect(html.indexOf('English Bible / 英文圣经')).toBeLessThan(html.indexOf('Printed announcements'));
     // The verse is in Weekly Data, so the dialog doesn't show it: only, by
-    // Create, why Create is off when it's blank or unreadable.
+    // Preview, why Preview is off when it's blank or unreadable (#622).
     expect(html).toContain('<div id="verseView" class="verse-view problem" role="alert" hidden></div>');
     expect(html).not.toContain('Bible reading');
     expect(html).not.toContain('From the Bible Verses column in Weekly Data');
     expect(html.indexOf('id="verseView"')).toBeLessThan(html.indexOf('id="submit"'));
-    // "Printed bulletin ready" shows under step 2, above step 3.
+    // "Preview ready" shows under step 2, above step 3.
     expect(html.indexOf('id="statusView"')).toBeGreaterThan(html.indexOf('</form>'));
     expect(html.indexOf('id="statusView"')).toBeLessThan(html.indexOf('id="wordCopySection"'));
     expect(html).not.toMatch(/id="(book|chapter|verses)"/);
@@ -2002,7 +2005,7 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
     expect(row(rows.study, 'Opening Hymns')).toEqual([
       '開會詩歌\nOpening Hymns',
-      'AH 348 The Church Has One Foundation · 第413首 教會根基\nAmazing Love',
+      'AH 348 The Church Has One Foundation\n第413首 教會根基\nAmazing Love',
       '會眾\nCongregation',
     ]);
     expect(row(rows.study, 'Closing Hymns')).toEqual([
@@ -2022,7 +2025,7 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
     expect(row(rows.brooklyn, 'Opening Hymns')?.slice(0, 2)).toEqual([
       '開會唱詩\nOpening Hymns',
-      'AH 348 The Church Has One Foundation · 第413首 教會根基\nAmazing Love',
+      'AH 348 The Church Has One Foundation\n第413首 教會根基\nAmazing Love',
     ]);
     expect(row(rows.brooklyn, 'Closing Hymns')?.slice(0, 2)).toEqual([
       '合班唱詩\nClosing Hymns',
@@ -2090,10 +2093,10 @@ describe('printed bulletin Apps Script helpers', () => {
 
     // Queens: in order, without the blank middle cell.
     // AH 73 Holy, Holy, Holy is 505 #2, 聖哉真神.
-    expect(row('開會詩歌')).toBe('AH 348 The Church Has One Foundation · 第413首 教會根基\nAH 73 Holy, Holy, Holy · 第2首 聖哉真神');
+    expect(row('開會詩歌')).toBe('AH 348 The Church Has One Foundation\n第413首 教會根基\nAH 73 Holy, Holy, Holy\n第2首 聖哉真神');
     // Brooklyn: a bare number is a Chinese hymnal number. With one hymn, the
     // rows say Hymn, not Hymns.
-    expect(row('開會唱詩')).toBe('AH 206 Face to Face · 第205首');
+    expect(row('開會唱詩')).toBe('AH 206 Face to Face\n第205首');
     expect(rows.find(([first]) => first.includes('合班唱詩'))?.slice(0, 2)).toEqual([
       '合班唱詩\nClosing Hymn',
       '同開會唱詩\nSame as Opening Hymn',
@@ -2641,9 +2644,9 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(output.mixed).toBe(
       [
-        'AH 348 The Church Has One Foundation · 第413首 教會根基',
-        'AH 348 The Church Has One Foundation · 第413首 教會基礎',
-        'AH 348 The Church Has One Foundation · 第413首',
+        'AH 348 The Church Has One Foundation\n第413首 教會根基',
+        'AH 348 The Church Has One Foundation\n第413首 教會基礎',
+        'AH 348 The Church Has One Foundation\n第413首',
         '還要等多久',
       ].join(
         '\n',

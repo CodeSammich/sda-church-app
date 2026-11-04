@@ -53,6 +53,9 @@ var PRINTED_BULLETIN_TYPE = Object.freeze({
  * own spacing: an exact height would crop the picture. `lineHeightProperty`
  * changes the multiple without a deploy.
  */
+// Free, for printing the Word copy on a computer without Word.
+var PRINTED_BULLETIN_LIBREOFFICE_URL = 'https://www.libreoffice.org/download/download-libreoffice/';
+
 var PRINTED_BULLETIN_WORD_COPY = Object.freeze({
   chineseFont: 'Songti TC',
   lineHeight: 1.15,
@@ -554,55 +557,60 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '.link{display:block;border:1px solid #dadce0;border-radius:6px;color:#1a73e8;' +
     'font-size:14px;margin:10px 0;padding:11px 12px;text-decoration:none;}' +
     '</style></head><body>' +
+    // Each step: a heading, then one short help line in English over one in
+    // Simplified Chinese, so it reads at a glance.
     '<div id="formView">' +
-    '<h2 class="section-heading">1. Update the digital bulletin / 第一步：更新手机版周刊</h2>' +
-    '<div class="admin-reminder"><strong>Instructions / 使用说明：</strong> Check the current week in the app, then add or update one row per location in Weekly Data. Nonblank values there feed both the digital and printed bulletins; no separate intake workflow is required.' +
-    '<br>请先在应用中查看本周的周刊，然后在“Weekly Data”中为每个地点添加或更新一行。该工作表中的非空单元格会同时用于手机版和纸质周刊，无需另外提交。</div>' +
+    '<h2 class="section-heading">1. Update Weekly Data / 第一步：更新 Weekly Data</h2>' +
+    '<div class="help">One row per location. The app and the printed bulletin both use it.<br>每个地点一行。应用和纸质周刊都使用这些内容。</div>' +
     '<div class="form-links"><a class="form-button" href="' +
     escapePrintedBulletinHtml_(getBulletinIntakeSheetUrl_()) +
     '">↗ Open Weekly Data / 打开 Weekly Data</a></div></div>' +
-    '<h2 class="section-heading" style="margin-top:20px;">2. Create the printed bulletin / 第二步：创建纸质周刊</h2>' +
+    '<h2 class="section-heading" style="margin-top:20px;">2. Preview / 第二步：预览</h2>' +
+    '<div class="help">Makes this Sabbath\'s Google Doc, to check and edit if needed.<br>生成这个安息日的 Google 文档，供检查，需要时可修改。</div>' +
     '<form id="bulletinForm">' +
-    '<label for="date">Sabbath date <span class="required-mark" aria-hidden="true">*</span><br>安息日日期</label>' +
+    '<label for="date">Sabbath date / 安息日日期 <span class="required-mark" aria-hidden="true">*</span></label>' +
     '<input id="date" type="date" value="' +
     escapePrintedBulletinHtml_(defaultDate) +
     '" required>' +
-    '<div class="help">Defaults to the closest upcoming Saturday.<br>默认为即将到来的星期六。</div>' +
-    '<label>Location<br>地点</label>' +
+    '<label>Location / 地点</label>' +
     '<div class="choices" id="locationChoices">' +
     '<button type="button" class="choice selected" data-value="queens">Queens / 皇后区</button>' +
     '<button type="button" class="choice" data-value="brooklyn">Brooklyn / 布鲁克林</button>' +
     '</div>' +
-    '<label>Format<br>格式</label>' +
+    '<label>Format / 格式</label>' +
     '<div class="choices" id="formatChoices">' +
     '<button type="button" class="choice selected" data-value="regular">Regular / 普通</button>' +
     '<button type="button" class="choice" data-value="communion">Communion / 圣餐</button>' +
     '</div>' +
-    '<div class="help">Brooklyn Communion is not currently available. Choose Regular for Brooklyn.<br>目前尚未提供布鲁克林圣餐周刊；布鲁克林请选择普通格式。</div>' +
-    '<label for="englishTranslation">English Bible translation<br>英文圣经译本</label>' +
+    '<label for="englishTranslation">English Bible / 英文圣经</label>' +
     '<select id="englishTranslation">' +
     englishTranslationOptions +
     '</select>' +
-    '<div class="help">Chinese Bible translation: CUV — 和合本（Traditional Chinese）.<br>中文圣经译本：CUV — 和合本（繁体中文）。</div>' +
+    '<div class="help">Chinese is always CUV.<br>中文固定为和合本。</div>' +
     '<label>Printed announcements / 纸质周刊通知</label>' +
-    '<div class="help">Optional. Add one entry per card. These entries are printed only; they are not shown in the mobile bulletin.<br>可选。每张卡片输入一条通知。这些通知只打印在纸质周刊上，不会显示在手机版周刊中。</div>' +
+    '<div class="help">Optional. Printed only, not in the app.<br>可选。只印在纸质周刊上，不显示在应用中。</div>' +
     '<div id="announcementList"></div>' +
     '<button type="button" class="announcement-add" id="addAnnouncement">+ Add announcement / 添加通知</button>' +
-    // The verse is in Weekly Data, so it isn't shown here: only why Create is
+    // The verse is in Weekly Data, so it isn't shown here: only why Preview is
     // off, when Weekly Data's verse is blank or can't be read (#622).
     '<div id="verseView" class="verse-view problem" role="alert" hidden></div>' +
     '<div id="error" class="error" hidden></div>' +
     '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
-    '<button type="submit" class="submit" id="submit" disabled>Create / 创建</button></div>' +
+    '<button type="submit" class="submit" id="submit" disabled>Preview / 预览</button></div>' +
     '</form></div>' +
-    // Right under step 2, so "Printed bulletin ready" shows where it was made.
+    // Right under step 2, so "Preview ready" shows where it was made.
     '<div class="status-slot"><div id="statusView" hidden></div></div>' +
-    '<div id="wordCopySection"><h2 class="section-heading" style="margin-top:20px;">3. Send the pastor a Word copy to print / 第三步：把 Word 副本发给牧师打印</h2>' +
-    '<div class="admin-reminder"><strong>Needs a Mac with Microsoft Word.</strong> The pastor\'s Chinese font, Songti TC (宋體-繁), comes only with macOS, and Google Docs can\'t print it. Without a Mac, print the Google Doc itself: its Chinese is in UoqMunThenKhung (宇文天穹).<br>' +
-    '<strong>需要装有 Microsoft Word 的 Mac。</strong>牧师选用的中文字体宋体-繁（Songti TC）只有 macOS 自带，Google 文档无法打印该字体。没有 Mac 时，请直接打印 Google 文档，其中文字体为宇文天穹（UoqMunThenKhung）。</div>' +
-    '<div class="help">After the last edit to this Sabbath\'s Google Doc, make the Word copy, download it, and send it to the pastor on WhatsApp. The pastor opens it in Word on a Mac and prints it, with the Chinese in Songti TC. It uses the date and location above.<br>' +
-    '在这个安息日的 Google 文档最后修改之后，制作 Word 副本，下载后通过 WhatsApp 发给牧师。牧师在 Mac 上用 Word 打开并打印，中文为宋体-繁。使用上面选择的日期和地点。</div>' +
-    '<div class="actions"><button type="button" class="word-copy" id="wordCopy">Make Word copy / 制作 Word 副本</button></div>' +
+    // The print version is a Word file because Docs can't print the final
+    // fonts and spacing (#627); a Mac has Songti TC, elsewhere Word or
+    // LibreOffice uses a similar font, and the exact line heights keep the layout.
+    '<div id="wordCopySection"><h2 class="section-heading" style="margin-top:20px;">3. Print the final version / 第三步：打印最终版</h2>' +
+    '<div class="help">After the last edit to the Doc, make the print version: a Word file with the final fonts and spacing. Print it from Word or free <a href="' +
+    PRINTED_BULLETIN_LIBREOFFICE_URL +
+    '">LibreOffice</a>, or send it to the pastor on WhatsApp. On a Mac, the Chinese is in Songti TC.<br>' +
+    '文档最后修改后，制作打印版：使用最终字体和行距的 Word 文件。用 Word 或免费的 <a href="' +
+    PRINTED_BULLETIN_LIBREOFFICE_URL +
+    '">LibreOffice</a> 打印，或通过 WhatsApp 发给牧师。在 Mac 上，中文为宋体-繁。</div>' +
+    '<div class="actions"><button type="button" class="word-copy" id="wordCopy">Make print version / 制作打印版</button></div>' +
     '<div id="wordCopyStatus" class="help" aria-live="polite"></div></div>' +
     '<script>' +
     'var initialRequest=' +
@@ -629,11 +637,11 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function loadPromptData(){var request=++promptRequest;promptData=null;renderVerse(null);updateSubmitState();google.script.run.withSuccessHandler(function(data){if(request===promptRequest){renderPromptData(data);}}).withFailureHandler(function(error){if(request===promptRequest){renderPromptData({announcements:[],verse:"",verseProblem:"Could not read Weekly Data. Close this dialog, then open it again.\\n无法读取 Weekly Data。请关闭此对话框后重新打开。\\n\\n"+(error&&error.message?error.message:String(error))});}}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
     'function collectAnnouncements(){var entries=[];Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry"),function(card){var english=card.querySelector(".announcement-english").value.trim();var chinese=card.querySelector(".announcement-chinese").value.trim();if(english||chinese){entries.push({scope:card.querySelector(".announcement-scope").value,english:english,chinese:chinese});}});return entries;}' +
     'function showLoading(){document.getElementById("bulletinForm").hidden=true;document.getElementById("statusView").hidden=false;document.getElementById("statusView").innerHTML=' +
-    '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Creating printed bulletin…<br>正在创建纸质周刊…</h2><p class=\'intro\'>This may take a minute while the Google Doc is prepared.<br>创建 Google 文档可能需要一点时间。</p></div>";focusStatusView_();}' +
+    '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Making the preview…<br>正在生成预览…</h2><p class=\'intro\'>This may take a minute while the Google Doc is prepared.<br>创建 Google 文档可能需要一点时间。</p></div>";focusStatusView_();}' +
     'function focusStatusView_(){setTimeout(function(){var status=document.getElementById("statusView");if(status&&status.scrollIntoView){status.scrollIntoView({behavior:"smooth",block:"nearest"});}},0);}' +
     'function showGenerationError(error){document.getElementById("statusView").hidden=true;document.getElementById("bulletinForm").hidden=false;showError("Could not create bulletin / 无法创建周刊\\n\\n"+(error&&error.message?error.message:String(error)));setTimeout(function(){var message=document.getElementById("error");if(message&&message.scrollIntoView){message.scrollIntoView({behavior:"smooth",block:"center"});}},0);}' +
     'function showResult(result){document.getElementById("statusView").innerHTML=' +
-    '"<h2>Printed bulletin ready / 纸质周刊已完成</h2><p class=\'intro\'>"+escapeHtml(result.title||"Your bulletin is ready. / 您的周刊已准备好。")+"</p>"+'+
+    '"<h2>Preview ready / 预览已完成</h2><p class=\'intro\'>"+escapeHtml(result.title||"Your bulletin is ready. / 您的周刊已准备好。")+"</p>"+'+
     '(result.scheduleNotSet?"<p class=\'intro\'>The Sabbath Calendar has no schedule for this Sabbath yet, so its roster says TBD.<br>安息日日历还没有这个安息日的安排，所以名单显示为 TBD。</p>":"")+'+
     '"<a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open Google Doc / 打开 Google 文档</a>"+'+
     '"<div class=\'actions\'><button type=\'button\' class=\'cancel\' onclick=\'google.script.host.close()\'>Close / 关闭</button></div>";}' +
@@ -650,8 +658,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'document.getElementById("date").addEventListener("change",function(){loadPromptData();updateSubmitState();});' +
     'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();if(!date){showError("Sabbath date is required. / 安息日日期为必填。");return;}if(!promptData||!promptData.verse||promptData.verseProblem){showError((promptData&&promptData.verseProblem)||"Reading Weekly Data… / 正在读取 Weekly Data…");return;}var request={date:date,format:formatValue,location:locationValue,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}runRequest(request);});' +
     'function makeWordCopy(){var date=document.getElementById("date").value.trim();var wordStatus=document.getElementById("wordCopyStatus");var button=document.getElementById("wordCopy");if(!date){wordStatus.className="error";wordStatus.textContent="Choose the Sabbath date first. / 请先选择安息日日期。";return;}' +
-    'button.disabled=true;wordStatus.className="help";wordStatus.textContent="Making the Word copy… / 正在制作 Word 副本…";google.script.run.withSuccessHandler(function(result){button.disabled=false;wordStatus.className="help";' +
-    'wordStatus.innerHTML="<a class=\'link\' href=\'"+escapeHtml(result.downloadUrl)+"\'>Download Word copy / 下载 Word 副本</a>";})' +
+    'button.disabled=true;wordStatus.className="help";wordStatus.textContent="Making the print version… / 正在制作打印版…";google.script.run.withSuccessHandler(function(result){button.disabled=false;wordStatus.className="help";' +
+    'wordStatus.innerHTML="<a class=\'link\' href=\'"+escapeHtml(result.downloadUrl)+"\'>Download print version (.docx) / 下载打印版（.docx）</a>";})' +
     '.withFailureHandler(function(error){button.disabled=false;wordStatus.className="error";wordStatus.textContent=(error&&error.message)||String(error);}).createPrintedBulletinWordCopy({date:date,location:locationValue});}' +
     'document.getElementById("wordCopy").addEventListener("click",makeWordCopy);' +
     'selectChoice("locationChoices",locationValue);selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();loadPromptData();' +
@@ -1901,12 +1909,12 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
   return english || chinese ? printedBilingualText_(english, chinese) : physicalTbdText_();
 }
 
-// One line per Sabbath School hymn: the English, a dot, then the Chinese, where
-// the hymnal map has the other one, such as
-// "AH 348 The Church Has One Foundation · 第413首 教會根基" for a typed
-// "第413首 教會根基"; otherwise the hymn as typed. A bare number is a Chinese
-// hymnal number, and prints as 第N首. The other side gets its number and title
-// from resolvePrintedHymnText_ (#619).
+// Each Sabbath School hymn, as one entry: the English, then the Chinese on the
+// next line, where the hymnal map has the other one, such as
+// "AH 348 The Church Has One Foundation" over "第413首 教會根基" for a typed
+// "第413首 教會根基"; otherwise the hymn as typed, on one line. A bare number is
+// a Chinese hymnal number, and prints as 第N首. The other side gets its number
+// and title from resolvePrintedHymnText_ (#619).
 function getPrintedSabbathSchoolHymnLines_(hymns) {
   var lines = [];
   (hymns || []).forEach(function (value) {
@@ -1920,7 +1928,8 @@ function getPrintedSabbathSchoolHymnLines_(hymns) {
       : resolvePrintedHymnText_('', /^\d+$/.test(entry) ? '第' + entry + '首' : entry);
     var english = resolved.english || entry;
     var chinese = resolved.chinese || entry;
-    lines.push(english === chinese ? english : english + ' · ' + chinese);
+    // Both languages on their own lines: on one, a long title wrapped mid-word.
+    lines.push(english === chinese ? english : english + '\n' + chinese);
   });
   return lines;
 }
@@ -3649,8 +3658,8 @@ function buildPrintedBulletinFontsHtml_(settings) {
     '</style></head><body>' +
     '<p class="intro">These fonts are for every printed bulletin made from now on, by anyone. A Doc already made keeps its fonts until it\'s made again with Create Google Doc…. A different font can change the line heights, so check that the next Doc still fits its pages.<br>' +
     '这些字体将用于此后任何人创建的所有纸质周刊。已创建的文档保留原字体，直到再次使用“Create Google Doc…”创建。更换字体可能改变行高，请检查下一份文档是否仍在原页数内。</p>' +
-    '<p class="intro">Songti TC (宋體-繁) isn\'t here: Google Docs can\'t print it. To print in it, use the Word copy in Create Google Doc…, on a Mac with Word.<br>' +
-    '这里没有宋体-繁（Songti TC）：Google 文档无法打印该字体。如需用该字体打印，请在 Mac 上用 Word 打开“Create Google Doc…”中的 Word 副本。</p>' +
+    '<p class="intro">Songti TC (宋體-繁) isn\'t here: Google Docs can\'t print it. The print version, step 3 of Create Google Doc…, has it on a Mac.<br>' +
+    '这里没有宋体-繁（Songti TC）：Google 文档无法打印该字体。“Create Google Doc…”第三步的打印版在 Mac 上使用该字体。</p>' +
     '<label for="chinese">Chinese font<br>中文字体</label>' + select('chinese', settings.chinese) +
     '<label for="latin">English font<br>英文字体</label>' + select('latin', settings.latin) +
     '<div id="status" class="status" aria-live="polite"></div>' +
