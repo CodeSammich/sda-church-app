@@ -219,6 +219,15 @@ const planCaptures = (config, platform = 'ios') => {
  */
 const SPLIT_TEXT_SCALE = 1.5;
 const planSplitCaptures = (config, width) => {
+  // EVAL (#324), not for merging: Home at 125% and 200%, in English and Spanish.
+  if (process.env.SE_EVAL) {
+    const home = config.screens.find((screen) => screen.name === 'home');
+    return [['en-125', 'en', 1.25], ['es-125', 'es', 1.25], ['es-200', 'es', 2], ['en-200', 'en', 2]].map(([name, language, textScale]) => ({
+      platform: 'android', screen: 'home', group: home.group, name: `home-${name}`, file: `android/home-${name}.png`,
+      route: home.path, url: `${SCHEME}://${home.path}`,
+      settings: { ...BASE_SETTINGS.android, language, textScale }, checks: [], wait: WAIT, split: { width: 375, height: 667 },
+    }));
+  }
   const window = (config.android.splitWindows || []).find((each) => each.width === width);
   if (!window) {
     throw new Error(`No split window ${width} points wide; screens.json has ${(config.android.splitWindows || []).map((each) => each.width).join(', ')}.`);
