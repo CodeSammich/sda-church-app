@@ -133,9 +133,9 @@ describe('Bible reader text scaling', () => {
     // "Psalms" read "Ps…" beside a full-size "Verse".
     const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     expect(source).toContain('bibleUiTextScale * getHeaderFontScale(osFontScale)');
-    // On a wide screen, the dock's controls get the content column's width (#324),
-    // or the floating card's (#589).
-    expect(source).toContain('getBibleDockLayout(dockCardWidth ?? getContentWidth(viewportWidth, columnScale), dockTextScale)');
+    // The dock's controls get the floating card's width (#589), at most the
+    // content column's on a wide screen (#324).
+    expect(source).toContain('() => getBibleDockLayout(dockCardWidth, dockTextScale),');
     // The book, chapter, and Verse labels, the selection count, the audio
     // language mark, both audio times, and the hidden copy that measures pills.
     expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(8);
@@ -310,23 +310,24 @@ describe("the chapter dock's pills on a wide row (#324)", () => {
 describe("the Bible's dock follows the tab bar's system (#589)", () => {
   const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
 
-  it('floats in a card above the capsule on iPhone, iPad and the web, and docks above Android\'s bar', () => {
-    expect(bible).toContain("const capsuleDock = getTabBarStyle() === 'capsule';");
+  it('floats in a card above the capsule, on every system', () => {
     // As wide as the capsule on a phone, wider on a tablet, at most 640 points.
     expect(bible).toContain('const DOCK_CARD_MAX_WIDTH = 640;');
     expect(bible).toContain(
       'Math.max(getCapsuleTabBarWidth(viewportWidth), Math.min(getContentWidth(viewportWidth, columnScale), DOCK_CARD_MAX_WIDTH)),',
     );
     // The card keeps the capsule's gap from the bottom edge, and CAPSULE_STACK_GAP above it.
-    expect(bible).toContain('const bottomDockInset = capsuleDock ? getCapsuleBottomGap(systemBottomInset) : systemBottomInset;');
-    expect(bible).toContain('+ (capsuleDock ? CAPSULE_STACK_GAP : 0);');
+    expect(bible).toContain('const bottomDockInset = getCapsuleBottomGap(systemBottomInset);');
+    expect(bible).toContain('measuredBottomTabHeight - bottomDockInset)) + CAPSULE_STACK_GAP;');
     // While the capsule shows, the room below the card is the capsule's; when it
     // hides, the card slides down to the capsule's gap.
     expect(bible).toContain(
-      'outputRange: [bottomDockInset, capsuleDock ? bottomDockInset + bottomTabContentHeight : bottomDockInset],',
+      'outputRange: [bottomDockInset, bottomDockInset + bottomTabContentHeight],',
     );
     expect(bible).toMatch(/<ScrollEdgeFade\s+background=\{theme\.colors\.background\}/);
-    expect(bible).toContain("<View style={[StyleSheet.absoluteFill, { backgroundColor: getMaterialBarColor(theme) }]} />");
+    // Raised a shade off the page, with its pills and round buttons in the page's colour.
+    expect(bible).toContain('{ backgroundColor: getBarSurfaceColor(theme), borderColor: theme.colors.outlineVariant },');
+    expect(bible.match(/backgroundColor: getDockControlColor\(theme\),/g)).toHaveLength(5);
   });
 
   it('keeps the card within the screen: the hidden and shown heights hold its controls with room to spare', () => {

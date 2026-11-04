@@ -1,6 +1,5 @@
 import type { AppTheme } from '@/constants/Themes';
 import type React from 'react';
-import { Platform } from 'react-native';
 
 /**
  * A window at least this wide, such as a tablet's, gets the tab bar's larger
@@ -10,18 +9,24 @@ import { Platform } from 'react-native';
 export const TABLET_TAB_BAR_MIN_WIDTH = 600;
 
 /**
- * Each system's own kind of tab bar (#589): Android's follows Material 3, a
- * full-width bar along the bottom; iPhone, iPad and the web get iOS's
- * floating capsule (CapsuleTabBar), in the app's colours. The Bible's dock
- * follows the same system.
+ * The colour of the floating tab bar and the Bible's dock card (#589): the
+ * theme's surface, a shade off the page (lighter in the light theme, charcoal
+ * in the dark), so with their shadow they read as raised above the text that
+ * scrolls under them.
  */
-export type TabBarStyleName = 'capsule' | 'material';
-export const getTabBarStyle = (os: string = Platform.OS): TabBarStyleName =>
-  os === 'android' ? 'material' : 'capsule';
+export const getBarSurfaceColor = (theme: AppTheme) => theme.colors.surface;
 
-/** The tint behind the selected tab, on the bar's warm card colour. */
-export const getSelectedTabTint = (theme: AppTheme) =>
-  theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
+/**
+ * The colour of the dock card's pills and round buttons: the page's own (warm
+ * pink, or black in the dark theme), set off from the card's.
+ */
+export const getDockControlColor = (theme: AppTheme) => theme.colors.background;
+
+/**
+ * The pill behind the selected tab: the theme's selection container, light
+ * blue behind the blue tab, or gold-brown behind the gold one in the dark theme.
+ */
+export const getSelectedTabTint = (theme: AppTheme) => theme.colors.primaryContainer;
 
 type TabRoute = { key: string; name: string; params?: object };
 export type TabBarProps = {

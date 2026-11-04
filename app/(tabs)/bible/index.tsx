@@ -47,10 +47,9 @@ import {
   getCapsuleTabBarWidth,
   ScrollEdgeFade,
 } from '@/components/CapsuleTabBar';
-import { getMaterialBarColor } from '@/components/MaterialTabBar';
-import { getTabBarStyle } from '@/components/TabBarItems';
+import { getBarSurfaceColor, getDockControlColor } from '@/components/TabBarItems';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { CONTENT_MAX_WIDTH, contentColumnStyle, getBottomTabContentHeight, getContentSideInset, getContentWidth } from '@/constants/Layout';
+import { CONTENT_MAX_WIDTH, contentColumnStyle, getBottomTabContentHeight, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
 import {
@@ -617,20 +616,15 @@ export default function BibleScreen() {
     [columnScale, viewportWidth],
   );
   const measuredBottomTabHeight = useBottomTabHeight();
-  // The dock follows the tab bar's system (#589): on iPhone, iPad and the web
-  // a card floating above the tab bar's capsule, as iOS puts a player above
-  // its tab bar, at least as wide as the capsule and at most DOCK_CARD_MAX_WIDTH;
-  // on Android, docked flush above Material's bar in its colour.
-  const capsuleDock = getTabBarStyle() === 'capsule';
-  const dockCardWidth = capsuleDock
-    ? Math.min(
-        viewportWidth - 32,
-        Math.max(getCapsuleTabBarWidth(viewportWidth), Math.min(getContentWidth(viewportWidth, columnScale), DOCK_CARD_MAX_WIDTH)),
-      )
-    : null;
+  // The dock is a card floating above the tab bar's capsule (#589), as iOS
+  // puts a player above its tab bar: at least as wide as the capsule, and at
+  // most the content column or DOCK_CARD_MAX_WIDTH.
+  const dockCardWidth = Math.min(
+    viewportWidth - 32,
+    Math.max(getCapsuleTabBarWidth(viewportWidth), Math.min(getContentWidth(viewportWidth, columnScale), DOCK_CARD_MAX_WIDTH)),
+  );
   const dockLayout = useMemo(
-    // The dock's controls stay in the content column on a wide screen.
-    () => getBibleDockLayout(dockCardWidth ?? getContentWidth(viewportWidth, columnScale), dockTextScale),
+    () => getBibleDockLayout(dockCardWidth, dockTextScale),
     [columnScale, dockCardWidth, dockTextScale, viewportWidth],
   );
   // The verse pill says "Vs." rather than "Verse" only when the book, chapter,
@@ -662,11 +656,11 @@ export default function BibleScreen() {
   const systemBottomInset = Math.max(insets.bottom, fullscreenEdgeInset);
   // The floating card keeps the capsule's gap from the bottom edge when the tab
   // bar hides, and sits CAPSULE_STACK_GAP above the capsule when it shows.
-  const bottomDockInset = capsuleDock ? getCapsuleBottomGap(systemBottomInset) : systemBottomInset;
+  const bottomDockInset = getCapsuleBottomGap(systemBottomInset);
   const bottomTabContentHeight =
     (measuredBottomTabHeight === null
       ? getBottomTabContentHeight(getBottomTabTextScale(textScale, osFontScale))
-      : Math.max(0, measuredBottomTabHeight - bottomDockInset)) + (capsuleDock ? CAPSULE_STACK_GAP : 0);
+      : Math.max(0, measuredBottomTabHeight - bottomDockInset)) + CAPSULE_STACK_GAP;
   const { language, languageSelectionRevision } = useContext(LanguageContext);
   const { menuAnim, setMenuVisible: setGlobalMenuVisible } = useContext(UIStateContext);
 
@@ -730,10 +724,6 @@ export default function BibleScreen() {
     return `${translation.name} (${translationLanguageLabel})`;
   };
   const popupMaxHeight = usePopupMaxHeight();
-  // Android's dock spans the screen; on a wide screen its rows pad their
-  // controls into the content column (#324). The floating card is already
-  // within it.
-  const dockSideInset = capsuleDock ? 0 : getContentSideInset(viewportWidth, columnScale);
   // ReaderStyles.modalContent's 20-point margin, held to the You tab's dialog
   // width on a wide screen (#324).
   const popupWidthStyle = useMemo(() => getPopupWidthStyle(viewportWidth - 40), [viewportWidth]);
@@ -3766,7 +3756,7 @@ export default function BibleScreen() {
   // Below the card, the room for the capsule while it shows.
   const animatedDockBottomClearance = menuAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [bottomDockInset, capsuleDock ? bottomDockInset + bottomTabContentHeight : bottomDockInset],
+    outputRange: [bottomDockInset, bottomDockInset + bottomTabContentHeight],
   });
   const dockNeedsVerticalScroll =
     dockViewportLayout.hiddenNeedsScroll || dockViewportLayout.visibleNeedsScroll;
@@ -3846,7 +3836,7 @@ export default function BibleScreen() {
           ReaderStyles.pill,
           stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surface,
+            backgroundColor: getDockControlColor(theme),
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
@@ -3889,7 +3879,7 @@ export default function BibleScreen() {
           ReaderStyles.pill,
           stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surface,
+            backgroundColor: getDockControlColor(theme),
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
@@ -3928,7 +3918,7 @@ export default function BibleScreen() {
           ReaderStyles.pill,
           stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surface,
+            backgroundColor: getDockControlColor(theme),
             borderColor: theme.colors.outline,
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
@@ -3976,10 +3966,7 @@ export default function BibleScreen() {
           borderTopColor: theme.colors.outlineVariant,
           borderTopWidth: hasChapterAudio ? StyleSheet.hairlineWidth : 0,
         },
-        (fullscreenEdgeInset > 0 || dockSideInset > 0) && {
-          paddingHorizontal:
-            (fullscreenEdgeInset > 0 ? fullscreenEdgeInset : stackChapterControls ? 8 : 4) + dockSideInset,
-        },
+        fullscreenEdgeInset > 0 && { paddingHorizontal: fullscreenEdgeInset },
       ]}
     >
       {stackChapterControls ? (
@@ -4115,33 +4102,25 @@ export default function BibleScreen() {
             elevation: 5, // Higher than the audio button's 4 to prioritize nav touches
             zIndex: 10,
           },
-          dockCardWidth !== null && {
+          {
             left: (viewportWidth - dockCardWidth) / 2,
             right: (viewportWidth - dockCardWidth) / 2,
             overflow: 'visible',
           },
         ]}
       >
-        {dockCardWidth !== null ? (
-          // The page fades out under the card and the capsule, rather than
-          // stopping at a line above them.
-          <ScrollEdgeFade
-            background={theme.colors.background}
-            style={{ left: -(viewportWidth - dockCardWidth) / 2, right: -(viewportWidth - dockCardWidth) / 2 }}
-          />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: getMaterialBarColor(theme) }]} />
-        )}
+        {/* The page fades out under the card and the capsule, rather than
+            stopping at a line above them. */}
+        <ScrollEdgeFade
+          background={theme.colors.background}
+          style={{ left: -(viewportWidth - dockCardWidth) / 2, right: -(viewportWidth - dockCardWidth) / 2 }}
+        />
 
         <View
-          style={
-            dockCardWidth !== null
-              ? [
-                  styles.dockCard,
-                  { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant },
-                ]
-              : styles.controlDockScroll
-          }
+          style={[
+            styles.dockCard,
+            { backgroundColor: getBarSurfaceColor(theme), borderColor: theme.colors.outlineVariant },
+          ]}
         >
         <ScrollView
           style={styles.controlDockScroll}
@@ -4158,7 +4137,7 @@ export default function BibleScreen() {
               <View
                 style={[
                   styles.selectionBarInner,
-                  { minHeight: dockLayout.selectionBarHeight, paddingHorizontal: 8 + dockSideInset },
+                  { minHeight: dockLayout.selectionBarHeight, paddingHorizontal: 8 },
                 ]}
               >
                 <IconButton
@@ -4212,7 +4191,7 @@ export default function BibleScreen() {
                   minHeight: dockLayout.audioDockHeight,
                   // The dock's own colour sets it off from the page now (#589).
                   borderTopWidth: 0,
-                  paddingHorizontal: 12 + dockSideInset,
+                  paddingHorizontal: 12,
                 },
               ]}
             >
@@ -4242,7 +4221,7 @@ export default function BibleScreen() {
                       minWidth: dockLayout.controlHeight,
                     },
                     {
-                      backgroundColor: theme.colors.surface,
+                      backgroundColor: getDockControlColor(theme),
                       borderWidth: 1,
                       borderColor: theme.colors.outline,
                     },
@@ -4320,7 +4299,7 @@ export default function BibleScreen() {
                       minWidth: dockLayout.controlHeight,
                     },
                     {
-                      backgroundColor: theme.colors.surface,
+                      backgroundColor: getDockControlColor(theme),
                       borderWidth: 1,
                       borderColor: theme.colors.outline,
                     },
@@ -4459,10 +4438,10 @@ export default function BibleScreen() {
           )}
 
           {renderChapterNavigationDock()}
-          {dockCardWidth === null && <Animated.View style={{ height: animatedDockBottomClearance }} />}
         </ScrollView>
         </View>
-        {dockCardWidth !== null && <Animated.View style={{ height: animatedDockBottomClearance }} />}
+        {/* Below the card, the capsule's room while it shows. */}
+        <Animated.View style={{ height: animatedDockBottomClearance }} />
       </Animated.View>
 
       <Portal>

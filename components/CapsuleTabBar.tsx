@@ -1,4 +1,4 @@
-import { getSelectedTabTint, getTabItems, TABLET_TAB_BAR_MIN_WIDTH, type TabBarProps } from '@/components/TabBarItems';
+import { getBarSurfaceColor, getSelectedTabTint, getTabItems, TABLET_TAB_BAR_MIN_WIDTH, type TabBarProps } from '@/components/TabBarItems';
 import type { AppTheme } from '@/constants/Themes';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
@@ -19,12 +19,15 @@ export const getCapsuleTabBarWidth = (windowWidth: number) =>
   Math.min(windowWidth - 2 * SIDE_MARGIN, CAPSULE_TAB_BAR_MAX_WIDTH);
 
 /**
- * The capsule's gap from the bottom edge. Like iOS's own floating bar, it sits
- * partly within a Face ID iPhone's 34-point home indicator inset (20 points up),
- * and 12 points up where there's no inset.
+ * The capsule's gap from the bottom edge, given the safe area's bottom inset.
+ * On iOS, like iOS's own floating bar, it sits partly within a Face ID
+ * iPhone's 34-point home indicator inset (20 points up), and 12 points up
+ * where there's no inset. On Android it stays wholly above the gesture bar or
+ * the three navigation buttons, 8 points clear of them, so taps never land on
+ * the system's.
  */
-export const getCapsuleBottomGap = (bottomInset: number) =>
-  Math.max(Math.round(bottomInset * 0.6), 12);
+export const getCapsuleBottomGap = (bottomInset: number, os: string = Platform.OS) =>
+  os === 'android' ? Math.max(bottomInset + 8, 12) : Math.max(Math.round(bottomInset * 0.6), 12);
 
 // How far above a floating bar the page starts to fade, so text scrolling
 // under it fades out rather than meeting a line.
@@ -55,12 +58,14 @@ export function ScrollEdgeFade({ background, style }: { background: string; styl
 }
 
 /**
- * The tab bar on iPhone, iPad and the web (#589, #324): the four tabs sit in
- * a rounded capsule floating above the bottom edge, as iOS's own bar does, in
- * the app's warm card colour like its other cards and pills, with a lighter
- * pill behind the selected tab. Pages run to the bottom edge and scroll under
- * it (TabBarSpacer leaves room for their last lines). The icons and labels are
- * the app's own, so they follow its text size, which iOS's own bar wouldn't.
+ * The tab bar on every system (#589, #324), one design on iPhone, iPad and
+ * Android: the four tabs sit in a rounded capsule floating above the bottom
+ * edge, as iOS's own bar does, raised a shade off the page with a hairline
+ * and a soft shadow, with the selected tab in blue, or gold in the dark theme,
+ * on its selection pill. Pages run to the bottom edge and scroll under it
+ * (TabBarSpacer leaves room for their last lines). The icons and labels are
+ * the app's own, so they follow its text size, which the systems' own bars
+ * wouldn't.
  */
 export function CapsuleTabBar({
   bottomInset,
@@ -78,7 +83,7 @@ export function CapsuleTabBar({
           styles.capsule,
           {
             width: getCapsuleTabBarWidth(windowWidth),
-            backgroundColor: theme.colors.surface,
+            backgroundColor: getBarSurfaceColor(theme),
             borderColor: theme.colors.outlineVariant,
           },
         ]}
@@ -89,6 +94,8 @@ export function CapsuleTabBar({
             accessibilityLabel={item.accessibilityLabel}
             accessibilityRole="tab"
             accessibilityState={{ selected: item.focused }}
+            // Android's touch ripple, inside the tab's pill.
+            android_ripple={{ color: getSelectedTabTint(theme) }}
             onLongPress={item.onLongPress}
             onPress={item.onPress}
             style={[styles.item, !tablet && styles.phoneItem, item.focused && { backgroundColor: getSelectedTabTint(theme) }]}
@@ -140,6 +147,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     minWidth: 0,
+    // Keeps Android's ripple within the pill.
+    overflow: 'hidden',
     paddingVertical: 4,
   },
   phoneItem: {

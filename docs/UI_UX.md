@@ -81,7 +81,7 @@ interface consistent and spiritually focused while minimizing retinal distractio
 | **Selection Container**  | #E3F2FD  | #302714 | **The State.** A quiet gold-brown selected state avoids large luminous blocks. |
 | **Boundary (Outline)**   | #CAC4D0  | #947D3F | **The Frame.** A visible muted-gold boundary for controls and focus regions. |
 | **Boundary (Subtle)**   | #E0E0E0  | #3B3423 | **The Divider.** Used for subtle organization within grouped cards. |
-| **Functional Icons (e.g. Bottom Bar)** | #1A1A1A  | #D2B258 | **Active Focus.** Main gold identifies selected and actionable elements; inactive navigation uses `#947D3F`. |
+| **Functional Icons (e.g. Bottom Bar)** | #0369A1  | #D2B258 | **Active Focus.** The selected tab is primary blue, or main gold in the dark theme, on the Selection Container; inactive navigation uses `#606060`, or `#947D3F` in the dark theme. |
 
 ### Grid Menu Card Tokens
 
@@ -213,25 +213,26 @@ simple, blended colors.
     than a window inside a frame.
 - **Header Opacity:** The top header is completely opaque (using the base background
   color) to provide a solid anchor for the "Digital Sanctuary."
-- **Each system's own tab bar (#589).** The tab bar and the Bible's dock follow the
-  phone's system, in the app's warm colours, and their icons and labels follow the app's
-  text size, which the systems' own bars wouldn't:
-  - **iPhone, iPad and the web: a floating capsule** (`components/CapsuleTabBar.tsx`), as
-    iOS 26 floats its tab bar: the four tabs in a rounded capsule above the bottom edge,
-    16 points from a phone's sides and at most 520 points wide, with a lighter pill
-    behind the selected tab. Pages run to the bottom edge and scroll under it; the page
-    fades out just above it (`ScrollEdgeFade`) rather than stopping at a line, and every
-    tab page ends with `TabBarSpacer` so its last lines can scroll clear of it. The
-    Bible's audio and chapter controls float in a card of their own above the capsule,
-    as iOS puts a player above its tab bar: as wide as the capsule on a phone, up to 640
-    points on a tablet. When the tab bar hides while reading, the card slides down
-    into its place. No Liquid Glass: the app's design has no glass anywhere else.
-  - **Android: Material 3's navigation bar** (`components/MaterialTabBar.tsx`): full
-    width along the bottom in the app's card colour, with a pill behind the selected
-    tab's icon; on a tablet the label sits beside the icon, as Material's bar does in a
-    medium-width window. Pages stop above it. The Bible's dock docks flush on top of it
-    in the same colour, so the bottom of the screen is one panel, as Google's apps dock
-    a player above their bar.
+- **One floating tab bar on every system (#589).** iPhone, iPad, Android and the web
+  share one design (`components/CapsuleTabBar.tsx`), as iOS 26 floats its tab bar: the
+  four tabs in a rounded capsule above the bottom edge, 16 points from a phone's sides
+  and at most 520 points wide. It's raised a shade off the page (the theme's surface:
+  lighter in the light theme, charcoal in the dark) with a hairline and a soft shadow,
+  since text scrolls under it; the selected tab is primary blue, or gold in the dark
+  theme, on the selection container. Its icons and labels follow the app's text size,
+  which the systems' own bars wouldn't. On iOS it sits partly within the home
+  indicator's inset, as iOS's own bar does; on Android, wholly above the gesture bar or
+  the three buttons, with Android's ripple when pressed (`getCapsuleBottomGap`).
+  - **Pages run to the bottom edge** and scroll under it. The page fades out just above
+    it (`ScrollEdgeFade`) rather than stopping at a line, and is solid below that, so no
+    fragments of text show around it. Every tab page ends with `TabBarSpacer`, so its
+    last lines can scroll clear of it.
+  - **The Bible's audio and chapter controls float in a card of their own** above the
+    capsule, as iOS puts a player above its tab bar: the same raised surface, as wide as
+    the capsule on a phone and up to 640 points on a tablet, with its pills and round
+    buttons in the page's own colour (warm pink, or black). When the tab bar hides while
+    reading, the card slides down into its place.
+  - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
   height from `useGlobalHeaderHeight()`: the status bar plus 64px at 100% text size.
@@ -329,9 +330,8 @@ shows the phone's pages larger and roomier, not more on each page:
   `getContentWidth(width, columnScale)`, not the window's width. On a tablet the Bible's
   text also gets 24-point margins, since a phone's 4 points would leave it against the
   screen's edge once the column fills the screen.
-- **Full-width edges.** Banner images, the header, and Android's tab bar and Bible dock
-  still span the screen, so the app reaches the edges as it does on a phone (see Edge-to-Edge
-  above). Their text and buttons line up with the column (`contentColumnWithin`). Rows
+- **Full-width edges.** Banner images and the header still span the screen, so the app
+  reaches the edges as it does on a phone (see Edge-to-Edge above). Their text and buttons line up with the column (`contentColumnWithin`). Rows
   that scroll sideways, such as the library's shelves, span the screen too, starting in
   line with the column.
 - **Tablet sizes in the tab bar.** In a window at least 600 points wide the tabs get

@@ -1,8 +1,7 @@
 import { UpdateContext } from '@/app/_layout';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import { CapsuleTabBar } from '@/components/CapsuleTabBar';
-import { MaterialTabBar } from '@/components/MaterialTabBar';
-import { getTabBarStyle, TABLET_TAB_BAR_MIN_WIDTH } from '@/components/TabBarItems';
+import { TABLET_TAB_BAR_MIN_WIDTH } from '@/components/TabBarItems';
 import { GlobalHeader, UIStateContext } from '@/components/GlobalHeader';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { APP_ICONOGRAPHY } from '@/constants/Iconography';
@@ -12,31 +11,21 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { BottomTabHeightContext, TabBarClearanceContext } from '@/constants/BottomTabHeightContext';
-import { DESIGN_TOKENS, getBottomTabContentHeight, getContentSideInset } from '@/constants/Layout';
+import { DESIGN_TOKENS, getBottomTabContentHeight } from '@/constants/Layout';
 import { getBottomTabTextScale, HEADER_MAX_FONT_SCALE } from '@/hooks/useGlobalHeaderHeight';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { Tabs, router, usePathname } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, LayoutChangeEvent, Platform, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-// The tabs' sizes in each bar: a phone's or a tablet's capsule (CapsuleTabBar),
-// or Android's bar (MaterialTabBar), whose labels sit beside the icons on a tablet.
-type TabItemVariant = 'phone' | 'tablet' | 'material' | 'material-beside';
-const TAB_ICON_SIZES: Record<TabItemVariant, number> = {
-  phone: DESIGN_TOKENS.ICON_SIZE_TAB,
-  tablet: 30,
-  material: 24,
-  'material-beside': 24,
-};
 
 function TabBarIcon(props: {
   name: MaterialCommunityIconName;
   color: string;
   focused: boolean;
   textScale: TextScale;
-  variant: TabItemVariant;
+  tablet?: boolean;
 }) {
   let iconName = props.name;
 
@@ -45,15 +34,12 @@ function TabBarIcon(props: {
     iconName = `${props.name}-outline` as any;
   }
 
-  const material = props.variant === 'material' || props.variant === 'material-beside';
-  // Material's bar has 24-point icons in a 32-point pill (MaterialTabBar).
-  const box = material ? scaleTypographyMetric(24, getBottomTabIconTextScale(props.textScale)) : 44;
   return (
-    <View style={{ width: box, height: box, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+    <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
       <AppIcon
         name={iconName}
         // A little larger in a tablet's capsule (CapsuleTabBar).
-        size={TAB_ICON_SIZES[props.variant]}
+        size={props.tablet ? 30 : DESIGN_TOKENS.ICON_SIZE_TAB}
         textScale={getBottomTabIconTextScale(props.textScale)}
         color={props.color}
       />
@@ -69,15 +55,12 @@ function TabBarLabel(props: {
   color: string;
   label: string;
   textScale: TextScale;
-  variant: TabItemVariant;
+  tablet?: boolean;
 }) {
   const labelScale = getBottomTabIconTextScale(props.textScale);
-  // 12 points in a tablet's capsule, where there's room, and in Material's
-  // bar; 10 in a phone's capsule.
-  const fontSize = props.variant === 'phone' ? DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE : 12;
-  const lineHeight = props.variant === 'tablet' ? 18 : DESIGN_TOKENS.BOTTOM_TAB_LABEL_LINE_HEIGHT;
-  // On an Android tablet the label sits beside the icon, so it takes its own width.
-  const beside = props.variant === 'material-beside';
+  // 12 points in a tablet's capsule, where there's room; 10 on a phone.
+  const fontSize = props.tablet ? 12 : DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE;
+  const lineHeight = props.tablet ? 18 : DESIGN_TOKENS.BOTTOM_TAB_LABEL_LINE_HEIGHT;
   return (
     <Text
       maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
@@ -87,9 +70,9 @@ function TabBarLabel(props: {
         flexShrink: 1,
         fontSize: scaleTypographyMetric(fontSize, labelScale),
         lineHeight: scaleTypographyMetric(lineHeight, labelScale),
-        paddingBottom: beside ? 0 : DESIGN_TOKENS.BOTTOM_TAB_LABEL_BOTTOM_PADDING,
+        paddingBottom: DESIGN_TOKENS.BOTTOM_TAB_LABEL_BOTTOM_PADDING,
         textAlign: 'center',
-        width: beside ? undefined : '100%',
+        width: '100%',
       }}
     >
       {props.label}
@@ -111,10 +94,9 @@ export default function TabLayout() {
     typeof window !== 'undefined' &&
     window.matchMedia('(display-mode: fullscreen)').matches;
   const fullscreenEdgeInset = isFullscreenWeb ? 12 : 0;
-  // Android's rounded/gesture edge can sit just beyond the reported inset at
-  // enlarged text sizes. Keep the tab row visibly above that physical edge.
-  const bottomTabInset =
-    Math.max(insets.bottom, fullscreenEdgeInset) + (Platform.OS === 'android' ? 8 : 0);
+  // The safe area's bottom inset; the capsule keeps its own gap from it
+  // (getCapsuleBottomGap), wholly above Android's gesture bar or buttons.
+  const bottomTabInset = Math.max(insets.bottom, fullscreenEdgeInset);
   const [tabBarHeight, setTabBarHeight] = useState(
     tabContentHeight + bottomTabInset,
   );
@@ -172,17 +154,9 @@ export default function TabLayout() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
-  // Each system's own kind of tab bar (#589): a floating capsule on iPhone,
-  // iPad and the web, which pages run under; Material's bar on Android.
-  const capsule = getTabBarStyle() === 'capsule';
+  // One floating tab bar on every system (#589): a capsule that pages run
+  // under, with slightly larger tabs on a tablet.
   const tablet = windowWidth >= TABLET_TAB_BAR_MIN_WIDTH;
-  const tabItemVariant: TabItemVariant = capsule
-    ? tablet
-      ? 'tablet'
-      : 'phone'
-    : tablet
-      ? 'material-beside'
-      : 'material';
   // Far enough down to hide the bar, by its measured height.
   const tabBarTranslateY = menuAnim.interpolate({
     inputRange: [0, 1],
@@ -194,7 +168,7 @@ export default function TabLayout() {
 
   return (
     <BottomTabHeightContext.Provider value={tabBarHeight}>
-      <TabBarClearanceContext.Provider value={capsule ? tabBarHeight : 0}>
+      <TabBarClearanceContext.Provider value={tabBarHeight}>
       <UIStateContext.Provider
         value={{ menuAnim, setMenuVisible, bibleControlsStacked, setBibleControlsStacked }}
       >
@@ -217,42 +191,32 @@ export default function TabLayout() {
               transform: [{ translateY: tabBarTranslateY }],
             }}
           >
-            {capsule ? (
-              <CapsuleTabBar
-                {...(props as any)}
-                bottomInset={bottomTabInset}
-                // The Bible's dock fades the page behind itself and the capsule.
-                fade={!isBibleRoute}
-                theme={theme}
-                windowWidth={windowWidth}
-              />
-            ) : (
-              <MaterialTabBar
-                {...(props as any)}
-                bottomInset={bottomTabInset}
-                // On a wide screen the tabs stay within the content column (#324).
-                sideInset={fullscreenEdgeInset + getContentSideInset(windowWidth)}
-                theme={theme}
-                windowWidth={windowWidth}
-              />
-            )}
+            <CapsuleTabBar
+              {...(props as any)}
+              bottomInset={bottomTabInset}
+              // The Bible's dock fades the page behind itself and the capsule.
+              fade={!isBibleRoute}
+              theme={theme}
+              windowWidth={windowWidth}
+            />
           </Animated.View>
         )}
         screenOptions={{
+          // The selected tab in blue, or gold in the dark theme, on its
+          // selection pill (getSelectedTabTint, #589).
           tabBarActiveTintColor: theme.dark
             ? theme.colors.metallicGold.main
-            : theme.colors.onBackground,
+            : theme.colors.primary,
           tabBarInactiveTintColor: theme.dark
             ? theme.colors.metallicGold.muted
             : theme.colors.onSurfaceVariant,
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
-          // The animated tab bar is absolutely positioned, so React Navigation cannot
-          // reserve space for it. Pages run under the floating capsule to the
-          // bottom edge (TabBarSpacer leaves room at their ends); under
-          // Android's bar they stop above it.
+          // The animated tab bar is absolutely positioned, so React Navigation
+          // doesn't reserve space for it: pages run under the floating capsule to
+          // the bottom edge, and TabBarSpacer leaves room at their ends.
           sceneStyle: {
-            paddingBottom: capsule ? 0 : tabBarHeight,
+            paddingBottom: 0,
             backgroundColor: theme.colors.background,
           },
         }}
@@ -268,7 +232,7 @@ export default function TabLayout() {
                 color={String(color)}
                 label={labels.home}
                 textScale={textScale}
-                variant={tabItemVariant}
+                tablet={tablet}
               />
             ),
             tabBarIcon: ({ color, focused }) => (
@@ -277,7 +241,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
-                variant={tabItemVariant}
+                tablet={tablet}
               />
             ),
           }}
@@ -306,7 +270,7 @@ export default function TabLayout() {
                 color={String(color)}
                 label={labels.bible}
                 textScale={textScale}
-                variant={tabItemVariant}
+                tablet={tablet}
               />
             ),
             // The Bible reader owns a coordinated bottom dock and already accounts
@@ -318,7 +282,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
-                variant={tabItemVariant}
+                tablet={tablet}
               />
             ),
           }}
@@ -339,7 +303,7 @@ export default function TabLayout() {
                 color={String(color)}
                 label={labels.explore}
                 textScale={textScale}
-                variant={tabItemVariant}
+                tablet={tablet}
               />
             ),
             tabBarIcon: ({ color, focused }) => (
@@ -348,7 +312,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
-                variant={tabItemVariant}
+                tablet={tablet}
               />
             ),
           }}
@@ -381,7 +345,7 @@ export default function TabLayout() {
                   color={color}
                   label={labels.you}
                   textScale={textScale}
-                  variant={tabItemVariant}
+                  tablet={tablet}
                 />
               ),
               unmountOnBlur: true as any, // Ensures the stack resets when leaving the tab
@@ -391,7 +355,7 @@ export default function TabLayout() {
                   color={color}
                   focused={focused}
                   textScale={textScale}
-                  variant={tabItemVariant}
+                  tablet={tablet}
                 />
               ),
             } as any

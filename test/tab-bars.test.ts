@@ -9,9 +9,13 @@ import {
   getCapsuleBottomGap,
   getCapsuleTabBarWidth,
 } from '@/components/CapsuleTabBar';
-import { MaterialTabBar } from '@/components/MaterialTabBar';
-import { getTabBarStyle, TABLET_TAB_BAR_MIN_WIDTH } from '@/components/TabBarItems';
-import { customLightTheme } from '@/constants/Themes';
+import {
+  getBarSurfaceColor,
+  getDockControlColor,
+  getSelectedTabTint,
+  TABLET_TAB_BAR_MIN_WIDTH,
+} from '@/components/TabBarItems';
+import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 
 // Three tabs and one hidden route, as app/(tabs)/_layout.tsx hides Home's pages.
 const routes = [
@@ -34,14 +38,9 @@ const descriptors = {
   'you-1': { options: option('You') },
 };
 
-const bars = {
-  capsule: CapsuleTabBar,
-  material: (props: any) => React.createElement(MaterialTabBar, { ...props, sideInset: 0 }),
-};
-
-const renderBar = (navigation: any, index = 0, bar: keyof typeof bars = 'capsule', windowWidth = 1032) =>
+const renderBar = (navigation: any, index = 0, windowWidth = 1032) =>
   render(
-    React.createElement(bars[bar] as any, {
+    React.createElement(CapsuleTabBar as any, {
       bottomInset: 20,
       descriptors,
       navigation,
@@ -52,10 +51,14 @@ const renderBar = (navigation: any, index = 0, bar: keyof typeof bars = 'capsule
   );
 
 describe('the tab bars (#589)', () => {
-  it("follows each system: Material's bar on Android, the capsule on iPhone, iPad and the web", () => {
-    expect(getTabBarStyle('android')).toBe('material');
-    expect(getTabBarStyle('ios')).toBe('capsule');
-    expect(getTabBarStyle('web')).toBe('capsule');
+  it('is raised a shade off the page, with the selected tab on the selection container, in both themes', () => {
+    for (const theme of [customLightTheme, customDarkTheme]) {
+      expect(getBarSurfaceColor(theme)).toBe(theme.colors.surface);
+      expect(getDockControlColor(theme)).toBe(theme.colors.background);
+      expect(getSelectedTabTint(theme)).toBe(theme.colors.primaryContainer);
+    }
+    const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
+    expect(layout).toMatch(/tabBarActiveTintColor: theme\.dark\s*\? theme\.colors\.metallicGold\.main\s*: theme\.colors\.primary,/);
   });
 
   it('is a capsule at most 520 points wide, 16 points from the sides of a phone', () => {
@@ -66,50 +69,51 @@ describe('the tab bars (#589)', () => {
     expect(getCapsuleTabBarWidth(320)).toBe(288);
   });
 
-  it("floats partly within a Face ID iPhone's home indicator inset, as iOS's own bar does", () => {
-    expect(getCapsuleBottomGap(34)).toBe(20);
-    expect(getCapsuleBottomGap(20)).toBe(12);
-    expect(getCapsuleBottomGap(0)).toBe(12);
+  it("floats partly within a Face ID iPhone's home indicator inset, and wholly above Android's navigation", () => {
+    expect(getCapsuleBottomGap(34, 'ios')).toBe(20);
+    expect(getCapsuleBottomGap(20, 'ios')).toBe(12);
+    expect(getCapsuleBottomGap(0, 'ios')).toBe(12);
+    // The gesture bar's inset, and the three buttons'.
+    expect(getCapsuleBottomGap(24, 'android')).toBe(32);
+    expect(getCapsuleBottomGap(48, 'android')).toBe(56);
+    expect(getCapsuleBottomGap(0, 'android')).toBe(12);
   });
 
-  it.each([
-    ['capsule', 1032],
-    ['capsule', 390],
-    ['material', 412],
-    ['material', 1280],
-  ] as const)("%s at %p points shows the visible tabs, and marks the selected one, not Home's hidden pages", async (bar, width) => {
-    const { getAllByRole, queryByText } = await renderBar({ emit: () => ({ defaultPrevented: false }), navigate: jest.fn() }, 0, bar, width);
+  it.each([1032, 390, 412, 1280])("at %p points shows the visible tabs, and marks the selected one, not Home's hidden pages", async (width) => {
+    const { getAllByRole, queryByText } = await renderBar({ emit: () => ({ defaultPrevented: false }), navigate: jest.fn() }, 0, width);
     const tabs = getAllByRole('tab');
     expect(tabs.map((tab) => tab.props.accessibilityLabel)).toEqual(['Home', 'Bible', 'You']);
     expect(tabs.map((tab) => tab.props.accessibilityState.selected)).toEqual([true, false, false]);
     expect(queryByText('Home')).not.toBeNull();
   });
 
-  it.each(['capsule', 'material'] as const)("%s emits tabPress like React Navigation's bar, so a screen's listener can take over", async (bar) => {
+  it("emits tabPress like React Navigation's bar, so a screen's listener can take over", async () => {
     const emit = jest.fn(() => ({ defaultPrevented: false }));
     const navigate = jest.fn();
-    const { getAllByRole } = await renderBar({ emit, navigate }, 0, bar);
+    const { getAllByRole } = await renderBar({ emit, navigate });
     await fireEvent.press(getAllByRole('tab')[1]);
     expect(emit).toHaveBeenCalledWith({ type: 'tabPress', target: 'bible-1', canPreventDefault: true });
     expect(navigate).toHaveBeenCalledWith('bible', undefined);
     // The Bible and You tabs prevent the default and navigate themselves.
     const prevented = jest.fn();
-    const { getAllByRole: tabsAgain } = await renderBar({ emit: () => ({ defaultPrevented: true }), navigate: prevented }, 0, bar);
+    const { getAllByRole: tabsAgain } = await renderBar({ emit: () => ({ defaultPrevented: true }), navigate: prevented });
     await fireEvent.press(tabsAgain('tab')[2]);
     expect(prevented).not.toHaveBeenCalled();
     // Pressing the selected tab doesn't navigate.
     const again = jest.fn();
-    const { getAllByRole: third } = await renderBar({ emit: () => ({ defaultPrevented: false }), navigate: again }, 0, bar);
+    const { getAllByRole: third } = await renderBar({ emit: () => ({ defaultPrevented: false }), navigate: again });
     await fireEvent.press(third('tab')[0]);
     expect(again).not.toHaveBeenCalled();
   });
 
-  it('lets pages run under the capsule, with room at their ends, and stop above Android\'s bar', () => {
+  it('is the one tab bar on every system, with pages running under it and room at their ends', () => {
     const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
-    expect(layout).toContain("const capsule = getTabBarStyle() === 'capsule';");
-    expect(layout).toContain('paddingBottom: capsule ? 0 : tabBarHeight,');
-    expect(layout).toContain('<TabBarClearanceContext.Provider value={capsule ? tabBarHeight : 0}>');
-    expect(layout).toMatch(/\{capsule \? \(\s*<CapsuleTabBar[\s\S]*?\) : \(\s*<MaterialTabBar[\s\S]*?\)\}/);
+    expect(layout).toMatch(/tabBar=\{\(props\) => \(\s*<Animated\.View[\s\S]*?<CapsuleTabBar[\s\S]*?<\/Animated\.View>\s*\)\}/);
+    expect(layout).not.toContain('BottomTabBar ');
+    expect(layout).toContain('paddingBottom: 0,');
+    expect(layout).toContain('<TabBarClearanceContext.Provider value={tabBarHeight}>');
+    // Android's touch ripple, kept within each tab's pill.
+    expect(readFileSync('components/CapsuleTabBar.tsx', 'utf8')).toContain('android_ripple={{ color: getSelectedTabTint(theme) }}');
   });
 
 
