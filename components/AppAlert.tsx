@@ -104,9 +104,20 @@ export function AppAlertHost() {
         style={[styles.dialog, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
       >
         {asks ? (
-          <Text accessibilityRole="header" variant="titleLarge" style={[styles.title, { color: theme.colors.onSurface }]}>
-            {inLanguage(alert.title, language)}
-          </Text>
+          // A question's title scrolls with its message, so at the largest
+          // text sizes its answers stay in the popup, below them.
+          <Dialog.ScrollArea style={styles.scrollArea}>
+            <PopupScrollView testID="app-alert-scroll" contentContainerStyle={styles.message}>
+              <Text accessibilityRole="header" variant="titleLarge" style={[styles.title, { color: theme.colors.onSurface }]}>
+                {inLanguage(alert.title, language)}
+              </Text>
+              {!!alert.message && (
+                <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                  {inLanguage(alert.message, language)}
+                </Text>
+              )}
+            </PopupScrollView>
+          </Dialog.ScrollArea>
         ) : (
           <PopupHeader
             closeLabel={closeLabels[language] ?? closeLabels.en}
@@ -115,9 +126,10 @@ export function AppAlertHost() {
             title={inLanguage(alert.title, language)}
           />
         )}
-        {!!alert.message && (
+        {/* Separate children, as Paper's Dialog spaces its first one. */}
+        {!asks && !!alert.message && (
           <Dialog.ScrollArea style={styles.scrollArea}>
-            <PopupScrollView contentContainerStyle={[styles.message, !asks && styles.noticeMessage]}>
+            <PopupScrollView testID="app-alert-scroll" contentContainerStyle={[styles.message, styles.noticeMessage]}>
               <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
                 {inLanguage(alert.message, language)}
               </Text>
@@ -163,13 +175,14 @@ const styles = StyleSheet.create({
   // Paper gives a dialog's first child a 24-point top margin; with the X's
   // 48-point row, 16 keeps the title where Paper's own title sits.
   header: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },
-  title: { marginBottom: 8, paddingHorizontal: 24 },
-  scrollArea: { borderBottomWidth: 0, borderTopWidth: 0, marginBottom: 0, paddingHorizontal: 0 },
+  title: { marginBottom: 8 },
+  // It shrinks to what the height limit leaves; the answers below it don't.
+  scrollArea: { borderBottomWidth: 0, borderTopWidth: 0, flexShrink: 1, marginBottom: 0, paddingHorizontal: 0 },
   message: { paddingBottom: 8, paddingHorizontal: 24 },
   // With no buttons below, as much room under the message as above the title.
   noticeMessage: { paddingBottom: 24 },
   // Stacked, and wrapping (Paper's Button keeps to one line), so long answers
   // in large text still fit, as "Usar datos móviles".
-  answers: { gap: 8, paddingBottom: 20, paddingHorizontal: 24, paddingTop: 12 },
+  answers: { flexShrink: 0, gap: 8, paddingBottom: 20, paddingHorizontal: 24, paddingTop: 12 },
   answer: { alignSelf: 'stretch' },
 });

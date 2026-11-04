@@ -214,13 +214,13 @@
     {
       "name": "bible-audio-mobile-data",
       "group": "bible-reading",
-      "$comment": "The question Offline Bible Audio asks before a download on mobile data (#611), by popup=mobile-data in the preview build, for Souer's whole Bible: the app's own popup, not the system's alert, with its answers as stacked buttons, Use mobile data first and Cancel last, and no X. In Spanish at the largest text sizes, the title and the longest answer may wrap, but no answer may be cut short with an ellipsis, as Paper's one-line Button cut \"Usar datos m...\" (run 41714586130). The text readers may read the curly apostrophe in \"You’re\" as a straight one, and drop the hyphen in \"Wi-Fi\".",
+      "$comment": "The question Offline Bible Audio asks before a download on mobile data (#611), by popup=mobile-data in the preview build, for Souer's whole Bible: the app's own popup, not the system's alert, with its answers as stacked buttons, Use mobile data first and Cancel last, and no X. In Spanish at the largest text sizes, the title and the longest answer may wrap, on the iPhone a word to a line, but no answer may be cut short with an ellipsis, as Paper's one-line Button cut \"Usar datos m...\" (run 41714586130), and Cancelar must show in the popup: at the iPhone's largest, the title and answers once overflowed it, and Cancelar showed over the page below (run 41741902378). The title scrolls with the message now, above the answers. The text readers may read the curly apostrophe in \"You’re\" as a straight one, and drop the hyphen in \"Wi-Fi\".",
       "path": "you/audio-downloads?narrator=souer&popup=mobile-data",
       "variants": ["default", "es-xl-ios-large-text", "es-xl-android-font-max"],
       "variantRules": {
         "default": { "mustShowLines": ["^Use mobile data\\?$", "^You.re on mobile data", "^Use mobile data$", "^Wait for Wi-?Fi$", "^Cancel$"], "mustNotShowLines": ["^Close$", "^CANCEL$", "^OK$"] },
-        "es-xl-ios-large-text": { "mustShowLines": ["^¿Usar datos", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "(\\.\\.\\.|…)$"] },
-        "es-xl-android-font-max": { "mustShowLines": ["^¿Usar datos", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "^CANCELAR$", "(\\.\\.\\.|…)$"] }
+        "es-xl-ios-large-text": { "mustShowLines": ["^¿Usar\\b", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "(\\.\\.\\.|…)$"] },
+        "es-xl-android-font-max": { "mustShowLines": ["^¿Usar\\b", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "^CANCELAR$", "(\\.\\.\\.|…)$"] }
       }
     },
     {
@@ -485,12 +485,12 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting but one, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only. Download notifications, the last, turns off the app\u2019s notifications for downloads (#610), where the app shows its own: the iPhone, and Android 14 and later. Its line is checked on the iPhone, where it shows above the fold with Share the App.",
+      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting but one, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only. Download notifications, the last, turns off the app\u2019s notifications for downloads (#610), where the app shows its own: the iPhone, and Android 14 and later. Its line is checked on the iPhone, where it pushes About & Support's items down: the heading shows, and in Chinese Share the App below it, but Help & Feedback, and Share the App in English, are below the fold (run 41741902378). The share-app screen checks Share the App's popup.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Share the App$", "platforms": ["ios"] }, "^Offline Bible Audio$", { "line": "^Download notifications$", "platforms": ["ios"] }] },
-        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, { "line": "幫助與意見回饋", "platforms": ["ios"] }, "^離線聖經音訊$", { "line": "^下載通知$", "platforms": ["ios"] }] }
+        "default": { "mustShowLines": ["^Offline Bible Audio$", { "line": "^Download notifications$", "platforms": ["ios"] }, { "line": "^About & Support$", "platforms": ["ios"] }] },
+        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, "^離線聖經音訊$", { "line": "^下載通知$", "platforms": ["ios"] }, { "line": "^關於與支援$", "platforms": ["ios"] }] }
       }
     },
     {

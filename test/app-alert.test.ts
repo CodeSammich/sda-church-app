@@ -1,6 +1,6 @@
 import { AppAlertHost, getAppAlertForTests, resetAppAlertsForTests, showAppAlert } from '@/components/AppAlert';
 import { customDarkTheme } from '@/constants/Themes';
-import { act, fireEvent } from '@testing-library/react-native';
+import { act, fireEvent, within } from '@testing-library/react-native';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createElement } from 'react';
@@ -51,6 +51,23 @@ describe('the app popup', () => {
     expect(wait).not.toHaveBeenCalled();
     expect(getAppAlertForTests()).toBeNull();
     expect(screen.queryByText('Download on mobile data?')).toBeNull();
+  });
+
+  it("scrolls a question's title with its message, so the answers stay in the popup at the largest text sizes", async () => {
+    // At the iPhone's largest text, the title and the answers overflowed the
+    // height limit: the message vanished, and Cancel showed below the popup.
+    const screen = await renderHost();
+    await act(async () =>
+      showAppAlert('¿Usar datos móviles?', 'Estás usando datos móviles.', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Usar datos móviles' },
+      ]),
+    );
+    const scroll = within(screen.getByTestId('app-alert-scroll'));
+    expect(scroll.getByText('¿Usar datos móviles?')).toBeTruthy();
+    expect(scroll.getByText('Estás usando datos móviles.')).toBeTruthy();
+    expect(scroll.queryByText('Cancelar')).toBeNull();
+    expect(screen.getByText('Cancelar')).toBeTruthy();
   });
 
   it('answers Cancel when the popup is dismissed', async () => {
