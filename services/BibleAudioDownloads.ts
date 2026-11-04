@@ -1,4 +1,3 @@
-import BIBLE_AUDIO_DOWNLOAD_SIZES from '@/constants/BibleAudioDownloadSizes.json';
 import { BIBLE_AUDIO_NARRATOR_ORDER, getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
 import { BIBLE_SECTIONS, type BibleTestament } from '@/constants/BibleSections';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
@@ -11,6 +10,13 @@ import {
   getCantoneseCuvChapterUrl,
   getRv1909ChapterLinks,
 } from '@/services/BibleAudioSources';
+import {
+  BIBLE_AUDIO_SIZED_NARRATORS,
+  getBibleAudioBookBytes,
+  getBibleAudioChapterBytes,
+  getBibleAudioChapterSizeRange,
+  isBibleAudioChapterSizeRight,
+} from '@/services/BibleAudioDownloadSizes';
 import { downloadFile, isPhoneOffline } from '@/services/FileDownloads';
 import { Directory, File, Paths } from 'expo-file-system';
 import {
@@ -53,7 +59,7 @@ export type BibleAudioDownloadScope =
   | Readonly<{ kind: 'testament'; testament: BibleTestament }>
   | Readonly<{ kind: 'bible' }>;
 
-const SIZES: Readonly<Record<string, Readonly<Record<string, number>>>> = BIBLE_AUDIO_DOWNLOAD_SIZES;
+const SIZED = new Set(BIBLE_AUDIO_SIZED_NARRATORS);
 const CHAPTERS = new Map(BIBLE_AUDIO_BOOKS);
 const HELLOAO_AUDIO = 'https://audio.bible.helloao.org/api/BSB';
 
@@ -73,13 +79,13 @@ const PROGRESS_EMIT_MS = 250;
 const SPACE_TO_LEAVE = 500_000_000;
 
 /** The narrators a member can download, in the app's one narrator order. */
-export const BIBLE_AUDIO_DOWNLOAD_NARRATORS = BIBLE_AUDIO_NARRATOR_ORDER.filter((narrator) => narrator in SIZES);
+export const BIBLE_AUDIO_DOWNLOAD_NARRATORS = BIBLE_AUDIO_NARRATOR_ORDER.filter((narrator) => SIZED.has(narrator));
 
 /** The narrator a reader choice plays, by its download name, if it can be downloaded here. */
 export const getDownloadableBibleAudioNarrator = (translationId: string, reader?: string) => {
   if (Platform.OS === 'web' || !reader) return null;
   const narrator = getBibleAudioNarrator(translationId, reader);
-  return narrator && narrator in SIZES ? narrator : null;
+  return narrator && SIZED.has(narrator) ? narrator : null;
 };
 
 const scopeKey = (scope: BibleAudioDownloadScope) => {
@@ -135,7 +141,7 @@ export const getBibleAudioDownloadUrls = (narrator: string, bookId: string, chap
     case 'rv1909':
       return list(Object.values(getRv1909ChapterLinks(bookId, chapter))[0]);
     default:
-      return narrator in SIZES ? [`${HELLOAO_AUDIO}/${bookId}/${chapter}/audio/${narrator}.mp3`] : [];
+      return SIZED.has(narrator) ? [`${HELLOAO_AUDIO}/${bookId}/${chapter}/audio/${narrator}.mp3`] : [];
   }
 };
 
@@ -153,6 +159,27 @@ const record = (narrator: string, bookId: string, chapter: number, bytes: number
   let chapters = books.get(bookId);
   if (!chapters) books.set(bookId, (chapters = new Map()));
   chapters.set(chapter, bytes);
+};
+
+/**
+ * Records a chapter that's arrived, if it's the recording: one whose size is
+ * wrong, as a Wi-Fi's sign-in page or a file cut off part way, is deleted, so
+ * it's downloaded again rather than kept to fail when played offline. False
+ * for one deleted.
+ */
+const keepIfWhole = (file: File, narrator: string, bookId: string, chapter: number) => {
+  const bytes = file.size;
+  if (isBibleAudioChapterSizeRight(narrator, bookId, chapter, bytes)) {
+    record(narrator, bookId, chapter, bytes);
+    return true;
+  }
+  console.warn(`Deleted a Bible audio download that isn't the recording: ${narrator}/${bookId}/${chapter}, ${bytes} bytes`);
+  try {
+    file.delete();
+  } catch {
+    // Tried again at the next start.
+  }
+  return false;
 };
 
 type Queued = Readonly<{
@@ -225,7 +252,7 @@ export const loadBibleAudioDownloads = () => {
         for (const entry of book.list()) {
           if (!(entry instanceof File)) continue;
           const chapter = /^(\d+)\.mp3$/.exec(entry.name)?.[1];
-          if (chapter) record(narrator.name, book.name, Number(chapter), entry.size);
+          if (chapter) keepIfWhole(entry, narrator.name, book.name, Number(chapter));
           // Nothing downloads before this, so it's one a closed app left.
           else if (entry.name.endsWith('.part')) entry.delete();
         }
@@ -299,7 +326,7 @@ export const getBibleAudioScopeStatus = (
   for (const bookId of books) {
     const bookChapters = CHAPTERS.get(bookId) ?? 0;
     chapters += bookChapters;
-    totalBytes += SIZES[narrator]?.[bookId] ?? 0;
+    totalBytes += getBibleAudioBookBytes(narrator, bookId);
     const onPhone = downloaded.get(narrator)?.get(bookId);
     if (onPhone && onPhone.size >= bookChapters) downloadedBooks += 1;
     downloadedChapters += onPhone?.size ?? 0;
@@ -428,6 +455,8 @@ const downloadChapter = async (item: Queued) => {
       try {
         const file = await downloadFile(url, bookFolder(item.narrator, item.bookId), chapterFileName(item.chapter), {
           signal: controller.signal,
+          // A Wi-Fi's sign-in page, or a file cut off part way, fails as a lost connection does.
+          sizeRange: getBibleAudioChapterSizeRange(item.narrator, item.bookId, item.chapter),
           onProgress: ({ bytesWritten }) => {
             entry.bytesWritten = bytesWritten;
             emitProgress();
@@ -439,9 +468,11 @@ const downloadChapter = async (item: Queued) => {
           return;
         }
         if (Platform.OS === 'ios') excludeFromBackup(file.uri);
-        record(item.narrator, item.bookId, item.chapter, file.size);
-        failuresInARow = 0;
-        return;
+        if (keepIfWhole(file, item.narrator, item.bookId, item.chapter)) {
+          failuresInARow = 0;
+          return;
+        }
+        entry.bytesWritten = 0;
       } catch {
         if (controller.signal.aborted) return;
         entry.bytesWritten = 0;
@@ -508,6 +539,8 @@ const handToSystem = (items: readonly Queued[], allowMobileData: boolean) => {
     // The next source first, then the rest in turn, for a phone that tries them all.
     const first = (tries.get(id) ?? 0) % urls.length;
     const inTurn = [...urls.slice(first), ...urls.slice(0, first)];
+    // Zero when the size isn't known: the phone then keeps to its own limits.
+    const size = getBibleAudioChapterSizeRange(item.narrator, item.bookId, item.chapter);
     return [
       {
         id,
@@ -515,7 +548,11 @@ const handToSystem = (items: readonly Queued[], allowMobileData: boolean) => {
         fallbacks: inTurn.slice(1),
         path: chapterFile(item).uri,
         group: getBibleAudioNarratorName(item.narrator, notificationLanguage) ?? item.narrator,
-        bytes: Math.round((SIZES[item.narrator]?.[item.bookId] ?? 0) / Math.max(1, CHAPTERS.get(item.bookId) ?? 1)),
+        bytes:
+          getBibleAudioChapterBytes(item.narrator, item.bookId, item.chapter) ??
+          Math.round(getBibleAudioBookBytes(item.narrator, item.bookId) / Math.max(1, CHAPTERS.get(item.bookId) ?? 1)),
+        minBytes: size.known ? size.min : 0,
+        maxBytes: size.known ? size.max : 0,
       },
     ];
   });
@@ -575,8 +612,7 @@ const applySystemStatuses = (statuses: readonly SystemDownloadStatus[]) => {
       continue;
     }
     const file = chapterFile(item);
-    if (file.exists) {
-      record(item.narrator, item.bookId, item.chapter, file.size);
+    if (file.exists && keepIfWhole(file, item.narrator, item.bookId, item.chapter)) {
       tries.delete(key);
       failuresInARow = 0;
     } else {

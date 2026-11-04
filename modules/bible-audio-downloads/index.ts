@@ -31,6 +31,13 @@ import { requireOptionalNativeModule } from 'expo';
  * One chapter: the app's name for it, where from, and the file it becomes;
  * where else from, if that fails, what it's part of for its notification, as
  * "English – Souer (BSB)", and about how big it is.
+ *
+ * `minBytes` and `maxBytes` are the sizes it's kept at
+ * (services/BibleAudioDownloadSizes.ts): one that grows past `maxBytes` is
+ * stopped, and one that ends outside them, as a Wi-Fi's sign-in page or a file
+ * cut off part way, is deleted, and fails, so the app tries it again. Zero
+ * when its size isn't known: the phone then keeps it between 20 KB and 60 MB,
+ * and only when the server says it's audio.
  */
 export type SystemDownload = Readonly<{
   id: string;
@@ -39,6 +46,8 @@ export type SystemDownload = Readonly<{
   fallbacks?: readonly string[];
   group?: string;
   bytes?: number;
+  minBytes?: number;
+  maxBytes?: number;
 }>;
 
 /** A chapter still downloading or waiting. Finished ones aren't listed. */

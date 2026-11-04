@@ -12,6 +12,7 @@ import {
 } from '@/services/BibleAudioDownloads';
 import { File } from 'expo-file-system';
 import { AppState } from 'react-native';
+import { chapterBytes, mockChapterFile } from './helpers/bible-audio-chapter-files';
 import { mockFiles } from './helpers/file-system-mock';
 
 // Bible audio downloads the phone itself carries out (#611), so they go on
@@ -56,7 +57,9 @@ const mockSystem = {
     }
   }),
   list: jest.fn(async () =>
-    [...mockTasks.values()].map(({ url, path, fallbacks, group, bytes, ...status }: MockTask & Record<string, unknown>) => status),
+    [...mockTasks.values()].map(
+      ({ url, path, fallbacks, group, bytes, minBytes, maxBytes, ...status }: MockTask & Record<string, unknown>) => status,
+    ),
   ),
   cancel: jest.fn(async (ids: string[]) => {
     ids.forEach((id) => mockTasks.delete(id));
@@ -74,7 +77,7 @@ const REQUESTS = 'document/bible-audio/requests.json';
 // The phone finishing a chapter: the file in place, and the task gone.
 const finish = (id: string) => {
   const task = mockSystem.tasks.get(id)!;
-  mockFiles.set(task.path, 'x'.repeat(1000));
+  mockChapterFile(task.path);
   mockSystem.tasks.delete(id);
 };
 
@@ -117,9 +120,12 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
       // For a phone that tries each in turn with the app closed (Android 14 and later).
       fallbacks: others,
       path: 'document/bible-audio/cuv-mandarin/MAT/1.mp3',
-      // What its notification calls it, and about how big it is.
+      // What its notification calls it, how big it is, and the sizes it's
+      // kept at, so a Wi-Fi's sign-in page or a file cut off part way isn't.
       group: 'Mandarin (Chinese Union Version)',
-      bytes: expect.any(Number),
+      bytes: chapterBytes(MANDARIN, 'MAT', 1),
+      minBytes: Math.floor(chapterBytes(MANDARIN, 'MAT', 1) * 0.98),
+      maxBytes: Math.ceil(chapterBytes(MANDARIN, 'MAT', 1) * 1.02),
     });
     expect(downloads[0].bytes).toBeGreaterThan(100_000);
     downloadBibleAudio('souer', JUDE, { mobileData: true });
@@ -307,7 +313,7 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     // was closed, Matthew 2 is still downloading, and the rest the phone
     // dropped, as iOS does when the app is swiped away.
     mockFiles.set(REQUESTS, JSON.stringify([{ narrator: MANDARIN, scope: GOSPELS, mobileData: false }]));
-    mockFiles.set('document/bible-audio/cuv-mandarin/MAT/1.mp3', 'x'.repeat(1000));
+    mockChapterFile('document/bible-audio/cuv-mandarin/MAT/1.mp3');
     mockSystem.tasks.set('cuv-mandarin/MAT/2', {
       id: 'cuv-mandarin/MAT/2',
       url: 'https://example.org/2.mp3',
@@ -407,7 +413,7 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     expect(kotlin).toContain('.setAllowedOverMetered(next.mobileData)');
     expect(kotlin).toContain('.setAllowedOverRoaming(next.mobileData)');
     expect(kotlin).toContain('if (!next.mobileData) request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)');
-    expect(kotlin).toContain('editor.putString(key, encodeWaiting(Waiting(key, download.id, download.url, target.path, allowMobileData)))');
+    expect(kotlin).toContain('editor.putString(key, encodeWaiting(Waiting(key, download.id, download.url, target.path, allowMobileData, download.minBytes.toLong(), download.maxBytes.toLong())))');
   });
 
   it('take three chapters at a time, as the in-app downloader does, and stop starting more while the host fails', () => {
@@ -476,7 +482,7 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     expect(service).toContain('connection.setRequestProperty("Range", "bytes=$offset-")');
     // Partial files in the folder no backup takes; a web page is never kept as a chapter.
     expect(transfers).toContain('File(context.noBackupFilesDir, PARTIAL_FOLDER)');
-    expect(service).toContain('connection.contentType?.startsWith("text/html") != true');
+    expect(service).toContain('if (!sizes.allows(connection.contentType)) {');
     // Its notification at once, as Android requires; Stop and Android's Task Manager stop it all.
     expect(service.indexOf('setNotification(')).toBeLessThan(service.indexOf('run.start()'));
     expect(transfers).toContain('fun stopAll()');

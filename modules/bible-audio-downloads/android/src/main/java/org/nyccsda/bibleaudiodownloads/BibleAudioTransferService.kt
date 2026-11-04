@@ -191,7 +191,9 @@ class BibleAudioTransferService : JobService() {
 
     // Downloads one chapter into its partial file, carrying on from what's
     // there when it came from the same source and the server allows it, then
-    // moves it into place. False for an answer that isn't the file.
+    // moves it into place. False for an answer that isn't the file: a web
+    // page, or a size that isn't the recording's (BibleAudioFileChecks), whose
+    // partial file goes.
     private fun fetch(transfer: BibleAudioTransfers.Transfer, url: String, target: File): Boolean {
       val partial = transfers.partialFile(transfer)
       val source = File(partial.path + ".source")
@@ -215,10 +217,15 @@ class BibleAudioTransferService : JobService() {
         connection.instanceFollowRedirects = true
         if (offset > 0) connection.setRequestProperty("Range", "bytes=$offset-")
         val code = connection.responseCode
-        if (code == HttpURLConnection.HTTP_PARTIAL && offset > 0) {
+        val sizes = transfer.sizes
+        if (!sizes.allows(connection.contentType)) {
+          // A web page, as a Wi-Fi's sign-in page, isn't the recording.
+          partial.delete()
+          return false
+        } else if (code == HttpURLConnection.HTTP_PARTIAL && offset > 0) {
           // Carries on.
-        } else if (code in 200..299 && connection.contentType?.startsWith("text/html") != true) {
-          // A whole file. A web page, as a Wi-Fi's sign-in page, isn't one.
+        } else if (code in 200..299) {
+          // A whole file.
           offset = 0
         } else {
           // 416: what's there doesn't fit; start again next time.
@@ -227,7 +234,13 @@ class BibleAudioTransferService : JobService() {
         }
         val length = connection.contentLengthLong
         val total = if (length >= 0) offset + length else -1L
+        // Bigger than the recording: not it, and it mustn't fill the phone.
+        if (total > sizes.max) {
+          partial.delete()
+          return false
+        }
         var bytes = offset
+        var tooBig = false
         transfers.progress(transfer, bytes, total)
         connection.inputStream.use { input ->
           FileOutputStream(partial, offset > 0).use { output ->
@@ -237,6 +250,10 @@ class BibleAudioTransferService : JobService() {
               if (stopped) throw IOException("stopped")
               val read = input.read(buffer)
               if (read < 0) break
+              if (bytes + read > sizes.max) {
+                tooBig = true
+                break
+              }
               output.write(buffer, 0, read)
               bytes += read
               sinceReport += read
@@ -247,7 +264,11 @@ class BibleAudioTransferService : JobService() {
             }
           }
         }
-        if (total >= 0 && bytes != total) return false
+        // Cut off, or not the recording: tried again from the start.
+        if (tooBig || (total >= 0 && bytes != total) || !sizes.fits(bytes)) {
+          partial.delete()
+          return false
+        }
         target.parentFile?.mkdirs()
         if (target.exists()) target.delete()
         // The same storage, so it moves whole: the app never sees half a chapter.

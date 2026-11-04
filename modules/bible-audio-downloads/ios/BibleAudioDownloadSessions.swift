@@ -20,6 +20,14 @@ import UIKit
 /// or without the app's JavaScript running. The app finds it there. A task
 /// keeps its path relative to the Bible audio folder, as an app update may
 /// move the app's folders while a download goes on.
+///
+/// A chapter is kept only at the sizes the app gives
+/// (services/BibleAudioDownloadSizes.ts), and never when the server says it's
+/// a web page: a Wi-Fi's sign-in page, or a file cut off part way, is deleted,
+/// so the app sees the chapter missing and tries it again, rather than kept to
+/// fail when played offline. One that grows past its size is stopped while the
+/// app is running; iOS downloads in the background without telling the app
+/// how far it's got, so one that's too big then is deleted when it ends.
 final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
   static let shared = BibleAudioDownloadSessions()
 
@@ -69,6 +77,34 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
       .appendingPathComponent("bible-audio", isDirectory: true)
   }
 
+  // For a chapter whose size isn't known: the app's MIN_UNKNOWN_CHAPTER_BYTES
+  // and MAX_UNKNOWN_CHAPTER_BYTES.
+  private static let minUnknownBytes: Int64 = 20_000
+  private static let maxUnknownBytes: Int64 = 60_000_000
+
+  /// The sizes a chapter is kept at, and whether they're its recording's.
+  struct Sizes {
+    let min: Int64
+    let max: Int64
+    let known: Bool
+
+    init(minBytes: Int64, maxBytes: Int64) {
+      known = maxBytes > 0
+      min = known ? Swift.max(0, Swift.min(minBytes, maxBytes)) : BibleAudioDownloadSessions.minUnknownBytes
+      max = known ? maxBytes : BibleAudioDownloadSessions.maxUnknownBytes
+    }
+
+    func fits(_ bytes: Int64) -> Bool { bytes >= min && bytes <= max }
+
+    /// A web page never is the recording, and for a chapter whose size isn't
+    /// known, only audio passes. A server that doesn't say is left to the size.
+    func allows(_ mimeType: String?) -> Bool {
+      guard let type = mimeType?.lowercased(), !type.isEmpty else { return true }
+      if type.hasPrefix("text/") { return false }
+      return known || type.hasPrefix("audio/") || type == "application/octet-stream"
+    }
+  }
+
   // A path to compare with another: /var is /private/var on iOS, and the app
   // and FileManager may name the same folder either way.
   private static func comparable(_ url: URL) -> String {
@@ -93,7 +129,12 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
         let path = Self.comparable(target)
         guard path.hasPrefix(root) else { continue }
         let task = session.downloadTask(with: URLRequest(url: source))
-        task.taskDescription = [download.id, String(path.dropFirst(root.count))].joined(separator: "\n")
+        task.taskDescription = [
+          download.id,
+          String(path.dropFirst(root.count)),
+          String(Int64(download.minBytes)),
+          String(Int64(download.maxBytes)),
+        ].joined(separator: "\n")
         task.resume()
       }
       done()
@@ -107,7 +148,7 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
       var result: [[String: Any]] = []
       for (session, mobileData) in sessions {
         for task in await session.allTasks {
-          guard task.state == .running || task.state == .suspended, case let (id, _)? = Self.decode(task) else {
+          guard task.state == .running || task.state == .suspended, case let (id, _, _)? = Self.decode(task) else {
             continue
           }
           // iOS doesn't say why one waits, so there's no "reason": the app knows the network.
@@ -141,7 +182,7 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
     Task {
       for session in sessions {
         for task in await session.allTasks {
-          if case let (id, _)? = Self.decode(task), ids.contains(id) {
+          if case let (id, _, _)? = Self.decode(task), ids.contains(id) {
             task.cancel()
           }
         }
@@ -161,9 +202,32 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
 
   // MARK: - URLSessionDownloadDelegate
 
+  // While the app runs: one growing past its size is stopped, so it can't fill
+  // the phone. The app sees it missing, and tries it again.
+  func urlSession(
+    _ session: URLSession,
+    downloadTask: URLSessionDownloadTask,
+    didWriteData bytesWritten: Int64,
+    totalBytesWritten: Int64,
+    totalBytesExpectedToWrite: Int64
+  ) {
+    guard case let (_, _, sizes)? = Self.decode(downloadTask) else { return }
+    if Swift.max(totalBytesWritten, totalBytesExpectedToWrite) > sizes.max {
+      downloadTask.cancel()
+      BibleAudioNotifications.failed()
+    }
+  }
+
   func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-    guard case let (id, relative)? = Self.decode(downloadTask), !stopped.contains(id) else { return }
+    guard case let (id, relative, sizes)? = Self.decode(downloadTask), !stopped.contains(id) else { return }
     if let response = downloadTask.response as? HTTPURLResponse, !(200...299).contains(response.statusCode) {
+      BibleAudioNotifications.failed()
+      return
+    }
+    // A Wi-Fi's sign-in page, or a file cut off part way, isn't the recording.
+    // iOS deletes the file at `location` once this returns.
+    let bytes = (try? FileManager.default.attributesOfItem(atPath: location.path)[.size] as? NSNumber)?.int64Value ?? -1
+    guard sizes.allows(downloadTask.response?.mimeType), sizes.fits(bytes) else {
       BibleAudioNotifications.failed()
       return
     }
@@ -209,8 +273,14 @@ final class BibleAudioDownloadSessions: NSObject, URLSessionDownloadDelegate {
     }
   }
 
-  private static func decode(_ task: URLSessionTask) -> (String, String)? {
+  // A task's chapter, its path, and its sizes; a task from before the sizes has none.
+  private static func decode(_ task: URLSessionTask) -> (String, String, Sizes)? {
     let parts = task.taskDescription?.components(separatedBy: "\n") ?? []
-    return parts.count == 2 ? (parts[0], parts[1]) : nil
+    guard parts.count == 2 || parts.count == 4 else { return nil }
+    let sizes = Sizes(
+      minBytes: parts.count == 4 ? Int64(parts[2]) ?? 0 : 0,
+      maxBytes: parts.count == 4 ? Int64(parts[3]) ?? 0 : 0
+    )
+    return (parts[0], parts[1], sizes)
   }
 }

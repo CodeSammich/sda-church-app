@@ -24,6 +24,7 @@ import { withDownloadedCopy } from '@/services/BibleAudioService';
 import { BIBLE_AUDIO_BOOKS, CANTONESE_CUV_READER, RV1909_READER } from '@/services/BibleAudioSources';
 import { File } from 'expo-file-system';
 import { AppState } from 'react-native';
+import { chapterBytes, mockChapterFile } from './helpers/bible-audio-chapter-files';
 import { mockDisk, mockFiles } from './helpers/file-system-mock';
 
 // Bible audio downloaded for listening offline (#556).
@@ -55,7 +56,13 @@ const GENERAL_LETTERS = { kind: 'section', sectionId: 'general-letters' } as con
 const NEW_TESTAMENT = { kind: 'testament', testament: 'new' } as const;
 const OLD_TESTAMENT = { kind: 'testament', testament: 'old' } as const;
 const BIBLE = { kind: 'bible' } as const;
-const SIZES: Record<string, Record<string, number>> = BIBLE_AUDIO_DOWNLOAD_SIZES;
+// Each book's size, from its chapters'.
+const SIZES: Record<string, Record<string, number>> = Object.fromEntries(
+  Object.entries(BIBLE_AUDIO_DOWNLOAD_SIZES as Record<string, Record<string, number[]>>).map(([narrator, books]) => [
+    narrator,
+    Object.fromEntries(Object.entries(books).map(([book, chapters]) => [book, chapters.reduce((total, bytes) => total + bytes)])),
+  ]),
+);
 
 const setNetwork = (state: Partial<MockNetwork>) => {
   mockNetwork.state = { ...mockNetwork.state, ...state };
@@ -80,7 +87,7 @@ const mockDownloads = (download?: Download) =>
     (download ??
       (async (url, destination, options) => {
         options?.onProgress?.({ bytesWritten: 500, totalBytes: 1000 });
-        mockFiles.set(destination.uri, `${'x'.repeat(1000)} ${url}`);
+        mockChapterFile(destination.uri, url);
         return destination;
       })) as typeof File.downloadFileAsync,
   );
@@ -226,7 +233,7 @@ describe('Bible audio downloads', () => {
   it("move to the next mirror when the church's copy fails", async () => {
     const download = mockDownloads(async (url, destination) => {
       if (url.includes('adventistconnect')) throw new Error('HTTP 503');
-      mockFiles.set(destination.uri, url);
+      mockChapterFile(destination.uri, url);
       return destination;
     });
     downloadBibleAudio('cuv-mandarin', JUDE);
@@ -249,7 +256,7 @@ describe('Bible audio downloads', () => {
     mockDownloads();
     downloadBibleAudio('cuv-mandarin', JUDE);
     await until(isDone(JUDE));
-    const onPhone = mockFiles.get('document/bible-audio/cuv-mandarin/JUD/1.mp3')!.length;
+    const onPhone = chapterBytes('cuv-mandarin', 'JUD', 1);
     expect(getBibleAudioScopeStatus('cuv-mandarin', JUDE)).toMatchObject({
       books: 1,
       downloadedBooks: 1,
@@ -276,7 +283,7 @@ describe('Bible audio downloads', () => {
       totalBytes: Object.values(SIZES['cuv-mandarin']).reduce((total, bytes) => total + bytes),
     });
     // Part of a book on the phone isn't a book downloaded.
-    mockFiles.set('document/bible-audio/cuv-mandarin/JHN/1.mp3', 'x'.repeat(10));
+    mockChapterFile('document/bible-audio/cuv-mandarin/JHN/1.mp3');
     resetBibleAudioDownloadsForTests();
     loadBibleAudioDownloads();
     expect(getBibleAudioScopeStatus('cuv-mandarin', GOSPELS)).toMatchObject({ downloadedBooks: 0, downloadedChapters: 1 });
@@ -325,7 +332,7 @@ describe('Bible audio downloads', () => {
         // The fourth waits until it's stopped.
         await new Promise((_, reject) => options?.signal?.addEventListener('abort', () => reject(new Error('stopped'))));
       }
-      mockFiles.set(destination.uri, url);
+      mockChapterFile(destination.uri, url);
       return destination;
     });
     downloadBibleAudio('cuv-mandarin', JOHN);
@@ -360,7 +367,7 @@ describe('Bible audio downloads', () => {
     let online = true;
     mockDownloads(async (url, destination) => {
       if (!online) throw new Error('The Internet connection appears to be offline.');
-      mockFiles.set(destination.uri, url);
+      mockChapterFile(destination.uri, url);
       return destination;
     });
     online = false;
@@ -397,15 +404,17 @@ describe('Bible audio downloads', () => {
   });
 
   it('find what an earlier session downloaded, and clear what it left half done', () => {
-    mockFiles.set('document/bible-audio/souer/JHN/1.mp3', 'x'.repeat(4_000));
-    mockFiles.set('document/bible-audio/souer/JHN/2.mp3', 'x'.repeat(5_000));
+    mockChapterFile('document/bible-audio/souer/JHN/1.mp3');
+    mockChapterFile('document/bible-audio/souer/JHN/2.mp3');
     mockFiles.set('document/bible-audio/souer/JHN/3.mp3.1761000000000.part', 'x');
-    mockFiles.set('document/bible-audio/rv1909/GEN/1.mp3', 'x'.repeat(700));
+    mockChapterFile('document/bible-audio/rv1909/GEN/1.mp3');
     loadBibleAudioDownloads();
+    const john = chapterBytes('souer', 'JHN', 1) + chapterBytes('souer', 'JHN', 2);
+    const genesis = chapterBytes('rv1909', 'GEN', 1);
     // In the app's one narrator order: English first, as the BSB is in the translation picker.
     expect(listDownloadedBibleAudio()).toEqual([
-      { narrator: 'souer', bytes: 9_000, books: [{ bookId: 'JHN', chapters: 21, downloadedChapters: 2, bytes: 9_000 }] },
-      { narrator: 'rv1909', bytes: 700, books: [{ bookId: 'GEN', chapters: 50, downloadedChapters: 1, bytes: 700 }] },
+      { narrator: 'souer', bytes: john, books: [{ bookId: 'JHN', chapters: 21, downloadedChapters: 2, bytes: john }] },
+      { narrator: 'rv1909', bytes: genesis, books: [{ bookId: 'GEN', chapters: 50, downloadedChapters: 1, bytes: genesis }] },
     ]);
     expect(audioFiles()).not.toContain('document/bible-audio/souer/JHN/3.mp3.1761000000000.part');
     expect(getDownloadedChapterUri('souer', 'JHN', 2)).toBe('document/bible-audio/souer/JHN/2.mp3');
@@ -452,7 +461,7 @@ describe('Bible audio downloads', () => {
         // bytes have already arrived does.
         await new Promise<void>((resolve) => finishing.push(resolve));
       }
-      mockFiles.set(destination.uri, url);
+      mockChapterFile(destination.uri, url);
       return destination;
     });
     downloadBibleAudio('cuv-mandarin', GOSPELS);

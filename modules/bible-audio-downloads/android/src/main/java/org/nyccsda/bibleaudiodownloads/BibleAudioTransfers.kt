@@ -51,7 +51,12 @@ internal class BibleAudioTransfers(private val context: Context) {
     val state: String,
     // Its size as the app estimates it, for Android's estimate of the job.
     val bytes: Long,
-  )
+    // The sizes it's kept at (BibleAudioFileChecks); zero when not known.
+    val minBytes: Long = 0,
+    val maxBytes: Long = 0,
+  ) {
+    val sizes get() = ChapterSizes.of(minBytes, maxBytes)
+  }
 
   /** Queues the chapters, in place of any under the same names, and starts their job. */
   fun enqueue(downloads: List<ChapterDownload>, allowMobileData: Boolean) = synchronized(LOCK) {
@@ -69,7 +74,7 @@ internal class BibleAudioTransfers(private val context: Context) {
       val place = sequence.toString().padStart(12, '0')
       val key = PREFIX + if (download.id in again) "$AGAIN$place" else place
       val urls = listOf(download.url) + download.fallbacks.filter { it != download.url }
-      editor.putString(key, encode(Transfer(key, download.id, urls, target.path, allowMobileData, download.group, WAITING, download.bytes.toLong())))
+      editor.putString(key, encode(Transfer(key, download.id, urls, target.path, allowMobileData, download.group, WAITING, download.bytes.toLong(), download.minBytes.toLong(), download.maxBytes.toLong())))
       if (download.id !in again) added[download.group] = (added[download.group] ?: 0) + 1
     }
     // For the notification's "312 of 1,189 chapters".
@@ -160,9 +165,10 @@ internal class BibleAudioTransfers(private val context: Context) {
       .commit()
   }
 
-  /** Every source failed: left for the app, which may try again. */
+  /** Every source failed: left for the app, which may try again, from the start. */
   fun failed(transfer: Transfer) = synchronized(LOCK) {
     release(transfer)
+    deletePartial(transfer)
     if (tracked.getString(transfer.key, null) == null) return@synchronized
     tracked.edit()
       .putString(transfer.key, encode(transfer.copy(state = FAILED)))
@@ -218,8 +224,8 @@ internal class BibleAudioTransfers(private val context: Context) {
     return File(folder, transfer.id.replace(Regex("[^A-Za-z0-9-]"), "_") + ".part")
   }
 
-  // The partial file, and the note of which source it came from.
-  private fun deletePartial(transfer: Transfer) {
+  /** The partial file, and the note of which source it came from. */
+  fun deletePartial(transfer: Transfer) {
     val partial = partialFile(transfer)
     partial.delete()
     File(partial.path + ".source").delete()
@@ -318,12 +324,14 @@ internal class BibleAudioTransfers(private val context: Context) {
       .put("group", transfer.group)
       .put("state", transfer.state)
       .put("bytes", transfer.bytes)
+      .put("minBytes", transfer.minBytes)
+      .put("maxBytes", transfer.maxBytes)
       .toString()
 
   private fun decode(key: String, value: String): Transfer? = try {
     val json = JSONObject(value)
     val urls = json.getJSONArray("urls").let { array -> (0 until array.length()).map { array.getString(it) } }
-    Transfer(key, json.getString("id"), urls, json.getString("path"), json.getBoolean("mobileData"), json.optString("group"), json.getString("state"), json.optLong("bytes"))
+    Transfer(key, json.getString("id"), urls, json.getString("path"), json.getBoolean("mobileData"), json.optString("group"), json.getString("state"), json.optLong("bytes"), json.optLong("minBytes"), json.optLong("maxBytes"))
   } catch (error: Exception) {
     null
   }

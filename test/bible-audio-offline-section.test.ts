@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createElement } from 'react';
 import { AppState, Platform } from 'react-native';
-import { mockFiles } from './helpers/file-system-mock';
+import { mockChapterFile } from './helpers/bible-audio-chapter-files';
 import { renderWithPreferences } from './helpers/render-preferences';
 
 // "Listen offline" in the Bible audio settings popup (#556): one row that
@@ -29,7 +29,7 @@ const styles = { divider: {}, helper: {}, row: {}, rowCaption: {}, rowLabel: {},
 // Every chapter of a book on the phone, for one narrator.
 const putOnPhone = (narrator: string, bookId: string, chapters: number) => {
   for (let chapter = 1; chapter <= chapters; chapter += 1) {
-    mockFiles.set(`document/bible-audio/${narrator}/${bookId}/${chapter}.mp3`, 'x'.repeat(1000));
+    mockChapterFile(`document/bible-audio/${narrator}/${bookId}/${chapter}.mp3`);
   }
   resetBibleAudioDownloadsForTests();
   loadBibleAudioDownloads();
@@ -81,7 +81,7 @@ describe('Listen offline', () => {
   });
 
   it('count part of a book as partly downloaded, and the whole Bible once it is all there', () => {
-    mockFiles.set('document/bible-audio/rv1909/GEN/1.mp3', 'x');
+    mockChapterFile('document/bible-audio/rv1909/GEN/1.mp3');
     resetBibleAudioDownloadsForTests();
     loadBibleAudioDownloads();
     expect(getBibleAudioOfflineCaption('rv1909', undefined, 'es')).toBe('Descargado en parte');
