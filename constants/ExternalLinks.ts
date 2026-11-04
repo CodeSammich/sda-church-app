@@ -172,10 +172,12 @@ export type DafSponsor = Readonly<{
 }>;
 
 /**
- * Fidelity Charitable's own link to a grant to one charity, from the "Making
- * the Most of DAF Direct" section of its DAF Direct user guide
- * (dafdirect.org): it opens the Giving Account sign-in, then a grant
- * recommendation with the church, by EIN, already chosen.
+ * Fidelity Charitable's own grant link, on its own site: it opens the Giving
+ * Account sign-in, then a grant recommendation with the church, by EIN, already
+ * chosen. The church needs no account or sign-up for it; it isn't enrolled in
+ * any giving service. The link's form is in Fidelity's user guide for its
+ * DAF Direct tool (dafdirect.org), "Making the Most of DAF Direct", which the
+ * church decided not to use (#646).
  */
 export const FIDELITY_CHARITABLE_GRANT_URL =
   'https://charitablegift.fidelity.com/cgfweb/CGFLogon.cgfdo' +

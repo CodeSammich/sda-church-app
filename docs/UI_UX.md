@@ -344,10 +344,12 @@ opens the same page with that hymnal picked and just that hymn showing, marked, 
 buttons open giving sites in the in-app browser; the app takes no payment. **Give
 Online** opens the church's AdventistGiving page. The **Donor-Advised Fund** card's
 **Fidelity Charitable** button, for the sponsor the church prefers, opens Fidelity
-Charitable's sign-in, then a grant with the church already chosen by its EIN. **Other
-Sponsors** opens a popup listing the other sponsors the card names, each opening its
-home page, as they have no such link, with the church's legal name and EIN (#646). The
-sponsors are one list, `DAF_SPONSORS` in `constants/ExternalLinks.ts`.
+Charitable's own grant link: its sign-in, then a grant with the church already chosen
+by its EIN. The church needs no account or sign-up for it. **Other Sponsors** opens a
+popup listing the other sponsors the card names, each opening its home page, as they
+have no such link, with the church's legal name and EIN (#646). The card and the popup
+name DAFgiving360 with its old name, Schwab Charitable. The sponsors are one list,
+`DAF_SPONSORS` in `constants/ExternalLinks.ts`.
 
 **Tenet Alignment:**
 

@@ -105,6 +105,15 @@ describe('the Tithe & Offering page’s donor-advised fund card (#646)', () => {
     expect(view.queryByTestId('daf-sponsors-dialog')).toBeNull();
   });
 
+  it.each(LANGUAGES)('names Schwab’s sponsor by its new name, with its old one as the popup does, in %s', async (language) => {
+    const view = await renderWithPreferences(createElement(GiveScreen), { language });
+    const [schwab] = OTHER_DAF_SPONSORS;
+    const formerly = `${DAF_SPONSORS_COPY[language].formerly} ${schwab.formerName}`;
+    const card = view.getByText(new RegExp(CHURCH_EIN));
+    expect(card).toHaveTextContent(new RegExp(`${schwab.name}\\W+${formerly}\\W`, 'i'));
+    expect(view.queryByText(/Charles Schwab/)).toBeNull();
+  });
+
   it('opens a Fidelity Charitable grant to the church in the in-app browser', async () => {
     const view = await renderWithPreferences(createElement(GiveScreen));
     await fireEvent.press(view.getByRole('button', { name: 'Fidelity Charitable' }));

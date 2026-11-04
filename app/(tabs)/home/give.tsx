@@ -56,7 +56,7 @@ export default function GiveScreen() {
       dafLabel: 'Fidelity Charitable',
       dafTitle: 'Stocks/Equities',
       dafDesc:
-        'We prefer Fidelity Charitable. If you already know how to recommend a grant, direct it to New York Chinese Seventh-day Adventist Church using EIN 11-3004814. For Charles Schwab Charitable, Vanguard Charitable, or another charitable sponsor or brokerage, please contact church staff in advance.',
+        'We prefer Fidelity Charitable. If you already know how to recommend a grant, direct it to New York Chinese Seventh-day Adventist Church using EIN 11-3004814. For DAFgiving360 (formerly Schwab Charitable), Vanguard Charitable, or another charitable sponsor or brokerage, please contact church staff in advance.',
       dafOther: 'Other Sponsors',
       quote:
         'Bring the full tithe into the storehouse, so that there may be food in My house. Test Me in this,” says the Lord of Hosts. “See if I will not open the windows of heaven and pour out for you blessing without measure.',
@@ -84,7 +84,7 @@ export default function GiveScreen() {
       dafLabel: 'Fidelity Charitable',
       dafTitle: '股票／證券',
       dafDesc:
-        '本教會較偏好使用 Fidelity Charitable。如您已知道如何建議撥款，請將撥款指定給紐約華人基督復臨安息日會，並使用 EIN 11-3004814。如要使用 Charles Schwab Charitable、Vanguard Charitable 或其他慈善贊助機構或券商，請提前聯絡教會同工。',
+        '本教會較偏好使用 Fidelity Charitable。如您已知道如何建議撥款，請將撥款指定給紐約華人基督復臨安息日會，並使用 EIN 11-3004814。如要使用 DAFgiving360（原名 Schwab Charitable）、Vanguard Charitable 或其他慈善贊助機構或券商，請提前聯絡教會同工。',
       dafOther: '其他贊助機構',
       quote:
         '萬軍之耶和華說：你們要將當納的十分之一全然送入倉庫，使我家有糧，以此試試我，是否為你們敞開天上的窗戶，傾福與你們，甚至無處可容。',
@@ -112,7 +112,7 @@ export default function GiveScreen() {
       dafLabel: 'Fidelity Charitable',
       dafTitle: '股票／证券',
       dafDesc:
-        '本教会更倾向使用 Fidelity Charitable。如您已知道如何建议拨款，请将拨款指定给纽约华人基督复临安息日会，并使用 EIN 11-3004814。如要使用 Charles Schwab Charitable、Vanguard Charitable 或其他慈善赞助机构或券商，请提前联系教会同工。',
+        '本教会更倾向使用 Fidelity Charitable。如您已知道如何建议拨款，请将拨款指定给纽约华人基督复临安息日会，并使用 EIN 11-3004814。如要使用 DAFgiving360（原名 Schwab Charitable）、Vanguard Charitable 或其他慈善赞助机构或券商，请提前联系教会同工。',
       dafOther: '其他赞助机构',
       quote:
         '万军之耶和华说：你们要将当纳的十分之一全然送入仓库，使我家有粮，以此试试我，是否为你们敞开天上的窗户，倾福与你们，甚至无处可容。',
@@ -141,7 +141,7 @@ export default function GiveScreen() {
       dafLabel: 'Fidelity Charitable',
       dafTitle: 'Acciones/Valores',
       dafDesc:
-        'Preferimos Fidelity Charitable. Si ya sabe cómo recomendar una donación, diríjala a New York Chinese Seventh-day Adventist Church usando el EIN 11-3004814. Para Charles Schwab Charitable, Vanguard Charitable u otra organización patrocinadora o casa de corretaje, comuníquese con el personal de la iglesia con anticipación.',
+        'Preferimos Fidelity Charitable. Si ya sabe cómo recomendar una donación, diríjala a New York Chinese Seventh-day Adventist Church usando el EIN 11-3004814. Para DAFgiving360 (anteriormente Schwab Charitable), Vanguard Charitable u otra organización patrocinadora o casa de corretaje, comuníquese con el personal de la iglesia con anticipación.',
       dafOther: 'Otros patrocinadores',
       quote:
         'Traed todos los diezmos al alfolí, y haya alimento en mi casa; y probadme ahora en esto, dice Jehová de los ejércitos, si no os abriré las ventanas de los cielos, y vaciaré sobre vosotros bendición hasta que sobreabunde.',
