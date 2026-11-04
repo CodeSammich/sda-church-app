@@ -46,7 +46,7 @@ Master spreadsheet
 ├── Weekly Data           reviewed final-owner bulletin content
 ├── Name Dictionary        private physical-print name resolution
 ├── Leadership             pastors and elders, for printed titles
-└── Hymn Bank              hymns to copy into Weekly Data; kept up to date by Create Google Doc…
+└── Hymn Bank              hymns to copy into Weekly Data; kept up to date on open
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
@@ -323,7 +323,7 @@ Head | Paul Wen  | Ruth Ho
 
 This tab lists every hymn in the church's two hymnals, to copy into
 `Weekly Data`'s hymn cells instead of typing them (#606). No script reads it.
-**Create Google Doc…** keeps it the same as the app's hymnals (#619), so nobody
+The end of each open keeps it the same as the app's hymnals (#619), so nobody
 pastes or protects it.
 
 ```text
@@ -350,9 +350,10 @@ Chinese Hymnal 505 中文赞美诗 | SDA Hymnal 1985 英文诗歌本
 **How it stays current (#619).** Each Apps Script deploy writes
 `HymnalData.gs` from `features/hymnal/`, with the tab's rows
 (`scripts/build-hymnal-apps-script.cjs`, which builds them with
-`scripts/export-hymn-bank.cjs`). Each time someone opens **Printed Bulletin →
-Create Google Doc…**, after its dialog is up, `ensureHymnBankTab_` checks the
-tab. Usually that's one Document Property, `bulletin.hymnBank.fingerprint`: the
+`scripts/export-hymn-bank.cjs`). At the end of each open, `ensureHymnBankTab_`
+checks the tab, if the open has used less than 20 seconds
+(`HYMN_BANK_OPEN_BUDGET_MS`); otherwise it logs that it skipped, and the next
+open tries again. Usually that's one Document Property, `bulletin.hymnBank.fingerprint`: the
 fingerprint of the rows it last checked or wrote. Only when that differs (after a
 deploy that changed the hymnals), after an edit in the tab (`onEdit` clears the
 fingerprint), or when the tab is missing does it read the tab in one call and
@@ -361,17 +362,18 @@ compare it with those rows:
 - If every cell matches, it does nothing.
 - If any cell differs (a stray edit, a sort, an extra column), it rewrites the
   tab as plain text, with the headers bold and frozen. So when the app's
-  hymnal data changes, the tab follows the first time anyone makes a bulletin
-  after the deploy.
+  hymnal data changes, the tab follows at the first open after the deploy
+  that has the time.
 - If no tab is named `Hymn Bank`, it adds one at the end. A renamed tab is
   left as it is.
 
-It used to run on open, but `onOpen` is a simple trigger with 30 seconds, and the
-first open after the 1.6.1 deploy ran out of time rewriting this tab before it
-built the menu. A menu click has six minutes. Any operator's click can do this,
-so the tab must not be protected. The protection added by hand in #606 should
-be removed: right-click the tab → **Protect sheet** → delete the rule. While
-it's there, an operator it blocks just leaves the tab as it was.
+In 1.6.1 it ran in the middle of the upkeep, and the first open after that
+deploy ran out of `onOpen`'s 30 seconds rewriting this tab, before it built the
+menu (#639). Now the menu comes first and this check comes last, with its time
+limit. Any editor's open can do it, so the tab must not be protected. The
+protection added by hand in #606 should be removed: right-click the tab →
+**Protect sheet** → delete the rule. While it's there, an editor it blocks just
+leaves the tab as it was.
 
 `node scripts/export-hymn-bank.cjs --output hymn-bank.tsv` still writes the
 same rows to a file, for a look without opening the spreadsheet.
@@ -385,7 +387,9 @@ can open the workbook. It is intentionally quiet and does not require an email
 allowlist. The visible custom menu exposes only the Google Doc creation action
 and **Fonts…**; maintenance and setup operations stay hidden. `onOpen` builds the
 menu before anything else, because a simple trigger stops at 30 seconds: an
-open that runs out of time in the upkeep still has the menu.
+open that runs out of time in the upkeep still has the menu. Each upkeep step
+logs how long it took, such as `Upkeep: conflict scan took 8123 ms`, so
+**Extensions → Apps Script → Executions** shows which step is slow (#642).
 
 On open, the script:
 
@@ -401,7 +405,9 @@ On open, the script:
 7. repaints the conflict highlights described below across every schedule row;
 8. tags the tabs and columns it finds by name, so a later rename doesn't lose
    them (see [Columns are read by name](#columns-are-read-by-name)); and
-9. shows one alert, in English and Simplified Chinese, listing any expected
+9. keeps the `Hymn Bank` tab the same as the app's hymnals, if this open has
+   used less than 20 seconds (see [The `Hymn Bank` tab](#the-hymn-bank-tab));
+10. shows one alert, in English and Simplified Chinese, listing any expected
    column or tab still missing from `Sabbath Calendar` or `Weekly Data`, and
    any tab or column renamed, or any name more than one column has, since the
    last notice.

@@ -187,23 +187,39 @@ function runBulletinScheduleMaintenance_(now) {
     return { skipped: true, reason: 'another maintenance run is active' };
   }
 
+  // Logs each step's time, so an open that runs out of its 30 seconds shows
+  // in Executions which step took them (#642).
+  var lap = new Date().getTime();
+  var timed = function (step) {
+    var now = new Date().getTime();
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Upkeep: ' + step + ' took ' + (now - lap) + ' ms');
+    }
+    lap = now;
+  };
   try {
     var sheet = getBulletinScheduleMaintenanceSheet_();
     ensureBulletinHeaderProtections_();
+    timed('header protections');
     var validation = {
       installed: installSabbathCalendarEnglishValidation_(sheet),
       updatedAfterQuarterAppend: false,
     };
+    timed('English-only rule');
     var populated = populateUpcomingBulletinQuarters_(sheet, now);
     if (populated) {
       validation.updatedAfterQuarterAppend = updateSabbathCalendarEnglishValidation_(
         sheet,
       );
     }
+    timed('quarter rows');
     var weeklyRows = populateUpcomingWeeklyDataRowsSafely_(now);
+    timed('Weekly Data');
     var hidden = hideOldBulletinScheduleRows_(sheet, now);
+    timed('hiding old rows');
     // Runs after quarter rows are appended so the scan covers every row.
     var conflicts = refreshScheduleRosterChecksSafely_(sheet);
+    timed('conflict scan');
     SpreadsheetApp.flush();
     return {
       populated: populated,
@@ -218,6 +234,7 @@ function runBulletinScheduleMaintenance_(now) {
     // without its Date column, so the other tabs and columns keep their tags.
     try {
       tagBulletinTabsAndColumnsSafely_(SpreadsheetApp.getActiveSpreadsheet());
+      timed('tags');
     } finally {
       lock.releaseLock();
     }
@@ -386,12 +403,10 @@ function ensureBulletinHeaderProtection_(sheet, headerCount) {
   });
 
   var protection = matching.length ? matching[0] : headerRange.protect();
-  protection.setDescription(
+  restrictBulletinProtection_(
+    protection,
     BULLETIN_HEADER_PROTECTION_DESCRIPTION + ' Sheet: ' + sheet.getName(),
   );
-  protection.setWarningOnly(false);
-  protection.setDomainEdit(false);
-  protection.setEditors([BULLETIN_HEADER_PROTECTION_EDITOR]);
 
   // Remove duplicate header protections left by older manual setup so the
   // effective editor list cannot diverge between overlapping locks.
@@ -400,6 +415,38 @@ function ensureBulletinHeaderProtection_(sheet, headerCount) {
   });
 
   return protection;
+}
+
+/**
+ * Leaves only the technology group as an editor of a managed protection, and
+ * changes a setting only if it differs, so most opens just read them. Until
+ * #642 this called protection.setEditors, which Apps Script doesn't have, so
+ * every open failed here and nothing was restricted. Removing the owner or
+ * the person running the script does nothing: Apps Script keeps them.
+ */
+function restrictBulletinProtection_(protection, description) {
+  if (protection.getDescription() !== description) {
+    protection.setDescription(description);
+  }
+  if (protection.isWarningOnly()) {
+    protection.setWarningOnly(false);
+  }
+  if (protection.canDomainEdit()) {
+    protection.setDomainEdit(false);
+  }
+  var group = BULLETIN_HEADER_PROTECTION_EDITOR.toLowerCase();
+  var editors = protection.getEditors().map(function (user) {
+    return String(user.getEmail() || '').toLowerCase();
+  });
+  if (editors.indexOf(group) === -1) {
+    protection.addEditor(BULLETIN_HEADER_PROTECTION_EDITOR);
+  }
+  var others = editors.filter(function (email) {
+    return email && email !== group;
+  });
+  if (others.length) {
+    protection.removeEditors(others);
+  }
 }
 
 function ensureBulletinScheduleFixedColumnProtection_(sheet) {
@@ -416,10 +463,7 @@ function ensureBulletinScheduleFixedColumnProtection_(sheet) {
   });
 
   var protection = matching.length ? matching[0] : fixedColumnRange.protect();
-  protection.setDescription('Fixed date and quarter columns; technology team only.');
-  protection.setWarningOnly(false);
-  protection.setDomainEdit(false);
-  protection.setEditors([BULLETIN_HEADER_PROTECTION_EDITOR]);
+  restrictBulletinProtection_(protection, 'Fixed date and quarter columns; technology team only.');
   matching.slice(1).forEach(function (duplicate) {
     duplicate.remove();
   });
@@ -737,9 +781,9 @@ function applyWeeklyDataRules_(sheet, dateColumn, locationColumn) {
  * needs no protection. A deleted tab comes back at the end. Returns what it
  * did.
  *
- * It runs after Printed Bulletin → Create Google Doc… opens its dialog, not on
- * open: onOpen is a simple trigger with 30 seconds, and the first open after
- * the 1.6.1 deploy ran out of time rewriting this tab, before the menu.
+ * It runs at the end of onOpen, and only while the open has used less than
+ * HYMN_BANK_OPEN_BUDGET_MS of its 30 seconds: the first open after the 1.6.1
+ * deploy ran out of time rewriting this tab, before it built the menu (#639).
  *
  * Most runs read nothing but one Document Property: the fingerprint of the
  * rows last checked or written. Only a deploy that changed the hymnals, an
@@ -783,6 +827,9 @@ function ensureHymnBankTab_(spreadsheet) {
 }
 
 var HYMN_BANK_TAB_NAME = 'Hymn Bank';
+// An open that has used more than this skips the check, which the next open
+// does instead.
+var HYMN_BANK_OPEN_BUDGET_MS = 20000;
 // A Document Property, so it stays off the Script Properties page.
 var HYMN_BANK_FINGERPRINT_PROPERTY = 'bulletin.hymnBank.fingerprint';
 

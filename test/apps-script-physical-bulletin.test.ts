@@ -538,32 +538,24 @@ describe('printed bulletin Apps Script helpers', () => {
 
   it('restricts managed header and date/quarter protections to the technology group', () => {
     const calls: string[] = [];
-    const headerProtection = {
-      getRange: () => ({
-        getRow: () => 1,
-        getColumn: () => 1,
-        getNumRows: () => 1,
-        getNumColumns: () => 25,
-      }),
+    // Only methods Apps Script's Protection has: until #642 the code called
+    // setEditors, which it doesn't, and a fake that had one hid the bug.
+    const fakeProtection = (rows: number, columns: number, state: { editors: string[]; warning: boolean; domain: boolean; description: string }) => ({
+      getRange: () => ({ getRow: () => 1, getColumn: () => 1, getNumRows: () => rows, getNumColumns: () => columns }),
+      getDescription: () => state.description,
       setDescription: (value: string) => calls.push(`description:${value}`),
+      isWarningOnly: () => state.warning,
       setWarningOnly: (value: boolean) => calls.push(`warning:${value}`),
+      canDomainEdit: () => state.domain,
       setDomainEdit: (value: boolean) => calls.push(`domain:${value}`),
-      setEditors: (value: string[]) => calls.push(`editors:${value.join(',')}`),
+      getEditors: () => state.editors.map((email) => ({ getEmail: () => email })),
+      addEditor: (email: string) => calls.push(`add:${email}`),
+      removeEditors: (emails: string[]) => calls.push(`remove editors:${emails.join(',')}`),
       remove: () => calls.push('remove'),
-    };
-    const columnProtection = {
-      getRange: () => ({
-        getRow: () => 1,
-        getColumn: () => 1,
-        getNumRows: () => 53,
-        getNumColumns: () => 2,
-      }),
-      setDescription: (value: string) => calls.push(`description:${value}`),
-      setWarningOnly: (value: boolean) => calls.push(`warning:${value}`),
-      setDomainEdit: (value: boolean) => calls.push(`domain:${value}`),
-      setEditors: (value: string[]) => calls.push(`editors:${value.join(',')}`),
-      remove: () => calls.push('remove'),
-    };
+    });
+    const loose = { editors: ['Someone@example.com'], warning: true, domain: true, description: 'old' };
+    const headerProtection = fakeProtection(1, 25, { ...loose });
+    const columnProtection = fakeProtection(53, 2, { ...loose });
     const sheet = {
       getRange: (notation: string) => ({
         protect: () => {
@@ -585,12 +577,22 @@ describe('printed bulletin Apps Script helpers', () => {
       context,
     );
 
-    expect(calls.filter((call) => call.startsWith('editors:'))).toEqual([
-      'editors:technology@nyccsda.org',
-      'editors:technology@nyccsda.org',
+    expect(calls.filter((call) => /^(add|remove editors):/.test(call))).toEqual([
+      'add:technology@nyccsda.org',
+      'remove editors:someone@example.com',
+      'add:technology@nyccsda.org',
+      'remove editors:someone@example.com',
     ]);
     expect(calls.filter((call) => call === 'domain:false')).toHaveLength(2);
     expect(calls.filter((call) => call === 'warning:false')).toHaveLength(2);
+
+    // Already restricted: an open only reads them.
+    calls.length = 0;
+    const tight = { editors: ['technology@nyccsda.org'], warning: false, domain: false, description: 'Fixed date and quarter columns; technology team only.' };
+    const done = fakeProtection(53, 2, tight);
+    (context as { doneSheet: unknown }).doneSheet = { ...sheet, getProtections: () => [done] };
+    runInContext(`ensureBulletinScheduleFixedColumnProtection_(doneSheet);`, context);
+    expect(calls).toEqual([]);
   });
 
   it('finds no missing Saturdays in a complete quarter', () => {

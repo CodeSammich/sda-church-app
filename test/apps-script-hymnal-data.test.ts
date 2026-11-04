@@ -106,7 +106,7 @@ describe('the printed hymn lookup (#619)', () => {
   });
 });
 
-describe('the Hymn Bank tab, kept when Create Google Doc… opens (#619)', () => {
+describe('the Hymn Bank tab, kept on open with time to spare (#619, #639)', () => {
   const rows: string[][] = data.hymnBankRows;
 
   // A fake tab that records every change.
@@ -283,26 +283,44 @@ describe('the Hymn Bank tab, kept when Create Google Doc… opens (#619)', () =>
 
   // onOpen is a simple trigger with 30 seconds, and the first open after the
   // 1.6.1 deploy ran out of time rewriting this tab, before it built the menu.
-  it('runs after the Create Google Doc… dialog is up, never in the open-time upkeep', () => {
+  const openWith = (budget: number) => {
     const calls: string[] = [];
+    const logs: string[] = [];
+    const menu = { addItem: () => menu, addToUi: () => { calls.push('menu'); return menu; } };
     const context = load(['BulletinApi.gs', 'BulletinScheduleMaintenance.gs', 'ScheduleAssignmentChecks.gs', 'PrintedBulletin.gs'], {
-      HtmlService: {
-        createHtmlOutput: () => ({ setWidth() { return this; }, setHeight() { return this; } }),
-      },
-      SpreadsheetApp: {
-        getUi: () => ({ showModalDialog: () => calls.push('dialog') }),
-        getActiveSpreadsheet: () => ({ getSheetByName: () => null }),
-      },
+      testCalls: calls,
+      Logger: { log: (message: string) => logs.push(message) },
+      SpreadsheetApp: { getUi: () => ({ createMenu: () => menu }), getActiveSpreadsheet: () => ({}) },
     });
     runInContext(
-      `ensureScheduleNameCheckTrigger_ = function () {};
+      `HYMN_BANK_OPEN_BUDGET_MS = ${budget};
+       maintainBulletinScheduleOnOpen_ = function () { testCalls.push('upkeep'); };
+       getMissingBulletinColumns_ = function () { return []; };
+       getRenamedBulletinTabsAndColumns_ = function () { return []; };
        ensureHymnBankTabSafely_ = function () { testCalls.push('hymn bank'); };`,
-      Object.assign(context, { testCalls: calls }),
+      context,
     );
-    runInContext('createPrintedBulletinFromPrompt()', context);
+    runInContext('onOpen()', context);
+    return { calls, logs, context };
+  };
 
-    expect(calls).toEqual(['dialog', 'hymn bank']);
+  it('runs last in onOpen, after the menu and the upkeep', () => {
+    expect(openWith(1e9).calls).toEqual(['menu', 'upkeep', 'hymn bank']);
+  });
+
+  it('skips, and says so, when the open has used its budget, and the next open tries again', () => {
+    const { calls, logs } = openWith(-1);
+
+    expect(calls).toEqual(['menu', 'upkeep']);
+    expect(logs.some((line) => /^Skipped the Hymn Bank check: this open has used \d+ ms\.$/.test(line))).toBe(true);
+  });
+
+  it('is not in the open-time upkeep or the Create Google Doc… dialog', () => {
+    const { context } = openWith(1e9);
+
+    expect(runInContext('HYMN_BANK_OPEN_BUDGET_MS = 20000; HYMN_BANK_OPEN_BUDGET_MS', load(['BulletinApi.gs', 'BulletinScheduleMaintenance.gs']))).toBe(20000);
     expect(runInContext('runBulletinScheduleMaintenance_.toString()', context)).not.toContain('HymnBank');
+    expect(runInContext('createPrintedBulletinFromPrompt.toString()', context)).not.toContain('HymnBank');
     expect(runInContext(`Object.keys(BULLETIN_TABS)`, context)).not.toContain('Hymn Bank');
   });
 });
