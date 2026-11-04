@@ -247,7 +247,7 @@ GitHub's code scanning default setup and have no workflow file.
   workflows write it through `key-screens-review.yml`, a reusable workflow with no check
   of its own, so a rerun of Android's join updates the comment with the rerun's results.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
-  iPhone and Android screenshots in the `screenshot-review` environment; see
+  iOS (iPhone and iPad) and Android screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
 - The compiling runner reuses the compiled native code that `iOS compile cache` saved on
   `main`, read-only.

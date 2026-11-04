@@ -123,7 +123,7 @@ describe('refreshing the review comment from the Android run', () => {
     expect(patched).toContain('✅ The automatic checks passed on both platforms');
     expect(patched).toContain(androidLink);
     expect(patched).toContain(
-      '[the iPhone screenshots](https://github.com/org/repo/actions/runs/200/artifacts/901) (a zip of about 159 MB)',
+      '[the iOS screenshots](https://github.com/org/repo/actions/runs/200/artifacts/901) (a zip of about 159 MB)',
     );
     // The approval is still on the iPhone run.
     expect(patched).toContain('opens [this run](https://github.com/org/repo/actions/runs/200), clicks **Review deployments**');
@@ -131,7 +131,7 @@ describe('refreshing the review comment from the Android run', () => {
 
   it('says which platform failed', () => {
     const { patched } = postOrRefresh({ ...androidRerun, CHECKS: 'failure' }, api);
-    expect(patched).toContain('⚠️ **The automatic checks failed or didn\'t finish** (iPhone: success, Android: failure).');
+    expect(patched).toContain('⚠️ **The automatic checks failed or didn\'t finish** (iOS: success, Android: failure).');
   });
 
   it("leaves the comment to the iPhone run until it's posted, and never touches another commit's", () => {
@@ -164,13 +164,13 @@ describe('posting the review comment from the iPhone run', () => {
       'api repos/org/repo/issues/631/comments',
     ]);
     expect(posted).toContain(androidLink);
-    expect(posted).toContain('[the iPhone Simulator app](https://github.com/org/repo/actions/runs/200/artifacts/902)');
+    expect(posted).toContain('[the iOS Simulator app](https://github.com/org/repo/actions/runs/200/artifacts/902)');
   });
 
   it("says the Android screenshots aren't ready if its join hasn't finished", () => {
     const { posted } = postOrRefresh(iosRun, { ...api, joins: { 200: 'success', 100: 'not finished' } });
     expect(posted).toContain("the Android screenshots, which aren't ready: [their runs]");
-    expect(posted).toContain('(iPhone: success, Android: not finished)');
+    expect(posted).toContain('(iOS: success, Android: not finished)');
   });
 
   it('writes the same comment as the Android refresh, once both have finished', () => {
@@ -223,7 +223,7 @@ describe('the shared review comment workflow', () => {
   it("links each run's newest unexpired download, which is a rerun's own", () => {
     expect(review).toContain('[.artifacts[] | select(.expired | not) | select($3)] | max_by(.id) // empty');
     expect(review).toContain(
-      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"`,
+      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"`,
     );
     expect(review).toContain(
       `android="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"`,

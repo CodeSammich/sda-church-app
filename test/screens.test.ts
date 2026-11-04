@@ -361,9 +361,9 @@ describe('iOS key screens', () => {
     // key-screens-review.yml writes the comment for this workflow.
     const comment = repoFile('.github/workflows/key-screens-review.yml');
     expect(comment).toContain(
-      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"`,
+      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"`,
     );
-    expect(comment).toContain(`app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iPhone Simulator app')"`);
+    expect(comment).toContain(`app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iOS Simulator app')"`);
   });
 
   it('re-checks an earlier run from its screenshots, or from the app download of runs before the split', () => {
