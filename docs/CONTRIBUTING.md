@@ -222,8 +222,9 @@ GitHub's code scanning default setup and have no workflow file.
 ### `Bulletin API Integration` (`.github/workflows/bulletin-integration.yml`)
 
 - Check: `verify-bulletin-api`. Runs on the release PR into `main`, and by hand.
-- Runs `npm run test:integration:bulletin` against the production bulletin API. It calls
-  the deployed Apps Script, not the PR's code.
+- Runs `npm run test:integration:bulletin` against the production bulletin API, for the
+  coming Sabbath (`BULLETIN_TEST_DATE` picks another). It calls the deployed Apps
+  Script, not the PR's code.
 
 ### `Android preview APK` (`.github/workflows/android-preview-apk.yml`)
 

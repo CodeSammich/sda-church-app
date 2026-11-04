@@ -1,7 +1,9 @@
+import { comingSabbath } from './coming-sabbath.mjs';
+
 const API_BASE_URL =
   process.env.BULLETIN_API_URL ||
   'https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec';
-const TEST_DATE = process.env.BULLETIN_TEST_DATE || '2026-08-08';
+const TEST_DATE = process.env.BULLETIN_TEST_DATE || comingSabbath();
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);

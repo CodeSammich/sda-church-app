@@ -657,6 +657,19 @@ accessible anonymously. This is required for an installed app that cannot stop
 for an interactive Google login. The endpoint must therefore remain narrowly
 allowlisted and privacy-filtered.
 
+It also answers only for dates near today: from 14 days back to 120 days ahead
+(`publicDaysBack` and `publicDaysAhead` in `BulletinApi.gs`), so nobody can read
+the roster's history week by week. The app asks only for this Sabbath and the
+next; the API checks ask for the coming Sabbath. Any other date gets
+`Bulletins are available from … to …`. The printed bulletin doesn't go through the
+web app, so it can still be made for any date.
+
+The errors it returns are the ones written for callers: a bad date, a date
+outside that window, and the missing-schedule errors above, which the app shows
+under the bulletin. Any other failure, such as a Google service error, returns
+`The bulletin is unavailable right now. Please try again later.`, and the details
+go to the project's execution log (**Executions** in the Apps Script editor).
+
 ## Privacy, auto-translation, and name behavior
 
 The public `/exec` endpoint is anonymous by design, so every returned value must
