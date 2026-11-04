@@ -1,0 +1,8 @@
+{
+  "name": "apps-script-deploy-tools",
+  "private": true,
+  "description": "clasp, locked for the Deploy Bulletin Apps Script job. Installed with npm ci --ignore-scripts.",
+  "dependencies": {
+    "@google/clasp": "3.4.1"
+  }
+}

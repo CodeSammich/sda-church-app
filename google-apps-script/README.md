@@ -25,11 +25,13 @@ From the repository root:
    installed `pinyin-pro` package and stops if it is missing, and builds
    `HymnalData.gs` from `features/hymnal/` (#619).
 2. Install clasp and sign in with a Google account that can edit the Apps
-   Script project:
+   Script project. The deploy script uses the clasp locked in
+   `tools/apps-script/`, as the deploy workflow does, or else one on your
+   `PATH`:
 
    ```bash
-   npm install --global @google/clasp
-   clasp login    # add --no-localhost in WSL if the browser sign-in can't return
+   npm ci --ignore-scripts --prefix tools/apps-script
+   tools/apps-script/node_modules/.bin/clasp login    # add --no-localhost in WSL if the browser sign-in can't return
    ```
 
 3. Copy `google-apps-script/.clasp.json.example` to `.clasp.json` and

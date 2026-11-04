@@ -61,6 +61,11 @@ const CHECKLIST = [
         'governance-principles',
       ],
       [
+        'Bulletin spreadsheet: only the people who plan the roster or make bulletins can edit it (Share), since its editors can also edit its Apps Script. Everyone else views or comments.',
+        'docs/operations/admin-runbook.md',
+        'apps-script-edited-outside-git',
+      ],
+      [
         'Faith Comes By Hearing: the Bible Brain API key is still in the IT Admin shared drive, and still needed; nothing uses it yet (#241).',
         'docs/operations/admin-runbook.md',
         'credentials-that-need-attention',

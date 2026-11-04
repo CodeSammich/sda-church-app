@@ -45,6 +45,10 @@ describe('printed bulletin QR codes', () => {
 
     const upload = workflow.slice(workflow.indexOf('  upload-to-drive:'));
     expect(upload).toContain('environment: production');
+    // Only main in the church repository uploads, like the other production jobs.
+    const condition = upload.slice(upload.indexOf('if:'), upload.indexOf('name:'));
+    expect(condition).toContain("github.ref == 'refs/heads/main'");
+    expect(condition).toContain('github.event.repository.fork == false');
     expect(upload).toMatch(/ref: main\n\s+path: trusted-source/);
     expect(upload).toContain('node trusted-source/scripts/upload-google-drive.mjs');
   });
