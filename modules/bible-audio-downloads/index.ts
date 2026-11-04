@@ -65,7 +65,7 @@ export type BibleAudioSystemDownloads = Readonly<{
   triesEverySource?: boolean;
   /** Whether the app's own notifications show a download: no on Android 13 and lower, whose system shows its own. */
   ownNotifications?: boolean;
-  /** The member's choice in You, and the notifications' words in the app's language. */
+  /** The member's choice on Offline Bible Audio, and the notifications' words in the app's language. */
   setNotificationOptions?(enabled: boolean, text: DownloadNotificationText): Promise<void>;
   getNotificationPermission?(): Promise<NotificationPermission>;
   /** Asks, if the phone still lets the app ask. */

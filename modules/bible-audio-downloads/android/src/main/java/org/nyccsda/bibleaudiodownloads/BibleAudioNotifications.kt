@@ -17,7 +17,8 @@ import org.json.JSONObject
  * download's progress while it runs out of sight, with Stop, and a word when
  * it's done or waits for Wi-Fi. Only for a download the member started, and
  * only with the member's leave: the app asks the first time a long download
- * starts, never at launch, and You → Download notifications turns them off.
+ * starts, never at launch, and Offline Bible Audio → Download notifications
+ * turns them off.
  *
  * Android 14 and later require a notification while a user-initiated job runs
  * (BibleAudioTransferService). With notifications off, it's the quiet kind,

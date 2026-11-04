@@ -24,6 +24,15 @@ jest.mock('@/components/AppAlert', () => ({
   ...jest.requireActual('@/components/AppAlert'),
   showAppAlert: jest.fn(),
 }));
+// Where the phone shows the app's own download notifications (#610).
+let mockOwnNotifications = false;
+const mockSetNotifications = jest.fn(async () => undefined);
+jest.mock('@/services/DownloadNotifications', () => ({
+  ...jest.requireActual('@/services/DownloadNotifications'),
+  hasDownloadNotifications: () => mockOwnNotifications,
+  getDownloadNotificationsOn: () => false,
+  setDownloadNotificationsEnabled: (enabled: boolean) => mockSetNotifications(enabled),
+}));
 let mockParams: Record<string, string> = {};
 let mockScreenOptions: Record<string, unknown> = {};
 jest.mock('expo-router', () => ({
@@ -222,6 +231,24 @@ describe('Offline Bible Audio', () => {
     await act(async () => undefined);
     expect(showAppAlert).not.toHaveBeenCalled();
     expect(getBibleAudioScopeStatus('cuv-mandarin', { kind: 'bible' }).downloading).toBe(true);
+  });
+
+  it('offer the download notifications switch below the narrator, where the app has its own', async () => {
+    mockOwnNotifications = true;
+    try {
+      const screen = await renderPage({ narrator: 'cuv-mandarin' });
+      const toggle = screen.getByRole('switch', { name: /^Download notifications\./ });
+      expect(toggle.props.accessibilityState).toMatchObject({ checked: false });
+      await fireEvent.press(toggle);
+      expect(mockSetNotifications).toHaveBeenCalledWith(true);
+    } finally {
+      mockOwnNotifications = false;
+    }
+  });
+
+  it('show no switch where the phone shows its own download notification instead', async () => {
+    const screen = await renderPage({ narrator: 'cuv-mandarin' });
+    expect(screen.queryByTestId('download-notifications')).toBeNull();
   });
 
   it("say so when the phone is offline or hasn't the room, and download nothing", async () => {

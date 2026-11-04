@@ -19,14 +19,14 @@ import { Linking, Platform } from 'react-native';
  * - None is needed for a download to go on in the background: Android 14 and
  *   later show it in their Task Manager without leave, and Android 13 and lower
  *   and the iPhone need none.
- * - You → Download notifications turns them off.
+ * - Offline Bible Audio → Download notifications turns them off.
  *
  * - Android 14 and later: the progress, with Stop, and done or waiting for
  *   Wi-Fi. Android requires one while a download runs out of sight, so with
  *   them off it's the quiet kind.
  * - iPhone: a word when it's done, as iOS shows no progress for it.
  * - Android 13 and lower: the system's own download notification, which the
- *   app doesn't change, so You has no switch there.
+ *   app doesn't change, so Offline Bible Audio has no switch there.
  */
 
 export const DOWNLOAD_NOTIFICATIONS_STORAGE_KEY = 'downloadNotifications';
@@ -39,33 +39,33 @@ const ASK: Readonly<
 > = {
   en: {
     title: 'Show this download’s progress?',
-    message: 'A notification shows how far it is, with Stop, and when it’s done. The download keeps going either way. You can turn this off in You.',
+    message: 'A notification shows how far it is, with Stop, and when it’s done. The download keeps going either way. You can turn this on or off here, under Download notifications.',
     iosTitle: 'Get a notice when it’s done?',
-    iosMessage: 'The download keeps going either way. You can turn this off in You.',
+    iosMessage: 'The download keeps going either way. You can turn this on or off here, under Download notifications.',
     notNow: 'Not now',
     allow: 'Allow',
   },
   zh: {
     title: '顯示這次下載的進度？',
-    message: '通知會顯示下載進度、「停止」按鈕，以及何時完成。不論是否允許，下載都會繼續。您可以在「您」頁面關閉。',
+    message: '通知會顯示下載進度、「停止」按鈕，以及何時完成。不論是否允許，下載都會繼續。您可以在本頁的「下載通知」開啟或關閉。',
     iosTitle: '下載完成時通知您？',
-    iosMessage: '不論是否允許，下載都會繼續。您可以在「您」頁面關閉。',
+    iosMessage: '不論是否允許，下載都會繼續。您可以在本頁的「下載通知」開啟或關閉。',
     notNow: '以後再說',
     allow: '允許',
   },
   'zh-cn': {
     title: '显示这次下载的进度？',
-    message: '通知会显示下载进度、“停止”按钮，以及何时完成。无论是否允许，下载都会继续。您可以在“您”页面关闭。',
+    message: '通知会显示下载进度、“停止”按钮，以及何时完成。无论是否允许，下载都会继续。您可以在本页的“下载通知”开启或关闭。',
     iosTitle: '下载完成时通知您？',
-    iosMessage: '无论是否允许，下载都会继续。您可以在“您”页面关闭。',
+    iosMessage: '无论是否允许，下载都会继续。您可以在本页的“下载通知”开启或关闭。',
     notNow: '以后再说',
     allow: '允许',
   },
   es: {
     title: '¿Mostrar el progreso de esta descarga?',
-    message: 'Una notificación muestra cuánto lleva, con Detener, y cuándo termina. La descarga sigue de todos modos. Puedes desactivarlo en Tú.',
+    message: 'Una notificación muestra cuánto lleva, con Detener, y cuándo termina. La descarga sigue de todos modos. Puedes activarlo o desactivarlo aquí, en Notificaciones de descarga.',
     iosTitle: '¿Avisarte cuando termine?',
-    iosMessage: 'La descarga sigue de todos modos. Puedes desactivarlo en Tú.',
+    iosMessage: 'La descarga sigue de todos modos. Puedes activarlo o desactivarlo aquí, en Notificaciones de descarga.',
     notNow: 'Ahora no',
     allow: 'Permitir',
   },
@@ -134,12 +134,12 @@ const listeners = new Set<() => void>();
 
 const system = () => getBibleAudioSystemDownloads();
 
-/** Whether the phone shows the app's own download notifications, so You offers the switch. */
+/** Whether the phone shows the app's own download notifications, so Offline Bible Audio offers the switch. */
 export const hasDownloadNotifications = () => !!system()?.ownNotifications && !!system()?.setNotificationOptions;
 
 export const getDownloadNotificationsEnabled = () => enabled;
 
-/** What You's switch shows: on only if the member wants them and the phone allows them. */
+/** What the switch on Offline Bible Audio shows: on only if the member wants them and the phone allows them. */
 export const getDownloadNotificationsOn = () => enabled && granted;
 
 /** Whether the phone allows them, as after the member changed it in Settings. */
@@ -169,7 +169,7 @@ export const loadDownloadNotifications = async (appLanguage: SupportedLanguage) 
 };
 
 /**
- * The switch in You. Turned on where the phone won't let the app ask again,
+ * The switch on Offline Bible Audio. Turned on where the phone won't let the app ask again,
  * it opens the app's settings, where the member can allow them.
  */
 export const setDownloadNotificationsEnabled = async (value: boolean) => {

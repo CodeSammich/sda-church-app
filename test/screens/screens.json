@@ -203,12 +203,12 @@
     {
       "name": "offline-bible-audio",
       "group": "bible-reading",
-      "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete. The text readers may read a closed section's chevron with its title (\"> Law\") and drop the spaces in \"英語 – Souer\" and \"66 卷\", so the rules allow both.",
+      "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete. Below the narrator, Download notifications (#610), the switch for the app's own download notifications, which both phones that capture have. The text readers may read a closed section's chevron with its title (\"> Law\") and drop the spaces in \"英語 – Souer\" and \"66 卷\", so the rules allow both.",
       "path": "you/audio-downloads?narrator=souer",
       "variants": ["default", "zh"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–]\\s*Souer", "^Whole Bible$", "^66 books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
-        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–]\\s*Souer", "^整本聖經$", "^66\\s*卷", "^舊約$", "(^|\\s)摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
+        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–]\\s*Souer", "^Download notifications$", "^Whole Bible$", "^66 books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
+        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–]\\s*Souer", "^下載通知$", "^整本聖經$", "^66\\s*卷", "^舊約$", "(^|\\s)摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
       }
     },
     {
@@ -485,12 +485,12 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting but one, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only. Download notifications, the last, turns off the app\u2019s notifications for downloads (#610), where the app shows its own: the iPhone, and Android 14 and later. Its line is checked on the iPhone, where it pushes About & Support's items down: the heading shows, and in Chinese Share the App below it, but Help & Feedback, and Share the App in English, are below the fold (run 41741902378). The share-app screen checks Share the App's popup.",
+      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Offline Bible Audio$", { "line": "^Download notifications$", "platforms": ["ios"] }, { "line": "^About & Support$", "platforms": ["ios"] }] },
-        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, "^離線聖經音訊$", { "line": "^下載通知$", "platforms": ["ios"] }, { "line": "^關於與支援$", "platforms": ["ios"] }] }
+        "default": { "mustShowLines": [{ "line": "^Share the App$", "platforms": ["ios"] }, "^Offline Bible Audio$"] },
+        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, { "line": "幫助與意見回饋", "platforms": ["ios"] }, "^離線聖經音訊$"] }
       }
     },
     {

@@ -263,7 +263,7 @@ with the phone locked, with no foreground service of the app's:
 - **Android 13 and lower:** Android's `DownloadManager`, a system service, which adds no
   permission.
 - **Notifications (#610):** `POST_NOTIFICATIONS`, asked for only when a long download
-  starts, with the app's own explanation first, or when the member turns on You →
+  starts, with the app's own explanation first, or when the member turns on Offline Bible Audio →
   Download notifications; never at launch. They're made on the
   phone, about that download only; no push service, token, or server is involved, so
   Data safety and App Privacy don't change. The iPhone asks iOS the same way, for a word

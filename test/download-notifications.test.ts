@@ -17,7 +17,7 @@ import { Linking, Platform } from 'react-native';
 
 // The app's first notifications (#610): only for a Bible audio download the
 // member started, asked for at need with the app's own words first, and one
-// switch in You. docs/UI_UX.md, "Notifications", is the policy.
+// switch on Offline Bible Audio. docs/UI_UX.md, "Notifications", is the policy.
 jest.mock('@/components/AppAlert', () => ({ showAppAlert: jest.fn() }));
 const mockPermission = { status: 'undetermined', granted: false, canAskAgain: true };
 const mockSystem = {
@@ -79,7 +79,7 @@ describe('download notifications', () => {
     const words = getDownloadNotificationQuestion('en');
     expect(title).toBe(Platform.OS === 'ios' ? words.iosTitle : words.title);
     expect(message).toContain('The download keeps going either way.');
-    expect(message).toContain('You can turn this off in You.');
+    expect(message).toContain('You can turn this on or off here, under Download notifications.');
     expect(buttons.map(({ text }: { text: string }) => text)).toEqual(['Not now', 'Allow']);
     expect(mockSystem.requestNotificationPermission).not.toHaveBeenCalled();
     await answer(ask, 'Allow');
@@ -124,7 +124,7 @@ describe('download notifications', () => {
     expect(mockSystem.requestNotificationPermission).not.toHaveBeenCalled();
   });
 
-  it('turn off and on from You, kept for next time, and open Settings where the phone won’t let the app ask', async () => {
+  it('turn off and on from Offline Bible Audio, kept for next time, and open Settings where the phone won’t let the app ask', async () => {
     const settings = jest.spyOn(Linking, 'openSettings').mockResolvedValue(undefined);
     Object.assign(mockPermission, { status: 'granted', granted: true, canAskAgain: false });
     await loadDownloadNotifications('es');

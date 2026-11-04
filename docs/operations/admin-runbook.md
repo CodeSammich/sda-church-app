@@ -707,18 +707,19 @@ app's own code, while Android uses a native queue.
   lower still use it. iOS paces a
   background session's downloads as it sees fit, so a slow hour there is worth an
   issue, not a failed release.
-- [ ] **Download notifications (#610).** On a fresh install, open You: the app hasn't
-  asked about notifications. Start a section of several books, such as the Gospels, in
-  Offline Bible Audio: the app's own popup asks first, saying the download keeps going
-  either way; tap **Not now**, and the download goes on with no question from the phone.
+- [ ] **Download notifications (#610).** On a fresh install, open You → Offline Bible
+  Audio: the app hasn't asked about notifications, and **Download notifications**, below the
+  narrator, is off. Start a section of several books, such as the Gospels: the app's own
+  popup asks first, saying the download keeps going either way and where to turn this on
+  or off; tap **Not now**, and the download goes on with no question from the phone.
   Start another such section: no popup.
   Start a Testament: it asks once more; tap **Allow**, then allow the phone's question.
   - **Android 14 and later:** the notification shows the narrator and "N of M chapters",
-    and Stop stops it, as the page's X does. In You, turn **Download notifications** off:
-    the next download's notification is the quiet kind, minimized.
+    and Stop stops it, as the page's X does. Turn **Download notifications** off on the
+    page: the next download's notification is the quiet kind, minimized.
   - **iPhone:** lock the phone until a download finishes: a notification says it's done.
-  - **Android 13 and lower:** only the system's download notification shows, and You has
-    no switch.
+  - **Android 13 and lower:** only the system's download notification shows, and the page
+    has no switch.
 - [ ] **Offline start.** After using the app online, close it fully, turn on airplane
   mode, and open it. It starts, and the **Home** tab and the bulletin show what they
   last loaded.

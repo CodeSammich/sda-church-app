@@ -6,7 +6,7 @@ import UserNotifications
 /// first: a word when a download finishes while the app is out of sight, or
 /// that it couldn't. Only for a download the member started, and only with the
 /// member's leave: the app asks the first time a long download starts, never at
-/// launch, and You → Download notifications turns them off.
+/// launch, and Offline Bible Audio → Download notifications turns them off.
 ///
 /// iOS shows no progress for a background download, and wakes the app only
 /// when a session's tasks are done (BibleAudioDownloadSessions), so there's no

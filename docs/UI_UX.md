@@ -244,13 +244,15 @@ simple, blended colors.
     - **Android 13 and lower:** nothing of the app's. The system's own download notification
       shows the chapters, as Android requires for them to download while the phone is locked.
   - **Asked at need, never at launch.** The first time a download of a section of several
-    books or more starts, the app's own popup asks first, since the phone's question can't say why: what
-    the notifications are for, that the download keeps going either way, and that You turns
-    them off. Only **Allow** brings the phone's question. After **Not now**, the app asks once
-    more at most, at the next Testament or whole Bible, and then never. Turning them on in
-    You asks the phone at once, or opens the app's settings where the phone won't ask again.
-  - **One switch:** You → **Download notifications**. It shows on only when the member wants
-    them and the phone allows them.
+    books or more starts, the app's own popup asks first, since the phone's question can't
+    say why: what the notifications are for, that the download keeps going either way, and
+    that the page's switch turns them on or off. Only **Allow** brings the phone's question.
+    After **Not now**, the app asks once more at most, at the next Testament or whole Bible,
+    and then never. Turning the switch on asks the phone at once, or opens the app's settings
+    where the phone won't ask again.
+  - **One switch:** **Download notifications**, on Offline Bible Audio, below the narrator,
+    with the downloads it's about. It shows on only when the member wants them and the phone
+    allows them.
   - **Never:** badges, reminders to come back, sounds, marketing, or anything sent from a
     server. They're made on the phone, so nothing about them leaves it, and Data safety and
     App Privacy don't change.
