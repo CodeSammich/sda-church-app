@@ -1007,10 +1007,12 @@ Store release, are how iPad layouts get tested.
   one.
 - **Turning the Simulator.** `simctl` can't rotate a Simulator, so the capture uses
   [serve-sim](https://github.com/EvanBacon/serve-sim), an Apache-2.0 tool by an Expo
-  developer that drives the Simulator through Apple's private interfaces. `npx`
-  fetches it on the Mac runner only, pinned to one version (`SERVE_SIM` in
-  `scripts/capture-ios-screens.cjs`); it isn't in `package.json`. A new Xcode may need a
-  newer version: if the landscape shots come out in portrait, check its releases first.
+  developer that drives the Simulator through Apple's private interfaces. It's a
+  development dependency pinned to one exact version in `package.json`, with its own
+  dependencies in the lockfile, and the capture runs it from `node_modules/.bin`
+  (`SERVE_SIM` in `scripts/capture-ios-screens.cjs`). The capture job's checkout keeps no
+  GitHub token (`persist-credentials: false`). A new Xcode may need a newer version: if
+  the landscape shots come out in portrait, check its releases first.
   serve-sim can also unfold the iPhone Duo Simulator, which #432 needs.
 - **Text checks.** The same rules as the iPhone's, with the iPad's own places for the tab
   labels and chapter controls, by orientation (`REGIONS_BY_PLATFORM` in

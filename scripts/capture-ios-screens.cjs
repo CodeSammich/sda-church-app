@@ -122,9 +122,10 @@ const SAMPLE_EVERY = 2;
 const ROUTE_KEY = 'screenshot-route';
 
 // serve-sim turns the iPad Simulator sideways, which simctl can't (#324). It
-// drives the Simulator through Apple's private interfaces, so it's pinned, and
-// a new Xcode may need a newer version. npx fetches it on the Mac runner only.
-const SERVE_SIM = 'serve-sim@0.1.48';
+// drives the Simulator through Apple's private interfaces, so package.json pins
+// its version exactly and the lockfile its dependencies; a new Xcode may need a
+// newer version.
+const SERVE_SIM = join(__dirname, '..', 'node_modules', '.bin', 'serve-sim');
 const SERVE_SIM_ORIENTATIONS = { portrait: 'portrait', landscape: 'landscape_left' };
 
 const loadConfig = (file = join(projectRoot, 'test/screens/screens.json')) =>
@@ -555,7 +556,7 @@ const CHECKS = {
 };
 
 const serveSim = (...args) =>
-  execFileSync('npx', ['--yes', SERVE_SIM, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+  execFileSync(SERVE_SIM, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
 
 /**
  * Turns a landscape screenshot upright. simctl saves the screen as the iPad

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const { mergeResults } = require('../scripts/merge-key-screens.cjs');
 const {
@@ -840,8 +840,13 @@ describe('iPad key screens (#324)', () => {
     );
   });
 
-  it('pins serve-sim, which turns the Simulator through private interfaces', () => {
-    expect(SERVE_SIM).toMatch(/^serve-sim@\d+\.\d+\.\d+$/);
+  it('pins serve-sim through the lockfile, as it turns the Simulator through private interfaces', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    expect(pkg.devDependencies['serve-sim']).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(JSON.parse(readFileSync('package-lock.json', 'utf8')).packages['node_modules/serve-sim'].version).toBe(
+      pkg.devDependencies['serve-sim'],
+    );
+    expect(SERVE_SIM.endsWith(join('node_modules', '.bin', 'serve-sim'))).toBe(true);
   });
 
   describe('status bar and orientation', () => {
