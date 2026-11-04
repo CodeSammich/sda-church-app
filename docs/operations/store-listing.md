@@ -335,15 +335,15 @@ access** (Google Play, choosing that all functionality is available without spec
 access):
 
 ```text
-No sign-in is required, and every feature works without an account. The one exception is the Schedule sheet (staff only) button on the bulletin page, which opens the church's internal Google Sheet. Only church staff can open it, and nothing else in the app depends on it.
+No sign-in is required, and every feature works without an account.
 
-This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services; members can also download it to listen offline (You tab, Offline Bible Audio).
+This is the official app of the New York Chinese Seventh-day Adventist Church. It shows the church's weekly bulletin, which comes from the church's own server. The Bible text ships with the app, and Bible audio streams from public Bible services; members can also download it to listen offline (You tab, Offline Bible Audio). A download keeps going in the background. The app's only notifications are about a download the member started: the app asks for them, with its own explanation first, when a long download starts, never at launch, and the download goes on either way.
 
 Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
 
 The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the in-app browser (Safari View Controller on iOS). The app itself collects no payment details, takes no payments, and giving unlocks nothing in the app.
 
-Hymn lyrics and sheet music, library books, and Sabbath School lessons open on their publishers' websites in the in-app browser. YouTube, Spotify, Zoom, and Google Maps links open in their own apps.
+Hymn lyrics and sheet music, library books, and the adult Sabbath School lesson open on their publishers' websites in the in-app browser. A children's Sabbath School lesson downloads its publisher's PDF and opens it in the phone's own viewer. YouTube, Spotify, Zoom, and Google Maps links open in their own apps.
 
 The app plays Bible audio in the background, which is why it uses the audio background mode on iOS and a media playback service on Android.
 
