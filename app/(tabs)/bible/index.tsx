@@ -41,13 +41,13 @@ import {
 } from '@/constants/AppPreferences';
 import { useBottomTabHeight } from '@/constants/BottomTabHeightContext';
 import {
-  CAPSULE_SHADOW,
   CAPSULE_STACK_GAP,
   getCapsuleBottomGap,
   getCapsuleTabBarWidth,
+  getFloatingSurfaceStyle,
   ScrollEdgeFade,
 } from '@/components/CapsuleTabBar';
-import { getBarSurfaceColor, getDockControlColor } from '@/components/TabBarItems';
+import { getDockControlColor } from '@/components/TabBarItems';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { CONTENT_MAX_WIDTH, contentColumnStyle, getBottomTabContentHeight, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -4116,12 +4116,7 @@ export default function BibleScreen() {
           style={{ left: -(viewportWidth - dockCardWidth) / 2, right: -(viewportWidth - dockCardWidth) / 2 }}
         />
 
-        <View
-          style={[
-            styles.dockCard,
-            { backgroundColor: getBarSurfaceColor(theme), borderColor: theme.colors.outlineVariant },
-          ]}
-        >
+        <View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>
         <ScrollView
           style={styles.controlDockScroll}
           scrollEnabled={!isScrubGestureActive}
@@ -5681,9 +5676,7 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
     },
     dockCard: {
       borderRadius: 24,
-      borderWidth: StyleSheet.hairlineWidth,
       flex: 1,
-      ...CAPSULE_SHADOW,
     },
     controlDockScrollContent: {
       flexGrow: 1,

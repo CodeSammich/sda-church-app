@@ -81,11 +81,8 @@ export function CapsuleTabBar({
       <View
         style={[
           styles.capsule,
-          {
-            width: getCapsuleTabBarWidth(windowWidth),
-            backgroundColor: getBarSurfaceColor(theme),
-            borderColor: theme.colors.outlineVariant,
-          },
+          getFloatingSurfaceStyle(theme),
+          { width: getCapsuleTabBarWidth(windowWidth) },
         ]}
       >
         {getTabItems(props).map((item) => (
@@ -110,11 +107,23 @@ export function CapsuleTabBar({
   );
 }
 
-/** The shadow of the capsule, and of a floating card that goes with it. */
-export const CAPSULE_SHADOW = Platform.select<ViewStyle>({
+/** The soft shadow of everything that floats over a page. */
+const CAPSULE_SHADOW = Platform.select<ViewStyle>({
   ios: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
   android: { elevation: 3 },
   default: { boxShadow: '0 4px 14px rgba(0,0,0,0.1)' },
+});
+
+/**
+ * The surface of everything that floats over a page: the capsule, the Bible's
+ * card, and the header's pills and round buttons, so a page's top matches its
+ * bottom. A shade off the page, with a faint hairline and a soft shadow.
+ */
+export const getFloatingSurfaceStyle = (theme: AppTheme): ViewStyle => ({
+  backgroundColor: getBarSurfaceColor(theme),
+  borderColor: theme.colors.outlineVariant,
+  borderWidth: StyleSheet.hairlineWidth,
+  ...CAPSULE_SHADOW,
 });
 
 const styles = StyleSheet.create({
@@ -136,10 +145,8 @@ const styles = StyleSheet.create({
   },
   capsule: {
     borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     padding: 4,
-    ...CAPSULE_SHADOW,
   },
   item: {
     alignItems: 'center',

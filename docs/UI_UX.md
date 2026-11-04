@@ -232,15 +232,20 @@ simple, blended colors.
     the capsule on a phone and up to 640 points on a tablet, with its pills and round
     buttons in the page's own colour (warm pink, or black). When the tab bar hides while
     reading, the card slides down into its place.
+  - **The header's buttons match the bars:** the back button, the page title, the search
+    bar, and the Bible's translation, saved-verse, help and search buttons float on the
+    same surface, with the same hairline and shadow (`getFloatingSurfaceStyle`), so a
+    page's top matches its bottom.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
   height from `useGlobalHeaderHeight()`: the status bar plus 64px at 100% text size.
   The header grows with the app's text size and with the phone's text size up to 1.35×
   (`hooks/useGlobalHeaderHeight.ts`).
-- **Boundary Definition:** A restrained 0.5px top boundary using the theme's subtle
-  outline token is permitted for the bottom tab navigation bar and persistent audio
-  controls. Do not add shadows, strong dividers, or decorative glass effects.
+- **Boundary Definition:** What floats over a page (the capsule, the Bible's card, the
+  header's buttons) takes only a hairline in the theme's subtle outline token and one soft
+  shadow (`getFloatingSurfaceStyle`). Do not add strong dividers or decorative glass
+  effects.
 - **Popups:** Every popup is the app's own, never the system's alert (`Alert.alert`),
   which on Android looks unlike the rest of the app. A popup is centred, with the shared
   corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall at any

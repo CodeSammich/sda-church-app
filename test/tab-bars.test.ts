@@ -8,6 +8,7 @@ import {
   CapsuleTabBar,
   getCapsuleBottomGap,
   getCapsuleTabBarWidth,
+  getFloatingSurfaceStyle,
 } from '@/components/CapsuleTabBar';
 import {
   getBarSurfaceColor,
@@ -59,6 +60,26 @@ describe('the tab bars (#589)', () => {
     }
     const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
     expect(layout).toMatch(/tabBarActiveTintColor: theme\.dark\s*\? theme\.colors\.metallicGold\.main\s*: theme\.colors\.primary,/);
+  });
+
+  it("gives the capsule, the Bible's card and the header's pills one opaque floating surface, so a page's top matches its bottom", () => {
+    for (const theme of [customLightTheme, customDarkTheme]) {
+      const surface = getFloatingSurfaceStyle(theme);
+      expect(surface).toMatchObject({ backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant });
+      // Opaque, so page text scrolling under the header never shows through.
+      expect(surface.backgroundColor).toMatch(/^#[\dA-F]{6}$/i);
+    }
+    expect(readFileSync('components/CapsuleTabBar.tsx', 'utf8')).toMatch(/styles\.capsule,\s+getFloatingSurfaceStyle\(theme\),/);
+    expect(readFileSync('app/(tabs)/bible/index.tsx', 'utf8')).toContain('<View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>');
+    const header = readFileSync('components/GlobalHeader.tsx', 'utf8');
+    // The back button, the page title, the search bar, the Bible's translation
+    // and three round buttons, and the other pages' search button.
+    expect(header.match(/getFloatingSurfaceStyle\(theme\),/g)).toHaveLength(8);
+    // None keeps an outline or a shadow of its own.
+    for (const name of ['circleBackButton', 'floatingTitleChip', 'floatingSearchbar', 'translationChip', 'collapsedSearchButton']) {
+      const block = header.slice(header.indexOf(`\n  ${name}: {`) + 1);
+      expect(block.slice(0, block.indexOf('\n  },'))).not.toMatch(/border(Width|Color)|shadow|elevation/);
+    }
   });
 
   it('is a capsule at most 520 points wide, 16 points from the sides of a phone', () => {

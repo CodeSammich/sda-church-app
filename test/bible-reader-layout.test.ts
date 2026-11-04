@@ -325,8 +325,8 @@ describe("the Bible's dock follows the tab bar's system (#589)", () => {
       'outputRange: [bottomDockInset, bottomDockInset + bottomTabContentHeight],',
     );
     expect(bible).toMatch(/<ScrollEdgeFade\s+background=\{theme\.colors\.background\}/);
-    // Raised a shade off the page, with its pills and round buttons in the page's colour.
-    expect(bible).toContain('{ backgroundColor: getBarSurfaceColor(theme), borderColor: theme.colors.outlineVariant },');
+    // Raised a shade off the page like the capsule, with its pills and round buttons in the page's colour.
+    expect(bible).toContain('<View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>');
     expect(bible.match(/backgroundColor: getDockControlColor\(theme\),/g)).toHaveLength(5);
   });
 
