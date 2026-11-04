@@ -6,7 +6,8 @@ name: Android key screens
 # Every job runs on standard Linux runners; Mac runners are few, so only the
 # iPhone uses them. One review covers both platforms: ios-key-screens.yml's
 # review comment waits for this workflow's run on the same commit and links
-# its screenshots, and its Screenshots reviewed approval covers both.
+# its screenshots, a rerun here refreshes it, and its Screenshots reviewed
+# approval covers both.
 #
 # It's separate from android-preview-apk.yml, which builds the APK for phones.
 # Like that workflow's build, it runs pull request code only with a read-only
@@ -365,6 +366,33 @@ jobs:
         run: |
           echo "::error::The build ended as $BUILD and the key-screen groups as $GROUPS; their jobs' logs say why."
           exit 1
+
+  review-comment:
+    # Refreshes the release PR's screenshot review comment, if
+    # ios-key-screens.yml has already posted it for this commit, with this
+    # run's result and screenshots. That happens after a rerun of a failed
+    # group, which used to leave the comment showing the failure and the
+    # first attempt's download (#632). Usually this run finishes first, and
+    # the iPhone run posts the comment with it. key-screens-review.yml writes
+    # the comment for both.
+    needs: screens
+    if: >-
+      !cancelled() &&
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'release-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Refresh the screenshot review comment
+    permissions:
+      # To find the iPhone run and both runs' downloads.
+      actions: read
+      contents: read
+      # Only to update the review comment. It never checks out or runs the
+      # pull request's code.
+      pull-requests: write
+    uses: ./.github/workflows/key-screens-review.yml
+    with:
+      platform: android
+      checks: ${{ needs.screens.result }}
 
   earlier-screens:
     # Re-checks an earlier run's screenshots in a few minutes, instead of a

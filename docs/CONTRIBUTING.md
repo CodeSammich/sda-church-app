@@ -47,7 +47,9 @@ checks a pull request must pass, are under
    reviews. Don't retarget it to `main`. If a release merges first, GitHub moves the PR
    to `main`, and it's moved back to `release-candidate` once that is created again.
    Then update the branch (**Update branch**, or merge `upstream/release-candidate`
-   into it).
+   into it). A PR from a fork is closed instead, and reopened once `release-candidate`
+   is created again, with a comment saying how to move the branch onto it. Don't
+   force-push the branch while the PR is closed: GitHub can't reopen it after that.
 5. A maintainer merges it once its checks and review pass. Its issues stay open until
    the release reaches `main`.
 
@@ -120,8 +122,9 @@ clear whether the release is a patch, minor, or major. The click-by-click steps 
 1. Feature PRs merge into `release-candidate`. **Release - After Merge** creates it from
    `main` after each release merges. If it's missing, a maintainer creates it from the
    primary repository's `main` (for example `git fetch upstream` then
-   `git push upstream upstream/main:refs/heads/release-candidate`), and moves the feature
-   PRs GitHub moved to `main` back to it.
+   `git push upstream upstream/main:refs/heads/release-candidate`), moves the feature
+   PRs GitHub moved to `main` back to it, and reopens the PRs from forks that GitHub
+   closed.
 2. Once the release's contents are settled, a maintainer picks the version and merges a
    version PR into `release-candidate` that runs `npm run sync-version -- --version x.y.z`
    and commits the generated files. Like any PR, it needs a `Part of #…` line or the
@@ -239,7 +242,9 @@ GitHub's code scanning default setup and have no workflow file.
 - `iOS key screens join` joins the batches and fails if any failed. It only copies
   files, so it runs on Linux.
 - Its review comment links both platforms' screenshots, once `Android key screens`
-  (below) has finished for the same commit, and says how long each run took.
+  (below) has finished for the same commit, and says how long each run took. Both
+  workflows write it through `key-screens-review.yml`, a reusable workflow with no check
+  of its own, so a rerun of Android's join updates the comment with the rerun's results.
 - **Screenshots reviewed** waits until a `release-approvers` member approves the
   iPhone and Android screenshots in the `screenshot-review` environment; see
   [Approving the screenshots](operations/admin-runbook.md#approving-the-screenshots).
@@ -253,10 +258,11 @@ GitHub's code scanning default setup and have no workflow file.
 - Builds the Android preview APK for an emulator, with the key-screen route, and shares
   it with one emulator runner per key-screen group, numbered
   (`Android key screens batch <n> (<group>)`), and a sixth for the Google Play shots.
-  Each takes its group of the key screens and checks their text with RapidOCR.
+  Each frees disk space for its emulator, takes its group of the key screens, and checks
+  their text with RapidOCR.
 - `Android key screens join` joins the batches, with the Google Play copies, and fails
-  if any failed. The iOS preview's review comment links its screenshots. See
-  [Android key screens](operations/native-builds.md#android-key-screens).
+  if any failed. The iOS preview's review comment links its screenshots, and a rerun
+  refreshes it. See [Android key screens](operations/native-builds.md#android-key-screens).
 
 ### `iOS compile cache` (`.github/workflows/ios-compile-cache.yml`)
 
@@ -301,10 +307,15 @@ GitHub's code scanning default setup and have no workflow file.
 - After the release PR's merge, moves every open PR into `main` back to
   `release-candidate`: GitHub moves feature PRs to `main` when it deletes the branch, and
   only `release-candidate` may merge into `main`. Dependabot's PRs move too.
+- GitHub closes the PRs from forks instead of moving them. It reopens each PR whose
+  timeline shows its base branch deleted and then the PR closed, within five minutes of
+  the merge, and comments on it how to move its branch onto the new `release-candidate`
+  with `git rebase --onto`. A PR closed any other way stays closed.
 - Comments on the merged PR with links to that merge's **Native iOS build**, **Native
   Android build**, and **Deploy Bulletin Apps Script** runs, which wait for `production`
-  approval, and to the branches page. The comment names the PRs it moved, and says if
-  `release-candidate` couldn't be created or a PR couldn't be moved, and what to do.
+  approval, and to the branches page. The comment names the PRs it moved and reopened,
+  and says if `release-candidate` couldn't be created or a PR couldn't be moved or
+  reopened, and what to do.
 
 ### `Native Android build` and `Native iOS build` (`native-android-build.yml`, `native-ios-build.yml`)
 

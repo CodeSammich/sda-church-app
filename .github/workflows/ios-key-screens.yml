@@ -505,8 +505,10 @@ jobs:
   review-comment:
     # Tells the release PR's reviewer where this commit's screenshots are, the
     # iPhone's and Android's, and how to approve them, for the "Screenshots
-    # reviewed" check (#331, #372). Each run replaces the previous comment, so
-    # the one on the PR is always current.
+    # reviewed" check (#331, #372). key-screens-review.yml writes it, after
+    # waiting for the Android run, which usually finishes first. Each run
+    # replaces the previous comment, and a rerun of Android's join refreshes it
+    # (#632), so the one on the PR is always current.
     needs: simulator
     if: >-
       !cancelled() &&
@@ -514,138 +516,17 @@ jobs:
       github.head_ref == 'release-candidate' &&
       github.event.pull_request.head.repo.full_name == github.repository
     name: Post the screenshot review comment
-    runs-on: ubuntu-latest
-    # Most of it is waiting for the Android run, which usually finishes first.
-    timeout-minutes: 60
     permissions:
-      # To find this run's artifact, and the Android run's.
+      # To find this run's downloads, and the Android run's.
       actions: read
       contents: read
-      # Only to replace the review comment. The job never checks out or runs
-      # the pull request's code.
+      # Only to replace the review comment. It never checks out or runs the
+      # pull request's code.
       pull-requests: write
-    steps:
-      - name: Wait for the Android key screens
-        # android-key-screens.yml's newest run for this commit. Gives up after
-        # 50 minutes, and the comment then says the Android shots are missing.
-        id: android
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -uo pipefail
-          for _ in $(seq 1 100); do
-            run=$(gh api "repos/$REPO/actions/workflows/android-key-screens.yml/runs?head_sha=$SHA&event=pull_request" \
-              --jq '.workflow_runs[0] // empty | "\(.id) \(.status) \(.conclusion)"' || true)
-            read -r id status conclusion <<<"$run"
-            if [ "${status:-}" = completed ]; then
-              echo "run_id=$id" >> "$GITHUB_OUTPUT"
-              echo "conclusion=$conclusion" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            sleep 30
-          done
-          echo "::warning::The Android key screens for $SHA didn't finish in time."
-
-      - name: Post the review comment
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          SHA: ${{ github.event.pull_request.head.sha }}
-          RUN_ID: ${{ github.run_id }}
-          CHECKS: ${{ needs.simulator.result }}
-          ANDROID_RUN_ID: ${{ steps.android.outputs.run_id }}
-          ANDROID_CHECKS: ${{ steps.android.outputs.conclusion }}
-        run: |
-          set -euo pipefail
-          # A link to a run's screenshots, given its run ID and the jq test for its artifact.
-          screenshots() {
-            local url="https://github.com/$REPO/actions/runs/$1" found id bytes
-            found=$(gh api "repos/$REPO/actions/runs/$1/artifacts" \
-              --jq "[.artifacts[] | select($2)][0] // empty | \"\\(.id) \\(.size_in_bytes)\"")
-            if [ -n "$found" ]; then
-              read -r id bytes <<<"$found"
-              echo "[$3]($url/artifacts/$id) (a zip of about $((bytes / 1000000)) MB)"
-            else
-              echo "$3 from [its run]($url), which uploaded none; it says why"
-            fi
-          }
-          # How long a run took, in whole minutes, from its start until the job that
-          # uploads its screenshots finished.
-          took() {
-            local started finished seconds
-            started=$(gh api "repos/$REPO/actions/runs/$1" --jq '.run_started_at // empty') || return 0
-            finished=$(JOB="$2" gh api "repos/$REPO/actions/runs/$1/jobs?per_page=100" \
-              --jq '[.jobs[] | select(.name == env.JOB and .completed_at != null) | .completed_at][0] // empty') || return 0
-            if [ -n "$started" ] && [ -n "$finished" ]; then
-              seconds=$(( $(date -d "$finished" +%s) - $(date -d "$started" +%s) ))
-              if [ "$seconds" -gt 0 ]; then echo "about $(( (seconds + 30) / 60 )) minutes"; fi
-            fi
-          }
-          run_url="https://github.com/$REPO/actions/runs/$RUN_ID"
-          download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"
-          app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
-          if [ -n "$ANDROID_RUN_ID" ]; then
-            android="$(screenshots "$ANDROID_RUN_ID" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
-          else
-            android="the Android screenshots, which aren't ready: [their runs](https://github.com/$REPO/actions/workflows/android-key-screens.yml) say why"
-          fi
-          if [ "$CHECKS" = success ] && [ "$ANDROID_CHECKS" = success ]; then
-            checks="✅ The automatic checks passed on both platforms: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
-          else
-            checks="⚠️ **The automatic checks failed or didn't finish** (iPhone: ${CHECKS:-unknown}, Android: ${ANDROID_CHECKS:-not finished}). Start with the runs linked below to see why."
-          fi
-          # The comment posts without them if GitHub doesn't say.
-          ios_took="$(took "$RUN_ID" 'iOS key screens join')" || ios_took=""
-          android_took=""
-          if [ -n "$ANDROID_RUN_ID" ]; then
-            android_took="$(took "$ANDROID_RUN_ID" 'Android key screens join')" || android_took=""
-          fi
-          if [ -n "$ios_took" ] && [ -n "$android_took" ]; then
-            timing="⏱️ The iPhone run took $ios_took and the Android run $android_took, each from its start until its screenshots were ready."
-          elif [ -n "$ios_took" ]; then
-            timing="⏱️ The iPhone run took $ios_took, from its start until its screenshots were ready."
-          elif [ -n "$android_took" ]; then
-            timing="⏱️ The Android run took $android_took, from its start until its screenshots were ready."
-          else
-            timing=""
-          fi
-          approve="an approver in the release-approvers team opens [this run]($run_url), clicks **Review deployments**, ticks **screenshot-review**, and approves. The **Screenshots reviewed** check then passes."
-
-          body=$(cat <<BODY
-          <!-- key-screens-review sha=$SHA -->
-          ### 📸 Screenshots to review
-
-          The iPhone and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
-
-          $checks
-
-          $timing
-
-          1. **Download** $download and $android, and open their \`screens/ios/\` and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), and \`zh\`, \`zh-cn\`, and \`es\`.
-          2. **Look for** what a person would notice:
-             - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
-             - a verse number split from its verse, or a button label cut short;
-             - the wrong language, a blank or half-drawn screen, or a popup covering the page;
-             - dark mode or large text that's hard to read.
-
-             The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
-          3. **Approve:** $approve
-
-          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
-
-          To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
-          BODY
-          )
-
-          # Replace earlier review comments, so the newest screenshots are the only ones offered.
-          gh api "repos/$REPO/issues/$PR/comments" --paginate \
-            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- key-screens-review"))) | .id' |
-            while read -r old; do gh api -X DELETE "repos/$REPO/issues/comments/$old" >/dev/null; done
-          gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
-          echo "Posted the review comment for $SHA."
+    uses: ./.github/workflows/key-screens-review.yml
+    with:
+      platform: ios
+      checks: ${{ needs.simulator.result }}
 
   screenshots-reviewed:
     # A person looks at a release's screenshots before it merges into main

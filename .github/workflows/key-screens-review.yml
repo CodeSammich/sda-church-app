@@ -1,0 +1,222 @@
+name: Key screens review comment
+
+# The release PR's screenshot review comment (#331, #372): where its commit's
+# iPhone and Android screenshots are, whether their automatic checks passed,
+# how long each run took, and how to approve them for the Screenshots reviewed
+# check. Both key-screen workflows call this after their join job, so the
+# comment is written in one place:
+#
+# - ios-key-screens.yml posts it, once Android's join has finished for the
+#   same commit, replacing the notice and any earlier comment.
+# - android-key-screens.yml refreshes it, if it's already posted for this
+#   commit. After a failed Android group was rerun and passed on 1.6.0, the
+#   comment still showed the failure and the first attempt's download until
+#   it was edited by hand (#632).
+#
+# Each finds the other platform's newest run for the commit through GitHub's
+# API, and links each run's newest screenshots, so a rerun's are the ones
+# offered. It never checks out or runs the pull request's code: a reusable
+# workflow from the same commit needs no checkout.
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: >-
+          The calling workflow's platform: ios posts the comment, and android
+          refreshes one already posted.
+        type: string
+        required: true
+      checks:
+        description: How the calling run's join job ended (its needs result).
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  comment:
+    name: Review comment
+    runs-on: ubuntu-latest
+    # Most of it is waiting for the Android run, which usually finishes first.
+    timeout-minutes: 60
+    permissions:
+      # To find both runs and their downloads.
+      actions: read
+      contents: read
+      # Only to post or update the review comment.
+      pull-requests: write
+    steps:
+      - name: Wait for the Android key screens
+        # android-key-screens.yml's newest run for this commit, until its join
+        # job finishes. Gives up after 50 minutes, and the comment then says
+        # the Android shots aren't ready.
+        if: inputs.platform == 'ios'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          for _ in $(seq 1 100); do
+            run=$(gh api "repos/$REPO/actions/workflows/android-key-screens.yml/runs?head_sha=$SHA&event=pull_request&per_page=1" \
+              --jq '.workflow_runs[0].id // empty' || true)
+            if [ -n "$run" ]; then
+              status=$(gh api "repos/$REPO/actions/runs/$run/jobs?per_page=100" \
+                --jq '[.jobs[] | select(.name == "Android key screens join")][0].status // empty' || true)
+              if [ "$status" = completed ]; then exit 0; fi
+            fi
+            sleep 30
+          done
+          echo "::warning::The Android key screens for $SHA didn't finish in time."
+
+      - name: Post or refresh the review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          PLATFORM: ${{ inputs.platform }}
+          CHECKS: ${{ inputs.checks }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          marker="<!-- key-screens-review sha=$SHA -->"
+          # This PR's review comments and notices: "<id> <first line>".
+          reviews=$(gh api "repos/$REPO/issues/$PR/comments?per_page=100" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- key-screens-review"))) | "\(.id) \(.body | split("\n")[0])"')
+          # The one for this commit, which Android's run refreshes. Until the
+          # iPhone's run posts it, there's nothing to refresh.
+          current=$(while read -r id line; do if [ "$line" = "$marker" ]; then echo "$id"; fi; done <<<"$reviews" | head -n 1)
+          if [ "$PLATFORM" = android ] && [ -z "$current" ]; then
+            echo "No review comment for $SHA yet. The iPhone run posts it, with these Android screenshots."
+            exit 0
+          fi
+
+          # A key-screen workflow's newest run for this commit: "<id> <attempt>".
+          newest_run() {
+            gh api "repos/$REPO/actions/workflows/$1/runs?head_sha=$SHA&event=pull_request&per_page=1" \
+              --jq '.workflow_runs[0] // empty | "\(.id) \(.run_attempt)"'
+          }
+          # How a run's join job ended in its newest attempt.
+          join_result() {
+            JOB="$2" gh api "repos/$REPO/actions/runs/$1/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name == env.JOB)][0] // empty | if .status == "completed" then .conclusion else "not finished" end'
+          }
+          # This run is the caller's platform; the other's is its newest for the commit.
+          if [ "$PLATFORM" = ios ]; then
+            ios_run=$RUN_ID ios_attempt=$RUN_ATTEMPT ios_checks=$CHECKS
+            read -r android_run android_attempt <<<"$(newest_run android-key-screens.yml || true)"
+            android_checks=""
+            if [ -n "$android_run" ]; then android_checks=$(join_result "$android_run" 'Android key screens join' || true); fi
+          else
+            android_run=$RUN_ID android_attempt=$RUN_ATTEMPT android_checks=$CHECKS
+            read -r ios_run ios_attempt <<<"$(newest_run ios-key-screens.yml || true)"
+            ios_checks=""
+            if [ -n "$ios_run" ]; then ios_checks=$(join_result "$ios_run" 'iOS key screens join' || true); fi
+          fi
+
+          # A link to a run's newest download that passes a jq test, given the
+          # run's ID and attempt, the test, and the link's text. A rerun
+          # uploads its own, so the newest is its attempt's.
+          screenshots() {
+            local url="https://github.com/$REPO/actions/runs/$1" found id bytes rerun=""
+            found=$(gh api "repos/$REPO/actions/runs/$1/artifacts?per_page=100" \
+              --jq "[.artifacts[] | select(.expired | not) | select($3)] | max_by(.id) // empty | \"\\(.id) \\(.size_in_bytes)\"")
+            if [ "${2:-1}" -gt 1 ]; then rerun=", from attempt $2 of its run"; fi
+            if [ -n "$found" ]; then
+              read -r id bytes <<<"$found"
+              echo "[$4]($url/artifacts/$id) (a zip of about $((bytes / 1000000)) MB$rerun)"
+            else
+              echo "$4 from [its run]($url), which uploaded none; it says why"
+            fi
+          }
+          # How long a run took, in whole minutes, from its start until the job that
+          # uploads its screenshots finished.
+          took() {
+            local started finished seconds
+            started=$(gh api "repos/$REPO/actions/runs/$1" --jq '.run_started_at // empty') || return 0
+            finished=$(JOB="$2" gh api "repos/$REPO/actions/runs/$1/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name == env.JOB and .completed_at != null) | .completed_at][0] // empty') || return 0
+            if [ -n "$started" ] && [ -n "$finished" ]; then
+              seconds=$(( $(date -d "$finished" +%s) - $(date -d "$started" +%s) ))
+              if [ "$seconds" -gt 0 ]; then echo "about $(( (seconds + 30) / 60 )) minutes"; fi
+            fi
+          }
+          run_url="https://github.com/$REPO/actions/runs/$ios_run"
+          download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"
+          app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
+          if [ -n "$android_run" ] && [ "$android_checks" != "not finished" ]; then
+            android="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
+          else
+            android="the Android screenshots, which aren't ready: [their runs](https://github.com/$REPO/actions/workflows/android-key-screens.yml) say why"
+          fi
+          if [ "$ios_checks" = success ] && [ "$android_checks" = success ]; then
+            checks="✅ The automatic checks passed on both platforms: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
+          else
+            checks="⚠️ **The automatic checks failed or didn't finish** (iPhone: ${ios_checks:-unknown}, Android: ${android_checks:-not finished}). Start with the runs linked below to see why."
+          fi
+          # The comment posts without them if GitHub doesn't say.
+          ios_took="$(took "$ios_run" 'iOS key screens join')" || ios_took=""
+          android_took=""
+          if [ -n "$android_run" ]; then
+            android_took="$(took "$android_run" 'Android key screens join')" || android_took=""
+          fi
+          # A rerun's time is its own attempt's.
+          ios_name="iPhone run" android_name="Android run"
+          if [ "${ios_attempt:-1}" -gt 1 ]; then ios_name="iPhone run's attempt $ios_attempt"; fi
+          if [ "${android_attempt:-1}" -gt 1 ]; then android_name="Android run's attempt $android_attempt"; fi
+          if [ -n "$ios_took" ] && [ -n "$android_took" ]; then
+            timing="⏱️ The $ios_name took $ios_took and the $android_name $android_took, each from its start until its screenshots were ready."
+          elif [ -n "$ios_took" ]; then
+            timing="⏱️ The $ios_name took $ios_took, from its start until its screenshots were ready."
+          elif [ -n "$android_took" ]; then
+            timing="⏱️ The $android_name took $android_took, from its start until its screenshots were ready."
+          else
+            timing=""
+          fi
+          approve="an approver in the release-approvers team opens [this run]($run_url), clicks **Review deployments**, ticks **screenshot-review**, and approves. The **Screenshots reviewed** check then passes."
+
+          body=$(cat <<BODY
+          <!-- key-screens-review sha=$SHA -->
+          ### 📸 Screenshots to review
+
+          The iPhone and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
+
+          $checks
+
+          $timing
+
+          1. **Download** $download and $android, and open their \`screens/ios/\` and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), and \`zh\`, \`zh-cn\`, and \`es\`.
+          2. **Look for** what a person would notice:
+             - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
+             - a verse number split from its verse, or a button label cut short;
+             - the wrong language, a blank or half-drawn screen, or a popup covering the page;
+             - dark mode or large text that's hard to read.
+
+             The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
+          3. **Approve:** $approve
+
+          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
+
+          To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
+          BODY
+          )
+
+          if [ "$PLATFORM" = android ]; then
+            # Updated in place, so the reviewer's link stays the same.
+            if gh api -X PATCH "repos/$REPO/issues/comments/$current" -f body="$body" >/dev/null; then
+              echo "Refreshed the review comment for $SHA with Android's attempt $RUN_ATTEMPT."
+            else
+              # The iPhone's run may have just replaced it, with these results.
+              echo "::warning::Couldn't refresh the review comment for $SHA."
+            fi
+            exit 0
+          fi
+          # Replace earlier review comments, so the newest screenshots are the only ones offered.
+          while read -r old _; do
+            if [ -n "$old" ]; then gh api -X DELETE "repos/$REPO/issues/comments/$old" >/dev/null; fi
+          done <<<"$reviews"
+          gh api "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null
+          echo "Posted the review comment for $SHA."

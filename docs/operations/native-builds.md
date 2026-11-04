@@ -989,7 +989,11 @@ only with a read-only token and reads no secret.
   `EXPO_PUBLIC_KEY_SCREENS=1`, so it reads the saved screen and `popup=`. The published
   APK and the store builds don't.
 - **Android key screens batch 1 (home)** to **batch 5 (worship-and-you)**, one per group, each boots an emulator the size of
-  the phone below while the app builds, on Android 16 (API 36). It then installs the
+  the phone below while the app builds, on Android 16 (API 36). First it frees disk
+  space: an emulator needs about 7.4 GB, and one runner had only 6.4 GB free, so
+  `scripts/free-runner-disk.sh` removes preinstalled tools these jobs never use, such as
+  .NET, Haskell, and Swift, and logs the free space before and after. The Bible audio
+  emulator test does the same. It then installs the
   app and runs `scripts/capture-android-screens.cjs --group <group>`, which saves
   `screens/android/<screen>-<variant>.png`, and then checks their text
   (`check-screens.cjs --platform android`).
@@ -1002,9 +1006,13 @@ only with a read-only token and reads no secret.
 One review still covers both platforms. The iOS preview's review comment waits for this
 workflow's run on the same commit. It then links both downloads, says whether both
 passed, and says how long each run took, from its start until its join job finished. Its
-**Screenshots reviewed** approval covers both. To recheck an earlier
+**Screenshots reviewed** approval covers both. If a failed Android group is rerun after
+the comment is posted, this workflow's **Refresh the screenshot review comment** job
+updates it in place, with the rerun's result and screenshots. Both workflows write the
+comment through `key-screens-review.yml`. To recheck an earlier
 run's Android screenshots with new rules, start this workflow by hand with
-**screens_from_run**, as for the iPhone.
+**screens_from_run**, as for the iPhone. It checks every group's shots, from the run's
+joined download and each group's own.
 
 **The phone.** The emulator is the size of the best-selling Android phone where most
 Adventists live, set under `android.phone` in `screens.json`. Of the church's 24.4

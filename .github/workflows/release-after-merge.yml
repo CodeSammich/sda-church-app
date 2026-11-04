@@ -2,9 +2,9 @@ name: Release - After Merge
 
 # After a merge into main, creates release-candidate again for the next release
 # (GitHub deletes it when the release pull request merges), moves the feature
-# pull requests GitHub moved to main back to it, and comments on the merged
-# pull request with links to the runs that wait for production approval. It
-# checks out no code.
+# pull requests GitHub moved to main back to it, reopens the ones from forks
+# that GitHub closed instead, and comments on the merged pull request with
+# links to the runs that wait for production approval. It checks out no code.
 on:
   push:
     branches:
@@ -25,6 +25,8 @@ jobs:
     permissions:
       actions: read
       contents: write
+      # To read the timelines of the pull requests GitHub closed.
+      issues: read
       pull-requests: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -41,7 +43,7 @@ jobs:
           for try in $(seq 1 6); do
             found=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '
               [.[] | select(.merged_at != null and .base.ref == "main")][0] // empty
-              | "number=\(.number)\nhead_ref=\(.head.ref)"') || found=''
+              | "number=\(.number)\nhead_ref=\(.head.ref)\nhead_sha=\(.head.sha)\nmerged_at=\(.merged_at | fromdateiso8601)"') || found=''
             if [[ -n "$found" ]]; then
               echo "$found" >> "$GITHUB_OUTPUT"
               exit 0
@@ -125,6 +127,113 @@ jobs:
           echo "moved=${moved[*]}" >> "$GITHUB_OUTPUT"
           echo "failed=${failed[*]}" >> "$GITHUB_OUTPUT"
 
+      # GitHub moves only this repository's own pull requests to main when it
+      # deletes release-candidate. It closes those from forks instead: each
+      # one's timeline shows base_ref_deleted, then closed, seconds after the
+      # release merged, as #593 and #613 did on 1.6.0 (#632). Reopen exactly
+      # those, now that release-candidate exists again, and tell each author how
+      # to move the branch onto it. A pull request a person closed has no
+      # base_ref_deleted just before its close, so it stays closed. If this step
+      # fails, the comment below still posts, and says to check by hand.
+      - name: Reopen fork pull requests GitHub closed
+        id: reopened
+        if: >-
+          steps.pr.outputs.head_ref == 'release-candidate' &&
+          steps.branch.outputs.result == 'created'
+        continue-on-error: true
+        env:
+          RELEASE_PR: ${{ steps.pr.outputs.number }}
+          OLD_BASE: ${{ steps.pr.outputs.head_sha }}
+          # In seconds since 1970, as are the times below.
+          MERGED_AT: ${{ steps.pr.outputs.merged_at }}
+        run: |
+          set -euo pipefail
+          # GitHub closes them seconds after the merge. The window allows a
+          # minute before it, for any difference in GitHub's clocks, and five
+          # after.
+          export FROM=$((MERGED_AT - 60)) TO=$((MERGED_AT + 300))
+
+          # Prints yes if GitHub closed the pull request for its deleted base:
+          # its last two open-or-closed events are base_ref_deleted and then
+          # closed, at most a minute apart, in the window. Fails if GitHub
+          # doesn't answer, so the next look asks again.
+          closed_by_github() {
+            local events last deleted closed
+            events=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/timeline?per_page=100" --jq '.[]
+              | select(.event == "base_ref_deleted" or .event == "closed" or .event == "reopened" or .event == "merged")
+              | "\(.event) \(.created_at | fromdateiso8601)"') || return 1
+            mapfile -t last < <(tail -n 2 <<< "$events")
+            if [[ "${#last[@]}" -eq 2 && "${last[0]}" == "base_ref_deleted "* && "${last[1]}" == "closed "* ]]; then
+              deleted=${last[0]#* }
+              closed=${last[1]#* }
+              if (( deleted >= FROM && closed >= deleted && closed - deleted <= 60 && closed <= TO )); then
+                echo yes
+                return 0
+              fi
+            fi
+            echo no
+          }
+
+          # The release squashed the old release-candidate into one commit on
+          # main, so a reopened branch still has the old one's commits under
+          # its own. Its author moves just the branch's own commits onto the
+          # new one, and force-pushes only once it's open: GitHub can't reopen
+          # a pull request whose branch was force-pushed while it was closed.
+          template=$(cat <<'BODY'
+          GitHub closed this pull request when the release, #RELEASE_PR, merged into `main` and `release-candidate` was deleted. `release-candidate` now starts again from `main`, and this pull request is open again, into the new one.
+
+          The release went into `main` as one squashed commit, so this branch still has the old `release-candidate`'s commits under its own. Move just its own commits onto the new `release-candidate`, then force-push:
+
+          ```bash
+          git fetch upstream
+          git rebase --onto upstream/release-candidate OLD_BASE
+          git push --force-with-lease
+          ```
+
+          That commit is the old `release-candidate`'s last. If git doesn't have it, `git fetch upstream pull/RELEASE_PR/head` gets it. Push only while this pull request is open: GitHub can't reopen a pull request whose branch was force-pushed while it was closed.
+          BODY
+          )
+          body="${template//RELEASE_PR/$RELEASE_PR}"
+          body="${body//OLD_BASE/$OLD_BASE}"
+
+          declare -A seen=() unread=()
+          reopened=()
+          failed=()
+          # GitHub may still be closing them, so look three times.
+          for try in 1 2 3; do
+            pulls=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=closed&base=release-candidate&sort=updated&direction=desc&per_page=100" \
+              --jq '.[] | select(.merged_at == null)
+                | select(.closed_at | fromdateiso8601 | . >= (env.FROM | tonumber) and . <= (env.TO | tonumber)) | .number') || pulls=''
+            while read -r number; do
+              [[ -n "$number" && -z "${seen[$number]:-}" ]] || continue
+              if ! verdict=$(closed_by_github "$number" < /dev/null); then
+                unread[$number]=1
+                continue
+              fi
+              seen[$number]=1
+              unset 'unread[$number]'
+              if [[ "$verdict" != yes ]]; then
+                echo "#$number was closed some other way, so it stays closed."
+              elif gh api --method PATCH "repos/$GITHUB_REPOSITORY/pulls/$number" -f state=open --silent < /dev/null; then
+                echo "Reopened #$number."
+                reopened+=("$number")
+                gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$number/comments" -f body="$body" --silent < /dev/null ||
+                  echo "::warning title=No rebase comment::Tell #$number's author how to rebase its branch."
+              else
+                echo "::warning title=Pull request not reopened::Reopen #$number before its branch is force-pushed."
+                failed+=("$number")
+              fi
+            done <<< "$pulls"
+            if [[ "$try" -lt 3 ]]; then sleep 10; fi
+          done
+          # One whose timeline GitHub never returned may have been closed either way.
+          for number in "${!unread[@]}"; do
+            echo "::warning title=Pull request not checked::Couldn't read #$number's timeline. If GitHub closed it, reopen it."
+            failed+=("$number")
+          done
+          echo "reopened=${reopened[*]}" >> "$GITHUB_OUTPUT"
+          echo "failed=${failed[*]}" >> "$GITHUB_OUTPUT"
+
       - name: Comment the next steps on the pull request
         if: steps.pr.outputs.number != ''
         env:
@@ -132,6 +241,9 @@ jobs:
           BRANCH_RESULT: ${{ steps.branch.outputs.result }}
           MOVED: ${{ steps.moved.outputs.moved }}
           FAILED: ${{ steps.moved.outputs.failed }}
+          REOPENED: ${{ steps.reopened.outputs.reopened }}
+          NOT_REOPENED: ${{ steps.reopened.outputs.failed }}
+          REOPEN_OUTCOME: ${{ steps.reopened.outcome }}
         run: |
           set -euo pipefail
           # The same push starts each of these workflows. Link this merge's run,
@@ -156,15 +268,18 @@ jobs:
 
           branches="[branches page]($REPO_URL/branches)"
           on_main="[open pull requests into \`main\`]($REPO_URL/pulls?q=is%3Apr+is%3Aopen+base%3Amain)"
+          # GitHub closes the ones from forks when it deletes release-candidate.
+          closed="[closed pull requests into \`release-candidate\`]($REPO_URL/pulls?q=is%3Apr+is%3Aclosed+is%3Aunmerged+base%3Arelease-candidate)"
+          reopen="Reopen the ones from forks that GitHub closed then ($closed) before their branches are force-pushed: GitHub can't reopen one after."
           case "$BRANCH_RESULT" in
             created)
               branch_line="Created \`release-candidate\` from this merge for the next release ($branches)." ;;
             stale)
-              branch_line="\`release-candidate\` wasn't deleted, so it still holds this release's commits. Delete it on the $branches, then create it again from \`main\`. Deleting it moves its open pull requests to \`main\`, so then change their base back to \`release-candidate\` ($on_main)." ;;
+              branch_line="\`release-candidate\` wasn't deleted, so it still holds this release's commits. Delete it on the $branches, then create it again from \`main\`. Deleting it moves its open pull requests to \`main\`, so then change their base back to \`release-candidate\` ($on_main). $reopen" ;;
             exists)
               branch_line="\`release-candidate\` already exists ($branches)." ;;
             *)
-              branch_line="Couldn't create \`release-candidate\`. Create it from \`main\` on the $branches, then change the base of the pull requests GitHub moved to \`main\` back to it ($on_main)." ;;
+              branch_line="Couldn't create \`release-candidate\`. Create it from \`main\` on the $branches, then change the base of the pull requests GitHub moved to \`main\` back to it ($on_main). $reopen" ;;
           esac
 
           {
@@ -182,6 +297,18 @@ jobs:
             if [[ -n "${FAILED:-}" ]]; then
               echo
               echo "Couldn't move $(numbers "$FAILED") back to \`release-candidate\`. Change each one's base on its page."
+            fi
+            if [[ -n "${REOPENED:-}" ]]; then
+              echo
+              echo "Reopened $(numbers "$REOPENED"), from forks, which GitHub closed when it deleted \`release-candidate\`. Each has a comment on moving its branch onto the new \`release-candidate\`."
+            fi
+            if [[ -n "${NOT_REOPENED:-}" ]]; then
+              echo
+              echo "Couldn't reopen $(numbers "$NOT_REOPENED"). If GitHub closed it when it deleted \`release-candidate\`, reopen it on its page before its branch is force-pushed: GitHub can't reopen one after."
+            fi
+            if [[ "${REOPEN_OUTCOME:-}" == failure ]]; then
+              echo
+              echo "Couldn't check for pull requests from forks that GitHub closed when it deleted \`release-candidate\`; this run's log says why. $reopen"
             fi
           } > comment.md
 
