@@ -29,8 +29,8 @@ are captured, their sizes, and what they may show are in
   takes: Home, the Bible in English and Chinese, the Bible in landscape, the Library,
   and Home in landscape. They're the key screens' 13-inch iPad shots, at the iPad's own
   150% text, copied from a run's `screens/app-store-ipad/en-US/` when the app first ran
-  on iPad (#324), with the tablet's tab bar capsule (#589), November 4, 2026. Upload them with the first release that supports
-  iPad, and copy a newer run's set here only when the iPad's layout changes; a different
+  on iPad (#324), with the floating tab bar and Bible card (#589), November 4, 2026. Upload
+  them with 1.7.0, the first release that supports iPad, and copy a newer run's set here only when the iPad's layout changes; a different
   day's verse on Home isn't a reason. The other languages' listings show these too.
 - `app-store/header/`: the App Store product page headers, one per listing language:
   `en-US.png`, `zh-Hant.png`, `zh-Hans.png`, and `es.png` for both Spanish listings.
@@ -53,9 +53,10 @@ are captured, their sizes, and what they may show are in
   [Foreground service](../operations/play-console-answers.md#foreground-service).
 
 The Play app icon is `public/icon-512x512.png`, so it isn't copied here. The screenshots
-and headers here are from the key-screen runs for 1.4.0 on October 28, 2026, the first
-with the 1919 Chinese Union Version: [iOS](https://github.com/CodeSammich/sda-church-app/actions/runs/40628414994)
-and [Android](https://github.com/CodeSammich/sda-church-app/actions/runs/40632080157). The
+and headers here are from the key-screen runs for 1.7.0 on November 4, 2026, the first
+with the floating tab bar and Bible card on every system (#589):
+[iOS](https://github.com/CodeSammich/sda-church-app/actions/runs/41919509424) and
+[Android](https://github.com/CodeSammich/sda-church-app/actions/runs/41919513576). The
 feature graphic was built from the Google Play ones.
 
 Each run also saves numbered App Store copies in its screenshots download's
