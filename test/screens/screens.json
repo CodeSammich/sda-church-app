@@ -17,7 +17,8 @@
       { "$comment": "The iPad's Split View and Slide Over windows, in points (dp at 2x, 320 dpi), taken on their own emulators (#324): Slide Over, and the 11-inch iPad's half, the 13-inch iPad's half in portrait, and its two-thirds in landscape.", "width": 320, "height": 744 },
       { "width": 504, "height": 1194 },
       { "width": 678, "height": 1024 },
-      { "width": 981, "height": 1024 }
+      { "width": 981, "height": 1024 },
+      { "width": 375, "height": 667 }
     ]
   },
   "variants": {
