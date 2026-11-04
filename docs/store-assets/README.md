@@ -26,9 +26,12 @@ are captured, their sizes, and what they may show are in
   and Home shows what the app is. The other languages' listings show these too.
 - `app-store/ipad/en-US/`: the iPad screenshots, in upload order, at 2064 × 2752 (or
   2752 × 2064 in landscape), the size App Store Connect's **iPad 13-inch display** slot
-  takes, copied from a run's `screens/app-store-ipad/en-US/` with the first release that
-  supports iPad (#324): Home, the Bible in English and Chinese, the Bible in
-  landscape, the Library, and Home in landscape.
+  takes: Home, the Bible in English and Chinese, the Bible in landscape, the Library,
+  and Home in landscape. They're the key screens' 13-inch iPad shots, at the iPad's own
+  150% text, copied from a run's `screens/app-store-ipad/en-US/` when the app first ran
+  on iPad (#324, November 3, 2026). Upload them with the first release that supports
+  iPad, and copy a newer run's set here only when the iPad's layout changes; a different
+  day's verse on Home isn't a reason. The other languages' listings show these too.
 - `app-store/header/`: the App Store product page headers, one per listing language:
   `en-US.png`, `zh-Hant.png`, `zh-Hans.png`, and `es.png` for both Spanish listings.
   Each is a 3840 × 1646 (21:9) PNG with no transparency. App Store Connect's header
