@@ -46,7 +46,7 @@ Master spreadsheet
 ├── Weekly Data           reviewed final-owner bulletin content
 ├── Name Dictionary        private physical-print name resolution
 ├── Leadership             pastors and elders, for printed titles
-└── Hymn Bank              hymns to copy into Weekly Data; no script reads it
+└── Hymn Bank              hymns to copy into Weekly Data; kept up to date on open
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
@@ -54,8 +54,8 @@ Master spreadsheet
 ```
 
 There is one bound Apps Script project. `BulletinApi.gs`, the printed renderers,
-the schedule-maintenance script, and the generated `PinyinPro.gs` are deployed
-together. The public web-app endpoint is read-only; users enter or correct
+the schedule-maintenance script, and the generated `PinyinPro.gs` and
+`HymnalData.gs` are deployed together. The public web-app endpoint is read-only; users enter or correct
 content in the spreadsheet, not through the mobile app.
 
 ### Why this architecture
@@ -85,10 +85,11 @@ the church's Workspace terms during annual maintenance.
 | `google-apps-script/PrintedCommunionBulletin.gs` | Communion service content both locations print: fixed Communion/Foot Washing readings, response hymn, and ceremony panels |
 | `google-apps-script/PrintedQueensBulletin.gs` | Queens Regular and Queens Communion page layouts |
 | `google-apps-script/PrintedBrooklynBulletin.gs` | Brooklyn cover, Zoom, Sabbath School, worship, Communion, and giving footer layouts, and placing the Sabbath Encouragement spread |
-| `google-apps-script/PrintedHymnLookup.gs` | Reviewed bidirectional English/Chinese hymn-number lookup for physical printing |
+| `google-apps-script/PrintedHymnLookup.gs` | Fills in a printed hymn's missing language, number and title, from `HymnalData.gs` |
 | `google-apps-script/SabbathEncouragement.gs` | 52-page Brooklyn encouragement rotation containing Ellen White quotations plus Bible/editorial/other source material, machine translation, direct Bible replacement, and the bilingual printed spread |
 | `google-apps-script/appsscript.json` | Apps Script runtime and web-app manifest |
 | `google-apps-script/PinyinPro.gs` | Generated on each push or deploy from the pinned `pinyin-pro` npm dependency; ignored by Git, never edited by hand |
+| `google-apps-script/HymnalData.gs` | Generated on each push or deploy by `scripts/build-hymnal-apps-script.cjs` from `features/hymnal/` (#619): the 1985 and 505 titles, Chinese in Traditional, their number maps, and the `Hymn Bank` tab's rows; ignored by Git, never edited by hand |
 | `services/BulletinService.ts` | App response types, date selection, local cache, refresh cooldown, and empty-location behavior |
 | `app/(tabs)/home/bulletin.tsx` | Digital bulletin sections, labels, privacy-safe names, translations, and staff link |
 | `test/apps-script-physical-bulletin.test.ts` | Physical layout, sheet columns, privacy, lookup, QR, and maintenance regression tests |
@@ -320,9 +321,10 @@ Head | Paul Wen  | Ruth Ho
 
 ## The `Hymn Bank` tab
 
-This optional tab lists every hymn in the church's two hymnals, to copy into
-`Weekly Data`'s hymn cells instead of typing them (#606). No script reads it,
-so it can be renamed, sorted, or deleted, and refreshing it needs no deploy.
+This tab lists every hymn in the church's two hymnals, to copy into
+`Weekly Data`'s hymn cells instead of typing them (#606). No script reads it.
+The open-time upkeep keeps it the same as the app's hymnals (#619), so nobody
+pastes or protects it.
 
 ```text
 Chinese Hymnal 505 中文赞美诗 | SDA Hymnal 1985 英文诗歌本
@@ -345,20 +347,29 @@ Chinese Hymnal 505 中文赞美诗 | SDA Hymnal 1985 英文诗歌本
   converts them with `opencc-js`, and its `TRADITIONAL_FIXES` corrects the
   characters the converter gets wrong, such as 祢, which it turns into 禰.
 
-To make the tab, or refresh it after the app's hymnal data or number map
-changes, run this from the repo:
+**How it stays current (#619).** Each Apps Script deploy writes
+`HymnalData.gs` from `features/hymnal/`, with the tab's rows
+(`scripts/build-hymnal-apps-script.cjs`, which builds them with
+`scripts/export-hymn-bank.cjs`). Each time the spreadsheet opens, the upkeep
+(`ensureHymnBankTab_`) reads the tab in one call and compares it with those
+rows:
 
-```sh
-node scripts/export-hymn-bank.cjs --output hymn-bank.tsv
-```
+- If every cell matches, it does nothing.
+- If any cell differs (a stray edit, a sort, an extra column), it rewrites the
+  tab as plain text, with the headers bold and frozen. So when the app's
+  hymnal data changes, the tab follows at the first open after the deploy.
+- If the tab is gone, it adds it back at the end. The tab is tagged like the
+  others, so a renamed one is still found and kept.
 
-Open `hymn-bank.tsv`, select everything, and copy it. In the spreadsheet, add a
-tab named `Hymn Bank` (or clear the old one), click cell A1, and paste: the
-tabs in the file split it into the two columns. Then **View → Freeze → 1 row**
-keeps the headers in sight, and **Protect sheet** (right-click the tab), with
-**Restrict who can edit this range**, lets staff copy cells but not change
-them. `test/hymn-bank.test.ts` checks that the app and the printed bulletin
-read every cell as its own hymn.
+Any editor's open can do this, so the tab must not be protected. The
+protection added by hand in #606 should be removed: right-click the tab →
+**Protect sheet** → delete the rule. While it's there, an editor it blocks just
+leaves the tab as it was, and the upkeep goes on.
+
+`node scripts/export-hymn-bank.cjs --output hymn-bank.tsv` still writes the
+same rows to a file, for a look without opening the spreadsheet.
+`test/hymn-bank.test.ts` checks that the app and the printed bulletin read
+every cell as its own hymn, with the other cell in the row as its twin.
 
 ## Header protection and validation automation
 
@@ -377,11 +388,13 @@ On open, the script:
    the fourth quarter ahead when the current quarter is in its final 21 days;
 5. puts back a deleted `Weekly Data` tab or its missing columns, adds its rows
    for the next two Sabbaths, and sets its `Date` and `Location` rules;
-6. hides old schedule rows without deleting them;
-7. repaints the conflict highlights described below across every schedule row;
-8. tags the tabs and columns it finds by name, so a later rename doesn't lose
+6. keeps the `Hymn Bank` tab the same as the app's hymnals (see
+   [The `Hymn Bank` tab](#the-hymn-bank-tab));
+7. hides old schedule rows without deleting them;
+8. repaints the conflict highlights described below across every schedule row;
+9. tags the tabs and columns it finds by name, so a later rename doesn't lose
    them (see [Columns are read by name](#columns-are-read-by-name)); and
-9. shows one alert, in English and Simplified Chinese, listing any expected
+10. shows one alert, in English and Simplified Chinese, listing any expected
    column or tab still missing from `Sabbath Calendar` or `Weekly Data`, and
    any tab or column renamed, or any name more than one column has, since the
    last notice.
@@ -389,7 +402,7 @@ On open, the script:
 ### Columns are read by name
 
 The API and the printed bulletin find every `Sabbath Calendar` and `Weekly
-Data` column by its header, wherever it is. Each open also tags the four tabs,
+Data` column by its header, wherever it is. Each open also tags the five tabs,
 and each of those columns, with
 [developer metadata](https://developers.google.com/apps-script/reference/spreadsheet/developer-metadata),
 which stays with a tab or column through a rename or a move and can't be seen
@@ -933,13 +946,16 @@ a little, such as to 1.1. If tall characters look clipped, raise it, such as to
 
 ### Hymns
 
-`PrintedHymnLookup.gs` contains the reviewed English↔Chinese hymnal number map.
-For each printed hymn:
+`PrintedHymnLookup.gs` reads the 1985 ↔ 505 number maps and both hymnals'
+titles from the generated `HymnalData.gs` (#619). For each printed hymn:
 
 - if both language values are supplied, preserve both exactly, except that a
   bare number in the Chinese value prints as `第N首`;
-- if only English is supplied, fill only the missing Chinese hymn number;
-- if only Chinese is supplied, fill only the missing English hymn number; and
+- if only English is supplied, fill only the missing Chinese hymn's number and
+  title, such as `第2首 聖哉真神` for `AH 73 Holy, Holy, Holy`;
+- if only Chinese is supplied, fill only the missing English hymn's number and
+  title, such as `AH 73 Holy, Holy, Holy` for `第2首 聖哉真神`. A typed title
+  prints as typed, even where the app's title differs;
 - never copy an English title/reference into the Chinese slot. The Sabbath
   School hymns (below) have no separate slots: each prints on one line.
 
@@ -1053,7 +1069,8 @@ push, and deploy commands, with what each one changes in production, are in its
 
 The deployment helper:
 
-- regenerates `PinyinPro.gs` from the pinned npm dependency;
+- regenerates `PinyinPro.gs` from the pinned npm dependency, and `HymnalData.gs`
+  from `features/hymnal/`;
 - writes ignored `.clasp.json` and `.clasp-deployment.json` from environment values;
 - accepts `APPS_SCRIPT_PROJECT_ID`, `APPS_SCRIPT_DEPLOYMENT_ID`, and an optional
   `APPS_SCRIPT_DEPLOYMENT_DESCRIPTION` or `DEPLOYMENT_DESCRIPTION`; and
@@ -1120,7 +1137,7 @@ changes the URL and requires a coordinated mobile-app update.
 | A Chinese character prints in a plainer font than the rest | It's a Simplified or rare character the bulletin's Chinese font lacks, so it uses the fallback font | Nothing, if it's spelled as intended. A Simplified name or title typed in Traditional prints in the bulletin's font; a rare character always prints in the fallback font. See [Type](#type) |
 | All Chinese, or all English, prints in the wrong font | `PRINTED_BULLETIN_CJK_FONT` or `PRINTED_BULLETIN_LATIN_FONT` names a font Docs doesn't offer, typed by hand | Choose a font in **Printed Bulletin → Fonts…**, or **Default** |
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
-| Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten (on the Sabbath School hymns row, an unmapped English hymn repeats on purpose) | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
+| Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten (on the Sabbath School hymns row, an unmapped English hymn repeats on purpose) | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` and `HymnalData.gs` |
 | QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
 | A pastor or elder prints without a title, or Communion rows print `TBD` | The name isn't in the `Leadership` tab, is spelled differently from the schedule or the `Name Dictionary`, or the tab or its `Pastors`/`Elders` header was renamed (a header must hold only the title) | Fix the [`Leadership` tab](#the-leadership-tab); **Extensions → Apps Script → Executions** logs a missing tab or column. No deploy is needed |
 | Brooklyn Communion is unavailable | Intentional safety/layout restriction | Use Queens Holy Communion or Brooklyn Regular; do not re-enable without a dedicated layout review |

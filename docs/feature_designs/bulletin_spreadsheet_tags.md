@@ -50,7 +50,7 @@ In order of priority. When two conflict, the earlier one wins.
 
 | Term | Meaning |
 | --- | --- |
-| **Bulletin tab** | One of `BULLETIN_TABS`: `Sabbath Calendar`, `Weekly Data`, `Name Dictionary`, `Leadership`. All four are tagged |
+| **Bulletin tab** | One of `BULLETIN_TABS`: `Sabbath Calendar`, `Weekly Data`, `Name Dictionary`, `Leadership`, `Hymn Bank`. All five are tagged; `Hymn Bank` is kept by the upkeep, not read (#619) |
 | **Expected column** | A header in `BULLETIN_SHEET_COLUMNS`. Only `Sabbath Calendar` and `Weekly Data` have them, so only their columns are tagged. `Leadership` is read by the words `Pastors` and `Elders` in a header that holds only the title, and `Name Dictionary` by position |
 | **Repeated column** | A `Sabbath Calendar` header that appears on both sides, such as `Offering Prayer`. Its side, Queens or Brooklyn, is its *location*: columns left of `Brooklyn Sermon` are Queens |
 | **Label** | An expected column's name with its location, such as `Brooklyn Offering Prayer`; for other columns, the header itself |

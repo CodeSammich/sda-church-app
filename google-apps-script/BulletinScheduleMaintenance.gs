@@ -197,6 +197,7 @@ function runBulletinScheduleMaintenance_(now) {
       );
     }
     var weeklyRows = populateUpcomingWeeklyDataRowsSafely_(now);
+    var hymnBank = ensureHymnBankTabSafely_();
     var hidden = hideOldBulletinScheduleRows_(sheet, now);
     // Runs after quarter rows are appended so the scan covers every row.
     var conflicts = refreshScheduleRosterChecksSafely_(sheet);
@@ -204,6 +205,7 @@ function runBulletinScheduleMaintenance_(now) {
     return {
       populated: populated,
       weeklyRows: weeklyRows,
+      hymnBank: hymnBank,
       hidden: hidden,
       conflicts: conflicts,
       validation: validation,
@@ -723,6 +725,70 @@ function applyWeeklyDataRules_(sheet, dateColumn, locationColumn) {
     .build();
   range.setDataValidation(rule);
   range.setNumberFormat('yyyy-mm-dd');
+}
+
+/**
+ * Keeps the Hymn Bank tab (#606) the same as the app's hymnals (#619), the way
+ * Weekly Data repairs itself: the rows come from BULLETIN_HYMNAL_DATA, which
+ * each deploy makes from features/hymnal/. The tab is read in one call, and
+ * rewritten only when a cell differs, so a stray edit, sort or new column is
+ * undone at the next open and the tab needs no protection. A deleted tab
+ * comes back at the end. Returns what it did.
+ */
+function ensureHymnBankTab_(spreadsheet) {
+  var rows = typeof BULLETIN_HYMNAL_DATA !== 'undefined' ? BULLETIN_HYMNAL_DATA.hymnBankRows : null;
+  if (!rows || !rows.length) {
+    return 'no data';
+  }
+  var name = 'Hymn Bank';
+  var sheet = getBulletinSheet_(spreadsheet, name);
+  var created = !sheet;
+  if (created) {
+    sheet = spreadsheet.insertSheet(name, spreadsheet.getSheets().length);
+  } else {
+    var current = sheet.getLastRow() ? sheet.getDataRange().getDisplayValues() : [];
+    if (isSameHymnBank_(current, rows)) {
+      return 'unchanged';
+    }
+    sheet.clearContents();
+  }
+  var width = rows[0].length;
+  var range = sheet.getRange(1, 1, rows.length, width);
+  // Plain text, so Sheets never reads a cell as a number or a date.
+  range.setNumberFormat('@');
+  range.setValues(rows);
+  sheet.getRange(1, 1, 1, width).setFontWeight('bold');
+  if (sheet.getFrozenRows() !== 1) {
+    sheet.setFrozenRows(1);
+  }
+  return created ? 'created' : 'rewritten';
+}
+
+function isSameHymnBank_(current, rows) {
+  return (
+    current.length === rows.length &&
+    current.every(function (row, index) {
+      return (
+        row.length === rows[index].length &&
+        row.every(function (cell, column) {
+          return cell === rows[index][column];
+        })
+      );
+    })
+  );
+}
+
+// A Hymn Bank problem, such as a tab still protected from this editor, must
+// not stop the rest of the upkeep.
+function ensureHymnBankTabSafely_() {
+  try {
+    return ensureHymnBankTab_(SpreadsheetApp.getActiveSpreadsheet());
+  } catch (error) {
+    if (typeof Logger !== 'undefined') {
+      Logger.log('Could not refresh the Hymn Bank tab: ' + error);
+    }
+    return 'failed';
+  }
 }
 
 // A Weekly Data problem must not stop the Sabbath Calendar's upkeep.

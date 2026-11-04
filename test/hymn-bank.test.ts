@@ -13,11 +13,15 @@ import {
 // two hymnals, one per cell, to copy into Weekly Data.
 const hymnBank = require('../scripts/export-hymn-bank.cjs');
 
+// HymnalData.gs is made at deploy (#619), so the tests make it the same way.
+const HYMNAL_DATA_GS: string = require('../scripts/build-hymnal-apps-script.cjs').buildHymnalAppsScript();
+
 const loadAppsScript = () => {
   const context = createContext({});
   runInContext(
     ['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs']
       .map((file) => readFileSync(join(process.cwd(), 'google-apps-script', file), 'utf8'))
+      .concat(HYMNAL_DATA_GS)
       .join('\n'),
     context,
   );
@@ -94,6 +98,8 @@ describe('scripts/export-hymn-bank.cjs', () => {
     }
   });
 
+  // The printed bulletin fills in the twin with its number and title (#619),
+  // so the twin is exactly the other cell in the row.
   it('writes cells the printed bulletin files by language and fills in the twin', () => {
     const context = loadAppsScript();
     const read = (expression: string) =>
@@ -102,7 +108,7 @@ describe('scripts/export-hymn-bank.cjs', () => {
       if (chineseCell) {
         expect(read(`getBulletinHymnLanguage_(${JSON.stringify(chineseCell)})`)).toBe('chinese');
         expect(read(`resolvePrintedHymnText_('', ${JSON.stringify(chineseCell)})`)).toEqual({
-          english: englishCell ? `AH ${getNumber(englishCell)}` : '',
+          english: englishCell,
           chinese: chineseCell,
         });
       }
@@ -110,7 +116,7 @@ describe('scripts/export-hymn-bank.cjs', () => {
         expect(read(`getBulletinHymnLanguage_(${JSON.stringify(englishCell)})`)).toBe('english');
         expect(read(`resolvePrintedHymnText_(${JSON.stringify(englishCell)}, '')`)).toEqual({
           english: englishCell,
-          chinese: chineseCell ? `第${getNumber(chineseCell)}首` : '',
+          chinese: chineseCell,
         });
       }
     }

@@ -53,6 +53,7 @@ external-dependency-report.json
 **/.clasp-deployment.json
 **/.clasprc.json
 google-apps-script/PinyinPro.gs
+google-apps-script/HymnalData.gs
 .vscode/hunkwise/
 
 # Native signing credentials and build artifacts

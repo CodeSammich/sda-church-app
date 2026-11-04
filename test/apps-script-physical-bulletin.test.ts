@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext, runInContext } from 'node:vm';
 
+// HymnalData.gs is made at deploy (#619), so the tests make it the same way.
+const HYMNAL_DATA_GS: string = require('../scripts/build-hymnal-apps-script.cjs').buildHymnalAppsScript();
+
 const loadAppsScript = (context: Record<string, unknown>) => {
   const vmContext = createContext(context);
   runInContext(
@@ -14,6 +17,8 @@ const loadAppsScript = (context: Record<string, unknown>) => {
       readFileSync(join(process.cwd(), 'google-apps-script/ScheduleAssignmentChecks.gs'), 'utf8') +
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedBulletin.gs'), 'utf8') +
+      '\n' +
+      HYMNAL_DATA_GS +
       '\n' +
       readFileSync(join(process.cwd(), 'google-apps-script/PrintedHymnLookup.gs'), 'utf8') +
       '\n' +
@@ -1953,7 +1958,7 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
     expect(row(rows.study, 'Opening Hymns')).toEqual([
       '開會詩歌\nOpening Hymns',
-      'AH 348 · 第413首 教會根基\nAmazing Love',
+      'AH 348 The Church Has One Foundation · 第413首 教會根基\nAmazing Love',
       '會眾\nCongregation',
     ]);
     expect(row(rows.study, 'Closing Hymns')).toEqual([
@@ -1973,7 +1978,7 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
     expect(row(rows.brooklyn, 'Opening Hymns')?.slice(0, 2)).toEqual([
       '開會唱詩\nOpening Hymns',
-      'AH 348 · 第413首 教會根基\nAmazing Love',
+      'AH 348 The Church Has One Foundation · 第413首 教會根基\nAmazing Love',
     ]);
     expect(row(rows.brooklyn, 'Closing Hymns')?.slice(0, 2)).toEqual([
       '合班唱詩\nClosing Hymns',
@@ -2041,10 +2046,10 @@ describe('printed bulletin Apps Script helpers', () => {
 
     // Queens: in order, without the blank middle cell.
     // AH 73 Holy, Holy, Holy is 505 #2, 聖哉真神.
-    expect(row('開會詩歌')).toBe('AH 348 · 第413首 教會根基\nAH 73 Holy, Holy, Holy · 第2首');
+    expect(row('開會詩歌')).toBe('AH 348 The Church Has One Foundation · 第413首 教會根基\nAH 73 Holy, Holy, Holy · 第2首 聖哉真神');
     // Brooklyn: a bare number is a Chinese hymnal number. With one hymn, the
     // rows say Hymn, not Hymns.
-    expect(row('開會唱詩')).toBe('AH 206 · 第205首');
+    expect(row('開會唱詩')).toBe('AH 206 Face to Face · 第205首');
     expect(rows.find(([first]) => first.includes('合班唱詩'))?.slice(0, 2)).toEqual([
       '合班唱詩\nClosing Hymn',
       '同開會唱詩\nSame as Opening Hymn',
@@ -2548,7 +2553,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.date).toBe('August 22, 2026\n2026年8月22日');
   });
 
-  it('fills only a missing hymn side from the reviewed bidirectional lookup', () => {
+  it('fills only a missing hymn side, with its number and title, from the lookup', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
       runInContext(
@@ -2562,9 +2567,10 @@ describe('printed bulletin Apps Script helpers', () => {
       ) as string,
     );
 
-    expect(output.bareNumber).toBe('第413首\nAH 348');
-    expect(output.englishOnly).toBe('第413首\nAH 348 The Church Has One Foundation');
-    expect(output.chineseOnly).toBe('第413首 教會根基\nAH 348');
+    // The app's title for 505 #413 is 教會基礎; a typed title prints as typed.
+    expect(output.bareNumber).toBe('第413首\nAH 348 The Church Has One Foundation');
+    expect(output.englishOnly).toBe('第413首 教會基礎\nAH 348 The Church Has One Foundation');
+    expect(output.chineseOnly).toBe('第413首 教會根基\nAH 348 The Church Has One Foundation');
     expect(output.both).toBe('第413首 教會根基\nAH 348 The Church Has One Foundation');
   });
 
@@ -2590,7 +2596,12 @@ describe('printed bulletin Apps Script helpers', () => {
     );
 
     expect(output.mixed).toBe(
-      ['AH 348 · 第413首 教會根基', 'AH 348 The Church Has One Foundation · 第413首', 'AH 348 · 第413首', '還要等多久'].join(
+      [
+        'AH 348 The Church Has One Foundation · 第413首 教會根基',
+        'AH 348 The Church Has One Foundation · 第413首 教會基礎',
+        'AH 348 The Church Has One Foundation · 第413首',
+        '還要等多久',
+      ].join(
         '\n',
       ),
     );

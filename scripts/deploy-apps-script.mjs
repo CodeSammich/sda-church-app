@@ -1,4 +1,5 @@
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
@@ -28,6 +29,13 @@ const generatePinyinAppsScriptFile = () => {
     resolve(appsScriptRoot, 'PinyinPro.gs'),
     `// Generated from the pinned pinyin-pro dependency for Apps Script V8.\n// Do not edit this generated file directly.\n${pinyinSource}\n`,
   );
+};
+
+// The app's hymnal titles, number maps and Hymn Bank rows (#619), made from
+// features/hymnal/ on every push so the deployed copy never falls behind.
+const generateHymnalAppsScriptFile = () => {
+  const { buildHymnalAppsScript } = createRequire(import.meta.url)('./build-hymnal-apps-script.cjs');
+  writeFileSync(resolve(appsScriptRoot, 'HymnalData.gs'), buildHymnalAppsScript());
 };
 
 const configureFromEnvironment = () => {
@@ -83,6 +91,7 @@ const runClasp = (args) => {
 try {
   configureFromEnvironment();
   generatePinyinAppsScriptFile();
+  generateHymnalAppsScriptFile();
   runClasp(['push', '--force']);
   if (pushOnly) {
     process.exit(0);

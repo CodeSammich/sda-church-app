@@ -151,6 +151,9 @@ function paragraphsOf(container: FakeContainer): FakeParagraph[] {
 
 const CJK = /[⺀-⿟　-〿㐀-鿿豈-﫿︰-﹏﻿＀-￯\ud800-\udfff]/;
 
+// HymnalData.gs is made at deploy (#619), so the tests make it the same way.
+const HYMNAL_DATA_GS: string = require('../scripts/build-hymnal-apps-script.cjs').buildHymnalAppsScript();
+
 const loadPrintedBulletin = (properties: Record<string, string> = {}) => {
   const context = createContext({
     DocumentApp: {
@@ -204,6 +207,7 @@ const loadPrintedBulletin = (properties: Record<string, string> = {}) => {
       'PrintedBrooklynBulletin.gs',
     ]
       .map((file) => readFileSync(join(process.cwd(), 'google-apps-script', file), 'utf8'))
+      .concat(HYMNAL_DATA_GS)
       .join('\n'),
     context,
   );
