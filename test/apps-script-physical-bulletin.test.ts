@@ -3413,7 +3413,7 @@ describe('Sabbath Calendar year-ahead rows', () => {
         .every((row) => row[QUEENS_SERMON - 1] === WHITE && row[BROOKLYN_SERMON - 1] === WHITE),
     ).toBe(true);
     expect(
-      runInContext(`formatBulletinScheduleMaintenanceResult_(${JSON.stringify(result)})`, context),
+      runInContext('formatBulletinScheduleMaintenanceResult_(testResult)', Object.assign(context, { testResult: result })),
     ).toBe(
       'Schedule maintenance complete. Added 39 upcoming Saturday(s) and 0 Weekly Data row(s), and hid 0 old row(s).',
     );

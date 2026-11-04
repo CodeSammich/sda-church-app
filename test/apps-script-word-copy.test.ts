@@ -40,11 +40,12 @@ const paragraphs = (xml: string) => xml.match(/<w:p(?:\s[^>]*[^/>])?>[\s\S]*?<\/
 
 describe('the Word copy for printing on a Mac (#627)', () => {
   const convert = (lineHeight = 1.15) => {
-    const context = loadAppsScript({});
+    // The values go in through the context, so no code is built from them.
+    const context = loadAppsScript({ testXml: DOCUMENT_XML, testLineHeight: lineHeight });
     return runInContext(
-      `convertPrintedDocxDocumentXml_(${JSON.stringify(DOCUMENT_XML)}, {
+      `convertPrintedDocxDocumentXml_(testXml, {
         chineseFonts: ['UoqMunThenKhung', 'Noto Sans SC'],
-        lineHeight: ${lineHeight},
+        lineHeight: testLineHeight,
         defaultSize: 11,
         defaultMultiple: 1.15,
       })`,
@@ -92,14 +93,14 @@ describe('the Word copy for printing on a Mac (#627)', () => {
   });
 
   it('reads the default size and spacing, and sets Songti TC as the default East Asian font', () => {
-    const context = loadAppsScript({});
+    const context = loadAppsScript({ testStyles: STYLES_XML });
 
-    expect(runInContext(`readPrintedDocxDefaults_(${JSON.stringify(STYLES_XML)})`, context)).toEqual({
+    expect(runInContext('readPrintedDocxDefaults_(testStyles)', context)).toEqual({
       size: 11,
       multiple: 1.15,
     });
     expect(runInContext(`readPrintedDocxDefaults_('')`, context)).toEqual({ size: 11, multiple: 1 });
-    expect(runInContext(`setPrintedDocxEastAsiaFonts_(${JSON.stringify(STYLES_XML)}, [])`, context)).toContain(
+    expect(runInContext('setPrintedDocxEastAsiaFonts_(testStyles, [])', context)).toContain(
       '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Songti TC"/>',
     );
   });
@@ -250,21 +251,21 @@ describe('the Word copy for printing on a Mac (#627)', () => {
   });
 
   it('says so, in English and Simplified Chinese, when there is no Doc yet or the export fails', () => {
-    const run = (options: Parameters<typeof setup>[0], request: string) => {
+    const run = (options: Parameters<typeof setup>[0], request: { date: string; location: string }) => {
       const { context, created } = setup(options);
       const message = runInContext(
-        `try { createPrintedBulletinWordCopy(${request}); 'made'; } catch (error) { error.message; }`,
-        context,
+        "try { createPrintedBulletinWordCopy(testRequest); 'made'; } catch (error) { error.message; }",
+        Object.assign(context, { testRequest: request }),
       );
       return { message, created };
     };
     const noDoc = 'There is no Google Doc for this Sabbath and location yet. Create it first, then make the Word copy.\n这个安息日和地点还没有 Google 文档。请先创建，再制作 Word 副本。';
 
-    expect(run({}, `{ date: '2026-11-07', location: 'brooklyn' }`).message).toBe(noDoc);
-    expect(run({ trashed: true }, `{ date: '2026-11-07', location: 'queens' }`).message).toBe(noDoc);
-    expect(run({ properties: { 'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07': 'gone' } }, `{ date: '2026-11-07', location: 'queens' }`).message).toBe(noDoc);
-    expect(run({}, `{ date: '', location: 'queens' }`).message).toBe('Sabbath date is required. / 安息日日期为必填。');
-    const failed = run({ exportCode: 403 }, `{ date: '2026-11-07', location: 'queens' }`);
+    expect(run({}, { date: '2026-11-07', location: 'brooklyn' }).message).toBe(noDoc);
+    expect(run({ trashed: true }, { date: '2026-11-07', location: 'queens' }).message).toBe(noDoc);
+    expect(run({ properties: { 'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07': 'gone' } }, { date: '2026-11-07', location: 'queens' }).message).toBe(noDoc);
+    expect(run({}, { date: '', location: 'queens' }).message).toBe('Sabbath date is required. / 安息日日期为必填。');
+    const failed = run({ exportCode: 403 }, { date: '2026-11-07', location: 'queens' });
     expect(failed.message).toContain('Google Drive could not export the Doc as Word (403).');
     expect(failed.message).toContain('Google 云端硬盘无法将文档导出为 Word（403）');
     expect(failed.created).toEqual([]);

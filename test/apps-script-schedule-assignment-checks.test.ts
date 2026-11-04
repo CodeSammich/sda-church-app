@@ -332,9 +332,9 @@ describe('Sabbath Calendar columns found by name', () => {
     expect(schedule.notes[1][at('Pianist') - 1]).toBe('Duplicate / 重复: Queens Offering Prayer');
     expect(
       runInContext(
-        `[findScheduleColumn_(${JSON.stringify(headers)}, 'Offering Prayer', 'queens', 0),
-          findScheduleColumn_(${JSON.stringify(headers)}, 'Offering Prayer', 'brooklyn', 1)]`,
-        context,
+        `[findScheduleColumn_(testHeaders, 'Offering Prayer', 'queens', 0),
+          findScheduleColumn_(testHeaders, 'Offering Prayer', 'brooklyn', 1)]`,
+        Object.assign(context, { testHeaders: headers }),
       ),
     ).toEqual([at('Queens Offering Prayer') - 1, at('Offering Prayer') - 1]);
   });
@@ -416,9 +416,10 @@ describe('Sabbath Calendar unknown-name warnings', () => {
 describe('Simplified Chinese names in the Name Dictionary dialog', () => {
   const add = (chinese: string, allowSimplified = false) => {
     const { context, names } = setup([]);
+    // The request goes in through the context, so no code is built from it.
     const result = runInContext(
-      `addScheduleNameToDictionary(${JSON.stringify({ english: 'Grace Ho', chinese, allowSimplified })})`,
-      context,
+      'addScheduleNameToDictionary(testRequest)',
+      Object.assign(context, { testRequest: { english: 'Grace Ho', chinese, allowSimplified } }),
     ) as { added: boolean; simplifiedWarning?: string };
     return { result, added: names.values.slice(4) };
   };

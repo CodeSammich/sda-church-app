@@ -386,8 +386,8 @@ describe('Apps Script bulletin response merging', () => {
     const context = loadBulletinApi();
     const find = (headers: string[], location: string, occurrence: number) =>
       runInContext(
-        `findScheduleColumn_(${JSON.stringify(headers)}, 'Offering Prayer', '${location}', ${occurrence})`,
-        context,
+        "findScheduleColumn_(testHeaders, 'Offering Prayer', testLocation, testOccurrence)",
+        Object.assign(context, { testHeaders: headers, testLocation: location, testOccurrence: occurrence }),
       );
     expect(find(withoutQueensOffering, 'queens', 0)).toBe(-1);
     expect(find(withoutQueensOffering, 'brooklyn', 1)).toBe(

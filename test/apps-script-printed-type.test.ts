@@ -285,9 +285,9 @@ const render = (
 ) => {
   const context = loadPrintedBulletin(properties);
   const body = new FakeContainer();
-  Object.assign(context, { testBody: body, testBulletin: data, testNext: bulletin() });
+  Object.assign(context, { testBody: body, testBulletin: data, testNext: bulletin(), testFormat: format, testPlace: place });
   runInContext(
-    `renderPrintedBulletinDocument_({ getBody: function () { return testBody; } }, testBulletin, testNext, '${format}', '${place}')`,
+    'renderPrintedBulletinDocument_({ getBody: function () { return testBody; } }, testBulletin, testNext, testFormat, testPlace)',
     context,
   );
   return { context, paragraphs: paragraphsOf(body) };

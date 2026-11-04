@@ -102,19 +102,20 @@ describe('scripts/export-hymn-bank.cjs', () => {
   // so the twin is exactly the other cell in the row.
   it('writes cells the printed bulletin files by language and fills in the twin', () => {
     const context = loadAppsScript();
-    const read = (expression: string) =>
-      JSON.parse(runInContext(`JSON.stringify(${expression})`, context));
+    // The cell goes in through the context, so no code is built from it.
+    const read = (expression: string, cell: string) =>
+      JSON.parse(runInContext(`JSON.stringify(${expression})`, Object.assign(context, { testCell: cell })));
     for (const [chineseCell, englishCell] of hymns) {
       if (chineseCell) {
-        expect(read(`getBulletinHymnLanguage_(${JSON.stringify(chineseCell)})`)).toBe('chinese');
-        expect(read(`resolvePrintedHymnText_('', ${JSON.stringify(chineseCell)})`)).toEqual({
+        expect(read('getBulletinHymnLanguage_(testCell)', chineseCell)).toBe('chinese');
+        expect(read("resolvePrintedHymnText_('', testCell)", chineseCell)).toEqual({
           english: englishCell,
           chinese: chineseCell,
         });
       }
       if (englishCell) {
-        expect(read(`getBulletinHymnLanguage_(${JSON.stringify(englishCell)})`)).toBe('english');
-        expect(read(`resolvePrintedHymnText_(${JSON.stringify(englishCell)}, '')`)).toEqual({
+        expect(read('getBulletinHymnLanguage_(testCell)', englishCell)).toBe('english');
+        expect(read("resolvePrintedHymnText_(testCell, '')", englishCell)).toEqual({
           english: englishCell,
           chinese: chineseCell,
         });
