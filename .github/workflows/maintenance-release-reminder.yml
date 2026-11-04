@@ -1,0 +1,98 @@
+name: Maintenance Release Reminder
+
+# GitHub turns off a public repository's scheduled workflows after 60 days
+# without activity, this one included, and a commit to main is the activity
+# known to count. From 45 days after main's last commit, every Monday, this
+# opens a "Maintenance release due" tracking issue and the maintenance
+# release's version pull request into release-candidate ("Set the version to
+# X.Y.Z", on its own maintenance/version-X.Y.Z branch), keeps the pull
+# request's count of days left up to date, and closes both after the release
+# (#658). It also alerts when GitHub has already turned a
+# scheduled workflow off. It never enables a workflow. The logic is in
+# scripts/maintenance-release-reminder.cjs, and the admin runbook
+# ("Maintenance releases") has the steps.
+#
+# It runs only main's code, and none of release-candidate's: main's
+# sync-version.js raises the version in copies of release-candidate's version
+# files, and the commit, branch, and pull request are made through the API,
+# with no credentials left on disk. Its write token can create and delete only
+# branches through that code, which never touches a branch it didn't create.
+# A pull request the workflow token opens holds its checks until someone with
+# write access selects "Approve workflows to run" in its merge box, as its
+# description says, or closes and reopens it. Creating it needs "Allow
+# GitHub Actions to create and approve pull requests" (Settings → Actions →
+# General → Workflow permissions).
+
+on:
+  schedule:
+    # Mondays, away from the top of the hour.
+    - cron: "23 13 * * 1"
+      timezone: "America/New_York"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maintenance-release-reminder
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    # Forks start with scheduled workflows off and commonly disable Issues.
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # To read each scheduled workflow's state.
+      actions: read
+      # To create the version pull request's branch and commit, and delete
+      # the branch once it's stale.
+      contents: write
+      # To open, update, and close the version pull request.
+      pull-requests: write
+      # For the alert issues.
+      issues: write
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Check main's last commit, and open or update the version pull request
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          # Comma-separated GitHub usernames; assigning an issue emails them.
+          ALERT_ASSIGNEES: ${{ vars.MONITOR_ALERT_ASSIGNEES }}
+        with:
+          script: |
+            const workspace = process.env.GITHUB_WORKSPACE;
+            const alerts = require(`${workspace}/scripts/monitor-alert-issue.cjs`);
+            const reminder = require(`${workspace}/scripts/maintenance-release-reminder.cjs`);
+            const { syncVersion } = require(`${workspace}/public/sync-version.js`);
+            const workflows = reminder.findScheduledWorkflows(`${workspace}/.github/workflows`);
+            const result = await reminder.check({ github, context, core, workflows });
+            core.info(`Days since main's last commit: ${result.daysSinceCommit ?? 'unknown'}`);
+            core.info(`Turned off for inactivity: ${result.turnedOff.map((w) => w.file).join(', ') || 'none'}`);
+            const repoUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
+            const done = await reminder.remind({
+              github,
+              context,
+              core,
+              alerts,
+              syncVersion,
+              result,
+              mainVersion: require(`${workspace}/package.json`).version,
+              assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
+              runUrl: alerts.getRunUrl(context),
+              docs: {
+                dependabot: `${repoUrl}/blob/main/docs/operations/admin-runbook.md#dependabot-pull-requests`,
+                release: `${repoUrl}/blob/main/docs/operations/admin-runbook.md#shipping-a-release-to-main`,
+                runbook: `${repoUrl}/blob/main/docs/operations/admin-runbook.md#maintenance-releases`,
+                tokenEvents: 'https://docs.github.com/en/actions/concepts/security/github_token#when-github_token-triggers-workflow-runs',
+              },
+            });
+            core.info(`Version pull request: ${done.pull}. Turned-off alert: ${done.turnedOff}.`);
+            if (result.unread.length || result.daysSinceCommit === null) {
+              core.setFailed("Couldn't read every workflow's state or main's last commit; see the warnings above.");
+            }

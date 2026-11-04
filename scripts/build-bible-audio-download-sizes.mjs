@@ -1,8 +1,13 @@
 /**
- * Writes how big each book's recording is for each narrator a member can
- * download for listening offline (#556), so the app can show the size before
- * a download starts: constants/BibleAudioDownloadSizes.json, as
- * { narrator: { book: bytes } }.
+ * Writes how big each chapter's recording is for each narrator a member can
+ * download for listening offline (#556): constants/BibleAudioDownloadSizes.json,
+ * as { narrator: { book: [chapter 1's bytes, chapter 2's, …] } }. The app shows
+ * the size before a download starts, and keeps a downloaded chapter only at
+ * about its recording's size (services/BibleAudioDownloadSizes.ts), so a
+ * Wi-Fi's sign-in page or a file cut off part way is tried again.
+ *
+ * Run it again whenever a host replaces a recording, or the app would turn
+ * the new one down.
  *
  * The church's copies (Mandarin, Cantonese, and Spanish) are measured already:
  * scripts/bible-audio-timing-sources/<narrator>.json has each chapter's size,
@@ -30,14 +35,17 @@ export const helloAoChapterUrl = (narrator, bookId, chapter) =>
 const chapterSizes = (narrator) =>
   JSON.parse(readFileSync(join(root, 'scripts/bible-audio-timing-sources', `${narrator}.json`), 'utf8'));
 
+// In chapter order: the sources list each book's chapters in order.
 const byBook = (entries) => {
   const books = {};
   for (const [chapter, bytes] of entries) {
-    const book = chapter.split(' ')[0];
-    books[book] = (books[book] ?? 0) + bytes;
+    const [book, number] = chapter.split(' ');
+    (books[book] ??= [])[Number(number) - 1] = bytes;
   }
   return books;
 };
+
+const total = (books) => Object.values(books).flat().reduce((a, b) => a + b, 0);
 
 const contentLength = async (url) => {
   for (let attempt = 1; ; attempt += 1) {
@@ -80,9 +88,16 @@ const main = async () => {
     });
     const measured = await measure(urls);
     sizes[narrator] = byBook(chapters.map((chapter, index) => [chapter, measured[index]]));
-    console.log(`${narrator}: ${(Object.values(sizes[narrator]).reduce((a, b) => a + b) / 1e9).toFixed(2)} GB`);
+    console.log(`${narrator}: ${(total(sizes[narrator]) / 1e9).toFixed(2)} GB`);
   }
-  writeFileSync(join(root, 'constants/BibleAudioDownloadSizes.json'), `${JSON.stringify(sizes, null, 2)}\n`);
+  // A book a line, so a replaced recording shows in a diff.
+  const lines = Object.entries(sizes).map(
+    ([narrator, books]) =>
+      `  ${JSON.stringify(narrator)}: {\n${Object.entries(books)
+        .map(([book, chapters]) => `    ${JSON.stringify(book)}: ${JSON.stringify(chapters)}`)
+        .join(',\n')}\n  }`,
+  );
+  writeFileSync(join(root, 'constants/BibleAudioDownloadSizes.json'), `{\n${lines.join(',\n')}\n}\n`);
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

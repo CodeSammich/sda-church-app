@@ -30,6 +30,7 @@ does and what still needs a person.
 - [Expo doctor monitor alerts](#expo-doctor-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
 - [Due-date reminders](#due-date-reminders)
+- [Maintenance releases](#maintenance-releases)
 - [Issue priorities](#issue-priorities)
 - [Updating pastors and elders](#updating-pastors-and-elders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
@@ -260,9 +261,9 @@ workflow** at any time. Either way it overwrites the QR images the printed bulle
 uses, and nothing reaches Drive until someone approves:
 
 1. For a manual run, select **Run workflow** and choose **`main`** under *Use
-   workflow from*. The upload step always runs the upload script from `main`, but
-   it uploads the images the chosen branch generated from its own copy of the
-   file. A run from `release-candidate` can test image generation; reject its upload.
+   workflow from*. Only a run from `main` uploads; a run from any other branch,
+   such as `release-candidate`, still generates the images to check in its
+   artifact and skips the upload.
 2. Approve the `production` deployment when the upload job starts. Leaving it
    unapproved is safe: the run expires without changing Drive.
 3. Open the **Upload QR codes to Google Drive** log and check:
@@ -341,6 +342,42 @@ request's title.
 
 The workflow updates the existing web app deployment, so the URL the mobile app uses
 doesn't change. Never create a new deployment just to publish code.
+
+The workflow installs `clasp` from its own lockfile in `tools/apps-script/`, without
+install scripts, because the job holds the deploy login. Dependabot proposes its
+updates in their own pull requests.
+
+### Apps Script edited outside git
+
+The Apps Script project is bound to the bulletin spreadsheet, so Google lets everyone
+who can edit the spreadsheet open **Extensions → Apps Script** and change its code.
+Google has no setting that keeps a spreadsheet editor out of its bound script, and
+the project can't move out of the spreadsheet: the **Printed Bulletin** menu and the
+name checks need it there, and every installed app calls this project's web-app URL.
+So:
+
+- **Keep the editor list short.** Give edit access to the spreadsheet only to the
+  people who plan the roster and make bulletins; everyone else gets view or comment
+  access. Check the list in **Share** at each [yearly checkup](#yearly-checkup) and
+  when someone leaves a role.
+- **Change code only through a pull request.** A hand edit in the Apps Script editor
+  lasts only until the next deploy, which replaces the whole project with `main`.
+- **Read the deploy's warning.** Before it pushes, the deploy compares every live file
+  with the last release and with this one. A file that matches neither, or one that
+  `main` doesn't have, appears as an **Apps Script edited outside git** warning in the
+  run's summary. The deploy still goes ahead, which puts `main`'s code back. A warning
+  also appears when an earlier deploy was rejected, since the live code is then
+  older than the last release.
+
+If you get the warning and nobody on the technology team made the change:
+
+1. In the Apps Script editor, open **Project history** to see which version changed
+   and when, and **Triggers** to check that every trigger belongs to a bulletin
+   admin and calls a function that's in `main`. Delete any other trigger.
+2. Remove edit access from anyone on the spreadsheet who no longer needs it, and ask
+   the person whose account made the change whether it was them. If it wasn't, they
+   should change their Google password and sign out of other sessions.
+3. Approve the deploy if it's still waiting; it restores `main`'s code.
 
 ## The app website (`app.nyccsda.org`)
 
@@ -477,6 +514,7 @@ check once a year, each item linked to the doc that explains it:
 - the Cloudflare card, domain renewal, and billing;
 - the Google Cloud project's lack of a billing account;
 - administrator access and two-factor login on every system;
+- who can edit the bulletin spreadsheet, and so its Apps Script;
 - the Faith Comes By Hearing key, kept in the IT Admin shared drive;
 - the Apple dates and Google Play's contact details and declarations;
 - the Workspace nonprofit terms;
@@ -813,6 +851,13 @@ release on an Apple Silicon Mac before merging, download the app, the artifact e
 The screenshots are a separate download, `ios-key-screens-<number>-<run>`. See
 [iOS key screens](native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
+To check an earlier run's screenshots again, say after changing a text check in
+`scripts/check-screens.cjs`, run **Key screens recheck** (**Run workflow**) on the branch
+with the change, choose the **platform**, and give the earlier **iOS key screens** or
+**Android key screens** run's ID, the number in its address, as **screens_from_run**. It
+only downloads and checks, in a few minutes. It runs only by hand, so pull requests
+don't list it.
+
 ## Dependabot pull requests
 
 Dependabot opens one pull request a week for all minor and patch updates, and a
@@ -842,6 +887,17 @@ Each one held open takes one of the 10 open pull requests `open-pull-requests-li
 allows; at the limit, Dependabot opens no new version update. Closing a single-package
 pull request by hand skips only that exact version: Dependabot opens a new one at the
 next release, such as 7.0.3. Closing the weekly group pull request skips nothing.
+
+**Two packages get their own pull request** outside the weekly group: `expo` (above) and
+`pinyin-pro`, whose code the deploy copies into the live bulletin Apps Script, so read
+its changes before merging.
+
+**It also updates two things besides the app's packages,** each in a weekly pull request
+into `release-candidate`: the GitHub Actions the workflows pin by commit SHA (it moves the
+SHA and its version comment together), and `clasp`, which the
+[Apps Script deploy](#deploying-the-bulletin-apps-script) installs from
+`tools/apps-script/package-lock.json`. A `clasp` update changes only that lockfile;
+merge it like any other, and the next deploy uses it.
 
 **After each release,** GitHub moves the pull requests open on `release-candidate` to
 `main` when it deletes the branch, and **Release - After Merge** moves them all back,
@@ -1008,6 +1064,84 @@ workflows such as the yearly checkup and the Workspace backup reminder, count, s
 notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.
+
+## Maintenance releases
+
+**Workflow:** **Maintenance Release Reminder** (`maintenance-release-reminder.yml`), which
+runs every Monday and can be run manually.
+
+GitHub turns off a public repository's scheduled workflows after 60 days with no
+repository activity
+([GitHub's docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)),
+and a commit to the default branch is the activity known to count
+([warn-workflow-about-to-be-disabled-action](https://github.com/fem-on-colab/warn-workflow-about-to-be-disabled-action)).
+Without one, the Apple Signing Monitor's warnings, the Yearly Checkup, the Workspace
+Backup Reminder, the Due-Date Reminders, and this reminder would stop, and nothing would
+say so. So a release, even a small one, should reach `main` within 60 days of the last.
+
+**45 days after `main`'s last commit**, the reminder opens two things, once each:
+
+- a **Maintenance release due** tracking issue, at High priority and assigned to
+  `MONITOR_ALERT_ASSIGNEES`, with the release's checklist and the date GitHub would
+  turn the scheduled workflows off; and
+- the maintenance release's version pull request into `release-candidate`: **Set the
+  version to X.Y.Z**, the next patch version, on its own branch,
+  `maintenance/version-X.Y.Z`. It says `Part of #` the issue, which links it in a
+  comment. Its description says how many days are left, and each Monday's run updates
+  that count.
+
+To finish the release:
+
+1. **Get it past its checks.** `release-candidate` requires **Jest unit tests**,
+   **validate-pr**, and **require-linked-issue**, and a required check that never reports
+   blocks the merge. A pull request the workflow token opens holds its runs
+   ([GitHub's docs](https://docs.github.com/en/actions/concepts/security/github_token#when-github_token-triggers-workflow-runs)),
+   so either select **Approve workflows to run** in its merge box, or close it and reopen
+   it once, and they finish in a few minutes; or, as an admin, merge it with **Merge
+   without waiting for requirements to be met (bypass rules)**, which the **PR approval**
+   ruleset allows admins. It changes only the four version files, and the release pull
+   request runs every check again. If `release-candidate` moves on first, **Update
+   branch** starts them too.
+2. Merge or close the open Dependabot pull requests
+   ([Dependabot pull requests](#dependabot-pull-requests)).
+3. Run `npm audit`, and take Expo's SDK patch updates with `npx expo install --check`,
+   each in its own pull request. A change to `package-lock.json` gets an Android and an
+   iPhone launch on a device or emulator before it's called ready.
+4. Merge the version pull request, then open the release pull request into `main` and
+   merge it ([Shipping a release to `main`](#shipping-a-release-to-main)).
+5. At the merge, **Native Android build** and **Native iOS build** wait for `production`
+   approval. A maintenance release needn't go to the stores, so reject them unless it
+   should.
+
+The first run after a new commit on `main` closes the issue; GitHub's `Closes` keyword
+only works on `main`, so the reminder does it. If the release moved the version past the
+pull request's, it closes that too, and deletes its branch. It never pushes to a branch
+it didn't just create, and it skips opening one if `maintenance/version-X.Y.Z` already
+exists. If `release-candidate`'s version is already raised, there's no version to set,
+so it opens only the issue, with that step ticked.
+
+It runs only `main`'s code: `main`'s `public/sync-version.js` raises the version in copies
+of `release-candidate`'s version files, and the commit, branch, and pull request are made
+through the API, with only the workflow token (`actions: read`, `contents: write`,
+`pull-requests: write`, `issues: write`). Opening the pull request needs **Allow GitHub
+Actions to create and approve pull requests**, under **Settings → Actions → General →
+Workflow permissions**
+([GitHub's docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)).
+If the organization turns it off for its repositories, it's under the organization's
+**Settings → Actions → General** too. Without it, the run fails at that step, and its
+log says so.
+
+**A scheduled workflow already turned off:** a separate issue, *Scheduled workflows
+turned off for inactivity*, assigned to `MONITOR_ALERT_ASSIGNEES`, names any workflow in
+the state `disabled_inactivity` ([the workflows API](https://docs.github.com/en/rest/actions/workflows)).
+Open it under **Actions**, where it says "This scheduled workflow is disabled because
+there hasn't been activity in this repository for at least 60 days", and select **Enable
+workflow**, or run `gh workflow enable <file>`. Then run any reminder it missed (**Run
+workflow**). A commit to `main` also starts the 60 days again. A workflow a person turned
+off isn't reported, and the reminder never turns one on itself.
+
+If the reminder itself has stopped, it's a scheduled workflow too, so it stops with the
+others. The yearly checkup asks to check that every scheduled workflow is enabled.
 
 ## Issue priorities
 

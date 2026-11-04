@@ -198,7 +198,7 @@ describe('the shared review comment workflow', () => {
     }
     expect(review).toMatch(/\non:\n  workflow_call:\n/);
     // Only the iPhone run waits for the other platform.
-    expect(review).toMatch(/- name: Wait for the Android key screens\n(?:\s+#.*\n)*\s+if: inputs\.platform == 'ios'\n/);
+    expect(review).toMatch(/- name: Wait for the Android key screens\n(?: +#.*\n)* +if: inputs\.platform == 'ios'\n/);
   });
 
   it('gets from each caller exactly the permissions it asks for, or GitHub refuses to start the run', () => {

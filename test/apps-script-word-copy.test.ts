@@ -40,11 +40,12 @@ const paragraphs = (xml: string) => xml.match(/<w:p(?:\s[^>]*[^/>])?>[\s\S]*?<\/
 
 describe('the Word copy for printing on a Mac (#627)', () => {
   const convert = (lineHeight = 1.15) => {
-    const context = loadAppsScript({});
+    // The values go in through the context, so no code is built from them.
+    const context = loadAppsScript({ testXml: DOCUMENT_XML, testLineHeight: lineHeight });
     return runInContext(
-      `convertPrintedDocxDocumentXml_(${JSON.stringify(DOCUMENT_XML)}, {
+      `convertPrintedDocxDocumentXml_(testXml, {
         chineseFonts: ['UoqMunThenKhung', 'Noto Sans SC'],
-        lineHeight: ${lineHeight},
+        lineHeight: testLineHeight,
         defaultSize: 11,
         defaultMultiple: 1.15,
       })`,
@@ -92,14 +93,14 @@ describe('the Word copy for printing on a Mac (#627)', () => {
   });
 
   it('reads the default size and spacing, and sets Songti TC as the default East Asian font', () => {
-    const context = loadAppsScript({});
+    const context = loadAppsScript({ testStyles: STYLES_XML });
 
-    expect(runInContext(`readPrintedDocxDefaults_(${JSON.stringify(STYLES_XML)})`, context)).toEqual({
+    expect(runInContext('readPrintedDocxDefaults_(testStyles)', context)).toEqual({
       size: 11,
       multiple: 1.15,
     });
     expect(runInContext(`readPrintedDocxDefaults_('')`, context)).toEqual({ size: 11, multiple: 1 });
-    expect(runInContext(`setPrintedDocxEastAsiaFonts_(${JSON.stringify(STYLES_XML)}, [])`, context)).toContain(
+    expect(runInContext('setPrintedDocxEastAsiaFonts_(testStyles, [])', context)).toContain(
       '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Songti TC"/>',
     );
   });
@@ -250,44 +251,47 @@ describe('the Word copy for printing on a Mac (#627)', () => {
   });
 
   it('says so, in English and Simplified Chinese, when there is no Doc yet or the export fails', () => {
-    const run = (options: Parameters<typeof setup>[0], request: string) => {
+    const run = (options: Parameters<typeof setup>[0], request: { date: string; location: string }) => {
       const { context, created } = setup(options);
       const message = runInContext(
-        `try { createPrintedBulletinWordCopy(${request}); 'made'; } catch (error) { error.message; }`,
-        context,
+        "try { createPrintedBulletinWordCopy(testRequest); 'made'; } catch (error) { error.message; }",
+        Object.assign(context, { testRequest: request }),
       );
       return { message, created };
     };
     const noDoc = 'There is no Google Doc for this Sabbath and location yet. Create it first, then make the Word copy.\n这个安息日和地点还没有 Google 文档。请先创建，再制作 Word 副本。';
 
-    expect(run({}, `{ date: '2026-11-07', location: 'brooklyn' }`).message).toBe(noDoc);
-    expect(run({ trashed: true }, `{ date: '2026-11-07', location: 'queens' }`).message).toBe(noDoc);
-    expect(run({ properties: { 'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07': 'gone' } }, `{ date: '2026-11-07', location: 'queens' }`).message).toBe(noDoc);
-    expect(run({}, `{ date: '', location: 'queens' }`).message).toBe('Sabbath date is required. / 安息日日期为必填。');
-    const failed = run({ exportCode: 403 }, `{ date: '2026-11-07', location: 'queens' }`);
+    expect(run({}, { date: '2026-11-07', location: 'brooklyn' }).message).toBe(noDoc);
+    expect(run({ trashed: true }, { date: '2026-11-07', location: 'queens' }).message).toBe(noDoc);
+    expect(run({ properties: { 'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07': 'gone' } }, { date: '2026-11-07', location: 'queens' }).message).toBe(noDoc);
+    expect(run({}, { date: '', location: 'queens' }).message).toBe('Sabbath date is required. / 安息日日期为必填。');
+    const failed = run({ exportCode: 403 }, { date: '2026-11-07', location: 'queens' });
     expect(failed.message).toContain('Google Drive could not export the Doc as Word (403).');
     expect(failed.message).toContain('Google 云端硬盘无法将文档导出为 Word（403）');
     expect(failed.created).toEqual([]);
   });
 
-  it('puts a Word copy button in the Create Google Doc dialog, for the date and location chosen', () => {
+  it('makes the .docx in step 3, to send to the pastor, with LibreOffice as the fallback', () => {
     const context = loadAppsScript({});
     const html = runInContext(`buildPrintedBulletinPromptHtml_('2026-11-07')`, context) as string;
 
-    expect(html).toContain('3. Send the pastor a Word copy to print / 第三步：把 Word 副本发给牧师打印');
-    expect(html).toContain('make the Word copy, download it, and send it to the pastor on WhatsApp');
-    expect(html).toContain('下载后通过 WhatsApp 发给牧师');
-    expect(html).toContain('id="wordCopy">Make Word copy / 制作 Word 副本</button>');
+    expect(html).toContain('Send .docx to pastor / 把 .docx 发给牧师');
+    // A Mac first, for its font; Word or LibreOffice work on any computer.
+    expect(html).toContain('<strong>Mac preferred: better font.</strong> Open in Microsoft Word or free <a href=');
+    expect(html).toContain('<strong>建议用 Mac：字体更好。</strong>用 Microsoft Word 或免费的 <a href=');
+    expect(html).toContain('">LibreOffice</a> 打开。');
+    expect(html).not.toContain('No Mac?');
+    expect(html.match(/href="https:\/\/www\.libreoffice\.org\/download\/download-libreoffice\/">LibreOffice<\/a>/g)).toHaveLength(2);
+    expect(html).toContain('id="wordCopy">Make .docx / 制作 .docx</button>');
     expect(html).toContain('createPrintedBulletinWordCopy({date:date,location:locationValue})');
-    expect(html).toContain('Download Word copy / 下载 Word 副本');
-    // It needs a Mac, and says what to do without one.
-    expect(html).toContain('<strong>Needs a Mac with Microsoft Word.</strong>');
-    expect(html).toContain('Without a Mac, print the Google Doc itself');
-    expect(html).toContain('<strong>需要装有 Microsoft Word 的 Mac。</strong>');
+    expect(html).toContain('⬇ Download .docx / 下载 .docx');
+    // Only the download: the copy is for printing, not for opening in Drive.
+    expect(html).not.toContain('Open in Google Drive');
+    expect(html).not.toContain('Make Word copy');
     expect(html).not.toMatch(/pdf/i);
   });
 
-  it('says in Fonts… that Songti TC needs the Word copy on a Mac', () => {
+  it('says in Fonts… that Songti TC is in the .docx, on a Mac', () => {
     const context = loadAppsScript({
       PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     });
@@ -297,7 +301,7 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     ) as string;
 
     expect(html).toContain("Songti TC (宋體-繁) isn't here: Google Docs can't print it.");
-    expect(html).toContain('on a Mac with Word');
+    expect(html).toContain('The .docx from step 3 of Create Google Doc… has it, on a Mac.');
     expect(html).toContain('这里没有宋体-繁（Songti TC）');
     expect(html).not.toContain('<option value="Songti TC"');
   });

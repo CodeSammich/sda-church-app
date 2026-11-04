@@ -56,7 +56,13 @@ jobs:
 
   upload-to-drive:
     needs: generate
-    if: needs.generate.result == 'success'
+    # The images go on the printed bulletin, so only main in the church's
+    # repository uploads them, like the other production jobs. A manual run
+    # from another branch still builds the images to look at, and skips this.
+    if: >-
+      needs.generate.result == 'success' &&
+      github.event.repository.fork == false &&
+      github.ref == 'refs/heads/main'
     name: Upload QR codes to Google Drive
     environment: production
     runs-on: ubuntu-latest

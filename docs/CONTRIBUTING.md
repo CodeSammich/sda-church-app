@@ -222,8 +222,9 @@ GitHub's code scanning default setup and have no workflow file.
 ### `Bulletin API Integration` (`.github/workflows/bulletin-integration.yml`)
 
 - Check: `verify-bulletin-api`. Runs on the release PR into `main`, and by hand.
-- Runs `npm run test:integration:bulletin` against the production bulletin API. It calls
-  the deployed Apps Script, not the PR's code.
+- Runs `npm run test:integration:bulletin` against the production bulletin API, for the
+  coming Sabbath (`BULLETIN_TEST_DATE` picks another). It calls the deployed Apps
+  Script, not the PR's code.
 
 ### `Android preview APK` (`.github/workflows/android-preview-apk.yml`)
 
@@ -327,8 +328,15 @@ GitHub's code scanning default setup and have no workflow file.
 
 The other workflows never run on pull requests. **External Dependency Monitor**, **Store
 Toolchain Monitor**, **Expo Doctor Monitor**, **Apple Signing Monitor**, **Yearly
-Checkup**, **Workspace Backup Reminder**, and **Due-Date Reminders** run on a schedule;
+Checkup**, **Workspace Backup Reminder**, **Due-Date Reminders**, and **Maintenance
+Release Reminder**, which opens an issue and a version pull request for a maintenance release 45 days
+after `main`'s last commit, before GitHub turns the scheduled workflows off at 60, run on
+a schedule;
 **Deploy Bulletin Apps Script** starts on every merge into `main` and waits for
 `production` approval; and **Generate physical bulletin QR codes**
-runs when a merge into `main` changes the QR code list or its script. The
+runs when a merge into `main` changes the QR code list or its script. **Key screens
+recheck** (`key-screens-recheck.yml`) runs only by hand: it checks the text on an earlier
+**iOS key screens** or **Android key screens** run's screenshots again, without building,
+for tuning the text checks; see
+[Text checks](operations/native-builds.md#ios-key-screens-unsigned-simulator-builds). The
 [admin runbook](operations/admin-runbook.md) explains each.

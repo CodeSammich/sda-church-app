@@ -6,7 +6,10 @@ const yaml = require('js-yaml');
 // Dependabot's npm updates: where its pull requests go, and which packages it
 // leaves to Expo.
 const config = yaml.load(readFileSync(join(process.cwd(), '.github/dependabot.yml'), 'utf8'));
-const npm = config.updates.find((update: { 'package-ecosystem': string }) => update['package-ecosystem'] === 'npm');
+type Update = { 'package-ecosystem': string; directory: string; 'target-branch': string };
+const npm = config.updates.find(
+  (update: Update) => update['package-ecosystem'] === 'npm' && update.directory === '/',
+);
 
 describe('Dependabot', () => {
   it('opens its pull requests against release-candidate, where they can merge', () => {
@@ -42,7 +45,20 @@ describe('Dependabot', () => {
   });
 
   it('gives `expo` its own pull request, so its update can\'t hold up the weekly group', () => {
-    expect(npm.groups['minor-and-patch']['exclude-patterns']).toEqual(['expo']);
+    expect(npm.groups['minor-and-patch']['exclude-patterns']).toContain('expo');
+  });
+
+  it('gives pinyin-pro, which the deploy copies into the live Apps Script, its own pull request', () => {
+    expect(npm.groups['minor-and-patch']['exclude-patterns']).toContain('pinyin-pro');
+  });
+
+  it('also updates the Apps Script deploy tool and the pinned GitHub Actions', () => {
+    const others = config.updates.filter((update: Update) => update !== npm);
+    expect(others.map((update: Update) => [update['package-ecosystem'], update.directory])).toEqual([
+      ['npm', '/tools/apps-script'],
+      ['github-actions', '/'],
+    ]);
+    for (const update of others) expect(update['target-branch']).toBe('release-candidate');
   });
 
   it('still offers `expo` itself, the sign of a new SDK or patch release', () => {

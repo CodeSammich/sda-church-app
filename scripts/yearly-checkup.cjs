@@ -61,6 +61,11 @@ const CHECKLIST = [
         'governance-principles',
       ],
       [
+        'Bulletin spreadsheet: only the people who plan the roster or make bulletins can edit it (Share), since its editors can also edit its Apps Script. Everyone else views or comments.',
+        'docs/operations/admin-runbook.md',
+        'apps-script-edited-outside-git',
+      ],
+      [
         'Faith Comes By Hearing: the Bible Brain API key is still in the IT Admin shared drive, and still needed; nothing uses it yet (#241).',
         'docs/operations/admin-runbook.md',
         'credentials-that-need-attention',
@@ -111,9 +116,9 @@ const CHECKLIST = [
         'what-the-monitor-cant-check',
       ],
       [
-        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, Needs Priority Label, and iOS compile cache. GitHub turns schedules off after 60 days without activity in the repository.',
-        'docs/operations/external-dependency-monitor.md',
-        'alerts-and-recovery',
+        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, Needs Priority Label, iOS compile cache, and Maintenance Release Reminder. GitHub turns schedules off after 60 days without a commit to main; the reminder opens a tracking issue and a version pull request for a maintenance release at 45 days, and an issue if it finds one turned off.',
+        'docs/operations/admin-runbook.md',
+        'maintenance-releases',
       ],
     ],
   ],

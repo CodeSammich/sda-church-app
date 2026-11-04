@@ -19,14 +19,9 @@ on:
   pull_request:
     branches:
       - main
+  # key-screens-recheck.yml checks an earlier run's screenshots again,
+  # without building.
   workflow_dispatch:
-    inputs:
-      screens_from_run:
-        description: >-
-          Only check the key screens of an earlier run of this workflow (its run
-          ID), without building. For tuning scripts/check-screens.cjs.
-        required: false
-        default: ''
 
 permissions:
   contents: read
@@ -43,7 +38,7 @@ jobs:
     # (EXPO_PUBLIC_KEY_SCREENS, services/ScreenshotRoute.ts) turned on. The
     # published APK and the store builds never set that.
     if: >-
-      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
+      github.event_name != 'pull_request' ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
     name: Build the Android key-screens app
@@ -109,7 +104,7 @@ jobs:
     # emulator runner, which boots while the app builds and then checks its own
     # shots' text, as the iPhone groups do.
     if: >-
-      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
+      github.event_name != 'pull_request' ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
     name: Android key screens batch ${{ matrix.batch }} (${{ matrix.group }})
@@ -317,7 +312,7 @@ jobs:
     needs: [android-build, android-capture]
     if: >-
       !cancelled() && (
-      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
+      github.event_name != 'pull_request' ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository))
     name: Android key screens join
@@ -393,72 +388,3 @@ jobs:
     with:
       platform: android
       checks: ${{ needs.screens.result }}
-
-  earlier-screens:
-    # Re-checks an earlier run's screenshots in a few minutes, instead of a
-    # full build, while tuning the text checks.
-    if: github.event_name == 'workflow_dispatch' && inputs.screens_from_run != ''
-    name: Check the key screens of an earlier run
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      # To download the earlier run's screenshots.
-      actions: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-          cache: npm
-
-      # For sharp, which crops strips for a closer look.
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install the text reader
-        run: |
-          set -euo pipefail
-          python3 -m venv "$RUNNER_TEMP/ocr"
-          "$RUNNER_TEMP/ocr/bin/pip" install --quiet -r scripts/ocr-requirements.txt
-          echo "OCR_PYTHON=$RUNNER_TEMP/ocr/bin/python" >> "$GITHUB_ENV"
-
-      - name: Download that run's screenshots
-        id: earlier
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ inputs.screens_from_run }}
-        run: |
-          set -euo pipefail
-          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo 'screens_from_run must be a run ID.' >&2; exit 1; }
-          # The joined download, and each group's own, which a run keeps for a
-          # day and may have alone if its join failed. Each has a screens
-          # folder, so all their shots go into one, and every group's are
-          # checked, not just the first folder's.
-          gh run download "$RUN_ID" --repo "$REPO" --pattern 'android-key-screens-*' --dir "$RUNNER_TEMP/earlier"
-          screens="$RUNNER_TEMP/screens"
-          mkdir -p "$screens/android"
-          find "$RUNNER_TEMP/earlier" -path '*/screens/android/*.png' -exec cp {} "$screens/android/" \;
-          count=$(find "$screens/android" -name '*.png' | wc -l)
-          test "$count" -gt 0 || { echo 'That run has no key screens.' >&2; exit 1; }
-          echo "Checking the $count screenshots in that run's downloads."
-          echo "screens=$screens" >> "$GITHUB_OUTPUT"
-
-      - name: Check the text on the key screens
-        env:
-          SCREENS: ${{ steps.earlier.outputs.screens }}
-        run: node scripts/check-screens.cjs --dir "$SCREENS" --platform android
-
-      - name: Upload the text that was read
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: android-key-screen-checks-${{ inputs.screens_from_run }}
-          path: |
-            ${{ steps.earlier.outputs.screens }}/ocr.json
-            ${{ steps.earlier.outputs.screens }}/checks.json
-          if-no-files-found: warn
-          retention-days: 14

@@ -669,9 +669,28 @@ describe('Bulletin Apps Script deploy', () => {
     expect(workflow).not.toContain('head_commit');
   });
 
-  it('pins the clasp version it installs', () => {
-    // It runs on every release with the deploy credentials, so a new clasp
-    // release must not reach it unreviewed.
-    expect(workflow).toMatch(/npm install --global @google\/clasp@\d+\.\d+\.\d+\n/);
+  it('installs clasp and all its dependencies from a lockfile, without install scripts', () => {
+    // It runs on every release with the deploy credentials, so no new clasp
+    // or dependency release may reach it unreviewed.
+    expect(job).toContain('run: npm ci --ignore-scripts --prefix tools/apps-script\n');
+    expect(job).not.toMatch(/npm install\b/);
+    const tools = JSON.parse(readRepoFile('tools/apps-script/package.json'));
+    expect(tools.dependencies['@google/clasp']).toMatch(/^\d+\.\d+\.\d+$/);
+    const lock = JSON.parse(readRepoFile('tools/apps-script/package-lock.json'));
+    expect(lock.packages['node_modules/@google/clasp'].version).toBe(tools.dependencies['@google/clasp']);
+    for (const [name, entry] of Object.entries(lock.packages) as [string, { resolved?: string; integrity?: string; hasInstallScript?: boolean }][]) {
+      if (!name) continue;
+      expect(entry.resolved).toMatch(/^https:\/\/registry\.npmjs\.org\//);
+      expect(entry.integrity).toBeTruthy();
+      // --ignore-scripts skips them; one that needs its script would break the deploy.
+      expect(entry.hasInstallScript).toBeUndefined();
+    }
+  });
+
+  it('compares the live project with the last release before replacing it', () => {
+    // The script is bound to the bulletin spreadsheet, so its editors can
+    // change the live code by hand; the deploy shows that to the approver.
+    expect(job).toMatch(/fetch-depth: 2\n/);
+    expect(job).toMatch(/APPS_SCRIPT_PREVIOUS_REF: HEAD\^\n\s+run: npm run apps-script:deploy\n/);
   });
 });

@@ -105,6 +105,7 @@ describe('key screen list (test/screens/screens.json)', () => {
   it('opens only popups the screen can open from its path (#372)', () => {
     const screenFiles: Record<string, string> = {
       bible: 'app/(tabs)/bible/index.tsx',
+      'home/give': 'app/(tabs)/home/give.tsx',
       'sabbath-school': 'app/(tabs)/explore/sabbath-school.tsx',
       you: 'app/(tabs)/you/index.tsx',
       // The route shows the component, which reads the path.
@@ -263,7 +264,7 @@ describe('iOS key screens', () => {
     const cost = (group: string) =>
       takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
     for (const group of Object.keys(config.groups)) expect(cost(builder)).toBeLessThanOrEqual(cost(group));
-    const guard = (step: string) => new RegExp(`- name: ${step}\n(?:\\s+#.*\n)*\\s+if: (.+)\n`).exec(workflow)?.[1];
+    const guard = (step: string) => new RegExp(`- name: ${step}\n(?: +#.*\n)* +if: (.+)\n`).exec(workflow)?.[1];
     for (const step of [
       'Set up the compile cache',
       'Restore the compile cache from main',
@@ -336,7 +337,14 @@ describe('iOS key screens', () => {
   });
 
   it('re-checks an earlier run from its screenshots, or from the app download of runs before the split', () => {
-    const earlier = workflow.slice(workflow.indexOf('\n  earlier-screens:\n'));
+    // In its own workflow, started only by hand, so it never shows on pull
+    // requests as a skipped check.
+    const recheck = repoFile('.github/workflows/key-screens-recheck.yml');
+    const earlier = recheck.slice(recheck.indexOf('\n  ios:\n'));
+    expect(earlier).toContain("if: inputs.platform == 'ios'");
+    expect(earlier).toContain('runs-on: macos-26');
+    expect(earlier).toContain('node scripts/check-screens.cjs --dir "$SCREENS"\n');
+    expect(workflow).not.toMatch(/screens_from_run|earlier-screens/);
     expect(earlier).toMatch(
       /--pattern 'ios-key-screens-\*' --dir "\$RUNNER_TEMP\/earlier" \|\|\n\s+gh run download [^\n]+--pattern 'ios-pr-preview-\*-arm64'/,
     );
@@ -1000,7 +1008,7 @@ describe('Android key screens workflow (#372)', () => {
 
   it('runs every Android job on Linux, apart from the iPhone workflow and its Macs', () => {
     expect(workflow).not.toMatch(/runs-on: macos/);
-    expect(workflow.match(/runs-on: ubuntu-24\.04/g)!.length).toBe(4);
+    expect(workflow.match(/runs-on: ubuntu-24\.04/g)!.length).toBe(3);
     expect(preview).not.toMatch(/android-build|android-capture|capture-android-screens/);
   });
 
@@ -1008,13 +1016,13 @@ describe('Android key screens workflow (#372)', () => {
     for (const text of [build, capture, join]) {
       expect(text).toContain("github.head_ref == 'release-candidate'");
       expect(text).toContain('github.event.pull_request.head.repo.full_name == github.repository');
-      expect(text).toContain("github.event_name != 'pull_request' && inputs.screens_from_run == ''");
+      expect(text).toContain("github.event_name != 'pull_request' ||\n");
     }
   });
 
   it('builds the preview APK for the emulator with the key-screen route, and shares it once', () => {
     expect(build).toContain('npm run build:android:apk:debug:intel');
-    expect(build).toMatch(/env:\n(?:\s+#.*\n)*\s+EXPO_PUBLIC_KEY_SCREENS: '1'\n/);
+    expect(build).toMatch(/env:\n(?: +#.*\n)* +EXPO_PUBLIC_KEY_SCREENS: '1'\n/);
     expect(build).toContain('name: android-emulator-app-${{ github.run_id }}');
     expect(capture).toContain('name: android-emulator-app-${{ github.run_id }}');
     expect(capture).toContain('select(.name == "Build the Android key-screens app")');
@@ -1066,8 +1074,18 @@ describe('Android key screens workflow (#372)', () => {
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
   });
 
-  it('re-checks an earlier run on Linux', () => {
-    const earlier = jobOf(workflow, 'earlier-screens');
+  it('re-checks an earlier run on Linux, by hand only, never as a check on pull requests', () => {
+    const recheck = repoFile('.github/workflows/key-screens-recheck.yml');
+    // Its only trigger is workflow_dispatch: the lines under `on:` indented
+    // by exactly two spaces name the triggers. (Plain line checks, not one
+    // regular expression over the whole block, which CodeQL flagged as
+    // exponential backtracking.)
+    const on = recheck.slice(recheck.indexOf('\non:\n') + 1, recheck.indexOf('\npermissions:'));
+    const triggers = on.split('\n').filter((line) => line.startsWith('  ') && !line.startsWith('   '));
+    expect(triggers).toEqual(['  workflow_dispatch:']);
+    expect(workflow).not.toMatch(/screens_from_run|earlier-screens/);
+    const earlier = jobOf(recheck, 'android');
+    expect(earlier).toContain("if: inputs.platform == 'android'");
     expect(earlier).toContain('runs-on: ubuntu-24.04');
     expect(earlier).toContain('check-screens.cjs --dir "$SCREENS" --platform android');
     // A run's downloads are its joined screenshots and each group's own, each

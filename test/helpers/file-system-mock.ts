@@ -5,8 +5,11 @@
 // tests set with jest.spyOn, what features/sabbath-school/LessonDownloads.ts
 // uses to open lesson PDFs, and the documents directory's nested folders that
 // services/BibleAudioDownloads.ts keeps audio in. A file's size is its text's
-// length. test/bundled-bible.test.ts mocks the module its own way.
+// length, unless `mockFileSizes` says otherwise, as for a Bible audio chapter
+// of a few megabytes. test/bundled-bible.test.ts mocks the module its own way.
 export const mockFiles = new Map<string, string>();
+/** Sizes for files much bigger than their text, by path; cleared with `mockFiles`. */
+export const mockFileSizes = new Map<string, number>();
 
 /** What Paths.availableDiskSpace says. */
 export const mockDisk = { availableBytes: 64_000_000_000 };
@@ -26,7 +29,8 @@ class File {
     return this.uri.split('/').pop() ?? '';
   }
   get size() {
-    return mockFiles.get(this.uri)?.length ?? 0;
+    if (!mockFiles.has(this.uri)) return 0;
+    return mockFileSizes.get(this.uri) ?? (mockFiles.get(this.uri) as string).length;
   }
   async text() {
     if (!mockFiles.has(this.uri)) throw new Error(`No file ${this.uri}`);
@@ -34,9 +38,11 @@ class File {
   }
   async write(text: string) {
     mockFiles.set(this.uri, text);
+    mockFileSizes.delete(this.uri);
   }
   delete() {
     mockFiles.delete(this.uri);
+    mockFileSizes.delete(this.uri);
   }
   create() {
     if (!mockFiles.has(this.uri)) mockFiles.set(this.uri, '');
@@ -44,7 +50,10 @@ class File {
   rename(newName: string) {
     const renamed = [...this.uri.split('/').slice(0, -1), newName].join('/');
     mockFiles.set(renamed, mockFiles.get(this.uri) as string);
+    mockFileSizes.delete(renamed);
+    if (mockFileSizes.has(this.uri)) mockFileSizes.set(renamed, mockFileSizes.get(this.uri) as number);
     mockFiles.delete(this.uri);
+    mockFileSizes.delete(this.uri);
     this.uri = renamed;
   }
   async canPreview() {
@@ -69,7 +78,11 @@ class Directory {
   }
   create() {}
   delete() {
-    for (const path of [...mockFiles.keys()]) if (path.startsWith(`${this.uri}/`)) mockFiles.delete(path);
+    for (const path of [...mockFiles.keys()]) {
+      if (!path.startsWith(`${this.uri}/`)) continue;
+      mockFiles.delete(path);
+      mockFileSizes.delete(path);
+    }
   }
   /** Its files, and the folders that hold files further down. */
   list() {

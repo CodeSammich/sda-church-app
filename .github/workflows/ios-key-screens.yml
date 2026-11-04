@@ -17,14 +17,9 @@ on:
   pull_request:
     branches:
       - main
+  # key-screens-recheck.yml checks an earlier run's screenshots again,
+  # without building.
   workflow_dispatch:
-    inputs:
-      screens_from_run:
-        description: >-
-          Only check the key screens of an earlier run of this workflow (its run
-          ID), without building. For tuning scripts/check-screens.cjs.
-        required: false
-        default: ''
 
 permissions:
   contents: read
@@ -38,10 +33,9 @@ jobs:
     # A release PR comes from this repository's release-candidate branch.
     # Other PRs into main, such as Dependabot's security updates, can't
     # merge there, so they skip it.
-    # Started by hand, it builds unless it was asked only to re-check an
-    # earlier run's screenshots.
+    # Started by hand, it always builds.
     if: >-
-      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
+      github.event_name != 'pull_request' ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
     name: iOS key screens batch ${{ matrix.batch }} (${{ matrix.group }})
@@ -392,7 +386,7 @@ jobs:
     needs: capture
     if: >-
       !cancelled() && (
-      (github.event_name != 'pull_request' && inputs.screens_from_run == '') ||
+      github.event_name != 'pull_request' ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository))
     name: iOS key screens join
@@ -570,55 +564,3 @@ jobs:
           approvers=$(gh api "repos/$REPO/actions/runs/$RUN_ID/approvals" \
             --jq '[.[] | select(any(.environments[]; .name == "screenshot-review")) | .user.login] | unique | join(", ")' || true)
           echo "Screenshots approved by ${approvers:-an approver}." | tee -a "$GITHUB_STEP_SUMMARY"
-
-  earlier-screens:
-    # Re-checks an earlier run's screenshots in a few minutes, instead of a
-    # full build, while tuning the text checks.
-    if: github.event_name == 'workflow_dispatch' && inputs.screens_from_run != ''
-    name: Check the key screens of an earlier run
-    runs-on: macos-26
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      # To download the earlier run's screenshots.
-      actions: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-          cache: npm
-
-      # For sharp, which crops strips for a closer look.
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download that run's screenshots
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ inputs.screens_from_run }}
-        run: |
-          set -euo pipefail
-          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo 'screens_from_run must be a run ID.' >&2; exit 1; }
-          # Runs from before the screenshots got their own download kept them in
-          # the app's download.
-          gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-key-screens-*' --dir "$RUNNER_TEMP/earlier" ||
-            gh run download "$RUN_ID" --repo "$REPO" --pattern 'ios-pr-preview-*-arm64' --dir "$RUNNER_TEMP/earlier"
-          SCREENS="$(find "$RUNNER_TEMP/earlier" -type d -name screens -print -quit)"
-          test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
-          echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
-
-      - name: Check the text on the key screens
-        run: node scripts/check-screens.cjs --dir "$SCREENS"
-
-      - name: Upload the text that was read
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: key-screen-checks-${{ inputs.screens_from_run }}
-          path: |
-            ${{ env.SCREENS }}/ocr.json
-            ${{ env.SCREENS }}/checks.json
-          if-no-files-found: warn
-          retention-days: 14

@@ -314,9 +314,10 @@ submitted for review before they appear on the App Store.
 > domain, and the Apple fee waiver depends on that status. Don't make the app paid,
 > and don't add in-app purchases, subscriptions, ads, or anything else that earns
 > money through Apple or Google. Giving stays outside the stores: the app only opens
-> external donation links (AdventistGiving) in the browser, and may show the Zelle
-> address, which is fine. The Zelle section stays hidden until the address can
-> receive gifts (`SHOW_ZELLE_GIVING` in `constants/ExternalLinks.ts`, #392).
+> external donation links (AdventistGiving and donor-advised fund sponsors) in the
+> browser, and may show the Zelle address, which is fine. The Zelle section stays
+> hidden until the address can receive gifts (`SHOW_ZELLE_GIVING` in
+> `constants/ExternalLinks.ts`, #392).
 
 ### Apple App Store
 
@@ -458,6 +459,7 @@ checks nearly all of them daily.
 | Media | Spotify | `open.spotify.com` | Sermon and class audio archive | Link |
 | Media | Zoom | `zoom.us` | Online class | Link |
 | Giving | AdventistGiving | `adventistgiving.org` | Online giving | Link |
+| Giving | Fidelity Charitable, DAFgiving360, Vanguard Charitable | `charitablegift.fidelity.com`, `dafgiving360.org`, `vanguardcharitable.org` | Donor-advised fund grants: Fidelity Charitable's sign-in, then a grant with the church already chosen by EIN; the others' home pages (`DAF_SPONSORS` in `constants/ExternalLinks.ts`, #646) | Link |
 | Church | GNYC, Atlantic Union, adventist.org | `gnyc.org`, `atlantic-union.org`, `adventist.org` | Conference, union, and beliefs pages | Link |
 | Church | Google Maps | `google.com/maps` | Directions to each church location | Link |
 

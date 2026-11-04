@@ -21,6 +21,7 @@
 !/services
 !/styles
 !/test
+!/tools
 !/vendor
 
 # 3. Re-include root configuration files
@@ -58,6 +59,14 @@ google-apps-script/HymnalData.gs
 
 # Native signing credentials and build artifacts
 credentials.json
+# Google key and config files, in case one is saved here: the root re-includes
+# every JSON file above, so these need their own lines.
+client_secret*.json
+*service-account*.json
+*serviceaccount*.json
+*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].json
+google-services.json
+GoogleService-Info.plist
 *.jks
 *.keystore
 *.p12

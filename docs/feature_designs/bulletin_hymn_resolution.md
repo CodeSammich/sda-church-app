@@ -17,7 +17,11 @@ different intake answers.
 The printed bulletin doesn't use this resolver. `resolvePrintedHymnText_` in
 `google-apps-script/PrintedHymnLookup.gs` keeps both supplied values as entered and fills
 only a missing side, by hymn number, with that hymn's number and title, such as
-`AH 73 Holy, Holy, Holy` for `第2首 聖哉真神`. It has no title matching. The maps and titles
+`AH 73 Holy, Holy, Holy` for `第2首 聖哉真神`. A hymn typed by title alone is found by an exact
+match of its title, ignoring case, spaces and punctuation, in either script for the 505
+(`findPrintedHymnByTitle_`). It has no fuzzy matching, so a wrong hymn can't print. Where hymns
+share a title, the only one with a twin wins (so `Holy, Holy, Holy` is #73, not #661); if they
+all share one twin, only the twin prints; otherwise the title prints as typed. The maps and titles
 are in `HymnalData.gs`, which `scripts/build-hymnal-apps-script.cjs` makes from
 `HymnalNumberMappings.json`, `EnglishHymnal.ts` and `Chinese505Hymnal.json` on every Apps
 Script deploy (#619), so they never fall behind; `test/apps-script-hymnal-data.test.ts`

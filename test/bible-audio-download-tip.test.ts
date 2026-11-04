@@ -18,7 +18,7 @@ import { act, render, renderHook } from '@testing-library/react-native';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { AccessibilityInfo, Animated, AppState } from 'react-native';
-import { mockFiles } from './helpers/file-system-mock';
+import { mockChapterFile } from './helpers/bible-audio-chapter-files';
 
 // When Bible audio keeps stopping to load, the audio settings button points
 // the listener to Listen offline (#595).
@@ -171,7 +171,7 @@ describe('The tip', () => {
     });
 
     it('is never shown again once Bible audio is on the phone', async () => {
-      mockFiles.set('document/bible-audio/souer/JHN/1.mp3', 'x'.repeat(4_000));
+      mockChapterFile('document/bible-audio/souer/JHN/1.mp3');
       const { result } = await renderTip();
       expect(await AsyncStorage.getItem(BIBLE_AUDIO_TIP_STORAGE_KEY)).toBe('downloaded');
       await struggle(result.current.watcher);

@@ -63,6 +63,7 @@ import androidx.glance.color.ColorProvider as DayNightColorProvider
 const val VERSE_WIDGET_NAME = "VerseOfTheDay"
 
 private const val INTERACTION_ACTION = "expo.modules.widgets.ACTION_WIDGET_INTERACTION"
+private const val SOURCE_EXTRA = "expo.modules.widgets.extra.SOURCE"
 private const val TARGET_EXTRA = "expo.modules.widgets.extra.TARGET"
 private const val LINK_PREFIX = "sdachurchapp:"
 private const val SHARE_PREFIX = "share:"
@@ -100,19 +101,24 @@ private const val MAX_CHILDREN = 10
  *   to the verse even if the link is the same as last time (see
  *   BibleService.createScriptureReferenceRequest). A `share:` target opens the
  *   phone's share sheet with the rest of the target as the text, and `theme:`
- *   flips this widget between light and dark (WidgetLooks).
+ *   flips this widget between light and dark (WidgetLooks). Any other tap
+ *   is dropped. The receiver isn't exported, so only Android and the app
+ *   itself (the widget's buttons) can reach it.
  */
 open class VerseWidgetReceiver : ExpoWidgetsAppWidgetProvider(VERSE_WIDGET_NAME) {
   override val glanceAppWidget: PeekEmittableAppWidget = DayNightWidget(super.glanceAppWidget)
 
   override fun onReceive(context: Context, intent: Intent) {
-    val target = if (intent.action == INTERACTION_ACTION) intent.getStringExtra(TARGET_EXTRA) else null
+    // Android's own broadcasts (updates, resizes, removals) go to Glance.
+    if (intent.action != INTERACTION_ACTION) return super.onReceive(context, intent)
+    // A tap takes only this widget's own targets. Anything else is dropped,
+    // not handed to expo-widgets, as the layout has no other buttons.
+    if (intent.getStringExtra(SOURCE_EXTRA) != VERSE_WIDGET_NAME) return
+    val target = intent.getStringExtra(TARGET_EXTRA) ?: return
     when {
-      target == null -> super.onReceive(context, intent)
       target.startsWith(LINK_PREFIX) -> openLink(context, target)
       target.startsWith(SHARE_PREFIX) -> share(context, target.removePrefix(SHARE_PREFIX))
       target == THEME_TARGET -> flipLook(context, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
-      else -> super.onReceive(context, intent)
     }
   }
 
@@ -305,9 +311,9 @@ private fun ColorProvider.withNight(night: ColorProvider): ColorProvider {
  * a tap opens the whole verse.
  *
  * The space is the widget's size less the padding around the verse and the
- * height of everything else in its column. On a widget too small for a line
- * of the verse, what's below the verse (the translation) gives way first, and
- * then the verse itself.
+ * height of everything above it in its column: the heading, the reference, and
+ * the gap below them. Nothing follows the verse, so it has the rest of the
+ * widget. On a widget too small for a line of it, the verse gives way.
  */
 private fun Emittable.fitVerse(context: Context, size: DpSize) {
   val path = pathTo { it is EmittableText && it.maxLines == Int.MAX_VALUE } ?: return
@@ -323,22 +329,16 @@ private fun Emittable.fitVerse(context: Context, size: DpSize) {
     width -= padding.horizontal
     height -= padding.vertical
   }
-  fun space() = height - column.children.filter { it !== verse }
+  val space = height - column.children.filter { it !== verse }
     .sumOf { it.heightDp(context, width, measure).toDouble() }.toFloat()
 
   // Each line leaves a little room at its end, so Android never wraps it again.
   val lines = measure.lines(verse.text, style, width - LINE_SLACK_DP)
   val pitch = max(lines.maxOf { it.heightDp }, measure.textSizeDp(style) * VERSE_LINE_SPACING)
-  fun fitting(space: Float) = lines.indices.takeWhile { i -> i * pitch + lines[i].heightDp <= space }.size
-
-  var count = fitting(space())
+  val count = lines.indices.takeWhile { i -> i * pitch + lines[i].heightDp <= space }.size
   val index = column.children.indexOf(verse)
-  if (count == 0) {
-    while (column.children.size > index + 1) column.children.removeAt(column.children.size - 1)
-    count = fitting(space())
-  }
   if (Log.isLoggable(LOG_TAG, Log.DEBUG)) {
-    Log.d(LOG_TAG, "size=${size.width.value}x${size.height.value}dp space=${width}x${space()}dp pitch=${pitch}dp lines=$count/${lines.size}")
+    Log.d(LOG_TAG, "size=${size.width.value}x${size.height.value}dp space=${width}x${space}dp pitch=${pitch}dp lines=$count/${lines.size}")
   }
   if (count == 0) {
     column.children.removeAt(index)
@@ -354,7 +354,7 @@ private fun Emittable.fitVerse(context: Context, size: DpSize) {
     }
   }
   column.children[index] = shown.inColumns().also {
-    // Fills the space, keeping what follows the verse at the bottom.
+    // Fills the rest of the widget.
     it.modifier = GlanceModifier.then(HeightModifier(Dimension.Expand))
   }
 }

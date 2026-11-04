@@ -14,6 +14,7 @@ import { File } from 'expo-file-system';
 import { createElement, type ComponentType } from 'react';
 import { showAppAlert } from '@/components/AppAlert';
 import { AppState } from 'react-native';
+import { mockChapterFile } from './helpers/bible-audio-chapter-files';
 import { mockDisk, mockFiles } from './helpers/file-system-mock';
 import { renderWithPreferences } from './helpers/render-preferences';
 
@@ -54,7 +55,13 @@ jest.mock('expo-network', () => ({
 }));
 
 const OfflineBibleAudioScreen: ComponentType = require('@/app/(tabs)/you/audio-downloads').default;
-const SIZES: Record<string, Record<string, number>> = BIBLE_AUDIO_DOWNLOAD_SIZES;
+// Each book's size, from its chapters'.
+const SIZES: Record<string, Record<string, number>> = Object.fromEntries(
+  Object.entries(BIBLE_AUDIO_DOWNLOAD_SIZES as Record<string, Record<string, number[]>>).map(([narrator, books]) => [
+    narrator,
+    Object.fromEntries(Object.entries(books).map(([book, chapters]) => [book, chapters.reduce((total, bytes) => total + bytes)])),
+  ]),
+);
 const sum = (narrator: string, books: string[]) => books.reduce((total, book) => total + SIZES[narrator][book], 0);
 const size = (bytes: number, language: 'en' | 'zh' | 'es' = 'en') => formatDownloadSize(bytes, language);
 const GOSPELS = ['MAT', 'MRK', 'LUK', 'JHN'];
@@ -73,11 +80,10 @@ const status = (overrides: Partial<BibleAudioScopeStatus>): BibleAudioScopeStatu
   ...overrides,
 });
 
-// Every chapter of a book on the phone, for one narrator, each 10,000 bytes.
-const CHAPTER_BYTES = 10_000;
+// Every chapter of a book on the phone, for one narrator, each at its recording's size.
 const putOnPhone = (narrator: string, bookId: string, chapters: number) => {
   for (let chapter = 1; chapter <= chapters; chapter += 1) {
-    mockFiles.set(`document/bible-audio/${narrator}/${bookId}/${chapter}.mp3`, 'x'.repeat(CHAPTER_BYTES));
+    mockChapterFile(`document/bible-audio/${narrator}/${bookId}/${chapter}.mp3`);
   }
   resetBibleAudioDownloadsForTests();
   loadBibleAudioDownloads();
@@ -274,20 +280,20 @@ describe('Offline Bible Audio', () => {
     const screen = await renderPage({ narrator: 'cuv-mandarin', bookId: 'JHN' });
     expect(screen.queryByRole('button', { name: /^Delete the Old Testament/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /^Delete Mark/ })).toBeNull();
-    expect(screen.getByText(`Downloaded · ${size(21 * CHAPTER_BYTES)}`)).toBeTruthy();
+    expect(screen.getByText(`Downloaded · ${size(SIZES['cuv-mandarin'].JHN)}`)).toBeTruthy();
     expect(screen.getByText(/^2 of 4 books downloaded · /)).toBeTruthy();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Delete John' }));
-    expect(lastAlert().title).toBe(`Delete John? (${size(21 * CHAPTER_BYTES)})`);
+    expect(lastAlert().title).toBe(`Delete John? (${size(SIZES['cuv-mandarin'].JHN)})`);
     expect(lastAlert().message).toBe('You can download it again later.');
     expect(lastAlert().buttons.map(({ text }) => text)).toEqual(['Cancel', 'Delete']);
     await fireEvent.press(screen.getByRole('button', { name: 'Delete the Gospels' }));
-    expect(lastAlert().title).toBe(`Delete the Gospels? (${size(49 * CHAPTER_BYTES)})`);
+    expect(lastAlert().title).toBe(`Delete the Gospels? (${size(sum('cuv-mandarin', ['MAT', 'JHN']))})`);
     await fireEvent.press(screen.getByRole('button', { name: 'Delete the New Testament' }));
-    expect(lastAlert().title).toBe(`Delete the New Testament? (${size(49 * CHAPTER_BYTES)})`);
+    expect(lastAlert().title).toBe(`Delete the New Testament? (${size(sum('cuv-mandarin', ['MAT', 'JHN']))})`);
     // Only some of the Bible: delete it all.
     await fireEvent.press(screen.getByRole('button', { name: 'Delete all downloads for Mandarin (Chinese Union Version)' }));
-    expect(lastAlert().title).toBe(`Delete all downloads for Mandarin (Chinese Union Version)? (${size(49 * CHAPTER_BYTES)})`);
+    expect(lastAlert().title).toBe(`Delete all downloads for Mandarin (Chinese Union Version)? (${size(sum('cuv-mandarin', ['MAT', 'JHN']))})`);
 
     // Cancel deletes nothing; Delete deletes that scope.
     await fireEvent.press(screen.getByRole('button', { name: 'Delete John' }));
@@ -304,23 +310,23 @@ describe('Offline Bible Audio', () => {
     putOnPhone('cuv-mandarin', 'JHN', 21);
     const zh = await renderPage({ narrator: 'cuv-mandarin', bookId: 'JHN' }, 'zh');
     await fireEvent.press(zh.getByRole('button', { name: '刪除福音書' }));
-    expect(lastAlert().title).toBe(`刪除福音書？（${size(21 * CHAPTER_BYTES, 'zh')}）`);
+    expect(lastAlert().title).toBe(`刪除福音書？（${size(SIZES['cuv-mandarin'].JHN, 'zh')}）`);
     const es = await renderPage({ narrator: 'cuv-mandarin', bookId: 'JHN' }, 'es');
     await fireEvent.press(es.getByRole('button', { name: 'Borrar los Evangelios' }));
-    expect(lastAlert().title).toBe(`¿Borrar los Evangelios? (${size(21 * CHAPTER_BYTES, 'es')})`);
+    expect(lastAlert().title).toBe(`¿Borrar los Evangelios? (${size(SIZES['cuv-mandarin'].JHN, 'es')})`);
   });
 
   it('call the whole Bible by name once it is all on the phone', async () => {
     for (const [bookId, chapters] of require('@/services/BibleAudioSources').BIBLE_AUDIO_BOOKS) {
       for (let chapter = 1; chapter <= chapters; chapter += 1) {
-        mockFiles.set(`document/bible-audio/rv1909/${bookId}/${chapter}.mp3`, 'x'.repeat(100));
+        mockChapterFile(`document/bible-audio/rv1909/${bookId}/${chapter}.mp3`);
       }
     }
     resetBibleAudioDownloadsForTests();
     loadBibleAudioDownloads();
     const screen = await renderPage({ narrator: 'rv1909' });
     await fireEvent.press(screen.getByRole('button', { name: 'Delete the whole Bible' }));
-    expect(lastAlert().title).toBe(`Delete the whole Bible? (${size(1189 * 100)})`);
+    expect(lastAlert().title).toBe(`Delete the whole Bible? (${size(sum('rv1909', Object.keys(SIZES.rv1909)))})`);
     expect(screen.queryByRole('button', { name: /^Download / })).toBeNull();
   });
 
@@ -356,10 +362,10 @@ describe('Offline Bible Audio', () => {
     expect(screen.getByText('Other narrators')).toBeTruthy();
     expect(screen.getByText('Spanish (Reina-Valera 1909)')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Delete all downloads for Spanish (Reina-Valera 1909)' }));
-    expect(lastAlert().title).toBe(`Delete all downloads for Spanish (Reina-Valera 1909)? (${size(CHAPTER_BYTES)})`);
+    expect(lastAlert().title).toBe(`Delete all downloads for Spanish (Reina-Valera 1909)? (${size(SIZES.rv1909.JUD)})`);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Narrator: English – Hays (BSB). Change' }));
-    expect(screen.getByRole('radio', { name: `Spanish (Reina-Valera 1909), Downloaded · ${size(CHAPTER_BYTES)}` })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: `Spanish (Reina-Valera 1909), Downloaded · ${size(SIZES.rv1909.JUD)}` })).toBeTruthy();
     await fireEvent.press(screen.getByRole('radio', { name: 'English – David (BSB), Nothing downloaded' }));
     expect(screen.getByRole('button', { name: 'Narrator: English – David (BSB). Change' })).toBeTruthy();
   });

@@ -300,11 +300,12 @@ Visitor) live here.
 
 **Android home screen widget (#235):** **Today's Verse** can also sit on an Android
 phone's home screen, laid out like YouVersion's Verse of the Day widget: the heading, the
-reference, a light/dark button and a share button, the verse with its number in the
-phone's serif font, and the translation, in the app's language. A verse longer than the
-widget's size stops at the end of the last whole line that fits, as YouVersion's does. The
-colors are the app's: the primary blue on the warm canvas, or gold on near-black,
-following the phone's light or dark mode. Android 12 and later switch it with the phone;
+reference, a light/dark button and a share button, and the verse with its number in the
+phone's serif font, in the app's language. It leaves out the translation's name, which
+YouVersion shows at the bottom, so the verse has the rest of the widget; the shared text
+still names it. A verse longer than the widget's size stops at the end of the last whole
+line that fits, as YouVersion's does. The colors are the app's: the primary blue on the
+warm canvas, or gold on near-black, following the phone's light or dark mode. Android 12 and later switch it with the phone;
 older versions at its next hourly redraw. A member whose phone is dark but whose wallpaper
 is light, or the reverse, can tap the light/dark button. Each tap flips the widget's
 colors. When the new look matches the phone's mode, the widget goes back to following the
@@ -339,6 +340,17 @@ church without a pianist.
 Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bulletin hymn,
 opens the same page with that hymnal picked and just that hymn showing, marked, above
 **Show all hymns**. The old English–Chinese hymn lookup's route opens the hymnal page.
+
+**Tithe & Offering** (`app/(tabs)/home/give.tsx`) describes the ways to give, and its
+buttons open giving sites in the in-app browser; the app takes no payment. **Give
+Online** opens the church's AdventistGiving page. The **Donor-Advised Fund** card's
+**Fidelity Charitable** button, for the sponsor the church prefers, opens Fidelity
+Charitable's own grant link: its sign-in, then a grant with the church already chosen
+by its EIN. The church needs no account or sign-up for it. **Other Sponsors** opens a
+popup listing the other sponsors the card names, each opening its home page, as they
+have no such link, with the church's legal name and EIN (#646). The card and the popup
+name DAFgiving360 with its old name, Schwab Charitable. The sponsors are one list,
+`DAF_SPONSORS` in `constants/ExternalLinks.ts`.
 
 **Tenet Alignment:**
 
