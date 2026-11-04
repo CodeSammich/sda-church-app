@@ -1686,9 +1686,11 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
  * language is filled in by number where the hymnals' number maps have it, and
  * otherwise repeats what was typed. Two identical lines print as one.
  */
-function formatSabbathSchoolHymnsForPrint_(hymns) {
-  var english = [];
-  var chinese = [];
+// One line per Sabbath School hymn, as typed, with the other language after a
+// slash where the hymnal map has it, Chinese first, such as
+// "第413首 教會根基 / AH 348". A bare number is a Chinese hymnal number.
+function getPrintedSabbathSchoolHymnLines_(hymns) {
+  var lines = [];
   (hymns || []).forEach(function (value) {
     var entry = String(value === null || typeof value === 'undefined' ? '' : value).trim();
     if (!entry) {
@@ -1698,15 +1700,44 @@ function formatSabbathSchoolHymnsForPrint_(hymns) {
     var resolved = isEnglish
       ? resolvePrintedHymnText_(entry, '')
       : resolvePrintedHymnText_('', /^\d+$/.test(entry) ? '第' + entry + '首' : entry);
-    english.push(resolved.english || entry);
-    chinese.push(resolved.chinese || entry);
+    var english = resolved.english || entry;
+    var chinese = resolved.chinese || entry;
+    lines.push(english === chinese ? english : chinese + ' / ' + english);
   });
-  if (!english.length) {
-    return physicalTbdText_();
-  }
-  var englishLine = english.join(' · ');
-  var chineseLine = chinese.join(' · ');
-  return englishLine === chineseLine ? englishLine : printedBilingualText_(englishLine, chineseLine);
+  return lines;
+}
+
+function formatSabbathSchoolHymnsForPrint_(hymns) {
+  var lines = getPrintedSabbathSchoolHymnLines_(hymns);
+  return lines.length ? lines.join('\n') : physicalTbdText_();
+}
+
+/**
+ * The Sabbath School's Opening Hymn and Closing Hymn rows. The closing sings
+ * the opening hymns again, so its row says so instead of listing them twice.
+ * `openingChinese` is the location's Chinese label for the opening hymns.
+ */
+function getPrintedSabbathSchoolHymnRows_(hymns, openingChinese, closingChinese) {
+  var lines = getPrintedSabbathSchoolHymnLines_(hymns);
+  var plural = lines.length > 1;
+  var congregation = printedBilingualText_('Congregation', '會眾');
+  return {
+    opening: [
+      printedBilingualText_(plural ? 'Opening Hymns' : 'Opening Hymn', openingChinese),
+      formatSabbathSchoolHymnsForPrint_(hymns),
+      congregation,
+    ],
+    closing: [
+      printedBilingualText_(plural ? 'Closing Hymns' : 'Closing Hymn', closingChinese),
+      lines.length
+        ? printedBilingualText_(
+            plural ? 'Same as the opening hymns' : 'Same as the opening hymn',
+            '同' + openingChinese,
+          )
+        : physicalTbdText_(),
+      congregation,
+    ],
+  };
 }
 
 function resolvePhysicalBiblePassage_(reference, bibleTranslations, includeVerseLines) {

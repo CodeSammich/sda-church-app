@@ -98,12 +98,13 @@ function appendStudyPanel_(cell, bulletin) {
     printedBilingualText_('THE CHURCH AT STUDY', '安息日學'),
   );
   appendCenteredText_(cell, PRINTED_BULLETIN_CONFIG.studyTime, PRINTED_BULLETIN_TYPE.bodySize, false);
+  var hymnRows = getPrintedSabbathSchoolHymnRows_(location.sabbathSchoolHymns, '開會詩歌', '結會詩歌');
   var studyRows = [
     [printedBilingualText_('SS Chair', '安息日學主席'), '', printValue_(location.ssChair)],
     [printedBilingualText_('Opening Prayer', '開會禱告'), '', printValue_(location.ssOpeningPrayer)],
-    // The closing repeats every opening hymn, so one row names them for both.
-    [printedBilingualText_('Opening & Closing Hymns', '開會及結會詩歌'), formatSabbathSchoolHymnsForPrint_(location.sabbathSchoolHymns), printedBilingualText_('Congregation', '會眾')],
+    hymnRows.opening,
     [printedBilingualText_('Lesson / Study', '課程／學習'), formatSabbathSchoolLessonForPrint_(bulletin.sabbathSchoolLesson), printedBilingualText_('Congregation', '會眾')],
+    hymnRows.closing,
     [printedBilingualText_('Closing Prayer', '結會禱告'), '', printValue_(location.closingPrayer)],
   ];
   appendProgramTable_(cell, studyRows);

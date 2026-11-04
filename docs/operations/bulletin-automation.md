@@ -898,21 +898,23 @@ For each printed hymn:
   bare number in the Chinese value prints as `第N首`;
 - if only English is supplied, fill only the missing Chinese hymn number;
 - if only Chinese is supplied, fill only the missing English hymn number; and
-- never copy an English title/reference into the Chinese slot, except on the
-  Sabbath School hymns row (below).
+- never copy an English title/reference into the Chinese slot. The Sabbath
+  School hymns (below) have no separate slots: each prints on one line.
 
 Queens Regular, Queens Communion, and Brooklyn all use this shared path. The
 Communion response hymn remains a fixed bilingual reference and must fit on one
 line in the printed layout.
 
-The Sabbath School hymns print on one **Opening & Closing Hymns** row in each
-Sabbath School panel, one line per language, such as `第413首 · 第205首` over
-`AH 348 · AH 206` (`formatSabbathSchoolHymnsForPrint_`). Each cell has one hymn
-in either language, so it prints as typed, except that a bare number prints as
-`第N首`. The other language is filled in by number where the map has it, and
-otherwise repeats what was typed, English on the Chinese line included, so both
-lines list the same hymns. When the two lines would be the same, one line
-prints. The lesson prints in the Queens `Lesson / Study` row and the Brooklyn
+The Sabbath School hymns print in each Sabbath School panel's **Opening Hymns**
+row, after the opening prayer, one hymn per line, such as
+`第413首 教會根基 / AH 348` (`formatSabbathSchoolHymnsForPrint_`). Each cell has
+one hymn in either language, so it prints as typed, except that a bare number
+prints as `第N首`. The other language follows after a slash, Chinese first,
+where the map has it by number; otherwise the hymn prints once, as typed. The
+closing sings the same hymns, so the **Closing Hymns** row, after the lesson,
+says `同開會詩歌` (`同開會唱詩` in Brooklyn) and `Same as the opening hymns`
+rather than listing them twice (`getPrintedSabbathSchoolHymnRows_`). With one
+hymn, the rows say Hymn; with none, both say `TBD`. The lesson prints in the Queens `Lesson / Study` row and the Brooklyn
 `Sabbath School` row, and the special music piece beside its performer (`TBD`
 in Brooklyn).
 

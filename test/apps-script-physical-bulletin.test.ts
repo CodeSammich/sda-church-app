@@ -1872,27 +1872,60 @@ describe('printed bulletin Apps Script helpers', () => {
            sabbathSchoolLesson: { english: 'Lesson 5: Revelation and Inspiration', chinese: '第5課 啟示與默示' },
          };
          appendStudyPanel_('study', bulletin);
+         var queensStudy = captured;
+         captured = [];
          appendBrooklynStudyPanel_('brooklyn-study', bulletin);
          var worship = [];
          appendSermonRow_ = function () {};
          appendProgramTable_ = function (cell, rows) { worship = worship.concat(rows); };
          appendWorshipPanel_('worship', bulletin, false);
-         JSON.stringify({ study: captured, worship: worship })`,
+         JSON.stringify({ study: queensStudy, brooklyn: captured, worship: worship })`,
         context,
       ) as string,
     );
     const row = (list: string[][], label: string) => list.find(([first]) => first.includes(label));
 
-    expect(row(rows.study, 'Opening & Closing Hymns')).toEqual([
-      '開會及結會詩歌\nOpening & Closing Hymns',
-      '第413首 教會根基 · Amazing Love\nAH 348 · Amazing Love',
+    // The Sabbath School in its order: the opening hymns one per line after
+    // the opening prayer, and the closing hymns after the lesson, saying
+    // they're the opening hymns again rather than listing them twice.
+    const english = (list: string[][]) => list.map(([label]) => label.split('\n').pop());
+    expect(english(rows.study)).toEqual([
+      'SS Chair',
+      'Opening Prayer',
+      'Opening Hymns',
+      'Lesson / Study',
+      'Closing Hymns',
+      'Closing Prayer',
+    ]);
+    expect(row(rows.study, 'Opening Hymns')).toEqual([
+      '開會詩歌\nOpening Hymns',
+      '第413首 教會根基 / AH 348\nAmazing Love',
       '會眾\nCongregation',
     ]);
-    expect(row(rows.study, 'Opening & Closing Hymns\u0000')).toBeUndefined();
-    expect(rows.study.filter(([label]: string[]) => /^(Opening|Closing) Hymn$/m.test(label))).toEqual([]);
+    expect(row(rows.study, 'Closing Hymns')).toEqual([
+      '結會詩歌\nClosing Hymns',
+      '同開會詩歌\nSame as the opening hymns',
+      '會眾\nCongregation',
+    ]);
     expect(row(rows.study, 'Lesson / Study')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
-    expect(row(rows.study, '開會及合班唱詩')?.[1]).toBe('第413首 教會根基 · Amazing Love\nAH 348 · Amazing Love');
-    expect(row(rows.study, '安息日學課')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
+    expect(english(rows.brooklyn)).toEqual([
+      'Song and Bible Verse',
+      'Opening Hymns',
+      'Prayer',
+      'Sabbath Encouragement',
+      'Sabbath School',
+      'Closing Hymns',
+      'Closing Prayer',
+    ]);
+    expect(row(rows.brooklyn, 'Opening Hymns')?.slice(0, 2)).toEqual([
+      '開會唱詩\nOpening Hymns',
+      '第413首 教會根基 / AH 348\nAmazing Love',
+    ]);
+    expect(row(rows.brooklyn, 'Closing Hymns')?.slice(0, 2)).toEqual([
+      '合班唱詩\nClosing Hymns',
+      '同開會唱詩\nSame as the opening hymns',
+    ]);
+    expect(row(rows.brooklyn, '安息日學課')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
     expect(row(rows.worship, 'Special Music')?.slice(1)).toEqual(['It Is Well', 'Ruoxi Tan']);
   });
 
@@ -1954,9 +1987,14 @@ describe('printed bulletin Apps Script helpers', () => {
 
     // Queens: in order, without the blank middle cell.
     // AH 73 Holy, Holy, Holy is 505 #2, 聖哉真神.
-    expect(row('開會及結會詩歌')).toBe('第413首 教會根基 · 第2首\nAH 348 · AH 73 Holy, Holy, Holy');
-    // Brooklyn: a bare number is a Chinese hymnal number.
-    expect(row('開會及合班唱詩')).toBe('第205首\nAH 206');
+    expect(row('開會詩歌')).toBe('第413首 教會根基 / AH 348\n第2首 / AH 73 Holy, Holy, Holy');
+    // Brooklyn: a bare number is a Chinese hymnal number. With one hymn, the
+    // rows say Hymn, not Hymns.
+    expect(row('開會唱詩')).toBe('第205首 / AH 206');
+    expect(rows.find(([first]) => first.includes('合班唱詩'))?.slice(0, 2)).toEqual([
+      '合班唱詩\nClosing Hymn',
+      '同開會唱詩\nSame as the opening hymn',
+    ]);
   });
 
   it('merges adjacent Brooklyn Sabbath School rows with the same assignment', () => {
@@ -2476,7 +2514,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.both).toBe('第413首 教會根基\nAH 348 The Church Has One Foundation');
   });
 
-  it('prints the Sabbath School hymns on one line per language, filling the other by number', () => {
+  it('prints one line per Sabbath School hymn, filling the other language by number', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
       runInContext(
@@ -2491,18 +2529,23 @@ describe('printed bulletin Apps Script helpers', () => {
           englishOnly: formatSabbathSchoolHymnsForPrint_(['Amazing Love']),
           blank: formatSabbathSchoolHymnsForPrint_(['', '  ']),
           missing: formatSabbathSchoolHymnsForPrint_(undefined),
+          noHymnRows: getPrintedSabbathSchoolHymnRows_([], '開會詩歌', '結會詩歌'),
         })`,
         context,
       ) as string,
     );
 
     expect(output.mixed).toBe(
-      '第413首 教會根基 · 第413首 · 第413首 · 還要等多久\n' +
-        'AH 348 · AH 348 The Church Has One Foundation · AH 348 · 還要等多久',
+      ['第413首 教會根基 / AH 348', '第413首 / AH 348 The Church Has One Foundation', '第413首 / AH 348', '還要等多久'].join(
+        '\n',
+      ),
     );
     expect(output.englishOnly).toBe('Amazing Love');
     expect(output.blank).toBe('尚未確定\nTBD');
     expect(output.missing).toBe('尚未確定\nTBD');
+    // With no hymns, both rows say TBD rather than "the same as" nothing.
+    expect(output.noHymnRows.opening.slice(0, 2)).toEqual(['開會詩歌\nOpening Hymn', '尚未確定\nTBD']);
+    expect(output.noHymnRows.closing.slice(0, 2)).toEqual(['結會詩歌\nClosing Hymn', '尚未確定\nTBD']);
   });
 
   it("looks up the lesson the class discusses: the week that ends the day before", () => {
