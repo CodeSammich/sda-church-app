@@ -463,6 +463,16 @@ describe('Bible audio downloads the phone carries out (#611)', () => {
     expect(transfers).toContain('const val AT_ONCE = 3');
     expect(service).toContain('private val SHARED = Semaphore(BibleAudioTransfers.AT_ONCE)');
     expect(service).toContain('for (url in transfer.urls)');
+    // Every connection on the job's own network, never the phone's default,
+    // which may be mobile data while Wi-Fi is still connected, or just after
+    // it goes.
+    expect(service).toContain('val connection = network.openConnection(URL(url)) as HttpURLConnection');
+    expect(service).toContain('val network = params.network ?: throw IOException("no network for the job")');
+    expect(service).not.toMatch(/URL\(url\)\.openConnection\(\)/);
+    // When that network goes, the chapters under way wait for it: a lost
+    // network isn't the source failing, or six would pause the download.
+    expect(service).toMatch(/catch \(error: IOException\) \{\n\s+\/\/[^\n]*\n\s+if \(!networkUp\(\)\) \{\n\s+networkLost = true\n\s+return transfers\.release\(transfer\)/);
+    expect(service).toContain('while (!stopped && !networkLost && coroutineContext.isActive)');
     expect(service).toContain('connection.setRequestProperty("Range", "bytes=$offset-")');
     // Partial files in the folder no backup takes; a web page is never kept as a chapter.
     expect(transfers).toContain('File(context.noBackupFilesDir, PARTIAL_FOLDER)');

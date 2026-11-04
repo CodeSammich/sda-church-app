@@ -2,6 +2,8 @@ package org.nyccsda.bibleaudiodownloads
 
 import android.app.job.JobParameters
 import android.app.job.JobService
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.CoroutineScope
@@ -91,6 +93,10 @@ class BibleAudioTransferService : JobService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val connections: MutableSet<HttpURLConnection> = ConcurrentHashMap.newKeySet()
     @Volatile private var stopped = false
+    // The job's network went, as when Wi-Fi drops: the chapters under way wait
+    // for it, and aren't failures. Android stops the job, and starts it again
+    // when the network is back.
+    @Volatile private var networkLost = false
 
     fun start() {
       scope.launch {
@@ -112,7 +118,14 @@ class BibleAudioTransferService : JobService() {
         }
         while (true) {
           (1..BibleAudioTransfers.AT_ONCE).map { launch { work() } }.joinAll()
-          if (stopped || transfers.endIfIdle(params.jobId, mobileData)) break
+          if (stopped) break
+          if (networkLost) {
+            // Until Android stops the job, or the network turns out to be there.
+            delay(NETWORK_CHECK_MS)
+            if (networkUp()) networkLost = false
+            continue
+          }
+          if (transfers.endIfIdle(params.jobId, mobileData)) break
         }
         ticker.cancel()
         if (stopped) return@launch
@@ -129,7 +142,7 @@ class BibleAudioTransferService : JobService() {
     }
 
     private suspend fun work() {
-      while (!stopped && coroutineContext.isActive) {
+      while (!stopped && !networkLost && coroutineContext.isActive) {
         val more = SHARED.withPermit {
           val transfer = if (stopped) null else transfers.take(mobileData)
           transfer?.let { download(it) }
@@ -143,7 +156,7 @@ class BibleAudioTransferService : JobService() {
     private fun download(transfer: BibleAudioTransfers.Transfer) {
       val target = transfers.targetFile(transfer.path) ?: return transfers.failed(transfer)
       for (url in transfer.urls) {
-        if (stopped) return transfers.release(transfer)
+        if (stopped || networkLost) return transfers.release(transfer)
         if (!transfers.wanted(transfer)) return transfers.dropped(transfer)
         try {
           if (fetch(transfer, url, target)) {
@@ -155,12 +168,25 @@ class BibleAudioTransferService : JobService() {
             return
           }
         } catch (error: IOException) {
-          // The next source, unless it stopped.
+          // Not the source's fault if the network went: the chapter waits for it.
+          if (!networkUp()) {
+            networkLost = true
+            return transfers.release(transfer)
+          }
+          // Otherwise the next source, unless it stopped.
         }
       }
-      if (stopped) transfers.release(transfer)
+      if (stopped || networkLost) transfers.release(transfer)
       else if (!transfers.wanted(transfer)) transfers.dropped(transfer)
       else transfers.failed(transfer)
+    }
+
+    // Whether the job's network is still there, and still one the job may use.
+    private fun networkUp(): Boolean {
+      val network = params.network ?: return false
+      val capabilities = getSystemService(ConnectivityManager::class.java).getNetworkCapabilities(network) ?: return false
+      return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+        (mobileData || capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED))
     }
 
     // Downloads one chapter into its partial file, carrying on from what's
@@ -174,7 +200,14 @@ class BibleAudioTransferService : JobService() {
         source.writeText(url)
       }
       var offset = partial.length()
-      val connection = URL(url).openConnection() as HttpURLConnection
+      // On the network Android started the job for, never the phone's default:
+      // with weak Wi-Fi, Android may make mobile data the default while Wi-Fi
+      // stays connected, and when Wi-Fi goes, the default becomes mobile data
+      // before the job is stopped. Bound to the job's Wi-Fi, a download fails
+      // when Wi-Fi goes, and waits for it, instead of carrying on over mobile
+      // data the member didn't allow.
+      val network = params.network ?: throw IOException("no network for the job")
+      val connection = network.openConnection(URL(url)) as HttpURLConnection
       connections.add(connection)
       try {
         connection.connectTimeout = TIMEOUT_MS
@@ -254,5 +287,6 @@ class BibleAudioTransferService : JobService() {
     private const val REPORT_EVERY = 256L * 1024
     private const val NOTIFICATION_EVERY_MS = 1_000L
     private const val ESTIMATE_EVERY_TICKS = 30
+    private const val NETWORK_CHECK_MS = 5_000L
   }
 }
