@@ -881,6 +881,11 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('<span class="step-number">3</span>Convert and send .docx to pastor / 转换 .docx 发给牧师');
     expect(html.match(/class="help">/g)).toBeNull();
     expect(html.match(/class="mac-note">/g)).toHaveLength(1);
+    // So nobody shortens a bulletin that only runs long in the preview.
+    expect(html).toContain(
+      '预览并检查</h2><p class="preview-note">ⓘ Preview may run taller than print: Docs spaces Chinese more. Step 3\'s .docx fixes it.<br>',
+    );
+    expect(html).toContain('ⓘ 预览可能比打印稿长：Google 文档的中文行距较大。第 3 步的 .docx 会修正。</p><form id="bulletinForm">');
     expect(html).toContain('Announcements (print only) / 通知（仅印刷）');
     // No empty announcement card to start with: just the Add button.
     expect(html).toContain('(entries||[]).forEach(addAnnouncementEntry)');

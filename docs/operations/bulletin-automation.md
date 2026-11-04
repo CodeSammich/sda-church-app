@@ -808,7 +808,10 @@ needed. It opens a staff dialog that:
 It's three numbered cards, a few words each, because people skim: **1. Fill in
 Weekly Data**, with a link to the tab; **2. Preview & check**, which makes or
 updates the Google Doc to check and edit; and **3. Convert and send .docx to
-pastor**. Step 3 opens with the one tip that changes the printout, in a large
+pastor**. Step 2 says the preview may run taller than the print, since Docs
+gives a line with Chinese its font's height (up to 1.45 times the size for a
+character in the fallback font), and that step 3's .docx fixes it, so nobody
+shortens a bulletin that only runs long in the preview. Step 3 opens with the one tip that changes the printout, in a large
 highlighted note: "Mac preferred: font looks better", over a smaller "Open in
 Microsoft Word or free LibreOffice." **⬇ Download .docx** shows on the right,
 under **Make .docx**. Announcements start with just **+ Add announcement**.

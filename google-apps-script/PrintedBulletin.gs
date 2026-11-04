@@ -549,6 +549,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'padding:9px 17px;}' +
     '.submit{background:#1a73e8;color:#fff;}' +
     '.download-row{display:flex;justify-content:flex-end;margin-top:10px;}' +
+    '.preview-note{color:#5f6368;font-size:13px;line-height:1.45;margin:-4px 0 0;}' +
     '.mac-note{background:#fef7e0;border:1px solid #f9ab00;border-radius:8px;color:#3c4043;font-size:13px;line-height:1.45;margin:0 0 4px;padding:12px 14px;}' +
     '.mac-note strong{color:#202124;display:block;font-size:18px;line-height:1.35;margin-bottom:4px;}' +
     '.submit:disabled{background:#9aa0a6;cursor:wait;}' +
@@ -569,6 +570,12 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '">↗ Open Weekly Data / 打开 Weekly Data</a></div></div>' +
     '<div class="step">' +
     '<h2 class="section-heading"><span class="step-number">2</span>Preview &amp; check / 预览并检查</h2>' +
+    // Docs gives a line with Chinese its font's height, up to 1.45 times the
+    // size for a character in the fallback font; the .docx sets every line's
+    // height from the size alone (#627). Outside the form, so it stays after
+    // the preview is made.
+    '<p class="preview-note">ⓘ Preview may run taller than print: Docs spaces Chinese more. Step 3\'s .docx fixes it.<br>' +
+    'ⓘ 预览可能比打印稿长：Google 文档的中文行距较大。第 3 步的 .docx 会修正。</p>' +
     '<form id="bulletinForm">' +
     '<label for="date">Sabbath date / 安息日日期 <span class="required-mark" aria-hidden="true">*</span></label>' +
     '<input id="date" type="date" value="' +
