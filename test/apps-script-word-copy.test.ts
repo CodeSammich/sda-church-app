@@ -270,31 +270,27 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     expect(failed.created).toEqual([]);
   });
 
-  it('makes the print version in step 3, for everyone to print from, with LibreOffice as the free option', () => {
+  it('makes the .docx in step 3, to send to the pastor, with LibreOffice as the fallback', () => {
     const context = loadAppsScript({});
     const html = runInContext(`buildPrintedBulletinPromptHtml_('2026-11-07')`, context) as string;
 
-    expect(html).toContain('3. Print the final version / 第三步：打印最终版');
-    expect(html).toContain('make the print version: a Word file with the final fonts and spacing');
-    expect(html).toContain('制作打印版：使用最终字体和行距的 Word 文件');
-    // Sending it to the pastor comes first; Word or LibreOffice is the fallback.
-    expect(html).toContain('Send it to the pastor on WhatsApp to print on a Mac. If no Mac is available, print it from Word or free');
-    expect(html).toContain('通过 WhatsApp 发给牧师，在 Mac 上打印。如果没有 Mac，可用 Word 或免费的');
-    expect(html.indexOf('Send it to the pastor')).toBeLessThan(html.indexOf('>LibreOffice</a>'));
-    // It says what a computer without Songti TC shows.
-    expect(html).toContain('>LibreOffice</a>, with a similar Chinese font.');
-    expect(html).toContain('中文会使用相近的字体');
+    expect(html).toContain('Send .docx to pastor / 把 .docx 发给牧师');
+    // A Mac first, for its font; Word or LibreOffice work on any computer.
+    expect(html).toContain('<strong>Mac preferred: better font.</strong> Open in Microsoft Word or free <a href=');
+    expect(html).toContain('<strong>建议用 Mac：字体更好。</strong>用 Microsoft Word 或免费的 <a href=');
+    expect(html).toContain('">LibreOffice</a> 打开。');
+    expect(html).not.toContain('No Mac?');
     expect(html.match(/href="https:\/\/www\.libreoffice\.org\/download\/download-libreoffice\/">LibreOffice<\/a>/g)).toHaveLength(2);
-    expect(html).toContain('id="wordCopy">Make print version / 制作打印版</button>');
+    expect(html).toContain('id="wordCopy">Make .docx / 制作 .docx</button>');
     expect(html).toContain('createPrintedBulletinWordCopy({date:date,location:locationValue})');
-    expect(html).toContain('Download print version (.docx) / 下载打印版（.docx）');
+    expect(html).toContain('⬇ Download .docx / 下载 .docx');
     // Only the download: the copy is for printing, not for opening in Drive.
     expect(html).not.toContain('Open in Google Drive');
     expect(html).not.toContain('Make Word copy');
     expect(html).not.toMatch(/pdf/i);
   });
 
-  it('says in Fonts… that Songti TC is in the print version, on a Mac', () => {
+  it('says in Fonts… that Songti TC is in the .docx, on a Mac', () => {
     const context = loadAppsScript({
       PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     });
@@ -304,7 +300,7 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     ) as string;
 
     expect(html).toContain("Songti TC (宋體-繁) isn't here: Google Docs can't print it.");
-    expect(html).toContain('The print version, step 3 of Create Google Doc…, has it on a Mac.');
+    expect(html).toContain('The .docx from step 3 of Create Google Doc… has it, on a Mac.');
     expect(html).toContain('这里没有宋体-繁（Songti TC）');
     expect(html).not.toContain('<option value="Songti TC"');
   });

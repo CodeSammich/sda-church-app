@@ -791,9 +791,12 @@ needed. It opens a staff dialog that:
 7. in step 3, below where **Preview ready** appears, makes the print version of
    the week's Doc. See [Printing the final version](#printing-the-final-version).
 
-Its three steps are **1. Update Weekly Data**, **2. Preview**, which makes or
-updates the Google Doc to check and edit, and **3. Print the final version**.
-Each has one short help line in English over one in Simplified Chinese.
+It's three numbered cards, a few words each, because people skim: **1. Fill in
+Weekly Data**, with a link to the tab; **2. Preview & check**, which makes or
+updates the Google Doc to check and edit; and **3. Send .docx to pastor**. The
+only help line is step 3's "Mac preferred: better font. Open in Microsoft Word
+or free LibreOffice." Announcements start
+with just **+ Add announcement**.
 
 A long passage still asks before it's printed, since it can push the bulletin
 onto another page.
@@ -929,21 +932,22 @@ pastor's preferred Chinese font is Songti TC (宋體-繁). It comes only with
 macOS, under Apple's license, and Google Docs can't print it: Docs prints only
 fonts in its own list, and none of its Chinese lists (Traditional, Hong Kong or
 Simplified) has a Song face besides UoqMunThenKhung. On a Mac, the print
-version's Chinese is in Songti TC. On any other computer, Word or LibreOffice
-puts in a similar Chinese font, so the Chinese looks different, but the layout
+version's Chinese is in Songti TC, in Word or LibreOffice. On any other
+computer, they put in a similar Chinese font, so the Chinese looks different, but the layout
 holds: the copy's exact line heights come from each line's font size, not from
 the font, and Chinese characters are one em wide in any Chinese font. The
 dialog's step 3 says both.
 
 1. Make and edit the week's Doc with **Preview**, as usual.
 2. After the last edit, in step 3 of **Printed Bulletin → Create Google Doc…**,
-   with the date and location chosen, click **Make print version**. It reads the
+   with the date and location chosen, click **Make .docx**. It reads the
    Doc as it stands, so a copy made before an edit misses that edit.
-3. Click **Download print version (.docx)**.
-4. Send it to the pastor on WhatsApp, to print from Word on a Mac.
-5. If no Mac is available, print it from Word, or from the free
-   [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/) on
-   a computer without Word.
+3. Click **⬇ Download .docx**.
+4. Send it to the pastor on WhatsApp, to print on a Mac.
+5. Open it in Microsoft Word or the free
+   [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/).
+   Either uses Songti TC on a Mac, which is why a Mac is preferred; elsewhere
+   they put in a similar Chinese font.
 
 The copy is saved as `<Doc title> (Word, Songti TC).docx` in the Doc's own
 Drive folder, replacing that week's earlier copy. The Doc doesn't change. The
@@ -964,7 +968,7 @@ it already has, and changes only `word/document.xml` and `word/styles.xml`:
 
 If the copy runs onto an extra page, lower `PRINTED_BULLETIN_WORD_LINE_HEIGHT`
 a little, such as to 1.1. If tall characters look clipped, raise it, such as to
-1.2. The next **Make print version** uses it.
+1.2. The next **Make .docx** uses it.
 
 ## Printed edge cases and content rules
 

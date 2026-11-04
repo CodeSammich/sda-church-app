@@ -849,7 +849,7 @@ describe('printed bulletin Apps Script helpers', () => {
     );
   });
 
-  it('builds a short bilingual form: three steps, one help line each, and Preview', () => {
+  it('builds three numbered cards, a few words each, with Preview', () => {
     const context = loadAppsScript({});
     const html = runInContext(
       `buildPrintedBulletinPromptHtml_('2026-09-26')`,
@@ -867,16 +867,22 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('.choice:disabled');
     expect(html).not.toContain('Detect from response');
     expect(html).toContain('eng_kjv');
-    expect(html).toContain('Chinese is always CUV.<br>中文固定为和合本。');
+    expect(html).toContain('English Bible / 英文圣经');
+    expect(html).not.toContain('Chinese is always CUV');
     expect(html).not.toContain('cmn_cu1');
     expect(html).toContain('getPrintedBulletinPromptWarning');
     expect(html).toContain('Add announcement / 添加通知');
     expect(html).toContain('getPrintedBulletinPromptData');
-    // Each step: a heading and one short help line, English over Chinese.
-    expect(html).toContain('1. Update Weekly Data / 第一步：更新 Weekly Data');
-    expect(html).toContain('One row per location. The app and the printed bulletin both use it.<br>每个地点一行。应用和纸质周刊都使用这些内容。');
-    expect(html).toContain('2. Preview / 第二步：预览');
-    expect(html).toContain('3. Print the final version / 第三步：打印最终版');
+    // Three numbered cards, each a few words: no help paragraphs but step 3's
+    // one fallback line.
+    expect(html.match(/<div (id="[^"]+" )?class="step">/g)).toHaveLength(3);
+    expect(html).toContain('<span class="step-number">1</span>Fill in Weekly Data / 填写 Weekly Data');
+    expect(html).toContain('<span class="step-number">2</span>Preview &amp; check / 预览并检查');
+    expect(html).toContain('<span class="step-number">3</span>Send .docx to pastor / 把 .docx 发给牧师');
+    expect(html.match(/class="help">/g)).toHaveLength(1);
+    expect(html).toContain('Announcements (print only) / 通知（仅印刷）');
+    // No empty announcement card to start with: just the Add button.
+    expect(html).toContain('(entries||[]).forEach(addAnnouncementEntry)');
     expect(html).not.toContain('admin-reminder"');
     expect(html).toContain('>Preview / 预览</button>');
     expect(html).not.toContain('Create / 创建');
@@ -896,7 +902,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('class="status-slot"');
     expect(html).toContain('document.getElementById("bulletinForm").hidden=true');
     expect(html).toContain('block:"nearest"');
-    expect(html.indexOf('English Bible / 英文圣经')).toBeLessThan(html.indexOf('Printed announcements'));
+    expect(html.indexOf('English Bible / 英文圣经')).toBeLessThan(html.indexOf('Announcements (print only)'));
     // The verse is in Weekly Data, so the dialog doesn't show it: only, by
     // Preview, why Preview is off when it's blank or unreadable (#622).
     expect(html).toContain('<div id="verseView" class="verse-view problem" role="alert" hidden></div>');
