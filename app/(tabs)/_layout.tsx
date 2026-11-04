@@ -1,5 +1,6 @@
 import { UpdateContext } from '@/app/_layout';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
+import { AppTabBar, getAppTabBarVariant, WIDE_TAB_BAR_MIN_WIDTH, type AppTabBarVariant } from '@/components/AppTabBar';
 import { GlobalHeader, UIStateContext } from '@/components/GlobalHeader';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { APP_ICONOGRAPHY } from '@/constants/Iconography';
@@ -13,17 +14,20 @@ import { DESIGN_TOKENS, getBottomTabContentHeight, getContentSideInset } from '@
 import { getBottomTabTextScale, HEADER_MAX_FONT_SCALE } from '@/hooks/useGlobalHeaderHeight';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
-import { BottomTabBar } from 'expo-router/js-tabs';
 import { Tabs, router, usePathname } from 'expo-router';
 import React, { useContext, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// The tab bar's style (AppTabBar, #589), and whether it's a tablet's larger one.
+type TabBarLook = { variant: AppTabBarVariant; wide: boolean; indicatorColor: string };
 
 function TabBarIcon(props: {
   name: MaterialCommunityIconName;
   color: string;
   focused: boolean;
   textScale: TextScale;
+  look: TabBarLook;
 }) {
   let iconName = props.name;
 
@@ -32,12 +36,30 @@ function TabBarIcon(props: {
     iconName = `${props.name}-outline` as any;
   }
 
+  const iconScale = getBottomTabIconTextScale(props.textScale);
+  // Material 3's navigation bar puts the selected tab's icon on a 64 × 32 pill.
+  if (props.look.variant === 'material') {
+    return (
+      <View
+        style={{
+          width: 64 * Math.min(iconScale, 1.25),
+          height: 32 * Math.min(iconScale, 1.25),
+          borderRadius: 16 * Math.min(iconScale, 1.25),
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: props.focused ? props.look.indicatorColor : 'transparent',
+        }}
+      >
+        <AppIcon name={iconName} size={props.look.wide ? 26 : 24} textScale={iconScale} color={props.color} />
+      </View>
+    );
+  }
   return (
-    <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+    <View style={{ width: 44, height: props.look.wide ? 40 : 34, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
       <AppIcon
         name={iconName}
-        size={DESIGN_TOKENS.ICON_SIZE_TAB}
-        textScale={getBottomTabIconTextScale(props.textScale)}
+        size={props.look.wide ? 30 : DESIGN_TOKENS.ICON_SIZE_TAB - 2}
+        textScale={iconScale}
         color={props.color}
       />
     </View>
@@ -50,10 +72,14 @@ function TabBarIcon(props: {
 // minimumFontScale and shrank the labels to dots, so it isn't used.
 function TabBarLabel(props: {
   color: string;
+  focused?: boolean;
   label: string;
   textScale: TextScale;
+  look: TabBarLook;
 }) {
   const labelScale = getBottomTabIconTextScale(props.textScale);
+  // Material 3's labels are 12 points; the glass capsule's 10, or 12 on a tablet.
+  const fontSize = props.look.variant === 'material' || props.look.wide ? 12 : DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE;
   return (
     <Text
       maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
@@ -61,8 +87,9 @@ function TabBarLabel(props: {
       style={{
         color: props.color,
         flexShrink: 1,
-        fontSize: scaleTypographyMetric(DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE, labelScale),
-        lineHeight: scaleTypographyMetric(DESIGN_TOKENS.BOTTOM_TAB_LABEL_LINE_HEIGHT, labelScale),
+        fontSize: scaleTypographyMetric(fontSize, labelScale),
+        fontWeight: props.focused ? '700' : '500',
+        lineHeight: scaleTypographyMetric(fontSize + 6, labelScale),
         paddingBottom: DESIGN_TOKENS.BOTTOM_TAB_LABEL_BOTTOM_PADDING,
         textAlign: 'center',
         width: '100%',
@@ -113,7 +140,7 @@ export default function TabLayout() {
 
   const tabBarTranslateY = menuAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [tabContentHeight + bottomTabInset + 16, 0],
+    outputRange: [tabBarHeight + 16, 0],
   });
 
   const handleTabBarLayout = (event: LayoutChangeEvent) => {
@@ -151,6 +178,15 @@ export default function TabLayout() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  // PROTOTYPE (#589): EXPO_PUBLIC_TAB_BAR_PREVIEW picks a style in a web
+  // preview build; remove before merging.
+  const tabBarVariant =
+    (process.env.EXPO_PUBLIC_TAB_BAR_PREVIEW as AppTabBarVariant | undefined) || getAppTabBarVariant(Platform.OS);
+  const look: TabBarLook = {
+    variant: tabBarVariant,
+    wide: windowWidth >= WIDE_TAB_BAR_MIN_WIDTH,
+    indicatorColor: theme.colors.tertiaryContainer,
+  };
   // The Bible's fixed reader dock owns the upper boundary on this tab. Keep
   // this broad enough for native/router variants that expose `/bible/index`.
   const isBibleRoute = pathname === '/bible' || pathname.startsWith('/bible/');
@@ -179,7 +215,15 @@ export default function TabLayout() {
               transform: [{ translateY: tabBarTranslateY }],
             }}
           >
-            <BottomTabBar {...(props as any)} />
+            <AppTabBar
+              {...(props as any)}
+              bottomInset={bottomTabInset}
+              sideInset={fullscreenEdgeInset + getContentSideInset(windowWidth)}
+              theme={theme}
+              variant={tabBarVariant}
+              wide={look.wide}
+              windowWidth={windowWidth}
+            />
           </Animated.View>
         )}
         screenOptions={{
@@ -191,36 +235,6 @@ export default function TabLayout() {
             : theme.colors.onSurfaceVariant,
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
-          tabBarStyle: {
-            height: tabContentHeight + bottomTabInset + 4,
-            paddingTop: 4,
-            paddingBottom: bottomTabInset,
-            // On a wide screen the four tabs stay within the content column,
-            // rather than spreading across it (#324).
-            paddingHorizontal: fullscreenEdgeInset + getContentSideInset(windowWidth),
-            elevation: 0,
-            backgroundColor: 'transparent',
-            borderTopColor: isBibleRoute
-              ? 'transparent'
-              : theme.colors.outlineVariant,
-            borderTopWidth: isBibleRoute ? 0 : StyleSheet.hairlineWidth,
-          },
-          // React Navigation puts each label beside its icon on a wide screen,
-          // far from it on a tablet. Keep the phone's layout (#324, #432).
-          tabBarLabelPosition: 'below-icon',
-          tabBarItemStyle: {
-            flex: 1,
-            minWidth: 0,
-            overflow: 'visible',
-          },
-          tabBarBackground: () => (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: theme.colors.background },
-              ]}
-            />
-          ),
           // The animated tab bar is absolutely positioned, so React Navigation cannot
           // reserve space for it. Keep every regular tab screen above the overlay.
           sceneStyle: {
@@ -235,11 +249,13 @@ export default function TabLayout() {
           options={{
             title: labels.home,
             headerShown: true,
-            tabBarLabel: ({ color }) => (
+            tabBarLabel: ({ color, focused }) => (
               <TabBarLabel
                 color={String(color)}
+                focused={focused}
                 label={labels.home}
                 textScale={textScale}
+                look={look}
               />
             ),
             tabBarIcon: ({ color, focused }) => (
@@ -248,6 +264,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
+                look={look}
               />
             ),
           }}
@@ -271,11 +288,13 @@ export default function TabLayout() {
           options={{
             title: labels.bible,
             headerShown: false, // Internal Stack handles header for consistency
-            tabBarLabel: ({ color }) => (
+            tabBarLabel: ({ color, focused }) => (
               <TabBarLabel
                 color={String(color)}
+                focused={focused}
                 label={labels.bible}
                 textScale={textScale}
+                look={look}
               />
             ),
             // The Bible reader owns a coordinated bottom dock and already accounts
@@ -287,6 +306,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
+                look={look}
               />
             ),
           }}
@@ -302,11 +322,13 @@ export default function TabLayout() {
           options={{
             title: labels.explore,
             headerShown: false, // Internal Stack handles header for consistency
-            tabBarLabel: ({ color }) => (
+            tabBarLabel: ({ color, focused }) => (
               <TabBarLabel
                 color={String(color)}
+                focused={focused}
                 label={labels.explore}
                 textScale={textScale}
+                look={look}
               />
             ),
             tabBarIcon: ({ color, focused }) => (
@@ -315,6 +337,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
+                look={look}
               />
             ),
           }}
@@ -342,11 +365,13 @@ export default function TabLayout() {
             {
               title: labels.you,
               headerShown: false, // Internal Stack handles header for consistency
-              tabBarLabel: ({ color }: { color: string }) => (
+              tabBarLabel: ({ color, focused }: { color: string; focused: boolean }) => (
                 <TabBarLabel
                   color={color}
+                  focused={focused}
                   label={labels.you}
                   textScale={textScale}
+                  look={look}
                 />
               ),
               unmountOnBlur: true as any, // Ensures the stack resets when leaving the tab
@@ -356,6 +381,7 @@ export default function TabLayout() {
                   color={color}
                   focused={focused}
                   textScale={textScale}
+                  look={look}
                 />
               ),
             } as any
