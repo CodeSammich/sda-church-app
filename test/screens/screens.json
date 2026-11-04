@@ -485,10 +485,10 @@
     {
       "name": "give-daf-sponsors",
       "group": "home",
-      "$comment": "The Tithe & Offering page's Other Sponsors popup, opened by popup=daf-sponsors (#646). The page's Donor-Advised Fund card, far below the give shot's fold, has a Fidelity Charitable button, which opens a grant to the church, and Other Sponsors, which opens this: an X beside its title and no Close button, the other sponsors the card names, each opening its website, DAFgiving360 saying it was Schwab Charitable, then the church's legal name and EIN for the grant. Each row's open-in-new icon may be read on the end of a line, so lines aren't anchored at their end. The Android phone's shorter screen may leave the EIN below the popup's height limit, so it's checked on the iPhone only.",
+      "$comment": "The Tithe & Offering page's Other Sponsors popup, opened by popup=daf-sponsors (#646). The page's Donor-Advised Fund card, far below the give shot's fold, has a Fidelity Charitable button, which opens a grant to the church, and Other Sponsors, which opens this: an X beside its title and no Close button, the other sponsors the card names, each opening its website, DAFgiving360 saying it was Schwab Charitable, then the church's legal name and EIN for the grant. Each row's open-in-new icon may be read on the end of a line, so lines aren't anchored at their end, and the EIN's hyphen may be read as a dash.",
       "path": "home/give?popup=daf-sponsors",
       "variants": ["default", "zh"],
-      "mustShowLines": ["^DAFgiving360\\b", "Schwab Charitable\\b", "^Vanguard Charitable\\b", { "line": "^EIN 11-3004814", "platforms": ["ios"] }],
+      "mustShowLines": ["^DAFgiving360\\b", "Schwab Charitable\\b", "^Vanguard Charitable\\b", "^EIN 11\\W{1,3}3004814"],
       "mustNotShowLines": ["^Close$", "^關閉$"],
       "variantRules": {
         "default": { "mustShowLines": ["^Other Sponsors\\b", "^Formerly Schwab\\b"] },
