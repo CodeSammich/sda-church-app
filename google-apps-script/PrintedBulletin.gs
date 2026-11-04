@@ -526,7 +526,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '.announcement-remove{background:#fce8e6;color:#a50e0e;font-size:12px;padding:6px 9px;}' +
     '.announcement-add{background:#e8f0fe;color:#174ea6;font-size:13px;margin-top:4px;}' +
     '.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;}' +
-    '.status-slot{box-sizing:border-box;min-height:180px;padding-top:8px;}' +
+    '.status-slot{box-sizing:border-box;padding-top:8px;}' +
     '#statusView{min-height:164px;}' +
     'button{font:14px Arial,sans-serif;border:0;border-radius:4px;cursor:pointer;' +
     'padding:9px 17px;}' +
@@ -573,25 +573,26 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     englishTranslationOptions +
     '</select>' +
     '<div class="help">Chinese Bible translation: CUV — 和合本（Traditional Chinese）.<br>中文圣经译本：CUV — 和合本（繁体中文）。</div>' +
-    '<label>Bible reading<br>读经</label>' +
-    '<div id="verseView" class="verse-view" aria-live="polite">Reading Weekly Data… / 正在读取 Weekly Data…</div>' +
-    '<div class="help">From the Bible Verses column in Weekly Data, the same verse the app shows. To change it, close this dialog, edit Weekly Data, then open the dialog again.<br>来自“Weekly Data”的“Bible Verses”列，与应用中显示的经文相同。如需修改，请关闭此对话框，在“Weekly Data”中修改后重新打开。</div>' +
     '<label>Printed announcements / 纸质周刊通知</label>' +
     '<div class="help">Optional. Add one entry per card. These entries are printed only; they are not shown in the mobile bulletin.<br>可选。每张卡片输入一条通知。这些通知只打印在纸质周刊上，不会显示在手机版周刊中。</div>' +
     '<div id="announcementList"></div>' +
     '<button type="button" class="announcement-add" id="addAnnouncement">+ Add announcement / 添加通知</button>' +
+    // The verse is in Weekly Data, so it isn't shown here: only why Create is
+    // off, when Weekly Data's verse is blank or can't be read (#622).
+    '<div id="verseView" class="verse-view problem" role="alert" hidden></div>' +
     '<div id="error" class="error" hidden></div>' +
     '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
     '<button type="submit" class="submit" id="submit" disabled>Create / 创建</button></div>' +
     '</form></div>' +
-    '<div id="wordCopySection"><h2 class="section-heading" style="margin-top:20px;">3. Printing on a Mac: a Word copy / 第三步（可选）：Mac 打印用 Word 副本</h2>' +
+    // Right under step 2, so "Printed bulletin ready" shows where it was made.
+    '<div class="status-slot"><div id="statusView" hidden></div></div>' +
+    '<div id="wordCopySection"><h2 class="section-heading" style="margin-top:20px;">3. Send the pastor a Word copy to print / 第三步：把 Word 副本发给牧师打印</h2>' +
     '<div class="admin-reminder"><strong>Needs a Mac with Microsoft Word.</strong> The pastor\'s Chinese font, Songti TC (宋體-繁), comes only with macOS, and Google Docs can\'t print it. Without a Mac, print the Google Doc itself: its Chinese is in UoqMunThenKhung (宇文天穹).<br>' +
     '<strong>需要装有 Microsoft Word 的 Mac。</strong>牧师选用的中文字体宋体-繁（Songti TC）只有 macOS 自带，Google 文档无法打印该字体。没有 Mac 时，请直接打印 Google 文档，其中文字体为宇文天穹（UoqMunThenKhung）。</div>' +
-    '<div class="help">After the last edit to this Sabbath\'s Google Doc, make a Word copy with the Chinese in Songti TC. Open it in Word on the Mac to print. It uses the date and location above.<br>' +
-    '在这个安息日的 Google 文档最后修改之后，制作一份中文为宋体-繁的 Word 副本，在 Mac 上用 Word 打开打印。使用上面选择的日期和地点。</div>' +
+    '<div class="help">After the last edit to this Sabbath\'s Google Doc, make the Word copy, download it, and send it to the pastor on WhatsApp. The pastor opens it in Word on a Mac and prints it, with the Chinese in Songti TC. It uses the date and location above.<br>' +
+    '在这个安息日的 Google 文档最后修改之后，制作 Word 副本，下载后通过 WhatsApp 发给牧师。牧师在 Mac 上用 Word 打开并打印，中文为宋体-繁。使用上面选择的日期和地点。</div>' +
     '<div class="actions"><button type="button" class="word-copy" id="wordCopy">Make Word copy / 制作 Word 副本</button></div>' +
     '<div id="wordCopyStatus" class="help" aria-live="polite"></div></div>' +
-    '<div class="status-slot"><div id="statusView" hidden></div></div>' +
     '<script>' +
     'var initialRequest=' +
     requestJson +
@@ -610,7 +611,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 通知 "+(index+1);});}' +
     'function addAnnouncementEntry(entry){var list=document.getElementById("announcementList");var index=list.children.length;list.insertAdjacentHTML("beforeend",announcementMarkup(entry,index));refreshAnnouncementLabels();}' +
     'function renderAnnouncements(entries){var list=document.getElementById("announcementList");list.innerHTML="";if(!entries||!entries.length){entries=[{}];}entries.forEach(addAnnouncementEntry);refreshAnnouncementLabels();announcementsDirty=false;updateSubmitState();}' +
-    'function renderVerse(data){var view=document.getElementById("verseView");if(!data){view.className="verse-view";view.textContent="Reading Weekly Data… / 正在读取 Weekly Data…";return;}if(data.verseProblem){view.className="verse-view problem";view.textContent=data.verseProblem;return;}view.className="verse-view";view.textContent=data.verseLabels.english+"\\n"+data.verseLabels.chinese;}' +
+    'function renderVerse(data){var view=document.getElementById("verseView");var problem=data&&data.verseProblem;view.hidden=!problem;view.textContent=problem||"";}' +
     'function renderPromptData(data){promptData=data||null;renderAnnouncements((data&&data.announcements)||[]);renderVerse(data);updateSubmitState();}' +
     // A reply for an earlier date or location is dropped, so the verse shown is
     // always the one for the current choices.

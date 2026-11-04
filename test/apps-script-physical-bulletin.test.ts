@@ -810,7 +810,7 @@ describe('printed bulletin Apps Script helpers', () => {
     );
   });
 
-  it('builds a bilingual form with location/format buttons and a read-only Bible reading', () => {
+  it('builds a bilingual form with location/format buttons, and no Bible reading box', () => {
     const context = loadAppsScript({});
     const html = runInContext(
       `buildPrintedBulletinPromptHtml_('2026-09-26')`,
@@ -851,14 +851,19 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('function focusStatusView_');
     expect(html).toContain('scrollIntoView');
     expect(html).toContain('class="status-slot"');
-    expect(html).toContain('min-height:180px');
     expect(html).toContain('document.getElementById("bulletinForm").hidden=true');
     expect(html).toContain('block:"nearest"');
-    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Bible reading'));
+    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Printed announcements'));
     // The verse is Weekly Data's, shown read-only (#622): no picker.
-    expect(html).toContain('id="verseView"');
-    expect(html).toContain('From the Bible Verses column in Weekly Data, the same verse the app shows.');
-    expect(html).toContain('来自“Weekly Data”的“Bible Verses”列');
+    // The verse is in Weekly Data, so the dialog doesn't show it: only, by
+    // Create, why Create is off when it's blank or unreadable.
+    expect(html).toContain('<div id="verseView" class="verse-view problem" role="alert" hidden></div>');
+    expect(html).not.toContain('Bible reading');
+    expect(html).not.toContain('From the Bible Verses column in Weekly Data');
+    expect(html.indexOf('id="verseView"')).toBeLessThan(html.indexOf('id="submit"'));
+    // "Printed bulletin ready" shows under step 2, above step 3.
+    expect(html.indexOf('id="statusView"')).toBeGreaterThan(html.indexOf('</form>'));
+    expect(html.indexOf('id="statusView"')).toBeLessThan(html.indexOf('id="wordCopySection"'));
     expect(html).not.toMatch(/id="(book|chapter|verses)"/);
     expect(html).not.toContain('Choose a book');
     expect(html).not.toContain('选择书卷');

@@ -769,13 +769,15 @@ needed. It opens a staff dialog that:
 3. lets the operator select Queens or Brooklyn;
 4. supports Queens Regular or Queens Holy Communion; Brooklyn Communion is
    intentionally disabled;
-5. shows the Bible reading from `Weekly Data → Bible Verses`, read-only, the
-   same one the app shows. While it's blank or can't be read, the dialog says
-   why (and, for one it can't read, how to write it), and **Create** stays off. To change it, close the
-   dialog, edit `Weekly Data`, and open the dialog again;
+5. checks the Bible reading in `Weekly Data → Bible Verses`, the same one the
+   app shows. It doesn't show the verse, since it's in the sheet. While the
+   verse is blank or can't be read, a red note above **Create** says why (and,
+   for one it can't read, how to write it), and **Create** stays off. To change
+   it, close the dialog, edit `Weekly Data`, and open the dialog again;
 6. optionally accepts printed announcements; and
-7. makes a Word copy of the week's Doc for printing in Songti TC, which needs a
-   Mac with Word. See [Printing in Songti TC needs a Mac](#printing-in-songti-tc-needs-a-mac).
+7. in step 3, below where **Printed bulletin ready** appears, makes a Word copy of
+   the week's Doc to send to the pastor on WhatsApp, for printing in Songti TC on
+   a Mac with Word. See [Printing in Songti TC needs a Mac](#printing-in-songti-tc-needs-a-mac).
 
 A long passage still asks before it's printed, since it can push the bulletin
 onto another page.
@@ -918,8 +920,8 @@ To print in Songti TC (#627):
 2. After the last edit, open **Printed Bulletin → Create Google Doc…**, choose
    the date and location, and click **Make Word copy** in step 3. It reads the
    Doc as it stands, so a copy made before an edit misses that edit.
-3. Click **Download Word copy** and open the file in Word on the Mac. Print
-   from Word.
+3. Click **Download Word copy** and send the file to the pastor on WhatsApp.
+4. The pastor opens it in Word on a Mac and prints from Word.
 
 The copy is saved as `<Doc title> (Word, Songti TC).docx` in the Doc's own
 Drive folder, replacing that week's earlier copy. The Doc doesn't change. The

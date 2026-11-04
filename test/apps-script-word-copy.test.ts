@@ -259,8 +259,9 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     const context = loadAppsScript({});
     const html = runInContext(`buildPrintedBulletinPromptHtml_('2026-11-07')`, context) as string;
 
-    expect(html).toContain('3. Printing on a Mac: a Word copy / 第三步（可选）：Mac 打印用 Word 副本');
-    expect(html).toContain('After the last edit to this Sabbath\'s Google Doc, make a Word copy with the Chinese in Songti TC');
+    expect(html).toContain('3. Send the pastor a Word copy to print / 第三步：把 Word 副本发给牧师打印');
+    expect(html).toContain('make the Word copy, download it, and send it to the pastor on WhatsApp');
+    expect(html).toContain('下载后通过 WhatsApp 发给牧师');
     expect(html).toContain('id="wordCopy">Make Word copy / 制作 Word 副本</button>');
     expect(html).toContain('createPrintedBulletinWordCopy({date:date,location:locationValue})');
     expect(html).toContain('Download Word copy / 下载 Word 副本');
