@@ -271,24 +271,27 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     expect(failed.created).toEqual([]);
   });
 
-  it('puts a Word copy button in the Create Google Doc dialog, for the date and location chosen', () => {
+  it('makes the .docx in step 3, to send to the pastor, with LibreOffice as the fallback', () => {
     const context = loadAppsScript({});
     const html = runInContext(`buildPrintedBulletinPromptHtml_('2026-11-07')`, context) as string;
 
-    expect(html).toContain('3. Send the pastor a Word copy to print / 第三步：把 Word 副本发给牧师打印');
-    expect(html).toContain('make the Word copy, download it, and send it to the pastor on WhatsApp');
-    expect(html).toContain('下载后通过 WhatsApp 发给牧师');
-    expect(html).toContain('id="wordCopy">Make Word copy / 制作 Word 副本</button>');
+    expect(html).toContain('Send .docx to pastor / 把 .docx 发给牧师');
+    // A Mac first, for its font; Word or LibreOffice work on any computer.
+    expect(html).toContain('<strong>Mac preferred: better font.</strong> Open in Microsoft Word or free <a href=');
+    expect(html).toContain('<strong>建议用 Mac：字体更好。</strong>用 Microsoft Word 或免费的 <a href=');
+    expect(html).toContain('">LibreOffice</a> 打开。');
+    expect(html).not.toContain('No Mac?');
+    expect(html.match(/href="https:\/\/www\.libreoffice\.org\/download\/download-libreoffice\/">LibreOffice<\/a>/g)).toHaveLength(2);
+    expect(html).toContain('id="wordCopy">Make .docx / 制作 .docx</button>');
     expect(html).toContain('createPrintedBulletinWordCopy({date:date,location:locationValue})');
-    expect(html).toContain('Download Word copy / 下载 Word 副本');
-    // It needs a Mac, and says what to do without one.
-    expect(html).toContain('<strong>Needs a Mac with Microsoft Word.</strong>');
-    expect(html).toContain('Without a Mac, print the Google Doc itself');
-    expect(html).toContain('<strong>需要装有 Microsoft Word 的 Mac。</strong>');
+    expect(html).toContain('⬇ Download .docx / 下载 .docx');
+    // Only the download: the copy is for printing, not for opening in Drive.
+    expect(html).not.toContain('Open in Google Drive');
+    expect(html).not.toContain('Make Word copy');
     expect(html).not.toMatch(/pdf/i);
   });
 
-  it('says in Fonts… that Songti TC needs the Word copy on a Mac', () => {
+  it('says in Fonts… that Songti TC is in the .docx, on a Mac', () => {
     const context = loadAppsScript({
       PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     });
@@ -298,7 +301,7 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     ) as string;
 
     expect(html).toContain("Songti TC (宋體-繁) isn't here: Google Docs can't print it.");
-    expect(html).toContain('on a Mac with Word');
+    expect(html).toContain('The .docx from step 3 of Create Google Doc… has it, on a Mac.');
     expect(html).toContain('这里没有宋体-繁（Songti TC）');
     expect(html).not.toContain('<option value="Songti TC"');
   });

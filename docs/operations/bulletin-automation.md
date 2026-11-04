@@ -781,16 +781,22 @@ needed. It opens a staff dialog that:
 2. links the operator to the `Weekly Data` tab;
 3. lets the operator select Queens or Brooklyn;
 4. supports Queens Regular or Queens Holy Communion; Brooklyn Communion is
-   intentionally disabled;
+   intentionally disabled, with no note, since the missing choice shows it;
 5. checks the Bible reading in `Weekly Data → Bible Verses`, the same one the
    app shows. It doesn't show the verse, since it's in the sheet. While the
-   verse is blank or can't be read, a red note above **Create** says why (and,
-   for one it can't read, how to write it), and **Create** stays off. To change
+   verse is blank or can't be read, a red note above **Preview** says why (and,
+   for one it can't read, how to write it), and **Preview** stays off. To change
    it, close the dialog, edit `Weekly Data`, and open the dialog again;
 6. optionally accepts printed announcements; and
-7. in step 3, below where **Printed bulletin ready** appears, makes a Word copy of
-   the week's Doc to send to the pastor on WhatsApp, for printing in Songti TC on
-   a Mac with Word. See [Printing in Songti TC needs a Mac](#printing-in-songti-tc-needs-a-mac).
+7. in step 3, below where **Preview ready** appears, makes the print version of
+   the week's Doc. See [Printing the final version](#printing-the-final-version).
+
+It's three numbered cards, a few words each, because people skim: **1. Fill in
+Weekly Data**, with a link to the tab; **2. Preview & check**, which makes or
+updates the Google Doc to check and edit; and **3. Send .docx to pastor**. The
+only help line is step 3's "Mac preferred: better font. Open in Microsoft Word
+or free LibreOffice." Announcements start
+with just **+ Add announcement**.
 
 A long passage still asks before it's printed, since it can push the bulletin
 onto another page.
@@ -881,7 +887,7 @@ The pastor's rules for the printed bulletin (#603):
 
 Google Docs prints only fonts in its own **Font → More fonts** list, so a Mac
 font such as 宋體-繁 (Songti TC) can't be used in the Doc; to print in it, see
-[Printing in Songti TC needs a Mac](#printing-in-songti-tc-needs-a-mac). In that list,
+[Printing the final version](#printing-the-final-version). In that list,
 **UoqMunThenKhung** (宇文天穹) is the only Ming style face for Traditional
 Chinese, so it's the default. It has every common Traditional character and the
 Simplified forms Japanese shares (国, 会), but not most Simplified-only ones
@@ -918,23 +924,30 @@ The script knows UoqMunThenKhung's characters (`PRINTED_DEFAULT_CHINESE_FONT_COV
 but not another font's. With another Chinese font set, every Chinese character
 uses it and the fallback font isn't used.
 
-### Printing in Songti TC needs a Mac
+### Printing the final version
 
-The pastor's preferred Chinese font is Songti TC (宋體-繁). It comes only with
+The Google Doc is the preview: staff check and edit it. **Everyone prints from
+the print version**, a Word file with the final fonts and spacing (#627). The
+pastor's preferred Chinese font is Songti TC (宋體-繁). It comes only with
 macOS, under Apple's license, and Google Docs can't print it: Docs prints only
-fonts in its own list, and none of its Chinese lists (Traditional, Hong Kong
-or Simplified) has a Song face besides UoqMunThenKhung. **So printing the
-bulletin in Songti TC needs a Mac with Microsoft Word.** Without one, print the
-Google Doc itself, in UoqMunThenKhung. Both dialogs say so.
+fonts in its own list, and none of its Chinese lists (Traditional, Hong Kong or
+Simplified) has a Song face besides UoqMunThenKhung. On a Mac, the print
+version's Chinese is in Songti TC, in Word or LibreOffice. On any other
+computer, they put in a similar Chinese font, so the Chinese looks different, but the layout
+holds: the copy's exact line heights come from each line's font size, not from
+the font, and Chinese characters are one em wide in any Chinese font. The
+dialog's step 3 says both.
 
-To print in Songti TC (#627):
-
-1. Make and edit the week's Doc as usual.
-2. After the last edit, open **Printed Bulletin → Create Google Doc…**, choose
-   the date and location, and click **Make Word copy** in step 3. It reads the
+1. Make and edit the week's Doc with **Preview**, as usual.
+2. After the last edit, in step 3 of **Printed Bulletin → Create Google Doc…**,
+   with the date and location chosen, click **Make .docx**. It reads the
    Doc as it stands, so a copy made before an edit misses that edit.
-3. Click **Download Word copy** and send the file to the pastor on WhatsApp.
-4. The pastor opens it in Word on a Mac and prints from Word.
+3. Click **⬇ Download .docx**.
+4. Send it to the pastor on WhatsApp, to print on a Mac.
+5. Open it in Microsoft Word or the free
+   [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/).
+   Either uses Songti TC on a Mac, which is why a Mac is preferred; elsewhere
+   they put in a similar Chinese font.
 
 The copy is saved as `<Doc title> (Word, Songti TC).docx` in the Doc's own
 Drive folder, replacing that week's earlier copy. The Doc doesn't change. The
@@ -955,7 +968,7 @@ it already has, and changes only `word/document.xml` and `word/styles.xml`:
 
 If the copy runs onto an extra page, lower `PRINTED_BULLETIN_WORD_LINE_HEIGHT`
 a little, such as to 1.1. If tall characters look clipped, raise it, such as to
-1.2. The next **Make Word copy** uses it.
+1.2. The next **Make .docx** uses it.
 
 ## Printed edge cases and content rules
 
@@ -971,20 +984,29 @@ titles from the generated `HymnalData.gs` (#619). For each printed hymn:
 - if only Chinese is supplied, fill only the missing English hymn's number and
   title, such as `AH 73 Holy, Holy, Holy` for `第2首 聖哉真神`. A typed title
   prints as typed, even where the app's title differs;
+- if one side is a title alone, with no number, such as `holy holy holy` or
+  `圣哉真神`, find the hymn by an exact match of its title (ignoring case,
+  spaces and punctuation, and in either script for the 505), then print that
+  side with its number and fill the other, both `AH 73 Holy, Holy, Holy` and
+  `第2首 聖哉真神`. Where hymns share a title, the only one with a twin wins;
+  if they all share one twin, only the twin prints; otherwise it prints as
+  typed. Nothing is guessed from a near match; and
 - never copy an English title/reference into the Chinese slot. The Sabbath
-  School hymns (below) have no separate slots: each prints on one line.
+  School hymns (below) print the English on one line and the Chinese on the
+  next.
 
 Queens Regular, Queens Communion, and Brooklyn all use this shared path. The
 Communion response hymn remains a fixed bilingual reference and must fit on one
 line in the printed layout.
 
 The Sabbath School hymns print in each Sabbath School panel's **Opening Hymns**
-row, after the opening prayer, one hymn per line, such as
-`AH 348 The Church Has One Foundation · 第413首 教會根基` for a typed
-`第413首 教會根基` (`formatSabbathSchoolHymnsForPrint_`). Each cell has
-one hymn in either language. Where the map has the other language by number,
-the line is the English, a dot, then the Chinese; otherwise the hymn prints
-once, as typed. A bare number is `第N首`. The closing sings the same hymns, so
+row, after the opening prayer, each hymn with the English on one line and the
+Chinese on the next, such as `AH 348 The Church Has One Foundation` over
+`第413首 教會根基` for a typed `第413首 教會根基`
+(`formatSabbathSchoolHymnsForPrint_`). On one line, a long title wrapped
+mid-word. Each cell has one hymn in either language. Where the map has the
+other language by number, both print; otherwise the hymn prints once, as
+typed. A bare number is `第N首`. The closing sings the same hymns, so
 the **Closing Hymns** row, after the lesson, says `同開會詩歌` (`同開會唱詩` in
 Brooklyn) and `Same as Opening Hymns` rather than listing them twice (`getPrintedSabbathSchoolHymnRows_`). With one
 hymn, the rows say Hymn; with none, both say `TBD`. The lesson prints in the Queens `Lesson / Study` row and the Brooklyn
