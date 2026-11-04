@@ -16,6 +16,9 @@ class FakeParagraph {
   chars: Style[] = [];
   base: Style = { ...DEFAULT_STYLE };
   lineSpacing = 1.15;
+  alignment = '';
+  indentStart = 0;
+  indentFirstLine = 0;
   constructor(text: string, public parent: FakeContainer | null) {
     this.setText(text);
   }
@@ -28,7 +31,9 @@ class FakeParagraph {
     this.chars = Array.from({ length: this.text.length }, () => ({ ...this.base }));
     return this;
   }
-  setAlignment() { return this; }
+  setAlignment(value: string) { this.alignment = value; return this; }
+  setIndentStart(value: number) { this.indentStart = value; return this; }
+  setIndentFirstLine(value: number) { this.indentFirstLine = value; return this; }
   setLineSpacing(value: number) { this.lineSpacing = value; return this; }
   setSpacingBefore() { return this; }
   setSpacingAfter() { return this; }
@@ -421,6 +426,87 @@ describe('printed bulletin type (#603)', () => {
       [' ', 1],
       [' ', 1],
     ]);
+  });
+
+  it.each([
+    ['Queens', 'queens', '開會詩歌\nOpening Hymns'],
+    ['Brooklyn', 'brooklyn', '開會唱詩\nOpening Hymns'],
+  ])('lines up the numbered hymns, each with its lines at one indent: %s', (_name, place, label) => {
+    const hymns = ['第2首 聖哉真神', '還要等多久', 'AH 348 The Church Has One Foundation'];
+    const context = loadPrintedBulletin();
+    const body = new FakeContainer();
+    const data = bulletin();
+    Object.assign(data.queens as Record<string, unknown>, { sabbathSchoolHymns: hymns });
+    Object.assign(data.brooklyn as Record<string, unknown>, { sabbathSchoolHymns: hymns });
+    Object.assign(context, { testBody: body, testBulletin: data, testNext: bulletin(), testPlace: place });
+    runInContext(
+      "renderPrintedBulletinDocument_({ getBody: function () { return testBody; } }, testBulletin, testNext, 'regular', testPlace)",
+      context,
+    );
+    const tablesOf = (container: FakeContainer): FakeTable[] =>
+      container.children.flatMap((child) =>
+        child instanceof FakeTable
+          ? [child, ...child.rows.flatMap((row) => row.flatMap((cell) => tablesOf(cell)))]
+          : [],
+      );
+    const row = tablesOf(body)
+      .flatMap((table) => table.rows)
+      .find((cells) => (cells[0].children[0] as FakeParagraph).text === label);
+    const lines = (row?.[1].children ?? []) as FakeParagraph[];
+
+    // One paragraph a line, left-aligned: each number at the same place, and
+    // every line after it, a translation too, one em (10 points, "1. " in
+    // Times New Roman) further in.
+    expect(lines.map((line) => line.text)).toEqual([
+      '1. 第2首 聖哉真神',
+      'AH 73 Holy, Holy, Holy',
+      '2. 還要等多久',
+      '3. 第413首 教會基礎',
+      'AH 348 The Church Has One Foundation',
+    ]);
+    expect(new Set(lines.map((line) => line.alignment))).toEqual(new Set(['LEFT']));
+    const [start] = lines.map((line) => line.indentFirstLine);
+    expect(lines.map((line) => [line.indentFirstLine, line.indentStart])).toEqual([
+      [start, start + 10],
+      [start + 10, start + 10],
+      [start, start + 10],
+      [start, start + 10],
+      [start + 10, start + 10],
+    ]);
+    // The widest line nearly fills the column, so the block starts at its edge.
+    expect(start).toBe(0);
+    expect(lines.every((line) => line.chars.every((style) => style.size === 10))).toBe(true);
+  });
+
+  it('centres a short numbered list as a block', () => {
+    const context = loadPrintedBulletin();
+    const body = new FakeContainer();
+    const data = bulletin();
+    Object.assign(data.queens as Record<string, unknown>, { sabbathSchoolHymns: ['第2首 聖哉真神', '還要等多久'] });
+    Object.assign(context, { testBody: body, testBulletin: data, testNext: bulletin() });
+    runInContext(
+      "renderPrintedBulletinDocument_({ getBody: function () { return testBody; } }, testBulletin, testNext, 'regular', 'queens')",
+      context,
+    );
+    // The hymns come first; the announcements, numbered too, are later.
+    const lines = paragraphsOf(body)
+      .filter((paragraph) => /^(\d\. |AH 73)/.test(paragraph.text))
+      .slice(0, 3);
+
+    // Its widest line, AH 73 Holy, Holy, Holy, is about 98 points of the
+    // column's 156, so the block moves in by about half the rest.
+    expect(lines.map((line) => line.text)).toEqual(['1. 第2首 聖哉真神', 'AH 73 Holy, Holy, Holy', '2. 還要等多久']);
+    expect(lines[0].indentFirstLine).toBeGreaterThan(20);
+    expect(lines[0].indentFirstLine).toBeLessThan(40);
+    expect(lines[1].indentFirstLine).toBe(lines[0].indentFirstLine + 10);
+  });
+
+  it('keeps a single hymn, and every other row, centred', () => {
+    const data = bulletin();
+    Object.assign(data.queens as Record<string, unknown>, { sabbathSchoolHymns: ['第2首 聖哉真神'] });
+    const { paragraphs } = render(data, 'regular', 'queens');
+
+    expect(paragraphs.filter((paragraph) => paragraph.indentStart || paragraph.indentFirstLine)).toEqual([]);
   });
 
   it('keeps the Chinese and English panel titles close together', () => {

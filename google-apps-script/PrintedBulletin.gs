@@ -3356,10 +3356,17 @@ function appendHalfSpacer_(cell) {
 function appendProgramTable_(cell, rows, options) {
   options = options || {};
   var columnWidths = options.columnWidths || [105, 160, 95];
+  // A numbered list's lines each become a paragraph, so each can be indented.
+  var lists = {};
   var table = cell.appendTable(
-    rows.map(function (row) {
-      return row.map(function (value) {
-        return String(value === null || typeof value === 'undefined' ? '' : value);
+    rows.map(function (row, rowIndex) {
+      return row.map(function (value, columnIndex) {
+        var text = String(value === null || typeof value === 'undefined' ? '' : value);
+        if (columnIndex === 1 && isPrintedNumberedList_(text)) {
+          lists[rowIndex] = text.split('\n');
+          return lists[rowIndex][0];
+        }
+        return text;
       });
     }),
   );
@@ -3371,6 +3378,12 @@ function appendProgramTable_(cell, rows, options) {
     var tableRow = table.getRow(rowIndex);
     for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {
       var tableCell = tableRow.getCell(columnIndex);
+      var list = columnIndex === 1 ? lists[rowIndex] : null;
+      if (list) {
+        list.slice(1).forEach(function (line) {
+          tableCell.appendParagraph(line);
+        });
+      }
       tableCell.setPaddingTop(0);
       tableCell.setPaddingBottom(0.5);
       setPrintedProgramCellSidePadding_(tableCell);
@@ -3384,8 +3397,73 @@ function appendProgramTable_(cell, rows, options) {
             ? DocumentApp.HorizontalAlignment.CENTER
             : DocumentApp.HorizontalAlignment.RIGHT,
       );
+      if (list) {
+        alignPrintedNumberedList_(tableCell, columnWidths[1]);
+      }
     }
   });
+}
+
+// Two or more Sabbath School hymns, as formatSabbathSchoolHymnsForPrint_
+// numbers them: "1. …", maybe its translation on the next line, "2. …".
+function isPrintedNumberedList_(text) {
+  return /^1\. /.test(text) && /\n2\. /.test(text);
+}
+
+// The numbers in one column, and each hymn's lines, its translation too, at
+// one indent after them: a hanging indent of "1. ", which in Times New Roman
+// is a digit (half an em), a period and a space (a quarter each), one em in
+// all. Centred lines put each number somewhere else. The block is moved in by
+// half the room its widest line leaves, so it still sits in the middle.
+function alignPrintedNumberedList_(tableCell, width) {
+  var size = PRINTED_BULLETIN_TYPE.bodySize;
+  var marker = size;
+  var paragraphs = [];
+  for (var childIndex = 0; childIndex < tableCell.getNumChildren(); childIndex += 1) {
+    var child = tableCell.getChild(childIndex);
+    if (child.getType() === DocumentApp.ElementType.PARAGRAPH) {
+      paragraphs.push(child.asParagraph());
+    }
+  }
+  var numbered = paragraphs.map(function (paragraph) {
+    return /^\d+\. /.test(paragraph.getText());
+  });
+  var widest = 0;
+  paragraphs.forEach(function (paragraph, index) {
+    var lineWidth = estimatePrintedTextWidth_(paragraph.getText(), size) + (numbered[index] ? 0 : marker);
+    widest = Math.max(widest, lineWidth);
+  });
+  // The cell's side padding is 2 points each side.
+  var start = Math.max(0, Math.floor((width - 4 - widest) / 2));
+  paragraphs.forEach(function (paragraph, index) {
+    paragraph.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
+    // Docs measures both from the cell's edge: the first line at the number,
+    // the rest, and a wrapped title, after it.
+    paragraph.setIndentFirstLine(numbered[index] ? start : start + marker);
+    paragraph.setIndentStart(start + marker);
+  });
+}
+
+// A line's width in points, near enough to centre a block: Chinese is one em,
+// and the rest is Times New Roman's typical widths.
+function estimatePrintedTextWidth_(text, size) {
+  var ems = 0;
+  Array.from(String(text || '')).forEach(function (character) {
+    if (/[\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef]/.test(character) || character.length > 1) {
+      ems += 1;
+    } else if (/[A-Z]/.test(character)) {
+      ems += 0.67;
+    } else if (/[a-z]/.test(character)) {
+      ems += 0.45;
+    } else if (/[0-9]/.test(character)) {
+      ems += 0.5;
+    } else if (/[ .,:;'’!|]/.test(character)) {
+      ems += 0.25;
+    } else {
+      ems += 0.4;
+    }
+  });
+  return ems * size;
 }
 
 // The sermon row, in a thin box so it stands out at a glance. A Docs border

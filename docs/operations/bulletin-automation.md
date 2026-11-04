@@ -1030,7 +1030,15 @@ typed. A bare number is `第N首`. Two or more hymns are numbered `1.`, `2.`,
 `3.`, so a hymn's two lines read as one hymn, and a hymn in one language, such
 as `第12首 讚美上帝大君王` (the cross-reference table has no English match) or a song
 outside both hymnals, isn't taken for the translation of the hymn above or
-below it. The closing sings the same hymns, so
+below it. The list is left-aligned, one paragraph a line, with a hanging
+indent: the numbers line up in one column, and each hymn's lines, its
+translation and a wrapped title too, start one em further in, the width of
+`1. ` in Times New Roman (`alignPrintedNumberedList_`). The block moves in by
+half the room its widest line leaves (estimated from the characters), so it
+still sits in the middle of the column. The .docx conversion leaves the indents
+alone. With another English font chosen in **Fonts…**, a hymn's first line can
+sit a point or so off the indent. A single hymn stays centred, like every other
+row. The closing sings the same hymns, so
 the **Closing Hymns** row, after the lesson, says `同開會詩歌` (`同開會唱詩` in
 Brooklyn) and `Same as Opening Hymns` rather than listing them twice (`getPrintedSabbathSchoolHymnRows_`). With one
 hymn, the rows say Hymn; with none, both say `TBD`. The lesson prints in the Queens `Lesson / Study` row and the Brooklyn
