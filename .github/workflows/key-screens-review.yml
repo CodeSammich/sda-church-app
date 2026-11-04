@@ -88,7 +88,10 @@ jobs:
             --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- key-screens-review"))) | "\(.id) \(.body | split("\n")[0])"')
           # The one for this commit, which Android's run refreshes. Until the
           # iPhone's run posts it, there's nothing to refresh.
-          current=$(while read -r id line; do if [ "$line" = "$marker" ]; then echo "$id"; fi; done <<<"$reviews" | head -n 1)
+          current=""
+          while read -r id line; do
+            if [ "$line" = "$marker" ]; then current=$id; break; fi
+          done <<<"$reviews"
           if [ "$PLATFORM" = android ] && [ -z "$current" ]; then
             echo "No review comment for $SHA yet. The iPhone run posts it, with these Android screenshots."
             exit 0
