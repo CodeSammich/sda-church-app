@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { AndroidConfig, withDangerousMod } = require('@expo/config-plugins');
+const { AndroidConfig, withAndroidManifest, withDangerousMod } = require('@expo/config-plugins');
 // Only the Android half of expo-widgets' config plugin. The full plugin also
 // adds an iOS widget extension and app group, which the iPhone app doesn't
 // have; package.json keeps expo-widgets and @expo/ui out of the iOS build too.
@@ -100,6 +100,23 @@ function createLocalizedStringsXml({ displayName, description }) {
 `;
 }
 
+/**
+ * Keeps the widget's receiver to Android and the app itself. expo-widgets
+ * exports it, but nothing outside the app needs to reach it: Android sends
+ * the widget's updates itself, and the widget's buttons name the receiver
+ * from the app, so it takes only the widget's own taps.
+ */
+function setReceiverNotExported(manifest) {
+  const mainApplication = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
+  const name = `.${getProviderClassName(VERSE_WIDGET)}`;
+  const receiver = (mainApplication.receiver ?? []).find((r) => r.$['android:name'] === name);
+  if (!receiver) {
+    throw new Error('Could not find the verse widget receiver written by expo-widgets');
+  }
+  receiver.$['android:exported'] = 'false';
+  return manifest;
+}
+
 /** Edits the files expo-widgets writes for the widget. */
 function writeVerseWidgetFiles(projectRoot, androidPackage) {
   const providerPath = path.join(
@@ -134,8 +151,12 @@ function writeVerseWidgetFiles(projectRoot, androidPackage) {
  * expo-widgets. iOS isn't touched.
  */
 function withAndroidVerseWidget(config) {
-  // Config plugins run their file steps newest first, so adding this step
-  // before expo-widgets' own makes it run after, on the files it writes.
+  // Config plugins run their steps newest first, so adding these steps
+  // before expo-widgets' own makes them run after, on what it writes.
+  config = withAndroidManifest(config, (modConfig) => {
+    modConfig.modResults = setReceiverNotExported(modConfig.modResults);
+    return modConfig;
+  });
   config = withDangerousMod(config, [
     'android',
     async (modConfig) => {
@@ -154,4 +175,5 @@ module.exports.VERSE_WIDGET = VERSE_WIDGET;
 module.exports.UPDATE_PERIOD_MILLIS = UPDATE_PERIOD_MILLIS;
 module.exports.createProviderKt = createProviderKt;
 module.exports.setUpdatePeriod = setUpdatePeriod;
+module.exports.setReceiverNotExported = setReceiverNotExported;
 module.exports.createLocalizedStringsXml = createLocalizedStringsXml;
