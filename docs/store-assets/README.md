@@ -29,7 +29,7 @@ are captured, their sizes, and what they may show are in
   takes: Home, the Bible in English and Chinese, the Bible in landscape, the Library,
   and Home in landscape. They're the key screens' 13-inch iPad shots, at the iPad's own
   150% text, copied from a run's `screens/app-store-ipad/en-US/` when the app first ran
-  on iPad (#324, November 3, 2026). Upload them with the first release that supports
+  on iPad (#324), with the tablet's tab bar capsule (#589), November 4, 2026. Upload them with the first release that supports
   iPad, and copy a newer run's set here only when the iPad's layout changes; a different
   day's verse on Home isn't a reason. The other languages' listings show these too.
 - `app-store/header/`: the App Store product page headers, one per listing language:
