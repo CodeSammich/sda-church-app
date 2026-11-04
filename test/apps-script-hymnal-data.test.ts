@@ -99,6 +99,58 @@ describe('the printed hymn lookup (#619)', () => {
     expect(resolve(context, 'TBD', '')).toEqual({ english: 'TBD', chinese: '' });
   });
 
+  it('finds a hymn typed by title alone, in either hymnal and either script', () => {
+    const context = load(['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs']);
+    const holy = { english: 'AH 73 Holy, Holy, Holy', chinese: '第2首 聖哉真神' };
+
+    // Case, spaces and punctuation don't matter.
+    expect(resolve(context, 'Holy, Holy, Holy', '')).toEqual(holy);
+    expect(resolve(context, 'holy holy holy', '')).toEqual(holy);
+    expect(resolve(context, '', '聖哉真神')).toEqual(holy);
+    expect(resolve(context, '', '圣哉真神')).toEqual(holy);
+    // A title only one hymnal has gets its number.
+    expect(resolve(context, 'Amazing Grace', '')).toEqual({ english: 'AH 108 Amazing Grace', chinese: '' });
+    // Not a hymnal's title, or typed with both sides: as typed.
+    expect(resolve(context, 'Not a hymn', '')).toEqual({ english: 'Not a hymn', chinese: '' });
+    expect(resolve(context, 'Holy, Holy, Holy', '聖哉')).toEqual({ english: 'Holy, Holy, Holy', chinese: '聖哉' });
+  });
+
+  it('picks, among hymns that share a title, the only one with a twin, and otherwise guesses nothing', () => {
+    const context = load(['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs']);
+
+    // #73 and #661 are both "Holy, Holy, Holy"; only #73 has a 505 twin.
+    expect(resolve(context, 'Holy, Holy, Holy', '').english).toBe('AH 73 Holy, Holy, Holy');
+    expect(resolve(context, 'Just As I Am', '')).toEqual({ english: 'AH 314 Just as I Am', chinese: '第174首 來就耶穌' });
+    // 505 #72 and #73 are both 思想十架, with different twins.
+    expect(resolve(context, '', '思想十架')).toEqual({ english: '', chinese: '思想十架' });
+
+    // Two tunes of one hymn, both with the same twin: the twin is known, the
+    // number isn't, so the typed title stays as it is.
+    const tunes = load(['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs'], {}, false);
+    runInContext(
+      `var BULLETIN_HYMNAL_DATA = {
+        englishTitles: { 10: 'Two Tunes', 11: 'Two Tunes' },
+        chineseTitles: { 5: '同一首' },
+        chineseTitlesSimplified: { 5: '同一首' },
+        numberMaps: { englishToChinese: { 10: [5], 11: [5] }, chineseToEnglish: { 5: [10] } },
+        hymnBankRows: [],
+      };`,
+      tunes,
+    );
+    expect(resolve(tunes, 'Two Tunes', '')).toEqual({ english: 'Two Tunes', chinese: '第5首 同一首' });
+  });
+
+  it('prints a hymn typed by title in the Sabbath School as both languages, on two lines', () => {
+    const context = load(['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs']);
+
+    expect(
+      runInContext(
+        'formatSabbathSchoolHymnsForPrint_(testHymns)',
+        Object.assign(context, { testHymns: ['holy holy holy', '聖哉真神', 'Not a hymn'] }),
+      ),
+    ).toBe('AH 73 Holy, Holy, Holy\n第2首 聖哉真神\nAH 73 Holy, Holy, Holy\n第2首 聖哉真神\nNot a hymn');
+  });
+
   it('prints a hymn as typed if HymnalData.gs is missing', () => {
     const context = load(['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs'], {}, false);
 

@@ -2,7 +2,9 @@
 /**
  * Writes google-apps-script/HymnalData.gs, the bulletin scripts' copy of the
  * app's hymnal data (#619): the 1985 SDA Hymnal's and the 505 Chinese Hymnal's
- * titles, the number maps between them, and the Hymn Bank tab's rows.
+ * titles (the 505's in Traditional, and as the app stores them in Simplified,
+ * so a hymn typed by title in either is found), the number maps between them,
+ * and the Hymn Bank tab's rows.
  *
  * scripts/deploy-apps-script.mjs runs it before every push, like the generated
  * PinyinPro.gs, so the deployed script always matches features/hymnal/. The
@@ -27,6 +29,9 @@ const buildHymnalData = (hymnals = readHymnals()) => {
       Object.entries(hymnals.chinese)
         .filter(([, title]) => title)
         .map(([number, title]) => [number, toTraditional(title)]),
+    ),
+    chineseTitlesSimplified: Object.fromEntries(
+      Object.entries(hymnals.chinese).filter(([, title]) => title),
     ),
     numberMaps: {
       englishToChinese: numberMap('sdah-1985-en-to-chinese-hymnal-505'),

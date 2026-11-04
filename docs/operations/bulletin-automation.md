@@ -984,8 +984,16 @@ titles from the generated `HymnalData.gs` (#619). For each printed hymn:
 - if only Chinese is supplied, fill only the missing English hymn's number and
   title, such as `AH 73 Holy, Holy, Holy` for `第2首 聖哉真神`. A typed title
   prints as typed, even where the app's title differs;
+- if one side is a title alone, with no number, such as `holy holy holy` or
+  `圣哉真神`, find the hymn by an exact match of its title (ignoring case,
+  spaces and punctuation, and in either script for the 505), then print that
+  side with its number and fill the other, both `AH 73 Holy, Holy, Holy` and
+  `第2首 聖哉真神`. Where hymns share a title, the only one with a twin wins;
+  if they all share one twin, only the twin prints; otherwise it prints as
+  typed. Nothing is guessed from a near match; and
 - never copy an English title/reference into the Chinese slot. The Sabbath
-  School hymns (below) have no separate slots: each prints on one line.
+  School hymns (below) print the English on one line and the Chinese on the
+  next.
 
 Queens Regular, Queens Communion, and Brooklyn all use this shared path. The
 Communion response hymn remains a fixed bilingual reference and must fit on one
