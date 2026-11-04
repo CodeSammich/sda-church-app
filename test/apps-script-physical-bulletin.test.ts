@@ -187,7 +187,7 @@ describe('printed bulletin Apps Script helpers', () => {
 
     expect(menuTitle).toBe('Printed Bulletin');
     expect(menuItems).toEqual([
-      'Create Google Doc…',
+      'Create Word Doc…',
       'Fonts…',
     ]);
   });
@@ -222,7 +222,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(() => runInContext('onOpen()', context)).not.toThrow();
 
     expect(calls.slice(0, 4)).toEqual([
-      'item Create Google Doc…',
+      'item Create Word Doc…',
       'item Fonts…',
       'menu shown',
       'upkeep',
@@ -873,13 +873,14 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('getPrintedBulletinPromptWarning');
     expect(html).toContain('Add announcement / 添加通知');
     expect(html).toContain('getPrintedBulletinPromptData');
-    // Three numbered cards, each a few words: no help paragraphs but step 3's
-    // one fallback line.
+    // Three numbered cards, each a few words: no help paragraphs, only step
+    // 3's Mac note.
     expect(html.match(/<div (id="[^"]+" )?class="step">/g)).toHaveLength(3);
     expect(html).toContain('<span class="step-number">1</span>Fill in Weekly Data / 填写 Weekly Data');
     expect(html).toContain('<span class="step-number">2</span>Preview &amp; check / 预览并检查');
-    expect(html).toContain('<span class="step-number">3</span>Send .docx to pastor / 把 .docx 发给牧师');
-    expect(html.match(/class="help">/g)).toHaveLength(1);
+    expect(html).toContain('<span class="step-number">3</span>Convert and send .docx to pastor / 转换 .docx 发给牧师');
+    expect(html.match(/class="help">/g)).toBeNull();
+    expect(html.match(/class="mac-note">/g)).toHaveLength(1);
     expect(html).toContain('Announcements (print only) / 通知（仅印刷）');
     // No empty announcement card to start with: just the Add button.
     expect(html).toContain('(entries||[]).forEach(addAnnouncementEntry)');
@@ -2085,7 +2086,7 @@ describe('printed bulletin Apps Script helpers', () => {
          appendProgramTable_ = appendBrooklynProgramTable_ = function (cell, rows) {
            captured = captured.concat(rows);
          };
-         // As the Create Google Doc dialog builds it.
+         // As the Create Word Doc dialog builds it.
          var bulletin = preparePrintedBulletinForPrint_(
            buildBulletin_('2026-11-07', { includeFullNames: true }),
            {},
