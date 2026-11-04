@@ -30,26 +30,26 @@ export const getCapsuleBottomGap = (bottomInset: number) =>
 // under it fades out rather than meeting a line.
 const FADE_HEIGHT = 32;
 
-/** `color` at this opacity (0–1), for a six-digit hex colour. */
-const withOpacity = (color: string, opacity: number) =>
-  /^#[0-9a-f]{6}$/i.test(color)
-    ? `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`
-    : color;
+// `color` with alpha 0, so a fade into it doesn't pass through grey.
+const transparent = (color: string) =>
+  /^#[0-9a-f]{6}$/i.test(color) ? `${color}00` : 'transparent';
 
 /**
  * The page's colour behind a floating bar, as iOS fades a page's edge under its
- * bars: clear at the top, 95% solid by FADE_HEIGHT down, so text that
- * scrolls under the bar stays out of the way of its buttons. It reaches
- * FADE_HEIGHT above the box it's placed in.
+ * bars: clear at the top and solid from FADE_HEIGHT down, so text scrolling
+ * under the bar fades out above it rather than meeting a line, and no faint
+ * fragments of it show beside the bar, as they did beside the Bible's card on
+ * an iPad, whose text column is wider. It reaches FADE_HEIGHT above the box
+ * it's placed in.
  */
 export function ScrollEdgeFade({ background, style }: { background: string; style?: StyleProp<ViewStyle> }) {
   return (
     <View pointerEvents="none" style={[styles.fade, style]}>
       <LinearGradient
-        colors={[withOpacity(background, 0), withOpacity(background, 0.95)]}
+        colors={[transparent(background), background]}
         style={styles.fadeGradient}
       />
-      <View style={[styles.fadeSolid, { backgroundColor: withOpacity(background, 0.95) }]} />
+      <View style={[styles.fadeSolid, { backgroundColor: background }]} />
     </View>
   );
 }

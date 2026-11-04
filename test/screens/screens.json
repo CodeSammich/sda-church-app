@@ -298,12 +298,12 @@
     {
       "name": "bible-audio-download-tip",
       "group": "bible-reading",
-      "$comment": "The audio settings popup as the marked audio button opens it when playback keeps stopping to load (#595), by popup=audio-download-tip in the preview build. The BSB has four narrators above Listen offline, so the popup scrolls down to it: the tip's line, and the Offline Bible Audio row below it, which opens the downloads (#556), must show. The line doesn't say \"keeps stopping\", which Android's check reserves for the system's crash dialog. On the iPad, the dimmed page shows beside the popup, and Vision can read its words into the tip's line, so the rule finds the tip anywhere in a line.",
+      "$comment": "The audio settings popup as the marked audio button opens it when playback keeps stopping to load (#595), by popup=audio-download-tip in the preview build. The BSB has four narrators above Listen offline, so the popup scrolls down to it: the tip's line, and the Offline Bible Audio row below it, which opens the downloads (#556), must show. The line doesn't say \"keeps stopping\", which Android's check reserves for the system's crash dialog. On the iPad, the dimmed page shows beside the popup, and Vision can read its words into the tip's line, so the rule finds the tip anywhere in a line. Vision once missed the Offline Bible Audio row's title there while reading the line below it (run 41836240862), so either line of the row shows it.",
       "path": "bible?bookId=JHN&chapter=3&translationId=BSB&popup=audio-download-tip",
       "settings": { "dualLanguage": false, "pinyin": false },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["\\bPlayback often stops", "^Listen offline$", "^Offline Bible Audio$"]
+      "mustShowLines": ["\\bPlayback often stops", "^Listen offline$", "^(Offline Bible Audio|Download a book, a section, or the whole Bible)$"]
     },
     {
       "name": "bible-long-chapter",
