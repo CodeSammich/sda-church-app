@@ -264,7 +264,7 @@ describe('iOS key screens', () => {
     const cost = (group: string) =>
       takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
     for (const group of Object.keys(config.groups)) expect(cost(builder)).toBeLessThanOrEqual(cost(group));
-    const guard = (step: string) => new RegExp(`- name: ${step}\n(?:\\s+#.*\n)*\\s+if: (.+)\n`).exec(workflow)?.[1];
+    const guard = (step: string) => new RegExp(`- name: ${step}\n(?: +#.*\n)* +if: (.+)\n`).exec(workflow)?.[1];
     for (const step of [
       'Set up the compile cache',
       'Restore the compile cache from main',
@@ -1022,7 +1022,7 @@ describe('Android key screens workflow (#372)', () => {
 
   it('builds the preview APK for the emulator with the key-screen route, and shares it once', () => {
     expect(build).toContain('npm run build:android:apk:debug:intel');
-    expect(build).toMatch(/env:\n(?:\s+#.*\n)*\s+EXPO_PUBLIC_KEY_SCREENS: '1'\n/);
+    expect(build).toMatch(/env:\n(?: +#.*\n)* +EXPO_PUBLIC_KEY_SCREENS: '1'\n/);
     expect(build).toContain('name: android-emulator-app-${{ github.run_id }}');
     expect(capture).toContain('name: android-emulator-app-${{ github.run_id }}');
     expect(capture).toContain('select(.name == "Build the Android key-screens app")');
@@ -1076,9 +1076,13 @@ describe('Android key screens workflow (#372)', () => {
 
   it('re-checks an earlier run on Linux, by hand only, never as a check on pull requests', () => {
     const recheck = repoFile('.github/workflows/key-screens-recheck.yml');
-    expect(recheck.slice(recheck.indexOf('\non:'), recheck.indexOf('\npermissions:'))).toMatch(
-      /\non:\n  workflow_dispatch:\n(?:    .*\n|\s*\n)*$/,
-    );
+    // Its only trigger is workflow_dispatch: the lines under `on:` indented
+    // by exactly two spaces name the triggers. (Plain line checks, not one
+    // regular expression over the whole block, which CodeQL flagged as
+    // exponential backtracking.)
+    const on = recheck.slice(recheck.indexOf('\non:\n') + 1, recheck.indexOf('\npermissions:'));
+    const triggers = on.split('\n').filter((line) => line.startsWith('  ') && !line.startsWith('   '));
+    expect(triggers).toEqual(['  workflow_dispatch:']);
     expect(workflow).not.toMatch(/screens_from_run|earlier-screens/);
     const earlier = jobOf(recheck, 'android');
     expect(earlier).toContain("if: inputs.platform == 'android'");
