@@ -12,7 +12,8 @@ import expo.modules.kotlin.records.Record
 /**
  * One chapter to download: the app's name for it, where from (and from where
  * else, if that fails), the file it becomes, what it's part of, as "English –
- * Souer (BSB)", for its notification, and about how big it is.
+ * Souer (BSB)", for its notification, about how big it is, and the sizes it's
+ * kept at.
  */
 class ChapterDownload : Record {
   @Field var id: String = ""
@@ -21,6 +22,9 @@ class ChapterDownload : Record {
   @Field var path: String = ""
   @Field var group: String = ""
   @Field var bytes: Double = 0.0
+  // The sizes it's kept at, or zero when not known: BibleAudioFileChecks.
+  @Field var minBytes: Double = 0.0
+  @Field var maxBytes: Double = 0.0
 }
 
 /**

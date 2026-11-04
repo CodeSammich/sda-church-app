@@ -48,8 +48,9 @@ jest.mock('@/services/BundledBible', () => {
 // and the documents directory, for downloaded Bible audio.
 jest.mock('expo-file-system', () => require('./helpers/file-system-mock').fileSystemMock);
 beforeEach(() => {
-  const { mockDisk, mockFiles } = require('./helpers/file-system-mock');
+  const { mockDisk, mockFileSizes, mockFiles } = require('./helpers/file-system-mock');
   mockFiles.clear();
+  mockFileSizes.clear();
   mockDisk.availableBytes = 64_000_000_000;
 });
 

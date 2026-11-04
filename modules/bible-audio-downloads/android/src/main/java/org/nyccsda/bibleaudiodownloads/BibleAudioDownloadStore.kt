@@ -43,11 +43,29 @@ internal class BibleAudioDownloadStore(private val context: Context) {
   private val tracked = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
   // A chapter handed over: the app's name for it, the file it becomes, whether
-  // it may use mobile data, and where DownloadManager writes it meanwhile.
-  private data class Entry(val id: String, val path: String, val mobileData: Boolean, val partial: String)
+  // it may use mobile data, where DownloadManager writes it meanwhile, and the
+  // sizes it's kept at (BibleAudioFileChecks), zero when not known.
+  private data class Entry(
+    val id: String,
+    val path: String,
+    val mobileData: Boolean,
+    val partial: String,
+    val minBytes: Long = 0,
+    val maxBytes: Long = 0,
+  ) {
+    val sizes get() = ChapterSizes.of(minBytes, maxBytes)
+  }
 
   // A chapter waiting its turn, not yet handed to DownloadManager.
-  private data class Waiting(val key: String, val id: String, val url: String, val path: String, val mobileData: Boolean)
+  private data class Waiting(
+    val key: String,
+    val id: String,
+    val url: String,
+    val path: String,
+    val mobileData: Boolean,
+    val minBytes: Long = 0,
+    val maxBytes: Long = 0,
+  )
 
   // One handed over, as DownloadManager reports it.
   private data class Handed(val entry: Entry, val status: Int, val reason: Int)
@@ -66,7 +84,7 @@ internal class BibleAudioDownloadStore(private val context: Context) {
       sequence += 1
       val place = sequence.toString().padStart(12, '0')
       val key = WAITING_PREFIX + if (download.id in handedBefore) "$AGAIN$place" else place
-      editor.putString(key, encodeWaiting(Waiting(key, download.id, download.url, target.path, allowMobileData)))
+      editor.putString(key, encodeWaiting(Waiting(key, download.id, download.url, target.path, allowMobileData, download.minBytes.toLong(), download.maxBytes.toLong())))
     }
     // The app asked again, as with the next source after failures: start again.
     editor.putLong(SEQUENCE, sequence).putInt(FAILURES, 0).commit()
@@ -88,7 +106,18 @@ internal class BibleAudioDownloadStore(private val context: Context) {
           val downloadId = cursor.long(DownloadManager.COLUMN_ID)
           val entry = entries[downloadId] ?: continue
           seen.add(downloadId)
-          when (val status = cursor.int(DownloadManager.COLUMN_STATUS)) {
+          val status = cursor.int(DownloadManager.COLUMN_STATUS)
+          // Bigger than the recording: stopped, so it can't fill the phone,
+          // and left out, which the app takes for a failure. DownloadManager
+          // can only be watched while the app is open; one that ends bigger
+          // while it's closed is turned down when it ends.
+          if (status != DownloadManager.STATUS_SUCCESSFUL && status != DownloadManager.STATUS_FAILED &&
+            maxOf(cursor.long(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR), cursor.long(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)) > entry.sizes.max
+          ) {
+            turnDownLocked(downloadId, entry)
+            continue
+          }
+          when (status) {
             DownloadManager.STATUS_SUCCESSFUL -> finishLocked(downloadId, entry, cursor)
             else -> result.add(
               mapOf(
@@ -137,8 +166,11 @@ internal class BibleAudioDownloadStore(private val context: Context) {
         if (!cursor.moveToFirst()) return@use
         when (cursor.int(DownloadManager.COLUMN_STATUS)) {
           DownloadManager.STATUS_SUCCESSFUL -> finishLocked(downloadId, entry, cursor)
-          // Left for the app, which tries the next source.
-          DownloadManager.STATUS_FAILED -> tracked.edit().putInt(FAILURES, tracked.getInt(FAILURES, 0) + 1).commit()
+          // Left for the app, which tries the next source; what it got goes now.
+          DownloadManager.STATUS_FAILED -> {
+            tracked.edit().putInt(FAILURES, tracked.getInt(FAILURES, 0) + 1).commit()
+            File(entry.partial).delete()
+          }
         }
       }
     }
@@ -174,7 +206,7 @@ internal class BibleAudioDownloadStore(private val context: Context) {
       val downloadId = manager.enqueue(request)
       tracked.edit()
         .remove(next.key)
-        .putString(downloadId.toString(), encode(Entry(next.id, next.path, next.mobileData, File(partial, name).path)))
+        .putString(downloadId.toString(), encode(Entry(next.id, next.path, next.mobileData, File(partial, name).path, next.minBytes, next.maxBytes)))
         .commit()
       busy += 1
       busyForMobileData += 1
@@ -227,12 +259,27 @@ internal class BibleAudioDownloadStore(private val context: Context) {
     }
   }
 
+  // A chapter stopped for its size: forgotten, which the app takes for a
+  // failure, and tries again.
+  private fun turnDownLocked(downloadId: Long, entry: Entry) {
+    tracked.edit().remove(downloadId.toString()).putInt(FAILURES, tracked.getInt(FAILURES, 0) + 1).commit()
+    manager.remove(downloadId)
+    File(entry.partial).delete()
+  }
+
   private fun finishLocked(downloadId: Long, entry: Entry, cursor: Cursor) {
-    tracked.edit().remove(downloadId.toString()).putInt(FAILURES, 0).commit()
     val source = cursor.string(DownloadManager.COLUMN_LOCAL_URI)?.let { Uri.parse(it).path }?.let(::File)
     val target = targetFile(entry.path)
+    // A Wi-Fi's sign-in page, or a file cut off part way, isn't the recording:
+    // it isn't moved into place, so the app sees the chapter missing, and
+    // tries it again.
+    val whole = source != null && source.exists() &&
+      entry.sizes.fits(source.length()) && entry.sizes.allows(cursor.string(DownloadManager.COLUMN_MEDIA_TYPE))
+    tracked.edit().remove(downloadId.toString())
+      .putInt(FAILURES, if (whole) 0 else tracked.getInt(FAILURES, 0) + 1)
+      .commit()
     try {
-      if (source != null && source.exists() && target != null) {
+      if (whole && target != null) {
         target.parentFile?.mkdirs()
         // A copy, as the two folders may be on different storage; renamed once
         // it's whole, as the app's own downloads are.
@@ -271,21 +318,26 @@ internal class BibleAudioDownloadStore(private val context: Context) {
       .sortedBy { it.key }
       .mapNotNull { (key, value) -> decodeWaiting(key, value as? String ?: return@mapNotNull null) }
 
+  // The sizes come last, and a chapter queued before they did has none.
   private fun encodeWaiting(waiting: Waiting) =
-    listOf(waiting.id, waiting.url, waiting.path, if (waiting.mobileData) "1" else "0").joinToString("\n")
+    listOf(waiting.id, waiting.url, waiting.path, if (waiting.mobileData) "1" else "0", waiting.minBytes, waiting.maxBytes).joinToString("\n")
 
   private fun decodeWaiting(key: String, value: String): Waiting? {
     val parts = value.split("\n")
-    return if (parts.size == 4) Waiting(key, parts[0], parts[1], parts[2], parts[3] == "1") else null
+    if (parts.size != 4 && parts.size != 6) return null
+    return Waiting(key, parts[0], parts[1], parts[2], parts[3] == "1", parts.sizeAt(4), parts.sizeAt(5))
   }
 
   private fun encode(entry: Entry) =
-    listOf(entry.id, entry.path, if (entry.mobileData) "1" else "0", entry.partial).joinToString("\n")
+    listOf(entry.id, entry.path, if (entry.mobileData) "1" else "0", entry.partial, entry.minBytes, entry.maxBytes).joinToString("\n")
 
   private fun decode(value: String): Entry? {
     val parts = value.split("\n")
-    return if (parts.size == 4) Entry(parts[0], parts[1], parts[2] == "1", parts[3]) else null
+    if (parts.size != 4 && parts.size != 6) return null
+    return Entry(parts[0], parts[1], parts[2] == "1", parts[3], parts.sizeAt(4), parts.sizeAt(5))
   }
+
+  private fun List<String>.sizeAt(index: Int) = getOrNull(index)?.toLongOrNull() ?: 0L
 
   private fun stateOf(status: Int) = when (status) {
     DownloadManager.STATUS_RUNNING -> "running"

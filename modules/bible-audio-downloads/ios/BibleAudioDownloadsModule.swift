@@ -3,7 +3,8 @@ import ExpoModulesCore
 /// One chapter to download: the app's name for it, where from, and the file it
 /// becomes; what it's part of, as "English – Souer (BSB)", for its notification.
 /// The other sources and the size are for Android's own jobs: an iOS task has
-/// one URL, and the app tries the next itself.
+/// one URL, and the app tries the next itself. `minBytes` and `maxBytes` are the
+/// sizes it's kept at, zero when not known (BibleAudioDownloadSessions).
 struct ChapterDownload: Record {
   @Field var id: String = ""
   @Field var url: String = ""
@@ -11,6 +12,8 @@ struct ChapterDownload: Record {
   @Field var fallbacks: [String] = []
   @Field var group: String = ""
   @Field var bytes: Double = 0
+  @Field var minBytes: Double = 0
+  @Field var maxBytes: Double = 0
 }
 
 /// Bible audio downloads that go on while the iPhone is locked or the app is
