@@ -300,11 +300,12 @@ Visitor) live here.
 
 **Android home screen widget (#235):** **Today's Verse** can also sit on an Android
 phone's home screen, laid out like YouVersion's Verse of the Day widget: the heading, the
-reference, a light/dark button and a share button, the verse with its number in the
-phone's serif font, and the translation, in the app's language. A verse longer than the
-widget's size stops at the end of the last whole line that fits, as YouVersion's does. The
-colors are the app's: the primary blue on the warm canvas, or gold on near-black,
-following the phone's light or dark mode. Android 12 and later switch it with the phone;
+reference, a light/dark button and a share button, and the verse with its number in the
+phone's serif font, in the app's language. It leaves out the translation's name, which
+YouVersion shows at the bottom, so the verse has the rest of the widget; the shared text
+still names it. A verse longer than the widget's size stops at the end of the last whole
+line that fits, as YouVersion's does. The colors are the app's: the primary blue on the
+warm canvas, or gold on near-black, following the phone's light or dark mode. Android 12 and later switch it with the phone;
 older versions at its next hourly redraw. A member whose phone is dark but whose wallpaper
 is light, or the reverse, can tap the light/dark button. Each tap flips the widget's
 colors. When the new look matches the phone's mode, the widget goes back to following the

@@ -35,7 +35,11 @@ export interface VerseWidgetDay {
   verse: number;
   /** Opens the verse in the Bible reader, as the home page's Read button does. */
   url: string;
-  /** What the share button shares, as the home page's Share button does. */
+  /**
+   * What the share button shares, as the home page's Share button does,
+   * with the translation's name. The widget itself leaves the name out, to
+   * give the verse more room.
+   */
   share: string;
 }
 
@@ -55,8 +59,6 @@ export interface VerseWidgetWeek {
   shareLabel: string;
   /** The label of the button that switches the widget between light and dark, for screen readers. */
   themeLabel: string;
-  /** The name of the translation the verses are from, such as `BSB`. */
-  translation: string;
   days: VerseWidgetDay[];
 }
 
@@ -126,7 +128,6 @@ export async function loadVerseWidgetWeek(
     title: labels.title,
     shareLabel: labels.share,
     themeLabel: VERSE_WIDGET_THEME_LABELS[language],
-    translation,
     days,
   };
 }

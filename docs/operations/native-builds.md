@@ -1440,8 +1440,9 @@ receiver the one in `modules/verse-widget`, a local Expo module for Android only
   receiver lays the verse out itself, as YouVersion's widget looks: the phone's serif font,
   lines 1.5 times the type size apart, and only the whole lines that fit the widget's size.
   It measures the text as Android's widget text draws it and makes each line a one-line
-  text. A verse that runs on stops at the end of a whole line, with no "…". On a widget
-  too small for a line, the translation gives way first, then the verse. Running
+  text. The verse is the last thing in the widget, with no translation name under it, so
+  it gets all the room below the reference. A verse that runs on stops at the end of a
+  whole line, with no "…". On a widget too small for a line, the verse gives way. Running
   `adb shell setprop log.tag.VerseWidget DEBUG` logs each fit.
 - **Redraws.** `expo-widgets`' own redraw (`updateSnapshot` or `reload`) wouldn't go through
   the receiver, so the app never calls it. It stores the week of verses as the widget's

@@ -311,9 +311,9 @@ private fun ColorProvider.withNight(night: ColorProvider): ColorProvider {
  * a tap opens the whole verse.
  *
  * The space is the widget's size less the padding around the verse and the
- * height of everything else in its column. On a widget too small for a line
- * of the verse, what's below the verse (the translation) gives way first, and
- * then the verse itself.
+ * height of everything above it in its column: the heading, the reference, and
+ * the gap below them. Nothing follows the verse, so it has the rest of the
+ * widget. On a widget too small for a line of it, the verse gives way.
  */
 private fun Emittable.fitVerse(context: Context, size: DpSize) {
   val path = pathTo { it is EmittableText && it.maxLines == Int.MAX_VALUE } ?: return
@@ -329,22 +329,16 @@ private fun Emittable.fitVerse(context: Context, size: DpSize) {
     width -= padding.horizontal
     height -= padding.vertical
   }
-  fun space() = height - column.children.filter { it !== verse }
+  val space = height - column.children.filter { it !== verse }
     .sumOf { it.heightDp(context, width, measure).toDouble() }.toFloat()
 
   // Each line leaves a little room at its end, so Android never wraps it again.
   val lines = measure.lines(verse.text, style, width - LINE_SLACK_DP)
   val pitch = max(lines.maxOf { it.heightDp }, measure.textSizeDp(style) * VERSE_LINE_SPACING)
-  fun fitting(space: Float) = lines.indices.takeWhile { i -> i * pitch + lines[i].heightDp <= space }.size
-
-  var count = fitting(space())
+  val count = lines.indices.takeWhile { i -> i * pitch + lines[i].heightDp <= space }.size
   val index = column.children.indexOf(verse)
-  if (count == 0) {
-    while (column.children.size > index + 1) column.children.removeAt(column.children.size - 1)
-    count = fitting(space())
-  }
   if (Log.isLoggable(LOG_TAG, Log.DEBUG)) {
-    Log.d(LOG_TAG, "size=${size.width.value}x${size.height.value}dp space=${width}x${space()}dp pitch=${pitch}dp lines=$count/${lines.size}")
+    Log.d(LOG_TAG, "size=${size.width.value}x${size.height.value}dp space=${width}x${space}dp pitch=${pitch}dp lines=$count/${lines.size}")
   }
   if (count == 0) {
     column.children.removeAt(index)
@@ -360,7 +354,7 @@ private fun Emittable.fitVerse(context: Context, size: DpSize) {
     }
   }
   column.children[index] = shown.inColumns().also {
-    // Fills the space, keeping what follows the verse at the bottom.
+    // Fills the rest of the widget.
     it.modifier = GlanceModifier.then(HeightModifier(Dimension.Expand))
   }
 }

@@ -86,11 +86,12 @@ describe('the verses the app hands the widget', () => {
     expect(days[6].day).toBe('2026-11-8');
   });
 
-  it('come with the home page’s labels and the translation’s name', async () => {
+  it('come with the home page’s labels, and the translation’s name only in what they share', async () => {
     const week = await loadVerseWidgetWeek('zh', { title: '今日經文', share: '分享經文' }, new Date(2026, 10, 2, 9));
-    expect(week).toEqual(
-      expect.objectContaining({ title: '今日經文', shareLabel: '分享經文', translation: 'CUV' }),
-    );
+    expect(week).toEqual(expect.objectContaining({ title: '今日經文', shareLabel: '分享經文' }));
+    // The widget leaves the translation's name out, to give the verse more room.
+    expect(Object.keys(week).sort()).toEqual(['days', 'shareLabel', 'themeLabel', 'title']);
+    expect(week.days[0].share).toBe(`${week.days[0].text}\n\n— ${week.days[0].reference} (CUV)`);
   });
 
   it('label the light/dark button in every language', async () => {
@@ -159,7 +160,6 @@ describe('updating the widget from the home page', () => {
     title: labels.title,
     shareLabel: labels.share,
     themeLabel: 'Switch between light and dark',
-    translation: 'BSB',
     days: [day],
   });
   const week = weekIn(englishLabels);
@@ -350,7 +350,6 @@ describe('the widget layout', () => {
     title: 'Today’s Verse',
     shareLabel: 'Share Verse',
     themeLabel: 'Switch between light and dark',
-    translation: 'BSB',
     days: [day('2026-11-2', 'Monday'), day('2026-11-3', 'Tuesday'), day('2026-11-4', 'Wednesday')],
     colors: layoutModule().VERSE_WIDGET_COLORS,
   };
@@ -360,9 +359,22 @@ describe('the widget layout', () => {
     expect(typeof layout()).toBe('string');
   });
 
-  it('shows the heading, the reference, the numbered verse, and the translation, as YouVersion’s does', () => {
+  it('shows the heading, the reference, and the numbered verse, as YouVersion’s does', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 3, 14) });
-    expect(texts(render(week))).toEqual(['Today’s Verse', 'Ref 2026-11-3', '[16]\u00A0Tuesday', 'BSB']);
+    expect(texts(render(week))).toEqual(['Today’s Verse', 'Ref 2026-11-3', '[16]\u00A0Tuesday']);
+  });
+
+  it('leaves out the translation’s name, so the verse has the rest of the widget', () => {
+    jest.useFakeTimers({ now: new Date(2026, 10, 3, 14) });
+    // Even a week saved by an earlier version, which still has the name.
+    const tree = render({ ...week, translation: 'BSB' } as VerseWidgetProps);
+    expect(texts(tree)).not.toContain('BSB');
+    // The verse ends the widget's column, so the receiver gives it all the
+    // room below the reference.
+    const column = nodes(tree).find((n) => n.type === 'Column')!;
+    const last = [column.props.children].flat().filter(Boolean).pop();
+    expect(last.type).toBe('Text');
+    expect(last.props.children).toBe('[16]\u00A0Tuesday');
   });
 
   it('changes verses at 6 AM, as the app does', () => {
@@ -440,7 +452,7 @@ describe('the widget layout', () => {
     jest.useFakeTimers({ now: new Date(2026, 10, 3, 9) });
     const colorsIn = (colorScheme: string) => {
       const tree = render(week, colorScheme);
-      const [title, reference, verse, translation] = textNodes(tree);
+      const [title, reference, verse] = textNodes(tree);
       const [icon] = nodes(tree).filter((n) => n.type === 'Image');
       return [
         tree.props.colors.containerColor,
@@ -448,7 +460,6 @@ describe('the widget layout', () => {
         reference.props.color,
         icon.props.tint,
         verse.props.color,
-        translation.props.color,
       ];
     };
     for (const [mode, theme] of [
@@ -462,7 +473,6 @@ describe('the widget layout', () => {
         c.primary,
         c.primary,
         c.onSurface,
-        c.onSurfaceVariant,
       ]);
     }
   });

@@ -28,8 +28,9 @@ export const VERSE_WIDGET_COLORS: VerseWidgetProps['colors'] = {
 /**
  * The Android home screen widget's layout (#235), styled after YouVersion's
  * Verse of the Day widget: a small heading, the reference under it, a share
- * button, the verse with its number, and the translation at the bottom, in the
- * app's language. A tap anywhere else opens the verse in the Bible reader.
+ * button, and the verse with its number, in the app's language. It leaves out
+ * YouVersion's translation name, so the verse has the rest of the widget to
+ * itself. A tap anywhere else opens the verse in the Bible reader.
  *
  * The 'widget' directive turns this function into a string, which Android
  * runs in its own small JavaScript runtime each time it redraws the widget.
@@ -45,8 +46,9 @@ export const VERSE_WIDGET_COLORS: VerseWidgetProps['colors'] = {
  * - Colors: the theme's background, primary, ink, and muted ink, in the
  *   phone's mode. The app's widget receiver (modules/verse-widget) draws the
  *   layout in both modes, so the widget follows the phone between them.
- * - The verse is the one text without maxLines. The receiver sets it in the
- *   phone's serif font and cuts it to the whole lines the widget's size fits.
+ * - The verse is the one text without maxLines, and the last thing in the
+ *   widget. The receiver sets it in the phone's serif font and cuts it to the
+ *   whole lines that fit below the reference.
  * - Links go in the buttons' `target`, which ButtonProps leaves out but
  *   expo-widgets passes on to the app's receiver: an app link opens the
  *   verse, `share:` and the text open the share sheet, and `theme:` flips
@@ -112,12 +114,6 @@ export const VerseOfTheDayWidgetLayout = (
         <Text color={colors.onSurface} style={{ fontSize: 18 }}>
           {verse ? `[${verse.verse}]\u00A0${verse.text}` : 'Open the app to see today’s verse.'}
         </Text>
-        {verse ? <Spacer modifiers={[height(8)]} /> : null}
-        {verse ? (
-          <Text color={colors.onSurfaceVariant} maxLines={1} style={{ fontSize: 12 }}>
-            {props.translation}
-          </Text>
-        ) : null}
       </Column>
     </Button>
   );
