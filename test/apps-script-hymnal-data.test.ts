@@ -74,8 +74,14 @@ describe('HymnalData.gs (#619)', () => {
 });
 
 describe('the printed hymn lookup (#619)', () => {
+  // The values go in through the context, so no code is built from them.
   const resolve = (context: object, english: string, chinese: string) =>
-    JSON.parse(runInContext(`JSON.stringify(resolvePrintedHymnText_(${JSON.stringify(english)}, ${JSON.stringify(chinese)}))`, context));
+    JSON.parse(
+      runInContext(
+        'JSON.stringify(resolvePrintedHymnText_(testHymn.english, testHymn.chinese))',
+        Object.assign(context, { testHymn: { english, chinese } }),
+      ),
+    );
 
   it("fills in the other hymnal's number and title", () => {
     const context = load(['BulletinApi.gs', 'PrintedBulletin.gs', 'PrintedHymnLookup.gs']);
@@ -215,10 +221,8 @@ describe('the Hymn Bank tab, kept on open with time to spare (#619, #639)', () =
         PropertiesService: { getDocumentProperties: () => properties },
         SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => null }) },
       });
-      runInContext(
-        `onEdit({ range: { getSheet: function () { return { getName: function () { return ${JSON.stringify(tab)}; } }; } } })`,
-        context,
-      );
+      const event = { range: { getSheet: () => ({ getName: () => tab }) } };
+      runInContext('onEdit(testEvent)', Object.assign(context, { testEvent: event }));
     };
 
     edit('Leadership');
@@ -292,8 +296,9 @@ describe('the Hymn Bank tab, kept on open with time to spare (#619, #639)', () =
       Logger: { log: (message: string) => logs.push(message) },
       SpreadsheetApp: { getUi: () => ({ createMenu: () => menu }), getActiveSpreadsheet: () => ({}) },
     });
+    Object.assign(context, { testBudget: budget });
     runInContext(
-      `HYMN_BANK_OPEN_BUDGET_MS = ${budget};
+      `HYMN_BANK_OPEN_BUDGET_MS = testBudget;
        maintainBulletinScheduleOnOpen_ = function () { testCalls.push('upkeep'); };
        getMissingBulletinColumns_ = function () { return []; };
        getRenamedBulletinTabsAndColumns_ = function () { return []; };

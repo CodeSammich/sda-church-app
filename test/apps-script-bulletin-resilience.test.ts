@@ -652,7 +652,9 @@ describe('bulletin tab and column tags', () => {
   it('announces each rename once', () => {
     const properties = new Map<string, string>();
     const context = load(createChurchWorkbook(), properties);
-    const take = (lines: string[]) => run<string[]>(context, `takeNewBulletinRenames_(${JSON.stringify(lines)})`);
+    // The lines go in through the context, so no code is built from them.
+    const take = (lines: string[]) =>
+      run<string[]>(Object.assign(context, { testLines: lines }), 'takeNewBulletinRenames_(testLines)');
 
     expect(take(['A'])).toEqual(['A']);
     expect(take(['A'])).toEqual([]);
@@ -676,8 +678,8 @@ describe('a bulletin without its schedule', () => {
   const request = (context: object, appVersion?: string) =>
     JSON.parse(
       runInContext(
-        `doGet({ parameter: ${JSON.stringify({ date: SABBATH, ...(appVersion ? { appVersion } : {}) })} }).text`,
-        context,
+        'doGet({ parameter: testParameter }).text',
+        Object.assign(context, { testParameter: { date: SABBATH, ...(appVersion ? { appVersion } : {}) } }),
       ) as string,
     ) as Response;
 
@@ -768,7 +770,9 @@ describe('a bulletin without its schedule', () => {
   ])('counts app version %p as showing it: %p', (version, expected) => {
     const context = load(createChurchWorkbook());
 
-    expect(run(context, `isAppVersionAtLeast_(${JSON.stringify(version)}, SCHEDULE_NOT_SET_APP_VERSION)`)).toBe(expected);
+    expect(
+      run(Object.assign(context, { testVersion: version }), 'isAppVersionAtLeast_(testVersion, SCHEDULE_NOT_SET_APP_VERSION)'),
+    ).toBe(expected);
   });
 });
 
@@ -796,10 +800,15 @@ describe('changeovers kept for older apps', () => {
     };
     const context = load(createChurchWorkbook(), undefined, scriptProperties);
     const setToday = (day: string) =>
-      runInContext(`getPrintedBulletinToday_ = function () { return '${day}'; }`, context);
+      runInContext(
+        'getPrintedBulletinToday_ = function () { return testToday; }',
+        Object.assign(context, { testToday: day }),
+      );
     setToday(today);
     const ask = (parameter: Record<string, string>) =>
-      JSON.parse(runInContext(`doGet({ parameter: ${JSON.stringify(parameter)} }).text`, context) as string);
+      JSON.parse(
+        runInContext('doGet({ parameter: testParameter }).text', Object.assign(context, { testParameter: parameter })) as string,
+      );
     const status = () => {
       const response = ask({ changeovers: '1' });
       expect(response.ok).toBe(true);
@@ -909,7 +918,7 @@ describe('changeovers kept for older apps', () => {
     expect(list.length).toBeGreaterThan(0);
     list.forEach((changeover) => {
       expect(changeover.id).toMatch(/^[a-z0-9-]+$/);
-      expect(run(context, `isAppVersionAtLeast_(${JSON.stringify(changeover.retiresWith)}, '0')`)).toBe(true);
+      expect(run(Object.assign(context, { testVersion: changeover.retiresWith }), "isAppVersionAtLeast_(testVersion, '0')")).toBe(true);
       expect(changeover.cleanup.length).toBeGreaterThan(20);
     });
     expect(new Set(list.map((changeover) => changeover.id)).size).toBe(list.length);
