@@ -38,6 +38,9 @@ class File {
   delete() {
     mockFiles.delete(this.uri);
   }
+  create() {
+    if (!mockFiles.has(this.uri)) mockFiles.set(this.uri, '');
+  }
   rename(newName: string) {
     const renamed = [...this.uri.split('/').slice(0, -1), newName].join('/');
     mockFiles.set(renamed, mockFiles.get(this.uri) as string);

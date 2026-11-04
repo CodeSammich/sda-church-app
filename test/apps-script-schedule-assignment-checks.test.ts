@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext, runInContext } from 'node:vm';
+import OpenCC from 'opencc-js/cn2t';
 
 const SOURCES = [
   'BulletinApi.gs',
@@ -409,6 +410,79 @@ describe('Sabbath Calendar unknown-name warnings', () => {
         context,
       ),
     ).toThrow('not a roster name cell');
+  });
+});
+
+describe('Simplified Chinese names in the Name Dictionary dialog', () => {
+  const add = (chinese: string, allowSimplified = false) => {
+    const { context, names } = setup([]);
+    const result = runInContext(
+      `addScheduleNameToDictionary(${JSON.stringify({ english: 'Grace Ho', chinese, allowSimplified })})`,
+      context,
+    ) as { added: boolean; simplifiedWarning?: string };
+    return { result, added: names.values.slice(4) };
+  };
+
+  it('warns before adding a name with Simplified-only characters, and adds it once confirmed', () => {
+    const warned = add('张聪张');
+    expect(warned.result.added).toBe(false);
+    expect(warned.added).toEqual([]);
+    // Each character is named once.
+    expect(warned.result.simplifiedWarning).toContain('The Chinese name has Simplified characters: 张聪.');
+    expect(warned.result.simplifiedWarning).toContain('中文姓名含有简体字：张聪。');
+    expect(warned.result.simplifiedWarning).toContain('Add anyway');
+    expect(warned.result.simplifiedWarning).toContain('仍然添加');
+
+    // Never converted: it's added exactly as typed.
+    const confirmed = add('张聪', true);
+    expect(confirmed.result.added).toBe(true);
+    expect(confirmed.added).toEqual([['Grace Ho', '张聪']]);
+  });
+
+  it('adds Traditional names, and surnames both scripts share, with no warning', () => {
+    ['張聰', '余', '于', '范', '姜', '沈', '云', '温', '干', '后', '台', '叶', '松', '里', '万', '峰', '群'].forEach((chinese) => {
+      const { result, added } = add(chinese);
+      expect(result).toEqual({ added: true });
+      expect(added).toEqual([['Grace Ho', chinese]]);
+    });
+    expect(add('').result).toEqual({ added: true });
+  });
+
+  it('flags only characters OpenCC converts for both Taiwan and Hong Kong', () => {
+    const { context } = setup([]);
+    const list = runInContext('SIMPLIFIED_ONLY_CHINESE_CHARACTERS_', context) as string;
+    const characters = Array.from(list);
+    const toTaiwan = OpenCC.Converter({ from: 'cn', to: 'tw' });
+    const toHongKong = OpenCC.Converter({ from: 'cn', to: 'hk' });
+
+    expect(characters.length).toBeGreaterThan(2500);
+    expect(new Set(characters).size).toBe(characters.length);
+    expect([...characters].sort()).toEqual(characters);
+    characters.forEach((character) => {
+      expect([character, toTaiwan(character) === character, toHongKong(character) === character]).toEqual([
+        character,
+        false,
+        false,
+      ]);
+    });
+    // Each Traditional form of these is a different character.
+    expect(runInContext(`findSimplifiedOnlyChinese_('陈张聪国会')`, context)).toBe('陈张聪国会');
+    expect(runInContext(`findSimplifiedOnlyChinese_('陳張聰國會 Grace 余范')`, context)).toBe('');
+  });
+
+  it('shows the warning in the dialog and turns Add into Add anyway', () => {
+    const { context } = setup([]);
+    const html = runInContext(
+      `buildUnknownScheduleNamesHtml_([{ name: 'Grace Ho', role: 'Pianist', date: '2026-10-03', row: 2, column: 3, suggestions: [] }])`,
+      context,
+    ) as string;
+
+    expect(html).toContain('result.simplifiedWarning');
+    expect(html).toContain('Add anyway / 仍然添加');
+    expect(html).toContain('allowSimplified:allowSimplified');
+    // Editing the Chinese name asks again.
+    expect(html).toContain('chinese.oninput=function(){allowSimplified=false;');
+    expect(html).toContain('.status.warn{');
   });
 });
 

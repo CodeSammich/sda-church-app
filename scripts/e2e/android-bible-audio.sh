@@ -364,8 +364,8 @@ scenario_downloaded_book_offline() {
     point=$(element_center 'Download 2 Thessalonians, [^"]*') || { echo 'no Download button for the book'; return 1; }
     # shellcheck disable=SC2086
     sh_ input tap $point >/dev/null
-    # On mobile data, the app asks first.
-    if point=$(ATTR=text TRIES=3 element_center '(Use mobile data|USE MOBILE DATA)'); then
+    # On mobile data, the app's popup asks first.
+    if point=$(ATTR=text TRIES=3 element_center 'Use mobile data'); then
       # shellcheck disable=SC2086
       sh_ input tap $point >/dev/null
     fi

@@ -1,4 +1,6 @@
+import { showAppAlert } from '@/components/AppAlert';
 import { AppIcon } from '@/components/AppIcon';
+import { MenuCardSwitchVisual } from '@/components/MenuCard';
 import { PopupHeader } from '@/components/PopupHeader';
 import { PopupScrollView } from '@/components/PopupScrollView';
 import { getBibleAudioNarratorName } from '@/constants/BibleAudioNarrators';
@@ -27,13 +29,23 @@ import {
   type BibleAudioScopeStatus,
 } from '@/services/BibleAudioDownloads';
 import { BIBLE_BOOK_NAMES, BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP } from '@/services/BibleService';
+import {
+  askForDownloadNotifications,
+  getDownloadNotificationsOn,
+  hasDownloadNotifications,
+  refreshDownloadNotificationPermission,
+  setDownloadNotificationsEnabled,
+  showDownloadNotificationQuestion,
+  subscribeDownloadNotifications,
+} from '@/services/DownloadNotifications';
+import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkStateAsync, NetworkStateType } from 'expo-network';
 import { useLocalSearchParams } from 'expo-router';
-import { useContext, useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentRef, type ReactNode } from 'react';
+import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Dialog, IconButton, Portal, ProgressBar, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,6 +57,7 @@ const copy = {
     narrator: 'Narrator',
     change: 'Change',
     changeNarrator: (name: string) => `Narrator: ${name}. Change`,
+    notifications: 'Download notifications',
     close: 'Close',
     wholeBible: 'Whole Bible',
     wholeBibleInSentence: 'the whole Bible',
@@ -87,6 +100,7 @@ const copy = {
     narrator: '朗讀者',
     change: '更改',
     changeNarrator: (name: string) => `朗讀者：${name}。更改`,
+    notifications: '下載通知',
     close: '關閉',
     wholeBible: '整本聖經',
     wholeBibleInSentence: '整本聖經',
@@ -129,6 +143,7 @@ const copy = {
     narrator: '朗读者',
     change: '更改',
     changeNarrator: (name: string) => `朗读者：${name}。更改`,
+    notifications: '下载通知',
     close: '关闭',
     wholeBible: '整本圣经',
     wholeBibleInSentence: '整本圣经',
@@ -172,6 +187,7 @@ const copy = {
     narrator: 'Narrador',
     change: 'Cambiar',
     changeNarrator: (name: string) => `Narrador: ${name}. Cambiar`,
+    notifications: 'Notificaciones de descarga',
     close: 'Cerrar',
     wholeBible: 'Toda la Biblia',
     wholeBibleInSentence: 'toda la Biblia',
@@ -238,7 +254,7 @@ export const getBibleAudioScopeCaption = (
       const waiting = status.waitingFor === 'wifi' ? labels.waitingForWifi : labels.waitingForConnection;
       return { text: `${waiting} · ${labels.progress(size(status.downloadedBytes), size(total))}`, fraction };
     }
-    // Its turn hasn't come: three chapters download at a time.
+    // Its turn hasn't come: the phone downloads a few chapters at a time.
     if (!status.active) return { text: labels.queued(size(Math.max(0, total - status.downloadedBytes))), fraction: null };
     return getDownloadProgressStatus({ bytesWritten: status.downloadedBytes, totalBytes: total }, language);
   }
@@ -494,6 +510,9 @@ export function OfflineBibleAudio() {
   const params = useLocalSearchParams();
   const narratorParam = firstParam(params.narrator);
   const bookParam = firstParam(params.bookId);
+  // The key-screen capture can't tap, so its build asks the mobile-data
+  // question (#611), or the notifications one (#610), from the path.
+  const screenshotPopup = getScreenshotPopup(params.popup, ['mobile-data', 'notifications']);
   const insets = useSafeAreaInsets();
   const headerHeight = useGlobalHeaderHeight();
   useBibleAudioDownloads();
@@ -564,43 +583,68 @@ export function OfflineBibleAudio() {
 
   const name = (option: string) => getBibleAudioNarratorName(option, language) ?? option;
 
+  // The download notifications (#610), where the app shows its own: on only if
+  // the member wants them and the phone allows them, as after a change in Settings.
+  const notificationsOn = useSyncExternalStore(subscribeDownloadNotifications, getDownloadNotificationsOn);
+  useEffect(() => {
+    if (!hasDownloadNotifications()) return;
+    void refreshDownloadNotificationPermission();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refreshDownloadNotificationPermission();
+    });
+    return () => subscription.remove();
+  }, []);
+
+  const askMobileData = (remaining: string, begin: (mobileData: boolean) => void) =>
+    showAppAlert(labels.mobileDataTitle, labels.mobileData(remaining), [
+      { text: labels.cancel, style: 'cancel' },
+      { text: labels.waitForWifi, onPress: () => begin(false) },
+      { text: labels.useMobileData, onPress: () => begin(true) },
+    ]);
+  useEffect(() => {
+    if (screenshotPopup === 'notifications') showDownloadNotificationQuestion(language, () => undefined);
+    if (screenshotPopup !== 'mobile-data' || !narrator) return;
+    const status = getBibleAudioScopeStatus(narrator, { kind: 'bible' });
+    askMobileData(formatDownloadSize(status.totalBytes - status.downloadedBytes, language), () => undefined);
+    // Once, for the narrator shown.
+  }, [screenshotPopup, narrator]);
+
   const start = async (option: string, scope: BibleAudioDownloadScope) => {
     const status = getBibleAudioScopeStatus(option, scope);
     const remainingBytes = Math.max(0, status.totalBytes - status.downloadedBytes);
     const remaining = formatDownloadSize(remainingBytes, language);
     if (!hasRoomForBibleAudio(remainingBytes)) {
-      Alert.alert(labels.noRoomTitle, labels.noRoom(remaining));
+      showAppAlert(labels.noRoomTitle, labels.noRoom(remaining));
       return;
     }
     const network = await getNetworkStateAsync().catch(() => null);
     if (network && (network.isConnected === false || network.isInternetReachable === false)) {
-      Alert.alert(labels.offlineTitle, labels.offline);
+      showAppAlert(labels.offlineTitle, labels.offline);
       return;
     }
-    const begin = (mobileData: boolean) => {
+    const begin = async (mobileData: boolean) => {
+      // The first long download, a section or more, asks for leave to show
+      // its progress (#610), with the app's own popup first; never at launch.
+      await askForDownloadNotifications(scope.kind).catch(() => undefined);
       try {
         downloadBibleAudio(option, scope, { mobileData });
       } catch (error) {
         console.error('Bible audio download failed to start:', error);
-        Alert.alert(labels.errorTitle, labels.backupError);
+        showAppAlert(labels.errorTitle, labels.backupError);
       }
     };
     if (network?.type !== NetworkStateType.CELLULAR) {
       if (remainingBytes > BIBLE_AUDIO_CONFIRM_BYTES) {
-        Alert.alert(labels.bigTitle(remaining), labels.big, [
+        showAppAlert(labels.bigTitle(remaining), labels.big, [
           { text: labels.cancel, style: 'cancel' },
-          { text: labels.confirmDownload, onPress: () => begin(false) },
+          { text: labels.confirmDownload, onPress: () => void begin(false) },
         ]);
         return;
       }
-      begin(false);
+      void begin(false);
       return;
     }
-    Alert.alert(labels.mobileDataTitle, labels.mobileData(remaining), [
-      { text: labels.cancel, style: 'cancel' },
-      { text: labels.waitForWifi, onPress: () => begin(false) },
-      { text: labels.useMobileData, onPress: () => begin(true) },
-    ]);
+    askMobileData(remaining, (mobileData) => void begin(mobileData));
   };
 
   // "Delete the Gospels? (210 MB)", or for the whole Bible when only some is
@@ -611,7 +655,7 @@ export function OfflineBibleAudio() {
         ? labels.deleteAll(name(option))
         : labels.delete(what);
     const size = formatDownloadSize(getDownloadedBibleAudioBytes(option, scope), language);
-    Alert.alert(labels.question(action, size), labels.deleteMessage, [
+    showAppAlert(labels.question(action, size), labels.deleteMessage, [
       { text: labels.cancel, style: 'cancel' },
       { text: labels.confirmDelete, style: 'destructive', onPress: () => deleteBibleAudio(option, scope) },
     ]);
@@ -674,6 +718,30 @@ export function OfflineBibleAudio() {
                 {labels.change}
               </Text>
             </Pressable>
+            {hasDownloadNotifications() && (
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityState={{ checked: notificationsOn }}
+                accessibilityLabel={labels.notifications}
+                onPress={() => void setDownloadNotificationsEnabled(!notificationsOn)}
+                testID="download-notifications"
+                style={({ pressed }) => [
+                  styles.narrator,
+                  styles.toggleRow,
+                  { backgroundColor: theme.colors.surfaceVariant, opacity: pressed ? 0.78 : 1 },
+                ]}
+              >
+                <Text variant="titleMedium" style={[styles.label, { color: theme.colors.onSurface }]}>
+                  {labels.notifications}
+                </Text>
+                <MenuCardSwitchVisual
+                  active={notificationsOn}
+                  activeColor={theme.colors.primary}
+                  inactiveColor={theme.colors.outline}
+                  thumbColor={theme.colors.onPrimary}
+                />
+              </Pressable>
+            )}
 
             {row({ narrator, scope: BIBLE, kind: 'bible', title: labels.wholeBible, what: labels.wholeBibleInSentence })}
             {TESTAMENTS.map((testament) => {
@@ -774,7 +842,7 @@ export function OfflineBibleAudio() {
                       iconColor={theme.colors.onSurfaceVariant}
                       onPress={() => {
                         const size = formatDownloadSize(narratorTotal(option), language);
-                        Alert.alert(labels.question(labels.deleteAll(name(option)), size), labels.deleteMessage, [
+                        showAppAlert(labels.question(labels.deleteAll(name(option)), size), labels.deleteMessage, [
                           { text: labels.cancel, style: 'cancel' },
                           { text: labels.confirmDelete, style: 'destructive', onPress: () => deleteBibleAudio(option, BIBLE) },
                         ]);
@@ -813,6 +881,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  // A skinny row, its label and its switch: still a thumb's height.
+  toggleRow: { minHeight: 48, paddingVertical: 8 },
   testament: { marginTop: 16 },
   row: { alignItems: 'center', flexDirection: 'row', minHeight: 56 },
   headerRow: { borderBottomWidth: StyleSheet.hairlineWidth * 2, marginBottom: 4, paddingVertical: 4 },

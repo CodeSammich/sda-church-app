@@ -137,7 +137,9 @@ opens a big file should work the same way. The children's Sabbath School lessons
 first ([#529](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/529));
 see [Opening a lesson on a phone](feature_designs/sabbath_school_lessons.md#opening-a-lesson-on-a-phone).
 The download itself and what its progress says are shared: `services/FileDownloads.ts`
-and `constants/DownloadCopy.ts`. Use them, rather than copy the lessons' code.
+and `constants/DownloadCopy.ts`. Use them, rather than copy the lessons' code. Bible audio
+shares the progress text; on a phone, its download is the phone's own
+(`modules/bible-audio-downloads`, #611), so it goes on while the phone is locked.
 
 Bible audio downloaded to listen offline
 ([#556](https://github.com/New-York-Chinese-Seventh-day-Adventist/sda-church-app/issues/556))
@@ -150,12 +152,16 @@ is, part of it, or all of it. Narrators are named language first, as "English â€
 (BSB)" or "Mandarin (Chinese Union Version)", and listed in one order, as the translation
 picker lists their translations (`constants/BibleAudioNarrators.ts`); the Bible's audio
 settings name the English ones the same way. A row's download
-progress shows at once, with an X that stops it, and goes on when the page closes, since
-the whole Bible takes a while. Deleting goes by the same rows, after the system's alert
+progress shows at once, with an X that stops it. It goes on when the page closes, and
+with the phone locked or the app in the background, since the whole Bible takes a while:
+the phone itself downloads it (#611), on Wi-Fi only unless the member chose mobile data.
+Meanwhile a notification can show it, with Stop, as **Notifications** below says: the
+app's own on Android 14 and later, and the system's download notification on Android 13
+and lower; on the iPhone, a word when it's done. Deleting goes by the same rows, after the app's popup
 asks, naming what it deletes and its size. It stays in the documents directory until the
 member deletes it, rather than in the cache, and the size of each choice shows before it
 starts. Over mobile data,
-the system's alert asks first: Cancel, Wait for Wi-Fi, or Use mobile data; and a download
+the app's popup asks first: Use mobile data, Wait for Wi-Fi, or Cancel; and a download
 over 1 GB, such as the English Bible, asks first even on Wi-Fi. See
 [Bible audio downloaded to listen offline](feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
 
@@ -215,6 +221,48 @@ simple, blended colors.
 - **Boundary Definition:** A restrained 0.5px top boundary using the theme's subtle
   outline token is permitted for the bottom tab navigation bar and persistent audio
   controls. Do not add shadows, strong dividers, or decorative glass effects.
+- **Popups:** Every popup is the app's own, never the system's alert (`Alert.alert`),
+  which on Android looks unlike the rest of the app. A popup is centred, with the shared
+  corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall at any
+  text size, scrolling beyond that. One that only says something has an X in its title row
+  and no Close button. One that asks a question has its answers as buttons, stacked so
+  large text fits, the main one first and Cancel last, and no X; a tap outside it answers
+  Cancel. Code shows a notice or question with `showAppAlert`
+  (`components/AppAlert.tsx`), and `test/app-alert.test.ts` fails on a system alert.
+- **Notifications:** The app's notifications are few, quiet, and only ones the member asked
+  for (Tenet 7). Today there's one kind: a Bible audio download the member started (#610).
+  - **What they say, by phone.** None is needed for a download to go on in the
+    background; they only show it.
+    - **Android 14 and later:** while chapters download, the download's
+      progress ("Mandarin (Chinese Union Version): 312 of 1,189 chapters"), with Stop; then
+      "Downloaded", or that it waits for Wi-Fi or a connection. Android requires a
+      notification while the app's own download job runs, so with the member's notifications
+      off it's the quiet kind: minimized, with no status bar icon, and gone when the job ends.
+      Without the permission, Android shows the job only in its Task Manager.
+    - **iPhone:** a word when a download finishes, or couldn't, while the app is out of
+      sight. iOS shows no progress for a background download.
+    - **Android 13 and lower:** nothing of the app's. The system's own download notification
+      shows the chapters, as Android requires for them to download while the phone is locked.
+  - **Asked at need, never at launch.** The first time a download of a section of several
+    books or more starts, the app's own popup asks first, since the phone's question can't
+    say why: what the notifications are for, that the download keeps going either way, and
+    that the page's switch turns them on or off. Only **Allow** brings the phone's question.
+    After **Not now**, the app asks once more at most, at the next Testament or whole Bible,
+    and then never. Turning the switch on asks the phone at once, or opens the app's settings
+    where the phone won't ask again.
+  - **One switch:** **Download notifications**, on Offline Bible Audio, below the narrator,
+    with the downloads it's about: a row with just its name and its switch. It shows on only when the member wants them and the phone
+    allows them.
+  - **Never:** badges, reminders to come back, sounds, marketing, or anything sent from a
+    server. They're made on the phone, so nothing about them leaves it, and Data safety and
+    App Privacy don't change.
+  - **Why the permission isn't dropped after each download:** iOS can't take back leave once
+    given, and on Android asking at every download would nag, and Android stops showing its
+    question after two refusals. So the app limits what it does instead:
+    `test/notification-guard.test.ts` fails if anything but `modules/bible-audio-downloads`
+    posts a notification.
+  - **Anything new,** such as announcements (#562) or event reminders (#49), needs its own
+    decision, and an update to this policy, first.
 - **Future-Proofing:** It shifts your design from "Standard App" to a custom "Digital
   Sanctuary."
 

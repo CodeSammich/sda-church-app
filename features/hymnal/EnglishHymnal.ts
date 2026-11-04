@@ -54,11 +54,7 @@ export const getEnglishHymnUrl = (hymnNumber?: string | number) => {
 };
 
 export const openHymnal = (hymnNumber?: string | number) => {
-  return openURL(
-    getEnglishHymnUrl(hymnNumber),
-    'Error',
-    'Could not open the English hymnal page.',
-  );
+  return openURL(getEnglishHymnUrl(hymnNumber));
 };
 
 const ENGLISH_HYMN_PIANO_VIDEOS = pianoData.videos as Record<string, string>;

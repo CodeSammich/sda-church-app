@@ -688,6 +688,38 @@ app's own code, while Android uses a native queue.
 - [ ] **Changes while playing.** Change the chapter, the translation, and
   **Preferred source** under **Audio settings**, and seek within a chapter. Leave the
   Bible tab and come back: it returns to the chapter that's playing.
+- [ ] **Downloads while locked, on Wi-Fi only (#611).** On Wi-Fi, start a book in
+  You → **Offline Bible Audio** (2 Thessalonians in Mandarin is 1.2 MB; John is
+  24.5 MB), lock the phone, and wait a minute. Unlock: it carried on. Start a bigger
+  one, such as the Gospels, lock the phone, and turn Wi-Fi off with mobile data on.
+  Nothing more may download: on the iPhone, Settings → Cellular shows no new data for
+  the app, and the page says "Waiting for Wi-Fi". Turn Wi-Fi back on while it's
+  still locked: it goes on. Then try it again after tapping **Use mobile data**: it
+  carries on over mobile data. On a phone's hotspot, a download not allowed on mobile
+  data waits too.
+- [ ] **Chapters an hour, locked (#611).** Start the Mandarin Old Testament (929
+  chapters) on Wi-Fi, note the chapters downloaded, lock the phone on battery, and
+  check again after an hour; then the same plugged in. On the iPhone, the page shows
+  the count when unlocked; on Android 14 and later, the notification does. Note both
+  numbers in the release pull request. Android 14 and later should go well past 75 an
+  hour on battery, which is where the `DownloadManager` path stopped on the Android 16
+  emulator: each of its chapters is one of the app's background jobs. Android 13 and
+  lower still use it. iOS paces a
+  background session's downloads as it sees fit, so a slow hour there is worth an
+  issue, not a failed release.
+- [ ] **Download notifications (#610).** On a fresh install, open You → Offline Bible
+  Audio: the app hasn't asked about notifications, and **Download notifications**, below the
+  narrator, is off. Start a section of several books, such as the Gospels: the app's own
+  popup asks first, saying the download keeps going either way and where to turn this on
+  or off; tap **Not now**, and the download goes on with no question from the phone.
+  Start another such section: no popup.
+  Start a Testament: it asks once more; tap **Allow**, then allow the phone's question.
+  - **Android 14 and later:** the notification shows the narrator and "N of M chapters",
+    and Stop stops it, as the page's X does. Turn **Download notifications** off on the
+    page: the next download's notification is the quiet kind, minimized.
+  - **iPhone:** lock the phone until a download finishes: a notification says it's done.
+  - **Android 13 and lower:** only the system's download notification shows, and the page
+    has no switch.
 - [ ] **Offline start.** After using the app online, close it fully, turn on airplane
   mode, and open it. It starts, and the **Home** tab and the bulletin show what they
   last loaded.

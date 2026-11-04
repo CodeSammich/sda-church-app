@@ -13,8 +13,8 @@ The Sabbath Encouragement attribution and copyright review is maintained at:
 
 [`docs/operations/sabbath-encouragement-copyright.md`](../docs/operations/sabbath-encouragement-copyright.md)
 
-What each file here does, including the generated `PinyinPro.gs` (never edit
-it by hand), is in the runbook's
+What each file here does, including the generated `PinyinPro.gs` and
+`HymnalData.gs` (never edit them by hand), is in the runbook's
 [Source map](../docs/operations/bulletin-automation.md#source-map).
 
 ## Setup
@@ -22,7 +22,8 @@ it by hand), is in the runbook's
 From the repository root:
 
 1. Run `npm install`. The deploy script builds `PinyinPro.gs` from the
-   installed `pinyin-pro` package and stops if it is missing.
+   installed `pinyin-pro` package and stops if it is missing, and builds
+   `HymnalData.gs` from `features/hymnal/` (#619).
 2. Install clasp and sign in with a Google account that can edit the Apps
    Script project:
 

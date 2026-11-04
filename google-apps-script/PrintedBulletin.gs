@@ -24,9 +24,11 @@
  * prints in the fallback font, and the rest of its name or verse stays in
  * UoqMunThenKhung.
  *
- * Staff can change any of the fonts without a deploy by setting its Script
- * Property (Apps Script → Project Settings → Script properties) to a name from
- * Docs' Font → More fonts list; see readPrintedBulletinFonts_.
+ * Staff can change the Chinese and English fonts without a deploy, in
+ * Printed Bulletin → Fonts… (#624), which sets their Script Properties. The
+ * fallback font is set only in Script Properties (Apps Script → Project
+ * Settings → Script properties), as a name from Docs' Font → More fonts list;
+ * see readPrintedBulletinFonts_.
  */
 var PRINTED_BULLETIN_TYPE = Object.freeze({
   latinFont: 'Times New Roman',
@@ -39,6 +41,24 @@ var PRINTED_BULLETIN_TYPE = Object.freeze({
   subheadingSize: 11,
   headingSize: 13,
   lineSpacing: 1,
+});
+
+/**
+ * The Word copy for printing on a Mac (#627). Docs can't print Songti TC (宋體-繁),
+ * the pastor's preferred Chinese font, but Word on a Mac can. The copy is the
+ * week's Doc as it stands, exported as .docx, with every Chinese character set
+ * to Songti TC. Songti's lines are taller in Word, which pushed a bulletin onto
+ * extra pages, so each paragraph of text gets an exact line height of
+ * `lineHeight` times its largest font size. Paragraphs with pictures keep their
+ * own spacing: an exact height would crop the picture. `lineHeightProperty`
+ * changes the multiple without a deploy.
+ */
+var PRINTED_BULLETIN_WORD_COPY = Object.freeze({
+  chineseFont: 'Songti TC',
+  lineHeight: 1.15,
+  lineHeightProperty: 'PRINTED_BULLETIN_WORD_LINE_HEIGHT',
+  mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  nameSuffix: ' (Word, Songti TC).docx',
 });
 
 var PRINTED_BULLETIN_CONFIG = Object.freeze({
@@ -72,7 +92,11 @@ var PRINTED_BULLETIN_CONFIG = Object.freeze({
   bulletinIntakeSheetUrl:
     'https://docs.google.com/spreadsheets/d/1FqFJ8YvBA-IybOlVU1SW6ynrBGNs8Cd-9xlWz6SkkDA/edit',
   printedAnnouncementsPropertyPrefix: 'PRINTED_ANNOUNCEMENTS_',
+  // The old verse picker saved a print-only verse under this prefix (#622).
+  // prunePrintedBulletinProperties_ deletes any left.
   printedBibleVersePropertyPrefix: 'PRINTED_BIBLE_VERSE_',
+  // Per-week Script Properties are kept this long after their Sabbath.
+  weeklyPropertyRetentionDays: 28,
   printedAnnouncementsMaxEntries: 12,
   printedAnnouncementsMaxSerializedBytes: 8000,
   churchSketchImageFileId: '1ZmxAI0l-689nnz5l1pEtmpNTDquA8_No',
@@ -356,6 +380,7 @@ function onOpen() {
   ui
     .createMenu('Printed Bulletin')
     .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
+    .addItem('Fonts…', 'openPrintedBulletinFontsDialog')
     .addToUi();
   if (!ui.alert || !ui.ButtonSet || !ui.ButtonSet.OK) {
     return;
@@ -450,22 +475,6 @@ function createPrintedBulletinFromPrompt() {
 // Everything printed stays in Traditional Chinese on purpose. Keep the two
 // apart: see "Chinese script" in docs/operations/bulletin-automation.md.
 function buildPrintedBulletinPromptHtml_(defaultDate) {
-  var bookOptions = Object.keys(PRINTED_BIBLE_BOOK_LABELS)
-    .map(function (bookId) {
-      var labels = PRINTED_BIBLE_BOOK_LABELS[bookId];
-      return (
-        '<option value="' +
-        escapePrintedBulletinHtml_(bookId) +
-        '" data-english="' +
-        escapePrintedBulletinHtml_(labels.english) +
-        '" data-chapters="' +
-        (PRINTED_BIBLE_CHAPTER_COUNTS[bookId] || 1) +
-        '">' +
-        escapePrintedBulletinHtml_(labels.english + ' · ' + labels.chinese) +
-        '</option>'
-      );
-    })
-    .join('');
   var englishTranslationOptions = Object.keys(PRINTED_BIBLE_TRANSLATION_OPTIONS.english)
     .map(function (key) {
       var option = PRINTED_BIBLE_TRANSLATION_OPTIONS.english[key];
@@ -506,7 +515,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '.choice.selected{background:#e8f0fe;border-color:#1a73e8;color:#174ea6;' +
     'box-shadow:inset 0 0 0 1px #1a73e8;}' +
     '.choice:disabled{cursor:not-allowed;opacity:.48;box-shadow:none;}' +
-    '.row{display:grid;grid-template-columns:1fr 150px;gap:10px;}' +
+    '.verse-view{background:#f8f9fa;border:1px solid #dadce0;border-radius:4px;font-size:14px;line-height:1.45;padding:9px 10px;white-space:pre-wrap;}' +
+    '.verse-view.problem{background:#fce8e6;border-color:#f4b4ae;color:#a50e0e;font-size:13px;}' +
     '.announcement-entry{border:1px solid #dadce0;border-radius:8px;margin:10px 0;padding:12px;}' +
     '.announcement-header{align-items:center;display:flex;justify-content:space-between;gap:8px;}' +
     '.announcement-header strong{font-size:13px;}' +
@@ -529,6 +539,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '.spinner{width:34px;height:34px;margin:0 auto 18px;border:4px solid #dadce0;' +
     'border-top-color:#1a73e8;border-radius:50%;animation:spin .85s linear infinite;}' +
     '@keyframes spin{to{transform:rotate(360deg)}}' +
+    '.word-copy{background:#e8f0fe;color:#174ea6;}' +
     '.link{display:block;border:1px solid #dadce0;border-radius:6px;color:#1a73e8;' +
     'font-size:14px;margin:10px 0;padding:11px 12px;text-decoration:none;}' +
     '</style></head><body>' +
@@ -562,16 +573,9 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     englishTranslationOptions +
     '</select>' +
     '<div class="help">Chinese Bible translation: CUV — 和合本（Traditional Chinese）.<br>中文圣经译本：CUV — 和合本（繁体中文）。</div>' +
-    '<label for="book">Bible book <span class="required-mark" aria-hidden="true">*</span><br>圣经书卷</label>' +
-    '<select id="book" required><option value="">Choose a book — 选择书卷</option>' +
-    bookOptions +
-    '</select>' +
-    '<div class="row">' +
-    '<div><label for="chapter">Chapter <span class="required-mark" aria-hidden="true">*</span><br>章</label><select id="chapter" disabled required>' +
-    '<option value="">Choose a book first — 请先选择书卷</option></select></div>' +
-    '<div><label for="verses">Verse(s) <span class="required-mark" aria-hidden="true">*</span><br>节</label><input id="verses" type="text" placeholder="11 or 11-15" inputmode="text" required></div>' +
-    '</div>' +
-    '<div class="help">Choose a book and chapter, then type one verse or a range, such as 11 or 11-15. If the speaker submitted a Bible verse in Weekly Data, it will appear here automatically. Check or edit it before creating.<br>选择书卷和章，然后输入一节或一段经文，例如 11 或 11-15。如果讲员已在“Weekly Data”提交圣经经文，系统会自动填入。创建前请确认或修改。</div>' +
+    '<label>Bible reading<br>读经</label>' +
+    '<div id="verseView" class="verse-view" aria-live="polite">Reading Weekly Data… / 正在读取 Weekly Data…</div>' +
+    '<div class="help">From the Bible Verses column in Weekly Data, the same verse the app shows. To change it, close this dialog, edit Weekly Data, then open the dialog again.<br>来自“Weekly Data”的“Bible Verses”列，与应用中显示的经文相同。如需修改，请关闭此对话框，在“Weekly Data”中修改后重新打开。</div>' +
     '<label>Printed announcements / 纸质周刊通知</label>' +
     '<div class="help">Optional. Add one entry per card. These entries are printed only; they are not shown in the mobile bulletin.<br>可选。每张卡片输入一条通知。这些通知只打印在纸质周刊上，不会显示在手机版周刊中。</div>' +
     '<div id="announcementList"></div>' +
@@ -580,12 +584,19 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
     '<button type="submit" class="submit" id="submit" disabled>Create / 创建</button></div>' +
     '</form></div>' +
+    '<div id="wordCopySection"><h2 class="section-heading" style="margin-top:20px;">3. Printing on a Mac: a Word copy / 第三步（可选）：Mac 打印用 Word 副本</h2>' +
+    '<div class="admin-reminder"><strong>Needs a Mac with Microsoft Word.</strong> The pastor\'s Chinese font, Songti TC (宋體-繁), comes only with macOS, and Google Docs can\'t print it. Without a Mac, print the Google Doc itself: its Chinese is in UoqMunThenKhung (宇文天穹).<br>' +
+    '<strong>需要装有 Microsoft Word 的 Mac。</strong>牧师选用的中文字体宋体-繁（Songti TC）只有 macOS 自带，Google 文档无法打印该字体。没有 Mac 时，请直接打印 Google 文档，其中文字体为宇文天穹（UoqMunThenKhung）。</div>' +
+    '<div class="help">After the last edit to this Sabbath\'s Google Doc, make a Word copy with the Chinese in Songti TC. Open it in Word on the Mac to print. It uses the date and location above.<br>' +
+    '在这个安息日的 Google 文档最后修改之后，制作一份中文为宋体-繁的 Word 副本，在 Mac 上用 Word 打开打印。使用上面选择的日期和地点。</div>' +
+    '<div class="actions"><button type="button" class="word-copy" id="wordCopy">Make Word copy / 制作 Word 副本</button></div>' +
+    '<div id="wordCopyStatus" class="help" aria-live="polite"></div></div>' +
     '<div class="status-slot"><div id="statusView" hidden></div></div>' +
     '<script>' +
     'var initialRequest=' +
     requestJson +
     ';' +
-    'var locationValue="queens";var formatValue="regular";var announcementsDirty=false;var verseDirty=false;var suppressVerseDirty=false;var promptData={scheduleVerse:""};' +
+    'var locationValue="queens";var formatValue="regular";var announcementsDirty=false;var promptData=null;var promptRequest=0;' +
     'function selectChoice(group,value){' +
     'var buttons=document.querySelectorAll("#"+group+" .choice");' +
     'Array.prototype.forEach.call(buttons,function(button){' +
@@ -593,16 +604,17 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'button.classList.toggle("selected",selected);button.setAttribute("aria-pressed",selected?"true":"false");});}' +
     'function updateLocationFormatAvailability(){var brooklynButton=document.querySelector("#locationChoices .choice[data-value=brooklyn]");var communionButton=document.querySelector("#formatChoices .choice[data-value=communion]");var brooklynDisabled=formatValue==="communion";var communionDisabled=locationValue==="brooklyn";brooklynButton.disabled=brooklynDisabled;communionButton.disabled=communionDisabled;brooklynButton.setAttribute("aria-disabled",brooklynDisabled?"true":"false");communionButton.setAttribute("aria-disabled",communionDisabled?"true":"false");}' +
     'function escapeHtml(value){return String(value==null?"":value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\\x27/g,"&#39;");}' +
-    'function updateSubmitState(){var date=document.getElementById("date").value.trim();var book=document.getElementById("book").value;var chapter=document.getElementById("chapter").value;var verses=document.getElementById("verses").value.trim();var unsupported=locationValue==="brooklyn"&&formatValue==="communion";document.getElementById("submit").disabled=Boolean(unsupported||!(date&&book&&chapter&&verses));}' +
+    'function updateSubmitState(){var date=document.getElementById("date").value.trim();var unsupported=locationValue==="brooklyn"&&formatValue==="communion";var verseReady=Boolean(promptData&&promptData.verse&&!promptData.verseProblem);document.getElementById("submit").disabled=Boolean(unsupported||!date||!verseReady);}' +
     'function showError(message){var error=document.getElementById("error");error.textContent=message;error.hidden=false;updateSubmitState();}' +
     'function announcementMarkup(entry,index){entry=entry||{};var scope=entry.scope||"all";return "<div class=\\"announcement-entry\\"><div class=\\"announcement-header\\"><strong>Announcement "+(index+1)+" / 通知 "+(index+1)+"</strong><button type=\\"button\\" class=\\"announcement-remove\\">Remove / 移除</button></div><select class=\\"announcement-scope\\"><option value=\\"all\\""+(scope==="all"?" selected":"")+">Both locations / 两个地点</option><option value=\\"queens\\""+(scope==="queens"?" selected":"")+">Queens / 皇后区</option><option value=\\"brooklyn\\""+(scope==="brooklyn"?" selected":"")+">Brooklyn / 布鲁克林</option></select><label>English announcement / 英文通知</label><textarea class=\\"announcement-english\\" placeholder=\\"Optional English announcement\\">"+escapeHtml(entry.english||"")+"</textarea><label>Traditional Chinese announcement / 繁体中文通知</label><textarea class=\\"announcement-chinese\\" placeholder=\\"Optional Traditional Chinese announcement\\">"+escapeHtml(entry.chinese||"")+"</textarea></div>";}' +
     'function refreshAnnouncementLabels(){Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry strong"),function(label,index){label.textContent="Announcement "+(index+1)+" / 通知 "+(index+1);});}' +
     'function addAnnouncementEntry(entry){var list=document.getElementById("announcementList");var index=list.children.length;list.insertAdjacentHTML("beforeend",announcementMarkup(entry,index));refreshAnnouncementLabels();}' +
     'function renderAnnouncements(entries){var list=document.getElementById("announcementList");list.innerHTML="";if(!entries||!entries.length){entries=[{}];}entries.forEach(addAnnouncementEntry);refreshAnnouncementLabels();announcementsDirty=false;updateSubmitState();}' +
-    'function updateChapterOptions(selectedChapter){var book=document.getElementById("book");var selected=book.options[book.selectedIndex];var count=Number(selected.getAttribute("data-chapters")||0);var chapter=document.getElementById("chapter");chapter.innerHTML="";if(!count){chapter.disabled=true;chapter.add(new Option("Choose a book first — 请先选择书卷",""));updateSubmitState();return;}chapter.disabled=false;chapter.add(new Option("Choose chapter — 选择章",""));for(var i=1;i<=count;i++){chapter.add(new Option(String(i),String(i)));}if(selectedChapter){chapter.value=String(selectedChapter);}updateSubmitState();}' +
-    'function setVerseReference(reference){suppressVerseDirty=true;var value=String(reference||"").replace(/[：]/g,":").replace(/^(.+?):(\\d+):/,"$1 $2:").trim();var match=value.match(/^(.+?)\\s+(\\d+):(\\d+)(?:-(\\d+))?$/);var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses");book.value="";chapter.innerHTML="<option value=\\"\\">Choose a book first — 请先选择书卷</option>";chapter.disabled=true;verses.value="";if(match){for(var i=0;i<book.options.length;i++){if(String(book.options[i].getAttribute("data-english")||"").toLowerCase()===match[1].toLowerCase()){book.selectedIndex=i;updateChapterOptions(match[2]);verses.value=match[3]+(match[4]?"-"+match[4]:"");break;}}}suppressVerseDirty=false;updateSubmitState();}' +
-    'function renderPromptData(data){promptData=data||{scheduleVerse:""};renderAnnouncements(promptData.announcements||[]);setVerseReference(promptData.verse||"");verseDirty=false;updateSubmitState();}' +
-    'function loadPromptData(){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(renderPromptData).withFailureHandler(function(){renderPromptData({announcements:[],scheduleVerse:"",verse:""});}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
+    'function renderVerse(data){var view=document.getElementById("verseView");if(!data){view.className="verse-view";view.textContent="Reading Weekly Data… / 正在读取 Weekly Data…";return;}if(data.verseProblem){view.className="verse-view problem";view.textContent=data.verseProblem;return;}view.className="verse-view";view.textContent=data.verseLabels.english+"\\n"+data.verseLabels.chinese;}' +
+    'function renderPromptData(data){promptData=data||null;renderAnnouncements((data&&data.announcements)||[]);renderVerse(data);updateSubmitState();}' +
+    // A reply for an earlier date or location is dropped, so the verse shown is
+    // always the one for the current choices.
+    'function loadPromptData(){var request=++promptRequest;promptData=null;renderVerse(null);updateSubmitState();google.script.run.withSuccessHandler(function(data){if(request===promptRequest){renderPromptData(data);}}).withFailureHandler(function(error){if(request===promptRequest){renderPromptData({announcements:[],verse:"",verseProblem:"Could not read Weekly Data. Close this dialog, then open it again.\\n无法读取 Weekly Data。请关闭此对话框后重新打开。\\n\\n"+(error&&error.message?error.message:String(error))});}}).getPrintedBulletinPromptData(document.getElementById("date").value||initialRequest.date,locationValue);}' +
     'function collectAnnouncements(){var entries=[];Array.prototype.forEach.call(document.querySelectorAll(".announcement-entry"),function(card){var english=card.querySelector(".announcement-english").value.trim();var chinese=card.querySelector(".announcement-chinese").value.trim();if(english||chinese){entries.push({scope:card.querySelector(".announcement-scope").value,english:english,chinese:chinese});}});return entries;}' +
     'function showLoading(){document.getElementById("bulletinForm").hidden=true;document.getElementById("statusView").hidden=false;document.getElementById("statusView").innerHTML=' +
     '"<div class=\'loading\'><div class=\'spinner\'></div><h2>Creating printed bulletin…<br>正在创建纸质周刊…</h2><p class=\'intro\'>This may take a minute while the Google Doc is prepared.<br>创建 Google 文档可能需要一点时间。</p></div>";focusStatusView_();}' +
@@ -616,7 +628,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function runRequest(request){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(function(result){' +
     'if(result&&result.requiresConfirmation){var message=result.warning+"\\n\\n"+result.warningChinese+"\\n\\nContinue anyway? / 仍要继续吗？";if(window.confirm(message)){request.confirmLongVerse=true;runRequest(request);}else{updateSubmitState();}return;}' +
     'showLoading();google.script.run.withSuccessHandler(showResult).withFailureHandler(function(error){showGenerationError(error);}).createPrintedBulletinFromRequest(request);' +
-    '}).withFailureHandler(function(error){showError(error&&error.message?error.message:String(error));}).getPrintedBulletinPromptWarning(request.verse||"",Boolean(request.confirmLongVerse),{englishTranslation:request.englishTranslation});}' +
+    '}).withFailureHandler(function(error){showError(error&&error.message?error.message:String(error));}).getPrintedBulletinPromptWarning((promptData&&promptData.verse)||"",Boolean(request.confirmLongVerse),{englishTranslation:request.englishTranslation});}' +
     'document.getElementById("locationChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){locationValue=event.target.getAttribute("data-value");selectChoice("locationChoices",locationValue);updateLocationFormatAvailability();loadPromptData();}});' +
     'document.getElementById("formatChoices").addEventListener("click",function(event){if(event.target.classList.contains("choice")&&!event.target.disabled){formatValue=event.target.getAttribute("data-value");selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();updateSubmitState();}});' +
     'document.getElementById("addAnnouncement").addEventListener("click",function(){addAnnouncementEntry({});announcementsDirty=true;});' +
@@ -624,10 +636,12 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'document.getElementById("announcementList").addEventListener("change",function(){announcementsDirty=true;});' +
     'document.getElementById("announcementList").addEventListener("click",function(event){if(event.target.classList.contains("announcement-remove")){event.target.closest(".announcement-entry").remove();if(!document.getElementById("announcementList").children.length){addAnnouncementEntry({});}refreshAnnouncementLabels();announcementsDirty=true;}});' +
     'document.getElementById("date").addEventListener("change",function(){loadPromptData();updateSubmitState();});' +
-    'document.getElementById("book").addEventListener("change",function(){updateChapterOptions();if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
-    'document.getElementById("chapter").addEventListener("change",function(){if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
-    'document.getElementById("verses").addEventListener("input",function(){if(!suppressVerseDirty){verseDirty=true;}updateSubmitState();});' +
-    'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();var book=document.getElementById("book");var chapter=document.getElementById("chapter");var verses=document.getElementById("verses").value.trim();if(!date||!book.value||!chapter.value||!verses){showError("Sabbath date, Bible book, chapter, and verse/range are required. / 安息日日期、圣经书卷、章和节数（或节数范围）均为必填。");return;}if(verses&&!/^\\d+(?:-\\d+)?$/.test(verses)){showError("Verse(s) must look like 11 or 11-15. / 节数格式应为 11 或 11-15。");return;}var range=verses.split("-");if(range.length===2&&Number(range[1])<Number(range[0])){showError("The ending verse must not be smaller than the starting verse. / 结束节数不可小于开始节数。");return;}var reference=book.options[book.selectedIndex].getAttribute("data-english")+" "+chapter.value+":"+verses;var request={date:date,format:formatValue,location:locationValue,verse:reference,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}if(verseDirty){request.verseOverrideDirty=true;}runRequest(request);});' +
+    'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();if(!date){showError("Sabbath date is required. / 安息日日期为必填。");return;}if(!promptData||!promptData.verse||promptData.verseProblem){showError((promptData&&promptData.verseProblem)||"Reading Weekly Data… / 正在读取 Weekly Data…");return;}var request={date:date,format:formatValue,location:locationValue,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}runRequest(request);});' +
+    'function makeWordCopy(){var date=document.getElementById("date").value.trim();var wordStatus=document.getElementById("wordCopyStatus");var button=document.getElementById("wordCopy");if(!date){wordStatus.className="error";wordStatus.textContent="Choose the Sabbath date first. / 请先选择安息日日期。";return;}' +
+    'button.disabled=true;wordStatus.className="help";wordStatus.textContent="Making the Word copy… / 正在制作 Word 副本…";google.script.run.withSuccessHandler(function(result){button.disabled=false;wordStatus.className="help";' +
+    'wordStatus.innerHTML="<a class=\'link\' href=\'"+escapeHtml(result.downloadUrl)+"\'>Download Word copy / 下载 Word 副本</a><a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open in Google Drive / 在 Google 云端硬盘中打开</a>";})' +
+    '.withFailureHandler(function(error){button.disabled=false;wordStatus.className="error";wordStatus.textContent=(error&&error.message)||String(error);}).createPrintedBulletinWordCopy({date:date,location:locationValue});}' +
+    'document.getElementById("wordCopy").addEventListener("click",makeWordCopy);' +
     'selectChoice("locationChoices",locationValue);selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();loadPromptData();' +
     '</script></body></html>'
   );
@@ -750,25 +764,19 @@ function createPrintedBulletinFromRequest(request) {
   if (Object.prototype.hasOwnProperty.call(request, 'announcements')) {
     savePrintedBulletinAnnouncements_(request.date, request.announcements);
   }
-  var verseForGeneration = request.verse;
-  if (request.verseOverrideDirty) {
-    savePrintedBibleVerseOverride_(
-      request.date,
-      request.location,
-      request.verse,
-    );
-    verseForGeneration = '';
-  }
-  return createPrintedBulletin_(
+  // The verse is always Weekly Data's, as in the app (#622), so a verse sent
+  // with the request is ignored.
+  var result = createPrintedBulletin_(
     request.date,
     request.format,
     request.location,
-    verseForGeneration,
     {
       englishTranslation: request.englishTranslation,
       chineseTranslation: request.chineseTranslation,
     },
   );
+  prunePrintedBulletinProperties_();
+  return result;
 }
 
 function validatePrintedBulletinRequest_(request) {
@@ -779,13 +787,6 @@ function validatePrintedBulletinRequest_(request) {
   var requestedFormat = String(request.format || '').trim().toLowerCase();
   if (requestedFormat === 'communion') {
     validatePrintedBulletinCombination_(location, requestedFormat);
-  }
-  var verse = String(request.verse || '').trim();
-  if (!verse) {
-    throw new Error('Bible book, chapter, and verse/range are required. / 圣经书卷、章和节数（或节数范围）均为必填。');
-  }
-  if (!/^.+\s+\d+:\d+(?:-\d+)?$/.test(verse)) {
-    throw new Error('Bible reference must include a book, chapter, and verse/range. / 圣经经文必须包括书卷、章和节数（或节数范围）。');
   }
 }
 
@@ -801,19 +802,17 @@ function getPrintedBulletinAnnouncements(requestedDate) {
 function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
   var date = toIsoDate_(requestedDate);
   var location = normalizePrintedBulletinLocation_(requestedLocation);
-  var scheduleVerse = '';
-  var reviewedIntakeVerse = '';
   var bulletin = null;
+  var readError = '';
   if (date) {
     try {
       bulletin = buildBulletin_(date, { allowMissingSchedule: true });
-      scheduleVerse = bulletin[location] ? String(bulletin[location].bibleVerses || '') : '';
-      reviewedIntakeVerse = getReviewedBulletinIntakeBibleVerse_(date, location);
     } catch (error) {
       Logger.log('Could not load schedule data for the printed bulletin prompt: ' + error);
+      readError = String((error && error.message) || error);
     }
   }
-  var override = readPrintedBibleVerseOverride_(date, location);
+  var verse = bulletin && bulletin[location] ? String(bulletin[location].bibleVerses || '').trim() : '';
   var storedAnnouncements = readPrintedBulletinAnnouncements_(date);
   var announcements = storedAnnouncements.entries;
   if (!storedAnnouncements.found && bulletin) {
@@ -829,34 +828,68 @@ function getPrintedBulletinPromptData(requestedDate, requestedLocation) {
       });
     }
   }
-  // The reviewed Weekly Data row is the source of truth for this
-  // prompt. A prior printed-bulletin memory is only a fallback when that
-  // managed intake cell is blank, so an old manual selection cannot mask a
-  // newly reviewed Bible reference.
-  var preferredVerse = reviewedIntakeVerse || (override.found ? override.reference : scheduleVerse);
+  // The dialog shows Weekly Data's verse read-only, the same one the app
+  // shows, and can't create the Doc while it's blank or unreadable (#622).
+  var verseProblem = readError
+    ? 'Could not read Weekly Data. Close this dialog, then open it again.\n' +
+      '无法读取 Weekly Data。请关闭此对话框后重新打开。\n\n' +
+      readError
+    : getPrintedBibleVerseProblem_(verse);
   return {
     announcements: announcements,
-    scheduleVerse: scheduleVerse,
-    verse: preferredVerse,
-    hasVerseOverride: override.found && !reviewedIntakeVerse,
+    verse: verse,
+    verseLabels: verseProblem ? null : formatPrintedBibleVerseLabels_(verse),
+    verseProblem: verseProblem,
   };
 }
 
-function getReviewedBulletinIntakeBibleVerse_(requestedDate, location) {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var intakeRows = getBulletinIntakeRows_(spreadsheet, requestedDate, location);
-  if (!intakeRows) {
+/**
+ * Why the printed bulletin can't use this Weekly Data "Bible Verses" value,
+ * in English and Simplified Chinese, or '' if it can. Blank and TBD can't be
+ * printed, and nor can a passage the parser would drop, such as a misspelled
+ * book or a chapter the book doesn't have, so nothing is left out quietly.
+ */
+function getPrintedBibleVerseProblem_(reference) {
+  var value = String(reference || '').trim();
+  if (!value || isPhysicalTbd_(value)) {
+    return (
+      'Weekly Data has no Bible Verses for this Sabbath and location. Close this dialog, add the ' +
+      'reference in Weekly Data, then open the dialog again.\n' +
+      '“Weekly Data”中没有这个安息日和地点的“Bible Verses”。请关闭此对话框，在“Weekly Data”中' +
+      '填写经文后重新打开。'
+    );
+  }
+  var unreadable = parsePhysicalBibleReferencePieces_(value)
+    .filter(function (piece) {
+      return !piece.reference;
+    })
+    .map(function (piece) {
+      return '“' + piece.text + '”';
+    });
+  if (!unreadable.length) {
     return '';
   }
+  return (
+    'Weekly Data\'s Bible Verses can\'t be read: ' + unreadable.join(', ') + '. Write each passage ' +
+    'as book chapter:verse, such as John 3:16 or John 3:16-18, with a semicolon between passages. ' +
+    'Close this dialog, fix it in Weekly Data, then open the dialog again.\n' +
+    '无法读取“Weekly Data”中的“Bible Verses”：' + unreadable.join('、') + '。每段经文请写成“书卷 章:节”，' +
+    '例如 John 3:16 或 John 3:16-18，多段经文之间用分号隔开。请关闭此对话框，在“Weekly Data”中修改后重新打开。'
+  );
+}
 
-  var reference = '';
-  intakeRows.rows.forEach(function (row) {
-    var value = valueForAliases_(intakeRows.headers, row, ['Bible Verses']);
-    if (!isBlank_(value)) {
-      reference = displayValue_(value);
-    }
-  });
-  return reference;
+// The passages as the bulletin prints them, without the translation names,
+// such as "John 3:16–18; Psalm 23" and "約翰福音 3:16–18；詩篇 23".
+function formatPrintedBibleVerseLabels_(reference) {
+  var passages = parsePhysicalBibleReferences_(reference);
+  return {
+    english: passages.map(function (passage) {
+      return formatPhysicalBibleReference_(passage, 'english');
+    }).join('; '),
+    chinese: passages.map(function (passage) {
+      return formatPhysicalBibleReference_(passage, 'chinese');
+    }).join('；'),
+  };
 }
 
 function savePrintedBulletinAnnouncements_(requestedDate, entries) {
@@ -913,6 +946,70 @@ function readPrintedBulletinAnnouncements_(requestedDate) {
   }
 }
 
+/**
+ * Script Properties keep each bulletin's Doc ID, and each week's printed
+ * announcements, by Sabbath. The project settings page can manage only 50
+ * properties by hand, so after each Doc is made this deletes the per-week ones
+ * for Sabbaths more than four weeks past, and every print-only verse the old
+ * verse picker left (#622). Recent and future weeks stay, so a reprint still
+ * updates its Doc. The Docs and PDFs stay in Drive, and no other property is
+ * touched. Returns the number deleted.
+ */
+function prunePrintedBulletinProperties_(today) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    Logger.log('Skipped pruning Script Properties: another run holds the lock.');
+    return 0;
+  }
+  try {
+    var properties = PropertiesService.getScriptProperties();
+    var cutoff = addPrintedBulletinDays_(
+      toIsoDate_(today) || getPrintedBulletinToday_(),
+      -PRINTED_BULLETIN_CONFIG.weeklyPropertyRetentionDays,
+    );
+    var expired = properties.getKeys().filter(function (key) {
+      return isExpiredPrintedBulletinProperty_(key, cutoff);
+    });
+    expired.forEach(function (key) {
+      properties.deleteProperty(key);
+    });
+    Logger.log('Pruned ' + expired.length + ' old printed bulletin Script Properties.');
+    return expired.length;
+  } catch (error) {
+    // Pruning never stops the bulletin; the next run tries again.
+    Logger.log('Could not prune printed bulletin Script Properties: ' + error);
+    return 0;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Only these exact forms are per-week keys. Locations are optional only where
+// a legacy Queens key once had none.
+function isExpiredPrintedBulletinProperty_(key, cutoff) {
+  var config = PRINTED_BULLETIN_CONFIG;
+  var match = String(key).match(/^(.+?)(?:(QUEENS|BROOKLYN)_)?(\d{4}-\d{2}-\d{2})$/);
+  if (!match || toIsoDate_(match[3]) !== match[3]) {
+    return false;
+  }
+  var prefix = match[1];
+  var hasLocation = Boolean(match[2]);
+  if (prefix === config.printedBibleVersePropertyPrefix) {
+    return hasLocation;
+  }
+  var weekly =
+    prefix === config.documentPropertyPrefix ||
+    prefix === config.pdfPropertyPrefix ||
+    (prefix === config.printedAnnouncementsPropertyPrefix && !hasLocation);
+  return weekly && match[3] < cutoff;
+}
+
+function addPrintedBulletinDays_(date, days) {
+  var parts = date.split('-');
+  var shifted = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + days));
+  return [shifted.getUTCFullYear(), pad2_(shifted.getUTCMonth() + 1), pad2_(shifted.getUTCDate())].join('-');
+}
+
 function getPrintedBulletinAnnouncementsPropertyKey_(date) {
   return PRINTED_BULLETIN_CONFIG.printedAnnouncementsPropertyPrefix + date;
 }
@@ -961,55 +1058,6 @@ function getPhysicalUtf8ByteLength_(value) {
     return Utilities.newBlob(text).getBytes().length;
   }
   return encodeURIComponent(text).replace(/%[0-9A-F]{2}/g, 'x').length;
-}
-
-function savePrintedBibleVerseOverride_(requestedDate, requestedLocation, reference) {
-  var date = toIsoDate_(requestedDate);
-  var location = normalizePrintedBulletinLocation_(requestedLocation);
-  if (!date) {
-    throw new Error('A valid Sabbath date is required for the printed Bible verse');
-  }
-
-  var normalizedReference = String(reference || '').trim();
-  if (normalizedReference.length > 300) {
-    throw new Error('The printed Bible verse reference is too long.');
-  }
-
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    PropertiesService.getScriptProperties().setProperty(
-      getPrintedBibleVersePropertyKey_(date, location),
-      normalizedReference,
-    );
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function readPrintedBibleVerseOverride_(requestedDate, requestedLocation) {
-  var date = toIsoDate_(requestedDate);
-  var location = normalizePrintedBulletinLocation_(requestedLocation);
-  if (!date || typeof PropertiesService === 'undefined') {
-    return { found: false, reference: '' };
-  }
-
-  var raw = PropertiesService.getScriptProperties().getProperty(
-    getPrintedBibleVersePropertyKey_(date, location),
-  );
-  return {
-    found: raw !== null && typeof raw !== 'undefined',
-    reference: String(raw || '').trim(),
-  };
-}
-
-function getPrintedBibleVersePropertyKey_(date, location) {
-  return (
-    PRINTED_BULLETIN_CONFIG.printedBibleVersePropertyPrefix +
-    String(location || '').toUpperCase() +
-    '_' +
-    date
-  );
 }
 
 // A link straight to the Weekly Data tab, or else to the spreadsheet.
@@ -1114,7 +1162,6 @@ function createPrintedBulletin_(
   requestedDate,
   requestedFormat,
   requestedLocation,
-  studyVerseReference,
   requestedBibleTranslations,
 ) {
   var lock = LockService.getScriptLock();
@@ -1124,7 +1171,6 @@ function createPrintedBulletin_(
       requestedDate,
       requestedFormat,
       requestedLocation,
-      studyVerseReference,
       requestedBibleTranslations,
     );
   } finally {
@@ -1136,7 +1182,6 @@ function createPrintedBulletinUnlocked_(
   requestedDate,
   requestedFormat,
   requestedLocation,
-  studyVerseReference,
   requestedBibleTranslations,
 ) {
   var date = toIsoDate_(requestedDate);
@@ -1151,17 +1196,13 @@ function createPrintedBulletinUnlocked_(
   // says why (#580).
   var bulletin = buildBulletin_(date, { includeFullNames: true, allowMissingSchedule: true });
   var scheduleNotSet = Boolean(bulletin.scheduleNotSet);
+  var verseProblem = getPrintedBibleVerseProblem_(bulletin[location] && bulletin[location].bibleVerses);
+  if (verseProblem) {
+    throw new Error(verseProblem);
+  }
   var printedAnnouncements = readPrintedBulletinAnnouncements_(date);
   bulletin.printedAnnouncements = printedAnnouncements.entries;
   bulletin.hasPrintedAnnouncements = printedAnnouncements.found;
-  var printedVerseOverride = readPrintedBibleVerseOverride_(date, location);
-  if (printedVerseOverride.found && bulletin[location]) {
-    bulletin[location].bibleVerses = printedVerseOverride.reference;
-  }
-  var promptedVerse = String(studyVerseReference || '').trim();
-  if (promptedVerse && bulletin[location]) {
-    bulletin[location].bibleVerses = promptedVerse;
-  }
   bulletin = preparePrintedBulletinForPrint_(bulletin, nameDictionary);
   bulletin.physicalBibleTranslations = bibleTranslations;
   hydratePhysicalBibleVerses_(bulletin, bibleTranslations);
@@ -1221,6 +1262,184 @@ function createPrintedBulletinUnlocked_(
     url: document.getUrl(),
     scheduleNotSet: scheduleNotSet,
   };
+}
+
+/**
+ * Dialog action: makes the Word copy of a Sabbath's Doc for printing on a Mac
+ * (#627), next to the Doc in Drive, replacing the copy made before. It reads the
+ * Doc as it stands, so make it after the last edit. Any operator can.
+ */
+function createPrintedBulletinWordCopy(request) {
+  var date = toIsoDate_(request && request.date);
+  if (!date) {
+    throw new Error('Sabbath date is required. / 安息日日期为必填。');
+  }
+  var location = normalizePrintedBulletinLocation_(request && request.location);
+  var properties = PropertiesService.getScriptProperties();
+  var documentId =
+    properties.getProperty(
+      getPrintedBulletinPropertyKey_(PRINTED_BULLETIN_CONFIG.documentPropertyPrefix, location, date),
+    ) ||
+    (location === 'queens' ? properties.getProperty(PRINTED_BULLETIN_CONFIG.documentPropertyPrefix + date) : null);
+  var file = null;
+  try {
+    file = documentId ? DriveApp.getFileById(documentId) : null;
+  } catch (error) {
+    file = null;
+  }
+  if (!file || file.isTrashed()) {
+    throw new Error(
+      'There is no Google Doc for this Sabbath and location yet. Create it first, then make the Word copy.\n' +
+        '这个安息日和地点还没有 Google 文档。请先创建，再制作 Word 副本。',
+    );
+  }
+
+  var response = UrlFetchApp.fetch(
+    'https://www.googleapis.com/drive/v3/files/' +
+      encodeURIComponent(documentId) +
+      '/export?mimeType=' +
+      encodeURIComponent(PRINTED_BULLETIN_WORD_COPY.mimeType),
+    {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true,
+    },
+  );
+  if (response.getResponseCode() !== 200) {
+    throw new Error(
+      'Google Drive could not export the Doc as Word (' + response.getResponseCode() + '). Try again in a minute.\n' +
+        'Google 云端硬盘无法将文档导出为 Word（' + response.getResponseCode() + '）。请稍后再试。',
+    );
+  }
+
+  var lineHeight = Number(properties.getProperty(PRINTED_BULLETIN_WORD_COPY.lineHeightProperty));
+  if (!(lineHeight >= 0.8 && lineHeight <= 2)) {
+    lineHeight = PRINTED_BULLETIN_WORD_COPY.lineHeight;
+  }
+  var fonts = readPrintedBulletinFonts_();
+  var parts = Utilities.unzip(response.getBlob());
+  var styles = parts.filter(function (part) {
+    return part.getName() === 'word/styles.xml';
+  })[0];
+  var defaults = readPrintedDocxDefaults_(styles ? styles.getDataAsString('UTF-8') : '');
+  var name = file.getName() + PRINTED_BULLETIN_WORD_COPY.nameSuffix;
+  var rewritten = parts.map(function (part) {
+    var partName = part.getName();
+    if (partName !== 'word/document.xml' && partName !== 'word/styles.xml') {
+      return part;
+    }
+    var xml = part.getDataAsString('UTF-8');
+    xml =
+      partName === 'word/document.xml'
+        ? convertPrintedDocxDocumentXml_(xml, {
+            chineseFonts: [fonts.chinese, fonts.chineseFallback],
+            lineHeight: lineHeight,
+            defaultSize: defaults.size,
+            defaultMultiple: defaults.multiple,
+          })
+        : setPrintedDocxEastAsiaFonts_(xml, []);
+    return Utilities.newBlob(xml, 'application/xml', partName);
+  });
+  var docx = Utilities.zip(rewritten, name).setContentType(PRINTED_BULLETIN_WORD_COPY.mimeType);
+
+  var parents = file.getParents();
+  var folder = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
+  var previous = folder.getFilesByName(name);
+  while (previous.hasNext()) {
+    previous.next().setTrashed(true);
+  }
+  var copy = folder.createFile(docx);
+  return {
+    name: name,
+    url: copy.getUrl(),
+    downloadUrl: 'https://drive.google.com/uc?export=download&id=' + copy.getId(),
+  };
+}
+
+// styles.xml's default font size, in points, and line spacing multiple, which a
+// paragraph or run without its own uses.
+function readPrintedDocxDefaults_(stylesXml) {
+  var xml = String(stylesXml || '');
+  var runDefaults = (xml.match(/<w:rPrDefault>[\s\S]*?<\/w:rPrDefault>/) || [''])[0];
+  var paragraphDefaults = (xml.match(/<w:pPrDefault>[\s\S]*?<\/w:pPrDefault>/) || [''])[0];
+  var size = runDefaults.match(/<w:sz w:val="(\d+)"/);
+  var spacing = paragraphDefaults.match(/<w:spacing\b[^>]*>/);
+  var multiple = 1;
+  if (spacing && /w:line="(\d+)"/.test(spacing[0]) && !/w:lineRule="(exact|atLeast)"/.test(spacing[0])) {
+    multiple = Number(spacing[0].match(/w:line="(\d+)"/)[1]) / 240;
+  }
+  return { size: size ? Number(size[1]) / 2 : 11, multiple: multiple };
+}
+
+// Every w:rFonts gets Songti TC as its East Asian font, with no theme font to
+// override it. A run in one of `chineseFonts`, the Doc's Chinese and fallback
+// fonts, gets Songti TC in every slot, so a character Word files under Latin,
+// such as a full-width form, can't print in a font the Mac doesn't have.
+function setPrintedDocxEastAsiaFonts_(xml, chineseFonts) {
+  var songti = PRINTED_BULLETIN_WORD_COPY.chineseFont;
+  return String(xml).replace(/<w:rFonts\b([^>]*?)(\/?)>/g, function (match, attributes, selfClosing) {
+    var ascii = (attributes.match(/w:ascii="([^"]*)"/) || [])[1] || '';
+    var chinese = (chineseFonts || []).indexOf(ascii) !== -1;
+    var kept = attributes
+      .replace(/\s+w:(eastAsia|eastAsiaTheme|hint)="[^"]*"/g, '')
+      .replace(/\s+w:(ascii|hAnsi|cs|asciiTheme|hAnsiTheme|cstheme)="[^"]*"/g, function (slot) {
+        return chinese ? '' : slot;
+      });
+    var slots = chinese
+      ? ' w:ascii="' + songti + '" w:hAnsi="' + songti + '" w:cs="' + songti + '"'
+      : '';
+    return '<w:rFonts' + kept + slots + ' w:eastAsia="' + songti + '"' + selfClosing + '>';
+  });
+}
+
+/**
+ * The Word copy's document.xml: Songti TC for Chinese, no document grid for the
+ * lines to snap to, and an exact line height on every paragraph without a
+ * picture. The height is `lineHeight` times the paragraph's largest font size,
+ * times its own line spacing (0.9 for the giving notes).
+ */
+function convertPrintedDocxDocumentXml_(xml, options) {
+  var lineHeight = options.lineHeight;
+  var defaultSize = options.defaultSize || 11;
+  var defaultMultiple = options.defaultMultiple || 1;
+  var converted = String(xml).replace(/<w:docGrid\b[^>]*\/>/g, '');
+  // A paragraph's own opening tag, not a self-closing <w:p/>.
+  converted = converted.replace(/<w:p(?:\s[^>]*[^\/>])?>[\s\S]*?<\/w:p>/g, function (paragraph) {
+    if (/<w:(drawing|pict|object)\b/.test(paragraph)) {
+      return paragraph;
+    }
+    var sizes = (paragraph.match(/<w:sz w:val="\d+"/g) || []).map(function (size) {
+      return Number(size.match(/\d+/)[0]) / 2;
+    });
+    var largest = sizes.length ? Math.max.apply(null, sizes) : defaultSize;
+    var properties = (paragraph.match(/<w:pPr>[\s\S]*?<\/w:pPr>/) || [''])[0];
+    // The paragraph's own w:spacing, not a run's letter spacing, which is also
+    // w:spacing but inside a w:rPr.
+    var own = properties.split('<w:rPr>')[0];
+    var spacing = own.match(/<w:spacing\b[^>]*\/>/);
+    var multiple = defaultMultiple;
+    if (spacing && /w:line="(\d+)"/.test(spacing[0]) && !/w:lineRule="(exact|atLeast)"/.test(spacing[0])) {
+      multiple = Number(spacing[0].match(/w:line="(\d+)"/)[1]) / 240;
+    }
+    var exact = ' w:line="' + Math.round(largest * lineHeight * multiple * 20) + '" w:lineRule="exact"';
+    var withSpacing;
+    if (spacing) {
+      withSpacing = properties.replace(
+        spacing[0],
+        spacing[0].replace(/\s+w:(line|lineRule)="[^"]*"/g, '').replace(/\s*\/>$/, exact + '/>'),
+      );
+    } else if (properties) {
+      // w:spacing goes before these in w:pPr, as the schema orders them.
+      var later = own.match(
+        /<w:(ind|contextualSpacing|mirrorIndents|suppressOverlap|jc|textDirection|textAlignment|textboxTightWrap|outlineLvl|divId|cnfStyle|sectPr|pPrChange)\b/,
+      );
+      var before = later ? later[0] : properties.indexOf('<w:rPr>') !== -1 ? '<w:rPr>' : '</w:pPr>';
+      withSpacing = properties.replace(before, '<w:spacing' + exact + '/>' + before);
+    } else {
+      return paragraph.replace(/^(<w:p[^>]*>)/, '$1<w:pPr><w:spacing' + exact + '/></w:pPr>');
+    }
+    return paragraph.replace(properties, withSpacing);
+  });
+  return setPrintedDocxEastAsiaFonts_(converted, options.chineseFonts);
 }
 
 function tryOpenExistingPrintedBulletinDocument_(
@@ -1668,17 +1887,14 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
   return english || chinese ? printedBilingualText_(english, chinese) : physicalTbdText_();
 }
 
-/**
- * The Sabbath School hymns on one line per language, such as
- * "第413首 · 第205首" over "AH 348 · AH 206". Each cell holds one hymn, typed in
- * either language: Chinese text or a bare number is a Chinese hymnal number,
- * and a bare number prints as 第N首. What was typed is printed; the other
- * language is filled in by number where the hymnals' number maps have it, and
- * otherwise repeats what was typed. Two identical lines print as one.
- */
-function formatSabbathSchoolHymnsForPrint_(hymns) {
-  var english = [];
-  var chinese = [];
+// One line per Sabbath School hymn: the English, a dot, then the Chinese, where
+// the hymnal map has the other one, such as
+// "AH 348 The Church Has One Foundation · 第413首 教會根基" for a typed
+// "第413首 教會根基"; otherwise the hymn as typed. A bare number is a Chinese
+// hymnal number, and prints as 第N首. The other side gets its number and title
+// from resolvePrintedHymnText_ (#619).
+function getPrintedSabbathSchoolHymnLines_(hymns) {
+  var lines = [];
   (hymns || []).forEach(function (value) {
     var entry = String(value === null || typeof value === 'undefined' ? '' : value).trim();
     if (!entry) {
@@ -1688,15 +1904,44 @@ function formatSabbathSchoolHymnsForPrint_(hymns) {
     var resolved = isEnglish
       ? resolvePrintedHymnText_(entry, '')
       : resolvePrintedHymnText_('', /^\d+$/.test(entry) ? '第' + entry + '首' : entry);
-    english.push(resolved.english || entry);
-    chinese.push(resolved.chinese || entry);
+    var english = resolved.english || entry;
+    var chinese = resolved.chinese || entry;
+    lines.push(english === chinese ? english : english + ' · ' + chinese);
   });
-  if (!english.length) {
-    return physicalTbdText_();
-  }
-  var englishLine = english.join(' · ');
-  var chineseLine = chinese.join(' · ');
-  return englishLine === chineseLine ? englishLine : printedBilingualText_(englishLine, chineseLine);
+  return lines;
+}
+
+function formatSabbathSchoolHymnsForPrint_(hymns) {
+  var lines = getPrintedSabbathSchoolHymnLines_(hymns);
+  return lines.length ? lines.join('\n') : physicalTbdText_();
+}
+
+/**
+ * The Sabbath School's Opening Hymn and Closing Hymn rows. The closing sings
+ * the opening hymns again, so its row says so instead of listing them twice.
+ * `openingChinese` is the location's Chinese label for the opening hymns.
+ */
+function getPrintedSabbathSchoolHymnRows_(hymns, openingChinese, closingChinese) {
+  var lines = getPrintedSabbathSchoolHymnLines_(hymns);
+  var plural = lines.length > 1;
+  var congregation = printedBilingualText_('Congregation', '會眾');
+  return {
+    opening: [
+      printedBilingualText_(plural ? 'Opening Hymns' : 'Opening Hymn', openingChinese),
+      formatSabbathSchoolHymnsForPrint_(hymns),
+      congregation,
+    ],
+    closing: [
+      printedBilingualText_(plural ? 'Closing Hymns' : 'Closing Hymn', closingChinese),
+      lines.length
+        ? printedBilingualText_(
+            plural ? 'Same as Opening Hymns' : 'Same as Opening Hymn',
+            '同' + openingChinese,
+          )
+        : physicalTbdText_(),
+      congregation,
+    ],
+  };
 }
 
 function resolvePhysicalBiblePassage_(reference, bibleTranslations, includeVerseLines) {
@@ -1740,6 +1985,16 @@ function resolvePhysicalBiblePassage_(reference, bibleTranslations, includeVerse
 }
 
 function parsePhysicalBibleReferences_(value) {
+  return parsePhysicalBibleReferencePieces_(value)
+    .map(function (piece) {
+      return piece.reference;
+    })
+    .filter(Boolean);
+}
+
+// Each passage in a reference, such as "John 3:16; Psalm 23", with its parsed
+// reference, or null when it can't be read.
+function parsePhysicalBibleReferencePieces_(value) {
   var source = String(value || '')
     .replace(/[：]/g, ':')
     .replace(/[–—]/g, '-')
@@ -1749,7 +2004,7 @@ function parsePhysicalBibleReferences_(value) {
     return [];
   }
 
-  var pieces = source
+  return source
     .split(/[;；,，\n]/)
     .reduce(function (all, piece) {
       return all.concat(piece.split(/\s+(?:and|&)\s+/i));
@@ -1757,41 +2012,45 @@ function parsePhysicalBibleReferences_(value) {
     .map(function (piece) {
       return piece.trim();
     })
-    .filter(Boolean);
-  var references = [];
-
-  pieces.forEach(function (piece) {
-    // Accept both "Jeremiah 29:11-15" and the common shorthand
-    // "Jeremiah:29:11-15".
-    piece = piece.replace(/^(.+?):(\d+):/, '$1 $2:');
-    var match = piece.match(
-      /^(.+?)\s+(\d+)(?:\s*:\s*(\d+)(?:\s*-\s*(\d+))?)?$/,
-    );
-    if (!match) {
-      return;
-    }
-
-    var bookName = normalizePhysicalBibleBookName_(match[1]);
-    var bookId = PRINTED_BIBLE_BOOK_IDS[bookName];
-    if (!bookId) {
-      return;
-    }
-
-    var verseStart = match[3] ? Number(match[3]) : null;
-    var verseEnd = match[4] ? Number(match[4]) : verseStart;
-    if (verseStart && verseEnd < verseStart) {
-      return;
-    }
-
-    references.push({
-      bookId: bookId,
-      chapter: Number(match[2]),
-      verseStart: verseStart,
-      verseEnd: verseEnd,
+    .filter(Boolean)
+    .map(function (piece) {
+      return { text: piece, reference: parsePhysicalBibleReferencePiece_(piece) };
     });
-  });
+}
 
-  return references;
+function parsePhysicalBibleReferencePiece_(piece) {
+  // Accept both "Jeremiah 29:11-15" and the common shorthand
+  // "Jeremiah:29:11-15".
+  piece = piece.replace(/^(.+?):(\d+):/, '$1 $2:');
+  var match = piece.match(
+    /^(.+?)\s+(\d+)(?:\s*:\s*(\d+)(?:\s*-\s*(\d+))?)?$/,
+  );
+  if (!match) {
+    return null;
+  }
+
+  var bookName = normalizePhysicalBibleBookName_(match[1]);
+  var bookId = PRINTED_BIBLE_BOOK_IDS[bookName];
+  if (!bookId) {
+    return null;
+  }
+
+  var chapter = Number(match[2]);
+  if (chapter < 1 || chapter > (PRINTED_BIBLE_CHAPTER_COUNTS[bookId] || chapter)) {
+    return null;
+  }
+  var verseStart = match[3] ? Number(match[3]) : null;
+  var verseEnd = match[4] ? Number(match[4]) : verseStart;
+  if (verseStart === 0 || (verseStart && verseEnd < verseStart)) {
+    return null;
+  }
+
+  return {
+    bookId: bookId,
+    chapter: chapter,
+    verseStart: verseStart,
+    verseEnd: verseEnd,
+  };
 }
 
 function formatPhysicalBibleReferenceLabels_(location, bibleTranslations) {
@@ -2622,13 +2881,9 @@ function appendGivingText_(cell, options) {
     false,
     0.9,
   );
-  appendCompactCenteredText_(
-    cell,
-    'Stocks/equities: We recommend donor-advised funds; see our church\'s mobile app or contact treasury@nyccsda.org. Nonprofit EIN: 11-3004814.',
-    PRINTED_BULLETIN_TYPE.bodySize,
-    false,
-    0.9,
-  );
+  // Stock and donor-advised fund gifts are left to the app's Give page, which
+  // has the EIN and the steps in every language. An English-only line for them
+  // here pushed the bulletin onto a second page at the 10-point minimum.
 }
 
 function appendGivingQrPlaceholders_(cell, options) {
@@ -2891,6 +3146,13 @@ function getPrintedBulletinQrImageFileName_(kind, location) {
   return '';
 }
 
+// The roster's Chinese role labels follow the pastor's: four characters, with
+// this dot between two-character pairs (崇拜･主席), so each fits on one line.
+// U+FF65 is UoqMunThenKhung's half-width middle dot, centred on the
+// characters. U+00B7 is narrower but sits low, U+30FB is a full character
+// wide, and the font has no U+2027.
+var PRINTED_ROLE_DOT = '･';
+
 function appendHorizontalScheduleTable_(cell, current, next, entries, currentData, nextData) {
   current = withPhysicalRosterNames_(current);
   next = withPhysicalRosterNames_(next);
@@ -2917,9 +3179,12 @@ function appendHorizontalScheduleTable_(cell, current, next, entries, currentDat
   appendDataTable_(cell, rows, {
     borderWidth: 0.75,
     borderColor: '#000000',
-    // Sized for 10-point text: the narrow number column and 1-point side
-    // padding leave the names as much room as the panel allows.
-    columnWidths: [16, 66, 58, 62, 46, 62, 46],
+    // Sized for 10-point text with 1-point side padding, so each column holds
+    // 2 points less than its width. In Times New Roman, "Flower Offering" is
+    // 65.3 points and "Sacrifice-Global" 66.1. The widest Chinese role label
+    // (崇拜･主席) is 45 points and 尚未安排 is 40. At 359 points the grid is
+    // still narrower than the 360-point announcements table above it.
+    columnWidths: [14, 69, 48, 70, 44, 70, 44],
     alignments: [
       DocumentApp.HorizontalAlignment.LEFT,
       DocumentApp.HorizontalAlignment.CENTER,
@@ -3240,6 +3505,152 @@ function readPrintedBulletinFonts_() {
       PRINTED_BULLETIN_TYPE.chineseFallbackFont,
     ),
   };
+}
+
+// The fonts Printed Bulletin → Fonts… offers (#624). Each is in Docs' Font →
+// More fonts list, so Docs can print it: a name Docs doesn't know would print
+// in its fallback font without saying why. The Chinese ones have the
+// Traditional characters the bulletin uses; Docs' others in that list add
+// bopomofo or are display faces.
+var PRINTED_BULLETIN_FONT_CHOICES = Object.freeze({
+  chinese: [
+    { font: 'Noto Sans TC', label: 'Noto Sans TC 思源黑体 (sans / 黑体)' },
+    { font: 'Chocolate Classical Sans', label: 'Chocolate Classical Sans 朱古力黑体 (classic sans / 古典黑体)' },
+    { font: 'Iansui', label: 'Iansui 芫荽 (brush / 楷体风格)' },
+  ],
+  latin: [
+    { font: 'Georgia', label: 'Georgia' },
+    { font: 'EB Garamond', label: 'EB Garamond' },
+  ],
+});
+
+// What the dialog shows: each slot's choices, the default first, and the
+// font now set. A font set by hand that isn't a choice is added, so saving
+// the dialog keeps it.
+function getPrintedBulletinFontSettings_() {
+  var properties = PropertiesService.getScriptProperties();
+  var slot = function (key, propertyName, defaultFont, defaultLabel) {
+    var current = String(properties.getProperty(propertyName) || '').trim();
+    var choices = [{ font: '', label: defaultLabel }].concat(PRINTED_BULLETIN_FONT_CHOICES[key]);
+    var known = choices.some(function (choice) {
+      return choice.font === current;
+    });
+    if (current && !known) {
+      choices.push({ font: current, label: current + ' (set by hand / 手动设置)' });
+    }
+    return { current: current === defaultFont ? '' : current, choices: choices };
+  };
+  return {
+    chinese: slot(
+      'chinese',
+      PRINTED_BULLETIN_TYPE.chineseFontProperty,
+      PRINTED_BULLETIN_TYPE.chineseFont,
+      'Default: UoqMunThenKhung 宇文天穹 (Ming / 明体)',
+    ),
+    latin: slot(
+      'latin',
+      PRINTED_BULLETIN_TYPE.latinFontProperty,
+      PRINTED_BULLETIN_TYPE.latinFont,
+      'Default: Times New Roman',
+    ),
+  };
+}
+
+function openPrintedBulletinFontsDialog() {
+  var output = HtmlService.createHtmlOutput(
+    buildPrintedBulletinFontsHtml_(getPrintedBulletinFontSettings_()),
+  )
+    .setWidth(520)
+    .setHeight(430);
+  SpreadsheetApp.getUi().showModalDialog(output, 'Printed bulletin fonts / 纸质周刊字体');
+  return null;
+}
+
+/**
+ * Dialog action: saves the Chinese and English fonts. Any operator can, as
+ * each week's Doc is checked before it's printed. A blank font is the default
+ * and deletes its property. Only a listed font, or the one already set, is
+ * accepted.
+ */
+function savePrintedBulletinFonts(request) {
+  var settings = getPrintedBulletinFontSettings_();
+  var changes = [
+    ['chinese', PRINTED_BULLETIN_TYPE.chineseFontProperty],
+    ['latin', PRINTED_BULLETIN_TYPE.latinFontProperty],
+  ].map(function (entry) {
+    var font = String((request && request[entry[0]]) || '').trim();
+    var allowed = settings[entry[0]].choices.some(function (choice) {
+      return choice.font === font;
+    });
+    if (!allowed) {
+      throw new Error('Choose a font from the list. / 请从列表中选择字体。');
+    }
+    return { propertyName: entry[1], font: font };
+  });
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var properties = PropertiesService.getScriptProperties();
+    changes.forEach(function (change) {
+      if (change.font) {
+        properties.setProperty(change.propertyName, change.font);
+      } else {
+        properties.deleteProperty(change.propertyName);
+      }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  return getPrintedBulletinFontSettings_();
+}
+
+function buildPrintedBulletinFontsHtml_(settings) {
+  var select = function (id, slot) {
+    return (
+      '<select id="' + id + '">' +
+      slot.choices
+        .map(function (choice) {
+          return (
+            '<option value="' + escapePrintedBulletinHtml_(choice.font) + '"' +
+            (choice.font === slot.current ? ' selected' : '') + '>' +
+            escapePrintedBulletinHtml_(choice.label) + '</option>'
+          );
+        })
+        .join('') +
+      '</select>'
+    );
+  };
+  return (
+    '<!doctype html><html><head><base target="_top"><style>' +
+    'body{color:#202124;font:14px Arial,sans-serif;margin:0;padding:4px 2px 12px;}' +
+    '.intro{color:#5f6368;font-size:13px;line-height:1.5;margin:0 0 14px;}' +
+    'label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px;}' +
+    'select{background:#fff;border:1px solid #bdc1c6;border-radius:4px;box-sizing:border-box;font:14px Arial,sans-serif;padding:8px 9px;width:100%;}' +
+    '.status{font-size:13px;line-height:1.45;margin-top:12px;min-height:1.2em;white-space:pre-line;}' +
+    '.status.ok{color:#137333;}.status.error{color:#a50e0e;}' +
+    '.actions{display:flex;gap:9px;justify-content:flex-end;margin-top:16px;}' +
+    'button{border:0;border-radius:4px;cursor:pointer;font:14px Arial,sans-serif;padding:8px 16px;}' +
+    '.cancel{background:#f1f3f4;color:#3c4043;}.save{background:#1a73e8;color:#fff;}' +
+    'button:disabled{cursor:default;opacity:.5;}' +
+    '</style></head><body>' +
+    '<p class="intro">These fonts are for every printed bulletin made from now on, by anyone. A Doc already made keeps its fonts until it\'s made again with Create Google Doc…. A different font can change the line heights, so check that the next Doc still fits its pages.<br>' +
+    '这些字体将用于此后任何人创建的所有纸质周刊。已创建的文档保留原字体，直到再次使用“Create Google Doc…”创建。更换字体可能改变行高，请检查下一份文档是否仍在原页数内。</p>' +
+    '<p class="intro">Songti TC (宋體-繁) isn\'t here: Google Docs can\'t print it. To print in it, use the Word copy in Create Google Doc…, on a Mac with Word.<br>' +
+    '这里没有宋体-繁（Songti TC）：Google 文档无法打印该字体。如需用该字体打印，请在 Mac 上用 Word 打开“Create Google Doc…”中的 Word 副本。</p>' +
+    '<label for="chinese">Chinese font<br>中文字体</label>' + select('chinese', settings.chinese) +
+    '<label for="latin">English font<br>英文字体</label>' + select('latin', settings.latin) +
+    '<div id="status" class="status" aria-live="polite"></div>' +
+    '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
+    '<button type="button" class="save" id="save">Save / 保存</button></div>' +
+    '<script>' +
+    'var save=document.getElementById("save");var saveStatus=document.getElementById("status");' +
+    'save.onclick=function(){save.disabled=true;saveStatus.className="status";saveStatus.textContent="Saving… / 正在保存…";' +
+    'google.script.run.withSuccessHandler(function(){save.disabled=false;saveStatus.className="status ok";' +
+    'saveStatus.textContent="Saved. The next Create Google Doc… uses these fonts.\\n已保存。下次“Create Google Doc…”将使用这些字体。";})' +
+    '.withFailureHandler(function(error){save.disabled=false;saveStatus.className="status error";saveStatus.textContent=(error&&error.message)||String(error);})' +
+    '.savePrintedBulletinFonts({chinese:document.getElementById("chinese").value,latin:document.getElementById("latin").value});};' +
+    '</script></body></html>'
+  );
 }
 
 function getPrintedBulletinFonts_() {

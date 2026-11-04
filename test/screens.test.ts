@@ -107,6 +107,8 @@ describe('key screen list (test/screens/screens.json)', () => {
       bible: 'app/(tabs)/bible/index.tsx',
       'sabbath-school': 'app/(tabs)/explore/sabbath-school.tsx',
       you: 'app/(tabs)/you/index.tsx',
+      // The route shows the component, which reads the path.
+      'you/audio-downloads': 'components/OfflineBibleAudio.tsx',
     };
     const popups = config.screens.filter((screen: { path: string }) => /[?&]popup=/.test(screen.path));
     expect(popups.length).toBeGreaterThan(0);

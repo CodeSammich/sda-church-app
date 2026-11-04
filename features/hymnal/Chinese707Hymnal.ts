@@ -81,8 +81,4 @@ export const openChinese707Hymn = (
   version: Chinese707Version,
   hymnNumber?: number | string,
 ) =>
-  openURL(
-    getChinese707HymnUrl(version, hymnNumber),
-    'Error',
-    'Could not open the Chinese hymnal link.',
-  );
+  openURL(getChinese707HymnUrl(version, hymnNumber));

@@ -32,15 +32,22 @@ describe('device backups', () => {
     }
   });
 
-  it('leave out downloaded Bible audio and the widget’s verses on Android, and nothing else', () => {
+  it('leave out downloaded Bible audio, what is still downloading, and the widget’s verses on Android, and nothing else', () => {
     expect(app.plugins).toContain('./plugins/withAndroidBackupRules');
+    // The second and third are #611's: where Android's DownloadManager writes a
+    // chapter until the app moves it into bible-audio, and the list of chapters
+    // under way.
     expect(EXCLUDED).toEqual([
       { domain: 'file', path: 'bible-audio' },
+      { domain: 'external', path: 'bible-audio-partial' },
+      { domain: 'sharedpref', path: 'bible-audio-downloads.xml' },
       { domain: 'sharedpref', path: 'expo.modules.widgets.xml' },
       { domain: 'sharedpref', path: 'verse_widget_theme.xml' },
     ]);
     for (const exclude of [
       '<exclude domain="file" path="bible-audio"/>',
+      '<exclude domain="external" path="bible-audio-partial"/>',
+      '<exclude domain="sharedpref" path="bible-audio-downloads.xml"/>',
       '<exclude domain="sharedpref" path="expo.modules.widgets.xml"/>',
       '<exclude domain="sharedpref" path="verse_widget_theme.xml"/>',
     ]) {
@@ -74,6 +81,14 @@ describe('device backups', () => {
     expect(downloads).not.toMatch(/Paths\.cache|AsyncStorage/);
     expect(downloads).toContain("if (Platform.OS === 'ios' && !excludeFromBackup(root.uri))");
     expect(source('modules/backup-exclusion/ios/BackupExclusionModule.swift')).toContain('values.isExcludedFromBackup = true');
+    // The phone's downloader (#611): the iPhone marks each chapter as it lands,
+    // and Android writes them where the rules above leave out.
+    expect(source('modules/bible-audio-downloads/ios/BibleAudioDownloadSessions.swift')).toContain('values.isExcludedFromBackup = true');
+    const store = source('modules/bible-audio-downloads/android/src/main/java/org/nyccsda/bibleaudiodownloads/BibleAudioDownloadStore.kt');
+    expect(store).toContain('private const val PARTIAL_FOLDER = "bible-audio-partial"');
+    expect(store).toContain('private const val PREFERENCES = "bible-audio-downloads"');
+    expect(store).toContain('private const val AUDIO_FOLDER = "bible-audio"');
+    expect(store).toContain('setDestinationInExternalFilesDir(context, null, "$PARTIAL_FOLDER/');
     expect(JSON.parse(source('modules/backup-exclusion/expo-module.config.json'))).toEqual({
       platforms: ['apple'],
       apple: { modules: ['BackupExclusionModule'] },

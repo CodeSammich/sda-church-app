@@ -1,3 +1,4 @@
+import { AppAlertHost } from '@/components/AppAlert';
 import { InitialSetup } from '@/components/InitialSetup';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LaunchSplash } from '@/components/LaunchSplash';
@@ -57,6 +58,7 @@ import {
 import { getSunTimes } from '@/services/SunTimesService';
 import packageJson from '@/package.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadDownloadNotifications } from '@/services/DownloadNotifications';
 import { isKeyScreensBuild, takeScreenshotRoute } from '@/services/ScreenshotRoute';
 import { ThemeProvider } from 'expo-router/react-navigation';
 import { useFonts } from 'expo-font';
@@ -921,6 +923,11 @@ function RootLayoutNav({
   const { language } = useContext(LanguageContext);
   const { textScale } = useContext(TextSizeContext);
   const { fontScale, width: viewportWidth } = useWindowDimensions();
+  // The download notifications (#610): the member's choice, and their words
+  // in the app's language, for the phone to use with the app closed.
+  useEffect(() => {
+    if (Platform.OS !== 'web') void loadDownloadNotifications(language).catch(() => undefined);
+  }, [language]);
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const segments = useSegments();
@@ -1127,6 +1134,7 @@ function RootLayoutNav({
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
+        <AppAlertHost />
         {installAvailable && (
           <InstallPrompt onInstall={onInstall} onDismiss={onDismissInstall} />
         )}

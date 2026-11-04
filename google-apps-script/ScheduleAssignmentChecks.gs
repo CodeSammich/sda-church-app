@@ -572,7 +572,7 @@ function buildUnknownScheduleNamesHtml_(unknown) {
     '.primary{background:#1a73e8;border:0;border-radius:4px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;padding:7px 12px;white-space:nowrap;}' +
     'button:disabled{cursor:default;opacity:.5;}' +
     '.status{font-size:12px;margin-top:8px;min-height:1em;}' +
-    '.status.ok{color:#137333;}.status.error{color:#a50e0e;}' +
+    '.status.ok{color:#137333;}.status.error{color:#a50e0e;}.status.warn{color:#b06000;line-height:1.45;white-space:pre-line;}' +
     '.actions{display:flex;justify-content:space-between;margin-top:6px;}' +
     '.link{background:none;border:0;color:#1a73e8;cursor:pointer;font-size:13px;padding:6px 0;}' +
     '.close{background:#f1f3f4;border:0;border-radius:4px;cursor:pointer;font-size:13px;padding:7px 14px;}' +
@@ -587,8 +587,9 @@ function buildUnknownScheduleNamesHtml_(unknown) {
     'function el(tag,className,text){var node=document.createElement(tag);if(className){node.className=className;}if(text){node.textContent=text;}return node;}' +
     'function setStatus(node,ok,text){node.className="status "+(ok?"ok":"error");node.textContent=text;}' +
     'function lock(card){Array.prototype.forEach.call(card.querySelectorAll("button,input"),function(control){control.disabled=true;});}' +
+    'function unlock(card){Array.prototype.forEach.call(card.querySelectorAll("button,input"),function(control){control.disabled=false;});}' +
     'function run(card,status,fn,arg,okText){lock(card);google.script.run.withSuccessHandler(function(){setStatus(status,true,okText);})' +
-    '.withFailureHandler(function(error){Array.prototype.forEach.call(card.querySelectorAll("button,input"),function(control){control.disabled=false;});' +
+    '.withFailureHandler(function(error){unlock(card);' +
     'setStatus(status,false,(error&&error.message)||String(error));})[fn](arg);}' +
     'entries.forEach(function(entry){var card=el("div","entry");card.appendChild(el("h2","","\\u201c"+entry.name+"\\u201d"));' +
     'card.appendChild(el("p","where",entry.role+" \\u00b7 "+entry.date));var status=el("div","status");' +
@@ -599,8 +600,13 @@ function buildUnknownScheduleNamesHtml_(unknown) {
     'card.appendChild(el("div","label","Add to Name Dictionary / 添加到姓名字典"));var form=el("div","add");' +
     'var english=el("input");english.value=entry.name;english.placeholder="English name / 英文姓名";english.setAttribute("aria-label","English name");' +
     'var chinese=el("input");chinese.placeholder="Chinese name (optional) / 中文姓名（可选）";chinese.setAttribute("aria-label","Chinese name");' +
-    'var add=el("button","primary","Add / 添加");add.type="button";add.onclick=function(){if(!english.value.trim()){setStatus(status,false,"English name is required. / 必须填写英文姓名。");return;}' +
-    'run(card,status,"addScheduleNameToDictionary",{english:english.value,chinese:chinese.value},"Added to Name Dictionary / 已添加到姓名字典");};' +
+    'var add=el("button","primary","Add / 添加");add.type="button";var allowSimplified=false;' +
+    'chinese.oninput=function(){allowSimplified=false;add.textContent="Add / 添加";};' +
+    'add.onclick=function(){if(!english.value.trim()){setStatus(status,false,"English name is required. / 必须填写英文姓名。");return;}' +
+    'lock(card);google.script.run.withSuccessHandler(function(result){if(result&&result.simplifiedWarning){unlock(card);allowSimplified=true;' +
+    'add.textContent="Add anyway / 仍然添加";status.className="status warn";status.textContent=result.simplifiedWarning;return;}' +
+    'setStatus(status,true,"Added to Name Dictionary / 已添加到姓名字典");}).withFailureHandler(function(error){unlock(card);' +
+    'setStatus(status,false,(error&&error.message)||String(error));}).addScheduleNameToDictionary({english:english.value,chinese:chinese.value,allowSimplified:allowSimplified});};' +
     'form.appendChild(english);form.appendChild(chinese);form.appendChild(add);card.appendChild(form);card.appendChild(status);' +
     'document.getElementById("entries").appendChild(card);});' +
     'document.getElementById("openDictionary").onclick=function(){google.script.run.withSuccessHandler(function(){google.script.host.close();}).openNameDictionaryFromDialog();};' +
@@ -632,6 +638,21 @@ function addScheduleNameToDictionary(request) {
   var chinese = String((request && request.chinese) || '').trim();
   if (chinese.length > 80) {
     throw new Error('Chinese name is too long. / 中文姓名过长。');
+  }
+  // Names print as typed, so a Simplified name prints in Simplified. Warn once
+  // here, where the name is entered, and add it if the editor confirms. Never
+  // convert it: a surname such as 余, 于 or 范 is also a Traditional character.
+  var simplified = findSimplifiedOnlyChinese_(chinese);
+  if (simplified && !(request && request.allowSimplified)) {
+    return {
+      added: false,
+      simplifiedWarning:
+        'The Chinese name has Simplified characters: ' + simplified + '. The printed bulletin is in ' +
+        'Traditional Chinese, and prints names exactly as they are in the Name Dictionary. If this ' +
+        'person writes their name in Traditional, change it here. Otherwise, click Add anyway.\n' +
+        '中文姓名含有简体字：' + simplified + '。纸质周刊使用繁体中文，并按姓名字典中的写法打印姓名。' +
+        '如果此人的姓名用繁体书写，请在这里修改；否则请点击“仍然添加”。',
+    };
   }
 
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -696,3 +717,69 @@ function openNameDictionaryFromDialog() {
   }
   return null;
 }
+
+// The Simplified characters in text that aren't also Traditional, each once,
+// such as 张 and 聪 but not 余 or 范 (#623).
+function findSimplifiedOnlyChinese_(text) {
+  var found = '';
+  String(text || '').replace(/[㐀-鿿]/g, function (character) {
+    if (SIMPLIFIED_ONLY_CHINESE_CHARACTERS_.indexOf(character) !== -1 && found.indexOf(character) === -1) {
+      found += character;
+    }
+    return character;
+  });
+  return found;
+}
+
+/**
+ * Every character OpenCC (Apache-2.0, commit 178f05dbc5) converts to
+ * Traditional that is neither one of its Traditional forms in STCharacters.txt
+ * nor their Taiwan or Hong Kong form in TWVariants.txt and HKVariants.txt, in
+ * Unicode order. 张 → 張 is here. 余 → 餘 余, 于 → 於 于 and 范 → 範 范 aren't,
+ * because they're also Traditional, often as surnames, and nor are 温 and 峰,
+ * the Taiwan forms of 溫 and 峯. Only characters below U+10000, which covers
+ * names typed with a Simplified keyboard.
+ */
+var SIMPLIFIED_ONLY_CHINESE_CHARACTERS_ =
+  '㐷㐽㑇㑈㑔㑩㓆㓥㓰㔉㖊㖞㘎㚯㛀㛟㛠㛣㛤㛿㟆㟜㟥㡎㤘㤽㥪㧏㧐㧑㧟㧰㨫㭎㭏㭣㭤㭴㱩㱮㲿㳔㳕㳠㳡㳢㳽㴋㶉㶶㶽㺍㻅㻏㻘䀥䁖䂵䃅䅉䅟䅪䇲䉤' +
+  '䌶䌷䌸䌹䌺䌻䌼䌽䌾䌿䍀䍁䍠䎬䏝䑽䓓䓕䓖䓨䗖䘛䘞䙊䙌䙓䜣䜤䜥䜧䜩䝙䞌䞍䞎䞐䟢䢀䢁䢂䥺䥽䥾䥿䦀䦁䦂䦃䦅䦆䦶䦷䩄䭪䯃䯄䯅䲝䲞䲟䲠䲡䲢䲣' +
+  '䴓䴔䴕䴖䴗䴘䴙䶮与专业丛东丝丢两严丧个临为丽举么义乌乐乔习乡书买乱争亏亚产亩亲亵亸亿仅从仑仓仪们众优会伛伞伟传伡伣伤伥伦伧伪伫体' +
+  '佥侠侣侥侦侧侨侩侪侬侭俣俦俨俩俪俫俭债倾偬偻偾偿傤傥傧储傩儿兖兰关兴兹养兽冁内冈册写军农冯冲决况冻净凄凉减凑凛凤凫凭凯击凿刍刘则' +
+  '刚创删别刬刭刹刽刾刿剀剂剐剑剥剧劝办务劢动励劲劳势勋勚匀匦匮区医华协单卖卢卤卫却卺厅历厉压厌厍厐厕厢厣厦厨厩厮县参叆叇双发变叙叠' +
+  '号叹叽吓吕吗吨听启吴呐呒呓呕呖呗员呙呛呜咏咙咛咝咤响哑哒哓哔哕哗哙哜哝哟唛唝唠唡唢唤啧啬啭啮啯啰啴啸喷喽喾嗫嗳嘘嘤嘱噜嚣团园围囵' +
+  '国图圆圣圹场坏块坚坛坜坝坞坟坠垄垅垆垒垦垩垫垭垯垱垲垴埘埙埚堑堕塆墙壮声壳壶壸处备复够头夹夺奁奂奋奖奥妆妇妈妩妪妫姗姹娄娅娆娇娈' +
+  '娱娲娴婳婴婵婶媭嫒嫔嫱嬷孙学孪宁宝实宠审宪宫宽宾寝对寻导寿将尔尘尝尧尴尽层屃屉届属屡屦屿岁岂岖岗岘岚岛岭岽岿峃峄峡峣峤峥峦崂崃崄' +
+  '崭嵘嵚嵝巅巩巯币帅师帏帐帜带帧帮帱帻帼幂并庄庆庐庑库应庙庞废庼廪开异弃弑张弥弪弯弹强归当录彟彦彨彻径徕忆忏忧忾怀态怂怃怄怅怆怜总' +
+  '怼怿恋恒恳恶恸恹恺恻恼恽悫悬悭悮悯惊惧惨惩惫惬惭惮惯愤愦慑慭懑懒懔戆戋戏戗战戬戯扑执扩扪扫扬扰抚抛抟抠抡抢护报担拟拢拣拥拦拧拨择' +
+  '挚挛挜挝挞挟挠挡挢挣挤挥挦捞损捡换捣掳掴掷掸掺掼揽揿搀搁搂搄搅携摄摅摆摇摈摊撄撑撵撷撸撺擜擞攒敌敛敩数斋斓斩断无旧时旷旸昙昵昼昽' +
+  '显晋晒晓晔晕晖暂暅暧术机杀杂权条来杨杩构枞枢枣枥枧枨枪枫枭柠柽栀栅标栈栉栊栋栌栎栏树栖样栾桠桡桢档桤桥桦桧桨桩桪梦梼梾梿检棂椁椝' +
+  '椟椠椢椤椫椭椮楼榄榇榈榉榝槚槛槟槠横樯樱橥橱橹橼檩欢欤欧歼殁殇残殒殓殚殡殴毁毂毕毙毡毵毶氇气氢氩汇汉汤汹沄沟没沣沤沥沦沧沨沩沪泞' +
+  '泪泶泷泸泺泻泼泽泾洁洒洼浃浅浆浇浈浉浊测浍济浏浐浑浒浓浔浕涛涝涞涟涠涡涢涣涤润涧涨涩渊渌渍渎渐渑渔渖渗湾湿溁溃溅溆溇滗滚滞滟滠满' +
+  '滢滤滥滦滨滩滪潆潇潋潍潜潴澛澜濑濒灏灭灯灵灾灿炀炉炖炜炝点炼炽烁烂烃烛烟烦烧烨烩烫烬热焕焖焘爱爷牍牦牵牺犊状犷犸犹狈狝狞独狭狮狯' +
+  '狰狱狲猃猎猕猡猪猫猬献獭玑玙玚玛玮环现玱玺珐珑珰珲琎琏琐琼瑶瑷瑸璎瓒瓮瓯电画畅畴疖疗疟疠疡疬疭疮疯疱疴痈痉痒痖痨痪痫瘅瘆瘗瘘瘪瘫' +
+  '瘾瘿癞癣癫皑皱皲盏盐监盖盗盘眍眦眬睁睐睑瞆瞒瞩矫矶矾矿砀码砖砗砚砜砺砻砾础硁硕硖硗硙硚硵碍碛碜碱礼祃祎祢祯祷祸禀禄禅离秃秆积称秽' +
+  '秾稆稣稳穑穞穷窃窍窎窑窜窝窥窦窭竖竞笃笋笔笕笺笼笾筚筛筜筝筹筼签筿简箓箦箧箨箩箪箫篑篓篮篯篱簖籁籴类籼粜粝粤粪粮糁糇糍紧絷縆纟纠' +
+  '纡红纣纤纥约级纨纩纪纫纬纭纮纯纰纱纲纳纴纵纶纷纸纹纺纻纼纽纾线绀绁绂练组绅细织终绉绊绋绌绍绎经绐绑绒结绔绕绖绗绘给绚绛络绝绞统绠' +
+  '绡绢绣绤绥绦继绨绩绪绫绬续绮绯绰绱绲绳维绵绶绷绸绹绺绻综绽绾绿缀缁缂缃缄缅缆缇缈缉缊缋缌缍缎缏缐缑缒缓缔缕编缗缘缙缚缛缜缝缞缟缠' +
+  '缡缢缣缤缥缦缧缨缩缪缫缬缭缮缯缰缱缲缳缴缵罂网罗罚罢罴羁羟羡翘翙翚耢耧耸耻聂聋职聍联聩聪肃肠肤肮肴肾肿胀胁胆胧胨胪胫胶脉脍脏脐脑' +
+  '脓脔脚脶脸腘腭腻腼腾膑臜舆舣舰舱舻艰艳艺节芈芗芜芦苁苇苈苋苌苍苎苏苧茎茏茑茔茕茧荆荙荚荛荜荝荞荟荠荡荣荤荥荦荧荨荩荪荫荬荭荮药莅' +
+  '莱莲莳莴莶获莸莹莺莼萚萝萤营萦萧萨蒇蒉蒋蒌蒏蓝蓟蓠蓣蓥蓦蔂蔷蔹蔺蔼蕰蕲蕴薮藓蘖虏虑虚虬虮虱虽虾虿蚀蚁蚂蚃蚕蚬蛊蛎蛏蛮蛰蛱蛲蛳蛴蜗' +
+  '蝇蝈蝉蝼蝾螀螨蟏衅衔补衬衮袄袅袆袜袭袯装裆裈裢裣裤裥褛褴襕见观觃规觅视觇览觉觊觋觌觍觎觏觐觑觞触觯訚詟誉誊讠计订讣认讥讦讧讨让讪' +
+  '讫讬训议讯记讱讲讳讴讵讶讷许讹论讻讼讽设访诀证诂诃评诅识诇诈诉诊诋诌词诎诏诐译诒诓诔试诖诗诘诙诚诛诜话诞诟诠诡询诣诤该详诧诨诩诪' +
+  '诫诬语诮误诰诱诲诳说诵诶请诸诹诺读诼诽课诿谀谁谂调谄谅谆谇谈谉谊谋谌谍谎谏谐谑谒谓谔谕谖谗谘谙谚谛谜谝谞谟谠谡谢谣谤谥谦谧谨谩谪' +
+  '谫谬谭谮谯谰谱谲谳谴谵谶豮贝贞负贠贡财责贤败账货质贩贪贫贬购贮贯贰贱贲贳贴贵贶贷贸费贺贻贼贽贾贿赀赁赂赃资赅赆赇赈赉赊赋赌赍赎赏' +
+  '赐赑赒赓赔赕赖赗赘赙赚赛赜赝赞赟赠赡赢赣赪赵赶趋趱趸跃跄跞践跶跷跸跹跻踌踪踬踯蹑蹒蹰蹿躏躜躯车轧轨轩轪轫转轭轮软轰轱轲轳轴轵轶轷' +
+  '轸轹轺轻轼载轾轿辀辁辂较辄辅辆辇辈辉辊辋辌辍辎辏辐辑辒输辔辕辖辗辘辙辚辞辩辫边辽达迁过迈运还这进远违连迟迩迳迹选逊递逦逻遗遥邓邝' +
+  '邬邮邹邺邻郏郐郑郓郦郧郸酂酝酦酱酽酾酿释鉴銮錾钅钆钇针钉钊钋钌钍钎钏钐钑钒钓钔钕钖钗钘钙钚钛钜钝钞钟钠钡钢钣钤钥钦钧钨钩钪钫钬钭' +
+  '钮钯钰钱钲钳钴钵钶钷钸钹钺钻钼钽钾钿铀铁铂铃铄铅铆铇铈铉铊铋铌铍铎铏铐铑铒铓铔铕铖铗铘铙铚铛铜铝铞铟铠铡铢铣铤铥铦铧铨铩铪铫铬铭' +
+  '铮铯铰铱铲铳铴铵银铷铸铹铺铻铼铽链铿销锁锂锃锄锅锆锇锈锉锊锋锌锍锎锏锐锑锒锓锔锕锖锗锘错锚锛锜锝锞锟锠锡锢锣锤锥锦锧锨锩锪锫锬锭' +
+  '键锯锰锱锲锳锴锵锶锷锸锹锺锻锼锽锾锿镀镁镂镃镄镅镆镇镈镉镊镋镌镍镎镏镐镑镒镓镔镕镖镗镘镙镚镛镜镝镞镟镠镡镢镣镤镥镦镧镨镩镪镫镬镭' +
+  '镮镯镰镱镲镳镴镵镶长门闩闪闫闬闭问闯闰闱闲闳间闵闶闷闸闹闺闻闼闽闾闿阀阁阂阃阄阅阆阇阈阉阊阋阌阍阎阏阐阑阒阓阔阕阖阗阘阙阚阛队阳' +
+  '阴阵阶际陆陇陈陉陕陦陧陨险随隐隶隽难雏雠雳雾霁霉霡霭靓靔静靥鞑鞒鞯鞲韦韧韨韩韪韫韬韵页顶顷顸项顺须顼顽顾顿颀颁颂颃预颅领颇颈颉颊' +
+  '颋颌颍颎颏颐频颒颓颔颕颖颗题颙颚颛颜额颞颟颠颡颢颣颤颥颦颧风飏飐飑飒飓飔飕飖飗飘飙飚飞飨餍饣饤饥饦饧饨饩饪饫饬饭饮饯饰饱饲饳饴饵' +
+  '饶饷饸饹饺饻饼饽饾饿馀馁馂馃馄馅馆馇馈馉馊馋馌馍馎馏馐馑馒馓馔馕马驭驮驯驰驱驲驳驴驵驶驷驸驹驺驻驼驽驾驿骀骁骂骃骄骅骆骇骈骉骊骋' +
+  '验骍骎骏骐骑骒骓骔骕骖骗骘骙骚骛骜骝骞骟骠骡骢骣骤骥骦骧髅髋髌鬓鬶魇魉鱼鱽鱾鱿鲀鲁鲂鲃鲄鲅鲆鲇鲈鲉鲊鲋鲌鲍鲎鲏鲐鲑鲒鲓鲔鲕鲖鲗鲘' +
+  '鲙鲚鲛鲜鲝鲞鲟鲠鲡鲢鲣鲤鲥鲦鲧鲨鲩鲪鲫鲬鲭鲮鲯鲰鲱鲲鲳鲴鲵鲶鲷鲸鲹鲺鲻鲼鲽鲾鲿鳀鳁鳂鳃鳄鳅鳆鳇鳈鳉鳊鳋鳌鳍鳎鳏鳐鳑鳒鳓鳔鳕鳖鳗鳘' +
+  '鳙鳚鳛鳜鳝鳞鳟鳠鳡鳢鳣鳤鸟鸠鸡鸢鸣鸤鸥鸦鸧鸨鸩鸪鸫鸬鸭鸮鸯鸰鸱鸲鸳鸴鸵鸶鸷鸸鸹鸺鸻鸼鸽鸾鸿鹀鹁鹂鹃鹄鹅鹆鹇鹈鹉鹊鹋鹌鹍鹎鹏鹐鹑鹒' +
+  '鹓鹔鹕鹖鹗鹘鹙鹚鹛鹜鹝鹞鹟鹠鹡鹢鹣鹤鹥鹦鹧鹨鹩鹪鹫鹬鹭鹮鹯鹰鹱鹲鹳鹴鹾麦麸麹麺麽黄黉黡黩黪黾鼋鼌鼍鼹齐齑齿龀龁龂龃龄龅龆龇龈龉龊' +
+  '龋龌龙龚龛龟鿎鿏鿒鿔';

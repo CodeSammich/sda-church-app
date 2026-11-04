@@ -41,9 +41,5 @@ export const getSdaBibleEgwBookUrl = (bookId: number) =>
  */
 export const openSdaBible = (language: SupportedLanguage) =>
   Platform.OS === 'ios'
-    ? openInItsApp(SDA_BIBLE_APP_STORE_URL, 'Error', 'Could not open the App Store link.')
-    : openURL(
-        withSdaBibleInterface(`${SDA_BIBLE_READER_ORIGIN}/`, language),
-        'Error',
-        'Could not open the SDA Bible reader.',
-      );
+    ? openInItsApp(SDA_BIBLE_APP_STORE_URL)
+    : openURL(withSdaBibleInterface(`${SDA_BIBLE_READER_ORIGIN}/`, language));

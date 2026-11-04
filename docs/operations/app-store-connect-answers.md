@@ -92,6 +92,7 @@ are in the runbook's [Uploading to the stores](admin-runbook.md#uploading-to-the
 | If a release adds | Revisit |
 | --- | --- |
 | Analytics, crash reporting, ads, accounts, forms, or push notifications | App Privacy, and Google Play's matching answers |
+| Local notifications, as a download's "done" since #610 | Nothing: they're made on the phone, need no entitlement, and send nothing |
 | Ads, chat, user posts, a web browser, or medical or health content | Age Rating |
 | iPad support (#324) | iPad screenshots. Test first: Apple doesn't let an update remove iPad support. |
 | A new language, such as Japanese | A new localization, published with that release |
