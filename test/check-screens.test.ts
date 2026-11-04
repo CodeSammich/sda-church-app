@@ -391,3 +391,19 @@ describe('audio that keeps playing (#551)', () => {
     expect(checkAdvance(shot('bible-default'), dock('0:00'), undefined)).toEqual([]);
   });
 });
+
+describe('tab labels in any case (#589)', () => {
+  const { showsLabel } = require('../scripts/check-screens.cjs');
+  const line = (text: string) => ({ text, box: [0.35, 0.955, 0.05, 0.02] });
+  const tabs = [0.91, 0.99];
+
+  it("finds a Latin label Vision read with the wrong case, as the iPad's capsule's \"Inicio\" as \"InIcIo\"", () => {
+    expect(showsLabel([line('InIcIo')], 'Inicio', tabs)).toBe(true);
+    expect(showsLabel([line('HOME')], 'Home', tabs)).toBe(true);
+  });
+
+  it('still fails a label cut short, or one inside a longer word', () => {
+    expect(showsLabel([line('Inici')], 'Inicio', tabs)).toBe(false);
+    expect(showsLabel([line('Verses')], 'Verse', tabs)).toBe(false);
+  });
+});
