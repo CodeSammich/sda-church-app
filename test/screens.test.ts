@@ -256,7 +256,7 @@ describe('iOS key screens', () => {
     // for the compiling runner's app; no sixth runner for the iPad (#324).
     expect(groups).toHaveLength(5);
     expect(workflow).not.toContain('ipad: true');
-    expect(workflow).toMatch(/strategy:\n\s+fail-fast: false\n(?:\s+#.*\n)*\s+max-parallel: 5\n/);
+    expect(workflow).toMatch(/strategy:\n +fail-fast: false\n(?: +#.*\n)* +max-parallel: 5\n/);
     expect(workflow).toMatch(/capture-ios-screens\.cjs --out [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
     expect(workflow).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
     // Then the group's iPad shots, into a part of their own, checked against
