@@ -337,7 +337,14 @@ describe('iOS key screens', () => {
   });
 
   it('re-checks an earlier run from its screenshots, or from the app download of runs before the split', () => {
-    const earlier = workflow.slice(workflow.indexOf('\n  earlier-screens:\n'));
+    // In its own workflow, started only by hand, so it never shows on pull
+    // requests as a skipped check.
+    const recheck = repoFile('.github/workflows/key-screens-recheck.yml');
+    const earlier = recheck.slice(recheck.indexOf('\n  ios:\n'));
+    expect(earlier).toContain("if: inputs.platform == 'ios'");
+    expect(earlier).toContain('runs-on: macos-26');
+    expect(earlier).toContain('node scripts/check-screens.cjs --dir "$SCREENS"\n');
+    expect(workflow).not.toMatch(/screens_from_run|earlier-screens/);
     expect(earlier).toMatch(
       /--pattern 'ios-key-screens-\*' --dir "\$RUNNER_TEMP\/earlier" \|\|\n\s+gh run download [^\n]+--pattern 'ios-pr-preview-\*-arm64'/,
     );
@@ -1001,7 +1008,7 @@ describe('Android key screens workflow (#372)', () => {
 
   it('runs every Android job on Linux, apart from the iPhone workflow and its Macs', () => {
     expect(workflow).not.toMatch(/runs-on: macos/);
-    expect(workflow.match(/runs-on: ubuntu-24\.04/g)!.length).toBe(4);
+    expect(workflow.match(/runs-on: ubuntu-24\.04/g)!.length).toBe(3);
     expect(preview).not.toMatch(/android-build|android-capture|capture-android-screens/);
   });
 
@@ -1009,7 +1016,7 @@ describe('Android key screens workflow (#372)', () => {
     for (const text of [build, capture, join]) {
       expect(text).toContain("github.head_ref == 'release-candidate'");
       expect(text).toContain('github.event.pull_request.head.repo.full_name == github.repository');
-      expect(text).toContain("github.event_name != 'pull_request' && inputs.screens_from_run == ''");
+      expect(text).toContain("github.event_name != 'pull_request' ||\n");
     }
   });
 
@@ -1067,8 +1074,14 @@ describe('Android key screens workflow (#372)', () => {
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
   });
 
-  it('re-checks an earlier run on Linux', () => {
-    const earlier = jobOf(workflow, 'earlier-screens');
+  it('re-checks an earlier run on Linux, by hand only, never as a check on pull requests', () => {
+    const recheck = repoFile('.github/workflows/key-screens-recheck.yml');
+    expect(recheck.slice(recheck.indexOf('\non:'), recheck.indexOf('\npermissions:'))).toMatch(
+      /\non:\n  workflow_dispatch:\n(?:    .*\n|\s*\n)*$/,
+    );
+    expect(workflow).not.toMatch(/screens_from_run|earlier-screens/);
+    const earlier = jobOf(recheck, 'android');
+    expect(earlier).toContain("if: inputs.platform == 'android'");
     expect(earlier).toContain('runs-on: ubuntu-24.04');
     expect(earlier).toContain('check-screens.cjs --dir "$SCREENS" --platform android');
     // A run's downloads are its joined screenshots and each group's own, each

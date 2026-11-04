@@ -331,5 +331,9 @@ Toolchain Monitor**, **Expo Doctor Monitor**, **Apple Signing Monitor**, **Yearl
 Checkup**, **Workspace Backup Reminder**, and **Due-Date Reminders** run on a schedule;
 **Deploy Bulletin Apps Script** starts on every merge into `main` and waits for
 `production` approval; and **Generate physical bulletin QR codes**
-runs when a merge into `main` changes the QR code list or its script. The
+runs when a merge into `main` changes the QR code list or its script. **Key screens
+recheck** (`key-screens-recheck.yml`) runs only by hand: it checks the text on an earlier
+**iOS key screens** or **Android key screens** run's screenshots again, without building,
+for tuning the text checks; see
+[Text checks](operations/native-builds.md#ios-key-screens-unsigned-simulator-builds). The
 [admin runbook](operations/admin-runbook.md) explains each.

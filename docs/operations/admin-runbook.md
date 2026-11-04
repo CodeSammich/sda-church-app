@@ -850,6 +850,13 @@ release on an Apple Silicon Mac before merging, download the app, the artifact e
 The screenshots are a separate download, `ios-key-screens-<number>-<run>`. See
 [iOS key screens](native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
+To check an earlier run's screenshots again, say after changing a text check in
+`scripts/check-screens.cjs`, run **Key screens recheck** (**Run workflow**) on the branch
+with the change, choose the **platform**, and give the earlier **iOS key screens** or
+**Android key screens** run's ID, the number in its address, as **screens_from_run**. It
+only downloads and checks, in a few minutes. It runs only by hand, so pull requests
+don't list it.
+
 ## Dependabot pull requests
 
 Dependabot opens one pull request a week for all minor and patch updates, and a
