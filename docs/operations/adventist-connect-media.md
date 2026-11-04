@@ -130,7 +130,9 @@ church-website platform.
   can switch to the Mandarin narrator meanwhile.
 - The player streams with byte-range requests. On a phone, a member can also
   download a book, a section, a Testament, or the whole Bible to listen offline (#556),
-  only when they tap it: one file a chapter, church copy first, three at a time.
+  only when they tap it: one file a chapter, church copy first. The phone's own
+  downloader runs a few chapters at a time, so a download goes on while the phone is
+  locked (#611).
   See [What the app keeps on the phone](../feature_designs/on_device_storage.md#bible-audio-downloaded-to-listen-offline).
 - The web player preloads only the next chapter. On native, the app queues up to 24
   upcoming chapter descriptors but does not fetch their audio itself.

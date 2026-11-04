@@ -1,4 +1,4 @@
-import { openCurrentChildrenSabbathSchool, openURL } from '@/constants/ExternalLinks';
+import { LINK_ERROR_MESSAGE, openCurrentChildrenSabbathSchool, openURL } from '@/constants/ExternalLinks';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import {
   isChildrenLessonPdf,
@@ -11,7 +11,8 @@ import {
 } from '@/features/sabbath-school/LessonDownloads';
 import { recordForScreenshot } from '@/services/ScreenshotRoute';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { showAppAlert, type LocalizedText } from '@/components/AppAlert';
+import { Platform } from 'react-native';
 
 export type ChildrenLessonDialogState = Readonly<{
   title: string;
@@ -20,7 +21,12 @@ export type ChildrenLessonDialogState = Readonly<{
   offline?: boolean;
 }>;
 
-const ERROR_MESSAGE = "Could not open the children's Sabbath School lesson.";
+const ERROR_TITLE: LocalizedText = {
+  en: 'Couldn’t open the lesson',
+  zh: '無法開啟課程',
+  'zh-cn': '无法打开课程',
+  es: 'No se pudo abrir la lección',
+};
 
 /**
  * Opens this week's children's lesson for an age group (#529). On a phone, a
@@ -88,12 +94,12 @@ export function useChildrenLessonOpener(language: SupportedLanguage) {
         }
         // Before the browser opens: it returns only once it's closed.
         recordForScreenshot('lesson', { outcome: 'browser', reason: browserReason, url: lesson.url });
-        await openURL(lesson.url, 'Error', ERROR_MESSAGE);
+        await openURL(lesson.url, ERROR_TITLE, LINK_ERROR_MESSAGE);
       } catch (error) {
         if (signal.aborted) return;
         recordForScreenshot('lesson', { outcome: 'error', error: String(error) });
         setDialog(null);
-        Alert.alert('Error', ERROR_MESSAGE);
+        showAppAlert(ERROR_TITLE, LINK_ERROR_MESSAGE);
         console.error('Children Sabbath School lesson error:', error);
       } finally {
         if (request.current === controller) request.current = null;

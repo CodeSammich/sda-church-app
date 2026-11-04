@@ -47,11 +47,7 @@ export const getChinese506HymnUrl = (hymnNumber?: number) => {
 };
 
 export const openChinese506Hymn = (hymnNumber?: number) =>
-  openURL(
-    getChinese506HymnUrl(hymnNumber),
-    'Error',
-    'Could not open the Chinese hymnal link.',
-  );
+  openURL(getChinese506HymnUrl(hymnNumber));
 
 const CHINESE_506_YOUTUBE_VIDEOS = youtubeData.videos as Record<string, string>;
 

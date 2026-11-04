@@ -49,11 +49,7 @@ export const getChinese505HymnUrl = (hymnNumber?: number) => {
 };
 
 export const openChinese505Hymn = (hymnNumber?: number) =>
-  openURL(
-    getChinese505HymnUrl(hymnNumber),
-    'Error',
-    'Could not open the Chinese hymnal link.',
-  );
+  openURL(getChinese505HymnUrl(hymnNumber));
 
 const CHINESE_505_PIANO_VIDEOS = pianoData.videos as Record<string, string>;
 

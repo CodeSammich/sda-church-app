@@ -203,12 +203,49 @@
     {
       "name": "offline-bible-audio",
       "group": "bible-reading",
-      "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete. The text readers may read a closed section's chevron with its title (\"> Law\") and drop the spaces in \"英語 – Souer\" and \"66 卷\", so the rules allow both.",
+      "$comment": "Offline Bible Audio, where Bible audio is downloaded and deleted (#556), as the Bible's audio settings open it for Souer's English narration: the narrator, named language first (the user: people don't know who Souer is), then the whole Bible, the Old Testament, and its sections, closed, each with its book count and size. A key-screen build has nothing downloaded, so no row offers delete. Below the narrator, Download notifications (#610), the switch for the app's own download notifications, which both phones that capture have. The text readers may read a closed section's chevron with its title (\"> Law\") and drop the spaces in \"英語 – Souer\" and \"66 卷\", so the rules allow both.",
       "path": "you/audio-downloads?narrator=souer",
       "variants": ["default", "zh"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–]\\s*Souer", "^Whole Bible$", "^66 books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
-        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–]\\s*Souer", "^整本聖經$", "^66\\s*卷", "^舊約$", "(^|\\s)摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
+        "default": { "mustShowLines": ["^Offline Bible Audio$", "^English\\s*[-–]\\s*Souer", "^Download notifications$", "^Whole Bible$", "^66 books", "^Old Testament$", "(^|\\s)Law$", "^5 books"], "mustNotShowLines": ["^Downloaded", "^Genesis$"] },
+        "zh": { "mustShowLines": ["^離線聖經音訊$", "^英語\\s*[-–]\\s*Souer", "^下載通知$", "^整本聖經$", "^66\\s*卷", "^舊約$", "(^|\\s)摩西五經$"], "mustNotShowLines": ["^已下載", "^創世記$"] }
+      }
+    },
+    {
+      "name": "bible-audio-mobile-data",
+      "group": "bible-reading",
+      "$comment": "The question Offline Bible Audio asks before a download on mobile data (#611), by popup=mobile-data in the preview build, for Souer's whole Bible: the app's own popup, not the system's alert, with its answers as stacked buttons, Use mobile data first and Cancel last, and no X. In Spanish at the largest text sizes, the title and the longest answer may wrap, on the iPhone a word to a line, but no answer may be cut short with an ellipsis, as Paper's one-line Button cut \"Usar datos m...\" (run 41714586130), and Cancelar must show in the popup: at the iPhone's largest, the title and answers once overflowed it, and Cancelar showed over the page below (run 41741902378). The title scrolls with the message now, above the answers. The text readers may read the curly apostrophe in \"You’re\" as a straight one, and drop the hyphen in \"Wi-Fi\".",
+      "path": "you/audio-downloads?narrator=souer&popup=mobile-data",
+      "variants": ["default", "es-xl-ios-large-text", "es-xl-android-font-max"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Use mobile data\\?$", "^You.re on mobile data", "^Use mobile data$", "^Wait for Wi-?Fi$", "^Cancel$"], "mustNotShowLines": ["^Close$", "^CANCEL$", "^OK$"] },
+        "es-xl-ios-large-text": { "mustShowLines": ["^¿Usar\\b", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "(\\.\\.\\.|…)$"] },
+        "es-xl-android-font-max": { "mustShowLines": ["^¿Usar\\b", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "^CANCELAR$", "(\\.\\.\\.|…)$"] }
+      }
+    },
+    {
+      "name": "bible-audio-notifications-question",
+      "group": "bible-reading",
+      "$comment": "The app's own question before the phone's, the first time a long download starts (#610), by popup=notifications in the preview build: what the notifications are for, that the download keeps going either way, and where to turn them off, with Allow first and Not now. iOS asks only for a word when it's done, so its words are shorter. The text readers may read the curly apostrophes as straight ones, and the Chinese message wraps inside 下載都會繼續 on the Android phone, so the rule checks 不論是否允許.",
+      "path": "you/audio-downloads?narrator=cuv-mandarin&popup=notifications",
+      "variants": ["default", "zh"],
+      "variantRules": {
+        "default": {
+          "mustShowLines": [
+            { "line": "^Show this download.s", "platforms": ["android"] },
+            { "line": "^Get a notice when it.s", "platforms": ["ios"] },
+            "keeps going either", "^Allow$", "^Not now$"
+          ],
+          "mustNotShowLines": ["^Close$", "^Don.t allow$"]
+        },
+        "zh": {
+          "mustShowLines": [
+            { "line": "^顯示這次下載的進度", "platforms": ["android"] },
+            { "line": "^下載完成時通知您", "platforms": ["ios"] },
+            "不論是否允許", "^允許$", "^以後再說$"
+          ],
+          "mustNotShowLines": ["^關閉$"]
+        }
       }
     },
     {
