@@ -940,8 +940,9 @@ prompt failed, and so did one screenshot the app hadn't drawn yet, which the bla
 then missed. To try a rule change without waiting for a full run, start **Key screens
 recheck** (`key-screens-recheck.yml`) by hand on your branch, with **platform** `ios`
 and **screens_from_run** set to an earlier run's ID: it downloads that run's screenshots
-and only checks them, on a Mac, since Vision reads them. It's a workflow of its own,
-started only by hand, so it never shows as a skipped check on pull requests. The tests use text Vision read from real screenshots
+and only checks them, the iPhone's and then the iPad's, on a Mac, since Vision reads
+them. It's a workflow of its own, started only by hand, so it never shows as a skipped
+check on pull requests. The tests use text Vision read from real screenshots
 (`test/screens/ocr-samples.json`), unedited. It includes Vision's mistakes on text
 that's fine on screen, such as "ANDKPW MUKKA" for the "ANDREW MURRAY" printed small on
 the *Humility* cover image, and "eternal life4." for a verse with footnote 4. The

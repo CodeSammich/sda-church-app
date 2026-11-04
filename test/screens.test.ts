@@ -373,7 +373,10 @@ describe('iOS key screens', () => {
     const earlier = recheck.slice(recheck.indexOf('\n  ios:\n'));
     expect(earlier).toContain("if: inputs.platform == 'ios'");
     expect(earlier).toContain('runs-on: macos-26');
-    expect(earlier).toContain('node scripts/check-screens.cjs --dir "$SCREENS"\n');
+    // The iPhone's shots, then the iPad's (#324), keeping each one's results.
+    expect(earlier).toContain('node scripts/check-screens.cjs --dir "$SCREENS" || status=1\n');
+    expect(earlier).toContain('node scripts/check-screens.cjs --dir "$SCREENS" --platform ipad || status=1\n');
+    expect(earlier).toContain('${{ env.SCREENS }}/ocr*.json');
     expect(workflow).not.toMatch(/screens_from_run|earlier-screens/);
     expect(earlier).toMatch(
       /--pattern 'ios-key-screens-\*' --dir "\$RUNNER_TEMP\/earlier" \|\|\n\s+gh run download [^\n]+--pattern 'ios-pr-preview-\*-arm64'/,
