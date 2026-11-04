@@ -25,6 +25,7 @@ import {
   resolveBulletinHymnPresentation,
   toBulletinHymnText,
 } from '@/services/BulletinHymnalService';
+import { getSabbathSchoolHymnRowText } from '@/services/BulletinSabbathSchoolHymns';
 import {
   type AdultLesson,
   findAdultLesson,
@@ -105,7 +106,6 @@ const LABELS = {
       hymnOfResponse: 'Hymn of Response',
       benediction: 'Benediction',
       postlude: 'Postlude',
-      sabbathSchoolHymns: 'Opening & Closing Hymns',
       lesson: 'Lesson',
       specialMusicTitle: 'Piece',
     },
@@ -184,7 +184,6 @@ const LABELS = {
       hymnOfResponse: '回應詩',
       benediction: '祝福',
       postlude: '後奏曲',
-      sabbathSchoolHymns: '開會及結會詩歌',
       lesson: '課程',
       specialMusicTitle: '曲目',
     },
@@ -263,7 +262,6 @@ const LABELS = {
       hymnOfResponse: '回应诗',
       benediction: '祝福',
       postlude: '后奏曲',
-      sabbathSchoolHymns: '开会及结会诗歌',
       lesson: '课程',
       specialMusicTitle: '曲目',
     },
@@ -342,7 +340,6 @@ const LABELS = {
       hymnOfResponse: 'Himno de Respuesta',
       benediction: 'Bendición',
       postlude: 'Postludio',
-      sabbathSchoolHymns: 'Himnos de apertura y clausura',
       lesson: 'Lección',
       specialMusicTitle: 'Pieza',
     },
@@ -967,24 +964,34 @@ export default function WeeklyBulletinScreen() {
         />
       ),
     });
-    // Each opening hymn is sung again to close, so one row names them for both.
-    const hymns: Row = {
+    const hymnEntries = (location.sabbathSchoolHymns || [])
+      .filter(hasBulletinValue)
+      .map((value) => {
+        const presentation = resolveBulletinHymnPresentation(toBulletinHymnText(value), language);
+        return {
+          displayText: presentation.displayText,
+          action: getBulletinHymnAction(presentation),
+        };
+      });
+    // The closing sings the opening hymns again, so its row says so (#635).
+    const hymnText = getSabbathSchoolHymnRowText(language, hymnEntries.length);
+    const openingHymns: Row = {
       render: (last) => (
         <HymnListRow
-          key="hymns"
-          label={labels.program.sabbathSchoolHymns}
-          hymns={(location.sabbathSchoolHymns || [])
-            .filter(hasBulletinValue)
-            .map((value) => {
-              const presentation = resolveBulletinHymnPresentation(
-                toBulletinHymnText(value),
-                language,
-              );
-              return {
-                displayText: presentation.displayText,
-                action: getBulletinHymnAction(presentation),
-              };
-            })}
+          key="opening-hymns"
+          label={hymnText.openingLabel}
+          hymns={hymnEntries}
+          emptyText={labels.notAvailable}
+          last={last}
+        />
+      ),
+    };
+    const closingHymns: Row = {
+      render: (last) => (
+        <DataRow
+          key="closing-hymns"
+          label={hymnText.closingLabel}
+          value={hymnText.closingValue}
           emptyText={labels.notAvailable}
           last={last}
         />
@@ -1016,20 +1023,22 @@ export default function WeeklyBulletinScreen() {
       ? [
           person(labels.roles.ssChair, location.ssChair),
           person(labels.roles.ssOpeningPrayer, location.ssOpeningPrayer),
-          hymns,
+          openingHymns,
           lessonRow,
           person(labels.roles.chineseTeacher, location.chineseTeacher),
           person(labels.roles.englishTeacher, location.englishTeacher),
           person(labels.roles.youthTeacher, location.youthTeacher),
           person(labels.roles.kidsTeacher, location.kidsTeacher),
+          closingHymns,
           person(labels.roles.ssClosingPrayer, location.closingPrayer),
         ]
       : [
-          hymns,
+          openingHymns,
           person(labels.roles.prayer, location.chairPastoralPrayer),
           person(labels.roles.sabbathEncouragement, location.encouragement),
           person(labels.roles.sabbathSchool, location.sabbathSchool),
           lessonRow,
+          closingHymns,
         ];
 
     return (
