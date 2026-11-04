@@ -935,9 +935,11 @@ results page (`search=`), which covers them. What Vision read is saved as
 
 The first real runs showed what this catches. Every screen covered by iOS's "Open in"
 prompt failed, and so did one screenshot the app hadn't drawn yet, which the blank check
-then missed. To try a rule change without waiting for a full run, start the
-workflow by hand with **screens_from_run** set to an earlier run's ID: it downloads that
-run's screenshots and only checks them. The tests use text Vision read from real screenshots
+then missed. To try a rule change without waiting for a full run, start **Key screens
+recheck** (`key-screens-recheck.yml`) by hand on your branch, with **platform** `ios`
+and **screens_from_run** set to an earlier run's ID: it downloads that run's screenshots
+and only checks them, on a Mac, since Vision reads them. It's a workflow of its own,
+started only by hand, so it never shows as a skipped check on pull requests. The tests use text Vision read from real screenshots
 (`test/screens/ocr-samples.json`), unedited. It includes Vision's mistakes on text
 that's fine on screen, such as "ANDKPW MUKKA" for the "ANDREW MURRAY" printed small on
 the *Humility* cover image, and "eternal life4." for a verse with footnote 4. The
@@ -1010,9 +1012,9 @@ passed, and says how long each run took, from its start until its join job finis
 the comment is posted, this workflow's **Refresh the screenshot review comment** job
 updates it in place, with the rerun's result and screenshots. Both workflows write the
 comment through `key-screens-review.yml`. To recheck an earlier
-run's Android screenshots with new rules, start this workflow by hand with
-**screens_from_run**, as for the iPhone. It checks every group's shots, from the run's
-joined download and each group's own.
+run's Android screenshots with new rules, start **Key screens recheck** with **platform**
+`android` and **screens_from_run**, as for the iPhone; it runs on Linux. It checks every
+group's shots, from the run's joined download and each group's own.
 
 **The phone.** The emulator is the size of the best-selling Android phone where most
 Adventists live, set under `android.phone` in `screens.json`. Of the church's 24.4
