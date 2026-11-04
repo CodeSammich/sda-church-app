@@ -122,7 +122,10 @@ Data begins on row 2.
   stores Chinese names surname-first. A name prints exactly as typed, in either
   script. A character the bulletin's Chinese font lacks, such as most
   Simplified-only characters (张, 陈), prints in the fallback font (see
-  [Type](#type)); in Traditional it prints in the bulletin's font.
+  [Type](#type)); in Traditional it prints in the bulletin's font. The
+  unknown-name dialog's **Add** warns once about Simplified-only characters
+  (see [Name not in the Name Dictionary](#name-not-in-the-name-dictionary-popup)),
+  but never converts a name.
 - The private printed renderer derives surname-first and given-name-first pinyin
   aliases from `Chinese Name` with the generated `pinyin-pro` runtime. Pinyin is
   never stored as a third column, returned by the public API, or used to display
@@ -247,7 +250,11 @@ Rules:
   overwritten.
 - `Bible Verses` stores the reference used by Church at Study and the digital
   bulletin's Today's Verse. It may be a same-chapter range or supported
-  semicolon-separated references.
+  semicolon-separated references, such as `John 3:16-18; Psalm 23`. The printed
+  bulletin uses it too, and **Create Google Doc…** won't make the Doc while it's
+  blank, `TBD`, or has a passage it can't read, such as a misspelled book, a
+  chapter the book doesn't have, or a bare `18` after a comma (#622). Write
+  `John 3:16; John 3:18` instead.
 - `Sabbath School Hymn 1` to `3` each hold one opening hymn, typed in either
   language as a number, a title, or both, such as `第12首 讚美上帝大君王`,
   `AH 73 Holy, Holy, Holy`, or `還要等多久`. Chinese text or a bare number is
@@ -266,7 +273,8 @@ Rules:
 - There are intentionally no speaker password, source, last-updated, or
   updated-by columns in this tab.
 - Nonblank cells in this sheet feed both digital and printed bulletins. A blank
-  cell permits the documented fallback behavior.
+  cell permits the documented fallback behavior, except `Bible Verses`, which
+  the printed bulletin needs (see `Bible Verses` above).
 
 The printed-bulletin dialog links directly to this sheet. This is the only
 normal bulletin-content intake workflow.
@@ -356,8 +364,8 @@ read every cell as its own hymn.
 
 The bound spreadsheet's simple `onOpen` maintenance path runs for every user who
 can open the workbook. It is intentionally quiet and does not require an email
-allowlist. The visible custom menu exposes only the Google Doc creation action;
-maintenance and setup operations stay hidden.
+allowlist. The visible custom menu exposes only the Google Doc creation action
+and **Fonts…**; maintenance and setup operations stay hidden.
 
 On open, the script:
 
@@ -544,6 +552,14 @@ There are two versions of the popup:
   that fix the cell, plus English and optional Chinese name boxes with an
   **Add** button that appends them to the Name Dictionary.
 
+If the Chinese name has a Simplified-only character, such as 张 or 聪, **Add**
+first says so in English and Simplified Chinese, and becomes **Add anyway**
+(#623). The editor can type the name in Traditional, or add it as typed: names
+print exactly as they're stored. A name is never converted, because many
+surnames, such as 余, 于, 范, 姜, 沈, 云 and 温, are also Traditional characters.
+Only characters that are in neither Traditional nor Taiwan's or Hong Kong's
+forms, from OpenCC's tables (`SIMPLIFIED_ONLY_CHINESE_CHARACTERS_`), count.
+
 Google does not let simple triggers open HTML dialogs or create the
 installable trigger that can. So the dialog turns itself on the first time an
 account listed in `PHYSICAL_BULLETIN_ADMIN_EMAILS` uses **Printed Bulletin →
@@ -572,13 +588,14 @@ For a requested date, the API builds data in this order:
    column, but the tab has neither); a blank later cell does not
    erase an older nonblank value.
 
-The printed prompt has one additional fallback for its manual, print-only verse
-selection. The reviewed `Weekly Data → Bible Verses` value takes priority;
-only when it is blank may a saved printed override or older fallback memory be
-used. This prevents an old manual selection from masking newly reviewed intake.
+The printed bulletin uses the same `Weekly Data → Bible Verses` value as the
+app, with no print-only fallback (#622). The print dialog had a verse picker
+until 1.6.1, which saved a print-only verse in a `PRINTED_BIBLE_VERSE_*` Script
+Property; the next **Create Google Doc…** deletes any left.
 
 Blank content remains blank in the API and renders as `TBD` in the app or as the
-bilingual printed placeholder.
+bilingual printed placeholder. The exception is a blank `Bible Verses`: the
+printed bulletin isn't made until it's filled in.
 
 A missing schedule is different: the `Sabbath Calendar` tab, its `Date` column,
 or the Sabbath's row is gone, so there's no schedule record at all (#580).
@@ -738,8 +755,15 @@ needed. It opens a staff dialog that:
 2. links the operator to the `Weekly Data` tab;
 3. lets the operator select Queens or Brooklyn;
 4. supports Queens Regular or Queens Holy Communion; Brooklyn Communion is
-   intentionally disabled; and
-5. optionally accepts a print-only Bible reference and printed announcements.
+   intentionally disabled;
+5. shows the Bible reading from `Weekly Data → Bible Verses`, read-only, the
+   same one the app shows. While it's blank or can't be read, the dialog says
+   why (and, for one it can't read, how to write it), and **Create** stays off. To change it, close the
+   dialog, edit `Weekly Data`, and open the dialog again; and
+6. optionally accepts printed announcements.
+
+A long passage still asks before it's printed, since it can push the bulletin
+onto another page.
 
 The generator requires the operator to authorize Sheets, Docs, and Drive access.
 The anonymous public API never invokes the print generator.
@@ -766,6 +790,13 @@ Before #558 the generator also made a PDF. If one was made for the same date and
 location, making the Doc again moves that PDF to Drive Trash, so it can't be
 mistaken for the edited Doc.
 
+The Doc IDs, and each week's printed announcements, are Script Properties by
+Sabbath. The project settings page can manage only 50 properties by hand, so
+after each Doc is made the generator deletes these, and the PDF IDs from before
+#558, for Sabbaths more than four weeks past (#622). A reprint of an older week
+makes a new Doc. The Docs and PDFs themselves stay in Drive, and no other Script
+Property is touched.
+
 ### Page and fold order
 
 All printed output is landscape US Letter with two vertical panels and an explicit
@@ -785,8 +816,8 @@ Queens Holy Communion is four physical pages in imposed order:
    giving section with the QR codes;
 4. left: Foot Washing; right: the complete Holy Communion service.
 
-The Communion ceremony has fixed references and fixed order. The submitted study
-verse cannot replace the Foot Washing or Communion readings. Communion service
+The Communion ceremony has fixed references and fixed order. The `Weekly Data`
+study verse cannot replace the Foot Washing or Communion readings. Communion service
 assignments use the `Leadership` tab's head pastor (or, without one, its first
 pastor), with the title, except for Congregation. Brooklyn Communion is
 rejected server-side and should remain disabled in any intake UI.
@@ -827,10 +858,24 @@ Simplified forms Japanese shares (国, 会), but not most Simplified-only ones
 儹匉咷嗐嘬噝墁戥挓揝搋摞杴橛汊洑玎璫癤瞅矬碡磣秸窨綹繸纍羢臌荽菢蒺蔯蔻薅虼蝘蝻蟥蠓訇誆讟賙跐蹧躥醡鍤鏇鏊鐏颻餂饈騌騸鴞鵀鶘鶿鸇鸕麀麃鼫. Each character it lacks prints in the fallback font, alone; the rest of the name
 or verse stays in UoqMunThenKhung.
 
-Each font can be changed without a deploy, in **Extensions → Apps Script →
-Project Settings → Script properties**. The value must be a font name from
-Docs' **Font → More fonts** list. The next **Create Google Doc…** uses it, and
-deleting the property goes back to the default.
+Any operator can change the Chinese and English fonts without a deploy, in
+**Printed Bulletin → Fonts…** (#624). Each lists only fonts in Docs'
+**Font → More fonts** list, plus **Default**. The fonts apply to every bulletin
+made after that, by anyone; a Doc already made changes only when it's made
+again. Another font can change the line heights, so check that the next Doc
+still fits its pages.
+
+| Slot | Default | Other choices |
+| --- | --- | --- |
+| Chinese | UoqMunThenKhung (Ming) | Noto Sans TC, Chocolate Classical Sans, Iansui |
+| English | Times New Roman | Georgia, EB Garamond |
+
+The dialog saves the Script Properties below. Each can also be set by hand, in
+**Extensions → Apps Script → Project Settings → Script properties**, to a font
+name from Docs' **Font → More fonts** list; the dialog keeps a font set that
+way. The next **Create Google Doc…** uses it, and deleting the property, or
+choosing **Default**, goes back to the default. The fallback font is set only
+by hand.
 
 | Script property | Default | Used for |
 | --- | --- | --- |
@@ -1014,7 +1059,7 @@ changes the URL and requires a coordinated mobile-app update.
 | Symptom | Likely cause | Corrective action |
 | --- | --- | --- |
 | App shows `TBD` for worship content | No matching intake value | Add or correct the row in `Weekly Data`; allow up to 120 seconds for API cache expiry |
-| New intake verse is ignored by print prompt | Old print memory or override | Check that `Weekly Data → Bible Verses` is nonblank; it has priority over old memory |
+| **Create Google Doc…** says Weekly Data has no Bible Verses, or can't read them | The Sabbath's `Weekly Data → Bible Verses` cell for that location is blank, `TBD`, or has a passage the parser can't read | Close the dialog, write each passage as `Book chapter:verse` with `;` between them, then open the dialog again. The app shows the same verse |
 | API returns `No schedule found for …`, or the app says the schedule isn't set | Missing `Sabbath Calendar` date row (a deleted tab returns `Schedule sheet not found` instead; a renamed one is still found by its tag, unless it was renamed before the spreadsheet was opened after the deploy). Apps from 1.6.0 get the bulletin without its schedule instead of the error | Restore the tab and a matching Date row |
 | The spreadsheet opens with **Bulletin columns not found** | A column or tab it lists was deleted, or renamed before it was ever tagged, so that field is blank | Give a column that exact name again, in any position |
 | The spreadsheet opens with **Bulletin tabs or columns changed** | Someone renamed a tab or column the scripts read, or gave a second column an expected column's name | Nothing: the renamed one is still read by its tag, the notice says which of two same-named columns is read, and it shows once. Rename the extra column, or delete an empty one an open added, if it was a mistake. See [Columns are read by name](#columns-are-read-by-name) |
@@ -1030,7 +1075,7 @@ changes the URL and requires a coordinated mobile-app update.
 | Google Doc is in Trash or not updated | Saved ID points to a trashed/deleted file | Run generation again; the script treats it as missing and creates a new Doc in the configured folder |
 | The Doc, or its printout, has an extra page or clipped fold content | Layout overflow or altered gutter/margins | Shorten the long text in the Doc (an announcement, a sermon title). If every week overflows, restore the renderer's panel/gutter structure; never clip text or go under 10 points to fit |
 | A Chinese character prints in a plainer font than the rest | It's a Simplified or rare character the bulletin's Chinese font lacks, so it uses the fallback font | Nothing, if it's spelled as intended. A Simplified name or title typed in Traditional prints in the bulletin's font; a rare character always prints in the fallback font. See [Type](#type) |
-| All Chinese, or all English, prints in the wrong font | `PRINTED_BULLETIN_CJK_FONT` or `PRINTED_BULLETIN_LATIN_FONT` names a font Docs doesn't offer | Fix the name from Docs' **Font → More fonts** list, or delete the Script Property for the default |
+| All Chinese, or all English, prints in the wrong font | `PRINTED_BULLETIN_CJK_FONT` or `PRINTED_BULLETIN_LATIN_FONT` names a font Docs doesn't offer, typed by hand | Choose a font in **Printed Bulletin → Fonts…**, or **Default** |
 | Bible reference repeats English in Chinese slot | Renderer bypassed bilingual helper | Use `formatBibleReferenceForPrint_` and the deterministic Chinese book map |
 | Hymn English appears in Chinese slot | A manually supplied Chinese value was overwritten (on the Sabbath School hymns row, an unmapped English hymn repeats on purpose) | Preserve the supplied side; only the missing side may use `PrintedHymnLookup.gs` |
 | QR slot is blank | The slot is reserved (Zelle, or Brooklyn's third slot), the deployed script predates the mobile app code, or that code isn't in Drive | Check [Giving QR slots](#giving-qr-slots) and the Drive file name before changing the layout |
