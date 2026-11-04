@@ -29,12 +29,48 @@ const CJK = /[\u3400-\u9fff\uf900-\ufaff]/u;
  * at 125% on a 375-point iPhone and "Share" at 150% in a 320-point iPad window
  * (#324), so a caller can give the button a row of its own.
  */
-export const labelWordsFit = (label: string, width: number, textScale: number) => {
-  const em = LABEL_FONT_SIZE * Math.max(1, textScale);
-  const longest = CJK.test(label)
-    ? em
-    : Math.max(0, ...label.split(/\s+/u).map((word) => [...word].length)) * LETTER_EM * em;
-  return longest <= width - BUTTON_CHROME_WIDTH;
+export const labelWordsFit = (label: string, width: number, textScale: number) =>
+  widestWordWidth(label, LABEL_FONT_SIZE * Math.max(1, textScale)) <= width - BUTTON_CHROME_WIDTH;
+
+/**
+ * About how wide the widest word of `text` is, in points, at `em` points a
+ * letter's height: LETTER_EM a letter, or for Chinese, which can break between
+ * any two characters, `cjkChars` em (one, unless a caller wants more on a line).
+ */
+export const widestWordWidth = (text: string, em: number, cjkChars = 1) =>
+  CJK.test(text)
+    ? Math.min(cjkChars, [...text].length) * em
+    : Math.max(0, ...text.split(/\s+/u).map((word) => [...word].length)) * LETTER_EM * em;
+
+// The Sabbath countdown's widest form, as in "6d 23:59:59", in its monospaced
+// font (Courier on iOS, monospace on Android), whose every character is 0.6 em
+// wide, at 16 points; its label, date, and place are 12 (labelMedium and
+// bodySmall). The card has 16 points of padding on each side, on Home's
+// 20-point page margins, and keeps at least 8 between the words and the timer.
+const COUNTDOWN_CHARS = 11;
+const COUNTDOWN_FONT_SIZE = 16;
+const COUNTDOWN_TEXT_FONT_SIZE = 12;
+const COUNTDOWN_CARD_INSET = 2 * 20 + 2 * 16;
+const COUNTDOWN_GAP = 8;
+// Chinese could break after every character, but a column one character wide
+// isn't readable: it keeps room for four, as in 安息日還.
+const COUNTDOWN_CJK_CHARS = 4;
+
+/**
+ * Whether the Sabbath countdown fits beside its label, date, and place on a
+ * row `contentWidth` points wide (Home's content column), with text at
+ * `textScale` (the app's size times the device's): whether every word of
+ * `texts` still fits whole in the room the timer leaves. Only when one
+ * doesn't does the timer go below them (#324). On a 375-point iPhone that's
+ * above about 170% in Spanish, 180% in English, and 190% in Chinese; on a
+ * 440-point one, above about 210% to 230%; in a 320-point iPad window, above
+ * about 140%.
+ */
+export const countdownFitsBeside = (texts: string[], contentWidth: number, textScale: number) => {
+  const scale = Math.max(1, textScale);
+  const room =
+    contentWidth - COUNTDOWN_CARD_INSET - COUNTDOWN_CHARS * 0.6 * COUNTDOWN_FONT_SIZE * scale - COUNTDOWN_GAP;
+  return texts.every((text) => widestWordWidth(text, COUNTDOWN_TEXT_FONT_SIZE * scale, COUNTDOWN_CJK_CHARS) <= room);
 };
 
 /**

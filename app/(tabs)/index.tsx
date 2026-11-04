@@ -3,7 +3,7 @@ import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
 } from '@/constants/ExternalBrandAssets';
-import { labelsFitSideBySide, WrappingActionButton } from '@/components/WrappingActionButton';
+import { countdownFitsBeside, labelsFitSideBySide, WrappingActionButton } from '@/components/WrappingActionButton';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -150,11 +150,11 @@ export default function HomeScreen() {
     [labels],
   );
   // Once the app's and the phone's text sizes add up to 2× or more, the verse
-  // card's two buttons each get a full row, and the Sabbath countdown's label
-  // sits above the countdown, so words like "Compartir" and "Sabbath" are
+  // card's two buttons each get a full row, so words like "Compartir" are
   // never cut off or broken mid-word (#385). So they do, too, wherever a word
   // of either button's label wouldn't fit beside the other button: on a narrow
-  // phone in Spanish, or in a narrow iPad window (#324).
+  // phone in Spanish, or in a narrow iPad window (#324). The Sabbath countdown
+  // has its own rule, below.
   const stackHeroActions =
     effectiveTextScale >= 2 ||
     !labelsFitSideBySide(
@@ -406,6 +406,18 @@ export default function HomeScreen() {
     } as any);
   };
 
+  // The Sabbath countdown stays beside its label, date, and place, which wrap
+  // between words, unless one of their words couldn't fit whole beside it, as
+  // at about 170% or more on a 375-point iPhone in Spanish (#324).
+  const stackCountdown = !countdownFitsBeside(
+    [
+      isSabbath ? labels.isSabbath : labels.sabbathStarts,
+      ...(targetDate ? [formatDisplayDate(targetDate), labels.locationDefault] : []),
+    ],
+    getContentWidth(windowWidth, effectiveTextScale),
+    effectiveTextScale,
+  );
+
   return (
     <>
       <Stack.Screen options={screenOptions as any} />
@@ -487,8 +499,8 @@ export default function HomeScreen() {
             mode="contained"
           >
             <Card.Content style={styles.timerContentSubtle}>
-              <View style={[styles.timerRow, stackHeroActions && styles.timerRowStacked]}>
-                <View style={[styles.labelColumn, stackHeroActions && styles.labelColumnStacked]}>
+              <View style={[styles.timerRow, stackCountdown && styles.timerRowStacked]}>
+                <View style={[styles.labelColumn, stackCountdown && styles.labelColumnStacked]}>
                   <Text
                     variant="labelMedium"
                     style={{
@@ -512,7 +524,7 @@ export default function HomeScreen() {
                 <Text
                   style={[
                     styles.timerValueSubtle,
-                    stackHeroActions && styles.timerValueStacked,
+                    stackCountdown && styles.timerValueStacked,
                     { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
                   ]}
                 >
