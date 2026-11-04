@@ -17,6 +17,21 @@ describe('committed images', () => {
   });
 });
 
+// A PDF names its author in its Info dictionary or its XMP packet. The app and
+// OS that made it (Creator, Producer) are harmless; a person's name is not.
+const pdfs = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
+  .split('\n')
+  .filter((file) => /\.pdf$/i.test(file));
+
+describe('committed PDFs', () => {
+  it.each(pdfs)('%s names no author', (file) => {
+    // If this fails, re-export the PDF without its document properties.
+    const text = readFileSync(file).toString('latin1');
+    expect(text).not.toMatch(/\/Author\s*[(<]/);
+    expect(text).not.toMatch(/<dc:creator|pdf:Author/);
+  });
+});
+
 const pngChunk = (type: string, data: Buffer) => {
   const length = Buffer.alloc(4);
   length.writeUInt32BE(data.length);
