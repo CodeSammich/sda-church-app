@@ -46,7 +46,7 @@ Master spreadsheet
 ├── Weekly Data           reviewed final-owner bulletin content
 ├── Name Dictionary        private physical-print name resolution
 ├── Leadership             pastors and elders, for printed titles
-└── Hymn Bank              hymns to copy into Weekly Data; kept up to date on open
+└── Hymn Bank              hymns to copy into Weekly Data; kept up to date by Create Google Doc…
         │
         ├── BulletinApi.gs ── public, privacy-filtered JSON ──> mobile app
         │
@@ -323,7 +323,7 @@ Head | Paul Wen  | Ruth Ho
 
 This tab lists every hymn in the church's two hymnals, to copy into
 `Weekly Data`'s hymn cells instead of typing them (#606). No script reads it.
-The open-time upkeep keeps it the same as the app's hymnals (#619), so nobody
+**Create Google Doc…** keeps it the same as the app's hymnals (#619), so nobody
 pastes or protects it.
 
 ```text
@@ -350,21 +350,28 @@ Chinese Hymnal 505 中文赞美诗 | SDA Hymnal 1985 英文诗歌本
 **How it stays current (#619).** Each Apps Script deploy writes
 `HymnalData.gs` from `features/hymnal/`, with the tab's rows
 (`scripts/build-hymnal-apps-script.cjs`, which builds them with
-`scripts/export-hymn-bank.cjs`). Each time the spreadsheet opens, the upkeep
-(`ensureHymnBankTab_`) reads the tab in one call and compares it with those
-rows:
+`scripts/export-hymn-bank.cjs`). Each time someone opens **Printed Bulletin →
+Create Google Doc…**, after its dialog is up, `ensureHymnBankTab_` checks the
+tab. Usually that's one Document Property, `bulletin.hymnBank.fingerprint`: the
+fingerprint of the rows it last checked or wrote. Only when that differs (after a
+deploy that changed the hymnals), after an edit in the tab (`onEdit` clears the
+fingerprint), or when the tab is missing does it read the tab in one call and
+compare it with those rows:
 
 - If every cell matches, it does nothing.
 - If any cell differs (a stray edit, a sort, an extra column), it rewrites the
   tab as plain text, with the headers bold and frozen. So when the app's
-  hymnal data changes, the tab follows at the first open after the deploy.
-- If the tab is gone, it adds it back at the end. The tab is tagged like the
-  others, so a renamed one is still found and kept.
+  hymnal data changes, the tab follows the first time anyone makes a bulletin
+  after the deploy.
+- If no tab is named `Hymn Bank`, it adds one at the end. A renamed tab is
+  left as it is.
 
-Any editor's open can do this, so the tab must not be protected. The
-protection added by hand in #606 should be removed: right-click the tab →
-**Protect sheet** → delete the rule. While it's there, an editor it blocks just
-leaves the tab as it was, and the upkeep goes on.
+It used to run on open, but `onOpen` is a simple trigger with 30 seconds, and the
+first open after the 1.6.1 deploy ran out of time rewriting this tab before it
+built the menu. A menu click has six minutes. Any operator's click can do this,
+so the tab must not be protected. The protection added by hand in #606 should
+be removed: right-click the tab → **Protect sheet** → delete the rule. While
+it's there, an operator it blocks just leaves the tab as it was.
 
 `node scripts/export-hymn-bank.cjs --output hymn-bank.tsv` still writes the
 same rows to a file, for a look without opening the spreadsheet.
@@ -376,7 +383,9 @@ every cell as its own hymn, with the other cell in the row as its twin.
 The bound spreadsheet's simple `onOpen` maintenance path runs for every user who
 can open the workbook. It is intentionally quiet and does not require an email
 allowlist. The visible custom menu exposes only the Google Doc creation action
-and **Fonts…**; maintenance and setup operations stay hidden.
+and **Fonts…**; maintenance and setup operations stay hidden. `onOpen` builds the
+menu before anything else, because a simple trigger stops at 30 seconds: an
+open that runs out of time in the upkeep still has the menu.
 
 On open, the script:
 
@@ -388,13 +397,11 @@ On open, the script:
    the fourth quarter ahead when the current quarter is in its final 21 days;
 5. puts back a deleted `Weekly Data` tab or its missing columns, adds its rows
    for the next two Sabbaths, and sets its `Date` and `Location` rules;
-6. keeps the `Hymn Bank` tab the same as the app's hymnals (see
-   [The `Hymn Bank` tab](#the-hymn-bank-tab));
-7. hides old schedule rows without deleting them;
-8. repaints the conflict highlights described below across every schedule row;
-9. tags the tabs and columns it finds by name, so a later rename doesn't lose
+6. hides old schedule rows without deleting them;
+7. repaints the conflict highlights described below across every schedule row;
+8. tags the tabs and columns it finds by name, so a later rename doesn't lose
    them (see [Columns are read by name](#columns-are-read-by-name)); and
-10. shows one alert, in English and Simplified Chinese, listing any expected
+9. shows one alert, in English and Simplified Chinese, listing any expected
    column or tab still missing from `Sabbath Calendar` or `Weekly Data`, and
    any tab or column renamed, or any name more than one column has, since the
    last notice.
@@ -402,7 +409,7 @@ On open, the script:
 ### Columns are read by name
 
 The API and the printed bulletin find every `Sabbath Calendar` and `Weekly
-Data` column by its header, wherever it is. Each open also tags the five tabs,
+Data` column by its header, wherever it is. Each open also tags the four tabs,
 and each of those columns, with
 [developer metadata](https://developers.google.com/apps-script/reference/spreadsheet/developer-metadata),
 which stays with a tab or column through a rename or a move and can't be seen
@@ -443,7 +450,7 @@ For the people running the sheet:
   [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)).
   A `Sabbath Calendar` without `Date` or
   `Quarter` also stops the open-time upkeep from its quarter rows on (steps 4
-  to 8 above) until the column is back. The tagging in step 9 still runs.
+  to 7 above) until the column is back. The tagging in step 8 still runs.
 
 Since the header row and `Sabbath Calendar!A:B` are protected, an open by
 someone outside the technology group may not be able to tag them; a later open

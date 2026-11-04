@@ -50,15 +50,15 @@ In order of priority. When two conflict, the earlier one wins.
 
 | Term | Meaning |
 | --- | --- |
-| **Bulletin tab** | One of `BULLETIN_TABS`: `Sabbath Calendar`, `Weekly Data`, `Name Dictionary`, `Leadership`, `Hymn Bank`. All five are tagged; `Hymn Bank` is kept by the upkeep, not read (#619) |
+| **Bulletin tab** | One of `BULLETIN_TABS`: `Sabbath Calendar`, `Weekly Data`, `Name Dictionary`, `Leadership`. All four are tagged |
 | **Expected column** | A header in `BULLETIN_SHEET_COLUMNS`. Only `Sabbath Calendar` and `Weekly Data` have them, so only their columns are tagged. `Leadership` is read by the words `Pastors` and `Elders` in a header that holds only the title, and `Name Dictionary` by position |
 | **Repeated column** | A `Sabbath Calendar` header that appears on both sides, such as `Offering Prayer`. Its side, Queens or Brooklyn, is its *location*: columns left of `Brooklyn Sermon` are Queens |
 | **Label** | An expected column's name with its location, such as `Brooklyn Offering Prayer`; for other columns, the header itself |
 | **Tag** | Developer metadata with `DOCUMENT` visibility. A tab carries `bulletin.tab` with a value such as `sabbath-calendar`. A column carries `bulletin.column` with its label in lower case, such as `brooklyn offering prayer`, on the whole column (such as `C:C`) |
 | **Tagged** | The spreadsheet has been opened since the deploy that added tags, so what the scripts found by name then carries its tag |
 | **Effective headers** | The header row as the scripts read it, after the rules below: a renamed column's header replaced by its label, and the unread one of two same-named columns left out |
-| **Upkeep** | What each open does first: [open-time steps](../operations/bulletin-automation.md#header-protection-and-validation-automation) 1 to 9, from header protection to tagging. `onOpen` then shows the alert (step 10) |
-| **Readers** | Everything that reads the bulletin tabs: the API, the printed bulletin, the [roster checks](../operations/bulletin-automation.md#roster-conflict-highlights-and-unknown-names), the [English-only guard](../operations/bulletin-automation.md#english-only-sabbath-calendar-input), the upkeep's quarter rows, `Weekly Data` repair, `Hymn Bank` upkeep, and row hiding (steps 4 to 7), and the alert |
+| **Upkeep** | What each open does first: [open-time steps](../operations/bulletin-automation.md#header-protection-and-validation-automation) 1 to 8, from header protection to tagging. `onOpen` builds the menu first and shows the alert last (step 9) |
+| **Readers** | Everything that reads the bulletin tabs: the API, the printed bulletin, the [roster checks](../operations/bulletin-automation.md#roster-conflict-highlights-and-unknown-names), the [English-only guard](../operations/bulletin-automation.md#english-only-sabbath-calendar-input), the upkeep's quarter rows, `Weekly Data` repair, and row hiding (steps 4 to 6), and the alert |
 
 **Sources:** the lookup is in `google-apps-script/BulletinApi.gs` (`BULLETIN_TABS`,
 `BULLETIN_SHEET_COLUMNS`, `getBulletinSheet_`, `resolveBulletinHeaders_`). The

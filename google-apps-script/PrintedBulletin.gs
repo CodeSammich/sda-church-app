@@ -356,6 +356,14 @@ var PRINTED_BIBLE_CHAPTER_COUNTS = Object.freeze({
 var PRINTED_OFFERING_TRANSLATION_CACHE = {};
 
 function onOpen() {
+  // The menu first: a simple trigger stops at 30 seconds, and an open that
+  // ran out of time in the upkeep below once left staff with no menu at all.
+  var ui = SpreadsheetApp.getUi();
+  ui
+    .createMenu('Printed Bulletin')
+    .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
+    .addItem('Fonts…', 'openPrintedBulletinFontsDialog')
+    .addToUi();
   try {
     maintainBulletinScheduleOnOpen_();
   } catch (error) {
@@ -376,12 +384,6 @@ function onOpen() {
       Logger.log('Bulletin column check failed: ' + error);
     }
   }
-  var ui = SpreadsheetApp.getUi();
-  ui
-    .createMenu('Printed Bulletin')
-    .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
-    .addItem('Fonts…', 'openPrintedBulletinFontsDialog')
-    .addToUi();
   if (!ui.alert || !ui.ButtonSet || !ui.ButtonSet.OK) {
     return;
   }
@@ -467,6 +469,9 @@ function createPrintedBulletinFromPrompt() {
     output,
     'Bulletin workflow / 周刊流程',
   );
+  // After the dialog is up, so it isn't slowed: a menu click has six minutes,
+  // where onOpen has only 30 seconds.
+  ensureHymnBankTabSafely_();
   return null;
 }
 

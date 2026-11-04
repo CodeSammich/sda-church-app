@@ -95,6 +95,10 @@ function onEdit(e) {
 
   var range = e.range;
   var sheet = range.getSheet();
+  if (sheet.getName() === HYMN_BANK_TAB_NAME) {
+    forgetHymnBankFingerprint_();
+    return;
+  }
   if (isBulletinTab_(sheet, SCHEDULE_ASSIGNMENT_CHECK_CONFIG.nameDictionarySheetName)) {
     // Dictionary edits can merge or split pinyin aliases, which changes
     // which roster cells count as the same person.
@@ -197,7 +201,6 @@ function runBulletinScheduleMaintenance_(now) {
       );
     }
     var weeklyRows = populateUpcomingWeeklyDataRowsSafely_(now);
-    var hymnBank = ensureHymnBankTabSafely_();
     var hidden = hideOldBulletinScheduleRows_(sheet, now);
     // Runs after quarter rows are appended so the scan covers every row.
     var conflicts = refreshScheduleRosterChecksSafely_(sheet);
@@ -205,7 +208,6 @@ function runBulletinScheduleMaintenance_(now) {
     return {
       populated: populated,
       weeklyRows: weeklyRows,
-      hymnBank: hymnBank,
       hidden: hidden,
       conflicts: conflicts,
       validation: validation,
@@ -728,26 +730,41 @@ function applyWeeklyDataRules_(sheet, dateColumn, locationColumn) {
 }
 
 /**
- * Keeps the Hymn Bank tab (#606) the same as the app's hymnals (#619), the way
- * Weekly Data repairs itself: the rows come from BULLETIN_HYMNAL_DATA, which
- * each deploy makes from features/hymnal/. The tab is read in one call, and
- * rewritten only when a cell differs, so a stray edit, sort or new column is
- * undone at the next open and the tab needs no protection. A deleted tab
- * comes back at the end. Returns what it did.
+ * Keeps the Hymn Bank tab (#606) the same as the app's hymnals (#619): the rows
+ * come from BULLETIN_HYMNAL_DATA, which each deploy makes from
+ * features/hymnal/. The tab is read in one call, and rewritten only when a
+ * cell differs, so a stray edit, sort or new column is undone, and the tab
+ * needs no protection. A deleted tab comes back at the end. Returns what it
+ * did.
+ *
+ * It runs after Printed Bulletin → Create Google Doc… opens its dialog, not on
+ * open: onOpen is a simple trigger with 30 seconds, and the first open after
+ * the 1.6.1 deploy ran out of time rewriting this tab, before the menu.
+ *
+ * Most runs read nothing but one Document Property: the fingerprint of the
+ * rows last checked or written. Only a deploy that changed the hymnals, an
+ * edit in the tab (onEdit clears the fingerprint), or a missing tab leads to
+ * the read and compare below.
  */
 function ensureHymnBankTab_(spreadsheet) {
   var rows = typeof BULLETIN_HYMNAL_DATA !== 'undefined' ? BULLETIN_HYMNAL_DATA.hymnBankRows : null;
   if (!rows || !rows.length) {
     return 'no data';
   }
-  var name = 'Hymn Bank';
+  var name = HYMN_BANK_TAB_NAME;
+  var properties = PropertiesService.getDocumentProperties();
+  var fingerprint = getHymnBankFingerprint_(rows);
   var sheet = getBulletinSheet_(spreadsheet, name);
+  if (sheet && properties.getProperty(HYMN_BANK_FINGERPRINT_PROPERTY) === fingerprint) {
+    return 'unchanged';
+  }
   var created = !sheet;
   if (created) {
     sheet = spreadsheet.insertSheet(name, spreadsheet.getSheets().length);
   } else {
     var current = sheet.getLastRow() ? sheet.getDataRange().getDisplayValues() : [];
     if (isSameHymnBank_(current, rows)) {
+      properties.setProperty(HYMN_BANK_FINGERPRINT_PROPERTY, fingerprint);
       return 'unchanged';
     }
     sheet.clearContents();
@@ -761,7 +778,31 @@ function ensureHymnBankTab_(spreadsheet) {
   if (sheet.getFrozenRows() !== 1) {
     sheet.setFrozenRows(1);
   }
+  properties.setProperty(HYMN_BANK_FINGERPRINT_PROPERTY, fingerprint);
   return created ? 'created' : 'rewritten';
+}
+
+var HYMN_BANK_TAB_NAME = 'Hymn Bank';
+// A Document Property, so it stays off the Script Properties page.
+var HYMN_BANK_FINGERPRINT_PROPERTY = 'bulletin.hymnBank.fingerprint';
+
+// A short fingerprint of the rows: their count and a 32-bit hash of their text.
+function getHymnBankFingerprint_(rows) {
+  var text = JSON.stringify(rows);
+  var hash = 5381;
+  for (var index = 0; index < text.length; index += 1) {
+    hash = ((hash * 33) ^ text.charCodeAt(index)) >>> 0;
+  }
+  return rows.length + ':' + hash.toString(16);
+}
+
+// An edit in the Hymn Bank tab means it may differ now, so the next check reads it.
+function forgetHymnBankFingerprint_() {
+  try {
+    PropertiesService.getDocumentProperties().deleteProperty(HYMN_BANK_FINGERPRINT_PROPERTY);
+  } catch (error) {
+    // The next check after a deploy still compares the tab.
+  }
 }
 
 function isSameHymnBank_(current, rows) {

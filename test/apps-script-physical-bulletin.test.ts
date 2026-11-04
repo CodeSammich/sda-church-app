@@ -192,6 +192,43 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
   });
 
+  it('builds the menu before the upkeep, so an open that runs out of time still has it', () => {
+    const calls: string[] = [];
+    const menu = {
+      addItem: (label: string) => {
+        calls.push(`item ${label}`);
+        return menu;
+      },
+      addToUi: () => {
+        calls.push('menu shown');
+        return menu;
+      },
+    };
+    const context = loadAppsScript({
+      testCalls: calls,
+      SpreadsheetApp: {
+        getUi: () => ({ createMenu: () => menu }),
+        getActiveSpreadsheet: () => ({}),
+      },
+    });
+    // The upkeep never returns, as when Apps Script stops it at 30 seconds.
+    runInContext(
+      `maintainBulletinScheduleOnOpen_ = function () {
+        testCalls.push('upkeep');
+        throw new Error('Exceeded maximum execution time');
+      };`,
+      context,
+    );
+    expect(() => runInContext('onOpen()', context)).not.toThrow();
+
+    expect(calls.slice(0, 4)).toEqual([
+      'item Create Google Doc…',
+      'item Fonts…',
+      'menu shown',
+      'upkeep',
+    ]);
+  });
+
   it('names the expected columns it cannot find when the sheet opens', () => {
     const alerts: string[] = [];
     const menu = { addItem: () => menu, addToUi: () => menu };
