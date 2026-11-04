@@ -105,6 +105,7 @@ describe('key screen list (test/screens/screens.json)', () => {
   it('opens only popups the screen can open from its path (#372)', () => {
     const screenFiles: Record<string, string> = {
       bible: 'app/(tabs)/bible/index.tsx',
+      'home/give': 'app/(tabs)/home/give.tsx',
       'sabbath-school': 'app/(tabs)/explore/sabbath-school.tsx',
       you: 'app/(tabs)/you/index.tsx',
       // The route shows the component, which reads the path.

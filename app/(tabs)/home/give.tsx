@@ -1,17 +1,21 @@
+import { DafSponsorsDialog } from '@/components/DafSponsorsDialog';
 import { VerseHero } from '@/components/VerseHero';
 import { WrappingButton as Button } from '@/components/WrappingButton';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openAdventistGiving,
+  openDafSponsor,
+  PREFERRED_DAF_SPONSOR,
   SHOW_ZELLE_GIVING,
 } from '@/constants/ExternalLinks';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useHeroHeaderTitle } from '@/hooks/useHeroHeaderTitle';
+import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
-import { Stack } from 'expo-router';
-import { useContext } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useContext, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, Text } from 'react-native-paper';
 
 export default function GiveScreen() {
@@ -19,6 +23,14 @@ export default function GiveScreen() {
   const theme = useAppTheme();
   const DocumentStyles = useDocumentStyles();
   const { showHeaderTitle, handleHeroScroll } = useHeroHeaderTitle();
+  const [showDafSponsors, setShowDafSponsors] = useState(false);
+  const { popup } = useLocalSearchParams<{ popup?: string }>();
+
+  // The key-screen capture can't tap, so its build opens the sponsors popup
+  // from the path: home/give?popup=daf-sponsors.
+  useEffect(() => {
+    if (getScreenshotPopup(popup, ['daf-sponsors']) === 'daf-sponsors') setShowDafSponsors(true);
+  }, [popup]);
 
   const allLabels = {
     en: {
@@ -45,6 +57,7 @@ export default function GiveScreen() {
       dafTitle: 'Stocks/Equities',
       dafDesc:
         'We prefer Fidelity Charitable. If you already know how to recommend a grant, direct it to New York Chinese Seventh-day Adventist Church using EIN 11-3004814. For Charles Schwab Charitable, Vanguard Charitable, or another charitable sponsor or brokerage, please contact church staff in advance.',
+      dafOther: 'Other Sponsors',
       quote:
         'Bring the full tithe into the storehouse, so that there may be food in My house. Test Me in this,” says the Lord of Hosts. “See if I will not open the windows of heaven and pour out for you blessing without measure.',
       quoteRef: 'Malachi 3:10 (BSB)',
@@ -72,6 +85,7 @@ export default function GiveScreen() {
       dafTitle: '股票／證券',
       dafDesc:
         '本教會較偏好使用 Fidelity Charitable。如您已知道如何建議撥款，請將撥款指定給紐約華人基督復臨安息日會，並使用 EIN 11-3004814。如要使用 Charles Schwab Charitable、Vanguard Charitable 或其他慈善贊助機構或券商，請提前聯絡教會同工。',
+      dafOther: '其他贊助機構',
       quote:
         '萬軍之耶和華說：你們要將當納的十分之一全然送入倉庫，使我家有糧，以此試試我，是否為你們敞開天上的窗戶，傾福與你們，甚至無處可容。',
       quoteRef: '瑪拉基書 3:10 (CUV)',
@@ -99,6 +113,7 @@ export default function GiveScreen() {
       dafTitle: '股票／证券',
       dafDesc:
         '本教会更倾向使用 Fidelity Charitable。如您已知道如何建议拨款，请将拨款指定给纽约华人基督复临安息日会，并使用 EIN 11-3004814。如要使用 Charles Schwab Charitable、Vanguard Charitable 或其他慈善赞助机构或券商，请提前联系教会同工。',
+      dafOther: '其他赞助机构',
       quote:
         '万军之耶和华说：你们要将当纳的十分之一全然送入仓库，使我家有粮，以此试试我，是否为你们敞开天上的窗户，倾福与你们，甚至无处可容。',
       quoteRef: '玛拉基书 3:10 (CUVS)',
@@ -127,6 +142,7 @@ export default function GiveScreen() {
       dafTitle: 'Acciones/Valores',
       dafDesc:
         'Preferimos Fidelity Charitable. Si ya sabe cómo recomendar una donación, diríjala a New York Chinese Seventh-day Adventist Church usando el EIN 11-3004814. Para Charles Schwab Charitable, Vanguard Charitable u otra organización patrocinadora o casa de corretaje, comuníquese con el personal de la iglesia con anticipación.',
+      dafOther: 'Otros patrocinadores',
       quote:
         'Traed todos los diezmos al alfolí, y haya alimento en mi casa; y probadme ahora en esto, dice Jehová de los ejércitos, si no os abriré las ventanas de los cielos, y vaciaré sobre vosotros bendición hasta que sobreabunde.',
       quoteRef: 'Malaquías 3:10 (RVR1960)',
@@ -294,6 +310,20 @@ export default function GiveScreen() {
                 {labels.dafDesc}
               </Text>
             </Card.Content>
+            <Card.Actions style={styles.actions}>
+              <Button mode="text" onPress={() => setShowDafSponsors(true)}>
+                {labels.dafOther}
+              </Button>
+              <Button
+                mode="contained"
+                icon="open-in-new"
+                buttonColor={theme.colors.primary}
+                textColor={theme.colors.onPrimary}
+                onPress={() => openDafSponsor(PREFERRED_DAF_SPONSOR)}
+              >
+                {PREFERRED_DAF_SPONSOR.name}
+              </Button>
+            </Card.Actions>
           </Card>
         </View>
 
@@ -338,6 +368,21 @@ export default function GiveScreen() {
           </Card>
         </View>
       </ScrollView>
+      <DafSponsorsDialog
+        title={labels.dafOther}
+        visible={showDafSponsors}
+        onDismiss={() => setShowDafSponsors(false)}
+      />
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  // Side by side when they fit, Fidelity Charitable on the right as Give Online
+  // is. When they don't, it goes above Other Sponsors, so the preferred
+  // sponsor still comes first.
+  actions: {
+    flexWrap: 'wrap-reverse',
+    rowGap: 8,
+  },
+});

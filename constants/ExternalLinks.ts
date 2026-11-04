@@ -154,6 +154,53 @@ export const openAdventistGiving = async () => {
   return openURL('https://adventistgiving.org/donate/AN48CO');
 };
 
+/**
+ * The church as a donor-advised fund sponsor lists it, for recommending a
+ * grant: its legal name and EIN, as the Tithe & Offering page gives them.
+ */
+export const CHURCH_LEGAL_NAME = 'New York Chinese Seventh-day Adventist Church';
+export const CHURCH_EIN = '11-3004814';
+
+export type DafSponsor = Readonly<{
+  id: string;
+  /** The sponsor's name as its website gives it. Not translated. */
+  name: string;
+  /** The name members may still know it by, which the popup gives as "Formerly …". */
+  formerName?: string;
+  /** The page its button opens, in the in-app browser. */
+  url: string;
+}>;
+
+/**
+ * Fidelity Charitable's own link to a grant to one charity, from the "Making
+ * the Most of DAF Direct" section of its DAF Direct user guide
+ * (dafdirect.org): it opens the Giving Account sign-in, then a grant
+ * recommendation with the church, by EIN, already chosen.
+ */
+export const FIDELITY_CHARITABLE_GRANT_URL =
+  'https://charitablegift.fidelity.com/cgfweb/CGFLogon.cgfdo' +
+  `?Npo_Id=${CHURCH_EIN.replace('-', '')}&Device_Type=Widget&App_Id=MDNR&source=widget`;
+
+/**
+ * Donor-advised fund sponsors on the Tithe & Offering page (#646), each opening
+ * its website, where the donor recommends the grant. The church prefers the
+ * first, Fidelity Charitable (#230), which has its own button on the page and
+ * opens a grant to the church. DAFgiving360 and Vanguard Charitable have no such
+ * link, so they open their home pages; they're in the page's Other Sponsors
+ * popup, for donors whose fund is there, who contact church staff first. The
+ * app takes no payment.
+ */
+export const DAF_SPONSORS: readonly DafSponsor[] = [
+  { id: 'fidelity', name: 'Fidelity Charitable', url: FIDELITY_CHARITABLE_GRANT_URL },
+  // Schwab Charitable became DAFgiving360 in June 2024.
+  { id: 'dafgiving360', name: 'DAFgiving360', formerName: 'Schwab Charitable', url: 'https://www.dafgiving360.org/' },
+  { id: 'vanguard', name: 'Vanguard Charitable', url: 'https://www.vanguardcharitable.org/' },
+];
+
+export const [PREFERRED_DAF_SPONSOR, ...OTHER_DAF_SPONSORS] = DAF_SPONSORS;
+
+export const openDafSponsor = (sponsor: DafSponsor) => openURL(sponsor.url);
+
 export const openSpotifyPodcast = async () => {
   return openInItsApp('https://open.spotify.com/show/6Ig7RqU3A5vivl4x3FJFLV');
 };
