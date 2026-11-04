@@ -384,6 +384,126 @@ describe('printed bulletin type (#603)', () => {
   });
 });
 
+describe('Printed Bulletin → Fonts… (#624)', () => {
+  // The bulletin's code with a Script Properties store that can be written.
+  const loadWithStore = (properties: Record<string, string>) => {
+    const context = loadPrintedBulletin(properties);
+    const locks: string[] = [];
+    Object.assign(context, {
+      PropertiesService: {
+        getScriptProperties: () => ({
+          getProperty: (name: string) => properties[name] ?? null,
+          setProperty: (name: string, value: string) => {
+            properties[name] = value;
+          },
+          deleteProperty: (name: string) => {
+            delete properties[name];
+          },
+        }),
+      },
+      LockService: {
+        getScriptLock: () => ({
+          waitLock: () => locks.push('lock'),
+          releaseLock: () => locks.push('release'),
+        }),
+      },
+    });
+    return { context, locks };
+  };
+  type Slot = { current: string; choices: Array<{ font: string; label: string }> };
+  const settingsOf = (context: object) =>
+    JSON.parse(runInContext('JSON.stringify(getPrintedBulletinFontSettings_())', context) as string) as {
+      chinese: Slot;
+      latin: Slot;
+    };
+
+  it('offers the default first, then fonts Docs can print, with the current one chosen', () => {
+    const { context } = loadWithStore({ PRINTED_BULLETIN_CJK_FONT: 'Noto Sans TC' });
+    const settings = settingsOf(context);
+
+    expect(settings.chinese.current).toBe('Noto Sans TC');
+    expect(settings.chinese.choices.map((choice) => choice.font)).toEqual([
+      '',
+      'Noto Sans TC',
+      'Chocolate Classical Sans',
+      'Iansui',
+    ]);
+    expect(settings.chinese.choices[0].label).toContain('UoqMunThenKhung');
+    expect(settings.latin.current).toBe('');
+    expect(settings.latin.choices.map((choice) => choice.font)).toEqual(['', 'Georgia', 'EB Garamond']);
+    expect(settings.latin.choices[0].label).toContain('Times New Roman');
+  });
+
+  it('keeps a font set by hand, and shows a default set by hand as the default', () => {
+    const { context } = loadWithStore({
+      PRINTED_BULLETIN_CJK_FONT: 'Some Hand Font',
+      PRINTED_BULLETIN_LATIN_FONT: 'Times New Roman',
+    });
+    const settings = settingsOf(context);
+
+    expect(settings.chinese.current).toBe('Some Hand Font');
+    expect(settings.chinese.choices.slice(-1)).toEqual([
+      { font: 'Some Hand Font', label: 'Some Hand Font (set by hand / 手动设置)' },
+    ]);
+    expect(settings.latin.current).toBe('');
+  });
+
+  it('saves a listed font, clears the default, and rejects anything else, for any operator', () => {
+    const properties: Record<string, string> = {
+      PRINTED_BULLETIN_LATIN_FONT: 'Georgia',
+      PRINTED_BULLETIN_CJK_FALLBACK_FONT: 'Noto Sans SC',
+    };
+    const { context, locks } = loadWithStore(properties);
+
+    runInContext(`savePrintedBulletinFonts({ chinese: 'Iansui', latin: '' })`, context);
+    expect(properties).toEqual({
+      PRINTED_BULLETIN_CJK_FONT: 'Iansui',
+      PRINTED_BULLETIN_CJK_FALLBACK_FONT: 'Noto Sans SC',
+    });
+    expect(locks).toEqual(['lock', 'release']);
+
+    // No admin check: there are no admin emails here, and it still saved.
+    expect(() =>
+      runInContext(`savePrintedBulletinFonts({ chinese: 'Comic Sans MS', latin: '' })`, context),
+    ).toThrow('Choose a font from the list. / 请从列表中选择字体。');
+    expect(properties.PRINTED_BULLETIN_CJK_FONT).toBe('Iansui');
+  });
+
+  it('prints the next bulletin in the fonts it saved', () => {
+    const properties: Record<string, string> = {};
+    const { context } = loadWithStore(properties);
+    runInContext(`savePrintedBulletinFonts({ chinese: 'Noto Sans TC', latin: 'EB Garamond' })`, context);
+
+    const { paragraphs } = render(bulletin(), 'regular', 'queens', properties);
+    const fonts = new Set(
+      paragraphs.flatMap((paragraph) =>
+        Array.from(paragraph.text)
+          .map((character, index) => ({ character, font: paragraph.chars[index].font }))
+          .filter(({ character }) => /\S/.test(character))
+          .map(({ character, font }) => `${CJK.test(character) ? 'cjk' : 'latin'}:${font}`),
+      ),
+    );
+    expect(fonts).toEqual(new Set(['latin:EB Garamond', 'cjk:Noto Sans TC']));
+  });
+
+  it('explains, in English and Simplified Chinese, who and what a change affects', () => {
+    const { context } = loadWithStore({ PRINTED_BULLETIN_CJK_FONT: 'Iansui' });
+    const html = runInContext(
+      'buildPrintedBulletinFontsHtml_(getPrintedBulletinFontSettings_())',
+      context,
+    ) as string;
+
+    expect(html).toContain('for every printed bulletin made from now on, by anyone');
+    expect(html).toContain("A Doc already made keeps its fonts until it\'s made again");
+    expect(html).toContain('check that the next Doc still fits its pages');
+    expect(html).toContain('这些字体将用于此后任何人创建的所有纸质周刊');
+    expect(html).toContain('<option value="Iansui" selected>');
+    expect(html).toContain('<option value="" selected>Default: Times New Roman</option>');
+    expect(html).toContain('savePrintedBulletinFonts');
+    expect(html).toContain('Cancel / 取消');
+  });
+});
+
 describe('the printed Sabbath Encouragement in Traditional Chinese (#565, #603)', () => {
   const context = loadPrintedBulletin();
   const pages = JSON.parse(

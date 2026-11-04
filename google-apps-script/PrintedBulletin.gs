@@ -24,9 +24,11 @@
  * prints in the fallback font, and the rest of its name or verse stays in
  * UoqMunThenKhung.
  *
- * Staff can change any of the fonts without a deploy by setting its Script
- * Property (Apps Script → Project Settings → Script properties) to a name from
- * Docs' Font → More fonts list; see readPrintedBulletinFonts_.
+ * Staff can change the Chinese and English fonts without a deploy, in
+ * Printed Bulletin → Fonts… (#624), which sets their Script Properties. The
+ * fallback font is set only in Script Properties (Apps Script → Project
+ * Settings → Script properties), as a name from Docs' Font → More fonts list;
+ * see readPrintedBulletinFonts_.
  */
 var PRINTED_BULLETIN_TYPE = Object.freeze({
   latinFont: 'Times New Roman',
@@ -360,6 +362,7 @@ function onOpen() {
   ui
     .createMenu('Printed Bulletin')
     .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
+    .addItem('Fonts…', 'openPrintedBulletinFontsDialog')
     .addToUi();
   if (!ui.alert || !ui.ButtonSet || !ui.ButtonSet.OK) {
     return;
@@ -3267,6 +3270,150 @@ function readPrintedBulletinFonts_() {
       PRINTED_BULLETIN_TYPE.chineseFallbackFont,
     ),
   };
+}
+
+// The fonts Printed Bulletin → Fonts… offers (#624). Each is in Docs' Font →
+// More fonts list, so Docs can print it: a name Docs doesn't know would print
+// in its fallback font without saying why. The Chinese ones have the
+// Traditional characters the bulletin uses; Docs' others in that list add
+// bopomofo or are display faces.
+var PRINTED_BULLETIN_FONT_CHOICES = Object.freeze({
+  chinese: [
+    { font: 'Noto Sans TC', label: 'Noto Sans TC 思源黑体 (sans / 黑体)' },
+    { font: 'Chocolate Classical Sans', label: 'Chocolate Classical Sans 朱古力黑体 (classic sans / 古典黑体)' },
+    { font: 'Iansui', label: 'Iansui 芫荽 (brush / 楷体风格)' },
+  ],
+  latin: [
+    { font: 'Georgia', label: 'Georgia' },
+    { font: 'EB Garamond', label: 'EB Garamond' },
+  ],
+});
+
+// What the dialog shows: each slot's choices, the default first, and the
+// font now set. A font set by hand that isn't a choice is added, so saving
+// the dialog keeps it.
+function getPrintedBulletinFontSettings_() {
+  var properties = PropertiesService.getScriptProperties();
+  var slot = function (key, propertyName, defaultFont, defaultLabel) {
+    var current = String(properties.getProperty(propertyName) || '').trim();
+    var choices = [{ font: '', label: defaultLabel }].concat(PRINTED_BULLETIN_FONT_CHOICES[key]);
+    var known = choices.some(function (choice) {
+      return choice.font === current;
+    });
+    if (current && !known) {
+      choices.push({ font: current, label: current + ' (set by hand / 手动设置)' });
+    }
+    return { current: current === defaultFont ? '' : current, choices: choices };
+  };
+  return {
+    chinese: slot(
+      'chinese',
+      PRINTED_BULLETIN_TYPE.chineseFontProperty,
+      PRINTED_BULLETIN_TYPE.chineseFont,
+      'Default: UoqMunThenKhung 宇文天穹 (Ming / 明体)',
+    ),
+    latin: slot(
+      'latin',
+      PRINTED_BULLETIN_TYPE.latinFontProperty,
+      PRINTED_BULLETIN_TYPE.latinFont,
+      'Default: Times New Roman',
+    ),
+  };
+}
+
+function openPrintedBulletinFontsDialog() {
+  var output = HtmlService.createHtmlOutput(
+    buildPrintedBulletinFontsHtml_(getPrintedBulletinFontSettings_()),
+  )
+    .setWidth(520)
+    .setHeight(430);
+  SpreadsheetApp.getUi().showModalDialog(output, 'Printed bulletin fonts / 纸质周刊字体');
+  return null;
+}
+
+/**
+ * Dialog action: saves the Chinese and English fonts. Any operator can, as
+ * each week's Doc is checked before it's printed. A blank font is the default
+ * and deletes its property. Only a listed font, or the one already set, is
+ * accepted.
+ */
+function savePrintedBulletinFonts(request) {
+  var settings = getPrintedBulletinFontSettings_();
+  var changes = [
+    ['chinese', PRINTED_BULLETIN_TYPE.chineseFontProperty],
+    ['latin', PRINTED_BULLETIN_TYPE.latinFontProperty],
+  ].map(function (entry) {
+    var font = String((request && request[entry[0]]) || '').trim();
+    var allowed = settings[entry[0]].choices.some(function (choice) {
+      return choice.font === font;
+    });
+    if (!allowed) {
+      throw new Error('Choose a font from the list. / 请从列表中选择字体。');
+    }
+    return { propertyName: entry[1], font: font };
+  });
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var properties = PropertiesService.getScriptProperties();
+    changes.forEach(function (change) {
+      if (change.font) {
+        properties.setProperty(change.propertyName, change.font);
+      } else {
+        properties.deleteProperty(change.propertyName);
+      }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  return getPrintedBulletinFontSettings_();
+}
+
+function buildPrintedBulletinFontsHtml_(settings) {
+  var select = function (id, slot) {
+    return (
+      '<select id="' + id + '">' +
+      slot.choices
+        .map(function (choice) {
+          return (
+            '<option value="' + escapePrintedBulletinHtml_(choice.font) + '"' +
+            (choice.font === slot.current ? ' selected' : '') + '>' +
+            escapePrintedBulletinHtml_(choice.label) + '</option>'
+          );
+        })
+        .join('') +
+      '</select>'
+    );
+  };
+  return (
+    '<!doctype html><html><head><base target="_top"><style>' +
+    'body{color:#202124;font:14px Arial,sans-serif;margin:0;padding:4px 2px 12px;}' +
+    '.intro{color:#5f6368;font-size:13px;line-height:1.5;margin:0 0 14px;}' +
+    'label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px;}' +
+    'select{background:#fff;border:1px solid #bdc1c6;border-radius:4px;box-sizing:border-box;font:14px Arial,sans-serif;padding:8px 9px;width:100%;}' +
+    '.status{font-size:13px;line-height:1.45;margin-top:12px;min-height:1.2em;white-space:pre-line;}' +
+    '.status.ok{color:#137333;}.status.error{color:#a50e0e;}' +
+    '.actions{display:flex;gap:9px;justify-content:flex-end;margin-top:16px;}' +
+    'button{border:0;border-radius:4px;cursor:pointer;font:14px Arial,sans-serif;padding:8px 16px;}' +
+    '.cancel{background:#f1f3f4;color:#3c4043;}.save{background:#1a73e8;color:#fff;}' +
+    'button:disabled{cursor:default;opacity:.5;}' +
+    '</style></head><body>' +
+    '<p class="intro">These fonts are for every printed bulletin made from now on, by anyone. A Doc already made keeps its fonts until it\'s made again with Create Google Doc…. A different font can change the line heights, so check that the next Doc still fits its pages.<br>' +
+    '这些字体将用于此后任何人创建的所有纸质周刊。已创建的文档保留原字体，直到再次使用“Create Google Doc…”创建。更换字体可能改变行高，请检查下一份文档是否仍在原页数内。</p>' +
+    '<label for="chinese">Chinese font<br>中文字体</label>' + select('chinese', settings.chinese) +
+    '<label for="latin">English font<br>英文字体</label>' + select('latin', settings.latin) +
+    '<div id="status" class="status" aria-live="polite"></div>' +
+    '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
+    '<button type="button" class="save" id="save">Save / 保存</button></div>' +
+    '<script>' +
+    'var save=document.getElementById("save");var saveStatus=document.getElementById("status");' +
+    'save.onclick=function(){save.disabled=true;saveStatus.className="status";saveStatus.textContent="Saving… / 正在保存…";' +
+    'google.script.run.withSuccessHandler(function(){save.disabled=false;saveStatus.className="status ok";' +
+    'saveStatus.textContent="Saved. The next Create Google Doc… uses these fonts.\\n已保存。下次“Create Google Doc…”将使用这些字体。";})' +
+    '.withFailureHandler(function(error){save.disabled=false;saveStatus.className="status error";saveStatus.textContent=(error&&error.message)||String(error);})' +
+    '.savePrintedBulletinFonts({chinese:document.getElementById("chinese").value,latin:document.getElementById("latin").value});};' +
+    '</script></body></html>'
+  );
 }
 
 function getPrintedBulletinFonts_() {

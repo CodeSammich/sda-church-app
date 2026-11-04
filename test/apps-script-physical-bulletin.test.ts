@@ -129,6 +129,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(menuTitle).toBe('Printed Bulletin');
     expect(menuItems).toEqual([
       'Create Google Doc…',
+      'Fonts…',
     ]);
   });
 
