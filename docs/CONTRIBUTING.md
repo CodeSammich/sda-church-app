@@ -329,8 +329,8 @@ GitHub's code scanning default setup and have no workflow file.
 The other workflows never run on pull requests. **External Dependency Monitor**, **Store
 Toolchain Monitor**, **Expo Doctor Monitor**, **Apple Signing Monitor**, **Yearly
 Checkup**, **Workspace Backup Reminder**, **Due-Date Reminders**, and **Scheduled
-Workflows Keepalive**, which keeps the others from being turned off for inactivity, run
-on a schedule;
+Workflows Watch**, which warns before GitHub turns the others off for inactivity, run on
+a schedule;
 **Deploy Bulletin Apps Script** starts on every merge into `main` and waits for
 `production` approval; and **Generate physical bulletin QR codes**
 runs when a merge into `main` changes the QR code list or its script. **Key screens

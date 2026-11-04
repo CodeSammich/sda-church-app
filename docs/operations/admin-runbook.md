@@ -1067,41 +1067,36 @@ still get their reminders and the run fails, so check its log.
 
 ## Keeping scheduled workflows on
 
-**Workflow:** **Scheduled Workflows Keepalive** (`scheduled-workflows-keepalive.yml`),
-which runs on the 1st and 15th of each month and can be run manually.
+**Workflow:** **Scheduled Workflows Watch** (`scheduled-workflows-watch.yml`), which runs
+on the 1st and 15th of each month and can be run manually.
 
 GitHub turns off a public repository's scheduled workflows after 60 days with no
 repository activity
 ([GitHub's docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)).
 If development paused, the Apple Signing Monitor's warnings, the Yearly Checkup, the
 Workspace Backup Reminder, and the Due-Date Reminders would stop, and nothing would say
-so. So this workflow, with only the workflow token and no commits:
+so. This workflow only reads, with the workflow token, and opens an alert issue when:
 
-- **Enables every scheduled workflow again**, itself included, through the REST API
-  ([Enable a workflow](https://docs.github.com/en/rest/actions/workflows#enable-a-workflow)).
-  Calling it while a workflow is still on is how API keepalives such as
-  [gh-workflow-keepalive](https://github.com/liskin/gh-workflow-keepalive) keep it from
-  being turned off. GitHub doesn't document that this restarts the 60 days, so it isn't
-  the only safeguard.
-- **Turns back on any that GitHub turned off for inactivity** (state
-  `disabled_inactivity`), and opens an alert issue naming them. One a person turned off
-  stays off.
-- **Opens the alert issue when `main` has had no commit for 45 days**, leaving 15 days to
-  merge something. A commit to the default branch is the activity known to count
+- **`main` has had no commit for 45 days**, 15 days before GitHub turns them off. A commit
+  to the default branch is the activity known to count
   ([warn-workflow-about-to-be-disabled-action](https://github.com/fem-on-colab/warn-workflow-about-to-be-disabled-action)).
+- **GitHub has already turned one off for inactivity** (state `disabled_inactivity` in
+  [the workflows API](https://docs.github.com/en/rest/actions/workflows)). One a person
+  turned off isn't reported.
 
-The issue, *Scheduled workflows may stop: GitHub turns them off after 60 days without
-activity*, is assigned to `MONITOR_ALERT_ASSIGNEES` and closes itself on the first run
-that finds nothing wrong. When it opens:
+It never turns a workflow on itself. The issue, *Scheduled workflows may stop: GitHub
+turns them off after 60 days without activity*, is assigned to `MONITOR_ALERT_ASSIGNEES`,
+and closes itself on the first run that finds neither. When it opens:
 
-1. **For no commit in 45 days:** merge any small change into `main` before day 60, such
-   as a docs fix through `release-candidate` and a release.
-2. **For a workflow turned back on:** check under **Actions** that it's enabled, and run
-   any reminder it missed by hand (**Run workflow**). A workflow GitHub turned off shows
-   "This scheduled workflow is disabled because there hasn't been activity in this
-   repository for at least 60 days"; **Enable workflow** there also turns it on.
-3. **If the keepalive itself stopped:** it's a scheduled workflow too. The yearly
-   checkup asks to check every scheduled workflow is enabled.
+1. **For no commit in 45 days:** merge any real commit into `main` before day 60, such as
+   a docs fix through `release-candidate` and a release. That starts the 60 days again.
+2. **For a workflow GitHub turned off:** open it under **Actions**, where it says "This
+   scheduled workflow is disabled because there hasn't been activity in this repository
+   for at least 60 days", and select **Enable workflow**, or run
+   `gh workflow enable <file>`. Then run any reminder it missed (**Run workflow**). A
+   commit to `main` also starts the 60 days again.
+3. **If the watch itself stopped:** it's a scheduled workflow too, so it stops with the
+   others. The yearly checkup asks to check every scheduled workflow is enabled.
 
 ## Issue priorities
 

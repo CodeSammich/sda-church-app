@@ -1,18 +1,18 @@
-name: Scheduled Workflows Keepalive
+name: Scheduled Workflows Watch
 
 # GitHub turns off a public repository's scheduled workflows after 60 days
-# without repository activity. Twice a month this enables every scheduled
-# workflow again through the REST API, itself included, with no commit; turns
-# back on any that GitHub turned off for inactivity; and opens an alert issue
-# for those, or when main has had no commit for 45 days (#658). The logic is in
-# scripts/scheduled-workflows-keepalive.cjs, and the admin runbook ("Keeping
+# without repository activity. Twice a month this opens an alert issue when
+# main has had no commit for 45 days, 15 days before that, or when GitHub has
+# already turned a scheduled workflow off (#658). It only reads: a person
+# commits, or turns a workflow back on. The logic is in
+# scripts/scheduled-workflows-watch.cjs, and the admin runbook ("Keeping
 # scheduled workflows on") says what to do with the issue. It uses only the
 # workflow token.
 
 on:
   schedule:
     # The 1st and 15th, away from the top of the hour. Two runs a month leave
-    # a spare if one fails, well inside the 60 days.
+    # a spare if one fails, inside the 15 days' warning.
     - cron: "23 13 1,15 * *"
       timezone: "America/New_York"
   workflow_dispatch: {}
@@ -21,18 +21,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: scheduled-workflows-keepalive
+  group: scheduled-workflows-watch
   cancel-in-progress: false
 
 jobs:
-  keepalive:
+  watch:
     # Forks start with scheduled workflows off and commonly disable Issues.
     if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      # To enable the workflows.
-      actions: write
+      # To read each workflow's state.
+      actions: read
       contents: read
       # To open or close the alert issue.
       issues: write
@@ -42,7 +42,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Enable the scheduled workflows
+      - name: Check the scheduled workflows and main's last commit
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           # Comma-separated GitHub usernames; assigning the issue emails them.
@@ -50,21 +50,20 @@ jobs:
         with:
           script: |
             const alerts = require(`${process.env.GITHUB_WORKSPACE}/scripts/monitor-alert-issue.cjs`);
-            const keepalive = require(`${process.env.GITHUB_WORKSPACE}/scripts/scheduled-workflows-keepalive.cjs`);
-            const workflows = keepalive.findScheduledWorkflows(`${process.env.GITHUB_WORKSPACE}/.github/workflows`);
-            const result = await keepalive.keepAlive({ github, context, core, workflows });
-            core.info(`Enabled again: ${result.refreshed.map((w) => w.file).join(', ') || 'none'}`);
-            core.info(`Turned back on after inactivity: ${result.reenabled.map((w) => w.file).join(', ') || 'none'}`);
-            core.info(`Left off by a person: ${result.leftOff.map((w) => `${w.file} (${w.state})`).join(', ') || 'none'}`);
+            const watcher = require(`${process.env.GITHUB_WORKSPACE}/scripts/scheduled-workflows-watch.cjs`);
+            const workflows = watcher.findScheduledWorkflows(`${process.env.GITHUB_WORKSPACE}/.github/workflows`);
+            const result = await watcher.watch({ github, context, core, workflows });
+            core.info(`Scheduled workflows: ${workflows.map((w) => w.file).join(', ')}`);
+            core.info(`Turned off for inactivity: ${result.turnedOff.map((w) => w.file).join(', ') || 'none'}`);
             core.info(`Days since main's last commit: ${result.daysSinceCommit ?? 'unknown'}`);
             const runbook = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/blob/main/docs/operations/admin-runbook.md#keeping-scheduled-workflows-on`;
-            const body = keepalive.buildAlert(result, alerts.getRunUrl(context), runbook);
+            const body = watcher.buildAlert(result, alerts.getRunUrl(context), runbook);
             if (body) {
               const issue = await alerts.openOrUpdateAlert({
                 github,
                 context,
                 core,
-                title: keepalive.ALERT_TITLE,
+                title: watcher.ALERT_TITLE,
                 body,
                 priority: 'High',
                 assignees: alerts.parseAssignees(process.env.ALERT_ASSIGNEES),
@@ -74,9 +73,11 @@ jobs:
               const closed = await alerts.closeAlert({
                 github,
                 context,
-                title: keepalive.ALERT_TITLE,
-                body: `Every scheduled workflow is on, and main has a recent commit, as of ${alerts.getRunUrl(context)}.`,
+                title: watcher.ALERT_TITLE,
+                body: `main has a recent commit, and no scheduled workflow is turned off, as of ${alerts.getRunUrl(context)}.`,
               });
               core.info(`Alert issue: ${closed.action}`);
             }
-            if (result.failed.length) core.setFailed(`Couldn't enable ${result.failed.map((w) => w.file).join(', ')}.`);
+            if (result.unread.length || result.daysSinceCommit === null) {
+              core.setFailed("Couldn't read every workflow's state or main's last commit; see the warnings above.");
+            }

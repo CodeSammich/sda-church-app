@@ -116,7 +116,7 @@ const CHECKLIST = [
         'what-the-monitor-cant-check',
       ],
       [
-        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, Needs Priority Label, iOS compile cache, and Scheduled Workflows Keepalive. GitHub turns schedules off after 60 days without activity in the repository; the keepalive turns them back on twice a month, and opens an issue if it finds one off or no commit to main for 45 days.',
+        'The scheduled workflows are still enabled under Actions: External Dependency Monitor, Store Toolchain Monitor, Expo Doctor Monitor, Apple Signing Monitor, Yearly Checkup, Workspace Backup Reminder, Due-Date Reminders, Needs Priority Label, iOS compile cache, and Scheduled Workflows Watch. GitHub turns schedules off after 60 days without activity in the repository; the watch opens an issue twice a month if main has had no commit for 45 days or it finds one turned off.',
         'docs/operations/admin-runbook.md',
         'keeping-scheduled-workflows-on',
       ],
