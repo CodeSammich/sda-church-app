@@ -9,7 +9,9 @@ import {
   getBulletinVerseScrollOffset,
   getBibleDockLayout,
   getBibleDockViewportLayout,
+  getDockPillGrowth,
   shouldShortenVerseLabel,
+  WIDE_DOCK_PILLS_ROW,
 } from '@/styles/ReaderStyles';
 import { StyleSheet } from 'react-native';
 
@@ -283,5 +285,23 @@ describe('Bible reader text scaling', () => {
     expect(getVerseNumberColumnWidth(176, 1.25, 1)).toBeGreaterThan(base);
     // Never narrower than the original fixed width at the default system size.
     expect(base).toBeGreaterThanOrEqual(36);
+  });
+});
+
+describe("the chapter dock's pills on a wide row (#324)", () => {
+  it('let the book pill take the spare room on a phone, and share it 2:1:1 on a tablet', () => {
+    // A phone's row is at most about 340 points, even on a 440-point iPhone.
+    for (const row of [290, 310, 340, 400]) expect(getDockPillGrowth(row)).toEqual({ book: 1, chapter: 0, verse: 0 });
+    // The iPad mini's row is about 570 points, the 13-inch iPad's about 720.
+    for (const row of [WIDE_DOCK_PILLS_ROW, 570, 720]) {
+      expect(getDockPillGrowth(row)).toEqual({ book: 2, chapter: 1, verse: 1 });
+    }
+  });
+
+  it('measures the chapter number alone on a wide row, so "Verse" isn\'t shortened for room it has', () => {
+    const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(bible).toContain("renderPillMeasure(String(chapterNum), setChapterLabelWidth)");
+    expect(bible).toContain('chapterPillWidth: dockPillGrowth.chapter ? chapterLabelWidth : chapterPillWidth,');
+    expect(bible.match(/flexGrow: dockPillGrowth\.(book|chapter|verse),/g)).toHaveLength(3);
   });
 });

@@ -160,6 +160,7 @@ import {
   getBibleDockLayout,
   getBibleDockViewportLayout,
   getBulletinVerseScrollOffset,
+  getDockPillGrowth,
   shouldShortenVerseLabel,
 } from '@/styles/ReaderStyles';
 
@@ -616,10 +617,15 @@ export default function BibleScreen() {
   const [bookPillWidth, setBookPillWidth] = useState(0);
   const [chapterPillWidth, setChapterPillWidth] = useState(0);
   const [versePillWidth, setVersePillWidth] = useState(0);
+  // On a wide row the pills share its spare room (getDockPillGrowth), so the
+  // chapter pill's own width there includes its share: a hidden copy measures
+  // its number alone.
+  const [chapterLabelWidth, setChapterLabelWidth] = useState(0);
+  const dockPillGrowth = getDockPillGrowth(dockPillsWidth);
   const shortVerseLabel = shouldShortenVerseLabel({
     rowWidth: dockPillsWidth,
     bookPillWidth,
-    chapterPillWidth,
+    chapterPillWidth: dockPillGrowth.chapter ? chapterLabelWidth : chapterPillWidth,
     versePillWidth,
   });
   const insets = useSafeAreaInsets();
@@ -3805,6 +3811,7 @@ export default function BibleScreen() {
       ]}
     >
       {renderPillMeasure(book?.name || '...', setBookPillWidth)}
+      {renderPillMeasure(String(chapterNum), setChapterLabelWidth)}
       {renderPillMeasure(labels.verse, setVersePillWidth)}
       <TouchableOpacity
         style={[
@@ -3823,7 +3830,7 @@ export default function BibleScreen() {
             // "119", and "Verse" on most iPhones.
             paddingHorizontal: chipPaddingHorizontal,
             flexBasis: 'auto',
-            flexGrow: 1,
+            flexGrow: dockPillGrowth.book,
             flexShrink: 1,
           },
         ]}
@@ -3860,7 +3867,7 @@ export default function BibleScreen() {
             minHeight: dockLayout.controlHeight,
             paddingHorizontal: chipPaddingHorizontal,
             flexBasis: 'auto',
-            flexGrow: 0,
+            flexGrow: dockPillGrowth.chapter,
             flexShrink: 0,
             maxWidth: '30%',
           },
@@ -3899,7 +3906,7 @@ export default function BibleScreen() {
             minHeight: dockLayout.controlHeight,
             paddingHorizontal: chipPaddingHorizontal,
             flexBasis: 'auto',
-            flexGrow: 0,
+            flexGrow: dockPillGrowth.verse,
             flexShrink: 0,
             maxWidth: '40%',
           },

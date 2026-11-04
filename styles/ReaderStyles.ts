@@ -127,6 +127,18 @@ export const getBibleDockLayout = (
 };
 
 /**
+ * How the chapter dock's book, chapter, and verse pills share their row's
+ * spare room, as flex growth. On a phone, whose row is at most about 340
+ * points, the book pill takes it all, so a long book name has room. On a row
+ * at least WIDE_DOCK_PILLS_ROW wide, on a tablet or a wide window (#324), they
+ * share it 2:1:1, so the book pill doesn't stretch across the column beside
+ * two small ones.
+ */
+export const WIDE_DOCK_PILLS_ROW = 480;
+export const getDockPillGrowth = (rowWidth: number) =>
+  rowWidth >= WIDE_DOCK_PILLS_ROW ? { book: 2, chapter: 1, verse: 1 } : { book: 1, chapter: 0, verse: 0 };
+
+/**
  * Whether the chapter dock's verse pill shows its short label ("Vs.") rather
  * than its full one ("Verse"): only when the book, chapter, and verse pills
  * can't all fit at their full widths. The verse label shortens before the book
