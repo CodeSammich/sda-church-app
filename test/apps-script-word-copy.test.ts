@@ -278,7 +278,9 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     expect(html).toContain('make the print version: a Word file with the final fonts and spacing');
     expect(html).toContain('制作打印版：使用最终字体和行距的 Word 文件');
     expect(html).toContain('send it to the pastor on WhatsApp');
-    expect(html).toContain('On a Mac, the Chinese is in Songti TC.');
+    // It says what a computer without Songti TC shows.
+    expect(html).toContain('On a Mac, the Chinese is in Songti TC; elsewhere, in a similar font.');
+    expect(html).toContain('在 Mac 上中文为宋体-繁；其他电脑使用相近的字体。');
     expect(html.match(/href="https:\/\/www\.libreoffice\.org\/download\/download-libreoffice\/">LibreOffice<\/a>/g)).toHaveLength(2);
     expect(html).toContain('id="wordCopy">Make print version / 制作打印版</button>');
     expect(html).toContain('createPrintedBulletinWordCopy({date:date,location:locationValue})');

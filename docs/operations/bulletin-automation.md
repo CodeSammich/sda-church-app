@@ -929,8 +929,11 @@ pastor's preferred Chinese font is Songti TC (宋體-繁). It comes only with
 macOS, under Apple's license, and Google Docs can't print it: Docs prints only
 fonts in its own list, and none of its Chinese lists (Traditional, Hong Kong or
 Simplified) has a Song face besides UoqMunThenKhung. On a Mac, the print
-version's Chinese is in Songti TC. On Windows, Word or LibreOffice puts in a
-similar font, and the exact line heights keep the layout.
+version's Chinese is in Songti TC. On any other computer, Word or LibreOffice
+puts in a similar Chinese font, so the Chinese looks different, but the layout
+holds: the copy's exact line heights come from each line's font size, not from
+the font, and Chinese characters are one em wide in any Chinese font. The
+dialog's step 3 says both.
 
 1. Make and edit the week's Doc with **Preview**, as usual.
 2. After the last edit, in step 3 of **Printed Bulletin → Create Google Doc…**,
