@@ -940,9 +940,10 @@ dialog's step 3 says both.
    with the date and location chosen, click **Make print version**. It reads the
    Doc as it stands, so a copy made before an edit misses that edit.
 3. Click **Download print version (.docx)**.
-4. Print it from Word, or from the free
-   [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/)
-   on a computer without Word, or send it to the pastor on WhatsApp.
+4. Send it to the pastor on WhatsApp, to print from Word on a Mac.
+5. If no Mac is available, print it from Word, or from the free
+   [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/) on
+   a computer without Word.
 
 The copy is saved as `<Doc title> (Word, Songti TC).docx` in the Doc's own
 Drive folder, replacing that week's earlier copy. The Doc doesn't change. The

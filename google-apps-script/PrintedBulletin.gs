@@ -605,12 +605,14 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     // LibreOffice puts in a similar Chinese font. The exact line heights are
     // set by font size, not by font, so the layout holds either way.
     '<div id="wordCopySection"><h2 class="section-heading" style="margin-top:20px;">3. Print the final version / 第三步：打印最终版</h2>' +
-    '<div class="help">After the last edit to the Doc, make the print version: a Word file with the final fonts and spacing. Print it from Word or free <a href="' +
+    // Sending it to the pastor, who prints on a Mac, comes first; Word or
+    // LibreOffice elsewhere is the fallback.
+    '<div class="help">After the last edit to the Doc, make the print version: a Word file with the final fonts and spacing. Send it to the pastor on WhatsApp to print on a Mac. If no Mac is available, print it from Word or free <a href="' +
     PRINTED_BULLETIN_LIBREOFFICE_URL +
-    '">LibreOffice</a>, or send it to the pastor on WhatsApp. On a Mac, the Chinese is in Songti TC; elsewhere, in a similar font.<br>' +
-    '文档最后修改后，制作打印版：使用最终字体和行距的 Word 文件。用 Word 或免费的 <a href="' +
+    '">LibreOffice</a>, with a similar Chinese font.<br>' +
+    '文档最后修改后，制作打印版：使用最终字体和行距的 Word 文件。通过 WhatsApp 发给牧师，在 Mac 上打印。如果没有 Mac，可用 Word 或免费的 <a href="' +
     PRINTED_BULLETIN_LIBREOFFICE_URL +
-    '">LibreOffice</a> 打印，或通过 WhatsApp 发给牧师。在 Mac 上中文为宋体-繁；其他电脑使用相近的字体。</div>' +
+    '">LibreOffice</a> 打印，中文会使用相近的字体。</div>' +
     '<div class="actions"><button type="button" class="word-copy" id="wordCopy">Make print version / 制作打印版</button></div>' +
     '<div id="wordCopyStatus" class="help" aria-live="polite"></div></div>' +
     '<script>' +

@@ -277,10 +277,13 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     expect(html).toContain('3. Print the final version / 第三步：打印最终版');
     expect(html).toContain('make the print version: a Word file with the final fonts and spacing');
     expect(html).toContain('制作打印版：使用最终字体和行距的 Word 文件');
-    expect(html).toContain('send it to the pastor on WhatsApp');
+    // Sending it to the pastor comes first; Word or LibreOffice is the fallback.
+    expect(html).toContain('Send it to the pastor on WhatsApp to print on a Mac. If no Mac is available, print it from Word or free');
+    expect(html).toContain('通过 WhatsApp 发给牧师，在 Mac 上打印。如果没有 Mac，可用 Word 或免费的');
+    expect(html.indexOf('Send it to the pastor')).toBeLessThan(html.indexOf('>LibreOffice</a>'));
     // It says what a computer without Songti TC shows.
-    expect(html).toContain('On a Mac, the Chinese is in Songti TC; elsewhere, in a similar font.');
-    expect(html).toContain('在 Mac 上中文为宋体-繁；其他电脑使用相近的字体。');
+    expect(html).toContain('>LibreOffice</a>, with a similar Chinese font.');
+    expect(html).toContain('中文会使用相近的字体');
     expect(html.match(/href="https:\/\/www\.libreoffice\.org\/download\/download-libreoffice\/">LibreOffice<\/a>/g)).toHaveLength(2);
     expect(html).toContain('id="wordCopy">Make print version / 制作打印版</button>');
     expect(html).toContain('createPrintedBulletinWordCopy({date:date,location:locationValue})');
