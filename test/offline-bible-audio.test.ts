@@ -26,7 +26,7 @@ jest.mock('@/components/AppAlert', () => ({
 }));
 // Where the phone shows the app's own download notifications (#610).
 let mockOwnNotifications = false;
-const mockSetNotifications = jest.fn(async () => undefined);
+const mockSetNotifications = jest.fn(async (_enabled: boolean) => undefined);
 jest.mock('@/services/DownloadNotifications', () => ({
   ...jest.requireActual('@/services/DownloadNotifications'),
   hasDownloadNotifications: () => mockOwnNotifications,
