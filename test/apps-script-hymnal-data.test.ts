@@ -154,7 +154,7 @@ describe('the printed hymn lookup (#619)', () => {
         'formatSabbathSchoolHymnsForPrint_(testHymns)',
         Object.assign(context, { testHymns: ['holy holy holy', '聖哉真神', 'Not a hymn'] }),
       ),
-    ).toBe('AH 73 Holy, Holy, Holy\n第2首 聖哉真神\nAH 73 Holy, Holy, Holy\n第2首 聖哉真神\nNot a hymn');
+    ).toBe('1. 第2首 聖哉真神\nAH 73 Holy, Holy, Holy\n2. 第2首 聖哉真神\nAH 73 Holy, Holy, Holy\n3. Not a hymn');
   });
 
   it('prints a hymn as typed if HymnalData.gs is missing', () => {

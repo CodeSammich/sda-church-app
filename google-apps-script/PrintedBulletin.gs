@@ -1908,12 +1908,12 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
   return english || chinese ? printedBilingualText_(english, chinese) : physicalTbdText_();
 }
 
-// Each Sabbath School hymn, as one entry: the English, then the Chinese on the
-// next line, where the hymnal map has the other one, such as
-// "AH 348 The Church Has One Foundation" over "第413首 教會根基" for a typed
-// "第413首 教會根基"; otherwise the hymn as typed, on one line. A bare number is
-// a Chinese hymnal number, and prints as 第N首. The other side gets its number
-// and title from resolvePrintedHymnText_ (#619).
+// Each Sabbath School hymn, as one entry: the Chinese, then the English on the
+// next line, as in every other row, where the hymnal map has the other one,
+// such as "第413首 教會根基" over "AH 348 The Church Has One Foundation" for a
+// typed "第413首 教會根基"; otherwise the hymn as typed, on one line. A bare
+// number is a Chinese hymnal number, and prints as 第N首. The other side gets
+// its number and title from resolvePrintedHymnText_ (#619).
 function getPrintedSabbathSchoolHymnLines_(hymns) {
   var lines = [];
   (hymns || []).forEach(function (value) {
@@ -1928,14 +1928,25 @@ function getPrintedSabbathSchoolHymnLines_(hymns) {
     var english = resolved.english || entry;
     var chinese = resolved.chinese || entry;
     // Both languages on their own lines: on one, a long title wrapped mid-word.
-    lines.push(english === chinese ? english : english + '\n' + chinese);
+    lines.push(english === chinese ? english : printedBilingualText_(english, chinese));
   });
   return lines;
 }
 
+// Two or more hymns are numbered, so a hymn's two lines read as one hymn and
+// a hymn in one language isn't taken for the one above's translation.
 function formatSabbathSchoolHymnsForPrint_(hymns) {
   var lines = getPrintedSabbathSchoolHymnLines_(hymns);
-  return lines.length ? lines.join('\n') : physicalTbdText_();
+  if (lines.length === 1) {
+    return printedOneLanguageText_(lines[0]);
+  }
+  return lines.length
+    ? lines
+        .map(function (line, index) {
+          return index + 1 + '. ' + line;
+        })
+        .join('\n')
+    : physicalTbdText_();
 }
 
 /**
@@ -3369,16 +3380,44 @@ function appendProgramTable_(cell, rows, options) {
   });
 }
 
+// The sermon row, in a thin box so it stands out at a glance. A Docs border
+// belongs to a whole table and would also rule between the cells, so the row
+// sits in a one-cell table that draws only the outer box.
 function appendSermonRow_(cell, row) {
-  var table = cell.appendTable([
+  var box = cell.appendTable([['']]);
+  box.setBorderWidth(0.5);
+  box.setBorderColor('#000000');
+  box.setColumnWidth(0, 360);
+  var boxCell = box.getCell(0, 0);
+  boxCell.setPaddingTop(1);
+  boxCell.setPaddingBottom(1);
+  boxCell.setPaddingLeft(0);
+  boxCell.setPaddingRight(0);
+  var table = boxCell.appendTable([
     row.map(function (value) {
       return String(value === null || typeof value === 'undefined' ? '' : value);
     }),
   ]);
   table.setBorderWidth(0);
   table.setColumnWidth(0, 105);
-  table.setColumnWidth(1, 160);
+  // A point narrower than the rows above, for the box's border.
+  table.setColumnWidth(1, 159);
   table.setColumnWidth(2, 95);
+  // A cell can't end with a table, and the paragraph Docs would add after it
+  // is full height. Add it here, and shrink it and the cell's first paragraph
+  // to one-point slivers.
+  boxCell.appendParagraph(' ');
+  for (var childIndex = 0; childIndex < boxCell.getNumChildren(); childIndex += 1) {
+    var child = boxCell.getChild(childIndex);
+    if (child.getType() === DocumentApp.ElementType.PARAGRAPH) {
+      var sliver = child.asParagraph();
+      sliver.setText(' ');
+      sliver.setLineSpacing(1);
+      sliver.setSpacingBefore(0);
+      sliver.setSpacingAfter(0);
+      styleText_(sliver.editAsText(), 1, false);
+    }
+  }
   for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {
     var tableCell = table.getCell(0, columnIndex);
     tableCell.setPaddingTop(0);
@@ -3756,7 +3795,7 @@ function formatHymnForPrint_(hymn) {
   if (english && chinese && english !== chinese) {
     return printedBilingualText_(english, chinese);
   }
-  return english || chinese || physicalTbdText_();
+  return printedOneLanguageText_(english || chinese) || physicalTbdText_();
 }
 
 function formatBibleReferenceForPrint_(location, bibleTranslations) {
@@ -3788,7 +3827,7 @@ function formatSermonTitleForPrint_(location) {
   return (
     englishTitle && chineseTitle && englishTitle !== chineseTitle
       ? printedBilingualText_(englishTitle, chineseTitle)
-      : englishTitle || chineseTitle
+      : printedOneLanguageText_(englishTitle || chineseTitle)
   ) || physicalTbdText_();
 }
 
@@ -3840,6 +3879,20 @@ function printedBilingualText_(english, traditionalChinese) {
     lines.push(String(english));
   }
   return lines.join('\n');
+}
+
+// A title in only one language goes on that language's line, beside the
+// row's label in it: Chinese on the first line, English on the second. "—"
+// holds the other line, as in the offering and name cells.
+function printedOneLanguageText_(value) {
+  var text = String(value === null || typeof value === 'undefined' ? '' : value).trim();
+  if (!text || /\n/.test(text)) {
+    return text;
+  }
+  if (isPhysicalTbd_(text)) {
+    return physicalTbdText_();
+  }
+  return /[\u3400-\u9fff]/.test(text) ? text + '\n—' : '—\n' + text;
 }
 
 function printValue_(value) {

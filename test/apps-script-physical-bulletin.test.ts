@@ -2011,7 +2011,7 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
     expect(row(rows.study, 'Opening Hymns')).toEqual([
       '開會詩歌\nOpening Hymns',
-      'AH 348 The Church Has One Foundation\n第413首 教會根基\nAmazing Love',
+      '1. 第413首 教會根基\nAH 348 The Church Has One Foundation\n2. Amazing Love',
       '會眾\nCongregation',
     ]);
     expect(row(rows.study, 'Closing Hymns')).toEqual([
@@ -2031,14 +2031,15 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
     expect(row(rows.brooklyn, 'Opening Hymns')?.slice(0, 2)).toEqual([
       '開會唱詩\nOpening Hymns',
-      'AH 348 The Church Has One Foundation\n第413首 教會根基\nAmazing Love',
+      '1. 第413首 教會根基\nAH 348 The Church Has One Foundation\n2. Amazing Love',
     ]);
     expect(row(rows.brooklyn, 'Closing Hymns')?.slice(0, 2)).toEqual([
       '合班唱詩\nClosing Hymns',
       '同開會唱詩\nSame as Opening Hymns',
     ]);
     expect(row(rows.brooklyn, '安息日學課')?.[1]).toBe('第5課 啟示與默示\nLesson 5: Revelation and Inspiration');
-    expect(row(rows.worship, 'Special Music')?.slice(1)).toEqual(['It Is Well', 'Ruoxi Tan']);
+    // An English-only piece goes on the English line, beside "Special Music".
+    expect(row(rows.worship, 'Special Music')?.slice(1)).toEqual(['—\nIt Is Well', 'Ruoxi Tan']);
   });
 
   it('carries the Weekly Data hymn cells into both printed Sabbath School rows', () => {
@@ -2099,10 +2100,10 @@ describe('printed bulletin Apps Script helpers', () => {
 
     // Queens: in order, without the blank middle cell.
     // AH 73 Holy, Holy, Holy is 505 #2, 聖哉真神.
-    expect(row('開會詩歌')).toBe('AH 348 The Church Has One Foundation\n第413首 教會根基\nAH 73 Holy, Holy, Holy\n第2首 聖哉真神');
+    expect(row('開會詩歌')).toBe('1. 第413首 教會根基\nAH 348 The Church Has One Foundation\n2. 第2首 聖哉真神\nAH 73 Holy, Holy, Holy');
     // Brooklyn: a bare number is a Chinese hymnal number. With one hymn, the
     // rows say Hymn, not Hymns.
-    expect(row('開會唱詩')).toBe('AH 206 Face to Face\n第205首');
+    expect(row('開會唱詩')).toBe('第205首\nAH 206 Face to Face');
     expect(rows.find(([first]) => first.includes('合班唱詩'))?.slice(0, 2)).toEqual([
       '合班唱詩\nClosing Hymn',
       '同開會唱詩\nSame as Opening Hymn',
@@ -2615,11 +2616,25 @@ describe('printed bulletin Apps Script helpers', () => {
           chineseOnly: formatHymnForPrint_({ english: '', chinese: '第413首 教會根基' }),
           both: formatHymnForPrint_({ english: 'AH 348 The Church Has One Foundation', chinese: '第413首 教會根基' }),
           bareNumber: formatHymnForPrint_({ english: '', chinese: '413' }),
+          englishNoTwin: formatHymnForPrint_({ english: 'Amazing Love', chinese: '' }),
+          chineseNoTwin: formatHymnForPrint_({ english: '', chinese: '還要等多久' }),
+          sermonEnglish: formatSermonTitleForPrint_({ sermonTitle: { english: 'The Good Shepherd', chinese: '' } }),
+          sermonChinese: formatSermonTitleForPrint_({ sermonTitle: { english: '', chinese: '好牧人' } }),
+          sermonBoth: formatSermonTitleForPrint_({ sermonTitle: { english: 'The Good Shepherd', chinese: '好牧人' } }),
+          specialMusicTbd: printedOneLanguageText_('TBD'),
         })`,
         context,
       ) as string,
     );
 
+    // A title in one language goes on that language's line, Chinese first,
+    // and "—" holds the other, as in the offering and name cells.
+    expect(output.englishNoTwin).toBe('—\nAmazing Love');
+    expect(output.chineseNoTwin).toBe('還要等多久\n—');
+    expect(output.sermonEnglish).toBe('—\nThe Good Shepherd');
+    expect(output.sermonChinese).toBe('好牧人\n—');
+    expect(output.sermonBoth).toBe('好牧人\nThe Good Shepherd');
+    expect(output.specialMusicTbd).toBe('尚未確定\nTBD');
     // The app's title for 505 #413 is 教會基礎; a typed title prints as typed.
     expect(output.bareNumber).toBe('第413首\nAH 348 The Church Has One Foundation');
     expect(output.englishOnly).toBe('第413首 教會基礎\nAH 348 The Church Has One Foundation');
@@ -2627,7 +2642,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output.both).toBe('第413首 教會根基\nAH 348 The Church Has One Foundation');
   });
 
-  it('prints one line per Sabbath School hymn, filling the other language by number', () => {
+  it('prints each Sabbath School hymn Chinese first and numbered, filling the other language by number', () => {
     const context = loadAppsScript({});
     const output = JSON.parse(
       runInContext(
@@ -2640,6 +2655,7 @@ describe('printed bulletin Apps Script helpers', () => {
             '還要等多久',
           ]),
           englishOnly: formatSabbathSchoolHymnsForPrint_(['Amazing Love']),
+          chineseOnly: formatSabbathSchoolHymnsForPrint_(['還要等多久']),
           blank: formatSabbathSchoolHymnsForPrint_(['', '  ']),
           missing: formatSabbathSchoolHymnsForPrint_(undefined),
           noHymnRows: getPrintedSabbathSchoolHymnRows_([], '開會詩歌', '結會詩歌'),
@@ -2648,17 +2664,22 @@ describe('printed bulletin Apps Script helpers', () => {
       ) as string,
     );
 
+    // Chinese first, as in every other row, and numbered, so a hymn's two
+    // lines read as one hymn and 還要等多久 isn't taken for a translation.
     expect(output.mixed).toBe(
       [
-        'AH 348 The Church Has One Foundation\n第413首 教會根基',
-        'AH 348 The Church Has One Foundation\n第413首 教會基礎',
-        'AH 348 The Church Has One Foundation\n第413首',
-        '還要等多久',
+        '1. 第413首 教會根基\nAH 348 The Church Has One Foundation',
+        '2. 第413首 教會基礎\nAH 348 The Church Has One Foundation',
+        '3. 第413首\nAH 348 The Church Has One Foundation',
+        '4. 還要等多久',
       ].join(
         '\n',
       ),
     );
-    expect(output.englishOnly).toBe('Amazing Love');
+    // One hymn isn't numbered, and one language goes on its own line, beside
+    // the label in that language.
+    expect(output.englishOnly).toBe('—\nAmazing Love');
+    expect(output.chineseOnly).toBe('還要等多久\n—');
     expect(output.blank).toBe('尚未確定\nTBD');
     expect(output.missing).toBe('尚未確定\nTBD');
     // With no hymns, both rows say TBD rather than "the same as" nothing.
