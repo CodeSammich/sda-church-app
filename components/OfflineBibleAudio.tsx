@@ -45,7 +45,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNetworkStateAsync, NetworkStateType } from 'expo-network';
 import { useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentRef, type ReactNode } from 'react';
-import { AppState, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Dialog, IconButton, Portal, ProgressBar, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -58,7 +58,6 @@ const copy = {
     change: 'Change',
     changeNarrator: (name: string) => `Narrator: ${name}. Change`,
     notifications: 'Download notifications',
-    notificationsSub: Platform.OS === 'ios' ? 'A word when a download is done' : 'Progress, with Stop, and when it’s done',
     close: 'Close',
     wholeBible: 'Whole Bible',
     wholeBibleInSentence: 'the whole Bible',
@@ -102,7 +101,6 @@ const copy = {
     change: '更改',
     changeNarrator: (name: string) => `朗讀者：${name}。更改`,
     notifications: '下載通知',
-    notificationsSub: Platform.OS === 'ios' ? '下載完成時通知您' : '顯示進度與「停止」按鈕，以及何時完成',
     close: '關閉',
     wholeBible: '整本聖經',
     wholeBibleInSentence: '整本聖經',
@@ -146,7 +144,6 @@ const copy = {
     change: '更改',
     changeNarrator: (name: string) => `朗读者：${name}。更改`,
     notifications: '下载通知',
-    notificationsSub: Platform.OS === 'ios' ? '下载完成时通知您' : '显示进度与“停止”按钮，以及何时完成',
     close: '关闭',
     wholeBible: '整本圣经',
     wholeBibleInSentence: '整本圣经',
@@ -191,7 +188,6 @@ const copy = {
     change: 'Cambiar',
     changeNarrator: (name: string) => `Narrador: ${name}. Cambiar`,
     notifications: 'Notificaciones de descarga',
-    notificationsSub: Platform.OS === 'ios' ? 'Un aviso cuando termine una descarga' : 'El progreso, con Detener, y cuándo termina',
     close: 'Cerrar',
     wholeBible: 'Toda la Biblia',
     wholeBibleInSentence: 'toda la Biblia',
@@ -726,22 +722,18 @@ export function OfflineBibleAudio() {
               <Pressable
                 accessibilityRole="switch"
                 accessibilityState={{ checked: notificationsOn }}
-                accessibilityLabel={`${labels.notifications}. ${labels.notificationsSub}`}
+                accessibilityLabel={labels.notifications}
                 onPress={() => void setDownloadNotificationsEnabled(!notificationsOn)}
                 testID="download-notifications"
                 style={({ pressed }) => [
                   styles.narrator,
+                  styles.toggleRow,
                   { backgroundColor: theme.colors.surfaceVariant, opacity: pressed ? 0.78 : 1 },
                 ]}
               >
-                <View style={styles.label}>
-                  <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
-                    {labels.notifications}
-                  </Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    {labels.notificationsSub}
-                  </Text>
-                </View>
+                <Text variant="titleMedium" style={[styles.label, { color: theme.colors.onSurface }]}>
+                  {labels.notifications}
+                </Text>
                 <MenuCardSwitchVisual
                   active={notificationsOn}
                   activeColor={theme.colors.primary}
@@ -889,6 +881,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  // A skinny row, its label and its switch: still a thumb's height.
+  toggleRow: { minHeight: 48, paddingVertical: 8 },
   testament: { marginTop: 16 },
   row: { alignItems: 'center', flexDirection: 'row', minHeight: 56 },
   headerRow: { borderBottomWidth: StyleSheet.hairlineWidth * 2, marginBottom: 4, paddingVertical: 4 },

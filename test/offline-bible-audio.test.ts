@@ -237,7 +237,7 @@ describe('Offline Bible Audio', () => {
     mockOwnNotifications = true;
     try {
       const screen = await renderPage({ narrator: 'cuv-mandarin' });
-      const toggle = screen.getByRole('switch', { name: /^Download notifications\./ });
+      const toggle = screen.getByRole('switch', { name: 'Download notifications' });
       expect(toggle.props.accessibilityState).toMatchObject({ checked: false });
       await fireEvent.press(toggle);
       expect(mockSetNotifications).toHaveBeenCalledWith(true);

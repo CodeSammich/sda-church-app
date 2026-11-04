@@ -251,7 +251,7 @@ simple, blended colors.
     and then never. Turning the switch on asks the phone at once, or opens the app's settings
     where the phone won't ask again.
   - **One switch:** **Download notifications**, on Offline Bible Audio, below the narrator,
-    with the downloads it's about. It shows on only when the member wants them and the phone
+    with the downloads it's about: a row with just its name and its switch. It shows on only when the member wants them and the phone
     allows them.
   - **Never:** badges, reminders to come back, sounds, marketing, or anything sent from a
     server. They're made on the phone, so nothing about them leaves it, and Data safety and
