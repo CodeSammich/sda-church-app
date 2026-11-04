@@ -103,7 +103,7 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output).not.toContain('中文經文');
   });
 
-  it('adds only the document-generation action to the Sheets menu', () => {
+  it('adds the document and font actions to the Sheets menu', () => {
     const menuItems: string[] = [];
     let menuTitle = '';
     const menu = {
@@ -577,7 +577,9 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(message).toContain('PHYSICAL_BULLETIN_ADMIN_EMAILS');
   });
 
-  it('preloads the reviewed Weekly Data verse ahead of print memory', () => {
+  // A Sabbath with a schedule row and a Weekly Data row whose Bible Verses is
+  // `verse`. Every Script Property reads as an old print-only verse.
+  const loadPromptFixture = (verse: string, extra: Record<string, unknown> = {}) => {
     const makeSheet = (name: string, rows: string[][]) => ({
       getName: () => name,
       getDataRange: () => ({
@@ -603,9 +605,9 @@ describe('printed bulletin Apps Script helpers', () => {
       'Sabbath School Hymn 1', 'Sabbath School Hymn 2', 'Sabbath School Hymn 3',
       'Hymn of Praise', 'Special Music Title', 'Hymn of Response',
     ], [
-      '2026-09-05', 'brooklyn', 'Luke 7:36-39', '', '', '', '', '', '', '', '',
+      '2026-09-05', 'brooklyn', verse, '', '', '', '', '', '', '', '',
     ]]);
-    const context = loadAppsScript({
+    return loadAppsScript({
       SpreadsheetApp: {
         getActiveSpreadsheet: () => ({
           getSheetByName: (name: string) =>
@@ -620,18 +622,80 @@ describe('printed bulletin Apps Script helpers', () => {
         getScriptProperties: () => ({ getProperty: () => 'John 12:24' }),
       },
       Logger: { log: () => undefined },
+      ...extra,
     });
-
-    const output = JSON.parse(
+  };
+  const promptDataFor = (verse: string) =>
+    JSON.parse(
       runInContext(
         `JSON.stringify(getPrintedBulletinPromptData('2026-09-05', 'brooklyn'))`,
-        context,
+        loadPromptFixture(verse),
       ) as string,
     );
 
-    expect(output.scheduleVerse).toBe('Luke 7:36-39');
+  it('shows Weekly Data\'s verse, as the app does, and ignores an old print-only verse', () => {
+    const output = promptDataFor('Luke 7:36-39');
+
     expect(output.verse).toBe('Luke 7:36-39');
-    expect(output.hasVerseOverride).toBe(false);
+    expect(output.verseLabels).toEqual({ english: 'Luke 7:36–39', chinese: '路加福音 7:36–39' });
+    expect(output.verseProblem).toBe('');
+    expect(output).not.toHaveProperty('hasVerseOverride');
+  });
+
+  it('shows every passage of a reference with several', () => {
+    const output = promptDataFor('John 3:16; Psalm 23 and Jeremiah:29:11-15');
+
+    expect(output.verseLabels).toEqual({
+      english: 'John 3:16; Psalms 23; Jeremiah 29:11–15',
+      chinese: '約翰福音 3:16；詩篇 23；耶利米書 29:11–15',
+    });
+    expect(output.verseProblem).toBe('');
+  });
+
+  it('stops on a blank or TBD verse, in English and Simplified Chinese', () => {
+    ['', '  ', 'TBD'].forEach((verse) => {
+      const output = promptDataFor(verse);
+      expect(output.verseLabels).toBeNull();
+      expect(output.verseProblem).toContain('Weekly Data has no Bible Verses for this Sabbath and location.');
+      expect(output.verseProblem).toContain('“Weekly Data”中没有这个安息日和地点的“Bible Verses”');
+    });
+  });
+
+  it('names each passage it can\'t read, rather than printing the rest', () => {
+    const output = promptDataFor('John 3:16; Jhon 3:17, 18; John 22:1; John 3:0; John 3:18-16');
+
+    expect(output.verseLabels).toBeNull();
+    expect(output.verseProblem).toContain(
+      'Weekly Data\'s Bible Verses can\'t be read: “Jhon 3:17”, “18”, “John 22:1”, “John 3:0”, “John 3:18-16”.',
+    );
+    expect(output.verseProblem).toContain('无法读取“Weekly Data”中的“Bible Verses”：“Jhon 3:17”、“18”');
+    expect(output.verseProblem).not.toContain('“John 3:16”');
+  });
+
+  it('won\'t create the Doc without a readable Weekly Data verse, whatever the request says', () => {
+    const created: string[] = [];
+    const run = (verse: string) => {
+      const context = loadPromptFixture(verse, {
+        LockService: {
+          getScriptLock: () => ({ waitLock: () => undefined, tryLock: () => true, releaseLock: () => undefined }),
+        },
+        DocumentApp: { create: (name: string) => created.push(name) },
+        DriveApp: { getFileById: () => created.push('drive') },
+      });
+      return runInContext(
+        `try {
+          createPrintedBulletinFromRequest({
+            date: '2026-09-05', location: 'brooklyn', format: 'regular', verse: 'John 3:16'
+          });
+          'created';
+        } catch (error) { error.message; }`,
+        context,
+      ) as string;
+    };
+
+    expect(run('')).toContain('Weekly Data has no Bible Verses');
+    expect(run('Jhon 3:16')).toContain('can\'t be read: “Jhon 3:16”');
+    expect(created).toEqual([]);
   });
 
   it('makes only a Google Doc, and trashes a PDF made for the same bulletin before', () => {
@@ -686,7 +750,7 @@ describe('printed bulletin Apps Script helpers', () => {
     );
   });
 
-  it('builds a bilingual form with location/format buttons and structured Bible selectors', () => {
+  it('builds a bilingual form with location/format buttons and a read-only Bible reading', () => {
     const context = loadAppsScript({});
     const html = runInContext(
       `buildPrintedBulletinPromptHtml_('2026-09-26')`,
@@ -701,14 +765,9 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('updateLocationFormatAvailability');
     expect(html).toContain('.choice:disabled');
     expect(html).not.toContain('Detect from response');
-    expect(html).toContain('Bible book ');
-    expect(html).toContain('圣经书卷</label>');
-    expect(html).toContain('Jeremiah · 耶利米書');
     expect(html).toContain('eng_kjv');
     expect(html).toContain('CUV — 和合本（Traditional Chinese）');
     expect(html).not.toContain('cmn_cu1');
-    expect(html).toContain('11 or 11-15');
-    expect(html).toContain('If the speaker submitted a Bible verse in Weekly Data');
     expect(html).toContain('getPrintedBulletinPromptWarning');
     expect(html).toContain('Add announcement / 添加通知');
     expect(html).toContain('getPrintedBulletinPromptData');
@@ -726,9 +785,6 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).not.toContain('Worship Data form');
     expect(html).toContain('grid-template-columns:repeat(2,minmax(0,1fr))');
     expect(html).toContain('white-space:normal');
-    expect(html).toContain('id="book" required');
-    expect(html).toContain('id="chapter" disabled required');
-    expect(html).toContain('id="verses" type="text"');
     expect(html).toContain('class="required-mark"');
     expect(html).toContain('function updateSubmitState');
     expect(html).toContain('function showGenerationError');
@@ -738,7 +794,16 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('min-height:180px');
     expect(html).toContain('document.getElementById("bulletinForm").hidden=true');
     expect(html).toContain('block:"nearest"');
-    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Bible book'));
+    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Bible reading'));
+    // The verse is Weekly Data's, shown read-only (#622): no picker.
+    expect(html).toContain('id="verseView"');
+    expect(html).toContain('From the Bible Verses column in Weekly Data, the same verse the app shows.');
+    expect(html).toContain('来自“Weekly Data”的“Bible Verses”列');
+    expect(html).not.toMatch(/id="(book|chapter|verses)"/);
+    expect(html).not.toContain('Choose a book');
+    expect(html).not.toContain('选择书卷');
+    expect(html).not.toContain('verseOverrideDirty');
+    expect(html).toContain('verseReady');
   });
 
   it('stores ordered printed announcements in Apps Script properties', () => {
@@ -1202,34 +1267,107 @@ describe('printed bulletin Apps Script helpers', () => {
     });
   });
 
-  it('stores printed Bible verse overrides separately from reviewed intake data', () => {
-    const properties: Record<string, string> = {};
+  it('prunes per-week Script Properties more than four weeks old, and every old print-only verse', () => {
+    const properties: Record<string, string> = {
+      // Older than four weeks before 2026-11-03 (the cutoff is 2026-10-06).
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12': 'doc-a',
+      'PHYSICAL_BULLETIN_DOC_ID_BROOKLYN_2026-10-03': 'doc-b',
+      'PHYSICAL_BULLETIN_DOC_ID_2026-09-05': 'doc-c',
+      'PHYSICAL_BULLETIN_PDF_ID_QUEENS_2026-09-12': 'pdf-a',
+      'PHYSICAL_BULLETIN_PDF_ID_2026-09-05': 'pdf-b',
+      'PRINTED_ANNOUNCEMENTS_2026-09-12': '[]',
+      // Every old print-only verse goes, even next week's.
+      'PRINTED_BIBLE_VERSE_QUEENS_2026-09-12': 'John 1:1',
+      'PRINTED_BIBLE_VERSE_BROOKLYN_2026-11-07': 'John 1:2',
+      // Recent and future weeks stay, so a reprint still updates its Doc.
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-10-10': 'doc-d',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07': 'doc-e',
+      'PHYSICAL_BULLETIN_PDF_ID_BROOKLYN_2026-10-06': 'pdf-c',
+      'PRINTED_ANNOUNCEMENTS_2026-11-07': '[]',
+      // Anything else stays: settings, other prefixes, odd forms and dates.
+      'bulletin.changeover.schedule-not-set.watchedSince': '2026-09-01',
+      PRINTED_BULLETIN_CJK_FONT: 'Some Font',
+      PHYSICAL_BULLETIN_ADMIN_EMAILS: 'admin@example.com',
+      SCHEDULE_NAME_CHECK_TRIGGER: 'installed',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026_09_12': 'underscored',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-02-30': 'not a date',
+      'PHYSICAL_BULLETIN_DOC_ID_MANHATTAN_2026-09-12': 'unknown location',
+      'PRINTED_ANNOUNCEMENTS_QUEENS_2026-09-12': 'no location form',
+      'PRINTED_BIBLE_VERSE_2026-09-12': 'no location form',
+      'XPHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12': 'other prefix',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12_COPY': 'suffix',
+    };
+    const logs: string[] = [];
+    const locks: string[] = [];
     const context = loadAppsScript({
       PropertiesService: {
         getScriptProperties: () => ({
-          getProperty: (key: string) => properties[key] ?? null,
-          setProperty: (key: string, value: string) => {
-            properties[key] = value;
+          getKeys: () => Object.keys(properties),
+          deleteProperty: (key: string) => {
+            delete properties[key];
           },
         }),
       },
       LockService: {
         getScriptLock: () => ({
-          waitLock: () => undefined,
-          releaseLock: () => undefined,
+          tryLock: () => {
+            locks.push('lock');
+            return true;
+          },
+          releaseLock: () => locks.push('release'),
         }),
       },
+      Logger: { log: (message: string) => logs.push(message) },
     });
 
-    const output = JSON.parse(
-      runInContext(
-        `savePrintedBibleVerseOverride_('2026-09-26', 'queens', 'John 12:24'); JSON.stringify(readPrintedBibleVerseOverride_('2026-09-26', 'queens'))`,
-        context,
-      ) as string,
-    );
+    const removed = runInContext(`prunePrintedBulletinProperties_('2026-11-03')`, context);
 
-    expect(output).toEqual({ found: true, reference: 'John 12:24' });
-    expect(properties['PRINTED_BIBLE_VERSE_QUEENS_2026-09-26']).toBe('John 12:24');
+    expect(removed).toBe(8);
+    expect(Object.keys(properties).sort()).toEqual([
+      'PHYSICAL_BULLETIN_ADMIN_EMAILS',
+      'PHYSICAL_BULLETIN_DOC_ID_MANHATTAN_2026-09-12',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-02-30',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12_COPY',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-10-10',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-11-07',
+      'PHYSICAL_BULLETIN_DOC_ID_QUEENS_2026_09_12',
+      'PHYSICAL_BULLETIN_PDF_ID_BROOKLYN_2026-10-06',
+      'PRINTED_ANNOUNCEMENTS_2026-11-07',
+      'PRINTED_ANNOUNCEMENTS_QUEENS_2026-09-12',
+      'PRINTED_BIBLE_VERSE_2026-09-12',
+      'PRINTED_BULLETIN_CJK_FONT',
+      'SCHEDULE_NAME_CHECK_TRIGGER',
+      'XPHYSICAL_BULLETIN_DOC_ID_QUEENS_2026-09-12',
+      'bulletin.changeover.schedule-not-set.watchedSince',
+    ]);
+    expect(logs).toEqual(['Pruned 8 old printed bulletin Script Properties.']);
+    expect(locks).toEqual(['lock', 'release']);
+  });
+
+  it('skips pruning, without failing, while another run holds the lock or the properties fail', () => {
+    const deleted: string[] = [];
+    const load = (tryLock: boolean, getKeys: () => string[]) =>
+      loadAppsScript({
+        PropertiesService: {
+          getScriptProperties: () => ({ getKeys, deleteProperty: (key: string) => deleted.push(key) }),
+        },
+        LockService: {
+          getScriptLock: () => ({ tryLock: () => tryLock, releaseLock: () => undefined }),
+        },
+        Logger: { log: () => undefined },
+      });
+
+    const keys = () => ['PRINTED_BIBLE_VERSE_QUEENS_2026-09-12'];
+    expect(runInContext(`prunePrintedBulletinProperties_('2026-11-03')`, load(false, keys))).toBe(0);
+    expect(
+      runInContext(
+        `prunePrintedBulletinProperties_('2026-11-03')`,
+        load(true, () => {
+          throw new Error('Service unavailable');
+        }),
+      ),
+    ).toBe(0);
+    expect(deleted).toEqual([]);
   });
 
   it('detects communion format from the schedule remark', () => {
@@ -2199,8 +2337,8 @@ describe('printed bulletin Apps Script helpers', () => {
       ['DS Sermon', '崇拜･證道'],
       ['DS Interpreter', '崇拜･翻譯'],
       ['Special Music', '特別音樂'],
-      ['Flower Offering', '鮮花奉獻'],
       ['Offerings', '奉獻事項'],
+      ['Flower Offering', '鮮花奉獻'],
       ['Sunset Times', '日落時間'],
     ]);
     expect(brooklyn.rows.slice(1).map((row) => row[2])).toEqual([
