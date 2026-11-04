@@ -731,6 +731,13 @@ const navigationLinks = [
   // Its bot protection answers some networks with 403 (seen from a home
   // connection on 2026-10-01), so 403 means "up, but blocking the monitor".
   ['Adventist Giving', 'https://adventistgiving.org/donate/AN48CO', false, [403]],
+  // Donor-advised fund sponsors on the Give page (#646). Fidelity Charitable's
+  // grant link redirects to its sign-in, behind the same kind of bot protection
+  // as the others. DAFgiving360's answers scripts with 403 (seen 2026-11-04);
+  // Vanguard Charitable's was down for scheduled maintenance at the time.
+  ['Fidelity Charitable grant', 'https://charitablegift.fidelity.com/cgfweb/CGFLogon.cgfdo?Npo_Id=113004814&Device_Type=Widget&App_Id=MDNR&source=widget', false, [403]],
+  ['DAFgiving360', 'https://www.dafgiving360.org/', false, [403]],
+  ['Vanguard Charitable', 'https://www.vanguardcharitable.org/', false, [403]],
   ['Spotify podcast', 'https://open.spotify.com/show/6Ig7RqU3A5vivl4x3FJFLV'],
   ['Zoom class', 'https://us06web.zoom.us/j/2541879535?pwd=Rmhsa0pFK3hQVTRHMzVqQ2swZlBodz09'],
   ['sermon archive', 'https://www.youtube.com/playlist?list=PLX85oBoVF4TKC4p0hJ6EK6X_2zXOB53eW'],

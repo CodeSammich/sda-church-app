@@ -340,6 +340,17 @@ Each hymnal's older route, such as `/home/english-hymnal?hymnNum=12` from a bull
 opens the same page with that hymnal picked and just that hymn showing, marked, above
 **Show all hymns**. The old English–Chinese hymn lookup's route opens the hymnal page.
 
+**Tithe & Offering** (`app/(tabs)/home/give.tsx`) describes the ways to give, and its
+buttons open giving sites in the in-app browser; the app takes no payment. **Give
+Online** opens the church's AdventistGiving page. The **Donor-Advised Fund** card's
+**Fidelity Charitable** button, for the sponsor the church prefers, opens Fidelity
+Charitable's own grant link: its sign-in, then a grant with the church already chosen
+by its EIN. The church needs no account or sign-up for it. **Other Sponsors** opens a
+popup listing the other sponsors the card names, each opening its home page, as they
+have no such link, with the church's legal name and EIN (#646). The card and the popup
+name DAFgiving360 with its old name, Schwab Charitable. The sponsors are one list,
+`DAF_SPONSORS` in `constants/ExternalLinks.ts`.
+
 **Tenet Alignment:**
 
 - **Tenet 5 (Simplicity):** A widget-based dashboard provides a "glanceable" interface

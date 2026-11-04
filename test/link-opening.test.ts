@@ -13,6 +13,7 @@ import {
   openChineseHymnalAndroid,
   openChineseHymnalIos,
   openCurrentSabbathSchool,
+  openDafSponsor,
   openEmail,
   openGNYC,
   openInMaps,
@@ -26,6 +27,7 @@ import {
   openYouTubeSearch,
   openYouTubeVideo,
   openZoomClass,
+  PREFERRED_DAF_SPONSOR,
 } from '@/constants/ExternalLinks';
 import { openChinese505Hymn } from '@/features/hymnal/Chinese505Hymnal';
 import { openChinese506Hymn } from '@/features/hymnal/Chinese506Hymnal';
@@ -43,6 +45,7 @@ describe('where links open', () => {
 
   it.each([
     ['online giving', openAdventistGiving],
+    ['a donor-advised fund sponsor', () => openDafSponsor(PREFERRED_DAF_SPONSOR)],
     ['Sabbath School', () => openSabbathSchool('en')],
     ["this week's lesson", () => openCurrentSabbathSchool('en')],
     ["children's lessons", openChildrenSabbathSchool],

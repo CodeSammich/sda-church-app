@@ -341,7 +341,7 @@ This is the official app of the New York Chinese Seventh-day Adventist Church. I
 
 Things worth trying: Bible audio (Bible tab, play button), which keeps playing in the background and on the lock screen; the app language under You → Language (English, Traditional Chinese, Simplified Chinese, Spanish); and dark mode under You → Theme.
 
-The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the in-app browser (Safari View Controller on iOS). The app itself collects no payment details, takes no payments, and giving unlocks nothing in the app.
+The Tithe & Offering page describes ways to give. Its online giving button opens the church's AdventistGiving page in the in-app browser (Safari View Controller on iOS). Its donor-advised fund buttons open Fidelity Charitable's sign-in, for a grant to the church, and the websites of other donor-advised fund sponsors, the same way. The app itself collects no payment details, takes no payments, and giving unlocks nothing in the app.
 
 Hymn lyrics and sheet music, library books, and the adult Sabbath School lesson open on their publishers' websites in the in-app browser. A children's Sabbath School lesson downloads its publisher's PDF and opens it in the phone's own viewer. YouTube, Spotify, Zoom, and Google Maps links open in their own apps.
 

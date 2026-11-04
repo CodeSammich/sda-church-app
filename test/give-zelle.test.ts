@@ -1,11 +1,12 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { PaperProvider } from 'react-native-paper';
 
 import GiveScreen from '@/app/(tabs)/home/give';
 import { SHOW_ZELLE_GIVING } from '@/constants/ExternalLinks';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 
-jest.mock('expo-router', () => ({ Stack: { Screen: () => null } }));
+jest.mock('expo-router', () => ({ Stack: { Screen: () => null }, useLocalSearchParams: () => ({}) }));
 jest.mock('@/components/VerseHero', () => ({ VerseHero: () => null }));
 jest.mock('@/hooks/useHeroHeaderTitle', () => ({
   useHeroHeaderTitle: () => ({ showHeaderTitle: false, handleHeroScroll: jest.fn() }),
@@ -25,9 +26,13 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
 const renderGive = async (language: SupportedLanguage) =>
   await render(
     React.createElement(
-      LanguageContext.Provider,
-      { value: { language, languageSelectionRevision: 0, setLanguage: () => {} } },
-      React.createElement(GiveScreen),
+      PaperProvider,
+      null,
+      React.createElement(
+        LanguageContext.Provider,
+        { value: { language, languageSelectionRevision: 0, setLanguage: () => {} } },
+        React.createElement(GiveScreen),
+      ),
     ),
   );
 
