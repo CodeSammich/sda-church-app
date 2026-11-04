@@ -10,7 +10,7 @@ import {
 } from '@/constants/ExternalLinks';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { useAppTheme } from '@/constants/Themes';
-import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { useContext } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Dialog, Portal, Text } from 'react-native-paper';
@@ -71,6 +71,8 @@ export function DafSponsorsDialog({ onDismiss, title, visible }: DafSponsorsDial
   const labels = DAF_SPONSORS_COPY[language] || DAF_SPONSORS_COPY.en;
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight();
+  // A numeric width: on iOS, Paper splits a percentage width from maxWidth (#324).
+  const popupWidthStyle = usePopupWidthStyle();
 
   return (
     <Portal>
@@ -78,7 +80,7 @@ export function DafSponsorsDialog({ onDismiss, title, visible }: DafSponsorsDial
         testID="daf-sponsors-dialog"
         visible={visible}
         onDismiss={onDismiss}
-        style={[styles.dialog, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
+        style={[popupWidthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
       >
         <PopupHeader
           closeLabel={labels.close}
@@ -153,11 +155,6 @@ export function DafSponsorsDialog({ onDismiss, title, visible }: DafSponsorsDial
 }
 
 const styles = StyleSheet.create({
-  dialog: {
-    alignSelf: 'center',
-    maxWidth: 560,
-    width: '90%',
-  },
   // As in the other popups: with the X's 48-point row, 16 keeps the title where
   // Paper's own title sits.
   header: {

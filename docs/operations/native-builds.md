@@ -796,7 +796,7 @@ builds for the Mac's own processor. To build it in the workflow again:
 
 #### Key screens
 
-The five runners screenshot the 46 screens listed in `test/screens/screens.json`, 107
+The five runners screenshot the 47 screens listed in `test/screens/screens.json`, 109
 shots in all, so a layout problem on iPhone shows up before release rather than in
 TestFlight (#331). Each runner then takes its group's iPad shots; see
 [iPad key screens](#ipad-key-screens). Each runner takes one group (`--group <name>`) of related
@@ -984,7 +984,7 @@ on a 13-inch iPad Pro Simulator (`ipad.device` in `screens.json`). The maintaine
 no iPad, so these shots, and a check on a member's iPad through TestFlight before each App
 Store release, are how iPad layouts get tested.
 
-- **Which shots.** Each screen's `ipadVariants`, 63 shots: every key screen in landscape,
+- **Which shots.** Each screen's `ipadVariants`, 64 shots: every key screen in landscape,
   where a wide screen changes the most, and in the language its checks read (`landscape`,
   `landscape-zh`, `landscape-zh-cn`, `landscape-es`); the screens a wide screen changes
   most in portrait too (`default`: Home, New Member & Visitor, the Bible, Explore, the
