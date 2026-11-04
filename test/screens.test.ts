@@ -317,8 +317,16 @@ describe('iOS key screens', () => {
     // The iPhone, and the iPad for the group's iPad shots, boot together.
     // Not on the compiling runner, which boots its iPad after its iPhone shots.
     expect(boot).toContain('BOOT_IPAD: ${{ !matrix.builds }}\n');
-    expect(boot).toMatch(/if \[ "\$BOOT_IPAD" = true \]; then\n\s+nohup xcrun simctl bootstatus "\$IPAD_ID" -b [^\n]+&\n\s+fi\n/);
-    expect(workflow.match(/nohup xcrun simctl bootstatus/g)).toHaveLength(2);
+    // Its first boot, slow, while the runner waits, then off until its shots,
+    // so it doesn't slow the iPhone's: the launch step waits for that.
+    expect(boot).toContain(
+      `nohup sh -c 'xcrun simctl bootstatus "$1" -b && xcrun simctl shutdown "$1"' sh "$IPAD_ID"`,
+    );
+    expect(boot).toContain('echo "$!" > "$RUNNER_TEMP/ipad-boot.pid"');
+    const launchStep = workflow.slice(workflow.indexOf('- name: Launch on a simulated iPhone'));
+    expect(launchStep.indexOf('while kill -0 "$(cat "$RUNNER_TEMP/ipad-boot.pid")"')).toBeGreaterThan(-1);
+    expect(launchStep.indexOf('while kill -0')).toBeLessThan(launchStep.indexOf('xcrun simctl launch'));
+    expect(workflow.match(/nohup xcrun simctl bootstatus/g)).toHaveLength(1);
     // The launch step, after the build, boots it or waits for it.
     const launch = workflow.slice(workflow.indexOf('- name: Launch on a simulated iPhone'));
     expect(launch.indexOf('xcrun simctl bootstatus "$DEVICE_ID" -b\n')).toBeGreaterThan(-1);

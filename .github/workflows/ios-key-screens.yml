@@ -185,6 +185,9 @@ jobs:
         # alongside it (docs/operations/native-builds.md). So it starts after
         # the package installs, while the other runners wait for the app, and
         # their iPads boot alongside, for the group's iPad shots (#324). The
+        # iPad then shuts down until its shots: left running beside the iPhone,
+        # on November 4, 2026, it slowed the iPhone's shots 1.5 to 2 times and
+        # one launch stalled. Booted once, it boots again in about a minute. The
         # runner that compiles boots its iPhone after the build, in the launch
         # step, when it restored a compile cache: booting alongside, a build
         # from a matching cache took 10.8 minutes instead of 2.3. With no cache,
@@ -208,7 +211,10 @@ jobs:
             nohup xcrun simctl bootstatus "$DEVICE_ID" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
           fi
           if [ "$BOOT_IPAD" = true ]; then
-            nohup xcrun simctl bootstatus "$IPAD_ID" -b > "$RUNNER_TEMP/ipad-boot.log" 2>&1 &
+            # Its first boot, then off; the launch step waits for this to finish.
+            nohup sh -c 'xcrun simctl bootstatus "$1" -b && xcrun simctl shutdown "$1"' sh "$IPAD_ID" \
+              > "$RUNNER_TEMP/ipad-boot.log" 2>&1 &
+            echo "$!" > "$RUNNER_TEMP/ipad-boot.pid"
           fi
 
       - name: Build for the Simulator without signing
@@ -343,6 +349,11 @@ jobs:
             echo 'No Simulator app was built or shared.' >&2
             exit 1
           }
+          # The iPad's first boot, started while this runner waited, has to be
+          # done, and the iPad off, before the iPhone's shots (#324).
+          if [ -f "$RUNNER_TEMP/ipad-boot.pid" ]; then
+            while kill -0 "$(cat "$RUNNER_TEMP/ipad-boot.pid")" 2>/dev/null; do sleep 5; done
+          fi
           EXECUTABLE="$(plutil -extract CFBundleExecutable raw "$APP_PATH/Info.plist")"
           lipo -archs "$APP_PATH/$EXECUTABLE"
           BUNDLE_ID="$(node -p "require('./app.json').expo.ios.bundleIdentifier")"
@@ -409,8 +420,9 @@ jobs:
         # The group's iPad shots (#324), named ipad/<screen>-<variant>.png: every
         # key screen in landscape, and the ones a wide screen changes most in
         # portrait and at 200%. The iPhone is done, so it shuts down and its
-        # memory goes to the iPad, which booted while this runner waited, or
-        # boots now on the runner that compiled.
+        # memory goes to the iPad, which boots again here, in about a minute
+        # after its first boot while this runner waited, or for the first time
+        # on the runner that compiled.
         id: ipad
         if: ${{ !cancelled() && steps.launch.outcome == 'success' }}
         timeout-minutes: 25

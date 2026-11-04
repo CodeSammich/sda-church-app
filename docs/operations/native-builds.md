@@ -996,8 +996,10 @@ Store release, are how iPad layouts get tested.
 - **Where they're taken.** On the same five runners as the iPhone's, each taking its
   own group's iPad shots after its iPhone shots, so the iPad adds no job: a sixth Mac job
   once got a Mac before the compiling runner did, and the other five waited 45 minutes.
-  Each runner boots the iPad alongside the iPhone while it waits for the app, then shuts
-  the iPhone down before the iPad's shots, so the two don't share the runner's memory.
+  Each runner gives the iPad its slow first boot alongside the iPhone's while it waits for
+  the app, then shuts the iPad down: left running beside the iPhone, it slowed the
+  iPhone's shots 1.5 to 2 times and stalled a launch. After the iPhone's shots, the iPhone
+  shuts down and the iPad boots again, in about a minute, for its own.
   The compiling runner boots its iPad only after its iPhone shots: with both booted
   during a compile, its iPhone shots slowed to a minute each, and the app was gone from
   one.
