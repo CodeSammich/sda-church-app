@@ -130,14 +130,16 @@ const isChinese = (text) => /\p{Script=Han}/u.test(text);
 /**
  * Whether a label appears as a whole word, with its top inside the region.
  * "Verse" doesn't count inside "Verses". Chinese has no spaces between words,
- * so any occurrence counts there.
+ * so any occurrence counts there. Case doesn't count: Vision read the iPad
+ * tab bar's "Inicio" as "InIcIo" (#589), and a label cut short is still short
+ * in any case.
  */
 const showsLabel = (lines, label, region) => {
   // A label given as a list shows if any of its forms does.
   if (Array.isArray(label)) return label.some((form) => showsLabel(lines, form, region));
   const pattern = isChinese(label)
     ? new RegExp(escape(label), 'u')
-    : new RegExp(`(^|[^\\p{L}])${escape(label)}($|[^\\p{L}])`, 'u');
+    : new RegExp(`(^|[^\\p{L}])${escape(label)}($|[^\\p{L}])`, 'iu');
   return lines.some(
     (line) =>
       pattern.test(line.text) &&
