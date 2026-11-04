@@ -1,5 +1,6 @@
 import { UpdateContext } from '@/app/_layout';
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
+import { TABLET_TAB_BAR_MIN_WIDTH, TabletTabBar } from '@/components/TabletTabBar';
 import { GlobalHeader, UIStateContext } from '@/components/GlobalHeader';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { APP_ICONOGRAPHY } from '@/constants/Iconography';
@@ -24,6 +25,7 @@ function TabBarIcon(props: {
   color: string;
   focused: boolean;
   textScale: TextScale;
+  tablet?: boolean;
 }) {
   let iconName = props.name;
 
@@ -36,7 +38,8 @@ function TabBarIcon(props: {
     <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
       <AppIcon
         name={iconName}
-        size={DESIGN_TOKENS.ICON_SIZE_TAB}
+        // A little larger in the tablet's capsule (TabletTabBar).
+        size={props.tablet ? 30 : DESIGN_TOKENS.ICON_SIZE_TAB}
         textScale={getBottomTabIconTextScale(props.textScale)}
         color={props.color}
       />
@@ -52,8 +55,12 @@ function TabBarLabel(props: {
   color: string;
   label: string;
   textScale: TextScale;
+  tablet?: boolean;
 }) {
   const labelScale = getBottomTabIconTextScale(props.textScale);
+  // 12 points in the tablet's capsule, where there's room; 10 on a phone.
+  const fontSize = props.tablet ? 12 : DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE;
+  const lineHeight = props.tablet ? 18 : DESIGN_TOKENS.BOTTOM_TAB_LABEL_LINE_HEIGHT;
   return (
     <Text
       maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
@@ -61,8 +68,8 @@ function TabBarLabel(props: {
       style={{
         color: props.color,
         flexShrink: 1,
-        fontSize: scaleTypographyMetric(DESIGN_TOKENS.BOTTOM_TAB_LABEL_FONT_SIZE, labelScale),
-        lineHeight: scaleTypographyMetric(DESIGN_TOKENS.BOTTOM_TAB_LABEL_LINE_HEIGHT, labelScale),
+        fontSize: scaleTypographyMetric(fontSize, labelScale),
+        lineHeight: scaleTypographyMetric(lineHeight, labelScale),
         paddingBottom: DESIGN_TOKENS.BOTTOM_TAB_LABEL_BOTTOM_PADDING,
         textAlign: 'center',
         width: '100%',
@@ -111,10 +118,7 @@ export default function TabLayout() {
     }).start();
   };
 
-  const tabBarTranslateY = menuAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [tabContentHeight + bottomTabInset + 16, 0],
-  });
+
 
   const handleTabBarLayout = (event: LayoutChangeEvent) => {
     const nextHeight = event.nativeEvent.layout.height;
@@ -151,6 +155,15 @@ export default function TabLayout() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  // On a tablet, the tabs sit in a centred capsule rather than a full-width
+  // bar (TabletTabBar, #589); a phone, and a narrow window beside another app,
+  // keep the full-width bar.
+  const tablet = windowWidth >= TABLET_TAB_BAR_MIN_WIDTH;
+  // Far enough down to hide the bar: a tablet's capsule by its measured height.
+  const tabBarTranslateY = menuAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [(tablet ? tabBarHeight : tabContentHeight + bottomTabInset) + 16, 0],
+  });
   // The Bible's fixed reader dock owns the upper boundary on this tab. Keep
   // this broad enough for native/router variants that expose `/bible/index`.
   const isBibleRoute = pathname === '/bible' || pathname.startsWith('/bible/');
@@ -179,7 +192,16 @@ export default function TabLayout() {
               transform: [{ translateY: tabBarTranslateY }],
             }}
           >
-            <BottomTabBar {...(props as any)} />
+            {tablet ? (
+              <TabletTabBar
+                {...(props as any)}
+                bottomInset={bottomTabInset}
+                theme={theme}
+                windowWidth={windowWidth}
+              />
+            ) : (
+              <BottomTabBar {...(props as any)} />
+            )}
           </Animated.View>
         )}
         screenOptions={{
@@ -240,6 +262,7 @@ export default function TabLayout() {
                 color={String(color)}
                 label={labels.home}
                 textScale={textScale}
+                tablet={tablet}
               />
             ),
             tabBarIcon: ({ color, focused }) => (
@@ -248,6 +271,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
+                tablet={tablet}
               />
             ),
           }}
@@ -276,6 +300,7 @@ export default function TabLayout() {
                 color={String(color)}
                 label={labels.bible}
                 textScale={textScale}
+                tablet={tablet}
               />
             ),
             // The Bible reader owns a coordinated bottom dock and already accounts
@@ -287,6 +312,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
+                tablet={tablet}
               />
             ),
           }}
@@ -307,6 +333,7 @@ export default function TabLayout() {
                 color={String(color)}
                 label={labels.explore}
                 textScale={textScale}
+                tablet={tablet}
               />
             ),
             tabBarIcon: ({ color, focused }) => (
@@ -315,6 +342,7 @@ export default function TabLayout() {
                 color={String(color)}
                 focused={focused}
                 textScale={textScale}
+                tablet={tablet}
               />
             ),
           }}
@@ -347,6 +375,7 @@ export default function TabLayout() {
                   color={color}
                   label={labels.you}
                   textScale={textScale}
+                  tablet={tablet}
                 />
               ),
               unmountOnBlur: true as any, // Ensures the stack resets when leaving the tab
@@ -356,6 +385,7 @@ export default function TabLayout() {
                   color={color}
                   focused={focused}
                   textScale={textScale}
+                  tablet={tablet}
                 />
               ),
             } as any

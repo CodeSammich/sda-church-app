@@ -310,12 +310,19 @@ shows the phone's pages larger and roomier, not more on each page:
   `getContentWidth(width, columnScale)`, not the window's width. On a tablet the Bible's
   text also gets 24-point margins, since a phone's 4 points would leave it against the
   screen's edge once the column fills the screen.
-- **Full-width edges.** Banner images, the header, the Bible's dock background, and the
-  tab bar still span the screen, so the app reaches the edges as it does on a phone
-  (see Edge-to-Edge above). Their text and buttons line up with the column
-  (`contentColumnWithin`, and the tab bar's `getContentSideInset`). Rows that scroll
-  sideways, such as the library's shelves, span the screen too, starting in line with
-  the column.
+- **Full-width edges.** Banner images, the header, and the Bible's dock background still
+  span the screen, so the app reaches the edges as it does on a phone (see Edge-to-Edge
+  above). Their text and buttons line up with the column (`contentColumnWithin`). Rows
+  that scroll sideways, such as the library's shelves, span the screen too, starting in
+  line with the column.
+- **The tab bar on a tablet** (a window at least 600 points wide, #589) is a rounded
+  capsule centered above the bottom edge, at most 520 points wide, in the app's warm card
+  colour with a lighter pill behind the selected tab, and slightly larger icons and labels
+  (`components/TabletTabBar.tsx`). A phone's full-width bar stretched across an iPad looked
+  like a phone app blown up. It's the same on iPad and Android, and its labels follow the
+  app's text size as on a phone. Phones, and a narrow window beside another app, keep the
+  full-width bar (its buttons within the column, `getContentSideInset`). The system's own
+  iPad tab bar would sit at the top, over the header, so the app draws its own.
 - **A third column of book covers** in a library shelf's grid once the column is 600
   points wide (`getLibraryGridColumns`), so covers stay a sensible size. Other grids,
   such as Home's cards, keep two columns, which the column keeps a phone-like shape.
