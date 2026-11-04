@@ -30,7 +30,7 @@ does and what still needs a person.
 - [Expo doctor monitor alerts](#expo-doctor-monitor-alerts)
 - [Apple signing reminders](#apple-signing-reminders)
 - [Due-date reminders](#due-date-reminders)
-- [Keeping scheduled workflows on](#keeping-scheduled-workflows-on)
+- [Maintenance releases](#maintenance-releases)
 - [Issue priorities](#issue-priorities)
 - [Updating pastors and elders](#updating-pastors-and-elders)
 - [Bible audio emulator test](#bible-audio-emulator-test)
@@ -1065,38 +1065,83 @@ notify anyone. The rules are in
 `scripts/due-date-reminders.cjs`. When an issue can't be commented on, the others
 still get their reminders and the run fails, so check its log.
 
-## Keeping scheduled workflows on
+## Maintenance releases
 
-**Workflow:** **Scheduled Workflows Watch** (`scheduled-workflows-watch.yml`), which runs
-on the 1st and 15th of each month and can be run manually.
+**Workflow:** **Maintenance Release Reminder** (`maintenance-release-reminder.yml`), which
+runs every Monday and can be run manually.
 
 GitHub turns off a public repository's scheduled workflows after 60 days with no
 repository activity
-([GitHub's docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)).
-If development paused, the Apple Signing Monitor's warnings, the Yearly Checkup, the
-Workspace Backup Reminder, and the Due-Date Reminders would stop, and nothing would say
-so. This workflow only reads, with the workflow token, and opens an alert issue when:
+([GitHub's docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)),
+and a commit to the default branch is the activity known to count
+([warn-workflow-about-to-be-disabled-action](https://github.com/fem-on-colab/warn-workflow-about-to-be-disabled-action)).
+Without one, the Apple Signing Monitor's warnings, the Yearly Checkup, the Workspace
+Backup Reminder, the Due-Date Reminders, and this reminder would stop, and nothing would
+say so. So a release, even a small one, should reach `main` within 60 days of the last.
 
-- **`main` has had no commit for 45 days**, 15 days before GitHub turns them off. A commit
-  to the default branch is the activity known to count
-  ([warn-workflow-about-to-be-disabled-action](https://github.com/fem-on-colab/warn-workflow-about-to-be-disabled-action)).
-- **GitHub has already turned one off for inactivity** (state `disabled_inactivity` in
-  [the workflows API](https://docs.github.com/en/rest/actions/workflows)). One a person
-  turned off isn't reported.
+**45 days after `main`'s last commit**, the reminder opens two things, once each:
 
-It never turns a workflow on itself. The issue, *Scheduled workflows may stop: GitHub
-turns them off after 60 days without activity*, is assigned to `MONITOR_ALERT_ASSIGNEES`,
-and closes itself on the first run that finds neither. When it opens:
+- a **Maintenance release due** tracking issue, at High priority and assigned to
+  `MONITOR_ALERT_ASSIGNEES`, with the release's checklist and the date GitHub would
+  turn the scheduled workflows off; and
+- the maintenance release's version pull request into `release-candidate`: **Set the
+  version to X.Y.Z**, the next patch version, on its own branch,
+  `maintenance/version-X.Y.Z`. It says `Part of #` the issue, which links it in a
+  comment. Its description says how many days are left, and each Monday's run updates
+  that count.
 
-1. **For no commit in 45 days:** merge any real commit into `main` before day 60, such as
-   a docs fix through `release-candidate` and a release. That starts the 60 days again.
-2. **For a workflow GitHub turned off:** open it under **Actions**, where it says "This
-   scheduled workflow is disabled because there hasn't been activity in this repository
-   for at least 60 days", and select **Enable workflow**, or run
-   `gh workflow enable <file>`. Then run any reminder it missed (**Run workflow**). A
-   commit to `main` also starts the 60 days again.
-3. **If the watch itself stopped:** it's a scheduled workflow too, so it stops with the
-   others. The yearly checkup asks to check every scheduled workflow is enabled.
+To finish the release:
+
+1. **Get it past its checks.** `release-candidate` requires **Jest unit tests**,
+   **validate-pr**, and **require-linked-issue**, and a required check that never reports
+   blocks the merge. A pull request the workflow token opens holds its runs
+   ([GitHub's docs](https://docs.github.com/en/actions/concepts/security/github_token#when-github_token-triggers-workflow-runs)),
+   so either select **Approve workflows to run** in its merge box, or close it and reopen
+   it once, and they finish in a few minutes; or, as an admin, merge it with **Merge
+   without waiting for requirements to be met (bypass rules)**, which the **PR approval**
+   ruleset allows admins. It changes only the four version files, and the release pull
+   request runs every check again. If `release-candidate` moves on first, **Update
+   branch** starts them too.
+2. Merge or close the open Dependabot pull requests
+   ([Dependabot pull requests](#dependabot-pull-requests)).
+3. Run `npm audit`, and take Expo's SDK patch updates with `npx expo install --check`,
+   each in its own pull request. A change to `package-lock.json` gets an Android and an
+   iPhone launch on a device or emulator before it's called ready.
+4. Merge the version pull request, then open the release pull request into `main` and
+   merge it ([Shipping a release to `main`](#shipping-a-release-to-main)).
+5. At the merge, **Native Android build** and **Native iOS build** wait for `production`
+   approval. A maintenance release needn't go to the stores, so reject them unless it
+   should.
+
+The first run after a new commit on `main` closes the issue; GitHub's `Closes` keyword
+only works on `main`, so the reminder does it. If the release moved the version past the
+pull request's, it closes that too, and deletes its branch. It never pushes to a branch
+it didn't just create, and it skips opening one if `maintenance/version-X.Y.Z` already
+exists. If `release-candidate`'s version is already raised, there's no version to set,
+so it opens only the issue, with that step ticked.
+
+It runs only `main`'s code: `main`'s `public/sync-version.js` raises the version in copies
+of `release-candidate`'s version files, and the commit, branch, and pull request are made
+through the API, with only the workflow token (`actions: read`, `contents: write`,
+`pull-requests: write`, `issues: write`). Opening the pull request needs **Allow GitHub
+Actions to create and approve pull requests**, under **Settings → Actions → General →
+Workflow permissions**
+([GitHub's docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)).
+If the organization turns it off for its repositories, it's under the organization's
+**Settings → Actions → General** too. Without it, the run fails at that step, and its
+log says so.
+
+**A scheduled workflow already turned off:** a separate issue, *Scheduled workflows
+turned off for inactivity*, assigned to `MONITOR_ALERT_ASSIGNEES`, names any workflow in
+the state `disabled_inactivity` ([the workflows API](https://docs.github.com/en/rest/actions/workflows)).
+Open it under **Actions**, where it says "This scheduled workflow is disabled because
+there hasn't been activity in this repository for at least 60 days", and select **Enable
+workflow**, or run `gh workflow enable <file>`. Then run any reminder it missed (**Run
+workflow**). A commit to `main` also starts the 60 days again. A workflow a person turned
+off isn't reported, and the reminder never turns one on itself.
+
+If the reminder itself has stopped, it's a scheduled workflow too, so it stops with the
+others. The yearly checkup asks to check that every scheduled workflow is enabled.
 
 ## Issue priorities
 
