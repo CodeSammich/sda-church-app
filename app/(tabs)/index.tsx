@@ -43,6 +43,7 @@ import {
 import { ImageBackground } from '@/components/ImageBackground';
 import { Card, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function HomeScreen() {
   const { language } = useContext(LanguageContext);
@@ -630,6 +631,7 @@ export default function HomeScreen() {
             />
           </View>
         </List.Section>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

@@ -194,7 +194,8 @@ jobs:
           1. **Download** $download and $android, and open their \`screens/ios/\` (iPhone), \`screens/ipad/\`, and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's or iPad's own large text), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad turned sideways, in a screen's own language as \`landscape-zh\` and so on, and at 200% as \`landscape-xl\`), \`w320\` to \`w981\` (Android at an iPad's Split View and Slide Over widths), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:
              - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
-             - on the iPad, a page's text and buttons spread across the whole screen instead of staying in a centered column, or the tab bar not a centered capsule;
+             - on the iPad, a page's text and buttons spread across the whole screen instead of staying in a centered column;
+             - on iOS, the tab bar not a floating capsule, or the Bible's audio and chapter controls not in their own card above it; on Android, the tab bar not a full-width bar with the Bible's controls flush on top of it;
              - a verse number split from its verse, or a button label cut short;
              - the wrong language, a blank or half-drawn screen, or a popup covering the page;
              - dark mode or large text that's hard to read.

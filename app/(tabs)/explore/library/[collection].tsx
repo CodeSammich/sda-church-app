@@ -25,6 +25,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function LibraryScreen() {
   const { collection, q } = useLocalSearchParams<{
@@ -86,6 +87,7 @@ export default function LibraryScreen() {
             ))}
           </View>
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

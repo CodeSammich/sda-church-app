@@ -48,6 +48,7 @@ import { useContext, useEffect, useRef, useState, useSyncExternalStore, type Com
 import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Dialog, IconButton, Portal, ProgressBar, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const copy = {
   en: {
@@ -870,6 +871,7 @@ export function OfflineBibleAudio() {
           </>
         )}
       </View>
+      <TabBarSpacer />
     </ScrollView>
   );
 }

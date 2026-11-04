@@ -22,6 +22,7 @@ import { useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Card, Divider, List, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const allLabels = {
   en: {
@@ -424,6 +425,7 @@ export default function FellowshipsScreen() {
           </Card>
 
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

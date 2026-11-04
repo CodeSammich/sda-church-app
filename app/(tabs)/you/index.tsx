@@ -32,6 +32,7 @@ import { useContext, useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { List, Text, TouchableRipple } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const allLabels = {
   en: {
@@ -335,6 +336,7 @@ export default function YouScreen() {
             </View>
           </List.Section>
         </View>
+        <TabBarSpacer />
       </ScrollView>
       <TextSizeDialog
         visible={showTextSize}

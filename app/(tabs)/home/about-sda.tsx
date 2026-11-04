@@ -12,6 +12,7 @@ import { useContext } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function AboutSDAScreen() {
   const { language } = useContext(LanguageContext);
@@ -495,6 +496,7 @@ export default function AboutSDAScreen() {
             {labels.learnMore}
           </Button>
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

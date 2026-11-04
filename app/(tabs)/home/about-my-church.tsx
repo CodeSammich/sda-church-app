@@ -26,6 +26,7 @@ import {
 import { ImageBackground } from '@/components/ImageBackground';
 import { Card, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function AboutChurchHistoryScreen() {
   const { language } = useContext(LanguageContext);
@@ -515,6 +516,7 @@ export default function AboutChurchHistoryScreen() {
             </Card.Actions>
           </Card>
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

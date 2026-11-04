@@ -35,6 +35,7 @@ import { Stack, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, List, Text } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const copy = {
   en: {
@@ -287,6 +288,7 @@ export default function SabbathSchoolScreen() {
           <MenuCard title={labels.allChildren} description={labels.allChildrenSub} icon="account-child" onPress={openChildrenSabbathSchool} />
         </List.Section>
         </View>
+        <TabBarSpacer />
       </ScrollView>
       <ChildrenLessonDialog
         offline={lessonDialog?.offline}

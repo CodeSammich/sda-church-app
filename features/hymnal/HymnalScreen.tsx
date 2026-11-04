@@ -57,6 +57,7 @@ import {
   type HymnalSearchItem,
 } from './HymnalSearch';
 import { formatHymnScriptureReference } from './HymnScripture';
+import { useTabBarClearance } from '@/constants/BottomTabHeightContext';
 
 const copy = {
   en: {
@@ -271,6 +272,8 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
   const viewsRef = useRef(views);
   viewsRef.current = views;
   const listRef = useRef<FlatList<HymnalListItem>>(null);
+  // Room for the last hymns to scroll clear of a floating tab bar.
+  const tabBarClearance = useTabBarClearance();
   // Like the header's search: Paper's Searchbar handle isn't exported.
   const searchRef = useRef<any>(null);
   const searchTop = useRef(0);
@@ -585,7 +588,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       <FlatList
         ref={listRef}
         style={NavigationStyles.container}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 50 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 50 + tabBarClearance }}
         data={listData}
         initialNumToRender={6}
         keyboardDismissMode="on-drag"

@@ -133,8 +133,9 @@ describe('Bible reader text scaling', () => {
     // "Psalms" read "Ps…" beside a full-size "Verse".
     const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
     expect(source).toContain('bibleUiTextScale * getHeaderFontScale(osFontScale)');
-    // On a wide screen, the dock's controls get the content column's width (#324).
-    expect(source).toContain('getBibleDockLayout(getContentWidth(viewportWidth, columnScale), dockTextScale)');
+    // On a wide screen, the dock's controls get the content column's width (#324),
+    // or the floating card's (#589).
+    expect(source).toContain('getBibleDockLayout(dockCardWidth ?? getContentWidth(viewportWidth, columnScale), dockTextScale)');
     // The book, chapter, and Verse labels, the selection count, the audio
     // language mark, both audio times, and the hidden copy that measures pills.
     expect(source.match(/maxFontSizeMultiplier=\{HEADER_MAX_FONT_SCALE\}/g)).toHaveLength(8);
@@ -303,5 +304,42 @@ describe("the chapter dock's pills on a wide row (#324)", () => {
     expect(bible).toContain("renderPillMeasure(String(chapterNum), setChapterLabelWidth)");
     expect(bible).toContain('chapterPillWidth: dockPillGrowth.chapter ? chapterLabelWidth : chapterPillWidth,');
     expect(bible.match(/flexGrow: dockPillGrowth\.(book|chapter|verse),/g)).toHaveLength(3);
+  });
+});
+
+describe("the Bible's dock follows the tab bar's system (#589)", () => {
+  const bible = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+
+  it('floats in a card above the capsule on iPhone, iPad and the web, and docks above Android\'s bar', () => {
+    expect(bible).toContain("const capsuleDock = getTabBarStyle() === 'capsule';");
+    // As wide as the capsule on a phone, wider on a tablet, at most 640 points.
+    expect(bible).toContain('const DOCK_CARD_MAX_WIDTH = 640;');
+    expect(bible).toContain(
+      'Math.max(getCapsuleTabBarWidth(viewportWidth), Math.min(getContentWidth(viewportWidth, columnScale), DOCK_CARD_MAX_WIDTH)),',
+    );
+    // The card keeps the capsule's gap from the bottom edge, and CAPSULE_STACK_GAP above it.
+    expect(bible).toContain('const bottomDockInset = capsuleDock ? getCapsuleBottomGap(systemBottomInset) : systemBottomInset;');
+    expect(bible).toContain('+ (capsuleDock ? CAPSULE_STACK_GAP : 0);');
+    // While the capsule shows, the room below the card is the capsule's; when it
+    // hides, the card slides down to the capsule's gap.
+    expect(bible).toContain(
+      'outputRange: [bottomDockInset, capsuleDock ? bottomDockInset + bottomTabContentHeight : bottomDockInset],',
+    );
+    expect(bible).toMatch(/<ScrollEdgeFade\s+background=\{theme\.colors\.background\}/);
+    expect(bible).toContain("<View style={[StyleSheet.absoluteFill, { backgroundColor: getMaterialBarColor(theme) }]} />");
+  });
+
+  it('keeps the card within the screen: the hidden and shown heights hold its controls with room to spare', () => {
+    // A phone with the card above a 70-point capsule 20 points up, as on a Face ID iPhone.
+    const layout = getBibleDockViewportLayout({
+      bottomInset: 20,
+      bottomTabHeight: 70 + 8,
+      contentHeight: 150,
+      headerHeight: 100,
+      viewportHeight: 844,
+    });
+    expect(layout.hiddenHeight).toBe(170);
+    expect(layout.visibleHeight).toBe(248);
+    expect(layout.visibleNeedsScroll).toBe(false);
   });
 });

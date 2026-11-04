@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { Text } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function DiscoverScreen() {
   const { language } = useContext(LanguageContext);
@@ -173,6 +174,7 @@ export default function DiscoverScreen() {
     showArrow={false}
           />
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

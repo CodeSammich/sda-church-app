@@ -213,6 +213,25 @@ simple, blended colors.
     than a window inside a frame.
 - **Header Opacity:** The top header is completely opaque (using the base background
   color) to provide a solid anchor for the "Digital Sanctuary."
+- **Each system's own tab bar (#589).** The tab bar and the Bible's dock follow the
+  phone's system, in the app's warm colours, and their icons and labels follow the app's
+  text size, which the systems' own bars wouldn't:
+  - **iPhone, iPad and the web: a floating capsule** (`components/CapsuleTabBar.tsx`), as
+    iOS 26 floats its tab bar: the four tabs in a rounded capsule above the bottom edge,
+    16 points from a phone's sides and at most 520 points wide, with a lighter pill
+    behind the selected tab. Pages run to the bottom edge and scroll under it; the page
+    fades out just above it (`ScrollEdgeFade`) rather than stopping at a line, and every
+    tab page ends with `TabBarSpacer` so its last lines can scroll clear of it. The
+    Bible's audio and chapter controls float in a card of their own above the capsule,
+    as iOS puts a player above its tab bar: as wide as the capsule on a phone, up to 640
+    points on a tablet. When the tab bar hides while reading, the card slides down
+    into its place. No Liquid Glass: the app's design has no glass anywhere else.
+  - **Android: Material 3's navigation bar** (`components/MaterialTabBar.tsx`): full
+    width along the bottom in the app's card colour, with a pill behind the selected
+    tab's icon; on a tablet the label sits beside the icon, as Material's bar does in a
+    medium-width window. Pages stop above it. The Bible's dock docks flush on top of it
+    in the same colour, so the bottom of the screen is one panel, as Google's apps dock
+    a player above their bar.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
   height from `useGlobalHeaderHeight()`: the status bar plus 64px at 100% text size.
@@ -310,19 +329,14 @@ shows the phone's pages larger and roomier, not more on each page:
   `getContentWidth(width, columnScale)`, not the window's width. On a tablet the Bible's
   text also gets 24-point margins, since a phone's 4 points would leave it against the
   screen's edge once the column fills the screen.
-- **Full-width edges.** Banner images, the header, and the Bible's dock background still
-  span the screen, so the app reaches the edges as it does on a phone (see Edge-to-Edge
+- **Full-width edges.** Banner images, the header, and Android's tab bar and Bible dock
+  still span the screen, so the app reaches the edges as it does on a phone (see Edge-to-Edge
   above). Their text and buttons line up with the column (`contentColumnWithin`). Rows
   that scroll sideways, such as the library's shelves, span the screen too, starting in
   line with the column.
-- **The tab bar on a tablet** (a window at least 600 points wide, #589) is a rounded
-  capsule centered above the bottom edge, at most 520 points wide, in the app's warm card
-  colour with a lighter pill behind the selected tab, and slightly larger icons and labels
-  (`components/TabletTabBar.tsx`). A phone's full-width bar stretched across an iPad looked
-  like a phone app blown up. It's the same on iPad and Android, and its labels follow the
-  app's text size as on a phone. Phones, and a narrow window beside another app, keep the
-  full-width bar (its buttons within the column, `getContentSideInset`). The system's own
-  iPad tab bar would sit at the top, over the header, so the app draws its own.
+- **Tablet sizes in the tab bar.** In a window at least 600 points wide the tabs get
+  slightly larger icons and labels (`TABLET_TAB_BAR_MIN_WIDTH`). The system's own iPad
+  tab bar would sit at the top, over the header, so the app draws its own at the bottom.
 - **A third column of book covers** in a library shelf's grid once the column is 600
   points wide (`getLibraryGridColumns`), so covers stay a sensible size. Other grids,
   such as Home's cards, keep two columns, which the column keeps a phone-like shape.

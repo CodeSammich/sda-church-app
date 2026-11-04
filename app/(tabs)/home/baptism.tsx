@@ -18,6 +18,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, List, Text } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function BaptismScreen() {
   const { language } = useContext(LanguageContext);
@@ -452,6 +453,7 @@ export default function BaptismScreen() {
               </Card.Content>
             </Card>
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

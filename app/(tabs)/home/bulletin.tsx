@@ -55,6 +55,7 @@ import { type ReactNode, useCallback, useContext, useEffect, useRef, useState } 
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { ActivityIndicator, Card, Divider, IconButton, Text } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const LABELS = {
   en: {
@@ -1408,6 +1409,7 @@ export default function WeeklyBulletinScreen() {
             );
           })()}
 
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

@@ -23,6 +23,7 @@ import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { ImageBackground } from '@/components/ImageBackground';
 import { Card, Divider, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function MeetOurTeamScreen() {
   const { language } = useContext(LanguageContext);
@@ -190,6 +191,7 @@ export default function MeetOurTeamScreen() {
             </Card>
           ))}
         </View>
+        <TabBarSpacer />
       </ScrollView>
     </>
   );

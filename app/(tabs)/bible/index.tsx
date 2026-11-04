@@ -40,6 +40,15 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { useBottomTabHeight } from '@/constants/BottomTabHeightContext';
+import {
+  CAPSULE_SHADOW,
+  CAPSULE_STACK_GAP,
+  getCapsuleBottomGap,
+  getCapsuleTabBarWidth,
+  ScrollEdgeFade,
+} from '@/components/CapsuleTabBar';
+import { getMaterialBarColor } from '@/components/MaterialTabBar';
+import { getTabBarStyle } from '@/components/TabBarItems';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { CONTENT_MAX_WIDTH, contentColumnStyle, getBottomTabContentHeight, getContentSideInset, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -165,6 +174,9 @@ import {
 } from '@/styles/ReaderStyles';
 
 const FOOTER_PADDING_GUTTER = 34;
+// The floating dock card's widest, on a tablet: room for the pills' tablet
+// proportions (getDockPillGrowth) without spanning a wide column.
+const DOCK_CARD_MAX_WIDTH = 640;
 // Native expo-audio owns one active player. The web adapter may warm one
 // immediate next chapter, but native preload downloads an entire file on
 // Android, which is too memory-heavy for long Bible chapters.
@@ -605,10 +617,21 @@ export default function BibleScreen() {
     [columnScale, viewportWidth],
   );
   const measuredBottomTabHeight = useBottomTabHeight();
+  // The dock follows the tab bar's system (#589): on iPhone, iPad and the web
+  // a card floating above the tab bar's capsule, as iOS puts a player above
+  // its tab bar, at least as wide as the capsule and at most DOCK_CARD_MAX_WIDTH;
+  // on Android, docked flush above Material's bar in its colour.
+  const capsuleDock = getTabBarStyle() === 'capsule';
+  const dockCardWidth = capsuleDock
+    ? Math.min(
+        viewportWidth - 32,
+        Math.max(getCapsuleTabBarWidth(viewportWidth), Math.min(getContentWidth(viewportWidth, columnScale), DOCK_CARD_MAX_WIDTH)),
+      )
+    : null;
   const dockLayout = useMemo(
     // The dock's controls stay in the content column on a wide screen.
-    () => getBibleDockLayout(getContentWidth(viewportWidth, columnScale), dockTextScale),
-    [columnScale, dockTextScale, viewportWidth],
+    () => getBibleDockLayout(dockCardWidth ?? getContentWidth(viewportWidth, columnScale), dockTextScale),
+    [columnScale, dockCardWidth, dockTextScale, viewportWidth],
   );
   // The verse pill says "Vs." rather than "Verse" only when the book, chapter,
   // and verse pills can't all fit at full width, so the book name is cut short
@@ -636,11 +659,14 @@ export default function BibleScreen() {
     window.matchMedia('(display-mode: fullscreen)').matches
       ? 12
       : 0;
-  const bottomDockInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  const systemBottomInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  // The floating card keeps the capsule's gap from the bottom edge when the tab
+  // bar hides, and sits CAPSULE_STACK_GAP above the capsule when it shows.
+  const bottomDockInset = capsuleDock ? getCapsuleBottomGap(systemBottomInset) : systemBottomInset;
   const bottomTabContentHeight =
-    measuredBottomTabHeight === null
+    (measuredBottomTabHeight === null
       ? getBottomTabContentHeight(getBottomTabTextScale(textScale, osFontScale))
-      : Math.max(0, measuredBottomTabHeight - bottomDockInset);
+      : Math.max(0, measuredBottomTabHeight - bottomDockInset)) + (capsuleDock ? CAPSULE_STACK_GAP : 0);
   const { language, languageSelectionRevision } = useContext(LanguageContext);
   const { menuAnim, setMenuVisible: setGlobalMenuVisible } = useContext(UIStateContext);
 
@@ -704,9 +730,10 @@ export default function BibleScreen() {
     return `${translation.name} (${translationLanguageLabel})`;
   };
   const popupMaxHeight = usePopupMaxHeight();
-  // The dock spans the screen, with its top boundary; on a wide screen its
-  // rows pad their controls into the content column (#324).
-  const dockSideInset = getContentSideInset(viewportWidth, columnScale);
+  // Android's dock spans the screen; on a wide screen its rows pad their
+  // controls into the content column (#324). The floating card is already
+  // within it.
+  const dockSideInset = capsuleDock ? 0 : getContentSideInset(viewportWidth, columnScale);
   // ReaderStyles.modalContent's 20-point margin, held to the You tab's dialog
   // width on a wide screen (#324).
   const popupWidthStyle = useMemo(() => getPopupWidthStyle(viewportWidth - 40), [viewportWidth]);
@@ -3736,9 +3763,10 @@ export default function BibleScreen() {
     inputRange: [0, 1],
     outputRange: [dockViewportLayout.hiddenHeight, dockViewportLayout.visibleHeight],
   });
+  // Below the card, the room for the capsule while it shows.
   const animatedDockBottomClearance = menuAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [bottomDockInset, bottomDockInset],
+    outputRange: [bottomDockInset, capsuleDock ? bottomDockInset + bottomTabContentHeight : bottomDockInset],
   });
   const dockNeedsVerticalScroll =
     dockViewportLayout.hiddenNeedsScroll || dockViewportLayout.visibleNeedsScroll;
@@ -3944,10 +3972,9 @@ export default function BibleScreen() {
           height: stackChapterControls
             ? dockLayout.dockHeight
             : dockLayout.chapterDockHeight,
-          // The first visible Bible surface owns the shared upper boundary.
-          // When audio exists, the audio dock receives it instead.
+          // A faint line between the audio row and this one.
           borderTopColor: theme.colors.outlineVariant,
-          borderTopWidth: hasChapterAudio ? 0 : 1,
+          borderTopWidth: hasChapterAudio ? StyleSheet.hairlineWidth : 0,
         },
         (fullscreenEdgeInset > 0 || dockSideInset > 0) && {
           paddingHorizontal:
@@ -4088,17 +4115,34 @@ export default function BibleScreen() {
             elevation: 5, // Higher than the audio button's 4 to prioritize nav touches
             zIndex: 10,
           },
+          dockCardWidth !== null && {
+            left: (viewportWidth - dockCardWidth) / 2,
+            right: (viewportWidth - dockCardWidth) / 2,
+            overflow: 'visible',
+          },
         ]}
       >
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: theme.colors.background,
-            },
-          ]}
-        />
+        {dockCardWidth !== null ? (
+          // The page fades out under the card and the capsule, rather than
+          // stopping at a line above them.
+          <ScrollEdgeFade
+            background={theme.colors.background}
+            style={{ left: -(viewportWidth - dockCardWidth) / 2, right: -(viewportWidth - dockCardWidth) / 2 }}
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: getMaterialBarColor(theme) }]} />
+        )}
 
+        <View
+          style={
+            dockCardWidth !== null
+              ? [
+                  styles.dockCard,
+                  { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant },
+                ]
+              : styles.controlDockScroll
+          }
+        >
         <ScrollView
           style={styles.controlDockScroll}
           scrollEnabled={!isScrubGestureActive}
@@ -4166,8 +4210,8 @@ export default function BibleScreen() {
                 ReaderStyles.audioDock,
                 {
                   minHeight: dockLayout.audioDockHeight,
-                  borderTopColor: theme.colors.outlineVariant,
-                  borderTopWidth: 1,
+                  // The dock's own colour sets it off from the page now (#589).
+                  borderTopWidth: 0,
                   paddingHorizontal: 12 + dockSideInset,
                 },
               ]}
@@ -4415,8 +4459,10 @@ export default function BibleScreen() {
           )}
 
           {renderChapterNavigationDock()}
-          <Animated.View style={{ height: animatedDockBottomClearance }} />
+          {dockCardWidth === null && <Animated.View style={{ height: animatedDockBottomClearance }} />}
         </ScrollView>
+        </View>
+        {dockCardWidth !== null && <Animated.View style={{ height: animatedDockBottomClearance }} />}
       </Animated.View>
 
       <Portal>
@@ -5653,6 +5699,12 @@ const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
   StyleSheet.create({
     controlDockScroll: {
       flex: 1,
+    },
+    dockCard: {
+      borderRadius: 24,
+      borderWidth: StyleSheet.hairlineWidth,
+      flex: 1,
+      ...CAPSULE_SHADOW,
     },
     controlDockScrollContent: {
       flexGrow: 1,

@@ -6,6 +6,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 /**
  * ATTENTION: This file must ONLY ever use English, like the license texts it
@@ -55,6 +56,7 @@ export default function OpenSourceLicensesScreen() {
           {`${notice.name} (${notice.url})\n${notice.usage}\n\n${notice.license}`}
         </Text>
       ))}
+      <TabBarSpacer />
     </ScrollView>
   );
 }
