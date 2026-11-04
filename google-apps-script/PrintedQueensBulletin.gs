@@ -75,7 +75,7 @@ function appendScheduleTable_(cell, bulletin, nextBulletin) {
   var current = bulletin.queens;
   var next = nextBulletin ? nextBulletin.queens : null;
   appendHorizontalScheduleTable_(cell, current, next, [
-    // The pastor's four-character labels; see PRINTED_ROLE_DOT.
+    // The pastor's four-character labels, in the pastor's order; see PRINTED_ROLE_DOT.
     [printedBilingualText_('SS Pianist', '學課' + PRINTED_ROLE_DOT + '司琴'), function (location) { return location.pianist; }],
     [printedBilingualText_('SS Teacher E.', '英文教師'), function (location) { return location.englishTeacher; }],
     [printedBilingualText_('SS Teacher C.', '中文教師'), function (location) { return location.chineseTeacher; }],
@@ -85,8 +85,8 @@ function appendScheduleTable_(cell, bulletin, nextBulletin) {
     [printedBilingualText_('DS Sermon', '崇拜' + PRINTED_ROLE_DOT + '證道'), function (location) { return location.sermon; }],
     [printedBilingualText_('DS Interpreter', '崇拜' + PRINTED_ROLE_DOT + '翻譯'), function (location) { return location.translation; }],
     [printedBilingualText_('Special Music', '特別音樂'), function (location) { return location.specialMusic; }],
-    [printedBilingualText_('Flower Offering', '鮮花奉獻'), function (location) { return location.flowerOffering; }],
     [printedBilingualText_('Offerings', '奉獻事項'), function (location, data) { return formatPhysicalOfferingValue_(data.tithePurpose); }],
+    [printedBilingualText_('Flower Offering', '鮮花奉獻'), function (location) { return location.flowerOffering; }],
     [printedBilingualText_('Sunset Times', '日落時間'), function (location, data) { return data.sunsetTime; }],
   ], bulletin, nextBulletin);
 }

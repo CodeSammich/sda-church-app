@@ -2187,7 +2187,8 @@ describe('printed bulletin Apps Script helpers', () => {
     );
     const [queens, brooklyn] = tables;
 
-    // The Queens grid prints in Regular and Communion bulletins alike.
+    // The Queens grid prints in Regular and Communion bulletins alike, in the
+    // pastor's order: Offerings before Flower Offering.
     expect(queens.rows.slice(1).map((row) => [row[1], row[2]])).toEqual([
       ['SS Pianist', '學課･司琴'],
       ['SS Teacher E.', '英文教師'],
