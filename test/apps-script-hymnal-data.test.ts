@@ -154,7 +154,7 @@ describe('the printed hymn lookup (#619)', () => {
         'formatSabbathSchoolHymnsForPrint_(testHymns)',
         Object.assign(context, { testHymns: ['holy holy holy', '聖哉真神', 'Not a hymn'] }),
       ),
-    ).toBe('AH 73 Holy, Holy, Holy\n第2首 聖哉真神\nAH 73 Holy, Holy, Holy\n第2首 聖哉真神\nNot a hymn');
+    ).toBe('1. 第2首 聖哉真神\nAH 73 Holy, Holy, Holy\n2. 第2首 聖哉真神\nAH 73 Holy, Holy, Holy\n3. Not a hymn');
   });
 
   it('prints a hymn as typed if HymnalData.gs is missing', () => {
@@ -372,7 +372,7 @@ describe('the Hymn Bank tab, kept on open with time to spare (#619, #639)', () =
     expect(logs.some((line) => /^Skipped the Hymn Bank check: this open has used \d+ ms\.$/.test(line))).toBe(true);
   });
 
-  it('is not in the open-time upkeep or the Create Google Doc… dialog', () => {
+  it('is not in the open-time upkeep or the Create Word Doc… dialog', () => {
     const { context } = openWith(1e9);
 
     expect(runInContext('HYMN_BANK_OPEN_BUDGET_MS = 20000; HYMN_BANK_OPEN_BUDGET_MS', load(['BulletinApi.gs', 'BulletinScheduleMaintenance.gs']))).toBe(20000);

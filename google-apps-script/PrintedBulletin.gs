@@ -365,7 +365,7 @@ function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui
     .createMenu('Printed Bulletin')
-    .addItem('Create Google Doc…', 'createPrintedBulletinFromPrompt')
+    .addItem('Create Word Doc…', 'createPrintedBulletinFromPrompt')
     .addItem('Fonts…', 'openPrintedBulletinFontsDialog')
     .addToUi();
   try {
@@ -479,7 +479,7 @@ function createPrintedBulletinFromPrompt() {
     .setHeight(820);
   SpreadsheetApp.getUi().showModalDialog(
     output,
-    'Bulletin workflow / 周刊流程',
+    'Create Word Doc / 制作 Word 文档',
   );
   return null;
 }
@@ -547,8 +547,11 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '#statusView{min-height:164px;}' +
     'button{font:14px Arial,sans-serif;border:0;border-radius:4px;cursor:pointer;' +
     'padding:9px 17px;}' +
-    '.cancel{background:#f1f3f4;color:#3c4043;}' +
     '.submit{background:#1a73e8;color:#fff;}' +
+    '.download-row{display:flex;justify-content:flex-end;margin-top:10px;}' +
+    '.preview-note{color:#5f6368;font-size:13px;line-height:1.45;margin:-4px 0 0;}' +
+    '.mac-note{background:#fef7e0;border:1px solid #f9ab00;border-radius:8px;color:#3c4043;font-size:13px;line-height:1.45;margin:0 0 4px;padding:12px 14px;}' +
+    '.mac-note strong{color:#202124;display:block;font-size:18px;line-height:1.35;margin-bottom:4px;}' +
     '.submit:disabled{background:#9aa0a6;cursor:wait;}' +
     '.error{color:#b3261e;font-size:13px;line-height:1.4;margin-top:12px;' +
     'white-space:pre-wrap;}' +
@@ -567,6 +570,12 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     '">↗ Open Weekly Data / 打开 Weekly Data</a></div></div>' +
     '<div class="step">' +
     '<h2 class="section-heading"><span class="step-number">2</span>Preview &amp; check / 预览并检查</h2>' +
+    // Docs gives a line with Chinese its font's height, up to 1.45 times the
+    // size for a character in the fallback font; the .docx sets every line's
+    // height from the size alone (#627). Outside the form, so it stays after
+    // the preview is made.
+    '<p class="preview-note">ⓘ Preview may run taller than print: Docs spaces Chinese more. Step 3\'s .docx fixes it.<br>' +
+    'ⓘ 预览可能比打印稿长：Google 文档的中文行距较大。第 3 步的 .docx 会修正。</p>' +
     '<form id="bulletinForm">' +
     '<label for="date">Sabbath date / 安息日日期 <span class="required-mark" aria-hidden="true">*</span></label>' +
     '<input id="date" type="date" value="' +
@@ -594,8 +603,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     // off, when Weekly Data's verse is blank or can't be read (#622).
     '<div id="verseView" class="verse-view problem" role="alert" hidden></div>' +
     '<div id="error" class="error" hidden></div>' +
-    '<div class="actions"><button type="button" class="cancel" onclick="google.script.host.close()">Cancel / 取消</button>' +
-    '<button type="submit" class="submit" id="submit" disabled>Preview / 预览</button></div>' +
+    '<div class="actions"><button type="submit" class="submit" id="submit" disabled>Preview / 预览</button></div>' +
     '</form>' +
     // In step 2's card, so "Preview ready" shows where it was made.
     '<div class="status-slot"><div id="statusView" hidden></div></div></div>' +
@@ -603,14 +611,15 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     // fonts and spacing (#627). On a Mac, Word or LibreOffice prints the
     // Chinese in Songti TC; elsewhere they put in a similar Chinese font, and
     // the exact line heights, set by font size, keep the layout.
-    '<div id="wordCopySection" class="step"><h2 class="section-heading"><span class="step-number">3</span>Send .docx to pastor / 把 .docx 发给牧师</h2>' +
+    '<div id="wordCopySection" class="step"><h2 class="section-heading"><span class="step-number">3</span>Convert and send .docx to pastor / 转换 .docx 发给牧师</h2>' +
+    // The one tip that changes the printout, so it's the first thing in the card.
+    '<div class="mac-note"><strong>Mac preferred: font looks better<br>建议用 Mac：字体更好看</strong>Open in Microsoft Word or free <a href="' +
+    PRINTED_BULLETIN_LIBREOFFICE_URL +
+    '">LibreOffice</a>. / 用 Microsoft Word 或免费的 <a href="' +
+    PRINTED_BULLETIN_LIBREOFFICE_URL +
+    '">LibreOffice</a> 打开。</div>' +
     '<div class="actions"><button type="button" class="submit" id="wordCopy">Make .docx / 制作 .docx</button></div>' +
-    '<div id="wordCopyStatus" class="help" aria-live="polite"></div>' +
-    '<div class="help"><strong>Mac preferred: better font.</strong> Open in Microsoft Word or free <a href="' +
-    PRINTED_BULLETIN_LIBREOFFICE_URL +
-    '">LibreOffice</a>. / <strong>建议用 Mac：字体更好。</strong>用 Microsoft Word 或免费的 <a href="' +
-    PRINTED_BULLETIN_LIBREOFFICE_URL +
-    '">LibreOffice</a> 打开。</div></div>' +
+    '<div id="wordCopyStatus" class="help" aria-live="polite"></div></div>' +
     '<script>' +
     'var initialRequest=' +
     requestJson +
@@ -642,8 +651,7 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'function showResult(result){document.getElementById("statusView").innerHTML=' +
     '"<h2>Preview ready / 预览已完成</h2><p class=\'intro\'>"+escapeHtml(result.title||"Your bulletin is ready. / 您的周刊已准备好。")+"</p>"+'+
     '(result.scheduleNotSet?"<p class=\'intro\'>The Sabbath Calendar has no schedule for this Sabbath yet, so its roster says TBD.<br>安息日日历还没有这个安息日的安排，所以名单显示为 TBD。</p>":"")+'+
-    '"<a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open Google Doc / 打开 Google 文档</a>"+'+
-    '"<div class=\'actions\'><button type=\'button\' class=\'cancel\' onclick=\'google.script.host.close()\'>Close / 关闭</button></div>";}' +
+    '"<a class=\'link\' href=\'"+escapeHtml(result.url)+"\'>Open Google Doc / 打开 Google 文档</a>";}' +
     'function runRequest(request){document.getElementById("submit").disabled=true;google.script.run.withSuccessHandler(function(result){' +
     'if(result&&result.requiresConfirmation){var message=result.warning+"\\n\\n"+result.warningChinese+"\\n\\nContinue anyway? / 仍要继续吗？";if(window.confirm(message)){request.confirmLongVerse=true;runRequest(request);}else{updateSubmitState();}return;}' +
     'showLoading();google.script.run.withSuccessHandler(showResult).withFailureHandler(function(error){showGenerationError(error);}).createPrintedBulletinFromRequest(request);' +
@@ -657,8 +665,8 @@ function buildPrintedBulletinPromptHtml_(defaultDate) {
     'document.getElementById("date").addEventListener("change",function(){loadPromptData();updateSubmitState();});' +
     'document.getElementById("bulletinForm").addEventListener("submit",function(event){event.preventDefault();var date=document.getElementById("date").value.trim();if(!date){showError("Sabbath date is required. / 安息日日期为必填。");return;}if(!promptData||!promptData.verse||promptData.verseProblem){showError((promptData&&promptData.verseProblem)||"Reading Weekly Data… / 正在读取 Weekly Data…");return;}var request={date:date,format:formatValue,location:locationValue,englishTranslation:document.getElementById("englishTranslation").value};if(announcementsDirty){request.announcements=collectAnnouncements();}runRequest(request);});' +
     'function makeWordCopy(){var date=document.getElementById("date").value.trim();var wordStatus=document.getElementById("wordCopyStatus");var button=document.getElementById("wordCopy");if(!date){wordStatus.className="error";wordStatus.textContent="Choose the Sabbath date first. / 请先选择安息日日期。";return;}' +
-    'button.disabled=true;wordStatus.className="help";wordStatus.textContent="Making the .docx… / 正在制作 .docx…";google.script.run.withSuccessHandler(function(result){button.disabled=false;wordStatus.className="help";' +
-    'wordStatus.innerHTML="<a class=\'download\' href=\'"+escapeHtml(result.downloadUrl)+"\'>⬇ Download .docx / 下载 .docx</a>";})' +
+    'button.disabled=true;wordStatus.className="help";wordStatus.textContent="Making the .docx… / 正在制作 .docx…";google.script.run.withSuccessHandler(function(result){button.disabled=false;' +
+    'wordStatus.className="download-row";wordStatus.innerHTML="<a class=\'download\' href=\'"+escapeHtml(result.downloadUrl)+"\'>⬇ Download .docx / 下载 .docx</a>";})' +
     '.withFailureHandler(function(error){button.disabled=false;wordStatus.className="error";wordStatus.textContent=(error&&error.message)||String(error);}).createPrintedBulletinWordCopy({date:date,location:locationValue});}' +
     'document.getElementById("wordCopy").addEventListener("click",makeWordCopy);' +
     'selectChoice("locationChoices",locationValue);selectChoice("formatChoices",formatValue);updateLocationFormatAvailability();loadPromptData();' +
@@ -1908,12 +1916,12 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
   return english || chinese ? printedBilingualText_(english, chinese) : physicalTbdText_();
 }
 
-// Each Sabbath School hymn, as one entry: the English, then the Chinese on the
-// next line, where the hymnal map has the other one, such as
-// "AH 348 The Church Has One Foundation" over "第413首 教會根基" for a typed
-// "第413首 教會根基"; otherwise the hymn as typed, on one line. A bare number is
-// a Chinese hymnal number, and prints as 第N首. The other side gets its number
-// and title from resolvePrintedHymnText_ (#619).
+// Each Sabbath School hymn, as one entry: the Chinese, then the English on the
+// next line, as in every other row, where the hymnal map has the other one,
+// such as "第413首 教會根基" over "AH 348 The Church Has One Foundation" for a
+// typed "第413首 教會根基"; otherwise the hymn as typed, on one line. A bare
+// number is a Chinese hymnal number, and prints as 第N首. The other side gets
+// its number and title from resolvePrintedHymnText_ (#619).
 function getPrintedSabbathSchoolHymnLines_(hymns) {
   var lines = [];
   (hymns || []).forEach(function (value) {
@@ -1928,14 +1936,25 @@ function getPrintedSabbathSchoolHymnLines_(hymns) {
     var english = resolved.english || entry;
     var chinese = resolved.chinese || entry;
     // Both languages on their own lines: on one, a long title wrapped mid-word.
-    lines.push(english === chinese ? english : english + '\n' + chinese);
+    lines.push(english === chinese ? english : printedBilingualText_(english, chinese));
   });
   return lines;
 }
 
+// Two or more hymns are numbered, so a hymn's two lines read as one hymn and
+// a hymn in one language isn't taken for the one above's translation.
 function formatSabbathSchoolHymnsForPrint_(hymns) {
   var lines = getPrintedSabbathSchoolHymnLines_(hymns);
-  return lines.length ? lines.join('\n') : physicalTbdText_();
+  if (lines.length === 1) {
+    return printedOneLanguageText_(lines[0]);
+  }
+  return lines.length
+    ? lines
+        .map(function (line, index) {
+          return index + 1 + '. ' + line;
+        })
+        .join('\n')
+    : physicalTbdText_();
 }
 
 /**
@@ -3369,16 +3388,44 @@ function appendProgramTable_(cell, rows, options) {
   });
 }
 
+// The sermon row, in a thin box so it stands out at a glance. A Docs border
+// belongs to a whole table and would also rule between the cells, so the row
+// sits in a one-cell table that draws only the outer box.
 function appendSermonRow_(cell, row) {
-  var table = cell.appendTable([
+  var box = cell.appendTable([['']]);
+  box.setBorderWidth(0.5);
+  box.setBorderColor('#000000');
+  box.setColumnWidth(0, 360);
+  var boxCell = box.getCell(0, 0);
+  boxCell.setPaddingTop(1);
+  boxCell.setPaddingBottom(1);
+  boxCell.setPaddingLeft(0);
+  boxCell.setPaddingRight(0);
+  var table = boxCell.appendTable([
     row.map(function (value) {
       return String(value === null || typeof value === 'undefined' ? '' : value);
     }),
   ]);
   table.setBorderWidth(0);
   table.setColumnWidth(0, 105);
-  table.setColumnWidth(1, 160);
+  // A point narrower than the rows above, for the box's border.
+  table.setColumnWidth(1, 159);
   table.setColumnWidth(2, 95);
+  // A cell can't end with a table, and the paragraph Docs would add after it
+  // is full height. Add it here, and shrink it and the cell's first paragraph
+  // to one-point slivers.
+  boxCell.appendParagraph(' ');
+  for (var childIndex = 0; childIndex < boxCell.getNumChildren(); childIndex += 1) {
+    var child = boxCell.getChild(childIndex);
+    if (child.getType() === DocumentApp.ElementType.PARAGRAPH) {
+      var sliver = child.asParagraph();
+      sliver.setText(' ');
+      sliver.setLineSpacing(1);
+      sliver.setSpacingBefore(0);
+      sliver.setSpacingAfter(0);
+      styleText_(sliver.editAsText(), 1, false);
+    }
+  }
   for (var columnIndex = 0; columnIndex < 3; columnIndex += 1) {
     var tableCell = table.getCell(0, columnIndex);
     tableCell.setPaddingTop(0);
@@ -3655,10 +3702,10 @@ function buildPrintedBulletinFontsHtml_(settings) {
     '.cancel{background:#f1f3f4;color:#3c4043;}.save{background:#1a73e8;color:#fff;}' +
     'button:disabled{cursor:default;opacity:.5;}' +
     '</style></head><body>' +
-    '<p class="intro">These fonts are for every printed bulletin made from now on, by anyone. A Doc already made keeps its fonts until it\'s made again with Create Google Doc…. A different font can change the line heights, so check that the next Doc still fits its pages.<br>' +
-    '这些字体将用于此后任何人创建的所有纸质周刊。已创建的文档保留原字体，直到再次使用“Create Google Doc…”创建。更换字体可能改变行高，请检查下一份文档是否仍在原页数内。</p>' +
-    '<p class="intro">Songti TC (宋體-繁) isn\'t here: Google Docs can\'t print it. The .docx from step 3 of Create Google Doc… has it, on a Mac.<br>' +
-    '这里没有宋体-繁（Songti TC）：Google 文档无法打印该字体。“Create Google Doc…”第三步的 .docx 在 Mac 上使用该字体。</p>' +
+    '<p class="intro">These fonts are for every printed bulletin made from now on, by anyone. A Doc already made keeps its fonts until it\'s made again with Create Word Doc…. A different font can change the line heights, so check that the next Doc still fits its pages.<br>' +
+    '这些字体将用于此后任何人创建的所有纸质周刊。已创建的文档保留原字体，直到再次使用“Create Word Doc…”创建。更换字体可能改变行高，请检查下一份文档是否仍在原页数内。</p>' +
+    '<p class="intro">Songti TC (宋體-繁) isn\'t here: Google Docs can\'t print it. The .docx from step 3 of Create Word Doc… has it, on a Mac.<br>' +
+    '这里没有宋体-繁（Songti TC）：Google 文档无法打印该字体。“Create Word Doc…”第三步的 .docx 在 Mac 上使用该字体。</p>' +
     '<label for="chinese">Chinese font<br>中文字体</label>' + select('chinese', settings.chinese) +
     '<label for="latin">English font<br>英文字体</label>' + select('latin', settings.latin) +
     '<div id="status" class="status" aria-live="polite"></div>' +
@@ -3668,7 +3715,7 @@ function buildPrintedBulletinFontsHtml_(settings) {
     'var save=document.getElementById("save");var saveStatus=document.getElementById("status");' +
     'save.onclick=function(){save.disabled=true;saveStatus.className="status";saveStatus.textContent="Saving… / 正在保存…";' +
     'google.script.run.withSuccessHandler(function(){save.disabled=false;saveStatus.className="status ok";' +
-    'saveStatus.textContent="Saved. The next Create Google Doc… uses these fonts.\\n已保存。下次“Create Google Doc…”将使用这些字体。";})' +
+    'saveStatus.textContent="Saved. The next Create Word Doc… uses these fonts.\\n已保存。下次“Create Word Doc…”将使用这些字体。";})' +
     '.withFailureHandler(function(error){save.disabled=false;saveStatus.className="status error";saveStatus.textContent=(error&&error.message)||String(error);})' +
     '.savePrintedBulletinFonts({chinese:document.getElementById("chinese").value,latin:document.getElementById("latin").value});};' +
     '</script></body></html>'
@@ -3756,7 +3803,7 @@ function formatHymnForPrint_(hymn) {
   if (english && chinese && english !== chinese) {
     return printedBilingualText_(english, chinese);
   }
-  return english || chinese || physicalTbdText_();
+  return printedOneLanguageText_(english || chinese) || physicalTbdText_();
 }
 
 function formatBibleReferenceForPrint_(location, bibleTranslations) {
@@ -3788,7 +3835,7 @@ function formatSermonTitleForPrint_(location) {
   return (
     englishTitle && chineseTitle && englishTitle !== chineseTitle
       ? printedBilingualText_(englishTitle, chineseTitle)
-      : englishTitle || chineseTitle
+      : printedOneLanguageText_(englishTitle || chineseTitle)
   ) || physicalTbdText_();
 }
 
@@ -3840,6 +3887,20 @@ function printedBilingualText_(english, traditionalChinese) {
     lines.push(String(english));
   }
   return lines.join('\n');
+}
+
+// A title in only one language goes on that language's line, beside the
+// row's label in it: Chinese on the first line, English on the second. "—"
+// holds the other line, as in the offering and name cells.
+function printedOneLanguageText_(value) {
+  var text = String(value === null || typeof value === 'undefined' ? '' : value).trim();
+  if (!text || /\n/.test(text)) {
+    return text;
+  }
+  if (isPhysicalTbd_(text)) {
+    return physicalTbdText_();
+  }
+  return /[\u3400-\u9fff]/.test(text) ? text + '\n—' : '—\n' + text;
 }
 
 function printValue_(value) {

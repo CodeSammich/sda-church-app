@@ -130,11 +130,13 @@ class FakeCell extends FakeContainer {
 
 class FakeTable {
   rows: FakeCell[][];
+  // Docs draws a 1-point border unless told otherwise.
+  borderWidth = 1;
   constructor(rows: string[][]) {
     this.rows = rows.map((row) => row.map((text) => new FakeCell(text)));
   }
   getType() { return 'TABLE'; }
-  setBorderWidth() { return this; }
+  setBorderWidth(value: number) { this.borderWidth = value; return this; }
   setBorderColor() { return this; }
   setColumnWidth() { return this; }
   getCell(row: number, column: number) { return this.rows[row][column]; }
@@ -375,6 +377,50 @@ describe('printed bulletin type (#603)', () => {
     // Coverage is only known for the default Chinese font, so a font set here
     // is used for every Chinese run.
     expect(fonts).toEqual(new Set(['latin:Georgia', 'cjk:Noto Sans TC']));
+  });
+
+  it.each([
+    ['Queens', 'queens'],
+    ['Brooklyn', 'brooklyn'],
+  ])('boxes the sermon row, with no lines between its cells: %s', (_name, place) => {
+    const context = loadPrintedBulletin();
+    const body = new FakeContainer();
+    Object.assign(context, { testBody: body, testBulletin: bulletin(), testNext: bulletin(), testPlace: place });
+    runInContext(
+      "renderPrintedBulletinDocument_({ getBody: function () { return testBody; } }, testBulletin, testNext, 'regular', testPlace)",
+      context,
+    );
+    const tablesOf = (container: FakeContainer): FakeTable[] =>
+      container.children.flatMap((child) =>
+        child instanceof FakeTable
+          ? [child, ...child.rows.flatMap((row) => row.flatMap((cell) => tablesOf(cell)))]
+          : [],
+      );
+    const boxes = tablesOf(body).filter((table) =>
+      table.rows[0][0].children.some(
+        (child) => child instanceof FakeTable && (child.rows[0][0].children[0] as FakeParagraph).text === '講道\nSermon',
+      ),
+    );
+
+    expect(boxes).toHaveLength(1);
+    const [box] = boxes;
+    const boxCell = box.rows[0][0];
+    const row = boxCell.children.find((child): child is FakeTable => child instanceof FakeTable);
+    expect([box.borderWidth, box.rows.length, box.rows[0].length]).toEqual([0.5, 1, 1]);
+    expect(row?.borderWidth).toBe(0);
+    expect(row?.rows[0].map((cell) => (cell.children[0] as FakeParagraph).text)).toEqual([
+      '講道\nSermon',
+      '城牆上的守望者\nWatchmen on the Walls',
+      '林志遠牧師\nPastor Zhiyuan Lin',
+    ]);
+    // The cell's own paragraph, and the one it must end with after a table,
+    // are one-point slivers, so the box hugs the row.
+    const slivers = boxCell.children.filter((child): child is FakeParagraph => child instanceof FakeParagraph);
+    expect(boxCell.children[boxCell.children.length - 1]).toBeInstanceOf(FakeParagraph);
+    expect(slivers.map((paragraph) => [paragraph.text, paragraph.chars[0].size])).toEqual([
+      [' ', 1],
+      [' ', 1],
+    ]);
   });
 
   it('keeps the Chinese and English panel titles close together', () => {
