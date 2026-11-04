@@ -493,8 +493,32 @@ describe('the Android widget config plugin', () => {
   it('opens only app links, in the app itself, from the widget’s receiver', () => {
     expect(receiverKotlin).toContain(`private const val LINK_PREFIX = "${appJson.scheme}:"`);
     expect(receiverKotlin).toContain('.setPackage(context.packageName)');
-    expect(receiverKotlin).toContain('super.onReceive(context, intent)');
     expect(receiverKotlin).toContain('"widget-${System.currentTimeMillis()}"');
+  });
+
+  it('takes only its own widget’s taps, and hands Android’s broadcasts to Glance', () => {
+    const onReceive = receiverKotlin.slice(
+      receiverKotlin.indexOf('override fun onReceive'),
+      receiverKotlin.indexOf('override fun onDeleted'),
+    );
+    expect(onReceive).toContain(
+      'if (intent.action != INTERACTION_ACTION) return super.onReceive(context, intent)',
+    );
+    expect(onReceive).toContain('if (intent.getStringExtra(SOURCE_EXTRA) != VERSE_WIDGET_NAME) return');
+    // Only the widget's own targets; any other tap never reaches expo-widgets.
+    expect(onReceive.match(/super\.onReceive/g)).toHaveLength(1);
+    expect(onReceive).not.toMatch(/else ->/);
+  });
+
+  it('keeps the widget’s receiver to Android and the app', () => {
+    const manifest = (receiver: object[]) => ({
+      manifest: { $: {}, application: [{ $: { 'android:name': '.MainApplication' }, receiver }] },
+    });
+    const widgetReceiver = { $: { 'android:name': '.VerseOfTheDayProvider', 'android:exported': 'true' } };
+    const result = plugin.setReceiverNotExported(manifest([{ $: { 'android:name': '.Other' } }, widgetReceiver]));
+    expect(result.manifest.application[0].receiver[1].$['android:exported']).toBe('false');
+    expect(result.manifest.application[0].receiver[0].$['android:exported']).toBeUndefined();
+    expect(() => plugin.setReceiverNotExported(manifest([]))).toThrow('verse widget receiver');
   });
 
   it('shares the verse through the phone’s share sheet from the widget’s receiver', () => {
@@ -583,6 +607,26 @@ describe('the Android widget config plugin', () => {
           modName: 'dangerous',
           introspect: false,
         },
+      });
+
+      // expo-widgets adds its exported receiver, then the plugin closes it.
+      const { modResults } = await config.mods.android.manifest({
+        ...config,
+        modResults: { manifest: { $: {}, application: [{ $: { 'android:name': '.MainApplication' } }] } },
+        modRequest: {
+          projectRoot: root,
+          platformProjectRoot: androidRoot,
+          platform: 'android',
+          modName: 'manifest',
+          introspect: false,
+        },
+      });
+      const [receiver] = modResults.manifest.application[0].receiver;
+      expect(receiver.$).toEqual(
+        expect.objectContaining({ 'android:name': '.VerseOfTheDayProvider', 'android:exported': 'false' }),
+      );
+      expect(receiver['intent-filter'][0].action.map((action: { $: object }) => action.$)).toContainEqual({
+        'android:name': 'android.appwidget.action.APPWIDGET_UPDATE',
       });
 
       const read = (path: string) => readFileSync(join(androidRoot, 'app/src/main', path), 'utf8');
