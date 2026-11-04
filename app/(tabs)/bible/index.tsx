@@ -169,6 +169,7 @@ import {
   getBibleDockViewportLayout,
   getBulletinVerseScrollOffset,
   getDockPillGrowth,
+  getDockPillPaddingHorizontal,
   shouldShortenVerseLabel,
 } from '@/styles/ReaderStyles';
 
@@ -3764,7 +3765,7 @@ export default function BibleScreen() {
   // dock controls may still stack at large text sizes, but these three compact
   // selectors remain a single horizontal navigation row.
   const stackChapterControls = false;
-  const chipPaddingHorizontal = textScale >= 1.75 ? 8 : 10;
+  const chipPaddingHorizontal = getDockPillPaddingHorizontal({ cardWidth: dockCardWidth, dockTextScale, textScale });
 
   const renderPreviousChapterButton = () =>
     !isFirstChapter ? (
@@ -3926,7 +3927,10 @@ export default function BibleScreen() {
             flexBasis: 'auto',
             flexGrow: dockPillGrowth.verse,
             flexShrink: 0,
-            maxWidth: '40%',
+            // Capped only once the labels are shortened: while all three fit
+            // whole, the cap would cut "Versículo" short on a phone's card
+            // for nothing.
+            maxWidth: shortVerseLabel ? '40%' : undefined,
           },
         ]}
         onPress={() => setModalType('verse')}

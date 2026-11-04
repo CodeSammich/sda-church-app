@@ -10,6 +10,8 @@ import {
   getBibleDockLayout,
   getBibleDockViewportLayout,
   getDockPillGrowth,
+  getDockPillPaddingHorizontal,
+  NARROW_DOCK_CARD,
   shouldShortenVerseLabel,
   WIDE_DOCK_PILLS_ROW,
 } from '@/styles/ReaderStyles';
@@ -142,10 +144,12 @@ describe('Bible reader text scaling', () => {
   });
 
   it('shortens the Verse label before the book name is cut short (#376)', () => {
-    // Psalms 130 + 23 64 + Verse 100 + 2 gaps of 8 = 310.
+    // Psalms 130 + 23 64 + Verse 100 + 2 gaps of 8 = 310, and 4 to spare.
     const pills = { bookPillWidth: 130, chapterPillWidth: 64, versePillWidth: 100 };
     expect(shouldShortenVerseLabel({ ...pills, rowWidth: 340 })).toBe(false);
-    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 310 })).toBe(false);
+    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 314 })).toBe(false);
+    // Fitting by a point isn't enough: "Juan" became "Ju…" beside "Versículo".
+    expect(shouldShortenVerseLabel({ ...pills, rowWidth: 311 })).toBe(true);
     expect(shouldShortenVerseLabel({ ...pills, rowWidth: 300 })).toBe(true);
     // Unmeasured: the full label.
     expect(shouldShortenVerseLabel({ ...pills, rowWidth: 0 })).toBe(false);
@@ -156,6 +160,26 @@ describe('Bible reader text scaling', () => {
     expect(source).toContain("verseShort: 'Vers.',");
     // The pill still says "Verse" to screen readers.
     expect(source).toContain('accessibilityLabel={labels.verse}');
+  });
+
+  it("keeps \"Psalms\" and \"Versículo\" whole in a phone's floating card (#589)", () => {
+    // Android's key-screen phone is 384 points: a 352-point card, about 250
+    // points for the pills. At 150% text, "Psalms" was cut to "Psal…" beside
+    // "23" and "Vs." with 10 points a side; 6 gives it about 24 more.
+    const phone = { cardWidth: 352, textScale: 1.5 };
+    expect(getDockPillPaddingHorizontal({ ...phone, dockTextScale: 1.5 })).toBe(6);
+    // The default size fits with the usual padding, as do a tablet's cards.
+    expect(getDockPillPaddingHorizontal({ ...phone, dockTextScale: 1, textScale: 1 })).toBe(10);
+    expect(getDockPillPaddingHorizontal({ cardWidth: 640, dockTextScale: 1.5, textScale: 1.5 })).toBe(10);
+    expect(getDockPillPaddingHorizontal({ cardWidth: 640, dockTextScale: 2, textScale: 2 })).toBe(8);
+    // An iPhone Pro Max's card is 408 points: not narrow.
+    expect(NARROW_DOCK_CARD).toBeGreaterThan(352);
+    expect(NARROW_DOCK_CARD).toBeLessThanOrEqual(408);
+    const source = readFileSync('app/(tabs)/bible/index.tsx', 'utf8');
+    expect(source).toContain('getDockPillPaddingHorizontal({ cardWidth: dockCardWidth, dockTextScale, textScale })');
+    // The verse pill's cap applies only once the labels are shortened: in
+    // Spanish at the default size, "Versículo" fit the row but not 40% of it.
+    expect(source).toContain("maxWidth: shortVerseLabel ? '40%' : undefined,");
   });
 
   it('stacks reader controls when space is narrow or text is enlarged', () => {
