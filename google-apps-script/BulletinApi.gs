@@ -183,8 +183,6 @@ var BULLETIN_TABS = Object.freeze({
   'Weekly Data': Object.freeze({ tag: 'weekly-data', earlierNames: Object.freeze([]) }),
   'Name Dictionary': Object.freeze({ tag: 'name-dictionary', earlierNames: Object.freeze([]) }),
   Leadership: Object.freeze({ tag: 'leadership', earlierNames: Object.freeze([]) }),
-  // No script reads it; the upkeep keeps it the same as the app's hymnals (#619).
-  'Hymn Bank': Object.freeze({ tag: 'hymn-bank', earlierNames: Object.freeze([]) }),
 });
 
 // The tab the scripts read as this one, or null.

@@ -6,7 +6,8 @@ name: Android key screens
 # Every job runs on standard Linux runners; Mac runners are few, so only the
 # iPhone uses them. One review covers both platforms: ios-key-screens.yml's
 # review comment waits for this workflow's run on the same commit and links
-# its screenshots, and its Screenshots reviewed approval covers both.
+# its screenshots, a rerun here refreshes it, and its Screenshots reviewed
+# approval covers both.
 #
 # It's separate from android-preview-apk.yml, which builds the APK for phones.
 # Like that workflow's build, it runs pull request code only with a read-only
@@ -138,6 +139,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+
+      # The emulator needs about 7.4 GB, more than some runners have free.
+      - name: Free disk space for the emulator
+        run: scripts/free-runner-disk.sh
+
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
@@ -361,6 +367,33 @@ jobs:
           echo "::error::The build ended as $BUILD and the key-screen groups as $GROUPS; their jobs' logs say why."
           exit 1
 
+  review-comment:
+    # Refreshes the release PR's screenshot review comment, if
+    # ios-key-screens.yml has already posted it for this commit, with this
+    # run's result and screenshots. That happens after a rerun of a failed
+    # group, which used to leave the comment showing the failure and the
+    # first attempt's download (#632). Usually this run finishes first, and
+    # the iPhone run posts the comment with it. key-screens-review.yml writes
+    # the comment for both.
+    needs: screens
+    if: >-
+      !cancelled() &&
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'release-candidate' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    name: Refresh the screenshot review comment
+    permissions:
+      # To find the iPhone run and both runs' downloads.
+      actions: read
+      contents: read
+      # Only to update the review comment. It never checks out or runs the
+      # pull request's code.
+      pull-requests: write
+    uses: ./.github/workflows/key-screens-review.yml
+    with:
+      platform: android
+      checks: ${{ needs.screens.result }}
+
   earlier-screens:
     # Re-checks an earlier run's screenshots in a few minutes, instead of a
     # full build, while tuning the text checks.
@@ -393,6 +426,7 @@ jobs:
           echo "OCR_PYTHON=$RUNNER_TEMP/ocr/bin/python" >> "$GITHUB_ENV"
 
       - name: Download that run's screenshots
+        id: earlier
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -400,12 +434,22 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo 'screens_from_run must be a run ID.' >&2; exit 1; }
+          # The joined download, and each group's own, which a run keeps for a
+          # day and may have alone if its join failed. Each has a screens
+          # folder, so all their shots go into one, and every group's are
+          # checked, not just the first folder's.
           gh run download "$RUN_ID" --repo "$REPO" --pattern 'android-key-screens-*' --dir "$RUNNER_TEMP/earlier"
-          SCREENS="$(find "$RUNNER_TEMP/earlier" -type d -name screens -print -quit)"
-          test -n "$SCREENS" || { echo 'That run has no key screens.' >&2; exit 1; }
-          echo "SCREENS=$SCREENS" >> "$GITHUB_ENV"
+          screens="$RUNNER_TEMP/screens"
+          mkdir -p "$screens/android"
+          find "$RUNNER_TEMP/earlier" -path '*/screens/android/*.png' -exec cp {} "$screens/android/" \;
+          count=$(find "$screens/android" -name '*.png' | wc -l)
+          test "$count" -gt 0 || { echo 'That run has no key screens.' >&2; exit 1; }
+          echo "Checking the $count screenshots in that run's downloads."
+          echo "screens=$screens" >> "$GITHUB_OUTPUT"
 
       - name: Check the text on the key screens
+        env:
+          SCREENS: ${{ steps.earlier.outputs.screens }}
         run: node scripts/check-screens.cjs --dir "$SCREENS" --platform android
 
       - name: Upload the text that was read
@@ -414,7 +458,7 @@ jobs:
         with:
           name: android-key-screen-checks-${{ inputs.screens_from_run }}
           path: |
-            ${{ env.SCREENS }}/ocr.json
-            ${{ env.SCREENS }}/checks.json
+            ${{ steps.earlier.outputs.screens }}/ocr.json
+            ${{ steps.earlier.outputs.screens }}/checks.json
           if-no-files-found: warn
           retention-days: 14

@@ -146,16 +146,31 @@ describe('the Word copy for printing on a Mac (#627)', () => {
       UrlFetchApp: {
         fetch: (url: string, options: { headers: Record<string, string> }) => {
           fetched.push({ url, headers: options.headers });
-          return { getResponseCode: () => overrides.exportCode ?? 200, getBlob: () => 'docx' };
+          // Drive labels the export as Word, not as a zip.
+          const blob = {
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            getContentType: () => blob.type,
+            setContentType: (type: string) => {
+              blob.type = type;
+              return blob;
+            },
+          };
+          return { getResponseCode: () => overrides.exportCode ?? 200, getBlob: () => blob };
         },
       },
       Utilities: {
-        unzip: () => [
-          part('[Content_Types].xml', '<Types/>'),
-          part('word/document.xml', DOCUMENT_XML),
-          part('word/styles.xml', STYLES_XML),
-          part('word/media/image1.png', 'png'),
-        ],
+        // As in Apps Script, which refuses any other content type.
+        unzip: (blob: { getContentType: () => string }) => {
+          if (blob.getContentType() !== 'application/zip') {
+            throw new Error('Exception: Invalid argument: ContentType: should be of type: application/zip');
+          }
+          return [
+            part('[Content_Types].xml', '<Types/>'),
+            part('word/document.xml', DOCUMENT_XML),
+            part('word/styles.xml', STYLES_XML),
+            part('word/media/image1.png', 'png'),
+          ];
+        },
         newBlob: (data: string, _type: string, name: string) => part(name, data),
         zip: (blobs: Array<ReturnType<typeof part>>, name: string) => {
           const zipped = {
@@ -259,8 +274,9 @@ describe('the Word copy for printing on a Mac (#627)', () => {
     const context = loadAppsScript({});
     const html = runInContext(`buildPrintedBulletinPromptHtml_('2026-11-07')`, context) as string;
 
-    expect(html).toContain('3. Printing on a Mac: a Word copy / 第三步（可选）：Mac 打印用 Word 副本');
-    expect(html).toContain('After the last edit to this Sabbath\'s Google Doc, make a Word copy with the Chinese in Songti TC');
+    expect(html).toContain('3. Send the pastor a Word copy to print / 第三步：把 Word 副本发给牧师打印');
+    expect(html).toContain('make the Word copy, download it, and send it to the pastor on WhatsApp');
+    expect(html).toContain('下载后通过 WhatsApp 发给牧师');
     expect(html).toContain('id="wordCopy">Make Word copy / 制作 Word 副本</button>');
     expect(html).toContain('createPrintedBulletinWordCopy({date:date,location:locationValue})');
     expect(html).toContain('Download Word copy / 下载 Word 副本');

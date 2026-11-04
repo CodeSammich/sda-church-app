@@ -250,7 +250,7 @@ their own [credentials](#source-code-and-cicd).
 
 | File | Used for | How the script finds it |
 | --- | --- | --- |
-| Master scheduling spreadsheet (`Sabbath Calendar`, `Weekly Data`, `Name Dictionary`, and `Leadership` tabs, plus the `Hymn Bank` the upkeep keeps) | Roster, sermon data, and full names and titles for print | Bound Apps Script project; layout in [Bulletin Automation Operations](operations/bulletin-automation.md) |
+| Master scheduling spreadsheet (`Sabbath Calendar`, `Weekly Data`, `Name Dictionary`, and `Leadership` tabs, plus the `Hymn Bank` that each open keeps) | Roster, sermon data, and full names and titles for print | Bound Apps Script project; layout in [Bulletin Automation Operations](operations/bulletin-automation.md) |
 | Church sketch image | Cover of the regular Queens and Brooklyn bulletins | The `CHURCH_SKETCH_IMAGE_FILE_ID` script property (or the older `BROOKLYN_BULLETIN_COVER_IMAGE_FILE_ID`), or else the Drive file ID in `PRINTED_BULLETIN_CONFIG.churchSketchImageFileId` |
 | Last Supper image | Communion bulletin cover | `LAST_SUPPER_IMAGE_FILE_ID`, or else `lastSupperImageFileId` |
 | SDA logo | Printed bulletin logo | `SDA_LOGO_IMAGE_FILE_ID`, or else `sdaLogoImageFileId`. Restricted branding: see [Branding & Trademark Policy](LEGAL_BRANDING.md) |

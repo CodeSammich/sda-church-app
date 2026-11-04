@@ -327,11 +327,12 @@ describe('iOS key screens', () => {
   });
 
   it('links only the screenshots in the review comment, and offers the app separately', () => {
-    const comment = workflow.slice(workflow.indexOf('\n  review-comment:\n'), workflow.indexOf('\n  screenshots-reviewed:\n'));
+    // key-screens-review.yml writes the comment for this workflow.
+    const comment = repoFile('.github/workflows/key-screens-review.yml');
     expect(comment).toContain(
-      `download="$(screenshots "$RUN_ID" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"`,
+      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"`,
     );
-    expect(comment).toContain(`app="$(screenshots "$RUN_ID" '.name | endswith("-arm64")' 'the iPhone Simulator app')"`);
+    expect(comment).toContain(`app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iPhone Simulator app')"`);
   });
 
   it('re-checks an earlier run from its screenshots, or from the app download of runs before the split', () => {
@@ -541,6 +542,8 @@ describe('Screenshot review', () => {
   };
   const announce = job('announce');
   const commentJob = job('review-comment');
+  // The comment itself, which the job above calls, as Android's run does.
+  const commentWorkflow = repoFile('.github/workflows/key-screens-review.yml');
   const approvalJob = job('screenshots-reviewed');
   const releaseOnly = [
     "github.head_ref == 'release-candidate'",
@@ -570,10 +573,11 @@ describe('Screenshot review', () => {
   it('posts the screenshots, and how to approve them, after the builds', () => {
     expect(commentJob).toContain('needs: simulator');
     for (const condition of releaseOnly) expect(commentJob).toContain(condition);
-    expect(commentJob).toContain('<!-- key-screens-review sha=$SHA -->');
-    expect(commentJob).toContain('**Review deployments**');
+    expect(commentJob).toContain('uses: ./.github/workflows/key-screens-review.yml');
+    expect(commentWorkflow).toContain('<!-- key-screens-review sha=$SHA -->');
+    expect(commentWorkflow).toContain('**Review deployments**');
     // It replaces its own earlier comments only.
-    expect(commentJob).toContain('select(.user.login == "github-actions[bot]"');
+    expect(commentWorkflow).toContain('select(.user.login == "github-actions[bot]"');
   });
 
   it('says the screenshots are on the way after each push, and clears out-of-date ones', () => {
@@ -587,6 +591,7 @@ describe('Screenshot review', () => {
   it.each([
     ['the notice', announce],
     ['the review comment', commentJob],
+    ['the review comment workflow', commentWorkflow],
     ['the approval', approvalJob],
   ])('%s never runs pull request code or reads a secret', (_name, text) => {
     expect(text).not.toMatch(/actions\/checkout|secrets\./);
@@ -1054,32 +1059,33 @@ describe('Android key screens workflow (#372)', () => {
   });
 
   it("links the Android run's screenshots in the one review comment, before the one approval", () => {
-    const comment = jobOf(preview, 'review-comment');
+    // key-screens-review.yml writes the comment; test/key-screens-review.test.ts runs it.
+    const comment = repoFile('.github/workflows/key-screens-review.yml');
     expect(comment).toContain('actions/workflows/android-key-screens.yml/runs?head_sha=$SHA&event=pull_request');
     expect(comment).toContain('test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")');
-    expect(comment).toContain('ANDROID_CHECKS: ${{ steps.android.outputs.conclusion }}');
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
-  });
-
-  it('says how long each run took, until its join job uploaded the screenshots', () => {
-    // took() finds the join job by name, so renaming one would drop its time quietly.
-    expect(jobOf(preview, 'simulator')).toContain('name: iOS key screens join');
-    expect(jobOf(workflow, 'screens')).toContain('name: Android key screens join');
-    const comment = jobOf(preview, 'review-comment');
-    expect(comment).toContain(`ios_took="$(took "$RUN_ID" 'iOS key screens join')" || ios_took=""`);
-    expect(comment).toContain(`android_took="$(took "$ANDROID_RUN_ID" 'Android key screens join')" || android_took=""`);
-    expect(comment).toMatch(/\n\s+\$checks\n\n\s+\$timing\n/);
   });
 
   it('re-checks an earlier run on Linux', () => {
     const earlier = jobOf(workflow, 'earlier-screens');
     expect(earlier).toContain('runs-on: ubuntu-24.04');
     expect(earlier).toContain('check-screens.cjs --dir "$SCREENS" --platform android');
+    // A run's downloads are its joined screenshots and each group's own, each
+    // with a screens folder. Every one's shots are checked, not the first
+    // folder's alone (#632).
+    expect(earlier).toContain(`find "$RUNNER_TEMP/earlier" -path '*/screens/android/*.png' -exec cp {} "$screens/android/" \\;`);
+    expect(earlier).not.toContain('-print -quit');
   });
 
   it('keeps pull request code away from credentials', () => {
     expect(workflow).not.toMatch(/secrets\.|environment:|pull_request_target/);
-    expect(workflow.match(/^\s+[a-z-]+:\s*write\b/gm)).toBeNull();
+    // Only the job that refreshes the review comment can write, and it runs
+    // no steps: key-screens-review.yml never checks out or runs code.
+    const refresh = jobOf(workflow, 'review-comment');
+    expect(workflow.replace(refresh, '').match(/^\s+[a-z-]+:\s*write\b/gm)).toBeNull();
+    expect(refresh.match(/^\s+[a-z-]+:\s*write\b/gm)).toEqual(['      pull-requests: write']);
+    expect(refresh).toContain('uses: ./.github/workflows/key-screens-review.yml');
+    expect(refresh).not.toContain('steps:');
     for (const text of [build, capture, join]) expect(text).toContain('persist-credentials: false');
   });
 });

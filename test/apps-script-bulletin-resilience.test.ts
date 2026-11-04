@@ -237,8 +237,6 @@ const createChurchWorkbook = () =>
     ],
     'Name Dictionary': [['English Name', 'Chinese Name'], ['Ada Lin', '林愛達']],
     Leadership: [['Pastors', 'Elders'], ['Ada Lin', 'Ben Hall']],
-    // Kept by the upkeep (#619); here so every tab is found by its name.
-    'Hymn Bank': [['Chinese Hymnal 505 中文赞美诗', 'SDA Hymnal 1985 英文诗歌本']],
   });
 
 const load = (
@@ -316,7 +314,6 @@ describe('bulletin tab and column tags', () => {
       ['Weekly Data', 'bulletin.tab', 'weekly-data'],
       ['Name Dictionary', 'bulletin.tab', 'name-dictionary'],
       ['Leadership', 'bulletin.tab', 'leadership'],
-      ['Hymn Bank', 'bulletin.tab', 'hymn-bank'],
     ]);
 
     const schedule = workbook.tags(workbook.sheet('Sabbath Calendar'));
@@ -574,7 +571,7 @@ describe('bulletin tab and column tags', () => {
     ).toThrow();
     expect(
       workbook.entries.filter((entry) => !entry.column).map((entry) => entry.sheet.name),
-    ).toEqual(['Weekly Data', 'Name Dictionary', 'Leadership', 'Hymn Bank']);
+    ).toEqual(['Weekly Data', 'Name Dictionary', 'Leadership']);
   });
 
   it("doesn't count a hymn's English and Chinese columns as the same name", () => {

@@ -192,6 +192,43 @@ describe('printed bulletin Apps Script helpers', () => {
     ]);
   });
 
+  it('builds the menu before the upkeep, so an open that runs out of time still has it', () => {
+    const calls: string[] = [];
+    const menu = {
+      addItem: (label: string) => {
+        calls.push(`item ${label}`);
+        return menu;
+      },
+      addToUi: () => {
+        calls.push('menu shown');
+        return menu;
+      },
+    };
+    const context = loadAppsScript({
+      testCalls: calls,
+      SpreadsheetApp: {
+        getUi: () => ({ createMenu: () => menu }),
+        getActiveSpreadsheet: () => ({}),
+      },
+    });
+    // The upkeep never returns, as when Apps Script stops it at 30 seconds.
+    runInContext(
+      `maintainBulletinScheduleOnOpen_ = function () {
+        testCalls.push('upkeep');
+        throw new Error('Exceeded maximum execution time');
+      };`,
+      context,
+    );
+    expect(() => runInContext('onOpen()', context)).not.toThrow();
+
+    expect(calls.slice(0, 4)).toEqual([
+      'item Create Google Doc…',
+      'item Fonts…',
+      'menu shown',
+      'upkeep',
+    ]);
+  });
+
   it('names the expected columns it cannot find when the sheet opens', () => {
     const alerts: string[] = [];
     const menu = { addItem: () => menu, addToUi: () => menu };
@@ -501,32 +538,24 @@ describe('printed bulletin Apps Script helpers', () => {
 
   it('restricts managed header and date/quarter protections to the technology group', () => {
     const calls: string[] = [];
-    const headerProtection = {
-      getRange: () => ({
-        getRow: () => 1,
-        getColumn: () => 1,
-        getNumRows: () => 1,
-        getNumColumns: () => 25,
-      }),
+    // Only methods Apps Script's Protection has: until #642 the code called
+    // setEditors, which it doesn't, and a fake that had one hid the bug.
+    const fakeProtection = (rows: number, columns: number, state: { editors: string[]; warning: boolean; domain: boolean; description: string }) => ({
+      getRange: () => ({ getRow: () => 1, getColumn: () => 1, getNumRows: () => rows, getNumColumns: () => columns }),
+      getDescription: () => state.description,
       setDescription: (value: string) => calls.push(`description:${value}`),
+      isWarningOnly: () => state.warning,
       setWarningOnly: (value: boolean) => calls.push(`warning:${value}`),
+      canDomainEdit: () => state.domain,
       setDomainEdit: (value: boolean) => calls.push(`domain:${value}`),
-      setEditors: (value: string[]) => calls.push(`editors:${value.join(',')}`),
+      getEditors: () => state.editors.map((email) => ({ getEmail: () => email })),
+      addEditor: (email: string) => calls.push(`add:${email}`),
+      removeEditors: (emails: string[]) => calls.push(`remove editors:${emails.join(',')}`),
       remove: () => calls.push('remove'),
-    };
-    const columnProtection = {
-      getRange: () => ({
-        getRow: () => 1,
-        getColumn: () => 1,
-        getNumRows: () => 53,
-        getNumColumns: () => 2,
-      }),
-      setDescription: (value: string) => calls.push(`description:${value}`),
-      setWarningOnly: (value: boolean) => calls.push(`warning:${value}`),
-      setDomainEdit: (value: boolean) => calls.push(`domain:${value}`),
-      setEditors: (value: string[]) => calls.push(`editors:${value.join(',')}`),
-      remove: () => calls.push('remove'),
-    };
+    });
+    const loose = { editors: ['Someone@example.com'], warning: true, domain: true, description: 'old' };
+    const headerProtection = fakeProtection(1, 25, { ...loose });
+    const columnProtection = fakeProtection(53, 2, { ...loose });
     const sheet = {
       getRange: (notation: string) => ({
         protect: () => {
@@ -548,12 +577,22 @@ describe('printed bulletin Apps Script helpers', () => {
       context,
     );
 
-    expect(calls.filter((call) => call.startsWith('editors:'))).toEqual([
-      'editors:technology@nyccsda.org',
-      'editors:technology@nyccsda.org',
+    expect(calls.filter((call) => /^(add|remove editors):/.test(call))).toEqual([
+      'add:technology@nyccsda.org',
+      'remove editors:someone@example.com',
+      'add:technology@nyccsda.org',
+      'remove editors:someone@example.com',
     ]);
     expect(calls.filter((call) => call === 'domain:false')).toHaveLength(2);
     expect(calls.filter((call) => call === 'warning:false')).toHaveLength(2);
+
+    // Already restricted: an open only reads them.
+    calls.length = 0;
+    const tight = { editors: ['technology@nyccsda.org'], warning: false, domain: false, description: 'Fixed date and quarter columns; technology team only.' };
+    const done = fakeProtection(53, 2, tight);
+    (context as { doneSheet: unknown }).doneSheet = { ...sheet, getProtections: () => [done] };
+    runInContext(`ensureBulletinScheduleFixedColumnProtection_(doneSheet);`, context);
+    expect(calls).toEqual([]);
   });
 
   it('finds no missing Saturdays in a complete quarter', () => {
@@ -810,7 +849,7 @@ describe('printed bulletin Apps Script helpers', () => {
     );
   });
 
-  it('builds a bilingual form with location/format buttons and a read-only Bible reading', () => {
+  it('builds a bilingual form with location/format buttons, and no Bible reading box', () => {
     const context = loadAppsScript({});
     const html = runInContext(
       `buildPrintedBulletinPromptHtml_('2026-09-26')`,
@@ -851,14 +890,19 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(html).toContain('function focusStatusView_');
     expect(html).toContain('scrollIntoView');
     expect(html).toContain('class="status-slot"');
-    expect(html).toContain('min-height:180px');
     expect(html).toContain('document.getElementById("bulletinForm").hidden=true');
     expect(html).toContain('block:"nearest"');
-    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Bible reading'));
+    expect(html.indexOf('English Bible translation')).toBeLessThan(html.indexOf('Printed announcements'));
     // The verse is Weekly Data's, shown read-only (#622): no picker.
-    expect(html).toContain('id="verseView"');
-    expect(html).toContain('From the Bible Verses column in Weekly Data, the same verse the app shows.');
-    expect(html).toContain('来自“Weekly Data”的“Bible Verses”列');
+    // The verse is in Weekly Data, so the dialog doesn't show it: only, by
+    // Create, why Create is off when it's blank or unreadable.
+    expect(html).toContain('<div id="verseView" class="verse-view problem" role="alert" hidden></div>');
+    expect(html).not.toContain('Bible reading');
+    expect(html).not.toContain('From the Bible Verses column in Weekly Data');
+    expect(html.indexOf('id="verseView"')).toBeLessThan(html.indexOf('id="submit"'));
+    // "Printed bulletin ready" shows under step 2, above step 3.
+    expect(html.indexOf('id="statusView"')).toBeGreaterThan(html.indexOf('</form>'));
+    expect(html.indexOf('id="statusView"')).toBeLessThan(html.indexOf('id="wordCopySection"'));
     expect(html).not.toMatch(/id="(book|chapter|verses)"/);
     expect(html).not.toContain('Choose a book');
     expect(html).not.toContain('选择书卷');

@@ -106,7 +106,7 @@ describe('the printed hymn lookup (#619)', () => {
   });
 });
 
-describe('the Hymn Bank tab, kept on open (#619)', () => {
+describe('the Hymn Bank tab, kept on open with time to spare (#619, #639)', () => {
   const rows: string[][] = data.hymnBankRows;
 
   // A fake tab that records every change.
@@ -136,7 +136,24 @@ describe('the Hymn Bank tab, kept on open (#619)', () => {
     };
     return sheet;
   };
-  const run = (sheet: ReturnType<typeof fakeSheet> | null, withData = true) => {
+  const documentProperties = (initial: Record<string, string> = {}) => {
+    const values: Record<string, string> = { ...initial };
+    return {
+      values,
+      getProperty: (key: string) => values[key] ?? null,
+      setProperty: (key: string, value: string) => {
+        values[key] = value;
+      },
+      deleteProperty: (key: string) => {
+        delete values[key];
+      },
+    };
+  };
+  const run = (
+    sheet: ReturnType<typeof fakeSheet> | null,
+    withData = true,
+    properties = documentProperties(),
+  ) => {
     const inserted: Array<[string, number]> = [];
     const created = fakeSheet([]);
     const spreadsheet = {
@@ -151,16 +168,63 @@ describe('the Hymn Bank tab, kept on open (#619)', () => {
     };
     const context = load(['BulletinApi.gs', 'BulletinScheduleMaintenance.gs'], {
       testSpreadsheet: spreadsheet,
+      PropertiesService: { getDocumentProperties: () => properties },
     }, withData);
     const result = runInContext('ensureHymnBankTab_(testSpreadsheet)', context);
-    return { result, inserted, created };
+    return { result, inserted, created, properties, context };
   };
+  const fingerprintOf = (context: object) =>
+    runInContext('getHymnBankFingerprint_(BULLETIN_HYMNAL_DATA.hymnBankRows)', context) as string;
 
-  it('leaves a tab that matches alone, after reading it once', () => {
+  it('leaves a tab that matches alone, after reading it once, and remembers it', () => {
     const sheet = fakeSheet(rows);
+    const { result, properties, context } = run(sheet);
 
-    expect(run(sheet).result).toBe('unchanged');
+    expect(result).toBe('unchanged');
     expect(sheet.calls).toEqual([]);
+    expect(properties.values).toEqual({ 'bulletin.hymnBank.fingerprint': fingerprintOf(context) });
+    expect(fingerprintOf(context)).toMatch(/^916:[0-9a-f]+$/);
+  });
+
+  it("reads nothing but its fingerprint while the data hasn't changed", () => {
+    const first = run(fakeSheet(rows));
+    // Even an edited tab is left alone: only onEdit, a deploy, or a missing
+    // tab makes it look again.
+    const edited = fakeSheet([['stale']]);
+    let reads = 0;
+    const getDataRange = edited.getDataRange;
+    edited.getDataRange = () => {
+      reads += 1;
+      return getDataRange();
+    };
+
+    expect(run(edited, true, first.properties).result).toBe('unchanged');
+    expect(reads).toBe(0);
+    expect(edited.calls).toEqual([]);
+
+    // A deploy that changes the hymnals changes the fingerprint.
+    first.properties.setProperty('bulletin.hymnBank.fingerprint', '916:old');
+    expect(run(edited, true, first.properties).result).toBe('rewritten');
+    expect(edited.values()).toEqual(rows);
+  });
+
+  it('looks again after an edit in the tab, and only there', () => {
+    const { properties } = run(fakeSheet(rows));
+    const edit = (tab: string) => {
+      const context = load(['BulletinApi.gs', 'BulletinScheduleMaintenance.gs', 'ScheduleAssignmentChecks.gs'], {
+        PropertiesService: { getDocumentProperties: () => properties },
+        SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => null }) },
+      });
+      runInContext(
+        `onEdit({ range: { getSheet: function () { return { getName: function () { return ${JSON.stringify(tab)}; } }; } } })`,
+        context,
+      );
+    };
+
+    edit('Leadership');
+    expect(Object.keys(properties.values)).toEqual(['bulletin.hymnBank.fingerprint']);
+    edit('Hymn Bank');
+    expect(properties.values).toEqual({});
   });
 
   it('rewrites a tab with a stray edit, an extra column, or a sort', () => {
@@ -183,8 +247,9 @@ describe('the Hymn Bank tab, kept on open (#619)', () => {
     }
   });
 
-  it('puts a deleted tab back, at the end', () => {
-    const { result, inserted, created } = run(null);
+  it('puts a deleted tab back, at the end, even with its fingerprint saved', () => {
+    const saved = run(fakeSheet(rows)).properties;
+    const { result, inserted, created } = run(null, true, saved);
 
     expect(result).toBe('created');
     expect(inserted).toEqual([['Hymn Bank', 3]]);
@@ -199,6 +264,7 @@ describe('the Hymn Bank tab, kept on open (#619)', () => {
     const logs: string[] = [];
     const context = load(['BulletinApi.gs', 'BulletinScheduleMaintenance.gs'], {
       Logger: { log: (message: string) => logs.push(message) },
+      PropertiesService: { getDocumentProperties: () => documentProperties() },
       SpreadsheetApp: {
         getActiveSpreadsheet: () => ({
           getSheetByName: () => ({
@@ -215,12 +281,46 @@ describe('the Hymn Bank tab, kept on open (#619)', () => {
     expect(logs).toEqual(['Could not refresh the Hymn Bank tab: Error: You are trying to edit a protected cell']);
   });
 
-  it('tags the tab, so it is still found and kept after a rename', () => {
-    const context = load(['BulletinApi.gs']);
-
-    expect(JSON.parse(runInContext(`JSON.stringify(BULLETIN_TABS['Hymn Bank'])`, context))).toEqual({
-      tag: 'hymn-bank',
-      earlierNames: [],
+  // onOpen is a simple trigger with 30 seconds, and the first open after the
+  // 1.6.1 deploy ran out of time rewriting this tab, before it built the menu.
+  const openWith = (budget: number) => {
+    const calls: string[] = [];
+    const logs: string[] = [];
+    const menu = { addItem: () => menu, addToUi: () => { calls.push('menu'); return menu; } };
+    const context = load(['BulletinApi.gs', 'BulletinScheduleMaintenance.gs', 'ScheduleAssignmentChecks.gs', 'PrintedBulletin.gs'], {
+      testCalls: calls,
+      Logger: { log: (message: string) => logs.push(message) },
+      SpreadsheetApp: { getUi: () => ({ createMenu: () => menu }), getActiveSpreadsheet: () => ({}) },
     });
+    runInContext(
+      `HYMN_BANK_OPEN_BUDGET_MS = ${budget};
+       maintainBulletinScheduleOnOpen_ = function () { testCalls.push('upkeep'); };
+       getMissingBulletinColumns_ = function () { return []; };
+       getRenamedBulletinTabsAndColumns_ = function () { return []; };
+       ensureHymnBankTabSafely_ = function () { testCalls.push('hymn bank'); };`,
+      context,
+    );
+    runInContext('onOpen()', context);
+    return { calls, logs, context };
+  };
+
+  it('runs last in onOpen, after the menu and the upkeep', () => {
+    expect(openWith(1e9).calls).toEqual(['menu', 'upkeep', 'hymn bank']);
+  });
+
+  it('skips, and says so, when the open has used its budget, and the next open tries again', () => {
+    const { calls, logs } = openWith(-1);
+
+    expect(calls).toEqual(['menu', 'upkeep']);
+    expect(logs.some((line) => /^Skipped the Hymn Bank check: this open has used \d+ ms\.$/.test(line))).toBe(true);
+  });
+
+  it('is not in the open-time upkeep or the Create Google Doc… dialog', () => {
+    const { context } = openWith(1e9);
+
+    expect(runInContext('HYMN_BANK_OPEN_BUDGET_MS = 20000; HYMN_BANK_OPEN_BUDGET_MS', load(['BulletinApi.gs', 'BulletinScheduleMaintenance.gs']))).toBe(20000);
+    expect(runInContext('runBulletinScheduleMaintenance_.toString()', context)).not.toContain('HymnBank');
+    expect(runInContext('createPrintedBulletinFromPrompt.toString()', context)).not.toContain('HymnBank');
+    expect(runInContext(`Object.keys(BULLETIN_TABS)`, context)).not.toContain('Hymn Bank');
   });
 });
