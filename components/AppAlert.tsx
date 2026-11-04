@@ -5,7 +5,7 @@ import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageCon
 import { useAppTheme } from '@/constants/Themes';
 import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { useContext, useSyncExternalStore } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Dialog, Portal, Text } from 'react-native-paper';
 
 /**
@@ -78,6 +78,9 @@ export const resetAppAlertsForTests = () => {
   notify();
 };
 
+// The widest a popup grows, on a tablet.
+const MAX_WIDTH = 560;
+
 const closeLabels = { en: 'Close', zh: '關閉', 'zh-cn': '关闭', es: 'Cerrar' } as const;
 
 /** Shows showAppAlert's popups. Mounted once, in app/_layout.tsx. */
@@ -86,6 +89,11 @@ export function AppAlertHost() {
   const { language } = useContext(LanguageContext);
   const theme = useAppTheme();
   const popupMaxHeight = usePopupMaxHeight();
+  // 90% of the screen, up to 560 points, as a number: iOS's Paper Surface
+  // splits a percentage width from a maxWidth, so on an iPad the content
+  // filled only part of the popup. As #593's usePopupWidthStyle does.
+  const { width: screenWidth } = useWindowDimensions();
+  const widthStyle = { width: Math.round(Math.min(screenWidth * 0.9, MAX_WIDTH)) };
   if (!alert) return null;
 
   const cancel = alert.buttons.find(({ style }) => style === 'cancel');
@@ -101,7 +109,7 @@ export function AppAlertHost() {
         testID="app-alert"
         visible
         onDismiss={() => close(cancel)}
-        style={[styles.dialog, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
+        style={[styles.dialog, widthStyle, { maxHeight: popupMaxHeight }, getPopupSurfaceStyle(theme)]}
       >
         {asks ? (
           // A question's title scrolls with its message, so at the largest
@@ -170,8 +178,7 @@ export function AppAlertHost() {
 }
 
 const styles = StyleSheet.create({
-  // As ThemeDialog's.
-  dialog: { alignSelf: 'center', maxWidth: 560, width: '90%' },
+  dialog: { alignSelf: 'center' },
   // Paper gives a dialog's first child a 24-point top margin; with the X's
   // 48-point row, 16 keeps the title where Paper's own title sits.
   header: { marginBottom: 8, marginTop: 16, paddingLeft: 24, paddingRight: 12 },

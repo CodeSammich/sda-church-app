@@ -120,6 +120,16 @@ describe('the app popup', () => {
     expect(screen.getByRole('button', { name: '关闭' })).toBeTruthy();
   });
 
+  it('is 90% of a phone’s width, up to 560 points, as a number iOS applies to the whole popup', () => {
+    // iOS's Paper Surface splits a percentage width from a maxWidth, so on an
+    // iPad the content filled only part of the popup (#324).
+    const source = readFileSync('components/AppAlert.tsx', 'utf8');
+    expect(source).not.toMatch(/width: '\d+%'/);
+    expect(source).not.toMatch(/maxWidth: \d+/);
+    expect(source).toContain('width: Math.round(Math.min(screenWidth * 0.9, MAX_WIDTH))');
+    expect(source).toContain('const MAX_WIDTH = 560;');
+  });
+
   it('has the shared popup corners and canvas', async () => {
     const screen = await renderHost({ theme: customDarkTheme });
     await act(async () => showAppAlert('No connection'));
