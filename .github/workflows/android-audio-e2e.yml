@@ -47,6 +47,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # The emulator needs about 7.4 GB, more than some runners have free, and
+      # this runner builds the app too.
+      - name: Free disk space for the emulator
+        run: scripts/free-runner-disk.sh
+
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
