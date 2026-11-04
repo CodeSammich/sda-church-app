@@ -204,8 +204,8 @@ a hymn in more than one table gets every chip; and `getHymnalCrossReferences`, w
 bulletin uses between its two primary hymnals, reads the same tables. Add the new pairs to
 `test/hymnal-number-mappings.test.ts`; `test/hymnal-cross-reference-registry.test.ts` shows
 a made-up table working end to end. The printed bulletin reads the 1985 ↔ 505 maps from
-`google-apps-script/HymnalData.gs`, generated from this file on every Apps Script deploy
-(#619), and a hymnal the hymnal page doesn't
+`google-apps-script/HymnalData.gs`, generated from `HymnalNumberMappings.json` on every
+Apps Script deploy (#619), and a hymnal the hymnal page doesn't
 list yet needs its page entry first (see the
 [bulletin hymn resolution guide](bulletin_hymn_resolution.md#changing-or-adding-a-primary-hymnal)).
 

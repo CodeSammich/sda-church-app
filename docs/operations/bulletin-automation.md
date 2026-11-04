@@ -443,7 +443,7 @@ For the people running the sheet:
   [Data precedence and fallback behavior](#data-precedence-and-fallback-behavior)).
   A `Sabbath Calendar` without `Date` or
   `Quarter` also stops the open-time upkeep from its quarter rows on (steps 4
-  to 7 above) until the column is back. The tagging in step 8 still runs.
+  to 8 above) until the column is back. The tagging in step 9 still runs.
 
 Since the header row and `Sabbath Calendar!A:B` are protected, an open by
 someone outside the technology group may not be able to tag them; a later open
@@ -965,7 +965,8 @@ line in the printed layout.
 
 The Sabbath School hymns print in each Sabbath School panel's **Opening Hymns**
 row, after the opening prayer, one hymn per line, such as
-`AH 348 · 第413首 教會根基` (`formatSabbathSchoolHymnsForPrint_`). Each cell has
+`AH 348 The Church Has One Foundation · 第413首 教會根基` for a typed
+`第413首 教會根基` (`formatSabbathSchoolHymnsForPrint_`). Each cell has
 one hymn in either language. Where the map has the other language by number,
 the line is the English, a dot, then the Chinese; otherwise the hymn prints
 once, as typed. A bare number is `第N首`. The closing sings the same hymns, so

@@ -57,8 +57,8 @@ In order of priority. When two conflict, the earlier one wins.
 | **Tag** | Developer metadata with `DOCUMENT` visibility. A tab carries `bulletin.tab` with a value such as `sabbath-calendar`. A column carries `bulletin.column` with its label in lower case, such as `brooklyn offering prayer`, on the whole column (such as `C:C`) |
 | **Tagged** | The spreadsheet has been opened since the deploy that added tags, so what the scripts found by name then carries its tag |
 | **Effective headers** | The header row as the scripts read it, after the rules below: a renamed column's header replaced by its label, and the unread one of two same-named columns left out |
-| **Upkeep** | What each open does first: [open-time steps](../operations/bulletin-automation.md#header-protection-and-validation-automation) 1 to 8, from header protection to tagging. `onOpen` then shows the alert (step 9) |
-| **Readers** | Everything that reads the bulletin tabs: the API, the printed bulletin, the [roster checks](../operations/bulletin-automation.md#roster-conflict-highlights-and-unknown-names), the [English-only guard](../operations/bulletin-automation.md#english-only-sabbath-calendar-input), the upkeep's quarter rows, `Weekly Data` repair, and row hiding (steps 4 to 6), and the alert |
+| **Upkeep** | What each open does first: [open-time steps](../operations/bulletin-automation.md#header-protection-and-validation-automation) 1 to 9, from header protection to tagging. `onOpen` then shows the alert (step 10) |
+| **Readers** | Everything that reads the bulletin tabs: the API, the printed bulletin, the [roster checks](../operations/bulletin-automation.md#roster-conflict-highlights-and-unknown-names), the [English-only guard](../operations/bulletin-automation.md#english-only-sabbath-calendar-input), the upkeep's quarter rows, `Weekly Data` repair, `Hymn Bank` upkeep, and row hiding (steps 4 to 7), and the alert |
 
 **Sources:** the lookup is in `google-apps-script/BulletinApi.gs` (`BULLETIN_TABS`,
 `BULLETIN_SHEET_COLUMNS`, `getBulletinSheet_`, `resolveBulletinHeaders_`). The

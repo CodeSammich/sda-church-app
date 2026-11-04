@@ -1887,17 +1887,12 @@ function formatSabbathSchoolLessonForPrint_(lesson) {
   return english || chinese ? printedBilingualText_(english, chinese) : physicalTbdText_();
 }
 
-/**
- * The Sabbath School hymns on one line per language, such as
- * "第413首 · 第205首" over "AH 348 · AH 206". Each cell holds one hymn, typed in
- * either language: Chinese text or a bare number is a Chinese hymnal number,
- * and a bare number prints as 第N首. What was typed is printed; the other
- * language is filled in by number where the hymnals' number maps have it, and
- * otherwise repeats what was typed. Two identical lines print as one.
- */
 // One line per Sabbath School hymn: the English, a dot, then the Chinese, where
-// the hymnal map has the other one, such as "AH 348 · 第413首 教會根基";
-// otherwise the hymn as typed. A bare number is a Chinese hymnal number.
+// the hymnal map has the other one, such as
+// "AH 348 The Church Has One Foundation · 第413首 教會根基" for a typed
+// "第413首 教會根基"; otherwise the hymn as typed. A bare number is a Chinese
+// hymnal number, and prints as 第N首. The other side gets its number and title
+// from resolvePrintedHymnText_ (#619).
 function getPrintedSabbathSchoolHymnLines_(hymns) {
   var lines = [];
   (hymns || []).forEach(function (value) {

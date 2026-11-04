@@ -109,8 +109,9 @@ but deliberately retain their church-approved fixed wording for display.
 plugin system. Before changing one of its primary IDs, a fork must:
 
 1. Add the hymnal metadata and number mappings to `HymnalNumberMappings.json`. The printed
-   bulletin's `HymnalData.gs` reads only the 1985 ↔ 505 maps, so another primary hymnal
-   also needs `scripts/build-hymnal-apps-script.cjs` and `PrintedHymnLookup.gs` changed.
+   bulletin's `HymnalData.gs` reads only the 1985 ↔ 505 maps and titles, so another primary
+   hymnal also needs `scripts/export-hymn-bank.cjs` (its titles and Hymn Bank rows),
+   `scripts/build-hymnal-apps-script.cjs` and `PrintedHymnLookup.gs` changed.
 2. Add or import its searchable catalog in `BulletinHymnalService.ts`.
 3. Register a hymnal adapter with its catalog lookup, valid number range, and reader route.
 4. Implement the reader route if it does not already exist: add the hymnal to `HYMNALS` in
