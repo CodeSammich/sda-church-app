@@ -103,6 +103,60 @@ describe('printed bulletin Apps Script helpers', () => {
     expect(output).not.toContain('中文經文');
   });
 
+  it('fits each Zoom study time on the cover on one line in its column', () => {
+    const context = loadAppsScript({});
+    const output = JSON.parse(
+      runInContext(
+        `var slots = [];
+         var columnWidths = [];
+         appendBrooklynOnlineText_ = function () {};
+         appendBrooklynOnlineSlot_ = function (cell, slot) { slots.push(slot); };
+         appendSpacer_ = function () {};
+         var fakeCell = {
+           appendHorizontalRule: function () { return { getParent: function () { return null; } }; },
+           appendTable: function () {
+             return {
+               setBorderWidth: function () {},
+               setColumnWidth: function (index, width) { columnWidths[index] = width; },
+               getCell: function () {
+                 return { clear: function () {}, setPaddingLeft: function () {}, setPaddingRight: function () {}, setPaddingTop: function () {}, setPaddingBottom: function () {} };
+               },
+             };
+           },
+         };
+         appendBrooklynOnlineZoomPanel_(fakeCell);
+         JSON.stringify({ slots: slots, columnWidths: columnWidths })`,
+        context,
+      ) as string,
+    ) as { slots: string[][]; columnWidths: number[] };
+
+    // Times New Roman advance widths in 2048ths of an em (Liberation Serif's
+    // are the same), at 10 points; each Chinese character is 10 points.
+    const timesWidths: Record<string, number> = {
+      ' ': 512, '0': 1024, '8': 1024, '9': 1024, ':': 569, '–': 1024, '|': 410, A: 1479, M: 1821,
+      P: 1139, T: 1251, W: 1933, a: 909, d: 1024, e: 909, n: 1024, s: 797, u: 1024, y: 1024,
+    };
+    const width = (text: string) =>
+      [...text].reduce((total, character) => {
+        if (/[\u3400-\u9fff]/.test(character)) return total + 10;
+        expect(timesWidths[character]).toBeDefined();
+        return total + (timesWidths[character] / 2048) * 10;
+      }, 0);
+
+    expect(output.columnWidths).toEqual([184, 184]);
+    expect(output.slots.map((slot) => slot[0])).toEqual([
+      'Tue 8:00–9:00 AM | 週二早 8:00–9:00',
+      'Wed 8:00–9:00 AM | 週三早 8:00–9:00',
+      'Wed 8:00–9:00 PM | 週三晚 8:00–9:00',
+    ]);
+    // The two side by side fit their 184-point columns with room to spare.
+    // "Wednesday 8:00–9:00 AM | 週三早 8:00–9:00" was 188 points, and wrapped.
+    output.slots.slice(0, 2).forEach(([time]) => {
+      expect(width(time)).toBeLessThanOrEqual(184 - 10);
+    });
+    expect(width('Wednesday 8:00–9:00 AM | 週三早 8:00–9:00')).toBeGreaterThan(184);
+  });
+
   it('adds the document and font actions to the Sheets menu', () => {
     const menuItems: string[] = [];
     let menuTitle = '';

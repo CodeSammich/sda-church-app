@@ -31,17 +31,19 @@ function appendBrooklynOnlineZoomPanel_(cell) {
     '254 187 9535 | Password / 密碼: 760641',
     PRINTED_BULLETIN_TYPE.bodySize,
   );
+  // Short day names: "Wednesday 8:00–9:00 AM | 週三早 8:00–9:00" is 188 points
+  // in Times New Roman, too wide for its 184-point column, so "9:00" wrapped.
   appendBrooklynOnlineSlotTable_(cell, [
     [
-      'Tuesday 8:00–9:00 AM | 週二早 8:00–9:00',
+      'Tue 8:00–9:00 AM | 週二早 8:00–9:00',
       'Sabbath School Study | 安息日學研讀',
     ],
     [
-      'Wednesday 8:00–9:00 AM | 週三早 8:00–9:00',
+      'Wed 8:00–9:00 AM | 週三早 8:00–9:00',
       'Theological Book Study | 神學書籍研讀',
     ],
     [
-      'Wednesday 8:00–9:00 PM | 週三晚 8:00–9:00',
+      'Wed 8:00–9:00 PM | 週三晚 8:00–9:00',
       'Bible Study | 聖經研讀',
     ],
   ]);
