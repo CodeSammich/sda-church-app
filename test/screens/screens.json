@@ -48,7 +48,7 @@
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give, and first-launch setup over it.",
     "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, the popup a tapped verse opens, and Offline Bible Audio, which its audio settings open.",
-    "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
+    "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah; and Offline Bible Audio's narrator popup, as the bible-reading group's phones are at their time limit.",
     "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
     "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs. Also, on the iPhone only, Bible audio playing and a children's lesson open in Quick Look (#551): this group finished first or second in the six release runs from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so these longer shots shouldn't lengthen the run."
   },
@@ -253,6 +253,7 @@
       "$comment": "The question Offline Bible Audio asks before a download on mobile data (#611), by popup=mobile-data in the preview build, for Souer's whole Bible: the app's own popup, not the system's alert, with its answers as stacked buttons, Use mobile data first and Cancel last, and no X. In Spanish at the largest text sizes, the title and the longest answer may wrap, on the iPhone a word to a line, but no answer may be cut short with an ellipsis, as Paper's one-line Button cut \"Usar datos m...\" (run 41714586130), and Cancelar must show in the popup: at the iPhone's largest, the title and answers once overflowed it, and Cancelar showed over the page below (run 41741902378). The title scrolls with the message now, above the answers. The text readers may read the curly apostrophe in \"You’re\" as a straight one, and drop the hyphen in \"Wi-Fi\".",
       "path": "you/audio-downloads?narrator=souer&popup=mobile-data",
       "variants": ["default", "es-xl-ios-large-text", "es-xl-android-font-max"],
+      "ipadVariants": ["landscape"],
       "variantRules": {
         "default": { "mustShowLines": ["^Use mobile data\\?$", "^You.re on mobile data", "^Use mobile data$", "^Wait for Wi-?Fi$", "^Cancel$"], "mustNotShowLines": ["^Close$", "^CANCEL$", "^OK$"] },
         "es-xl-ios-large-text": { "mustShowLines": ["^¿Usar\\b", "^Usar datos( móviles)?$", "^Esperar Wi-?Fi$", "^Cancelar$"], "mustNotShowLines": ["^Cerrar$", "(\\.\\.\\.|…)$"] },
@@ -265,6 +266,7 @@
       "$comment": "The app's own question before the phone's, the first time a long download starts (#610), by popup=notifications in the preview build: what the notifications are for, that the download keeps going either way, and where to turn them off, with Allow first and Not now. iOS asks only for a word when it's done, so its words are shorter. The text readers may read the curly apostrophes as straight ones, and the Chinese message wraps inside 下載都會繼續 on the Android phone, so the rule checks 不論是否允許.",
       "path": "you/audio-downloads?narrator=cuv-mandarin&popup=notifications",
       "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
       "variantRules": {
         "default": {
           "mustShowLines": [
@@ -286,8 +288,8 @@
     },
     {
       "name": "offline-bible-audio-narrator",
-      "group": "bible-reading",
-      "$comment": "Offline Bible Audio's narrator popup, which lists every narrator to download with what's on the phone, by popup=narrator in the preview build (#324). A key-screen build has nothing downloaded. Its iPad shot checks the popup's width: when it was new, it had a percentage width, which on iOS fills 90% of an iPad.",
+      "group": "bible-text",
+      "$comment": "Offline Bible Audio's narrator popup, which lists every narrator to download with what's on the phone, by popup=narrator in the preview build (#324). A key-screen build has nothing downloaded. Its iPad shot checks the popup's width: when it was new, it had a percentage width, which on iOS fills 90% of an iPad. In the bible-text group, the compiling runner's, since the bible-reading group's phones are at their time limit.",
       "path": "you/audio-downloads?narrator=souer&popup=narrator",
       "variants": ["default"],
       "ipadVariants": ["landscape"],
