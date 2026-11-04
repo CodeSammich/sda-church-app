@@ -32,7 +32,6 @@ jobs:
     timeout-minutes: 3
     env:
       BULLETIN_API_URL: https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec
-      BULLETIN_TEST_DATE: "2026-08-08"
     steps:
       - name: Check out pull request
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

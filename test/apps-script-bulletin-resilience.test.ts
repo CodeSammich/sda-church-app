@@ -24,6 +24,8 @@ const WEEKLY_HEADERS = [
 ];
 
 const SABBATH = '2026-11-07';
+// The API answers only for Sabbaths near today, so the tests fix today.
+const TODAY = '2026-11-04';
 
 // Each cell names its own column, so a value shows where it was read from.
 const scheduleRow = () =>
@@ -282,6 +284,7 @@ const load = (
   ].forEach((file) =>
     runInContext(readFileSync(join(process.cwd(), 'google-apps-script', file), 'utf8'), context),
   );
+  runInContext(`getPrintedBulletinToday_ = function () { return '${TODAY}'; }`, context);
   return context;
 };
 
@@ -913,5 +916,68 @@ describe('changeovers kept for older apps', () => {
       expect(changeover.cleanup.length).toBeGreaterThan(20);
     });
     expect(new Set(list.map((changeover) => changeover.id)).size).toBe(list.length);
+  });
+});
+
+describe('the public API', () => {
+  const ask = (context: object, parameter: Record<string, string>) =>
+    JSON.parse(runInContext(`doGet({ parameter: ${JSON.stringify(parameter)} }).text`, context) as string) as {
+      ok: boolean;
+      error?: string;
+      bulletin?: { date: string };
+    };
+
+  it.each([
+    ['14 days back', '2026-10-21'],
+    ['today', TODAY],
+    ['120 days ahead', '2027-03-04'],
+  ])('answers for a date %s', (_, date) => {
+    const context = load(createChurchWorkbook());
+
+    const response = ask(context, { date, appVersion: '1.6.0' });
+
+    expect(response.ok).toBe(true);
+    expect(response.bulletin?.date).toBe(date);
+  });
+
+  it.each([
+    ['more than 14 days back', '2026-10-20'],
+    ['a year back', '2025-11-08'],
+    ['more than 120 days ahead', '2027-03-05'],
+  ])("doesn't answer for a date %s, and says which dates it does", (_, date) => {
+    const context = load(createChurchWorkbook());
+
+    expect(ask(context, { date, appVersion: '1.6.0' })).toEqual({
+      ok: false,
+      error: 'Bulletins are available from 2026-10-21 to 2027-03-04',
+    });
+    // Nor for the API's own checks or an older app.
+    expect(ask(context, { date, client: 'check' }).ok).toBe(false);
+    expect(ask(context, { date }).ok).toBe(false);
+  });
+
+  it('still says what a bad date is', () => {
+    const context = load(createChurchWorkbook());
+
+    expect(ask(context, { date: '2026-02-30' })).toEqual({
+      ok: false,
+      error: 'A valid date query parameter is required (YYYY-MM-DD)',
+    });
+  });
+
+  it("logs any other failure and answers with a fixed message, so Google's own error text never leaves", () => {
+    const workbook = createChurchWorkbook();
+    const context = load(workbook);
+    const logged: string[] = [];
+    runInContext('console = { error: function (text) { logged.push(String(text)); } };', Object.assign(context, { logged }));
+    workbook.getSheetByName = () => {
+      throw new Error('Service Spreadsheets failed while accessing document with id 1abc.');
+    };
+
+    expect(ask(context, { date: SABBATH, appVersion: '1.6.0' })).toEqual({
+      ok: false,
+      error: 'The bulletin is unavailable right now. Please try again later.',
+    });
+    expect(logged.join('\n')).toContain('Service Spreadsheets failed');
   });
 });

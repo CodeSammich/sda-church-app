@@ -11,7 +11,8 @@
  * Production endpoint:
  * https://script.google.com/macros/s/AKfycbzBDlptzh5JpDyAiucJBXO4pQXe2hy2X3DL_1t6NixK-2tV3md_WbyhdDAtCGvGCwzX/exec
  *
- * Example request: append ?date=2026-08-08 to the production endpoint.
+ * Example request: append ?date=<a Sabbath within two weeks back or 120 days
+ * ahead, as YYYY-MM-DD> to the production endpoint.
  */
 
 var CONFIG = Object.freeze({
@@ -23,6 +24,14 @@ var CONFIG = Object.freeze({
   // pre-migration responses do not hide newly added roster fields.
   cacheVersion: 'v8',
   dateHeaders: ['Date', 'Service Date', 'Sabbath Date', 'What date is this Sabbath?'],
+  // The public API answers only for Sabbaths near today, so the roster's
+  // history can't be read week by week. The app asks for this Sabbath and the
+  // next; the margins cover a phone with the wrong date and the API checks,
+  // which look a few months ahead. The printed bulletin doesn't go through
+  // doGet, so it can still be made for any date.
+  publicDaysBack: 14,
+  publicDaysAhead: 120,
+  unavailableMessage: 'The bulletin is unavailable right now. Please try again later.',
 });
 
 // The order is intentional: it disambiguates the duplicated Queens/Brooklyn
@@ -536,6 +545,7 @@ function doGet(event) {
       });
     }
     var requestedDate = getRequestedDate_(event);
+    checkPublicDateWindow_(requestedDate);
     noteOlderAppCall_(parameter);
     var bulletin = getBulletin_(requestedDate, {
       allowMissingSchedule: isAppVersionAtLeast_(
@@ -546,10 +556,41 @@ function doGet(event) {
 
     return jsonResponse_({ ok: true, bulletin: bulletin });
   } catch (error) {
+    // Only the messages written for callers reach them. Anything else, such
+    // as a Google service error, goes to the execution log instead.
+    if (!(error && error.isPublic) && typeof console !== 'undefined') {
+      console.error(error && error.stack ? error.stack : String(error));
+    }
     return jsonResponse_({
       ok: false,
-      error: error && error.message ? error.message : String(error),
+      error: error && error.isPublic ? error.message : CONFIG.unavailableMessage,
     });
+  }
+}
+
+// An error whose message the app may show, as it does under the bulletin.
+function publicError_(message) {
+  var error = new Error(message);
+  error.isPublic = true;
+  return error;
+}
+
+function checkPublicDateWindow_(requestedDate) {
+  var today;
+  try {
+    today = getPrintedBulletinToday_();
+  } catch (error) {
+    // Without today's date there's no window to check; give the bulletin.
+    return;
+  }
+  var days = getDaysBetweenIsoDates_(today, requestedDate);
+  if (days < -CONFIG.publicDaysBack || days > CONFIG.publicDaysAhead) {
+    throw publicError_(
+      'Bulletins are available from ' +
+        addPrintedBulletinDays_(today, -CONFIG.publicDaysBack) +
+        ' to ' +
+        addPrintedBulletinDays_(today, CONFIG.publicDaysAhead),
+    );
   }
 }
 
@@ -700,7 +741,7 @@ function buildBulletin_(requestedDate, options) {
     requestedDate,
   );
   if (schedule.error && !(options && options.allowMissingSchedule)) {
-    throw new Error(schedule.error);
+    throw publicError_(schedule.error);
   }
   // Without the tab, its Date column, or this Sabbath's row (#580), every
   // schedule field is blank and the bulletin says the schedule isn't set.
@@ -1204,7 +1245,7 @@ function isLatinName_(value) {
 function getRequestedDate_(event) {
   var date = event && event.parameter ? event.parameter.date : '';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || toIsoDate_(date) !== date) {
-    throw new Error('A valid date query parameter is required (YYYY-MM-DD)');
+    throw publicError_('A valid date query parameter is required (YYYY-MM-DD)');
   }
   return date;
 }
