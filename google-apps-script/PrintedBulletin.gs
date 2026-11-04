@@ -1321,7 +1321,9 @@ function createPrintedBulletinWordCopy(request) {
     lineHeight = PRINTED_BULLETIN_WORD_COPY.lineHeight;
   }
   var fonts = readPrintedBulletinFonts_();
-  var parts = Utilities.unzip(response.getBlob());
+  // A .docx is a zip, but Drive labels it as Word, and Utilities.unzip takes
+  // only a blob labelled application/zip.
+  var parts = Utilities.unzip(response.getBlob().setContentType('application/zip'));
   var styles = parts.filter(function (part) {
     return part.getName() === 'word/styles.xml';
   })[0];
