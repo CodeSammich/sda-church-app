@@ -647,7 +647,7 @@
       "mustNotShowLines": ["^Welcome$", "^Appearance$"]
     },
     {
-      "$comment": "Setup's appearance step: the four themes.",
+      "$comment": "Setup's appearance step: the four themes. RapidOCR can read the sun icon beside Light as a colon.",
       "name": "setup-appearance",
       "group": "worship-and-you",
       "tabs": false,
@@ -656,7 +656,7 @@
       "settings": { "setupDone": false, "setupStep": "appearance" },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Appearance$", "^System$", "^Light$", "^Dark$"],
+      "mustShowLines": ["^Appearance$", "^System$", "^:?Light$", "^Dark$"],
       "mustNotShowLines": ["^Welcome$", "^Text size$"]
     },
     {
@@ -671,7 +671,7 @@
       "ipadVariants": ["landscape"],
       "mustNotShowLines": ["^Appearance$", "dark mode", "深色模式"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier to read", "^High contrast$", "^Standard$"] },
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
         "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$"] }
       }
     },
@@ -687,7 +687,7 @@
       "ipadVariants": ["landscape"],
       "mustNotShowLines": ["^Next$", "light mode", "淺色模式"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier to read", "^High contrast$", "^Standard$", { "line": "^Get Started$", "platforms": ["ios", "ipad"] }] },
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$", { "line": "^Get Started$", "platforms": ["ios", "ipad"] }] },
         "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$"] }
       }
     },
@@ -703,7 +703,7 @@
       "ipadVariants": ["landscape"],
       "mustNotShowLines": ["^Close$", "dark mode", "深色模式"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier to read", "^High contrast$", "^Standard$"] },
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
         "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$"] }
       }
     },
@@ -719,7 +719,7 @@
       "ipadVariants": ["landscape"],
       "mustNotShowLines": ["^Close$", "light mode", "淺色模式"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier to read", "^High contrast$", "^Standard$"] },
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
         "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$"] }
       }
     },
