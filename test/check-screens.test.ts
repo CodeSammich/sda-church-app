@@ -198,13 +198,13 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-default'), badges)).toEqual([]);
     expect(checkShot(shot('bible-dual-dark'), badges)).toEqual([]);
 
-    // With a back arrow, the iPhone at 125% has room for both names.
+    // With a back arrow, the iPhone has room for both names at every size.
     expect(checkShot(shot('bible-dual-back-default'), badges)).toEqual([]);
+    expect(checkShot(shot('bible-dual-back-xl'), badges)).toEqual([]);
+    // What the 0.43.0 preview showed: the names cut short.
     const namesCut = [...withoutHeader, line('EN B... +* C...', 0.05)];
     expect(checkShot(shot('bible-dual-back-default'), namesCut)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
-    // At 150% and 200% they may be cut short, or dropped; the badge stays.
-    expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual([]);
-    expect(checkShot(shot('bible-dual-back-xl'), [...withoutHeader, line('EN + *', 0.05)])).toEqual([]);
+    expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
   });
 
   it('catches tab labels that wrap, or rise out of an overgrown tab bar, at about 4× text (#380)', () => {
@@ -337,13 +337,13 @@ describe('rules for one platform (#372)', () => {
 
   it("require the Bible header's names on the Android phone only where they fit", () => {
     const header = (text: string) => [line(text, 0.05), line('Psalms', 0.86), line('Verse', 0.86)];
+    const namesGone = [...tabs, ...header('EN + 繁')];
     expect(checkShot(androidShot('bible-dual-default'), [...tabs, ...header('EN BSB + 繁 CUV')])).toEqual([]);
-    // With a back arrow, its narrower screen leaves only the badges.
-    expect(checkShot(androidShot('bible-dual-back-default'), [...tabs, ...header('EN + 繁')])).toEqual([]);
-    expect(checkShot(shot('bible-dual-back-default'), [...tabs, ...header('EN + 繁')])).toEqual([
-      'no line matches /BSB/',
-      'no line matches /CUV/',
-    ]);
+    // With a back arrow, both names fit at 100%; at 150% its narrower screen
+    // leaves only the badges, where the iPhone keeps the names.
+    expect(checkShot(androidShot('bible-dual-back-default'), namesGone)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
+    expect(checkShot(androidShot('bible-dual-back-large'), namesGone)).toEqual([]);
+    expect(checkShot(shot('bible-dual-back-large'), namesGone)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
   });
 });
 

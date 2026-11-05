@@ -7,9 +7,9 @@ import {
 } from '@/hooks/useGlobalHeaderHeight';
 
 // The Bible header's translation button shares a row with the icon buttons
-// (#376). When the row is tight it gives up its names first, cut short with
-// "…" and then dropped, and last its language badges, and stacks
-// only as a last resort. It used to stack whenever the full button didn't fit,
+// (#376). When the row is tight it gives up its names, cut short with "…" and
+// then dropped, keeping its language badges, and stacks only as a last resort.
+// It used to stack whenever the full button didn't fit,
 // as with a back arrow at the app's 150% and 200% text sizes, leaving a wide,
 // mostly empty button and a back arrow between the rows.
 describe("the Bible header's controls", () => {

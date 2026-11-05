@@ -118,14 +118,16 @@
     {
       "name": "bible-dual-back",
       "group": "bible-reading",
-      "$comment": "Opened from Home, so the header also has a back arrow and less room. When it's tight, the translation button gives up its names, cut short and then dropped, and then its badges (#376). On the iPhone at 125% both full names fit; at 150% and 200% they may be cut short. The Android phone's narrower screen drops them, leaving EN + 繁, so there only the badge is required.",
+      "$comment": "Opened from Home, so the header also has a back arrow and less room. When it's tight, the translation button gives up its names, cut short and then dropped, and only then takes a row of its own (#376). Both full names fit at 100% everywhere, and on the iPhone at 150% and 200% too, since dropping the 文A icon (1.7.0) saved more room than the bigger badges took. The Android phone's narrower screen drops them at 150% and 200%, leaving EN + 繁, so there only the badge is required.",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB&backTo=%2F",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "large", "xl"],
       "ipadVariants": ["landscape"],
       "mustShowLines": ["\\bEN\\b", "^Psalms\\b"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }] }
+        "default": { "mustShowLines": ["BSB", "CUV"] },
+        "large": { "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }] },
+        "xl": { "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }] }
       }
     },
     {

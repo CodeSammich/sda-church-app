@@ -248,7 +248,7 @@ simple, blended colors.
     button, the translation button's names and arrow, like the Bible card's pills, and
     the saved-verse button once a verse is saved. The translation button has no 文A icon
     (from 1.7.0): each translation's language badge, EN or 繁, about the icon's size and
-    in the pills' colours, says which language it is, and leaves room for the names.
+    in the pills' colors, says which language it is, and leaves room for the names.
   - **Contrast (#669):** high contrast, the white and night blue above, is the default.
     Members who'd rather have softer colors choose **Standard**, for light mode and for
     dark mode each, since a member may switch, or the System or Sunrise/Sunset theme

@@ -919,9 +919,9 @@ every screen must show:
   match. A `mustShowLines` rule can also be `{ "line": …, "minLeft": 0.5 }`, for a
   line that must start at least that far across, such as Psalm 9's right-aligned
   "Selah", or `{ "line": …, "maxTop": 0.4 }`, for one that must start no farther
-  down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header uses them: the
-  translation button shows the EN badge and both full names, and with a back arrow the
-  names are required only at 125%, since at 150% and 200% they may be cut short;
+  down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header opened from Home uses
+  them: its translation button must show both full names at 100%, and on the iPhone at
+  150% and 200% too, while the Android phone's narrower screen may drop them there;
 - no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
   ("undefined", "NaN").
 
