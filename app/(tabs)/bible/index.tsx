@@ -4302,22 +4302,23 @@ export default function BibleScreen() {
                       borderWidth: 1,
                       borderColor: getDockControlBorderColor(theme),
                     },
+                    // While it's on, it fills in like the play button.
+                    sleepTimerSetting !== null && {
+                      backgroundColor: theme.colors.tertiary,
+                      borderColor: theme.colors.tertiary,
+                    },
                   ]}
                 >
                   <AppIcon
                     name="timer-outline"
                     size={25}
                     textScale={bibleUiTextScale}
-                    color={getDockControlContentColor(theme)}
+                    color={
+                      sleepTimerSetting !== null
+                        ? theme.colors.onPrimary
+                        : getDockControlContentColor(theme)
+                    }
                   />
-                  {sleepTimerSetting !== null && (
-                    <View
-                      style={[
-                        ReaderStyles.timerBadge,
-                        { backgroundColor: theme.colors.tertiary },
-                      ]}
-                    />
-                  )}
                 </TouchableOpacity>
               </View>
 
