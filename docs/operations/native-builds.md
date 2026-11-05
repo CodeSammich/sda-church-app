@@ -920,8 +920,8 @@ every screen must show:
   line that must start at least that far across, such as Psalm 9's right-aligned
   "Selah", or `{ "line": …, "maxTop": 0.4 }`, for one that must start no farther
   down than that, such as the centred audio settings popup's title. `variantRules` adds either for one variant. The Bible header uses them: the
-  translation button shows its 文A icon (which Vision reads as "XA"), the EN badge, and
-  both full names, and at 150% and 200% with a back arrow it shows them without the icon;
+  translation button shows the EN badge and both full names, and with a back arrow the
+  names are required only at 125%, since at 150% and 200% they may be cut short;
 - no system prompt ("Open in"), setup dialog ("Get Started"), or unfilled value
   ("undefined", "NaN").
 
@@ -1170,8 +1170,7 @@ on buttons. `uiautomator dump`, which reads the text exactly, can't run on Home:
 countdown keeps the screen from ever going idle, which the dump waits for. It also sees
 a label's whole text even when the screen cuts it short. The script turns off RapidOCR's
 check for upside-down text, which the app never shows: it turned some short words over,
-so the EN badge read as N3. RapidOCR reads the 文A icon as
-文A where Vision reads XA, so those rules accept either.
+so the EN badge read as N3.
 
 The phone's screen holds less than the iPhone's, so a few lines fall below the fold
 there, such as the Sabbath School age groups. A rule written
