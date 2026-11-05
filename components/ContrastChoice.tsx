@@ -8,7 +8,9 @@ import {
   useAppTheme,
   type ContrastMode,
 } from '@/constants/Themes';
-import { TEXT_SCALE_MIN } from '@/constants/AppPreferences';
+import { DEFAULT_TEXT_SCALE, TEXT_SCALE_MIN } from '@/constants/AppPreferences';
+import { useTextSize } from '@/constants/TextSizeContext';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { RadioButton, Text } from 'react-native-paper';
 
@@ -76,7 +78,7 @@ export const getContrastCopy = (language: string) =>
 const PREVIEW_TABS: readonly MaterialCommunityIconName[] = ['home', 'cross', 'compass-outline', 'account-circle-outline'];
 
 /** A small picture of the page's bottom with the tab bar, in one contrast. */
-function ContrastPreview({ contrast }: Readonly<{ contrast: ContrastMode }>) {
+function ContrastPreview({ compact, contrast }: Readonly<{ compact: boolean; contrast: ContrastMode }>) {
   const appTheme = useAppTheme();
   // Only its colours are used, so it skips scaling the fonts.
   const theme = getAppTheme(appTheme.dark, false, TEXT_SCALE_MIN, contrast);
@@ -86,7 +88,7 @@ function ContrastPreview({ contrast }: Readonly<{ contrast: ContrastMode }>) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
-      style={[styles.preview, { backgroundColor: theme.colors.background }]}
+      style={[styles.preview, compact && styles.previewCompact, { backgroundColor: theme.colors.background }]}
     >
       <View style={[styles.previewLine, { backgroundColor: theme.colors.onSurfaceVariant }]} />
       <View style={[styles.previewLine, styles.previewLineShort, { backgroundColor: theme.colors.onSurfaceVariant }]} />
@@ -94,11 +96,15 @@ function ContrastPreview({ contrast }: Readonly<{ contrast: ContrastMode }>) {
         {PREVIEW_TABS.map((icon, index) => (
           <View
             key={icon}
-            style={[styles.previewTab, index === 1 && { backgroundColor: theme.colors.floatingSelected }]}
+            style={[
+              styles.previewTab,
+              compact && styles.previewTabCompact,
+              index === 1 && { backgroundColor: theme.colors.floatingSelected },
+            ]}
           >
             <AppIcon
               name={icon}
-              size={22}
+              size={compact ? 18 : 22}
               color={index === 1 ? selected : theme.colors.onSurfaceVariant}
             />
           </View>
@@ -110,7 +116,10 @@ function ContrastPreview({ contrast }: Readonly<{ contrast: ContrastMode }>) {
 
 /**
  * The two choices, each with its picture, label and description. Pressing
- * one chooses it.
+ * one chooses it. Side by side where they fit, as on a phone at up to the
+ * 125% default, so both pictures are in view to compare without scrolling,
+ * with a smaller radio mark so the labels keep whole words; one above the
+ * other at larger sizes.
  */
 export function ContrastChoice({
   language,
@@ -119,8 +128,15 @@ export function ContrastChoice({
 }: Readonly<{ language: string; onChoose: (mode: ContrastMode) => void; value: ContrastMode }>) {
   const theme = useAppTheme();
   const copy = getContrastCopy(language);
+  const { textScale } = useTextSize();
+  const [width, setWidth] = useState(0);
+  const sideBySide = width >= 300 && textScale <= DEFAULT_TEXT_SCALE;
   return (
-    <View accessibilityRole="radiogroup" style={styles.options}>
+    <View
+      accessibilityRole="radiogroup"
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      style={[styles.options, sideBySide && styles.optionsSideBySide]}
+    >
       {([CONTRAST_HIGH, CONTRAST_STANDARD] as const).map((mode) => {
         const selected = mode === value;
         const option = copy.options[mode];
@@ -134,6 +150,7 @@ export function ContrastChoice({
             testID={`contrast-${mode}`}
             style={({ pressed }) => [
               styles.option,
+              sideBySide && styles.optionSideBySide,
               {
                 backgroundColor: selected ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
                 borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
@@ -141,8 +158,15 @@ export function ContrastChoice({
               },
             ]}
           >
-            <ContrastPreview contrast={mode} />
-            <View style={styles.optionRow}>
+            <ContrastPreview compact={sideBySide} contrast={mode} />
+            <View style={[styles.optionRow, sideBySide && styles.optionRowSideBySide]}>
+              {sideBySide && (
+                <AppIcon
+                  name={selected ? 'radiobox-marked' : 'radiobox-blank'}
+                  size={20}
+                  color={selected ? theme.colors.primary : theme.colors.onSurfaceVariant}
+                />
+              )}
               <View style={styles.optionText}>
                 <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
                   {option.label}
@@ -151,14 +175,16 @@ export function ContrastChoice({
                   {option.description}
                 </Text>
               </View>
-              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
-                <RadioButton.Android
-                  value={mode}
-                  status={selected ? 'checked' : 'unchecked'}
-                  color={theme.colors.primary}
-                  uncheckedColor={theme.colors.onSurfaceVariant}
-                />
-              </View>
+              {!sideBySide && (
+                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
+                  <RadioButton.Android
+                    value={mode}
+                    status={selected ? 'checked' : 'unchecked'}
+                    color={theme.colors.primary}
+                    uncheckedColor={theme.colors.onSurfaceVariant}
+                  />
+                </View>
+              )}
             </View>
           </Pressable>
         );
@@ -170,6 +196,18 @@ export function ContrastChoice({
 const styles = StyleSheet.create({
   options: {
     gap: 12,
+  },
+  optionsSideBySide: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+  },
+  optionSideBySide: {
+    flex: 1,
+    padding: 8,
+  },
+  optionRowSideBySide: {
+    alignItems: 'flex-start',
+    gap: 6,
   },
   option: {
     borderRadius: 16,
@@ -194,6 +232,12 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 10,
   },
+  previewCompact: {
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
   previewLine: {
     borderRadius: 3,
     height: 6,
@@ -214,5 +258,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     flex: 1,
     paddingVertical: 6,
+  },
+  previewTabCompact: {
+    paddingVertical: 4,
   },
 });
