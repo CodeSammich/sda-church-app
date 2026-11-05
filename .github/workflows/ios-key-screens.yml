@@ -87,10 +87,7 @@ jobs:
         # runner also takes its group's iPad shots (#324), on an iPad it boots
         # while it waits, so the iPad adds no runner and no wait for a Mac.
         include:
-          - { group: home, batch: 1 }
-          - { group: bible-reading, batch: 2 }
           - { group: bible-text, batch: 3, builds: true }
-          - { group: library, batch: 4 }
           - { group: worship-and-you, batch: 5 }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
