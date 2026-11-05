@@ -18,10 +18,12 @@ export const TABLET_TAB_BAR_MIN_WIDTH = 600;
 export const getBarSurfaceColor = (theme: AppTheme) => theme.colors.floatingSurface;
 
 /**
- * The colour of the dock card's pills and round buttons: the page's own (warm
- * pink, or black in the dark theme), set off from the card's.
+ * The colour of the dock card's pills and round buttons: the selected tab's
+ * light blue, or its deeper night blue in the dark theme, so the card's
+ * controls match the tab bar below them. The page's own warm pink, or black,
+ * looked out of place on the white or night blue card.
  */
-export const getDockControlColor = (theme: AppTheme) => theme.colors.background;
+export const getDockControlColor = (theme: AppTheme) => theme.colors.floatingSelected;
 
 /**
  * The edge of the dock card's pills and round buttons: the theme's outline, or
