@@ -79,7 +79,7 @@ describe('key screen list (test/screens/screens.json)', () => {
     );
   });
 
-  it('checks Bible audio and Quick Look on the iPhone only, in worship-and-you, with records the capture knows (#551)', () => {
+  it('checks Bible audio and Quick Look on the iPhone only, with records the capture knows (#551)', () => {
     const { RECORDS } = require('../scripts/key-screen-records.cjs');
     const recorded = config.screens.filter((screen: { record?: string }) => screen.record);
     expect(recorded.map((screen: { name: string }) => screen.name).sort()).toEqual([
@@ -90,7 +90,10 @@ describe('key screen list (test/screens/screens.json)', () => {
       expect(RECORDS).toHaveProperty(screen.record);
       // Android checks its audio in android-audio-e2e.yml.
       expect(screen.platforms).toEqual(['ios']);
-      expect(screen.group).toBe('worship-and-you');
+      expect({ screen: screen.name, group: screen.group }).toEqual({
+        screen: screen.name,
+        group: screen.name === 'bible-audio-playing' ? 'worship-and-you' : 'library',
+      });
     }
     const playing = config.screens.find((screen: { name: string }) => screen.name === 'bible-audio-playing');
     expect(playing.path).toMatch(/^bible\?.*&play=1$/);
@@ -300,7 +303,7 @@ describe('iOS key screens', () => {
     }
     // The others stop waiting as soon as the builder's job ends without the app.
     const batch = Object.keys(config.groups).indexOf(builder) + 1;
-    expect(workflow).toContain(`select(.name == "iOS key screens batch ${batch} (${builder})")`);
+    expect(workflow).toContain(`select(.name == "iOS key screens batch ${batch}")`);
     expect(workflow.match(/ios-simulator-app-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
   });
 
@@ -405,7 +408,7 @@ describe('key-screen groups', () => {
     }
   });
 
-  it('flags a group over 6 minutes of capture, as a reminder to prune its screenshots', () => {
+  it('flags a group over 8 minutes of capture, as a reminder to prune its screenshots', () => {
     // The 6-minute limit is a reminder, not a rule. When a group passes it,
     // first prune: drop variants that repeat what another shot already shows
     // (say, a dark or Chinese copy of a screen whose layout doesn't change),
@@ -413,10 +416,13 @@ describe('key-screen groups', () => {
     // the key screens miss: screens, popups, and states no shot covers yet
     // (#456). Only then move some related screens to a lighter group,
     // or split one. If a group is still over after that, raise the limit;
-    // don't cut useful screenshots to fit it.
+    // don't cut useful screenshots to fit it. Raised from 6 to 8 minutes in
+    // 1.7.0: its release run took 37 minutes on worship-and-you, with the
+    // iPad's shots after the iPhone's, against 24 on library, so Sabbath
+    // School moved to library, whose iPhone shots then came to 7.5 minutes.
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(shots, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 360 }).toMatchObject({ group, over: false });
+      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 480 }).toMatchObject({ group, over: false });
     }
   });
 
@@ -1213,9 +1219,10 @@ describe('Android key screens (#372)', () => {
   });
 
   it('keeps every Android group within the same reminder to prune', () => {
+    // 8 minutes, as on the iPhone, since Sabbath School moved to library (1.7.0).
     for (const group of Object.keys(config.groups)) {
       const seconds = takeGroup(android, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
-      expect({ group, over: seconds > 360 }).toEqual({ group, over: false });
+      expect({ group, over: seconds > 480 }).toEqual({ group, over: false });
     }
   });
 
@@ -1430,8 +1437,9 @@ describe('Android key screens workflow (#372)', () => {
         expect(text).toMatch(new RegExp(`- \\{ group: ${group}, batch: ${index + 1}[,} ]`));
       });
     }
-    expect(ios).toContain('name: iOS key screens batch ${{ matrix.batch }} (${{ matrix.group }})');
-    expect(workflow).toContain('name: Android key screens batch ${{ matrix.batch }} (${{ matrix.group }})');
+    // Only the number: a failed batch's log says which group it took.
+    expect(ios).toContain('name: iOS key screens batch ${{ matrix.batch }}\n');
+    expect(workflow).toContain('name: Android key screens batch ${{ matrix.batch }}\n');
   });
 
   it('captures and checks each group on its own emulator runner, from the list in screens.json', () => {

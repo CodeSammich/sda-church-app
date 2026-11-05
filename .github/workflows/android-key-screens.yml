@@ -107,7 +107,7 @@ jobs:
       github.event_name != 'pull_request' ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
-    name: Android key screens batch ${{ matrix.batch }} (${{ matrix.group }})
+    name: Android key screens batch ${{ matrix.batch }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:

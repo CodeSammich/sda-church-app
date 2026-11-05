@@ -608,7 +608,8 @@ needs a Mac.
 each release PR into `main` without signing, on Apple Silicon runners (`macos-26`,
 arm64), with the same Xcode as the signed iOS build. It runs five `capture` jobs at
 once, one per key-screen group, numbered in the groups' order: **iOS key screens batch
-1 (home)** to **batch 5 (worship-and-you)**:
+1** (`home`) to **batch 5** (`worship-and-you`). The names carry only the number; a
+failed batch's log says which group it took:
 
 - The `bible-text` runner (batch 3), which has the lightest group, compiles the app once,
   reusing what it can from the compile cache (below), and shares it with the others as
@@ -806,8 +807,8 @@ screens, such as the Bible reader's layout or the library, listed under `groups`
 the App Store copies. The release PR waits only for the slowest group.
 
 **Adding a key screen.** Give it the `group` for its part of the app, as `groups`
-describes. A test fails if any group would take more than 6 minutes to capture. The
-limit is a reminder to prune, not a rule:
+describes. A test fails if any group would take more than 8 minutes to capture on the
+iPhone, or 7 on the iPad. The limit is a reminder to prune, not a rule:
 
 1. Prune first: drop variants that repeat what another shot already shows, such as a
    dark or Chinese copy of a screen whose layout doesn't change, and screens no longer
@@ -879,10 +880,9 @@ twice fails the run.
 
 **Audio and Quick Look.** Bible audio plays only on Android in the other checks
 ([Android audio test on release PRs](#android-audio-test-on-release-prs)), so two
-iPhone-only shots in the `worship-and-you` group check it there, on the app the run
-already builds (#551). That group finished first or second in the six release runs
-from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so the two shots,
-about 50 seconds with their launches, shouldn't lengthen the run. In the first trial
+iPhone-only shots check it there, on the app the run already builds (#551): Bible
+audio in the `worship-and-you` group, and the lesson, with Sabbath School, in `library`.
+The two shots take about 50 seconds with their launches. In the first trial
 the audio started a second after its 6-second wait, and the lesson took 22 seconds
 from launch to the shot.
 
@@ -1068,7 +1068,7 @@ only with a read-only token and reads no secret.
   emulator's x86_64 processor (`npm run build:android:apk:debug:intel`) and with
   `EXPO_PUBLIC_KEY_SCREENS=1`, so it reads the saved screen and `popup=`. The published
   APK and the store builds don't.
-- **Android key screens batch 1 (home)** to **batch 5 (worship-and-you)**, one per group, each boots an emulator the size of
+- **Android key screens batch 1** (`home`) to **batch 5** (`worship-and-you`), one per group, each boots an emulator the size of
   the phone below while the app builds, on Android 16 (API 36). First it frees disk
   space: an emulator needs about 7.4 GB, and one runner had only 6.4 GB free, so
   `scripts/free-runner-disk.sh` removes preinstalled tools these jobs never use, such as
@@ -1077,9 +1077,9 @@ only with a read-only token and reads no secret.
   app and runs `scripts/capture-android-screens.cjs --group <group>`, which saves
   `screens/android/<screen>-<variant>.png`, and then checks their text
   (`check-screens.cjs --platform android`).
-- **Android key screens batch 6 (google-play)** takes only the Google Play
+- **Android key screens batch 6** (`google-play`) takes only the Google Play
   shots, on an emulator of Play's size (below).
-- **Android key screens batch 7 (split-320)** to **batch 10 (split-981)** take the
+- **Android key screens batch 7** (`split-320`) to **batch 10** (`split-981`) take the
   screens a wide screen changes most (those whose `ipadVariants` include `default`) at
   a tablet's 150%, on emulators the size of an iPad's Slide Over and Split View windows,
   in points at 2x (`android.splitWindows`), which no iOS Simulator can be made to show
