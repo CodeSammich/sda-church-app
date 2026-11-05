@@ -78,7 +78,7 @@ jobs:
         # screens.json in step. GitHub's free plan runs five Mac jobs at once.
         # Three Simulators on one runner were slower: its 3 processors couldn't
         # keep up with them.
-        group: [home, bible-reading, bible-text, library, worship-and-you]
+        group: [bible-text, worship-and-you]
         # The app is compiled once, by the runner with the smallest group, and
         # shared with the others, which boot their iPhones meanwhile; five
         # separate compiles made the run wait for the slowest of five. A test
