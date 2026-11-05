@@ -1,5 +1,7 @@
 import type { AppTheme } from '@/constants/Themes';
 import type React from 'react';
+import type { BottomTabBarProps } from 'expo-router/js-tabs';
+import { StyleSheet } from 'react-native';
 
 /**
  * A window at least this wide, such as a tablet's, gets the tab bar's larger
@@ -49,19 +51,15 @@ export const getDockControlBorderColor = (theme: AppTheme) =>
  */
 export const getSelectedTabTint = (theme: AppTheme) => theme.colors.floatingSelected;
 
-type TabRoute = { key: string; name: string; params?: object };
-export type TabBarProps = {
-  state: { index: number; routes: TabRoute[] };
-  descriptors: Record<string, { options: any }>;
-  navigation: {
-    emit: (event: any) => { defaultPrevented: boolean };
-    navigate: (name: string, params?: object) => void;
-  };
-};
+// What Expo Router's tabs give a custom tab bar. Unlike React Navigation's,
+// they pass no `navigation`: presses go through `emitter` and `navigateToTab`,
+// as its own bar does. Calling `navigation.emit` crashed every tab press in
+// 1.7.0's first test builds, which a cast had hidden from the typecheck.
+export type TabBarProps = Pick<BottomTabBarProps, 'descriptors' | 'emitter' | 'navigateToTab' | 'state'>;
 
 export type TabItem = {
   key: string;
-  accessibilityLabel: string;
+  accessibilityLabel?: string;
   focused: boolean;
   icon: (size: number) => React.ReactNode;
   label: React.ReactNode;
@@ -72,12 +70,12 @@ export type TabItem = {
 
 /**
  * The tabs a bar shows, not the routes it hides (such as Home's pages), with
- * their icons, labels and presses as React Navigation's own bar has them.
+ * their icons, labels and presses as Expo Router's own bar has them.
  */
-export const getTabItems = ({ descriptors, navigation, state }: TabBarProps): TabItem[] => {
+export const getTabItems = ({ descriptors, emitter, navigateToTab, state }: TabBarProps): TabItem[] => {
   const focusedKey = state.routes[state.index]?.key;
   return state.routes
-    .filter((route) => descriptors[route.key]?.options.tabBarItemStyle?.display !== 'none')
+    .filter((route) => StyleSheet.flatten(descriptors[route.key]?.options.tabBarItemStyle)?.display !== 'none')
     .map((route) => {
       const { options } = descriptors[route.key];
       const focused = route.key === focusedKey;
@@ -89,16 +87,16 @@ export const getTabItems = ({ descriptors, navigation, state }: TabBarProps): Ta
         icon: (size: number) => options.tabBarIcon?.({ focused, color, size }),
         label:
           typeof options.tabBarLabel === 'function'
-            ? options.tabBarLabel({ focused, color, position: 'below-icon', children: options.title })
+            ? options.tabBarLabel({ focused, color, position: 'below-icon', children: options.title ?? route.name })
             : options.title,
         onLongPress: () => {
-          navigation.emit({ type: 'tabLongPress', target: route.key });
+          emitter.emit({ type: 'tabLongPress', target: route.key });
         },
-        // As React Navigation's own tab bar: the screen's tabPress listeners
-        // can take over, as the Bible and You tabs do to reset their stacks.
+        // As Expo Router's own tab bar: the screen's tabPress listeners can
+        // take over, as the Bible and You tabs do to reset their stacks.
         onPress: () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+          const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigateToTab(route.key);
         },
         testID: options.tabBarButtonTestID,
       };

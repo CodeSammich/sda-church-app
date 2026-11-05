@@ -41,12 +41,21 @@ const descriptors = {
   'you-1': { options: option('You') },
 };
 
-const renderBar = (navigation: any, index = 0, windowWidth = 1032) =>
+// What Expo Router's tabs pass a custom bar: an emitter and navigateToTab,
+// not React Navigation's `navigation`, which 1.7.0's first builds called and
+// crashed on every tab press.
+const renderBar = (
+  emit: () => { defaultPrevented: boolean },
+  navigateToTab: (routeKey: string) => void,
+  index = 0,
+  windowWidth = 1032,
+) =>
   render(
     React.createElement(CapsuleTabBar as any, {
       bottomInset: 20,
       descriptors,
-      navigation,
+      emitter: { emit },
+      navigateToTab,
       state: { index, routes },
       theme: customLightTheme,
       windowWidth,
@@ -120,30 +129,46 @@ describe('the tab bars (#589)', () => {
   });
 
   it.each([1032, 390, 412, 1280])("at %p points shows the visible tabs, and marks the selected one, not Home's hidden pages", async (width) => {
-    const { getAllByRole, queryByText } = await renderBar({ emit: () => ({ defaultPrevented: false }), navigate: jest.fn() }, 0, width);
+    const { getAllByRole, queryByText } = await renderBar(() => ({ defaultPrevented: false }), jest.fn(), 0, width);
     const tabs = getAllByRole('tab');
     expect(tabs.map((tab) => tab.props.accessibilityLabel)).toEqual(['Home', 'Bible', 'You']);
     expect(tabs.map((tab) => tab.props.accessibilityState.selected)).toEqual([true, false, false]);
     expect(queryByText('Home')).not.toBeNull();
   });
 
-  it("emits tabPress like React Navigation's bar, so a screen's listener can take over", async () => {
+  it("emits tabPress like Expo Router's own bar, so a screen's listener can take over", async () => {
     const emit = jest.fn(() => ({ defaultPrevented: false }));
-    const navigate = jest.fn();
-    const { getAllByRole } = await renderBar({ emit, navigate });
+    const navigateToTab = jest.fn();
+    const { getAllByRole } = await renderBar(emit, navigateToTab);
     await fireEvent.press(getAllByRole('tab')[1]);
     expect(emit).toHaveBeenCalledWith({ type: 'tabPress', target: 'bible-1', canPreventDefault: true });
-    expect(navigate).toHaveBeenCalledWith('bible', undefined);
+    expect(navigateToTab).toHaveBeenCalledWith('bible-1');
+    await fireEvent(getAllByRole('tab')[2], 'longPress');
+    expect(emit).toHaveBeenCalledWith({ type: 'tabLongPress', target: 'you-1' });
     // The Bible and You tabs prevent the default and navigate themselves.
     const prevented = jest.fn();
-    const { getAllByRole: tabsAgain } = await renderBar({ emit: () => ({ defaultPrevented: true }), navigate: prevented });
+    const { getAllByRole: tabsAgain } = await renderBar(() => ({ defaultPrevented: true }), prevented);
     await fireEvent.press(tabsAgain('tab')[2]);
     expect(prevented).not.toHaveBeenCalled();
     // Pressing the selected tab doesn't navigate.
     const again = jest.fn();
-    const { getAllByRole: third } = await renderBar({ emit: () => ({ defaultPrevented: false }), navigate: again });
+    const { getAllByRole: third } = await renderBar(() => ({ defaultPrevented: false }), again);
     await fireEvent.press(third('tab')[0]);
     expect(again).not.toHaveBeenCalled();
+  });
+
+  it("takes Expo Router's tab bar props as they are, so the typecheck catches a mismatch", () => {
+    // A cast here hid that Expo Router passes no `navigation`, and every tab
+    // press crashed in 1.7.0's first test builds.
+    const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
+    expect(layout).toMatch(/<CapsuleTabBar\s+\{\.\.\.props\}/);
+    expect(layout).not.toMatch(/\{\.\.\.\(props as any\)\}/);
+    expect(readFileSync('components/TabBarItems.ts', 'utf8')).toContain(
+      "export type TabBarProps = Pick<BottomTabBarProps, 'descriptors' | 'emitter' | 'navigateToTab' | 'state'>;",
+    );
+    // And Expo Router's tabs still hand a custom bar these.
+    const view = readFileSync('node_modules/expo-router/build/react-navigation/bottom-tabs/views/BottomTabView.js', 'utf8');
+    expect(view).toMatch(/tabBar\(\{\s*state,\s*descriptors,\s*emitter,\s*navigateToTab,/);
   });
 
   it('is the one tab bar on every system, with pages running under it and room at their ends', () => {
