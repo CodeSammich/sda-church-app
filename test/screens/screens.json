@@ -72,7 +72,7 @@
     {
       "name": "home",
       "group": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"ends in\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"ends in\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. Vision can read the iPhone's Courier \"1d\" as \"ld\". The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
       "ipadVariants": ["default", "landscape", "landscape-xl"],
@@ -81,16 +81,16 @@
           "mustShowLines": ["^Today.s Verse$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
-        "default": { "mustShowLines": ["^Sabbath (starts|ends) in$", "^(\\d+d )?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["^(Friday|Saturday), "] },
-        "es-large": { "mustShowLines": ["Compartir$", "^El S.bado (comienza|termina) en$", "^(\\d+d )?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["\\bCompar(t|ti)?$", "^(tir|ir)\\b"] },
+        "default": { "mustShowLines": ["^Sabbath (starts|ends) in$", "^([\\dlI]+d )?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["^(Friday|Saturday), "] },
+        "es-large": { "mustShowLines": ["Compartir$", "^El S.bado (comienza|termina) en$", "^([\\dlI]+d )?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["\\bCompar(t|ti)?$", "^(tir|ir)\\b"] },
         "es-xl-ios-large-text": { "mustShowLines": ["^Vers[ií]culo\\b"] },
         "xl-android-font-max": {
           "mustShowLines": ["^Today.s( Verse)?$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
         "es-xl-android-font-max": { "mustShowLines": ["^Vers[ií]culo\\b"] },
-        "zh": { "mustShowLines": ["^距離安息日(結束)?還有$", "^(\\d+d )?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] },
-        "zh-cn": { "mustShowLines": ["^距离安息日(结束)?还有$", "^(\\d+d )?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] }
+        "zh": { "mustShowLines": ["^距離安息日(結束)?還有$", "^([\\dlI]+d )?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] },
+        "zh-cn": { "mustShowLines": ["^距离安息日(结束)?还有$", "^([\\dlI]+d )?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] }
       },
       "changesDaily": true
     },
