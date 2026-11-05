@@ -12,7 +12,13 @@ import {
   openSabbathStream,
 } from '@/constants/ExternalLinks';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
-import { contentColumnStyle, contentColumnWithin, DESIGN_TOKENS, getContentWidth } from '@/constants/Layout';
+import {
+  contentColumnStyle,
+  contentColumnWithin,
+  DESIGN_TOKENS,
+  getContentWidth,
+  getCountdownFontSize,
+} from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import * as BibleService from '@/services/BibleService';
@@ -140,6 +146,7 @@ export default function HomeScreen() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
+  const countdownFontSize = getCountdownFontSize(getContentWidth(windowWidth, effectiveTextScale), effectiveTextScale);
   // One size for every card's text, which keeps each title's words whole.
   const gridTitles = useMemo(
     () => [labels.livestream, labels.bulletin, labels.give, labels.hymnal, labels.sabbathSchool, labels.discover],
@@ -458,27 +465,35 @@ export default function HomeScreen() {
             mode="contained"
           >
             <Card.Content style={styles.timerContentSubtle}>
-              {/* Three lines (#593): what the timer counts to, the timer, and the
-                  place. The timer already says when, so no date; during the
-                  Sabbath the label says it counts to its end. */}
+              {/* Three centred lines, like a clock (#593): what the timer counts
+                  to, the timer, and the place. The timer already says when, so
+                  no date; during the Sabbath the label says it counts to its end. */}
               <Text
                 variant="labelMedium"
                 style={{
                   color: isSabbath ? theme.colors.primary : theme.colors.secondary,
                   fontWeight: 'bold',
+                  textAlign: 'center',
                 }}
               >
                 {isSabbath ? labels.sabbathEnds : labels.sabbathStarts}
               </Text>
+              {/* Sized with the text size already counted in, so the phone's
+                  doesn't scale it again past its card. */}
               <Text
+                allowFontScaling={false}
                 style={[
                   styles.timerValueSubtle,
-                  { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
+                  {
+                    color: isSabbath ? theme.colors.primary : theme.colors.onSurface,
+                    fontSize: countdownFontSize,
+                    lineHeight: Math.round(countdownFontSize * 1.3),
+                  },
                 ]}
               >
                 {countdown || '--:--:--'}
               </Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}>
                 {labels.locationDefault}
               </Text>
             </Card.Content>
@@ -650,9 +665,8 @@ const createStyles = (
   timerValueSubtle: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontVariant: ['tabular-nums'],
-    fontSize: scaleTypographyMetric(16, textScale),
-    lineHeight: scaleTypographyMetric(24, textScale),
     fontWeight: '700',
+    textAlign: 'center',
     marginVertical: 2,
   },
   grid: {

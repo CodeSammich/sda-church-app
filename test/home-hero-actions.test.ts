@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { labelsFitSideBySide, labelWordsFit } from '@/components/WrappingActionButton';
-import { getContentWidth } from '@/constants/Layout';
+import { getContentWidth, getCountdownFontSize } from '@/constants/Layout';
 
 // Home's verse card: 24 points each side, the buttons' row 16 more, and 12
 // between the two buttons.
@@ -51,6 +51,31 @@ describe("the Sabbath countdown's card (#593)", () => {
     // The timer always has its own line, so nothing measures whether it fits
     // beside the words, and the date is gone: the timer already says when.
     expect(home).not.toMatch(/countdownFitsBeside|formatDisplayDate|timerRow|isSabbath:/);
+  });
+
+  it('centres its three lines, like a clock', () => {
+    const card = home.slice(home.indexOf('{/* Sabbath Countdown Widget */}'), home.indexOf('<View style={styles.grid}>'));
+    expect(card.match(/textAlign: 'center'/g)).toHaveLength(2);
+    expect(home).toMatch(/timerValueSubtle: \{[^}]*textAlign: 'center',/);
+    expect(card).toContain('fontSize: countdownFontSize,');
+    expect(card).toContain('allowFontScaling={false}');
+  });
+
+  it.each([
+    ['100% on a 390-point iPhone', 390, 1, 22],
+    ['150% on a 390-point iPhone', 390, 1.5, 33],
+    ['150% on the 13-inch iPad', 1032, 1.5, 33],
+  ])('sizes the timer 22 points a step at %s', (_case, width, scale, size) => {
+    expect(getCountdownFontSize(getContentWidth(width, scale), scale)).toBe(size);
+  });
+
+  it.each([
+    ['200% on a 375-point iPhone', 375, 2],
+    ["the iPhone's largest text, 3.2×, on a 375-point iPhone", 375, 3.2],
+    ['150% in a 320-point iPad window', 320, 1.5],
+  ])('keeps the widest timer, "6d 23:59:59", on one line at %s', (_case, width, scale) => {
+    const contentWidth = getContentWidth(width, scale);
+    expect(11 * 0.6 * getCountdownFontSize(contentWidth, scale)).toBeLessThanOrEqual(contentWidth - 2 * 20 - 2 * 16);
   });
 
   it('says during the Sabbath that it counts to its end, in every language', () => {

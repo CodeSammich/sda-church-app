@@ -73,6 +73,16 @@ export const getContentWidth = (windowWidth: number, textScale: number = DEFAULT
   Math.min(windowWidth, getContentMaxWidth(textScale));
 
 /**
+ * The size of Home's Sabbath countdown (#593): 22 points at 100% text, growing
+ * with the app's and the phone's text size together (`textScale`), but never
+ * wider than its card, so its widest form, "6d 23:59:59", stays on one line.
+ * Its monospaced font is 0.6 em a character, and the card sits in Home's
+ * 20-point margins with 16 points of padding a side.
+ */
+export const getCountdownFontSize = (contentWidth: number, textScale: number) =>
+  Math.min(22 * Math.max(1, textScale), (contentWidth - 2 * 20 - 2 * 16) / (11 * 0.6));
+
+/**
  * The side padding that keeps a full-width row's contents, such as the tab
  * bar's buttons, within the content column.
  */
