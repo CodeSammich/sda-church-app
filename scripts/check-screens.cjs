@@ -216,7 +216,11 @@ const checkShot = (shot, lines) => {
         : `the verse button doesn't show "${[missing[0]].flat()[0]}"`,
     );
   }
+  // Setup's own shots, which open before setup is done, show its Get Started
+  // on its last step on purpose (#669).
+  const setupShot = shot.settings?.setupDone === false;
   for (const text of NEVER_SHOWN_BY_PLATFORM[shot.platform]) {
+    if (setupShot && text === 'Get Started') continue;
     if (lines.some((line) => line.text.includes(text))) problems.push(`shows "${text}"`);
   }
   for (const rule of forPlatform(shot.mustShowLines, shot.platform)) {

@@ -13,14 +13,16 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { RadioButton, Text } from 'react-native-paper';
 
 /**
- * You → Contrast (#669): high contrast, the default, or standard. Members
- * choose by pictures of the tab bar in each, not by the term alone, which
- * many older members wouldn't know.
+ * The contrast choice (#669): high contrast, the default, or standard, in
+ * first-launch setup's last step and under You → Contrast. Members choose by
+ * pictures of the tab bar in each, not by the term alone, which many older
+ * members wouldn't know.
  */
 export const contrastCopy: Record<
   SupportedLanguage,
   {
     title: string;
+    question: string;
     help: string;
     close: string;
     options: Record<ContrastMode, { label: string; description: string }>;
@@ -28,6 +30,7 @@ export const contrastCopy: Record<
 > = {
   en: {
     title: 'Contrast',
+    question: 'Which is easier to read?',
     help: 'Compare the bar at the bottom of each picture.',
     close: 'Close',
     options: {
@@ -37,6 +40,7 @@ export const contrastCopy: Record<
   },
   zh: {
     title: '對比度',
+    question: '哪一個看得比較清楚？',
     help: '請比較每張圖下方的選單列。',
     close: '關閉',
     options: {
@@ -46,6 +50,7 @@ export const contrastCopy: Record<
   },
   'zh-cn': {
     title: '对比度',
+    question: '哪一个看得比较清楚？',
     help: '请比较每张图下方的菜单栏。',
     close: '关闭',
     options: {
@@ -55,6 +60,7 @@ export const contrastCopy: Record<
   },
   es: {
     title: 'Contraste',
+    question: '¿Cuál se lee mejor?',
     help: 'Compara la barra de abajo en cada imagen.',
     close: 'Cerrar',
     options: {

@@ -60,7 +60,7 @@
       "group": "home",
       "tabs": false,
       "popup": true,
-      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of three (#523), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
+      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of four (#523, #669), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
       "path": "",
       "settings": { "setupDone": false },
       "variants": ["default", "large"],
@@ -631,6 +631,49 @@
       "variantRules": {
         "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Standard$", "^Compare the bar"] },
         "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^標準$"] }
+      }
+    },
+    {
+      "$comment": "First-launch setup's other steps, which a key-screens build opens by the saved setupStep since the capture can't tap Next (#669), so each step has its shot: hard to reach by hand. The text size step, with Back and Next.",
+      "name": "setup-text-size",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "setupDone": false, "setupStep": "textSize" },
+      "variants": ["default"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": ["^Text size$", "^Choose a comfortable"],
+      "mustNotShowLines": ["^Welcome$", "^Appearance$"]
+    },
+    {
+      "$comment": "Setup's appearance step: the four themes.",
+      "name": "setup-appearance",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "setupDone": false, "setupStep": "appearance" },
+      "variants": ["default"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": ["^Appearance$", "^System$", "^Light$", "^Dark$"],
+      "mustNotShowLines": ["^Welcome$", "^Text size$"]
+    },
+    {
+      "$comment": "Setup's last step (#669): the pictures of high contrast, chosen, and standard, with Get Started, in the light and dark themes and in Chinese. Vision reads the white Get Started on its blue button; RapidOCR may not, so Android doesn't require it.",
+      "name": "setup-contrast",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "setupDone": false, "setupStep": "contrast" },
+      "variants": ["default", "dark", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Next$", "^Appearance$"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Which is easier to read\\?$", "^High contrast$", "^Standard$", { "line": "^Get Started$", "platforms": ["ios", "ipad"] }] },
+        "dark": { "mustShowLines": ["^Which is easier to read\\?$", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^哪一個看得比較清楚", "^高對比度$", "^標準$"] }
       }
     },
     {

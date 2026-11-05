@@ -248,7 +248,8 @@ simple, blended colors.
     button, the translation button's names, icon and arrow, like the Bible card's pills,
     and the saved-verse button once a verse is saved.
   - **Contrast (#669):** high contrast, the white and night blue above, is the default.
-    Members who'd rather have softer colors choose **Standard** under You → Contrast:
+    Members who'd rather have softer colors choose **Standard** at first-launch setup's
+    last step, "Which is easier to read?", or later under You → Contrast:
     the bars, the card and the header's buttons a shade off the page, the light theme's
     own warm surface (`#FAF4EF`) or a warm brown in the dark (`#211F18`), with the
     selected tab and the card's pills on the light blue or a deeper gold-brown

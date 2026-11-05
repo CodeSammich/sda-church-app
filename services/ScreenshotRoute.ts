@@ -11,6 +11,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const SCREENSHOT_ROUTE_KEY = 'screenshot-route';
 
 /**
+ * Where a key-screens build opens first-launch setup: the step the capture
+ * saved, by name, such as `contrast`, since it can't tap Next (#669).
+ */
+export const SCREENSHOT_SETUP_STEP_KEY = 'screenshot-setup-step';
+
+/**
  * Whether this is a key-screens build: the iOS Simulator build or the Android
  * emulator build the capture runs on. Those set EXPO_PUBLIC_KEY_SCREENS=1,
  * which Expo writes into the app when it's built; the store builds and the

@@ -56,6 +56,8 @@ const SETTING_KEYS = {
   audioReaders: 'user-bible-audio-readers',
   // High, the default, or standard (#669).
   contrast: 'user-contrast',
+  // The first-launch setup step a key-screens build opens, by name (#669).
+  setupStep: 'screenshot-setup-step',
 };
 
 // Settings of the simulated phone rather than the app, by platform. A variant

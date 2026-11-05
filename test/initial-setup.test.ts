@@ -190,14 +190,16 @@ describe('InitialSetup', () => {
     });
 
     await goOn(screen, 'Siguiente');
+    await goOn(screen, 'Siguiente');
     await goOn(screen, 'Comenzar');
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('goes through the three steps, back and on, and finishes on the last', async () => {
+  it('goes through the four steps, back and on, and finishes on the last', async () => {
     const onComplete = jest.fn();
-    const screen = await renderWithPreferences(createElement(InitialSetup, { onComplete }));
-    const stepLabel = (n: number) => screen.getByLabelText(`Step ${n} of 3`);
+    const setContrastMode = jest.fn();
+    const screen = await renderWithPreferences(createElement(InitialSetup, { onComplete }), { setContrastMode });
+    const stepLabel = (n: number) => screen.getByLabelText(`Step ${n} of 4`);
 
     expect(stepLabel(1)).toBeTruthy();
     expect(screen.getByText('Language')).toBeTruthy();
@@ -216,7 +218,16 @@ describe('InitialSetup', () => {
     await goOn(screen);
     expect(stepLabel(3)).toBeTruthy();
     expect(screen.getByText('Appearance')).toBeTruthy();
+
+    // The contrast step (#669): the pictures, with high contrast chosen.
+    await goOn(screen);
+    expect(stepLabel(4)).toBeTruthy();
+    expect(screen.getByText('Which is easier to read?')).toBeTruthy();
+    const options = screen.getAllByRole('radio');
+    expect(options.map((option) => option.props.accessibilityState.checked)).toEqual([true, false]);
     expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
+    await fireEvent.press(options[1]);
+    expect(setContrastMode).toHaveBeenCalledWith('standard');
     expect(onComplete).not.toHaveBeenCalled();
 
     await goOn(screen, 'Get Started');
