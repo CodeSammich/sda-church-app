@@ -191,13 +191,13 @@ describe('screen rules', () => {
       'no line matches /\\bEN\\b/',
       'no line matches /BSB/',
       'no line matches /CUV/',
-      'no line matches /^(XA\\b|文A|A EN\\b)/',
+      'no line matches /^(XA\\b|JA\\b|文A|A EN\\b)/',
     ]);
     // In the dark theme Vision can miss the gold icon on the charcoal button,
     // so there only the badge and names are required (the 1.7.0 run read "EN").
     const darkWithoutIcon = [...withoutHeader, line('EN', 0.05), line('BSB +', 0.05), line('CUV V', 0.05)];
     expect(checkShot(shot('bible-dual-dark'), darkWithoutIcon)).toEqual([]);
-    expect(checkShot(shot('bible-dual-default'), darkWithoutIcon)).toEqual(['no line matches /^(XA\\b|文A|A EN\\b)/']);
+    expect(checkShot(shot('bible-dual-default'), darkWithoutIcon)).toEqual(['no line matches /^(XA\\b|JA\\b|文A|A EN\\b)/']);
 
     // With a back arrow at 200%: the icon gives way first, so the names stay whole.
     const body = withoutHeader;
@@ -208,10 +208,13 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual([
       'no line matches /BSB/',
       'no line matches /CUV/',
-      '"XA EN B... +* C..." matches /(\\bXA|文A)\\b/, which must not show',
+      '"XA EN B... +* C..." matches /(\\bXA|\\bJA|文A)\\b/, which must not show',
     ]);
     // At the default size the icon must still show.
-    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^(XA\\b|文A|A EN\\b)/']);
+    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^(XA\\b|JA\\b|文A|A EN\\b)/']);
+    // Beside 1.7.0's pill-coloured EN badge, Vision reads the icon as JA, a line of its own.
+    const iconAsJA = [...body, line('JA', 0.05), line('EN', 0.05), line('BSB +', 0.05), line('CUV V', 0.05)];
+    expect(checkShot(shot('bible-dual-back-default'), iconAsJA)).toEqual([]);
   });
 
   it('catches tab labels that wrap, or rise out of an overgrown tab bar, at about 4× text (#380)', () => {
@@ -346,7 +349,7 @@ describe('rules for one platform (#372)', () => {
     const header = (icon: string) => [line(`${icon} EN BSB + 繁 CUV`, 0.05), line('Psalms', 0.86), line('Verse', 0.86)];
     expect(checkShot(androidShot('bible-dual-default'), [...tabs, ...header('文A')])).toEqual([]);
     expect(checkShot(androidShot('bible-dual-back-large'), [...tabs, ...header('文A')])).toEqual([
-      '"文A EN BSB + 繁 CUV" matches /(\\bXA|文A)\\b/, which must not show',
+      '"文A EN BSB + 繁 CUV" matches /(\\bXA|\\bJA|文A)\\b/, which must not show',
     ]);
   });
 });
