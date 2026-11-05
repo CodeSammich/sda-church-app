@@ -20,6 +20,12 @@ import React, { useContext, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Platform, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/**
+ * The house fills less of its square than the cross, compass and person, so
+ * it's drawn a tenth larger to look the same size beside them.
+ */
+const TAB_ICON_OPTICAL_SCALE: Partial<Record<MaterialCommunityIconName, number>> = { home: 1.1 };
+
 function TabBarIcon(props: {
   name: MaterialCommunityIconName;
   color: string;
@@ -39,7 +45,7 @@ function TabBarIcon(props: {
       <AppIcon
         name={iconName}
         // A little larger in a tablet's capsule (CapsuleTabBar).
-        size={props.tablet ? 30 : DESIGN_TOKENS.ICON_SIZE_TAB}
+        size={(props.tablet ? 30 : DESIGN_TOKENS.ICON_SIZE_TAB) * (TAB_ICON_OPTICAL_SCALE[props.name] ?? 1)}
         textScale={getBottomTabIconTextScale(props.textScale)}
         color={props.color}
       />
@@ -203,13 +209,12 @@ export default function TabLayout() {
         )}
         screenOptions={{
           // The selected tab in blue, or gold in the dark theme, on its
-          // selection pill (getSelectedTabTint, #589).
+          // selection pill (getSelectedTabTint, #589); the others in the
+          // theme's muted ink, which reads on the dark theme's blue bar.
           tabBarActiveTintColor: theme.dark
             ? theme.colors.metallicGold.main
             : theme.colors.primary,
-          tabBarInactiveTintColor: theme.dark
-            ? theme.colors.metallicGold.muted
-            : theme.colors.onSurfaceVariant,
+          tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
           headerTransparent: true,
           header: (props) => <GlobalHeader {...props} />,
           // The animated tab bar is absolutely positioned, so React Navigation

@@ -74,6 +74,7 @@ interface consistent and spiritually focused while minimizing retinal distractio
 | :---| :---| :---| :---|
 | **Background**    | #F2E6DF  | #080808 | **The Canvas.** A warm low-glare light canvas and render-matched near-black evening canvas. |
 | **Surface (Cards/Containers)**  | #FAF4EF  | #14130F | **The Object.** Warm cards lift clearly from their respective canvases. |
+| **Floating Surface**  | #FFFFFF  | #00405C | **What floats over a page.** The tab bar, the Bible's card and the header's buttons stand clearly apart from the canvas (#589). |
 | **Surface Variant**    | #F1F3F4  | #211F18 | **Secondary UI.** Search bars, unselected controls, and subtle grouped UI. |
 | **On Surface**   | #1A1A1A  | #F3EDE1 | **The Ink.** Warm-white dark-mode text mitigates **Irradiation Illusion** ([NIH/PMC3939872](https://pmc.ncbi.nlm.nih.gov/articles/PMC3939872/)) and stays visually dominant over gold annotations. |
 | **On Surface Variant**   | #606060  | #BDB5A2 | **Muted Intent.** Warm neutral content recedes without becoming illegible. |
@@ -216,10 +217,11 @@ simple, blended colors.
 - **One floating tab bar on every system (#589).** iPhone, iPad, Android and the web
   share one design (`components/CapsuleTabBar.tsx`), as iOS 26 floats its tab bar: the
   four tabs in a rounded capsule above the bottom edge, 16 points from a phone's sides
-  and at most 520 points wide. It's raised a shade off the page (the theme's surface:
-  lighter in the light theme, charcoal in the dark) with a hairline and a soft shadow,
-  since text scrolls under it; the selected tab is primary blue, or gold in the dark
-  theme, on the selection container. Its icons and labels follow the app's text size,
+  and at most 520 points wide. It's white in the light theme and the brand's night blue
+  (#00405C) in the dark (`floatingSurface`), with a hairline and a soft shadow, so it
+  stands clearly apart from the page, since text scrolls under it. The selected tab is
+  primary blue on light blue, or gold on a deeper night blue (`floatingSelected`); the
+  others take the muted ink. Its icons and labels follow the app's text size,
   which the systems' own bars wouldn't. On iOS it sits partly within the home
   indicator's inset, as iOS's own bar does; on Android, wholly above the gesture bar or
   the three buttons, with Android's ripple when pressed (`getCapsuleBottomGap`).
@@ -228,7 +230,7 @@ simple, blended colors.
     fragments of text show around it. Every tab page ends with `TabBarSpacer`, so its
     last lines can scroll clear of it.
   - **The Bible's audio and chapter controls float in a card of their own** above the
-    capsule, as iOS puts a player above its tab bar: the same raised surface, as wide as
+    capsule, as iOS puts a player above its tab bar: the same floating surface, as wide as
     the capsule on a phone and up to 640 points on a tablet, with its pills and round
     buttons in the page's own colour (warm pink, or black). When the tab bar hides while
     reading, the card slides down into its place.

@@ -52,20 +52,29 @@ const renderBar = (navigation: any, index = 0, windowWidth = 1032) =>
   );
 
 describe('the tab bars (#589)', () => {
-  it('is raised a shade off the page, with the selected tab on the selection container, in both themes', () => {
+  it('is white, or the brand blue in the dark theme, with the selected tab on its own pill', () => {
+    expect(getBarSurfaceColor(customLightTheme)).toBe('#FFFFFF');
+    expect(getBarSurfaceColor(customDarkTheme)).toBe('#00405C');
+    expect(getSelectedTabTint(customLightTheme)).toBe(customLightTheme.colors.primaryContainer);
+    expect(getSelectedTabTint(customDarkTheme)).toBe('#0B2C3D');
     for (const theme of [customLightTheme, customDarkTheme]) {
-      expect(getBarSurfaceColor(theme)).toBe(theme.colors.surface);
       expect(getDockControlColor(theme)).toBe(theme.colors.background);
-      expect(getSelectedTabTint(theme)).toBe(theme.colors.primaryContainer);
     }
     const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
     expect(layout).toMatch(/tabBarActiveTintColor: theme\.dark\s*\? theme\.colors\.metallicGold\.main\s*: theme\.colors\.primary,/);
+    expect(layout).toContain('tabBarInactiveTintColor: theme.colors.onSurfaceVariant,');
+  });
+
+  it('draws the house a tenth larger, as it fills less of its square than the other tab icons', () => {
+    const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
+    expect(layout).toContain('const TAB_ICON_OPTICAL_SCALE: Partial<Record<MaterialCommunityIconName, number>> = { home: 1.1 };');
+    expect(layout).toContain('* (TAB_ICON_OPTICAL_SCALE[props.name] ?? 1)}');
   });
 
   it("gives the capsule, the Bible's card and the header's pills one opaque floating surface, so a page's top matches its bottom", () => {
     for (const theme of [customLightTheme, customDarkTheme]) {
       const surface = getFloatingSurfaceStyle(theme);
-      expect(surface).toMatchObject({ backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant });
+      expect(surface).toMatchObject({ backgroundColor: theme.colors.floatingSurface, borderColor: theme.colors.outlineVariant });
       // Opaque, so page text scrolling under the header never shows through.
       expect(surface.backgroundColor).toMatch(/^#[\dA-F]{6}$/i);
     }

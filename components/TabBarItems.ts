@@ -9,12 +9,12 @@ import type React from 'react';
 export const TABLET_TAB_BAR_MIN_WIDTH = 600;
 
 /**
- * The colour of the floating tab bar and the Bible's dock card (#589): the
- * theme's surface, a shade off the page (lighter in the light theme, charcoal
- * in the dark), so with their shadow they read as raised above the text that
- * scrolls under them.
+ * The colour of everything that floats over a page (#589): the tab bar, the
+ * Bible's dock card and the header's buttons. White in the light theme and the
+ * brand's night blue in the dark, so they stand clearly apart from the page
+ * and the text that scrolls under them.
  */
-export const getBarSurfaceColor = (theme: AppTheme) => theme.colors.surface;
+export const getBarSurfaceColor = (theme: AppTheme) => theme.colors.floatingSurface;
 
 /**
  * The colour of the dock card's pills and round buttons: the page's own (warm
@@ -23,10 +23,10 @@ export const getBarSurfaceColor = (theme: AppTheme) => theme.colors.surface;
 export const getDockControlColor = (theme: AppTheme) => theme.colors.background;
 
 /**
- * The pill behind the selected tab: the theme's selection container, light
- * blue behind the blue tab, or gold-brown behind the gold one in the dark theme.
+ * The pill behind the selected tab: light blue behind the blue tab, or a
+ * deeper night blue behind the gold one in the dark theme.
  */
-export const getSelectedTabTint = (theme: AppTheme) => theme.colors.primaryContainer;
+export const getSelectedTabTint = (theme: AppTheme) => theme.colors.floatingSelected;
 
 type TabRoute = { key: string; name: string; params?: object };
 export type TabBarProps = {

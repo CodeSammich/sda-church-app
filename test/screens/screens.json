@@ -106,7 +106,7 @@
     {
       "name": "bible-dual",
       "group": "bible-reading",
-      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376). The icon is required in every variant but dark, where Vision sometimes misses the gold icon on the charcoal button entirely (the 1.7.0 run read only \"EN\"); the other variants still catch a dropped icon. On the iPad, Vision can read the book button's chevron as part of its name, \"Psalmsv\".",
+      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376). The icon is required in every variant but dark, where Vision sometimes misses the gold icon on the dark theme's button entirely (the 1.7.0 run read only \"EN\"); the other variants still catch a dropped icon. On the iPad, Vision can read the book button's chevron as part of its name, \"Psalmsv\".",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max"],

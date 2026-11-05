@@ -117,7 +117,8 @@ const CAPSULE_SHADOW = Platform.select<ViewStyle>({
 /**
  * The surface of everything that floats over a page: the capsule, the Bible's
  * card, and the header's pills and round buttons, so a page's top matches its
- * bottom. A shade off the page, with a faint hairline and a soft shadow.
+ * bottom. White, or the brand's night blue in the dark theme, with a faint
+ * hairline and a soft shadow.
  */
 export const getFloatingSurfaceStyle = (theme: AppTheme): ViewStyle => ({
   backgroundColor: getBarSurfaceColor(theme),
