@@ -105,22 +105,23 @@ prepare_app() {
   # second, so its screen never goes idle.
   open_chapter GEN 2
   local point
-  # First-launch setup is three steps (#523): Next, Next, then Get Started.
+  # First-launch setup is four steps (#523, #669): Next until Get Started.
   if point=$(ATTR=text TRIES=15 element_center 'Next'); then
-    # shellcheck disable=SC2086
-    sh_ input tap $point >/dev/null
-    sleep 1
-    if point=$(ATTR=text TRIES=5 element_center 'Next'); then
+    local taps=0
+    while [ "$taps" -lt 5 ]; do
       # shellcheck disable=SC2086
       sh_ input tap $point >/dev/null
       sleep 1
-    fi
-    if point=$(ATTR=text TRIES=5 element_center 'Get Started'); then
-      # shellcheck disable=SC2086
-      sh_ input tap $point >/dev/null
-      sleep 2
-      log 'Finished first-launch setup.'
-    fi
+      taps=$((taps + 1))
+      if point=$(ATTR=text TRIES=3 element_center 'Get Started'); then
+        # shellcheck disable=SC2086
+        sh_ input tap $point >/dev/null
+        sleep 2
+        log 'Finished first-launch setup.'
+        break
+      fi
+      point=$(ATTR=text TRIES=5 element_center 'Next') || break
+    done
   fi
   sh_ am force-stop "$PKG" >/dev/null
 }

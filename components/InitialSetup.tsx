@@ -19,8 +19,11 @@ import {
 } from '@/constants/Themes';
 import { getPopupSurfaceStyle, usePopupMaxHeight, usePopupWidthStyle } from '@/styles/PopupStyles';
 import { AppIcon } from '@/components/AppIcon';
+import { ContrastChoice, getContrastCopy } from '@/components/ContrastChoice';
+import { isKeyScreensBuild, SCREENSHOT_SETUP_STEP_KEY } from '@/services/ScreenshotRoute';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PopupScrollView } from '@/components/PopupScrollView';
-import { useContext, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -277,12 +280,15 @@ const SetupAction = ({
 
 // One question per step (#523), so each fits on a phone and the button to go
 // on is always in view: the language first, so the rest shows in it, then the
-// text size, so the last step shows at that size.
-export const SETUP_STEPS = ['language', 'textSize', 'appearance'] as const;
+// text size, so the last steps show at that size, and last the contrast for
+// light mode and for dark mode (#669), each asked, since a member may switch,
+// or the System or Sunrise/Sunset theme switches for them.
+export const SETUP_STEPS = ['language', 'textSize', 'appearance', 'contrastLight', 'contrastDark'] as const;
 
 export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const { language, setLanguage } = useContext(LanguageContext);
-  const { setThemeMode, themeMode } = useContext(ThemeContext);
+  const { contrastModes, setContrastMode, setThemeMode, themeMode } = useContext(ThemeContext);
+  const contrastCopy = getContrastCopy(language);
   // The chosen size, which a very large phone text size can reduce when drawn.
   const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
   const textScale = preferredTextScale ?? drawnTextScale;
@@ -297,6 +303,15 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const failedTextScaleRef = useRef<TextScale | null>(null);
   const labels = setupLabels[language] ?? setupLabels.en;
   const [step, setStep] = useState(0);
+  // A key-screens build opens the step the capture saved, since it can't tap
+  // Next, so each step has its own screenshot.
+  useEffect(() => {
+    if (!isKeyScreensBuild()) return;
+    void AsyncStorage.getItem(SCREENSHOT_SETUP_STEP_KEY).then((saved) => {
+      const index = SETUP_STEPS.indexOf(saved as (typeof SETUP_STEPS)[number]);
+      if (index > 0) setStep(index);
+    });
+  }, []);
   const currentStep = SETUP_STEPS[step];
   const lastStep = step === SETUP_STEPS.length - 1;
   // A text size that's saving, or failed to save, has to settle first.
@@ -472,6 +487,24 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
                     { value: THEME_LIGHT, label: labels.light, icon: 'weather-sunny' },
                     { value: THEME_DARK, label: labels.dark, icon: 'weather-night' },
                   ]}
+                />
+              </>
+            )}
+
+            {(currentStep === 'contrastLight' || currentStep === 'contrastDark') && (
+              <>
+                <Text variant="headlineMedium" style={styles.title}>
+                  {contrastCopy.questions[currentStep === 'contrastDark' ? 'dark' : 'light']}
+                </Text>
+                <Text variant="bodyMedium" style={styles.subtitle}>
+                  {contrastCopy.help}
+                </Text>
+                {/* High contrast stays chosen unless the member picks standard. */}
+                <ContrastChoice
+                  kind={currentStep === 'contrastDark' ? 'dark' : 'light'}
+                  language={language}
+                  onChoose={(mode) => void setContrastMode(currentStep === 'contrastDark' ? 'dark' : 'light', mode)}
+                  value={contrastModes[currentStep === 'contrastDark' ? 'dark' : 'light']}
                 />
               </>
             )}

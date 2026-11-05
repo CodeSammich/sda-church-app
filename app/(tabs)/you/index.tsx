@@ -3,6 +3,9 @@ import { MenuCard } from '@/components/MenuCard';
 import { LanguageDialog } from '@/components/LanguageDialog';
 import { ShareAppDialog } from '@/components/ShareAppDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
+import { ContrastDialog } from '@/components/ContrastDialog';
+import { getContrastCopy } from '@/components/ContrastChoice';
+import { ThemeContext } from '@/constants/Themes';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
 import { contentColumnStyle } from '@/constants/Layout';
 import {
@@ -147,6 +150,8 @@ export default function YouScreen() {
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
+  const { contrastModes } = useContext(ThemeContext);
+  const contrastCopy = getContrastCopy(language);
   // The chosen size, which a very large phone text size can reduce when drawn.
   const { textScale: drawnTextScale, preferredTextScale } = useTextSize();
   const columnScale = useContentColumnScale();
@@ -154,6 +159,7 @@ export default function YouScreen() {
   const [showTextSize, setShowTextSize] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
+  const [showContrast, setShowContrast] = useState(false);
   const [showShareApp, setShowShareApp] = useState(false);
   const headerHeight = useGlobalHeaderHeight();
   const { popup } = useLocalSearchParams<{ popup?: string }>();
@@ -161,10 +167,11 @@ export default function YouScreen() {
   // The key-screen capture can't tap, so its build opens a dialog from the
   // path, such as you?popup=text-size (#372).
   useEffect(() => {
-    const screenshotPopup = getScreenshotPopup(popup, ['language', 'text-size', 'theme', 'share-app']);
+    const screenshotPopup = getScreenshotPopup(popup, ['language', 'text-size', 'theme', 'contrast', 'share-app']);
     if (screenshotPopup === 'language') setShowLanguage(true);
     if (screenshotPopup === 'text-size') setShowTextSize(true);
     if (screenshotPopup === 'theme') setShowThemeDialog(true);
+    if (screenshotPopup === 'contrast') setShowContrast(true);
     if (screenshotPopup === 'share-app') setShowShareApp(true);
   }, [popup]);
   const { heroUnderStatusBar, onHeroLayout, onScroll } = useHeroUnderStatusBar();
@@ -241,6 +248,18 @@ export default function YouScreen() {
               icon="theme-light-dark"
               iconColor={theme.colors.primary}
               onPress={() => setShowThemeDialog(true)}
+            />
+            <MenuCard
+              title={contrastCopy.title}
+              description={
+                // One label when both themes match; otherwise each theme's.
+                contrastModes.light === contrastModes.dark
+                  ? contrastCopy.options[contrastModes.light].label
+                  : `${contrastCopy.sections.light}: ${contrastCopy.options[contrastModes.light].label} · ${contrastCopy.sections.dark}: ${contrastCopy.options[contrastModes.dark].label}`
+              }
+              icon="contrast-circle"
+              iconColor={theme.colors.primary}
+              onPress={() => setShowContrast(true)}
             />
             {Platform.OS !== 'web' && (
               <MenuCard
@@ -350,6 +369,7 @@ export default function YouScreen() {
         visible={showThemeDialog}
         onDismiss={() => setShowThemeDialog(false)}
       />
+      <ContrastDialog visible={showContrast} onDismiss={() => setShowContrast(false)} />
       <ShareAppDialog visible={showShareApp} onDismiss={() => setShowShareApp(false)} />
     </>
   );

@@ -174,10 +174,25 @@ describe('saved settings', () => {
       'services/BibleService.ts',
       'constants/Themes.ts',
       'constants/AppPreferences.ts',
+      'services/ScreenshotRoute.ts',
+      'constants/WhatsNew.ts',
     ]
       .map(repoFile)
       .join('\n');
     for (const key of Object.values(SETTING_KEYS)) expect(sources).toContain(`'${key}'`);
+  });
+
+  it('opens each first-launch setup step, which the capture saves by name (#669)', () => {
+    const { SCREENSHOT_SETUP_STEP_KEY } = require('../services/ScreenshotRoute');
+    const { SETUP_STEPS } = require('../components/InitialSetup');
+    expect(SETTING_KEYS.setupStep).toBe(SCREENSHOT_SETUP_STEP_KEY);
+    // Every step but the first, which setup opens on, has its own shot.
+    const steps = shots
+      .filter((shot: { settings: { setupStep?: string } }) => shot.settings.setupStep)
+      .map((shot: { settings: { setupStep: string } }) => shot.settings.setupStep);
+    expect([...new Set(steps)].sort()).toEqual([...SETUP_STEPS.slice(1)].sort());
+    expect(shots.some((shot: { name: string }) => shot.name === 'setup-default')).toBe(true);
+    expect(repoFile('components/InitialSetup.tsx')).toContain('AsyncStorage.getItem(SCREENSHOT_SETUP_STEP_KEY)');
   });
 
   it('saves the screen to open, where the app looks for it, except for Home', () => {
@@ -211,6 +226,8 @@ describe('saved settings', () => {
       'user-bible-dual-language': 'true',
       'user-bible-supporting-translation': 'BSB',
       'user-bible-show-pinyin': 'true',
+      // Every shot but its own has seen this version's "What's new" (#669).
+      'whats-new-seen': require('../package.json').version,
     });
     const large = shots.find((candidate: { file: string }) => candidate.file === 'ios/bible-dual-large.png');
     expect(buildManifest(large.settings)['user-text-scale']).toBe('1.5');
@@ -1208,6 +1225,7 @@ describe('Android key screens (#372)', () => {
       'user-language': 'en',
       'user-theme': 'light',
       'user-text-scale': '2',
+      'whats-new-seen': require('../package.json').version,
     });
   });
 

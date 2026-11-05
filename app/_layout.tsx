@@ -1,5 +1,7 @@
 import { AppAlertHost } from '@/components/AppAlert';
 import { InitialSetup } from '@/components/InitialSetup';
+import { WhatsNewDialog } from '@/components/WhatsNewDialog';
+import { shouldShowWhatsNew, WHATS_NEW_SEEN_KEY, WHATS_NEW_VERSION } from '@/constants/WhatsNew';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LaunchSplash } from '@/components/LaunchSplash';
 import {
@@ -33,7 +35,13 @@ import { useChildrenLessonCleanup } from '@/hooks/useChildrenLessonCleanup';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
   AppTheme,
+  CONTRAST_STORAGE_KEYS,
+  type ContrastMode,
+  type ContrastModes,
+  DEFAULT_CONTRAST_MODES,
   getAppTheme,
+  parseContrastMode,
+  type ThemeKind,
   SCRIPTURE_FONT_FAMILIES,
   THEME_DARK,
   THEME_LIGHT,
@@ -258,6 +266,10 @@ export default function RootLayout() {
   // System is the predictable default; users can explicitly choose Sunset,
   // Light, or Dark from the theme settings.
   const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_SYSTEM);
+  // High contrast unless the member chose standard, for the light and the dark
+  // theme each (#669).
+  const [contrasts, setContrasts] = useState<ContrastModes>(DEFAULT_CONTRAST_MODES);
+  const contrastFor = (dark: boolean) => contrasts[dark ? 'dark' : 'light'];
   const [sunTimes, setSunTimes] = useState<{ sunrise: Date; sunset: Date } | null>(null);
   const [textScale, setTextScale] = useState<TextScale>(DEVICE_DEFAULT_TEXT_SCALE);
   // The app's text size and the phone's multiply. Every screen draws with the
@@ -271,6 +283,8 @@ export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
   const [launchSplashVisible, setLaunchSplashVisible] = useState(playsLaunchAnimation);
   const [showSetup, setShowSetup] = useState(false);
+  // "What's new", once, for members who set up an earlier version (#669).
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<any>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
@@ -645,12 +659,16 @@ export default function RootLayout() {
 
     async function prepare() {
       try {
-        const [savedLang, savedTheme, setupDone, savedTextScale] = await Promise.all([
-          AsyncStorage.getItem('user-language'),
-          AsyncStorage.getItem(THEME_STORAGE_KEY),
-          AsyncStorage.getItem('has-completed-setup'),
-          AsyncStorage.getItem(TEXT_SCALE_STORAGE_KEY),
-        ]);
+        const [savedLang, savedTheme, setupDone, savedTextScale, savedLightContrast, savedDarkContrast, whatsNewSeen] =
+          await Promise.all([
+            AsyncStorage.getItem('user-language'),
+            AsyncStorage.getItem(THEME_STORAGE_KEY),
+            AsyncStorage.getItem('has-completed-setup'),
+            AsyncStorage.getItem(TEXT_SCALE_STORAGE_KEY),
+            AsyncStorage.getItem(CONTRAST_STORAGE_KEYS.light),
+            AsyncStorage.getItem(CONTRAST_STORAGE_KEYS.dark),
+            AsyncStorage.getItem(WHATS_NEW_SEEN_KEY),
+          ]);
 
         // Always determine fallbacks first
         const systemLang = getSystemLanguage();
@@ -669,19 +687,28 @@ export default function RootLayout() {
               ? savedTheme
               : THEME_SYSTEM;
         setThemeMode(preferredThemeMode);
+        const preferredContrasts: ContrastModes = {
+          light: parseContrastMode(savedLightContrast),
+          dark: parseContrastMode(savedDarkContrast),
+        };
+        setContrasts(preferredContrasts);
+        const preferredDark =
+          preferredThemeMode === THEME_DARK ||
+          (preferredThemeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
+          (preferredThemeMode === THEME_SUNSET && useDarkTheme);
         setTheme(
           getAppTheme(
-            preferredThemeMode === THEME_DARK ||
-              (preferredThemeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
-              (preferredThemeMode === THEME_SUNSET && useDarkTheme),
+            preferredDark,
             needsCjkSystemFont(preferredLanguage),
             getEffectiveTextScale(preferredTextScale, systemFontScale),
+            preferredContrasts[preferredDark ? 'dark' : 'light'],
           ),
         );
 
         if (setupDone !== 'true') {
           setShowSetup(true);
         }
+        setShowWhatsNew(shouldShowWhatsNew(setupDone === 'true', whatsNewSeen));
       } catch (e) {
         console.warn('Failed to load settings', e);
       } finally {
@@ -716,13 +743,13 @@ export default function RootLayout() {
       (themeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
       (themeMode === THEME_SUNSET &&
         (sunTimes ? now < sunTimes.sunrise || now >= sunTimes.sunset : now.getHours() < 7 || now.getHours() >= 19));
-    setTheme(getAppTheme(isDark, needsCjkSystemFont(language), effectiveTextScale));
-  }, [colorScheme, effectiveTextScale, isReady, language, sunTimes, themeMode]);
+    setTheme(getAppTheme(isDark, needsCjkSystemFont(language), effectiveTextScale, contrasts[isDark ? 'dark' : 'light']));
+  }, [colorScheme, contrasts, effectiveTextScale, isReady, language, sunTimes, themeMode]);
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
     setLanguageSelectionRevision((revision) => revision + 1);
-    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang), effectiveTextScale));
+    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang), effectiveTextScale, contrastFor(theme.dark)));
     await AsyncStorage.multiSet([
       ['user-language', lang],
       [BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP[lang] || 'BSB'],
@@ -732,6 +759,11 @@ export default function RootLayout() {
   const handleSetThemeMode = async (mode: ThemeMode) => {
     setThemeMode(mode);
     await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
+  };
+
+  const handleSetContrastMode = async (kind: ThemeKind, mode: ContrastMode) => {
+    setContrasts((current) => ({ ...current, [kind]: mode }));
+    await AsyncStorage.setItem(CONTRAST_STORAGE_KEYS[kind], mode);
   };
 
   const handleToggleTheme = (dark?: boolean) =>
@@ -751,10 +783,16 @@ export default function RootLayout() {
             currentTheme.dark,
             needsCjkSystemFont(language),
             getEffectiveTextScale(persistedScale, systemFontScale),
+            contrastFor(currentTheme.dark),
           ),
         );
       },
     );
+  };
+
+  const onWhatsNewDone = async () => {
+    setShowWhatsNew(false);
+    await AsyncStorage.setItem(WHATS_NEW_SEEN_KEY, WHATS_NEW_VERSION);
   };
 
   const onCompleteSetup = async () => {
@@ -770,6 +808,8 @@ export default function RootLayout() {
       ),
       AsyncStorage.setItem(THEME_STORAGE_KEY, themeMode),
       AsyncStorage.setItem(TEXT_SCALE_STORAGE_KEY, serializeTextScale(textScale)),
+      // Setup asked the contrast, so "What's new" has nothing more to ask.
+      AsyncStorage.setItem(WHATS_NEW_SEEN_KEY, WHATS_NEW_VERSION),
     ]);
     setShowSetup(false);
   };
@@ -862,6 +902,8 @@ export default function RootLayout() {
                 themeMode,
                 setThemeMode: handleSetThemeMode,
                 toggleTheme: handleToggleTheme,
+                contrastModes: contrasts,
+                setContrastMode: handleSetContrastMode,
               }}
             >
               <UpdateContext.Provider
@@ -877,6 +919,8 @@ export default function RootLayout() {
                   theme={theme}
                   showSetup={showSetup}
                   onCompleteSetup={onCompleteSetup}
+                  showWhatsNew={isReady && !showSetup && showWhatsNew}
+                  onWhatsNewDone={onWhatsNewDone}
                   installAvailable={
                     !installPromptDismissed &&
                     (installPrompt !== null || isIosSafariBrowser())
@@ -903,6 +947,8 @@ function RootLayoutNav({
   theme,
   showSetup,
   onCompleteSetup,
+  showWhatsNew,
+  onWhatsNewDone,
   installAvailable,
   onInstall,
   onDismissInstall,
@@ -915,6 +961,8 @@ function RootLayoutNav({
   theme: AppTheme;
   showSetup: boolean;
   onCompleteSetup: () => void;
+  showWhatsNew: boolean;
+  onWhatsNewDone: () => void;
   installAvailable: boolean;
   onInstall: () => Promise<void>;
   onDismissInstall: () => void;
@@ -1145,6 +1193,7 @@ function RootLayoutNav({
         {showSetup && !installAvailable && (
           <InitialSetup onComplete={onCompleteSetup} />
         )}
+        {showWhatsNew && !installAvailable && <WhatsNewDialog onDone={onWhatsNewDone} />}
 
         <Snackbar
           visible={updateStatus !== 'idle' || updateAvailable}

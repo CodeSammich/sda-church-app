@@ -54,6 +54,15 @@ const SETTING_KEYS = {
   translation: 'user-bible-translation',
   // The narrator chosen for each translation, as { cuv: '<narrator>' }.
   audioReaders: 'user-bible-audio-readers',
+  // High, the default, or standard, for each theme (#669).
+  contrastLight: 'user-contrast-light',
+  contrastDark: 'user-contrast-dark',
+  // The first-launch setup step a key-screens build opens, by name (#669).
+  setupStep: 'screenshot-setup-step',
+  // The newest "What's new" seen (#669); missing shows its contrast question,
+  // and whatsNewStep 'dark' opens its second.
+  whatsNewSeen: 'whats-new-seen',
+  whatsNewStep: 'screenshot-whats-new-step',
 };
 
 // Settings of the simulated phone rather than the app, by platform. A variant
@@ -77,6 +86,8 @@ const APP_BASE_SETTINGS = {
   language: 'en',
   theme: 'light',
   textScale: 1,
+  // This version's "What's new" already seen, so it shows only in its own shot.
+  whatsNewSeen: JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')).version,
 };
 const BASE_SETTINGS = {
   ios: { ...APP_BASE_SETTINGS, iosTextSize: 'large' },

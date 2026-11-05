@@ -23,6 +23,8 @@
   "variants": {
     "default": {},
     "dark": { "theme": "dark" },
+    "standard-contrast": { "contrastLight": "standard" },
+    "standard-contrast-dark": { "theme": "dark", "contrastDark": "standard" },
     "large": { "textScale": 1.5 },
     "es-default-text": { "language": "es", "textScale": 1.25 },
     "es-large": { "language": "es", "textScale": 1.5 },
@@ -58,7 +60,7 @@
       "group": "home",
       "tabs": false,
       "popup": true,
-      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of three (#523), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
+      "$comment": "First-launch setup, which shows until has-completed-setup is saved: its first step of four (#523, #669), the welcome and the language, with the step dots and Next below the scrolling part, so the way on stays in view. At the large size the step still fits. RapidOCR reads the white Next on its blue button as Net at the Android phone's default size, so there only the large variant requires it.",
       "path": "",
       "settings": { "setupDone": false },
       "variants": ["default", "large"],
@@ -74,7 +76,7 @@
       "group": "home",
       "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"Happy Sabbath!\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. The timer's rule allows up to three characters before it, for the days: Vision can read the iPhone's Courier \"1d\" as \"ld\" or \"la\", and RapidOCR can drop the space after it. The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
       "path": "",
-      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
+      "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "landscape", "landscape-xl"],
       "variantRules": {
         "xl-ios-large-text": {
@@ -109,7 +111,7 @@
       "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376). The icon is required in every variant but dark, where Vision sometimes misses the gold icon on the dark theme's button entirely (the 1.7.0 run read only \"EN\"); the other variants still catch a dropped icon. On the iPad, Vision can read the book button's chevron as part of its name, \"Psalmsv\".",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
-      "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max"],
+      "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "ios-large-text", "landscape"],
       "mustShowLines": ["\\bEN\\b", "BSB", "CUV", "^Psalms(\\b|v$)"],
       "variantRules": {
@@ -617,6 +619,109 @@
         "default": { "mustShowLines": [{ "line": "^Current selection: 150%", "platforms": ["ipad"] }] }
       },
       "mustNotShowLines": ["^Apply$", "^Close$"]
+    },
+    {
+      "$comment": "You → Contrast (#669): light mode and dark mode, each with high contrast, the default, and standard, with a picture of the tab bar in each. A setting, not a question, so it has an X, which Vision doesn't read as a word. Dark mode is below the fold on a phone.",
+      "name": "contrast",
+      "group": "worship-and-you",
+      "path": "you?popup=contrast",
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Close$", "^Apply$"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Contrast$", "^Light mode$", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^對比度$", "^淺色模式$", "^高對比度$", "^標準$"] }
+      }
+    },
+    {
+      "$comment": "First-launch setup's other steps, which a key-screens build opens by the saved setupStep since the capture can't tap Next (#669), so each step has its shot: hard to reach by hand. The text size step, with Back and Next.",
+      "name": "setup-text-size",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "setupDone": false, "setupStep": "textSize" },
+      "variants": ["default"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": ["^Text size$", "^Choose a comfortable"],
+      "mustNotShowLines": ["^Welcome$", "^Appearance$"]
+    },
+    {
+      "$comment": "Setup's appearance step: the four themes. RapidOCR can read the sun icon beside Light as a colon.",
+      "name": "setup-appearance",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "setupDone": false, "setupStep": "appearance" },
+      "variants": ["default"],
+      "ipadVariants": ["landscape"],
+      "mustShowLines": ["^Appearance$", "^System$", "^:?Light$", "^Dark$"],
+      "mustNotShowLines": ["^Welcome$", "^Text size$"]
+    },
+    {
+      "$comment": "Setup's contrast for light mode (#669): the pictures of high contrast, chosen, and standard, in the light theme, with Next. Titles wrap differently by device, so the rules need only their start, and fail on the other mode's wording.",
+      "name": "setup-contrast-light",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "setupDone": false, "setupStep": "contrastLight" },
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Appearance$", "dark mode", "深色模式"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$"] }
+      }
+    },
+    {
+      "$comment": "Setup's last step (#669): the contrast for dark mode, with its pictures in the dark theme, and Get Started. Vision reads the white Get Started on its blue button; RapidOCR may not, so Android doesn't require it.",
+      "name": "setup-contrast-dark",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "setupDone": false, "setupStep": "contrastDark" },
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Next$", "light mode", "淺色模式"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$", { "line": "^Get Started$", "platforms": ["ios", "ipad"] }] },
+        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$"] }
+      }
+    },
+    {
+      "$comment": "The contrast question after an update (#669): shown once, on the first launch after updating, to members who set up an earlier version, which a missing whatsNewSeen stands for. Light mode first, then dark mode (whatsNewStep dark), each with its two pictures, high contrast first, and no other text. It asks a question, so it has no X.",
+      "name": "whats-new",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "whatsNewSeen": null },
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Close$", "dark mode", "深色模式"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$"] }
+      }
+    },
+    {
+      "$comment": "The question's second page: dark mode.",
+      "name": "whats-new-dark",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "whatsNewSeen": null, "whatsNewStep": "dark" },
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Close$", "light mode", "淺色模式"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Which is easier", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$"] }
+      }
     },
     {
       "name": "language",
