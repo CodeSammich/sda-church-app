@@ -89,7 +89,7 @@ export default function HomeScreen() {
       sabbathSchool: 'This Week’s Lesson',
       hymnal: 'Hymnal',
       sabbathStarts: 'Sabbath starts in',
-      sabbathEnds: 'Sabbath ends in',
+      isSabbath: 'Happy Sabbath!',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: 'New York, NY',
@@ -106,7 +106,7 @@ export default function HomeScreen() {
       sabbathSchool: '本週安息日學課程',
       hymnal: '詩歌本',
       sabbathStarts: '距離安息日還有',
-      sabbathEnds: '距離安息日結束還有',
+      isSabbath: '安息日快樂！',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: '紐約',
@@ -123,7 +123,7 @@ export default function HomeScreen() {
       sabbathSchool: '本周安息日学课程',
       hymnal: '诗歌本',
       sabbathStarts: '距离安息日还有',
-      sabbathEnds: '距离安息日结束还有',
+      isSabbath: '安息日快乐！',
       locationDefault: '纽约',
     },
     es: {
@@ -138,7 +138,7 @@ export default function HomeScreen() {
       sabbathSchool: 'Lección de esta semana',
       hymnal: 'Himnario',
       sabbathStarts: 'El Sábado comienza en',
-      sabbathEnds: 'El Sábado termina en',
+      isSabbath: '¡Feliz Sábado!',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: 'New York, NY',
@@ -470,7 +470,7 @@ export default function HomeScreen() {
             <Card.Content style={styles.timerContentSubtle}>
               {/* Three centred lines, like a clock (#593): what the timer counts
                   to, the timer, and the place. The timer already says when, so
-                  no date; during the Sabbath the label says it counts to its end. */}
+                  no date. During the Sabbath the first line greets it instead. */}
               <Text
                 variant="labelMedium"
                 style={{
@@ -479,7 +479,7 @@ export default function HomeScreen() {
                   textAlign: 'center',
                 }}
               >
-                {isSabbath ? labels.sabbathEnds : labels.sabbathStarts}
+                {isSabbath ? labels.isSabbath : labels.sabbathStarts}
               </Text>
               <Text
                 style={[

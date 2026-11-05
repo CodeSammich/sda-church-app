@@ -46,11 +46,11 @@ describe("the Sabbath countdown's card (#593)", () => {
 
   it('shows three lines, what it counts to, the timer, and the place, with no date', () => {
     const card = home.slice(home.indexOf('{/* Sabbath Countdown Widget */}'), home.indexOf('<View style={styles.grid}>'));
-    expect(card.indexOf('labels.sabbathEnds : labels.sabbathStarts')).toBeLessThan(card.indexOf("countdown || '--:--:--'"));
+    expect(card.indexOf('labels.isSabbath : labels.sabbathStarts')).toBeLessThan(card.indexOf("countdown || '--:--:--'"));
     expect(card.indexOf("countdown || '--:--:--'")).toBeLessThan(card.indexOf('labels.locationDefault'));
     // The timer always has its own line, so nothing measures whether it fits
     // beside the words, and the date is gone: the timer already says when.
-    expect(home).not.toMatch(/countdownFitsBeside|formatDisplayDate|timerRow|isSabbath:/);
+    expect(home).not.toMatch(/countdownFitsBeside|formatDisplayDate|timerRow|sabbathEnds/);
   });
 
   it('centres its three lines, like a clock', () => {
@@ -79,8 +79,8 @@ describe("the Sabbath countdown's card (#593)", () => {
     expect(11 * 0.6 * getCountdownFontSize(contentWidth, scale)).toBeLessThanOrEqual(contentWidth - 2 * 20 - 2 * 16);
   });
 
-  it('says during the Sabbath that it counts to its end, in every language', () => {
-    for (const label of ["sabbathEnds: 'Sabbath ends in'", "sabbathEnds: '距離安息日結束還有'", "sabbathEnds: '距离安息日结束还有'", "sabbathEnds: 'El Sábado termina en'"]) {
+  it('greets the Sabbath during the Sabbath, in every language, as it did before #593', () => {
+    for (const label of ["isSabbath: 'Happy Sabbath!'", "isSabbath: '安息日快樂！'", "isSabbath: '安息日快乐！'", "isSabbath: '¡Feliz Sábado!'"]) {
       expect(home).toContain(label);
     }
   });
