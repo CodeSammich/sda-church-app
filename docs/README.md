@@ -129,7 +129,9 @@ screen shows, update its key screens and text checks; see
 The **Android audio e2e** workflow, on the release pull request into `main`, builds the
 debug APK, boots an Android emulator, and plays real Bible chapters to check what only a
 real player shows: switching hosts when the church's audio host is down, moving to the
-next chapter with the screen off, and recovering after the network drops. It's a
+next chapter with the screen off, and recovering after the network drops. First it
+presses each tab and checks the app doesn't crash, which the key screens, opening
+every screen by deep link, can't see. It's a
 required check on `main`; feature pull requests don't run it, but you can start it by
 hand on your branch. What each scenario checks, and what to do when the workflow fails,
 is in [Bible audio emulator test](operations/admin-runbook.md#bible-audio-emulator-test).
@@ -146,7 +148,8 @@ E2E_ONLY="pause-and-resume" scripts/e2e/android-bible-audio.sh   # one scenario
 - It prints PASS or FAIL for each scenario and exits non-zero if any failed. For each
   failed scenario it saves the reason, a screenshot, the app's log, and the media session in
   `e2e-output/` (`E2E_OUTPUT` changes the folder).
-- `E2E_ONLY` takes space-separated scenario names: `next-chapter-screen-off`,
+- `E2E_ONLY` takes space-separated scenario names: `tab-presses` (each tab pressed
+  in turn, with no crash), `next-chapter-screen-off`,
   `dead-zone-screen-off`, `mid-chapter-offline`, `pause-and-resume`,
   `previous-before-start`, `downloaded-book-offline` (a book downloaded to listen
   offline, #556), `primary-host-down`, and the reader's `verse-follows-audio`,

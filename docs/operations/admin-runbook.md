@@ -1222,6 +1222,9 @@ minutes.
 It builds the debug APK, boots an Android emulator on the runner, and plays real
 Bible chapters to check what only a real player shows:
 
+- **Tab presses:** each tab is pressed in turn, and the app must keep running with
+  no crash in the log. The key screens open every screen by deep link and never
+  press a tab, so they missed 1.7.0's first test builds crashing on every tab press.
 - **Primary host down:** a local DNS server on the runner makes
   `assets.adventistconnect.org` unreachable, and Genesis 1 must play from the
   Internet Archive.

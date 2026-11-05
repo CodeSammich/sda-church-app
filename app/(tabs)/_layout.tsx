@@ -198,7 +198,7 @@ export default function TabLayout() {
             }}
           >
             <CapsuleTabBar
-              {...(props as any)}
+              {...props}
               bottomInset={bottomTabInset}
               // The Bible's dock fades the page behind itself and the capsule.
               fade={!isBibleRoute}
