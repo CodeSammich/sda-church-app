@@ -157,6 +157,29 @@ describe('the tab bars (#589)', () => {
     expect(again).not.toHaveBeenCalled();
   });
 
+  it('presses each tab on the iPhone and iPad runners, and on the Android emulator, failing if the app stops', () => {
+    const { findTabs, TAB_PRESS_ORDER } = require('../scripts/capture-ios-screens.cjs');
+    // Vision's lines, as fractions of the screen: the tab labels are the
+    // lowest that read exactly each label, not a word higher up the page.
+    const line = (text: string, x: number, y: number) => ({ text, box: [x, y, 0.1, 0.02] });
+    expect(
+      findTabs([line('Bible', 0.4, 0.1), line('Home', 0.1, 0.93), line('Bible', 0.35, 0.93), line('Explore', 0.6, 0.93), line('You', 0.85, 0.93)]),
+    ).toEqual({
+      Home: { x: expect.closeTo(0.15), y: expect.closeTo(0.94) },
+      Bible: { x: expect.closeTo(0.4), y: expect.closeTo(0.94) },
+      Explore: { x: expect.closeTo(0.65), y: expect.closeTo(0.94) },
+      You: { x: expect.closeTo(0.9), y: expect.closeTo(0.94) },
+    });
+    expect(findTabs([line('Home', 0.1, 0.93)]).You).toBeUndefined();
+    expect(TAB_PRESS_ORDER).toEqual(['Bible', 'Explore', 'You', 'Home', 'Bible']);
+    const ios = readFileSync('.github/workflows/ios-key-screens.yml', 'utf8');
+    expect(ios).toContain('run: node scripts/capture-ios-screens.cjs --press-tabs --out "$RUNNER_TEMP/ios-pr-preview"');
+    expect(ios).toContain('run: node scripts/capture-ios-screens.cjs --platform ipad --press-tabs --out "$RUNNER_TEMP/ipad-part"');
+    expect(ios.match(/matrix\.group == 'worship-and-you' \}\}/g)).toHaveLength(2);
+    const android = readFileSync('scripts/e2e/android-bible-audio.sh', 'utf8');
+    expect(android).toContain('run tab-presses scenario_tab_presses');
+  });
+
   it("takes Expo Router's tab bar props as they are, so the typecheck catches a mismatch", () => {
     // A cast here hid that Expo Router passes no `navigation`, and every tab
     // press crashed in 1.7.0's first test builds.

@@ -725,6 +725,91 @@ const capture = async (outDir, { group, platform = 'ios' } = {}) => {
   if (failures.length) process.exitCode = 1;
 };
 
+// The tabs, by their English labels, and the order pressTabs presses them in:
+// the selected tab first, then each of the others, then back to the Bible,
+// whose own listener takes over the press.
+const TAB_LABELS = ['Home', 'Bible', 'Explore', 'You'];
+const TAB_PRESS_ORDER = ['Bible', 'Explore', 'You', 'Home', 'Bible'];
+
+/**
+ * Where each tab's label is, as fractions of the screen from the top left,
+ * from Vision's reading of a screenshot: the lowest line that reads exactly
+ * the label, so a word higher up the page isn't taken for it.
+ */
+const findTabs = (lines) =>
+  Object.fromEntries(
+    TAB_LABELS.map((label) => {
+      const matches = lines.filter((line) => line.text.trim() === label && line.box[1] > 0.75);
+      const lowest = matches.sort((a, b) => b.box[1] - a.box[1])[0];
+      return [label, lowest && { x: lowest.box[0] + lowest.box[2] / 2, y: lowest.box[1] + lowest.box[3] / 2 }];
+    }),
+  );
+
+/**
+ * Presses each tab in turn on a Bible chapter, as a member would, and fails
+ * if the app stops running. The shots open every screen by deep link and
+ * never press a tab, so they missed 1.7.0's first builds crashing on every
+ * tab press. Vision finds the tabs' labels in a screenshot, and serve-sim
+ * presses them, as fractions of the screen. Saves a screenshot after each
+ * press in <outDir>/<platform>-tabs/.
+ */
+const pressTabs = async (outDir, { platform = 'ios' } = {}) => {
+  const config = loadConfig();
+  const bundleId = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8')).expo.ios.bundleIdentifier;
+  const { udid, name } = pickDevice(config, platform);
+  spawnSync('xcrun', ['simctl', 'boot', udid]); // Already booted is fine.
+  simctl('bootstatus', udid, '-b');
+  // serve-sim's helper, which presses, runs until the Simulator shuts down.
+  // One may already be running from the iPad's landscape shots.
+  spawnSync(SERVE_SIM, ['--detach', udid], { stdio: 'inherit' });
+  await turnDevice(udid, 'portrait');
+  const shot = planCaptures(config, platform).find((candidate) => candidate.name === 'bible-dual-default');
+  const dataContainer = simctl('get_app_container', udid, bundleId, 'data');
+  spawnSync('xcrun', ['simctl', 'terminate', udid, bundleId]); // Not running is fine.
+  mkdirSync(dirname(manifestPath(dataContainer, bundleId)), { recursive: true });
+  writeFileSync(manifestPath(dataContainer, bundleId), JSON.stringify(buildManifest(shot.settings, shot.route)));
+  simctl('ui', udid, 'appearance', 'light');
+  simctl('ui', udid, 'content_size', shot.settings.iosTextSize);
+  simctl('launch', udid, bundleId);
+  await sleep(shot.wait + 5);
+
+  const dir = join(outDir, `${platform}-tabs`);
+  mkdirSync(dir, { recursive: true });
+  const first = join(dir, '0-opened.png');
+  simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', first);
+  const read = JSON.parse(
+    execFileSync('xcrun', ['swift', join(__dirname, 'ocr-screens.swift'), 'en-US', first], { encoding: 'utf8' }),
+  );
+  const tabs = findTabs(Object.values(read)[0] || []);
+  const running = () => simctl('spawn', udid, 'launchctl', 'list').includes(`UIKitApplication:${bundleId}`);
+  const failures = [];
+  const missing = TAB_LABELS.filter((label) => !tabs[label]);
+  if (missing.length) failures.push(`no ${missing.join(', ')} tab found on the Bible screen (see ${platform}-tabs/0-opened.png)`);
+  else if (!running()) failures.push('the app stopped before any tab was pressed');
+  else {
+    for (const [index, label] of TAB_PRESS_ORDER.entries()) {
+      serveSim('tap', String(tabs[label].x), String(tabs[label].y), '-d', udid);
+      await sleep(3);
+      simctl('io', udid, 'screenshot', '--type=png', '--mask=ignored', join(dir, `${index + 1}-${label}.png`));
+      if (!running()) {
+        failures.push(`the app stopped when the ${label} tab was pressed`);
+        break;
+      }
+    }
+  }
+  const summary = [
+    `### Tab presses (${name})`,
+    '',
+    failures.length
+      ? failures.map((failure) => `- ❌ ${failure}`).join('\n')
+      : `Pressed ${TAB_PRESS_ORDER.join(', ')}; the app kept running.`,
+    '',
+  ].join('\n');
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+  console.log(summary);
+  if (failures.length) process.exitCode = 1;
+};
+
 if (require.main === module) {
   const argument = (name) => {
     const index = process.argv.indexOf(name);
@@ -737,10 +822,17 @@ if (require.main === module) {
   }
   if (process.argv.includes('--pick-device')) {
     console.log(pickDevice(loadConfig(), platform).udid);
+  } else if (process.argv.includes('--press-tabs')) {
+    pressTabs(resolve(argument('--out') || '.'), { platform }).catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
   } else {
     const outDir = argument('--out');
     if (!outDir) {
-      console.error('Usage: node scripts/capture-ios-screens.cjs [--platform ios|ipad] --pick-device | --out <dir> [--group <group>]');
+      console.error(
+        'Usage: node scripts/capture-ios-screens.cjs [--platform ios|ipad] --pick-device | --out <dir> [--group <group>] | --press-tabs [--out <dir>]',
+      );
       process.exit(2);
     }
     capture(resolve(outDir), { group: argument('--group'), platform }).catch((error) => {
@@ -751,6 +843,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  findTabs,
+  TAB_PRESS_ORDER,
   shotCost,
   takeGroup,
   settledAfter,

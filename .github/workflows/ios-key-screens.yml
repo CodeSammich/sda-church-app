@@ -404,6 +404,15 @@ jobs:
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ios-pr-preview/screens"
           --group ${{ matrix.group }}
 
+      - name: Press each tab
+        # The shots open every screen by deep link and never press a tab, so
+        # they missed 1.7.0's first builds crashing on every tab press. One
+        # runner, the group that finishes first, presses each tab and fails if
+        # the app stops. Screenshots of each press go in ios-tabs/.
+        if: ${{ !cancelled() && steps.launch.outcome == 'success' && matrix.group == 'worship-and-you' }}
+        timeout-minutes: 5
+        run: node scripts/capture-ios-screens.cjs --press-tabs --out "$RUNNER_TEMP/ios-pr-preview"
+
       - name: Upload this group
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -447,6 +456,12 @@ jobs:
         run: >-
           node scripts/check-screens.cjs --dir "$RUNNER_TEMP/ipad-part/screens"
           --platform ipad --group ${{ matrix.group }}
+
+      - name: Press each tab on the iPad
+        # The same, on the iPad, in portrait. Screenshots go in ipad-tabs/.
+        if: ${{ !cancelled() && steps.ipad.outcome != 'skipped' && matrix.group == 'worship-and-you' }}
+        timeout-minutes: 5
+        run: node scripts/capture-ios-screens.cjs --platform ipad --press-tabs --out "$RUNNER_TEMP/ipad-part"
 
       - name: Upload this group's iPad shots
         if: ${{ always() && steps.ipad.outcome != 'skipped' }}
