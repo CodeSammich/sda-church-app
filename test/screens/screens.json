@@ -108,19 +108,19 @@
     {
       "name": "bible-dual",
       "group": "bible-reading",
-      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376). The icon is required in every variant but dark, where Vision sometimes misses the gold icon on the dark theme's button entirely (the 1.7.0 run read only \"EN\"); the other variants still catch a dropped icon. On the iPad, Vision can read the book button's chevron as part of its name, \"Psalmsv\".",
+      "$comment": "The header's translation button in full: the 文A icon (which Vision reads as XA, or as JA beside the pill-coloured EN badge from 1.7.0, and RapidOCR as 文A, or as A alone at Android's largest font), the EN badge, and both names, not cut to B… or C… (#376). The icon is required in every variant but dark, where Vision sometimes misses the gold icon on the dark theme's button entirely (the 1.7.0 run read only \"EN\"); the other variants still catch a dropped icon. On the iPad, Vision can read the book button's chevron as part of its name, \"Psalmsv\".",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "ios-large-text", "landscape"],
       "mustShowLines": ["\\bEN\\b", "BSB", "CUV", "^Psalms(\\b|v$)"],
       "variantRules": {
-        "default": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)"] },
-        "large": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)"] },
-        "xl": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)"] },
-        "ios-large-text": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)"] },
-        "android-font-max": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)"] },
-        "landscape": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)"] }
+        "default": { "mustShowLines": ["^(XA\\b|JA\\b|文A|A EN\\b)"] },
+        "large": { "mustShowLines": ["^(XA\\b|JA\\b|文A|A EN\\b)"] },
+        "xl": { "mustShowLines": ["^(XA\\b|JA\\b|文A|A EN\\b)"] },
+        "ios-large-text": { "mustShowLines": ["^(XA\\b|JA\\b|文A|A EN\\b)"] },
+        "android-font-max": { "mustShowLines": ["^(XA\\b|JA\\b|文A|A EN\\b)"] },
+        "landscape": { "mustShowLines": ["^(XA\\b|JA\\b|文A|A EN\\b)"] }
       }
     },
     {
@@ -133,14 +133,14 @@
       "ipadVariants": ["landscape"],
       "mustShowLines": ["\\bEN\\b", "^Psalms\\b"],
       "variantRules": {
-        "default": { "mustShowLines": ["^(XA\\b|文A|A EN\\b)", "BSB", "CUV"] },
+        "default": { "mustShowLines": ["^(XA\\b|JA\\b|文A|A EN\\b)", "BSB", "CUV"] },
         "large": {
           "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }],
-          "mustNotShowLines": ["(\\bXA|文A)\\b"]
+          "mustNotShowLines": ["(\\bXA|\\bJA|文A)\\b"]
         },
         "xl": {
           "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }],
-          "mustNotShowLines": ["(\\bXA|文A)\\b"]
+          "mustNotShowLines": ["(\\bXA|\\bJA|文A)\\b"]
         }
       }
     },
@@ -584,13 +584,13 @@
     {
       "name": "you",
       "group": "worship-and-you",
-      "$comment": "Share the App, the first item under About & Support, opens a QR code a friend can scan to download the app (#555). Help & Feedback, after it, emails the technology team (#541). Offline Bible Audio, the last setting, lists the Bible audio downloaded for listening offline (#556); the web has none. It pushes About & Support down, so on the Android phone's shorter screen Share the App and Help & Feedback may fall below the screenshot: they're checked on the iPhone only.",
+      "$comment": "The settings: Contrast, with the choice it reads, high contrast unless a member changed it (#669), and Offline Bible Audio, the last, which lists the Bible audio downloaded for listening offline (#556); the web has none. Since 1.7.0 added Contrast, About & Support's items, Share the App (#555) and Help & Feedback (#541), sit below the tab bar on every phone, so they aren't required here; share-app checks its popup.",
       "path": "you",
       "variants": ["default", "dark", "large", "zh", "android-display-large"],
       "ipadVariants": ["default", "landscape"],
       "variantRules": {
-        "default": { "mustShowLines": [{ "line": "^Share the App$", "platforms": ["ios"] }, "^Offline Bible Audio$"] },
-        "zh": { "mustShowLines": [{ "line": "分享應用程式", "platforms": ["ios"] }, { "line": "幫助與意見回饋", "platforms": ["ios"] }, "^離線聖經音訊$"] }
+        "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Offline Bible Audio$"] },
+        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^離線聖經音訊$"] }
       }
     },
     {
@@ -647,7 +647,7 @@
       "mustNotShowLines": ["^Welcome$", "^Appearance$"]
     },
     {
-      "$comment": "Setup's appearance step: the four themes. RapidOCR can read the sun icon beside Light as a colon.",
+      "$comment": "Setup's appearance step: the four themes. Each choice's icon can be read into its label, as a colon by RapidOCR or as letters by Vision (\"Lo System\", \"ội Light\"), so the labels are anchored only at their end.",
       "name": "setup-appearance",
       "group": "worship-and-you",
       "tabs": false,
@@ -656,7 +656,7 @@
       "settings": { "setupDone": false, "setupStep": "appearance" },
       "variants": ["default"],
       "ipadVariants": ["landscape"],
-      "mustShowLines": ["^Appearance$", "^System$", "^:?Light$", "^Dark$"],
+      "mustShowLines": ["^Appearance$", "\\bSystem$", "\\bLight$", "\\bDark$"],
       "mustNotShowLines": ["^Welcome$", "^Text size$"]
     },
     {
