@@ -208,9 +208,9 @@ export const GlobalHeader = (props: any) => {
   // Whole-Bible search (#516), from the Bible screen.
   const bibleSearch = props.options?.bibleSearch as BibleSearchOptions | undefined;
   // The translation button shares a row with the icon buttons. When the row
-  // is tight it gives up its 文A icon first, then its translation names, cut
-  // short with "…" and then dropped, and last its language badges: it takes a
-  // row of its own only when even the badges alone can't fit (#376). Stacking
+  // is tight it gives up its translation names first, cut short with "…" and
+  // then dropped, and last its language badges: it takes a row of its own
+  // only when even the badges alone can't fit (#376). Stacking
   // whenever the full button didn't fit left a wide, mostly empty button and a
   // back arrow between the rows. Hidden copies measure each form.
   const [bibleRowWidth, setBibleRowWidth] = useState(0);
@@ -227,7 +227,7 @@ export const GlobalHeader = (props: any) => {
           iconButtonCount: 1 + (onBibleVerseHelpPress ? 1 : 0) + (onBibleSavedVersesPress ? 1 : 0),
           iconButtonSize: compactControlHeight,
         })
-      : { stack: false, hideTranslationIcon: false, hideTranslationNames: false };
+      : { stack: false, hideTranslationNames: false };
   const stackBibleControls = bibleControlsLayout.stack;
   // Every tab's header stays mounted and sees the Bible's route while it's
   // open, so only the header showing the Bible's controls reports them.
@@ -456,23 +456,12 @@ export const GlobalHeader = (props: any) => {
     />
   );
 
-  // `shortest` draws each translation name cut to its first letter, for
-  // measuring the narrowest forms of the button. Without names, the badges
-  // stand alone, with no "…".
-  const renderTranslationChipContent = ({
-    shortest = false,
-    withIcon = true,
-    withNames = true,
-  } = {}) => (
+  // Each translation's language badge (EN, 繁) and name, with no 文A icon: the
+  // badges already say what it said. `shortest` draws each name cut to its
+  // first letter, for measuring the narrowest forms of the button. Without
+  // names, the badges stand alone, with no "…".
+  const renderTranslationChipContent = ({ shortest = false, withNames = true } = {}) => (
     <>
-                    {withIcon && (
-                      <AppIcon
-                        name="translate"
-                        size={18}
-                        textScale={headerTextScale}
-                        color={theme.colors.primary}
-                      />
-                    )}
                     {bibleTranslationItems?.length ? (
                       <View style={styles.translationChipItems}>
                         {bibleTranslationItems.map((item, index) => (
@@ -507,9 +496,9 @@ export const GlobalHeader = (props: any) => {
                                 maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                                 style={{
                                   color: getDockControlContentColor(theme),
-                                  fontSize: scaleTypographyMetric(11, headerTextScale),
+                                  fontSize: scaleTypographyMetric(14, headerTextScale),
                                   fontWeight: '800',
-                                  lineHeight: scaleTypographyMetric(15, headerTextScale),
+                                  lineHeight: scaleTypographyMetric(19, headerTextScale),
                                 }}
                               >
                                 {item.badge}
@@ -770,7 +759,7 @@ export const GlobalHeader = (props: any) => {
                     pointerEvents="none"
                     style={styles.translationChipMeasure}
                   >
-                    {renderTranslationChipContent({ shortest: true, withIcon: false })}
+                    {renderTranslationChipContent({ shortest: true })}
                   </View>
                 )}
                 {bibleTranslation && (
@@ -784,7 +773,7 @@ export const GlobalHeader = (props: any) => {
                     pointerEvents="none"
                     style={styles.translationChipMeasure}
                   >
-                    {renderTranslationChipContent({ withIcon: false, withNames: false })}
+                    {renderTranslationChipContent({ withNames: false })}
                   </View>
                 )}
                 {!isBibleSearchExpanded && bibleTranslation && onBibleTranslationPress && (
@@ -805,7 +794,6 @@ export const GlobalHeader = (props: any) => {
                     ]}
                   >
                     {renderTranslationChipContent({
-                      withIcon: !bibleControlsLayout.hideTranslationIcon,
                       withNames: !bibleControlsLayout.hideTranslationNames,
                     })}
                   </Pressable>
@@ -1046,14 +1034,16 @@ const styles = StyleSheet.create({
     gap: 4,
     justifyContent: 'center',
   },
+  // About the size of the 文A icon the button had until 1.7.0, so the
+  // language reads at a glance.
   translationLanguageBadge: {
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 22,
-    minWidth: 24,
-    paddingHorizontal: 4,
+    minHeight: 26,
+    minWidth: 30,
+    paddingHorizontal: 6,
   },
   // At its own width, over the icon buttons, rather than stretched across the
   // row with its names in the middle.

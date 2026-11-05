@@ -182,8 +182,9 @@ describe('screen rules', () => {
       .toEqual(['no line matches /国语/']);
   });
 
-  it("checks the Bible header's translation button: in full, or without its icon when tight (#376)", () => {
-    // The real text of a good shot: "XA EN", "BSB +", "* CUV v" (XA is the 文A icon).
+  it("checks the Bible header's translation button: badges and names, cut short only with a back arrow (#376)", () => {
+    // The real text of a good shot from before 1.7.0: "XA EN", "BSB +", "* CUV v"
+    // (XA was the 文A icon, which 1.7.0 removed; nothing requires it now).
     const dual = samples.clean['bible-dual-default'] as Line[];
     expect(checkShot(shot('bible-dual-default'), dual)).toEqual([]);
     const withoutHeader = dual.filter((each) => each.box[1] > 0.12);
@@ -191,30 +192,19 @@ describe('screen rules', () => {
       'no line matches /\\bEN\\b/',
       'no line matches /BSB/',
       'no line matches /CUV/',
-      'no line matches /^(XA\\b|JA\\b|文A|A EN\\b)/',
     ]);
-    // In the dark theme Vision can miss the gold icon on the charcoal button,
-    // so there only the badge and names are required (the 1.7.0 run read "EN").
-    const darkWithoutIcon = [...withoutHeader, line('EN', 0.05), line('BSB +', 0.05), line('CUV V', 0.05)];
-    expect(checkShot(shot('bible-dual-dark'), darkWithoutIcon)).toEqual([]);
-    expect(checkShot(shot('bible-dual-default'), darkWithoutIcon)).toEqual(['no line matches /^(XA\\b|JA\\b|文A|A EN\\b)/']);
+    // 1.7.0's header, with no icon.
+    const badges = [...withoutHeader, line('EN BSB + * CUV v', 0.05)];
+    expect(checkShot(shot('bible-dual-default'), badges)).toEqual([]);
+    expect(checkShot(shot('bible-dual-dark'), badges)).toEqual([]);
 
-    // With a back arrow at 200%: the icon gives way first, so the names stay whole.
-    const body = withoutHeader;
-    const iconFirst = [...body, line('EN BSB + * CUV v', 0.05)];
-    expect(checkShot(shot('bible-dual-back-xl'), iconFirst)).toEqual([]);
-    // What the 0.43.0 preview showed before: the icon kept, the names cut short.
-    const namesCut = [...body, line('XA EN B... +* C...', 0.05)];
-    expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual([
-      'no line matches /BSB/',
-      'no line matches /CUV/',
-      '"XA EN B... +* C..." matches /(\\bXA|\\bJA|文A)\\b/, which must not show',
-    ]);
-    // At the default size the icon must still show.
-    expect(checkShot(shot('bible-dual-back-default'), iconFirst)).toEqual(['no line matches /^(XA\\b|JA\\b|文A|A EN\\b)/']);
-    // Beside 1.7.0's pill-coloured EN badge, Vision reads the icon as JA, a line of its own.
-    const iconAsJA = [...body, line('JA', 0.05), line('EN', 0.05), line('BSB +', 0.05), line('CUV V', 0.05)];
-    expect(checkShot(shot('bible-dual-back-default'), iconAsJA)).toEqual([]);
+    // With a back arrow, the iPhone has room for both names at every size.
+    expect(checkShot(shot('bible-dual-back-default'), badges)).toEqual([]);
+    expect(checkShot(shot('bible-dual-back-xl'), badges)).toEqual([]);
+    // What the 0.43.0 preview showed: the names cut short.
+    const namesCut = [...withoutHeader, line('EN B... +* C...', 0.05)];
+    expect(checkShot(shot('bible-dual-back-default'), namesCut)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
+    expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
   });
 
   it('catches tab labels that wrap, or rise out of an overgrown tab bar, at about 4× text (#380)', () => {
@@ -345,12 +335,15 @@ describe('rules for one platform (#372)', () => {
     expect(checkShot(shot('setup-default'), setup)).toEqual(['no line matches /^Next$/']);
   });
 
-  it('accept the 文A icon as either reader reads it', () => {
-    const header = (icon: string) => [line(`${icon} EN BSB + 繁 CUV`, 0.05), line('Psalms', 0.86), line('Verse', 0.86)];
-    expect(checkShot(androidShot('bible-dual-default'), [...tabs, ...header('文A')])).toEqual([]);
-    expect(checkShot(androidShot('bible-dual-back-large'), [...tabs, ...header('文A')])).toEqual([
-      '"文A EN BSB + 繁 CUV" matches /(\\bXA|\\bJA|文A)\\b/, which must not show',
-    ]);
+  it("require the Bible header's names on the Android phone only where they fit", () => {
+    const header = (text: string) => [line(text, 0.05), line('Psalms', 0.86), line('Verse', 0.86)];
+    const namesGone = [...tabs, ...header('EN + 繁')];
+    expect(checkShot(androidShot('bible-dual-default'), [...tabs, ...header('EN BSB + 繁 CUV')])).toEqual([]);
+    // With a back arrow, both names fit at 100%; at 150% its narrower screen
+    // leaves only the badges, where the iPhone keeps the names.
+    expect(checkShot(androidShot('bible-dual-back-default'), namesGone)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
+    expect(checkShot(androidShot('bible-dual-back-large'), namesGone)).toEqual([]);
+    expect(checkShot(shot('bible-dual-back-large'), namesGone)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
   });
 });
 

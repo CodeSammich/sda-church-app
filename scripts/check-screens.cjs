@@ -17,7 +17,7 @@
  *   right-aligned text, and one with `maxTop` no farther down than that, such
  *   as a popup's title), and its
  *   `mustNotShowLines` match no line. `variantRules` adds rules for one variant,
- *   such as the Bible header without its 文A icon at a large text size;
+ *   such as the Bible header's names, required on the Android phone at 100% only;
  * - a screen with a `later` shot and `mustAdvance` shows a time, as minutes
  *   and seconds, that moved on by at least half the time between the shots,
  *   such as Bible audio's elapsed time while it plays (#551);

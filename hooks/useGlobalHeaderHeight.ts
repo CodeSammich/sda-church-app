@@ -68,16 +68,15 @@ export const getGlobalHeaderHeightForScale = (
 
 export type BibleControlsLayout = Readonly<{
   stack: boolean;
-  hideTranslationIcon: boolean;
   hideTranslationNames: boolean;
 }>;
 
 /**
  * How the Bible reader's header fits its controls (#376). The translation
  * button shares a row with the icon buttons. When the row is tight, it gives
- * things up in this order: first its 文A icon, then its translation names, cut
- * short with "…" down to one letter and then dropped, "…" and all, and last its
- * language badges (EN, 繁): only if even the badges alone can't fit does it take
+ * things up in this order: first its translation names, cut short with "…"
+ * down to one letter and then dropped, "…" and all, and last its language
+ * badges (EN, 繁): only if even the badges alone can't fit does it take
  * a row of its own, with everything. Measured widths are 0 until laid out, so
  * the controls start on one row with everything.
  */
@@ -92,29 +91,24 @@ export const getBibleControlsLayout = ({
   trailingPadding = 12,
 }: {
   rowWidth: number;
-  /** The icon, the badges, and the full names. */
+  /** The badges and the full names. */
   fullButtonWidth: number;
-  /** No icon; the badges, and each name cut to its first letter. */
+  /** The badges, and each name cut to its first letter. */
   shortestButtonWidth: number;
-  /** No icon or names; just the badges. */
+  /** No names; just the badges. */
   badgesOnlyButtonWidth: number;
   iconButtonCount: number;
   iconButtonSize: number;
   gap?: number;
   trailingPadding?: number;
 }): BibleControlsLayout => {
-  const everything = { stack: false, hideTranslationIcon: false, hideTranslationNames: false };
+  const everything = { stack: false, hideTranslationNames: false };
   if (rowWidth <= 0 || fullButtonWidth <= 0) return everything;
   const room = rowWidth - iconButtonCount * (iconButtonSize + gap) - trailingPadding;
-  if (fullButtonWidth <= room) return everything;
   const fits = (width: number) => width > 0 && width <= room;
-  // Without the icon, the names show in full if they fit, or as much as fits.
-  if (fits(shortestButtonWidth)) {
-    return { stack: false, hideTranslationIcon: true, hideTranslationNames: false };
-  }
-  if (fits(badgesOnlyButtonWidth)) {
-    return { stack: false, hideTranslationIcon: true, hideTranslationNames: true };
-  }
+  // The names show in full if they fit, or as much as fits.
+  if (fullButtonWidth <= room || fits(shortestButtonWidth)) return everything;
+  if (fits(badgesOnlyButtonWidth)) return { stack: false, hideTranslationNames: true };
   return { ...everything, stack: true };
 };
 
