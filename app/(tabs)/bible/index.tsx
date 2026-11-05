@@ -47,7 +47,7 @@ import {
   getFloatingSurfaceStyle,
   ScrollEdgeFade,
 } from '@/components/CapsuleTabBar';
-import { getDockControlColor } from '@/components/TabBarItems';
+import { getDockControlBorderColor, getDockControlColor } from '@/components/TabBarItems';
 import { LanguageContext } from '@/constants/LanguageContext';
 import { CONTENT_MAX_WIDTH, contentColumnStyle, getBottomTabContentHeight, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -3838,7 +3838,7 @@ export default function BibleScreen() {
           stackChapterControls && styles.stackedPill,
           {
             backgroundColor: getDockControlColor(theme),
-            borderColor: theme.colors.outline,
+            borderColor: getDockControlBorderColor(theme),
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
             // When the three chips don't fit, only the book name shortens. The
@@ -3881,7 +3881,7 @@ export default function BibleScreen() {
           stackChapterControls && styles.stackedPill,
           {
             backgroundColor: getDockControlColor(theme),
-            borderColor: theme.colors.outline,
+            borderColor: getDockControlBorderColor(theme),
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
             paddingHorizontal: chipPaddingHorizontal,
@@ -3920,7 +3920,7 @@ export default function BibleScreen() {
           stackChapterControls && styles.stackedPill,
           {
             backgroundColor: getDockControlColor(theme),
-            borderColor: theme.colors.outline,
+            borderColor: getDockControlBorderColor(theme),
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
             paddingHorizontal: chipPaddingHorizontal,
@@ -4222,7 +4222,7 @@ export default function BibleScreen() {
                     {
                       backgroundColor: getDockControlColor(theme),
                       borderWidth: 1,
-                      borderColor: theme.colors.outline,
+                      borderColor: getDockControlBorderColor(theme),
                     },
                   ]}
                 >
@@ -4300,7 +4300,7 @@ export default function BibleScreen() {
                     {
                       backgroundColor: getDockControlColor(theme),
                       borderWidth: 1,
-                      borderColor: theme.colors.outline,
+                      borderColor: getDockControlBorderColor(theme),
                     },
                   ]}
                 >

@@ -12,6 +12,7 @@ import {
 } from '@/components/CapsuleTabBar';
 import {
   getBarSurfaceColor,
+  getDockControlBorderColor,
   getDockControlColor,
   getSelectedTabTint,
   TABLET_TAB_BAR_MIN_WIDTH,
@@ -60,6 +61,10 @@ describe('the tab bars (#589)', () => {
     for (const theme of [customLightTheme, customDarkTheme]) {
       expect(getDockControlColor(theme)).toBe(theme.colors.background);
     }
+    // The card's pills and round buttons: a brighter gold edge on the dark
+    // theme's night blue, 4.2:1 where the outline's was 2.8.
+    expect(getDockControlBorderColor(customLightTheme)).toBe(customLightTheme.colors.outline);
+    expect(getDockControlBorderColor(customDarkTheme)).toBe('#B89C4D');
     const layout = readFileSync('app/(tabs)/_layout.tsx', 'utf8');
     expect(layout).toMatch(/tabBarActiveTintColor: theme\.dark\s*\? theme\.colors\.metallicGold\.main\s*: theme\.colors\.primary,/);
     expect(layout).toContain('tabBarInactiveTintColor: theme.colors.onSurfaceVariant,');
