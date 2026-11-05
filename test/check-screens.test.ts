@@ -138,9 +138,9 @@ describe('the bugs fixed in 0.42.0', () => {
   });
 
   it("lets setup's own last step show Get Started, and nothing else it shouldn't (#669)", () => {
-    const last = shot('setup-contrast-default');
+    const last = shot('setup-contrast-dark-default');
     expect(last.settings.setupDone).toBe(false);
-    const lines = ['Which is easier to read?', 'High contrast', 'Standard', 'Get Started'].map((text, index) =>
+    const lines = ['Which is easier to read in', 'High contrast', 'Standard', 'Get Started'].map((text, index) =>
       line(text, 0.2 + index * 0.1),
     );
     expect(checkShot(last, lines)).toEqual([]);

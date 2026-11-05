@@ -1,12 +1,14 @@
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
-  CONTRAST_HIGH,
+  DEFAULT_CONTRAST_MODES,
   ThemeContext,
   THEME_DARK,
   THEME_LIGHT,
   type AppTheme,
   type ContrastMode,
+  type ContrastModes,
+  type ThemeKind,
   type ThemeMode,
 } from '@/constants/Themes';
 import { render } from '@testing-library/react-native';
@@ -27,8 +29,8 @@ interface PreferenceRenderOptions {
   themeMode?: ThemeMode;
   setThemeMode?: (mode: ThemeMode) => void;
   toggleTheme?: (value?: unknown) => void;
-  contrastMode?: ContrastMode;
-  setContrastMode?: (mode: ContrastMode) => void;
+  contrastModes?: ContrastModes;
+  setContrastMode?: (kind: ThemeKind, mode: ContrastMode) => void;
 }
 
 export const renderWithPreferences = (
@@ -43,7 +45,7 @@ export const renderWithPreferences = (
     themeMode = theme?.dark ? THEME_DARK : THEME_LIGHT,
     setThemeMode = jest.fn(),
     toggleTheme = jest.fn(),
-    contrastMode = CONTRAST_HIGH,
+    contrastModes = DEFAULT_CONTRAST_MODES,
     setContrastMode = jest.fn(),
   }: PreferenceRenderOptions = {},
 ) =>
@@ -67,7 +69,7 @@ export const renderWithPreferences = (
           { value: { setTextScale, textScale, defaultTextScale } },
           createElement(
             ThemeContext.Provider,
-            { value: { themeMode, setThemeMode, toggleTheme, contrastMode, setContrastMode } },
+            { value: { themeMode, setThemeMode, toggleTheme, contrastModes, setContrastMode } },
             element,
           ),
         ),

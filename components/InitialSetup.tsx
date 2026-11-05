@@ -280,13 +280,14 @@ const SetupAction = ({
 
 // One question per step (#523), so each fits on a phone and the button to go
 // on is always in view: the language first, so the rest shows in it, then the
-// text size, so the last steps show at that size, and the contrast last
-// (#669), so its pictures show in the chosen light or dark theme.
-export const SETUP_STEPS = ['language', 'textSize', 'appearance', 'contrast'] as const;
+// text size, so the last steps show at that size, and last the contrast for
+// light mode and for dark mode (#669), each asked, since a member may switch,
+// or the System or Sunrise/Sunset theme switches for them.
+export const SETUP_STEPS = ['language', 'textSize', 'appearance', 'contrastLight', 'contrastDark'] as const;
 
 export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
   const { language, setLanguage } = useContext(LanguageContext);
-  const { contrastMode, setContrastMode, setThemeMode, themeMode } = useContext(ThemeContext);
+  const { contrastModes, setContrastMode, setThemeMode, themeMode } = useContext(ThemeContext);
   const contrastCopy = getContrastCopy(language);
   // The chosen size, which a very large phone text size can reduce when drawn.
   const { setTextScale, textScale: drawnTextScale, preferredTextScale } = useTextSize();
@@ -490,19 +491,20 @@ export const InitialSetup = ({ onComplete }: InitialSetupProps) => {
               </>
             )}
 
-            {currentStep === 'contrast' && (
+            {(currentStep === 'contrastLight' || currentStep === 'contrastDark') && (
               <>
                 <Text variant="headlineMedium" style={styles.title}>
-                  {contrastCopy.question}
+                  {contrastCopy.questions[currentStep === 'contrastDark' ? 'dark' : 'light']}
                 </Text>
                 <Text variant="bodyMedium" style={styles.subtitle}>
                   {contrastCopy.help}
                 </Text>
                 {/* High contrast stays chosen unless the member picks standard. */}
                 <ContrastChoice
+                  kind={currentStep === 'contrastDark' ? 'dark' : 'light'}
                   language={language}
-                  onChoose={(mode) => void setContrastMode(mode)}
-                  value={contrastMode}
+                  onChoose={(mode) => void setContrastMode(currentStep === 'contrastDark' ? 'dark' : 'light', mode)}
+                  value={contrastModes[currentStep === 'contrastDark' ? 'dark' : 'light']}
                 />
               </>
             )}

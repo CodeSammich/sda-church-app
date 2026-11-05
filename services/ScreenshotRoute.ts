@@ -17,6 +17,13 @@ export const SCREENSHOT_ROUTE_KEY = 'screenshot-route';
 export const SCREENSHOT_SETUP_STEP_KEY = 'screenshot-setup-step';
 
 /**
+ * Which theme's question the contrast question after an update opens on in a
+ * key-screens build: `dark` for its second, since the capture can't tap the
+ * first (#669).
+ */
+export const SCREENSHOT_WHATS_NEW_STEP_KEY = 'screenshot-whats-new-step';
+
+/**
  * Whether this is a key-screens build: the iOS Simulator build or the Android
  * emulator build the capture runs on. Those set EXPO_PUBLIC_KEY_SCREENS=1,
  * which Expo writes into the app when it's built; the store builds and the

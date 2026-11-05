@@ -248,18 +248,22 @@ simple, blended colors.
     button, the translation button's names, icon and arrow, like the Bible card's pills,
     and the saved-verse button once a verse is saved.
   - **Contrast (#669):** high contrast, the white and night blue above, is the default.
-    Members who'd rather have softer colors choose **Standard** at first-launch setup's
-    last step, "Which is easier to read?", or later under You → Contrast. Members who
-    set up an earlier version are asked once, in **What's new** on their first launch
-    after the update (`constants/WhatsNew.ts`, keyed by version, so a later release can
-    add its own or none; live announcements, #562, would be separate):
-    the bars, the card and the header's buttons a shade off the page, the light theme's
-    own warm surface (`#FAF4EF`) or a warm brown in the dark (`#211F18`), with the
-    selected tab and the card's pills on the light blue or a deeper gold-brown
-    (`#3B3423`, `STANDARD_FLOATING_COLORS`). Every text and icon on them still reads at
-    least 4.5:1. The popup shows a picture of the tab bar in each, since many older
-    members wouldn't know the word. A designer's advice settled the default: contrast
-    is usually the default, and the members it bothers, mostly younger, change it.
+    Members who'd rather have softer colors choose **Standard**, for light mode and for
+    dark mode each, since a member may switch, or the System or Sunrise/Sunset theme
+    switches for them: the bars, the card and the header's buttons a shade off the page,
+    the light theme's own warm surface (`#FAF4EF`) or a warm brown in the dark
+    (`#211F18`), with the selected tab, the card's pills and the header's EN and 繁
+    badges on the light blue or a deeper gold-brown (`#3B3423`,
+    `STANDARD_FLOATING_COLORS`). Every text and icon on them still reads at least 4.5:1.
+    - Asked at first-launch setup's last two steps ("Which is easier to read in light
+      mode?", then dark mode), and once after the update that brought it, in a popup
+      with only those two questions (`constants/WhatsNew.ts`, keyed by version, so a
+      later release can add its own or none; live announcements, #562, would be
+      separate). Changed any time under You → Contrast.
+    - Each shows a picture of the tab bar in each look, high contrast first, one above
+      the other, since many older members wouldn't know the word.
+    - A designer's advice settled the default: contrast is usually the default, and the
+      members it bothers, mostly younger, change it.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header

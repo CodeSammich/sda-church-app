@@ -3,6 +3,7 @@ import { getDockControlBorderColor } from '@/components/TabBarItems';
 import {
   CONTRAST_HIGH,
   CONTRAST_STANDARD,
+  CONTRAST_STORAGE_KEYS,
   customDarkTheme,
   customLightTheme,
   getAppTheme,
@@ -68,37 +69,51 @@ describe('the contrast setting (#669)', () => {
     expect(contrastRatio(getDockControlBorderColor(theme), colors.floatingSurface)).toBeGreaterThanOrEqual(dark ? 3 : 1.4);
   });
 
-  it('is chosen under You → Contrast by pictures, high contrast first, and closes on a choice', async () => {
+  it('is chosen under You → Contrast by pictures, for light mode and dark mode, high contrast first', async () => {
     const onDismiss = jest.fn();
     const setContrastMode = jest.fn();
     const screen = await renderWithPreferences(createElement(ContrastDialog, { onDismiss, visible: true }), {
+      contrastModes: { light: CONTRAST_HIGH, dark: CONTRAST_STANDARD },
       setContrastMode,
     });
+    expect(screen.getByText('Light mode')).toBeTruthy();
+    expect(screen.getByText('Dark mode')).toBeTruthy();
     const options = screen.getAllByRole('radio');
     expect(options.map((option) => option.props.accessibilityLabel)).toEqual([
       'High contrast, Bars and buttons that stand out clearly',
       'Standard, Soft colors, close to the page',
+      'High contrast, Bars and buttons that stand out clearly',
+      'Standard, Soft colors, close to the page',
     ]);
-    expect(options.map((option) => option.props.accessibilityState.checked)).toEqual([true, false]);
-    // A setting, not a question: it closes with an X.
-    expect(screen.queryByText('Close')).toBeNull();
+    expect(options.map((option) => option.props.accessibilityState.checked)).toEqual([true, false, false, true]);
+    // Each theme's own, and it stays open for the other: a setting, with an X.
     await fireEvent.press(options[1]);
-    expect(setContrastMode).toHaveBeenCalledWith(CONTRAST_STANDARD);
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(setContrastMode).toHaveBeenCalledWith('light', CONTRAST_STANDARD);
+    await fireEvent.press(options[2]);
+    expect(setContrastMode).toHaveBeenCalledWith('dark', CONTRAST_HIGH);
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(screen.queryByText('Close')).toBeNull();
   });
 
   it('is saved and applied to every theme the app makes', () => {
     const layout = readFileSync('app/_layout.tsx', 'utf8');
-    expect(layout).toContain('AsyncStorage.getItem(CONTRAST_STORAGE_KEY),');
-    expect(layout).toContain('await AsyncStorage.setItem(CONTRAST_STORAGE_KEY, mode);');
-    // Each theme the app makes after loading takes the setting; only the first,
-    // before the saved settings load, is the default.
+    // One for each theme, since a member may switch between them.
+    expect(CONTRAST_STORAGE_KEYS).toEqual({ light: 'user-contrast-light', dark: 'user-contrast-dark' });
+    expect(layout).toContain('AsyncStorage.getItem(CONTRAST_STORAGE_KEYS.light),');
+    expect(layout).toContain('AsyncStorage.getItem(CONTRAST_STORAGE_KEYS.dark),');
+    expect(layout).toContain('await AsyncStorage.setItem(CONTRAST_STORAGE_KEYS[kind], mode);');
+    // Each theme the app makes after loading takes the one for its light or
+    // dark; only the first, before the saved settings load, is the default.
     expect(layout.match(/getAppTheme\(/g)).toHaveLength(5);
-    expect(layout.match(/effectiveTextScale, contrast\)|\n\s+contrast,\n|\n\s+preferredContrast,\n/g)).toHaveLength(4);
+    expect(
+      layout.match(/contrasts\[isDark \? 'dark' : 'light'\]|contrastFor\((theme|currentTheme)\.dark\)|preferredContrasts\[preferredDark \? 'dark' : 'light'\]/g),
+    ).toHaveLength(4);
     const you = readFileSync('app/(tabs)/you/index.tsx', 'utf8');
     expect(you).toContain('<ContrastDialog visible={showContrast} onDismiss={() => setShowContrast(false)} />');
-    expect(you).toContain('description={contrastCopy.options[contrastMode].label}');
-    // The key screens take it like any other setting.
-    expect(readFileSync('scripts/capture-ios-screens.cjs', 'utf8')).toContain("contrast: 'user-contrast',");
+    expect(you).toContain('contrastModes.light === contrastModes.dark');
+    // The key screens take them like any other setting.
+    const capture = readFileSync('scripts/capture-ios-screens.cjs', 'utf8');
+    expect(capture).toContain("contrastLight: 'user-contrast-light',");
+    expect(capture).toContain("contrastDark: 'user-contrast-dark',");
   });
 });

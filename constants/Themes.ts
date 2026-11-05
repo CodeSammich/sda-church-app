@@ -41,10 +41,20 @@ export type ThemeMode =
  * Contrast. A designer's advice: contrast is usually the default, and those
  * it bothers change it.
  */
-export const CONTRAST_STORAGE_KEY = 'user-contrast';
 export const CONTRAST_STANDARD = 'standard';
 export const CONTRAST_HIGH = 'high';
 export type ContrastMode = typeof CONTRAST_STANDARD | typeof CONTRAST_HIGH;
+/**
+ * The light and dark themes each have their own, since a member may switch
+ * between them, or the System or Sunrise/Sunset theme does it for them.
+ */
+export type ThemeKind = 'light' | 'dark';
+export type ContrastModes = Record<ThemeKind, ContrastMode>;
+export const CONTRAST_STORAGE_KEYS: Record<ThemeKind, string> = {
+  light: 'user-contrast-light',
+  dark: 'user-contrast-dark',
+};
+export const DEFAULT_CONTRAST_MODES: ContrastModes = { light: CONTRAST_HIGH, dark: CONTRAST_HIGH };
 export const parseContrastMode = (value: string | null | undefined): ContrastMode =>
   value === CONTRAST_STANDARD ? CONTRAST_STANDARD : CONTRAST_HIGH;
 
@@ -394,8 +404,8 @@ export const ThemeContext = createContext({
   themeMode: THEME_SYSTEM as ThemeMode,
   setThemeMode: (_mode: ThemeMode) => {},
   toggleTheme: (_dark?: boolean) => {},
-  contrastMode: CONTRAST_HIGH as ContrastMode,
-  setContrastMode: (_mode: ContrastMode) => {},
+  contrastModes: DEFAULT_CONTRAST_MODES,
+  setContrastMode: (_kind: ThemeKind, _mode: ContrastMode) => {},
 });
 
 /**

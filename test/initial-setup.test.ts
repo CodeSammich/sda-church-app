@@ -191,15 +191,16 @@ describe('InitialSetup', () => {
 
     await goOn(screen, 'Siguiente');
     await goOn(screen, 'Siguiente');
+    await goOn(screen, 'Siguiente');
     await goOn(screen, 'Comenzar');
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('goes through the four steps, back and on, and finishes on the last', async () => {
+  it('goes through the five steps, back and on, and finishes on the last', async () => {
     const onComplete = jest.fn();
     const setContrastMode = jest.fn();
     const screen = await renderWithPreferences(createElement(InitialSetup, { onComplete }), { setContrastMode });
-    const stepLabel = (n: number) => screen.getByLabelText(`Step ${n} of 4`);
+    const stepLabel = (n: number) => screen.getByLabelText(`Step ${n} of 5`);
 
     expect(stepLabel(1)).toBeTruthy();
     expect(screen.getByText('Language')).toBeTruthy();
@@ -219,15 +220,22 @@ describe('InitialSetup', () => {
     expect(stepLabel(3)).toBeTruthy();
     expect(screen.getByText('Appearance')).toBeTruthy();
 
-    // The contrast step (#669): the pictures, with high contrast chosen.
+    // The contrast for light mode, then dark mode (#669): the pictures, with
+    // high contrast chosen.
     await goOn(screen);
     expect(stepLabel(4)).toBeTruthy();
-    expect(screen.getByText('Which is easier to read?')).toBeTruthy();
-    const options = screen.getAllByRole('radio');
+    expect(screen.getByText('Which is easier to read in light mode?')).toBeTruthy();
+    let options = screen.getAllByRole('radio');
     expect(options.map((option) => option.props.accessibilityState.checked)).toEqual([true, false]);
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
     await fireEvent.press(options[1]);
-    expect(setContrastMode).toHaveBeenCalledWith('standard');
+    expect(setContrastMode).toHaveBeenCalledWith('light', 'standard');
+    await goOn(screen);
+    expect(stepLabel(5)).toBeTruthy();
+    expect(screen.getByText('Which is easier to read in dark mode?')).toBeTruthy();
+    options = screen.getAllByRole('radio');
+    await fireEvent.press(options[1]);
+    expect(setContrastMode).toHaveBeenCalledWith('dark', 'standard');
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
     expect(onComplete).not.toHaveBeenCalled();
 
     await goOn(screen, 'Get Started');

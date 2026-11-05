@@ -65,6 +65,14 @@ describe("the Bible header's controls", () => {
     // The names are blue, or gold in the dark theme, like the Bible card's
     // pills, both in the list of translations and when one stands alone.
     expect(header.match(/color: theme\.colors\.primary,\n\s*(flexShrink: 1,|fontSize: scaleTypographyMetric\(14)/g)).toHaveLength(2);
+    // The EN and 繁 badges look like the card's pills too, in either contrast,
+    // not the theme's older selection colour, which was near-black on the dark
+    // theme's night blue.
+    expect(header).toMatch(
+      /styles\.translationLanguageBadge,\s*\{\s*backgroundColor: getDockControlColor\(theme\),\s*borderColor: getDockControlBorderColor\(theme\),/,
+    );
+    expect(header).toMatch(/color: getDockControlContentColor\(theme\),\s*fontSize: scaleTypographyMetric\(11, headerTextScale\)/);
+    expect(header).not.toContain('theme.colors.primaryContainer');
   });
 
   it('are reported only by the header that shows them', () => {

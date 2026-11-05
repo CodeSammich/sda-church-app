@@ -26,21 +26,27 @@ describe("What's new (#669)", () => {
     expect(shouldShowWhatsNew(false, null)).toBe(false);
   });
 
-  it('asks the contrast with the pictures, high contrast chosen, and closes on a choice', async () => {
+  it('asks only the contrast, for light mode and then dark mode, and closes after both', async () => {
     const onDone = jest.fn();
     const setContrastMode = jest.fn();
     const screen = await renderWithPreferences(createElement(WhatsNewDialog, { onDone }), {
       language: 'zh',
       setContrastMode,
     });
-    expect(screen.getByText('新功能')).toBeTruthy();
-    expect(screen.getByText('哪一個看得比較清楚？')).toBeTruthy();
-    const options = screen.getAllByRole('radio');
+    expect(screen.getByText('淺色模式下，哪一個看得比較清楚？')).toBeTruthy();
+    // No other text: the question, the hint, and the two pictures.
+    expect(screen.queryByText('新功能')).toBeNull();
+    let options = screen.getAllByRole('radio');
     expect(options.map((option) => option.props.accessibilityState.checked)).toEqual([true, false]);
     // A question: no X.
     expect(screen.queryByRole('button', { name: '關閉' })).toBeNull();
     await fireEvent.press(options[1]);
-    expect(setContrastMode).toHaveBeenCalledWith(CONTRAST_STANDARD);
+    expect(setContrastMode).toHaveBeenCalledWith('light', CONTRAST_STANDARD);
+    expect(onDone).not.toHaveBeenCalled();
+    expect(screen.getByText('深色模式下，哪一個看得比較清楚？')).toBeTruthy();
+    options = screen.getAllByRole('radio');
+    await fireEvent.press(options[0]);
+    expect(setContrastMode).toHaveBeenCalledWith('dark', 'high');
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 

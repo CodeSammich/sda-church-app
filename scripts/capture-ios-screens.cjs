@@ -54,12 +54,15 @@ const SETTING_KEYS = {
   translation: 'user-bible-translation',
   // The narrator chosen for each translation, as { cuv: '<narrator>' }.
   audioReaders: 'user-bible-audio-readers',
-  // High, the default, or standard (#669).
-  contrast: 'user-contrast',
+  // High, the default, or standard, for each theme (#669).
+  contrastLight: 'user-contrast-light',
+  contrastDark: 'user-contrast-dark',
   // The first-launch setup step a key-screens build opens, by name (#669).
   setupStep: 'screenshot-setup-step',
-  // The newest "What's new" seen (#669); missing shows it.
+  // The newest "What's new" seen (#669); missing shows its contrast question,
+  // and whatsNewStep 'dark' opens its second.
   whatsNewSeen: 'whats-new-seen',
+  whatsNewStep: 'screenshot-whats-new-step',
 };
 
 // Settings of the simulated phone rather than the app, by platform. A variant

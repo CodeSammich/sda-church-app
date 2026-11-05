@@ -32,6 +32,11 @@ import { isKeyScreensBuild } from '@/services/ScreenshotRoute';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
 import { getFloatingSurfaceStyle } from '@/components/CapsuleTabBar';
+import {
+  getDockControlBorderColor,
+  getDockControlColor,
+  getDockControlContentColor,
+} from '@/components/TabBarItems';
 import { router, useGlobalSearchParams, usePathname, useSegments } from 'expo-router';
 import {
   useContext,
@@ -488,19 +493,20 @@ export const GlobalHeader = (props: any) => {
                                 +
                               </Text>
                             )}
+                            {/* Like the Bible card's pills, in either contrast. */}
                             <View
                               style={[
                                 styles.translationLanguageBadge,
                                 {
-                                  backgroundColor: theme.colors.primaryContainer,
-                                  borderColor: theme.colors.outlineVariant,
+                                  backgroundColor: getDockControlColor(theme),
+                                  borderColor: getDockControlBorderColor(theme),
                                 },
                               ]}
                             >
                               <Text
                                 maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}
                                 style={{
-                                  color: theme.colors.onPrimaryContainer,
+                                  color: getDockControlContentColor(theme),
                                   fontSize: scaleTypographyMetric(11, headerTextScale),
                                   fontWeight: '800',
                                   lineHeight: scaleTypographyMetric(15, headerTextScale),

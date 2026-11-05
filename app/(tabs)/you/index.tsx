@@ -150,7 +150,7 @@ export default function YouScreen() {
   const NavigationStyles = useNavigationStyles();
   const { language } = useContext(LanguageContext);
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
-  const { contrastMode } = useContext(ThemeContext);
+  const { contrastModes } = useContext(ThemeContext);
   const contrastCopy = getContrastCopy(language);
   // The chosen size, which a very large phone text size can reduce when drawn.
   const { textScale: drawnTextScale, preferredTextScale } = useTextSize();
@@ -251,7 +251,12 @@ export default function YouScreen() {
             />
             <MenuCard
               title={contrastCopy.title}
-              description={contrastCopy.options[contrastMode].label}
+              description={
+                // One label when both themes match; otherwise each theme's.
+                contrastModes.light === contrastModes.dark
+                  ? contrastCopy.options[contrastModes.light].label
+                  : `${contrastCopy.sections.light}: ${contrastCopy.options[contrastModes.light].label} · ${contrastCopy.sections.dark}: ${contrastCopy.options[contrastModes.dark].label}`
+              }
               icon="contrast-circle"
               iconColor={theme.colors.primary}
               onPress={() => setShowContrast(true)}

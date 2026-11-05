@@ -1,5 +1,6 @@
 import { AppIcon, type MaterialCommunityIconName } from '@/components/AppIcon';
 import { getFloatingSurfaceStyle } from '@/components/CapsuleTabBar';
+import { TEXT_SCALE_MIN } from '@/constants/AppPreferences';
 import type { SupportedLanguage } from '@/constants/LanguageContext';
 import {
   CONTRAST_HIGH,
@@ -7,34 +8,35 @@ import {
   getAppTheme,
   useAppTheme,
   type ContrastMode,
+  type ThemeKind,
 } from '@/constants/Themes';
-import { DEFAULT_TEXT_SCALE, TEXT_SCALE_MIN } from '@/constants/AppPreferences';
-import { useTextSize } from '@/constants/TextSizeContext';
-import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { RadioButton, Text } from 'react-native-paper';
 
 /**
- * The contrast choice (#669): high contrast, the default, or standard, in
- * first-launch setup's last step and under You → Contrast. Members choose by
- * pictures of the tab bar in each, not by the term alone, which many older
- * members wouldn't know.
+ * The contrast choice (#669): high contrast, the default, or standard, for
+ * the light and the dark theme each. Asked at first-launch setup's last two
+ * steps, once after the update that brought it, and any time under You →
+ * Contrast. Members choose by pictures of the tab bar in each, not by the
+ * term alone, which many older members wouldn't know.
  */
 export const contrastCopy: Record<
   SupportedLanguage,
   {
     title: string;
-    question: string;
     help: string;
     close: string;
+    questions: Record<ThemeKind, string>;
+    sections: Record<ThemeKind, string>;
     options: Record<ContrastMode, { label: string; description: string }>;
   }
 > = {
   en: {
     title: 'Contrast',
-    question: 'Which is easier to read?',
     help: 'Compare the bar at the bottom of each picture.',
     close: 'Close',
+    questions: { light: 'Which is easier to read in light mode?', dark: 'Which is easier to read in dark mode?' },
+    sections: { light: 'Light mode', dark: 'Dark mode' },
     options: {
       [CONTRAST_STANDARD]: { label: 'Standard', description: 'Soft colors, close to the page' },
       [CONTRAST_HIGH]: { label: 'High contrast', description: 'Bars and buttons that stand out clearly' },
@@ -42,9 +44,10 @@ export const contrastCopy: Record<
   },
   zh: {
     title: '對比度',
-    question: '哪一個看得比較清楚？',
     help: '請比較每張圖下方的選單列。',
     close: '關閉',
+    questions: { light: '淺色模式下，哪一個看得比較清楚？', dark: '深色模式下，哪一個看得比較清楚？' },
+    sections: { light: '淺色模式', dark: '深色模式' },
     options: {
       [CONTRAST_STANDARD]: { label: '標準', description: '柔和的顏色，與頁面相近' },
       [CONTRAST_HIGH]: { label: '高對比度', description: '清楚突出的選單列和按鈕' },
@@ -52,9 +55,10 @@ export const contrastCopy: Record<
   },
   'zh-cn': {
     title: '对比度',
-    question: '哪一个看得比较清楚？',
     help: '请比较每张图下方的菜单栏。',
     close: '关闭',
+    questions: { light: '浅色模式下，哪一个看得比较清楚？', dark: '深色模式下，哪一个看得比较清楚？' },
+    sections: { light: '浅色模式', dark: '深色模式' },
     options: {
       [CONTRAST_STANDARD]: { label: '标准', description: '柔和的颜色，与页面相近' },
       [CONTRAST_HIGH]: { label: '高对比度', description: '清楚突出的菜单栏和按钮' },
@@ -62,9 +66,10 @@ export const contrastCopy: Record<
   },
   es: {
     title: 'Contraste',
-    question: '¿Cuál se lee mejor?',
     help: 'Compara la barra de abajo en cada imagen.',
     close: 'Cerrar',
+    questions: { light: '¿Cuál se lee mejor en modo claro?', dark: '¿Cuál se lee mejor en modo oscuro?' },
+    sections: { light: 'Modo claro', dark: 'Modo oscuro' },
     options: {
       [CONTRAST_STANDARD]: { label: 'Estándar', description: 'Colores suaves, parecidos a la página' },
       [CONTRAST_HIGH]: { label: 'Alto contraste', description: 'Barras y botones que resaltan claramente' },
@@ -77,18 +82,17 @@ export const getContrastCopy = (language: string) =>
 
 const PREVIEW_TABS: readonly MaterialCommunityIconName[] = ['home', 'cross', 'compass-outline', 'account-circle-outline'];
 
-/** A small picture of the page's bottom with the tab bar, in one contrast. */
-function ContrastPreview({ compact, contrast }: Readonly<{ compact: boolean; contrast: ContrastMode }>) {
-  const appTheme = useAppTheme();
+/** A small picture of the page's bottom with the tab bar, in one theme and contrast. */
+function ContrastPreview({ contrast, kind }: Readonly<{ contrast: ContrastMode; kind: ThemeKind }>) {
   // Only its colours are used, so it skips scaling the fonts.
-  const theme = getAppTheme(appTheme.dark, false, TEXT_SCALE_MIN, contrast);
+  const theme = getAppTheme(kind === 'dark', false, TEXT_SCALE_MIN, contrast);
   const selected = theme.dark ? theme.colors.metallicGold.main : theme.colors.primary;
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
-      style={[styles.preview, compact && styles.previewCompact, { backgroundColor: theme.colors.background }]}
+      style={[styles.preview, { backgroundColor: theme.colors.background }]}
     >
       <View style={[styles.previewLine, { backgroundColor: theme.colors.onSurfaceVariant }]} />
       <View style={[styles.previewLine, styles.previewLineShort, { backgroundColor: theme.colors.onSurfaceVariant }]} />
@@ -96,17 +100,9 @@ function ContrastPreview({ compact, contrast }: Readonly<{ compact: boolean; con
         {PREVIEW_TABS.map((icon, index) => (
           <View
             key={icon}
-            style={[
-              styles.previewTab,
-              compact && styles.previewTabCompact,
-              index === 1 && { backgroundColor: theme.colors.floatingSelected },
-            ]}
+            style={[styles.previewTab, index === 1 && { backgroundColor: theme.colors.floatingSelected }]}
           >
-            <AppIcon
-              name={icon}
-              size={compact ? 18 : 22}
-              color={index === 1 ? selected : theme.colors.onSurfaceVariant}
-            />
+            <AppIcon name={icon} size={22} color={index === 1 ? selected : theme.colors.onSurfaceVariant} />
           </View>
         ))}
       </View>
@@ -115,28 +111,20 @@ function ContrastPreview({ compact, contrast }: Readonly<{ compact: boolean; con
 }
 
 /**
- * The two choices, each with its picture, label and description. Pressing
- * one chooses it. Side by side where they fit, as on a phone at up to the
- * 125% default, so both pictures are in view to compare without scrolling,
- * with a smaller radio mark so the labels keep whole words; one above the
- * other at larger sizes.
+ * The two choices for one theme, high contrast first, one above the other,
+ * each with its picture in that theme, its label and description. Pressing
+ * one chooses it.
  */
 export function ContrastChoice({
+  kind,
   language,
   onChoose,
   value,
-}: Readonly<{ language: string; onChoose: (mode: ContrastMode) => void; value: ContrastMode }>) {
+}: Readonly<{ kind: ThemeKind; language: string; onChoose: (mode: ContrastMode) => void; value: ContrastMode }>) {
   const theme = useAppTheme();
   const copy = getContrastCopy(language);
-  const { textScale } = useTextSize();
-  const [width, setWidth] = useState(0);
-  const sideBySide = width >= 300 && textScale <= DEFAULT_TEXT_SCALE;
   return (
-    <View
-      accessibilityRole="radiogroup"
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-      style={[styles.options, sideBySide && styles.optionsSideBySide]}
-    >
+    <View accessibilityRole="radiogroup" style={styles.options}>
       {([CONTRAST_HIGH, CONTRAST_STANDARD] as const).map((mode) => {
         const selected = mode === value;
         const option = copy.options[mode];
@@ -147,10 +135,9 @@ export function ContrastChoice({
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
             onPress={() => onChoose(mode)}
-            testID={`contrast-${mode}`}
+            testID={`contrast-${kind}-${mode}`}
             style={({ pressed }) => [
               styles.option,
-              sideBySide && styles.optionSideBySide,
               {
                 backgroundColor: selected ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
                 borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
@@ -158,15 +145,8 @@ export function ContrastChoice({
               },
             ]}
           >
-            <ContrastPreview compact={sideBySide} contrast={mode} />
-            <View style={[styles.optionRow, sideBySide && styles.optionRowSideBySide]}>
-              {sideBySide && (
-                <AppIcon
-                  name={selected ? 'radiobox-marked' : 'radiobox-blank'}
-                  size={20}
-                  color={selected ? theme.colors.primary : theme.colors.onSurfaceVariant}
-                />
-              )}
+            <ContrastPreview contrast={mode} kind={kind} />
+            <View style={styles.optionRow}>
               <View style={styles.optionText}>
                 <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
                   {option.label}
@@ -175,16 +155,14 @@ export function ContrastChoice({
                   {option.description}
                 </Text>
               </View>
-              {!sideBySide && (
-                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
-                  <RadioButton.Android
-                    value={mode}
-                    status={selected ? 'checked' : 'unchecked'}
-                    color={theme.colors.primary}
-                    uncheckedColor={theme.colors.onSurfaceVariant}
-                  />
-                </View>
-              )}
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
+                <RadioButton.Android
+                  value={mode}
+                  status={selected ? 'checked' : 'unchecked'}
+                  color={theme.colors.primary}
+                  uncheckedColor={theme.colors.onSurfaceVariant}
+                />
+              </View>
             </View>
           </Pressable>
         );
@@ -196,18 +174,6 @@ export function ContrastChoice({
 const styles = StyleSheet.create({
   options: {
     gap: 12,
-  },
-  optionsSideBySide: {
-    alignItems: 'stretch',
-    flexDirection: 'row',
-  },
-  optionSideBySide: {
-    flex: 1,
-    padding: 8,
-  },
-  optionRowSideBySide: {
-    alignItems: 'flex-start',
-    gap: 6,
   },
   option: {
     borderRadius: 16,
@@ -232,12 +198,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 10,
   },
-  previewCompact: {
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
   previewLine: {
     borderRadius: 3,
     height: 6,
@@ -258,8 +218,5 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     flex: 1,
     paddingVertical: 6,
-  },
-  previewTabCompact: {
-    paddingVertical: 4,
   },
 });

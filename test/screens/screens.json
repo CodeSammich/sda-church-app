@@ -23,8 +23,8 @@
   "variants": {
     "default": {},
     "dark": { "theme": "dark" },
-    "standard-contrast": { "contrast": "standard" },
-    "standard-contrast-dark": { "theme": "dark", "contrast": "standard" },
+    "standard-contrast": { "contrastLight": "standard" },
+    "standard-contrast-dark": { "theme": "dark", "contrastDark": "standard" },
     "large": { "textScale": 1.5 },
     "es-default-text": { "language": "es", "textScale": 1.25 },
     "es-large": { "language": "es", "textScale": 1.5 },
@@ -621,7 +621,7 @@
       "mustNotShowLines": ["^Apply$", "^Close$"]
     },
     {
-      "$comment": "You → Contrast (#669): high contrast, the default, and standard, each with a picture of the tab bar. A setting, not a question, so it has an X, which Vision doesn't read as a word.",
+      "$comment": "You → Contrast (#669): light mode and dark mode, each with high contrast, the default, and standard, with a picture of the tab bar in each. A setting, not a question, so it has an X, which Vision doesn't read as a word. Dark mode is below the fold on a phone.",
       "name": "contrast",
       "group": "worship-and-you",
       "path": "you?popup=contrast",
@@ -629,8 +629,8 @@
       "ipadVariants": ["landscape"],
       "mustNotShowLines": ["^Close$", "^Apply$"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Contrast$", "^High contrast$", "^Standard$", "^Compare the bar"] },
-        "zh": { "mustShowLines": ["^對比度$", "^高對比度$", "^標準$"] }
+        "default": { "mustShowLines": ["^Contrast$", "^Light mode$", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^對比度$", "^淺色模式$", "^高對比度$", "^標準$"] }
       }
     },
     {
@@ -660,37 +660,67 @@
       "mustNotShowLines": ["^Welcome$", "^Text size$"]
     },
     {
-      "$comment": "Setup's last step (#669): the pictures of high contrast, chosen, and standard, with Get Started, in the light and dark themes and in Chinese. Vision reads the white Get Started on its blue button; RapidOCR may not, so Android doesn't require it.",
-      "name": "setup-contrast",
+      "$comment": "Setup's contrast for light mode (#669): the pictures of high contrast, chosen, and standard, in the light theme, with Next. Titles wrap differently by device, so the rules need only their start, and fail on the other mode's wording.",
+      "name": "setup-contrast-light",
       "group": "worship-and-you",
       "tabs": false,
       "popup": true,
       "path": "",
-      "settings": { "setupDone": false, "setupStep": "contrast" },
-      "variants": ["default", "dark", "zh"],
+      "settings": { "setupDone": false, "setupStep": "contrastLight" },
+      "variants": ["default", "zh"],
       "ipadVariants": ["landscape"],
-      "mustNotShowLines": ["^Next$", "^Appearance$"],
+      "mustNotShowLines": ["^Appearance$", "dark mode", "深色模式"],
       "variantRules": {
-        "default": { "mustShowLines": ["^Which is easier to read\\?$", "^High contrast$", "^Standard$", { "line": "^Get Started$", "platforms": ["ios", "ipad"] }] },
-        "dark": { "mustShowLines": ["^Which is easier to read\\?$", "^High contrast$", "^Standard$"] },
-        "zh": { "mustShowLines": ["^哪一個看得比較清楚", "^高對比度$", "^標準$"] }
+        "default": { "mustShowLines": ["^Which is easier to read", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$"] }
       }
     },
     {
-      "$comment": "What's new (#669): shown once, on the first launch after an update, to members who set up an earlier version, which a missing whatsNewSeen stands for. The new look, and the contrast pictures, high contrast first. It asks a question, so it has no X.",
+      "$comment": "Setup's last step (#669): the contrast for dark mode, with its pictures in the dark theme, and Get Started. Vision reads the white Get Started on its blue button; RapidOCR may not, so Android doesn't require it.",
+      "name": "setup-contrast-dark",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "setupDone": false, "setupStep": "contrastDark" },
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Next$", "light mode", "淺色模式"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Which is easier to read", "^High contrast$", "^Standard$", { "line": "^Get Started$", "platforms": ["ios", "ipad"] }] },
+        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$"] }
+      }
+    },
+    {
+      "$comment": "The contrast question after an update (#669): shown once, on the first launch after updating, to members who set up an earlier version, which a missing whatsNewSeen stands for. Light mode first, then dark mode (whatsNewStep dark), each with its two pictures, high contrast first, and no other text. It asks a question, so it has no X.",
       "name": "whats-new",
       "group": "worship-and-you",
       "tabs": false,
       "popup": true,
       "path": "",
       "settings": { "whatsNewSeen": null },
-      "variants": ["default", "dark", "zh"],
+      "variants": ["default", "zh"],
       "ipadVariants": ["landscape"],
-      "mustNotShowLines": ["^Close$"],
+      "mustNotShowLines": ["^Close$", "dark mode", "深色模式"],
       "variantRules": {
-        "default": { "mustShowLines": ["^What.s new$", "^Which is easier to read\\?$", "^High contrast$", "^Standard$"] },
-        "dark": { "mustShowLines": ["^What.s new$", "^High contrast$", "^Standard$"] },
-        "zh": { "mustShowLines": ["^新功能$", "^高對比度$", "^標準$"] }
+        "default": { "mustShowLines": ["^Which is easier to read", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^淺色模式下", "^高對比度$", "^標準$"] }
+      }
+    },
+    {
+      "$comment": "The question's second page: dark mode.",
+      "name": "whats-new-dark",
+      "group": "worship-and-you",
+      "tabs": false,
+      "popup": true,
+      "path": "",
+      "settings": { "whatsNewSeen": null, "whatsNewStep": "dark" },
+      "variants": ["default", "zh"],
+      "ipadVariants": ["landscape"],
+      "mustNotShowLines": ["^Close$", "light mode", "淺色模式"],
+      "variantRules": {
+        "default": { "mustShowLines": ["^Which is easier to read", "^High contrast$", "^Standard$"] },
+        "zh": { "mustShowLines": ["^深色模式下", "^高對比度$", "^標準$"] }
       }
     },
     {
