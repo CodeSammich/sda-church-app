@@ -39,7 +39,7 @@ jobs:
       github.event_name != 'pull_request' ||
       (github.head_ref == 'release-candidate' &&
         github.event.pull_request.head.repo.full_name == github.repository)
-    name: iOS key screens batch ${{ matrix.batch }} (${{ matrix.group }})
+    name: iOS key screens batch ${{ matrix.batch }}
     # Apple Silicon only. The Intel Mac build was dropped in 1.2.1;
     # docs/operations/native-builds.md ("On an Intel Mac") says how to build one.
     runs-on: macos-26
@@ -296,7 +296,7 @@ jobs:
           until { gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name' || true; } |
             grep -qx "ios-simulator-app-$RUN_ID"; do
             builder="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
-              --jq '.jobs[] | select(.name == "iOS key screens batch 3 (bible-text)") | "\(.status) \(.conclusion // "")"' || true)"
+              --jq '.jobs[] | select(.name == "iOS key screens batch 3") | "\(.status) \(.conclusion // "")"' || true)"
             status="${builder%% *}"
             conclusion="${builder#* }"
             if [ "$status" = completed ]; then

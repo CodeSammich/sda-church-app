@@ -1,5 +1,5 @@
 {
-  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, appStoreIpad the iPad's, from the screens that list ipadVariants (#324), and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 6 minutes. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. See docs/operations/native-builds.md.",
+  "$comment": "The app's key screens, captured from each platform's preview build: the iPhone's (#331) and Android's (#372). Each screen opens by deep link (sdachurchapp://<path>) after its settings are saved; each variant adds the settings listed under variants. A variant that changes one platform's own settings (iosTextSize on the iPhone; fontScale and displayScale on Android) is taken only there, and a screen with platforms only on those. Screenshots are named <platform>/<screen>-<variant>.png. checks lists automatic image checks for a screen, mustShowLines regular expressions that some line of its text must match (or { line, minLeft } for a line that must also start at least minLeft of the way across, such as right-aligned text), mustNotShowLines ones that no line may match, variantRules more of either for one variant (a rule written { line, platforms } applies on those platforms only, such as a line the Android phone's smaller screen leaves below the fold), and tabs false for a screen without the tab bar, such as the Bible while reading (scripts/check-screens.cjs); appStore lists, per App Store language, the iPhone shots to upload, in order, appStoreIpad the iPad's, from the screens that list ipadVariants (#324), and googlePlay, per Google Play language, the Android ones (at most 8). Each screen's group names the related screens it is captured with, on one of up to five runners at once (#453): put a new screen in the group for its part of the app, as groups describes. A test fails if a group would take more than 8 minutes on the iPhone, or 7 on the iPad. That limit is a reminder to prune, not a rule: first drop variants that repeat what another shot already shows and screens no longer worth a check, spend the time saved on screens and states no shot covers yet (#456), then move some related screens to a lighter group or split one, and if a group is still over after that, raise the limit. Leave out screens that show members' names or photos, such as the bulletin, the team page, the fellowship page, and the worship schedule. A path's popup= opens one of that screen's popups or dialogs, in the preview build only (#372); its shot skips the tab and verse-button checks, which the popup covers or dims. The Bible's play=1 starts its audio the same way (#551). A screen's record names what the app saves of such an action, which scripts/key-screen-records.cjs checks, saying when the network was the cause of a failure; later takes a second screenshot that many seconds after the first, <platform>/<screen>-<variant>-later.png; and mustAdvance is a regular expression for a time, its first two groups the minutes and seconds, that must have moved on in the later shot by at least half that time. See docs/operations/native-builds.md.",
   "ios": {
     "device": "iPhone 17 Pro Max"
   },
@@ -47,10 +47,10 @@
   },
   "groups": {
     "home": "The Home tab and the pages it opens, other than the hymnals: Discover, About, and Give, and first-launch setup over it.",
-    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, the popup a tapped verse opens, and Offline Bible Audio, which its audio settings open.",
-    "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah; and Offline Bible Audio's narrator popup, as the bible-reading group's phones are at their time limit.",
-    "library": "The Explore tab and the Library: featured books, shelves, and each collection.",
-    "worship-and-you": "The hymnals, Sabbath School, and the You tab with its open-source licenses page and its Text size and Language dialogs. Also, on the iPhone only, Bible audio playing and a children's lesson open in Quick Look (#551): this group finished first or second in the six release runs from 2026-10-19 to 11-02, 1.5 to 7.5 minutes before the slowest, so these longer shots shouldn't lengthen the run."
+    "bible-reading": "The Bible reader's layout: one and two translations, the header and its back arrow, text scrolled under the status bar, the popup a tapped verse opens, and Offline Bible Audio, which its audio settings open, with its narrator popup.",
+    "bible-text": "What the Bible reader shows: Chinese, Cantonese, Simplified Chinese, pinyin, and Spanish text, long chapters, and Selah.",
+    "library": "The Explore tab, Sabbath School, and the Library: featured books, shelves, and each collection. Also, on the iPhone only, a children's lesson open in Quick Look (#551). Sabbath School moved here from worship-and-you in 1.7.0, whose release run took 37 minutes on that group, with the iPad's shots, against 24 on this one.",
+    "worship-and-you": "The hymnals and the You tab with its open-source licenses page and its Text size and Language dialogs. Also, on the iPhone only, Bible audio playing (#551)."
   },
   "screens": [
     {
@@ -72,7 +72,7 @@
     {
       "name": "home",
       "group": "home",
-      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"ends in\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. Vision can read the iPhone's Courier \"1d\" as \"ld\", and RapidOCR can drop the space after it. The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
+      "$comment": "xl-ios-large-text and es-xl-ios-large-text: the app at 200% with the iPhone's accessibility-large text (2×), held to 3.2× by the combined cap, as with Android's largest font at 200%, where the tab labels used to wrap (#380); xl-android-font-max and es-xl-android-font-max are that case itself, with the same rules, except that the Android phone's narrower screen may wrap the heading between its words; and android-display-large is Android's largest display size. Their verse-card buttons and heading must show whole words, not “Shar” or “Versícul / o” (#385). The verse changes daily, and a long one, such as John 1:1 or Genesis 1:27 in English or most verses in Spanish, pushes one button or both below the shot, so no rule requires a button. English instead requires its heading whole on one line and fails on a line ending in a cut-off button word, such as “Shar” or “Rea”; Spanish requires its heading, with or without the accent, which OCR can miss when the photo's cross runs behind it. The tab-label check fails on a wrapped label, or one pushed up out of the tab bar's area by an overgrown bar. Not the iPhone's very largest size: at about 6× in all, page titles break mid-word, which isn't a useful baseline. es-large is Spanish at 150% on the phones: on the Android phone's 384 points, \"Compartir\" didn't fit beside Leer Versículo and broke mid-word, so the buttons stack wherever a word wouldn't fit (#324). The Sabbath countdown is three lines, with no date (#593): \"Sabbath starts in\" (or \"Happy Sabbath!\" during the Sabbath), the timer on a line of its own, and the place. default, es-large, zh and zh-cn require the label whole and the timer, and fail on a date line. The timer's rule allows up to three characters before it, for the days: Vision can read the iPhone's Courier \"1d\" as \"ld\" or \"la\", and RapidOCR can drop the space after it. The check of Chinese dates written out by hand moved to sabbath-school's zh shot.",
       "path": "",
       "variants": ["default", "dark", "large", "ios-large-text", "zh", "zh-cn", "es", "es-large", "xl-ios-large-text", "es-xl-ios-large-text", "xl-android-font-max", "es-xl-android-font-max", "android-display-large"],
       "ipadVariants": ["default", "landscape", "landscape-xl"],
@@ -81,16 +81,16 @@
           "mustShowLines": ["^Today.s Verse$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
-        "default": { "mustShowLines": ["^Sabbath (starts|ends) in$", "^([\\dlI]+d ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["^(Friday|Saturday), "] },
-        "es-large": { "mustShowLines": ["Compartir$", "^El S.bado (comienza|termina) en$", "^([\\dlI]+d ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["\\bCompar(t|ti)?$", "^(tir|ir)\\b"] },
+        "default": { "mustShowLines": ["^(Sabbath starts in|Happy Sabbath!?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["^(Friday|Saturday), "] },
+        "es-large": { "mustShowLines": ["Compartir$", "^(El S.bado comienza en|.?Feliz S.bado!?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["\\bCompar(t|ti)?$", "^(tir|ir)\\b"] },
         "es-xl-ios-large-text": { "mustShowLines": ["^Vers[ií]culo\\b"] },
         "xl-android-font-max": {
           "mustShowLines": ["^Today.s( Verse)?$"],
           "mustNotShowLines": ["\\b(Sh|Sha|Shar|Re|Rea|Ve|Ver|Vers)$"]
         },
         "es-xl-android-font-max": { "mustShowLines": ["^Vers[ií]culo\\b"] },
-        "zh": { "mustShowLines": ["^距離安息日(結束)?還有$", "^([\\dlI]+d ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] },
-        "zh-cn": { "mustShowLines": ["^距离安息日(结束)?还有$", "^([\\dlI]+d ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] }
+        "zh": { "mustShowLines": ["^(距離安息日還有|安息日快樂！?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] },
+        "zh-cn": { "mustShowLines": ["^(距离安息日还有|安息日快乐！?)$", "^(\\S{1,3} ?)?\\d{1,2}:\\d\\d:\\d\\d$"], "mustNotShowLines": ["星期[一二三四五六日]"] }
       },
       "changesDaily": true
     },
@@ -296,7 +296,7 @@
     },
     {
       "name": "offline-bible-audio-narrator",
-      "group": "bible-text",
+      "group": "bible-reading",
       "$comment": "Offline Bible Audio's narrator popup, which lists every narrator to download with what's on the phone, by popup=narrator in the preview build (#324). A key-screen build has nothing downloaded. Its iPad shot checks the popup's width: when it was new, it had a percentage width, which on iOS fills 90% of an iPad. In the bible-text group, the compiling runner's, since the bible-reading group's phones are at their time limit.",
       "path": "you/audio-downloads?narrator=souer&popup=narrator",
       "variants": ["default"],
@@ -430,7 +430,7 @@
     },
     {
       "name": "sabbath-school",
-      "group": "worship-and-you",
+      "group": "library",
       "$comment": "The adult lessons with this week's mission video between them (#508), in each language. The card's description names a different Sabbath each week, so only its title is checked, by its first words, since the Android phone wraps the Spanish one. In Chinese the title is 本週聖工剪影, or the Sabbath of the last Mandarin video the phone found, such as 10月31日聖工剪影; and the video's line starts with its Sabbath's date, such as 11月7日安息日, whether it's the Mandarin video or the English page. That date is the key screens' check of Chinese dates written out by hand (formatAppDate): on Android, Hermes once showed the Simplified one in English (\"Friday, November 6\"). The card pushes the first children's age group, checked here before (#338), below the fold on the iPhone too.",
       "path": "sabbath-school",
       "variants": ["default", "zh", "es"],
@@ -443,7 +443,7 @@
     },
     {
       "name": "sabbath-school-lesson-download",
-      "group": "worship-and-you",
+      "group": "library",
       "$comment": "The popup a tap on a children's lesson opens while its PDF downloads (#529). Key screens can't tap, so a key-screens build opens it from popup=, with a fixed 5.1 of 14.2 MB. The iPhone's text recognition reads \"14.2MB\", without the space.",
       "path": "sabbath-school?popup=lesson-download",
       "variants": ["default"],
@@ -452,7 +452,7 @@
     },
     {
       "name": "sabbath-school-lesson-offline",
-      "group": "worship-and-you",
+      "group": "library",
       "$comment": "The same popup offline with no copy of the lesson (#529, part of #533): it says so, with only the X, in Chinese.",
       "path": "sabbath-school?popup=lesson-offline",
       "variants": ["zh"],
@@ -462,7 +462,7 @@
     },
     {
       "name": "sabbath-school-lesson-viewer",
-      "group": "worship-and-you",
+      "group": "library",
       "platforms": ["ios"],
       "$comment": "A children's lesson downloaded and open in Quick Look, the iPhone's own viewer (#529, #551). popup=lesson-viewer opens the Beginner student lesson in a key-screens build as a tap would: this week's PDF is about 1 MB. The app records how it opened (record), and the capture fails unless Quick Look opened, saying whether the network was the cause. Where the week's lesson has no PDF yet, the browser opens its website instead and the run only warns, so the rules accept that page's address too. Nothing of the page beneath may show.",
       "path": "sabbath-school?popup=lesson-viewer",
