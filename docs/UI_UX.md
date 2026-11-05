@@ -243,7 +243,10 @@ simple, blended colors.
   - **The header's buttons match the bars:** the back button, the page title, the search
     bar, and the Bible's translation, saved-verse, help and search buttons float on the
     same surface, with the same hairline and shadow (`getFloatingSurfaceStyle`), so a
-    page's top matches its bottom.
+    page's top matches its bottom. Their icons are grey, like the tab bar's other tabs;
+    blue, or gold in the dark theme, marks what opens a list or shows a state: the back
+    button, the translation button's names, icon and arrow, like the Bible card's pills,
+    and the saved-verse button once a verse is saved.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header

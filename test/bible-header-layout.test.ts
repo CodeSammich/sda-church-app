@@ -62,6 +62,9 @@ describe("the Bible header's controls", () => {
     // Without names, nothing is left to cut short, so no "…" either.
     expect(header).toMatch(/\{withNames && \(\s*<Text/);
     expect(header).not.toMatch(/translationChip: \{[^}]*maxWidth: 240/);
+    // The names are blue, or gold in the dark theme, like the Bible card's
+    // pills, both in the list of translations and when one stands alone.
+    expect(header.match(/color: theme\.colors\.primary,\n\s*(flexShrink: 1,|fontSize: scaleTypographyMetric\(14)/g)).toHaveLength(2);
   });
 
   it('are reported only by the header that shows them', () => {
