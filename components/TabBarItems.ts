@@ -11,8 +11,9 @@ export const TABLET_TAB_BAR_MIN_WIDTH = 600;
 /**
  * The colour of everything that floats over a page (#589): the tab bar, the
  * Bible's dock card and the header's buttons. White in the light theme and the
- * brand's night blue in the dark, so they stand clearly apart from the page
- * and the text that scrolls under them.
+ * brand's night blue in the dark. Older members with presbyopia couldn't tell
+ * a surface a shade off the page from the page itself; only white and blue
+ * read to them as on top and pressable. Keep them that distinct.
  */
 export const getBarSurfaceColor = (theme: AppTheme) => theme.colors.floatingSurface;
 

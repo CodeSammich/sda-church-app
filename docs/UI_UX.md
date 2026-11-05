@@ -74,7 +74,7 @@ interface consistent and spiritually focused while minimizing retinal distractio
 | :---| :---| :---| :---|
 | **Background**    | #F2E6DF  | #080808 | **The Canvas.** A warm low-glare light canvas and render-matched near-black evening canvas. |
 | **Surface (Cards/Containers)**  | #FAF4EF  | #14130F | **The Object.** Warm cards lift clearly from their respective canvases. |
-| **Floating Surface**  | #FFFFFF  | #00405C | **What floats over a page.** The tab bar, the Bible's card and the header's buttons stand clearly apart from the canvas (#589). |
+| **Floating Surface**  | #FFFFFF  | #00405C | **What floats over a page.** The tab bar, the Bible's card and the header's buttons stand clearly apart from the canvas, so older eyes with presbyopia can tell they're on top and pressable (#589). |
 | **Surface Variant**    | #F1F3F4  | #211F18 | **Secondary UI.** Search bars, unselected controls, and subtle grouped UI. |
 | **On Surface**   | #1A1A1A  | #F3EDE1 | **The Ink.** Warm-white dark-mode text mitigates **Irradiation Illusion** ([NIH/PMC3939872](https://pmc.ncbi.nlm.nih.gov/articles/PMC3939872/)) and stays visually dominant over gold annotations. |
 | **On Surface Variant**   | #606060  | #BDB5A2 | **Muted Intent.** Warm neutral content recedes without becoming illegible. |
@@ -219,7 +219,10 @@ simple, blended colors.
   four tabs in a rounded capsule above the bottom edge, 16 points from a phone's sides
   and at most 520 points wide. It's white in the light theme and the brand's night blue
   (#00405C) in the dark (`floatingSurface`), with a hairline and a soft shadow, so it
-  stands clearly apart from the page, since text scrolls under it. The selected tab is
+  stands clearly apart from the page, since text scrolls under it. The strong contrast
+  is for older members with presbyopia: a surface only a shade off the page (the first
+  design, #FAF4EF and #14130F) blended into it for them, and only white and blue made
+  the bars and buttons feel on top of the page and pressable. Don't soften it. The selected tab is
   primary blue on light blue, or gold on a deeper night blue (`floatingSelected`); the
   others take the muted ink. Its icons and labels follow the app's text size,
   which the systems' own bars wouldn't. On iOS it sits partly within the home

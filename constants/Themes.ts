@@ -141,8 +141,10 @@ export const customLightTheme = {
     onBulletinRemarkSurface: '#6B3D00', // High-contrast warm notice text
     onSurface: LIGHT_THEME_COLORS.onSurface,
     // Everything that floats over a page (#589): the tab bar, the Bible's card
-    // and the header's buttons, white to stand clearly apart from the canvas;
-    // and the pill behind the selected tab.
+    // and the header's buttons, and the pill behind the selected tab. White
+    // (and night blue in the dark theme) so that older members with presbyopia
+    // can tell these controls sit on top and can be pressed; a shade off the
+    // canvas blended into it for them. See docs/UI_UX.md.
     floatingSurface: '#FFFFFF',
     floatingSelected: '#E3F2FD',
 
@@ -286,7 +288,8 @@ export const customDarkTheme: AppTheme = {
     onBulletinRemarkSurface: '#F6D88A',
     onSurface: DARK_THEME_COLORS.onSurface,
     // The floating tab bar, Bible card and header buttons in the brand's night
-    // blue, and a deeper blue behind the gold selected tab.
+    // blue, and a deeper blue behind the gold selected tab: like the light
+    // theme's white, clearly not the page, for older eyes.
     floatingSurface: '#00405C',
     floatingSelected: '#0B2C3D',
 
