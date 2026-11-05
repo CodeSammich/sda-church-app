@@ -274,7 +274,10 @@ const deviceFor = (config, { store, split }) => {
 
 const capture = async (outDir, { group, store, split }) => {
   const config = loadConfig();
-  const device = deviceFor(config, { store, split });
+  // EVAL (#324): WDP x HDP points at 2x.
+  const device = process.env.WDP
+    ? { width: Number(process.env.WDP) * 2, height: Number(process.env.HDP) * 2, density: 320, name: 'an iPhone SE-sized screen' }
+    : store ? config.android.googlePlay : config.android.phone;
   const pkg = previewPackage();
   await becomeRoot();
   prepareEmulator();
