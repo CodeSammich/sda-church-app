@@ -320,10 +320,10 @@ jobs:
           retention-days: 1
 
   screens:
-    # Joins the groups into the one artifact ios-key-screens.yml's review
-    # comment links, with the Google Play copies. It fails if any group failed,
-    # so a failed group can't pass as skipped. The "Main protection" ruleset
-    # requires this job's name.
+    # Joins the groups into the downloads ios-key-screens.yml's review
+    # comment links: the screenshots, and the Google Play copies. It fails if
+    # any group failed, so a failed group can't pass as skipped. The "Main
+    # protection" ruleset requires this job's name.
     needs: [android-build, android-capture]
     if: >-
       !cancelled() && (
@@ -342,7 +342,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      # For sharp, which writes the Google Play copies.
+      # For sharp, which writes the Google Play copies and the palette PNGs.
       - name: Install dependencies
         run: npm ci
 
@@ -359,12 +359,50 @@ jobs:
           node scripts/merge-key-screens.cjs --platform android --out "$RUNNER_TEMP/android-key-screens/screens" \
             "$RUNNER_TEMP"/parts/*/screens
 
+      # Every download a reviewer opens stays under the 50 MB Chrome looks
+      # inside ("Downloads under 50 MB" in docs/operations/native-builds.md),
+      # as in ios-key-screens.yml: the screenshots as palette PNGs, in parts
+      # if need be, and the Google Play copies, untouched. It runs after a
+      # failed join too, since the screenshots show why.
+      - name: Pack the downloads
+        if: ${{ !cancelled() }}
+        run: >-
+          node scripts/pack-review-downloads.cjs --from "$RUNNER_TEMP/android-key-screens/screens"
+          --out "$RUNNER_TEMP/review" --devices android --store google-play
+
       - name: Upload the screenshots
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/android-key-screens/
+          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-1
+          path: ${{ runner.temp }}/review/android-1/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload the screenshots, part 2
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-2
+          path: ${{ runner.temp }}/review/android-2/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the screenshots, part 3
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-3
+          path: ${{ runner.temp }}/review/android-3/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the Google Play copies
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play
+          path: ${{ runner.temp }}/review/store/
           if-no-files-found: warn
           retention-days: 14
 

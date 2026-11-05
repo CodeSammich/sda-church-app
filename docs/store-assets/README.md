@@ -61,8 +61,8 @@ three-line countdown:
 [Android](https://github.com/CodeSammich/sda-church-app/actions/runs/42003614621). The
 feature graphic was built from the Google Play ones.
 
-Each run also saves numbered App Store copies in its screenshots download's
-`screens/app-store/`, from the `appStore` lists in `test/screens/screens.json`:
+Each run also saves numbered App Store copies in its App Store download's
+(`ios-key-screens-<number>-<run>-app-store`) `screens/app-store/`, from the `appStore` lists in `test/screens/screens.json`:
 
 - `screens/app-store/en-US/`: the uploaded set, in upload order: Home, the Bible in
   English and Chinese, the Bible with the Chinese interface (`bible-cuv-zh`), the Bible
@@ -72,7 +72,8 @@ Each run also saves numbered App Store copies in its screenshots download's
 - `screens/app-store-ipad/en-US/`: the iPad set to upload, from the `appStoreIpad`
   list.
 
-Each run saves numbered Google Play copies too, in `screens/google-play/en-US/` and
+Each run saves numbered Google Play copies too, in its Google Play download's
+(`android-key-screens-<pr>-<run>-google-play`) `screens/google-play/en-US/` and
 `screens/google-play/zh-TW/`, from the `googlePlay` lists, on an emulator of Google
 Play's size (1080 × 1920), without transparency (#372). `en-US` is the uploaded set, in
 upload order: Home, the Bible in English and Chinese, the audio settings with the CUV's

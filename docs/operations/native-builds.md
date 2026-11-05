@@ -627,20 +627,20 @@ failed batch's log says which group it took:
   names (an iPhone 17 Pro Max, on the newest iOS runtime), fails if it isn't still
   running 45 seconds after launch, and takes its group's key screens.
 
-**iOS key screens join** then joins the batches, on Linux, and uploads two downloads
-(14-day retention):
+**iOS key screens join** then joins the batches, on Linux, and uploads these downloads
+(14-day retention), each under the 50 MB Chrome looks inside
+([Downloads under 50 MB](#downloads-under-50-mb)):
 
-- `ios-key-screens-<number>-<run>`, which the review comment links as the iOS (iPhone and
-  iPad) screenshots: the key screens in `screens/ios/<screen>-<variant>.png` and
-  `screens/ipad/<screen>-<variant>.png` (described below), the App Store copies, and the
-  text checks.
+- `ios-key-screens-<number>-<run>-iphone-1`, and `-iphone-2` and so on if the shots need
+  more than one, which the review comment links as the iPhone screenshots: the key
+  screens in `screens/ios/<screen>-<variant>.png` (described below), with the text checks.
+- `ios-key-screens-<number>-<run>-ipad-1` and so on: the iPad's, in `screens/ipad/`.
+- `ios-key-screens-<number>-<run>-app-store`: the App Store copies, in
+  `screens/app-store/` and `screens/app-store-ipad/`.
 - The download ending in `-arm64`: the app, `sda-church-app-pr-<number>-<run>-arm64-simulator.zip`,
   and a screenshot of its first screen, `…-arm64-first-screen.png`, named like the
-  Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`.
-
-They're separate because Chrome's Safe Browsing blocks a download with an unsigned app
-zipped inside it, so a shared download kept reviewers from the screenshots. Chrome may
-still block the app's download; `gh run download <run> --pattern '*-arm64'` gets it.
+  Android preview's `sda-church-app-pr-<number>-<run>-arm-debug.apk`. Chrome may block
+  it, since it's an unsigned app; `gh run download <run> --pattern '*-arm64'` gets it.
 
 Pull requests into `release-candidate` don't run it, and neither do other pull
 requests into `main`, such as Dependabot's security updates. To test a change to the
@@ -794,6 +794,48 @@ builds for the Mac's own processor. To build it in the workflow again:
 3. Once that's in `release-candidate`, add the new job's name to the
    **Main protection** ruleset's required checks; see
    [Changing a required check](admin-runbook.md#changing-a-required-check).
+
+#### Downloads under 50 MB
+
+Every download a reviewer opens in Chrome must stay **under 50 MB, with no app inside**.
+Chrome looks inside a zip only up to 50 MB (Chromium's `download_file_types.asciipb` sets
+`max_file_size_to_analyze` to 52428800 for zip). Past that, Google's servers judge it
+without seeing that it holds only pictures, and may call it dangerous. That has happened
+twice:
+
+- Before #484, Chrome blocked the screenshots for the unsigned Simulator app zipped
+  beside them. The app became its own download.
+- 1.7.0's iPad shots took the joined iPhone and iPad download to 349 MB, and Chrome
+  called it dangerous. Through 1.6.x, about 150 MB had passed, by luck rather than by
+  rule.
+
+So both joins run `scripts/pack-review-downloads.cjs`. It writes each device's shots as
+palette PNGs: the same names and sizes, at about a quarter of the bytes. The app's flat
+colours stay exact, and the photos are dithered, which looks the same at a glance. If a
+device's shots still pass 45 MB, it splits them, in name order, into parts of about equal
+size, each with the run's `ocr.json`, `checks.json`, and `settle-times.json`; a device's
+parts unzip into the same folders. The store copies are their own download, untouched.
+The review comment links every part. On 1.7.0's run the downloads were:
+
+| Download | Shots | Zip |
+| --- | --- | --- |
+| iPhone, 2 parts | 126 | 23 and 24 MB |
+| iPad | 72 | 33 MB |
+| App Store copies | 18 | 23 MB |
+| Android | 167 | 27 MB |
+| Google Play copies | 13 | 7 MB |
+
+Each workflow uploads at most three parts a device. The join fails if a device would need
+a fourth, or a download would pass 50 MB. Then add an upload step for the next part in
+`ios-key-screens.yml` or `android-key-screens.yml`; the review comment
+(`key-screens-review.yml`) finds every part by its name. Don't put an app, a build, or
+anything but screenshots and their results in a download a reviewer opens. Each group's own
+download, kept a day, has the original shots, which **Key screens recheck** reads over
+the palette copies while they last.
+
+RapidOCR used to read a palette PNG's colour indexes as grey, which failed 24 of 123
+Android checks on the copies. `scripts/ocr-screens.py` now gives it those in full colour,
+and the copies pass all 123.
 
 #### Key screens
 
@@ -1089,9 +1131,11 @@ only with a read-only token and reads no secret.
   the tab labels and verse button where the window puts them, no word cut short, the
   content column where the window is wider than it, and the Text size popup's width.
   The screens' `mustShowLines` are written for the phone, so they're left out.
-- **Android key screens join** joins the batches into one artifact,
-  `android-key-screens-<pr>-<run>`, with the Google Play copies, and fails if any group
-  failed.
+- **Android key screens join** joins the batches into
+  `android-key-screens-<pr>-<run>-android-1` (and `-android-2` and so on if the shots need
+  more than one) and the Google Play copies, `android-key-screens-<pr>-<run>-google-play`,
+  each under 50 MB ([Downloads under 50 MB](#downloads-under-50-mb)), and fails if any
+  group failed.
 
 One review still covers both platforms. The iOS preview's review comment waits for this
 workflow's run on the same commit. It then links both downloads, says whether both
@@ -1102,7 +1146,8 @@ updates it in place, with the rerun's result and screenshots. Both workflows wri
 comment through `key-screens-review.yml`. To recheck an earlier
 run's Android screenshots with new rules, start **Key screens recheck** with **platform**
 `android` and **screens_from_run**, as for iOS; it runs on Linux. It checks every
-group's shots, from the run's joined download and each group's own.
+group's shots, from the run's joined downloads and, while the run keeps them, each
+group's own originals.
 
 **The phone.** The emulator is the size of the best-selling Android phone where most
 Adventists live, set under `android.phone` in `screens.json`. Of the church's 24.4

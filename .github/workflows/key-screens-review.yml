@@ -120,20 +120,30 @@ jobs:
             if [ -n "$ios_run" ]; then ios_checks=$(join_result "$ios_run" 'iOS key screens join' || true); fi
           fi
 
-          # A link to a run's newest download that passes a jq test, given the
-          # run's ID and attempt, the test, and the link's text. A rerun
-          # uploads its own, so the newest is its attempt's.
+          # Links to a run's newest downloads whose names pass a jq test, given
+          # the run's ID and attempt, the test, and the links' text: one link,
+          # or one per part where a device's screenshots are split to stay
+          # under the 50 MB Chrome checks (scripts/pack-review-downloads.cjs).
+          # A rerun uploads its own, so each name's newest is its attempt's.
           screenshots() {
-            local url="https://github.com/$REPO/actions/runs/$1" found id bytes rerun=""
+            local url="https://github.com/$REPO/actions/runs/$1" found id bytes rerun="" links="" n=0
             found=$(gh api "repos/$REPO/actions/runs/$1/artifacts?per_page=100" \
-              --jq "[.artifacts[] | select(.expired | not) | select($3)] | max_by(.id) // empty | \"\\(.id) \\(.size_in_bytes)\"")
+              --jq "[.artifacts[] | select(.expired | not) | select($3)] | group_by(.name) | map(max_by(.id)) | sort_by(.name) | .[] | \"\\(.id) \\(.size_in_bytes)\"")
             if [ "${2:-1}" -gt 1 ]; then rerun=", from attempt $2 of its run"; fi
-            if [ -n "$found" ]; then
+            if [ -z "$found" ]; then
+              echo "$4 from [its run]($url), which uploaded none; it says why"
+              return 0
+            fi
+            if [ "$(wc -l <<<"$found")" -eq 1 ]; then
               read -r id bytes <<<"$found"
               echo "[$4]($url/artifacts/$id) (a zip of about $((bytes / 1000000)) MB$rerun)"
-            else
-              echo "$4 from [its run]($url), which uploaded none; it says why"
+              return 0
             fi
+            while read -r id bytes; do
+              n=$((n + 1))
+              links="$links${links:+; }[part $n]($url/artifacts/$id), about $((bytes / 1000000)) MB"
+            done <<<"$found"
+            echo "$4 ($links$rerun)"
           }
           # How long a run took, in whole minutes, from its start until the job that
           # uploads its screenshots finished.
@@ -148,12 +158,17 @@ jobs:
             fi
           }
           run_url="https://github.com/$REPO/actions/runs/$ios_run"
-          download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"
+          iphone="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-iphone-[0-9]+$")' 'the iPhone screenshots')"
+          ipad="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-ipad-[0-9]+$")' 'the iPad screenshots')"
+          app_store="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-app-store$")' 'their own download')"
           app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iOS Simulator app')"
           if [ -n "$android_run" ] && [ "$android_checks" != "not finished" ]; then
-            android="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
+            android="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+-android-[0-9]+$")' 'the Android screenshots')"
+            google_play="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+-google-play$")' 'theirs')"
+            stores="The App Store copies are in $app_store: \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`. The Google Play copies are in $google_play: \`screens/google-play/\`."
           else
             android="the Android screenshots, which aren't ready: [their runs](https://github.com/$REPO/actions/workflows/android-key-screens.yml) say why"
+            stores="The App Store copies are in $app_store: \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`."
           fi
           if [ "$ios_checks" = success ] && [ "$android_checks" = success ]; then
             checks="✅ The automatic checks passed on both platforms: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
@@ -191,7 +206,7 @@ jobs:
 
           $timing
 
-          1. **Download** $download and $android, and open their \`screens/ios/\` (iPhone), \`screens/ipad/\`, and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's or iPad's own large text), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad turned sideways, in a screen's own language as \`landscape-zh\` and so on, and at 200% as \`landscape-xl\`), \`w320\` to \`w981\` (Android at an iPad's Split View and Slide Over widths), and \`zh\`, \`zh-cn\`, and \`es\`.
+          1. **Download** $iphone, $ipad, and $android, and open their \`screens/ios/\` (iPhone), \`screens/ipad/\`, and \`screens/android/\` folders. A device's parts unzip into the same folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's or iPad's own large text), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad turned sideways, in a screen's own language as \`landscape-zh\` and so on, and at 200% as \`landscape-xl\`), \`w320\` to \`w981\` (Android at an iPad's Split View and Slide Over widths), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:
              - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
              - on the iPad, a page's text and buttons spread across the whole screen instead of staying in a centered column;
@@ -203,7 +218,7 @@ jobs:
              The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
           3. **Approve:** $approve
 
-          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iOS download's \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
+          A new push needs a new approval, and this comment is replaced when its screenshots are ready. $stores Each download stays under the 50 MB Chrome looks inside, so it can check them: the screenshots are palette PNGs to fit, and the store copies are untouched.
 
           To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
           BODY

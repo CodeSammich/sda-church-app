@@ -40,7 +40,10 @@ type Api = {
   runs: Record<string, string>;
   /** How each run's join job ended. */
   joins: Record<string, string>;
-  /** The newest matching download of each run, by "<run> <ios|app|android>", as "<id> <bytes>". */
+  /**
+   * Each name's newest matching download, by "<run> <iphone|ipad|app-store|app|android|google-play>",
+   * as "<id> <bytes>" lines, one per part, in name order.
+   */
   artifacts: Record<string, string>;
   patchFails?: boolean;
 };
@@ -71,7 +74,7 @@ else if (/\\/issues\\/\\d+\\/comments/.test(url)) print(data.reviews.join('\\n')
 else if ((match = /workflows\\/([^/]+)\\/runs/.exec(url))) print(data.runs[match[1]]);
 else if ((match = /runs\\/(\\d+)\\/jobs/.exec(url))) print(jq.includes('completed_at != null') ? '' : data.joins[match[1]]);
 else if ((match = /runs\\/(\\d+)\\/artifacts/.exec(url))) {
-  const kind = jq.includes('ios-key-screens') ? 'ios' : jq.includes('arm64') ? 'app' : 'android';
+  const kind = ['iphone', 'ipad', 'app-store', 'android', 'google-play'].find((name) => jq.includes('-' + name)) || 'app';
   print(data.artifacts[match[1] + ' ' + kind]);
 }
 `,
@@ -102,17 +105,27 @@ else if ((match = /runs\\/(\\d+)\\/artifacts/.exec(url))) {
 };
 
 // 1.6.0's runs: the iPhone's passed on its first attempt, and Android's
-// passed on its second, after a group's emulator ran out of disk.
+// passed on its second, after a group's emulator ran out of disk. The iPhone
+// screenshots come in two parts, to stay under the 50 MB Chrome checks.
 const iosRun = { PLATFORM: 'ios', RUN_ID: '200', RUN_ATTEMPT: '1', CHECKS: 'success' };
 const androidRerun = { PLATFORM: 'android', RUN_ID: '100', RUN_ATTEMPT: '2', CHECKS: 'success' };
 const api: Api = {
   reviews: [`12 <!-- key-screens-review sha=${SHA} -->`],
   runs: { 'ios-key-screens.yml': '200 1', 'android-key-screens.yml': '100 2' },
   joins: { 200: 'success', 100: 'success' },
-  artifacts: { '200 ios': '901 159000000', '200 app': '902 39000000', '100 android': '905 55000000' },
+  artifacts: {
+    '200 iphone': '901 24000000\n903 25000000',
+    '200 ipad': '904 34000000',
+    '200 app-store': '906 24000000',
+    '200 app': '902 39000000',
+    '100 android': '905 28000000',
+    '100 google-play': '907 7000000',
+  },
 };
 const androidLink =
-  '[the Android screenshots](https://github.com/org/repo/actions/runs/100/artifacts/905) (a zip of about 55 MB, from attempt 2 of its run)';
+  '[the Android screenshots](https://github.com/org/repo/actions/runs/100/artifacts/905) (a zip of about 28 MB, from attempt 2 of its run)';
+const iphoneLinks =
+  'the iPhone screenshots ([part 1](https://github.com/org/repo/actions/runs/200/artifacts/901), about 24 MB; [part 2](https://github.com/org/repo/actions/runs/200/artifacts/903), about 25 MB)';
 
 describe('refreshing the review comment from the Android run', () => {
   it("updates the commit's comment in place, with the rerun's result and newest screenshots", () => {
@@ -122,8 +135,10 @@ describe('refreshing the review comment from the Android run', () => {
     expect(patched.startsWith(`<!-- key-screens-review sha=${SHA} -->\n`)).toBe(true);
     expect(patched).toContain('✅ The automatic checks passed on both platforms');
     expect(patched).toContain(androidLink);
+    expect(patched).toContain(`**Download** ${iphoneLinks}, [the iPad screenshots](https://github.com/org/repo/actions/runs/200/artifacts/904) (a zip of about 34 MB), and ${androidLink}`);
     expect(patched).toContain(
-      '[the iOS screenshots](https://github.com/org/repo/actions/runs/200/artifacts/901) (a zip of about 159 MB)',
+      'The App Store copies are in [their own download](https://github.com/org/repo/actions/runs/200/artifacts/906) (a zip of about 24 MB): `screens/app-store/` and, for the iPad, `screens/app-store-ipad/`. ' +
+        'The Google Play copies are in [theirs](https://github.com/org/repo/actions/runs/100/artifacts/907) (a zip of about 7 MB, from attempt 2 of its run): `screens/google-play/`.',
     );
     // The approval is still on the iPhone run.
     expect(patched).toContain('opens [this run](https://github.com/org/repo/actions/runs/200), clicks **Review deployments**');
@@ -171,6 +186,20 @@ describe('posting the review comment from the iPhone run', () => {
     const { posted } = postOrRefresh(iosRun, { ...api, joins: { 200: 'success', 100: 'not finished' } });
     expect(posted).toContain("the Android screenshots, which aren't ready: [their runs]");
     expect(posted).toContain('(iOS: success, Android: not finished)');
+    expect(posted).toContain('for the iPad, `screens/app-store-ipad/`. Each download stays under');
+    expect(posted).not.toContain('Google Play copies are in');
+  });
+
+  it('lists every part, and says which attempt they came from', () => {
+    const { posted } = postOrRefresh({ ...iosRun, RUN_ATTEMPT: '2' }, {
+      ...api,
+      artifacts: { ...api.artifacts, '200 ipad': '904 30000000\n908 30000000\n909 20000000' },
+    });
+    expect(posted).toContain(
+      'the iPad screenshots ([part 1](https://github.com/org/repo/actions/runs/200/artifacts/904), about 30 MB; ' +
+        '[part 2](https://github.com/org/repo/actions/runs/200/artifacts/908), about 30 MB; ' +
+        '[part 3](https://github.com/org/repo/actions/runs/200/artifacts/909), about 20 MB, from attempt 2 of its run)',
+    );
   });
 
   it('writes the same comment as the Android refresh, once both have finished', () => {
@@ -220,14 +249,27 @@ describe('the shared review comment workflow', () => {
     expect(jobOf(android, 'review-comment')).not.toContain('steps:');
   });
 
-  it("links each run's newest unexpired download, which is a rerun's own", () => {
-    expect(review).toContain('[.artifacts[] | select(.expired | not) | select($3)] | max_by(.id) // empty');
+  it("links each name's newest unexpired download, which is a rerun's own, every part in order", () => {
     expect(review).toContain(
-      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"`,
+      '[.artifacts[] | select(.expired | not) | select($3)] | group_by(.name) | map(max_by(.id)) | sort_by(.name)',
     );
-    expect(review).toContain(
-      `android="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"`,
-    );
+    // The names the joins upload (scripts/pack-review-downloads.cjs).
+    for (const [variable, run, suffix] of [
+      ['iphone', 'ios', 'iphone-[0-9]+'],
+      ['ipad', 'ios', 'ipad-[0-9]+'],
+      ['app_store', 'ios', 'app-store'],
+      ['android', 'android', 'android-[0-9]+'],
+      ['google_play', 'android', 'google-play'],
+    ]) {
+      expect(review).toContain(
+        `${variable}="$(screenshots "$${run}_run" "$${run}_attempt" '.name | test("^${run}-key-screens-(manual|[0-9]+)-[0-9]+-${suffix}$")'`,
+      );
+    }
+    expect(ios).toContain("name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-iphone-1\n");
+    expect(ios).toContain("name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-ipad-1\n");
+    expect(ios).toContain("name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-app-store\n");
+    expect(android).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-android-1\n");
+    expect(android).toContain("name: android-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}-google-play\n");
   });
 
   it("reads each run's result from its join job, in its newest attempt", () => {

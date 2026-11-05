@@ -366,12 +366,23 @@ describe('iOS key screens', () => {
     expect(merge).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
     expect(merge).toContain("needs.capture.result != 'success'");
     expect(merge).toContain('node scripts/merge-key-screens.cjs --platform ios,ipad --out');
-    // Two downloads: the screenshots alone, which the review comment links,
-    // and the Simulator app. Chrome's Safe Browsing blocked the screenshots
-    // while they shared a zip with the unsigned app.
-    expect(merge).toContain(
-      "name: ios-key-screens-${{ github.event.pull_request.number || 'manual' }}-${{ github.run_id }}\n",
-    );
+    // The screenshots apart from the Simulator app: Chrome's Safe Browsing
+    // blocked them while they shared a zip with the unsigned app (#484). Each
+    // device's are packed under the 50 MB Chrome looks inside, in parts if
+    // need be, and the App Store copies are their own download, after a
+    // failed join too.
+    const pack = merge.slice(merge.indexOf('- name: Pack the downloads'));
+    expect(pack).toMatch(/^- name: Pack the downloads\n\s+if: \$\{\{ !cancelled\(\) \}\}\n/);
+    expect(pack).toContain('node scripts/pack-review-downloads.cjs --from "$RUNNER_TEMP/ios-key-screens/screens"');
+    expect(pack).toContain('--devices ios,ipad --store app-store,app-store-ipad');
+    for (const part of ['iphone-1', 'iphone-2', 'iphone-3', 'ipad-1', 'ipad-2', 'ipad-3']) {
+      expect(merge).toContain(
+        `name: ios-key-screens-\${{ github.event.pull_request.number || 'manual' }}-\${{ github.run_id }}-${part}\n` +
+          `          path: \${{ runner.temp }}/review/${part}/\n`,
+      );
+    }
+    expect(merge).toContain('-app-store\n          path: ${{ runner.temp }}/review/store/\n');
+    expect(merge).not.toContain('path: ${{ runner.temp }}/ios-key-screens/');
     expect(merge).toMatch(/name: ios-pr-preview-.*-arm64\n/);
     expect(merge).toContain('--out "$SCREENS_OUT/screens"');
     expect(merge).toMatch(/-name '\*-simulator\.zip' .*\n\s+-exec cp \{\} "\$APP_OUT\/"/);
@@ -381,7 +392,10 @@ describe('iOS key screens', () => {
     // key-screens-review.yml writes the comment for this workflow.
     const comment = repoFile('.github/workflows/key-screens-review.yml');
     expect(comment).toContain(
-      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"`,
+      `iphone="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-iphone-[0-9]+$")' 'the iPhone screenshots')"`,
+    );
+    expect(comment).toContain(
+      `ipad="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+-ipad-[0-9]+$")' 'the iPad screenshots')"`,
     );
     expect(comment).toContain(`app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iOS Simulator app')"`);
   });
@@ -401,6 +415,10 @@ describe('iOS key screens', () => {
     expect(earlier).toMatch(
       /--pattern 'ios-key-screens-\*' --dir "\$RUNNER_TEMP\/earlier" \|\|\n\s+gh run download [^\n]+--pattern 'ios-pr-preview-\*-arm64'/,
     );
+    // Every part's shots, in one folder, and each group's originals over them
+    // while a run keeps them.
+    expect(earlier).toContain(`--pattern 'key-screens-*' --dir "$RUNNER_TEMP/groups" || true`);
+    expect(earlier).toContain('find "$RUNNER_TEMP/earlier" "$RUNNER_TEMP/groups" -path "*/screens/$platform/*.png"');
   });
 
   it('reads no secrets and keeps a read-only token', () => {
@@ -1501,7 +1519,12 @@ describe('Android key screens workflow (#372)', () => {
     // key-screens-review.yml writes the comment; test/key-screens-review.test.ts runs it.
     const comment = repoFile('.github/workflows/key-screens-review.yml');
     expect(comment).toContain('actions/workflows/android-key-screens.yml/runs?head_sha=$SHA&event=pull_request');
-    expect(comment).toContain('test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")');
+    expect(comment).toContain('test("^android-key-screens-(manual|[0-9]+)-[0-9]+-android-[0-9]+$")');
+    expect(comment).toContain('test("^android-key-screens-(manual|[0-9]+)-[0-9]+-google-play$")');
+    // Packed for Chrome as the iPhone's are, with the Google Play copies apart.
+    expect(workflow).toContain('--devices android --store google-play');
+    expect(workflow).toContain('-android-1\n          path: ${{ runner.temp }}/review/android-1/\n');
+    expect(workflow).toContain('-google-play\n          path: ${{ runner.temp }}/review/store/\n');
     expect(jobOf(preview, 'screenshots-reviewed')).toContain('needs: review-comment');
   });
 
@@ -1519,10 +1542,18 @@ describe('Android key screens workflow (#372)', () => {
     expect(earlier).toContain("if: inputs.platform == 'android'");
     expect(earlier).toContain('runs-on: ubuntu-24.04');
     expect(earlier).toContain('check-screens.cjs --dir "$SCREENS" --platform android');
-    // A run's downloads are its joined screenshots and each group's own, each
-    // with a screens folder. Every one's shots are checked, not the first
-    // folder's alone (#632).
-    expect(earlier).toContain(`find "$RUNNER_TEMP/earlier" -path '*/screens/android/*.png' -exec cp {} "$screens/android/" \\;`);
+    // A run's downloads are its joined screenshots, in parts, and each
+    // group's own, each with a screens folder. Every one's shots are checked,
+    // not the first folder's alone (#632), and a group's originals go over the
+    // joined parts' palette copies.
+    const partsFirst = earlier.indexOf(
+      `find "$RUNNER_TEMP/earlier" -path '*-android-[0-9]*/screens/android/*.png' -exec cp {} "$screens/android/" \\;`,
+    );
+    const groupsAfter = earlier.indexOf(
+      `find "$RUNNER_TEMP/earlier" -path '*/screens/android/*.png' ! -path '*-android-[0-9]*/screens/*' -exec cp {} "$screens/android/" \\;`,
+    );
+    expect(partsFirst).toBeGreaterThan(-1);
+    expect(groupsAfter).toBeGreaterThan(partsFirst);
     expect(earlier).not.toContain('-print -quit');
   });
 

@@ -848,7 +848,9 @@ has looked at them; see [Approving the screenshots](#approving-the-screenshots).
 The build needs no `production` approval, because it reads no secrets. To test the
 release on an Apple Silicon Mac before merging, download the app, the artifact ending in
 `-arm64`, from the run's Artifacts section (kept 14 days); you don't need an iPhone.
-The screenshots are a separate download, `ios-key-screens-<number>-<run>`. See
+The screenshots are separate downloads, `ios-key-screens-<number>-<run>-iphone-1`,
+`-ipad-1`, and so on, each under the 50 MB Chrome looks inside
+([Downloads under 50 MB](native-builds.md#downloads-under-50-mb)). See
 [iOS key screens](native-builds.md#ios-key-screens-unsigned-simulator-builds).
 
 To check an earlier run's screenshots again, say after changing a text check in
