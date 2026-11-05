@@ -146,7 +146,10 @@ export default function HomeScreen() {
   };
 
   const labels = allLabels[language as keyof typeof allLabels] || allLabels.en;
-  const countdownFontSize = getCountdownFontSize(getContentWidth(windowWidth, effectiveTextScale), effectiveTextScale);
+  // The timer's size on screen, with both text sizes counted in, less the
+  // phone's, which the text applies again itself.
+  const countdownFontSize =
+    getCountdownFontSize(getContentWidth(windowWidth, effectiveTextScale), effectiveTextScale) / fontScale;
   // One size for every card's text, which keeps each title's words whole.
   const gridTitles = useMemo(
     () => [labels.livestream, labels.bulletin, labels.give, labels.hymnal, labels.sabbathSchool, labels.discover],
@@ -478,10 +481,7 @@ export default function HomeScreen() {
               >
                 {isSabbath ? labels.sabbathEnds : labels.sabbathStarts}
               </Text>
-              {/* Sized with the text size already counted in, so the phone's
-                  doesn't scale it again past its card. */}
               <Text
-                allowFontScaling={false}
                 style={[
                   styles.timerValueSubtle,
                   {

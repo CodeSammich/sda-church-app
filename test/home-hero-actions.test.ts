@@ -58,7 +58,8 @@ describe("the Sabbath countdown's card (#593)", () => {
     expect(card.match(/textAlign: 'center'/g)).toHaveLength(2);
     expect(home).toMatch(/timerValueSubtle: \{[^}]*textAlign: 'center',/);
     expect(card).toContain('fontSize: countdownFontSize,');
-    expect(card).toContain('allowFontScaling={false}');
+    // The phone's text size applies on top, so it's divided out first.
+    expect(home).toMatch(/getCountdownFontSize\(getContentWidth\(windowWidth, effectiveTextScale\), effectiveTextScale\) \/ fontScale;/);
   });
 
   it.each([
