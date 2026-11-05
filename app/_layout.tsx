@@ -33,7 +33,11 @@ import { useChildrenLessonCleanup } from '@/hooks/useChildrenLessonCleanup';
 import { TextSizeContext } from '@/constants/TextSizeContext';
 import {
   AppTheme,
+  CONTRAST_HIGH,
+  CONTRAST_STORAGE_KEY,
+  type ContrastMode,
   getAppTheme,
+  parseContrastMode,
   SCRIPTURE_FONT_FAMILIES,
   THEME_DARK,
   THEME_LIGHT,
@@ -258,6 +262,8 @@ export default function RootLayout() {
   // System is the predictable default; users can explicitly choose Sunset,
   // Light, or Dark from the theme settings.
   const [themeMode, setThemeMode] = useState<ThemeMode>(THEME_SYSTEM);
+  // High contrast unless the member chose standard under You → Contrast (#669).
+  const [contrast, setContrast] = useState<ContrastMode>(CONTRAST_HIGH);
   const [sunTimes, setSunTimes] = useState<{ sunrise: Date; sunset: Date } | null>(null);
   const [textScale, setTextScale] = useState<TextScale>(DEVICE_DEFAULT_TEXT_SCALE);
   // The app's text size and the phone's multiply. Every screen draws with the
@@ -645,11 +651,12 @@ export default function RootLayout() {
 
     async function prepare() {
       try {
-        const [savedLang, savedTheme, setupDone, savedTextScale] = await Promise.all([
+        const [savedLang, savedTheme, setupDone, savedTextScale, savedContrast] = await Promise.all([
           AsyncStorage.getItem('user-language'),
           AsyncStorage.getItem(THEME_STORAGE_KEY),
           AsyncStorage.getItem('has-completed-setup'),
           AsyncStorage.getItem(TEXT_SCALE_STORAGE_KEY),
+          AsyncStorage.getItem(CONTRAST_STORAGE_KEY),
         ]);
 
         // Always determine fallbacks first
@@ -669,6 +676,8 @@ export default function RootLayout() {
               ? savedTheme
               : THEME_SYSTEM;
         setThemeMode(preferredThemeMode);
+        const preferredContrast = parseContrastMode(savedContrast);
+        setContrast(preferredContrast);
         setTheme(
           getAppTheme(
             preferredThemeMode === THEME_DARK ||
@@ -676,6 +685,7 @@ export default function RootLayout() {
               (preferredThemeMode === THEME_SUNSET && useDarkTheme),
             needsCjkSystemFont(preferredLanguage),
             getEffectiveTextScale(preferredTextScale, systemFontScale),
+            preferredContrast,
           ),
         );
 
@@ -716,13 +726,13 @@ export default function RootLayout() {
       (themeMode === THEME_SYSTEM && colorScheme === THEME_DARK) ||
       (themeMode === THEME_SUNSET &&
         (sunTimes ? now < sunTimes.sunrise || now >= sunTimes.sunset : now.getHours() < 7 || now.getHours() >= 19));
-    setTheme(getAppTheme(isDark, needsCjkSystemFont(language), effectiveTextScale));
-  }, [colorScheme, effectiveTextScale, isReady, language, sunTimes, themeMode]);
+    setTheme(getAppTheme(isDark, needsCjkSystemFont(language), effectiveTextScale, contrast));
+  }, [colorScheme, contrast, effectiveTextScale, isReady, language, sunTimes, themeMode]);
 
   const handleSetLanguage = async (lang: SupportedLanguage) => {
     setLanguage(lang);
     setLanguageSelectionRevision((revision) => revision + 1);
-    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang), effectiveTextScale));
+    setTheme(getAppTheme(theme.dark, needsCjkSystemFont(lang), effectiveTextScale, contrast));
     await AsyncStorage.multiSet([
       ['user-language', lang],
       [BIBLE_TRANSLATION_STORAGE_KEY, DEFAULT_TRANSLATION_MAP[lang] || 'BSB'],
@@ -732,6 +742,11 @@ export default function RootLayout() {
   const handleSetThemeMode = async (mode: ThemeMode) => {
     setThemeMode(mode);
     await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
+  };
+
+  const handleSetContrastMode = async (mode: ContrastMode) => {
+    setContrast(mode);
+    await AsyncStorage.setItem(CONTRAST_STORAGE_KEY, mode);
   };
 
   const handleToggleTheme = (dark?: boolean) =>
@@ -751,6 +766,7 @@ export default function RootLayout() {
             currentTheme.dark,
             needsCjkSystemFont(language),
             getEffectiveTextScale(persistedScale, systemFontScale),
+            contrast,
           ),
         );
       },
@@ -862,6 +878,8 @@ export default function RootLayout() {
                 themeMode,
                 setThemeMode: handleSetThemeMode,
                 toggleTheme: handleToggleTheme,
+                contrastMode: contrast,
+                setContrastMode: handleSetContrastMode,
               }}
             >
               <UpdateContext.Provider

@@ -54,6 +54,8 @@ const SETTING_KEYS = {
   translation: 'user-bible-translation',
   // The narrator chosen for each translation, as { cuv: '<narrator>' }.
   audioReaders: 'user-bible-audio-readers',
+  // High, the default, or standard (#669).
+  contrast: 'user-contrast',
 };
 
 // Settings of the simulated phone rather than the app, by platform. A variant

@@ -247,6 +247,15 @@ simple, blended colors.
     blue, or gold in the dark theme, marks what opens a list or shows a state: the back
     button, the translation button's names, icon and arrow, like the Bible card's pills,
     and the saved-verse button once a verse is saved.
+  - **Contrast (#669):** high contrast, the white and night blue above, is the default.
+    Members who'd rather have softer colors choose **Standard** under You → Contrast:
+    the bars, the card and the header's buttons a shade off the page, the light theme's
+    own warm surface (`#FAF4EF`) or a warm brown in the dark (`#211F18`), with the
+    selected tab and the card's pills on the light blue or a deeper gold-brown
+    (`#3B3423`, `STANDARD_FLOATING_COLORS`). Every text and icon on them still reads at
+    least 4.5:1. The popup shows a picture of the tab bar in each, since many older
+    members wouldn't know the word. A designer's advice settled the default: contrast
+    is usually the default, and the members it bothers, mostly younger, change it.
   - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
