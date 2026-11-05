@@ -113,13 +113,14 @@ const api: Api = {
   reviews: [`12 <!-- key-screens-review sha=${SHA} -->`],
   runs: { 'ios-key-screens.yml': '200 1', 'android-key-screens.yml': '100 2' },
   joins: { 200: 'success', 100: 'success' },
+  // Whole MB of 1,048,576 bytes, the unit of the 50 MB (52,428,800 bytes) Chrome looks inside.
   artifacts: {
-    '200 iphone': '901 24000000\n903 25000000',
-    '200 ipad': '904 34000000',
-    '200 app-store': '906 24000000',
-    '200 app': '902 39000000',
-    '100 android': '905 28000000',
-    '100 google-play': '907 7000000',
+    '200 iphone': '901 25165824\n903 26214400',
+    '200 ipad': '904 35651584',
+    '200 app-store': '906 25165824',
+    '200 app': '902 40894464',
+    '100 android': '905 29360128',
+    '100 google-play': '907 7340032',
   },
 };
 const androidLink =
@@ -193,7 +194,7 @@ describe('posting the review comment from the iPhone run', () => {
   it('lists every part, and says which attempt they came from', () => {
     const { posted } = postOrRefresh({ ...iosRun, RUN_ATTEMPT: '2' }, {
       ...api,
-      artifacts: { ...api.artifacts, '200 ipad': '904 30000000\n908 30000000\n909 20000000' },
+      artifacts: { ...api.artifacts, '200 ipad': '904 31457280\n908 31457280\n909 20971520' },
     });
     expect(posted).toContain(
       'the iPad screenshots ([part 1](https://github.com/org/repo/actions/runs/200/artifacts/904), about 30 MB; ' +

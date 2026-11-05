@@ -367,7 +367,7 @@ describe('iOS key screens', () => {
     expect(merge).toContain("needs.capture.result != 'success'");
     expect(merge).toContain('node scripts/merge-key-screens.cjs --platform ios,ipad --out');
     // The screenshots apart from the Simulator app: Chrome's Safe Browsing
-    // blocked them while they shared a zip with the unsigned app (#484). Each
+    // blocked the one download that held them and the unsigned app (#484). Each
     // device's are packed under the 50 MB Chrome looks inside, in parts if
     // need be, and the App Store copies are their own download, after a
     // failed join too.

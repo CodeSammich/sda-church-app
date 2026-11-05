@@ -519,8 +519,8 @@ jobs:
 
       # Every download a reviewer opens stays under the 50 MB Chrome looks
       # inside, with no app in it ("Downloads under 50 MB" in
-      # docs/operations/native-builds.md). Chrome blocked the screenshots while
-      # they shared a zip with the unsigned app (#484), and called 1.7.0's
+      # docs/operations/native-builds.md). Chrome blocked the one download that
+      # held the screenshots and the unsigned app (#484), and called 1.7.0's
       # 349 MB of iPhone and iPad screenshots dangerous. So the app, the App
       # Store copies, and each device's screenshots, as palette PNGs, in parts
       # if need be, are separate downloads. It runs after a failed join too,

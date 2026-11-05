@@ -628,7 +628,7 @@ failed batch's log says which group it took:
   running 45 seconds after launch, and takes its group's key screens.
 
 **iOS key screens join** then joins the batches, on Linux, and uploads these downloads
-(14-day retention), each under the 50 MB Chrome looks inside
+(14-day retention). Each screenshot download stays under the 50 MB Chrome looks inside
 ([Downloads under 50 MB](#downloads-under-50-mb)):
 
 - `ios-key-screens-<number>-<run>-iphone-1`, and `-iphone-2` and so on if the shots need
@@ -803,8 +803,8 @@ Chrome looks inside a zip only up to 50 MB (Chromium's `download_file_types.asci
 without seeing that it holds only pictures, and may call it dangerous. That has happened
 twice:
 
-- Before #484, Chrome blocked the screenshots for the unsigned Simulator app zipped
-  beside them. The app became its own download.
+- Before #484, Chrome blocked the one download that held both the screenshots and the
+  unsigned Simulator app, about 160 MB. The app became its own download.
 - 1.7.0's iPad shots took the joined iPhone and iPad download to 349 MB, and Chrome
   called it dangerous. Through 1.6.x, about 150 MB had passed, by luck rather than by
   rule.
@@ -827,7 +827,8 @@ The review comment links every part. On 1.7.0's run the downloads were:
 
 Each workflow uploads at most three parts a device. The join fails if a device would need
 a fourth, or a download would pass 50 MB. Then add an upload step for the next part in
-`ios-key-screens.yml` or `android-key-screens.yml`; the review comment
+`ios-key-screens.yml` or `android-key-screens.yml`, and raise `MAX_PARTS` in
+`scripts/pack-review-downloads.cjs` and its test to match; the review comment
 (`key-screens-review.yml`) finds every part by its name. Don't put an app, a build, or
 anything but screenshots and their results in a download a reviewer opens. Each group's own
 download, kept a day, has the original shots, which **Key screens recheck** reads over
@@ -1138,7 +1139,7 @@ only with a read-only token and reads no secret.
   group failed.
 
 One review still covers both platforms. The iOS preview's review comment waits for this
-workflow's run on the same commit. It then links both downloads, says whether both
+workflow's run on the same commit. It then links every download of both, says whether both
 passed, and says how long each run took, from its start until its join job finished. Its
 **Screenshots reviewed** approval covers both. If a failed Android group is rerun after
 the comment is posted, this workflow's **Refresh the screenshot review comment** job

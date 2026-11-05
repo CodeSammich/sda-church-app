@@ -7,7 +7,7 @@
  * download_file_types.asciipb: zip max_file_size_to_analyze 52428800). A
  * bigger zip is judged without seeing that it holds only pictures, and 1.7.0's
  * 349 MB iPhone and iPad screenshots were called dangerous. Before #484,
- * Chrome blocked them for the unsigned app zipped beside them. So:
+ * Chrome blocked the one download that held them and the unsigned app. So:
  *
  * - each device's screenshots are their own download, as palette PNGs: the
  *   same names, size, and flat colours, at about a quarter of the bytes;
@@ -116,7 +116,7 @@ const pack = async ({ from, out, devices, store = [], budget = PART_TARGET_BYTES
     if (parts.length > maxParts) {
       problems.push(
         `The ${DEVICE_NAMES[platform]} screenshots need ${parts.length} downloads under ${megabytes(budget)}, ` +
-          `but the workflow uploads ${maxParts}: add upload steps for the rest.`,
+          `but the workflow uploads ${maxParts}: add upload steps for the rest, and raise MAX_PARTS and its test.`,
       );
     }
     parts.forEach((indexes, index) => {

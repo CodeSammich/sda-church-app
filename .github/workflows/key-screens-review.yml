@@ -136,12 +136,12 @@ jobs:
             fi
             if [ "$(wc -l <<<"$found")" -eq 1 ]; then
               read -r id bytes <<<"$found"
-              echo "[$4]($url/artifacts/$id) (a zip of about $((bytes / 1000000)) MB$rerun)"
+              echo "[$4]($url/artifacts/$id) (a zip of about $((bytes / 1048576)) MB$rerun)"
               return 0
             fi
             while read -r id bytes; do
               n=$((n + 1))
-              links="$links${links:+; }[part $n]($url/artifacts/$id), about $((bytes / 1000000)) MB"
+              links="$links${links:+; }[part $n]($url/artifacts/$id), about $((bytes / 1048576)) MB"
             done <<<"$found"
             echo "$4 ($links$rerun)"
           }
