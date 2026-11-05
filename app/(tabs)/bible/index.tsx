@@ -40,8 +40,16 @@ import {
   type TextScale,
 } from '@/constants/AppPreferences';
 import { useBottomTabHeight } from '@/constants/BottomTabHeightContext';
+import {
+  CAPSULE_STACK_GAP,
+  getCapsuleBottomGap,
+  getCapsuleTabBarWidth,
+  getFloatingSurfaceStyle,
+  ScrollEdgeFade,
+} from '@/components/CapsuleTabBar';
+import { getDockControlBorderColor, getDockControlColor } from '@/components/TabBarItems';
 import { LanguageContext } from '@/constants/LanguageContext';
-import { getBottomTabContentHeight } from '@/constants/Layout';
+import { CONTENT_MAX_WIDTH, contentColumnStyle, getBottomTabContentHeight, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { SCRIPTURE_FONT_FAMILIES, useAppTheme } from '@/constants/Themes';
 import {
@@ -153,17 +161,22 @@ import { useNavigationStyles } from '@/styles/NavigationStyles';
 import { formatHymnScriptureReference, getHymnsForVerse } from '@/features/hymnal/HymnScripture';
 import { getHymnalShortLabel } from '@/features/hymnal/HymnalLabels';
 import { HYMNALS } from '@/features/hymnal/Hymnals';
-import { getPopupSurfaceStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
+import { getPopupSurfaceStyle, getPopupWidthStyle, usePopupMaxHeight } from '@/styles/PopupStyles';
 import { getVerseNumberColumnWidth } from '@/styles/ReaderStyles';
 import {
   createReaderStyles,
   getBibleDockLayout,
   getBibleDockViewportLayout,
   getBulletinVerseScrollOffset,
+  getDockPillGrowth,
+  getDockPillPaddingHorizontal,
   shouldShortenVerseLabel,
 } from '@/styles/ReaderStyles';
 
 const FOOTER_PADDING_GUTTER = 34;
+// The floating dock card's widest, on a tablet: room for the pills' tablet
+// proportions (getDockPillGrowth) without spanning a wide column.
+const DOCK_CARD_MAX_WIDTH = 640;
 // Native expo-audio owns one active player. The web adapter may warm one
 // immediate next chapter, but native preload downloads an entire file on
 // Android, which is too memory-heavy for long Bible chapters.
@@ -592,10 +605,28 @@ export default function BibleScreen() {
   // Their text passes the same cap to React Native. The Bible text itself
   // follows the system size in full.
   const dockTextScale = Math.max(1, bibleUiTextScale * getHeaderFontScale(osFontScale));
+  // The text's column on a wide screen (#324), widening with the app's text
+  // size and the device's. A tablet gets margins beside the text too: a phone's
+  // 4 points left the text against the screen's edge once the column filled it.
+  const columnScale = textScale * osFontScale;
+  const readingColumnStyle = useMemo(
+    () => [
+      contentColumnStyle(columnScale),
+      viewportWidth > CONTENT_MAX_WIDTH ? { paddingLeft: 24, paddingRight: 24 } : null,
+    ],
+    [columnScale, viewportWidth],
+  );
   const measuredBottomTabHeight = useBottomTabHeight();
+  // The dock is a card floating above the tab bar's capsule (#589), as iOS
+  // puts a player above its tab bar: at least as wide as the capsule, and at
+  // most the content column or DOCK_CARD_MAX_WIDTH.
+  const dockCardWidth = Math.min(
+    viewportWidth - 32,
+    Math.max(getCapsuleTabBarWidth(viewportWidth), Math.min(getContentWidth(viewportWidth, columnScale), DOCK_CARD_MAX_WIDTH)),
+  );
   const dockLayout = useMemo(
-    () => getBibleDockLayout(viewportWidth, dockTextScale),
-    [dockTextScale, viewportWidth],
+    () => getBibleDockLayout(dockCardWidth, dockTextScale),
+    [columnScale, dockCardWidth, dockTextScale, viewportWidth],
   );
   // The verse pill says "Vs." rather than "Verse" only when the book, chapter,
   // and verse pills can't all fit at full width, so the book name is cut short
@@ -604,10 +635,15 @@ export default function BibleScreen() {
   const [bookPillWidth, setBookPillWidth] = useState(0);
   const [chapterPillWidth, setChapterPillWidth] = useState(0);
   const [versePillWidth, setVersePillWidth] = useState(0);
+  // On a wide row the pills share its spare room (getDockPillGrowth), so the
+  // chapter pill's own width there includes its share: a hidden copy measures
+  // its number alone.
+  const [chapterLabelWidth, setChapterLabelWidth] = useState(0);
+  const dockPillGrowth = getDockPillGrowth(dockPillsWidth);
   const shortVerseLabel = shouldShortenVerseLabel({
     rowWidth: dockPillsWidth,
     bookPillWidth,
-    chapterPillWidth,
+    chapterPillWidth: dockPillGrowth.chapter ? chapterLabelWidth : chapterPillWidth,
     versePillWidth,
   });
   const insets = useSafeAreaInsets();
@@ -618,11 +654,14 @@ export default function BibleScreen() {
     window.matchMedia('(display-mode: fullscreen)').matches
       ? 12
       : 0;
-  const bottomDockInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  const systemBottomInset = Math.max(insets.bottom, fullscreenEdgeInset);
+  // The floating card keeps the capsule's gap from the bottom edge when the tab
+  // bar hides, and sits CAPSULE_STACK_GAP above the capsule when it shows.
+  const bottomDockInset = getCapsuleBottomGap(systemBottomInset);
   const bottomTabContentHeight =
-    measuredBottomTabHeight === null
+    (measuredBottomTabHeight === null
       ? getBottomTabContentHeight(getBottomTabTextScale(textScale, osFontScale))
-      : Math.max(0, measuredBottomTabHeight - bottomDockInset);
+      : Math.max(0, measuredBottomTabHeight - bottomDockInset)) + CAPSULE_STACK_GAP;
   const { language, languageSelectionRevision } = useContext(LanguageContext);
   const { menuAnim, setMenuVisible: setGlobalMenuVisible } = useContext(UIStateContext);
 
@@ -686,6 +725,9 @@ export default function BibleScreen() {
     return `${translation.name} (${translationLanguageLabel})`;
   };
   const popupMaxHeight = usePopupMaxHeight();
+  // ReaderStyles.modalContent's 20-point margin, held to the You tab's dialog
+  // width on a wide screen (#324).
+  const popupWidthStyle = useMemo(() => getPopupWidthStyle(viewportWidth - 40), [viewportWidth]);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const versePositions = useRef<Record<number, number>>({});
   const lastScrollY = useRef(0);
@@ -3712,9 +3754,10 @@ export default function BibleScreen() {
     inputRange: [0, 1],
     outputRange: [dockViewportLayout.hiddenHeight, dockViewportLayout.visibleHeight],
   });
+  // Below the card, the room for the capsule while it shows.
   const animatedDockBottomClearance = menuAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [bottomDockInset, bottomDockInset],
+    outputRange: [bottomDockInset, bottomDockInset + bottomTabContentHeight],
   });
   const dockNeedsVerticalScroll =
     dockViewportLayout.hiddenNeedsScroll || dockViewportLayout.visibleNeedsScroll;
@@ -3722,7 +3765,7 @@ export default function BibleScreen() {
   // dock controls may still stack at large text sizes, but these three compact
   // selectors remain a single horizontal navigation row.
   const stackChapterControls = false;
-  const chipPaddingHorizontal = textScale >= 1.75 ? 8 : 10;
+  const chipPaddingHorizontal = getDockPillPaddingHorizontal({ cardWidth: dockCardWidth, dockTextScale, textScale });
 
   const renderPreviousChapterButton = () =>
     !isFirstChapter ? (
@@ -3787,14 +3830,15 @@ export default function BibleScreen() {
       ]}
     >
       {renderPillMeasure(book?.name || '...', setBookPillWidth)}
+      {renderPillMeasure(String(chapterNum), setChapterLabelWidth)}
       {renderPillMeasure(labels.verse, setVersePillWidth)}
       <TouchableOpacity
         style={[
           ReaderStyles.pill,
           stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.outline,
+            backgroundColor: getDockControlColor(theme),
+            borderColor: getDockControlBorderColor(theme),
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
             // When the three chips don't fit, only the book name shortens. The
@@ -3805,7 +3849,7 @@ export default function BibleScreen() {
             // "119", and "Verse" on most iPhones.
             paddingHorizontal: chipPaddingHorizontal,
             flexBasis: 'auto',
-            flexGrow: 1,
+            flexGrow: dockPillGrowth.book,
             flexShrink: 1,
           },
         ]}
@@ -3836,13 +3880,13 @@ export default function BibleScreen() {
           ReaderStyles.pill,
           stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.outline,
+            backgroundColor: getDockControlColor(theme),
+            borderColor: getDockControlBorderColor(theme),
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
             paddingHorizontal: chipPaddingHorizontal,
             flexBasis: 'auto',
-            flexGrow: 0,
+            flexGrow: dockPillGrowth.chapter,
             flexShrink: 0,
             maxWidth: '30%',
           },
@@ -3875,15 +3919,18 @@ export default function BibleScreen() {
           ReaderStyles.pill,
           stackChapterControls && styles.stackedPill,
           {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.outline,
+            backgroundColor: getDockControlColor(theme),
+            borderColor: getDockControlBorderColor(theme),
             borderWidth: 1,
             minHeight: dockLayout.controlHeight,
             paddingHorizontal: chipPaddingHorizontal,
             flexBasis: 'auto',
-            flexGrow: 0,
+            flexGrow: dockPillGrowth.verse,
             flexShrink: 0,
-            maxWidth: '40%',
+            // Capped only once the labels are shortened: while all three fit
+            // whole, the cap would cut "Versículo" short on a phone's card
+            // for nothing.
+            maxWidth: shortVerseLabel ? '40%' : undefined,
           },
         ]}
         onPress={() => setModalType('verse')}
@@ -3919,10 +3966,9 @@ export default function BibleScreen() {
           height: stackChapterControls
             ? dockLayout.dockHeight
             : dockLayout.chapterDockHeight,
-          // The first visible Bible surface owns the shared upper boundary.
-          // When audio exists, the audio dock receives it instead.
+          // A faint line between the audio row and this one.
           borderTopColor: theme.colors.outlineVariant,
-          borderTopWidth: hasChapterAudio ? 0 : 1,
+          borderTopWidth: hasChapterAudio ? StyleSheet.hairlineWidth : 0,
         },
         fullscreenEdgeInset > 0 && { paddingHorizontal: fullscreenEdgeInset },
       ]}
@@ -3991,6 +4037,7 @@ export default function BibleScreen() {
         onMomentumScrollEnd={handleScrollEnd}
         contentContainerStyle={[
           ReaderStyles.scrollContent,
+          readingColumnStyle,
           {
             paddingTop: headerHeight + 10,
             paddingBottom: dockViewportLayout.visibleHeight + FOOTER_PADDING_GUTTER,
@@ -4059,17 +4106,21 @@ export default function BibleScreen() {
             elevation: 5, // Higher than the audio button's 4 to prioritize nav touches
             zIndex: 10,
           },
+          {
+            left: (viewportWidth - dockCardWidth) / 2,
+            right: (viewportWidth - dockCardWidth) / 2,
+            overflow: 'visible',
+          },
         ]}
       >
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: theme.colors.background,
-            },
-          ]}
+        {/* The page fades out under the card and the capsule, rather than
+            stopping at a line above them. */}
+        <ScrollEdgeFade
+          background={theme.colors.background}
+          style={{ left: -(viewportWidth - dockCardWidth) / 2, right: -(viewportWidth - dockCardWidth) / 2 }}
         />
 
+        <View style={[styles.dockCard, getFloatingSurfaceStyle(theme)]}>
         <ScrollView
           style={styles.controlDockScroll}
           scrollEnabled={!isScrubGestureActive}
@@ -4085,7 +4136,7 @@ export default function BibleScreen() {
               <View
                 style={[
                   styles.selectionBarInner,
-                  { minHeight: dockLayout.selectionBarHeight },
+                  { minHeight: dockLayout.selectionBarHeight, paddingHorizontal: 8 },
                 ]}
               >
                 <IconButton
@@ -4137,8 +4188,9 @@ export default function BibleScreen() {
                 ReaderStyles.audioDock,
                 {
                   minHeight: dockLayout.audioDockHeight,
-                  borderTopColor: theme.colors.outlineVariant,
-                  borderTopWidth: 1,
+                  // The dock's own colour sets it off from the page now (#589).
+                  borderTopWidth: 0,
+                  paddingHorizontal: 12,
                 },
               ]}
             >
@@ -4168,9 +4220,9 @@ export default function BibleScreen() {
                       minWidth: dockLayout.controlHeight,
                     },
                     {
-                      backgroundColor: theme.colors.surface,
+                      backgroundColor: getDockControlColor(theme),
                       borderWidth: 1,
-                      borderColor: theme.colors.outline,
+                      borderColor: getDockControlBorderColor(theme),
                     },
                   ]}
                 >
@@ -4246,9 +4298,9 @@ export default function BibleScreen() {
                       minWidth: dockLayout.controlHeight,
                     },
                     {
-                      backgroundColor: theme.colors.surface,
+                      backgroundColor: getDockControlColor(theme),
                       borderWidth: 1,
-                      borderColor: theme.colors.outline,
+                      borderColor: getDockControlBorderColor(theme),
                     },
                   ]}
                 >
@@ -4385,8 +4437,10 @@ export default function BibleScreen() {
           )}
 
           {renderChapterNavigationDock()}
-          <Animated.View style={{ height: animatedDockBottomClearance }} />
         </ScrollView>
+        </View>
+        {/* Below the card, the capsule's room while it shows. */}
+        <Animated.View style={{ height: animatedDockBottomClearance }} />
       </Animated.View>
 
       <Portal>
@@ -4395,6 +4449,7 @@ export default function BibleScreen() {
           onDismiss={() => setAudioSettingsVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            popupWidthStyle,
             { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
@@ -4621,6 +4676,7 @@ export default function BibleScreen() {
           onDismiss={() => setBackgroundAudioGuidanceVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            popupWidthStyle,
             { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
@@ -4689,6 +4745,7 @@ export default function BibleScreen() {
           onDismiss={() => setSleepTimerVisible(false)}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            popupWidthStyle,
             { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
@@ -4762,6 +4819,7 @@ export default function BibleScreen() {
           onDismiss={closeModal}
           contentContainerStyle={[
             ReaderStyles.modalContent,
+            popupWidthStyle,
             { maxHeight: popupMaxHeight },
             getPopupSurfaceStyle(theme),
           ]}
@@ -5618,6 +5676,10 @@ export default function BibleScreen() {
 const createStyles = (textScale: TextScale, uiTextScale: TextScale) =>
   StyleSheet.create({
     controlDockScroll: {
+      flex: 1,
+    },
+    dockCard: {
+      borderRadius: 24,
       flex: 1,
     },
     controlDockScrollContent: {

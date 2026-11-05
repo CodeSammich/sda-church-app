@@ -20,6 +20,7 @@ interface PreferenceRenderOptions {
   setLanguage?: (language: SupportedLanguage) => void;
   setTextScale?: (scale: TextScale) => Promise<void>;
   textScale?: TextScale;
+  defaultTextScale?: TextScale;
   theme?: AppTheme;
   themeMode?: ThemeMode;
   setThemeMode?: (mode: ThemeMode) => void;
@@ -33,6 +34,7 @@ export const renderWithPreferences = (
     setLanguage = jest.fn(),
     setTextScale = jest.fn().mockResolvedValue(undefined),
     textScale = DEFAULT_TEXT_SCALE,
+    defaultTextScale,
     theme,
     themeMode = theme?.dark ? THEME_DARK : THEME_LIGHT,
     setThemeMode = jest.fn(),
@@ -56,7 +58,7 @@ export const renderWithPreferences = (
         },
         createElement(
           TextSizeContext.Provider,
-          { value: { setTextScale, textScale } },
+          { value: { setTextScale, textScale, defaultTextScale } },
           createElement(
             ThemeContext.Provider,
             { value: { themeMode, setThemeMode, toggleTheme } },

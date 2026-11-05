@@ -74,6 +74,7 @@ interface consistent and spiritually focused while minimizing retinal distractio
 | :---| :---| :---| :---|
 | **Background**    | #F2E6DF  | #080808 | **The Canvas.** A warm low-glare light canvas and render-matched near-black evening canvas. |
 | **Surface (Cards/Containers)**  | #FAF4EF  | #14130F | **The Object.** Warm cards lift clearly from their respective canvases. |
+| **Floating Surface**  | #FFFFFF  | #00405C | **What floats over a page.** The tab bar, the Bible's card and the header's buttons stand clearly apart from the canvas, so older eyes with presbyopia can tell they're on top and pressable (#589). |
 | **Surface Variant**    | #F1F3F4  | #211F18 | **Secondary UI.** Search bars, unselected controls, and subtle grouped UI. |
 | **On Surface**   | #1A1A1A  | #F3EDE1 | **The Ink.** Warm-white dark-mode text mitigates **Irradiation Illusion** ([NIH/PMC3939872](https://pmc.ncbi.nlm.nih.gov/articles/PMC3939872/)) and stays visually dominant over gold annotations. |
 | **On Surface Variant**   | #606060  | #BDB5A2 | **Muted Intent.** Warm neutral content recedes without becoming illegible. |
@@ -81,7 +82,7 @@ interface consistent and spiritually focused while minimizing retinal distractio
 | **Selection Container**  | #E3F2FD  | #302714 | **The State.** A quiet gold-brown selected state avoids large luminous blocks. |
 | **Boundary (Outline)**   | #CAC4D0  | #947D3F | **The Frame.** A visible muted-gold boundary for controls and focus regions. |
 | **Boundary (Subtle)**   | #E0E0E0  | #3B3423 | **The Divider.** Used for subtle organization within grouped cards. |
-| **Functional Icons (e.g. Bottom Bar)** | #1A1A1A  | #D2B258 | **Active Focus.** Main gold identifies selected and actionable elements; inactive navigation uses `#947D3F`. |
+| **Functional Icons (e.g. Bottom Bar)** | #0369A1  | #D2B258 | **Active Focus.** The selected tab is primary blue, or main gold in the dark theme, on the Selection Container; inactive navigation uses `#606060`, or `#947D3F` in the dark theme. |
 
 ### Grid Menu Card Tokens
 
@@ -213,14 +214,45 @@ simple, blended colors.
     than a window inside a frame.
 - **Header Opacity:** The top header is completely opaque (using the base background
   color) to provide a solid anchor for the "Digital Sanctuary."
+- **One floating tab bar on every system (#589).** iPhone, iPad, Android and the web
+  share one design (`components/CapsuleTabBar.tsx`), as iOS 26 floats its tab bar: the
+  four tabs in a rounded capsule above the bottom edge, 16 points from a phone's sides
+  and at most 520 points wide. It's white in the light theme and the brand's night blue
+  (#00405C) in the dark (`floatingSurface`), with a hairline and a soft shadow, so it
+  stands clearly apart from the page, since text scrolls under it. The strong contrast
+  is for older members with presbyopia: a surface only a shade off the page (the first
+  design, #FAF4EF and #14130F) blended into it for them, and only white and blue made
+  the bars and buttons feel on top of the page and pressable. Don't soften it. The selected tab is
+  primary blue on light blue, or gold on a deeper night blue (`floatingSelected`); the
+  others take the muted ink. Its icons and labels follow the app's text size,
+  which the systems' own bars wouldn't. On iOS it sits partly within the home
+  indicator's inset, as iOS's own bar does; on Android, wholly above the gesture bar or
+  the three buttons, with Android's ripple when pressed (`getCapsuleBottomGap`).
+  - **Pages run to the bottom edge** and scroll under it. The page fades out just above
+    it (`ScrollEdgeFade`) rather than stopping at a line, and is solid below that, so no
+    fragments of text show around it. Every tab page ends with `TabBarSpacer`, so its
+    last lines can scroll clear of it.
+  - **The Bible's audio and chapter controls float in a card of their own** above the
+    capsule, as iOS puts a player above its tab bar: the same floating surface, as wide as
+    the capsule on a phone and up to 640 points on a tablet, with its pills and round
+    buttons in the page's own colour (warm pink, or black), edged in the theme's outline,
+    or in a brighter gold on the dark theme's blue so their edges stand out at least 3:1
+    (`getDockControlBorderColor`). When the tab bar hides while
+    reading, the card slides down into its place.
+  - **The header's buttons match the bars:** the back button, the page title, the search
+    bar, and the Bible's translation, saved-verse, help and search buttons float on the
+    same surface, with the same hairline and shadow (`getFloatingSurfaceStyle`), so a
+    page's top matches its bottom.
+  - No Liquid Glass and no Material bar: the app's design has neither anywhere else.
 - **Absolute Positioning & Offset:** Global navigation elements are positioned absolute.
   To prevent initial overlap, screens must apply a `paddingTop` equal to the total header
   height from `useGlobalHeaderHeight()`: the status bar plus 64px at 100% text size.
   The header grows with the app's text size and with the phone's text size up to 1.35×
   (`hooks/useGlobalHeaderHeight.ts`).
-- **Boundary Definition:** A restrained 0.5px top boundary using the theme's subtle
-  outline token is permitted for the bottom tab navigation bar and persistent audio
-  controls. Do not add shadows, strong dividers, or decorative glass effects.
+- **Boundary Definition:** What floats over a page (the capsule, the Bible's card, the
+  header's buttons) takes only a hairline in the theme's subtle outline token and one soft
+  shadow (`getFloatingSurfaceStyle`). Do not add strong dividers or decorative glass
+  effects.
 - **Popups:** Every popup is the app's own, never the system's alert (`Alert.alert`),
   which on Android looks unlike the rest of the app. A popup is centred, with the shared
   corners and canvas (`getPopupSurfaceStyle`), and at most 65% of the screen tall at any
@@ -283,6 +315,59 @@ nearly ready, so most of the drawing's length is added to the time the app takes
 open. On November 1, 2026, the church chose to keep the drawing but keep it short.
 Keep it under a second if you change it. The brand rules it follows are in
 [LEGAL_BRANDING.md](LEGAL_BRANDING.md#the-launch-animation).
+
+#### Wide screens: iPad, tablets, and foldables
+
+The app is one layout that follows the window's width, not a separate tablet design
+(#324). Older members read on iPads for the bigger text and screen, so a wide screen
+shows the phone's pages larger and roomier, not more on each page:
+
+- **Text starts at 150% on a tablet**, not a phone's 125% (`getDefaultTextScale` in
+  `constants/AppPreferences.ts`). A tablet is held farther away, so at 125% its pages
+  read small, and Text size's Reset returns to 150% there. A device counts as a tablet
+  when its screen's shorter side is at least 600 points, Android's own line, which every
+  iPad passes and no phone does; the web stays at 125%, since its wide windows are mostly
+  computers. First-launch setup saves the size, so a foldable keeps the size it was set
+  up with.
+- **A centered content column.** A page's content grows to at most 720 points wide at
+  the default 125% text (`CONTENT_MAX_WIDTH` in `constants/Layout.ts`) and stays
+  centered, so lines of Bible text stay a comfortable length and a page's cards and
+  buttons stay near each other. Larger text widens it in proportion, 864 points at a
+  tablet's 150% and 1152 at 200%, so a line holds about as many words: members who chose an iPad for
+  bigger text get the screen's width, not a narrow column of short lines. The size it
+  follows is the app's text size times the device's (`useContentColumnScale`), since
+  members enlarge text in either place. Phones are narrower than the column, so their
+  layout never changes. Put a new page's content in the column with
+  `contentColumnStyle(columnScale)`, and size anything that depends on the width from
+  `getContentWidth(width, columnScale)`, not the window's width. On a tablet the Bible's
+  text also gets 24-point margins, since a phone's 4 points would leave it against the
+  screen's edge once the column fills the screen.
+- **Full-width edges.** Banner images and the header still span the screen, so the app
+  reaches the edges as it does on a phone (see Edge-to-Edge above). Their text and buttons line up with the column (`contentColumnWithin`). Rows
+  that scroll sideways, such as the library's shelves, span the screen too, starting in
+  line with the column.
+- **Tablet sizes in the tab bar.** In a window at least 600 points wide the tabs get
+  slightly larger icons and labels (`TABLET_TAB_BAR_MIN_WIDTH`). The system's own iPad
+  tab bar would sit at the top, over the header, so the app draws its own at the bottom.
+- **A third column of book covers** in a library shelf's grid once the column is 600
+  points wide (`getLibraryGridColumns`), so covers stay a sensible size. Other grids,
+  such as Home's cards, keep two columns, which the column keeps a phone-like shape.
+- **Popups at most 560 points wide** (`POPUP_MAX_WIDTH` in `styles/PopupStyles.ts`),
+  centered as on a phone (`usePopupWidthStyle`, or `getPopupWidthStyle` for a popup with
+  side margins). Give a popup that number, never a percentage width with a `maxWidth`:
+  on iOS, Paper splits the two between its views, and an iPad popup filled 90% of the
+  screen with its content in part of it.
+- **Tab labels under their icons**, as on a phone. React Navigation's default puts each
+  label beside its icon on a wide screen, far from it on a tablet.
+- **Every way up on a large screen, portrait on phones.** The iPad turns to any
+  orientation and can share the screen with another app or be resized, as iPadOS 26
+  expects of every iPad app (Apple's
+  [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key)).
+  Android tablets and unfolded foldables turn freely (#426). Phones stay in portrait on
+  both platforms. In a narrow window beside another app, the layout is a phone's.
+
+The release PR's screenshot run takes the iPad's pages in both orientations
+([iPad key screens](operations/native-builds.md#ipad-key-screens)).
 
 ## Navigation Layout
 

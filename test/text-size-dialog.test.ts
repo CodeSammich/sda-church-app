@@ -160,6 +160,20 @@ describe('TextSizeDialog', () => {
     expect(setTextScale).toHaveBeenCalledWith(1.25);
   });
 
+  it("resets to a tablet's 150% default, and names it (#324)", async () => {
+    const setTextScale = jest.fn().mockResolvedValue(undefined);
+    const screen = await renderWithPreferences(
+      createElement(TextSizeDialog, { onDismiss: jest.fn(), visible: true }),
+      { setTextScale, textScale: 1.25, defaultTextScale: 1.5 },
+    );
+
+    expect(screen.queryByRole('button', { name: 'Reset to 125%' })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Reset to 150%' }));
+
+    expect(screen.getByText('Current selection: 150%')).toBeTruthy();
+    expect(setTextScale).toHaveBeenCalledWith(1.5);
+  });
+
   it('announces a localized failure and clears it when the next size saves', async () => {
     const onDismiss = jest.fn();
     const setTextScale = jest

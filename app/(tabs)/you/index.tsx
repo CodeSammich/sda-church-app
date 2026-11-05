@@ -4,6 +4,7 @@ import { LanguageDialog } from '@/components/LanguageDialog';
 import { ShareAppDialog } from '@/components/ShareAppDialog';
 import { ThemeDialog } from '@/components/ThemeDialog';
 import { TextSizeDialog } from '@/components/TextSizeDialog';
+import { contentColumnStyle } from '@/constants/Layout';
 import {
   CHURCH_BUILDING_IMAGE_URL,
   openLegalDisclaimer,
@@ -20,6 +21,7 @@ import {
 } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
 import { useHeroUnderStatusBar } from '@/hooks/useHeroUnderStatusBar';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import packageJson from '@/package.json';
 import { getScreenshotPopup } from '@/services/ScreenshotRoute';
 import { useDocumentStyles } from '@/styles/DocumentStyles';
@@ -30,6 +32,7 @@ import { useContext, useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { ImageBackground } from '@/components/ImageBackground';
 import { List, Text, TouchableRipple } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 const allLabels = {
   en: {
@@ -146,6 +149,7 @@ export default function YouScreen() {
   const { onManualCheck, updateStatus } = useContext(UpdateContext);
   // The chosen size, which a very large phone text size can reduce when drawn.
   const { textScale: drawnTextScale, preferredTextScale } = useTextSize();
+  const columnScale = useContentColumnScale();
   const textScale = preferredTextScale ?? drawnTextScale;
   const [showTextSize, setShowTextSize] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
@@ -202,7 +206,7 @@ export default function YouScreen() {
           </Text>
         </ImageBackground>
 
-        <View style={styles.body}>
+        <View style={[styles.body, contentColumnStyle(columnScale)]}>
           <List.Section>
             <Text
               variant="titleLarge"
@@ -332,6 +336,7 @@ export default function YouScreen() {
             </View>
           </List.Section>
         </View>
+        <TabBarSpacer />
       </ScrollView>
       <TextSizeDialog
         visible={showTextSize}

@@ -178,11 +178,16 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-default'), dual)).toEqual([]);
     const withoutHeader = dual.filter((each) => each.box[1] > 0.12);
     expect(checkShot(shot('bible-dual-default'), withoutHeader)).toEqual([
-      'no line matches /^(XA\\b|文A|A EN\\b)/',
       'no line matches /\\bEN\\b/',
       'no line matches /BSB/',
       'no line matches /CUV/',
+      'no line matches /^(XA\\b|文A|A EN\\b)/',
     ]);
+    // In the dark theme Vision can miss the gold icon on the charcoal button,
+    // so there only the badge and names are required (the 1.7.0 run read "EN").
+    const darkWithoutIcon = [...withoutHeader, line('EN', 0.05), line('BSB +', 0.05), line('CUV V', 0.05)];
+    expect(checkShot(shot('bible-dual-dark'), darkWithoutIcon)).toEqual([]);
+    expect(checkShot(shot('bible-dual-default'), darkWithoutIcon)).toEqual(['no line matches /^(XA\\b|文A|A EN\\b)/']);
 
     // With a back arrow at 200%: the icon gives way first, so the names stay whole.
     const body = withoutHeader;
@@ -389,5 +394,21 @@ describe('audio that keeps playing (#551)', () => {
 
   it('leaves other shots alone', () => {
     expect(checkAdvance(shot('bible-default'), dock('0:00'), undefined)).toEqual([]);
+  });
+});
+
+describe('tab labels in any case (#589)', () => {
+  const { showsLabel } = require('../scripts/check-screens.cjs');
+  const line = (text: string) => ({ text, box: [0.35, 0.955, 0.05, 0.02] });
+  const tabs = [0.91, 0.99];
+
+  it("finds a Latin label Vision read with the wrong case, as the iPad's capsule's \"Inicio\" as \"InIcIo\"", () => {
+    expect(showsLabel([line('InIcIo')], 'Inicio', tabs)).toBe(true);
+    expect(showsLabel([line('HOME')], 'Home', tabs)).toBe(true);
+  });
+
+  it('still fails a label cut short, or one inside a longer word', () => {
+    expect(showsLabel([line('Inici')], 'Inicio', tabs)).toBe(false);
+    expect(showsLabel([line('Verses')], 'Verse', tabs)).toBe(false);
   });
 });

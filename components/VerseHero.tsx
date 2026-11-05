@@ -1,3 +1,4 @@
+import { contentColumnWithin } from '@/constants/Layout';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
@@ -119,6 +120,9 @@ const createStyles = (
     paddingBottom: 22,
   },
   title: {
+    // In line with the page's content column on a wide screen, like the
+    // verse below it.
+    ...contentColumnWithin(20, effectiveScale),
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: scaleTypographyMetric(28, textScale),
@@ -146,6 +150,7 @@ const createStyles = (
     backgroundColor: 'rgba(255,255,255,0.09)',
   },
   verseLead: {
+    ...contentColumnWithin(22, effectiveScale),
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
@@ -167,12 +172,14 @@ const createStyles = (
     backgroundColor: 'rgba(255,255,255,0.28)',
   },
   verse: {
+    ...contentColumnWithin(22, effectiveScale),
     color: '#FFFFFF',
     fontStyle: 'italic',
     lineHeight: scaleTypographyMetric(25, textScale),
     letterSpacing: 0.1,
   },
   reference: {
+    ...contentColumnWithin(22, effectiveScale),
     color: 'rgba(255,255,255,0.86)',
     marginTop: 12,
     textAlign: 'right',

@@ -5,7 +5,7 @@ import {
 } from '@/components/LibraryFeaturedCarousel';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import { LanguageContext, type SupportedLanguage } from '@/constants/LanguageContext';
-import { DESIGN_TOKENS } from '@/constants/Layout';
+import { contentColumnStyle, DESIGN_TOKENS, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
 import { useAppTheme } from '@/constants/Themes';
 import { useGlobalHeaderHeight } from '@/hooks/useGlobalHeaderHeight';
@@ -57,6 +57,7 @@ import {
   type HymnalSearchItem,
 } from './HymnalSearch';
 import { formatHymnScriptureReference } from './HymnScripture';
+import { useTabBarClearance } from '@/constants/BottomTabHeightContext';
 
 const copy = {
   en: {
@@ -226,7 +227,8 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
   const { textScale } = useTextSize();
   const { fontScale, width } = useWindowDimensions();
   const effectiveTextScale = fontScale * textScale;
-  const useStackedActions = (width - 48) / 2 < 120 * Math.max(1, effectiveTextScale);
+  const useStackedActions =
+    (getContentWidth(width, effectiveTextScale) - 48) / 2 < 120 * Math.max(1, effectiveTextScale);
   const rowStyles = useMemo(
     () => createHymnRowStyles(textScale, effectiveTextScale, useStackedActions),
     [effectiveTextScale, textScale, useStackedActions],
@@ -270,6 +272,8 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
   const viewsRef = useRef(views);
   viewsRef.current = views;
   const listRef = useRef<FlatList<HymnalListItem>>(null);
+  // Room for the last hymns to scroll clear of a floating tab bar.
+  const tabBarClearance = useTabBarClearance();
   // Like the header's search: Paper's Searchbar handle isn't exported.
   const searchRef = useRef<any>(null);
   const searchTop = useRef(0);
@@ -460,61 +464,68 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
     [backTo, focusSearch, heroUnderStatusBar, labels, selectedLabel, showHymnalName],
   );
 
+  // Each row is in the content column on a wide screen; the carousel above
+  // them spans the screen.
+  const columnStyle = useMemo(() => contentColumnStyle(effectiveTextScale), [effectiveTextScale]);
   const renderItem = useCallback(
-    ({ item }: { item: HymnalListItem }) =>
-      isHymn(item) ? (
-        <HymnRow
-          hymnalId={selectedId}
-          hymn={item}
-          highlighted={item === routedHymn}
-          labels={rowLabels}
-          styles={rowStyles}
-          onOpenScripture={openScripture}
-          onOpenCrossReference={openCrossReference}
-        />
-      ) : item.kind === 'heading' ? (
-        <Text
-          accessibilityRole="header"
-          style={[styles.otherHeading, { color: theme.colors.onSurface }]}
-        >
-          {labels.otherHymnals}
-        </Text>
-      ) : item.kind === 'group' ? (
-        <Text
-          accessibilityRole="header"
-          style={[styles.otherGroupHeading, { color: theme.colors.primary }]}
-        >
-          {getHymnalLabel(item.hymnalId, language)}
-        </Text>
-      ) : item.kind === 'more' ? (
-        <Pressable
-          accessibilityLabel={`${labels.showAllMatches(item.count)}, ${getHymnalLabel(item.hymnalId, language)}`}
-          accessibilityRole="button"
-          onPress={() => showAllMatches(item.hymnalId)}
-          style={({ pressed }) => [
-            styles.showMore,
-            { opacity: pressed ? 0.7 : 1 },
-            Platform.OS === 'web' ? styles.webPressable : null,
-          ]}
-        >
-          <Text style={[styles.showAllText, { color: theme.colors.primary }]}>
-            {labels.showAllMatches(item.count)}
+    ({ item }: { item: HymnalListItem }) => (
+      <View style={columnStyle}>
+        {isHymn(item) ? (
+          <HymnRow
+            hymnalId={selectedId}
+            hymn={item}
+            highlighted={item === routedHymn}
+            labels={rowLabels}
+            styles={rowStyles}
+            onOpenScripture={openScripture}
+            onOpenCrossReference={openCrossReference}
+          />
+        ) : item.kind === 'heading' ? (
+          <Text
+            accessibilityRole="header"
+            style={[styles.otherHeading, { color: theme.colors.onSurface }]}
+          >
+            {labels.otherHymnals}
           </Text>
-        </Pressable>
-      ) : (
-        <OtherHymnalRow
-          accessibilityHint={labels.crossReferenceHint}
-          accessibilityLabel={labels.otherResultLabel(
-            getHymnalLabel(item.item.hymnalId, language),
-            item.item.hymnNumber,
-            item.item.title.replace(`${item.item.hymnNumber}. `, ''),
-          )}
-          item={item.item}
-          onOpen={openCrossReference}
-          styles={styles}
-        />
-      ),
+        ) : item.kind === 'group' ? (
+          <Text
+            accessibilityRole="header"
+            style={[styles.otherGroupHeading, { color: theme.colors.primary }]}
+          >
+            {getHymnalLabel(item.hymnalId, language)}
+          </Text>
+        ) : item.kind === 'more' ? (
+          <Pressable
+            accessibilityLabel={`${labels.showAllMatches(item.count)}, ${getHymnalLabel(item.hymnalId, language)}`}
+            accessibilityRole="button"
+            onPress={() => showAllMatches(item.hymnalId)}
+            style={({ pressed }) => [
+              styles.showMore,
+              { opacity: pressed ? 0.7 : 1 },
+              Platform.OS === 'web' ? styles.webPressable : null,
+            ]}
+          >
+            <Text style={[styles.showAllText, { color: theme.colors.primary }]}>
+              {labels.showAllMatches(item.count)}
+            </Text>
+          </Pressable>
+        ) : (
+          <OtherHymnalRow
+            accessibilityHint={labels.crossReferenceHint}
+            accessibilityLabel={labels.otherResultLabel(
+              getHymnalLabel(item.item.hymnalId, language),
+              item.item.hymnNumber,
+              item.item.title.replace(`${item.item.hymnNumber}. `, ''),
+            )}
+            item={item.item}
+            onOpen={openCrossReference}
+            styles={styles}
+          />
+        )}
+      </View>
+    ),
     [
+      columnStyle,
       labels,
       language,
       openCrossReference,
@@ -577,7 +588,7 @@ export function HymnalScreen({ defaultHymnalId }: HymnalScreenProps) {
       <FlatList
         ref={listRef}
         style={NavigationStyles.container}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 50 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 50 + tabBarClearance }}
         data={listData}
         initialNumToRender={6}
         keyboardDismissMode="on-drag"
@@ -676,6 +687,7 @@ const createStyles = (
   StyleSheet.create({
     // Under the carousel's dots, which have room below them.
     searchArea: {
+      ...contentColumnStyle(effectiveTextScale),
       paddingBottom: 12,
       paddingHorizontal: 20,
     },

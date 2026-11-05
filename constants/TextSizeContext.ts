@@ -13,12 +13,19 @@ interface TextSizeContextValue {
    * missing, as in tests, use textScale.
    */
   preferredTextScale?: TextScale;
+  /**
+   * The size this device starts at, which Reset returns to: 150% on a tablet,
+   * 125% elsewhere (getDefaultTextScale). Where it's missing, as in tests, use
+   * DEFAULT_TEXT_SCALE.
+   */
+  defaultTextScale?: TextScale;
 }
 
 export const TextSizeContext = createContext<TextSizeContextValue>({
   setTextScale: async () => {},
   textScale: DEFAULT_TEXT_SCALE,
   preferredTextScale: DEFAULT_TEXT_SCALE,
+  defaultTextScale: DEFAULT_TEXT_SCALE,
 });
 
 export const useTextSize = () => useContext(TextSizeContext);

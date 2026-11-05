@@ -1,7 +1,7 @@
 name: Key screens review comment
 
 # The release PR's screenshot review comment (#331, #372): where its commit's
-# iPhone and Android screenshots are, whether their automatic checks passed,
+# iOS (iPhone and iPad) and Android screenshots are, whether their automatic checks passed,
 # how long each run took, and how to approve them for the Screenshots reviewed
 # check. Both key-screen workflows call this after their join job, so the
 # comment is written in one place:
@@ -87,13 +87,13 @@ jobs:
           reviews=$(gh api "repos/$REPO/issues/$PR/comments?per_page=100" --paginate \
             --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- key-screens-review"))) | "\(.id) \(.body | split("\n")[0])"')
           # The one for this commit, which Android's run refreshes. Until the
-          # iPhone's run posts it, there's nothing to refresh.
+          # iOS run posts it, there's nothing to refresh.
           current=""
           while read -r id line; do
             if [ "$line" = "$marker" ]; then current=$id; break; fi
           done <<<"$reviews"
           if [ "$PLATFORM" = android ] && [ -z "$current" ]; then
-            echo "No review comment for $SHA yet. The iPhone run posts it, with these Android screenshots."
+            echo "No review comment for $SHA yet. The iOS run posts it, with these Android screenshots."
             exit 0
           fi
 
@@ -148,8 +148,8 @@ jobs:
             fi
           }
           run_url="https://github.com/$REPO/actions/runs/$ios_run"
-          download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"
-          app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iPhone Simulator app')"
+          download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"
+          app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iOS Simulator app')"
           if [ -n "$android_run" ] && [ "$android_checks" != "not finished" ]; then
             android="$(screenshots "$android_run" "$android_attempt" '.name | test("^android-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the Android screenshots')"
           else
@@ -158,7 +158,7 @@ jobs:
           if [ "$ios_checks" = success ] && [ "$android_checks" = success ]; then
             checks="✅ The automatic checks passed on both platforms: the app opened every screen; none is blank or has text behind the status bar; and each shows its tab labels, verse button, and verse numbers, in its language."
           else
-            checks="⚠️ **The automatic checks failed or didn't finish** (iPhone: ${ios_checks:-unknown}, Android: ${android_checks:-not finished}). Start with the runs linked below to see why."
+            checks="⚠️ **The automatic checks failed or didn't finish** (iOS: ${ios_checks:-unknown}, Android: ${android_checks:-not finished}). Start with the runs linked below to see why."
           fi
           # The comment posts without them if GitHub doesn't say.
           ios_took="$(took "$ios_run" 'iOS key screens join')" || ios_took=""
@@ -167,8 +167,8 @@ jobs:
             android_took="$(took "$android_run" 'Android key screens join')" || android_took=""
           fi
           # A rerun's time is its own attempt's.
-          ios_name="iPhone run" android_name="Android run"
-          if [ "${ios_attempt:-1}" -gt 1 ]; then ios_name="iPhone run's attempt $ios_attempt"; fi
+          ios_name="iOS run" android_name="Android run"
+          if [ "${ios_attempt:-1}" -gt 1 ]; then ios_name="iOS run's attempt $ios_attempt"; fi
           if [ "${android_attempt:-1}" -gt 1 ]; then android_name="Android run's attempt $android_attempt"; fi
           if [ -n "$ios_took" ] && [ -n "$android_took" ]; then
             timing="⏱️ The $ios_name took $ios_took and the $android_name $android_took, each from its start until its screenshots were ready."
@@ -185,15 +185,17 @@ jobs:
           <!-- key-screens-review sha=$SHA -->
           ### 📸 Screenshots to review
 
-          The iPhone and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
+          The iOS (iPhone and iPad) and Android screenshots for commit \`${SHA:0:7}\` are ready. Someone needs to look through them before this release can merge into \`main\`.
 
           $checks
 
           $timing
 
-          1. **Download** $download and $android, and open their \`screens/ios/\` and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's own largest size), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), and \`zh\`, \`zh-cn\`, and \`es\`.
+          1. **Download** $download and $android, and open their \`screens/ios/\` (iPhone), \`screens/ipad/\`, and \`screens/android/\` folders. Each file is named \`<screen>-<variant>.png\`: \`default\`, \`dark\`, \`large\` and \`xl\` (150% and 200% app text), \`ios-large-text\` (the iPhone's or iPad's own large text), \`android-font-max\` and \`android-display-large\` (Android's largest font and display sizes), \`landscape\` (the iPad turned sideways, in a screen's own language as \`landscape-zh\` and so on, and at 200% as \`landscape-xl\`), \`w320\` to \`w981\` (Android at an iPad's Split View and Slide Over widths), and \`zh\`, \`zh-cn\`, and \`es\`.
           2. **Look for** what a person would notice:
              - text cut off, overlapping, or behind the clock, battery, Dynamic Island, or Android's status bar;
+             - on the iPad, a page's text and buttons spread across the whole screen instead of staying in a centered column;
+             - the tab bar not a floating capsule, or the Bible's audio and chapter controls not in their own card above it, or text showing beside or below them;
              - a verse number split from its verse, or a button label cut short;
              - the wrong language, a blank or half-drawn screen, or a popup covering the page;
              - dark mode or large text that's hard to read.
@@ -201,7 +203,7 @@ jobs:
              The black pill at the top is the Simulator's Dynamic Island; a real iPhone's screenshots leave it out.
           3. **Approve:** $approve
 
-          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iPhone download's \`screens/app-store/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
+          A new push needs a new approval, and this comment is replaced when its screenshots are ready. The App Store copies are in the iOS download's \`screens/app-store/\` and, for the iPad, \`screens/app-store-ipad/\`, and the Google Play copies in the Android download's \`screens/google-play/\`.
 
           To try the app itself on an Apple Silicon Mac, download $app separately. Chrome may block it, since it's an unsigned app; \`gh run download\` doesn't.
           BODY
@@ -212,7 +214,7 @@ jobs:
             if gh api -X PATCH "repos/$REPO/issues/comments/$current" -f body="$body" >/dev/null; then
               echo "Refreshed the review comment for $SHA with Android's attempt $RUN_ATTEMPT."
             else
-              # The iPhone's run may have just replaced it, with these results.
+              # The iOS run may have just replaced it, with these results.
               echo "::warning::Couldn't refresh the review comment for $SHA."
             fi
             exit 0

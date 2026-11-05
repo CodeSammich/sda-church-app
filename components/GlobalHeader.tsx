@@ -1,7 +1,7 @@
+import { contentColumnStyle } from '@/constants/Layout';
 import {
   getBackAction,
   getBackTarget,
-  getHeaderBackButtonColors,
   hasHeaderBackButton,
 } from '@/constants/BackNavigation';
 import {
@@ -26,10 +26,12 @@ import {
   type BibleSearchOptions,
   type BibleSearchRow,
 } from '@/hooks/useBibleSearch';
+import { useContentColumnScale } from '@/hooks/useContentColumnScale';
 import { prepareBibleSearch } from '@/services/BibleSearch';
 import { isKeyScreensBuild } from '@/services/ScreenshotRoute';
 import { useAppTheme } from '@/constants/Themes';
 import { AppIcon } from '@/components/AppIcon';
+import { getFloatingSurfaceStyle } from '@/components/CapsuleTabBar';
 import { router, useGlobalSearchParams, usePathname, useSegments } from 'expo-router';
 import {
   useContext,
@@ -126,6 +128,7 @@ export const GlobalHeader = (props: any) => {
     bibleTranslation;
   const theme = useAppTheme();
   const { textScale } = useTextSize();
+  const columnScale = useContentColumnScale();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -434,15 +437,7 @@ export const GlobalHeader = (props: any) => {
         styles.floatingSearchbar,
         isExpandableBible && styles.expandedBibleSearchbar,
         { minHeight: compactControlHeight },
-        {
-          backgroundColor: theme.colors.surface,
-          borderWidth: 1,
-          borderColor: theme.colors.outline,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6,
-        },
+        getFloatingSurfaceStyle(theme),
       ]}
       inputStyle={{
         minHeight: 0,
@@ -570,7 +565,11 @@ export const GlobalHeader = (props: any) => {
       keyboardDismissMode={isBiblePage ? 'on-drag' : 'none'}
       // iOS draws its keyboard over the app, so the last results scroll above it.
       automaticallyAdjustKeyboardInsets={isBiblePage}
-      contentContainerStyle={isBiblePage ? { paddingTop: 8, paddingBottom: insets.bottom + 16 } : undefined}
+      // In the content column on a wide screen (#324).
+      contentContainerStyle={[
+        contentColumnStyle(columnScale),
+        isBiblePage ? { paddingTop: 8, paddingBottom: insets.bottom + 16 } : null,
+      ]}
       keyExtractor={(item) => item.key}
       maxToRenderPerBatch={10}
       renderItem={({ item }) => {
@@ -674,10 +673,8 @@ export const GlobalHeader = (props: any) => {
                 height: compactControlHeight,
                 borderRadius: compactControlHeight / 2,
               },
-              {
-                ...getHeaderBackButtonColors(theme),
-                opacity: pressed ? 0.8 : 1,
-              },
+              getFloatingSurfaceStyle(theme),
+              { opacity: pressed ? 0.8 : 1 },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -709,9 +706,8 @@ export const GlobalHeader = (props: any) => {
                       windowWidth - 86 - (headerSearchButton ? compactControlHeight + 12 : 0),
                     paddingHorizontal: effectiveTextScale >= 1.75 ? 8 : 16,
                   },
+                  getFloatingSurfaceStyle(theme),
                   {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.outline,
                     opacity: titleChipAnim,
                     transform: [{ translateY: titleChipTranslateY }],
                   },
@@ -798,10 +794,8 @@ export const GlobalHeader = (props: any) => {
                           : compactControlHeight,
                       },
                       stackBibleControls && styles.stackedTranslationChip,
-                      {
-                        backgroundColor: theme.colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
+                      getFloatingSurfaceStyle(theme),
+                      { opacity: pressed ? 0.75 : 1 },
                     ]}
                   >
                     {renderTranslationChipContent({
@@ -826,10 +820,8 @@ export const GlobalHeader = (props: any) => {
                       style={({ pressed }) => [
                         styles.collapsedSearchButton,
                         { height: compactControlHeight, width: compactControlHeight },
-                        {
-                          backgroundColor: theme.colors.surface,
-                          opacity: pressed ? 0.75 : 1,
-                        },
+                        getFloatingSurfaceStyle(theme),
+                        { opacity: pressed ? 0.75 : 1 },
                       ]}
                     >
                       <AppIcon
@@ -852,10 +844,8 @@ export const GlobalHeader = (props: any) => {
                       style={({ pressed }) => [
                         styles.collapsedSearchButton,
                         { height: compactControlHeight, width: compactControlHeight },
-                        {
-                          backgroundColor: theme.colors.surface,
-                          opacity: pressed ? 0.75 : 1,
-                        },
+                        getFloatingSurfaceStyle(theme),
+                        { opacity: pressed ? 0.75 : 1 },
                       ]}
                     >
                       <AppIcon
@@ -882,10 +872,8 @@ export const GlobalHeader = (props: any) => {
                       style={({ pressed }) => [
                         styles.collapsedSearchButton,
                         { height: compactControlHeight, width: compactControlHeight },
-                        {
-                          backgroundColor: theme.colors.surface,
-                          opacity: pressed ? 0.75 : 1,
-                        },
+                        getFloatingSurfaceStyle(theme),
+                        { opacity: pressed ? 0.75 : 1 },
                       ]}
                     >
                       <AppIcon
@@ -912,7 +900,8 @@ export const GlobalHeader = (props: any) => {
               styles.collapsedSearchButton,
               styles.headerSearchButton,
               { height: compactControlHeight, width: compactControlHeight },
-              { backgroundColor: theme.colors.surface, opacity: pressed ? 0.75 : 1 },
+              getFloatingSurfaceStyle(theme),
+              { opacity: pressed ? 0.75 : 1 },
             ]}
           >
             <AppIcon
@@ -971,12 +960,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 12,
     marginRight: 8,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
   },
   floatingTitleChip: {
     minHeight: 40,
@@ -986,16 +969,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
     marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
   },
   floatingSearchbar: {
-    elevation: 4,
     borderRadius: 24,
     minHeight: 44,
     marginRight: 12,
@@ -1038,11 +1014,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
   },
   // An invisible copy of the translation chip at its natural width, with the
   // chip's padding and gap, to decide whether it fits beside the icon buttons.
@@ -1090,11 +1061,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
   },
   headerSearchButton: {
     marginRight: 12,

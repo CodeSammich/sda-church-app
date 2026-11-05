@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const { mergeResults } = require('../scripts/merge-key-screens.cjs');
 const {
@@ -249,11 +249,29 @@ describe('saved settings', () => {
 describe('iOS key screens', () => {
   const workflow = repoFile('.github/workflows/ios-key-screens.yml');
 
-  it('runs one runner per group, each capturing and checking only its group', () => {
+  it('runs one runner per group, each capturing and checking only its group, on the iPhone and then the iPad', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(workflow)![1].split(', ');
     expect(groups).toEqual(Object.keys(config.groups));
+    // Five jobs for five Macs, so none waits for one while the others wait
+    // for the compiling runner's app; no sixth runner for the iPad (#324).
+    expect(groups).toHaveLength(5);
+    expect(workflow).not.toContain('ipad: true');
+    expect(workflow).toMatch(/strategy:\n +fail-fast: false\n(?: +#.*\n)* +max-parallel: 5\n/);
     expect(workflow).toMatch(/capture-ios-screens\.cjs --out [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
     expect(workflow).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--group \$\{\{ matrix\.group \}\}\n/);
+    // Then the group's iPad shots, into a part of their own, checked against
+    // the iPad's positions and layout, and uploaded beside the iPhone's.
+    expect(workflow).toContain('capture-ios-screens.cjs --platform ipad --group ${{ matrix.group }}');
+    expect(workflow).toMatch(/check-screens\.cjs --dir "\$RUNNER_TEMP\/ipad-part\/screens"\n\s+--platform ipad --group \$\{\{ matrix\.group \}\}\n/);
+    expect(workflow).toContain('name: key-screens-${{ github.run_id }}-${{ matrix.group }}-ipad');
+    expect(workflow).toContain('pattern: key-screens-${{ github.run_id }}-*');
+    // The iPhone shuts down first, so the iPad has its memory.
+    const ipadStep = workflow.slice(workflow.indexOf('- name: Capture the key screens on the iPad'));
+    expect(ipadStep.indexOf('xcrun simctl shutdown "$DEVICE_ID"')).toBeLessThan(ipadStep.indexOf('capture-ios-screens.cjs'));
+    expect(workflow.indexOf('- name: Capture the key screens on the iPad')).toBeGreaterThan(
+      workflow.indexOf('- name: Upload this group\n'),
+    );
+    expect(workflow).toContain('capture-ios-screens.cjs --platform ipad --pick-device');
   });
 
   it('compiles the app once, on the lightest group\'s runner, and the others wait for it', () => {
@@ -296,8 +314,20 @@ describe('iOS key screens', () => {
     expect(workflow).toMatch(/- name: Restore the compile cache from main\n\s+if: .+\n\s+id: compile-cache\n/);
     expect(workflow.indexOf('id: compile-cache')).toBeLessThan(workflow.indexOf('BOOT_NOW:'));
     expect(boot).toMatch(
-      /if \[ "\$BOOT_NOW" = true \]; then\n\s+nohup xcrun simctl bootstatus "\$DEVICE_ID" -b [^\n]+&\n\s+fi\n/,
+      /if \[ "\$BOOT_NOW" = true \]; then\n\s+nohup xcrun simctl bootstatus "\$DEVICE_ID" -b [^\n]+&\n/,
     );
+    // The iPhone, and the iPad for the group's iPad shots, boot together.
+    // Not on the compiling runner, which boots its iPad after its iPhone shots.
+    expect(boot).toContain('BOOT_IPAD: ${{ !matrix.builds }}\n');
+    // Its first boot, slow, while the runner waits, then off until its shots,
+    // so it doesn't slow the iPhone's: the launch step waits for that.
+    expect(boot).toContain(
+      `nohup sh -c 'xcrun simctl bootstatus "$1" -b && xcrun simctl shutdown "$1"' sh "$IPAD_ID"`,
+    );
+    expect(boot).toContain('echo "$!" > "$RUNNER_TEMP/ipad-boot.pid"');
+    const launchStep = workflow.slice(workflow.indexOf('- name: Launch on a simulated iPhone'));
+    expect(launchStep.indexOf('while kill -0 "$(cat "$RUNNER_TEMP/ipad-boot.pid")"')).toBeGreaterThan(-1);
+    expect(launchStep.indexOf('while kill -0')).toBeLessThan(launchStep.indexOf('xcrun simctl launch'));
     expect(workflow.match(/nohup xcrun simctl bootstatus/g)).toHaveLength(1);
     // The launch step, after the build, boots it or waits for it.
     const launch = workflow.slice(workflow.indexOf('- name: Launch on a simulated iPhone'));
@@ -315,7 +345,7 @@ describe('iOS key screens', () => {
     // after a failed part, and then fail.
     expect(merge).toMatch(/if: >-\n\s+!cancelled\(\) && \(/);
     expect(merge).toContain("needs.capture.result != 'success'");
-    expect(merge).toContain('node scripts/merge-key-screens.cjs --platform ios --out');
+    expect(merge).toContain('node scripts/merge-key-screens.cjs --platform ios,ipad --out');
     // Two downloads: the screenshots alone, which the review comment links,
     // and the Simulator app. Chrome's Safe Browsing blocked the screenshots
     // while they shared a zip with the unsigned app.
@@ -331,9 +361,9 @@ describe('iOS key screens', () => {
     // key-screens-review.yml writes the comment for this workflow.
     const comment = repoFile('.github/workflows/key-screens-review.yml');
     expect(comment).toContain(
-      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iPhone screenshots')"`,
+      `download="$(screenshots "$ios_run" "$ios_attempt" '.name | test("^ios-key-screens-(manual|[0-9]+)-[0-9]+$")' 'the iOS screenshots')"`,
     );
-    expect(comment).toContain(`app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iPhone Simulator app')"`);
+    expect(comment).toContain(`app="$(screenshots "$ios_run" "$ios_attempt" '.name | endswith("-arm64")' 'the iOS Simulator app')"`);
   });
 
   it('re-checks an earlier run from its screenshots, or from the app download of runs before the split', () => {
@@ -343,7 +373,10 @@ describe('iOS key screens', () => {
     const earlier = recheck.slice(recheck.indexOf('\n  ios:\n'));
     expect(earlier).toContain("if: inputs.platform == 'ios'");
     expect(earlier).toContain('runs-on: macos-26');
-    expect(earlier).toContain('node scripts/check-screens.cjs --dir "$SCREENS"\n');
+    // The iPhone's shots, then the iPad's (#324), keeping each one's results.
+    expect(earlier).toContain('node scripts/check-screens.cjs --dir "$SCREENS" || status=1\n');
+    expect(earlier).toContain('node scripts/check-screens.cjs --dir "$SCREENS" --platform ipad || status=1\n');
+    expect(earlier).toContain('${{ env.SCREENS }}/ocr*.json');
     expect(workflow).not.toMatch(/screens_from_run|earlier-screens/);
     expect(earlier).toMatch(
       /--pattern 'ios-key-screens-\*' --dir "\$RUNNER_TEMP\/earlier" \|\|\n\s+gh run download [^\n]+--pattern 'ios-pr-preview-\*-arm64'/,
@@ -513,6 +546,368 @@ describe('splash check', () => {
     expect(await looksLikeSplash(await screenshot('dark', '#171b1c'))).toBe(false);
     // The splash colour with content in it, such as a header in the same blue.
     expect(await looksLikeSplash(await screenshot('content', '#00405C', [700, 2200]))).toBe(false);
+  });
+});
+
+describe('iPad layout checks (#324)', () => {
+  const {
+    CONTENT_MAX_WIDTH,
+    DEFAULT_TEXT_SCALE,
+    POPUP_MAX_WIDTH,
+    POPUP_SURFACE,
+    TABLET_TEXT_SCALE,
+    checkIpadLayout,
+    checkPopupWidth,
+    columnEdges,
+    planChecks,
+    surfaceWidth,
+  } = require('../scripts/check-screens.cjs');
+  const { IPAD_APP_STORE_SIZE } = require('../scripts/capture-ios-screens.cjs');
+  const ipadChecks = planChecks(config, 'ipad');
+  const shot = (name: string) => ipadChecks.find((each: { name: string }) => each.name === name);
+  const line = (text: string, left: number, right: number, top: number) => ({ text, box: [left, top, right - left, 0.02] });
+
+  it("expects the app's own sizes: the column, a tablet's text, a popup's width, and its surface", () => {
+    expect(CONTENT_MAX_WIDTH).toBe(require('../constants/Layout').CONTENT_MAX_WIDTH);
+    const preferences = require('../constants/AppPreferences');
+    expect(DEFAULT_TEXT_SCALE).toBe(preferences.DEFAULT_TEXT_SCALE);
+    expect(TABLET_TEXT_SCALE).toBe(preferences.TABLET_DEFAULT_TEXT_SCALE);
+    expect(POPUP_MAX_WIDTH).toBe(require('../styles/PopupStyles').POPUP_MAX_WIDTH);
+    // The light theme's canvas, which every popup's surface is (getPopupSurfaceStyle).
+    const canvas = require('../constants/Themes').customLightTheme.colors.background.slice(1);
+    expect(POPUP_SURFACE).toEqual([0, 2, 4].map((at) => parseInt(canvas.slice(at, at + 2), 16)));
+    // The 13-inch iPad's points, at 2 pixels each, are its screenshots' size.
+    expect([config.ipad.points.width * 2, config.ipad.points.height * 2]).toEqual([
+      IPAD_APP_STORE_SIZE.width,
+      IPAD_APP_STORE_SIZE.height,
+    ]);
+  });
+
+  it('expects the column 864 points wide at 150%, wider at 200%, and skips a larger iPad text size', () => {
+    const [left, right] = columnEdges(shot('home-landscape'));
+    expect(right - left).toBeCloseTo(864 / 1376, 3);
+    expect(left).toBeCloseTo((1 - 864 / 1376) / 2, 3);
+    expect(columnEdges(shot('home-default'))[1] - columnEdges(shot('home-default'))[0]).toBeCloseTo(864 / 1032, 3);
+    const [wideLeft, wideRight] = columnEdges(shot('home-landscape-xl'));
+    expect(wideRight - wideLeft).toBeCloseTo(1152 / 1376, 3);
+    expect(columnEdges(shot('bible-dual-ios-large-text'))).toBeNull();
+  });
+
+  it('fails text outside the column below the header, and text at the edge, but not the header or tab bar', () => {
+    const home = shot('home-landscape');
+    const ok = [
+      line('Today\'s Verse', 0.2, 0.6, 0.4),
+      // The Bible's header buttons and the tab bar span the screen.
+      line('BSB', 0.85, 0.98, 0.04),
+      line('Home', 0.1, 0.2, 0.95),
+    ];
+    expect(checkIpadLayout(home, ok)).toEqual([]);
+    const outside = checkIpadLayout(home, [...ok, line('Read Verse', 0.1, 0.3, 0.5)]);
+    expect(outside).toHaveLength(1);
+    expect(outside[0]).toMatch(/^text outside the content column, 19% to 81% of the way across: "Read Verse" at 10% to 30%/);
+    expect(checkIpadLayout(home, [line('Psalm 23', 0.001, 0.2, 0.5)])).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^text at the screen's edge, likely cut off: "Psalm 23"/)]),
+    );
+    // Not the status bar's clock, near the edge on purpose, nor the window's
+    // resize grip in the corner, which Vision reads as "/".
+    expect(checkIpadLayout(home, [line('9:41 AM', 0.002, 0.1, 0.007)])).toEqual([]);
+    expect(checkIpadLayout(home, [line('/', 0.98, 0.999, 0.973)])).toEqual([]);
+    // Nor a screen that shows a web page or Quick Look, wide on purpose.
+    expect(checkIpadLayout(shot('sabbath-school-lesson-viewer-landscape'), [line('Beginner', 0.001, 0.9, 0.5)])).toEqual([]);
+    // Nor an iPhone shot.
+    expect(checkIpadLayout(shots[0], [line('Welcome', 0.001, 0.999, 0.5)])).toEqual([]);
+  });
+
+  // A screen of the dimmed page's colour with a popup's surface, `wide` of
+  // its width, centred, and a line of text across it.
+  const popupImage = async (file: string, wide: number, size = { width: 688, height: 516 }) => {
+    const sharp = require('sharp');
+    const surface = Math.round(size.width * wide);
+    const text = await sharp({ create: { width: Math.round(surface * 0.6), height: 8, channels: 3, background: { r: 30, g: 30, b: 30 } } }).png().toBuffer();
+    const popup = await sharp({ create: { width: surface, height: Math.round(size.height * 0.4), channels: 3, background: { r: POPUP_SURFACE[0], g: POPUP_SURFACE[1], b: POPUP_SURFACE[2] } } })
+      .composite([{ input: text, top: 40, left: Math.round(surface * 0.2) }])
+      .png()
+      .toBuffer();
+    await sharp({ create: { ...size, channels: 3, background: { r: 166, g: 158, b: 154 } } })
+      .composite([{ input: popup, top: Math.round(size.height * 0.3), left: Math.round((size.width - surface) / 2) }])
+      .png()
+      .toFile(file);
+  };
+
+  it("measures a popup's surface, and fails one wider than 560 points, as a percentage width made it", async () => {
+    const { mkdtempSync } = require('node:fs');
+    const { tmpdir } = require('node:os');
+    const dir = mkdtempSync(resolve(tmpdir(), 'popup-'));
+    const right = resolve(dir, 'right.png');
+    const wide = resolve(dir, 'wide.png');
+    await popupImage(right, 560 / 1376);
+    await popupImage(wide, 0.9);
+    expect(await surfaceWidth(right)).toBeCloseTo(560 / 1376, 2);
+    expect(await surfaceWidth(wide)).toBeCloseTo(0.9, 2);
+    const textSize = shot('text-size-landscape');
+    expect(await checkPopupWidth(textSize, right)).toEqual([]);
+    expect(await checkPopupWidth(textSize, wide)).toEqual(['the popup is about 1238 points wide, more than 560']);
+    // A page with no popup is one colour edge to edge.
+    expect(await checkPopupWidth(shot('home-landscape'), wide)).toEqual([]);
+    // Setup's popup has no popup= in its path, so the list marks it.
+    expect(await checkPopupWidth(shot('setup-landscape'), wide)).toHaveLength(1);
+    expect(await checkPopupWidth(shot('offline-bible-audio-narrator-landscape'), wide)).toHaveLength(1);
+  });
+});
+
+describe("Android shots at an iPad's split windows (#324)", () => {
+  const { planSplitCaptures } = require('../scripts/capture-ios-screens.cjs');
+  const { checkIpadLayout, checkShot, planSplitChecks, splitRegions } = require('../scripts/check-screens.cjs');
+  const { deviceFor } = require('../scripts/capture-android-screens.cjs');
+  const widths = config.android.splitWindows.map((window: { width: number }) => window.width);
+
+  it('takes the screens a wide screen changes most, at 150%, at Slide Over and Split View widths', () => {
+    expect(widths).toEqual([320, 504, 678, 981]);
+    const portrait = config.screens.filter((screen: { ipadVariants: string[] }) => screen.ipadVariants.includes('default'));
+    for (const width of widths) {
+      const split = planSplitCaptures(config, width);
+      expect(split.map((shot: { screen: string }) => shot.screen)).toEqual(portrait.map((screen: { name: string }) => screen.name));
+      for (const shot of split) {
+        expect(shot.file).toBe(`android/${shot.screen}-w${width}.png`);
+        expect(shot.settings.textScale).toBe(1.5);
+      }
+      // An emulator that size, in points at 2x.
+      const window = config.android.splitWindows.find((each: { width: number }) => each.width === width);
+      expect(deviceFor(config, { split: width })).toMatchObject({ width: width * 2, height: window.height * 2, density: 320 });
+    }
+    expect(() => planSplitCaptures(config, 700)).toThrow('No split window 700 points wide');
+    expect(deviceFor(config, {})).toBe(config.android.phone);
+  });
+
+  it('checks the tab labels where a split window puts them, and the column only where the window is wider', () => {
+    const home = planSplitChecks(config, 981).find((shot: { screen: string }) => shot.screen === 'home');
+    const tabs = splitRegions(home.split).tabs;
+    // The tab labels sit about 58 points up from the bottom.
+    expect(tabs[0]).toBeLessThan(1 - 58 / 1024);
+    expect(tabs[1]).toBeGreaterThan(1 - 58 / 1024);
+    const labels = ['Home', 'Bible', 'Explore', 'You'].map((text, index) => ({ text, box: [0.1 + index * 0.2, 1 - 66 / 1024, 0.08, 0.02] }));
+    expect(checkShot(home, labels)).toEqual([]);
+    // Text past the 864-point column, 6% in from each side at 981.
+    expect(checkIpadLayout(home, [{ text: 'Read Verse', box: [0.02, 0.5, 0.2, 0.02] }])).toHaveLength(1);
+    // At 504 the column fills the window.
+    const narrow = planSplitChecks(config, 504).find((shot: { screen: string }) => shot.screen === 'home');
+    expect(checkIpadLayout(narrow, [{ text: 'Read Verse', box: [0.02, 0.5, 0.96, 0.02] }])).toEqual([]);
+    // Its mustShowLines are the phone's, so they're left out.
+    expect(planSplitChecks(config, 504).every((shot: { mustShowLines?: unknown }) => shot.mustShowLines === undefined)).toBe(true);
+  });
+});
+
+describe('iPad key screens (#324)', () => {
+  const ipad = planCaptures(config, 'ipad');
+  const ipadNames = ipad.map((shot: { name: string }) => shot.name);
+  const { IPAD_APP_STORE_SIZE, SERVE_SIM, variantsOn, writeIpadAppStoreCopy } = require('../scripts/capture-ios-screens.cjs');
+  const { planChecks, regionsFor } = require('../scripts/check-screens.cjs');
+
+  it('takes only the screens that list ipadVariants, named ipad/<screen>-<variant>.png', () => {
+    const listed = config.screens.filter((screen: { ipadVariants?: string[] }) => screen.ipadVariants);
+    expect(new Set(ipad.map((shot: { screen: string }) => shot.screen))).toEqual(
+      new Set(listed.map((screen: { name: string }) => screen.name)),
+    );
+    for (const shot of ipad) expect(shot.file).toBe(`ipad/${shot.name}.png`);
+    // The iPhone and Android lists don't change.
+    expect(shots.map((shot: { name: string }) => shot.name)).not.toContain('home-landscape');
+    expect(variantsOn({ variants: ['default'], ipadVariants: ['landscape'] }, 'ios')).toEqual(['default']);
+    expect(variantsOn({ variants: ['default'] }, 'ipad')).toEqual([]);
+  });
+
+  it("covers what a wide screen changes: the column, landscape, the library's grid, and a dialog", () => {
+    expect(ipadNames).toEqual(
+      expect.arrayContaining([
+        'home-default',
+        'home-landscape',
+        'bible-dual-default',
+        'bible-dual-landscape',
+        // The iPad's own large text: the column widens with it, so lines don't
+        // wrap phrase by phrase.
+        'bible-dual-ios-large-text',
+        'library-default',
+        'library-children-default',
+        // A Paper dialog: on iOS, a percentage width filled 90% of the iPad.
+        'text-size-default',
+      ]),
+    );
+  });
+
+  it('turns the iPad only once, taking the portrait shots first', () => {
+    const turned = ipad.map((shot: { settings: { orientation: string } }) => shot.settings.orientation);
+    expect(turned.indexOf('landscape')).toBeGreaterThan(0);
+    expect(turned.slice(turned.indexOf('landscape')).every((value: string) => value === 'landscape')).toBe(true);
+  });
+
+  it("keeps the iPad's orientation out of the app's storage, and off the iPhone and Android", () => {
+    const landscape = ipad.find((shot: { name: string }) => shot.name === 'home-landscape');
+    expect(landscape.settings).toMatchObject({ orientation: 'landscape', iosTextSize: 'large' });
+    expect(Object.values(buildManifest(landscape.settings, landscape.route))).not.toContain('landscape');
+    for (const shot of [...shots, ...planCaptures(config, 'android')]) {
+      expect(shot.settings).not.toHaveProperty('orientation');
+    }
+  });
+
+  it("saves no text size on the iPad, so its shots show a tablet's own 150%, which the Text size dialog confirms", () => {
+    // Every iPad shot but the 200% ones (landscape-xl).
+    for (const shot of ipad.filter((each: { settings: { textScale: unknown } }) => each.settings.textScale !== 2)) {
+      expect(buildManifest(shot.settings)).not.toHaveProperty('user-text-scale');
+    }
+    // A variant that sets a size still saves it.
+    expect(buildManifest({ ...ipad[0].settings, textScale: 2 })['user-text-scale']).toBe('2');
+    const lines = (rules: Array<string | { line: string }>) =>
+      rules.map((rule) => (typeof rule === 'string' ? rule : rule.line));
+    const forOne = (platform: string) => {
+      const shot = planChecks(config, platform).find((each: { name: string }) => each.name === 'text-size-default');
+      return lines(
+        shot.mustShowLines.filter(
+          (rule: string | { platforms?: string[] }) =>
+            typeof rule === 'string' || !rule.platforms || rule.platforms.includes(platform),
+        ),
+      );
+    };
+    expect(forOne('ipad')).toEqual(expect.arrayContaining(['^Reset to 150%', '^Current selection: 150%']));
+    expect(forOne('ipad')).not.toContain('^Reset to 125%');
+    expect(forOne('ios')).toContain('^Reset to 125%');
+    expect(forOne('ios')).not.toContain('^Current selection: 150%');
+  });
+
+  it('takes every key screen in landscape, and portrait and 200% where a wide screen changes most', () => {
+    for (const screen of config.screens) {
+      expect({ screen: screen.name, landscape: screen.ipadVariants.some((variant: string) => /^landscape/.test(variant)) })
+        .toEqual({ screen: screen.name, landscape: true });
+    }
+    expect(ipadNames).toEqual(
+      expect.arrayContaining(['home-landscape-xl', 'bible-scrolled-landscape-xl', 'library-landscape-xl', 'text-size-landscape-xl']),
+    );
+    // A screen whose checks read Chinese or Spanish takes its landscape shot
+    // in that language.
+    expect(ipadNames).toEqual(expect.arrayContaining(['bible-cuv-landscape-zh', 'bible-cuvs-landscape-zh-cn', 'bible-spanish-landscape-es']));
+  });
+
+  it("flags a group's iPad shots over 7 minutes of capture, the same reminder to prune", () => {
+    // Measured 20 seconds a shot on the 13-inch iPad, against the iPhone's 14
+    // (#324), which shotCost counts. Each runner takes them after its iPhone
+    // shots, so the slowest group's total sets the release PR's wait.
+    for (const group of Object.keys(config.groups)) {
+      const seconds = takeGroup(ipad, group, config).reduce((sum: number, shot: any) => sum + shotCost(shot), 0);
+      expect({ group, minutes: Math.round(seconds / 6) / 10, over: seconds > 420 }).toMatchObject({ group, over: false });
+    }
+    expect(shotCost(ipad[0])).toBe(shotCost({ ...ipad[0], platform: 'ios' }) + 5);
+  });
+
+  it('lists App Store iPad shots for the uploaded listing, at most 10, all captured on the iPad', () => {
+    expect(Object.keys(config.appStoreIpad)).toEqual(['en-US']);
+    const list = config.appStoreIpad['en-US'];
+    expect(list.length).toBeGreaterThan(0);
+    expect(list.length).toBeLessThanOrEqual(10);
+    for (const name of list) expect(ipadNames).toContain(name);
+    for (const copy of planStoreCopies(config, 'ipad')) {
+      expect(copy.file).toMatch(/^app-store-ipad\/en-US\/\d\d-.+\.png$/);
+      expect(copy.source).toBe(`ipad/${copy.name}.png`);
+    }
+  });
+
+  it("checks each shot with its screen's rules, against the iPad's regions for its orientation", () => {
+    const checks = planChecks(config, 'ipad');
+    expect(checks.map((shot: { name: string }) => shot.name)).toEqual(ipadNames);
+    const bible = checks.find((shot: { name: string }) => shot.name === 'bible-dual-default');
+    expect(bible.mustShowLines).toEqual(expect.arrayContaining(['BSB', 'CUV']));
+    const portrait = checks.find((shot: { name: string }) => shot.name === 'home-default');
+    const landscape = checks.find((shot: { name: string }) => shot.name === 'home-landscape');
+    expect(regionsFor(portrait).tabs).toBeDefined();
+    expect(regionsFor(landscape)).not.toBe(regionsFor(portrait));
+  });
+
+  it("saves App Store copies at the 13-inch iPad's size, either way up, and refuses another size", async () => {
+    const sharp = require('sharp');
+    const { mkdtempSync } = require('node:fs');
+    const { tmpdir } = require('node:os');
+    const { join } = require('node:path');
+    const dir = mkdtempSync(join(tmpdir(), 'app-store-ipad-'));
+    const make = async (name: string, width: number, height: number) => {
+      const file = join(dir, name);
+      await sharp({ create: { width, height, channels: 4, background: { r: 30, g: 90, b: 150, alpha: 1 } } })
+        .png()
+        .toFile(file);
+      return file;
+    };
+    const { width, height } = IPAD_APP_STORE_SIZE;
+    for (const [name, w, h] of [['portrait.png', width, height], ['landscape.png', height, width]] as const) {
+      const copy = join(dir, `copy-${name}`);
+      await writeIpadAppStoreCopy(await make(name, w, h), copy);
+      expect(await sharp(copy).metadata()).toMatchObject({ width: w, height: h, channels: 3, hasAlpha: false });
+    }
+    await expect(writeIpadAppStoreCopy(await make('iphone.png', 1320, 2868), join(dir, 'copy.png'))).rejects.toThrow(
+      'not the 13-inch iPad',
+    );
+  });
+
+  it('pins serve-sim through the lockfile, as it turns the Simulator through private interfaces', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    expect(pkg.devDependencies['serve-sim']).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(JSON.parse(readFileSync('package-lock.json', 'utf8')).packages['node_modules/serve-sim'].version).toBe(
+      pkg.devDependencies['serve-sim'],
+    );
+    expect(SERVE_SIM.endsWith(join('node_modules', '.bin', 'serve-sim'))).toBe(true);
+  });
+
+  describe('status bar and orientation', () => {
+    const sharp = require('sharp');
+    const { mkdtempSync } = require('node:fs');
+    const { tmpdir } = require('node:os');
+    const { join } = require('node:path');
+    const { STATUS_BAR_REGIONS_BY_SCREEN, screenOf, turnUpright } = require('../scripts/capture-ios-screens.cjs');
+    const dir = mkdtempSync(join(tmpdir(), 'ipad-status-'));
+    const box = (left: number, top: number, width: number, height: number, fill = '#111') => ({
+      input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${fill}"/></svg>`),
+      left,
+      top,
+    });
+
+    // A 13-inch iPad screenshot: the clock and date on the left of the 48-pixel
+    // status bar, the icons on the right, and a line of text at textAt.
+    const ipadShot = async (name: string, width: number, height: number, textAt?: number) => {
+      const file = join(dir, `${name}.png`);
+      const overlays = [box(48, 19, 270, 26), box(width - 200, 19, 140, 26)];
+      if (textAt !== undefined) {
+        for (let left = 60; left < width - 200; left += 160) overlays.push(box(left, textAt, 120, 22, '#222'));
+      }
+      await sharp({ create: { width, height, channels: 3, background: '#f3e6df' } }).composite(overlays).png().toFile(file);
+      return file;
+    };
+
+    it.each([
+      { screen: 'ipad', width: 2064, height: 2752 },
+      { screen: 'ipad-landscape', width: 2752, height: 2064 },
+    ])("catches text behind the $screen's status bar, but not its clock and icons", async ({ screen, width, height }) => {
+      const regions = STATUS_BAR_REGIONS_BY_SCREEN[screen];
+      expect(await statusBarClear(await ipadShot(`${screen}-clear`, width, height), regions)).toBe(true);
+      expect(await statusBarClear(await ipadShot(`${screen}-behind`, width, height, 16), regions)).toBe(false);
+      // Text just below the status bar, as the Bible shows when scrolled.
+      expect(await statusBarClear(await ipadShot(`${screen}-below`, width, height, 52), regions)).toBe(true);
+    });
+
+    it('checks each shot against its own screen and orientation', () => {
+      expect(screenOf(ipad.find((shot: { name: string }) => shot.name === 'home-default'))).toBe('ipad');
+      expect(screenOf(ipad.find((shot: { name: string }) => shot.name === 'bible-dual-landscape'))).toBe('ipad-landscape');
+      expect(screenOf(shots[0])).toBe('ios');
+    });
+
+    it('turns a landscape screenshot upright, its left edge to the top', async () => {
+      // simctl saves the landscape screen sideways: the app's top on the left.
+      const file = join(dir, 'sideways.png');
+      await sharp({ create: { width: 30, height: 40, channels: 3, background: '#ffffff' } })
+        .composite([box(0, 0, 5, 40, '#000')])
+        .png()
+        .toFile(file);
+      await turnUpright(file);
+      const { data, info } = await sharp(file).raw().toBuffer({ resolveWithObject: true });
+      expect([info.width, info.height]).toEqual([40, 30]);
+      // The dark strip is now along the top.
+      expect(data[0]).toBeLessThan(50);
+      expect(data[(info.height - 1) * info.width * info.channels]).toBeGreaterThan(200);
+    });
   });
 });
 
@@ -1042,13 +1437,23 @@ describe('Android key screens workflow (#372)', () => {
   it('captures and checks each group on its own emulator runner, from the list in screens.json', () => {
     const groups = /\n\s+group: \[([a-z, -]+)\]\n/.exec(capture)![1].split(', ');
     expect(groups).toEqual(Object.keys(config.groups));
-    expect(capture).toContain("PART: ${{ matrix.store && '--store' || format('--group {0}', matrix.group) }}");
+    expect(capture).toContain(
+      "PART: ${{ matrix.split && format('--split {0}', matrix.split) || (matrix.store && '--store' || format('--group {0}', matrix.group)) }}",
+    );
     expect(capture).toMatch(/capture-android-screens\.cjs --out [^\n]+ \$PART\n/);
     // The sixth runner takes the Google Play shots, and has no group to check.
     expect(capture).toContain('- { group: google-play, batch: 6, store: true }');
     expect(capture.match(/if: \$\{\{ !cancelled\(\) && !matrix\.store \}\}/g)).toHaveLength(2);
     expect(capture).toContain("process.env.STORE === 'true' ? googlePlay : phone");
-    expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+--platform android --group \$\{\{ matrix\.group \}\}\n/);
+    expect(capture).toContain(
+      "PART: ${{ matrix.split && format('--split {0}', matrix.split) || format('--platform android --group {0}', matrix.group) }}",
+    );
+    expect(capture).toMatch(/check-screens\.cjs --dir [^\n]+\n\s+\$PART\n/);
+    // Batches 7 to 10: an iPad's split windows (#324), one each.
+    const widths = config.android.splitWindows.map((window: { width: number }) => window.width);
+    widths.forEach((width: number, index: number) => {
+      expect(capture).toContain(`- { group: split-${width}, batch: ${index + 7}, split: ${width} }`);
+    });
     expect(capture).toContain('pip" install --quiet -r scripts/ocr-requirements.txt');
     expect(capture.indexOf('capture-android-screens.cjs')).toBeLessThan(capture.indexOf('--platform android'));
     expect(capture).toContain('name: android-key-screens-${{ github.run_id }}-${{ matrix.group }}');

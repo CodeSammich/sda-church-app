@@ -2,25 +2,12 @@ import { readFileSync } from 'node:fs';
 import {
   getBackAction,
   getBackTarget,
-  getHeaderBackButtonColors,
   hasHeaderBackButton,
   isSwipeBackToParent,
   SABBATH_SCHOOL_BACK_TARGET,
 } from '@/constants/BackNavigation';
-import { customDarkTheme, customLightTheme } from '@/constants/Themes';
 
 describe('global header back navigation', () => {
-  it.each([customLightTheme, customDarkTheme])(
-    'uses an opaque $dark back-button surface',
-    (theme) => {
-      expect(getHeaderBackButtonColors(theme)).toEqual({
-        backgroundColor: theme.colors.surface,
-        borderColor: theme.colors.outline,
-      });
-      expect(getHeaderBackButtonColors(theme).backgroundColor).toMatch(/^#[\dA-F]{6}$/i);
-    },
-  );
-
   it('keeps pillar roots free of a back button by default', () => {
     expect(hasHeaderBackButton(['(tabs)', 'bible'])).toBe(false);
   });

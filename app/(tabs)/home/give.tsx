@@ -17,6 +17,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useContext, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, Text } from 'react-native-paper';
+import { TabBarSpacer } from '@/constants/BottomTabHeightContext';
 
 export default function GiveScreen() {
   const { language } = useContext(LanguageContext);
@@ -367,6 +368,7 @@ export default function GiveScreen() {
             </Card.Content>
           </Card>
         </View>
+        <TabBarSpacer />
       </ScrollView>
       <DafSponsorsDialog
         title={labels.dafOther}
