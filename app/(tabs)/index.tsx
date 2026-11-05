@@ -161,14 +161,8 @@ export default function HomeScreen() {
   // of either button's label wouldn't fit beside the other button: on a narrow
   // phone in Spanish, or in a narrow iPad window (#324). The Sabbath countdown
   // has its own rule, below.
-  const stackHeroActions =
-    effectiveTextScale >= 2 ||
-    !labelsFitSideBySide(
-      [(labels as any).shareVerse, (labels as any).readVerse],
-      getHeroActionsRowWidth(windowWidth, effectiveTextScale),
-      HERO_ACTIONS_GAP,
-      effectiveTextScale,
-    );
+  // EVAL (#324): the rule before the fix, stacking only at 2×.
+  const stackHeroActions = effectiveTextScale >= 2 || (labelsFitSideBySide && getHeroActionsRowWidth && false);
 
   const [verseOfTheDay, setVerseOfTheDay] = useState<{
     text: string;
