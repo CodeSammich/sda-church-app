@@ -3,7 +3,7 @@ import {
   EXTERNAL_BRAND_ASSETS,
   EXTERNAL_BRAND_ICON_CONTENT_SCALE,
 } from '@/constants/ExternalBrandAssets';
-import { countdownFitsBeside, labelsFitSideBySide, WrappingActionButton } from '@/components/WrappingActionButton';
+import { labelsFitSideBySide, WrappingActionButton } from '@/components/WrappingActionButton';
 import { scaleTypographyMetric } from '@/constants/AppPreferences';
 import {
   CHURCH_BUILDING_IMAGE_URL,
@@ -11,7 +11,6 @@ import {
   CHURCH_LONGITUDE,
   openSabbathStream,
 } from '@/constants/ExternalLinks';
-import { formatAppDate } from '@/constants/DateFormat';
 import { LanguageContext, SupportedLanguage } from '@/constants/LanguageContext';
 import { contentColumnStyle, contentColumnWithin, DESIGN_TOKENS, getContentWidth } from '@/constants/Layout';
 import { useTextSize } from '@/constants/TextSizeContext';
@@ -85,7 +84,6 @@ export default function HomeScreen() {
       hymnal: 'Hymnal',
       sabbathStarts: 'Sabbath starts in',
       sabbathEnds: 'Sabbath ends in',
-      isSabbath: 'Happy Sabbath!',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: 'New York, NY',
@@ -103,7 +101,6 @@ export default function HomeScreen() {
       hymnal: '詩歌本',
       sabbathStarts: '距離安息日還有',
       sabbathEnds: '距離安息日結束還有',
-      isSabbath: '安息日快樂！',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: '紐約',
@@ -121,7 +118,6 @@ export default function HomeScreen() {
       hymnal: '诗歌本',
       sabbathStarts: '距离安息日还有',
       sabbathEnds: '距离安息日结束还有',
-      isSabbath: '安息日快乐！',
       locationDefault: '纽约',
     },
     es: {
@@ -137,7 +133,6 @@ export default function HomeScreen() {
       hymnal: 'Himnario',
       sabbathStarts: 'El Sábado comienza en',
       sabbathEnds: 'El Sábado termina en',
-      isSabbath: '¡Feliz Sábado!',
       // decided to remove the dynamic location since most people don't like to give away location
       // instead, each congregation shuold adjust the code to use their own location coordinates
       locationDefault: 'New York, NY',
@@ -177,7 +172,6 @@ export default function HomeScreen() {
   const [isSabbath, setIsSabbath] = useState(false);
   const [countdown, setCountdown] = useState('');
   const [useGps, setUseGps] = useState(false);
-  const [targetDate, setTargetDate] = useState<Date | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sunsets, setSunsets] = useState<{ fri: Date | null; sat: Date | null }>({
     fri: null,
@@ -233,29 +227,6 @@ export default function HomeScreen() {
     });
   }, [useGps, userCoords, new Date().toDateString()]);
 
-  const formatDisplayDate = (date: Date) => {
-    if (language === 'en') {
-      const day = date.getDate();
-      const suffix = (d: number) => {
-        if (d > 3 && d < 21) return 'th';
-        switch (d % 10) {
-          case 1:
-            return 'st';
-          case 2:
-            return 'nd';
-          case 3:
-            return 'rd';
-          default:
-            return 'th';
-        }
-      };
-      const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date);
-      const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date);
-      return `${weekday}, ${month} ${day}${suffix(day)}`;
-    }
-    return formatAppDate(date, language, { weekday: true });
-  };
-
   useEffect(() => {
     // If GPS status changes (user clicks "Allow"), the component will re-render
     // and this timer logic will re-calculate based on the new context.
@@ -290,7 +261,6 @@ export default function HomeScreen() {
         target.setDate(target.getDate() + 7);
       }
 
-      setTargetDate(target);
       setIsSabbath(isSabbathNow);
 
       const diff = Math.max(0, target.getTime() - now.getTime());
@@ -407,18 +377,6 @@ export default function HomeScreen() {
     } as any);
   };
 
-  // The Sabbath countdown stays beside its label, date, and place, which wrap
-  // between words, unless one of their words couldn't fit whole beside it, as
-  // at about 170% or more on a 375-point iPhone in Spanish (#324).
-  const stackCountdown = !countdownFitsBeside(
-    [
-      isSabbath ? labels.isSabbath : labels.sabbathStarts,
-      ...(targetDate ? [formatDisplayDate(targetDate), labels.locationDefault] : []),
-    ],
-    getContentWidth(windowWidth, effectiveTextScale),
-    effectiveTextScale,
-  );
-
   return (
     <>
       <Stack.Screen options={screenOptions as any} />
@@ -500,38 +458,29 @@ export default function HomeScreen() {
             mode="contained"
           >
             <Card.Content style={styles.timerContentSubtle}>
-              <View style={[styles.timerRow, stackCountdown && styles.timerRowStacked]}>
-                <View style={[styles.labelColumn, stackCountdown && styles.labelColumnStacked]}>
-                  <Text
-                    variant="labelMedium"
-                    style={{
-                      color: isSabbath ? theme.colors.primary : theme.colors.secondary,
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    {isSabbath ? labels.isSabbath : labels.sabbathStarts}
-                  </Text>
-                  {targetDate && (
-                    <>
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {formatDisplayDate(targetDate)}
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {labels.locationDefault}
-                      </Text>
-                    </>
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.timerValueSubtle,
-                    stackCountdown && styles.timerValueStacked,
-                    { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
-                  ]}
-                >
-                  {countdown || '--:--:--'}
-                </Text>
-              </View>
+              {/* Three lines (#593): what the timer counts to, the timer, and the
+                  place. The timer already says when, so no date; during the
+                  Sabbath the label says it counts to its end. */}
+              <Text
+                variant="labelMedium"
+                style={{
+                  color: isSabbath ? theme.colors.primary : theme.colors.secondary,
+                  fontWeight: 'bold',
+                }}
+              >
+                {isSabbath ? labels.sabbathEnds : labels.sabbathStarts}
+              </Text>
+              <Text
+                style={[
+                  styles.timerValueSubtle,
+                  { color: isSabbath ? theme.colors.primary : theme.colors.onSurface },
+                ]}
+              >
+                {countdown || '--:--:--'}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                {labels.locationDefault}
+              </Text>
             </Card.Content>
           </Card>
 
@@ -698,33 +647,13 @@ const createStyles = (
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  timerRow: {
-    flexDirection: useStackedLayout ? 'column' : 'row',
-    alignItems: useStackedLayout ? 'flex-start' : 'center',
-    justifyContent: 'space-between',
-  },
-  labelColumn: {
-    flex: 1,
-  },
-  timerRowStacked: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  labelColumnStacked: {
-    flex: 0,
-    alignSelf: 'stretch',
-  },
-  timerValueStacked: {
-    marginTop: 8,
-  },
   timerValueSubtle: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontVariant: ['tabular-nums'],
     fontSize: scaleTypographyMetric(16, textScale),
     lineHeight: scaleTypographyMetric(24, textScale),
     fontWeight: '700',
-    marginTop: useStackedLayout ? 8 : 0,
-    flexShrink: 0,
+    marginVertical: 2,
   },
   grid: {
     flexDirection: 'row',

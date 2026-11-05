@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { countdownFitsBeside, labelsFitSideBySide, labelWordsFit } from '@/components/WrappingActionButton';
+import { labelsFitSideBySide, labelWordsFit } from '@/components/WrappingActionButton';
 import { getContentWidth } from '@/constants/Layout';
 
 // Home's verse card: 24 points each side, the buttons' row 16 more, and 12
@@ -41,41 +41,21 @@ describe("the verse card's buttons (#385, #324)", () => {
   });
 });
 
-describe("the Sabbath countdown's card (#324)", () => {
-  const spanish = ['El Sábado comienza en', 'viernes, 6 de noviembre', 'New York, NY'];
-  const english = ['Sabbath starts in', 'Friday, November 6th', 'New York, NY'];
-  const chinese = ['距離安息日還有', '11月6日 星期五', '紐約'];
+describe("the Sabbath countdown's card (#593)", () => {
+  const home = readFileSync('app/(tabs)/index.tsx', 'utf8');
 
-  it.each([
-    // The user: keep the timer on the right, as before #593, with the label
-    // wrapping between words beside it.
-    ['Spanish at 125% on a 375-point iPhone', spanish, 375, 1.25, true],
-    ['English at 125% on a 375-point iPhone', english, 375, 1.25, true],
-    ['Spanish at 150% on the 384-point Android phone', spanish, 384, 1.5, true],
-    ['Spanish at 170% on a 375-point iPhone', spanish, 375, 1.7, true],
-    ['English at 200% on a 440-point iPhone', english, 440, 2, true],
-    ['Chinese at 150% on a 375-point iPhone', chinese, 375, 1.5, true],
-    ['Spanish at 150% on the 13-inch iPad', spanish, 1032, 1.5, true],
-    // Only where a word couldn't fit whole beside it does the timer go below.
-    ['Spanish at 200% on a 375-point iPhone', spanish, 375, 2, false],
-    ['English at 200% on a 375-point iPhone', english, 375, 2, false],
-    ['Chinese at 200% on a 375-point iPhone, four characters wide', chinese, 375, 2, false],
-    ['English at 150% in a 320-point iPad window', english, 320, 1.5, false],
-    ["the iPhone's largest text, 3.2×, on a 440-point iPhone", english, 440, 3.2, false],
-  ])('keeps the timer beside its words for %s: %p', (_case, texts, width, scale, beside) => {
-    expect(
-      countdownFitsBeside(texts as string[], getContentWidth(width as number, scale as number), scale as number),
-    ).toBe(beside);
+  it('shows three lines, what it counts to, the timer, and the place, with no date', () => {
+    const card = home.slice(home.indexOf('{/* Sabbath Countdown Widget */}'), home.indexOf('<View style={styles.grid}>'));
+    expect(card.indexOf('labels.sabbathEnds : labels.sabbathStarts')).toBeLessThan(card.indexOf("countdown || '--:--:--'"));
+    expect(card.indexOf("countdown || '--:--:--'")).toBeLessThan(card.indexOf('labels.locationDefault'));
+    // The timer always has its own line, so nothing measures whether it fits
+    // beside the words, and the date is gone: the timer already says when.
+    expect(home).not.toMatch(/countdownFitsBeside|formatDisplayDate|timerRow|isSabbath:/);
   });
 
-  it("stacks on its own rule, not the verse buttons'", () => {
-    const home = readFileSync('app/(tabs)/index.tsx', 'utf8');
-    expect(home).toMatch(/const stackCountdown = !countdownFitsBeside\(/);
-    for (const style of ['timerRowStacked', 'labelColumnStacked', 'timerValueStacked']) {
-      expect(home).toContain(`stackCountdown && styles.${style}`);
-      expect(home).not.toContain(`stackHeroActions && styles.${style}`);
+  it('says during the Sabbath that it counts to its end, in every language', () => {
+    for (const label of ["sabbathEnds: 'Sabbath ends in'", "sabbathEnds: '距離安息日結束還有'", "sabbathEnds: '距离安息日结束还有'", "sabbathEnds: 'El Sábado termina en'"]) {
+      expect(home).toContain(label);
     }
-    // Home's 20-point page margins, as countdownFitsBeside counts them.
-    expect(home).toMatch(/content: \{\s*\.\.\.contentColumnStyle\(effectiveTextScale\),\s*padding: 20,/);
   });
 });
