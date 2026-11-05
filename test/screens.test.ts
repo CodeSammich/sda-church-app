@@ -835,7 +835,7 @@ describe('iPad key screens (#324)', () => {
     const checks = planChecks(config, 'ipad');
     expect(checks.map((shot: { name: string }) => shot.name)).toEqual(ipadNames);
     const bible = checks.find((shot: { name: string }) => shot.name === 'bible-dual-default');
-    expect(bible.mustShowLines).toEqual(expect.arrayContaining(['BSB', 'CUV']));
+    expect(bible.mustShowLines).toEqual(expect.arrayContaining(['BSB', '[Cc]UV']));
     const portrait = checks.find((shot: { name: string }) => shot.name === 'home-default');
     const landscape = checks.find((shot: { name: string }) => shot.name === 'home-landscape');
     expect(regionsFor(portrait).tabs).toBeDefined();

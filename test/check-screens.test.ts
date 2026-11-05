@@ -191,7 +191,7 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-default'), withoutHeader)).toEqual([
       'no line matches /\\bEN\\b/',
       'no line matches /BSB/',
-      'no line matches /CUV/',
+      'no line matches /[Cc]UV/',
     ]);
     // 1.7.0's header, with no icon.
     const badges = [...withoutHeader, line('EN BSB + * CUV v', 0.05)];
@@ -203,8 +203,8 @@ describe('screen rules', () => {
     expect(checkShot(shot('bible-dual-back-xl'), badges)).toEqual([]);
     // What the 0.43.0 preview showed: the names cut short.
     const namesCut = [...withoutHeader, line('EN B... +* C...', 0.05)];
-    expect(checkShot(shot('bible-dual-back-default'), namesCut)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
-    expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
+    expect(checkShot(shot('bible-dual-back-default'), namesCut)).toEqual(['no line matches /BSB/', 'no line matches /[Cc]UV/']);
+    expect(checkShot(shot('bible-dual-back-xl'), namesCut)).toEqual(['no line matches /BSB/', 'no line matches /[Cc]UV/']);
   });
 
   it('catches tab labels that wrap, or rise out of an overgrown tab bar, at about 4× text (#380)', () => {
@@ -341,9 +341,9 @@ describe('rules for one platform (#372)', () => {
     expect(checkShot(androidShot('bible-dual-default'), [...tabs, ...header('EN BSB + 繁 CUV')])).toEqual([]);
     // With a back arrow, both names fit at 100%; at 150% its narrower screen
     // leaves only the badges, where the iPhone keeps the names.
-    expect(checkShot(androidShot('bible-dual-back-default'), namesGone)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
+    expect(checkShot(androidShot('bible-dual-back-default'), namesGone)).toEqual(['no line matches /BSB/', 'no line matches /[Cc]UV/']);
     expect(checkShot(androidShot('bible-dual-back-large'), namesGone)).toEqual([]);
-    expect(checkShot(shot('bible-dual-back-large'), namesGone)).toEqual(['no line matches /BSB/', 'no line matches /CUV/']);
+    expect(checkShot(shot('bible-dual-back-large'), namesGone)).toEqual(['no line matches /BSB/', 'no line matches /[Cc]UV/']);
   });
 });
 

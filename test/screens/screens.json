@@ -108,12 +108,12 @@
     {
       "name": "bible-dual",
       "group": "bible-reading",
-      "$comment": "The header's translation button in full: each translation's language badge and name, EN BSB + 繁 CUV, not cut to B… or C… (#376). From 1.7.0 it has no 文A icon, whose readings (XA, JA, 文A) these rules used to need; the bigger badges say the same. Vision has read the 繁 badge as \"*\", so only EN is required. On the iPad, Vision can read the book button's chevron as part of its name, \"Psalmsv\".",
+      "$comment": "The header's translation button in full: each translation's language badge and name, EN BSB + 繁 CUV, not cut to B… or C… (#376). From 1.7.0 it has no 文A icon, whose readings (XA, JA, 文A) these rules used to need; the bigger badges say the same. Vision has read the 繁 badge as \"*\", so only EN is required, and RapidOCR has read CUV's gold C on standard contrast's dark brown as \"c\", so either case passes. On the iPad, Vision can read the book button's chevron as part of its name, \"Psalmsv\".",
       "path": "bible?bookId=PSA&chapter=23&translationId=BSB",
       "settings": { "dualLanguage": true, "supportingTranslation": "cmn_cuv", "pinyin": false },
       "variants": ["default", "dark", "large", "xl", "ios-large-text", "android-font-max", "standard-contrast", "standard-contrast-dark"],
       "ipadVariants": ["default", "ios-large-text", "landscape"],
-      "mustShowLines": ["\\bEN\\b", "BSB", "CUV", "^Psalms(\\b|v$)"]
+      "mustShowLines": ["\\bEN\\b", "BSB", "[Cc]UV", "^Psalms(\\b|v$)"]
     },
     {
       "name": "bible-dual-back",
@@ -125,9 +125,9 @@
       "ipadVariants": ["landscape"],
       "mustShowLines": ["\\bEN\\b", "^Psalms\\b"],
       "variantRules": {
-        "default": { "mustShowLines": ["BSB", "CUV"] },
-        "large": { "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }] },
-        "xl": { "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "CUV", "platforms": ["ios"] }] }
+        "default": { "mustShowLines": ["BSB", "[Cc]UV"] },
+        "large": { "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "[Cc]UV", "platforms": ["ios"] }] },
+        "xl": { "mustShowLines": [{ "line": "BSB", "platforms": ["ios"] }, { "line": "[Cc]UV", "platforms": ["ios"] }] }
       }
     },
     {
